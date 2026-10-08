@@ -32,16 +32,31 @@ It is **not** a full 3D CAM (no surface finishing of freeform models), and it is
 
 ## Development
 
-Requirements: Node.js 24 (see `.nvmrc`) and pnpm 11 (`corepack enable`).
+Requirements: Node.js 24 (see `.nvmrc`), pnpm 11 (`corepack enable`) and Docker.
 
 ```sh
 pnpm install
+cp apps/web/.env.example apps/web/.env   # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm db:up        # start local PostgreSQL (docker compose)
+pnpm db:migrate   # apply database migrations
 pnpm dev          # start the web app at http://localhost:3000
+```
+
+Without `RESEND_API_KEY`, verification and password reset emails are printed to the dev server console.
+
+Other commands:
+
+```sh
 pnpm test         # unit tests (Vitest)
 pnpm typecheck    # TypeScript across all packages
 pnpm check        # lint + format check (Biome); pnpm check:fix to apply fixes
 pnpm build        # production build
+pnpm db:studio    # browse the database (Prisma Studio)
 ```
+
+### Deployment
+
+The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hosting-vercel-neon.md)). Set the project's root directory to `apps/web` and configure the variables listed in [`apps/web/.env.example`](apps/web/.env.example). Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building.
 
 ### Repository layout
 
