@@ -7,6 +7,10 @@ export type ToolType = z.infer<typeof ToolType>;
 export const CutDirection = z.enum(["upcut", "downcut", "compression"]);
 export type CutDirection = z.infer<typeof CutDirection>;
 
+/** `#rrggbb` in lowercase, as an `<input type="color">` produces. */
+export const HexColor = z.string().regex(/^#[0-9a-f]{6}$/, "Must be a #rrggbb colour");
+export type HexColor = z.infer<typeof HexColor>;
+
 const EndMillType = ToolType.extract(["flat_end_mill", "ball_end_mill"]);
 
 /**
@@ -37,6 +41,8 @@ export const Tool = z
     /** Percentage of the diameter. */
     stepOver: z.number().gt(0).max(100),
     notes: z.string().nullable(),
+    /** Identifies the tool in the library and colours its toolpaths in the preview. */
+    color: HexColor,
   })
   .superRefine((tool, ctx) => {
     const isEndMill = EndMillType.safeParse(tool.type).success;

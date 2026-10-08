@@ -15,6 +15,7 @@ export const endMill: Tool = {
   stepDown: 2,
   stepOver: 40,
   notes: null,
+  color: "#2563eb",
 };
 
 export const vBit: Tool = {
@@ -24,6 +25,7 @@ export const vBit: Tool = {
   cutDirection: null,
   vAngle: 60,
   tipDiameter: 0,
+  color: "#d97706",
 };
 
 export const machine: Machine = {

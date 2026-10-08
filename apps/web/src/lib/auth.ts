@@ -4,6 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { createDefaultTool } from "@/lib/tools";
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -35,7 +36,11 @@ export const auth = betterAuth({
   // Data minimisation (ADR-0013): `name` is a required Better Auth column; it always mirrors the email.
   databaseHooks: {
     user: {
-      create: { before: async (user) => ({ data: { ...user, name: user.email, image: null } }) },
+      create: {
+        before: async (user) => ({ data: { ...user, name: user.email, image: null } }),
+        // Every account starts with one bit in its tool library (#10).
+        after: async (user) => createDefaultTool(user.id),
+      },
       update: {
         before: async ({ name: _name, image: _image, ...user }) => ({
           data: user.email ? { ...user, name: user.email } : user,
