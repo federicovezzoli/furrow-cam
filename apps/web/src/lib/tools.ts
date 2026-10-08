@@ -19,3 +19,25 @@ export function getTool(userId: string, id: string) {
 export function snapshotTool(row: Tool): Tool {
   return Tool.parse(row);
 }
+
+/** Seeded into every new account, so a first project can be cut without setting up a library. */
+export const DEFAULT_TOOL: Tool = Tool.parse({
+  name: "6 mm 2-flute upcut",
+  type: "flat_end_mill",
+  diameter: 6,
+  fluteCount: 2,
+  fluteLength: 22,
+  cutDirection: "upcut",
+  vAngle: null,
+  tipDiameter: null,
+  spindleRpm: 18000,
+  feedRate: 1500,
+  plungeRate: 500,
+  stepDown: 2,
+  stepOver: 40,
+  notes: null,
+});
+
+export async function createDefaultTool(userId: string): Promise<void> {
+  await db.tool.create({ data: { ...DEFAULT_TOOL, userId } });
+}
