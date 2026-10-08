@@ -32,13 +32,14 @@ export const auth = betterAuth({
       });
     },
   },
-  // Data minimisation (ADR-0013): no name or avatar is stored for users.
+  // Data minimisation (ADR-0013): `name` is a required Better Auth column; it always mirrors the email.
   databaseHooks: {
     user: {
-      // `name` is a required Better Auth column; we never collect it.
-      create: { before: async (user) => ({ data: { ...user, name: "", image: null } }) },
+      create: { before: async (user) => ({ data: { ...user, name: user.email, image: null } }) },
       update: {
-        before: async ({ name: _name, image: _image, ...user }) => ({ data: user }),
+        before: async ({ name: _name, image: _image, ...user }) => ({
+          data: user.email ? { ...user, name: user.email } : user,
+        }),
       },
     },
   },

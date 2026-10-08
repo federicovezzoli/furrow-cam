@@ -16,8 +16,8 @@ By default, Better Auth (ADR-0006) stores a `user.name` and `user.image`. `name`
 The only identifying data we collect from users is their **email address**.
 
 - The sign-up form does not ask for a name, and emails do not greet the user by name.
-- A Better Auth `databaseHook` enforces this on the server, regardless of what a client sends: `user.name` is always stored as an empty string and `user.image` as `NULL`.
-- A data migration cleared these fields for existing rows.
+- A Better Auth `databaseHook` enforces this on the server, regardless of what a client sends: `user.name` always mirrors the user's email (also when the email changes) and `user.image` is always `NULL`. Mirroring the email, rather than leaving the column empty, keeps any code or tool that displays `name` meaningful without storing anything new.
+- Data migrations cleared avatars and set `name` to the email for existing rows.
 - Sessions **keep** `ipAddress` and `userAgent`. They are useful for security (spotting suspicious sessions, a future "active sessions" view) and are deleted together with the session.
 
 Any future feature that needs additional personal data (e.g. a display name for sharing) requires a new ADR.
@@ -25,6 +25,6 @@ Any future feature that needs additional personal data (e.g. a display name for 
 ## Consequences
 
 - Smaller privacy footprint and a simpler privacy policy.
-- The `name` and `image` columns remain in the schema because Better Auth requires them; they are always empty.
+- The `name` and `image` columns remain in the schema because Better Auth requires them; `name` duplicates the email and `image` is always empty.
 - Session IP addresses and user agents are personal data and must be mentioned in the privacy policy.
 - Third parties also process some data: Resend sees recipient addresses and email content, and Vercel sees request IPs in its logs.

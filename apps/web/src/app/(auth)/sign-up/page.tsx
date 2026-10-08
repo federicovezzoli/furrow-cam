@@ -28,7 +28,7 @@ export default function SignUpPage() {
     setPending(true);
     setError(null);
     const { error } = await authClient.signUp.email({
-      name: "", // Not collected (ADR-0013); required by the Better Auth API.
+      name: email, // Required by the Better Auth API; the server sets it to the email anyway (ADR-0013).
       email,
       password: String(form.get("password")),
       callbackURL: "/projects",
