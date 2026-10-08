@@ -74,7 +74,11 @@ See [ADR-0011](docs/adr/0011-monorepo-structure-and-tooling.md) for the reasonin
 
 The project is just getting started. The most useful contributions right now are feedback on the [PRDs](docs/prd/) and [ADRs](docs/adr/). Open an issue or a PR against the relevant document.
 
-For code changes: branch off `dev`, open a PR to `dev`, and add a changeset (`pnpm changeset`) if the change affects behaviour. Releases are cut from `main`; see [ADR-0012](docs/adr/0012-ci-and-releases.md).
+Work is tracked in [GitHub issues](https://github.com/federicovezzoli/furrow-cam/issues) under the [MVP milestone](https://github.com/federicovezzoli/furrow-cam/milestone/1). For code changes:
+
+1. Create a branch from the issue, off `dev`: `gh issue develop <number> --base dev --checkout` (branch name `<number>-<short-title>`).
+2. Open a PR to `dev` with `Closes #<number>` and a changeset (`pnpm changeset`) if the change affects behaviour.
+3. Releases are cut by merging `dev` into `main`; see [ADR-0012](docs/adr/0012-ci-and-releases.md).
 
 ## License
 
