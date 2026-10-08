@@ -29,14 +29,13 @@ implementation), stop and ask rather than guessing.
 
 ```bash
 gh issue view <n> --json number,title,body,labels,milestone,url
-gh issue view <n> --comments
 ```
 
 **Stop here** and report back, without branching, if:
 
 - the title starts with `[Scoping]`, or the body reads as an open design question;
-- an acceptance criterion requires a decision not yet recorded in the issue or its
-  comments (e.g. "Field list reviewed and agreed in this issue before implementation");
+- the issue still needs a decision: agreed scope is recorded in the issue body (not in
+  comments), so a "proposed" list or an open question in the body means it isn't settled;
 - the issue builds on another issue that is still open (e.g. "validated against the
   document schema (#9)" while #9 is open) — report the blocking issue.
 

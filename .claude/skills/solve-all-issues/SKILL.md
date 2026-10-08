@@ -28,8 +28,8 @@ Skip, and say why:
 
 - titles starting with `[Scoping]` (case-insensitive), or bodies that read as an open
   design question;
-- issues whose acceptance criteria require a decision not yet recorded in the issue
-  comments (e.g. an agreed field list).
+- issues that still need a decision (a "proposed" list or an open question in the body;
+  agreed scope is always recorded in the issue body, not in comments).
 
 Order the rest so that dependencies come first: if an issue builds on another listed
 issue (e.g. #12 references the document schema in #9), process the dependency first.

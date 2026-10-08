@@ -30,10 +30,10 @@ criteria. Read those linked docs too.
 Stay in discussion mode instead of branching/coding when:
 
 - the title starts with `[Scoping]`, or
-- an acceptance criterion requires a decision that hasn't been made yet (e.g. "Field
-  list reviewed and agreed in this issue before implementation" with no agreement in the
-  issue comments: check `gh issue view <n> --comments`). Propose the decision, get the
-  user's answer, and suggest recording it as an issue comment before coding.
+- the issue still needs a decision (e.g. a "proposed" field list, or an open question in
+  the body). Propose the decision, get the user's answer, then record it by **editing
+  the issue body** (`gh issue edit <n> --body ...`), never as a comment: the body is the
+  single source of truth for agreed scope. Then start coding.
 
 Also check dependencies: if the body references other open issues it builds on (e.g.
 "validated against the document schema (#9)"), say so and ask whether to proceed.
