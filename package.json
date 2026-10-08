@@ -9,6 +9,9 @@
     "check": "biome check",
     "check:fix": "biome check --write",
     "check:ci": "biome ci",
+    "db:up": "docker compose up -d --wait",
+    "db:migrate": "pnpm --filter @furrow/web db:migrate",
+    "db:studio": "pnpm --filter @furrow/web db:studio",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"

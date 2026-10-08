@@ -3,10 +3,12 @@ packages:
   - packages/*
 
 allowBuilds:
+  "@prisma/engines": true
+  prisma: true
   sharp: false
   unrs-resolver: false
 
 catalog:
   typescript: ^5
   vitest: ^4
-  zod: ^4
+  zod: ^4.6.5

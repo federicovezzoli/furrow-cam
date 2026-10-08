@@ -9,6 +9,7 @@ dist/
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
+**/src/generated/
 
 # testing
 coverage/
