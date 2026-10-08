@@ -28,7 +28,7 @@ export default function SignUpPage() {
     setPending(true);
     setError(null);
     const { error } = await authClient.signUp.email({
-      name: String(form.get("name")),
+      name: "", // Not collected (ADR-0013); required by the Better Auth API.
       email,
       password: String(form.get("password")),
       callbackURL: "/projects",
@@ -46,7 +46,6 @@ export default function SignUpPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
-          <FormField label="Name" id="name" autoComplete="name" />
           <FormField label="Email" id="email" type="email" autoComplete="email" />
           <FormField
             label="Password"

@@ -17,7 +17,7 @@ export const auth = betterAuth({
       await sendEmail({
         to: user.email,
         subject: "Reset your Furrow CAM password",
-        text: `Hi ${user.name},\n\nOpen this link to choose a new password:\n${url}\n\nIf you didn't ask for this, you can ignore this email.`,
+        text: `Open this link to choose a new password:\n${url}\n\nIf you didn't ask for this, you can ignore this email.`,
       });
     },
   },
@@ -28,8 +28,18 @@ export const auth = betterAuth({
       await sendEmail({
         to: user.email,
         subject: "Verify your Furrow CAM email",
-        text: `Hi ${user.name},\n\nOpen this link to verify your email address:\n${url}`,
+        text: `Open this link to verify your email address:\n${url}`,
       });
+    },
+  },
+  // Data minimisation (ADR-0013): no name or avatar is stored for users.
+  databaseHooks: {
+    user: {
+      // `name` is a required Better Auth column; we never collect it.
+      create: { before: async (user) => ({ data: { ...user, name: "", image: null } }) },
+      update: {
+        before: async ({ name: _name, image: _image, ...user }) => ({ data: user }),
+      },
     },
   },
   // Must be the last plugin: lets server actions set auth cookies.
