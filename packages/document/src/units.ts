@@ -12,3 +12,6 @@ export const FeedRate = z.number().positive();
 
 /** A spindle speed in revolutions per minute. */
 export const SpindleRpm = z.number().int().positive();
+
+/** A display name that isn't blank. Not trimmed, so parsing never changes stored values. */
+export const Name = z.string().regex(/\S/, "Must not be blank");

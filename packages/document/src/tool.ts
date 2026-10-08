@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FeedRate, PositiveLength, SpindleRpm } from "./units";
+import { FeedRate, Name, PositiveLength, SpindleRpm } from "./units";
 
 export const ToolType = z.enum(["flat_end_mill", "ball_end_mill", "v_bit", "drill"]);
 export type ToolType = z.infer<typeof ToolType>;
@@ -7,17 +7,18 @@ export type ToolType = z.infer<typeof ToolType>;
 export const CutDirection = z.enum(["upcut", "downcut", "compression"]);
 export type CutDirection = z.infer<typeof CutDirection>;
 
-const END_MILLS: readonly ToolType[] = ["flat_end_mill", "ball_end_mill"];
+const EndMillType = ToolType.extract(["flat_end_mill", "ball_end_mill"]);
 
 /**
  * A router bit (#10). Used to validate the user's tool library and stored as a
  * snapshot in each operation, so editing the library never changes existing
  * projects (ADR-0003). Type-specific fields are `null` when they don't apply,
- * mirroring nullable database columns.
+ * mirroring nullable database columns. Unknown keys are stripped, so a
+ * database row can be snapshotted with `Tool.parse(row)`.
  */
 export const Tool = z
   .object({
-    name: z.string().trim().min(1),
+    name: Name,
     type: ToolType,
     diameter: PositiveLength,
     fluteCount: z.number().int().positive(),
@@ -38,7 +39,7 @@ export const Tool = z
     notes: z.string().nullable(),
   })
   .superRefine((tool, ctx) => {
-    const isEndMill = END_MILLS.includes(tool.type);
+    const isEndMill = EndMillType.safeParse(tool.type).success;
     if (isEndMill && tool.cutDirection === null) {
       ctx.addIssue({ code: "custom", path: ["cutDirection"], message: "Required for end mills" });
     }
@@ -52,6 +53,13 @@ export const Tool = z
       if (tool.type !== "v_bit" && tool[key] !== null) {
         ctx.addIssue({ code: "custom", path: [key], message: "Only for V-bits" });
       }
+    }
+    if (tool.stepDown > tool.fluteLength) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["stepDown"],
+        message: "Must not exceed the flute length",
+      });
     }
     if (tool.tipDiameter !== null && tool.tipDiameter >= tool.diameter) {
       ctx.addIssue({

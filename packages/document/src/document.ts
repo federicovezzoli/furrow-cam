@@ -12,7 +12,7 @@ export type XYOrigin = z.infer<typeof XYOrigin>;
 export const ZOrigin = z.enum(["stock_top", "machine_bed"]);
 export type ZOrigin = z.infer<typeof ZOrigin>;
 
-export const Stock = z.object({
+export const Stock = z.strictObject({
   width: PositiveLength,
   height: PositiveLength,
   thickness: PositiveLength,
@@ -25,9 +25,13 @@ export type Stock = z.infer<typeof Stock>;
  * The contents of a project: stored in `Project.document` and used as the
  * export/import file format (ADR-0003). Read stored or imported documents
  * with `parseProjectDocument`, which upgrades older versions first.
+ *
+ * Objects owned by the document are strict: unknown keys are errors rather
+ * than silently dropped, so a misspelt field or an unversioned change fails
+ * loudly instead of losing data on the next save.
  */
 export const ProjectDocument = z
-  .object({
+  .strictObject({
     schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
     units: Units,
     stock: Stock,
@@ -60,7 +64,16 @@ export const ProjectDocument = z
         });
       }
       operationIds.add(operation.id);
+      const seen = new Set<string>();
       operation.shapeIds.forEach((shapeId, j) => {
+        if (seen.has(shapeId)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["operations", i, "shapeIds", j],
+            message: "Duplicate shape id",
+          });
+        }
+        seen.add(shapeId);
         if (!shapeIds.has(shapeId)) {
           ctx.addIssue({
             code: "custom",

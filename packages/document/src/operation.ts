@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { Tool } from "./tool";
+import { Name } from "./units";
 
 export const OperationType = z.enum(["profile", "pocket", "drill"]);
 export type OperationType = z.infer<typeof OperationType>;
 
 const operationFields = {
   id: z.uuid(),
-  name: z.string(),
+  name: Name,
   enabled: z.boolean(),
   /** Ids of the shapes this operation cuts. */
   shapeIds: z.array(z.uuid()),
@@ -15,21 +16,21 @@ const operationFields = {
 };
 
 // Type-specific params are added by the CAM issues (#21, #23, #24).
-export const ProfileOperation = z.object({
+export const ProfileOperation = z.strictObject({
   ...operationFields,
   type: z.literal("profile"),
   params: z.strictObject({}),
 });
 export type ProfileOperation = z.infer<typeof ProfileOperation>;
 
-export const PocketOperation = z.object({
+export const PocketOperation = z.strictObject({
   ...operationFields,
   type: z.literal("pocket"),
   params: z.strictObject({}),
 });
 export type PocketOperation = z.infer<typeof PocketOperation>;
 
-export const DrillOperation = z.object({
+export const DrillOperation = z.strictObject({
   ...operationFields,
   type: z.literal("drill"),
   params: z.strictObject({}),

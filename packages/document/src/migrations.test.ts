@@ -44,6 +44,28 @@ describe("migrateProjectDocument", () => {
     expect(v1).toEqual({ schemaVersion: 1, size: { width: 10 } });
   });
 
+  it("lets migrations edit nested objects without touching the input", () => {
+    const v2 = { schemaVersion: 2, stock: { width: 10 } };
+    const inPlace: Record<number, Migration> = {
+      2: (doc) => {
+        (doc.stock as { width: number }).width = 20;
+        return doc;
+      },
+    };
+    expect(migrateProjectDocument(v2, inPlace, 3)).toEqual({
+      schemaVersion: 3,
+      stock: { width: 20 },
+    });
+    expect(v2.stock.width).toBe(10);
+  });
+
+  it("fails when a migration does not return an object", () => {
+    const broken = { 1: () => undefined } as unknown as Record<number, Migration>;
+    expect(() => migrateProjectDocument({ schemaVersion: 1 }, broken, 2)).toThrow(
+      ProjectDocumentVersionError,
+    );
+  });
+
   it("fails on gaps in the chain", () => {
     expect(() =>
       migrateProjectDocument({ schemaVersion: 1 }, { 2: chain[2] as Migration }, 3),

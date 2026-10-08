@@ -26,6 +26,12 @@ describe("Tool", () => {
     expect(Tool.safeParse({ ...endMill, fluteCount: 1.5 }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, stepOver: 120 }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, name: "  " }).success).toBe(false);
+    expect(Tool.safeParse({ ...endMill, stepDown: endMill.fluteLength + 1 }).success).toBe(false);
     expect(Tool.safeParse({ ...vBit, vAngle: 180 }).success).toBe(false);
+  });
+
+  it("does not change names while parsing", () => {
+    const padded = { ...endMill, name: " 1/4 upcut " };
+    expect(Tool.parse(padded)).toEqual(padded);
   });
 });

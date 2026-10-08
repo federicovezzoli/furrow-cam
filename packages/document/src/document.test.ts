@@ -34,8 +34,22 @@ describe("ProjectDocument", () => {
     expect(ProjectDocument.safeParse({ ...doc, operations: [operation, operation] }).success).toBe(
       false,
     );
+    const twice = { ...operation, shapeIds: [SQUARE_ID, SQUARE_ID] };
+    expect(ProjectDocument.safeParse({ ...doc, operations: [twice] }).success).toBe(false);
     const dangling = { ...operation, shapeIds: ["11111111-2222-4333-8444-555555555555"] };
     expect(ProjectDocument.safeParse({ ...doc, operations: [dangling] }).success).toBe(false);
+  });
+
+  it("rejects unknown keys and blank operation names", () => {
+    const doc = fullDocument();
+    const [operation] = doc.operations;
+    expect(ProjectDocument.safeParse({ ...doc, extra: true }).success).toBe(false);
+    expect(ProjectDocument.safeParse({ ...doc, stock: { ...doc.stock, depth: 1 } }).success).toBe(
+      false,
+    );
+    expect(
+      ProjectDocument.safeParse({ ...doc, operations: [{ ...operation, name: " " }] }).success,
+    ).toBe(false);
   });
 
   it("rejects params on operations until their types define them", () => {

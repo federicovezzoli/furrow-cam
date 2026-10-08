@@ -2,7 +2,7 @@ import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
 
 type UnknownDocument = Record<string, unknown>;
 
-/** Upgrades a document by exactly one schema version. */
+/** Upgrades a document by exactly one schema version. It may edit `doc` in place. */
 export type Migration = (doc: UnknownDocument) => UnknownDocument;
 
 /**
@@ -43,13 +43,24 @@ export function migrateProjectDocument(
     );
   }
 
-  let doc = json;
+  if (version === targetVersion) {
+    return json;
+  }
+  // Documents are plain JSON, so this deep copy lets migrations edit in place
+  // without touching the caller's object.
+  let doc: UnknownDocument = JSON.parse(JSON.stringify(json));
   for (let from = version; from < targetVersion; from++) {
     const migrate = chain[from];
     if (!migrate) {
       throw new ProjectDocumentVersionError(`No migration from version ${from} to ${from + 1}`);
     }
-    doc = { ...migrate(doc), schemaVersion: from + 1 };
+    const migrated: unknown = migrate(doc);
+    if (!isObject(migrated)) {
+      throw new ProjectDocumentVersionError(
+        `Migration from version ${from} to ${from + 1} did not return an object`,
+      );
+    }
+    doc = { ...migrated, schemaVersion: from + 1 };
   }
   return doc;
 }
