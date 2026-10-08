@@ -7,8 +7,8 @@ import { ToolForm } from "../tool-form";
 
 export default function EditToolPage({ params }: PageProps<"/tools/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit tool</h1>
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
+      <h1 className="text-2xl font-semibold tracking-tight">Edit bit</h1>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <EditTool params={params} />
       </Suspense>
