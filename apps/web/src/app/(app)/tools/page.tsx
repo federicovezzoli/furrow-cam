@@ -1,20 +1,30 @@
 import type { Tool } from "@furrow/document";
+import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { requireUserId } from "@/lib/session";
 import { listTools } from "@/lib/tools";
+import { BitTypeIcon } from "./bit-type-icon";
 import { DeleteToolButton } from "./delete-tool-button";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 import { SetDefaultButton } from "./set-default-button";
 
 export default function ToolsPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Tool library</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Bits library</h1>
         <Button asChild>
-          <Link href="/tools/new">New tool</Link>
+          <Link href="/tools/new">New bit</Link>
         </Button>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
@@ -29,68 +39,118 @@ async function ToolList() {
   if (tools.length === 0) {
     return (
       <p className="rounded-lg border p-4 text-muted-foreground">
-        No tools yet. Add the bits you cut with, and pick them when you create operations.
+        No bits yet. Add the bits you cut with, and pick them when you create operations.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y rounded-lg border">
-      {tools.map((tool) => (
-        <li key={tool.id} className="flex items-center justify-between gap-4 p-4">
-          <div className="grid gap-1">
-            <div className="flex items-center gap-2">
-              <span
-                className="size-3 shrink-0 rounded-full border"
-                style={{ backgroundColor: tool.color }}
-                aria-hidden="true"
-              />
-              <Link href={`/tools/${tool.id}`} className="font-medium hover:underline">
-                {tool.name}
-              </Link>
-              {tool.isDefault && (
-                <span className="rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground">
-                  Default
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">{describeGeometry(tool)}</p>
-            <p className="text-sm text-muted-foreground">{describeCuttingData(tool)}</p>
-          </div>
-          <div className="flex gap-2">
-            {!tool.isDefault && <SetDefaultButton id={tool.id} />}
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/tools/${tool.id}`}>Edit</Link>
-            </Button>
-            <DeleteToolButton id={tool.id} name={tool.name} />
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow className="[&>th]:h-auto [&>th]:py-2 [&>th]:align-bottom">
+            <TableHead className="pl-4">Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">
+              Ø<Unit>mm</Unit>
+            </TableHead>
+            <TableHead className="text-right">Flutes</TableHead>
+            <TableHead className="text-right">
+              Flute length
+              <Unit>mm</Unit>
+            </TableHead>
+            <TableHead>Cut / angle</TableHead>
+            <TableHead className="text-right">
+              Spindle
+              <Unit>RPM</Unit>
+            </TableHead>
+            <TableHead className="text-right">
+              Feed
+              <Unit>mm/min</Unit>
+            </TableHead>
+            <TableHead className="text-right">
+              Plunge
+              <Unit>mm/min</Unit>
+            </TableHead>
+            <TableHead className="text-right">
+              Step down
+              <Unit>mm</Unit>
+            </TableHead>
+            <TableHead className="text-right">
+              Step over
+              <Unit>mm</Unit>
+            </TableHead>
+            <TableHead className="pr-4">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
+          {tools.map((tool) => (
+            <TableRow key={tool.id}>
+              <TableCell className="pl-4">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="size-3 shrink-0 rounded-full border"
+                    style={{ backgroundColor: tool.color }}
+                    aria-hidden="true"
+                  />
+                  <Link href={`/tools/${tool.id}`} className="font-medium hover:underline">
+                    {tool.name}
+                  </Link>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <BitTypeIcon type={tool.type} className="h-7 w-3.5 text-muted-foreground" />
+                  {TOOL_TYPE_LABELS[tool.type]}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">{formatNumber(tool.diameter)}</TableCell>
+              <TableCell className="text-right">{tool.fluteCount}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.fluteLength)}</TableCell>
+              <TableCell>{describeCut(tool)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
+              <TableCell className="text-right">
+                {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}
+                <span className="text-muted-foreground">({formatNumber(tool.stepOver)}%)</span>
+              </TableCell>
+              <TableCell className="pr-4">
+                <div className="flex justify-end gap-1">
+                  <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
+                  <Button asChild variant="ghost" size="icon-sm" title="Edit">
+                    <Link href={`/tools/${tool.id}`} aria-label={`Edit ${tool.name}`}>
+                      <PencilIcon />
+                    </Link>
+                  </Button>
+                  <DeleteToolButton id={tool.id} name={tool.name} />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
-function describeGeometry(tool: Tool): string {
-  return [
-    TOOL_TYPE_LABELS[tool.type],
-    `Ø ${tool.diameter} mm`,
-    tool.vAngle === null ? null : `${tool.vAngle}°`,
-    tool.tipDiameter ? `${tool.tipDiameter} mm tip` : null,
-    `${tool.fluteCount} ${tool.fluteCount === 1 ? "flute" : "flutes"}`,
-    `${tool.fluteLength} mm flute length`,
-    tool.cutDirection && CUT_DIRECTION_LABELS[tool.cutDirection],
-  ]
-    .filter(Boolean)
-    .join(" · ");
+function Unit({ children }: { children: string }) {
+  return <span className="block text-xs font-normal text-muted-foreground">{children}</span>;
 }
 
-function describeCuttingData(tool: Tool): string {
-  const stepOver = Math.round(tool.diameter * tool.stepOver) / 100;
-  return [
-    `${tool.spindleRpm} RPM`,
-    `${tool.feedRate} mm/min feed`,
-    `${tool.plungeRate} mm/min plunge`,
-    `${tool.stepDown} mm step down`,
-    `${stepOver} mm (${tool.stepOver}%) step over`,
-  ].join(" · ");
+const numberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
+
+function formatNumber(value: number): string {
+  return numberFormat.format(value);
+}
+
+/** Cut direction for end mills, angle and tip for V-bits, nothing for drills. */
+function describeCut(tool: Tool): string {
+  if (tool.cutDirection) return CUT_DIRECTION_LABELS[tool.cutDirection];
+  if (tool.vAngle === null) return "—";
+  const tip = tool.tipDiameter ? ` · ${formatNumber(tool.tipDiameter)} mm tip` : "";
+  return `${formatNumber(tool.vAngle)}°${tip}`;
 }

@@ -80,7 +80,7 @@ export async function saveTool(id: string | null, form: FormData): Promise<ToolF
       where: { id: z.uuid().parse(id), userId },
       data: tool,
     });
-    if (count === 0) return { form: "This tool no longer exists." };
+    if (count === 0) return { form: "This bit no longer exists." };
   }
   revalidatePath("/tools");
   redirect("/tools");

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { saveTool, type ToolFormErrors } from "./actions";
+import { BitTypeIcon } from "./bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 
 /** Starting values for a new tool; the rest of the fields start empty. */
@@ -50,20 +51,13 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
-      <fieldset className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <TypePicker value={type} onChange={setType} error={errors.type} />
         <Field label="Name" {...field("name")} placeholder="6 mm 2-flute upcut" />
-        <SelectField
-          label="Type"
-          id="type"
-          value={type}
-          onChange={(event) => setType(ToolType.parse(event.target.value))}
-          options={TOOL_TYPE_LABELS}
-          error={errors.type}
-        />
         <Field label="Colour" {...field("color")} type="color" className="p-1" />
       </fieldset>
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Geometry</legend>
         <Field label="Diameter (mm)" {...field("diameter")} type="number" step="any" min={0} />
         <Field label="Flutes" {...field("fluteCount")} type="number" step={1} min={1} />
@@ -98,7 +92,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         )}
       </fieldset>
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Cutting data</legend>
         <Field
           label="Spindle speed (RPM)"
@@ -140,7 +134,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
       <FormError message={errors.form ?? null} />
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : id ? "Save changes" : "Add tool"}
+          {pending ? "Saving…" : id ? "Save changes" : "Add bit"}
         </Button>
         <Button asChild variant="outline">
           <Link href="/tools">Cancel</Link>
@@ -200,6 +194,50 @@ function SelectField<T extends string>({
         ))}
       </NativeSelect>
       <FieldError id={id} error={error} />
+    </div>
+  );
+}
+
+/** The bit types as picture cards, so the profile is visible while choosing. */
+function TypePicker({
+  value,
+  onChange,
+  error,
+}: {
+  value: ToolType;
+  onChange: (type: ToolType) => void;
+  error?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby="type-label"
+      aria-describedby={error ? "type-error" : undefined}
+      className="grid gap-2 sm:col-span-full"
+    >
+      <span id="type-label" className="text-sm leading-none font-medium">
+        Type
+      </span>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {ToolType.options.map((type) => (
+          <label
+            key={type}
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-md border p-3 text-sm shadow-xs transition-colors hover:bg-accent has-checked:border-primary has-checked:bg-accent has-checked:ring-1 has-checked:ring-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+          >
+            <input
+              type="radio"
+              name="type"
+              value={type}
+              checked={value === type}
+              onChange={() => onChange(type)}
+              className="sr-only"
+            />
+            <BitTypeIcon type={type} className="h-14 w-7" />
+            {TOOL_TYPE_LABELS[type]}
+          </label>
+        ))}
+      </div>
+      <FieldError id="type" error={error} />
     </div>
   );
 }
