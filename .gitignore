@@ -1,7 +1,28 @@
+# dependencies
 node_modules/
+
+# build output and caches
+.next/
+out/
+build/
+dist/
 .turbo/
-coverage/
 *.tsbuildinfo
+next-env.d.ts
+
+# testing
+coverage/
+
+# env files (commit .env.example only)
 .env*
 !.env.example
+
+# deployment
+.vercel/
+
+# logs
+*.log
+
+# misc
+*.pem
 .DS_Store
