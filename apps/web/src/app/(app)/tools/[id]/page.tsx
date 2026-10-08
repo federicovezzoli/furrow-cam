@@ -22,5 +22,5 @@ async function EditTool({ params }: Pick<PageProps<"/tools/[id]">, "params">) {
   const tool = z.uuid().safeParse(id).success ? await getTool(userId, id) : null;
   if (!tool) notFound();
 
-  return <ToolForm id={tool.id} tool={snapshotTool(tool)} />;
+  return <ToolForm id={tool.id} values={snapshotTool(tool)} />;
 }

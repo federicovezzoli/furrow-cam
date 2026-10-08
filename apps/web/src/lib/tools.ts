@@ -20,6 +20,26 @@ export function snapshotTool(row: Tool): Tool {
   return Tool.parse(row);
 }
 
+/** Picked in turn for new tools, so each one is told apart in the preview without choosing a colour. */
+export const TOOL_COLORS = [
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#d97706",
+  "#9333ea",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
+] as const;
+
+/** The first palette colour no tool uses yet, cycling once all are taken. */
+export function nextToolColor(tools: { color: string }[]): string {
+  const used = new Set(tools.map((tool) => tool.color));
+  return (
+    TOOL_COLORS.find((color) => !used.has(color)) ?? TOOL_COLORS[tools.length % TOOL_COLORS.length]
+  );
+}
+
 /** Seeded into every new account, so a first project can be cut without setting up a library. */
 export const DEFAULT_TOOL: Tool = Tool.parse({
   name: "6 mm 2-flute upcut",
@@ -30,14 +50,16 @@ export const DEFAULT_TOOL: Tool = Tool.parse({
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
-  spindleRpm: 18000,
-  feedRate: 1500,
-  plungeRate: 500,
-  stepDown: 2,
+  spindleRpm: 24000,
+  feedRate: 600,
+  plungeRate: 300,
+  stepDown: 1,
   stepOver: 40,
   notes: null,
+  color: TOOL_COLORS[0],
 });
 
+/** Seeds the account's library with `DEFAULT_TOOL`, selected as the default tool. */
 export async function createDefaultTool(userId: string): Promise<void> {
-  await db.tool.create({ data: { ...DEFAULT_TOOL, userId } });
+  await db.tool.create({ data: { ...DEFAULT_TOOL, userId, isDefault: true } });
 }

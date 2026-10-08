@@ -17,16 +17,16 @@ const NEW_TOOL: Partial<Tool> = {
   type: "flat_end_mill",
   fluteCount: 2,
   cutDirection: "upcut",
+  spindleRpm: 24000,
+  feedRate: 600,
+  plungeRate: 300,
+  stepDown: 1,
   stepOver: 40,
 };
 
-export function ToolForm({
-  id = null,
-  tool = NEW_TOOL,
-}: {
-  id?: string | null;
-  tool?: Partial<Tool>;
-}) {
+/** Edits the tool `id`, or creates one when `id` is `null`, starting from `NEW_TOOL` plus `values`. */
+export function ToolForm({ id = null, values }: { id?: string | null; values: Partial<Tool> }) {
+  const tool = id === null ? { ...NEW_TOOL, ...values } : values;
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
@@ -60,6 +60,7 @@ export function ToolForm({
           options={TOOL_TYPE_LABELS}
           error={errors.type}
         />
+        <Field label="Colour" {...field("color")} type="color" className="p-1" />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -103,7 +104,7 @@ export function ToolForm({
           label="Spindle speed (RPM)"
           {...field("spindleRpm")}
           type="number"
-          step={1}
+          step={1000}
           min={0}
         />
         <Field label="Feed rate (mm/min)" {...field("feedRate")} type="number" step="any" min={0} />
