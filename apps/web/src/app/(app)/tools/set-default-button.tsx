@@ -28,7 +28,12 @@ export function SetDefaultButton({
     <Button
       variant="ghost"
       size="icon-sm"
-      onClick={() => startTransition(() => setDefaultTool(id))}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await setDefaultTool(id);
+          if (result) window.alert(result.error);
+        })
+      }
       disabled={pending}
       aria-label={`Make ${name} the default bit`}
       title="Set as default"
