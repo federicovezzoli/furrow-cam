@@ -51,17 +51,10 @@ Also check dependencies: if the body references other open issues it builds on (
 ## 3. Hand off with context, then implement
 
 Summarize: the issue's goal, the acceptance criteria, the relevant PRD/ADR constraints
-and the files likely involved. Then implement it, respecting the architecture:
-
-- Package boundaries (ADR-0011): `packages/*` must not import React, Next.js or three.js.
-- CAM computation runs client-side in Web Workers (ADR-0004); the server only stores and
-  validates (ADR-0003).
-- Store only the personal data ADR-0013 allows.
-- Schema changes: edit `apps/web/prisma/schema.prisma`, then
-  `pnpm --filter @furrow/web exec prisma migrate dev --name <name>`. Never edit an
-  applied migration; add a new one.
-- If the work changes or contradicts a decision or requirement, update the PRD or write
-  a new ADR (accepted ADRs are not edited; supersede them).
+and the files likely involved. Then implement it following the project rules in
+`AGENTS.md` (layout and dependency rules, architecture rules, database and environment,
+conventions, gotchas). In particular: if the work changes or contradicts a decision or
+requirement, update the PRD or write a new ADR (accepted ADRs are not edited).
 
 Before calling it done, all of these must pass:
 

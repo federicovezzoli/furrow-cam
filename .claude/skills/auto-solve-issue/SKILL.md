@@ -45,8 +45,7 @@ gh issue view <n> --comments
 Same as `solve-issue` steps 2-3: `git status` (stop and ask if the tree isn't clean —
 don't discard someone's in-progress work), `git checkout dev && git pull`, branch as
 `<type>/issue-<n>` (`bug` label → `fix`; spikes/CI/deployment/docs → `chore`; otherwise
-`feat`), then implement following the architecture rules listed there (package
-boundaries, client-side CAM, data minimisation, new migrations only, ADR/PRD updates).
+`feat`), then implement following the project rules in `AGENTS.md`.
 
 Add tests and a changeset. Run before moving on:
 
