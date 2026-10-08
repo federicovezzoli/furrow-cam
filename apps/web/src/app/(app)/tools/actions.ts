@@ -2,20 +2,27 @@
 
 import { Tool } from "@furrow/document";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { listTools as listUserTools } from "@/lib/tools";
+import { getUserId } from "@/lib/session";
 
 /** Field name → message; `form` holds errors that aren't about one field. */
 export type ToolFormErrors = Partial<Record<keyof Tool | "form", string>>;
 
-async function requireUserId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  return session.user.id;
+/** `undefined` on success, or a message to show the user. Unexpected failures still throw. */
+export type ActionResult = { error: string } | undefined;
+
+const SIGNED_OUT = "Your session has expired. Sign in again.";
+const NOT_FOUND = "This bit no longer exists.";
+
+/**
+ * Locks the user's row until the transaction ends, so changes to one library
+ * run one at a time and the one-default-per-user index can't be raced.
+ */
+async function lockLibrary(tx: Prisma.TransactionClient, userId: string): Promise<void> {
+  await tx.$queryRaw`SELECT 1 FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
 }
 
 function numberField(form: FormData, key: string): number | null {
@@ -62,45 +69,70 @@ function parseToolForm(form: FormData) {
   return { errors };
 }
 
-export async function listTools() {
-  return listUserTools(await requireUserId());
-}
-
-/** Creates a tool, or updates it when `id` is given. Redirects to the library on success. */
+/**
+ * Creates a tool, or updates it when `id` is given. A user's first tool
+ * becomes their default. Redirects to the library on success.
+ */
 export async function saveTool(id: string | null, form: FormData): Promise<ToolFormErrors> {
-  const userId = await requireUserId();
+  const userId = await getUserId();
+  if (!userId) return { form: SIGNED_OUT };
   const parsed = parseToolForm(form);
   if (parsed.errors) return parsed.errors;
   const { tool } = parsed;
 
   if (id === null) {
-    await db.tool.create({ data: { ...tool, userId } });
-  } else {
-    const { count } = await db.tool.updateMany({
-      where: { id: z.uuid().parse(id), userId },
-      data: tool,
+    await db.$transaction(async (tx) => {
+      await lockLibrary(tx, userId);
+      const hasDefault = await tx.tool.count({ where: { userId, isDefault: true } });
+      await tx.tool.create({ data: { ...tool, userId, isDefault: hasDefault === 0 } });
     });
-    if (count === 0) return { form: "This bit no longer exists." };
+  } else {
+    const toolId = z.uuid().safeParse(id);
+    if (!toolId.success) return { form: NOT_FOUND };
+    const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
+    if (count === 0) return { form: NOT_FOUND };
   }
   revalidatePath("/tools");
   redirect("/tools");
 }
 
-export async function deleteTool(id: string): Promise<void> {
-  const userId = await requireUserId();
-  await db.tool.deleteMany({ where: { id: z.uuid().parse(id), userId } });
+/** Deletes a tool. Deleting the default makes the first remaining tool, by name, the default. */
+export async function deleteTool(id: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const toolId = z.uuid().safeParse(id);
+  if (!toolId.success) return { error: NOT_FOUND };
+
+  const result = await db.$transaction(async (tx) => {
+    await lockLibrary(tx, userId);
+    const tool = await tx.tool.findFirst({ where: { id: toolId.data, userId } });
+    if (!tool) return { error: NOT_FOUND };
+    await tx.tool.delete({ where: { id: tool.id } });
+    if (tool.isDefault) {
+      const next = await tx.tool.findFirst({ where: { userId }, orderBy: { name: "asc" } });
+      if (next) await tx.tool.update({ where: { id: next.id }, data: { isDefault: true } });
+    }
+  });
   revalidatePath("/tools");
+  return result;
 }
 
 /** Makes `id` the tool preselected for new operations, replacing the previous default. */
-export async function setDefaultTool(id: string): Promise<void> {
-  const userId = await requireUserId();
-  const toolId = z.uuid().parse(id);
-  await db.$transaction(async (tx) => {
-    if (!(await tx.tool.findFirst({ where: { id: toolId, userId } }))) return;
+export async function setDefaultTool(id: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const toolId = z.uuid().safeParse(id);
+  if (!toolId.success) return { error: NOT_FOUND };
+
+  const result = await db.$transaction(async (tx) => {
+    await lockLibrary(tx, userId);
+    if (!(await tx.tool.findFirst({ where: { id: toolId.data, userId } }))) {
+      return { error: NOT_FOUND };
+    }
     // Clear first: the database allows at most one default per user.
     await tx.tool.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
-    await tx.tool.update({ where: { id: toolId }, data: { isDefault: true } });
+    await tx.tool.update({ where: { id: toolId.data }, data: { isDefault: true } });
   });
   revalidatePath("/tools");
+  return result;
 }
