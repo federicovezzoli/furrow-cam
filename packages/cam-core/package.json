@@ -1,6 +1,6 @@
 {
   "name": "@furrow/cam-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Framework-agnostic geometry and toolpath generation",
   "type": "module",
