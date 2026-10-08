@@ -6,6 +6,7 @@ import { requireUserId } from "@/lib/session";
 import { listTools } from "@/lib/tools";
 import { DeleteToolButton } from "./delete-tool-button";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
+import { SetDefaultButton } from "./set-default-button";
 
 export default function ToolsPage() {
   return (
@@ -38,13 +39,26 @@ async function ToolList() {
       {tools.map((tool) => (
         <li key={tool.id} className="flex items-center justify-between gap-4 p-4">
           <div className="grid gap-1">
-            <Link href={`/tools/${tool.id}`} className="font-medium hover:underline">
-              {tool.name}
-            </Link>
+            <div className="flex items-center gap-2">
+              <span
+                className="size-3 shrink-0 rounded-full border"
+                style={{ backgroundColor: tool.color }}
+                aria-hidden="true"
+              />
+              <Link href={`/tools/${tool.id}`} className="font-medium hover:underline">
+                {tool.name}
+              </Link>
+              {tool.isDefault && (
+                <span className="rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground">
+                  Default
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">{describeGeometry(tool)}</p>
             <p className="text-sm text-muted-foreground">{describeCuttingData(tool)}</p>
           </div>
           <div className="flex gap-2">
+            {!tool.isDefault && <SetDefaultButton id={tool.id} />}
             <Button asChild variant="outline" size="sm">
               <Link href={`/tools/${tool.id}`}>Edit</Link>
             </Button>

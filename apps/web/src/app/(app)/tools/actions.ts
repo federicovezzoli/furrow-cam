@@ -48,6 +48,7 @@ function parseToolForm(form: FormData) {
     stepDown: numberField(form, "stepDown"),
     stepOver: numberField(form, "stepOver"),
     notes: notes === "" ? null : notes,
+    color: String(form.get("color") ?? "").toLowerCase(),
   };
   const result = Tool.safeParse(input);
   if (result.success) return { tool: result.data };
@@ -88,5 +89,18 @@ export async function saveTool(id: string | null, form: FormData): Promise<ToolF
 export async function deleteTool(id: string): Promise<void> {
   const userId = await requireUserId();
   await db.tool.deleteMany({ where: { id: z.uuid().parse(id), userId } });
+  revalidatePath("/tools");
+}
+
+/** Makes `id` the tool preselected for new operations, replacing the previous default. */
+export async function setDefaultTool(id: string): Promise<void> {
+  const userId = await requireUserId();
+  const toolId = z.uuid().parse(id);
+  await db.$transaction(async (tx) => {
+    if (!(await tx.tool.findFirst({ where: { id: toolId, userId } }))) return;
+    // Clear first: the database allows at most one default per user.
+    await tx.tool.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });
+    await tx.tool.update({ where: { id: toolId }, data: { isDefault: true } });
+  });
   revalidatePath("/tools");
 }
