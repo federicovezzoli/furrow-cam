@@ -11,7 +11,10 @@ export function DeleteToolButton({ id, name }: { id: string; name: string }) {
   function onClick() {
     // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
     if (!window.confirm(`Delete "${name}"? Existing projects keep their copy of this bit.`)) return;
-    startTransition(() => deleteTool(id));
+    startTransition(async () => {
+      const result = await deleteTool(id);
+      if (result) window.alert(result.error);
+    });
   }
 
   return (

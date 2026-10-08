@@ -38,8 +38,16 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => ({ data: { ...user, name: user.email, image: null } }),
-        // Every account starts with one bit in its tool library (#10).
-        after: async (user) => createDefaultTool(user.id),
+        // Every account starts with one bit in its tool library (#10). Runs after the user
+        // row is committed, so a failure here must not fail the sign-up: the account just
+        // starts with an empty library.
+        after: async (user) => {
+          try {
+            await createDefaultTool(user.id);
+          } catch (error) {
+            console.error(`Failed to seed the default bit for user ${user.id}`, error);
+          }
+        },
       },
       update: {
         before: async ({ name: _name, image: _image, ...user }) => ({
