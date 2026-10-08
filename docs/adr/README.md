@@ -25,3 +25,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0008](0008-rendering-threejs-r3f.md) | Rendering with three.js via React Three Fiber | Accepted |
 | [0009](0009-ui-shadcn-tailwind.md) | UI components with shadcn/ui and Tailwind CSS | Accepted |
 | [0010](0010-state-management-zustand.md) | Client state management with Zustand and Immer | Accepted |
+| [0011](0011-monorepo-structure-and-tooling.md) | Monorepo structure and tooling | Accepted |
+| [0012](0012-ci-and-releases.md) | CI with GitHub Actions and releases with Changesets | Accepted |
