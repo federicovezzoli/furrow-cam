@@ -21,6 +21,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  tools         Tool[]
 
   @@unique([email])
   @@map("user")
@@ -72,4 +73,46 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// Mirrors the `Tool` schema in @furrow/document (#10): rows are validated with it
+// on write and snapshotted into operations with `Tool.parse(row)` (ADR-0003).
+// Lengths in mm, feeds in mm/min.
+
+enum ToolType {
+  flat_end_mill
+  ball_end_mill
+  v_bit
+  drill
+}
+
+enum CutDirection {
+  upcut
+  downcut
+  compression
+}
+
+model Tool {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  type         ToolType
+  diameter     Float
+  fluteCount   Int
+  fluteLength  Float
+  cutDirection CutDirection?
+  vAngle       Float?
+  tipDiameter  Float?
+  spindleRpm   Int
+  feedRate     Float
+  plungeRate   Float
+  stepDown     Float
+  stepOver     Float
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@map("tool")
 }
