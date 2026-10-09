@@ -10,5 +10,5 @@ allowBuilds:
 
 catalog:
   typescript: ^5
-  vitest: ^4
+  vitest: ^5
   zod: ^4.6.5
