@@ -55,6 +55,33 @@
                   "react": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "react-dom": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
+                  "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015)."
+                },
+                "patterns": [
+                  {
+                    "group": ["react/*", "react-dom/*", "next/*", "three/*", "@react-three/*"],
+                    "message": "Packages must be framework- and renderer-agnostic (ADR-0011)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/cam-core/src/geometry.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "react-dom": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011)."
                 },
                 "patterns": [
