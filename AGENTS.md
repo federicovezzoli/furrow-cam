@@ -58,6 +58,7 @@ packages/post/       post-processors, toolpaths → G-code
 ## Gotchas
 
 - **Prisma is pinned to 7.x**: Better Auth does not support Prisma 8 yet, and npm's `latest` tag may point at a Prisma 8 release candidate.
+- **three.js is pinned to 0.182** (with `@types/three`): React Three Fiber 9 creates a `THREE.Clock`, which r183 deprecated, so newer releases log a warning on every page load. Lift the pin with R3F 10.
 - **Next.js 16**: `proxy.ts` replaces `middleware.ts`; with `cacheComponents` enabled, request data (`headers()`, `cookies()`, sessions) must be read inside `<Suspense>`. Read `apps/web/node_modules/next/dist/docs/` for current APIs (see `apps/web/AGENTS.md`).
 - **Turborepo strict env mode** hides undeclared environment variables from tasks.
 - `prisma init` and similar CLIs may drop AI-agent skill folders (`.agents/`, `.claude/`, `.windsurf/`) into a package; delete them.

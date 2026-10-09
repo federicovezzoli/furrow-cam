@@ -17,4 +17,11 @@ describe("workspace store", () => {
     store.getState().clearSelection();
     expect(store.getState()).toMatchObject({ selectedShapeIds: [], selectedOperationId: null });
   });
+
+  it("starts in the top view and switches to the orbit view", () => {
+    const store = createWorkspaceStore();
+    expect(store.getState().view).toBe("top");
+    store.getState().setView("orbit");
+    expect(store.getState().view).toBe("orbit");
+  });
 });

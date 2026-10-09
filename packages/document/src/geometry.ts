@@ -103,6 +103,11 @@ export const Path = z
   });
 export type Path = z.infer<typeof Path>;
 
+/**
+ * Imported geometry. Coordinates are in stock coordinates: `(0, 0)` is the
+ * stock's bottom-left corner, whatever the work origin (`stockOffset` in
+ * `@furrow/cam-core`), so moving the origin never moves the design.
+ */
 export const Shape = z.strictObject({
   id: z.uuid(),
   /** May be empty: imported entities often have no name. */
