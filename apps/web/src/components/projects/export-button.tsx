@@ -3,11 +3,22 @@
 import { projectFileName } from "@furrow/document";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
+import { loadProject } from "@/app/(app)/projects/actions";
 import { Button } from "@/components/ui/button";
-import { loadProject } from "./actions";
 
-/** Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version. */
-export function ExportButton({ id, name }: { id: string; name: string }) {
+/**
+ * Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version.
+ * `compact` is the labelled button of the workspace top bar; the default is an icon.
+ */
+export function ExportButton({
+  id,
+  name,
+  size = "icon-sm",
+}: {
+  id: string;
+  name: string;
+  size?: "icon-sm" | "compact";
+}) {
   const [pending, startTransition] = useTransition();
 
   function onClick() {
@@ -43,13 +54,14 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size={size}
       onClick={onClick}
       disabled={pending}
       aria-label={`Export ${name}`}
       title="Export file"
     >
       <DownloadIcon />
+      {size === "compact" && "Export"}
     </Button>
   );
 }
