@@ -5,6 +5,17 @@ export const PostProcessorId = z.enum(["grbl"]);
 export type PostProcessorId = z.infer<typeof PostProcessorId>;
 
 /**
+ * Custom G-code written verbatim at one point of the program, replacing what
+ * the post-processor writes there by default. `null` keeps the default. No
+ * placeholders: the text is copied as is.
+ */
+export const GcodeBlock = z
+  .string()
+  .regex(/\S/, "Must not be blank")
+  .max(10_000, "Must be at most 10,000 characters")
+  .nullable();
+
+/**
  * A machine profile (#11). Used to validate the user's machines and stored as
  * a snapshot in each project (ADR-0003). Unknown keys are stripped, so a
  * database row can be snapshotted with `Machine.parse(row)`.
@@ -23,6 +34,14 @@ export const Machine = z
     /** Default retract height above the stock. */
     safeZ: PositiveLength,
     postProcessor: PostProcessorId,
+    /** Replaces the default preamble (units, absolute mode, feed mode…). */
+    programStart: GcodeBlock,
+    /** Replaces the default ending (spindle off, retract, program end). */
+    programEnd: GcodeBlock,
+    /** Written before each operation, in place of the default comment. */
+    operationStart: GcodeBlock,
+    /** Replaces the default tool change (spindle off and a pause). */
+    toolChange: GcodeBlock,
   })
   .superRefine((machine, ctx) => {
     if (machine.safeZ >= machine.workAreaZ) {
