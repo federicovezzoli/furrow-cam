@@ -12,6 +12,7 @@ import {
 import { listProjects } from "@/lib/projects";
 import { requireUserId } from "@/lib/session";
 import { deleteProject } from "./actions";
+import { LocalDate } from "./local-date";
 import { NewProjectForm } from "./new-project-form";
 import { RenameButton } from "./rename-button";
 
@@ -58,8 +59,12 @@ async function ProjectList() {
                   {project.name}
                 </Link>
               </TableCell>
-              <TableCell>{formatDate(project.updatedAt)}</TableCell>
-              <TableCell>{formatDate(project.createdAt)}</TableCell>
+              <TableCell>
+                <LocalDate date={project.updatedAt} />
+              </TableCell>
+              <TableCell>
+                <LocalDate date={project.createdAt} />
+              </TableCell>
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">
                   <RenameButton id={project.id} name={project.name} />
@@ -76,10 +81,4 @@ async function ProjectList() {
       </Table>
     </div>
   );
-}
-
-const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
-
-function formatDate(date: Date): string {
-  return dateFormat.format(date);
 }

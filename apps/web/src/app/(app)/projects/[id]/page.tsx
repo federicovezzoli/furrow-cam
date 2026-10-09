@@ -1,7 +1,8 @@
+import type { Stock } from "@furrow/document";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { z } from "zod";
+import { FormError } from "@/components/auth/form-error";
 import { getProject } from "@/lib/projects";
 import { requireUserId } from "@/lib/session";
 
@@ -19,19 +20,29 @@ export default function WorkspacePage({ params }: PageProps<"/projects/[id]">) {
 async function Workspace({ params }: Pick<PageProps<"/projects/[id]">, "params">) {
   const { id } = await params;
   const userId = await requireUserId();
-  const project = z.uuid().safeParse(id).success ? await getProject(userId, id) : null;
+  const project = await getProject(userId, id);
   if (!project) notFound();
-  const { stock } = project.document;
 
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
-      <p className="rounded-lg border p-4 text-muted-foreground">
-        Stock {stock.width} × {stock.height} × {stock.thickness} mm. The workspace is coming soon.
-      </p>
+      {project.error === undefined ? (
+        <StockSummary stock={project.document.stock} />
+      ) : (
+        // Retrying can't fix a document this release can't read, so don't fall into error.tsx.
+        <FormError message={project.error} />
+      )}
       <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
         ← All projects
       </Link>
     </>
+  );
+}
+
+function StockSummary({ stock }: { stock: Stock }) {
+  return (
+    <p className="rounded-lg border p-4 text-muted-foreground">
+      Stock {stock.width} × {stock.height} × {stock.thickness} mm. The workspace is coming soon.
+    </p>
   );
 }
