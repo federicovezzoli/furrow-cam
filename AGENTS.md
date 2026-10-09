@@ -12,7 +12,7 @@ pnpm dev                      # http://localhost:3000
 
 pnpm check:fix && pnpm check  # Biome lint + format (no ESLint/Prettier)
 pnpm typecheck
-pnpm test                     # Vitest in packages/*
+pnpm test                     # Vitest in packages/* and apps/web (stores)
 pnpm build
 pnpm changeset                # add a changeset for behaviour changes
 ```
