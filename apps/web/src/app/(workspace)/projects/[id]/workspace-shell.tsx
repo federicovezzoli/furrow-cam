@@ -2,6 +2,7 @@
 
 import type { ProjectDocument } from "@furrow/document";
 import { ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type * as React from "react";
 import { useRef } from "react";
@@ -22,6 +23,16 @@ import {
   WorkspaceStoresProvider,
 } from "@/stores/workspace-stores";
 import { SaveStatus } from "./save-status";
+
+/** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
+const Viewport = dynamic(() => import("@/components/viewport/viewport").then((m) => m.Viewport), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center">
+      <EmptyState>Loading viewport…</EmptyState>
+    </div>
+  ),
+});
 
 type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
@@ -116,11 +127,8 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
-            <section
-              aria-label="Viewport"
-              className="flex h-full items-center justify-center bg-muted/40"
-            >
-              <EmptyState>Viewport</EmptyState>
+            <section aria-label="Viewport" className="h-full bg-muted/40">
+              <Viewport />
             </section>
           </ResizablePanel>
           <ResizableHandle />

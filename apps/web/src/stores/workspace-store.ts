@@ -2,18 +2,24 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 
+/** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
+export type ViewMode = "top" | "orbit";
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
- * Viewport mode and camera join it with the viewport (#16).
+ * The camera pose stays inside the viewport, which its controls change on
+ * every pointer move.
  *
  * Ids may outlive what they point at (an undo can remove a selected shape), so
  * readers skip ids that are no longer in the document.
  */
 export type WorkspaceState = {
+  view: ViewMode;
   selectedShapeIds: string[];
   selectedOperationId: string | null;
   hoveredShapeId: string | null;
 
+  setView: (view: ViewMode) => void;
   /** `replace` selects only `ids`; `toggle` flips each of them (Ctrl/Cmd/Shift+click). */
   selectShapes: (ids: string[], mode?: "replace" | "toggle") => void;
   selectOperation: (id: string | null) => void;
@@ -27,9 +33,20 @@ export function createWorkspaceStore() {
   return createStore<WorkspaceState>()(
     devtools(
       immer((set) => ({
+        view: "top",
         selectedShapeIds: [],
         selectedOperationId: null,
         hoveredShapeId: null,
+
+        setView(view) {
+          set(
+            (state) => {
+              state.view = view;
+            },
+            false,
+            "setView",
+          );
+        },
 
         selectShapes(ids, mode = "replace") {
           set(
