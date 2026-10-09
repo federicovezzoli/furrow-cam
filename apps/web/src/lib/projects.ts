@@ -1,4 +1,5 @@
 import {
+  CURRENT_SCHEMA_VERSION,
   type ProjectDocument,
   ProjectDocumentVersionError,
   parseProjectDocument,
@@ -66,4 +67,36 @@ export function documentColumns(document: ProjectDocument) {
     schemaVersion: document.schemaVersion,
     document: document as Prisma.InputJsonObject,
   };
+}
+
+/**
+ * Reads an exported project file (ADR-0003): upgrades it to the current
+ * schema version and validates it, or explains why it can't be imported.
+ */
+export function parseProjectFile(
+  contents: string,
+): { document: ProjectDocument; error?: never } | { error: string } {
+  let json: unknown;
+  try {
+    json = JSON.parse(contents);
+  } catch {
+    return { error: "This file isn't a Furrow CAM project: it isn't valid JSON." };
+  }
+  const version = (json as { schemaVersion?: unknown } | null)?.schemaVersion;
+  if (typeof version === "number" && version > CURRENT_SCHEMA_VERSION) {
+    return {
+      error: `This file was saved by a newer version of Furrow CAM (document version ${version}; this version reads up to ${CURRENT_SCHEMA_VERSION}). Reload the page to get the latest version, then try again.`,
+    };
+  }
+  try {
+    return { document: parseProjectDocument(json) };
+  } catch (error) {
+    if (error instanceof ProjectDocumentVersionError) {
+      return { error: `This file can't be imported: ${error.message}.` };
+    }
+    if (error instanceof z.ZodError) {
+      return { error: `This file isn't a valid Furrow CAM project: ${z.prettifyError(error)}` };
+    }
+    throw error;
+  }
 }

@@ -1,13 +1,18 @@
 "use server";
 
-import { createProjectDocument, Name, ProjectDocument } from "@furrow/document";
+import {
+  createProjectDocument,
+  Name,
+  ProjectDocument,
+  projectNameFromFileName,
+} from "@furrow/document";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
-import { documentColumns, getProject, parseProjectId } from "@/lib/projects";
+import { documentColumns, getProject, parseProjectFile, parseProjectId } from "@/lib/projects";
 import { getUserId } from "@/lib/session";
 
 export type ProjectFormErrors = FormErrors<"name">;
@@ -16,7 +21,8 @@ const NOT_FOUND = "This project no longer exists.";
 const CONFLICT =
   "This project was changed somewhere else since you opened it. Reload it to see the latest version.";
 
-const ProjectName = Name.max(100, "Must be at most 100 characters");
+const PROJECT_NAME_MAX = 100;
+const ProjectName = Name.max(PROJECT_NAME_MAX, `Must be at most ${PROJECT_NAME_MAX} characters`);
 
 /** Reads a name typed by the user; surrounding spaces are dropped. */
 function parseName(value: unknown) {
@@ -32,6 +38,33 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
 
   const { id } = await db.project.create({
     data: { userId, name: name.data, ...documentColumns(createProjectDocument()) },
+    select: { id: true },
+  });
+  revalidatePath("/projects");
+  redirect(`/projects/${id}`);
+}
+
+/**
+ * Creates a project from an exported file and opens it. The file is upgraded
+ * to the current schema version and validated; the name comes from the file
+ * name. Only errors come back.
+ */
+export async function importProject(fileName: string, contents: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const parsed = parseProjectFile(contents);
+  if (parsed.error !== undefined) return { error: parsed.error };
+  let fileBaseName = (projectNameFromFileName(fileName) ?? "").slice(0, PROJECT_NAME_MAX);
+  // Don't leave half an emoji at the cut.
+  if (/[\uD800-\uDBFF]$/.test(fileBaseName)) fileBaseName = fileBaseName.slice(0, -1);
+  const name = parseName(fileBaseName);
+
+  const { id } = await db.project.create({
+    data: {
+      userId,
+      name: name.success ? name.data : "Imported project",
+      ...documentColumns(parsed.document),
+    },
     select: { id: true },
   });
   revalidatePath("/projects");

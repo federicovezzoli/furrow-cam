@@ -1,0 +1,6 @@
+---
+"@furrow/document": minor
+"@furrow/web": minor
+---
+
+Export and import projects as files. Each row on `/projects` has an export button that downloads the project document, upgraded to the current schema version, as `<name>.furrow.json`; "Import file…" creates a new project from such a file, named after it. Imported files are upgraded and validated with `parseProjectDocument`, with clear errors for files that aren't JSON, aren't valid projects or were saved by a newer version. `@furrow/document` adds `PROJECT_FILE_EXTENSION`, `projectFileName` and `projectNameFromFileName`.
