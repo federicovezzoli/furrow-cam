@@ -5,6 +5,7 @@ import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
+import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +48,7 @@ export function MachineForm({
   }
 
   const field = fieldProps(machine, errors);
+  const number = fieldProps(machine, errors, null);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -63,34 +65,16 @@ export function MachineForm({
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Work area</legend>
-        <Field label="X travel (mm)" {...field("workAreaX")} type="number" step="any" min={0} />
-        <Field label="Y travel (mm)" {...field("workAreaY")} type="number" step="any" min={0} />
-        <Field label="Z travel (mm)" {...field("workAreaZ")} type="number" step="any" min={0} />
-        <Field
-          label="Safe Z (mm above stock)"
-          {...field("safeZ")}
-          type="number"
-          step="any"
-          min={0}
-        />
+        <NumberField label="X travel" {...number("workAreaX")} quantity="length" min={0} />
+        <NumberField label="Y travel" {...number("workAreaY")} quantity="length" min={0} />
+        <NumberField label="Z travel" {...number("workAreaZ")} quantity="length" min={0} />
+        <NumberField label="Safe Z (above stock)" {...number("safeZ")} quantity="length" min={0} />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Limits</legend>
-        <Field
-          label="Max feed X/Y (mm/min)"
-          {...field("maxFeedXY")}
-          type="number"
-          step="any"
-          min={0}
-        />
-        <Field
-          label="Max feed Z (mm/min)"
-          {...field("maxFeedZ")}
-          type="number"
-          step="any"
-          min={0}
-        />
+        <NumberField label="Max feed X/Y" {...number("maxFeedXY")} quantity="feed" min={0} />
+        <NumberField label="Max feed Z" {...number("maxFeedZ")} quantity="feed" min={0} />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,17 +97,19 @@ export function MachineForm({
         {/* Hidden rather than unmounted, so unticking brings back the speeds typed earlier.
             The server ignores them while the spindle is manual. */}
         <div className="contents" hidden={manualSpindle}>
-          <Field
-            label="Min speed (RPM)"
-            {...field("spindleRpmMin")}
-            type="number"
+          <NumberField
+            label="Min speed"
+            {...number("spindleRpmMin")}
+            suffix="RPM"
+            integer
             step={1000}
             min={0}
           />
-          <Field
-            label="Max speed (RPM)"
-            {...field("spindleRpmMax")}
-            type="number"
+          <NumberField
+            label="Max speed"
+            {...number("spindleRpmMax")}
+            suffix="RPM"
+            integer
             step={1000}
             min={0}
           />
