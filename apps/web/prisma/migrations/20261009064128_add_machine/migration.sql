@@ -15,6 +15,10 @@ CREATE TABLE "machine" (
     "spindleRpmMax" INTEGER,
     "safeZ" DOUBLE PRECISION NOT NULL,
     "postProcessor" "PostProcessor" NOT NULL,
+    "programStart" TEXT,
+    "programEnd" TEXT,
+    "operationStart" TEXT,
+    "toolChange" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

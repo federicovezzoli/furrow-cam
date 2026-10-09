@@ -1,7 +1,8 @@
+import { machineFields } from "@furrow/document";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
-import { getMachine, snapshotMachine } from "@/lib/machines";
+import { getMachine } from "@/lib/machines";
 import { requireUserId } from "@/lib/session";
 import { MachineForm } from "../machine-form";
 
@@ -22,5 +23,8 @@ async function EditMachine({ params }: Pick<PageProps<"/machines/[id]">, "params
   const machine = z.uuid().safeParse(id).success ? await getMachine(userId, id) : null;
   if (!machine) notFound();
 
-  return <MachineForm id={machine.id} values={snapshotMachine(machine)} />;
+  // Copies the values without validating them. If a rule got stricter after this machine was
+  // saved (e.g. a new RPM cap), validating here would crash the page and the user couldn't fix
+  // the value. Instead the form shows it, and saving reports the error on the field.
+  return <MachineForm id={machine.id} values={machineFields(machine)} />;
 }

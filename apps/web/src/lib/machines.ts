@@ -1,4 +1,4 @@
-import { Machine } from "@furrow/document";
+import { Machine, machineFields } from "@furrow/document";
 import { db } from "@/lib/db";
 
 /** The signed-in user's machine profiles, by name. */
@@ -17,5 +17,5 @@ export function getMachine(userId: string, id: string) {
  * the machine later never changes existing projects.
  */
 export function snapshotMachine(row: Machine): Machine {
-  return Machine.parse(row);
+  return Machine.parse(machineFields(row));
 }

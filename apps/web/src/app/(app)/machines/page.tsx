@@ -1,6 +1,7 @@
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { DeleteButton } from "@/components/delete-button";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { listMachines } from "@/lib/machines";
 import { requireUserId } from "@/lib/session";
-import { DeleteMachineButton } from "./delete-machine-button";
+import { deleteMachine } from "./actions";
 import { POST_PROCESSOR_LABELS } from "./labels";
 
 export default function MachinesPage() {
@@ -97,7 +98,12 @@ async function MachineList() {
                       <PencilIcon />
                     </Link>
                   </Button>
-                  <DeleteMachineButton id={machine.id} name={machine.name} />
+                  <DeleteButton
+                    name={machine.name}
+                    // Projects keep their own snapshot of the machine, so deleting it is safe (ADR-0003).
+                    confirmText={`Delete "${machine.name}"? Existing projects keep their copy of this machine.`}
+                    action={deleteMachine.bind(null, machine.id)}
+                  />
                 </div>
               </TableCell>
             </TableRow>

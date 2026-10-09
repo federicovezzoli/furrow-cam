@@ -17,11 +17,11 @@ export const GcodeBlock = z
 
 /**
  * A machine profile (#11). Used to validate the user's machines and stored as
- * a snapshot in each project (ADR-0003). Unknown keys are stripped, so a
- * database row can be snapshotted with `Machine.parse(row)`.
+ * a snapshot in each project (ADR-0003). Strict like the rest of the document:
+ * read a database row with `machineFields` first.
  */
 export const Machine = z
-  .object({
+  .strictObject({
     name: Name,
     workAreaX: PositiveLength,
     workAreaY: PositiveLength,
@@ -67,3 +67,14 @@ export const Machine = z
     }
   });
 export type Machine = z.infer<typeof Machine>;
+
+const MACHINE_FIELDS = Object.keys(Machine.shape) as (keyof Machine)[];
+
+/**
+ * Copies the profile fields out of a database row, dropping columns such as
+ * `id` and `userId`. Doesn't validate, so a row that fails rules added since
+ * it was saved can still be shown in the form and fixed.
+ */
+export function machineFields(row: Machine): Machine {
+  return Object.fromEntries(MACHINE_FIELDS.map((key) => [key, row[key]])) as Machine;
+}

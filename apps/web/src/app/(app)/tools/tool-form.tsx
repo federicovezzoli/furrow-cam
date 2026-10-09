@@ -4,7 +4,7 @@ import { type Tool, ToolType } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
-import { Field, FieldError, SelectField } from "@/components/form-fields";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,12 +41,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
     });
   }
 
-  const field = (name: keyof Tool) => ({
-    id: name,
-    name,
-    defaultValue: tool[name] ?? "",
-    error: errors[name],
-  });
+  const field = fieldProps(tool, errors);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>

@@ -5,15 +5,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import {
+  type ActionResult,
+  type FormErrors,
+  issuesToFormErrors,
+  numberField,
+  SIGNED_OUT,
+} from "@/lib/form-data";
 import { getUserId } from "@/lib/session";
 
-/** Field name → message; `form` holds errors that aren't about one field. */
-export type MachineFormErrors = Partial<Record<keyof Machine | "form", string>>;
+export type MachineFormErrors = FormErrors<keyof Machine>;
 
-/** `undefined` on success, or a message to show the user. Unexpected failures still throw. */
-export type ActionResult = { error: string } | undefined;
-
-const SIGNED_OUT = "Your session has expired. Sign in again.";
 const NOT_FOUND = "This machine no longer exists.";
 
 /** Blank text keeps the post-processor's default. */
@@ -22,12 +24,6 @@ function gcodeField(form: FormData, key: string): string | null {
   // Browsers submit textarea line breaks as CRLF; G-code files use LF.
   const text = typeof value === "string" ? value.replace(/\r\n?/g, "\n").trimEnd() : "";
   return text.trim() === "" ? null : text;
-}
-
-function numberField(form: FormData, key: string): number | null {
-  const value = form.get(key);
-  if (typeof value !== "string" || value.trim() === "") return null;
-  return Number(value);
 }
 
 /**
@@ -55,14 +51,8 @@ function parseMachineForm(form: FormData) {
   const result = Machine.safeParse(input);
   if (result.success) return { machine: result.data };
 
-  const errors: MachineFormErrors = {};
-  for (const issue of result.error.issues) {
-    const key = (issue.path[0] ?? "form") as keyof MachineFormErrors;
-    // Includes a blank spindle speed when the spindle isn't manual.
-    const missing = input[key as keyof typeof input] == null;
-    errors[key] ??= missing ? "Required" : issue.message;
-  }
-  return { errors };
+  // A blank spindle speed reads "Required" unless the spindle is manual.
+  return { errors: issuesToFormErrors<keyof Machine>(result.error.issues, input) };
 }
 
 /** Creates a machine, or updates it when `id` is given. Redirects to the list on success. */

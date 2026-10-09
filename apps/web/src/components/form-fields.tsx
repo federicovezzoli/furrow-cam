@@ -3,6 +3,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
+/**
+ * Props for a `Field` named after one of the form's values, e.g.
+ * `const field = fieldProps(tool, errors)` then `<Field {...field("diameter")} />`.
+ */
+export function fieldProps<T extends object>(
+  values: Partial<T>,
+  errors: Partial<Record<keyof T | "form", string>>,
+) {
+  return <K extends keyof T & string>(name: K) => ({
+    id: name,
+    name,
+    defaultValue: (values[name] ?? "") as string | number,
+    error: errors[name],
+  });
+}
+
 /** A labelled input whose error is announced via `aria-describedby`. */
 export function Field({
   label,

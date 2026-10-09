@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { lowRider, machine } from "./fixtures";
-import { Machine } from "./machine";
+import { Machine, machineFields } from "./machine";
 
 describe("Machine", () => {
   it("accepts a machine with a controlled spindle", () => {
     expect(Machine.parse(machine)).toEqual(machine);
   });
 
-  it("strips extra keys, so a database row can be snapshotted", () => {
+  it("rejects unknown keys, so a misspelt or newer field fails loudly", () => {
+    expect(Machine.safeParse({ ...machine, programstart: "G21" }).success).toBe(false);
+  });
+
+  it("reads the profile fields out of a database row without validating them", () => {
     const row = { ...machine, id: "m1", userId: "u1", createdAt: new Date() };
-    expect(Machine.parse(row)).toEqual(machine);
+    expect(machineFields(row)).toEqual(machine);
+    // Fails today's rules, but must still reach the form so it can be fixed.
+    const stale = { ...row, safeZ: row.workAreaZ };
+    expect(machineFields(stale)).toEqual({ ...machine, safeZ: machine.workAreaZ });
   });
 
   it("accepts a manual spindle with no speed range", () => {
@@ -26,13 +33,7 @@ describe("Machine", () => {
     const fractional = { ...machine, workAreaZ: 95.5, safeZ: 2.5, maxFeedZ: 1250.5 };
     expect(Machine.parse(fractional)).toEqual(fractional);
     expect(Machine.safeParse({ ...machine, spindleRpmMax: 30000.5 }).success).toBe(false);
-  });
-
-  it("snapshots a copy, so later changes to the row don't reach the project", () => {
-    const row = { ...machine, id: "m1" };
-    const snapshot = Machine.parse(row);
-    row.safeZ = 10;
-    expect(snapshot.safeZ).toBe(machine.safeZ);
+    expect(Machine.safeParse({ ...machine, spindleRpmMax: 3_000_000_000 }).success).toBe(false);
   });
 
   it("keeps custom G-code blocks verbatim and rejects blank or oversized ones", () => {

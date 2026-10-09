@@ -4,7 +4,7 @@ import type { Machine } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
-import { Field, FieldError, SelectField } from "@/components/form-fields";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,12 +46,7 @@ export function MachineForm({
     });
   }
 
-  const field = (name: keyof Machine) => ({
-    id: name,
-    name,
-    defaultValue: machine[name] ?? "",
-    error: errors[name],
-  });
+  const field = fieldProps(machine, errors);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -115,24 +110,24 @@ export function MachineForm({
             Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.
           </span>
         </div>
-        {!manualSpindle && (
-          <>
-            <Field
-              label="Min speed (RPM)"
-              {...field("spindleRpmMin")}
-              type="number"
-              step={1000}
-              min={0}
-            />
-            <Field
-              label="Max speed (RPM)"
-              {...field("spindleRpmMax")}
-              type="number"
-              step={1000}
-              min={0}
-            />
-          </>
-        )}
+        {/* Hidden rather than unmounted, so unticking brings back the speeds typed earlier.
+            The server ignores them while the spindle is manual. */}
+        <div className="contents" hidden={manualSpindle}>
+          <Field
+            label="Min speed (RPM)"
+            {...field("spindleRpmMin")}
+            type="number"
+            step={1000}
+            min={0}
+          />
+          <Field
+            label="Max speed (RPM)"
+            {...field("spindleRpmMax")}
+            type="number"
+            step={1000}
+            min={0}
+          />
+        </div>
       </fieldset>
 
       <fieldset className="grid gap-4 lg:grid-cols-2">
