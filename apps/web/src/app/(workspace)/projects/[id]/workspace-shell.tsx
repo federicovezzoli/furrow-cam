@@ -1,7 +1,7 @@
 "use client";
 
-import type { ProjectDocument, Stock } from "@furrow/document";
-import { ChevronLeftIcon } from "lucide-react";
+import type { ProjectDocument } from "@furrow/document";
+import { ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 import { useRef } from "react";
@@ -11,13 +11,19 @@ import { ExportButton } from "@/components/projects/export-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useAutosave } from "@/hooks/use-autosave";
+import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
+import type { getProject, ProjectRow } from "@/lib/projects";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
+import type { AutosaveStatus } from "@/stores/autosave";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  WorkspaceStoresProvider,
+} from "@/stores/workspace-stores";
 import { SaveStatus } from "./save-status";
 
-type WorkspaceProject = { id: string; name: string; updatedAt: Date } & (
-  | { document: ProjectDocument; error?: never }
-  | { document?: never; error: string }
-);
+type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 /**
  * The CAM workspace (ADR-0009): a top bar over three resizable columns,
@@ -32,6 +38,29 @@ export function WorkspaceShell({
   project: WorkspaceProject;
   layout: WorkspaceLayout;
 }) {
+  if (project.error !== undefined) {
+    return (
+      <>
+        <TopBar project={project} />
+        {/* Retrying can't fix a document this release can't read, so don't fall into error.tsx. */}
+        <main className="mx-auto w-full max-w-2xl p-8">
+          <FormError message={project.error} />
+        </main>
+      </>
+    );
+  }
+  return (
+    <WorkspaceStoresProvider key={project.id} project={project}>
+      <Workspace project={project} layout={layout} />
+    </WorkspaceStoresProvider>
+  );
+}
+
+/** The workspace of a project that opened; its document lives in the stores (ADR-0010). */
+function Workspace({ project, layout }: { project: ProjectRow; layout: WorkspaceLayout }) {
+  const saveStatus = useAutosave();
+  useUndoShortcuts();
+  const documentStore = useDocumentStoreApi();
   const saved = useRef(layout);
 
   function remember(group: keyof WorkspaceLayout) {
@@ -45,77 +74,84 @@ export function WorkspaceShell({
 
   return (
     <>
-      <TopBar project={project} />
-      {project.error === undefined ? (
-        // Below the panels' minimum widths (180 + 200 + 200px), scroll sideways instead of clipping them.
-        <div className="min-h-0 flex-1 overflow-x-auto">
-          <ResizablePanelGroup
-            orientation="horizontal"
-            className="min-w-148"
-            defaultLayout={layout.columns}
-            onLayoutChanged={remember("columns")}
+      <TopBar
+        project={project}
+        saveStatus={saveStatus}
+        getDocument={() => documentStore.getState().document}
+      />
+      {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
+      {/* Below the panels' minimum widths (180 + 200 + 200px), scroll sideways instead of clipping them. */}
+      <div className="min-h-0 flex-1 overflow-x-auto">
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="min-w-148"
+          defaultLayout={layout.columns}
+          onLayoutChanged={remember("columns")}
+        >
+          <ResizablePanel
+            id="sidebar"
+            defaultSize={260}
+            minSize={180}
+            maxSize="40%"
+            collapsible
+            groupResizeBehavior="preserve-pixel-size"
           >
-            <ResizablePanel
-              id="sidebar"
-              defaultSize={260}
-              minSize={180}
-              maxSize="40%"
-              collapsible
-              groupResizeBehavior="preserve-pixel-size"
+            <ResizablePanelGroup
+              orientation="vertical"
+              defaultLayout={layout.sidebar}
+              onLayoutChanged={remember("sidebar")}
             >
-              <ResizablePanelGroup
-                orientation="vertical"
-                defaultLayout={layout.sidebar}
-                onLayoutChanged={remember("sidebar")}
-              >
-                <ResizablePanel id="geometry" minSize={80}>
-                  <Pane title="Geometry">
-                    <EmptyState>Import an SVG or DXF file to add geometry.</EmptyState>
-                  </Pane>
-                </ResizablePanel>
-                <ResizableHandle />
-                <ResizablePanel id="operations" minSize={80}>
-                  <Pane title="Operations">
-                    <EmptyState>No operations yet.</EmptyState>
-                  </Pane>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel id="viewport" minSize={200}>
-              <section
-                aria-label="Viewport"
-                className="flex h-full items-center justify-center bg-muted/40"
-              >
-                <EmptyState>Viewport</EmptyState>
-              </section>
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel
-              id="properties"
-              defaultSize={280}
-              minSize={200}
-              maxSize="40%"
-              collapsible
-              groupResizeBehavior="preserve-pixel-size"
+              <ResizablePanel id="geometry" minSize={80}>
+                <Pane title="Geometry">
+                  <EmptyState>Import an SVG or DXF file to add geometry.</EmptyState>
+                </Pane>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel id="operations" minSize={80}>
+                <Pane title="Operations">
+                  <EmptyState>No operations yet.</EmptyState>
+                </Pane>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel id="viewport" minSize={200}>
+            <section
+              aria-label="Viewport"
+              className="flex h-full items-center justify-center bg-muted/40"
             >
-              <Pane title="Properties">
-                <StockProperties stock={project.document.stock} />
-              </Pane>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-      ) : (
-        // Retrying can't fix a document this release can't read, so don't fall into error.tsx.
-        <main className="mx-auto w-full max-w-2xl p-8">
-          <FormError message={project.error} />
-        </main>
-      )}
+              <EmptyState>Viewport</EmptyState>
+            </section>
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel
+            id="properties"
+            defaultSize={280}
+            minSize={200}
+            maxSize="40%"
+            collapsible
+            groupResizeBehavior="preserve-pixel-size"
+          >
+            <Pane title="Properties">
+              <StockProperties />
+            </Pane>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
     </>
   );
 }
 
-function TopBar({ project }: { project: WorkspaceProject }) {
+/** `saveStatus` and `getDocument` are left out when the project couldn't be opened. */
+function TopBar({
+  project,
+  saveStatus,
+  getDocument,
+}: {
+  project: ProjectRow;
+  saveStatus?: AutosaveStatus;
+  getDocument?: () => ProjectDocument;
+}) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
@@ -126,14 +162,37 @@ function TopBar({ project }: { project: WorkspaceProject }) {
       <h1 className="min-w-0 truncate text-sm font-semibold" title={project.name}>
         {project.name}
       </h1>
-      {project.error === undefined && <SaveStatus state="saved" savedAt={project.updatedAt} />}
+      {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
-        {project.error === undefined && (
-          <ExportButton id={project.id} name={project.name} size="compact" />
+        {getDocument && (
+          <ExportButton
+            id={project.id}
+            name={project.name}
+            getDocument={getDocument}
+            size="compact"
+          />
         )}
         <ThemeToggle size="icon-compact" />
       </div>
     </header>
+  );
+}
+
+/** Autosave stopped for good (e.g. a conflict): say so where it can't be missed. */
+function SaveFailed({ message }: { message: string | undefined }) {
+  return (
+    <div
+      role="alert"
+      className="flex shrink-0 items-center gap-2 border-b bg-destructive/10 px-3 py-1.5 text-ui text-destructive"
+    >
+      <CircleAlertIcon className="size-3.5 shrink-0" aria-hidden />
+      <p className="min-w-0 flex-1">
+        {message} Changes are no longer saved; export the project to keep them.
+      </p>
+      <Button variant="outline" size="compact" onClick={() => window.location.reload()}>
+        Reload
+      </Button>
+    </div>
   );
 }
 
@@ -155,7 +214,8 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 const mmFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 3 });
 
 /** Read-only stock summary shown while nothing is selected; editing comes with #17. */
-function StockProperties({ stock }: { stock: Stock }) {
+function StockProperties() {
+  const stock = useDocumentStore((s) => s.document.stock);
   const rows = [
     ["Width", stock.width],
     ["Height", stock.height],
