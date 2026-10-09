@@ -39,6 +39,10 @@ export const machine: Machine = {
   spindleRpmMax: 30000,
   safeZ: 5,
   postProcessor: "grbl",
+  programStart: null,
+  programEnd: null,
+  operationStart: null,
+  toolChange: null,
 };
 
 /** V1 Engineering LowRider v4, full-sheet build, Makita RT0701C with a speed dial. */
@@ -53,6 +57,11 @@ export const lowRider: Machine = {
   spindleRpmMax: null,
   safeZ: 5,
   postProcessor: "grbl",
+  programStart: null,
+  programEnd: null,
+  operationStart: null,
+  /** Manual spindle: stop and wait while the router is switched off and the bit changed. */
+  toolChange: "G0 Z20\nM0 (Switch off the router and change the bit)",
 };
 
 export const SQUARE_ID = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";

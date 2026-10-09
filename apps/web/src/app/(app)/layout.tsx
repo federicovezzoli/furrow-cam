@@ -14,6 +14,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/tools" className="text-muted-foreground hover:text-foreground">
             Bits
           </Link>
+          <Link href="/machines" className="text-muted-foreground hover:text-foreground">
+            Machines
+          </Link>
         </nav>
       </header>
       {children}

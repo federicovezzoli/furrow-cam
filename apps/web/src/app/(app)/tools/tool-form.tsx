@@ -2,12 +2,11 @@
 
 import { type Tool, ToolType } from "@furrow/document";
 import Link from "next/link";
-import { type ComponentProps, type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { saveTool, type ToolFormErrors } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
@@ -42,12 +41,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
     });
   }
 
-  const field = (name: keyof Tool) => ({
-    id: name,
-    name,
-    defaultValue: tool[name] ?? "",
-    error: errors[name],
-  });
+  const field = fieldProps(tool, errors);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -144,60 +138,6 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
   );
 }
 
-function Field({
-  label,
-  id,
-  error,
-  ...props
-}: ComponentProps<typeof Input> & { label: string; id: string; error?: string }) {
-  return (
-    <div className="grid content-start gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        {...props}
-      />
-      <FieldError id={id} error={error} />
-    </div>
-  );
-}
-
-function SelectField<T extends string>({
-  label,
-  id,
-  options,
-  error,
-  ...props
-}: ComponentProps<typeof NativeSelect> & {
-  label: string;
-  id: string;
-  options: Record<T, string>;
-  error?: string;
-}) {
-  return (
-    <div className="grid content-start gap-2 *:data-[slot=native-select-wrapper]:w-full">
-      <Label htmlFor={id}>{label}</Label>
-      <NativeSelect
-        id={id}
-        name={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        {...props}
-      >
-        {Object.entries<string>(options).map(([value, text]) => (
-          <NativeSelectOption key={value} value={value}>
-            {text}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <FieldError id={id} error={error} />
-    </div>
-  );
-}
-
 /** The bit types as picture cards, so the profile is visible while choosing. */
 function TypePicker({
   value,
@@ -239,14 +179,5 @@ function TypePicker({
       </div>
       <FieldError id="type" error={error} />
     </div>
-  );
-}
-
-function FieldError({ id, error }: { id: string; error?: string }) {
-  if (!error) return null;
-  return (
-    <p id={`${id}-error`} className="text-sm text-destructive">
-      {error}
-    </p>
   );
 }

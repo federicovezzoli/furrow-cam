@@ -3,16 +3,24 @@
 import { Trash2Icon } from "lucide-react";
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { deleteTool } from "./actions";
+import type { ActionResult } from "@/lib/form-data";
 
-export function DeleteToolButton({ id, name }: { id: string; name: string }) {
+/** Asks `confirmText` before calling `action`, a server action bound to the item to delete. */
+export function DeleteButton({
+  name,
+  confirmText,
+  action,
+}: {
+  name: string;
+  confirmText: string;
+  action: () => Promise<ActionResult>;
+}) {
   const [pending, startTransition] = useTransition();
 
   function onClick() {
-    // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
-    if (!window.confirm(`Delete "${name}"? Existing projects keep their copy of this bit.`)) return;
+    if (!window.confirm(confirmText)) return;
     startTransition(async () => {
-      const result = await deleteTool(id);
+      const result = await action();
       if (result) window.alert(result.error);
     });
   }

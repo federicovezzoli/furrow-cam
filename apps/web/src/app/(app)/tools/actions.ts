@@ -6,15 +6,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import {
+  type ActionResult,
+  type FormErrors,
+  issuesToFormErrors,
+  numberField,
+  SIGNED_OUT,
+} from "@/lib/form-data";
 import { getUserId } from "@/lib/session";
 
-/** Field name → message; `form` holds errors that aren't about one field. */
-export type ToolFormErrors = Partial<Record<keyof Tool | "form", string>>;
+export type ToolFormErrors = FormErrors<keyof Tool>;
 
-/** `undefined` on success, or a message to show the user. Unexpected failures still throw. */
-export type ActionResult = { error: string } | undefined;
-
-const SIGNED_OUT = "Your session has expired. Sign in again.";
 const NOT_FOUND = "This bit no longer exists.";
 
 /**
@@ -23,12 +25,6 @@ const NOT_FOUND = "This bit no longer exists.";
  */
 async function lockLibrary(tx: Prisma.TransactionClient, userId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
-}
-
-function numberField(form: FormData, key: string): number | null {
-  const value = form.get(key);
-  if (typeof value !== "string" || value.trim() === "") return null;
-  return Number(value);
 }
 
 /**
@@ -60,13 +56,7 @@ function parseToolForm(form: FormData) {
   const result = Tool.safeParse(input);
   if (result.success) return { tool: result.data };
 
-  const errors: ToolFormErrors = {};
-  for (const issue of result.error.issues) {
-    const key = (issue.path[0] ?? "form") as keyof ToolFormErrors;
-    const missing = issue.code === "invalid_type" && input[key as keyof typeof input] == null;
-    errors[key] ??= missing ? "Required" : issue.message;
-  }
-  return { errors };
+  return { errors: issuesToFormErrors<keyof Tool>(result.error.issues, input) };
 }
 
 /**
