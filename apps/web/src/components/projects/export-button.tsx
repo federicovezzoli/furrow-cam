@@ -3,8 +3,8 @@
 import { projectFileName } from "@furrow/document";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
+import { loadProject } from "@/app/(app)/projects/actions";
 import { Button } from "@/components/ui/button";
-import { loadProject } from "./actions";
 
 /**
  * Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version.

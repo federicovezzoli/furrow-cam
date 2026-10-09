@@ -4,11 +4,14 @@ import type { ProjectDocument, Stock } from "@furrow/document";
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
-import { ExportButton } from "@/app/(app)/projects/export-button";
+import { useRef } from "react";
+import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { FormError } from "@/components/auth/form-error";
+import { ExportButton } from "@/components/projects/export-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import { SaveStatus } from "./save-status";
 
 type WorkspaceProject = { id: string; name: string; updatedAt: Date } & (
@@ -20,56 +23,88 @@ type WorkspaceProject = { id: string; name: string; updatedAt: Date } & (
  * The CAM workspace (ADR-0009): a top bar over three resizable columns,
  * geometry and operations on the left, the viewport in the centre and
  * properties on the right. Panel contents land with their own issues.
+ * Panel sizes are remembered in a cookie (`layout` is what it held).
  */
-export function WorkspaceShell({ project }: { project: WorkspaceProject }) {
+export function WorkspaceShell({
+  project,
+  layout,
+}: {
+  project: WorkspaceProject;
+  layout: WorkspaceLayout;
+}) {
+  const saved = useRef(layout);
+
+  function remember(group: keyof WorkspaceLayout) {
+    return (sizes: Layout, meta: LayoutChangedMeta) => {
+      // Window resizes and the initial mount aren't a choice worth keeping.
+      if (!meta.isUserInteraction) return;
+      saved.current = { ...saved.current, [group]: sizes };
+      saveWorkspaceLayout(saved.current);
+    };
+  }
+
   return (
     <>
       <TopBar project={project} />
       {project.error === undefined ? (
-        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-          <ResizablePanel
-            id="sidebar"
-            defaultSize={260}
-            minSize={180}
-            maxSize="40%"
-            groupResizeBehavior="preserve-pixel-size"
+        // Below the panels' minimum widths (180 + 200 + 200px), scroll sideways instead of clipping them.
+        <div className="min-h-0 flex-1 overflow-x-auto">
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="min-w-148"
+            defaultLayout={layout.columns}
+            onLayoutChanged={remember("columns")}
           >
-            <ResizablePanelGroup orientation="vertical">
-              <ResizablePanel id="geometry" minSize={80}>
-                <Pane title="Geometry">
-                  <EmptyState>Import an SVG or DXF file to add geometry.</EmptyState>
-                </Pane>
-              </ResizablePanel>
-              <ResizableHandle />
-              <ResizablePanel id="operations" minSize={80}>
-                <Pane title="Operations">
-                  <EmptyState>No operations yet.</EmptyState>
-                </Pane>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel id="viewport" minSize="30%">
-            <section
-              aria-label="Viewport"
-              className="flex h-full items-center justify-center bg-muted/40"
+            <ResizablePanel
+              id="sidebar"
+              defaultSize={260}
+              minSize={180}
+              maxSize="40%"
+              collapsible
+              groupResizeBehavior="preserve-pixel-size"
             >
-              <EmptyState>Viewport</EmptyState>
-            </section>
-          </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel
-            id="properties"
-            defaultSize={280}
-            minSize={200}
-            maxSize="40%"
-            groupResizeBehavior="preserve-pixel-size"
-          >
-            <Pane title="Properties">
-              <StockProperties stock={project.document.stock} />
-            </Pane>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+              <ResizablePanelGroup
+                orientation="vertical"
+                defaultLayout={layout.sidebar}
+                onLayoutChanged={remember("sidebar")}
+              >
+                <ResizablePanel id="geometry" minSize={80}>
+                  <Pane title="Geometry">
+                    <EmptyState>Import an SVG or DXF file to add geometry.</EmptyState>
+                  </Pane>
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel id="operations" minSize={80}>
+                  <Pane title="Operations">
+                    <EmptyState>No operations yet.</EmptyState>
+                  </Pane>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel id="viewport" minSize={200}>
+              <section
+                aria-label="Viewport"
+                className="flex h-full items-center justify-center bg-muted/40"
+              >
+                <EmptyState>Viewport</EmptyState>
+              </section>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel
+              id="properties"
+              defaultSize={280}
+              minSize={200}
+              maxSize="40%"
+              collapsible
+              groupResizeBehavior="preserve-pixel-size"
+            >
+              <Pane title="Properties">
+                <StockProperties stock={project.document.stock} />
+              </Pane>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       ) : (
         // Retrying can't fix a document this release can't read, so don't fall into error.tsx.
         <main className="mx-auto w-full max-w-2xl p-8">
@@ -117,6 +152,8 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="p-3 text-ui text-muted-foreground">{children}</p>;
 }
 
+const mmFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 3 });
+
 /** Read-only stock summary shown while nothing is selected; editing comes with #17. */
 function StockProperties({ stock }: { stock: Stock }) {
   const rows = [
@@ -131,7 +168,7 @@ function StockProperties({ stock }: { stock: Stock }) {
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
             <dt className="text-muted-foreground">{label}</dt>
-            <dd className="text-right tabular-nums">{value} mm</dd>
+            <dd className="text-right tabular-nums">{mmFormat.format(value)} mm</dd>
           </div>
         ))}
       </dl>
