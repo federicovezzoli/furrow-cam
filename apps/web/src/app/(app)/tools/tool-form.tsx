@@ -4,7 +4,14 @@ import { type Tool, ToolType } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
-import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
+import {
+  Field,
+  FieldError,
+  fieldProps,
+  numberFieldProps,
+  SelectField,
+} from "@/components/form-fields";
+import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +49,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
   }
 
   const field = fieldProps(tool, errors);
+  const number = numberFieldProps(tool, errors);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -53,15 +61,9 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Geometry</legend>
-        <Field label="Diameter (mm)" {...field("diameter")} type="number" step="any" min={0} />
-        <Field label="Flutes" {...field("fluteCount")} type="number" step={1} min={1} />
-        <Field
-          label="Flute length (mm)"
-          {...field("fluteLength")}
-          type="number"
-          step="any"
-          min={0}
-        />
+        <NumberField label="Diameter" {...number("diameter")} quantity="length" min={0} />
+        <NumberField label="Flutes" {...number("fluteCount")} min={1} />
+        <NumberField label="Flute length" {...number("fluteLength")} quantity="length" min={0} />
         {isEndMill && (
           <SelectField
             label="Cut direction"
@@ -73,13 +75,12 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         )}
         {type === "v_bit" && (
           <>
-            <Field label="V angle (°)" {...field("vAngle")} type="number" step="any" min={0} />
-            <Field
-              label="Tip diameter (mm)"
-              {...field("tipDiameter")}
+            <NumberField label="V angle" {...number("vAngle")} suffix="°" min={0} />
+            <NumberField
+              label="Tip diameter"
+              {...number("tipDiameter")}
               defaultValue={tool.tipDiameter ?? 0}
-              type="number"
-              step="any"
+              quantity="length"
               min={0}
             />
           </>
@@ -88,33 +89,20 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Cutting data</legend>
-        <Field
-          label="Spindle speed (RPM)"
-          {...field("spindleRpm")}
-          type="number"
+        <NumberField
+          label="Spindle speed"
+          {...number("spindleRpm")}
+          suffix="RPM"
           step={1000}
           min={0}
         />
-        <Field label="Feed rate (mm/min)" {...field("feedRate")} type="number" step="any" min={0} />
-        <Field
-          label="Plunge rate (mm/min)"
-          {...field("plungeRate")}
-          type="number"
-          step="any"
-          min={0}
-        />
-        <Field
-          label="Step down (mm per pass)"
-          {...field("stepDown")}
-          type="number"
-          step="any"
-          min={0}
-        />
-        <Field
-          label="Step over (% of diameter)"
-          {...field("stepOver")}
-          type="number"
-          step="any"
+        <NumberField label="Feed rate" {...number("feedRate")} quantity="feed" min={0} />
+        <NumberField label="Plunge rate" {...number("plungeRate")} quantity="feed" min={0} />
+        <NumberField label="Step down per pass" {...number("stepDown")} quantity="length" min={0} />
+        <NumberField
+          label="Step over (of diameter)"
+          {...number("stepOver")}
+          suffix="%"
           min={0}
           max={100}
         />
