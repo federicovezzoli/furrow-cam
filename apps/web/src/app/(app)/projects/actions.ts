@@ -44,20 +44,28 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
   redirect(`/projects/${id}`);
 }
 
+/** `text` cut to at most `max` UTF-16 units, without splitting a character. */
+function truncate(text: string, max: number) {
+  let result = "";
+  for (const char of text) {
+    if (result.length + char.length > max) break;
+    result += char;
+  }
+  return result;
+}
+
 /**
  * Creates a project from an exported file and opens it. The file is upgraded
  * to the current schema version and validated; the name comes from the file
  * name. Only errors come back.
  */
-export async function importProject(fileName: string, contents: string): Promise<ActionResult> {
+export async function importProject(file: File): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
-  const parsed = parseProjectFile(contents);
+  if (!(file instanceof File)) return { error: "Pick a file to import." };
+  const parsed = parseProjectFile(await file.text());
   if (parsed.error !== undefined) return { error: parsed.error };
-  let fileBaseName = (projectNameFromFileName(fileName) ?? "").slice(0, PROJECT_NAME_MAX);
-  // Don't leave half an emoji at the cut.
-  if (/[\uD800-\uDBFF]$/.test(fileBaseName)) fileBaseName = fileBaseName.slice(0, -1);
-  const name = parseName(fileBaseName);
+  const name = parseName(truncate(projectNameFromFileName(file.name) ?? "", PROJECT_NAME_MAX));
 
   const { id } = await db.project.create({
     data: {

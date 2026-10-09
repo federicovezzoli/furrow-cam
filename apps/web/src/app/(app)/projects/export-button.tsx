@@ -12,7 +12,13 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
 
   function onClick() {
     startTransition(async () => {
-      const result = await loadProject(id);
+      let result: Awaited<ReturnType<typeof loadProject>>;
+      try {
+        result = await loadProject(id);
+      } catch {
+        window.alert("This project couldn't be exported. Check your connection and try again.");
+        return;
+      }
       if (result.error !== undefined) {
         window.alert(result.error);
         return;
@@ -25,9 +31,12 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       const link = document.createElement("a");
       link.href = url;
       link.download = projectFileName(project.name);
+      // Some browsers ignore clicks on a link that isn't in the page.
+      document.body.append(link);
       link.click();
+      link.remove();
       // Revoking right away can cancel the download in some browsers.
-      setTimeout(() => URL.revokeObjectURL(url));
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
   }
 

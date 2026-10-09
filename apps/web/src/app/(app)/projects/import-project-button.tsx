@@ -2,12 +2,14 @@
 
 import { PROJECT_FILE_EXTENSION } from "@furrow/document";
 import { UploadIcon } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { Button } from "@/components/ui/button";
 import { importProject } from "./actions";
 
-// Matches `serverActions.bodySizeLimit` in next.config.ts, less room for the rest of the request.
+// `serverActions.bodySizeLimit` in next.config.ts is 4 MiB; the file is sent as is (multipart),
+// so this leaves room for the rest of the request.
 const MAX_FILE_SIZE = 4_000_000;
 
 /** Picks an exported project file and creates a project from it. */
@@ -26,9 +28,15 @@ export function ImportProjectButton() {
       return;
     }
     startTransition(async () => {
-      // Opens the new project on success, so only errors come back.
-      const result = await importProject(file.name, await file.text());
-      setError(result?.error ?? null);
+      try {
+        // Opens the new project on success, so only errors come back.
+        const result = await importProject(file);
+        setError(result?.error ?? null);
+      } catch (error) {
+        // The redirect to the new project rejects the call too; let Next.js handle it.
+        unstable_rethrow(error);
+        setError("This file couldn't be imported. Check your connection and try again.");
+      }
     });
   }
 
