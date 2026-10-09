@@ -12,6 +12,8 @@ import {
 import { listProjects } from "@/lib/projects";
 import { requireUserId } from "@/lib/session";
 import { deleteProject } from "./actions";
+import { ExportButton } from "./export-button";
+import { ImportProjectButton } from "./import-project-button";
 import { LocalDate } from "./local-date";
 import { NewProjectForm } from "./new-project-form";
 import { RenameButton } from "./rename-button";
@@ -20,7 +22,10 @@ export default function ProjectsPage() {
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
       <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-      <NewProjectForm />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <NewProjectForm />
+        <ImportProjectButton />
+      </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <ProjectList />
       </Suspense>
@@ -68,6 +73,7 @@ async function ProjectList() {
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">
                   <RenameButton id={project.id} name={project.name} />
+                  <ExportButton id={project.id} name={project.name} />
                   <DeleteButton
                     name={project.name}
                     confirmText={`Delete "${project.name}"? This can't be undone.`}

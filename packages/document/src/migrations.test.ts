@@ -95,7 +95,10 @@ describe("parseProjectDocument", () => {
     expect(parseProjectDocument(createProjectDocument())).toEqual(createProjectDocument());
   });
 
-  it("throws a version error for documents from a newer release", () => {
+  it("throws a too-new error for documents from a newer release", () => {
+    expect(() => parseProjectDocument({ ...fullDocument(), schemaVersion: 99 })).toThrow(
+      expect.objectContaining({ name: "ProjectDocumentTooNewError", version: 99 }),
+    );
     expect(() => parseProjectDocument({ ...fullDocument(), schemaVersion: 99 })).toThrow(
       ProjectDocumentVersionError,
     );

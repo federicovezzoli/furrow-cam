@@ -17,6 +17,21 @@ export class ProjectDocumentVersionError extends Error {
   override name = "ProjectDocumentVersionError";
 }
 
+/**
+ * Thrown when a document was saved by a newer release than this one, e.g.
+ * after a rollback or when importing a file from a newer instance.
+ */
+export class ProjectDocumentTooNewError extends ProjectDocumentVersionError {
+  override name = "ProjectDocumentTooNewError";
+
+  constructor(
+    readonly version: number,
+    readonly supportedVersion: number,
+  ) {
+    super(`Document version ${version} is newer than the supported version ${supportedVersion}`);
+  }
+}
+
 function isObject(value: unknown): value is UnknownDocument {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -38,9 +53,7 @@ export function migrateProjectDocument(
     throw new ProjectDocumentVersionError(`Invalid schemaVersion: ${JSON.stringify(version)}`);
   }
   if (version > targetVersion) {
-    throw new ProjectDocumentVersionError(
-      `Document version ${version} is newer than the supported version ${targetVersion}`,
-    );
+    throw new ProjectDocumentTooNewError(version, targetVersion);
   }
 
   if (version === targetVersion) {
