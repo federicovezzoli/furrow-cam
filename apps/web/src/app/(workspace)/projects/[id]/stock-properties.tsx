@@ -68,8 +68,8 @@ export function StockProperties() {
                 draft.stock[key] = value;
               })
             }
-            onScrubStart={() => store.getState().beginTransaction()}
-            onScrubEnd={(cancelled) => {
+            onGestureStart={() => store.getState().beginTransaction()}
+            onGestureEnd={(cancelled) => {
               const state = store.getState();
               if (cancelled) state.cancelTransaction();
               else state.commitTransaction();

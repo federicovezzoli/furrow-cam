@@ -4,13 +4,7 @@ import type { Machine } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
-import {
-  Field,
-  FieldError,
-  fieldProps,
-  numberFieldProps,
-  SelectField,
-} from "@/components/form-fields";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -54,7 +48,7 @@ export function MachineForm({
   }
 
   const field = fieldProps(machine, errors);
-  const number = numberFieldProps(machine, errors);
+  const number = fieldProps(machine, errors, null);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -107,6 +101,7 @@ export function MachineForm({
             label="Min speed"
             {...number("spindleRpmMin")}
             suffix="RPM"
+            integer
             step={1000}
             min={0}
           />
@@ -114,6 +109,7 @@ export function MachineForm({
             label="Max speed"
             {...number("spindleRpmMax")}
             suffix="RPM"
+            integer
             step={1000}
             min={0}
           />

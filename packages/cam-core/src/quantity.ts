@@ -1,5 +1,5 @@
 import type { Units } from "@furrow/document";
-import { toMillimetres } from "./units";
+import { fromMillimetres, MM_PER_INCH, toMillimetres } from "./units";
 
 /**
  * What a numeric field holds: a length (mm internally), a feed rate (mm/min
@@ -9,8 +9,8 @@ export type Quantity = "length" | "feed" | "number";
 
 /** Unit suffixes a field accepts, as the factor that converts them to the internal unit. */
 const UNIT_FACTORS: Record<Quantity, Readonly<Record<string, number>>> = {
-  length: { mm: 1, cm: 10, m: 1000, in: 25.4, '"': 25.4, ft: 304.8 },
-  feed: { "mm/min": 1, "mm/s": 60, "in/min": 25.4, ipm: 25.4 },
+  length: { mm: 1, cm: 10, m: 1000, in: MM_PER_INCH, '"': MM_PER_INCH, ft: 12 * MM_PER_INCH },
+  feed: { "mm/min": 1, "mm/s": 60, "in/min": MM_PER_INCH, ipm: MM_PER_INCH },
   number: {},
 };
 
@@ -35,7 +35,7 @@ export function parseQuantity(text: string, quantity: Quantity, units: Units): P
   let expression = text.trim().toLowerCase();
   if (expression === "") return { ok: false, error: "Enter a number" };
 
-  let factor = displayFactor(quantity, units);
+  let factor = toInternal(1, quantity, units);
   const suffix = SUFFIXES[quantity].find((unit) => hasSuffix(expression, unit));
   if (suffix !== undefined) {
     factor = UNIT_FACTORS[quantity][suffix] as number;
@@ -49,12 +49,28 @@ export function parseQuantity(text: string, quantity: Quantity, units: Units): P
   return { ok: true, value };
 }
 
-/** A value in the internal unit, written in the display `units` for an input. */
-export function formatQuantity(value: number, quantity: Quantity, units: Units): string {
-  const display = value / displayFactor(quantity, units);
+/**
+ * A value in the internal unit, written in the display `units` for an input.
+ * `rounding` picks the direction of the last decimal: `up` for a minimum and
+ * `down` for a maximum keep a quoted limit within itself once parsed back.
+ */
+export function formatQuantity(
+  value: number,
+  quantity: Quantity,
+  units: Units,
+  rounding: "nearest" | "up" | "down" = "nearest",
+): string {
   // Four decimals of an inch are finer than three of a millimetre, as both are finer than a cut.
-  const digits = quantity !== "number" && units === "in" ? 4 : 3;
-  return Number(display.toFixed(digits)).toString();
+  const scale = 10 ** (quantity !== "number" && units === "in" ? 4 : 3);
+  // Without the tolerance, noise such as 2500.0000000000005 would round up a whole unit.
+  const scaled = fromInternal(value, quantity, units) * scale;
+  const rounded =
+    rounding === "up"
+      ? Math.ceil(scaled - 1e-6)
+      : rounding === "down"
+        ? Math.floor(scaled + 1e-6)
+        : Math.round(scaled);
+  return Number((rounded / scale).toFixed(10)).toString();
 }
 
 /** The display unit's label, e.g. `mm`, `in/min`, or `""` for plain numbers. */
@@ -65,24 +81,12 @@ export function unitLabel(quantity: Quantity, units: Units): string {
 
 /** Converts from the display `units` to the internal unit. */
 export function toInternal(value: number, quantity: Quantity, units: Units): number {
-  return value * displayFactor(quantity, units);
+  return quantity === "number" ? value : toMillimetres(value, units);
 }
 
 /** Converts from the internal unit to the display `units`. */
 export function fromInternal(value: number, quantity: Quantity, units: Units): number {
-  return value / displayFactor(quantity, units);
-}
-
-/**
- * `value` rounded to a multiple of `step`, without the floating-point noise
- * of the multiplication (`0.1 * 3` is `0.30000000000000004`).
- */
-export function snapToStep(value: number, step: number): number {
-  return Number((Math.round(value / step) * step).toFixed(10));
-}
-
-function displayFactor(quantity: Quantity, units: Units): number {
-  return quantity === "number" ? 1 : toMillimetres(1, units);
+  return quantity === "number" ? value : fromMillimetres(value, units);
 }
 
 /** Whether `text` ends with the unit `suffix`, not inside a longer word (`10mm` isn't `m`). */

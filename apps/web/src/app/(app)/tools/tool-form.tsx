@@ -4,13 +4,7 @@ import { type Tool, ToolType } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
-import {
-  Field,
-  FieldError,
-  fieldProps,
-  numberFieldProps,
-  SelectField,
-} from "@/components/form-fields";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -49,7 +43,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
   }
 
   const field = fieldProps(tool, errors);
-  const number = numberFieldProps(tool, errors);
+  const number = fieldProps(tool, errors, null);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -62,7 +56,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Geometry</legend>
         <NumberField label="Diameter" {...number("diameter")} quantity="length" min={0} />
-        <NumberField label="Flutes" {...number("fluteCount")} min={1} />
+        <NumberField label="Flutes" {...number("fluteCount")} integer min={1} />
         <NumberField label="Flute length" {...number("fluteLength")} quantity="length" min={0} />
         {isEndMill && (
           <SelectField
@@ -93,6 +87,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
           label="Spindle speed"
           {...number("spindleRpm")}
           suffix="RPM"
+          integer
           step={1000}
           min={0}
         />

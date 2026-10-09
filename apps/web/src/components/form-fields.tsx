@@ -3,37 +3,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
+type FieldErrors<T> = Partial<Record<keyof T | "form", string>>;
+
 /**
- * Props for a `Field` named after one of the form's values, e.g.
- * `const field = fieldProps(tool, errors)` then `<Field {...field("diameter")} />`.
+ * Props for a field named after one of the form's values, e.g.
+ * `const field = fieldProps(tool, errors)` then `<Field {...field("name")} />`.
+ * Pass `null` as `blank` for a `NumberField`, which starts empty on `null`:
+ * `const number = fieldProps(tool, errors, null)` then `<NumberField {...number("diameter")} />`.
  */
 export function fieldProps<T extends object>(
   values: Partial<T>,
-  errors: Partial<Record<keyof T | "form", string>>,
+  errors: FieldErrors<T>,
+): <K extends keyof T & string>(name: K) => FieldProps<K, string | number>;
+export function fieldProps<T extends object>(
+  values: Partial<T>,
+  errors: FieldErrors<T>,
+  blank: null,
+): <K extends keyof T & string>(name: K) => FieldProps<K, number | null>;
+export function fieldProps<T extends object>(
+  values: Partial<T>,
+  errors: FieldErrors<T>,
+  blank: "" | null = "",
 ) {
   return <K extends keyof T & string>(name: K) => ({
     id: name,
     name,
-    defaultValue: (values[name] ?? "") as string | number,
+    defaultValue: values[name] ?? blank,
     error: errors[name],
   });
 }
 
-/**
- * Props for a `NumberField` named after one of the form's numeric values, e.g.
- * `const number = numberFieldProps(tool, errors)` then `<NumberField {...number("diameter")} />`.
- */
-export function numberFieldProps<T extends object>(
-  values: Partial<T>,
-  errors: Partial<Record<keyof T | "form", string>>,
-) {
-  return <K extends keyof T & string>(name: K) => ({
-    id: name,
-    name,
-    defaultValue: (values[name] ?? null) as number | null,
-    error: errors[name],
-  });
-}
+type FieldProps<K extends string, V> = { id: K; name: K; defaultValue: V; error?: string };
 
 /** A labelled input whose error is announced via `aria-describedby`. */
 export function Field({

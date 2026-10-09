@@ -1,6 +1,6 @@
 import type { Units } from "@furrow/document";
 
-const MM_PER_INCH = 25.4;
+export const MM_PER_INCH = 25.4;
 
 /** Converts a length in the given units to millimetres, the internal unit (ADR-0007). */
 export function toMillimetres(value: number, units: Units): number {

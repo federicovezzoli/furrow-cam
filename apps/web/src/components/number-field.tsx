@@ -5,14 +5,13 @@ import {
   fromInternal,
   parseQuantity,
   type Quantity,
-  snapToStep,
   toInternal,
   unitLabel,
 } from "@furrow/cam-core";
 import type { Units } from "@furrow/document";
 import { cn } from "cn";
 import type * as React from "react";
-import { useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -28,12 +27,23 @@ const PIXELS_PER_STEP = 4;
 /** Pointer travel before a press on the label becomes a scrub rather than a click. */
 const SCRUB_THRESHOLD = 3;
 
-type Scrub = {
+/** A press on the label, which becomes a scrub once the pointer moves far enough. */
+type Press = {
+  /** Where the pointer was when the value last moved; travel since then isn't spent yet. */
   pointerX: number;
-  start: number | null;
-  /** Listens for Escape while scrubbing, which cancels the scrub. */
-  onKeyDown: ((event: KeyboardEvent) => void) | null;
+  /** The value in display units. */
+  display: number;
+  scrubbing: boolean;
 };
+
+/** A scrub or a held arrow key: its changes form one undo step. */
+type Gesture = {
+  start: number | null;
+  /** Escape cancels the gesture wherever the focus is. */
+  onKeyDown: (event: KeyboardEvent) => void;
+};
+
+const ARROW_KEYS = new Set(["ArrowUp", "ArrowDown"]);
 
 export type NumberFieldProps = {
   id: string;
@@ -47,15 +57,23 @@ export type NumberFieldProps = {
   defaultValue?: number | null;
   /** Called with each committed value: on Enter or blur, each arrow step and each scrub move. */
   onValueChange?: (value: number) => void;
-  /** A scrub starts: the calls to `onValueChange` until it ends form one gesture. */
-  onScrubStart?: () => void;
-  /** A scrub ends, `cancelled` when Escape was pressed, which should restore the value. */
-  onScrubEnd?: (cancelled: boolean) => void;
+  /**
+   * A gesture starts (a scrub, or an arrow key held down): the calls to
+   * `onValueChange` until it ends form one undo step.
+   */
+  onGestureStart?: () => void;
+  /**
+   * A gesture ends, `cancelled` on Escape or when the field goes away
+   * mid-gesture, which should restore the value from before it.
+   */
+  onGestureEnd?: (cancelled: boolean) => void;
   /** Submits the value, in the internal unit, under this name in a form. */
   name?: string;
   /** Inclusive limits in the internal unit: typed values outside are errors, steps stop at them. */
   min?: number;
   max?: number;
+  /** Only whole numbers, e.g. a count: steps never go below 1. */
+  integer?: boolean;
   /** One arrow-key step in display units. */
   step?: number;
   /** Shown inside the input instead of the display unit, e.g. `RPM` or `%`. */
@@ -83,11 +101,12 @@ export function NumberField({
   value,
   defaultValue = null,
   onValueChange,
-  onScrubStart,
-  onScrubEnd,
+  onGestureStart,
+  onGestureEnd,
   name,
   min,
   max,
+  integer = false,
   step = DEFAULT_STEPS[quantity][units],
   suffix = unitLabel(quantity, units),
   error,
@@ -101,8 +120,13 @@ export function NumberField({
   /** What's typed while editing; `null` shows the current value. */
   const [draft, setDraft] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const scrub = useRef<Scrub | null>(null);
+  const press = useRef<Press | null>(null);
+  const gesture = useRef<Gesture | null>(null);
   const justScrubbed = useRef(false);
+
+  // Unmounting mid-gesture would otherwise leave it open, e.g. a document transaction.
+  const cancelOpenGesture = useEffectEvent(() => endGesture(true));
+  useEffect(() => () => cancelOpenGesture(), []);
 
   const text = draft ?? (current === null ? "" : formatQuantity(current, quantity, units));
   const shownError = parseError ?? error;
@@ -112,15 +136,24 @@ export function NumberField({
     onValueChange?.(next);
   }
 
-  function clamp(next: number) {
+  /** A display value moved by steps or a scrub, made whole or freed of floating-point noise. */
+  function settle(display: number) {
+    return integer ? Math.round(display) : Number(display.toFixed(10));
+  }
+
+  /** A display value as the internal value to store, within the limits. */
+  function toValue(display: number) {
+    const next = toInternal(settle(display), quantity, units);
     return Math.min(max ?? Infinity, Math.max(min ?? -Infinity, next));
   }
 
-  function rangeError(next: number): string | null {
-    const withUnit = (limit: number) =>
-      `${formatQuantity(limit, quantity, units)}${suffix ? ` ${suffix}` : ""}`;
-    if (min !== undefined && next < min) return `Must be at least ${withUnit(min)}`;
-    if (max !== undefined && next > max) return `Must be at most ${withUnit(max)}`;
+  function valueError(next: number): string | null {
+    if (integer && !Number.isInteger(next)) return "Must be a whole number";
+    // Rounded inwards, so typing the limit as shown is accepted.
+    const limit = (bound: number, rounding: "up" | "down") =>
+      `${formatQuantity(bound, quantity, units, rounding)}${suffix ? ` ${suffix}` : ""}`;
+    if (min !== undefined && next < min) return `Must be at least ${limit(min, "up")}`;
+    if (max !== undefined && next > max) return `Must be at most ${limit(max, "down")}`;
     return null;
   }
 
@@ -130,18 +163,16 @@ export function NumberField({
     // A form field may be left blank; the form decides whether that's allowed.
     if (draft.trim() === "" && value === undefined) {
       setOwnValue(null);
-      setDraft(null);
-      setParseError(null);
+      revert();
       return;
     }
     const result = parseQuantity(draft, quantity, units);
-    const problem = result.ok ? rangeError(result.value) : result.error;
+    const problem = result.ok ? valueError(result.value) : result.error;
     if (problem !== null || !result.ok) {
       setParseError(problem);
       return;
     }
-    setDraft(null);
-    setParseError(null);
+    revert();
     update(result.value);
   }
 
@@ -150,10 +181,33 @@ export function NumberField({
     setParseError(null);
   }
 
-  /** `steps` steps in display units, each 10× larger with Shift and 10× smaller with Alt. */
-  function stepBy(steps: number, event: React.KeyboardEvent | React.PointerEvent) {
+  /** One step in display units, 10× larger with Shift and 10× smaller with Alt. */
+  function stepSize(event: React.KeyboardEvent | React.PointerEvent) {
     const size = step * (event.shiftKey ? 10 : event.altKey ? 0.1 : 1);
-    return snapToStep(steps * size, size);
+    return integer ? Math.max(1, Math.round(size)) : size;
+  }
+
+  function beginGesture() {
+    if (gesture.current) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      endGesture(true);
+    };
+    gesture.current = { start: current, onKeyDown };
+    window.addEventListener("keydown", onKeyDown);
+    onGestureStart?.();
+  }
+
+  function endGesture(cancelled: boolean) {
+    const open = gesture.current;
+    if (!open) return;
+    gesture.current = null;
+    // A cancelled scrub stops following the pointer.
+    press.current = null;
+    window.removeEventListener("keydown", open.onKeyDown);
+    if (cancelled) setOwnValue(open.start);
+    onGestureEnd?.(cancelled);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -161,14 +215,15 @@ export function NumberField({
     else if (event.key === "Escape" && draft !== null) {
       event.preventDefault();
       revert();
-    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    } else if (ARROW_KEYS.has(event.key)) {
       event.preventDefault();
       const typed = draft === null ? null : parseQuantity(draft, quantity, units);
       const start = typed?.ok ? typed.value : (current ?? 0);
-      const delta = stepBy(event.key === "ArrowUp" ? 1 : -1, event);
-      const display = fromInternal(start, quantity, units) + delta;
+      const delta = (event.key === "ArrowUp" ? 1 : -1) * stepSize(event);
       revert();
-      update(clamp(toInternal(Number(display.toFixed(10)), quantity, units)));
+      // Holding the key repeats it; the whole hold is one gesture, ended on keyup.
+      beginGesture();
+      update(toValue(fromInternal(start, quantity, units) + delta));
     }
   }
 
@@ -176,38 +231,41 @@ export function NumberField({
     if (event.button !== 0 || disabled) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     justScrubbed.current = false;
-    scrub.current = { pointerX: event.clientX, start: current, onKeyDown: null };
+    press.current = {
+      pointerX: event.clientX,
+      display: fromInternal(current ?? 0, quantity, units),
+      scrubbing: false,
+    };
   }
 
   function onPointerMove(event: React.PointerEvent<HTMLLabelElement>) {
-    const state = scrub.current;
+    const state = press.current;
     if (!state) return;
     const distance = event.clientX - state.pointerX;
-    if (!state.onKeyDown) {
+    if (!state.scrubbing) {
       if (Math.abs(distance) < SCRUB_THRESHOLD) return;
-      state.onKeyDown = (key) => {
-        if (key.key !== "Escape") return;
-        key.preventDefault();
-        endScrub(true);
-      };
-      window.addEventListener("keydown", state.onKeyDown);
+      state.scrubbing = true;
+      state.pointerX = event.clientX;
+      // The press that ends a scrub isn't a click on the label.
+      justScrubbed.current = true;
       revert();
-      onScrubStart?.();
+      beginGesture();
+      return;
     }
-    const start = fromInternal(state.start ?? 0, quantity, units);
-    const delta = stepBy(Math.round(distance / PIXELS_PER_STEP), event);
-    const next = clamp(toInternal(Number((start + delta).toFixed(10)), quantity, units));
+    const steps = Math.trunc(distance / PIXELS_PER_STEP);
+    if (steps === 0) return;
+    // Only the travel spent moves on, so a modifier pressed now applies from here, without a jump.
+    state.pointerX += steps * PIXELS_PER_STEP;
+    const next = toValue(state.display + steps * stepSize(event));
+    state.display = fromInternal(next, quantity, units);
     if (next !== current) update(next);
   }
 
-  function endScrub(cancelled: boolean) {
-    const state = scrub.current;
-    scrub.current = null;
-    if (!state?.onKeyDown) return;
-    window.removeEventListener("keydown", state.onKeyDown);
-    justScrubbed.current = true;
-    if (cancelled) setOwnValue(state.start);
-    onScrubEnd?.(cancelled);
+  /** The press ends: released, or its pointer capture lost (e.g. the window lost focus). */
+  function endPress(cancelled: boolean) {
+    const state = press.current;
+    press.current = null;
+    if (state?.scrubbing) endGesture(cancelled);
   }
 
   /** Text that parses goes to the form as a value; anything else as typed, for the server to reject. */
@@ -233,10 +291,11 @@ export function NumberField({
         className={cn("cursor-ew-resize touch-none", layout === "inline" && "text-ui font-normal")}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={() => endScrub(false)}
-        onPointerCancel={() => endScrub(true)}
+        onPointerUp={() => endPress(false)}
+        onLostPointerCapture={() => endPress(false)}
+        onPointerCancel={() => endPress(true)}
         onClick={(event) => {
-          // The press that ends a scrub isn't a click on the label: don't focus the input.
+          // Don't focus the input after a scrub.
           if (justScrubbed.current) event.preventDefault();
           justScrubbed.current = false;
         }}
@@ -255,8 +314,14 @@ export function NumberField({
           placeholder={placeholder}
           disabled={disabled}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
+          onBlur={() => {
+            endGesture(false);
+            commit();
+          }}
           onKeyDown={onKeyDown}
+          onKeyUp={(event) => {
+            if (ARROW_KEYS.has(event.key)) endGesture(false);
+          }}
           aria-invalid={shownError ? true : undefined}
           aria-describedby={shownError ? errorId : undefined}
           className={cn(

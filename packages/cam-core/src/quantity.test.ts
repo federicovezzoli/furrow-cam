@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatQuantity, parseQuantity, snapToStep, unitLabel } from "./quantity";
+import { formatQuantity, parseQuantity, unitLabel } from "./quantity";
 
 /** The parsed value, failing the test on a parse error. */
 function value(
@@ -94,6 +94,17 @@ describe("formatQuantity", () => {
     expect(formatQuantity(24000, "number", "in")).toBe("24000");
   });
 
+  it("rounds limits so they stay within themselves", () => {
+    expect(formatQuantity(0.1, "length", "in")).toBe("0.0039");
+    expect(formatQuantity(0.1, "length", "in", "up")).toBe("0.004");
+    expect(value(formatQuantity(0.1, "length", "in", "up"), "in")).toBeGreaterThanOrEqual(0.1);
+    expect(formatQuantity(1000, "length", "in", "down")).toBe("39.37");
+    expect(value(formatQuantity(1000, "length", "in", "down"), "in")).toBeLessThanOrEqual(1000);
+    // Exact values aren't pushed to the next decimal by floating-point noise.
+    expect(formatQuantity(6.35, "length", "in", "up")).toBe("0.25");
+    expect(formatQuantity(6.35, "length", "in", "down")).toBe("0.25");
+  });
+
   it("round-trips through parseQuantity", () => {
     for (const mm of [6.35, 18, 600, 0.1]) {
       expect(value(formatQuantity(mm, "length", "in"), "in")).toBeCloseTo(mm, 2);
@@ -106,14 +117,5 @@ describe("unitLabel", () => {
     expect(unitLabel("length", "in")).toBe("in");
     expect(unitLabel("feed", "mm")).toBe("mm/min");
     expect(unitLabel("number", "mm")).toBe("");
-  });
-});
-
-describe("snapToStep", () => {
-  it("rounds to a multiple of the step without floating-point noise", () => {
-    expect(snapToStep(0.1 * 3, 0.1)).toBe(0.3);
-    expect(snapToStep(6.37, 0.1)).toBe(6.4);
-    expect(snapToStep(24_400, 1000)).toBe(24_000);
-    expect(snapToStep(0.0626, 1 / 16)).toBe(0.0625);
   });
 });
