@@ -8,47 +8,50 @@ import {
   gridLinePositions,
   POINT_MARKER_SIZE,
   shapeLinePositions,
+  shapesLinePositions,
 } from "./viewport-scene";
 
-const shape = (paths: Shape["paths"]): Shape => ({
-  id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
-  name: "",
-  layer: "0",
-  paths,
-});
+const shape = (id: string, paths: Shape["paths"]): Shape => ({ id, name: "", layer: "0", paths });
+
+const square = shape("a", [
+  {
+    start: [0, 0],
+    segments: [
+      { kind: "line", to: [10, 0] },
+      { kind: "line", to: [10, 10] },
+    ],
+    closed: true,
+  },
+]);
 
 const stock: Box3 = { min: [0, 0, -18], max: [600, 400, 0] };
 
 describe("shapeLinePositions", () => {
-  it("draws each polyline edge as a segment, moved into work coordinates", () => {
-    const positions = shapeLinePositions(
-      shape([
-        {
-          start: [0, 0],
-          segments: [
-            { kind: "line", to: [10, 0] },
-            { kind: "line", to: [10, 10] },
-          ],
-          closed: true,
-        },
-      ]),
-      [-5, -5, 2],
-    );
+  it("draws each polyline edge as a segment on the stock top", () => {
+    const positions = shapeLinePositions(square);
     // biome-ignore format: one segment per row
     expect([...positions]).toEqual([
-      -5, -5, 2, 5, -5, 2,
-      5, -5, 2, 5, 5, 2,
-      5, 5, 2, -5, -5, 2,
+      0, 0, 0, 10, 0, 0,
+      10, 0, 0, 10, 10, 0,
+      10, 10, 0, 0, 0, 0,
     ]);
   });
 
   it("draws a single point as a cross", () => {
     const positions = shapeLinePositions(
-      shape([{ start: [1, 2], segments: [], closed: false }]),
-      [0, 0, 0],
+      shape("b", [{ start: [1, 2], segments: [], closed: false }]),
     );
     const s = POINT_MARKER_SIZE;
     expect([...positions]).toEqual([1 - s, 2, 0, 1 + s, 2, 0, 1, 2 - s, 0, 1, 2 + s, 0]);
+  });
+
+  it("merges shapes into one buffer, in order", () => {
+    const point = shape("b", [{ start: [1, 2], segments: [], closed: false }]);
+    expect([...shapesLinePositions([square, point])]).toEqual([
+      ...shapeLinePositions(square),
+      ...shapeLinePositions(point),
+    ]);
+    expect(shapesLinePositions([])).toHaveLength(0);
   });
 });
 

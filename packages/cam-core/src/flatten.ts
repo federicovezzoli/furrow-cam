@@ -8,8 +8,8 @@ const MAX_ARC_STEP = Math.PI / 2;
 
 /**
  * Flattens a path into a polyline whose chords stay within `tolerance` of the
- * original curves. Segment ends are kept exactly. A closed path ends back at
- * `start`; a path with no segments is the single point `[start]`.
+ * original curves. Segment ends are kept exactly, and a closed path ends
+ * exactly on `start`; a path with no segments is the single point `[start]`.
  */
 export function flattenPath(path: Path, tolerance = DEFAULT_CHORD_TOLERANCE): Point[] {
   if (!(tolerance > 0)) throw new RangeError("Chord tolerance must be positive");
@@ -24,7 +24,11 @@ export function flattenPath(path: Path, tolerance = DEFAULT_CHORD_TOLERANCE): Po
     points.push(segment.to);
     current = segment.to;
   }
-  if (path.closed && !pointsCoincide(current, path.start)) points.push(path.start);
+  if (path.closed) {
+    // End exactly on `start`, even when the last segment stopped within tolerance of it.
+    if (pointsCoincide(current, path.start)) points[points.length - 1] = path.start;
+    else points.push(path.start);
+  }
   return points;
 }
 

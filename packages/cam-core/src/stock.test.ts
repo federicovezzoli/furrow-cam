@@ -1,6 +1,6 @@
 import type { Stock } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { stockBounds, stockOffset } from "./stock";
+import { stockBounds, stockBox, stockOffset } from "./stock";
 
 const stock: Stock = {
   width: 600,
@@ -20,5 +20,6 @@ describe("stock placement", () => {
     const centered: Stock = { ...stock, xyOrigin: "center", zOrigin: "machine_bed" };
     expect(stockOffset(centered)).toEqual([-300, -200, 18]);
     expect(stockBounds(centered)).toEqual({ min: [-300, -200, 0], max: [300, 200, 18] });
+    expect(stockBox(centered)).toEqual({ min: [0, 0, -18], max: [600, 400, 0] });
   });
 });

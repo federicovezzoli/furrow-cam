@@ -5,28 +5,53 @@ import type { Shape } from "@furrow/document";
 export const POINT_MARKER_SIZE = 3;
 
 /**
- * A shape as `LineSegments` positions: `[x, y, z]` per vertex, two vertices
- * per segment. `offset` moves it from stock coordinates to work coordinates.
+ * A shape as `LineSegments` positions on the stock top (`z = 0`, stock
+ * coordinates, ADR-0014): `[x, y, z]` per vertex, two vertices per segment.
  */
-export function shapeLinePositions(shape: Shape, offset: Vec3): Float32Array {
-  const [dx, dy, z] = offset;
+export function shapeLinePositions(shape: Shape): Float32Array {
   const values: number[] = [];
   for (const path of shape.paths) {
     const points = flattenPath(path);
     if (points.length === 1) {
       const [[x, y]] = points as [[number, number]];
       const s = POINT_MARKER_SIZE;
-      values.push(x - s + dx, y + dy, z, x + s + dx, y + dy, z);
-      values.push(x + dx, y - s + dy, z, x + dx, y + s + dy, z);
+      values.push(x - s, y, 0, x + s, y, 0, x, y - s, 0, x, y + s, 0);
       continue;
     }
     for (let i = 1; i < points.length; i++) {
       const [ax, ay] = points[i - 1] as [number, number];
       const [bx, by] = points[i] as [number, number];
-      values.push(ax + dx, ay + dy, z, bx + dx, by + dy, z);
+      values.push(ax, ay, 0, bx, by, 0);
     }
   }
   return new Float32Array(values);
+}
+
+/**
+ * Flattened shapes by identity. Immer keeps unchanged shapes as the same
+ * objects (ADR-0010), so only new or edited shapes are flattened again.
+ */
+const shapeCache = new WeakMap<Shape, Float32Array>();
+
+function cachedShapeLinePositions(shape: Shape): Float32Array {
+  let positions = shapeCache.get(shape);
+  if (!positions) {
+    positions = shapeLinePositions(shape);
+    shapeCache.set(shape, positions);
+  }
+  return positions;
+}
+
+/** Several shapes' line positions in one buffer, to draw them in a single call (ADR-0008). */
+export function shapesLinePositions(shapes: Iterable<Shape>): Float32Array {
+  const parts = Array.from(shapes, cachedShapeLinePositions);
+  const merged = new Float32Array(parts.reduce((length, part) => length + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    merged.set(part, offset);
+    offset += part.length;
+  }
+  return merged;
 }
 
 export type GridLines = { minor: Float32Array; major: Float32Array };

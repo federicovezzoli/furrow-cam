@@ -28,3 +28,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0011](0011-monorepo-structure-and-tooling.md) | Monorepo structure and tooling | Accepted |
 | [0012](0012-ci-and-releases.md) | CI with GitHub Actions and releases with Changesets | Accepted |
 | [0013](0013-data-minimisation.md) | Data minimisation for user accounts | Accepted |
+| [0014](0014-stock-coordinates.md) | Geometry is stored in stock coordinates | Accepted |

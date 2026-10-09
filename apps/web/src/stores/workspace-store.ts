@@ -2,16 +2,17 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 
+/** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
+export type ViewMode = "top" | "orbit";
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
- * The camera itself stays inside the viewport, which moves it every frame.
+ * The camera pose stays inside the viewport, which its controls change on
+ * every pointer move.
  *
  * Ids may outlive what they point at (an undo can remove a selected shape), so
  * readers skip ids that are no longer in the document.
  */
-/** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
-export type ViewMode = "top" | "orbit";
-
 export type WorkspaceState = {
   view: ViewMode;
   selectedShapeIds: string[];

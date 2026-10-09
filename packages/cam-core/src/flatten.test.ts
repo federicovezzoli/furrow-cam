@@ -33,6 +33,21 @@ describe("flattenPath", () => {
     expect(flattenPath(path)).toHaveLength(4);
   });
 
+  it("ends a closed path exactly on its start when the last segment stops just short", () => {
+    const path: Path = {
+      start: [0, 0],
+      segments: [
+        { kind: "line", to: [10, 0] },
+        { kind: "line", to: [0, 10] },
+        { kind: "line", to: [0.0002, -0.0003] },
+      ],
+      closed: true,
+    };
+    const points = flattenPath(path);
+    expect(points).toHaveLength(4);
+    expect(points.at(-1)).toEqual([0, 0]);
+  });
+
   it("turns a path without segments into a single point", () => {
     expect(flattenPath({ start: [5, 5], segments: [], closed: false })).toEqual([[5, 5]]);
   });

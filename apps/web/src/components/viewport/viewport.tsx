@@ -1,12 +1,18 @@
 "use client";
 
-import { type Box3, stockBounds, stockOffset } from "@furrow/cam-core";
+import { type Box3, stockBounds, stockBox, stockOffset, type Vec3 } from "@furrow/cam-core";
 import type { Shape } from "@furrow/document";
-import { Edges, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
+import {
+  Edges,
+  OrbitControls,
+  type OrbitControlsChangeEvent,
+  OrthographicCamera,
+  PerspectiveCamera,
+} from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { BoxIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { memo, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BufferGeometry, Float32BufferAttribute, MOUSE, TOUCH } from "three";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +20,10 @@ import {
   fitOrbitPosition,
   fitTopZoom,
   gridLinePositions,
-  shapeLinePositions,
+  shapesLinePositions,
 } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
-import {
-  useDocumentStore,
-  useDocumentStoreApi,
-  useWorkspaceStore,
-} from "@/stores/workspace-stores";
+import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 
 type Palette = {
   shape: string;
@@ -45,7 +47,7 @@ const PALETTES: Record<"light" | "dark", Palette> = {
   },
   dark: {
     shape: "#e4e4e7",
-    hovered: "#1d4ed8",
+    hovered: "#93c5fd",
     selected: "#60a5fa",
     stock: "#a47148",
     stockEdges: "#d4a373",
@@ -58,23 +60,49 @@ const PALETTES: Record<"light" | "dark", Palette> = {
 const ORIGIN_MARKER_SIZE = 40;
 
 /**
- * The workspace's 3D viewport (ADR-0008): stock, grid, origin and geometry in
- * one scene, seen from an orthographic top view or a perspective orbit view.
- * The scene is in work coordinates (millimetres, Z up). Browser-only: load it
- * with `next/dynamic` and `ssr: false`.
+ * Draw order of the transparent pass. Lines join it (as `transparent`
+ * materials) so they draw after the translucent stock instead of being tinted
+ * by it; three.js always draws opaque objects first.
+ */
+const RENDER_ORDER = { stock: 0, shapes: 1, selected: 2, hovered: 3, origin: 4 } as const;
+
+/** Where a camera looks from and at, and its zoom. */
+type CameraPose = { position: Vec3; target: Vec3; zoom: number };
+
+/** Each view's last camera pose, keyed by view and fit. */
+type CameraPoses = Map<string, CameraPose>;
+
+/**
+ * The workspace's 3D viewport (ADR-0008): stock, grid, work origin and
+ * geometry in one scene, seen from an orthographic top view or a perspective
+ * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014),
+ * so changing the work origin moves only the origin marker and the grid.
+ * Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
 export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
-  // Bumped to fit the camera to the stock again; remounting the camera does it.
+  const { width, height, thickness } = useDocumentStore((s) => s.document.stock);
+  const box = useMemo(
+    () => stockBox({ width, height, thickness, xyOrigin: "bottom_left", zOrigin: "stock_top" }),
+    [width, height, thickness],
+  );
+  // Pressing Fit or resizing the stock fits the camera again: new keys remount
+  // the cameras, which then find no saved pose.
   const [fits, setFits] = useState(0);
+  const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
+  const [poses] = useState<CameraPoses>(() => new Map());
 
   return (
     <div className="relative h-full">
       <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock and geometry">
-        {view === "top" ? <TopCamera key={`top-${fits}`} /> : <OrbitCamera key={`orbit-${fits}`} />}
-        <Scene palette={palette} />
+        {view === "top" ? (
+          <TopCamera key={poseKey} box={box} poses={poses} poseKey={poseKey} />
+        ) : (
+          <OrbitCamera key={poseKey} box={box} poses={poses} poseKey={poseKey} />
+        )}
+        <Scene box={box} palette={palette} />
       </Canvas>
       <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
     </div>
@@ -130,43 +158,56 @@ function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
   );
 }
 
-/** The stock's bounds in work coordinates, recomputed only when the stock changes. */
-function useStockBounds(): Box3 {
-  const stock = useDocumentStore((s) => s.document.stock);
-  return useMemo(() => stockBounds(stock), [stock]);
-}
-
-/** Bounds read once, for fitting the camera when it mounts without following later edits. */
-function useInitialStockBounds(): Box3 {
-  const documentStore = useDocumentStoreApi();
-  const [bounds] = useState(() => stockBounds(documentStore.getState().document.stock));
-  return bounds;
-}
+type CameraProps = { box: Box3; poses: CameraPoses; poseKey: string };
 
 /**
- * Looking straight down, fitted to the stock when mounted; the camera is the
- * user's to move after that. The left button is left free for selecting.
+ * The pose a camera mounts with: where it was last left in this view, or
+ * `fit()` the first time. Returns the controls' `onChange`, which remembers it.
  */
-function TopCamera() {
-  const bounds = useInitialStockBounds();
+function useCameraPose(
+  { poses, poseKey }: CameraProps,
+  fit: () => CameraPose,
+): [CameraPose, (event?: OrbitControlsChangeEvent) => void] {
+  const [pose] = useState(() => poses.get(poseKey) ?? fit());
+  function remember(event?: OrbitControlsChangeEvent) {
+    if (!event) return;
+    const { object: camera, target } = event.target;
+    poses.set(poseKey, {
+      position: camera.position.toArray(),
+      target: target.toArray(),
+      zoom: camera.zoom,
+    });
+  }
+  return [pose, remember];
+}
+
+/** Looking straight down. The left button is left free for selecting. */
+function TopCamera(props: CameraProps) {
   const get = useThree((s) => s.get);
-  const [zoom] = useState(() => fitTopZoom(bounds, get().size));
-  const [x, y] = boxCenter(bounds);
-  const top = bounds.max[2];
+  const [pose, remember] = useCameraPose(props, () => {
+    const [x, y] = boxCenter(props.box);
+    const top = props.box.max[2];
+    return {
+      position: [x, y, top + 1000],
+      target: [x, y, top],
+      zoom: fitTopZoom(props.box, get().size),
+    };
+  });
 
   return (
     <>
       <OrthographicCamera
         makeDefault
-        position={[x, y, top + 1000]}
-        zoom={zoom}
+        position={pose.position}
+        zoom={pose.zoom}
         near={1}
         far={100_000}
       />
       {/* Controls are rebuilt when the default camera changes, so the target is a prop, not set once. */}
       <OrbitControls
         makeDefault
-        target={[x, y, top]}
+        target={pose.target}
+        onChange={remember}
         enableRotate={false}
         screenSpacePanning
         zoomToCursor
@@ -179,13 +220,16 @@ function TopCamera() {
 
 const ORBIT_FOV = 40;
 
-/** Seen from the front right, fitted to the stock when mounted. */
-function OrbitCamera() {
-  const bounds = useInitialStockBounds();
+/** Seen from the front right the first time. */
+function OrbitCamera(props: CameraProps) {
   const get = useThree((s) => s.get);
-  const [position] = useState(() => {
+  const [pose, remember] = useCameraPose(props, () => {
     const { width, height } = get().size;
-    return fitOrbitPosition(bounds, ORBIT_FOV, height > 0 ? width / height : 1);
+    return {
+      position: fitOrbitPosition(props.box, ORBIT_FOV, height > 0 ? width / height : 1),
+      target: boxCenter(props.box),
+      zoom: 1,
+    };
   });
 
   return (
@@ -194,23 +238,21 @@ function OrbitCamera() {
         makeDefault
         up={[0, 0, 1]}
         fov={ORBIT_FOV}
-        position={position}
+        position={pose.position}
+        zoom={pose.zoom}
         near={1}
         far={100_000}
       />
-      <OrbitControls makeDefault target={boxCenter(bounds)} screenSpacePanning />
+      <OrbitControls makeDefault target={pose.target} onChange={remember} screenSpacePanning />
     </>
   );
 }
 
-function Scene({ palette }: { palette: Palette }) {
-  const bounds = useStockBounds();
+function Scene({ box, palette }: { box: Box3; palette: Palette }) {
   return (
     <>
-      <Grid bounds={bounds} palette={palette} />
-      <Stock bounds={bounds} palette={palette} />
-      {/* X red, Y green, Z blue; drawn over the stock edges it runs along. */}
-      <axesHelper args={[ORIGIN_MARKER_SIZE]} renderOrder={2} material-depthTest={false} />
+      <WorkOrigin palette={palette} />
+      <Stock box={box} palette={palette} />
       <Shapes palette={palette} />
     </>
   );
@@ -227,79 +269,105 @@ function useLineGeometry(positions: Float32Array) {
   return geometry;
 }
 
-function Grid({ bounds, palette }: { bounds: Box3; palette: Palette }) {
-  const { minor, major } = useMemo(() => gridLinePositions(bounds), [bounds]);
+/** The origin marker and the grid aligned to it, placed where the stock's origin settings say. */
+function WorkOrigin({ palette }: { palette: Palette }) {
+  const stock = useDocumentStore((s) => s.document.stock);
+  const offset = useMemo(() => stockOffset(stock), [stock]);
+  const { minor, major } = useMemo(() => gridLinePositions(stockBounds(stock)), [stock]);
   const minorGeometry = useLineGeometry(minor);
   const majorGeometry = useLineGeometry(major);
   return (
-    <>
+    // Work coordinates are stock coordinates moved by `offset`, so this undoes it.
+    <group position={[-offset[0], -offset[1], -offset[2]]}>
       <lineSegments geometry={minorGeometry}>
         <lineBasicMaterial color={palette.gridMinor} />
       </lineSegments>
       <lineSegments geometry={majorGeometry}>
         <lineBasicMaterial color={palette.gridMajor} />
       </lineSegments>
-    </>
+      {/* X red, Y green, Z blue; drawn over the stock edges it may run along. */}
+      <axesHelper
+        args={[ORIGIN_MARKER_SIZE]}
+        renderOrder={RENDER_ORDER.origin}
+        material-transparent
+        material-depthTest={false}
+      />
+    </group>
   );
 }
 
-function Stock({ bounds, palette }: { bounds: Box3; palette: Palette }) {
-  const { min, max } = bounds;
+function Stock({ box, palette }: { box: Box3; palette: Palette }) {
+  const { min, max } = box;
   return (
-    <mesh position={boxCenter(bounds)}>
+    <mesh position={boxCenter(box)} renderOrder={RENDER_ORDER.stock}>
       <boxGeometry args={[max[0] - min[0], max[1] - min[1], max[2] - min[2]]} />
-      {/* Translucent and not hiding what is behind it, so geometry on its top always shows. */}
+      {/* Not writing depth, so lines drawn after it on its top face always show. */}
       <meshBasicMaterial color={palette.stock} transparent opacity={0.25} depthWrite={false} />
       <Edges color={palette.stockEdges} />
     </mesh>
   );
 }
 
-/** Imported geometry on the stock top, highlighted from the workspace store's selection. */
+/**
+ * Imported geometry on the stock top: all shapes in one draw call, then the
+ * selected and hovered shapes (from the workspace store) drawn over them.
+ * Each layer subscribes on its own, so hovering redraws only its overlay.
+ */
 function Shapes({ palette }: { palette: Palette }) {
-  const geometry = useDocumentStore((s) => s.document.geometry);
-  const stock = useDocumentStore((s) => s.document.stock);
-  const offset = useMemo(() => stockOffset(stock), [stock]);
-  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
-  const hoveredId = useWorkspaceStore((s) => s.hoveredShapeId);
-  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
-
-  return geometry.map((shape) => {
-    const state = selected.has(shape.id)
-      ? "selected"
-      : shape.id === hoveredId
-        ? "hovered"
-        : "shape";
-    return (
-      <ShapeLines
-        key={shape.id}
-        shape={shape}
-        offset={offset}
-        color={palette[state]}
-        // Highlighted shapes draw last, so they show over overlapping ones.
-        renderOrder={state === "shape" ? 0 : 1}
-      />
-    );
-  });
+  return (
+    <>
+      <AllShapes color={palette.shape} />
+      <SelectedShapes color={palette.selected} />
+      <HoveredShape color={palette.hovered} />
+    </>
+  );
 }
 
-const ShapeLines = memo(function ShapeLines({
-  shape,
-  offset,
+function AllShapes({ color }: { color: string }) {
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const positions = useMemo(() => shapesLinePositions(geometry), [geometry]);
+  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
+}
+
+function SelectedShapes({ color }: { color: string }) {
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const positions = useMemo(() => {
+    const selected = new Set(selectedIds);
+    return shapesLinePositions(geometry.filter((shape) => selected.has(shape.id)));
+  }, [geometry, selectedIds]);
+  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.selected} />;
+}
+
+/** The hovered shape, unless it is selected: selection wins. */
+function HoveredShape({ color }: { color: string }) {
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const hoveredId = useWorkspaceStore((s) =>
+    s.hoveredShapeId !== null && !s.selectedShapeIds.includes(s.hoveredShapeId)
+      ? s.hoveredShapeId
+      : null,
+  );
+  const positions = useMemo(() => {
+    const hovered = geometry.filter((shape: Shape) => shape.id === hoveredId);
+    return shapesLinePositions(hovered);
+  }, [geometry, hoveredId]);
+  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
+}
+
+function Lines({
+  positions,
   color,
   renderOrder,
 }: {
-  shape: Shape;
-  offset: [number, number, number];
+  positions: Float32Array;
   color: string;
   renderOrder: number;
 }) {
-  // Immer keeps unchanged shapes as the same objects, so only edited shapes re-flatten.
-  const positions = useMemo(() => shapeLinePositions(shape, offset), [shape, offset]);
   const geometry = useLineGeometry(positions);
+  if (positions.length === 0) return null;
   return (
     <lineSegments geometry={geometry} renderOrder={renderOrder}>
-      <lineBasicMaterial color={color} />
+      <lineBasicMaterial color={color} transparent />
     </lineSegments>
   );
-});
+}
