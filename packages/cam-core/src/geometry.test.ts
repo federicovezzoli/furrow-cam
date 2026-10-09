@@ -49,6 +49,44 @@ describe("offset", () => {
     expect(totalArea(result)).toBeGreaterThan(expected);
   });
 
+  it("returns counter-clockwise outer boundaries for clockwise input", () => {
+    expect(offset([rect(0, 0, 10, 10).reverse()], -1).map(signedArea)).toEqual([64]);
+    const result = offset([rect(0, 0, 100, 100).reverse(), rect(30, 30, 40, 40)], -3);
+    expect(result.map(signedArea).sort((a, b) => a - b)).toEqual([
+      expect.closeTo(-(46 * 46 - (4 - Math.PI) * 9), 0),
+      8836,
+    ]);
+  });
+
+  it("reads a hole wound like its outer boundary with the given fill rule", () => {
+    const rings = [rect(0, 0, 100, 100), rect(30, 30, 40, 40)];
+    expect(offset(rings, -3).map(signedArea)).toEqual([8836]);
+    const result = offset(rings, -3, { fillRule: "evenOdd" });
+    expect(result).toHaveLength(2);
+    expect(totalArea(result)).toBeCloseTo(94 * 94 - (46 * 46 - (4 - Math.PI) * 9), 0);
+  });
+
+  it("cleans the input for a zero or sub-unit offset", () => {
+    const bowTie: Polygon = [
+      [0, 0],
+      [100, 100],
+      [100, 0],
+      [0, 100],
+    ];
+    for (const delta of [0, 0.00001, -0.00001]) {
+      const result = offset([bowTie], delta);
+      expect(result).toHaveLength(2);
+      expect(result.every((p) => signedArea(p) > 0)).toBe(true);
+    }
+    expect(offset([rect(0, 0, 10, 10).reverse()], 0).map(signedArea)).toEqual([100]);
+  });
+
+  it("rejects a distance that is not a finite number", () => {
+    for (const delta of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(() => offset([rect(0, 0, 10, 10)], delta)).toThrow(RangeError);
+    }
+  });
+
   it("keeps a sharp corner sharp with a miter join", () => {
     const square = single(offset([rect(0, 0, 10, 10)], 1, { join: "miter" }));
     expect(signedArea(square)).toBeCloseTo(144, 6);

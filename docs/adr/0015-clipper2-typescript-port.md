@@ -36,7 +36,8 @@ Other observations:
 ## Decision
 
 - Use **`clipper2-ts`** as the Clipper2 package, pinned to an exact version because its releases are prereleases.
-- Only `packages/cam-core/src/geometry.ts` imports it. The adapter exposes `offset`, `union`, `difference`, `intersection`, `nest` (outer boundaries with their holes), `containment` and `signedArea` on millimetre `[x, y]` rings; outer boundaries wind counter-clockwise and holes clockwise.
+- Only `packages/cam-core/src/geometry.ts` imports it; Biome's `noRestrictedImports` enforces this. The adapter exposes `offset`, `union`, `difference`, `intersection`, `nest` (outer boundaries with their holes), `containment` and `signedArea` on millimetre `[x, y]` rings; outer boundaries wind counter-clockwise and holes clockwise in every result.
+- `offset` resolves its input with a fill rule (`nonZero` by default) before offsetting. Clipper2's offset keeps the input winding, fills with the `Positive` rule (so a hole wound like its outer becomes stray rings) and returns its input untouched below half a unit; resolving first gives clean rings for any input and any distance.
 - Round-join arc tolerance defaults to the chord tolerance (0.01 mm), so offsets and flattened curves have the same accuracy.
 - Toolpath code computes successive rings by offsetting the source region, never by re-offsetting a ring.
 

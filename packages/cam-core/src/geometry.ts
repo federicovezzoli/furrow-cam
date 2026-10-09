@@ -31,7 +31,12 @@ export type Polygon = Point[];
 /** An outer boundary with the holes directly inside it. */
 export type PolygonWithHoles = { outer: Polygon; holes: Polygon[] };
 
-/** Which areas count as inside when rings overlap. */
+/**
+ * Which areas count as inside when rings overlap. With `nonZero`, a ring wound
+ * like the ring around it adds to it, so a hole must wind the other way; with
+ * `evenOdd`, every nested ring toggles inside and outside whatever its
+ * winding, as imported drawings expect (see `nest`).
+ */
 export type FillRule = "nonZero" | "evenOdd";
 
 /** How an offset turns convex corners. */
@@ -39,6 +44,8 @@ export type Join = "round" | "miter" | "square";
 
 export type OffsetOptions = {
   join?: Join;
+  /** How the input rings combine before offsetting. */
+  fillRule?: FillRule;
   /** Largest distance in millimetres between a round join and its true arc. */
   arcTolerance?: number;
 };
@@ -50,6 +57,9 @@ export const CLIPPER_SCALE = 1e4;
 
 /** Miter joins longer than this many times the offset distance are squared off. */
 const MITER_LIMIT = 2;
+
+/** Clipper2 returns its input untouched for offsets below half a unit. */
+const MIN_DELTA = 0.5 / CLIPPER_SCALE;
 
 const FILL_RULES: Record<FillRule, ClipperFillRule> = {
   nonZero: ClipperFillRule.NonZero,
@@ -65,7 +75,9 @@ const JOINS: Record<Join, JoinType> = {
 /**
  * Grows (positive `delta`) or shrinks (negative) the area covered by
  * `polygons` by `delta` millimetres; holes move the other way. Shapes that
- * shrink to nothing vanish, and shapes that pinch split.
+ * shrink to nothing vanish, and shapes that pinch split. The input is first
+ * resolved with `fillRule` (default `nonZero`), so any winding is accepted and
+ * a zero offset returns the cleaned area.
  *
  * For successive rings (pockets), offset the original polygons by a growing
  * delta rather than offsetting each ring again: every pass adds join vertices,
@@ -74,8 +86,13 @@ const JOINS: Record<Join, JoinType> = {
 export function offset(polygons: Polygon[], delta: number, options: OffsetOptions = {}): Polygon[] {
   const arcTolerance = options.arcTolerance ?? DEFAULT_CHORD_TOLERANCE;
   if (!(arcTolerance > 0)) throw new RangeError("Arc tolerance must be positive");
+  if (!Number.isFinite(delta)) throw new RangeError("Offset distance must be finite");
+  // Offsetting keeps the winding of its input and fills with the Positive rule,
+  // so it gets clean rings: outer boundaries counter-clockwise, holes clockwise.
+  const area = clipUnion(toPaths(polygons), FILL_RULES[options.fillRule ?? "nonZero"]);
+  if (Math.abs(delta) < MIN_DELTA) return fromPaths(area);
   const result = inflatePaths(
-    toPaths(polygons),
+    area,
     delta * CLIPPER_SCALE,
     JOINS[options.join ?? "round"],
     EndType.Polygon,
@@ -131,7 +148,11 @@ export function nest(polygons: Polygon[], fillRule: FillRule = "evenOdd"): Polyg
   return result;
 }
 
-/** Where `point` lies relative to `polygon`, to within one Clipper2 unit. */
+/**
+ * Where `point` lies relative to `polygon`. Both are rounded to whole Clipper2
+ * units (0.0001 mm) first, so "on" means within about half a unit of the
+ * rounded ring.
+ */
 export function containment(point: Point, polygon: Polygon): Containment {
   const result = clipPointInPolygon(toPoint(point), toPath(polygon));
   if (result === PointInPolygonResult.IsInside) return "inside";
