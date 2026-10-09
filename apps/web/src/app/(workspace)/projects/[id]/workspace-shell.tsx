@@ -17,12 +17,9 @@ import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
 import type { getProject, ProjectRow } from "@/lib/projects";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
-import {
-  useDocumentStore,
-  useDocumentStoreApi,
-  WorkspaceStoresProvider,
-} from "@/stores/workspace-stores";
+import { useDocumentStoreApi, WorkspaceStoresProvider } from "@/stores/workspace-stores";
 import { SaveStatus } from "./save-status";
+import { StockProperties } from "./stock-properties";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
 const Viewport = dynamic(() => import("@/components/viewport/viewport").then((m) => m.Viewport), {
@@ -217,29 +214,4 @@ function Pane({ title, children }: { title: string; children: React.ReactNode })
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="p-3 text-ui text-muted-foreground">{children}</p>;
-}
-
-const mmFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 3 });
-
-/** Read-only stock summary shown while nothing is selected; editing comes with #17. */
-function StockProperties() {
-  const stock = useDocumentStore((s) => s.document.stock);
-  const rows = [
-    ["Width", stock.width],
-    ["Height", stock.height],
-    ["Thickness", stock.thickness],
-  ] as const;
-  return (
-    <div className="p-3 text-ui">
-      <h3 className="mb-2 font-medium">Stock</h3>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="text-right tabular-nums">{mmFormat.format(value)} mm</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
 }
