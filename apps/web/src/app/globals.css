@@ -47,6 +47,20 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Compact density for the CAM workspace (ADR-0009): CAM UIs are dense and
+ * desktop-like, so workspace controls are shorter and use smaller type than
+ * shadcn's defaults. Use `h-control`/`size-control` and `text-ui`.
+ */
+@theme {
+  --spacing-control: 1.75rem;
+  --spacing-control-sm: 1.5rem;
+  --text-ui: 0.75rem;
+  --text-ui--line-height: 1rem;
+  --text-ui-label: 0.6875rem;
+  --text-ui-label--line-height: 1rem;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
