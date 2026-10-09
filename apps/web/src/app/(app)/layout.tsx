@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -17,6 +18,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/machines" className="text-muted-foreground hover:text-foreground">
             Machines
           </Link>
+          <div className="ml-auto">
+            <SignOutButton />
+          </div>
         </nav>
       </header>
       {children}
