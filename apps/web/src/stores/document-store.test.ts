@@ -93,7 +93,7 @@ describe("transactions", () => {
     store.getState().commitTransaction();
 
     expect(store.getState().past).toHaveLength(1);
-    expect(store.getState().transaction).toBeNull();
+    expect(store.getState().inTransaction).toBe(false);
     store.getState().undo();
     expect(width()).toBe(initial);
     store.getState().redo();
@@ -144,7 +144,7 @@ describe("transactions", () => {
     store.getState().cancelTransaction();
 
     expect(width()).toBe(100);
-    expect(store.getState().transaction).toBeNull();
+    expect(store.getState().inTransaction).toBe(false);
     expect(store.getState().past).toHaveLength(1);
   });
 

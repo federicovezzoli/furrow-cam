@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProjectDocument } from "@furrow/document";
-import { ChevronLeftIcon } from "lucide-react";
+import { ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 import { useRef } from "react";
@@ -13,15 +13,17 @@ import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useAutosave } from "@/hooks/use-autosave";
 import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
+import type { getProject, ProjectRow } from "@/lib/projects";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
-import { useDocumentStore, WorkspaceStoresProvider } from "@/stores/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  WorkspaceStoresProvider,
+} from "@/stores/workspace-stores";
 import { SaveStatus } from "./save-status";
 
-type ProjectRow = { id: string; name: string; updatedAt: Date };
-
-type WorkspaceProject = ProjectRow &
-  ({ document: ProjectDocument; error?: never } | { document?: never; error: string });
+type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 /**
  * The CAM workspace (ADR-0009): a top bar over three resizable columns,
@@ -48,7 +50,7 @@ export function WorkspaceShell({
     );
   }
   return (
-    <WorkspaceStoresProvider key={project.id} document={project.document}>
+    <WorkspaceStoresProvider key={project.id} project={project}>
       <Workspace project={project} layout={layout} />
     </WorkspaceStoresProvider>
   );
@@ -56,8 +58,9 @@ export function WorkspaceShell({
 
 /** The workspace of a project that opened; its document lives in the stores (ADR-0010). */
 function Workspace({ project, layout }: { project: ProjectRow; layout: WorkspaceLayout }) {
-  const saveStatus = useAutosave(project.id, project.updatedAt);
+  const saveStatus = useAutosave();
   useUndoShortcuts();
+  const documentStore = useDocumentStoreApi();
   const saved = useRef(layout);
 
   function remember(group: keyof WorkspaceLayout) {
@@ -71,7 +74,12 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
 
   return (
     <>
-      <TopBar project={project} saveStatus={saveStatus} />
+      <TopBar
+        project={project}
+        saveStatus={saveStatus}
+        getDocument={() => documentStore.getState().document}
+      />
+      {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
       {/* Below the panels' minimum widths (180 + 200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
         <ResizablePanelGroup
@@ -134,8 +142,16 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
   );
 }
 
-/** `saveStatus` is left out when the project couldn't be opened. */
-function TopBar({ project, saveStatus }: { project: ProjectRow; saveStatus?: AutosaveStatus }) {
+/** `saveStatus` and `getDocument` are left out when the project couldn't be opened. */
+function TopBar({
+  project,
+  saveStatus,
+  getDocument,
+}: {
+  project: ProjectRow;
+  saveStatus?: AutosaveStatus;
+  getDocument?: () => ProjectDocument;
+}) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
@@ -148,10 +164,35 @@ function TopBar({ project, saveStatus }: { project: ProjectRow; saveStatus?: Aut
       </h1>
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
-        {saveStatus && <ExportButton id={project.id} name={project.name} size="compact" />}
+        {getDocument && (
+          <ExportButton
+            id={project.id}
+            name={project.name}
+            getDocument={getDocument}
+            size="compact"
+          />
+        )}
         <ThemeToggle size="icon-compact" />
       </div>
     </header>
+  );
+}
+
+/** Autosave stopped for good (e.g. a conflict): say so where it can't be missed. */
+function SaveFailed({ message }: { message: string | undefined }) {
+  return (
+    <div
+      role="alert"
+      className="flex shrink-0 items-center gap-2 border-b bg-destructive/10 px-3 py-1.5 text-ui text-destructive"
+    >
+      <CircleAlertIcon className="size-3.5 shrink-0" aria-hidden />
+      <p className="min-w-0 flex-1">
+        {message} Changes are no longer saved; export the project to keep them.
+      </p>
+      <Button variant="outline" size="compact" onClick={() => window.location.reload()}>
+        Reload
+      </Button>
+    </div>
   );
 }
 

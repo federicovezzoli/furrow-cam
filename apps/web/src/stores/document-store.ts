@@ -18,11 +18,8 @@ export type DocumentState = {
   past: HistoryEntry[];
   /** Redo steps, the next one last. Cleared by any new change. */
   future: HistoryEntry[];
-  /**
-   * Changes made since `beginTransaction`, already applied to `document` but
-   * not yet in `past`; `null` outside a transaction.
-   */
-  transaction: HistoryEntry | null;
+  /** Whether a transaction is open: its changes are applied to `document` but not yet in `past`. */
+  inTransaction: boolean;
 
   /**
    * Applies `recipe` to the document as one undo step, or as part of the open
@@ -46,26 +43,47 @@ export type DocumentState = {
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
 
+/**
+ * Patches of the open transaction. Kept out of the state and appended in
+ * place: a gesture can make a change per pointer move, and copying the
+ * arrays on each one would be quadratic.
+ */
+class Transaction {
+  private readonly patches: Patch[] = [];
+  /** One array per change, undone last change first. */
+  private readonly inverseChunks: Patch[][] = [];
+
+  add(patches: Patch[], inversePatches: Patch[]) {
+    this.patches.push(...patches);
+    this.inverseChunks.push(inversePatches);
+  }
+
+  /** The changes as one undo step, or `null` if there were none. */
+  entry(): HistoryEntry | null {
+    if (this.patches.length === 0) return null;
+    return { patches: this.patches, inversePatches: this.inverseChunks.slice().reverse().flat() };
+  }
+}
+
 /** A document store for one open project, with an empty history. */
 export function createDocumentStore(document: ProjectDocument) {
+  let transaction: Transaction | null = null;
+
   return createStore<DocumentState>()(
     devtools(
       (set, get) => ({
         document,
         past: [],
         future: [],
-        transaction: null,
+        inTransaction: false,
 
         change(name, recipe) {
-          const { document, past, transaction } = get();
+          const { document, past } = get();
           const [next, patches, inversePatches] = produceWithPatches(document, recipe);
           if (patches.length === 0) return;
           if (transaction) {
-            set(
-              { document: next, transaction: merge(transaction, { patches, inversePatches }) },
-              false,
-              name,
-            );
+            transaction.add(patches, inversePatches);
+            set({ document: next }, false, name);
           } else {
             set(
               {
@@ -80,36 +98,46 @@ export function createDocumentStore(document: ProjectDocument) {
         },
 
         beginTransaction() {
-          if (get().transaction) return;
-          set({ transaction: { patches: [], inversePatches: [] } }, false, "beginTransaction");
+          if (transaction) return;
+          transaction = new Transaction();
+          set({ inTransaction: true }, false, "beginTransaction");
         },
 
         commitTransaction() {
-          const { past, transaction } = get();
           if (!transaction) return;
-          if (transaction.patches.length === 0) {
-            set({ transaction: null }, false, "commitTransaction");
+          const entry = transaction.entry();
+          transaction = null;
+          if (!entry) {
+            set({ inTransaction: false }, false, "commitTransaction");
             return;
           }
           set(
-            { past: [...past, transaction].slice(-MAX_HISTORY), future: [], transaction: null },
+            {
+              past: [...get().past, entry].slice(-MAX_HISTORY),
+              future: [],
+              inTransaction: false,
+            },
             false,
             "commitTransaction",
           );
         },
 
         cancelTransaction() {
-          const { document, transaction } = get();
           if (!transaction) return;
+          const entry = transaction.entry();
+          transaction = null;
           set(
-            { document: applyPatches(document, transaction.inversePatches), transaction: null },
+            {
+              document: entry ? applyPatches(get().document, entry.inversePatches) : get().document,
+              inTransaction: false,
+            },
             false,
             "cancelTransaction",
           );
         },
 
         undo() {
-          const { document, past, future, transaction } = get();
+          const { document, past, future } = get();
           const entry = past.at(-1);
           if (transaction || !entry) return;
           set(
@@ -124,7 +152,7 @@ export function createDocumentStore(document: ProjectDocument) {
         },
 
         redo() {
-          const { document, past, future, transaction } = get();
+          const { document, past, future } = get();
           const entry = future.at(-1);
           if (transaction || !entry) return;
           set(
@@ -141,12 +169,4 @@ export function createDocumentStore(document: ProjectDocument) {
       { name: "document", enabled: process.env.NODE_ENV !== "production" },
     ),
   );
-}
-
-/** `first` then `second` as one step: redo in order, undo in reverse order. */
-function merge(first: HistoryEntry, second: HistoryEntry): HistoryEntry {
-  return {
-    patches: [...first.patches, ...second.patches],
-    inversePatches: [...second.inversePatches, ...first.inversePatches],
-  };
 }

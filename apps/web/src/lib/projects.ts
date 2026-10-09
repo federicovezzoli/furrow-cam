@@ -23,7 +23,7 @@ export function listProjects(userId: string) {
   });
 }
 
-type ProjectRow = { id: string; name: string; updatedAt: Date };
+export type ProjectRow = { id: string; name: string; updatedAt: Date };
 
 /**
  * One of the user's projects, or `null` if `id` is malformed, doesn't exist or

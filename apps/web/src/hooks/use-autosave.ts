@@ -1,35 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { saveProject } from "@/app/(app)/projects/actions";
-import { type AutosaveStatus, createAutosave } from "@/stores/autosave";
-import { useDocumentStoreApi } from "@/stores/workspace-stores";
-
-/** Quiet time after the last change before the document is saved. */
-export const AUTOSAVE_DELAY = 1000;
+import { useEffect, useSyncExternalStore } from "react";
+import type { AutosaveStatus } from "@/stores/autosave";
+import { useAutosaveApi } from "@/stores/workspace-stores";
 
 /**
- * Autosaves the open project's document (ADR-0010) and returns the save
- * status. `updatedAt` is the version the page was rendered with. Leaving the
- * page with unsaved changes asks for confirmation.
+ * Autosaves the open project's document (ADR-0010) while mounted and returns
+ * the save status. Leaving the page with unsaved changes asks for confirmation.
  */
-export function useAutosave(projectId: string, updatedAt: Date): AutosaveStatus {
-  const store = useDocumentStoreApi();
-  const [status, setStatus] = useState<AutosaveStatus>({ state: "saved", savedAt: updatedAt });
-  // Survives re-running the effect, so a new autosave continues from the last save.
-  const savedAt = useRef(updatedAt);
+export function useAutosave(): AutosaveStatus {
+  const autosave = useAutosaveApi();
+  const status = useSyncExternalStore(
+    autosave.subscribe,
+    () => autosave.status,
+    () => autosave.status,
+  );
 
   useEffect(() => {
-    const autosave = createAutosave(store, {
-      savedAt: savedAt.current,
-      delay: AUTOSAVE_DELAY,
-      save: (document, version) => saveProject(projectId, document, version),
-      onStatus(next) {
-        savedAt.current = next.savedAt;
-        setStatus(next);
-      },
-    });
-
+    const stop = autosave.start();
     function onBeforeUnload(event: BeforeUnloadEvent) {
       autosave.flush();
       if (autosave.status.state !== "saved") event.preventDefault();
@@ -37,9 +25,9 @@ export function useAutosave(projectId: string, updatedAt: Date): AutosaveStatus 
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
-      autosave.dispose();
+      stop();
     };
-  }, [store, projectId]);
+  }, [autosave]);
 
   return status;
 }

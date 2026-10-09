@@ -4,31 +4,59 @@ import type { ProjectDocument } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
+import { saveProject } from "@/app/(app)/projects/actions";
+import { type Autosave, createAutosave } from "./autosave";
 import { createDocumentStore, type DocumentState, type DocumentStore } from "./document-store";
+import { latestVersion, rememberSavedVersion } from "./saved-versions";
 import { createToolpathStore, type ToolpathState, type ToolpathStore } from "./toolpath-store";
 import { createWorkspaceStore, type WorkspaceState, type WorkspaceStore } from "./workspace-store";
 
-type Stores = { document: DocumentStore; workspace: WorkspaceStore; toolpaths: ToolpathStore };
+/** Quiet time after the last change before the document is saved. */
+export const AUTOSAVE_DELAY = 1000;
+
+type Stores = {
+  document: DocumentStore;
+  workspace: WorkspaceStore;
+  toolpaths: ToolpathStore;
+  autosave: Autosave;
+};
 
 const StoresContext = createContext<Stores | null>(null);
 
 /**
- * Creates the stores of one open project (ADR-0010). They live as long as this
- * provider rather than in module scope, so server renders never share them;
- * key it by project id so another project starts fresh.
+ * Creates the stores of one open project (ADR-0010) and its autosave, which
+ * the workspace starts. They live as long as this provider rather than in
+ * module scope, so server renders never share them; key it by project id so
+ * another project starts fresh.
  */
 export function WorkspaceStoresProvider({
-  document,
+  project,
   children,
 }: {
-  document: ProjectDocument;
+  /** As rendered by the server. */
+  project: { id: string; document: ProjectDocument; updatedAt: Date };
   children: React.ReactNode;
 }) {
-  const [stores] = useState<Stores>(() => ({
-    document: createDocumentStore(document),
-    workspace: createWorkspaceStore(),
-    toolpaths: createToolpathStore(),
-  }));
+  const [stores] = useState<Stores>(() => {
+    const { document, updatedAt } = latestVersion(project.id, project);
+    const documentStore = createDocumentStore(document);
+    return {
+      document: documentStore,
+      workspace: createWorkspaceStore(),
+      toolpaths: createToolpathStore(),
+      autosave: createAutosave(documentStore, {
+        savedAt: updatedAt,
+        delay: AUTOSAVE_DELAY,
+        async save(document, savedAt) {
+          const result = await saveProject(project.id, document, savedAt);
+          if (result.error === undefined) {
+            rememberSavedVersion(project.id, { document, updatedAt: result.updatedAt });
+          }
+          return result;
+        },
+      }),
+    };
+  });
   return <StoresContext value={stores}>{children}</StoresContext>;
 }
 
@@ -65,4 +93,9 @@ export function useWorkspaceStoreApi() {
 
 export function useToolpathStoreApi() {
   return useStores().toolpaths;
+}
+
+/** The open project's autosave; `useAutosave` starts it. */
+export function useAutosaveApi() {
+  return useStores().autosave;
 }
