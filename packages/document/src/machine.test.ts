@@ -22,6 +22,26 @@ describe("Machine", () => {
     expect(Machine.safeParse({ ...machine, spindleRpmMin: 40000 }).success).toBe(false);
   });
 
+  it("accepts fractional lengths and feeds but only whole spindle speeds, like the database", () => {
+    const fractional = { ...machine, workAreaZ: 95.5, safeZ: 2.5, maxFeedZ: 1250.5 };
+    expect(Machine.parse(fractional)).toEqual(fractional);
+    expect(Machine.safeParse({ ...machine, spindleRpmMax: 30000.5 }).success).toBe(false);
+  });
+
+  it("snapshots a copy, so later changes to the row don't reach the project", () => {
+    const row = { ...machine, id: "m1" };
+    const snapshot = Machine.parse(row);
+    row.safeZ = 10;
+    expect(snapshot.safeZ).toBe(machine.safeZ);
+  });
+
+  it("keeps custom G-code blocks verbatim and rejects blank or oversized ones", () => {
+    const programStart = "G21\nG90\nG94\nG92.1\nG0 Z20\nM62 P1 (start spindle pin 27)";
+    expect(Machine.parse({ ...machine, programStart }).programStart).toBe(programStart);
+    expect(Machine.safeParse({ ...machine, programEnd: " \n " }).success).toBe(false);
+    expect(Machine.safeParse({ ...machine, toolChange: "M0\n".repeat(5000) }).success).toBe(false);
+  });
+
   it("rejects unknown post-processors and non-positive sizes", () => {
     expect(Machine.safeParse({ ...machine, postProcessor: "marlin" }).success).toBe(false);
     expect(Machine.safeParse({ ...machine, workAreaZ: 0 }).success).toBe(false);
