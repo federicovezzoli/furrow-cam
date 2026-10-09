@@ -24,6 +24,7 @@ model User {
   accounts      Account[]
   tools         Tool[]
   machines      Machine[]
+  projects      Project[]
 
   @@unique([email])
   @@map("user")
@@ -156,4 +157,22 @@ model Machine {
 
   @@index([userId])
   @@map("machine")
+}
+
+// Project metadata is relational; the contents are one versioned JSON document,
+// validated with `ProjectDocument` from @furrow/document on every write (ADR-0003).
+
+model Project {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  /// Copy of `document.schemaVersion`, so stale documents can be found without reading them.
+  schemaVersion Int
+  document      Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("project")
 }
