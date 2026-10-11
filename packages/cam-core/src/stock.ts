@@ -1,4 +1,4 @@
-import type { Stock } from "@furrow/document";
+import type { Stock, StockAnchor } from "@furrow/document";
 
 /** `[x, y, z]` in millimetres. */
 export type Vec3 = [number, number, number];
@@ -6,25 +6,49 @@ export type Vec3 = [number, number, number];
 /** An axis-aligned box. */
 export type Box3 = { min: Vec3; max: Vec3 };
 
+/** How far along the stock's width and height each anchor is (ADR-0016). */
+const ANCHOR_FRACTIONS = {
+  bottom_left: [0, 0],
+  bottom_center: [0.5, 0],
+  bottom_right: [1, 0],
+  middle_left: [0, 0.5],
+  center: [0.5, 0.5],
+  middle_right: [1, 0.5],
+  top_left: [0, 1],
+  top_center: [0.5, 1],
+  top_right: [1, 1],
+} as const satisfies Record<StockAnchor, readonly [number, number]>;
+
 /**
- * Where the stock coordinate frame sits in work coordinates (ADR-0014).
- * Geometry is stored in stock coordinates: `(0, 0)` is the stock's bottom-left
- * corner and `z = 0` its top, so changing the work origin never moves the
- * design on the stock.
+ * The XY zero in stock coordinates. Anchors follow the stock's size; a custom
+ * zero is already in stock coordinates.
+ */
+export function xyOriginPosition({
+  width,
+  height,
+  xyOrigin: origin,
+}: Pick<Stock, "width" | "height" | "xyOrigin">): [number, number] {
+  if (origin.anchor === "custom") return [origin.x, origin.y];
+  const [fx, fy] = ANCHOR_FRACTIONS[origin.anchor];
+  return [fx * width, fy * height];
+}
+
+/**
+ * Where the stock coordinate frame sits in work coordinates (ADR-0014,
+ * ADR-0016). Geometry is stored in stock coordinates: `(0, 0)` is the stock's
+ * bottom-left corner and `z = 0` its top, so changing the work origin never
+ * moves the design on the stock.
  * Work coordinates have their origin where the stock's XY and Z origins say,
  * which is where the machine is zeroed and what G-code is written in.
  */
 export function stockOffset(stock: Stock): Vec3 {
-  const centered = stock.xyOrigin === "center";
-  return [
-    centered ? -stock.width / 2 : 0,
-    centered ? -stock.height / 2 : 0,
-    stock.zOrigin === "machine_bed" ? stock.thickness : 0,
-  ];
+  const [x, y] = xyOriginPosition(stock);
+  // `0 - 0` keeps a bottom-left zero at `0` rather than `-0`.
+  return [0 - x, 0 - y, stock.zOrigin === "machine_bed" ? stock.thickness : 0];
 }
 
 /** The space the stock occupies, in stock coordinates. */
-export function stockBox(stock: Stock): Box3 {
+export function stockBox(stock: Pick<Stock, "width" | "height" | "thickness">): Box3 {
   return { min: [0, 0, -stock.thickness], max: [stock.width, stock.height, 0] };
 }
 

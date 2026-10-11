@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createProjectDocument, ProjectDocument } from "./document";
+import { createProjectDocument, ProjectDocument, StockAnchor, XYOrigin } from "./document";
 import { fullDocument, OPERATION_ID, SQUARE_ID } from "./fixtures";
 
 describe("ProjectDocument", () => {
@@ -19,7 +19,7 @@ describe("ProjectDocument", () => {
       false,
     );
     expect(
-      ProjectDocument.safeParse({ ...doc, stock: { ...doc.stock, xyOrigin: "top_right" } }).success,
+      ProjectDocument.safeParse({ ...doc, stock: { ...doc.stock, xyOrigin: "left" } }).success,
     ).toBe(false);
     expect(ProjectDocument.safeParse({ ...doc, schemaVersion: 2 }).success).toBe(false);
   });
@@ -67,6 +67,64 @@ describe("ProjectDocument", () => {
   });
 });
 
+describe("XYOrigin", () => {
+  it("accepts the 9 stock anchors", () => {
+    for (const anchor of StockAnchor.options) {
+      expect(XYOrigin.parse({ anchor })).toEqual({ anchor });
+    }
+  });
+
+  it("accepts custom zeros anywhere, including outside the stock", () => {
+    for (const [x, y] of [
+      [25, 40],
+      [0, 0],
+      [-12.5, 1000],
+    ]) {
+      expect(XYOrigin.parse({ anchor: "custom", x, y })).toEqual({ anchor: "custom", x, y });
+    }
+  });
+
+  it("normalises legacy anchor names", () => {
+    expect(XYOrigin.parse("bottom_left")).toEqual({ anchor: "bottom_left" });
+    expect(XYOrigin.parse("center")).toEqual({ anchor: "center" });
+    const doc = fullDocument();
+    const legacy = { ...doc, stock: { ...doc.stock, xyOrigin: "center" } };
+    expect(ProjectDocument.parse(legacy)).toEqual(doc);
+  });
+
+  it("rejects non-finite or missing custom coordinates", () => {
+    for (const origin of [
+      { anchor: "custom", x: Number.NaN, y: 0 },
+      { anchor: "custom", x: 0, y: Number.POSITIVE_INFINITY },
+      { anchor: "custom", x: Number.NEGATIVE_INFINITY, y: 0 },
+      { anchor: "custom", x: 0 },
+      { anchor: "custom", x: "1", y: 0 },
+    ]) {
+      expect(XYOrigin.safeParse(origin).success).toBe(false);
+    }
+  });
+
+  it("reports the invalid field of a custom zero", () => {
+    const result = XYOrigin.safeParse({ anchor: "custom", x: Number.NaN, y: 0 });
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([["x"]]);
+    const missing = XYOrigin.safeParse({ anchor: "custom", x: 0 });
+    expect(missing.error?.issues.map((issue) => issue.path)).toEqual([["y"]]);
+  });
+
+  it("rejects unknown anchors, coordinates on anchors and other legacy-looking names", () => {
+    for (const origin of [
+      { anchor: "left" },
+      { anchor: "center", x: 0, y: 0 },
+      { anchor: "custom", x: 0, y: 0, z: 0 },
+      "top_right",
+      "custom",
+      null,
+    ]) {
+      expect(XYOrigin.safeParse(origin).success).toBe(false);
+    }
+  });
+});
+
 describe("createProjectDocument", () => {
   it("returns a valid empty project with the default stock", () => {
     const doc = createProjectDocument();
@@ -77,7 +135,7 @@ describe("createProjectDocument", () => {
         width: 600,
         height: 400,
         thickness: 18,
-        xyOrigin: "bottom_left",
+        xyOrigin: { anchor: "bottom_left" },
         zOrigin: "stock_top",
       },
       machine: null,
