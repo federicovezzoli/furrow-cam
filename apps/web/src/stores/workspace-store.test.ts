@@ -45,6 +45,22 @@ describe("workspace store", () => {
     expect(store.getState().editingTabs).toBe(false);
   });
 
+  it("stops editing tabs once the selected profile has none", () => {
+    const store = createWorkspaceStore();
+    const withTabs = (tabs: object | null): ProjectDocument => ({
+      ...createProjectDocument(),
+      operations: [
+        { id: "op", type: "profile", params: { tabs } } as ProjectDocument["operations"][number],
+      ],
+    });
+    store.getState().selectOperation("op");
+    store.getState().setEditingTabs(true);
+    store.getState().prune(withTabs({ width: 6, height: 3, positions: [] }));
+    expect(store.getState().editingTabs).toBe(true);
+    store.getState().prune(withTabs(null));
+    expect(store.getState()).toMatchObject({ editingTabs: false, selectedOperationId: "op" });
+  });
+
   it("prunes ids that are no longer in the document, keeping an unchanged selection", () => {
     const store = createWorkspaceStore();
     const shape = (id: string) => ({ id }) as ProjectDocument["geometry"][number];

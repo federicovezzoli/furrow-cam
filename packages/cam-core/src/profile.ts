@@ -3,8 +3,8 @@ import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
 import {
   coveredSpans,
+  freeSpans,
   inSpans,
-  longestGapMiddle,
   loopLength,
   pointAlong,
   projectOnLoop,
@@ -139,7 +139,9 @@ export function profileToolpath(
     const missedFinishing = finishing
       ? placeTabs(finishing.contours, tabs.positions, radius + tabs.width, span)
       : missed;
-    const left = roughing.contours.length > 0 ? missed : missedFinishing;
+    // A tab the finish lap leaves out is cut away at full depth, so it counts as missed too.
+    const left =
+      roughing.contours.length === 0 ? missedFinishing : Math.max(missed, missedFinishing);
     if (left > 0) {
       warnings.push(`Left out ${plural(left, "tab")} too far from every closed contour.`);
     }
@@ -484,7 +486,8 @@ function rampZ(z: number, level: number, travelled: number, total: number): numb
 /**
  * Feeds `run` millimetres along `track` from `at`, at height `z(travelled)`,
  * staying at or above the tab top over `tabs`: straight up at a tab's start,
- * straight down at its end. Moves that go down are at the plunge rate.
+ * then past its end straight down, or ramping down at the plunge angle when
+ * ramping is on. Moves that go down are at the plunge rate.
  */
 function feedTrack(
   cut: Cut,
@@ -501,7 +504,10 @@ function feedTrack(
     // Contours have a point at each end of a tab, so no step crosses one.
     const middle = (at + (previousTravelled + travelled) / 2) % track.length;
     const lifted = tabTop !== null && inSpans(tabs, middle);
-    const height = (t: number) => (lifted ? Math.max(z(t), tabTop) : z(t));
+    const height = (t: number) =>
+      lifted && tabTop !== null
+        ? Math.max(z(t), tabTop)
+        : Math.max(z(t), rampDownFrom(cut, tabs, at + t, track.length));
     const from = height(previousTravelled);
     const current = builder.position?.[2];
     if (current !== undefined && Math.abs(current - from) > 1e-9) {
@@ -518,10 +524,29 @@ function feedTrack(
 }
 
 /**
+ * How high the tool still is `at` millimetres along a contour of `length`
+ * while ramping down after the tabs: the tab top less the descent since the
+ * end of the last tab, or `-Infinity` when not ramping.
+ */
+function rampDownFrom(cut: Cut, tabs: Span[], at: number, length: number): number {
+  const { tabTop, rampRun } = cut;
+  if (tabTop === null || rampRun === null) return -Infinity;
+  let height = -Infinity;
+  for (const [, end] of tabs) {
+    let past = (((at - end) % length) + length) % length;
+    // Right on the tab's end, give or take rounding.
+    if (past > length - 1e-6) past = 0;
+    height = Math.max(height, tabTop - past / rampRun);
+  }
+  return height;
+}
+
+/**
  * Gives each of `contours` the tabs at `positions` it is nearest to, if no
  * further than `reach`, each covering `span` along it. Restarts a contour
- * that would start on a tab in the middle of the longest stretch between
- * tabs. Returns how many positions were too far from every contour.
+ * that would start on a tab in the middle of the longest piece of an edge
+ * that no tab covers, so a lead-in still meets a straight. Returns how many
+ * positions were too far from every contour.
  */
 function placeTabs(contours: Contour[], positions: Point[], reach: number, span: number): number {
   const loops = contours.map((contour) => [...contour.ring, contour.ring[0] as Point]);
@@ -550,7 +575,7 @@ function placeTabs(contours: Contour[], positions: Point[], reach: number, span:
     const last = tabs.at(-1) as Span;
     const covered = first[0] <= 0 && first[1] >= length;
     if (!covered && (first[0] <= 0 || last[1] >= length)) {
-      const start = longestGapMiddle(tabs, length) ?? 0;
+      const start = freeStart(loops[i] as Point[], tabs, length);
       contour.ring = restartAt(loops[i] as Point[], start);
       at = at.map((centre) => centre - start);
       length = loopLength([...contour.ring, contour.ring[0] as Point]);
@@ -562,18 +587,45 @@ function placeTabs(contours: Contour[], positions: Point[], reach: number, span:
   return missed;
 }
 
-/** The ring of closed `loop`, starting `at` millimetres along it. */
+/** The middle of the longest piece of an edge of closed `loop` that none of `tabs` covers. */
+function freeStart(loop: Point[], tabs: Span[], length: number): number {
+  const free = freeSpans(tabs, length);
+  let longest = 0;
+  let start = 0;
+  let travelled = 0;
+  for (let i = 1; i < loop.length; i++) {
+    const end = travelled + distance(loop[i - 1] as Point, loop[i] as Point);
+    for (const [from, to] of free) {
+      const piece = Math.min(to, end) - Math.max(from, travelled);
+      if (piece > longest) {
+        longest = piece;
+        start = Math.max(from, travelled) + piece / 2;
+      }
+    }
+    travelled = end;
+  }
+  return start;
+}
+
+/** The ring of closed `loop`, starting `at` millimetres along it, without repeated points. */
 function restartAt(loop: Point[], at: number): Point[] {
   const start = pointAlong(loop, at);
+  let ring = loop.slice(0, -1);
   let travelled = 0;
   for (let i = 1; i < loop.length; i++) {
     travelled += distance(loop[i - 1] as Point, loop[i] as Point);
     if (travelled >= at) {
       // `loop` repeats its first point at the end; the ring doesn't.
-      return [start, ...loop.slice(i, -1), ...loop.slice(0, i)];
+      ring = [start, ...loop.slice(i, -1), ...loop.slice(0, i)];
+      break;
     }
   }
-  return loop.slice(0, -1);
+  const distinct = ring.filter(
+    (point, i) => i === 0 || distance(point, ring[i - 1] as Point) > 1e-9,
+  );
+  const last = distinct.at(-1) as Point;
+  if (distinct.length > 1 && distance(last, distinct[0] as Point) <= 1e-9) distinct.pop();
+  return distinct;
 }
 
 /** `ring` with a point added at each distance along it in `stops` that isn't one already. */

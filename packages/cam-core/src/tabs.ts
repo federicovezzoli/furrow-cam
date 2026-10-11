@@ -34,16 +34,12 @@ export function autoTabPositions(
 }
 
 /**
- * The point of the closed paths of `shapes` nearest to `point`, and how far
- * it is, or `null` if they have none. Tabs are dragged along these.
+ * The point of `loops` (from `closedLoops`) nearest to `point`, or `null`
+ * without loops. Tabs are dragged along these.
  */
-export function nearestOnClosedPaths(
-  shapes: Shape[],
-  point: Point,
-  tolerance = DEFAULT_CHORD_TOLERANCE,
-): Projection | null {
+export function nearestOnLoops(loops: Point[][], point: Point): Projection | null {
   let best: Projection | null = null;
-  for (const loop of closedLoops(shapes, tolerance)) {
+  for (const loop of loops) {
     const projection = projectOnLoop(loop, point);
     if (!best || projection.distance < best.distance) best = projection;
   }
@@ -57,24 +53,19 @@ export type TabFrame = { center: Point; angle: number };
 const SIDE_PROBE = 0.01;
 
 /**
- * Where the tab at `position` leaves material: on the nearest closed path of
- * `shapes`, across the slot a tool of `toolDiameter` cuts on `side` (centred
- * on the path for `on`), or `null` without closed paths. The tab is its
- * width long along `angle` and `toolDiameter` across.
+ * Where the tab at `position` leaves material: on the nearest of `loops`
+ * (the profile's closed paths, from `closedLoops`), across the slot a tool of
+ * `toolDiameter` cuts on `side` (centred on the path for `on`), or `null`
+ * without loops. The tab is its width long along `angle` and `toolDiameter`
+ * across.
  */
 export function tabFrame(
-  shapes: Shape[],
+  loops: Point[][],
   side: ProfileSide,
   position: Point,
   toolDiameter: number,
-  tolerance = DEFAULT_CHORD_TOLERANCE,
 ): TabFrame | null {
-  const loops = closedLoops(shapes, tolerance);
-  let nearest: Projection | null = null;
-  for (const loop of loops) {
-    const projection = projectOnLoop(loop, position);
-    if (!nearest || projection.distance < nearest.distance) nearest = projection;
-  }
+  const nearest = nearestOnLoops(loops, position);
   if (!nearest) return null;
   const { point, tangent } = nearest;
   const angle = Math.atan2(tangent[1], tangent[0]);
@@ -90,7 +81,7 @@ export function tabFrame(
 }
 
 /** The closed paths of `shapes`, flattened, each ending on its first point. */
-function closedLoops(shapes: Shape[], tolerance: number): Point[][] {
+export function closedLoops(shapes: Shape[], tolerance = DEFAULT_CHORD_TOLERANCE): Point[][] {
   return shapes.flatMap((shape) =>
     shape.paths
       .filter((path) => path.closed && path.segments.length > 0)
@@ -195,22 +186,16 @@ export function coveredSpans(centres: number[], width: number, length: number): 
   return merged;
 }
 
-/** The middle of the longest stretch of a loop of `length` that no span covers, or `null` if none is free. */
-export function longestGapMiddle(spans: Span[], length: number): number | null {
-  if (spans.length === 0) return 0;
-  let bestSize = 1e-9;
-  let middle: number | null = null;
-  for (let i = 0; i < spans.length; i++) {
-    const span = spans[i] as Span;
-    const next = spans[(i + 1) % spans.length] as Span;
-    const end = i + 1 < spans.length ? next[0] : next[0] + length;
-    const size = end - span[1];
-    if (size > bestSize) {
-      bestSize = size;
-      middle = (span[1] + size / 2) % length;
-    }
+/** The stretches of a loop of `length` that the merged, ordered `spans` leave free, in order. */
+export function freeSpans(spans: Span[], length: number): Span[] {
+  const free: Span[] = [];
+  let from = 0;
+  for (const [start, end] of spans) {
+    if (start > from) free.push([from, start]);
+    from = Math.max(from, end);
   }
-  return middle;
+  if (from < length) free.push([from, length]);
+  return free;
 }
 
 export function inSpans(spans: Span[], at: number): boolean {

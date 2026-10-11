@@ -2,10 +2,11 @@ import type { Point, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import {
   autoTabPositions,
+  closedLoops,
   coveredSpans,
+  freeSpans,
   inSpans,
-  longestGapMiddle,
-  nearestOnClosedPaths,
+  nearestOnLoops,
   projectOnLoop,
   tabFrame,
 } from "./tabs";
@@ -83,19 +84,34 @@ describe("autoTabPositions", () => {
   });
 });
 
-describe("nearestOnClosedPaths", () => {
+describe("closedLoops", () => {
+  it("flattens the closed paths, each ending on its start", () => {
+    const loops = closedLoops([square, hole, line]);
+    expect(loops).toHaveLength(2);
+    expect(loops[0]).toEqual([
+      [0, 0],
+      [100, 0],
+      [100, 100],
+      [0, 100],
+      [0, 0],
+    ]);
+  });
+});
+
+describe("nearestOnLoops", () => {
   it("snaps to the nearest closed path", () => {
-    const nearest = nearestOnClosedPaths([square, hole, line], [52, 12]);
+    const loops = closedLoops([square, hole, line]);
+    const nearest = nearestOnLoops(loops, [52, 12]);
     expect(rounded([nearest?.point as Point])).toEqual([[52, 0]]);
     expect(nearest?.distance).toBeCloseTo(12, 6);
-    expect(nearestOnClosedPaths([square, hole], [50, 45])?.distance).toBeCloseTo(5, 1);
-    expect(nearestOnClosedPaths([line], [0, 0])).toBeNull();
+    expect(nearestOnLoops(loops, [50, 45])?.distance).toBeCloseTo(5, 1);
+    expect(nearestOnLoops([], [0, 0])).toBeNull();
   });
 });
 
 describe("tabFrame", () => {
   function frame(side: "outside" | "inside" | "on", position: Point, shapes = [square]) {
-    const result = tabFrame(shapes, side, position, 6);
+    const result = tabFrame(closedLoops(shapes), side, position, 6);
     if (!result) throw new Error("no frame");
     return { center: rounded([result.center])[0], angle: Math.round(result.angle * 1e6) / 1e6 };
   }
@@ -116,7 +132,7 @@ describe("tabFrame", () => {
   });
 
   it("needs closed paths", () => {
-    expect(tabFrame([line], "on", [0, 0], 6)).toBeNull();
+    expect(tabFrame(closedLoops([line]), "on", [0, 0], 6)).toBeNull();
   });
 });
 
@@ -152,28 +168,32 @@ describe("coveredSpans", () => {
   });
 });
 
-describe("longestGapMiddle", () => {
-  it("finds the middle of the longest free stretch, across the start too", () => {
+describe("freeSpans", () => {
+  it("lists what the spans leave free, ends included", () => {
     expect(
-      longestGapMiddle(
+      freeSpans(
         [
           [10, 20],
           [30, 40],
         ],
         100,
       ),
-    ).toBe(75);
+    ).toEqual([
+      [0, 10],
+      [20, 30],
+      [40, 100],
+    ]);
     expect(
-      longestGapMiddle(
+      freeSpans(
         [
           [0, 4],
-          [40, 90],
+          [90, 100],
         ],
         100,
       ),
-    ).toBe(22);
-    expect(longestGapMiddle([[0, 100]], 100)).toBeNull();
-    expect(longestGapMiddle([], 100)).toBe(0);
+    ).toEqual([[4, 90]]);
+    expect(freeSpans([[0, 100]], 100)).toEqual([]);
+    expect(freeSpans([], 100)).toEqual([[0, 100]]);
   });
 });
 

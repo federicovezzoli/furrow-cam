@@ -406,6 +406,38 @@ describe("profileToolpath with tabs", () => {
     expect(cutsAt(finished, -6).some(([x, y]) => Math.abs(y + 3) < 1e-6 && x > 60)).toBe(true);
   });
 
+  it("restarts a contour mid-edge between equally spaced tabs, keeping the lead-in finite", () => {
+    const toolpath = profile({ tabs: tabs(midSides), leadIn: { radius: 3 } });
+    for (const move of toolpath.moves) expect(move.to.every(Number.isFinite)).toBe(true);
+    // The lead-in arc ends on a straight side of the contour, not on a rounded corner.
+    const onContour = ([x, y]: Vec3) =>
+      Math.abs(Math.max(Math.abs(x - 50), Math.abs(y - 50)) - 53) < 1e-6;
+    const arcEnd = toolpath.moves.find((move) => move.to[2] === -2 && onContour(move.to))?.to;
+    const [x, y] = arcEnd as Vec3;
+    const alongBottomOrTop =
+      (Math.abs(y + 3) < 1e-6 || Math.abs(y - 103) < 1e-6) && x > 0 && x < 100;
+    const alongSides = (Math.abs(x + 3) < 1e-6 || Math.abs(x - 103) < 1e-6) && y > 0 && y < 100;
+    expect(alongBottomOrTop || alongSides).toBe(true);
+  });
+
+  it("ramps back down after each tab when ramping", () => {
+    const top = -3;
+    const descents = (toolpath: Toolpath) =>
+      steps(toolpath).filter(
+        ([from, move]) => move.kind === "feed" && from[2] === top && move.to[2] < top,
+      );
+    const ramped = profile({ ramp: true, tabs: tabs(midSides) });
+    expect(descents(ramped).length).toBeGreaterThan(0);
+    for (const [from, move] of descents(ramped)) {
+      expect(descentAngle(from, move.to)).toBeLessThanOrEqual(3 + 1e-6);
+    }
+    expect(intrusions(ramped, top)).toEqual([]);
+    // Without a ramp it drops straight down.
+    for (const [from, move] of descents(profile({ tabs: tabs(midSides) }))) {
+      expect(move.to.slice(0, 2)).toEqual(from.slice(0, 2));
+    }
+  });
+
   it("puts each tab on the nearest contour", () => {
     const toolpath = profile({ tabs: tabs([[50, 40]]) }, [square, hole]);
     // The hole's contour (r 7) is nearer than the outline's.
@@ -423,6 +455,9 @@ describe("profileToolpath with tabs", () => {
         ]),
       }).warnings,
     ).toEqual(["Left out 1 tab too far from every closed contour."]);
+    // Near enough to the depth passes (3.5 mm out) but not to the finish lap (3 mm out).
+    const finishing = profile({ allowance: 0.5, finishPass: true, tabs: tabs([[50, -10.5]]) });
+    expect(finishing.warnings).toEqual(["Left out 1 tab too far from every closed contour."]);
     const tall = profile({ tabs: { width: 4, height: 6, positions: [[50, 0]] } });
     expect(tall.warnings).toEqual([
       "The tabs are as tall as the cut is deep, so nothing is cut under them.",

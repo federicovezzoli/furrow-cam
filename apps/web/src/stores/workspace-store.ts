@@ -12,8 +12,9 @@ export type ViewMode = "top" | "orbit";
  * every pointer move.
  *
  * An undo can remove a selected shape or operation, so `prune` drops ids that
- * are no longer in the document; the workspace calls it on every document
- * change, and readers can trust the ids.
+ * are no longer in the document, and ends editing tabs the selected profile
+ * no longer has; the workspace calls it on every document change, and readers
+ * can trust the ids.
  */
 export type WorkspaceState = {
   view: ViewMode;
@@ -34,7 +35,7 @@ export type WorkspaceState = {
   /** Switches to the top view when turned on. */
   setEditingTabs: (editing: boolean) => void;
   clearSelection: () => void;
-  /** Drops selected and hovered ids that aren't in `document`. */
+  /** Drops selected and hovered ids that aren't in `document`, and tab editing without tabs. */
   prune: (document: ProjectDocument) => void;
 };
 
@@ -136,11 +137,10 @@ export function createWorkspaceStore() {
                 state.hoveredShapeId = null;
               }
               const operationId = state.selectedOperationId;
-              if (
-                operationId !== null &&
-                !document.operations.some((operation) => operation.id === operationId)
-              ) {
-                state.selectedOperationId = null;
+              const operation = document.operations.find(({ id }) => id === operationId);
+              if (operationId !== null && !operation) state.selectedOperationId = null;
+              // Nothing left to edit once the profile's tabs are turned off (or undone).
+              if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
                 state.editingTabs = false;
               }
             },

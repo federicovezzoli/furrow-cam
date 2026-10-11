@@ -1,6 +1,6 @@
 "use client";
 
-import { nearestOnClosedPaths, type TabFrame, tabFrame, type Vec3 } from "@furrow/cam-core";
+import { closedLoops, nearestOnLoops, type TabFrame, tabFrame, type Vec3 } from "@furrow/cam-core";
 import type { Point, ProfileOperation } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
@@ -55,6 +55,8 @@ export function Tabs({ color }: { color: string }) {
     const ids = new Set(shapeIds);
     return geometry.filter((shape) => ids.has(shape.id));
   }, [geometry, shapeIds]);
+  // Flattened once per set of shapes, not on every pointer move.
+  const loops = useMemo(() => closedLoops(shapes), [shapes]);
   const tabs = operation?.params.tabs;
   const side = operation?.params.side;
   const diameter = operation?.tool.diameter;
@@ -62,9 +64,9 @@ export function Tabs({ color }: { color: string }) {
   const frames = useMemo(
     () =>
       side && diameter && positions
-        ? positions.map((position) => tabFrame(shapes, side, position, diameter))
+        ? positions.map((position) => tabFrame(loops, side, position, diameter))
         : [],
-    [shapes, side, diameter, positions],
+    [loops, side, diameter, positions],
   );
   if (!operation || !tabs) return null;
   const { depth } = operation.params;
@@ -73,7 +75,7 @@ export function Tabs({ color }: { color: string }) {
   function add(event: ThreeEvent<MouseEvent>) {
     if (!operation || event.delta > TAB_DRAG_THRESHOLD) return;
     const point = onStockTop(event.ray);
-    const nearest = point && nearestOnClosedPaths(shapes, point);
+    const nearest = point && nearestOnLoops(loops, point);
     // The top view is orthographic: its zoom is in pixels per millimetre.
     if (nearest && nearest.distance <= TAB_PICK_DISTANCE / event.camera.zoom) {
       addTab(store, operation.id, nearest.point);
@@ -83,9 +85,10 @@ export function Tabs({ color }: { color: string }) {
   return (
     <>
       {editing && (
-        // Catches clicks anywhere on the stock top's plane, under the markers.
+        // Catches clicks anywhere. Below the tabs, so a click on one reaches it first
+        // and stops here; where the click lands is measured on the stock top.
         // biome-ignore lint/a11y/noStaticElementInteractions: a three.js object, not a DOM element
-        <mesh onClick={add}>
+        <mesh position={[0, 0, -depth - 1]} onClick={add}>
           <planeGeometry args={[100_000, 100_000]} />
           <meshBasicMaterial visible={false} />
         </mesh>
@@ -101,7 +104,7 @@ export function Tabs({ color }: { color: string }) {
           color={color}
           editing={editing}
           onMove={(point) => {
-            const nearest = nearestOnClosedPaths(shapes, point);
+            const nearest = nearestOnLoops(loops, point);
             if (nearest) moveTab(store, operation.id, index, nearest.point);
           }}
           onRemove={() => removeTab(store, operation.id, index)}
@@ -157,13 +160,10 @@ function TabMarker({
     event.stopPropagation();
     (event.target as Element).releasePointerCapture(event.pointerId);
     press.current = null;
+    if (!current.dragging) return;
     const state = store.getState();
-    if (current.dragging) {
-      if (cancelled) state.cancelTransaction();
-      else state.commitTransaction();
-    } else if (!cancelled) {
-      onRemove();
-    }
+    if (cancelled) state.cancelTransaction();
+    else state.commitTransaction();
   }
 
   return (
@@ -198,8 +198,10 @@ function TabMarker({
       onPointerUp={(event) => end(event, false)}
       onPointerCancel={(event) => end(event, true)}
       onClick={(event) => {
-        // The press already handled it; keep it from adding a tab underneath.
-        if (editing) event.stopPropagation();
+        if (!editing) return;
+        // Keeps the click from adding a tab underneath, whether it removes this one or ends a drag.
+        event.stopPropagation();
+        if (event.delta <= TAB_DRAG_THRESHOLD) onRemove();
       }}
     >
       {/* Drawn over the stock and the shapes, which would otherwise hide it from above. */}
