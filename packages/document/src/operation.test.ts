@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fullDocument } from "./fixtures";
-import { PocketParams, ProfileParams } from "./operation";
+import { DrillOperation, DrillParams, PocketParams, ProfileParams } from "./operation";
 
 const params = fullDocument().operations[0]?.params as ProfileParams;
 
@@ -73,5 +73,28 @@ describe("PocketParams", () => {
 
   it("needs an allowance for a finish pass", () => {
     expect(PocketParams.safeParse({ ...pocket, allowance: 0 }).success).toBe(false);
+  });
+});
+
+describe("DrillOperation", () => {
+  const profile = fullDocument().operations[0];
+  if (!profile) throw new Error("The fixture has an operation");
+  const drill = { ...profile, type: "drill", params: { depth: 10, peck: true } };
+
+  it("accepts drills and end mills", () => {
+    expect(DrillOperation.safeParse(drill).success).toBe(true);
+    const drillBit = { ...drill.tool, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(DrillOperation.safeParse({ ...drill, tool: drillBit }).success).toBe(true);
+  });
+
+  it("rejects V-bits", () => {
+    const vBit = { ...drill.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+    expect(DrillOperation.safeParse({ ...drill, tool: vBit }).success).toBe(false);
+  });
+
+  it("rejects invalid params and unknown keys", () => {
+    expect(DrillParams.safeParse({ depth: 0, peck: false }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 5, peck: "yes" }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 5, peck: true, peckDepth: 2 }).success).toBe(false);
   });
 });

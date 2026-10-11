@@ -2,6 +2,7 @@ import { createProjectDocument, ProjectDocument, type Shape, type Tool } from "@
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
+  addDrillOperation,
   addPocketOperation,
   addProfileOperation,
   addTab,
@@ -15,6 +16,7 @@ import {
   setOperationEnabled,
   setOperationShapes,
   setOperationTool,
+  updateDrillParams,
   updatePocketParams,
   updateProfileParams,
 } from "./operation-actions";
@@ -213,6 +215,47 @@ describe("addPocketOperation", () => {
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
     expect(addPocketOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+  });
+});
+
+describe("addDrillOperation", () => {
+  const addDrill = (store: ReturnType<typeof setup>["store"]) => {
+    const id = addDrillOperation(store, { shapeIds: [circle.id], tool: endMill });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("appends a valid drill operation through the stock, pecking", () => {
+    const { store, document, operations } = setup();
+    const id = addDrill(store);
+    expect(operations().find((operation) => operation.id === id)).toMatchObject({
+      type: "drill",
+      name: "Drill 1",
+      enabled: true,
+      shapeIds: [circle.id],
+      tool: endMill,
+      params: { depth: 18, peck: true },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("refuses V-bits, adding or switching tools", () => {
+    const { store, operations } = setup();
+    expect(addDrillOperation(store, { shapeIds: [circle.id], tool: vBit })).toBeNull();
+    const id = addDrill(store);
+    expect(setOperationTool(store, id, vBit)).toEqual({ ok: false, error: "V-bits can't drill" });
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const { store, operations } = setup();
+    const id = addDrill(store);
+    expect(updateDrillParams(store, id, { depth: 5, peck: false })).toEqual({ ok: true });
+    expect(operations().find((operation) => operation.id === id)?.params).toEqual({
+      depth: 5,
+      peck: false,
+    });
+    expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
   });
 });
 

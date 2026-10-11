@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  addDrillOperation,
   addPocketOperation,
   addProfileOperation,
   deleteOperation,
@@ -30,9 +31,9 @@ import {
   useWorkspaceStoreApi,
 } from "@/stores/workspace-stores";
 import { OperationNameInput } from "./operation-name-input";
-import { defaultToolChoice, useToolLibrary } from "./tool-library";
+import { defaultToolChoice, drillToolChoice, useToolLibrary } from "./tool-library";
 
-/** The Operations pane: adds profiles and pockets from the selected shapes and lists operations in cutting order. */
+/** The Operations pane: adds profiles, pockets and drill operations from the selected shapes and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -40,10 +41,11 @@ export function OperationsPane() {
   const shapeIds = useWorkspaceStore((s) => s.selectedShapeIds);
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
+  const drillTool = drillToolChoice(tools);
 
-  function add(addOperation: typeof addProfileOperation) {
-    if (!tool) return;
-    const id = addOperation(store, { shapeIds, tool: tool.tool });
+  function add(addOperation: typeof addProfileOperation, choice = tool) {
+    if (!choice) return;
+    const id = addOperation(store, { shapeIds, tool: choice.tool });
     if (id) workspace.getState().selectOperation(id);
   }
 
@@ -74,6 +76,20 @@ export function OperationsPane() {
         >
           <PlusIcon />
           Add pocket
+        </Button>
+        <Button
+          variant="outline"
+          size="compact"
+          disabled={!target || !drillTool}
+          onClick={() => add(addDrillOperation, drillTool)}
+          title={
+            tool && !drillTool
+              ? "Add a drill or an end mill to your tool library: V-bits can't drill"
+              : target && `Drill the points and circles of the ${target}`
+          }
+        >
+          <PlusIcon />
+          Add drill
         </Button>
       </div>
       {target && tool && <p className="text-muted-foreground">For the {target}.</p>}

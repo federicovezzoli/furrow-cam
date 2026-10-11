@@ -1,7 +1,9 @@
 import { autoTabPositions, type TabPlacement } from "@furrow/cam-core";
 import {
+  canDrill,
+  DrillParams,
   Name,
-  type Operation,
+  Operation,
   PocketParams,
   type Point,
   type ProfileOperation,
@@ -53,6 +55,14 @@ export function defaultPocketParams(document: ProjectDocument): PocketParams {
   };
 }
 
+/**
+ * New drill operations go through the stock, pecking: a hole no deeper than
+ * the tool's step-down is a single plunge anyway.
+ */
+export function defaultDrillParams(document: ProjectDocument): DrillParams {
+  return { depth: document.stock.thickness, peck: true };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -88,6 +98,20 @@ export function addPocketOperation(store: DocumentStore, options: NewOperation):
     type: "pocket",
     name: nextName(document, "Pocket"),
     params: defaultPocketParams(document),
+  }));
+}
+
+/**
+ * Appends a drill operation on `shapeIds`, like `addProfileOperation`.
+ * Returns `null` as well if `tool` can't drill.
+ */
+export function addDrillOperation(store: DocumentStore, options: NewOperation): string | null {
+  if (!canDrill(options.tool)) return null;
+  return appendOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "drill",
+    name: nextName(document, "Drill"),
+    params: defaultDrillParams(document),
   }));
 }
 
@@ -162,10 +186,16 @@ export function deleteOperation(store: DocumentStore, id: string) {
 }
 
 /** Replaces the operation's tool with a snapshot of `tool` (ADR-0003). */
-export function setOperationTool(store: DocumentStore, id: string, tool: Tool) {
-  changeOperation(store, "setOperationTool", id, (operation) => {
-    operation.tool = tool;
+export function setOperationTool(store: DocumentStore, id: string, tool: Tool): ActionResult {
+  const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
+  if (!operation) return OK;
+  // E.g. a V-bit for a drill operation.
+  const parsed = Operation.safeParse({ ...operation, tool });
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  changeOperation(store, "setOperationTool", id, (draft) => {
+    draft.tool = tool;
   });
+  return OK;
 }
 
 /** Sets the shapes the operation cuts; ids no longer in the document are skipped. */
@@ -201,6 +231,15 @@ export function updatePocketParams(
   changes: Partial<PocketParams>,
 ): ActionResult {
   return updateParams(store, id, "pocket", PocketParams, "updatePocketParams", changes);
+}
+
+/** Changes some of a drill operation's params at once, like `updateProfileParams`. */
+export function updateDrillParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<DrillParams>,
+): ActionResult {
+  return updateParams(store, id, "drill", DrillParams, "updateDrillParams", changes);
 }
 
 type ParamsOf<T extends Operation["type"]> = Extract<Operation, { type: T }>["params"];
