@@ -26,6 +26,25 @@ describe("workspace store", () => {
     expect(store.getState().view).toBe("orbit");
   });
 
+  it("edits tabs only in the top view, until the operation or the view changes", () => {
+    const store = createWorkspaceStore();
+    store.getState().setView("orbit");
+    store.getState().selectOperation("op");
+    store.getState().setEditingTabs(true);
+    expect(store.getState()).toMatchObject({ editingTabs: true, view: "top" });
+    store.getState().selectOperation("op");
+    expect(store.getState().editingTabs).toBe(true);
+    store.getState().setView("orbit");
+    expect(store.getState().editingTabs).toBe(false);
+
+    store.getState().setEditingTabs(true);
+    store.getState().selectOperation("other");
+    expect(store.getState().editingTabs).toBe(false);
+    store.getState().setEditingTabs(true);
+    store.getState().clearSelection();
+    expect(store.getState().editingTabs).toBe(false);
+  });
+
   it("prunes ids that are no longer in the document, keeping an unchanged selection", () => {
     const store = createWorkspaceStore();
     const shape = (id: string) => ({ id }) as ProjectDocument["geometry"][number];
@@ -38,6 +57,7 @@ describe("workspace store", () => {
     store.getState().selectShapes(["a", "b"]);
     store.getState().selectOperation("op");
     store.getState().setHoveredShape("b");
+    store.getState().setEditingTabs(true);
 
     const selected = store.getState().selectedShapeIds;
     store.getState().prune(document(["a", "b"], ["op"]));
@@ -48,6 +68,7 @@ describe("workspace store", () => {
       selectedShapeIds: ["a"],
       selectedOperationId: null,
       hoveredShapeId: null,
+      editingTabs: false,
     });
   });
 });

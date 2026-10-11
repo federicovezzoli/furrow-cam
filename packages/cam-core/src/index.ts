@@ -5,5 +5,6 @@ export * from "./profile";
 export * from "./quantity";
 export * from "./stock";
 export * from "./svg/import";
+export * from "./tabs";
 export * from "./toolpath";
 export * from "./units";

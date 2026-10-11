@@ -3,8 +3,13 @@ import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
   addProfileOperation,
+  addTab,
+  autoPlaceTabs,
+  defaultTabs,
   deleteOperation,
   moveOperation,
+  moveTab,
+  removeTab,
   renameOperation,
   setOperationEnabled,
   setOperationShapes,
@@ -229,5 +234,70 @@ describe("updateProfileParams", () => {
     const before = store.getState().past.length;
     updateProfileParams(store, id, { side: "outside" });
     expect(store.getState().past).toHaveLength(before);
+  });
+});
+
+describe("tabs", () => {
+  function withTabs() {
+    const context = setup();
+    const id = context.add([square.id, circle.id]);
+    const tabs = defaultTabs(context.document(), context.profile(id));
+    updateProfileParams(context.store, id, { tabs });
+    return { ...context, id };
+  }
+
+  it("start 6 mm wide and 3 mm tall, four on each outline", () => {
+    const { document, profile, id } = withTabs();
+    expect(profile(id).params.tabs).toMatchObject({ width: 6, height: 3 });
+    // The square and the circle are side by side: both are outlines.
+    expect(profile(id).params.tabs?.positions).toHaveLength(8);
+    expect(profile(id).params.tabs?.positions[0]).toEqual([35, 10]);
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("are no taller than half the depth", () => {
+    const { store, add, document, profile } = setup();
+    const id = add();
+    updateProfileParams(store, id, { depth: 4 });
+    expect(defaultTabs(document(), profile(id)).height).toBe(2);
+  });
+
+  it("auto places by count or spacing, as one undo step", () => {
+    const { store, profile, id } = withTabs();
+    expect(autoPlaceTabs(store, id, { count: 1 })).toEqual({ ok: true });
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+    // The square is 200 mm round, the circle about 63 mm.
+    autoPlaceTabs(store, id, { spacing: 50 });
+    expect(profile(id).params.tabs?.positions).toHaveLength(5);
+    store.getState().undo();
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+  });
+
+  it("are added, moved and removed one at a time", () => {
+    const { store, profile, id } = withTabs();
+    autoPlaceTabs(store, id, { count: 1 });
+    addTab(store, id, [60, 30]);
+    expect(profile(id).params.tabs?.positions.at(-1)).toEqual([60, 30]);
+    moveTab(store, id, 2, [60, 40]);
+    expect(profile(id).params.tabs?.positions.at(-1)).toEqual([60, 40]);
+    removeTab(store, id, 0);
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+    store.getState().undo();
+    expect(profile(id).params.tabs?.positions).toHaveLength(3);
+  });
+
+  it("does nothing without tabs or out of range", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    const before = store.getState().document;
+    expect(autoPlaceTabs(store, id, { count: 2 })).toMatchObject({ ok: false });
+    addTab(store, id, [0, 0]);
+    expect(store.getState().document).toBe(before);
+    updateProfileParams(store, id, { tabs: { width: 6, height: 3, positions: [] } });
+    const withEmpty = store.getState().document;
+    moveTab(store, id, 0, [1, 1]);
+    removeTab(store, id, 3);
+    expect(store.getState().document).toBe(withEmpty);
+    expect(profile(id).params.tabs?.positions).toEqual([]);
   });
 });

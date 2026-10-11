@@ -1,9 +1,13 @@
+import { autoTabPositions, type TabPlacement } from "@furrow/cam-core";
 import {
   Name,
   type Operation,
+  type Point,
   type ProfileOperation,
   ProfileParams,
+  type ProfileTabs,
   type ProjectDocument,
+  type Shape,
   type Tool,
 } from "@furrow/document";
 import type { z } from "zod";
@@ -29,6 +33,7 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
     finishPass: false,
     leadIn: null,
     ramp: false,
+    tabs: null,
   };
 }
 
@@ -163,4 +168,90 @@ export function updateProfileParams(
     if (draft.type === "profile") Object.assign(draft.params, changes);
   });
   return OK;
+}
+
+/** Tabs per contour when they're turned on. */
+export const DEFAULT_TAB_COUNT = 4;
+
+/** The operation's shapes, in its order. */
+function operationShapes(document: ProjectDocument, operation: Operation): Shape[] {
+  const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
+  return operation.shapeIds.flatMap((id) => shapes.get(id) ?? []);
+}
+
+/**
+ * Tabs a profile starts with: 6 mm wide, 3 mm tall but no more than half the
+ * depth, `DEFAULT_TAB_COUNT` on each contour.
+ */
+export function defaultTabs(document: ProjectDocument, operation: ProfileOperation): ProfileTabs {
+  return {
+    width: 6,
+    height: Math.min(3, operation.params.depth / 2),
+    positions: autoTabPositions(operationShapes(document, operation), operation.params.side, {
+      count: DEFAULT_TAB_COUNT,
+    }),
+  };
+}
+
+/** The profile `id`'s tabs, if it is a profile with tabs. */
+function profileTabs(store: DocumentStore, id: string): ProfileTabs | null {
+  const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
+  return operation?.type === "profile" ? operation.params.tabs : null;
+}
+
+/** Applies `recipe` to the tab positions of the profile `id`, if it has tabs. */
+function changeTabPositions(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  recipe: (positions: Point[]) => void,
+) {
+  changeOperation(store, name, id, (operation) => {
+    if (operation.type === "profile" && operation.params.tabs) {
+      recipe(operation.params.tabs.positions);
+    }
+  });
+}
+
+/** Replaces the profile's tab positions with ones spread along its contours by `placement`. */
+export function autoPlaceTabs(
+  store: DocumentStore,
+  id: string,
+  placement: TabPlacement,
+): ActionResult {
+  const { document } = store.getState();
+  const operation = document.operations.find((candidate) => candidate.id === id);
+  if (operation?.type !== "profile" || !operation.params.tabs) {
+    return { ok: false, error: "The profile has no tabs" };
+  }
+  const positions = autoTabPositions(
+    operationShapes(document, operation),
+    operation.params.side,
+    placement,
+  );
+  changeTabPositions(store, "autoPlaceTabs", id, (draft) => {
+    draft.splice(0, draft.length, ...positions);
+  });
+  return OK;
+}
+
+export function addTab(store: DocumentStore, id: string, position: Point) {
+  if (!profileTabs(store, id)) return;
+  changeTabPositions(store, "addTab", id, (positions) => {
+    positions.push(position);
+  });
+}
+
+export function moveTab(store: DocumentStore, id: string, index: number, position: Point) {
+  const tabs = profileTabs(store, id);
+  if (!tabs || index < 0 || index >= tabs.positions.length) return;
+  changeTabPositions(store, "moveTab", id, (positions) => {
+    positions[index] = position;
+  });
+}
+
+export function removeTab(store: DocumentStore, id: string, index: number) {
+  changeTabPositions(store, "removeTab", id, (positions) => {
+    if (index >= 0 && index < positions.length) positions.splice(index, 1);
+  });
 }

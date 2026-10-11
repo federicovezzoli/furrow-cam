@@ -5,6 +5,7 @@ import {
   type ProfileOperation,
   type ProfileParams,
   ProfileSide,
+  type ProfileTabs,
   type Tool,
 } from "@furrow/document";
 import { XIcon } from "lucide-react";
@@ -16,6 +17,9 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DocumentStore } from "@/stores/document-store";
 import {
+  autoPlaceTabs,
+  DEFAULT_TAB_COUNT,
+  defaultTabs,
   renameOperation,
   setOperationShapes,
   setOperationTool,
@@ -319,12 +323,152 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
+      <Checkbox
+        id="profile-tabs"
+        label="Holding tabs"
+        checked={params.tabs !== null}
+        onChange={(checked) =>
+          update("tabs", {
+            tabs: checked ? defaultTabs(store.getState().document, operation) : null,
+          })
+        }
+      />
+      {params.tabs && (
+        <TabsFields
+          operation={operation}
+          tabs={params.tabs}
+          error={errors.tabs}
+          onChange={(tabs) => update("tabs", { tabs })}
+        />
+      )}
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp}
         </p>
       )}
     </section>
+  );
+}
+
+type PlacementMode = "count" | "spacing";
+
+/** Tab size, auto placement and the switch into editing them in the viewport. */
+function TabsFields({
+  operation,
+  tabs,
+  error,
+  onChange,
+}: {
+  operation: ProfileOperation;
+  tabs: ProfileTabs;
+  error?: string;
+  onChange: (tabs: ProfileTabs) => void;
+}) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const editing = useWorkspaceStore((s) => s.editingTabs);
+  const setEditing = useWorkspaceStore((s) => s.setEditingTabs);
+  const [mode, setMode] = useState<PlacementMode>("count");
+  const [count, setCount] = useState(DEFAULT_TAB_COUNT);
+  const [spacing, setSpacing] = useState(100);
+  const length = {
+    layout: "inline",
+    quantity: "length",
+    units,
+    ...gestureHandlers(store),
+  } as const;
+  const tabCount = tabs.positions.length;
+
+  return (
+    <div className="grid gap-2 border-l-2 pl-2">
+      <NumberField
+        id="profile-tab-width"
+        label="Tab width"
+        min={MIN_LENGTH}
+        value={tabs.width}
+        onValueChange={(width) => onChange({ ...tabs, width })}
+        {...length}
+      />
+      <NumberField
+        id="profile-tab-height"
+        label="Tab height"
+        min={MIN_LENGTH}
+        value={tabs.height}
+        onValueChange={(height) => onChange({ ...tabs, height })}
+        {...length}
+      />
+      {error && (
+        <p role="alert" className="text-destructive">
+          {error}
+        </p>
+      )}
+      <Row id="profile-tab-placement" label="Auto place">
+        <NativeSelect
+          id="profile-tab-placement"
+          size="sm"
+          value={mode}
+          onChange={(event) => setMode(event.target.value as PlacementMode)}
+          className={SELECT_CLASS}
+        >
+          <NativeSelectOption value="count">Per contour</NativeSelectOption>
+          <NativeSelectOption value="spacing">By spacing</NativeSelectOption>
+        </NativeSelect>
+      </Row>
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          {mode === "count" ? (
+            <NumberField
+              id="profile-tab-count"
+              label="Tabs"
+              layout="inline"
+              integer
+              min={1}
+              value={count}
+              onValueChange={setCount}
+            />
+          ) : (
+            <NumberField
+              id="profile-tab-spacing"
+              label="Every"
+              layout="inline"
+              quantity="length"
+              units={units}
+              min={MIN_LENGTH}
+              value={spacing}
+              onValueChange={setSpacing}
+            />
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="compact"
+          onClick={() =>
+            autoPlaceTabs(store, operation.id, mode === "count" ? { count } : { spacing })
+          }
+          title="Replace the tabs with ones spread evenly along each contour"
+        >
+          Place
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">
+          {tabCount === 1 ? "1 tab" : `${tabCount} tabs`}
+        </span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(!editing)}
+        >
+          {editing ? "Done" : "Edit in viewport"}
+        </Button>
+      </div>
+      {editing && (
+        <p className="text-muted-foreground">
+          Click a contour to add a tab, drag a tab to move it, click it to remove it.
+        </p>
+      )}
+    </div>
   );
 }
 

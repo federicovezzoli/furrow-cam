@@ -123,6 +123,7 @@ export function fullDocument(): ProjectDocument {
           finishPass: true,
           leadIn: { radius: 3 },
           ramp: true,
+          tabs: { width: 8, height: 3, positions: [[50, 0]] },
         },
       },
     ],

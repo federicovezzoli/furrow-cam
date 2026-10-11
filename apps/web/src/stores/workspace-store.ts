@@ -20,12 +20,19 @@ export type WorkspaceState = {
   selectedShapeIds: string[];
   selectedOperationId: string | null;
   hoveredShapeId: string | null;
+  /**
+   * Editing the selected profile's tabs in the viewport. Only in the top
+   * view, and ends when the selection or the view changes.
+   */
+  editingTabs: boolean;
 
   setView: (view: ViewMode) => void;
   /** `replace` selects only `ids`; `toggle` flips each of them (Ctrl/Cmd/Shift+click). */
   selectShapes: (ids: string[], mode?: "replace" | "toggle") => void;
   selectOperation: (id: string | null) => void;
   setHoveredShape: (id: string | null) => void;
+  /** Switches to the top view when turned on. */
+  setEditingTabs: (editing: boolean) => void;
   clearSelection: () => void;
   /** Drops selected and hovered ids that aren't in `document`. */
   prune: (document: ProjectDocument) => void;
@@ -41,11 +48,13 @@ export function createWorkspaceStore() {
         selectedShapeIds: [],
         selectedOperationId: null,
         hoveredShapeId: null,
+        editingTabs: false,
 
         setView(view) {
           set(
             (state) => {
               state.view = view;
+              if (view !== "top") state.editingTabs = false;
             },
             false,
             "setView",
@@ -74,6 +83,7 @@ export function createWorkspaceStore() {
         selectOperation(id) {
           set(
             (state) => {
+              if (state.selectedOperationId !== id) state.editingTabs = false;
               state.selectedOperationId = id;
             },
             false,
@@ -91,11 +101,23 @@ export function createWorkspaceStore() {
           );
         },
 
+        setEditingTabs(editing) {
+          set(
+            (state) => {
+              state.editingTabs = editing;
+              if (editing) state.view = "top";
+            },
+            false,
+            "setEditingTabs",
+          );
+        },
+
         clearSelection() {
           set(
             (state) => {
               state.selectedShapeIds = [];
               state.selectedOperationId = null;
+              state.editingTabs = false;
             },
             false,
             "clearSelection",
@@ -119,6 +141,7 @@ export function createWorkspaceStore() {
                 !document.operations.some((operation) => operation.id === operationId)
               ) {
                 state.selectedOperationId = null;
+                state.editingTabs = false;
               }
             },
             false,

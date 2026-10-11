@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Point } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
@@ -23,6 +24,22 @@ export type ProfileSide = z.infer<typeof ProfileSide>;
 export const MillingDirection = z.enum(["climb", "conventional"]);
 export type MillingDirection = z.infer<typeof MillingDirection>;
 
+/**
+ * Holding tabs (#22): bridges of material the profile leaves so the part stays
+ * attached to the stock. Rectangular: over a tab the tool rises straight to
+ * `height` above the final depth, crosses it flat and goes straight back down,
+ * on the passes that would otherwise cut lower.
+ */
+export const ProfileTabs = z.strictObject({
+  /** Length of the material left along the contour. */
+  width: PositiveLength,
+  /** Height of the material left, up from the profile's final depth. */
+  height: PositiveLength,
+  /** Where the tabs are, in stock coordinates; each goes to the nearest closed contour. */
+  positions: z.array(Point),
+});
+export type ProfileTabs = z.infer<typeof ProfileTabs>;
+
 /** Profile parameters (#21). The step-down and the ramp angle come from the tool. */
 export const ProfileParams = z
   .strictObject({
@@ -38,6 +55,8 @@ export const ProfileParams = z
     leadIn: z.strictObject({ radius: PositiveLength }).nullable(),
     /** Ramp in at the tool's plunge angle instead of plunging straight down. */
     ramp: z.boolean(),
+    /** Holding tabs, or `null` to cut the closed contours all the way round. */
+    tabs: ProfileTabs.nullable(),
   })
   .superRefine((params, ctx) => {
     if (params.side === "on" && params.allowance !== 0) {
