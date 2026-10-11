@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 377.953 188.976" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g id="Layer1" serif:id="Layer 1" transform="matrix(1,0,0,1,-20,-10)">
+        <g id="Outline" transform="matrix(1,0,0,1,20,10)">
+            <path d="M359.055,18.898L359.055,170.079L18.898,170.079L18.898,18.898L359.055,18.898Z" style="fill:none;stroke:black;stroke-width:1px;"/>
+        </g>
+        <g transform="matrix(0.5,0,0,0.5,100,50)">
+            <circle cx="113.386" cy="113.386" r="37.795" style="fill:none;stroke:black;stroke-width:2px;"/>
+        </g>
+        <g id="Slot" transform="matrix(1,0,0,1,20,10)">
+            <ellipse cx="264.567" cy="94.488" rx="37.795" ry="18.898" style="fill:none;stroke:black;stroke-width:1px;"/>
+        </g>
+    </g>
+</svg>
