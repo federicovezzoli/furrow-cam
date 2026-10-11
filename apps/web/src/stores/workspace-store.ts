@@ -12,22 +12,30 @@ export type ViewMode = "top" | "orbit";
  * every pointer move.
  *
  * An undo can remove a selected shape or operation, so `prune` drops ids that
- * are no longer in the document; the workspace calls it on every document
- * change, and readers can trust the ids.
+ * are no longer in the document, and ends editing tabs the selected profile
+ * no longer has; the workspace calls it on every document change, and readers
+ * can trust the ids.
  */
 export type WorkspaceState = {
   view: ViewMode;
   selectedShapeIds: string[];
   selectedOperationId: string | null;
   hoveredShapeId: string | null;
+  /**
+   * Editing the selected profile's tabs in the viewport. Only in the top
+   * view, and ends when the selection or the view changes.
+   */
+  editingTabs: boolean;
 
   setView: (view: ViewMode) => void;
   /** `replace` selects only `ids`; `toggle` flips each of them (Ctrl/Cmd/Shift+click). */
   selectShapes: (ids: string[], mode?: "replace" | "toggle") => void;
   selectOperation: (id: string | null) => void;
   setHoveredShape: (id: string | null) => void;
+  /** Switches to the top view when turned on. */
+  setEditingTabs: (editing: boolean) => void;
   clearSelection: () => void;
-  /** Drops selected and hovered ids that aren't in `document`. */
+  /** Drops selected and hovered ids that aren't in `document`, and tab editing without tabs. */
   prune: (document: ProjectDocument) => void;
 };
 
@@ -41,11 +49,13 @@ export function createWorkspaceStore() {
         selectedShapeIds: [],
         selectedOperationId: null,
         hoveredShapeId: null,
+        editingTabs: false,
 
         setView(view) {
           set(
             (state) => {
               state.view = view;
+              if (view !== "top") state.editingTabs = false;
             },
             false,
             "setView",
@@ -74,6 +84,7 @@ export function createWorkspaceStore() {
         selectOperation(id) {
           set(
             (state) => {
+              if (state.selectedOperationId !== id) state.editingTabs = false;
               state.selectedOperationId = id;
             },
             false,
@@ -91,11 +102,23 @@ export function createWorkspaceStore() {
           );
         },
 
+        setEditingTabs(editing) {
+          set(
+            (state) => {
+              state.editingTabs = editing;
+              if (editing) state.view = "top";
+            },
+            false,
+            "setEditingTabs",
+          );
+        },
+
         clearSelection() {
           set(
             (state) => {
               state.selectedShapeIds = [];
               state.selectedOperationId = null;
+              state.editingTabs = false;
             },
             false,
             "clearSelection",
@@ -114,11 +137,11 @@ export function createWorkspaceStore() {
                 state.hoveredShapeId = null;
               }
               const operationId = state.selectedOperationId;
-              if (
-                operationId !== null &&
-                !document.operations.some((operation) => operation.id === operationId)
-              ) {
-                state.selectedOperationId = null;
+              const operation = document.operations.find(({ id }) => id === operationId);
+              if (operationId !== null && !operation) state.selectedOperationId = null;
+              // Nothing left to edit once the profile's tabs are turned off (or undone).
+              if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
+                state.editingTabs = false;
               }
             },
             false,

@@ -64,6 +64,7 @@ function documentWithProfile(): ProjectDocument {
           finishPass: false,
           leadIn: null,
           ramp: true,
+          tabs: null,
         },
       },
     ],

@@ -1,6 +1,15 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
+import {
+  coveredSpans,
+  freeSpans,
+  inSpans,
+  loopLength,
+  pointAlong,
+  projectOnLoop,
+  type Span,
+} from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type ProfileOptions = {
@@ -13,8 +22,12 @@ export type ProfileOptions = {
 /** Height above the stock top where rapids down stop and feeding starts. */
 export const ENTRY_CLEARANCE = 1;
 
-/** A closed ring the tool follows, in cutting direction, without its closing point. */
-type Contour = { ring: Point[]; wasteLeft: boolean; area: number };
+/**
+ * A closed ring the tool follows, in cutting direction, without its closing
+ * point, and the stretches of it where tabs keep the tool up. It never starts
+ * on a tab, and has a point at each end of one.
+ */
+type Contour = { ring: Point[]; wasteLeft: boolean; area: number; tabs: Span[] };
 
 /** The contours of one offset, and where the tool centre may go without cutting the part. */
 type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
@@ -32,6 +45,8 @@ type Cut = {
   /** Ramps along anything shorter than this plunge instead. */
   minRampLength: number;
   leadInRadius: number | null;
+  /** Height the tool stays at or above over tabs, or `null` without tabs. */
+  tabTop: number | null;
   tolerance: number;
   /** Contours whose lead-in had to be shortened or left out. */
   leadInMisfits: number;
@@ -56,6 +71,11 @@ type Cut = {
  *   or back and forth on the lead-in arc or an open path) or plunges straight
  *   down when ramping is off, the angle is 90° or the path is too short. A
  *   lead-in that would leave the waste side is shortened, or left out.
+ * - Each tab goes to the nearest closed contour, roughing and finishing alike,
+ *   where the tool centre stays at or above the tab top for the tab's width
+ *   plus the tool diameter: it rises straight up at the tab's edge, crosses it
+ *   flat and goes straight back down. Passes above the tab top are untouched,
+ *   and no contour starts on a tab.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -95,6 +115,7 @@ export function profileToolpath(
         : null,
     minRampLength: radius,
     leadInRadius: params.leadIn?.radius ?? null,
+    tabTop: null,
     tolerance,
     leadInMisfits: 0,
   };
@@ -104,6 +125,26 @@ export function profileToolpath(
   const finishing = params.finishPass ? contours(closed, operation, radius) : null;
   if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
     warnings.push("The closed paths are too small for the tool.");
+  }
+
+  const { tabs } = params;
+  if (tabs && tabs.positions.length > 0) {
+    if (tabs.height >= params.depth) {
+      warnings.push("The tabs are as tall as the cut is deep, so nothing is cut under them.");
+    }
+    cut.tabTop = Math.min(0, tabs.height - params.depth);
+    const span = tabs.width + tool.diameter;
+    const reach = radius + params.allowance + tabs.width;
+    const missed = placeTabs(roughing.contours, tabs.positions, reach, span);
+    const missedFinishing = finishing
+      ? placeTabs(finishing.contours, tabs.positions, radius + tabs.width, span)
+      : missed;
+    // A tab the finish lap leaves out is cut away at full depth, so it counts as missed too.
+    const left =
+      roughing.contours.length === 0 ? missedFinishing : Math.max(missed, missedFinishing);
+    if (left > 0) {
+      warnings.push(`Left out ${plural(left, "tab")} too far from every closed contour.`);
+    }
   }
 
   // Open paths never free the part, so they go before any closed contour.
@@ -172,6 +213,7 @@ function contours(closed: Polygon[], operation: ProfileOperation, distance: numb
       ring: startOnLongestEdge(reverse ? [...ring].reverse() : ring),
       wasteLeft: (side === "inside") !== reverse,
       area: Math.abs(signedArea(ring)),
+      tabs: [] as Span[],
     }))
     .sort((a, b) => a.area - b.area);
 
@@ -227,7 +269,7 @@ function cutContour(
     for (const level of levels) {
       descend(cut, arc, z, level);
       feedAlong(cut, arc, level);
-      feedAlong(cut, loop, level);
+      feedTrack(cut, track, contour.tabs, 0, track.length, () => level);
       feedAlong(cut, back, level);
       z = level;
     }
@@ -241,17 +283,17 @@ function cutContour(
     if (cut.rampRun !== null && track.length >= cut.minRampLength) {
       // Spiral down along the contour, then cut a full lap from where the ramp ended.
       const run = (z - level) * cut.rampRun;
-      for (const [point, travelled] of track.walk(at, run)) {
-        builder.feed([point[0], point[1], rampZ(z, level, travelled, run)], cut.plungeRate);
-      }
+      const from = z;
+      feedTrack(cut, track, contour.tabs, at, run, (travelled) =>
+        rampZ(from, level, travelled, run),
+      );
       at = (at + run) % track.length;
     } else {
+      // Never on a tab: without a ramp `at` stays on the contour's start.
       const point = track.pointAt(at);
       builder.feed([point[0], point[1], level], cut.plungeRate);
     }
-    for (const [point] of track.walk(at, track.length)) {
-      builder.feed([point[0], point[1], level], cut.feedRate);
-    }
+    feedTrack(cut, track, contour.tabs, at, track.length, () => level);
     z = level;
   }
 }
@@ -278,10 +320,11 @@ function cutOpenPath(cut: Cut, path: Point[], levels: number[]) {
 function finishContour(cut: Cut, contour: Contour, slot: Point, depth: number) {
   const { builder } = cut;
   const start = contour.ring[0] as Point;
+  const track = new Track([...contour.ring, start]);
   enter(cut, slot);
   builder.feed([slot[0], slot[1], depth], cut.plungeRate);
   builder.feed([start[0], start[1], depth], cut.feedRate);
-  feedAlong(cut, [...contour.ring, start], depth);
+  feedTrack(cut, track, contour.tabs, 0, track.length, () => depth);
   builder.feed([slot[0], slot[1], depth], cut.feedRate);
 }
 
@@ -438,6 +481,173 @@ function descend(cut: Cut, path: Point[], z: number, level: number) {
 /** Height `travelled` along a ramp of length `total` from `z` to `level`, ending exactly on `level`. */
 function rampZ(z: number, level: number, travelled: number, total: number): number {
   return travelled >= total - 1e-9 ? level : z + ((level - z) * travelled) / total;
+}
+
+/**
+ * Feeds `run` millimetres along `track` from `at`, at height `z(travelled)`,
+ * staying at or above the tab top over `tabs`: straight up at a tab's start,
+ * then past its end straight down, or ramping down at the plunge angle when
+ * ramping is on. Moves that go down are at the plunge rate.
+ */
+function feedTrack(
+  cut: Cut,
+  track: Track,
+  tabs: Span[],
+  at: number,
+  run: number,
+  z: (travelled: number) => number,
+) {
+  const { builder, tabTop } = cut;
+  let previous = track.pointAt(at);
+  let previousTravelled = 0;
+  for (const [point, travelled] of track.walk(at, run)) {
+    // Contours have a point at each end of a tab, so no step crosses one.
+    const middle = (at + (previousTravelled + travelled) / 2) % track.length;
+    const lifted = tabTop !== null && inSpans(tabs, middle);
+    const height = (t: number) =>
+      lifted && tabTop !== null
+        ? Math.max(z(t), tabTop)
+        : Math.max(z(t), rampDownFrom(cut, tabs, at + t, track.length));
+    const from = height(previousTravelled);
+    const current = builder.position?.[2];
+    if (current !== undefined && Math.abs(current - from) > 1e-9) {
+      builder.feed(
+        [previous[0], previous[1], from],
+        from < current ? cut.plungeRate : cut.feedRate,
+      );
+    }
+    const to = height(travelled);
+    builder.feed([point[0], point[1], to], to < from - 1e-9 ? cut.plungeRate : cut.feedRate);
+    previous = point;
+    previousTravelled = travelled;
+  }
+}
+
+/**
+ * How high the tool still is `at` millimetres along a contour of `length`
+ * while ramping down after the tabs: the tab top less the descent since the
+ * end of the last tab, or `-Infinity` when not ramping.
+ */
+function rampDownFrom(cut: Cut, tabs: Span[], at: number, length: number): number {
+  const { tabTop, rampRun } = cut;
+  if (tabTop === null || rampRun === null) return -Infinity;
+  let height = -Infinity;
+  for (const [, end] of tabs) {
+    let past = (((at - end) % length) + length) % length;
+    // Right on the tab's end, give or take rounding.
+    if (past > length - 1e-6) past = 0;
+    height = Math.max(height, tabTop - past / rampRun);
+  }
+  return height;
+}
+
+/**
+ * Gives each of `contours` the tabs at `positions` it is nearest to, if no
+ * further than `reach`, each covering `span` along it. Restarts a contour
+ * that would start on a tab in the middle of the longest piece of an edge
+ * that no tab covers, so a lead-in still meets a straight. Returns how many
+ * positions were too far from every contour.
+ */
+function placeTabs(contours: Contour[], positions: Point[], reach: number, span: number): number {
+  const loops = contours.map((contour) => [...contour.ring, contour.ring[0] as Point]);
+  const boxes = contours.map((contour) => bounds(contour.ring));
+  const centres = contours.map((): number[] => []);
+  let missed = 0;
+  for (const position of positions) {
+    let best: { index: number; at: number; distance: number } | null = null;
+    for (let index = 0; index < loops.length; index++) {
+      if (!inBox(position, boxes[index] as Box, reach)) continue;
+      const projection = projectOnLoop(loops[index] as Point[], position);
+      if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
+        best = { index, at: projection.at, distance: projection.distance };
+      }
+    }
+    if (best) centres[best.index]?.push(best.at);
+    else missed++;
+  }
+
+  contours.forEach((contour, i) => {
+    let at = centres[i] as number[];
+    if (at.length === 0) return;
+    let length = loopLength(loops[i] as Point[]);
+    let tabs = coveredSpans(at, span, length);
+    const first = tabs[0] as Span;
+    const last = tabs.at(-1) as Span;
+    const covered = first[0] <= 0 && first[1] >= length;
+    if (!covered && (first[0] <= 0 || last[1] >= length)) {
+      const start = freeStart(loops[i] as Point[], tabs, length);
+      contour.ring = restartAt(loops[i] as Point[], start);
+      at = at.map((centre) => centre - start);
+      length = loopLength([...contour.ring, contour.ring[0] as Point]);
+      tabs = coveredSpans(at, span, length);
+    }
+    contour.ring = withStops(contour.ring, tabs.flat());
+    contour.tabs = tabs;
+  });
+  return missed;
+}
+
+/** The middle of the longest piece of an edge of closed `loop` that none of `tabs` covers. */
+function freeStart(loop: Point[], tabs: Span[], length: number): number {
+  const free = freeSpans(tabs, length);
+  let longest = 0;
+  let start = 0;
+  let travelled = 0;
+  for (let i = 1; i < loop.length; i++) {
+    const end = travelled + distance(loop[i - 1] as Point, loop[i] as Point);
+    for (const [from, to] of free) {
+      const piece = Math.min(to, end) - Math.max(from, travelled);
+      if (piece > longest) {
+        longest = piece;
+        start = Math.max(from, travelled) + piece / 2;
+      }
+    }
+    travelled = end;
+  }
+  return start;
+}
+
+/** The ring of closed `loop`, starting `at` millimetres along it, without repeated points. */
+function restartAt(loop: Point[], at: number): Point[] {
+  const start = pointAlong(loop, at);
+  let ring = loop.slice(0, -1);
+  let travelled = 0;
+  for (let i = 1; i < loop.length; i++) {
+    travelled += distance(loop[i - 1] as Point, loop[i] as Point);
+    if (travelled >= at) {
+      // `loop` repeats its first point at the end; the ring doesn't.
+      ring = [start, ...loop.slice(i, -1), ...loop.slice(0, i)];
+      break;
+    }
+  }
+  const distinct = ring.filter(
+    (point, i) => i === 0 || distance(point, ring[i - 1] as Point) > 1e-9,
+  );
+  const last = distinct.at(-1) as Point;
+  if (distinct.length > 1 && distance(last, distinct[0] as Point) <= 1e-9) distinct.pop();
+  return distinct;
+}
+
+/** `ring` with a point added at each distance along it in `stops` that isn't one already. */
+function withStops(ring: Point[], stops: number[]): Point[] {
+  const sorted = [...stops].sort((a, b) => a - b);
+  const result: Point[] = [];
+  let travelled = 0;
+  let next = 0;
+  ring.forEach((a, i) => {
+    const b = ring[(i + 1) % ring.length] as Point;
+    const length = distance(a, b);
+    result.push(a);
+    while (next < sorted.length && (sorted[next] as number) <= travelled + length) {
+      const stop = sorted[next] as number;
+      next++;
+      const f = length > 0 ? (stop - travelled) / length : 0;
+      if (f > 1e-9 && f < 1 - 1e-9)
+        result.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]);
+    }
+    travelled += length;
+  });
+  return result;
 }
 
 /** Feeds along `path` at height `z`. */
