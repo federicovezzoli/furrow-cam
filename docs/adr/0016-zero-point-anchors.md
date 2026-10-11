@@ -36,7 +36,7 @@ ADR-0014's decision stands: geometry is in stock coordinates and work coordinate
 | `top_right` | `(-width, -height)` |
 | `custom` | `(-x, -y)` |
 
-The Z offsets are ADR-0014's. `xyOriginPosition` in `@furrow/cam-core` gives the zero in stock coordinates, for the viewport marker and the zero-point UI.
+The Z offsets are ADR-0014's. `xyOriginPosition(stock)` in `@furrow/cam-core` gives the zero in stock coordinates, for the viewport marker and the zero-point UI.
 
 Documents saved with the old string values (`"bottom_left"`, `"center"`) still parse and are normalised to `{ anchor }`, so the schema version stays at 1.
 
@@ -44,6 +44,6 @@ Documents saved with the old string values (`"bottom_left"`, `"center"`) still p
 
 - Choosing any anchor or custom zero is still a one-field change that never moves the design.
 - Post-processor tests must cover every anchor and a custom zero, not just the two origins of ADR-0014 (#26).
-- The viewport grid is aligned to the zero and extended to reach it when a custom zero lies outside the stock.
+- The viewport grid is aligned to the zero and extended to reach it when a custom zero lies outside the stock, getting coarser rather than unbounded when the zero is far away; fitting the camera frames the stock and the zero.
 - A custom zero is a fixed point: it doesn't follow shapes it was picked from (PRD-0002 non-goals).
 - The legacy string form is accepted on input only; documents are always written in the object form.

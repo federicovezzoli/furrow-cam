@@ -1,12 +1,13 @@
 "use client";
 
-import { stockBox } from "@furrow/cam-core";
+import { stockBox, xyOriginPosition } from "@furrow/cam-core";
 import { Canvas } from "@react-three/fiber";
 import { cn } from "cn";
 import { BoxIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { boxWithPoint } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
 import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
@@ -25,8 +26,11 @@ export function Viewport() {
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
-  const { width, height, thickness } = useDocumentStore((s) => s.document.stock);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const { width, height, thickness } = stock;
   const box = useMemo(() => stockBox({ width, height, thickness }), [width, height, thickness]);
+  // The cameras fit the stock and the zero, which may lie outside it (ADR-0016).
+  const fitBox = useMemo(() => boxWithPoint(box, [...xyOriginPosition(stock), 0]), [box, stock]);
   // Pressing Fit or resizing the stock fits the camera again: new keys remount
   // the cameras, which then find no saved pose.
   const [fits, setFits] = useState(0);
@@ -37,9 +41,9 @@ export function Viewport() {
     <div className={cn("relative h-full", editingTabs && "cursor-crosshair")}>
       <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
         {view === "top" ? (
-          <TopCamera key={poseKey} box={box} poses={poses} poseKey={poseKey} />
+          <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         ) : (
-          <OrbitCamera key={poseKey} box={box} poses={poses} poseKey={poseKey} />
+          <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         )}
         <Scene box={box} palette={palette} />
       </Canvas>

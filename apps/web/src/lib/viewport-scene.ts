@@ -57,19 +57,27 @@ export function shapesLinePositions(shapes: Iterable<Shape>): Float32Array {
 export type GridLines = { minor: Float32Array; major: Float32Array };
 
 /**
+/** Most lines a grid draws along each axis; past it, the grid gets coarser. */
+export const MAX_GRID_LINES = 1000;
+
+/**
  * A grid under the stock at `bounds.min` z, aligned to the work origin and
  * reaching `margin` past the stock and the origin (a custom zero may lie
  * outside the stock): lines every `spacing` mm, every `majorEvery`-th one major.
+ * When that would take more than `MAX_GRID_LINES` along an axis, the spacing
+ * grows `majorEvery` times until it doesn't, so a far-away origin can't stall it.
  */
 export function gridLinePositions(
   bounds: Box3,
-  { spacing = 10, majorEvery = 10, margin = 50 } = {},
+  { spacing: fineSpacing = 10, majorEvery = 10, margin = 50 } = {},
 ): GridLines {
   const z = bounds.min[2];
-  const range = (axis: 0 | 1) => [
-    Math.floor((Math.min(bounds.min[axis], 0) - margin) / spacing),
-    Math.ceil((Math.max(bounds.max[axis], 0) + margin) / spacing),
-  ];
+  const from = (axis: 0 | 1) => Math.min(bounds.min[axis], 0) - margin;
+  const to = (axis: 0 | 1) => Math.max(bounds.max[axis], 0) + margin;
+  const extent = Math.max(to(0) - from(0), to(1) - from(1));
+  let spacing = fineSpacing;
+  while (extent / spacing > MAX_GRID_LINES) spacing *= majorEvery;
+  const range = (axis: 0 | 1) => [Math.floor(from(axis) / spacing), Math.ceil(to(axis) / spacing)];
   const [x0, x1] = range(0) as [number, number];
   const [y0, y1] = range(1) as [number, number];
   const minor: number[] = [];
@@ -83,6 +91,14 @@ export function gridLinePositions(
     (j % majorEvery === 0 ? major : minor).push(x0 * spacing, y, z, x1 * spacing, y, z);
   }
   return { minor: new Float32Array(minor), major: new Float32Array(major) };
+}
+
+/** The smallest box holding `box` and `point`. */
+export function boxWithPoint({ min, max }: Box3, point: Vec3): Box3 {
+  return {
+    min: min.map((v, i) => Math.min(v, point[i] as number)) as Vec3,
+    max: max.map((v, i) => Math.max(v, point[i] as number)) as Vec3,
+  };
 }
 
 /** Room left around the stock when the camera fits it. */

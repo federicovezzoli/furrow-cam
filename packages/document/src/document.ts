@@ -30,13 +30,14 @@ export type StockAnchor = z.infer<typeof StockAnchor>;
  * (`"bottom_left"` or `"center"`); parsing still accepts those and normalises
  * them to `{ anchor }`.
  */
-export const XYOrigin = z.union([
+export const XYOrigin = z.preprocess(
+  // Normalised before the union, so invalid origins still report the exact field.
+  (value) => (value === "bottom_left" || value === "center" ? { anchor: value } : value),
   z.discriminatedUnion("anchor", [
     z.strictObject({ anchor: StockAnchor }),
     z.strictObject({ anchor: z.literal("custom"), x: z.number(), y: z.number() }),
   ]),
-  z.enum(["bottom_left", "center"]).transform((anchor) => ({ anchor })),
-]);
+);
 export type XYOrigin = z.infer<typeof XYOrigin>;
 
 export const ZOrigin = z.enum(["stock_top", "machine_bed"]);

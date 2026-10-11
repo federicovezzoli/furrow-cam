@@ -3,9 +3,11 @@ import type { Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import {
   boxCenter,
+  boxWithPoint,
   fitOrbitPosition,
   fitTopZoom,
   gridLinePositions,
+  MAX_GRID_LINES,
   POINT_MARKER_SIZE,
   pixelsPerMillimetre,
   shapeLinePositions,
@@ -90,9 +92,32 @@ describe("gridLinePositions", () => {
     expect(major.slice(0, 6)).toEqual(new Float32Array([0, -50, -18, 0, 0, -18]));
     expect(major.slice(-6)).toEqual(new Float32Array([0, 0, -18, 40, 0, -18]));
   });
+
+  it("gets coarser instead of drawing more than MAX_GRID_LINES along an axis", () => {
+    // 900 m across: 10 mm lines would be 90,000, 1000 mm ones are 900 (majors every 10 m).
+    const far = gridLinePositions({ min: [-9e5, 0, -18], max: [600, 400, 0] });
+    expect((far.minor.length + far.major.length) / 6).toBeLessThanOrEqual(2 * (MAX_GRID_LINES + 2));
+    expect(far.minor.slice(0, 6)).toEqual(
+      new Float32Array([-901000, -1000, -18, -901000, 1000, -18]),
+    );
+    expect(far.major.slice(0, 6)).toEqual(new Float32Array([-9e5, -1000, -18, -9e5, 1000, -18]));
+
+    const huge = gridLinePositions({ min: [-1e300, 0, -18], max: [600, 400, 0] });
+    expect((huge.minor.length + huge.major.length) / 6).toBeLessThanOrEqual(
+      2 * (MAX_GRID_LINES + 2),
+    );
+  });
 });
 
 describe("camera fitting", () => {
+  it("grows the fitted box to reach a point outside it", () => {
+    expect(boxWithPoint(stock, [-20, 450, 0])).toEqual({
+      min: [-20, stock.min[1], stock.min[2]],
+      max: [stock.max[0], 450, stock.max[2]],
+    });
+    expect(boxWithPoint(stock, boxCenter(stock))).toEqual(stock);
+  });
+
   it("zooms the top view to the stock's limiting side", () => {
     expect(fitTopZoom(stock, { width: 1150, height: 1150 })).toBeCloseTo(1150 / (600 * 1.15));
     expect(fitTopZoom(stock, { width: 2000, height: 460 })).toBeCloseTo(1);

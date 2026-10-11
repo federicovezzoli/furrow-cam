@@ -35,7 +35,7 @@ describe("stock placement", () => {
     ["top_right", [600, 400]],
   ])("puts the %s anchor at %j on the stock", (anchor, [x, y]) => {
     const anchored: Stock = { ...stock, xyOrigin: { anchor } };
-    expect(xyOriginPosition(anchored, anchored.xyOrigin)).toEqual([x, y]);
+    expect(xyOriginPosition(anchored)).toEqual([x, y]);
     expect(stockOffset(anchored)).toEqual([0 - x, 0 - y, 0]);
     expect(stockBounds(anchored)).toEqual({
       min: [0 - x, 0 - y, -18],

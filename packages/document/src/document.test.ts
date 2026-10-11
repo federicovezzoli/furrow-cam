@@ -104,6 +104,13 @@ describe("XYOrigin", () => {
     }
   });
 
+  it("reports the invalid field of a custom zero", () => {
+    const result = XYOrigin.safeParse({ anchor: "custom", x: Number.NaN, y: 0 });
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([["x"]]);
+    const missing = XYOrigin.safeParse({ anchor: "custom", x: 0 });
+    expect(missing.error?.issues.map((issue) => issue.path)).toEqual([["y"]]);
+  });
+
   it("rejects unknown anchors, coordinates on anchors and other legacy-looking names", () => {
     for (const origin of [
       { anchor: "left" },

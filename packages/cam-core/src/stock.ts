@@ -1,4 +1,4 @@
-import type { Stock, XYOrigin } from "@furrow/document";
+import type { Stock, StockAnchor } from "@furrow/document";
 
 /** `[x, y, z]` in millimetres. */
 export type Vec3 = [number, number, number];
@@ -17,19 +17,20 @@ const ANCHOR_FRACTIONS = {
   top_left: [0, 1],
   top_center: [0.5, 1],
   top_right: [1, 1],
-} as const;
+} as const satisfies Record<StockAnchor, readonly [number, number]>;
 
 /**
  * The XY zero in stock coordinates. Anchors follow the stock's size; a custom
  * zero is already in stock coordinates.
  */
-export function xyOriginPosition(
-  stock: Pick<Stock, "width" | "height">,
-  origin: XYOrigin,
-): [number, number] {
+export function xyOriginPosition({
+  width,
+  height,
+  xyOrigin: origin,
+}: Pick<Stock, "width" | "height" | "xyOrigin">): [number, number] {
   if (origin.anchor === "custom") return [origin.x, origin.y];
   const [fx, fy] = ANCHOR_FRACTIONS[origin.anchor];
-  return [fx * stock.width, fy * stock.height];
+  return [fx * width, fy * height];
 }
 
 /**
@@ -41,7 +42,7 @@ export function xyOriginPosition(
  * which is where the machine is zeroed and what G-code is written in.
  */
 export function stockOffset(stock: Stock): Vec3 {
-  const [x, y] = xyOriginPosition(stock, stock.xyOrigin);
+  const [x, y] = xyOriginPosition(stock);
   // `0 - 0` keeps a bottom-left zero at `0` rather than `-0`.
   return [0 - x, 0 - y, stock.zOrigin === "machine_bed" ? stock.thickness : 0];
 }
