@@ -163,7 +163,7 @@ function OperationRow({
       />
       <span
         aria-hidden
-        className="size-2 shrink-0 rounded-full"
+        className="size-2 shrink-0"
         style={{ backgroundColor: operation.tool.color }}
         title={operation.tool.name}
       />
