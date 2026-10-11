@@ -74,6 +74,10 @@ async function ToolList() {
               <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
+              Plunge angle
+              <Unit>°</Unit>
+            </TableHead>
+            <TableHead className="text-right">
               Step down
               <Unit>mm</Unit>
             </TableHead>
@@ -114,6 +118,7 @@ async function ToolList() {
               <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.plungeAngle)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
               <TableCell className="text-right">
                 {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}

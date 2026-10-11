@@ -8,12 +8,18 @@ import {
   SvgImportError,
   svgNeedsDpi,
 } from "@furrow/cam-core";
+import { cn } from "cn";
 import { UploadIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { useDocumentStore, useDocumentStoreApi } from "@/stores/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useWorkspaceStore,
+  useWorkspaceStoreApi,
+} from "@/stores/workspace-stores";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
 const MAX_FILE_SIZE = 20_000_000;
@@ -26,10 +32,15 @@ type Notice = { kind: "error" | "info"; messages: string[] };
 /** A file sized in pixels, or not at all, waiting for the user's DPI. */
 type PendingFile = { svg: SvgDocument; name: string };
 
-/** The Geometry pane: imports SVG files and lists the project's shapes. */
+/**
+ * The Geometry pane: imports SVG files and lists the project's shapes. A
+ * click selects a shape; Ctrl/Cmd/Shift+click adds or removes it.
+ */
 export function GeometryPane() {
   const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
   const shapes = useDocumentStore((s) => s.document.geometry);
+  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -136,19 +147,68 @@ export function GeometryPane() {
       {shapes.length === 0 ? (
         <p className="text-muted-foreground">Import an SVG or DXF file to add geometry.</p>
       ) : (
-        <ul className="grid gap-0.5">
-          {shapes.map((shape) => (
-            <li key={shape.id} className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate">{shape.name || "Unnamed shape"}</span>
-              {shape.layer && (
-                <span className="ml-auto shrink-0 truncate text-muted-foreground">
-                  {shape.layer}
-                </span>
-              )}
-            </li>
-          ))}
+        <SelectionHint
+          count={shapes.filter((shape) => selectedIds.includes(shape.id)).length}
+          onClear={() => workspace.getState().selectShapes([])}
+        />
+      )}
+      {shapes.length > 0 && (
+        <ul aria-label="Shapes" className="grid gap-0.5">
+          {shapes.map((shape) => {
+            const selected = selectedIds.includes(shape.id);
+            return (
+              <li key={shape.id}>
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={(event) =>
+                    workspace
+                      .getState()
+                      .selectShapes(
+                        [shape.id],
+                        event.ctrlKey || event.metaKey || event.shiftKey ? "toggle" : "replace",
+                      )
+                  }
+                  onPointerEnter={() => workspace.getState().setHoveredShape(shape.id)}
+                  onPointerLeave={() => workspace.getState().setHoveredShape(null)}
+                  className={cn(
+                    "flex w-full min-w-0 items-baseline gap-2 rounded-md px-1.5 py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    selected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+                  )}
+                >
+                  <span className="truncate">{shape.name || "Unnamed shape"}</span>
+                  {shape.layer && (
+                    <span className="ml-auto shrink-0 truncate text-muted-foreground">
+                      {shape.layer}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** How to select shapes while none are, else how many are and a way to clear them. */
+function SelectionHint({ count, onClear }: { count: number; onClear: () => void }) {
+  if (count === 0) {
+    return (
+      <p className="text-muted-foreground">
+        Click a shape to select it for an operation; Ctrl/Cmd/Shift+click to select more.
+      </p>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <p className="flex-1">
+        {count} {count === 1 ? "shape" : "shapes"} selected
+      </p>
+      <Button variant="ghost" size="compact" onClick={onClear}>
+        Clear
+      </Button>
     </div>
   );
 }

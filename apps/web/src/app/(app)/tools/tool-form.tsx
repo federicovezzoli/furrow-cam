@@ -21,6 +21,7 @@ const NEW_TOOL: Partial<Tool> = {
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
+  plungeAngle: 3,
   stepDown: 1,
   stepOver: 40,
 };
@@ -93,6 +94,16 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         />
         <NumberField label="Feed rate" {...number("feedRate")} quantity="feed" min={0} />
         <NumberField label="Plunge rate" {...number("plungeRate")} quantity="feed" min={0} />
+        {/* Drills always plunge straight down. */}
+        {type !== "drill" && (
+          <NumberField
+            label="Plunge angle"
+            {...number("plungeAngle")}
+            suffix="°"
+            min={1}
+            max={90}
+          />
+        )}
         <NumberField label="Step down per pass" {...number("stepDown")} quantity="length" min={0} />
         <NumberField
           label="Step over (of diameter)"

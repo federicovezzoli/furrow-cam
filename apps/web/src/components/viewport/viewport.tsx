@@ -39,7 +39,7 @@ const PALETTES: Record<"light" | "dark", Palette> = {
   light: {
     shape: "#27272a",
     hovered: "#60a5fa",
-    selected: "#2563eb",
+    selected: "#dc2626",
     stock: "#d4a373",
     stockEdges: "#a16207",
     gridMinor: "#e4e4e7",
@@ -48,7 +48,7 @@ const PALETTES: Record<"light" | "dark", Palette> = {
   dark: {
     shape: "#e4e4e7",
     hovered: "#93c5fd",
-    selected: "#60a5fa",
+    selected: "#f87171",
     stock: "#a47148",
     stockEdges: "#d4a373",
     gridMinor: "#2a2a2d",

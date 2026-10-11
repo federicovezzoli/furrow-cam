@@ -13,14 +13,24 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useAutosave } from "@/hooks/use-autosave";
+import { useToolpaths } from "@/hooks/use-toolpaths";
 import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
 import type { getProject, ProjectRow } from "@/lib/projects";
+import type { ToolChoice } from "@/lib/tools";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
-import { useDocumentStoreApi, WorkspaceStoresProvider } from "@/stores/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useWorkspaceStore,
+  WorkspaceStoresProvider,
+} from "@/stores/workspace-stores";
 import { GeometryPane } from "./geometry-pane";
+import { OperationProperties } from "./operation-properties";
+import { OperationsPane } from "./operations-pane";
 import { SaveStatus } from "./save-status";
 import { StockProperties } from "./stock-properties";
+import { ToolLibraryProvider } from "./tool-library";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
 const Viewport = dynamic(() => import("@/components/viewport/viewport").then((m) => m.Viewport), {
@@ -39,12 +49,15 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * geometry and operations on the left, the viewport in the centre and
  * properties on the right. Panel contents land with their own issues.
  * Panel sizes are remembered in a cookie (`layout` is what it held).
+ * `tools` is the user's tool library, offered for operations.
  */
 export function WorkspaceShell({
   project,
+  tools,
   layout,
 }: {
   project: WorkspaceProject;
+  tools: ToolChoice[];
   layout: WorkspaceLayout;
 }) {
   if (project.error !== undefined) {
@@ -60,7 +73,9 @@ export function WorkspaceShell({
   }
   return (
     <WorkspaceStoresProvider key={project.id} project={project}>
-      <Workspace project={project} layout={layout} />
+      <ToolLibraryProvider tools={tools}>
+        <Workspace project={project} layout={layout} />
+      </ToolLibraryProvider>
     </WorkspaceStoresProvider>
   );
 }
@@ -69,6 +84,7 @@ export function WorkspaceShell({
 function Workspace({ project, layout }: { project: ProjectRow; layout: WorkspaceLayout }) {
   const saveStatus = useAutosave();
   useUndoShortcuts();
+  useToolpaths();
   const documentStore = useDocumentStoreApi();
   const saved = useRef(layout);
 
@@ -118,7 +134,7 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
               <ResizableHandle />
               <ResizablePanel id="operations" minSize={80}>
                 <Pane title="Operations">
-                  <EmptyState>No operations yet.</EmptyState>
+                  <OperationsPane />
                 </Pane>
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -139,13 +155,24 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
             groupResizeBehavior="preserve-pixel-size"
           >
             <Pane title="Properties">
-              <StockProperties />
+              <Properties />
             </Pane>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
     </>
   );
+}
+
+/** The selected operation's properties, or the project's while none is selected. */
+function Properties() {
+  const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
+  // The selection may name an operation an undo removed.
+  const exists = useDocumentStore((s) =>
+    s.document.operations.some((operation) => operation.id === selectedId),
+  );
+  if (selectedId !== null && exists) return <OperationProperties operationId={selectedId} />;
+  return <StockProperties />;
 }
 
 /** `saveStatus` and `getDocument` are left out when the project couldn't be opened. */
