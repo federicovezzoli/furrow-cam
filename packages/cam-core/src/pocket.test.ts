@@ -1,8 +1,8 @@
 import type { PocketOperation, PocketParams, Shape, Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { generateToolpath } from "./generate";
+import { ENTRY_CLEARANCE } from "./passes";
 import { pocketToolpath } from "./pocket";
-import { ENTRY_CLEARANCE } from "./profile";
 import type { Vec3 } from "./stock";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 
@@ -332,6 +332,59 @@ describe("pocketToolpath", () => {
     for (const [a, b] of cutsBelowTop(toolpath)) {
       expect(distanceToSegment([50, 50], [a, b])).toBeGreaterThanOrEqual(13 - 1e-2);
     }
+  });
+
+  describe("with a neck the clearing rings can't pass", () => {
+    // Two 40 mm squares joined by a 7 mm neck: wider than the 6 mm tool, too
+    // narrow for rings 1 mm of allowance off both walls.
+    const corners: [number, number][] = [
+      [40, 0],
+      [40, 16.5],
+      [60, 16.5],
+      [60, 0],
+      [100, 0],
+      [100, 40],
+      [60, 40],
+      [60, 23.5],
+      [40, 23.5],
+      [40, 40],
+      [0, 40],
+    ];
+    const dumbbell: Shape = {
+      id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
+      name: "Dumbbell",
+      layer: "0",
+      paths: [
+        {
+          start: [0, 0],
+          segments: corners.map((to) => ({ kind: "line" as const, to })),
+          closed: true,
+        },
+      ],
+    };
+    const toolpath = pocket({ allowance: 1, finishPass: true }, [dumbbell]);
+
+    it("clears the neck in depth passes", () => {
+      for (const z of [-2, -4]) {
+        const throughNeck = cutsAt(toolpath, z).filter(
+          ([a, b]) =>
+            Math.min(a[0], b[0]) < 50 && Math.max(a[0], b[0]) > 50 && a[1] > 16 && a[1] < 24,
+        );
+        expect(throughNeck.length).toBeGreaterThan(0);
+      }
+      expect(toolpath.warnings).toEqual([]);
+    });
+
+    it("finishes the walls only once both sides are cleared", () => {
+      // Only the finish lap reaches the outer walls, 3 mm in at x = 3 and x = 97.
+      const firstOnWall = toolpath.moves.findIndex(
+        (move) => move.to[2] < 0 && (move.to[0] < 3.001 || move.to[0] > 96.999),
+      );
+      const lastAboveFinalDepth = Math.max(
+        ...toolpath.moves.flatMap((move, i) => (move.to[2] < 0 && move.to[2] > -6 ? [i] : [])),
+      );
+      expect(firstOnWall).toBeGreaterThan(lastAboveFinalDepth);
+    });
   });
 
   it("leaves the allowance on the walls without a finish pass", () => {

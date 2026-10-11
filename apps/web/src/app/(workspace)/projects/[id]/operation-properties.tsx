@@ -3,9 +3,7 @@
 import {
   MillingDirection,
   type PocketOperation,
-  type PocketParams,
   type ProfileOperation,
-  type ProfileParams,
   ProfileSide,
   type ProfileTabs,
   type Tool,
@@ -19,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DocumentStore } from "@/stores/document-store";
 import {
+  type ActionResult,
   autoPlaceTabs,
   DEFAULT_TAB_COUNT,
   defaultTabs,
@@ -204,24 +203,66 @@ function gestureHandlers(store: DocumentStore) {
   };
 }
 
+/**
+ * Applies changes to an operation's params through `apply`, keeping why the
+ * last one was rejected and the params it was rejected against: once they
+ * change (another edit, an undo), the error no longer applies.
+ */
+function useParamsUpdate<P extends object>(
+  params: P,
+  apply: (changes: Partial<P>) => ActionResult,
+) {
+  const [rejected, setRejected] = useState<{
+    params: P;
+    errors: Partial<Record<keyof P, string>>;
+  } | null>(null);
+  const errors: Partial<Record<keyof P, string>> =
+    rejected?.params === params ? rejected.errors : {};
+
+  function update(field: keyof P, changes: Partial<P>) {
+    const result = apply(changes);
+    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
+  }
+
+  return { errors, update };
+}
+
+/** The "Ramp in" checkbox, disabled for a tool that plunges straight down whatever it says. */
+function RampCheckbox({
+  id,
+  tool,
+  checked,
+  onChange,
+}: {
+  id: string;
+  tool: Tool;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const straight = tool.plungeAngle === 90;
+  return (
+    <Checkbox
+      id={id}
+      label="Ramp in"
+      hint={
+        straight
+          ? "The tool's plunge angle is 90°, so it plunges straight down."
+          : `At the tool's plunge angle (${tool.plungeAngle}°).`
+      }
+      checked={checked && !straight}
+      disabled={straight}
+      onChange={onChange}
+    />
+  );
+}
+
 function ProfileFields({ operation }: { operation: ProfileOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const { params, tool } = operation;
-  /**
-   * Why the last change was rejected, and the params it was rejected against:
-   * once they change (another edit, an undo), the error no longer applies.
-   */
-  const [rejected, setRejected] = useState<{
-    params: ProfileParams;
-    errors: Partial<Record<keyof ProfileParams, string>>;
-  } | null>(null);
-  const errors = rejected?.params === params ? rejected.errors : {};
-
-  function update(field: keyof ProfileParams, changes: Partial<ProfileParams>) {
-    const result = updateProfileParams(store, operation.id, changes);
-    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
-  }
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateProfileParams(store, operation.id, changes),
+  );
 
   const length = {
     layout: "inline",
@@ -320,10 +361,9 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           {...length}
         />
       )}
-      <Checkbox
+      <RampCheckbox
         id="profile-ramp"
-        label="Ramp in"
-        hint={`At the tool's plunge angle (${tool.plungeAngle}°).`}
+        tool={tool}
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
@@ -358,17 +398,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const { params, tool } = operation;
-  /** Why the last change was rejected, and the params it was rejected against (see `ProfileFields`). */
-  const [rejected, setRejected] = useState<{
-    params: PocketParams;
-    errors: Partial<Record<keyof PocketParams, string>>;
-  } | null>(null);
-  const errors = rejected?.params === params ? rejected.errors : {};
-
-  function update(field: keyof PocketParams, changes: Partial<PocketParams>) {
-    const result = updatePocketParams(store, operation.id, changes);
-    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
-  }
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updatePocketParams(store, operation.id, changes),
+  );
 
   const length = {
     layout: "inline",
@@ -435,10 +467,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         disabled={params.allowance === 0}
         onChange={(finishPass) => update("finishPass", { finishPass })}
       />
-      <Checkbox
+      <RampCheckbox
         id="pocket-ramp"
-        label="Ramp in"
-        hint={`At the tool's plunge angle (${tool.plungeAngle}°).`}
+        tool={tool}
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />

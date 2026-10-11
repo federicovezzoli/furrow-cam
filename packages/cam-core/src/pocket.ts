@@ -9,8 +9,16 @@ import {
   type PolygonWithHoles,
   signedArea,
 } from "./geometry";
-import { type Box, bounds, inBox, plural, rampZ, Track } from "./passes";
-import { depthLevels, ENTRY_CLEARANCE } from "./profile";
+import {
+  type Box,
+  bounds,
+  depthLevels,
+  ENTRY_CLEARANCE,
+  inBox,
+  plural,
+  rampZ,
+  Track,
+} from "./passes";
 import { projectOnLoop } from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
@@ -30,8 +38,14 @@ type Ring = { loop: Point[]; track: Track };
  */
 type Piece = { area: PolygonWithHoles; box: Box; rings: Ring[]; children: Piece[] };
 
-/** One pocket: the outermost clearing piece and the finishing pieces around it. */
-type Region = { root: Piece; finishing: Piece[] };
+/**
+ * One pocket: the pieces its depth passes clear, the area the tool may cross
+ * once they have, and the finish piece around them, if any.
+ */
+type Region = { pieces: Piece[]; container: Piece; finishing: Piece | null };
+
+/** How a pocket's clearing rings are laid out. */
+type Layout = { stepOver: number; radius: number; reverse: boolean; tolerance: number };
 
 /** Everything the passes of one pocket share. */
 type Cut = {
@@ -68,7 +82,9 @@ type Cut = {
  *   angle, or plunges straight down when ramping is off, the angle is 90° or
  *   the ring is too short.
  * - A finish pass cuts the exact walls and islands at full depth, after the
- *   depth passes of their pocket, entering from the cleared floor.
+ *   depth passes of every piece they enclose, moving there across the cleared
+ *   floor. Necks and slots the clearing rings can't reach for the allowance
+ *   get depth passes of their own, on the walls themselves.
  */
 export function pocketToolpath(
   operation: PocketOperation,
@@ -78,7 +94,6 @@ export function pocketToolpath(
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const radius = tool.diameter / 2;
-  const stepOver = (tool.diameter * tool.stepOver) / 100;
   const warnings: string[] = [];
 
   const closed: Polygon[] = [];
@@ -97,36 +112,45 @@ export function pocketToolpath(
   }
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
 
-  const reverse = params.direction === "conventional";
+  const layout: Layout = {
+    stepOver: (tool.diameter * tool.stepOver) / 100,
+    radius,
+    reverse: params.direction === "conventional",
+    tolerance,
+  };
+  const offsetOptions = { arcTolerance: tolerance };
   // Clean rings once, so each offset below starts from the same area.
   const area = offset(closed, 0, { fillRule: "evenOdd", arcTolerance: tolerance });
-  const piecesAt = (inset: number) =>
-    pieces(offset(area, -inset, { arcTolerance: tolerance }), reverse, tolerance);
+  const roots = clearingTree(area, radius + params.allowance, layout);
 
-  const roots = piecesAt(radius + params.allowance);
-  let level = roots;
-  for (let step = 1; level.length > 0; step++) {
-    const next = piecesAt(radius + params.allowance + step * stepOver);
-    for (const piece of next) {
-      const parent = level.find((candidate) => covers(candidate, piece.area.outer[0] as Point));
-      parent?.children.push(piece);
-    }
-    if (stepOver > radius) {
-      for (const piece of level) clearCentre(piece, radius, reverse, tolerance);
-    }
-    level = next;
-  }
-
-  const regions: Region[] = roots.map((root) => ({ root, finishing: [] }));
+  const regions: Region[] = [];
   if (params.finishPass) {
-    for (const piece of piecesAt(radius)) {
-      const region = regions.find(({ root }) => covers(piece, root.area.outer[0] as Point));
-      // Too narrow for anything but the finish lap: cleared as a pocket of its own.
-      if (region) region.finishing.push(piece);
-      else regions.push({ root: piece, finishing: [] });
+    const placed = new Set<Piece>();
+    for (const wall of pieces(offset(area, -radius, offsetOptions), layout)) {
+      const inside = roots.filter((root) => covers(wall, root.area.outer[0] as Point));
+      for (const root of inside) placed.add(root);
+      // What the clearing rings don't come within the allowance of: necks and
+      // slots too narrow for them, or the whole piece when nothing fits.
+      // Mitred, so the sharp corners of the walls don't count as missed.
+      const reached = offset(inside.flatMap(polygons), params.allowance + tolerance, {
+        ...offsetOptions,
+        join: "miter",
+      });
+      const missed = opening(difference(polygons(wall), reached), tolerance);
+      regions.push({
+        pieces: [...inside, ...clearingTree(missed, 0, layout)],
+        container: wall,
+        finishing: wall,
+      });
     }
+    // Every root is inside a wall; this only guards against rounding.
+    for (const root of roots) {
+      if (!placed.has(root)) regions.push({ pieces: [root], container: root, finishing: null });
+    }
+  } else {
+    for (const root of roots) regions.push({ pieces: [root], container: root, finishing: null });
   }
-  if (closed.length > 0 && regions.length === 0) {
+  if (closed.length > 0 && regions.every((region) => region.pieces.length === 0)) {
     warnings.push("The closed paths are too small for the tool.");
   }
 
@@ -142,16 +166,63 @@ export function pocketToolpath(
     maxStep: tool.diameter + tolerance,
   };
   const levels = depthLevels(params.depth, tool.stepDown);
-  for (const region of nearestFirst(cut, regions, ({ root }) => root.rings)) {
+  for (const region of nearestFirst(cut, regions, (region) =>
+    region.pieces.flatMap(innermostRings),
+  )) {
     levels.forEach((z, i) => {
-      cutPiece(cut, region.root, region.root, z, levels[i - 1] ?? 0);
+      for (const piece of nearestFirst(cut, region.pieces, innermostRings)) {
+        cutPiece(cut, piece, region.container, z, levels[i - 1] ?? 0);
+      }
     });
-    for (const piece of nearestFirst(cut, region.finishing, ({ rings }) => rings)) {
-      finishPiece(cut, piece, region.root, -params.depth);
-    }
+    if (region.finishing) finishPiece(cut, region.finishing, -params.depth);
   }
   cut.builder.retract();
   return { moves: cut.builder.moves, warnings };
+}
+
+/**
+ * The pieces `first` in from the edges of `area`, each with the pieces every
+ * step-over further in as its children, and with extra pieces for what a
+ * step-over over the tool radius would leave.
+ */
+function clearingTree(area: Polygon[], first: number, layout: Layout): Piece[] {
+  const piecesAt = (inset: number) =>
+    pieces(offset(area, -inset, { arcTolerance: layout.tolerance }), layout);
+  const roots = piecesAt(first);
+  let level = roots;
+  for (let step = 1; level.length > 0; step++) {
+    const next = piecesAt(first + step * layout.stepOver);
+    for (const piece of next) {
+      const start = piece.area.outer[0] as Point;
+      // Offset rounding may put a piece's first point just outside its parent.
+      const parent = level.find((candidate) => covers(candidate, start)) ?? nearest(level, start);
+      parent?.children.push(piece);
+    }
+    if (layout.stepOver > layout.radius) for (const piece of level) clearCentre(piece, layout);
+    level = next;
+  }
+  return roots;
+}
+
+/** The piece whose outer boundary is nearest to `point`. */
+function nearest(candidates: Piece[], point: Point): Piece | undefined {
+  let best: Piece | undefined;
+  let bestDistance = Infinity;
+  for (const piece of candidates) {
+    const outer = piece.area.outer;
+    const d = projectOnLoop([...outer, outer[0] as Point], point).distance;
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = piece;
+    }
+  }
+  return best;
+}
+
+/** `polygons` less the slivers rounding leaves, narrower than twice `tolerance`. */
+function opening(polygons: Polygon[], tolerance: number): Polygon[] {
+  const options = { arcTolerance: tolerance };
+  return offset(offset(polygons, -tolerance, options), tolerance, options);
 }
 
 /**
@@ -159,7 +230,7 @@ export function pocketToolpath(
  * holes clockwise, reversed for conventional milling. Rings too short to cut
  * still bound the piece's area.
  */
-function pieces(rings: Polygon[], reverse: boolean, tolerance: number): Piece[] {
+function pieces(rings: Polygon[], { reverse, tolerance }: Layout): Piece[] {
   return nest(rings)
     .filter(({ outer }) => outer.length >= 3)
     .map((area) => {
@@ -181,14 +252,13 @@ function pieces(rings: Polygon[], reverse: boolean, tolerance: number): Piece[] 
  * children leave: everything deeper than the tool radius into the piece and
  * further than that from its children.
  */
-function clearCentre(piece: Piece, radius: number, reverse: boolean, tolerance: number) {
-  const options = { arcTolerance: tolerance };
-  const inner = offset(polygons(piece), -radius, options);
+function clearCentre(piece: Piece, layout: Layout) {
+  const options = { arcTolerance: layout.tolerance };
+  const inner = offset(polygons(piece), -layout.radius, options);
   if (inner.length === 0) return;
-  const reached = offset(piece.children.flatMap(polygons), radius, options);
-  // Opening by the tolerance drops slivers left by rounding.
-  const left = offset(offset(difference(inner, reached), -tolerance, options), tolerance, options);
-  piece.children.push(...pieces(left, reverse, tolerance));
+  const reached = offset(piece.children.flatMap(polygons), layout.radius, options);
+  const left = opening(difference(inner, reached), layout.tolerance);
+  piece.children.push(...pieces(left, layout));
 }
 
 function polygons({ area }: Piece): Polygon[] {
@@ -256,19 +326,30 @@ function* nearestFirst<T>(cut: Cut, items: T[], ringsOf: (item: T) => Ring[]): G
   }
 }
 
-/** The rings of `piece` and everything inside it, from the centre out, all at `z`. */
-function cutPiece(cut: Cut, piece: Piece, root: Piece, z: number, clearedZ: number) {
+/**
+ * The rings of `piece` and everything inside it, from the centre out, all at
+ * `z`. The tool may cross `container` at `clearedZ`.
+ */
+function cutPiece(cut: Cut, piece: Piece, container: Piece, z: number, clearedZ: number) {
   for (const child of nearestFirst(cut, piece.children, innermostRings)) {
-    cutPiece(cut, child, root, z, clearedZ);
+    cutPiece(cut, child, container, z, clearedZ);
   }
   for (const ring of nearestFirst(cut, piece.rings, (ring) => [ring])) {
-    cutRing(cut, ring, piece, root, z, clearedZ);
+    cutRing(cut, ring, piece, container, z, clearedZ);
   }
 }
 
+/** The tree never changes once built, so each piece's innermost rings are found once. */
+const innermost = new WeakMap<Piece, Ring[]>();
+
 /** The rings a tool coming to `piece` starts on. */
 function innermostRings(piece: Piece): Ring[] {
-  return piece.children.length > 0 ? piece.children.flatMap(innermostRings) : piece.rings;
+  let rings = innermost.get(piece);
+  if (!rings) {
+    rings = piece.children.length > 0 ? piece.children.flatMap(innermostRings) : piece.rings;
+    innermost.set(piece, rings);
+  }
+  return rings;
 }
 
 /**
@@ -276,7 +357,14 @@ function innermostRings(piece: Piece): Ring[] {
  * over from the last ring when the tool is at `z` inside `piece` and near
  * enough, otherwise coming from above at `clearedZ` and going down along it.
  */
-function cutRing(cut: Cut, ring: Ring, piece: Piece, root: Piece, z: number, clearedZ: number) {
+function cutRing(
+  cut: Cut,
+  ring: Ring,
+  piece: Piece,
+  container: Piece,
+  z: number,
+  clearedZ: number,
+) {
   const { builder } = cut;
   const here = builder.position;
   let at = here ? projectOnLoop(ring.loop, [here[0], here[1]]).at : 0;
@@ -289,57 +377,39 @@ function cutRing(cut: Cut, ring: Ring, piece: Piece, root: Piece, z: number, cle
   ) {
     builder.feed([start[0], start[1], z], cut.feedRate);
   } else {
-    reach(cut, start, root, clearedZ);
+    reach(cut, start, container, clearedZ);
     at = descend(cut, ring, at, clearedZ, z);
   }
   feedTrack(cut, ring.track, at, ring.track.length, () => z);
 }
 
 /**
- * The finish laps of `piece`'s rings at `depth`, each from its point nearest
- * to the tool: across the floor when the move stays inside `piece`, otherwise
- * down through the cleared floor of `root` next to it.
+ * The finish laps of `piece`'s rings at `depth`, once everything inside it is
+ * cleared, each from its point nearest to the tool.
  */
-function finishPiece(cut: Cut, piece: Piece, root: Piece, depth: number) {
-  const { builder } = cut;
+function finishPiece(cut: Cut, piece: Piece, depth: number) {
   for (const ring of nearestFirst(cut, piece.rings, (ring) => [ring])) {
-    const here = builder.position;
+    const here = cut.builder.position;
     const at = here ? projectOnLoop(ring.loop, [here[0], here[1]]).at : 0;
-    const start = ring.track.pointAt(at);
-    const across =
-      here &&
-      Math.abs(here[2] - depth) < 1e-9 &&
-      crossesOnlyInside(piece, [here[0], here[1]], start);
-    if (!across) {
-      let slot = start;
-      let nearest = Infinity;
-      for (const { loop } of root.rings) {
-        const projection = projectOnLoop(loop, start);
-        if (projection.distance < nearest) {
-          nearest = projection.distance;
-          slot = projection.point;
-        }
-      }
-      reach(cut, slot, root, depth);
-    }
-    builder.feed([start[0], start[1], depth], cut.feedRate);
+    // Across the floor; only the allowance is left anywhere in `piece`.
+    reach(cut, ring.track.pointAt(at), piece, depth);
     feedTrack(cut, ring.track, at, ring.track.length, () => depth);
   }
 }
 
 /**
  * Gets the tool to `point` at `clearedZ`, which the tool has cleared all over
- * `root`. When the tool is down in `root` and the move stays inside it, it
- * crosses at that height, or just above the stock on the first pass;
+ * `container`. When the tool is down in `container` and the move stays inside
+ * it, it crosses at that height, or just above the stock on the first pass;
  * otherwise it goes over the top at the retract height. Either way it goes
  * down through the cleared stock.
  */
-function reach(cut: Cut, point: Point, root: Piece, clearedZ: number) {
+function reach(cut: Cut, point: Point, container: Piece, clearedZ: number) {
   const { builder } = cut;
   const here = builder.position;
   const clearance = Math.min(ENTRY_CLEARANCE, builder.safeZ);
   const inside =
-    here && here[2] <= clearedZ + 1e-9 && crossesOnlyInside(root, [here[0], here[1]], point);
+    here && here[2] <= clearedZ + 1e-9 && crossesOnlyInside(container, [here[0], here[1]], point);
   if (here && inside && clearedZ < 0) {
     builder.feed([here[0], here[1], clearedZ], cut.feedRate);
     builder.feed([point[0], point[1], clearedZ], cut.feedRate);

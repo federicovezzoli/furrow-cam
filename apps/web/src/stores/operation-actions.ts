@@ -191,33 +191,35 @@ export function updateProfileParams(
   id: string,
   changes: Partial<ProfileParams>,
 ): ActionResult {
-  const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
-  if (operation?.type !== "profile") return { ok: false, error: "Not a profile operation" };
-  const parsed = ProfileParams.safeParse({ ...operation.params, ...changes });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  changeOperation(store, "updateProfileParams", id, (draft) => {
-    // Field by field, so unchanged values record no patches.
-    if (draft.type === "profile") Object.assign(draft.params, changes);
-  });
-  return OK;
+  return updateParams(store, id, "profile", ProfileParams, "updateProfileParams", changes);
 }
 
-/**
- * Changes some of a pocket's params at once. Rejected unless the result is
- * valid `PocketParams`.
- */
+/** Changes some of a pocket's params at once, like `updateProfileParams`. */
 export function updatePocketParams(
   store: DocumentStore,
   id: string,
   changes: Partial<PocketParams>,
 ): ActionResult {
+  return updateParams(store, id, "pocket", PocketParams, "updatePocketParams", changes);
+}
+
+type ParamsOf<T extends Operation["type"]> = Extract<Operation, { type: T }>["params"];
+
+function updateParams<T extends Operation["type"]>(
+  store: DocumentStore,
+  id: string,
+  type: T,
+  schema: z.ZodType<ParamsOf<T>>,
+  name: string,
+  changes: Partial<ParamsOf<T>>,
+): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
-  if (operation?.type !== "pocket") return { ok: false, error: "Not a pocket operation" };
-  const parsed = PocketParams.safeParse({ ...operation.params, ...changes });
+  if (operation?.type !== type) return { ok: false, error: `Not a ${type} operation` };
+  const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  changeOperation(store, "updatePocketParams", id, (draft) => {
+  changeOperation(store, name, id, (draft) => {
     // Field by field, so unchanged values record no patches.
-    if (draft.type === "pocket") Object.assign(draft.params, changes);
+    if (draft.type === type) Object.assign(draft.params, changes);
   });
   return OK;
 }

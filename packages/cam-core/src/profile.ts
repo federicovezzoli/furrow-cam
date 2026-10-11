@@ -1,7 +1,16 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
-import { type Box, bounds, inBox, plural, rampZ, Track } from "./passes";
+import {
+  type Box,
+  bounds,
+  depthLevels,
+  ENTRY_CLEARANCE,
+  inBox,
+  plural,
+  rampZ,
+  Track,
+} from "./passes";
 import {
   coveredSpans,
   freeSpans,
@@ -19,9 +28,6 @@ export type ProfileOptions = {
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
 };
-
-/** Height above the stock top where rapids down stop and feeding starts. */
-export const ENTRY_CLEARANCE = 1;
 
 /**
  * A closed ring the tool follows, in cutting direction, without its closing
@@ -187,12 +193,6 @@ export function profileToolpath(
     );
   }
   return { moves: cut.builder.moves, warnings };
-}
-
-/** Pass depths, as negative z: `depth` split into equal steps no deeper than `stepDown`. */
-export function depthLevels(depth: number, stepDown: number): number[] {
-  const count = Math.max(1, Math.ceil(depth / stepDown - 1e-9));
-  return Array.from({ length: count }, (_, i) => (-depth * (i + 1)) / count);
 }
 
 /**
