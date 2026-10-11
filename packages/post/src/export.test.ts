@@ -6,9 +6,9 @@ import {
   type ProjectDocument,
   type Shape,
 } from "@furrow/document";
+import { drill, endMill, lowRider, machine as shapeoko } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
-import { drill, endMill, lowRider, shapeoko } from "./test-fixtures";
 
 function rectangle([x, y]: Point, width: number, height: number): Path {
   return {
@@ -119,6 +119,15 @@ describe("exportGcode", () => {
     doc.operations = [{ ...(doc.operations[0] as Operation), shapeIds: [plate.id, holes.id] }];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
       "Holes: Skipped 1 path: drilling needs circles or points.",
+    ]);
+  });
+
+  it("warns about enabled operations left out for having no toolpath", () => {
+    const doc = referenceProject();
+    const [holes, ...rest] = doc.operations as [Operation, ...Operation[]];
+    doc.operations = [{ ...holes, shapeIds: [] }, ...rest];
+    expect(exportGcode(doc, "Plate").warnings).toEqual([
+      "Holes: no toolpath, left out of the program.",
     ]);
   });
 

@@ -1,3 +1,5 @@
+// Reference data for tests, here and in the packages that depend on this one
+// (`@furrow/document/fixtures`). Not part of the app.
 import type { Machine, ProjectDocument, Shape, Tool } from "./index";
 
 export const endMill: Tool = {
@@ -27,6 +29,21 @@ export const vBit: Tool = {
   vAngle: 60,
   tipDiameter: 0,
   color: "#d97706",
+};
+
+export const drill: Tool = {
+  ...endMill,
+  name: "6 mm drill",
+  type: "drill",
+  diameter: 6,
+  fluteLength: 30,
+  cutDirection: null,
+  spindleRpm: 12000,
+  feedRate: 1000,
+  plungeRate: 300,
+  plungeAngle: 90,
+  stepDown: 4,
+  color: "#16a34a",
 };
 
 export const machine: Machine = {

@@ -26,6 +26,9 @@ export function GcodeExportButton({
     let response: GcodeResponse;
     try {
       response = await postGcode({ document: getDocument(), name });
+    } catch (error) {
+      // E.g. the worker couldn't be started.
+      response = { error: error instanceof Error ? error.message : String(error) };
     } finally {
       setPending(false);
     }

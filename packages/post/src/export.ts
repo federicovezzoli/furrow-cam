@@ -30,7 +30,10 @@ export function exportGcode(doc: ProjectDocument, name: string): GcodeExport {
     const toolpath = generateToolpath(input);
     const { name: operationName } = input.operation;
     warnings.push(...toolpath.warnings.map((warning) => `${operationName}: ${warning}`));
-    return toolpath.moves.length > 0 ? [{ operation: input.operation, toolpath }] : [];
+    if (toolpath.moves.length > 0) return [{ operation: input.operation, toolpath }];
+    // Not every empty toolpath warns, e.g. an operation whose shapes were deleted.
+    warnings.push(`${operationName}: no toolpath, left out of the program.`);
+    return [];
   });
   if (operations.length === 0) {
     throw new Error("None of the enabled operations has a toolpath to export.");

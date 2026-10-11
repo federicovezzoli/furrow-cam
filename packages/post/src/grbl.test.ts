@@ -1,9 +1,9 @@
 import type { Toolpath, Vec3 } from "@furrow/cam-core";
 import type { Machine, Operation, Stock, StockAnchor, Tool } from "@furrow/document";
+import { drill as drillBit, endMill, lowRider, machine } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { formatNumber, grbl } from "./grbl";
 import type { PostInput } from "./post";
-import { drill as drillBit, endMill, lowRider, shapeoko as machine } from "./test-fixtures";
 
 const stock: Stock = {
   width: 300,
@@ -63,8 +63,8 @@ describe("grbl", () => {
         "G21 G90 G94 G17",
         '(Tool: 1/4" 2-flute upcut, 6.35 mm)',
         "(Operation: Holes)",
-        "M3 S18000",
         "G0 Z5",
+        "M3 S18000",
         "G0 X100 Y50",
         "G1 Z-5 F500",
         "G0 Z5",
@@ -220,10 +220,10 @@ describe("grbl", () => {
           "(Tool: 6 mm drill, 6.35 mm)",
           "M5",
           "G0 Z5",
-          "M0 (Change the bit to 6 mm drill, 6.35 mm)",
+          "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z again)",
           "(Operation: Holes)",
-          "M3 S12000",
           "G0 Z5",
+          "M3 S12000",
           "G0 X20 Y0",
         ].join("\n"),
       );
@@ -249,19 +249,42 @@ describe("grbl", () => {
         ],
       });
       expect(gcode).toContain(
-        "(Zero: X Y at the bottom-left corner of the stock, Z at the stock top)\nG21\nG90\nM62 P1 (start spindle pin 27)\n(Tool:",
+        "(Zero Z again after each tool change)\nG21\nG90\nM62 P1 (start spindle pin 27)\nG21 G90 G94 G17\n(Tool:",
       );
-      expect(gcode).not.toContain("G21 G90 G94 G17");
       expect(gcode).not.toContain("(Operation:");
       expect(gcode.match(/^G4 P1$/gm)).toHaveLength(2);
-      expect(gcode).toMatch(/\nM3 S18000\nG0 Z5\nG0 X20 Y0\n/);
-      // Every word is written again after a custom block, which may have moved the tool.
+      // The modes and every word are written again after a custom block, which
+      // may have moved the tool or switched to relative coordinates.
       expect(gcode).toContain(
-        "(Tool: Drill, 6.35 mm)\nG0 Z20\nM0 (Switch off the router and change the bit)\nG4 P1\nM3 S18000\nG0 Z5\nG0 X20 Y0",
+        [
+          "(Tool: Drill, 6.35 mm)",
+          "G0 Z20",
+          "M0 (Switch off the router and change the bit)",
+          "G21 G90 G94 G17",
+          "G4 P1",
+          "G21 G90 G94 G17",
+          "G0 Z5",
+          "M3 S18000",
+          "G0 X20 Y0",
+        ].join("\n"),
       );
       expect(gcode.endsWith("G0 Z5\nM63 P1\nM2\n")).toBe(true);
       expect(gcode).not.toContain("M30");
     });
+  });
+
+  it("asks for Z to be zeroed again only when the bit changes", () => {
+    expect(post({}).gcode).not.toContain("Zero Z again");
+  });
+
+  it("refuses a toolpath that starts with a feed", () => {
+    const toolpath: Toolpath = {
+      moves: [{ kind: "feed", to: [0, 0, -1], feedRate: 500 }],
+      warnings: [],
+    };
+    expect(() => post({ operations: [{ operation: operation("Bad"), toolpath }] })).toThrow(
+      "Bad: the toolpath starts with a feed",
+    );
   });
 
   it("keeps parentheses and line breaks out of comments", () => {
