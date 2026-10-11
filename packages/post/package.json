@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@furrow/cam-core": "workspace:*"
+    "@furrow/cam-core": "workspace:*",
+    "@furrow/document": "workspace:*"
   },
   "devDependencies": {
     "typescript": "catalog:",

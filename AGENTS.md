@@ -12,7 +12,7 @@ pnpm dev                      # http://localhost:3000
 
 pnpm check:fix && pnpm check  # Biome lint + format (no ESLint/Prettier)
 pnpm typecheck
-pnpm test                     # Vitest in packages/*
+pnpm test                     # Vitest in packages/* and apps/web (stores)
 pnpm build
 pnpm changeset                # add a changeset for behaviour changes
 ```
@@ -49,7 +49,7 @@ packages/post/       post-processors, toolpaths → G-code
 
 ## Conventions
 
-- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev`, never `main` (`main` is the default branch, so pass `--base dev`). Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
+- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev`, never `main` (`main` is the default branch, so pass `--base dev`). Write `Closes #<n>` in the PR body: `.github/workflows/close-linked-issues.yml` closes those issues when the PR merges into `dev` (GitHub itself only does it for `main`). Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
 - Commits: one short line, conventional prefix (`feat:`, `fix:`, `chore:`, `ci:`, `docs:`, `test:`), split by concern.
 - Changesets for every behaviour change, bumping the affected `@furrow/*` packages.
 - Docs: accepted ADRs are not edited; write a new ADR that supersedes them. Update the PRD when requirements change.
@@ -58,6 +58,7 @@ packages/post/       post-processors, toolpaths → G-code
 ## Gotchas
 
 - **Prisma is pinned to 7.x**: Better Auth does not support Prisma 8 yet, and npm's `latest` tag may point at a Prisma 8 release candidate.
+- **three.js is pinned to 0.182** (with `@types/three`): React Three Fiber 9 creates a `THREE.Clock`, which r183 deprecated, so newer releases log a warning on every page load. Lift the pin with R3F 10.
 - **Next.js 16**: `proxy.ts` replaces `middleware.ts`; with `cacheComponents` enabled, request data (`headers()`, `cookies()`, sessions) must be read inside `<Suspense>`. Read `apps/web/node_modules/next/dist/docs/` for current APIs (see `apps/web/AGENTS.md`).
 - **Turborepo strict env mode** hides undeclared environment variables from tasks.
 - `prisma init` and similar CLIs may drop AI-agent skill folders (`.agents/`, `.claude/`, `.windsurf/`) into a package; delete them.

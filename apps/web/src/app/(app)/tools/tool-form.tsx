@@ -2,12 +2,12 @@
 
 import { type Tool, ToolType } from "@furrow/document";
 import Link from "next/link";
-import { type ComponentProps, type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
+import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
+import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { saveTool, type ToolFormErrors } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
@@ -21,6 +21,7 @@ const NEW_TOOL: Partial<Tool> = {
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
+  plungeAngle: 3,
   stepDown: 1,
   stepOver: 40,
 };
@@ -42,12 +43,8 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
     });
   }
 
-  const field = (name: keyof Tool) => ({
-    id: name,
-    name,
-    defaultValue: tool[name] ?? "",
-    error: errors[name],
-  });
+  const field = fieldProps(tool, errors);
+  const number = fieldProps(tool, errors, null);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -59,15 +56,9 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Geometry</legend>
-        <Field label="Diameter (mm)" {...field("diameter")} type="number" step="any" min={0} />
-        <Field label="Flutes" {...field("fluteCount")} type="number" step={1} min={1} />
-        <Field
-          label="Flute length (mm)"
-          {...field("fluteLength")}
-          type="number"
-          step="any"
-          min={0}
-        />
+        <NumberField label="Diameter" {...number("diameter")} quantity="length" min={0} />
+        <NumberField label="Flutes" {...number("fluteCount")} integer min={1} />
+        <NumberField label="Flute length" {...number("fluteLength")} quantity="length" min={0} />
         {isEndMill && (
           <SelectField
             label="Cut direction"
@@ -79,13 +70,12 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         )}
         {type === "v_bit" && (
           <>
-            <Field label="V angle (°)" {...field("vAngle")} type="number" step="any" min={0} />
-            <Field
-              label="Tip diameter (mm)"
-              {...field("tipDiameter")}
+            <NumberField label="V angle" {...number("vAngle")} suffix="°" min={0} />
+            <NumberField
+              label="Tip diameter"
+              {...number("tipDiameter")}
               defaultValue={tool.tipDiameter ?? 0}
-              type="number"
-              step="any"
+              quantity="length"
               min={0}
             />
           </>
@@ -94,33 +84,31 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Cutting data</legend>
-        <Field
-          label="Spindle speed (RPM)"
-          {...field("spindleRpm")}
-          type="number"
+        <NumberField
+          label="Spindle speed"
+          {...number("spindleRpm")}
+          suffix="RPM"
+          integer
           step={1000}
           min={0}
         />
-        <Field label="Feed rate (mm/min)" {...field("feedRate")} type="number" step="any" min={0} />
-        <Field
-          label="Plunge rate (mm/min)"
-          {...field("plungeRate")}
-          type="number"
-          step="any"
-          min={0}
-        />
-        <Field
-          label="Step down (mm per pass)"
-          {...field("stepDown")}
-          type="number"
-          step="any"
-          min={0}
-        />
-        <Field
-          label="Step over (% of diameter)"
-          {...field("stepOver")}
-          type="number"
-          step="any"
+        <NumberField label="Feed rate" {...number("feedRate")} quantity="feed" min={0} />
+        <NumberField label="Plunge rate" {...number("plungeRate")} quantity="feed" min={0} />
+        {/* Drills always plunge straight down. */}
+        {type !== "drill" && (
+          <NumberField
+            label="Plunge angle"
+            {...number("plungeAngle")}
+            suffix="°"
+            min={1}
+            max={90}
+          />
+        )}
+        <NumberField label="Step down per pass" {...number("stepDown")} quantity="length" min={0} />
+        <NumberField
+          label="Step over (of diameter)"
+          {...number("stepOver")}
+          suffix="%"
           min={0}
           max={100}
         />
@@ -141,60 +129,6 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         </Button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  label,
-  id,
-  error,
-  ...props
-}: ComponentProps<typeof Input> & { label: string; id: string; error?: string }) {
-  return (
-    <div className="grid content-start gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        {...props}
-      />
-      <FieldError id={id} error={error} />
-    </div>
-  );
-}
-
-function SelectField<T extends string>({
-  label,
-  id,
-  options,
-  error,
-  ...props
-}: ComponentProps<typeof NativeSelect> & {
-  label: string;
-  id: string;
-  options: Record<T, string>;
-  error?: string;
-}) {
-  return (
-    <div className="grid content-start gap-2 *:data-[slot=native-select-wrapper]:w-full">
-      <Label htmlFor={id}>{label}</Label>
-      <NativeSelect
-        id={id}
-        name={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        {...props}
-      >
-        {Object.entries<string>(options).map(([value, text]) => (
-          <NativeSelectOption key={value} value={value}>
-            {text}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <FieldError id={id} error={error} />
-    </div>
   );
 }
 
@@ -239,14 +173,5 @@ function TypePicker({
       </div>
       <FieldError id="type" error={error} />
     </div>
-  );
-}
-
-function FieldError({ id, error }: { id: string; error?: string }) {
-  if (!error) return null;
-  return (
-    <p id={`${id}-error`} className="text-sm text-destructive">
-      {error}
-    </p>
   );
 }

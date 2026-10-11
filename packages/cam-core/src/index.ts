@@ -1,1 +1,15 @@
+export * from "./drill";
+export * from "./flatten";
+export * from "./generate";
+export * from "./geometry";
+export { depthLevels, ENTRY_CLEARANCE } from "./passes";
+export * from "./pocket";
+export * from "./preview";
+export * from "./profile";
+export * from "./quantity";
+export * from "./snap";
+export * from "./stock";
+export * from "./svg/import";
+export * from "./tabs";
+export * from "./toolpath";
 export * from "./units";
