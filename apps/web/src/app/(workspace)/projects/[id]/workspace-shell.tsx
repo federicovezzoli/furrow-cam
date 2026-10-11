@@ -18,6 +18,7 @@ import type { getProject, ProjectRow } from "@/lib/projects";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
 import { useDocumentStoreApi, WorkspaceStoresProvider } from "@/stores/workspace-stores";
+import { GeometryPane } from "./geometry-pane";
 import { SaveStatus } from "./save-status";
 import { StockProperties } from "./stock-properties";
 
@@ -111,7 +112,7 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
             >
               <ResizablePanel id="geometry" minSize={80}>
                 <Pane title="Geometry">
-                  <EmptyState>Import an SVG or DXF file to add geometry.</EmptyState>
+                  <GeometryPane />
                 </Pane>
               </ResizablePanel>
               <ResizableHandle />
