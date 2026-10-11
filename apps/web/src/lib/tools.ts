@@ -20,6 +20,12 @@ export function snapshotTool(row: Tool): Tool {
   return Tool.parse(row);
 }
 
+/** Like `snapshotTool`, but `null` for a row that fails today's rules instead of throwing. */
+export function safeSnapshotTool(row: Tool): Tool | null {
+  const tool = Tool.safeParse(row);
+  return tool.success ? tool.data : null;
+}
+
 /** A library tool offered when picking an operation's tool, as the snapshot to store. */
 export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
 
@@ -30,8 +36,8 @@ export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
 export async function listToolChoices(userId: string): Promise<ToolChoice[]> {
   const rows = await listTools(userId);
   return rows.flatMap((row) => {
-    const tool = Tool.safeParse(row);
-    return tool.success ? [{ id: row.id, isDefault: row.isDefault, tool: tool.data }] : [];
+    const tool = safeSnapshotTool(row);
+    return tool ? [{ id: row.id, isDefault: row.isDefault, tool }] : [];
   });
 }
 

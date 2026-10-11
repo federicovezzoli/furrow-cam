@@ -1,3 +1,4 @@
+import type { ProjectDocument } from "@furrow/document";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -10,8 +11,9 @@ export type ViewMode = "top" | "orbit";
  * The camera pose stays inside the viewport, which its controls change on
  * every pointer move.
  *
- * Ids may outlive what they point at (an undo can remove a selected shape), so
- * readers skip ids that are no longer in the document.
+ * An undo can remove a selected shape or operation, so `prune` drops ids that
+ * are no longer in the document; the workspace calls it on every document
+ * change, and readers can trust the ids.
  */
 export type WorkspaceState = {
   view: ViewMode;
@@ -25,6 +27,8 @@ export type WorkspaceState = {
   selectOperation: (id: string | null) => void;
   setHoveredShape: (id: string | null) => void;
   clearSelection: () => void;
+  /** Drops selected and hovered ids that aren't in `document`. */
+  prune: (document: ProjectDocument) => void;
 };
 
 export type WorkspaceStore = ReturnType<typeof createWorkspaceStore>;
@@ -95,6 +99,30 @@ export function createWorkspaceStore() {
             },
             false,
             "clearSelection",
+          );
+        },
+
+        prune(document) {
+          set(
+            (state) => {
+              const shapeIds = new Set(document.geometry.map((shape) => shape.id));
+              // Assigned only when something went, so unchanged selections keep their identity.
+              if (state.selectedShapeIds.some((id) => !shapeIds.has(id))) {
+                state.selectedShapeIds = state.selectedShapeIds.filter((id) => shapeIds.has(id));
+              }
+              if (state.hoveredShapeId !== null && !shapeIds.has(state.hoveredShapeId)) {
+                state.hoveredShapeId = null;
+              }
+              const operationId = state.selectedOperationId;
+              if (
+                operationId !== null &&
+                !document.operations.some((operation) => operation.id === operationId)
+              ) {
+                state.selectedOperationId = null;
+              }
+            },
+            false,
+            "prune",
           );
         },
       })),

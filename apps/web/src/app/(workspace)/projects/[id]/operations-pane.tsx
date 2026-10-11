@@ -12,7 +12,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   addProfileOperation,
@@ -36,16 +36,9 @@ export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const operations = useDocumentStore((s) => s.document.operations);
-  const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedShapeIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const shapeIds = useWorkspaceStore((s) => s.selectedShapeIds);
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
-
-  // The selection may name shapes an undo removed.
-  const shapeIds = useMemo(() => {
-    const selected = new Set(selectedShapeIds);
-    return geometry.filter((shape) => selected.has(shape.id)).map((shape) => shape.id);
-  }, [geometry, selectedShapeIds]);
 
   function addProfile() {
     if (!tool) return;

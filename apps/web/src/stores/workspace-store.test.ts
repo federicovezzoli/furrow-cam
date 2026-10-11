@@ -1,3 +1,4 @@
+import { createProjectDocument, type ProjectDocument } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createWorkspaceStore } from "./workspace-store";
 
@@ -23,5 +24,30 @@ describe("workspace store", () => {
     expect(store.getState().view).toBe("top");
     store.getState().setView("orbit");
     expect(store.getState().view).toBe("orbit");
+  });
+
+  it("prunes ids that are no longer in the document, keeping an unchanged selection", () => {
+    const store = createWorkspaceStore();
+    const shape = (id: string) => ({ id }) as ProjectDocument["geometry"][number];
+    const operation = (id: string) => ({ id }) as ProjectDocument["operations"][number];
+    const document = (shapes: string[], operations: string[]): ProjectDocument => ({
+      ...createProjectDocument(),
+      geometry: shapes.map(shape),
+      operations: operations.map(operation),
+    });
+    store.getState().selectShapes(["a", "b"]);
+    store.getState().selectOperation("op");
+    store.getState().setHoveredShape("b");
+
+    const selected = store.getState().selectedShapeIds;
+    store.getState().prune(document(["a", "b"], ["op"]));
+    expect(store.getState().selectedShapeIds).toBe(selected);
+
+    store.getState().prune(document(["a"], []));
+    expect(store.getState()).toMatchObject({
+      selectedShapeIds: ["a"],
+      selectedOperationId: null,
+      hoveredShapeId: null,
+    });
   });
 });

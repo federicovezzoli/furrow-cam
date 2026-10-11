@@ -20,7 +20,6 @@ import type { ToolChoice } from "@/lib/tools";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
 import {
-  useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
   WorkspaceStoresProvider,
@@ -167,11 +166,8 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
 /** The selected operation's properties, or the project's while none is selected. */
 function Properties() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
-  // The selection may name an operation an undo removed.
-  const exists = useDocumentStore((s) =>
-    s.document.operations.some((operation) => operation.id === selectedId),
-  );
-  if (selectedId !== null && exists) return <OperationProperties operationId={selectedId} />;
+  // Keyed, so nothing typed or rejected for one operation shows on the next.
+  if (selectedId !== null) return <OperationProperties key={selectedId} operationId={selectedId} />;
   return <StockProperties />;
 }
 

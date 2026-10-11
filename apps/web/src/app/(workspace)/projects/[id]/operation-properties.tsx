@@ -135,15 +135,11 @@ function ToolPicker({ operationId, tool }: { operationId: string; tool: Tool }) 
 function ShapesField({ operationId, shapeIds }: { operationId: string; shapeIds: string[] }) {
   const store = useDocumentStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedShapeIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const selected = useWorkspaceStore((s) => s.selectedShapeIds);
   const shapes = useMemo(() => {
     const ids = new Set(shapeIds);
     return geometry.filter((shape) => ids.has(shape.id));
   }, [geometry, shapeIds]);
-  const selected = useMemo(() => {
-    const ids = new Set(selectedShapeIds);
-    return geometry.filter((shape) => ids.has(shape.id)).map((shape) => shape.id);
-  }, [geometry, selectedShapeIds]);
 
   return (
     <section aria-labelledby="operation-shapes-heading" className="grid gap-1">
@@ -204,12 +200,19 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const { params, tool } = operation;
-  /** Why the last change was rejected, by field. */
-  const [errors, setErrors] = useState<Partial<Record<keyof ProfileParams, string>>>({});
+  /**
+   * Why the last change was rejected, and the params it was rejected against:
+   * once they change (another edit, an undo), the error no longer applies.
+   */
+  const [rejected, setRejected] = useState<{
+    params: ProfileParams;
+    errors: Partial<Record<keyof ProfileParams, string>>;
+  } | null>(null);
+  const errors = rejected?.params === params ? rejected.errors : {};
 
   function update(field: keyof ProfileParams, changes: Partial<ProfileParams>) {
     const result = updateProfileParams(store, operation.id, changes);
-    setErrors((previous) => ({ ...previous, [field]: result.ok ? undefined : result.error }));
+    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
   }
 
   const length = {

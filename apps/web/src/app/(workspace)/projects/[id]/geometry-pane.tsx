@@ -10,7 +10,7 @@ import {
 } from "@furrow/cam-core";
 import { cn } from "cn";
 import { UploadIcon } from "lucide-react";
-import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -41,6 +41,7 @@ export function GeometryPane() {
   const workspace = useWorkspaceStoreApi();
   const shapes = useDocumentStore((s) => s.document.geometry);
   const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -148,19 +149,19 @@ export function GeometryPane() {
         <p className="text-muted-foreground">Import an SVG or DXF file to add geometry.</p>
       ) : (
         <SelectionHint
-          count={shapes.filter((shape) => selectedIds.includes(shape.id)).length}
+          count={selectedIds.length}
           onClear={() => workspace.getState().selectShapes([])}
         />
       )}
       {shapes.length > 0 && (
         <ul aria-label="Shapes" className="grid gap-0.5">
           {shapes.map((shape) => {
-            const selected = selectedIds.includes(shape.id);
+            const isSelected = selected.has(shape.id);
             return (
               <li key={shape.id}>
                 <button
                   type="button"
-                  aria-pressed={selected}
+                  aria-pressed={isSelected}
                   onClick={(event) =>
                     workspace
                       .getState()
@@ -173,7 +174,7 @@ export function GeometryPane() {
                   onPointerLeave={() => workspace.getState().setHoveredShape(null)}
                   className={cn(
                     "flex w-full min-w-0 items-baseline gap-2 rounded-md px-1.5 py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                    selected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
                   )}
                 >
                   <span className="truncate">{shape.name || "Unnamed shape"}</span>
