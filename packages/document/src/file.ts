@@ -5,8 +5,11 @@ export const PROJECT_FILE_EXTENSION = ".furrow.json";
 // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
 const UNSAFE_FILE_NAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f\u007f]/g;
 
-/** The file name to export the project `name` as, e.g. `Cutting board.furrow.json`. */
-export function projectFileName(name: string): string {
+/**
+ * The file name to export the project `name` as, e.g. `Cutting board.furrow.json`,
+ * or with another `extension` (G-code is `Cutting board.gcode`).
+ */
+export function projectFileName(name: string, extension = PROJECT_FILE_EXTENSION): string {
   const base = name
     .replace(UNSAFE_FILE_NAME_CHARACTERS, "-")
     .replace(/\s+/g, " ")
@@ -14,7 +17,7 @@ export function projectFileName(name: string): string {
     // Windows drops trailing dots, and a leading dot hides the file elsewhere.
     .replace(/^\.+|\.+$/g, "")
     .trim();
-  return `${base || "project"}${PROJECT_FILE_EXTENSION}`;
+  return `${base || "project"}${extension}`;
 }
 
 /**
