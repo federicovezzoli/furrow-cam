@@ -69,7 +69,7 @@ export function drillToolpath(
         continue;
       }
       const round = path.closed ? roundness(path) : null;
-      if (!round || round.max - round.min > 2 * slack) other++;
+      if (!round || !isRound(round)) other++;
       else if (round.max <= radius + slack && round.min >= radius - slack) {
         found.push({ center: round.center, bore: null });
       } else if (round.min < radius - slack) tooSmall++;
@@ -220,6 +220,22 @@ function boreRing(
     builder.feed([px, py, z], tool.plungeRate);
   }
   turn(bottom);
+}
+
+/**
+ * The centre of `path` if it is a circle in the sense drilling uses: a closed
+ * path a circle fits within `DRILL_DIAMETER_TOLERANCE` on the diameter, drawn
+ * as arcs, a polygon or Béziers. `null` for any other path.
+ */
+export function circleCenter(path: Path): Point | null {
+  if (!path.closed || path.segments.length === 0) return null;
+  const round = roundness(path);
+  return round && isRound(round) ? round.center : null;
+}
+
+/** Whether a circle fits an outline within `DRILL_DIAMETER_TOLERANCE` on the diameter. */
+function isRound({ min, max }: { min: number; max: number }): boolean {
+  return max - min <= DRILL_DIAMETER_TOLERANCE + 2e-9;
 }
 
 /**

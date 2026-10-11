@@ -26,6 +26,13 @@ export type WorkspaceState = {
    * view, and ends when the selection or the view changes.
    */
   editingTabs: boolean;
+  /**
+   * Picking the XY zero in the viewport (PRD-0002 Z5), from the stock
+   * properties. Only in the top view and while nothing is selected (the stock
+   * properties show then), and never while editing tabs: each mode ends the
+   * other.
+   */
+  pickingZero: boolean;
   /** Operations whose toolpaths the viewport hides. */
   hiddenToolpathIds: string[];
 
@@ -36,6 +43,8 @@ export type WorkspaceState = {
   setHoveredShape: (id: string | null) => void;
   /** Switches to the top view when turned on. */
   setEditingTabs: (editing: boolean) => void;
+  /** Switches to the top view when turned on. */
+  setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
   clearSelection: () => void;
   /** Drops selected, hovered and hidden ids that aren't in `document`, and tab editing without tabs. */
@@ -53,13 +62,17 @@ export function createWorkspaceStore() {
         selectedOperationId: null,
         hoveredShapeId: null,
         editingTabs: false,
+        pickingZero: false,
         hiddenToolpathIds: [],
 
         setView(view) {
           set(
             (state) => {
               state.view = view;
-              if (view !== "top") state.editingTabs = false;
+              if (view !== "top") {
+                state.editingTabs = false;
+                state.pickingZero = false;
+              }
             },
             false,
             "setView",
@@ -71,6 +84,7 @@ export function createWorkspaceStore() {
             (state) => {
               if (mode === "replace") {
                 state.selectedShapeIds = [...new Set(ids)];
+                if (ids.length > 0) state.pickingZero = false;
                 return;
               }
               const selected = new Set(state.selectedShapeIds);
@@ -79,6 +93,7 @@ export function createWorkspaceStore() {
                 else selected.add(id);
               }
               state.selectedShapeIds = [...selected];
+              if (selected.size > 0) state.pickingZero = false;
             },
             false,
             "selectShapes",
@@ -89,6 +104,7 @@ export function createWorkspaceStore() {
           set(
             (state) => {
               if (state.selectedOperationId !== id) state.editingTabs = false;
+              if (id !== null) state.pickingZero = false;
               state.selectedOperationId = id;
             },
             false,
@@ -110,10 +126,27 @@ export function createWorkspaceStore() {
           set(
             (state) => {
               state.editingTabs = editing;
-              if (editing) state.view = "top";
+              if (editing) {
+                state.view = "top";
+                state.pickingZero = false;
+              }
             },
             false,
             "setEditingTabs",
+          );
+        },
+
+        setPickingZero(picking) {
+          set(
+            (state) => {
+              state.pickingZero = picking;
+              if (picking) {
+                state.view = "top";
+                state.editingTabs = false;
+              }
+            },
+            false,
+            "setPickingZero",
           );
         },
 
