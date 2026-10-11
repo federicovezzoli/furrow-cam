@@ -40,9 +40,14 @@ export function WorkspaceStoresProvider({
   const [stores] = useState<Stores>(() => {
     const { document, updatedAt } = latestVersion(project.id, project);
     const documentStore = createDocumentStore(document);
+    const workspaceStore = createWorkspaceStore();
+    // Both live as long as this provider, so the subscription needs no cleanup.
+    documentStore.subscribe((state, previous) => {
+      if (state.document !== previous.document) workspaceStore.getState().prune(state.document);
+    });
     return {
       document: documentStore,
-      workspace: createWorkspaceStore(),
+      workspace: workspaceStore,
       toolpaths: createToolpathStore(),
       autosave: createAutosave(documentStore, {
         savedAt: updatedAt,
