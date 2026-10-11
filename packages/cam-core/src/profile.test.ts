@@ -8,7 +8,8 @@ import type {
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SAFE_Z, generateToolpath, toolpathInput } from "./generate";
 import { signedArea } from "./geometry";
-import { depthLevels, ENTRY_CLEARANCE, profileToolpath } from "./profile";
+import { depthLevels, ENTRY_CLEARANCE } from "./passes";
+import { profileToolpath } from "./profile";
 import type { Vec3 } from "./stock";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 

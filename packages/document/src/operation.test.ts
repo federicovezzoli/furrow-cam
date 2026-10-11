@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fullDocument } from "./fixtures";
-import { ProfileParams } from "./operation";
+import { PocketParams, ProfileParams } from "./operation";
 
 const params = fullDocument().operations[0]?.params as ProfileParams;
 
@@ -45,5 +45,33 @@ describe("ProfileParams", () => {
     expect(ProfileParams.safeParse({ ...params, allowance: 0, finishPass: false }).success).toBe(
       true,
     );
+  });
+});
+
+describe("PocketParams", () => {
+  const pocket: PocketParams = {
+    direction: "climb",
+    depth: 6,
+    allowance: 0.3,
+    finishPass: true,
+    ramp: true,
+  };
+
+  it("accepts valid params", () => {
+    expect(PocketParams.parse(pocket)).toEqual(pocket);
+    expect(PocketParams.safeParse({ ...pocket, allowance: 0, finishPass: false }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects invalid values and unknown keys", () => {
+    expect(PocketParams.safeParse({ ...pocket, depth: 0 }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, allowance: -0.1 }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, direction: "up" }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, stepOver: 40 }).success).toBe(false);
+  });
+
+  it("needs an allowance for a finish pass", () => {
+    expect(PocketParams.safeParse({ ...pocket, allowance: 0 }).success).toBe(false);
   });
 });

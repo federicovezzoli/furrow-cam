@@ -2,8 +2,8 @@
 
 import {
   MillingDirection,
+  type PocketOperation,
   type ProfileOperation,
-  type ProfileParams,
   ProfileSide,
   type ProfileTabs,
   type Tool,
@@ -17,12 +17,14 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DocumentStore } from "@/stores/document-store";
 import {
+  type ActionResult,
   autoPlaceTabs,
   DEFAULT_TAB_COUNT,
   defaultTabs,
   renameOperation,
   setOperationShapes,
   setOperationTool,
+  updatePocketParams,
   updateProfileParams,
 } from "@/stores/operation-actions";
 import {
@@ -46,7 +48,7 @@ const DIRECTION_LABELS: Record<MillingDirection, string> = {
   conventional: "Conventional",
 };
 
-/** Keeps depths and radii positive, as `ProfileParams` requires, when stepping or scrubbing down. */
+/** Keeps depths and radii positive, as `ProfileParams` and `PocketParams` require, when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
 
 /** The selected operation's name, tool, shapes and params; replaces the stock while one is selected. */
@@ -83,6 +85,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       <ToolPicker operationId={operation.id} tool={operation.tool} />
       <ShapesField operationId={operation.id} shapeIds={operation.shapeIds} />
       {operation.type === "profile" && <ProfileFields operation={operation} />}
+      {operation.type === "pocket" && <PocketFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
@@ -200,24 +203,66 @@ function gestureHandlers(store: DocumentStore) {
   };
 }
 
+/**
+ * Applies changes to an operation's params through `apply`, keeping why the
+ * last one was rejected and the params it was rejected against: once they
+ * change (another edit, an undo), the error no longer applies.
+ */
+function useParamsUpdate<P extends object>(
+  params: P,
+  apply: (changes: Partial<P>) => ActionResult,
+) {
+  const [rejected, setRejected] = useState<{
+    params: P;
+    errors: Partial<Record<keyof P, string>>;
+  } | null>(null);
+  const errors: Partial<Record<keyof P, string>> =
+    rejected?.params === params ? rejected.errors : {};
+
+  function update(field: keyof P, changes: Partial<P>) {
+    const result = apply(changes);
+    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
+  }
+
+  return { errors, update };
+}
+
+/** The "Ramp in" checkbox, disabled for a tool that plunges straight down whatever it says. */
+function RampCheckbox({
+  id,
+  tool,
+  checked,
+  onChange,
+}: {
+  id: string;
+  tool: Tool;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const straight = tool.plungeAngle === 90;
+  return (
+    <Checkbox
+      id={id}
+      label="Ramp in"
+      hint={
+        straight
+          ? "The tool's plunge angle is 90°, so it plunges straight down."
+          : `At the tool's plunge angle (${tool.plungeAngle}°).`
+      }
+      checked={checked && !straight}
+      disabled={straight}
+      onChange={onChange}
+    />
+  );
+}
+
 function ProfileFields({ operation }: { operation: ProfileOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const { params, tool } = operation;
-  /**
-   * Why the last change was rejected, and the params it was rejected against:
-   * once they change (another edit, an undo), the error no longer applies.
-   */
-  const [rejected, setRejected] = useState<{
-    params: ProfileParams;
-    errors: Partial<Record<keyof ProfileParams, string>>;
-  } | null>(null);
-  const errors = rejected?.params === params ? rejected.errors : {};
-
-  function update(field: keyof ProfileParams, changes: Partial<ProfileParams>) {
-    const result = updateProfileParams(store, operation.id, changes);
-    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
-  }
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateProfileParams(store, operation.id, changes),
+  );
 
   const length = {
     layout: "inline",
@@ -316,10 +361,9 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           {...length}
         />
       )}
-      <Checkbox
+      <RampCheckbox
         id="profile-ramp"
-        label="Ramp in"
-        hint={`At the tool's plunge angle (${tool.plungeAngle}°).`}
+        tool={tool}
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
@@ -344,6 +388,94 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function PocketFields({ operation }: { operation: PocketOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const { params, tool } = operation;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updatePocketParams(store, operation.id, changes),
+  );
+
+  const length = {
+    layout: "inline",
+    quantity: "length",
+    units,
+    ...gestureHandlers(store),
+  } as const;
+
+  return (
+    <section aria-labelledby="pocket-heading" className="grid gap-2">
+      <h4 id="pocket-heading" className="font-medium">
+        Pocket
+      </h4>
+      <p className="text-muted-foreground">
+        Cleared from the centre out at the tool's step-over ({tool.stepOver}%) and step-down.
+      </p>
+      <Row id="pocket-direction" label="Direction">
+        <NativeSelect
+          id="pocket-direction"
+          size="sm"
+          value={params.direction}
+          onChange={(event) =>
+            update("direction", { direction: MillingDirection.parse(event.target.value) })
+          }
+          className={SELECT_CLASS}
+        >
+          {MillingDirection.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {DIRECTION_LABELS[option]}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      <NumberField
+        id="pocket-depth"
+        label="Depth"
+        min={MIN_LENGTH}
+        value={params.depth}
+        onValueChange={(depth) => update("depth", { depth })}
+        error={errors.depth}
+        {...length}
+      />
+      <NumberField
+        id="pocket-allowance"
+        label="Allowance"
+        min={0}
+        value={params.allowance}
+        onValueChange={(allowance) =>
+          // Nothing left for a finish pass to remove.
+          update("allowance", allowance === 0 ? { allowance, finishPass: false } : { allowance })
+        }
+        error={errors.allowance}
+        {...length}
+      />
+      <Checkbox
+        id="pocket-finish-pass"
+        label="Finish pass"
+        hint={
+          params.allowance === 0
+            ? "Needs an allowance to remove."
+            : "One lap on the walls and islands at full depth."
+        }
+        checked={params.finishPass}
+        disabled={params.allowance === 0}
+        onChange={(finishPass) => update("finishPass", { finishPass })}
+      />
+      <RampCheckbox
+        id="pocket-ramp"
+        tool={tool}
+        checked={params.ramp}
+        onChange={(ramp) => update("ramp", { ramp })}
+      />
+      {(errors.direction ?? errors.finishPass ?? errors.ramp) && (
+        <p role="alert" className="text-destructive">
+          {errors.direction ?? errors.finishPass ?? errors.ramp}
         </p>
       )}
     </section>

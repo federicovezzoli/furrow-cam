@@ -52,7 +52,7 @@ describe("ProjectDocument", () => {
     ).toBe(false);
   });
 
-  it("rejects params on operations until their types define them", () => {
+  it("rejects params a pocket doesn't define", () => {
     const doc = fullDocument();
     const operation = {
       id: OPERATION_ID,

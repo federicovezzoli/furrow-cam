@@ -2,6 +2,16 @@ import { distance, type Point, type ProfileOperation, type Shape } from "@furrow
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
 import {
+  type Box,
+  bounds,
+  depthLevels,
+  ENTRY_CLEARANCE,
+  inBox,
+  plural,
+  rampZ,
+  Track,
+} from "./passes";
+import {
   coveredSpans,
   freeSpans,
   inSpans,
@@ -18,9 +28,6 @@ export type ProfileOptions = {
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
 };
-
-/** Height above the stock top where rapids down stop and feeding starts. */
-export const ENTRY_CLEARANCE = 1;
 
 /**
  * A closed ring the tool follows, in cutting direction, without its closing
@@ -186,12 +193,6 @@ export function profileToolpath(
     );
   }
   return { moves: cut.builder.moves, warnings };
-}
-
-/** Pass depths, as negative z: `depth` split into equal steps no deeper than `stepDown`. */
-export function depthLevels(depth: number, stepDown: number): number[] {
-  const count = Math.max(1, Math.ceil(depth / stepDown - 1e-9));
-  return Array.from({ length: count }, (_, i) => (-depth * (i + 1)) / count);
 }
 
 /**
@@ -365,29 +366,6 @@ function nearestOnSegment(point: Point, a: Point, b: Point): Point {
   return [a[0] + t * dx, a[1] + t * dy];
 }
 
-type Box = { minX: number; minY: number; maxX: number; maxY: number };
-
-function bounds(ring: Point[]): Box {
-  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-  for (const [x, y] of ring) {
-    box.minX = Math.min(box.minX, x);
-    box.minY = Math.min(box.minY, y);
-    box.maxX = Math.max(box.maxX, x);
-    box.maxY = Math.max(box.maxY, y);
-  }
-  return box;
-}
-
-/** Whether `point` is inside `box` grown by `margin`. */
-function inBox(point: Point, box: Box, margin: number): boolean {
-  return (
-    point[0] >= box.minX - margin &&
-    point[0] <= box.maxX + margin &&
-    point[1] >= box.minY - margin &&
-    point[1] <= box.maxY + margin
-  );
-}
-
 /**
  * The lead-in arc into `loop`, halved until it stays where `isFree` allows,
  * or `null` without a lead-in or when even the shortest doesn't fit.
@@ -476,11 +454,6 @@ function descend(cut: Cut, path: Point[], z: number, level: number) {
       cut.builder.feed([point[0], point[1], rampZ(z, level, travelled, total)], cut.plungeRate);
     }
   }
-}
-
-/** Height `travelled` along a ramp of length `total` from `z` to `level`, ending exactly on `level`. */
-function rampZ(z: number, level: number, travelled: number, total: number): number {
-  return travelled >= total - 1e-9 ? level : z + ((level - z) * travelled) / total;
 }
 
 /**
@@ -653,55 +626,4 @@ function withStops(ring: Point[], stops: number[]): Point[] {
 /** Feeds along `path` at height `z`. */
 function feedAlong(cut: Cut, path: Point[], z: number) {
   for (const point of path) cut.builder.feed([point[0], point[1], z], cut.feedRate);
-}
-
-/** A polyline measured by length; a closed one repeats its first point at the end. */
-class Track {
-  readonly length: number;
-  private readonly cumulative: number[];
-
-  constructor(private readonly points: Point[]) {
-    this.cumulative = [0];
-    for (let i = 1; i < points.length; i++) {
-      const previous = this.cumulative[i - 1] as number;
-      this.cumulative.push(previous + distance(points[i - 1] as Point, points[i] as Point));
-    }
-    this.length = this.cumulative.at(-1) ?? 0;
-  }
-
-  /** The point `at` millimetres from the start, wrapping around a closed track. */
-  pointAt(at: number): Point {
-    const d = ((at % this.length) + this.length) % this.length;
-    let i = 1;
-    while (i < this.points.length - 1 && (this.cumulative[i] as number) < d) i++;
-    const a = this.points[i - 1] as Point;
-    const b = this.points[i] as Point;
-    const from = this.cumulative[i - 1] as number;
-    const span = (this.cumulative[i] as number) - from;
-    const f = span > 0 ? (d - from) / span : 0;
-    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
-  }
-
-  /**
-   * The points met going `run` millimetres forward from `at`, each with the
-   * distance travelled to it, ending exactly `run` along. Wraps around a closed
-   * track; on an open one `at + run` must not pass the end.
-   */
-  *walk(at: number, run: number): Generator<[Point, number]> {
-    const end = at + run;
-    let lap = Math.floor(at / this.length) * this.length;
-    while (lap < end) {
-      for (let i = 1; i < this.points.length; i++) {
-        const position = lap + (this.cumulative[i] as number);
-        if (position >= end) break;
-        if (position > at) yield [this.points[i] as Point, position - at];
-      }
-      lap += this.length;
-    }
-    yield [this.pointAt(end), run];
-  }
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }

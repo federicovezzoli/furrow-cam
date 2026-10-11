@@ -2,6 +2,7 @@ import { autoTabPositions, type TabPlacement } from "@furrow/cam-core";
 import {
   Name,
   type Operation,
+  PocketParams,
   type Point,
   type ProfileOperation,
   ProfileParams,
@@ -37,6 +38,21 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
   };
 }
 
+/**
+ * New pockets go half through the stock, climb milling, ramping in: an end
+ * mill plunging straight into the middle of a pocket has nowhere to clear its
+ * chips.
+ */
+export function defaultPocketParams(document: ProjectDocument): PocketParams {
+  return {
+    direction: "climb",
+    depth: document.stock.thickness / 2,
+    allowance: 0,
+    finishPass: false,
+    ramp: true,
+  };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -56,22 +72,38 @@ function existingShapeIds(document: ProjectDocument, shapeIds: string[]): string
  * cut with a snapshot of `tool`. Returns the new operation's id, or `null` if
  * none of the shapes exist.
  */
-export function addProfileOperation(
+export function addProfileOperation(store: DocumentStore, options: NewOperation): string | null {
+  return appendOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "profile",
+    name: nextName(document, "Profile"),
+    params: defaultProfileParams(document),
+  }));
+}
+
+/** Appends a pocket of `shapeIds`, like `addProfileOperation`. */
+export function addPocketOperation(store: DocumentStore, options: NewOperation): string | null {
+  return appendOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "pocket",
+    name: nextName(document, "Pocket"),
+    params: defaultPocketParams(document),
+  }));
+}
+
+type NewOperation = { shapeIds: string[]; tool: Tool; id?: string };
+
+type OperationFields = Pick<Operation, "id" | "enabled" | "shapeIds" | "tool">;
+
+function appendOperation(
   store: DocumentStore,
-  { shapeIds, tool, id = crypto.randomUUID() }: { shapeIds: string[]; tool: Tool; id?: string },
+  { shapeIds, tool, id = crypto.randomUUID() }: NewOperation,
+  create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
   const shapes = existingShapeIds(document, shapeIds);
   if (shapes.length === 0) return null;
-  const operation: ProfileOperation = {
-    id,
-    type: "profile",
-    name: nextName(document, "Profile"),
-    enabled: true,
-    shapeIds: shapes,
-    tool,
-    params: defaultProfileParams(document),
-  };
+  const operation = create(document, { id, enabled: true, shapeIds: shapes, tool });
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
@@ -159,13 +191,35 @@ export function updateProfileParams(
   id: string,
   changes: Partial<ProfileParams>,
 ): ActionResult {
+  return updateParams(store, id, "profile", ProfileParams, "updateProfileParams", changes);
+}
+
+/** Changes some of a pocket's params at once, like `updateProfileParams`. */
+export function updatePocketParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<PocketParams>,
+): ActionResult {
+  return updateParams(store, id, "pocket", PocketParams, "updatePocketParams", changes);
+}
+
+type ParamsOf<T extends Operation["type"]> = Extract<Operation, { type: T }>["params"];
+
+function updateParams<T extends Operation["type"]>(
+  store: DocumentStore,
+  id: string,
+  type: T,
+  schema: z.ZodType<ParamsOf<T>>,
+  name: string,
+  changes: Partial<ParamsOf<T>>,
+): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
-  if (operation?.type !== "profile") return { ok: false, error: "Not a profile operation" };
-  const parsed = ProfileParams.safeParse({ ...operation.params, ...changes });
+  if (operation?.type !== type) return { ok: false, error: `Not a ${type} operation` };
+  const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  changeOperation(store, "updateProfileParams", id, (draft) => {
+  changeOperation(store, name, id, (draft) => {
     // Field by field, so unchanged values record no patches.
-    if (draft.type === "profile") Object.assign(draft.params, changes);
+    if (draft.type === type) Object.assign(draft.params, changes);
   });
   return OK;
 }
