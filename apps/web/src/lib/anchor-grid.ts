@@ -7,22 +7,31 @@ export const ANCHOR_GRID = [
   ["bottom_left", "bottom_center", "bottom_right"],
 ] as const satisfies readonly (readonly StockAnchor[])[];
 
-const MOVES: Record<string, [row: number, column: number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-};
+/** A choice in the zero picker: an anchor, or the custom zero below the grid. */
+export type ZeroChoice = StockAnchor | "custom";
+
+const MOVES = new Map<string, [row: number, column: number]>([
+  ["ArrowUp", [-1, 0]],
+  ["ArrowDown", [1, 0]],
+  ["ArrowLeft", [0, -1]],
+  ["ArrowRight", [0, 1]],
+]);
 
 /**
- * The anchor an arrow key moves to in the grid, stopping at its edges, or
- * `null` for any other key.
+ * Where an arrow key moves in the zero picker, or `null` for any other key.
+ * Moves stop at the grid's edges, except that Custom sits after it: down from
+ * the bottom row or right from the bottom-right corner reaches Custom, and up
+ * or left from Custom goes back to the bottom-right corner.
  */
-export function anchorInDirection(anchor: StockAnchor, key: string): StockAnchor | null {
-  const move = MOVES[key];
+export function zeroChoiceInDirection(choice: ZeroChoice, key: string): ZeroChoice | null {
+  const move = MOVES.get(key);
   if (!move) return null;
-  const row = ANCHOR_GRID.findIndex((cells) => (cells as readonly StockAnchor[]).includes(anchor));
-  const column = (ANCHOR_GRID[row] as readonly StockAnchor[]).indexOf(anchor);
-  const clamp = (i: number) => Math.min(2, Math.max(0, i));
+  if (choice === "custom") return move[0] < 0 || move[1] < 0 ? "bottom_right" : "custom";
+  const row = ANCHOR_GRID.findIndex((cells) => (cells as readonly StockAnchor[]).includes(choice));
+  if (row === -1) return null;
+  const column = (ANCHOR_GRID[row] as readonly StockAnchor[]).indexOf(choice);
+  const last = ANCHOR_GRID.length - 1;
+  if (row === last && (move[0] > 0 || (column === last && move[1] > 0))) return "custom";
+  const clamp = (i: number) => Math.min(last, Math.max(0, i));
   return ANCHOR_GRID[clamp(row + move[0])][clamp(column + move[1])];
 }

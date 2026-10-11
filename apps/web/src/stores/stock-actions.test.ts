@@ -1,7 +1,14 @@
 import { createProjectDocument } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
-import { setCustomOrigin, setCustomXYOrigin, setXYAnchor, setZOrigin } from "./stock-actions";
+import {
+  setCustomOrigin,
+  setCustomXYOrigin,
+  setStockDimension,
+  setUnits,
+  setXYAnchor,
+  setZOrigin,
+} from "./stock-actions";
 
 /** 600 × 400 mm stock, zeroed at its bottom-left corner. */
 function newStore() {
@@ -9,6 +16,35 @@ function newStore() {
 }
 
 const stock = (store: ReturnType<typeof newStore>) => store.getState().document.stock;
+
+describe("setUnits", () => {
+  it("changes the display units as one undo step", () => {
+    const store = newStore();
+    setUnits(store, "in");
+    expect(store.getState().document.units).toBe("in");
+    setUnits(store, "in");
+    expect(store.getState().past).toHaveLength(1);
+  });
+});
+
+describe("setStockDimension", () => {
+  it("resizes one dimension as one undo step", () => {
+    const store = newStore();
+    setStockDimension(store, "thickness", 12);
+    expect(stock(store)).toMatchObject({ width: 600, height: 400, thickness: 12 });
+    setStockDimension(store, "thickness", 12);
+    expect(store.getState().past).toHaveLength(1);
+    store.getState().undo();
+    expect(stock(store).thickness).toBe(18);
+  });
+
+  it("keeps an anchored zero on its anchor", () => {
+    const store = newStore();
+    setXYAnchor(store, "top_right");
+    setStockDimension(store, "width", 500);
+    expect(stock(store).xyOrigin).toEqual({ anchor: "top_right" });
+  });
+});
 
 describe("setXYAnchor", () => {
   it("puts the zero on the anchor as one undo step", () => {

@@ -1,17 +1,20 @@
 "use client";
 
-import { type Stock, type StockAnchor, Units, ZOrigin } from "@furrow/document";
+import { type StockAnchor, Units, ZOrigin } from "@furrow/document";
 import { cn } from "cn";
 import type * as React from "react";
 import { useRef } from "react";
 import { NumberField } from "@/components/number-field";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { ANCHOR_GRID, anchorInDirection } from "@/lib/anchor-grid";
-import type { DocumentStore } from "@/stores/document-store";
+import { ANCHOR_GRID, type ZeroChoice, zeroChoiceInDirection } from "@/lib/anchor-grid";
+import { gestureHandlers } from "@/stores/gesture-handlers";
 import {
+  type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
+  setStockDimension,
+  setUnits,
   setXYAnchor,
   setZOrigin,
 } from "@/stores/stock-actions";
@@ -23,7 +26,7 @@ const DIMENSIONS = [
   ["width", "Width"],
   ["height", "Height"],
   ["thickness", "Thickness"],
-] as const satisfies [keyof Stock, string][];
+] as const satisfies [StockDimension, string][];
 
 /** Thinner than any stock worth cutting, and keeps the stock's sizes positive. */
 const MIN_STOCK = 0.1;
@@ -45,18 +48,6 @@ const Z_ORIGIN_LABELS: Record<ZOrigin, string> = {
   machine_bed: "Machine bed",
 };
 
-/** A scrub or held arrow key in a field is one undo step; Escape reverts it. */
-function gestureHandlers(store: DocumentStore) {
-  return {
-    onGestureStart: () => store.getState().beginTransaction(),
-    onGestureEnd: (cancelled: boolean) => {
-      const state = store.getState();
-      if (cancelled) state.cancelTransaction();
-      else state.commitTransaction();
-    },
-  };
-}
-
 /** The project's display units, stock size and zero point, shown while nothing is selected. */
 export function StockProperties() {
   const store = useDocumentStoreApi();
@@ -73,12 +64,7 @@ export function StockProperties() {
           id="units"
           size="sm"
           value={units}
-          onChange={(event) => {
-            const next = Units.parse(event.target.value);
-            store.getState().change("setUnits", (draft) => {
-              draft.units = next;
-            });
-          }}
+          onChange={(event) => setUnits(store, Units.parse(event.target.value))}
           className="h-control px-2 pr-7 text-ui"
         >
           {Units.options.map((option) => (
@@ -103,11 +89,7 @@ export function StockProperties() {
             units={units}
             min={MIN_STOCK}
             value={stock[key]}
-            onValueChange={(value) =>
-              store.getState().change(`setStock.${key}`, (draft) => {
-                draft.stock[key] = value;
-              })
-            }
+            onValueChange={(value) => setStockDimension(store, key, value)}
             {...gestureHandlers(store)}
           />
         ))}
@@ -127,15 +109,32 @@ function ZeroSection() {
   const units = useDocumentStore((s) => s.document.units);
   const xyOrigin = useDocumentStore((s) => s.document.stock.xyOrigin);
   const zOrigin = useDocumentStore((s) => s.document.stock.zOrigin);
-  const radios = useRef(new Map<StockAnchor, HTMLInputElement>());
+  const radios = useRef(new Map<ZeroChoice, HTMLInputElement>());
 
-  /** Arrow keys move around the grid as laid out, rather than through the radios in order. */
-  function onAnchorKeyDown(anchor: StockAnchor, event: React.KeyboardEvent<HTMLInputElement>) {
-    const next = anchorInDirection(anchor, event.key);
+  function choose(choice: ZeroChoice) {
+    if (choice === "custom") setCustomXYOrigin(store);
+    else setXYAnchor(store, choice);
+  }
+
+  /**
+   * Arrow keys move around the grid as laid out, rather than through the
+   * radios in order; chords (Alt+Arrow for back/forward, …) are left alone.
+   */
+  function onKeyDown(choice: ZeroChoice, event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const next = zeroChoiceInDirection(choice, event.key);
     if (next === null) return;
     event.preventDefault();
-    setXYAnchor(store, next);
+    choose(next);
     radios.current.get(next)?.focus();
+  }
+
+  /** Keeps `radios` up to date as the inputs mount and unmount. */
+  function radioRef(choice: ZeroChoice) {
+    return (input: HTMLInputElement | null) => {
+      if (input) radios.current.set(choice, input);
+      else radios.current.delete(choice);
+    };
   }
 
   return (
@@ -166,16 +165,13 @@ function ZeroSection() {
                   )}
                 >
                   <input
-                    ref={(input) => {
-                      if (input) radios.current.set(anchor, input);
-                      else radios.current.delete(anchor);
-                    }}
+                    ref={radioRef(anchor)}
                     type="radio"
                     name="zero-xy"
                     aria-label={ANCHOR_LABELS[anchor]}
                     checked={xyOrigin.anchor === anchor}
-                    onChange={() => setXYAnchor(store, anchor)}
-                    onKeyDown={(event) => onAnchorKeyDown(anchor, event)}
+                    onChange={() => choose(anchor)}
+                    onKeyDown={(event) => onKeyDown(anchor, event)}
                     className="peer sr-only"
                   />
                   <span className="size-3 rounded-full border border-muted-foreground bg-background transition-colors peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 hover:border-foreground" />
@@ -187,8 +183,10 @@ function ZeroSection() {
             <input
               type="radio"
               name="zero-xy"
+              ref={radioRef("custom")}
               checked={xyOrigin.anchor === "custom"}
-              onChange={() => setCustomXYOrigin(store)}
+              onChange={() => choose("custom")}
+              onKeyDown={(event) => onKeyDown("custom", event)}
               className="accent-primary"
             />
             Custom
