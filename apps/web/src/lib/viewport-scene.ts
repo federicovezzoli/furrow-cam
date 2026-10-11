@@ -101,6 +101,21 @@ export function fitTopZoom({ min, max }: Box3, size: { width: number; height: nu
   return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
+/**
+ * How many pixels a millimetre covers on screen: the zoom of an orthographic
+ * camera, or for a perspective one (`fov` in degrees) a millimetre `distance`
+ * away, in a viewport `height` pixels tall.
+ */
+export function pixelsPerMillimetre(
+  camera: { zoom: number; fov?: number },
+  height: number,
+  distance: number,
+): number {
+  if (camera.fov === undefined) return camera.zoom;
+  const visible = 2 * distance * Math.tan((camera.fov * Math.PI) / 360);
+  return visible > 0 ? (height / visible) * camera.zoom : 1;
+}
+
 /** Looking at the stock from the front right, above it. */
 const ORBIT_DIRECTION: Vec3 = [0.4, -1, 0.9];
 

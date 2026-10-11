@@ -4,6 +4,8 @@ export type Palette = {
   hovered: string;
   selected: string;
   tab: string;
+  /** Rapid moves; cutting moves take their tool's colour. */
+  rapid: string;
   stock: string;
   stockEdges: string;
   gridMinor: string;
@@ -16,6 +18,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#60a5fa",
     selected: "#ea580c",
     tab: "#16a34a",
+    rapid: "#71717a",
     stock: "#d4a373",
     stockEdges: "#a16207",
     gridMinor: "#e4e4e7",
@@ -26,6 +29,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#93c5fd",
     selected: "#fb923c",
     tab: "#4ade80",
+    rapid: "#a1a1aa",
     stock: "#a47148",
     stockEdges: "#d4a373",
     gridMinor: "#2a2a2d",
@@ -43,6 +47,9 @@ export const RENDER_ORDER = {
   shapes: 1,
   selected: 2,
   hovered: 3,
-  origin: 4,
-  tabs: 5,
+  rapids: 4,
+  feeds: 5,
+  holes: 6,
+  origin: 7,
+  tabs: 8,
 } as const;

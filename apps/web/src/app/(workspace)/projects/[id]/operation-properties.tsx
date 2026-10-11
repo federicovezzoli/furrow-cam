@@ -738,7 +738,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
       </p>
     );
   }
-  const { warnings } = entry.result;
+  const { warnings } = entry;
   if (warnings.length === 0) return null;
   return (
     <section

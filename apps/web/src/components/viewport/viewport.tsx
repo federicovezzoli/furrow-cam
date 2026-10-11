@@ -14,8 +14,8 @@ import { Scene } from "./scene";
 import { PALETTES } from "./scene-style";
 
 /**
- * The workspace's 3D viewport (ADR-0008): stock, grid, work origin and
- * geometry in one scene, seen from an orthographic top view or a perspective
+ * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry
+ * and toolpaths in one scene, seen from an orthographic top view or a perspective
  * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014),
  * so changing the work origin moves only the origin marker and the grid.
  * Browser-only: load it with `next/dynamic` and `ssr: false`.
@@ -38,7 +38,7 @@ export function Viewport() {
 
   return (
     <div className={cn("relative h-full", editingTabs && "cursor-crosshair")}>
-      <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock and geometry">
+      <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
         {view === "top" ? (
           <TopCamera key={poseKey} box={box} poses={poses} poseKey={poseKey} />
         ) : (

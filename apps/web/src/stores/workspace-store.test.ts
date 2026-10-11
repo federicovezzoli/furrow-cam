@@ -74,6 +74,7 @@ describe("workspace store", () => {
     store.getState().selectOperation("op");
     store.getState().setHoveredShape("b");
     store.getState().setEditingTabs(true);
+    store.getState().setToolpathVisible("op", false);
 
     const selected = store.getState().selectedShapeIds;
     store.getState().prune(document(["a", "b"], ["op"]));
@@ -85,6 +86,18 @@ describe("workspace store", () => {
       selectedOperationId: null,
       hoveredShapeId: null,
       editingTabs: false,
+      hiddenToolpathIds: [],
     });
+  });
+
+  it("hides and shows an operation's toolpath", () => {
+    const store = createWorkspaceStore();
+    expect(store.getState().hiddenToolpathIds).toEqual([]);
+    store.getState().setToolpathVisible("a", false);
+    store.getState().setToolpathVisible("a", false);
+    store.getState().setToolpathVisible("b", false);
+    expect(store.getState().hiddenToolpathIds).toEqual(["a", "b"]);
+    store.getState().setToolpathVisible("a", true);
+    expect(store.getState().hiddenToolpathIds).toEqual(["b"]);
   });
 });

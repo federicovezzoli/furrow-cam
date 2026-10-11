@@ -12,7 +12,7 @@ export type ViewMode = "top" | "orbit";
  * every pointer move.
  *
  * An undo can remove a selected shape or operation, so `prune` drops ids that
- * are no longer in the document, and ends editing tabs the selected profile
+ * are no longer in the document (selected, hovered and hidden ones), and ends editing tabs the selected profile
  * no longer has; the workspace calls it on every document change, and readers
  * can trust the ids.
  */
@@ -26,6 +26,8 @@ export type WorkspaceState = {
    * view, and ends when the selection or the view changes.
    */
   editingTabs: boolean;
+  /** Operations whose toolpaths the viewport hides. */
+  hiddenToolpathIds: string[];
 
   setView: (view: ViewMode) => void;
   /** `replace` selects only `ids`; `toggle` flips each of them (Ctrl/Cmd/Shift+click). */
@@ -34,8 +36,9 @@ export type WorkspaceState = {
   setHoveredShape: (id: string | null) => void;
   /** Switches to the top view when turned on. */
   setEditingTabs: (editing: boolean) => void;
+  setToolpathVisible: (operationId: string, visible: boolean) => void;
   clearSelection: () => void;
-  /** Drops selected and hovered ids that aren't in `document`, and tab editing without tabs. */
+  /** Drops selected, hovered and hidden ids that aren't in `document`, and tab editing without tabs. */
   prune: (document: ProjectDocument) => void;
 };
 
@@ -50,6 +53,7 @@ export function createWorkspaceStore() {
         selectedOperationId: null,
         hoveredShapeId: null,
         editingTabs: false,
+        hiddenToolpathIds: [],
 
         setView(view) {
           set(
@@ -113,6 +117,23 @@ export function createWorkspaceStore() {
           );
         },
 
+        setToolpathVisible(operationId, visible) {
+          set(
+            (state) => {
+              const hidden = state.hiddenToolpathIds.includes(operationId);
+              if (visible && hidden) {
+                state.hiddenToolpathIds = state.hiddenToolpathIds.filter(
+                  (id) => id !== operationId,
+                );
+              } else if (!visible && !hidden) {
+                state.hiddenToolpathIds.push(operationId);
+              }
+            },
+            false,
+            "setToolpathVisible",
+          );
+        },
+
         clearSelection() {
           set(
             (state) => {
@@ -128,6 +149,12 @@ export function createWorkspaceStore() {
         prune(document) {
           set(
             (state) => {
+              const operationIds = new Set(document.operations.map(({ id }) => id));
+              if (state.hiddenToolpathIds.some((id) => !operationIds.has(id))) {
+                state.hiddenToolpathIds = state.hiddenToolpathIds.filter((id) =>
+                  operationIds.has(id),
+                );
+              }
               const shapeIds = new Set(document.geometry.map((shape) => shape.id));
               // Assigned only when something went, so unchanged selections keep their identity.
               if (state.selectedShapeIds.some((id) => !shapeIds.has(id))) {

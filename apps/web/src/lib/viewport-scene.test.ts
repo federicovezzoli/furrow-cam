@@ -7,6 +7,7 @@ import {
   fitTopZoom,
   gridLinePositions,
   POINT_MARKER_SIZE,
+  pixelsPerMillimetre,
   shapeLinePositions,
   shapesLinePositions,
 } from "./viewport-scene";
@@ -101,5 +102,17 @@ describe("camera fitting", () => {
     expect(Math.hypot(x - cx, y - cy, z - cz)).toBeGreaterThan(
       radius / Math.sin((25 * Math.PI) / 180),
     );
+  });
+});
+
+describe("pixelsPerMillimetre", () => {
+  it("is the zoom of an orthographic camera", () => {
+    expect(pixelsPerMillimetre({ zoom: 2.5 }, 800, 1000)).toBe(2.5);
+  });
+
+  it("follows the distance of a perspective camera", () => {
+    // 90° fov: 200 mm visible at 100 mm away.
+    expect(pixelsPerMillimetre({ zoom: 1, fov: 90 }, 800, 100)).toBeCloseTo(4);
+    expect(pixelsPerMillimetre({ zoom: 1, fov: 90 }, 800, 200)).toBeCloseTo(2);
   });
 });
