@@ -1,0 +1,52 @@
+import { generateToolpath, toolpathInputs } from "@furrow/cam-core";
+import { type PostProcessorId, type ProjectDocument, projectFileName } from "@furrow/document";
+import { grbl } from "./grbl";
+import type { PostOutput, PostProcessor } from "./post";
+
+/** Every dialect, by the id machine profiles store. */
+export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
+
+/** Used when the project has no machine profile. */
+export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
+
+export type GcodeExport = PostOutput & { fileName: string };
+
+/**
+ * The G-code of the project `name`, for its machine's post-processor: the
+ * enabled operations in order, toolpath warnings included. Computes every
+ * toolpath, so it runs in a Web Worker (ADR-0004). Throws when there is
+ * nothing to cut.
+ */
+export function exportGcode(doc: ProjectDocument, name: string): GcodeExport {
+  const inputs = toolpathInputs(
+    doc,
+    doc.operations.filter((operation) => operation.enabled),
+  );
+  const first = inputs[0];
+  if (first === undefined) throw new Error("There are no enabled operations to export.");
+
+  const warnings: string[] = [];
+  const operations = inputs.flatMap((input) => {
+    const toolpath = generateToolpath(input);
+    const { name: operationName } = input.operation;
+    warnings.push(...toolpath.warnings.map((warning) => `${operationName}: ${warning}`));
+    return toolpath.moves.length > 0 ? [{ operation: input.operation, toolpath }] : [];
+  });
+  if (operations.length === 0) {
+    throw new Error("None of the enabled operations has a toolpath to export.");
+  }
+
+  const processor = POST_PROCESSORS[doc.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR];
+  const output = processor.post({
+    name,
+    stock: doc.stock,
+    machine: doc.machine,
+    safeZ: first.safeZ,
+    operations,
+  });
+  return {
+    gcode: output.gcode,
+    warnings: [...warnings, ...output.warnings],
+    fileName: projectFileName(name, processor.extension),
+  };
+}

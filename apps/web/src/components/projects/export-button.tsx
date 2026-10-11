@@ -5,6 +5,7 @@ import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
 import { loadProject } from "@/app/(app)/projects/actions";
 import { Button } from "@/components/ui/button";
+import { downloadFile } from "@/lib/download";
 
 /**
  * Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version.
@@ -62,17 +63,9 @@ export function ExportButton({
 }
 
 function download(projectDocument: ProjectDocument, name: string) {
-  const blob = new Blob([`${JSON.stringify(projectDocument, null, 2)}\n`], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = projectFileName(name);
-  // Some browsers ignore clicks on a link that isn't in the page.
-  document.body.append(link);
-  link.click();
-  link.remove();
-  // Revoking right away can cancel the download in some browsers.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadFile(
+    `${JSON.stringify(projectDocument, null, 2)}\n`,
+    projectFileName(name),
+    "application/json",
+  );
 }

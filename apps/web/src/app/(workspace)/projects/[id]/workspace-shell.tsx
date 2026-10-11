@@ -9,6 +9,7 @@ import { useRef } from "react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { FormError } from "@/components/auth/form-error";
 import { ExportButton } from "@/components/projects/export-button";
+import { GcodeExportButton } from "@/components/projects/gcode-export-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -193,6 +194,7 @@ function TopBar({
       </h1>
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
+        {getDocument && <GcodeExportButton name={project.name} getDocument={getDocument} />}
         {getDocument && (
           <ExportButton
             id={project.id}

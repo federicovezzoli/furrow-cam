@@ -176,6 +176,9 @@ importers:
       '@furrow/cam-core':
         specifier: workspace:*
         version: link:../cam-core
+      '@furrow/document':
+        specifier: workspace:*
+        version: link:../document
     devDependencies:
       typescript:
         specifier: 'catalog:'

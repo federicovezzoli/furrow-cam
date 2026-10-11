@@ -4,6 +4,7 @@ import { projectFileName, projectNameFromFileName } from "./file";
 describe("projectFileName", () => {
   it("appends the extension", () => {
     expect(projectFileName("Walnut cutting board")).toBe("Walnut cutting board.furrow.json");
+    expect(projectFileName("Sign: v2", ".gcode")).toBe("Sign- v2.gcode");
   });
 
   it("replaces characters that aren't allowed in file names", () => {
