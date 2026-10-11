@@ -1,7 +1,7 @@
 import { generateToolpath } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument, type Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { createDocumentStore } from "./document-store";
+import { createDocumentStore, type DocumentStore } from "./document-store";
 import { scheduleToolpaths, type ToolpathRequest } from "./toolpath-scheduler";
 import { createToolpathStore } from "./toolpath-store";
 
@@ -78,6 +78,13 @@ function setup() {
   return { documents, toolpaths, requests, schedule };
 }
 
+function deepen(documents: DocumentStore, depth: number) {
+  documents.getState().change("Depth", (draft) => {
+    const operation = draft.operations[0];
+    if (operation?.type === "profile") operation.params.depth = depth;
+  });
+}
+
 describe("scheduleToolpaths", () => {
   it("requests enabled operations and files the worker's results", () => {
     const { toolpaths, requests, schedule } = setup();
@@ -90,19 +97,64 @@ describe("scheduleToolpaths", () => {
     expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({ status: "ready", result });
   });
 
-  it("recomputes only when an operation's inputs change", () => {
-    const { documents, requests } = setup();
+  it("recomputes only when what the toolpath depends on changes", () => {
+    const { documents, requests, schedule } = setup();
+    const answer = () => {
+      const request = requests.at(-1) as ToolpathRequest;
+      schedule.receive({ ...request, result: generateToolpath(request.input) });
+    };
+    answer();
     documents.getState().change("Edit stock", (draft) => {
       draft.stock.width = 500;
     });
+    documents.getState().change("Rename", (draft) => {
+      const operation = draft.operations[0];
+      const shape = draft.geometry[0];
+      if (operation && shape) {
+        operation.name = "Renamed";
+        operation.tool.color = "#dc2626";
+        shape.name = "Renamed";
+      }
+    });
     expect(requests).toHaveLength(1);
 
-    documents.getState().change("Deeper", (draft) => {
-      const operation = draft.operations[0];
-      if (operation?.type === "profile") operation.params.depth = 6;
-    });
+    deepen(documents, 6);
     expect(requests).toHaveLength(2);
     expect(requests[1]?.inputHash).not.toBe(requests[0]?.inputHash);
+  });
+
+  it("keeps one request per operation at the worker and sends only the latest next", () => {
+    const { documents, toolpaths, requests, schedule } = setup();
+    for (const depth of [4, 5, 6]) deepen(documents, depth);
+    expect(requests).toHaveLength(1);
+
+    const [first] = requests as [ToolpathRequest];
+    schedule.receive({ ...first, result: generateToolpath(first.input) });
+    // The first result is stale: the operation computes the latest inputs.
+    expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("computing");
+    expect(requests).toHaveLength(2);
+    const latest = requests[1] as ToolpathRequest;
+    expect(latest.input.operation.type === "profile" && latest.input.operation.params.depth).toBe(
+      6,
+    );
+
+    schedule.receive({ ...latest, result: generateToolpath(latest.input) });
+    expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("ready");
+    expect(requests).toHaveLength(2);
+  });
+
+  it("fails pending toolpaths and sends again after a change", () => {
+    const { documents, toolpaths, requests, schedule } = setup();
+    deepen(documents, 6);
+    schedule.fail("The toolpath worker stopped");
+    expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({
+      status: "error",
+      error: "The toolpath worker stopped",
+    });
+    expect(requests).toHaveLength(1);
+
+    deepen(documents, 5);
+    expect(requests).toHaveLength(2);
   });
 
   it("drops toolpaths of disabled operations and reports errors", () => {
@@ -125,11 +177,10 @@ describe("scheduleToolpaths", () => {
 
   it("stops listening", () => {
     const { documents, requests, schedule } = setup();
+    const [first] = requests as [ToolpathRequest];
+    schedule.receive({ ...first, result: generateToolpath(first.input) });
     schedule.stop();
-    documents.getState().change("Deeper", (draft) => {
-      const operation = draft.operations[0];
-      if (operation?.type === "profile") operation.params.depth = 6;
-    });
+    deepen(documents, 6);
     expect(requests).toHaveLength(1);
   });
 });

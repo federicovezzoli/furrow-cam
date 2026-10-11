@@ -1,6 +1,6 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
-import { offset, type Polygon, signedArea } from "./geometry";
+import { containment, offset, type Polygon, signedArea } from "./geometry";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type ProfileOptions = {
@@ -14,7 +14,13 @@ export type ProfileOptions = {
 export const ENTRY_CLEARANCE = 1;
 
 /** A closed ring the tool follows, in cutting direction, without its closing point. */
-type Contour = { ring: Point[]; wasteLeft: boolean };
+type Contour = { ring: Point[]; wasteLeft: boolean; area: number };
+
+/** The contours of one offset, and where the tool centre may go without cutting the part. */
+type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
+
+/** A lead-in that doesn't fit is halved this many times before it is left out. */
+const LEAD_IN_ATTEMPTS = 4;
 
 /** Everything the passes of one profile share. */
 type Cut = {
@@ -27,6 +33,8 @@ type Cut = {
   minRampLength: number;
   leadInRadius: number | null;
   tolerance: number;
+  /** Contours whose lead-in had to be shortened or left out. */
+  leadInMisfits: number;
 };
 
 /**
@@ -37,14 +45,17 @@ type Cut = {
  *   so a part with holes is profiled outside its outline and inside its holes.
  *   `on` follows each path as drawn, open paths included.
  * - Each contour is cut to `depth` in equal passes no deeper than the tool's
- *   step-down, all passes of a contour before the next; smaller contours first,
- *   so inner cuts come before the outline that frees the part.
+ *   step-down, all passes of a contour before the next; open paths first, then
+ *   smaller contours first, so inner cuts come before the outline that frees
+ *   the part.
  * - Climb milling keeps the material on the tool's right (clockwise spindle).
  * - The depth passes stay `allowance` away from the contour; a finish pass then
- *   cuts the exact contour at full depth, entering from the cleared slot.
+ *   cuts the exact contour at full depth, entering from the cleared slot,
+ *   right after the depth passes of that contour.
  * - Each pass enters by ramping at the tool's plunge angle (along the contour,
  *   or back and forth on the lead-in arc or an open path) or plunges straight
- *   down when ramping is off, the angle is 90° or the path is too short.
+ *   down when ramping is off, the angle is 90° or the path is too short. A
+ *   lead-in that would leave the waste side is shortened, or left out.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -85,23 +96,54 @@ export function profileToolpath(
     minRampLength: radius,
     leadInRadius: params.leadIn?.radius ?? null,
     tolerance,
+    leadInMisfits: 0,
   };
   const levels = depthLevels(params.depth, tool.stepDown);
 
   const roughing = contours(closed, operation, radius + params.allowance);
-  const finishing = params.finishPass ? contours(closed, operation, radius) : [];
-  if (closed.length > 0 && roughing.length === 0 && finishing.length === 0) {
+  const finishing = params.finishPass ? contours(closed, operation, radius) : null;
+  if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
     warnings.push("The closed paths are too small for the tool.");
   }
 
-  for (const contour of roughing) cutContour(cut, contour, levels);
+  // Open paths never free the part, so they go before any closed contour.
   if (params.side === "on") for (const path of open) cutOpenPath(cut, path, levels);
-  for (const contour of finishing) {
-    if (!finishContour(cut, contour, roughing, params.allowance, -params.depth)) {
-      cutContour(cut, contour, levels);
+
+  // A finish lap follows the depth passes it enters from, so inner contours
+  // are finished before the outline frees the part.
+  const jobs = roughing.contours.map((contour) => ({
+    area: contour.area,
+    run: () => cutContour(cut, contour, levels, roughing.isFree),
+  }));
+  if (finishing) {
+    const within = params.allowance + 2 * tolerance + 1e-3;
+    const boxes = roughing.contours.map((contour) => bounds(contour.ring));
+    for (const contour of finishing.contours) {
+      const entry = slotFor(contour.ring[0] as Point, roughing.contours, boxes, within);
+      const job = entry && jobs[entry.index];
+      if (entry && job) {
+        const roughingRun = job.run;
+        job.run = () => {
+          roughingRun();
+          finishContour(cut, contour, entry.point, -params.depth);
+        };
+      } else {
+        jobs.push({
+          area: contour.area,
+          run: () => cutContour(cut, contour, levels, finishing.isFree),
+        });
+      }
     }
   }
+  jobs.sort((a, b) => a.area - b.area);
+  for (const job of jobs) job.run();
   cut.builder.retract();
+
+  if (cut.leadInMisfits > 0) {
+    warnings.push(
+      `The lead-in didn't fit ${plural(cut.leadInMisfits, "contour")} and was shortened or left out.`,
+    );
+  }
   return { moves: cut.builder.moves, warnings };
 }
 
@@ -115,22 +157,33 @@ export function depthLevels(depth: number, stepDown: number): number[] {
  * The rings the tool centre follows, `distance` away from the closed paths on
  * the operation's side, in cutting direction and cutting order.
  */
-function contours(closed: Polygon[], operation: ProfileOperation, distance: number): Contour[] {
+function contours(closed: Polygon[], operation: ProfileOperation, distance: number): Contours {
   const { side, direction } = operation.params;
   // Every ring here has the area it bounds on its left: the kept material for
   // `outside` and `on`, the waste for `inside`.
-  const rings =
+  const rings = (
     side === "on"
       ? closed.map((ring) => (signedArea(ring) < 0 ? [...ring].reverse() : ring))
-      : offset(closed, side === "outside" ? distance : -distance, { fillRule: "evenOdd" });
+      : offset(closed, side === "outside" ? distance : -distance, { fillRule: "evenOdd" })
+  ).filter((ring) => ring.length >= 2);
   const reverse = (direction === "climb") === (side !== "inside");
-  return rings
-    .filter((ring) => ring.length >= 2)
-    .sort((a, b) => Math.abs(signedArea(a)) - Math.abs(signedArea(b)))
+  const contours = rings
     .map((ring) => ({
       ring: startOnLongestEdge(reverse ? [...ring].reverse() : ring),
       wasteLeft: (side === "inside") !== reverse,
-    }));
+      area: Math.abs(signedArea(ring)),
+    }))
+    .sort((a, b) => a.area - b.area);
+
+  // The rings nest without crossing, so even-odd containment gives the area they bound.
+  const boxes = rings.map(bounds);
+  const bounded = (point: Point) =>
+    rings.filter(
+      (ring, i) => inBox(point, boxes[i] as Box, 0) && containment(point, ring) === "inside",
+    ).length %
+      2 ===
+    1;
+  return { contours, isFree: side === "inside" ? bounded : (point) => !bounded(point) };
 }
 
 /** Starts the ring halfway along its longest edge, so a lead-in meets it on a straight. */
@@ -151,15 +204,23 @@ function startOnLongestEdge(ring: Point[]): Point[] {
   return [middle, ...ring.slice(best + 1), ...ring.slice(0, best + 1)];
 }
 
-/** Cuts a closed contour pass by pass, from the stock top down to each level. */
-function cutContour(cut: Cut, contour: Contour, levels: number[]) {
+/**
+ * Cuts a closed contour pass by pass, from the stock top down to each level.
+ * `isFree` tells where a lead-in may go.
+ */
+function cutContour(
+  cut: Cut,
+  contour: Contour,
+  levels: number[],
+  isFree: (point: Point) => boolean,
+) {
   const loop = [...contour.ring, contour.ring[0] as Point];
   const track = new Track(loop);
   if (track.length <= cut.tolerance) return;
   const { builder } = cut;
 
-  if (cut.leadInRadius !== null) {
-    const arc = leadInArc(loop, cut.leadInRadius, contour.wasteLeft, cut.tolerance);
+  const arc = fittingLeadIn(cut, loop, contour.wasteLeft, isFree);
+  if (arc) {
     const back = [...arc].reverse();
     enter(cut, arc[0] as Point);
     let z = 0;
@@ -212,70 +273,101 @@ function cutOpenPath(cut: Cut, path: Point[], levels: number[]) {
 
 /**
  * Cuts the finish lap of `contour` at full depth: down through the slot the
- * depth passes cleared, across to the contour, around it and back. Returns
- * `false` when no roughing ring is near enough to enter from.
+ * depth passes cleared at `slot`, across to the contour, around it and back.
  */
-function finishContour(
-  cut: Cut,
-  contour: Contour,
-  roughing: Contour[],
-  allowance: number,
-  depth: number,
-): boolean {
-  const entry = nearestPair(contour.ring, roughing, allowance + 2 * cut.tolerance + 1e-3);
-  if (!entry) return false;
+function finishContour(cut: Cut, contour: Contour, slot: Point, depth: number) {
   const { builder } = cut;
-  const [index, slot] = entry;
-  const ring = [...contour.ring.slice(index), ...contour.ring.slice(0, index)];
-  const start = ring[0] as Point;
+  const start = contour.ring[0] as Point;
   enter(cut, slot);
   builder.feed([slot[0], slot[1], depth], cut.plungeRate);
   builder.feed([start[0], start[1], depth], cut.feedRate);
-  feedAlong(cut, [...ring, start], depth);
+  feedAlong(cut, [...contour.ring, start], depth);
   builder.feed([slot[0], slot[1], depth], cut.feedRate);
-  return true;
 }
 
 /**
- * The vertex of `ring` closest to a vertex of any of `others`, as its index
- * and the other vertex, if one is within `within`.
+ * The point of the `contours` nearest to `point`, with the index of its
+ * contour, if one is within `within`. `boxes` are the contours' bounds.
  */
-function nearestPair(ring: Point[], others: Contour[], within: number): [number, Point] | null {
-  const box = bounds(ring);
-  let best: [number, Point] | null = null;
+function slotFor(
+  point: Point,
+  contours: Contour[],
+  boxes: Box[],
+  within: number,
+): { index: number; point: Point } | null {
+  let best: { index: number; point: Point } | null = null;
   let bestDistance = within;
-  for (const other of others) {
-    const otherBox = bounds(other.ring);
-    if (
-      otherBox.minX > box.maxX + within ||
-      otherBox.maxX < box.minX - within ||
-      otherBox.minY > box.maxY + within ||
-      otherBox.maxY < box.minY - within
-    ) {
-      continue;
-    }
-    ring.forEach((point, i) => {
-      for (const candidate of other.ring) {
-        const d = distance(point, candidate);
-        if (d <= bestDistance) {
-          bestDistance = d;
-          best = [i, candidate];
-        }
+  contours.forEach(({ ring }, index) => {
+    if (!inBox(point, boxes[index] as Box, within)) return;
+    ring.forEach((a, i) => {
+      const candidate = nearestOnSegment(point, a, ring[(i + 1) % ring.length] as Point);
+      const d = distance(point, candidate);
+      if (d <= bestDistance) {
+        bestDistance = d;
+        best = { index, point: candidate };
       }
     });
-  }
+  });
   return best;
 }
 
-function bounds(ring: Point[]) {
-  const xs = ring.map((p) => p[0]);
-  const ys = ring.map((p) => p[1]);
-  return {
-    minX: Math.min(...xs),
-    maxX: Math.max(...xs),
-    minY: Math.min(...ys),
-    maxY: Math.max(...ys),
-  };
+function nearestOnSegment(point: Point, a: Point, b: Point): Point {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  const t =
+    lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared))
+      : 0;
+  return [a[0] + t * dx, a[1] + t * dy];
+}
+
+type Box = { minX: number; minY: number; maxX: number; maxY: number };
+
+function bounds(ring: Point[]): Box {
+  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const [x, y] of ring) {
+    box.minX = Math.min(box.minX, x);
+    box.minY = Math.min(box.minY, y);
+    box.maxX = Math.max(box.maxX, x);
+    box.maxY = Math.max(box.maxY, y);
+  }
+  return box;
+}
+
+/** Whether `point` is inside `box` grown by `margin`. */
+function inBox(point: Point, box: Box, margin: number): boolean {
+  return (
+    point[0] >= box.minX - margin &&
+    point[0] <= box.maxX + margin &&
+    point[1] >= box.minY - margin &&
+    point[1] <= box.maxY + margin
+  );
+}
+
+/**
+ * The lead-in arc into `loop`, halved until it stays where `isFree` allows,
+ * or `null` without a lead-in or when even the shortest doesn't fit.
+ */
+function fittingLeadIn(
+  cut: Cut,
+  loop: Point[],
+  wasteLeft: boolean,
+  isFree: (point: Point) => boolean,
+): Point[] | null {
+  if (cut.leadInRadius === null) return null;
+  let radius = cut.leadInRadius;
+  for (let attempt = 0; attempt <= LEAD_IN_ATTEMPTS; attempt++) {
+    const arc = leadInArc(loop, radius, wasteLeft, cut.tolerance);
+    // The last point is on the contour itself.
+    if (arc.slice(0, -1).every(isFree)) {
+      if (attempt > 0) cut.leadInMisfits++;
+      return arc;
+    }
+    radius /= 2;
+  }
+  cut.leadInMisfits++;
+  return null;
 }
 
 /**
