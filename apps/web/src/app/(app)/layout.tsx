@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
+import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </nav>
       </header>
       {children}
+      <SiteFooter />
     </>
   );
 }
