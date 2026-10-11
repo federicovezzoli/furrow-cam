@@ -6,12 +6,22 @@ describe("Tool", () => {
   it("accepts end mills and V-bits", () => {
     expect(Tool.parse(endMill)).toEqual(endMill);
     expect(Tool.parse(vBit)).toEqual(vBit);
-    expect(Tool.parse({ ...endMill, type: "drill", cutDirection: null })).toBeTruthy();
+    expect(
+      Tool.parse({ ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 }),
+    ).toBeTruthy();
   });
 
   it("requires a cut direction on end mills only", () => {
     expect(Tool.safeParse({ ...endMill, cutDirection: null }).success).toBe(false);
-    expect(Tool.safeParse({ ...endMill, type: "drill" }).success).toBe(false);
+    expect(Tool.safeParse({ ...endMill, type: "drill", plungeAngle: 90 }).success).toBe(false);
+  });
+
+  it("limits the plunge angle, and keeps drills at 90°", () => {
+    expect(Tool.safeParse({ ...endMill, plungeAngle: 90 }).success).toBe(true);
+    expect(Tool.safeParse({ ...endMill, plungeAngle: 0 }).success).toBe(false);
+    expect(Tool.safeParse({ ...endMill, plungeAngle: 91 }).success).toBe(false);
+    const drill = { ...endMill, type: "drill", cutDirection: null };
+    expect(Tool.safeParse({ ...drill, plungeAngle: 45 }).success).toBe(false);
   });
 
   it("requires V-bit geometry on V-bits only", () => {

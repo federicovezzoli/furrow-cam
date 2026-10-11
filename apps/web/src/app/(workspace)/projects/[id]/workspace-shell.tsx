@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useAutosave } from "@/hooks/use-autosave";
+import { useToolpaths } from "@/hooks/use-toolpaths";
 import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
 import type { getProject, ProjectRow } from "@/lib/projects";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
@@ -69,6 +70,7 @@ export function WorkspaceShell({
 function Workspace({ project, layout }: { project: ProjectRow; layout: WorkspaceLayout }) {
   const saveStatus = useAutosave();
   useUndoShortcuts();
+  useToolpaths();
   const documentStore = useDocumentStoreApi();
   const saved = useRef(layout);
 

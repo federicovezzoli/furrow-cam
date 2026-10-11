@@ -36,6 +36,11 @@ export const Tool = z
     spindleRpm: SpindleRpm,
     feedRate: FeedRate,
     plungeRate: FeedRate,
+    /**
+     * Steepest angle in degrees, from horizontal, at which the bit may enter
+     * the material. `90` plunges straight down; drills are always `90`.
+     */
+    plungeAngle: z.number().gt(0).max(90),
     /** Depth per pass. */
     stepDown: PositiveLength,
     /** Percentage of the diameter. */
@@ -59,6 +64,9 @@ export const Tool = z
       if (tool.type !== "v_bit" && tool[key] !== null) {
         ctx.addIssue({ code: "custom", path: [key], message: "Only for V-bits" });
       }
+    }
+    if (tool.type === "drill" && tool.plungeAngle !== 90) {
+      ctx.addIssue({ code: "custom", path: ["plungeAngle"], message: "Drills plunge at 90°" });
     }
     if (tool.stepDown > tool.fluteLength) {
       ctx.addIssue({

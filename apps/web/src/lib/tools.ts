@@ -53,6 +53,7 @@ export const DEFAULT_TOOL: Tool = Tool.parse({
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
+  plungeAngle: 3,
   stepDown: 1,
   stepOver: 40,
   notes: null,
