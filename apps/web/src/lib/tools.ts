@@ -20,6 +20,21 @@ export function snapshotTool(row: Tool): Tool {
   return Tool.parse(row);
 }
 
+/** A library tool offered when picking an operation's tool, as the snapshot to store. */
+export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
+
+/**
+ * The user's tools as snapshots for operations, by name. Rows that fail
+ * today's rules are left out until they are fixed in the library.
+ */
+export async function listToolChoices(userId: string): Promise<ToolChoice[]> {
+  const rows = await listTools(userId);
+  return rows.flatMap((row) => {
+    const tool = Tool.safeParse(row);
+    return tool.success ? [{ id: row.id, isDefault: row.isDefault, tool: tool.data }] : [];
+  });
+}
+
 /** Picked in turn for new tools, so each one is told apart in the preview without choosing a colour. */
 export const TOOL_COLORS = [
   "#2563eb",
@@ -53,6 +68,7 @@ export const DEFAULT_TOOL: Tool = Tool.parse({
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
+  plungeAngle: 3,
   stepDown: 1,
   stepOver: 40,
   notes: null,

@@ -110,6 +110,8 @@ model Tool {
   spindleRpm   Int
   feedRate     Float
   plungeRate   Float
+  /// Degrees from horizontal; 90 plunges straight down (see `Tool` in @furrow/document).
+  plungeAngle  Float
   stepDown     Float
   stepOver     Float
   notes        String?
