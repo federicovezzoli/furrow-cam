@@ -49,7 +49,7 @@ export const RENDER_ORDER = {
   hovered: 3,
   rapids: 4,
   feeds: 5,
-  plunges: 6,
+  holes: 6,
   origin: 7,
   tabs: 8,
 } as const;

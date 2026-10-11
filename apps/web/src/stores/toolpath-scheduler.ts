@@ -1,17 +1,11 @@
-import {
-  type Toolpath,
-  type ToolpathInput,
-  type ToolpathLines,
-  toolpathInputs,
-  toolpathKey,
-} from "@furrow/cam-core";
+import { type ToolpathInput, toolpathInputs, toolpathKey } from "@furrow/cam-core";
 import type { DocumentStore } from "./document-store";
-import type { ToolpathStore } from "./toolpath-store";
+import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
 
 export type ToolpathRequest = { operationId: string; inputHash: string; input: ToolpathInput };
 
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
-  | { result: Toolpath; lines: ToolpathLines }
+  | ToolpathPreview
   | { error: string }
 );
 
@@ -84,8 +78,9 @@ export function scheduleToolpaths(
       const { operationId, inputHash } = response;
       inFlight.delete(operationId);
       const { setResult, setError } = toolpaths.getState();
-      if ("result" in response) setResult(operationId, inputHash, response.result, response.lines);
-      else setError(operationId, inputHash, response.error);
+      if ("error" in response) setError(operationId, inputHash, response.error);
+      else
+        setResult(operationId, inputHash, { warnings: response.warnings, lines: response.lines });
       const next = waiting.get(operationId);
       if (next) {
         waiting.delete(operationId);

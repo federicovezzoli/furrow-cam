@@ -9,48 +9,81 @@ const feed = (x: number, y: number, z: number): ToolpathMove => ({
   feedRate: 100,
 });
 
-const lines = (...moves: ToolpathMove[]) => toolpathLines({ moves, warnings: [] } as Toolpath);
+const toolpath = (...moves: ToolpathMove[]): Toolpath => ({ moves, warnings: [] });
+
+/** The `[x, y, z]` vertices of `LineSegments` positions. */
+const vertices = (positions: Float32Array) =>
+  Array.from({ length: positions.length / 3 }, (_, i) =>
+    Array.from(positions.subarray(i * 3, i * 3 + 3)),
+  );
+
+/** A pecked hole at `[1, 2]` and a plain one at `[8, 9]`, both 6 mm deep. */
+const drilled = toolpath(
+  rapid(1, 2, 5),
+  feed(1, 2, -3),
+  rapid(1, 2, 0.5),
+  rapid(1, 2, -2.5),
+  feed(1, 2, -6),
+  rapid(1, 2, 5),
+  rapid(8, 9, 5),
+  feed(8, 9, -6),
+  rapid(8, 9, 5),
+);
 
 describe("toolpathLines", () => {
   it("splits moves into rapid and feed segments from where the last one ended", () => {
-    const result = lines(rapid(0, 0, 5), feed(0, 0, -1), feed(10, 0, -1), rapid(10, 0, 5));
-    expect([...result.rapids]).toEqual([10, 0, -1, 10, 0, 5]);
-    expect([...result.feeds]).toEqual([0, 0, 5, 0, 0, -1, 0, 0, -1, 10, 0, -1]);
+    const lines = toolpathLines(
+      toolpath(rapid(0, 0, 5), feed(0, 0, -1), feed(10, 0, -1), rapid(10, 0, 5)),
+    );
+    expect([...lines.rapids]).toEqual([10, 0, -1, 10, 0, 5]);
+    expect([...lines.feeds]).toEqual([0, 0, 5, 0, 0, -1, 0, 0, -1, 10, 0, -1]);
+  });
+
+  it("measures each rapid from its own start, for dashes", () => {
+    const lines = toolpathLines(
+      toolpath(rapid(0, 0, 0), rapid(3, 4, 0), feed(3, 4, -1), rapid(3, 4, 1)),
+    );
+    expect([...lines.rapidDistances]).toEqual([0, 5, 0, 2]);
   });
 
   it("draws no segment for the first move, which has no start", () => {
-    const result = lines(rapid(3, 4, 5));
-    expect(result.rapids).toHaveLength(0);
-    expect(result.feeds).toHaveLength(0);
-    expect(lines().rapids).toHaveLength(0);
+    const lines = toolpathLines(toolpath(rapid(3, 4, 5)));
+    expect(lines.rapids).toHaveLength(0);
+    expect(lines.feeds).toHaveLength(0);
+    expect(toolpathLines(toolpath()).rapids).toHaveLength(0);
   });
 
-  it("marks straight plunges, merging pecks into the deepest", () => {
-    const result = lines(
-      rapid(1, 2, 5),
-      feed(1, 2, -3),
-      rapid(1, 2, 0.5),
-      rapid(1, 2, -2.5),
-      feed(1, 2, -6),
-      rapid(1, 2, 5),
-      rapid(8, 9, 5),
-      feed(8, 9, -6),
-      rapid(8, 9, 5),
-    );
-    expect([...result.plunges]).toEqual([1, 2, -6, 8, 9, -6]);
+  it("marks no holes unless asked", () => {
+    expect(toolpathLines(drilled).holes).toHaveLength(0);
+  });
+
+  it("circles each drilled hole at its bottom, merging its pecks", () => {
+    const { holes } = toolpathLines(drilled, { holeRadius: 3 });
+    const points = vertices(holes);
+    expect(points).toHaveLength(2 * 24 * 2);
+    expect(points[0]).toEqual([4, 2, -6]);
+    for (const [index, [x, y, z]] of points.entries() as Iterable<[number, number[]]>) {
+      const [cx, cy] = index < 48 ? [1, 2] : [8, 9];
+      expect(Math.hypot((x as number) - cx, (y as number) - cy)).toBeCloseTo(3, 5);
+      expect(z).toBe(-6);
+    }
   });
 
   it("doesn't mark ramps, helices or moves up", () => {
-    const result = lines(rapid(0, 0, 5), feed(4, 0, -1), feed(4, 0, 2), feed(4, 0, 2));
-    expect(result.plunges).toHaveLength(0);
+    const lines = toolpathLines(
+      toolpath(rapid(0, 0, 5), feed(4, 0, -1), feed(4, 0, 2), feed(4, 0, 2)),
+      { holeRadius: 3 },
+    );
+    expect(lines.holes).toHaveLength(0);
   });
 
   it("exposes its buffers for transfer", () => {
-    const result = lines(rapid(0, 0, 5), feed(0, 0, -1));
-    expect(toolpathLinesBuffers(result)).toEqual([
-      result.feeds.buffer,
-      result.rapids.buffer,
-      result.plunges.buffer,
+    const lines = toolpathLines(drilled, { holeRadius: 3 });
+    expect(toolpathLinesBuffers(lines)).toEqual([
+      lines.feeds.buffer,
+      lines.rapids.buffer,
+      lines.rapidDistances.buffer,
+      lines.holes.buffer,
     ]);
   });
 });

@@ -11,10 +11,15 @@ const scope = self as unknown as {
 scope.onmessage = ({ data }) => {
   const { operationId, inputHash } = data;
   try {
-    const result = generateToolpath(data.input);
-    const lines = toolpathLines(result);
-    // The viewport's typed arrays move to the main thread instead of being copied.
-    scope.postMessage({ operationId, inputHash, result, lines }, toolpathLinesBuffers(lines));
+    const { operation } = data.input;
+    const { moves, warnings } = generateToolpath(data.input);
+    // Only drills make holes; other straight plunges enter a cut that shows.
+    const holeRadius = operation.type === "drill" ? operation.tool.diameter / 2 : null;
+    const lines = toolpathLines({ moves, warnings }, { holeRadius });
+    // Only what the main thread shows crosses over, and the viewport's typed
+    // arrays move there instead of being copied: cloning every move would cost
+    // more than drawing them.
+    scope.postMessage({ operationId, inputHash, warnings, lines }, toolpathLinesBuffers(lines));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     scope.postMessage({ operationId, inputHash, error: message });

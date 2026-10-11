@@ -8,8 +8,6 @@ import {
   gridLinePositions,
   POINT_MARKER_SIZE,
   pixelsPerMillimetre,
-  plungeMarkerPositions,
-  segmentLineDistances,
   shapeLinePositions,
   shapesLinePositions,
 } from "./viewport-scene";
@@ -104,26 +102,6 @@ describe("camera fitting", () => {
     expect(Math.hypot(x - cx, y - cy, z - cz)).toBeGreaterThan(
       radius / Math.sin((25 * Math.PI) / 180),
     );
-  });
-});
-
-describe("toolpath lines", () => {
-  it("draws a circle of the tool's radius at each plunge", () => {
-    const positions = plungeMarkerPositions(new Float32Array([10, 20, -5, 0, 0, -1]), 3, 4);
-    expect(positions).toHaveLength(2 * 4 * 6);
-    const vertex = (i: number) => Array.from(positions.subarray(i * 3, i * 3 + 3));
-    expect(vertex(0)).toEqual([13, 20, -5]);
-    for (let i = 0; i < 8; i++) {
-      const [x, y, z] = vertex(i) as [number, number, number];
-      expect(Math.hypot(x - 10, y - 20)).toBeCloseTo(3, 5);
-      expect(z).toBe(-5);
-    }
-    expect(vertex(8)).toEqual([3, 0, -1]);
-  });
-
-  it("measures each segment from its own start", () => {
-    const distances = segmentLineDistances(new Float32Array([0, 0, 0, 3, 4, 0, 5, 5, 5, 5, 5, 7]));
-    expect(Array.from(distances)).toEqual([0, 5, 0, 2]);
   });
 });
 

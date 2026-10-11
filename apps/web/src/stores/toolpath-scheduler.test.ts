@@ -89,7 +89,7 @@ function deepen(documents: DocumentStore, depth: number) {
 /** What the worker answers for `input`. */
 function compute(input: ToolpathInput) {
   const result = generateToolpath(input);
-  return { result, lines: toolpathLines(result) };
+  return { warnings: result.warnings, lines: toolpathLines(result) };
 }
 
 describe("scheduleToolpaths", () => {
@@ -99,12 +99,12 @@ describe("scheduleToolpaths", () => {
     const [request] = requests as [ToolpathRequest];
     expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("computing");
 
-    const { result, lines } = compute(request.input);
-    schedule.receive({ operationId: OPERATION_ID, inputHash: request.inputHash, result, lines });
-    expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({
+    const preview = compute(request.input);
+    schedule.receive({ operationId: OPERATION_ID, inputHash: request.inputHash, ...preview });
+    expect(toolpaths.getState().entries[OPERATION_ID]).toEqual({
+      inputHash: request.inputHash,
       status: "ready",
-      result,
-      lines,
+      ...preview,
     });
   });
 

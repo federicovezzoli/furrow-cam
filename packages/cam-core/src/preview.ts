@@ -3,28 +3,51 @@ import type { Toolpath } from "./toolpath";
 
 /**
  * A toolpath as typed arrays for the viewport (ADR-0008), built in the worker
- * that computes it and transferred without copying. `feeds` and `rapids` are
- * `LineSegments` positions in stock coordinates: `[x, y, z]` per vertex, two
- * vertices per move. The first move has no start, so it has no segment.
+ * that computes it and transferred without copying. `feeds`, `rapids` and
+ * `holes` are `LineSegments` positions in stock coordinates: `[x, y, z]` per
+ * vertex, two vertices per segment. The first move has no start, so it has no
+ * segment.
  */
 export type ToolpathLines = {
   feeds: Float32Array;
   rapids: Float32Array;
   /**
-   * `[x, y, z]` of each straight plunge: feeds down with no XY movement (a
-   * drilled hole), which a top view would show as nothing. A plunge at the
-   * same XY as the one before it (the next peck or pass) is merged into it,
-   * at the deeper of the two.
+   * The distance along its own segment at each vertex of `rapids`: `0` at its
+   * start and its length at its end, so dashes restart on every segment (what
+   * `LineDashedMaterial` reads as `lineDistance`).
    */
-  plunges: Float32Array;
+  rapidDistances: Float32Array;
+  /**
+   * A circle the size of the hole at the bottom of each drilled hole, which a
+   * top view would otherwise show as nothing. Empty unless asked for.
+   */
+  holes: Float32Array;
 };
 
+export type ToolpathLinesOptions = {
+  /**
+   * Marks each straight plunge (a feed down with no XY movement) with a
+   * circle of this radius, for drill operations. A plunge at the same XY as
+   * the one before it, the next peck of the same hole, is merged into it, at
+   * the deeper of the two.
+   */
+  holeRadius?: number | null;
+};
+
+/** Sides of the circles that mark holes. */
+const HOLE_SIDES = 24;
+
 /** Builds the viewport lines of `toolpath`. */
-export function toolpathLines({ moves }: Toolpath): ToolpathLines {
+export function toolpathLines(
+  { moves }: Toolpath,
+  { holeRadius = null }: ToolpathLinesOptions = {},
+): ToolpathLines {
   let feedCount = 0;
   for (let i = 1; i < moves.length; i++) if (moves[i]?.kind === "feed") feedCount++;
   const feeds = new Float32Array(feedCount * 6);
-  const rapids = new Float32Array(Math.max(moves.length - 1 - feedCount, 0) * 6);
+  const rapidCount = Math.max(moves.length - 1 - feedCount, 0);
+  const rapids = new Float32Array(rapidCount * 6);
+  const rapidDistances = new Float32Array(rapidCount * 2);
   const plunges: number[] = [];
   let f = 0;
   let r = 0;
@@ -33,27 +56,61 @@ export function toolpathLines({ moves }: Toolpath): ToolpathLines {
     const [ax, ay, az] = (moves[i - 1] as Toolpath["moves"][number]).to;
     const move = moves[i] as Toolpath["moves"][number];
     const [bx, by, bz] = move.to;
+    const target = move.kind === "rapid" ? rapids : feeds;
+    const at = move.kind === "rapid" ? r : f;
+    target[at] = ax;
+    target[at + 1] = ay;
+    target[at + 2] = az;
+    target[at + 3] = bx;
+    target[at + 4] = by;
+    target[at + 5] = bz;
     if (move.kind === "rapid") {
-      rapids.set([ax, ay, az, bx, by, bz], r);
+      rapidDistances[r / 3 + 1] = Math.hypot(bx - ax, by - ay, bz - az);
       r += 6;
       continue;
     }
-    feeds.set([ax, ay, az, bx, by, bz], f);
     f += 6;
-    if (bz >= az || Math.hypot(bx - ax, by - ay) >= GEOMETRY_TOLERANCE) continue;
+    if (holeRadius === null || bz >= az || Math.hypot(bx - ax, by - ay) >= GEOMETRY_TOLERANCE) {
+      continue;
+    }
     const last = plunges.length - 3;
-    const sameHole =
+    const samePlace =
       last >= 0 &&
       Math.hypot(bx - (plunges[last] as number), by - (plunges[last + 1] as number)) <
         GEOMETRY_TOLERANCE;
-    if (!sameHole) plunges.push(bx, by, bz);
+    if (!samePlace) plunges.push(bx, by, bz);
     else if (bz < (plunges[last + 2] as number)) plunges[last + 2] = bz;
   }
 
-  return { feeds, rapids, plunges: new Float32Array(plunges) };
+  const holes = holeRadius === null ? new Float32Array() : circles(plunges, holeRadius);
+  return { feeds, rapids, rapidDistances, holes };
+}
+
+/** A circle of `radius` around each `[x, y, z]` of `centers`, as `LineSegments` positions. */
+function circles(centers: number[], radius: number): Float32Array {
+  const positions = new Float32Array((centers.length / 3) * HOLE_SIDES * 6);
+  let offset = 0;
+  for (let i = 0; i < centers.length; i += 3) {
+    const x = centers[i] as number;
+    const y = centers[i + 1] as number;
+    const z = centers[i + 2] as number;
+    for (let j = 0; j < HOLE_SIDES; j++) {
+      const a = (2 * Math.PI * j) / HOLE_SIDES;
+      const b = (2 * Math.PI * (j + 1)) / HOLE_SIDES;
+      positions[offset] = x + radius * Math.cos(a);
+      positions[offset + 1] = y + radius * Math.sin(a);
+      positions[offset + 2] = z;
+      positions[offset + 3] = x + radius * Math.cos(b);
+      positions[offset + 4] = y + radius * Math.sin(b);
+      positions[offset + 5] = z;
+      offset += 6;
+    }
+  }
+  return positions;
 }
 
 /** The buffers of `lines`, to transfer them to another thread instead of copying. */
-export function toolpathLinesBuffers({ feeds, rapids, plunges }: ToolpathLines): ArrayBuffer[] {
-  return [feeds.buffer, rapids.buffer, plunges.buffer] as ArrayBuffer[];
+export function toolpathLinesBuffers(lines: ToolpathLines): ArrayBuffer[] {
+  const { feeds, rapids, rapidDistances, holes } = lines;
+  return [feeds.buffer, rapids.buffer, rapidDistances.buffer, holes.buffer] as ArrayBuffer[];
 }

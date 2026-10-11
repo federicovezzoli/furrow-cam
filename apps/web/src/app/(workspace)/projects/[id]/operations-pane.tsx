@@ -247,7 +247,7 @@ function ToolpathVisibility({ operation }: { operation: Operation }) {
       variant="ghost"
       size="icon-compact"
       onClick={() => workspace.getState().setToolpathVisible(operation.id, hidden)}
-      aria-label={`Show the toolpath of ${operation.name}`}
+      aria-label={`Toolpath of ${operation.name}`}
       aria-pressed={!hidden}
       title={hidden ? "Show toolpath" : "Hide toolpath"}
       className={cn(hidden && "text-muted-foreground")}
@@ -283,7 +283,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
       </CircleAlertIcon>
     );
   }
-  const { warnings } = entry.result;
+  const { warnings } = entry;
   if (warnings.length === 0) return null;
   return (
     <TriangleAlertIcon
