@@ -104,7 +104,13 @@ export function fullDocument(): ProjectDocument {
   return {
     schemaVersion: 1,
     units: "in",
-    stock: { width: 300, height: 200, thickness: 18, xyOrigin: "center", zOrigin: "machine_bed" },
+    stock: {
+      width: 300,
+      height: 200,
+      thickness: 18,
+      xyOrigin: { anchor: "center" },
+      zOrigin: "machine_bed",
+    },
     machine,
     geometry: [square, circle],
     operations: [

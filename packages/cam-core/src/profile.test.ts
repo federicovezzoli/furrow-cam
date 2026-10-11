@@ -479,7 +479,7 @@ describe("generateToolpath", () => {
       width: 200,
       height: 200,
       thickness: 18,
-      xyOrigin: "bottom_left",
+      xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
     },
     machine:

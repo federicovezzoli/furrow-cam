@@ -58,8 +58,8 @@ export type GridLines = { minor: Float32Array; major: Float32Array };
 
 /**
  * A grid under the stock at `bounds.min` z, aligned to the work origin and
- * reaching `margin` past the stock: lines every `spacing` mm, every
- * `majorEvery`-th one major.
+ * reaching `margin` past the stock and the origin (a custom zero may lie
+ * outside the stock): lines every `spacing` mm, every `majorEvery`-th one major.
  */
 export function gridLinePositions(
   bounds: Box3,
@@ -67,8 +67,8 @@ export function gridLinePositions(
 ): GridLines {
   const z = bounds.min[2];
   const range = (axis: 0 | 1) => [
-    Math.floor((bounds.min[axis] - margin) / spacing),
-    Math.ceil((bounds.max[axis] + margin) / spacing),
+    Math.floor((Math.min(bounds.min[axis], 0) - margin) / spacing),
+    Math.ceil((Math.max(bounds.max[axis], 0) + margin) / spacing),
   ];
   const [x0, x1] = range(0) as [number, number];
   const [y0, y1] = range(1) as [number, number];

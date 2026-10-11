@@ -26,10 +26,7 @@ export function Viewport() {
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
   const { width, height, thickness } = useDocumentStore((s) => s.document.stock);
-  const box = useMemo(
-    () => stockBox({ width, height, thickness, xyOrigin: "bottom_left", zOrigin: "stock_top" }),
-    [width, height, thickness],
-  );
+  const box = useMemo(() => stockBox({ width, height, thickness }), [width, height, thickness]);
   // Pressing Fit or resizing the stock fits the camera again: new keys remount
   // the cameras, which then find no saved pose.
   const [fits, setFits] = useState(0);

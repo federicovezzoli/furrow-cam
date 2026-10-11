@@ -6,7 +6,37 @@ import { PositiveLength, Units } from "./units";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-export const XYOrigin = z.enum(["bottom_left", "center"]);
+/** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
+export const StockAnchor = z.enum([
+  "bottom_left",
+  "bottom_center",
+  "bottom_right",
+  "middle_left",
+  "center",
+  "middle_right",
+  "top_left",
+  "top_center",
+  "top_right",
+]);
+export type StockAnchor = z.infer<typeof StockAnchor>;
+
+/**
+ * Where the machine's XY zero is (ADR-0016): a stock anchor, which follows the
+ * stock when it is resized, or a custom point in millimetres from the stock's
+ * bottom-left corner, which keeps its stock position and may lie outside the
+ * stock (a fixture corner, a fence).
+ *
+ * Documents saved before custom zeros stored a bare anchor name
+ * (`"bottom_left"` or `"center"`); parsing still accepts those and normalises
+ * them to `{ anchor }`.
+ */
+export const XYOrigin = z.union([
+  z.discriminatedUnion("anchor", [
+    z.strictObject({ anchor: StockAnchor }),
+    z.strictObject({ anchor: z.literal("custom"), x: z.number(), y: z.number() }),
+  ]),
+  z.enum(["bottom_left", "center"]).transform((anchor) => ({ anchor })),
+]);
 export type XYOrigin = z.infer<typeof XYOrigin>;
 
 export const ZOrigin = z.enum(["stock_top", "machine_bed"]);
@@ -95,7 +125,7 @@ export function createProjectDocument(): ProjectDocument {
       width: 600,
       height: 400,
       thickness: 18,
-      xyOrigin: "bottom_left",
+      xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
     },
     machine: null,

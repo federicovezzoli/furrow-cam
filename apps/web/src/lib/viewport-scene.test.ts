@@ -80,6 +80,16 @@ describe("gridLinePositions", () => {
       [-20, 10, -18, 20, 10, -18],
     ]);
   });
+
+  it("reaches an origin outside the stock", () => {
+    const { major } = gridLinePositions(
+      { min: [20, -45, -18], max: [40, -25, 0] },
+      { spacing: 10, majorEvery: 1, margin: 0 },
+    );
+    // x = 0…40, y = -50…0: the stock alone would give x = 20…40, y = -50…-20.
+    expect(major.slice(0, 6)).toEqual(new Float32Array([0, -50, -18, 0, 0, -18]));
+    expect(major.slice(-6)).toEqual(new Float32Array([0, 0, -18, 40, 0, -18]));
+  });
 });
 
 describe("camera fitting", () => {
