@@ -18,7 +18,7 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import type { DocumentStore } from "@/stores/document-store";
+import { gestureHandlers } from "@/stores/gesture-handlers";
 import {
   type ActionResult,
   autoPlaceTabs,
@@ -223,18 +223,6 @@ function ShapesField({ operationId, shapeIds }: { operationId: string; shapeIds:
       </ul>
     </section>
   );
-}
-
-/** Begins and ends a document transaction around a number field's gesture (one undo step). */
-function gestureHandlers(store: DocumentStore) {
-  return {
-    onGestureStart: () => store.getState().beginTransaction(),
-    onGestureEnd: (cancelled: boolean) => {
-      const state = store.getState();
-      if (cancelled) state.cancelTransaction();
-      else state.commitTransaction();
-    },
-  };
 }
 
 /**
