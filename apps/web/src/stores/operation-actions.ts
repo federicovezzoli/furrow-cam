@@ -3,7 +3,7 @@ import {
   canDrill,
   DrillParams,
   Name,
-  type Operation,
+  Operation,
   PocketParams,
   type Point,
   type ProfileOperation,
@@ -188,9 +188,10 @@ export function deleteOperation(store: DocumentStore, id: string) {
 /** Replaces the operation's tool with a snapshot of `tool` (ADR-0003). */
 export function setOperationTool(store: DocumentStore, id: string, tool: Tool): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
-  if (operation?.type === "drill" && !canDrill(tool)) {
-    return { ok: false, error: "V-bits can't drill" };
-  }
+  if (!operation) return OK;
+  // E.g. a V-bit for a drill operation.
+  const parsed = Operation.safeParse({ ...operation, tool });
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   changeOperation(store, "setOperationTool", id, (draft) => {
     draft.tool = tool;
   });

@@ -130,34 +130,46 @@ function ToolPicker({
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
   const current = matchingToolChoice(tools, tool);
+  // Cleared once the operation's tool changes.
+  const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
+  const error = rejected?.tool === tool ? rejected.error : null;
 
   return (
-    <Row id="operation-tool" label="Tool">
-      <NativeSelect
-        id="operation-tool"
-        size="sm"
-        value={current?.id ?? ""}
-        onChange={(event) => {
-          const choice = tools.find((candidate) => candidate.id === event.target.value);
-          if (choice) setOperationTool(store, operationId, choice.tool);
-        }}
-        className={SELECT_CLASS}
-      >
-        {!current && (
-          // The snapshot differs from every library tool (edited or deleted since it was picked).
-          <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
-        )}
-        {tools.map((choice) => (
-          <NativeSelectOption
-            key={choice.id}
-            value={choice.id}
-            disabled={drilling && !canDrill(choice.tool)}
-          >
-            {choice.tool.name}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-    </Row>
+    <>
+      <Row id="operation-tool" label="Tool">
+        <NativeSelect
+          id="operation-tool"
+          size="sm"
+          value={current?.id ?? ""}
+          onChange={(event) => {
+            const choice = tools.find((candidate) => candidate.id === event.target.value);
+            if (!choice) return;
+            const result = setOperationTool(store, operationId, choice.tool);
+            setRejected(result.ok ? null : { tool, error: result.error });
+          }}
+          className={SELECT_CLASS}
+        >
+          {!current && (
+            // The snapshot differs from every library tool (edited or deleted since it was picked).
+            <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
+          )}
+          {tools.map((choice) => (
+            <NativeSelectOption
+              key={choice.id}
+              value={choice.id}
+              disabled={drilling && !canDrill(choice.tool)}
+            >
+              {choice.tool.name}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      {error && (
+        <p role="alert" className="text-destructive">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 

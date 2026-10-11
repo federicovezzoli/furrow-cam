@@ -318,6 +318,13 @@ describe("drillOrder", () => {
       for (let j = i + 2; j < route.length - 1; j++) expect(crosses(route, i, j)).toBe(false);
     }
   });
+
+  it("stays quick on thousands of holes, keeping every one", () => {
+    const points: Point[] = [];
+    for (let i = 0; i < 60; i++) for (let j = 0; j < 50; j++) points.push([i * 10, j * 10]);
+    const route = drillOrder(holes(points.reverse()));
+    expect(new Set(centers(route).map((p) => p.join())).size).toBe(3000);
+  });
 });
 
 describe("helical boring", () => {
@@ -342,8 +349,8 @@ describe("helical boring", () => {
   }
 
   it("bores a circle larger than an end mill with a climb helix, then a turn at depth", () => {
-    // Ø5.3 hole, Ø2 tool: the centre circles at 1.65.
-    const toolpath = drill([shape(circle([20, 30], 2.65))], { depth: 4 }, 5, endMill);
+    // Ø5.6 hole, Ø2 tool: the centre circles at 0.8, close enough to clear the middle.
+    const toolpath = drill([shape(circle([20, 30], 1.8))], { depth: 4 }, 5, endMill);
     expect(toolpath.warnings).toEqual([]);
     const steps = feeds(toolpath);
     const helix = steps.filter(([from, to]) => to[2] < from[2] - 1e-9);
@@ -351,31 +358,28 @@ describe("helical boring", () => {
     expect(helix.length).toBeGreaterThan(0);
     expect(helix.length + bottom.length).toBe(steps.length);
 
-    const circumference = 2 * Math.PI * 1.65;
-    const maxDrop = Math.min(1, circumference * Math.tan((3 * Math.PI) / 180));
+    const slope = Math.tan((3 * Math.PI) / 180);
     for (const [from, to, feedRate] of helix) {
-      expect(Math.hypot(to[0] - 20, to[1] - 30)).toBeCloseTo(1.65, 9);
+      expect(Math.hypot(to[0] - 20, to[1] - 30)).toBeCloseTo(0.8, 9);
+      // Never steeper than the plunge angle, measured along the chords.
       const run = Math.hypot(to[0] - from[0], to[1] - from[1]);
-      // Never steeper than the plunge angle (chords are a little shorter than the arc).
-      expect((from[2] - to[2]) / run).toBeLessThanOrEqual(Math.tan((3 * Math.PI) / 180) * 1.01);
+      expect((from[2] - to[2]) / run).toBeLessThanOrEqual(slope + 1e-9);
       // Counter-clockwise around the centre: the wall on the tool's right.
       expect((from[0] - 20) * (to[1] - 30) - (from[1] - 30) * (to[0] - 20)).toBeGreaterThan(0);
       expect(feedRate).toBe(200);
     }
-    expect(helix[0]?.[0]).toEqual([21.65, 30, 1]);
-    expect(helix.at(-1)?.[1]).toEqual([21.65, 30, -4]);
-    const turns = (1 + 4) / maxDrop;
-    expect(helix.length % Math.ceil(turns - 1e-9)).toBe(0);
+    expect(helix[0]?.[0]).toEqual([20.8, 30, 1]);
+    expect(helix.at(-1)?.[1]).toEqual([20.8, 30, -4]);
 
     // A full turn at depth at the feed rate, then to the centre and out.
-    expect(bottom.at(-2)?.[1]).toEqual([21.65, 30, -4]);
+    expect(bottom.at(-2)?.[1]).toEqual([20.8, 30, -4]);
     expect(bottom.at(-1)?.[1]).toEqual([20, 30, -4]);
     expect(bottom.every(([, , feedRate]) => feedRate === 800)).toBe(true);
     expect(toolpath.moves.at(-1)).toEqual({ kind: "rapid", to: [20, 30, 5] });
   });
 
   it("drops no more than the step-down per turn when the plunge angle allows more", () => {
-    const toolpath = drill([shape(circle([0, 0], 10))], { depth: 3 }, 5, {
+    const toolpath = drill([shape(circle([0, 0], 1.9))], { depth: 3 }, 5, {
       ...endMill,
       plungeAngle: 90,
     });
@@ -387,12 +391,46 @@ describe("helical boring", () => {
     expect(perChord * (helix.length / 4)).toBeCloseTo(1, 9);
   });
 
+  it("bores a hole over twice the tool diameter in rings from the inside out, leaving no core", () => {
+    // Ø20 hole, Ø2 tool at 40% step-over: rings from 1 to 9, at most 0.8 apart.
+    const toolpath = drill([shape(circle([0, 0], 10))], { depth: 2 }, 5, endMill);
+    expect(toolpath.warnings).toEqual([]);
+    const rings: number[] = [];
+    for (const [from, to] of feeds(toolpath)) {
+      const r = Math.hypot(to[0], to[1]);
+      if (to[2] < from[2] - 1e-9 && !rings.some((ring) => Math.abs(ring - r) < 1e-6)) rings.push(r);
+    }
+    expect(rings[0]).toBeCloseTo(1, 9);
+    expect(rings.at(-1)).toBeCloseTo(9, 9);
+    rings.slice(1).forEach((ring, i) => {
+      expect(ring).toBeGreaterThan(rings[i] as number);
+      expect(ring - (rings[i] as number)).toBeLessThanOrEqual(0.8 + 1e-9);
+    });
+    // Between rings the tool only rises to just above the stock.
+    expect(toolpath.moves.filter((move) => move.to[2] === 5)).toHaveLength(2);
+  });
+
+  it("plunges a step-down at a time into a bore too short to ramp along", () => {
+    // Ø6.2 hole, Ø6 tool: the centre circles at 0.1, under a millimetre a turn.
+    const toolpath = drill([shape(circle([0, 0], 3.1))], { depth: 18 }, 5, {
+      ...endMill,
+      diameter: 6,
+      stepDown: 2,
+      fluteLength: 25,
+    });
+    const steps = feeds(toolpath);
+    const plunges = steps.filter(([from, to]) => to[2] < from[2] - 1e-9);
+    expect(plunges).toHaveLength(9);
+    expect(plunges.every(([from, to]) => from[0] === to[0] && from[1] === to[1])).toBe(true);
+    expect(steps.length).toBeLessThan(100);
+  });
+
   it("plunges the end mill into a hole it fits, and bores the larger hole at a shared centre", () => {
     const fits = drill([shape(circle([0, 0], 1))], {}, 5, endMill);
     expect(feeds(fits)).toHaveLength(1);
-    const shared = drill([shape(point([0, 0]), circle([0, 0], 3))], { depth: 2 }, 5, endMill);
+    const shared = drill([shape(point([0, 0]), circle([0, 0], 1.8))], { depth: 2 }, 5, endMill);
     expect(feeds(shared).every(([, to]) => to[2] >= -2)).toBe(true);
-    expect(feeds(shared).some(([, to]) => Math.hypot(to[0], to[1]) > 1.9)).toBe(true);
+    expect(feeds(shared).some(([, to]) => Math.hypot(to[0], to[1]) > 0.79)).toBe(true);
   });
 
   it("bores the holes of the OpenSCAD export with a smaller end mill", () => {

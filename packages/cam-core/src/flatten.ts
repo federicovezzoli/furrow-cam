@@ -32,6 +32,17 @@ export function flattenPath(path: Path, tolerance = DEFAULT_CHORD_TOLERANCE): Po
   return points;
 }
 
+/**
+ * The largest angle a chord of a circle of `radius` may span and stay within
+ * `tolerance` of it, at most a quarter turn.
+ */
+export function arcStep(radius: number, tolerance = DEFAULT_CHORD_TOLERANCE): number {
+  // A chord spanning angle θ deviates from the arc by r(1 − cos(θ/2)).
+  return tolerance >= radius
+    ? MAX_ARC_STEP
+    : Math.min(2 * Math.acos(1 - tolerance / radius), MAX_ARC_STEP);
+}
+
 /** Pushes the inner points of an arc; the caller pushes `to`. */
 function flattenArc(
   points: Point[],
@@ -50,11 +61,7 @@ function flattenArc(
     : (((clockwise ? start - end : end - start) % TAU) + TAU) % TAU;
   if (clockwise) sweep = -sweep;
 
-  // A chord spanning angle θ deviates from the arc by r(1 − cos(θ/2)).
-  const step =
-    tolerance >= radius
-      ? MAX_ARC_STEP
-      : Math.min(2 * Math.acos(1 - tolerance / radius), MAX_ARC_STEP);
+  const step = arcStep(radius, tolerance);
   const count = Math.max(1, Math.ceil(Math.abs(sweep) / step));
   for (let i = 1; i < count; i++) {
     const angle = start + (sweep * i) / count;
