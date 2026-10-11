@@ -49,7 +49,7 @@ packages/post/       post-processors, toolpaths → G-code
 
 ## Conventions
 
-- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev`, never `main` (`main` is the default branch, so pass `--base dev`). Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
+- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev`, never `main` (`main` is the default branch, so pass `--base dev`). Write `Closes #<n>` in the PR body: `.github/workflows/close-linked-issues.yml` closes those issues when the PR merges into `dev` (GitHub itself only does it for `main`). Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
 - Commits: one short line, conventional prefix (`feat:`, `fix:`, `chore:`, `ci:`, `docs:`, `test:`), split by concern.
 - Changesets for every behaviour change, bumping the affected `@furrow/*` packages.
 - Docs: accepted ADRs are not edited; write a new ADR that supersedes them. Update the PRD when requirements change.
