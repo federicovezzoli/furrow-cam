@@ -48,6 +48,7 @@ function parseToolForm(form: FormData) {
     spindleRpm: numberField(form, "spindleRpm"),
     feedRate: numberField(form, "feedRate"),
     plungeRate: numberField(form, "plungeRate"),
+    plungeAngle: type === "drill" ? 90 : numberField(form, "plungeAngle"),
     stepDown: numberField(form, "stepDown"),
     stepOver: numberField(form, "stepOver"),
     notes: notes === "" ? null : notes,

@@ -1,3 +1,4 @@
+import type { Toolpath } from "@furrow/cam-core";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -5,12 +6,12 @@ import { createStore } from "zustand/vanilla";
 /**
  * A toolpath computed in a worker (ADR-0004) for one operation. `inputHash`
  * identifies the inputs it was computed from (the operation, its shapes, tool
- * and stock), so an entry is stale once the hash of the current inputs differs.
- * `result` gets its type with toolpath generation (#21).
+ * and retract height), so an entry is stale once the hash of the current
+ * inputs differs.
  */
 export type ToolpathEntry = { inputHash: string } & (
   | { status: "computing" }
-  | { status: "ready"; result: unknown }
+  | { status: "ready"; result: Toolpath }
   | { status: "error"; error: string }
 );
 
@@ -21,7 +22,7 @@ export type ToolpathState = {
 
   startComputing: (operationId: string, inputHash: string) => void;
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
-  setResult: (operationId: string, inputHash: string, result: unknown) => void;
+  setResult: (operationId: string, inputHash: string, result: Toolpath) => void;
   setError: (operationId: string, inputHash: string, error: string) => void;
   /** Drops entries of operations that are no longer in the document. */
   retain: (operationIds: Iterable<string>) => void;
