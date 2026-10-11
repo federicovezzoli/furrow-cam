@@ -156,6 +156,13 @@ describe("nearestSnapTarget", () => {
     expect(nearestSnapTarget([], [0, 0], 3)).toBeNull();
   });
 
+  it("keeps the earlier of coinciding targets against a farther one in between", () => {
+    const first: SnapTarget = { kind: "vertex", point: [0, 0] };
+    const coinciding: SnapTarget = { kind: "bounds_corner", point: [0.0009, 0] };
+    const between: SnapTarget = { kind: "bounds_center", point: [0.0008, 0.04] };
+    expect(nearestSnapTarget([first, coinciding, between], [10, 0], 20)).toBe(first);
+  });
+
   it("prefers the earlier of coinciding targets: a stock anchor over a vertex over a box corner", () => {
     expect(nearestSnapTarget(targets, [1, 1], 3)).toEqual({
       kind: "stock_anchor",

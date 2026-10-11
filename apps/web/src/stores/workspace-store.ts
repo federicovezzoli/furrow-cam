@@ -12,9 +12,10 @@ export type ViewMode = "top" | "orbit";
  * every pointer move.
  *
  * An undo can remove a selected shape or operation, so `prune` drops ids that
- * are no longer in the document (selected, hovered and hidden ones), and ends editing tabs the selected profile
- * no longer has; the workspace calls it on every document change, and readers
- * can trust the ids.
+ * are no longer in the document (selected, hovered and hidden ones), ends
+ * editing tabs the selected profile no longer has and ends picking the zero
+ * once it isn't custom; the workspace calls it on every document change, and
+ * readers can trust the ids.
  */
 export type WorkspaceState = {
   view: ViewMode;
@@ -47,7 +48,10 @@ export type WorkspaceState = {
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
   clearSelection: () => void;
-  /** Drops selected, hovered and hidden ids that aren't in `document`, and tab editing without tabs. */
+  /**
+   * Drops selected, hovered and hidden ids that aren't in `document`, tab
+   * editing without tabs and picking the zero without a custom zero.
+   */
   prune: (document: ProjectDocument) => void;
 };
 
@@ -199,6 +203,10 @@ export function createWorkspaceStore() {
               const operationId = state.selectedOperationId;
               const operation = document.operations.find(({ id }) => id === operationId);
               if (operationId !== null && !operation) state.selectedOperationId = null;
+              // The pick button goes with the custom zero (an undo, an anchor chosen).
+              if (state.pickingZero && document.stock.xyOrigin.anchor !== "custom") {
+                state.pickingZero = false;
+              }
               // Nothing left to edit once the profile's tabs are turned off (or undone).
               if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
                 state.editingTabs = false;

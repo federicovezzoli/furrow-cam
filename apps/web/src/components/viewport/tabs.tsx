@@ -13,7 +13,7 @@ import {
   useWorkspaceStore,
 } from "@/stores/workspace-stores";
 import { RENDER_ORDER } from "./scene-style";
-import { onStockTop } from "./stock-top";
+import { onStockTop, StockTopCatcher } from "./stock-top";
 
 /** Radius in pixels of the area around a tab that grabs it, however far zoomed out. */
 const TAB_GRAB_RADIUS = 6;
@@ -78,13 +78,8 @@ export function Tabs({ color }: { color: string }) {
   return (
     <>
       {editing && (
-        // Catches clicks anywhere. Below the tabs, so a click on one reaches it first
-        // and stops here; where the click lands is measured on the stock top.
-        // biome-ignore lint/a11y/noStaticElementInteractions: a three.js object, not a DOM element
-        <mesh position={[0, 0, -depth - 1]} onClick={add}>
-          <planeGeometry args={[100_000, 100_000]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
+        // Below the tabs, so a click on one reaches it first and stops here.
+        <StockTopCatcher z={-depth - 1} onClick={add} />
       )}
       {frames.map((frame, index) => (
         <TabMarker

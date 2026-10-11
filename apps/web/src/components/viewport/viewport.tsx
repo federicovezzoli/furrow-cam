@@ -7,6 +7,7 @@ import { BoxIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { belongsElsewhere } from "@/lib/keyboard-target";
 import { boxWithPoint } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
 import {
@@ -77,7 +78,10 @@ function useCancelZeroPick(picking: boolean) {
   useEffect(() => {
     if (!picking) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // A focused field may use Esc itself, e.g. to cancel a gesture.
+      if (event.key !== "Escape" || event.defaultPrevented || belongsElsewhere(event.target)) {
+        return;
+      }
       workspace.getState().setPickingZero(false);
     }
     window.addEventListener("keydown", onKeyDown);

@@ -70,6 +70,19 @@ describe("workspace store", () => {
     expect(store.getState().pickingZero).toBe(false);
   });
 
+  it("stops picking the zero once it isn't custom", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    store.getState().setPickingZero(true);
+    store.getState().prune({
+      ...document,
+      stock: { ...document.stock, xyOrigin: { anchor: "custom", x: 1, y: 2 } },
+    });
+    expect(store.getState().pickingZero).toBe(true);
+    store.getState().prune(document);
+    expect(store.getState().pickingZero).toBe(false);
+  });
+
   it("stops editing tabs once the selected profile has none", () => {
     const store = createWorkspaceStore();
     const withTabs = (tabs: object | null): ProjectDocument => ({

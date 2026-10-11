@@ -4,7 +4,7 @@ import {
   pointsCoincide,
   type Shape,
   type Stock,
-  type StockAnchor,
+  StockAnchor,
 } from "@furrow/document";
 import { circleCenter } from "./drill";
 import { flattenPath } from "./flatten";
@@ -29,18 +29,6 @@ export type SnapTarget =
   | { kind: "stock_anchor"; anchor: StockAnchor; point: Point }
   | { kind: Exclude<SnapKind, "stock_anchor">; point: Point };
 
-const STOCK_ANCHORS: StockAnchor[] = [
-  "bottom_left",
-  "bottom_center",
-  "bottom_right",
-  "middle_left",
-  "center",
-  "middle_right",
-  "top_left",
-  "top_center",
-  "top_right",
-];
-
 /**
  * Every point a picked XY zero can snap to, in stock coordinates. Where
  * targets coincide, the earlier one wins in `nearestSnapTarget`, and the list
@@ -48,7 +36,7 @@ const STOCK_ANCHORS: StockAnchor[] = [
  * arc centres, bounding-box corners and centres.
  */
 export function snapTargets(stock: Pick<Stock, "width" | "height">, shapes: Shape[]): SnapTarget[] {
-  const targets: SnapTarget[] = STOCK_ANCHORS.map((anchor) => ({
+  const targets: SnapTarget[] = StockAnchor.options.map((anchor) => ({
     kind: "stock_anchor",
     anchor,
     point: xyOriginPosition({ ...stock, xyOrigin: { anchor } }),
@@ -60,7 +48,8 @@ export function snapTargets(stock: Pick<Stock, "width" | "height">, shapes: Shap
     let min: Point = [Infinity, Infinity];
     let max: Point = [-Infinity, -Infinity];
     for (const path of shape.paths) {
-      const center = circleCenter(path);
+      const loop = flattenPath(path);
+      const center = circleCenter(path, loop);
       if (center) targets.push({ kind: "circle_center", point: center });
       vertices.push({ kind: "vertex", point: path.start });
       for (const segment of path.segments) {
@@ -70,7 +59,7 @@ export function snapTargets(stock: Pick<Stock, "width" | "height">, shapes: Shap
         }
       }
       // Flattened, so curves bulging past their end points count.
-      for (const [x, y] of flattenPath(path)) {
+      for (const [x, y] of loop) {
         min = [Math.min(min[0], x), Math.min(min[1], y)];
         max = [Math.max(max[0], x), Math.max(max[1], y)];
       }
@@ -99,10 +88,9 @@ export function nearestSnapTarget(
   for (const target of targets) {
     const d = distance(target.point, point);
     if (d > radius || d >= bestDistance) continue;
-    if (!best || !pointsCoincide(best.point, target.point)) {
-      best = target;
-      bestDistance = d;
-    }
+    // A coinciding later target is as near as `best`, which stays.
+    if (!best || !pointsCoincide(best.point, target.point)) best = target;
+    bestDistance = d;
   }
   return best;
 }
