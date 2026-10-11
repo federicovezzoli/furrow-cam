@@ -1,4 +1,4 @@
-import type { Toolpath } from "@furrow/cam-core";
+import type { Toolpath, ToolpathLines } from "@furrow/cam-core";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -7,11 +7,13 @@ import { createStore } from "zustand/vanilla";
  * A toolpath computed in a worker (ADR-0004) for one operation. `inputHash`
  * identifies the inputs it was computed from (the operation, its shapes, tool
  * and retract height), so an entry is stale once the hash of the current
- * inputs differs.
+ * inputs differs. `lines` are the toolpath as the viewport draws it; while an
+ * operation recomputes it keeps those of its last toolpath, so the preview
+ * doesn't flicker while a value is scrubbed.
  */
 export type ToolpathEntry = { inputHash: string } & (
-  | { status: "computing" }
-  | { status: "ready"; result: Toolpath }
+  | { status: "computing"; lines?: ToolpathLines }
+  | { status: "ready"; result: Toolpath; lines: ToolpathLines }
   | { status: "error"; error: string }
 );
 
@@ -22,7 +24,12 @@ export type ToolpathState = {
 
   startComputing: (operationId: string, inputHash: string) => void;
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
-  setResult: (operationId: string, inputHash: string, result: Toolpath) => void;
+  setResult: (
+    operationId: string,
+    inputHash: string,
+    result: Toolpath,
+    lines: ToolpathLines,
+  ) => void;
   setError: (operationId: string, inputHash: string, error: string) => void;
   /** Drops entries of operations that are no longer in the document. */
   retain: (operationIds: Iterable<string>) => void;
@@ -39,18 +46,22 @@ export function createToolpathStore() {
         startComputing(operationId, inputHash) {
           set(
             (state) => {
-              state.entries[operationId] = { inputHash, status: "computing" };
+              const previous = state.entries[operationId];
+              const lines = previous?.status === "error" ? undefined : previous?.lines;
+              state.entries[operationId] = lines
+                ? { inputHash, status: "computing", lines }
+                : { inputHash, status: "computing" };
             },
             false,
             "startComputing",
           );
         },
 
-        setResult(operationId, inputHash, result) {
+        setResult(operationId, inputHash, result, lines) {
           set(
             (state) => {
               if (state.entries[operationId]?.inputHash !== inputHash) return;
-              state.entries[operationId] = { inputHash, status: "ready", result };
+              state.entries[operationId] = { inputHash, status: "ready", result, lines };
             },
             false,
             "setResult",

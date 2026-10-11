@@ -4,6 +4,7 @@ export * from "./generate";
 export * from "./geometry";
 export { depthLevels, ENTRY_CLEARANCE } from "./passes";
 export * from "./pocket";
+export * from "./preview";
 export * from "./profile";
 export * from "./quantity";
 export * from "./stock";

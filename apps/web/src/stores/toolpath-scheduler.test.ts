@@ -1,4 +1,4 @@
-import { generateToolpath } from "@furrow/cam-core";
+import { generateToolpath, type ToolpathInput, toolpathLines } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument, type Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore, type DocumentStore } from "./document-store";
@@ -86,6 +86,12 @@ function deepen(documents: DocumentStore, depth: number) {
   });
 }
 
+/** What the worker answers for `input`. */
+function compute(input: ToolpathInput) {
+  const result = generateToolpath(input);
+  return { result, lines: toolpathLines(result) };
+}
+
 describe("scheduleToolpaths", () => {
   it("requests enabled operations and files the worker's results", () => {
     const { toolpaths, requests, schedule } = setup();
@@ -93,16 +99,20 @@ describe("scheduleToolpaths", () => {
     const [request] = requests as [ToolpathRequest];
     expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("computing");
 
-    const result = generateToolpath(request.input);
-    schedule.receive({ operationId: OPERATION_ID, inputHash: request.inputHash, result });
-    expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({ status: "ready", result });
+    const { result, lines } = compute(request.input);
+    schedule.receive({ operationId: OPERATION_ID, inputHash: request.inputHash, result, lines });
+    expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({
+      status: "ready",
+      result,
+      lines,
+    });
   });
 
   it("recomputes only when what the toolpath depends on changes", () => {
     const { documents, requests, schedule } = setup();
     const answer = () => {
       const request = requests.at(-1) as ToolpathRequest;
-      schedule.receive({ ...request, result: generateToolpath(request.input) });
+      schedule.receive({ ...request, ...compute(request.input) });
     };
     answer();
     documents.getState().change("Edit stock", (draft) => {
@@ -130,7 +140,7 @@ describe("scheduleToolpaths", () => {
     expect(requests).toHaveLength(1);
 
     const [first] = requests as [ToolpathRequest];
-    schedule.receive({ ...first, result: generateToolpath(first.input) });
+    schedule.receive({ ...first, ...compute(first.input) });
     // The first result is stale: the operation computes the latest inputs.
     expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("computing");
     expect(requests).toHaveLength(2);
@@ -139,7 +149,7 @@ describe("scheduleToolpaths", () => {
       6,
     );
 
-    schedule.receive({ ...latest, result: generateToolpath(latest.input) });
+    schedule.receive({ ...latest, ...compute(latest.input) });
     expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("ready");
     expect(requests).toHaveLength(2);
   });
@@ -179,7 +189,7 @@ describe("scheduleToolpaths", () => {
   it("stops listening", () => {
     const { documents, requests, schedule } = setup();
     const [first] = requests as [ToolpathRequest];
-    schedule.receive({ ...first, result: generateToolpath(first.input) });
+    schedule.receive({ ...first, ...compute(first.input) });
     schedule.stop();
     deepen(documents, 6);
     expect(requests).toHaveLength(1);

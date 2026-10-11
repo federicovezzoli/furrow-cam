@@ -6,6 +6,8 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CircleAlertIcon,
+  EyeIcon,
+  EyeOffIcon,
   LoaderCircleIcon,
   PlusIcon,
   Trash2Icon,
@@ -193,7 +195,12 @@ function OperationRow({
           {operation.name}
         </button>
       )}
-      {operation.enabled && <ToolpathStatus operationId={operation.id} />}
+      {operation.enabled && (
+        <>
+          <ToolpathStatus operationId={operation.id} />
+          <ToolpathVisibility operation={operation} />
+        </>
+      )}
       <Button
         variant="ghost"
         size="icon-compact"
@@ -227,6 +234,26 @@ function OperationRow({
         <Trash2Icon />
       </Button>
     </li>
+  );
+}
+
+/** Shows or hides an operation's toolpath in the viewport. */
+function ToolpathVisibility({ operation }: { operation: Operation }) {
+  const workspace = useWorkspaceStoreApi();
+  const hidden = useWorkspaceStore((s) => s.hiddenToolpathIds.includes(operation.id));
+  const Icon = hidden ? EyeOffIcon : EyeIcon;
+  return (
+    <Button
+      variant="ghost"
+      size="icon-compact"
+      onClick={() => workspace.getState().setToolpathVisible(operation.id, hidden)}
+      aria-label={`Show the toolpath of ${operation.name}`}
+      aria-pressed={!hidden}
+      title={hidden ? "Show toolpath" : "Hide toolpath"}
+      className={cn(hidden && "text-muted-foreground")}
+    >
+      <Icon />
+    </Button>
   );
 }
 

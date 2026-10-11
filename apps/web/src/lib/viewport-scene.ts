@@ -101,6 +101,21 @@ export function fitTopZoom({ min, max }: Box3, size: { width: number; height: nu
   return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
+/**
+ * How many pixels a millimetre covers on screen: the zoom of an orthographic
+ * camera, or for a perspective one (`fov` in degrees) a millimetre `distance`
+ * away, in a viewport `height` pixels tall.
+ */
+export function pixelsPerMillimetre(
+  camera: { zoom: number; fov?: number },
+  height: number,
+  distance: number,
+): number {
+  if (camera.fov === undefined) return camera.zoom;
+  const visible = 2 * distance * Math.tan((camera.fov * Math.PI) / 360);
+  return visible > 0 ? (height / visible) * camera.zoom : 1;
+}
+
 /** Looking at the stock from the front right, above it. */
 const ORBIT_DIRECTION: Vec3 = [0.4, -1, 0.9];
 
@@ -116,4 +131,49 @@ export function fitOrbitPosition(box: Box3, fov: number, aspect: number): Vec3 {
   const distance = (radius * FIT_PADDING) / Math.sin(Math.min(vertical, horizontal) / 2);
   const length = Math.hypot(...ORBIT_DIRECTION);
   return center.map((c, i) => c + ((ORBIT_DIRECTION[i] as number) / length) * distance) as Vec3;
+}
+
+/**
+ * A circle the size of the tool at each straight plunge (`[x, y, z]` triples,
+ * see `ToolpathLines`), as `LineSegments` positions: the top view's marker for
+ * a hole it would otherwise show as nothing.
+ */
+export function plungeMarkerPositions(
+  plunges: Float32Array,
+  radius: number,
+  sides = 24,
+): Float32Array {
+  const positions = new Float32Array((plunges.length / 3) * sides * 6);
+  let offset = 0;
+  for (let i = 0; i < plunges.length; i += 3) {
+    const x = plunges[i] as number;
+    const y = plunges[i + 1] as number;
+    const z = plunges[i + 2] as number;
+    for (let j = 0; j < sides; j++) {
+      const a = (2 * Math.PI * j) / sides;
+      const b = (2 * Math.PI * (j + 1)) / sides;
+      positions.set([x + radius * Math.cos(a), y + radius * Math.sin(a), z], offset);
+      positions.set([x + radius * Math.cos(b), y + radius * Math.sin(b), z], offset + 3);
+      offset += 6;
+    }
+  }
+  return positions;
+}
+
+/**
+ * The distance along each segment of `LineSegments` positions at each vertex:
+ * `0` at its start and its length at its end, so dashes restart on every
+ * segment (what `LineDashedMaterial` reads as `lineDistance`).
+ */
+export function segmentLineDistances(positions: Float32Array): Float32Array {
+  const distances = new Float32Array(positions.length / 3);
+  for (let i = 0; i < distances.length; i += 2) {
+    const p = i * 3;
+    distances[i + 1] = Math.hypot(
+      (positions[p + 3] as number) - (positions[p] as number),
+      (positions[p + 4] as number) - (positions[p + 1] as number),
+      (positions[p + 5] as number) - (positions[p + 2] as number),
+    );
+  }
+  return distances;
 }

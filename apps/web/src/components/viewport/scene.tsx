@@ -9,6 +9,7 @@ import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 import { Lines, useLineGeometry } from "./lines";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 import { Tabs } from "./tabs";
+import { Toolpaths } from "./toolpaths";
 
 /** Length in millimetres of the origin marker's axes. */
 const ORIGIN_MARKER_SIZE = 40;
@@ -19,6 +20,7 @@ export function Scene({ box, palette }: { box: Box3; palette: Palette }) {
       <WorkOrigin palette={palette} />
       <Stock box={box} palette={palette} />
       <Shapes palette={palette} />
+      <Toolpaths palette={palette} />
       <Tabs color={palette.tab} />
     </>
   );
