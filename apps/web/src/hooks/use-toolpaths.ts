@@ -14,13 +14,32 @@ export function useToolpaths() {
   const toolpaths = useToolpathStoreApi();
 
   useEffect(() => {
-    const worker = new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    function start() {
+      const started = new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), {
+        type: "module",
+      });
+      started.onmessage = ({ data }: MessageEvent<ToolpathResponse>) => schedule.receive(data);
+      // Without these, a worker that fails to load or crashes would leave
+      // every operation computing forever.
+      started.onerror = (event) => {
+        event.preventDefault();
+        restart(event.message || "The toolpath worker stopped");
+      };
+      started.onmessageerror = () => restart("A toolpath couldn't be read from the worker");
+      return started;
+    }
+
+    /** Fails the pending toolpaths and replaces the worker; editing an operation retries it. */
+    function restart(error: string) {
+      worker.terminate();
+      schedule.fail(error);
+      worker = start();
+    }
+
+    let worker = start();
     const schedule = scheduleToolpaths(documents, toolpaths, (request) =>
       worker.postMessage(request),
     );
-    worker.onmessage = ({ data }: MessageEvent<ToolpathResponse>) => schedule.receive(data);
     return () => {
       schedule.stop();
       worker.terminate();

@@ -267,6 +267,46 @@ describe("profileToolpath", () => {
     expect(signedArea(holeLap)).toBeGreaterThan(0);
   });
 
+  it("finishes each contour right after its depth passes", () => {
+    const toolpath = profile({ allowance: 0.5, finishPass: true }, [square, hole]);
+    // Laps at full depth: hole roughing (r 6.5), hole finish (r 7), then the outline's.
+    const radii = cutsAt(toolpath, -6).map(([x, y]) => Math.hypot(x - 50, y - 50));
+    const firstOutline = radii.findIndex((r) => r > 10);
+    const holeLaps = radii.slice(0, firstOutline);
+    expect(Math.min(...holeLaps)).toBeCloseTo(6.5, 1);
+    expect(Math.max(...holeLaps)).toBeCloseTo(7, 1);
+    expect(radii.slice(firstOutline).every((r) => r > 10)).toBe(true);
+  });
+
+  it("shortens a lead-in that doesn't fit, or leaves it out", () => {
+    // A 20 mm hole leaves 7 mm for the tool centre: a 10 mm arc would cross it.
+    const small: Shape = {
+      ...hole,
+      paths: [
+        {
+          start: [60, 50],
+          segments: [{ kind: "arc", to: [60, 50], center: [50, 50], clockwise: true }],
+          closed: true,
+        },
+      ],
+    };
+    const toolpath = profile({ side: "inside", leadIn: { radius: 10 } }, [small]);
+    for (const move of toolpath.moves) {
+      expect(Math.hypot(move.to[0] - 50, move.to[1] - 50)).toBeLessThanOrEqual(7 + 0.01);
+    }
+    expect(toolpath.warnings).toEqual([
+      "The lead-in didn't fit 1 contour and was shortened or left out.",
+    ]);
+    // Outside a lone square there is room for any lead-in.
+    expect(profile({ leadIn: { radius: 10 } }).warnings).toEqual([]);
+  });
+
+  it("cuts open paths before closed contours", () => {
+    const toolpath = profile({ side: "on" }, [square, line]);
+    const first = cutsAt(toolpath, -2)[0];
+    expect(first?.[1]).toBe(10);
+  });
+
   it("follows open paths on the line, alternating direction per pass", () => {
     const toolpath = profile({ side: "on" }, [line]);
     expect(toolpath.warnings).toEqual([]);

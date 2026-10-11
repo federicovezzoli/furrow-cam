@@ -18,7 +18,8 @@ describe("Tool", () => {
 
   it("limits the plunge angle, and keeps drills at 90°", () => {
     expect(Tool.safeParse({ ...endMill, plungeAngle: 90 }).success).toBe(true);
-    expect(Tool.safeParse({ ...endMill, plungeAngle: 0 }).success).toBe(false);
+    expect(Tool.safeParse({ ...endMill, plungeAngle: 1 }).success).toBe(true);
+    expect(Tool.safeParse({ ...endMill, plungeAngle: 0.5 }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, plungeAngle: 91 }).success).toBe(false);
     const drill = { ...endMill, type: "drill", cutDirection: null };
     expect(Tool.safeParse({ ...drill, plungeAngle: 45 }).success).toBe(false);

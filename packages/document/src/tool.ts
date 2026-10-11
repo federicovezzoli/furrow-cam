@@ -38,9 +38,10 @@ export const Tool = z
     plungeRate: FeedRate,
     /**
      * Steepest angle in degrees, from horizontal, at which the bit may enter
-     * the material. `90` plunges straight down; drills are always `90`.
+     * the material, at least 1° (shallower ramps get impractically long).
+     * `90` plunges straight down; drills are always `90`.
      */
-    plungeAngle: z.number().gt(0).max(90),
+    plungeAngle: z.number().min(1).max(90),
     /** Depth per pass. */
     stepDown: PositiveLength,
     /** Percentage of the diameter. */

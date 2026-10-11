@@ -100,7 +100,7 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
             label="Plunge angle"
             {...number("plungeAngle")}
             suffix="°"
-            min={0}
+            min={1}
             max={90}
           />
         )}
