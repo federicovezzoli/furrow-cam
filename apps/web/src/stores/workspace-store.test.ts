@@ -45,6 +45,44 @@ describe("workspace store", () => {
     expect(store.getState().editingTabs).toBe(false);
   });
 
+  it("picks the zero only in the top view, until the view, the selection or tab editing changes", () => {
+    const store = createWorkspaceStore();
+    store.getState().setView("orbit");
+    store.getState().setPickingZero(true);
+    expect(store.getState()).toMatchObject({ pickingZero: true, view: "top" });
+    store.getState().setView("orbit");
+    expect(store.getState().pickingZero).toBe(false);
+
+    store.getState().setPickingZero(true);
+    store.getState().selectShapes(["a"]);
+    expect(store.getState().pickingZero).toBe(false);
+    store.getState().clearSelection();
+    store.getState().setPickingZero(true);
+    store.getState().selectOperation("op");
+    expect(store.getState().pickingZero).toBe(false);
+
+    store.getState().setPickingZero(true);
+    store.getState().setEditingTabs(true);
+    expect(store.getState()).toMatchObject({ pickingZero: false, editingTabs: true });
+    store.getState().setPickingZero(true);
+    expect(store.getState()).toMatchObject({ pickingZero: true, editingTabs: false });
+    store.getState().setPickingZero(false);
+    expect(store.getState().pickingZero).toBe(false);
+  });
+
+  it("stops picking the zero once it isn't custom", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    store.getState().setPickingZero(true);
+    store.getState().prune({
+      ...document,
+      stock: { ...document.stock, xyOrigin: { anchor: "custom", x: 1, y: 2 } },
+    });
+    expect(store.getState().pickingZero).toBe(true);
+    store.getState().prune(document);
+    expect(store.getState().pickingZero).toBe(false);
+  });
+
   it("stops editing tabs once the selected profile has none", () => {
     const store = createWorkspaceStore();
     const withTabs = (tabs: object | null): ProjectDocument => ({

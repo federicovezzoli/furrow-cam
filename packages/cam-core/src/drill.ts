@@ -69,7 +69,7 @@ export function drillToolpath(
         continue;
       }
       const round = path.closed ? roundness(path) : null;
-      if (!round || round.max - round.min > 2 * slack) other++;
+      if (!round || !isRound(round)) other++;
       else if (round.max <= radius + slack && round.min >= radius - slack) {
         found.push({ center: round.center, bore: null });
       } else if (round.min < radius - slack) tooSmall++;
@@ -223,14 +223,35 @@ function boreRing(
 }
 
 /**
+ * The centre of `path` if it is a circle in the sense drilling uses: a closed
+ * path a circle fits within `DRILL_DIAMETER_TOLERANCE` on the diameter, drawn
+ * as arcs, a polygon or Béziers. `null` for any other path. `flattened` is
+ * the path from `flattenPath` at the default tolerance, if already at hand.
+ */
+export function circleCenter(path: Path, flattened?: Point[]): Point | null {
+  if (!path.closed || path.segments.length === 0) return null;
+  const round = roundness(path, flattened);
+  return round && isRound(round) ? round.center : null;
+}
+
+/** Whether a circle fits an outline within `DRILL_DIAMETER_TOLERANCE` on the diameter. */
+function isRound({ min, max }: { min: number; max: number }): boolean {
+  return max - min <= DRILL_DIAMETER_TOLERANCE + 2e-9;
+}
+
+/**
  * The centre of a closed path and the nearest and farthest its outline comes
  * to it: exact for a circle of arcs, otherwise from the path flattened, around
- * the centroid of its area. `null` for a path enclosing no area.
+ * the centroid of its area. `null` for a path enclosing no area. `flattened`
+ * saves flattening the path again.
  */
-function roundness(path: Path): { center: Point; min: number; max: number } | null {
+function roundness(
+  path: Path,
+  flattened?: Point[],
+): { center: Point; min: number; max: number } | null {
   const circle = arcCircle(path);
   if (circle) return { center: circle.center, min: circle.radius, max: circle.radius };
-  const loop = flattenPath(path);
+  const loop = flattened ?? flattenPath(path);
   const center = centroid(loop);
   if (!center) return null;
   const max = Math.max(...loop.map((point) => distance(center, point)));

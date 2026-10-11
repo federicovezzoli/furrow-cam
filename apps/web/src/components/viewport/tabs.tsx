@@ -5,7 +5,7 @@ import type { Point, ProfileOperation } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { type Mesh, Plane, type Ray, Vector3 } from "three";
+import type { Mesh } from "three";
 import { addTab, moveTab, removeTab } from "@/stores/operation-actions";
 import {
   useDocumentStore,
@@ -13,6 +13,7 @@ import {
   useWorkspaceStore,
 } from "@/stores/workspace-stores";
 import { RENDER_ORDER } from "./scene-style";
+import { onStockTop, StockTopCatcher } from "./stock-top";
 
 /** Radius in pixels of the area around a tab that grabs it, however far zoomed out. */
 const TAB_GRAB_RADIUS = 6;
@@ -20,14 +21,6 @@ const TAB_GRAB_RADIUS = 6;
 const TAB_PICK_DISTANCE = 10;
 /** Pointer travel, in pixels, before a press on a tab becomes a drag rather than a click. */
 const TAB_DRAG_THRESHOLD = 3;
-
-const STOCK_TOP = new Plane(new Vector3(0, 0, 1), 0);
-
-/** Where `ray` meets the stock top. */
-function onStockTop(ray: Ray): Point | null {
-  const hit = ray.intersectPlane(STOCK_TOP, new Vector3());
-  return hit ? [hit.x, hit.y] : null;
-}
 
 /** The selected profile, if it has tabs. */
 function useSelectedTabbedProfile(): ProfileOperation | null {
@@ -85,13 +78,8 @@ export function Tabs({ color }: { color: string }) {
   return (
     <>
       {editing && (
-        // Catches clicks anywhere. Below the tabs, so a click on one reaches it first
-        // and stops here; where the click lands is measured on the stock top.
-        // biome-ignore lint/a11y/noStaticElementInteractions: a three.js object, not a DOM element
-        <mesh position={[0, 0, -depth - 1]} onClick={add}>
-          <planeGeometry args={[100_000, 100_000]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
+        // Below the tabs, so a click on one reaches it first and stops here.
+        <StockTopCatcher z={-depth - 1} onClick={add} />
       )}
       {frames.map((frame, index) => (
         <TabMarker

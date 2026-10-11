@@ -2,6 +2,7 @@ import { createProjectDocument } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
+  pickXYOrigin,
   setCustomOrigin,
   setCustomXYOrigin,
   setStockDimension,
@@ -110,6 +111,27 @@ describe("setCustomOrigin", () => {
     expect(store.getState().past).toHaveLength(2);
     store.getState().undo();
     expect(stock(store).xyOrigin).toEqual({ anchor: "custom", x: 0, y: 0 });
+  });
+});
+
+describe("pickXYOrigin", () => {
+  it("puts a custom zero on the picked point as one undo step", () => {
+    const store = newStore();
+    setXYAnchor(store, "center");
+    pickXYOrigin(store, [12.5, -3]);
+    expect(stock(store).xyOrigin).toEqual({ anchor: "custom", x: 12.5, y: -3 });
+    expect(store.getState().past).toHaveLength(2);
+    store.getState().undo();
+    expect(stock(store).xyOrigin).toEqual({ anchor: "center" });
+  });
+
+  it("moves an existing custom zero, and adds no undo step for the same point", () => {
+    const store = newStore();
+    pickXYOrigin(store, [10, 20]);
+    pickXYOrigin(store, [30, 40]);
+    expect(stock(store).xyOrigin).toEqual({ anchor: "custom", x: 30, y: 40 });
+    pickXYOrigin(store, [30, 40]);
+    expect(store.getState().past).toHaveLength(2);
   });
 });
 

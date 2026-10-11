@@ -1,5 +1,5 @@
 import { xyOriginPosition } from "@furrow/cam-core";
-import type { StockAnchor, Units, ZOrigin } from "@furrow/document";
+import type { Point, StockAnchor, Units, ZOrigin } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 
 /**
@@ -49,6 +49,22 @@ export function setCustomXYOrigin(store: DocumentStore) {
 export function setCustomOrigin(store: DocumentStore, axis: "x" | "y", value: number) {
   store.getState().change(`setStock.xyOrigin.${axis}`, (draft) => {
     if (draft.stock.xyOrigin.anchor === "custom") draft.stock.xyOrigin[axis] = value;
+  });
+}
+
+/**
+ * Puts the XY zero on a custom point picked in the viewport, in stock
+ * coordinates, as one undo step. The point is fixed: it doesn't follow the
+ * shape it was picked on (PRD-0002).
+ */
+export function pickXYOrigin(store: DocumentStore, [x, y]: Point) {
+  store.getState().change("setStock.xyOrigin", (draft) => {
+    const origin = draft.stock.xyOrigin;
+    // Assigned field by field, so picking the zero where it is changes nothing.
+    if (origin.anchor === "custom") {
+      origin.x = x;
+      origin.y = y;
+    } else draft.stock.xyOrigin = { anchor: "custom", x, y };
   });
 }
 

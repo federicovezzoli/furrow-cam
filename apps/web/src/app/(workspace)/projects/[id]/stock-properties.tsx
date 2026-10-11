@@ -1,13 +1,20 @@
 "use client";
 
-import { type StockAnchor, Units, ZOrigin } from "@furrow/document";
+import { Units, ZOrigin } from "@furrow/document";
 import { cn } from "cn";
+import { CrosshairIcon } from "lucide-react";
 import type * as React from "react";
 import { useRef } from "react";
 import { NumberField } from "@/components/number-field";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { ANCHOR_GRID, type ZeroChoice, zeroChoiceInDirection } from "@/lib/anchor-grid";
+import {
+  ANCHOR_GRID,
+  ANCHOR_LABELS,
+  type ZeroChoice,
+  zeroChoiceInDirection,
+} from "@/lib/anchor-grid";
 import { gestureHandlers } from "@/stores/gesture-handlers";
 import {
   type StockDimension,
@@ -18,7 +25,11 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "@/stores/stock-actions";
-import { useDocumentStore, useDocumentStoreApi } from "@/stores/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useWorkspaceStore,
+} from "@/stores/workspace-stores";
 
 const UNIT_LABELS: Record<Units, string> = { mm: "Millimetres", in: "Inches" };
 
@@ -30,18 +41,6 @@ const DIMENSIONS = [
 
 /** Thinner than any stock worth cutting, and keeps the stock's sizes positive. */
 const MIN_STOCK = 0.1;
-
-const ANCHOR_LABELS: Record<StockAnchor, string> = {
-  top_left: "Top left",
-  top_center: "Top centre",
-  top_right: "Top right",
-  middle_left: "Middle left",
-  center: "Centre",
-  middle_right: "Middle right",
-  bottom_left: "Bottom left",
-  bottom_center: "Bottom centre",
-  bottom_right: "Bottom right",
-};
 
 const Z_ORIGIN_LABELS: Record<ZOrigin, string> = {
   stock_top: "Stock top",
@@ -101,8 +100,8 @@ export function StockProperties() {
 }
 
 /**
- * Where the machine is zeroed (PRD-0002 Z2, Z4, Z10): a stock anchor or a
- * custom XY point, and the Z zero. The viewport's marker and grid follow it.
+ * Where the machine is zeroed (PRD-0002 Z2, Z4, Z5, Z10): a stock anchor or
+ * a custom XY point, typed or picked in the viewport, and the Z zero. The viewport's marker and grid follow it.
  */
 function ZeroSection() {
   const store = useDocumentStoreApi();
@@ -110,6 +109,8 @@ function ZeroSection() {
   const xyOrigin = useDocumentStore((s) => s.document.stock.xyOrigin);
   const zOrigin = useDocumentStore((s) => s.document.stock.zOrigin);
   const radios = useRef(new Map<ZeroChoice, HTMLInputElement>());
+  const picking = useWorkspaceStore((s) => s.pickingZero);
+  const setPicking = useWorkspaceStore((s) => s.setPickingZero);
 
   function choose(choice: ZeroChoice) {
     if (choice === "custom") setCustomXYOrigin(store);
@@ -193,20 +194,40 @@ function ZeroSection() {
           </label>
         </div>
       </div>
-      {xyOrigin.anchor === "custom" &&
-        (["x", "y"] as const).map((axis) => (
-          <NumberField
-            key={axis}
-            id={`zero-${axis}`}
-            label={axis.toUpperCase()}
-            layout="inline"
-            quantity="length"
-            units={units}
-            value={xyOrigin[axis]}
-            onValueChange={(value) => setCustomOrigin(store, axis, value)}
-            {...gestureHandlers(store)}
-          />
-        ))}
+      {xyOrigin.anchor === "custom" && (
+        <>
+          {(["x", "y"] as const).map((axis) => (
+            <NumberField
+              key={axis}
+              id={`zero-${axis}`}
+              label={axis.toUpperCase()}
+              layout="inline"
+              quantity="length"
+              units={units}
+              value={xyOrigin[axis]}
+              onValueChange={(value) => setCustomOrigin(store, axis, value)}
+              {...gestureHandlers(store)}
+            />
+          ))}
+          <div className="flex justify-end">
+            <Button
+              variant={picking ? "secondary" : "outline"}
+              size="compact"
+              aria-pressed={picking}
+              onClick={() => setPicking(!picking)}
+            >
+              <CrosshairIcon />
+              {picking ? "Cancel" : "Pick in viewport"}
+            </Button>
+          </div>
+          {picking && (
+            <p className="text-muted-foreground">
+              Click a point in the viewport; it snaps to stock anchors, vertices, centres and
+              bounding boxes nearby. Esc or right-click cancels.
+            </p>
+          )}
+        </>
+      )}
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
         <Label htmlFor="zero-z" className="text-ui font-normal">
           Z

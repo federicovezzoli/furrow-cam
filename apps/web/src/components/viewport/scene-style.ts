@@ -4,6 +4,8 @@ export type Palette = {
   hovered: string;
   selected: string;
   tab: string;
+  /** The snap target while picking the zero. */
+  snap: string;
   /** Rapid moves; cutting moves take their tool's colour. */
   rapid: string;
   stock: string;
@@ -18,6 +20,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#60a5fa",
     selected: "#ea580c",
     tab: "#16a34a",
+    snap: "#c026d3",
     rapid: "#71717a",
     stock: "#d4a373",
     stockEdges: "#a16207",
@@ -29,6 +32,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#93c5fd",
     selected: "#fb923c",
     tab: "#4ade80",
+    snap: "#e879f9",
     rapid: "#a1a1aa",
     stock: "#a47148",
     stockEdges: "#d4a373",
@@ -52,4 +56,5 @@ export const RENDER_ORDER = {
   holes: 6,
   origin: 7,
   tabs: 8,
+  snap: 9,
 } as const;
