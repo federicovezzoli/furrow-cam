@@ -1,6 +1,7 @@
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";
+export * from "./pocket";
 export * from "./profile";
 export * from "./quantity";
 export * from "./stock";

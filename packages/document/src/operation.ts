@@ -72,7 +72,6 @@ export const ProfileParams = z
   });
 export type ProfileParams = z.infer<typeof ProfileParams>;
 
-// Type-specific params of the other operations are added by #23 and #24.
 export const ProfileOperation = z.strictObject({
   ...operationFields,
   type: z.literal("profile"),
@@ -80,13 +79,42 @@ export const ProfileOperation = z.strictObject({
 });
 export type ProfileOperation = z.infer<typeof ProfileOperation>;
 
+/**
+ * Pocket parameters (#23): offset clearing of the area inside the closed
+ * paths, islands left standing. The step-over, step-down and ramp angle come
+ * from the tool.
+ */
+export const PocketParams = z
+  .strictObject({
+    direction: MillingDirection,
+    /** Final depth below the stock top. */
+    depth: PositiveLength,
+    /** Material the clearing passes leave on the walls and islands. */
+    allowance: z.number().nonnegative(),
+    /** One more lap at full depth on each exact wall, removing the allowance. */
+    finishPass: z.boolean(),
+    /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+    ramp: z.boolean(),
+  })
+  .superRefine((params, ctx) => {
+    if (params.finishPass && params.allowance === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["finishPass"],
+        message: "Needs an allowance to remove",
+      });
+    }
+  });
+export type PocketParams = z.infer<typeof PocketParams>;
+
 export const PocketOperation = z.strictObject({
   ...operationFields,
   type: z.literal("pocket"),
-  params: z.strictObject({}),
+  params: PocketParams,
 });
 export type PocketOperation = z.infer<typeof PocketOperation>;
 
+// Type-specific params of the drill operation are added by #24.
 export const DrillOperation = z.strictObject({
   ...operationFields,
   type: z.literal("drill"),

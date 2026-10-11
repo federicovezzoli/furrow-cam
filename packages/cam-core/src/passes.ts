@@ -1,0 +1,82 @@
+import { distance, type Point } from "@furrow/document";
+
+// Helpers the toolpath generators share.
+
+export type Box = { minX: number; minY: number; maxX: number; maxY: number };
+
+export function bounds(ring: Point[]): Box {
+  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const [x, y] of ring) {
+    box.minX = Math.min(box.minX, x);
+    box.minY = Math.min(box.minY, y);
+    box.maxX = Math.max(box.maxX, x);
+    box.maxY = Math.max(box.maxY, y);
+  }
+  return box;
+}
+
+/** Whether `point` is inside `box` grown by `margin`. */
+export function inBox(point: Point, box: Box, margin: number): boolean {
+  return (
+    point[0] >= box.minX - margin &&
+    point[0] <= box.maxX + margin &&
+    point[1] >= box.minY - margin &&
+    point[1] <= box.maxY + margin
+  );
+}
+
+/** Height `travelled` along a ramp of length `total` from `z` to `level`, ending exactly on `level`. */
+export function rampZ(z: number, level: number, travelled: number, total: number): number {
+  return travelled >= total - 1e-9 ? level : z + ((level - z) * travelled) / total;
+}
+
+/** A polyline measured by length; a closed one repeats its first point at the end. */
+export class Track {
+  readonly length: number;
+  private readonly cumulative: number[];
+
+  constructor(private readonly points: Point[]) {
+    this.cumulative = [0];
+    for (let i = 1; i < points.length; i++) {
+      const previous = this.cumulative[i - 1] as number;
+      this.cumulative.push(previous + distance(points[i - 1] as Point, points[i] as Point));
+    }
+    this.length = this.cumulative.at(-1) ?? 0;
+  }
+
+  /** The point `at` millimetres from the start, wrapping around a closed track. */
+  pointAt(at: number): Point {
+    const d = ((at % this.length) + this.length) % this.length;
+    let i = 1;
+    while (i < this.points.length - 1 && (this.cumulative[i] as number) < d) i++;
+    const a = this.points[i - 1] as Point;
+    const b = this.points[i] as Point;
+    const from = this.cumulative[i - 1] as number;
+    const span = (this.cumulative[i] as number) - from;
+    const f = span > 0 ? (d - from) / span : 0;
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+
+  /**
+   * The points met going `run` millimetres forward from `at`, each with the
+   * distance travelled to it, ending exactly `run` along. Wraps around a closed
+   * track; on an open one `at + run` must not pass the end.
+   */
+  *walk(at: number, run: number): Generator<[Point, number]> {
+    const end = at + run;
+    let lap = Math.floor(at / this.length) * this.length;
+    while (lap < end) {
+      for (let i = 1; i < this.points.length; i++) {
+        const position = lap + (this.cumulative[i] as number);
+        if (position >= end) break;
+        if (position > at) yield [this.points[i] as Point, position - at];
+      }
+      lap += this.length;
+    }
+    yield [this.pointAt(end), run];
+  }
+}
+
+export function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  addPocketOperation,
   addProfileOperation,
   deleteOperation,
   moveOperation,
@@ -31,7 +32,7 @@ import {
 import { OperationNameInput } from "./operation-name-input";
 import { defaultToolChoice, useToolLibrary } from "./tool-library";
 
-/** The Operations pane: adds profiles from the selected shapes and lists operations in cutting order. */
+/** The Operations pane: adds profiles and pockets from the selected shapes and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -40,27 +41,42 @@ export function OperationsPane() {
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
 
-  function addProfile() {
+  function add(addOperation: typeof addProfileOperation) {
     if (!tool) return;
-    const id = addProfileOperation(store, { shapeIds, tool: tool.tool });
+    const id = addOperation(store, { shapeIds, tool: tool.tool });
     if (id) workspace.getState().selectOperation(id);
   }
 
+  const target =
+    shapeIds.length === 0
+      ? undefined
+      : `${shapeIds.length} selected ${shapeIds.length === 1 ? "shape" : "shapes"}`;
+
   return (
     <div className="grid gap-2 p-3 text-ui">
-      <div>
+      <div className="flex flex-wrap gap-1">
         <Button
           variant="outline"
           size="compact"
-          disabled={shapeIds.length === 0 || !tool}
-          onClick={addProfile}
+          disabled={!target || !tool}
+          onClick={() => add(addProfileOperation)}
+          title={target && `Cut around the ${target}`}
         >
           <PlusIcon />
-          {shapeIds.length === 0
-            ? "Add profile"
-            : `Add profile to ${shapeIds.length} ${shapeIds.length === 1 ? "shape" : "shapes"}`}
+          Add profile
+        </Button>
+        <Button
+          variant="outline"
+          size="compact"
+          disabled={!target || !tool}
+          onClick={() => add(addPocketOperation)}
+          title={target && `Clear the area inside the ${target}`}
+        >
+          <PlusIcon />
+          Add pocket
         </Button>
       </div>
+      {target && tool && <p className="text-muted-foreground">For the {target}.</p>}
       {!tool ? (
         <p className="text-muted-foreground">
           Add a tool to your{" "}

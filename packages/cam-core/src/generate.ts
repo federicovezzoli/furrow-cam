@@ -1,4 +1,5 @@
 import type { Operation, ProjectDocument, Shape } from "@furrow/document";
+import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
 import type { Toolpath } from "./toolpath";
 
@@ -57,6 +58,7 @@ export function generateToolpath({ operation, shapes, safeZ }: ToolpathInput): T
     case "profile":
       return profileToolpath(operation, shapes, { safeZ });
     case "pocket":
+      return pocketToolpath(operation, shapes, { safeZ });
     case "drill":
       throw new Error(`${operation.type} toolpaths are not supported yet`);
   }

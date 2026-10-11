@@ -2,6 +2,7 @@ import { createProjectDocument, ProjectDocument, type Shape, type Tool } from "@
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
+  addPocketOperation,
   addProfileOperation,
   addTab,
   autoPlaceTabs,
@@ -14,6 +15,7 @@ import {
   setOperationEnabled,
   setOperationShapes,
   setOperationTool,
+  updatePocketParams,
   updateProfileParams,
 } from "./operation-actions";
 
@@ -194,6 +196,57 @@ describe("operation edits", () => {
     moveOperation(store, MISSING_ID, 0);
     deleteOperation(store, MISSING_ID);
     expect(store.getState().document).toBe(before);
+  });
+});
+
+describe("addPocketOperation", () => {
+  it("appends a valid pocket half through the stock, ramping in", () => {
+    const { store, document, operations } = setup();
+    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    expect(operations().find((operation) => operation.id === id)).toMatchObject({
+      type: "pocket",
+      name: "Pocket 1",
+      enabled: true,
+      shapeIds: [square.id],
+      tool: endMill,
+      params: { direction: "climb", depth: 9, allowance: 0, finishPass: false, ramp: true },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    expect(addPocketOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+  });
+});
+
+describe("updatePocketParams", () => {
+  const addPocket = (store: ReturnType<typeof setup>["store"]) => {
+    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("changes several params as one undo step", () => {
+    const { store, operations } = setup();
+    const id = addPocket(store);
+    const params = () => operations().find((operation) => operation.id === id)?.params;
+    expect(updatePocketParams(store, id, { allowance: 0.5, finishPass: true })).toEqual({
+      ok: true,
+    });
+    expect(params()).toMatchObject({ allowance: 0.5, finishPass: true });
+    store.getState().undo();
+    expect(params()).toMatchObject({ allowance: 0, finishPass: false });
+  });
+
+  it("rejects invalid params and other operation types", () => {
+    const { store, add } = setup();
+    const id = addPocket(store);
+    expect(updatePocketParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
+    expect(updatePocketParams(store, id, { finishPass: true })).toEqual({
+      ok: false,
+      error: "Needs an allowance to remove",
+    });
+    expect(updatePocketParams(store, add(), { depth: 3 })).toEqual({
+      ok: false,
+      error: "Not a pocket operation",
+    });
   });
 });
 
