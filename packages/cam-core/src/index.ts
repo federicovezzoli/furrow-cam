@@ -1,3 +1,4 @@
+export * from "./drill";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";

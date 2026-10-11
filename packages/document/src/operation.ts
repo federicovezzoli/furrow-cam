@@ -114,12 +114,34 @@ export const PocketOperation = z.strictObject({
 });
 export type PocketOperation = z.infer<typeof PocketOperation>;
 
-// Type-specific params of the drill operation are added by #24.
-export const DrillOperation = z.strictObject({
-  ...operationFields,
-  type: z.literal("drill"),
-  params: z.strictObject({}),
+/**
+ * Drill parameters (#24): holes at points and at circles of the tool's
+ * diameter. The peck depth comes from the tool's step-down.
+ */
+export const DrillParams = z.strictObject({
+  /** Depth of the tool tip below the stock top. */
+  depth: PositiveLength,
+  /** Drill in pecks, retracting above the stock after each to clear chips. */
+  peck: z.boolean(),
 });
+export type DrillParams = z.infer<typeof DrillParams>;
+
+/** Drills and end mills can drill: a V-bit's diameter doesn't describe the hole it makes. */
+export function canDrill(tool: Tool): boolean {
+  return tool.type !== "v_bit";
+}
+
+export const DrillOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("drill"),
+    params: DrillParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (!canDrill(operation.tool)) {
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "V-bits can't drill" });
+    }
+  });
 export type DrillOperation = z.infer<typeof DrillOperation>;
 
 export const Operation = z.discriminatedUnion("type", [

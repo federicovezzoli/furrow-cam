@@ -1,6 +1,9 @@
 "use client";
 
+import { DRILL_DIAMETER_TOLERANCE, formatQuantity, unitLabel } from "@furrow/cam-core";
 import {
+  canDrill,
+  type DrillOperation,
   MillingDirection,
   type PocketOperation,
   type ProfileOperation,
@@ -24,6 +27,7 @@ import {
   renameOperation,
   setOperationShapes,
   setOperationTool,
+  updateDrillParams,
   updatePocketParams,
   updateProfileParams,
 } from "@/stores/operation-actions";
@@ -48,7 +52,7 @@ const DIRECTION_LABELS: Record<MillingDirection, string> = {
   conventional: "Conventional",
 };
 
-/** Keeps depths and radii positive, as `ProfileParams` and `PocketParams` require, when stepping or scrubbing down. */
+/** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
 
 /** The selected operation's name, tool, shapes and params; replaces the stock while one is selected. */
@@ -82,10 +86,15 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           onRename={(name) => renameOperation(store, operation.id, name)}
         />
       </Row>
-      <ToolPicker operationId={operation.id} tool={operation.tool} />
+      <ToolPicker
+        operationId={operation.id}
+        tool={operation.tool}
+        drilling={operation.type === "drill"}
+      />
       <ShapesField operationId={operation.id} shapeIds={operation.shapeIds} />
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
+      {operation.type === "drill" && <DrillFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
@@ -108,7 +117,16 @@ function Row({ id, label, children }: { id: string; label: string; children: Rea
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
-function ToolPicker({ operationId, tool }: { operationId: string; tool: Tool }) {
+function ToolPicker({
+  operationId,
+  tool,
+  drilling,
+}: {
+  operationId: string;
+  tool: Tool;
+  /** Disables the tools that can't drill. */
+  drilling: boolean;
+}) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
   const current = matchingToolChoice(tools, tool);
@@ -130,7 +148,11 @@ function ToolPicker({ operationId, tool }: { operationId: string; tool: Tool }) 
           <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
         )}
         {tools.map((choice) => (
-          <NativeSelectOption key={choice.id} value={choice.id}>
+          <NativeSelectOption
+            key={choice.id}
+            value={choice.id}
+            disabled={drilling && !canDrill(choice.tool)}
+          >
             {choice.tool.name}
           </NativeSelectOption>
         ))}
@@ -476,6 +498,55 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       {(errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.direction ?? errors.finishPass ?? errors.ramp}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DrillFields({ operation }: { operation: DrillOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const { params, tool } = operation;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateDrillParams(store, operation.id, changes),
+  );
+
+  return (
+    <section aria-labelledby="drill-heading" className="grid gap-2">
+      <h4 id="drill-heading" className="font-medium">
+        Drill
+      </h4>
+      <p className="text-muted-foreground">
+        Holes at the points and circles. The tool plunges into the points and the circles it fits
+        within {formatQuantity(DRILL_DIAMETER_TOLERANCE, "length", units)}{" "}
+        {unitLabel("length", units)}
+        {tool.type === "drill"
+          ? "; a drill bit can't bore larger circles."
+          : ", and bores larger circles with a helix at its plunge angle."}
+      </p>
+      <NumberField
+        id="drill-depth"
+        label="Depth"
+        min={MIN_LENGTH}
+        value={params.depth}
+        onValueChange={(depth) => update("depth", { depth })}
+        error={errors.depth}
+        layout="inline"
+        quantity="length"
+        units={units}
+        {...gestureHandlers(store)}
+      />
+      <Checkbox
+        id="drill-peck"
+        label="Peck"
+        hint="Plunges in pecks no deeper than the tool's step-down, retracting after each to clear chips."
+        checked={params.peck}
+        onChange={(peck) => update("peck", { peck })}
+      />
+      {errors.peck && (
+        <p role="alert" className="text-destructive">
+          {errors.peck}
         </p>
       )}
     </section>
