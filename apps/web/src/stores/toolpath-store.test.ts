@@ -1,0 +1,56 @@
+import type { ToolpathLines } from "@furrow/cam-core";
+import { describe, expect, it } from "vitest";
+import { createToolpathStore, type ToolpathPreview } from "./toolpath-store";
+
+const lines: ToolpathLines = {
+  feeds: new Float32Array([0, 0, 0, 1, 0, 0]),
+  rapids: new Float32Array(),
+  rapidDistances: new Float32Array(),
+  holes: new Float32Array(),
+};
+const stale: ToolpathPreview = { warnings: ["stale"], lines };
+const fresh: ToolpathPreview = { warnings: [], lines };
+
+describe("toolpath store", () => {
+  it("keeps the result for the latest inputs only", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "hash-1");
+    store.getState().startComputing("op", "hash-2");
+    store.getState().setResult("op", "hash-1", stale);
+    expect(store.getState().entries.op).toEqual({ inputHash: "hash-2", status: "computing" });
+
+    store.getState().setResult("op", "hash-2", fresh);
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "hash-2",
+      status: "ready",
+      ...fresh,
+    });
+  });
+
+  it("keeps the last lines while recomputing, but not after an error", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setResult("op", "1", fresh);
+    store.getState().startComputing("op", "2");
+    expect(store.getState().entries.op).toEqual({ inputHash: "2", status: "computing", lines });
+
+    store.getState().setError("op", "2", "boom");
+    store.getState().startComputing("op", "3");
+    expect(store.getState().entries.op).toEqual({ inputHash: "3", status: "computing" });
+  });
+
+  it("drops errors and results of operations it isn't computing", () => {
+    const store = createToolpathStore();
+    store.getState().setError("op", "hash", "boom");
+    store.getState().setResult("op", "hash", fresh);
+    expect(store.getState().entries).toEqual({});
+  });
+
+  it("retains only the given operations", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("a", "1");
+    store.getState().startComputing("b", "2");
+    store.getState().retain(["b", "c"]);
+    expect(Object.keys(store.getState().entries)).toEqual(["b"]);
+  });
+});

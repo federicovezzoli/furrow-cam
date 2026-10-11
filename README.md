@@ -56,7 +56,7 @@ pnpm db:studio    # browse the database (Prisma Studio)
 
 ### Deployment
 
-The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hosting-vercel-neon.md)). Set the project's root directory to `apps/web` and configure the variables listed in [`apps/web/.env.example`](apps/web/.env.example). Vercel runs the `vercel-build` script, which applies pending migrations (`prisma migrate deploy`) before building.
+The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hosting-vercel-neon.md)). Set the project's root directory to `apps/web` and configure the variables listed in [`apps/web/.env.example`](apps/web/.env.example). Vercel runs the `vercel-build` script, which generates the Prisma client (`prisma generate`) and applies pending migrations (`prisma migrate deploy`) before building, so the build does not depend on install scripts running on a cached install.
 
 ### Repository layout
 

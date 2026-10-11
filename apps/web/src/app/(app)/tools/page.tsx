@@ -2,6 +2,7 @@ import type { Tool } from "@furrow/document";
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { DeleteButton } from "@/components/delete-button";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,8 +14,8 @@ import {
 } from "@/components/ui/table";
 import { requireUserId } from "@/lib/session";
 import { listTools } from "@/lib/tools";
+import { deleteTool } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
-import { DeleteToolButton } from "./delete-tool-button";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 import { SetDefaultButton } from "./set-default-button";
 
@@ -73,6 +74,10 @@ async function ToolList() {
               <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
+              Plunge angle
+              <Unit>°</Unit>
+            </TableHead>
+            <TableHead className="text-right">
               Step down
               <Unit>mm</Unit>
             </TableHead>
@@ -91,7 +96,7 @@ async function ToolList() {
               <TableCell className="pl-4">
                 <div className="flex items-center gap-2">
                   <span
-                    className="size-3 shrink-0 rounded-full border"
+                    className="size-3 shrink-0 border"
                     style={{ backgroundColor: tool.color }}
                     aria-hidden="true"
                   />
@@ -113,6 +118,7 @@ async function ToolList() {
               <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
+              <TableCell className="text-right">{formatNumber(tool.plungeAngle)}</TableCell>
               <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
               <TableCell className="text-right">
                 {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}
@@ -126,7 +132,12 @@ async function ToolList() {
                       <PencilIcon />
                     </Link>
                   </Button>
-                  <DeleteToolButton id={tool.id} name={tool.name} />
+                  <DeleteButton
+                    name={tool.name}
+                    // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
+                    confirmText={`Delete "${tool.name}"? Existing projects keep their copy of this bit.`}
+                    action={deleteTool.bind(null, tool.id)}
+                  />
                 </div>
               </TableCell>
             </TableRow>

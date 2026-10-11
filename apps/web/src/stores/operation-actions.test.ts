@@ -1,0 +1,399 @@
+import { createProjectDocument, ProjectDocument, type Shape, type Tool } from "@furrow/document";
+import { describe, expect, it } from "vitest";
+import { createDocumentStore } from "./document-store";
+import {
+  addDrillOperation,
+  addPocketOperation,
+  addProfileOperation,
+  addTab,
+  autoPlaceTabs,
+  defaultTabs,
+  deleteOperation,
+  moveOperation,
+  moveTab,
+  removeTab,
+  renameOperation,
+  setOperationEnabled,
+  setOperationShapes,
+  setOperationTool,
+  updateDrillParams,
+  updatePocketParams,
+  updateProfileParams,
+} from "./operation-actions";
+
+const MISSING_ID = "11111111-2222-4333-8444-555555555555";
+
+const endMill: Tool = {
+  name: "6 mm upcut",
+  type: "flat_end_mill",
+  diameter: 6,
+  fluteCount: 2,
+  fluteLength: 22,
+  cutDirection: "upcut",
+  vAngle: null,
+  tipDiameter: null,
+  spindleRpm: 24000,
+  feedRate: 600,
+  plungeRate: 300,
+  plungeAngle: 3,
+  stepDown: 1,
+  stepOver: 40,
+  notes: null,
+  color: "#2563eb",
+};
+
+const vBit: Tool = {
+  ...endMill,
+  name: "60° V-bit",
+  type: "v_bit",
+  cutDirection: null,
+  vAngle: 60,
+  tipDiameter: 0,
+};
+
+const square: Shape = {
+  id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
+  name: "Square",
+  layer: "0",
+  paths: [
+    {
+      start: [10, 10],
+      segments: [
+        { kind: "line", to: [60, 10] },
+        { kind: "line", to: [60, 60] },
+        { kind: "line", to: [10, 60] },
+      ],
+      closed: true,
+    },
+  ],
+};
+
+const circle: Shape = {
+  id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+  name: "Hole",
+  layer: "0",
+  paths: [
+    {
+      start: [110, 50],
+      segments: [{ kind: "arc", to: [110, 50], center: [100, 50], clockwise: false }],
+      closed: true,
+    },
+  ],
+};
+
+function setup() {
+  const store = createDocumentStore({
+    ...createProjectDocument(),
+    geometry: [square, circle],
+  });
+  const document = () => store.getState().document;
+  const operations = () => document().operations;
+  const add = (shapeIds = [square.id]) => {
+    const id = addProfileOperation(store, { shapeIds, tool: endMill });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+  const profile = (id: string) => {
+    const operation = operations().find((candidate) => candidate.id === id);
+    if (operation?.type !== "profile") throw new Error("no profile");
+    return operation;
+  };
+  return { store, document, operations, add, profile };
+}
+
+describe("addProfileOperation", () => {
+  it("appends a valid, enabled profile through the stock with the tool", () => {
+    const { store, document, add, profile } = setup();
+    const id = add([circle.id, square.id, MISSING_ID]);
+    expect(profile(id)).toMatchObject({
+      name: "Profile 1",
+      enabled: true,
+      shapeIds: [square.id, circle.id],
+      tool: endMill,
+      params: { side: "outside", direction: "climb", depth: 18, allowance: 0, finishPass: false },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    expect(store.getState().past).toHaveLength(1);
+  });
+
+  it("numbers names after the ones in use", () => {
+    const { store, operations, add } = setup();
+    const first = add();
+    add();
+    renameOperation(store, first, "Outline");
+    add();
+    expect(operations().map((operation) => operation.name)).toEqual([
+      "Outline",
+      "Profile 2",
+      "Profile 1",
+    ]);
+  });
+
+  it("adds nothing without shapes that exist", () => {
+    const { store, operations } = setup();
+    expect(addProfileOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+    expect(operations()).toEqual([]);
+    expect(store.getState().past).toEqual([]);
+  });
+});
+
+describe("operation edits", () => {
+  it("renames, rejecting blank names", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    expect(renameOperation(store, id, "Outline")).toEqual({ ok: true });
+    expect(renameOperation(store, id, "  ")).toMatchObject({ ok: false });
+    expect(profile(id).name).toBe("Outline");
+  });
+
+  it("enables and disables", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    setOperationEnabled(store, id, false);
+    expect(profile(id).enabled).toBe(false);
+  });
+
+  it("reorders within the list", () => {
+    const { store, operations, add } = setup();
+    const [a, b, c] = [add(), add(), add()];
+    moveOperation(store, c, 0);
+    expect(operations().map((operation) => operation.id)).toEqual([c, a, b]);
+    moveOperation(store, c, 99);
+    expect(operations().map((operation) => operation.id)).toEqual([a, b, c]);
+    const before = store.getState().past.length;
+    moveOperation(store, c, 2);
+    expect(store.getState().past).toHaveLength(before);
+  });
+
+  it("deletes, and undo brings it back in place", () => {
+    const { store, operations, add } = setup();
+    const [a, b] = [add(), add()];
+    deleteOperation(store, a);
+    expect(operations().map((operation) => operation.id)).toEqual([b]);
+    store.getState().undo();
+    expect(operations().map((operation) => operation.id)).toEqual([a, b]);
+  });
+
+  it("replaces the tool snapshot", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    setOperationTool(store, id, vBit);
+    expect(profile(id).tool).toEqual(vBit);
+  });
+
+  it("sets the shapes, rejecting none", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    expect(setOperationShapes(store, id, [circle.id, MISSING_ID])).toEqual({ ok: true });
+    expect(profile(id).shapeIds).toEqual([circle.id]);
+    expect(setOperationShapes(store, id, [MISSING_ID])).toMatchObject({ ok: false });
+    expect(profile(id).shapeIds).toEqual([circle.id]);
+  });
+
+  it("does nothing to operations that no longer exist", () => {
+    const { store, add } = setup();
+    add();
+    const before = store.getState().document;
+    setOperationEnabled(store, MISSING_ID, false);
+    moveOperation(store, MISSING_ID, 0);
+    deleteOperation(store, MISSING_ID);
+    expect(store.getState().document).toBe(before);
+  });
+});
+
+describe("addPocketOperation", () => {
+  it("appends a valid pocket half through the stock, ramping in", () => {
+    const { store, document, operations } = setup();
+    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    expect(operations().find((operation) => operation.id === id)).toMatchObject({
+      type: "pocket",
+      name: "Pocket 1",
+      enabled: true,
+      shapeIds: [square.id],
+      tool: endMill,
+      params: { direction: "climb", depth: 9, allowance: 0, finishPass: false, ramp: true },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    expect(addPocketOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+  });
+});
+
+describe("addDrillOperation", () => {
+  const addDrill = (store: ReturnType<typeof setup>["store"]) => {
+    const id = addDrillOperation(store, { shapeIds: [circle.id], tool: endMill });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("appends a valid drill operation through the stock, pecking", () => {
+    const { store, document, operations } = setup();
+    const id = addDrill(store);
+    expect(operations().find((operation) => operation.id === id)).toMatchObject({
+      type: "drill",
+      name: "Drill 1",
+      enabled: true,
+      shapeIds: [circle.id],
+      tool: endMill,
+      params: { depth: 18, peck: true },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("refuses V-bits, adding or switching tools", () => {
+    const { store, operations } = setup();
+    expect(addDrillOperation(store, { shapeIds: [circle.id], tool: vBit })).toBeNull();
+    const id = addDrill(store);
+    expect(setOperationTool(store, id, vBit)).toEqual({ ok: false, error: "V-bits can't drill" });
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const { store, operations } = setup();
+    const id = addDrill(store);
+    expect(updateDrillParams(store, id, { depth: 5, peck: false })).toEqual({ ok: true });
+    expect(operations().find((operation) => operation.id === id)?.params).toEqual({
+      depth: 5,
+      peck: false,
+    });
+    expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
+  });
+});
+
+describe("updatePocketParams", () => {
+  const addPocket = (store: ReturnType<typeof setup>["store"]) => {
+    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("changes several params as one undo step", () => {
+    const { store, operations } = setup();
+    const id = addPocket(store);
+    const params = () => operations().find((operation) => operation.id === id)?.params;
+    expect(updatePocketParams(store, id, { allowance: 0.5, finishPass: true })).toEqual({
+      ok: true,
+    });
+    expect(params()).toMatchObject({ allowance: 0.5, finishPass: true });
+    store.getState().undo();
+    expect(params()).toMatchObject({ allowance: 0, finishPass: false });
+  });
+
+  it("rejects invalid params and other operation types", () => {
+    const { store, add } = setup();
+    const id = addPocket(store);
+    expect(updatePocketParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
+    expect(updatePocketParams(store, id, { finishPass: true })).toEqual({
+      ok: false,
+      error: "Needs an allowance to remove",
+    });
+    expect(updatePocketParams(store, add(), { depth: 3 })).toEqual({
+      ok: false,
+      error: "Not a pocket operation",
+    });
+  });
+});
+
+describe("updateProfileParams", () => {
+  it("changes several params as one undo step", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    const result = updateProfileParams(store, id, {
+      side: "inside",
+      allowance: 0.5,
+      finishPass: true,
+      leadIn: { radius: 3 },
+    });
+    expect(result).toEqual({ ok: true });
+    expect(profile(id).params).toMatchObject({ side: "inside", allowance: 0.5, finishPass: true });
+    store.getState().undo();
+    expect(profile(id).params).toMatchObject({ side: "outside", allowance: 0, finishPass: false });
+  });
+
+  it("rejects invalid params and changes nothing", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    const before = profile(id).params;
+    expect(updateProfileParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
+    expect(updateProfileParams(store, id, { finishPass: true })).toEqual({
+      ok: false,
+      error: "Needs an allowance to remove",
+    });
+    expect(updateProfileParams(store, id, { side: "on", allowance: 1 })).toMatchObject({
+      ok: false,
+    });
+    expect(profile(id).params).toBe(before);
+  });
+
+  it("records nothing for unchanged values", () => {
+    const { store, add } = setup();
+    const id = add();
+    const before = store.getState().past.length;
+    updateProfileParams(store, id, { side: "outside" });
+    expect(store.getState().past).toHaveLength(before);
+  });
+});
+
+describe("tabs", () => {
+  function withTabs() {
+    const context = setup();
+    const id = context.add([square.id, circle.id]);
+    const tabs = defaultTabs(context.document(), context.profile(id));
+    updateProfileParams(context.store, id, { tabs });
+    return { ...context, id };
+  }
+
+  it("start 6 mm wide and 3 mm tall, four on each outline", () => {
+    const { document, profile, id } = withTabs();
+    expect(profile(id).params.tabs).toMatchObject({ width: 6, height: 3 });
+    // The square and the circle are side by side: both are outlines.
+    expect(profile(id).params.tabs?.positions).toHaveLength(8);
+    expect(profile(id).params.tabs?.positions[0]).toEqual([35, 10]);
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("are no taller than half the depth", () => {
+    const { store, add, document, profile } = setup();
+    const id = add();
+    updateProfileParams(store, id, { depth: 4 });
+    expect(defaultTabs(document(), profile(id)).height).toBe(2);
+  });
+
+  it("auto places by count or spacing, as one undo step", () => {
+    const { store, profile, id } = withTabs();
+    expect(autoPlaceTabs(store, id, { count: 1 })).toEqual({ ok: true });
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+    // The square is 200 mm round, the circle about 63 mm.
+    autoPlaceTabs(store, id, { spacing: 50 });
+    expect(profile(id).params.tabs?.positions).toHaveLength(5);
+    store.getState().undo();
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+  });
+
+  it("are added, moved and removed one at a time", () => {
+    const { store, profile, id } = withTabs();
+    autoPlaceTabs(store, id, { count: 1 });
+    addTab(store, id, [60, 30]);
+    expect(profile(id).params.tabs?.positions.at(-1)).toEqual([60, 30]);
+    moveTab(store, id, 2, [60, 40]);
+    expect(profile(id).params.tabs?.positions.at(-1)).toEqual([60, 40]);
+    removeTab(store, id, 0);
+    expect(profile(id).params.tabs?.positions).toHaveLength(2);
+    store.getState().undo();
+    expect(profile(id).params.tabs?.positions).toHaveLength(3);
+  });
+
+  it("does nothing without tabs or out of range", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    const before = store.getState().document;
+    expect(autoPlaceTabs(store, id, { count: 2 })).toMatchObject({ ok: false });
+    addTab(store, id, [0, 0]);
+    expect(store.getState().document).toBe(before);
+    updateProfileParams(store, id, { tabs: { width: 6, height: 3, positions: [] } });
+    const withEmpty = store.getState().document;
+    moveTab(store, id, 0, [1, 1]);
+    removeTab(store, id, 3);
+    expect(store.getState().document).toBe(withEmpty);
+    expect(profile(id).params.tabs?.positions).toEqual([]);
+  });
+});

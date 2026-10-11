@@ -1,3 +1,5 @@
+// Reference data for tests, here and in the packages that depend on this one
+// (`@furrow/document/fixtures`). Not part of the app.
 import type { Machine, ProjectDocument, Shape, Tool } from "./index";
 
 export const endMill: Tool = {
@@ -12,6 +14,7 @@ export const endMill: Tool = {
   spindleRpm: 18000,
   feedRate: 1500,
   plungeRate: 500,
+  plungeAngle: 3,
   stepDown: 2,
   stepOver: 40,
   notes: null,
@@ -28,6 +31,21 @@ export const vBit: Tool = {
   color: "#d97706",
 };
 
+export const drill: Tool = {
+  ...endMill,
+  name: "6 mm drill",
+  type: "drill",
+  diameter: 6,
+  fluteLength: 30,
+  cutDirection: null,
+  spindleRpm: 12000,
+  feedRate: 1000,
+  plungeRate: 300,
+  plungeAngle: 90,
+  stepDown: 4,
+  color: "#16a34a",
+};
+
 export const machine: Machine = {
   name: "Shapeoko 4 XL",
   workAreaX: 838,
@@ -39,6 +57,10 @@ export const machine: Machine = {
   spindleRpmMax: 30000,
   safeZ: 5,
   postProcessor: "grbl",
+  programStart: null,
+  programEnd: null,
+  operationStart: null,
+  toolChange: null,
 };
 
 /** V1 Engineering LowRider v4, full-sheet build, Makita RT0701C with a speed dial. */
@@ -53,6 +75,11 @@ export const lowRider: Machine = {
   spindleRpmMax: null,
   safeZ: 5,
   postProcessor: "grbl",
+  programStart: null,
+  programEnd: null,
+  operationStart: null,
+  /** Manual spindle: stop and wait while the router is switched off and the bit changed. */
+  toolChange: "G0 Z20\nM0 (Switch off the router and change the bit)",
 };
 
 export const SQUARE_ID = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";
@@ -94,7 +121,13 @@ export function fullDocument(): ProjectDocument {
   return {
     schemaVersion: 1,
     units: "in",
-    stock: { width: 300, height: 200, thickness: 18, xyOrigin: "center", zOrigin: "machine_bed" },
+    stock: {
+      width: 300,
+      height: 200,
+      thickness: 18,
+      xyOrigin: { anchor: "center" },
+      zOrigin: "machine_bed",
+    },
     machine,
     geometry: [square, circle],
     operations: [
@@ -105,7 +138,16 @@ export function fullDocument(): ProjectDocument {
         enabled: true,
         shapeIds: [SQUARE_ID, CIRCLE_ID],
         tool: endMill,
-        params: {},
+        params: {
+          side: "outside",
+          direction: "climb",
+          depth: 18,
+          allowance: 0.5,
+          finishPass: true,
+          leadIn: { radius: 3 },
+          ramp: true,
+          tabs: { width: 8, height: 3, positions: [[50, 0]] },
+        },
       },
     ],
   };

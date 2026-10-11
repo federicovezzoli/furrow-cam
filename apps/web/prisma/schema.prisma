@@ -23,6 +23,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
   tools         Tool[]
+  machines      Machine[]
+  projects      Project[]
 
   @@unique([email])
   @@map("user")
@@ -108,6 +110,8 @@ model Tool {
   spindleRpm   Int
   feedRate     Float
   plungeRate   Float
+  /// Degrees from horizontal; 90 plunges straight down (see `Tool` in @furrow/document).
+  plungeAngle  Float
   stepDown     Float
   stepOver     Float
   notes        String?
@@ -120,4 +124,57 @@ model Tool {
   @@unique([userId], where: raw("\"isDefault\""), map: "tool_userId_default_key")
   @@index([userId])
   @@map("tool")
+}
+
+// Mirrors the `Machine` schema in @furrow/document (#11): rows are validated with it
+// on write and snapshotted into projects with `Machine.parse(row)` (ADR-0003).
+// Lengths in mm, feeds in mm/min.
+
+enum PostProcessor {
+  grbl
+}
+
+model Machine {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  workAreaX      Float
+  workAreaY      Float
+  workAreaZ      Float
+  maxFeedXY      Float
+  maxFeedZ       Float
+  /// Both `NULL` for a manual spindle: the post-processor omits the `S` word.
+  spindleRpmMin  Int?
+  spindleRpmMax  Int?
+  safeZ          Float
+  postProcessor  PostProcessor
+  /// Custom G-code replacing the post-processor's default at that point; `NULL` keeps the default.
+  programStart   String?
+  programEnd     String?
+  operationStart String?
+  toolChange     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId])
+  @@map("machine")
+}
+
+// Project metadata is relational; the contents are one versioned JSON document,
+// validated with `ProjectDocument` from @furrow/document on every write (ADR-0003).
+
+model Project {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  /// Copy of `document.schemaVersion`, so stale documents can be found without reading them.
+  schemaVersion Int
+  document      Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("project")
 }
