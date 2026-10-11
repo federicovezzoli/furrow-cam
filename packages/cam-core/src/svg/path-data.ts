@@ -1,4 +1,5 @@
 import type { Point } from "@furrow/document";
+import { NUMBER_PATTERN } from "./number";
 
 /** A line or cubic Bézier in SVG user units; arcs and quadratics are converted to cubics. */
 export type RawSegment =
@@ -7,7 +8,7 @@ export type RawSegment =
 
 export type RawSubpath = { start: Point; segments: RawSegment[]; closed: boolean };
 
-const NUMBER = /[\s,]*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/y;
+const NUMBER = new RegExp(String.raw`[\s,]*(${NUMBER_PATTERN})`, "y");
 const FLAG = /[\s,]*([01])/y;
 const COMMAND = /\s*([MmZzLlHhVvCcSsQqTtAa])/y;
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { DEFAULT_SVG_DPI, importSvg, SvgImportError, svgNeedsDpi } from "@furrow/cam-core";
+import {
+  DEFAULT_SVG_DPI,
+  importSvg,
+  parseSvg,
+  type SvgDocument,
+  SvgImportError,
+  svgNeedsDpi,
+} from "@furrow/cam-core";
 import { UploadIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +24,7 @@ const DPI_OPTIONS = [96, 72, 90, 300] as const;
 type Notice = { kind: "error" | "info"; messages: string[] };
 
 /** A file sized in pixels, or not at all, waiting for the user's DPI. */
-type PendingFile = { text: string; name: string };
+type PendingFile = { svg: SvgDocument; name: string };
 
 /** The Geometry pane: imports SVG files and lists the project's shapes. */
 export function GeometryPane() {
@@ -26,6 +33,8 @@ export function GeometryPane() {
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  /** Counts picks, so a slow file read can't land after the user picked another file. */
+  const picks = useRef(0);
 
   function fail(error: unknown) {
     if (!(error instanceof SvgImportError)) console.error(error);
@@ -36,13 +45,14 @@ export function GeometryPane() {
 
   function add(file: PendingFile, dpi: number) {
     try {
-      const { shapes, warnings } = importSvg(file.text, { dpi, fileName: file.name });
+      const { shapes, warnings } = importSvg(file.svg, { dpi, fileName: file.name });
       if (shapes.length === 0) {
         setNotice({ kind: "error", messages: ["This file has no shapes to import.", ...warnings] });
         return;
       }
       store.getState().change("importSvg", (draft) => {
-        draft.geometry.push(...shapes);
+        // One by one: spreading a huge array into arguments overflows the stack.
+        for (const shape of shapes) draft.geometry.push(shape);
       });
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
@@ -55,6 +65,7 @@ export function GeometryPane() {
     // Lets the same file be picked again after fixing it.
     event.currentTarget.value = "";
     if (!picked) return;
+    const pick = ++picks.current;
     setPending(null);
     if (picked.size > MAX_FILE_SIZE) {
       setNotice({
@@ -64,15 +75,17 @@ export function GeometryPane() {
       return;
     }
     try {
-      const file = { text: await picked.text(), name: picked.name };
-      if (svgNeedsDpi(file.text)) {
+      const text = await picked.text();
+      if (pick !== picks.current) return;
+      const file = { svg: parseSvg(text), name: picked.name };
+      if (svgNeedsDpi(file.svg)) {
         setNotice(null);
         setPending(file);
       } else {
         add(file, DEFAULT_SVG_DPI);
       }
     } catch (error) {
-      fail(error);
+      if (pick === picks.current) fail(error);
     }
   }
 

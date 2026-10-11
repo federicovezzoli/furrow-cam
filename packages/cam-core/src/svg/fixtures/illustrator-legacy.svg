@@ -14,7 +14,12 @@
 		</i:pgfRef>
 	</foreignObject>
 	<g i:extraneous="self">
-		<rect x="36" y="18" fill="none" stroke="#000000" stroke-miterlimit="10" width="72" height="36"/>
+		<g id="Outline">
+			<rect x="36" y="18" fill="none" stroke="#000000" stroke-miterlimit="10" width="72" height="36"/>
+		</g>
+		<g id="Holes">
+			<circle fill="none" stroke="#000000" stroke-miterlimit="10" cx="72" cy="36" r="9"/>
+		</g>
 	</g>
 </switch>
 <i:pgf  id="adobe_illustrator_pgf">

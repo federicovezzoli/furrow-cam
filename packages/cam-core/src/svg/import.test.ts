@@ -5,7 +5,7 @@ import affinity from "./fixtures/affinity.svg?raw";
 import illustrator from "./fixtures/illustrator.svg?raw";
 import illustratorLegacy from "./fixtures/illustrator-legacy.svg?raw";
 import inkscape from "./fixtures/inkscape.svg?raw";
-import { importSvg, SvgImportError, svgNeedsDpi } from "./import";
+import { importSvg, MAX_SVG_ELEMENTS, parseSvg, SvgImportError, svgNeedsDpi } from "./import";
 
 function bounds(paths: Path[]): { min: Point; max: Point } {
   const points = paths.flatMap((path) => flattenPath(path));
@@ -251,12 +251,95 @@ describe("importSvg", () => {
     expect(shapes[0]?.name).toBe("tick");
   });
 
-  it("skips use cycles and missing references with a warning", () => {
+  it("skips missing references with a warning", () => {
+    const { shapes, warnings } = importSvg(svg('<use href="#missing"/>'));
+    expect(shapes).toEqual([]);
+    expect(warnings).toEqual(["Skipped references to missing elements (1)."]);
+  });
+
+  it.each([
+    ["a group", '<g id="g"><path d="M0 0 H1"/><use href="#g"/></g>'],
+    ["itself", '<path d="M0 0 H1"/><use id="u" href="#u"/>'],
+    ["a symbol", '<symbol id="s"><path d="M0 0 H1"/><use href="#s"/></symbol><use href="#s"/>'],
+    ["the root", '<path d="M0 0 H1"/><use href="#root"/>'],
+  ])("draws nothing for a use that refers back to %s, once", (_, body) => {
     const { shapes, warnings } = importSvg(
-      svg('<g id="loop"><use href="#loop"/></g><use href="#missing"/>'),
+      svg(body, 'id="root" width="100mm" height="50mm" viewBox="0 0 100 50"'),
+    );
+    expect(shapes).toHaveLength(1);
+    expect(warnings).toEqual(["Skipped circular references (1)."]);
+  });
+
+  it("stops at an element budget when references fan out", () => {
+    let defs = '<path id="p0" d="M0 0 H1"/>';
+    for (let i = 1; i <= 20; i++)
+      defs += `<g id="p${i}"><use href="#p${i - 1}"/><use href="#p${i - 1}"/></g>`;
+    let next = 0;
+    const createId = () => String(next++);
+    const { shapes, warnings } = importSvg(svg(`<defs>${defs}</defs><use href="#p20"/>`), {
+      createId,
+    });
+    expect(shapes.length).toBeLessThan(MAX_SVG_ELEMENTS);
+    expect(warnings).toEqual([expect.stringContaining("more than 200,000 elements")]);
+  });
+
+  it("skips elements with relative or invalid positions instead of importing NaN", () => {
+    const { shapes, warnings } = importSvg(
+      svg(
+        '<svg x="10%"><path d="M0 0 H1"/></svg>' +
+          '<defs><path id="a" d="M0 0 H1"/></defs><use href="#a" x="50%"/><use href="#a" y="oops"/>',
+      ),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual([expect.stringContaining("missing or circular")]);
+    expect(warnings).toEqual(["Skipped elements with invalid or relative (%) positions (3)."]);
+  });
+
+  it("skips shapes whose coordinates overflow", () => {
+    const { shapes, warnings } = importSvg(svg('<path d="M0 0 H1e400"/><path d="M0 0 H1"/>'));
+    expect(shapes).toHaveLength(1);
+    expect(warnings).toEqual(["Skipped shapes with coordinates too large to import (1)."]);
+  });
+
+  it("maps a nested svg's viewBox onto its viewport", () => {
+    const shape = importOne(
+      '<svg x="10" width="20" height="10" viewBox="0 0 2 1"><path d="M0 1 H2"/></svg>',
+    );
+    expect(shape.paths[0]).toEqual({
+      start: [10, 40],
+      segments: [{ kind: "line", to: [30, 40] }],
+      closed: false,
+    });
+  });
+
+  it("sizes a symbol's and an svg's viewport by the use that draws it", () => {
+    const { shapes } = importSvg(
+      svg(
+        '<defs><symbol id="s" viewBox="0 0 1 1"><path d="M0 0 H1"/></symbol>' +
+          '<svg id="v" width="1" height="1" viewBox="0 0 1 1"><path d="M0 0 H1"/></svg></defs>' +
+          '<use href="#s" x="5" width="10" height="10"/><use href="#v" width="20" height="20"/>',
+      ),
+    );
+    expect(shapes.map((shape) => shape.paths[0]?.segments[0]?.to)).toEqual([
+      [15, 50],
+      [20, 50],
+    ]);
+  });
+
+  it("warns about nested viewports whose size it can't tell", () => {
+    const { shapes, warnings } = importSvg(
+      svg(
+        '<svg viewBox="0 0 1 1"><path d="M0 0 H1"/></svg>' +
+          '<defs><symbol id="s" viewBox="0 0 1 1"><path d="M0 0 H1"/></symbol></defs><use href="#s"/>',
+      ),
+    );
+    expect(shapes).toEqual([]);
+    expect(warnings).toEqual(["Skipped nested viewports with relative (%) or missing sizes (2)."]);
+  });
+
+  it("takes a parsed document, so a file is parsed once", () => {
+    const document = parseSvg(svg('<path d="M0 0 H1"/>'));
+    expect(svgNeedsDpi(document)).toBe(false);
+    expect(importSvg(document).shapes).toHaveLength(1);
   });
 
   it("skips hidden elements, definitions and non-geometry content, warning about what it can't import", () => {
@@ -363,13 +446,22 @@ describe("importSvg on editor exports", () => {
     expectBounds(arch.paths, [75, 30], [85, 35], 2);
   });
 
-  it("imports a legacy Illustrator file, skipping its private data", () => {
+  it("imports a legacy Illustrator file with its layers, skipping its private data", () => {
     const { shapes, warnings } = importSvg(illustratorLegacy, { dpi: 72 });
     expectValid(shapes);
     expect(warnings).toEqual([]);
-    expect(shapes).toHaveLength(1);
+    expect(shapes.map(({ name, layer }) => ({ name, layer }))).toEqual([
+      { name: "", layer: "Outline" },
+      { name: "", layer: "Holes" },
+    ]);
     // 144 × 72 px at 72 DPI is 50.8 × 25.4 mm.
     expectBounds(shapes[0]?.paths ?? [], [12.7, 6.35], [38.1, 19.05], 9);
+    expect(shapes[1]?.paths[0]?.segments[0]).toEqual({
+      kind: "arc",
+      to: [28.575, 12.7],
+      center: [25.4, 12.7],
+      clockwise: true,
+    });
   });
 
   it("imports an Affinity drawing with nested group transforms", () => {
@@ -422,5 +514,11 @@ describe("svgNeedsDpi", () => {
 
   it("rejects files that aren't SVG", () => {
     expect(() => svgNeedsDpi("<html/>")).toThrow(SvgImportError);
+  });
+
+  it("only takes CSS units, not other names", () => {
+    expect(svgNeedsDpi(svg("", 'width="10constructor" height="5toString" viewBox="0 0 1 1"'))).toBe(
+      true,
+    );
   });
 });

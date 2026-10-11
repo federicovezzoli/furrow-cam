@@ -1,4 +1,5 @@
 import type { Point } from "@furrow/document";
+import { parseNumbers } from "./number";
 
 /** An affine transform `[a, b, c, d, e, f]`, as in SVG's `matrix(a b c d e f)`. */
 export type Matrix = readonly [number, number, number, number, number, number];
@@ -41,13 +42,6 @@ export function isSimilarity(m: Matrix): boolean {
   const sy = c * c + d * d;
   const scale = Math.max(sx, sy);
   return scale > 0 && Math.abs(sx - sy) <= 1e-9 * scale && Math.abs(a * c + b * d) <= 1e-9 * scale;
-}
-
-export const NUMBER = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g;
-
-/** Every number in `text`, however it is separated. */
-export function parseNumbers(text: string): number[] {
-  return Array.from(text.matchAll(NUMBER), (match) => Number(match[0]));
 }
 
 const TRANSFORM = /(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g;

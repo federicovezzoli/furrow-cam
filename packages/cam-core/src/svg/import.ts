@@ -1,14 +1,15 @@
 import { type Path, type Point, pointsCoincide, type Segment, type Shape } from "@furrow/document";
 import { flattenPath } from "../flatten";
 import { MM_PER_INCH } from "../units";
-import { parsePathData, type RawSubpath } from "./path-data";
+import { NUMBER_PATTERN, parseNumbers } from "./number";
+import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
 import {
   apply,
   determinant,
+  IDENTITY,
   isSimilarity,
   type Matrix,
   multiply,
-  parseNumbers,
   parseTransform,
   translation,
 } from "./transform";
@@ -16,6 +17,12 @@ import { parseXml, type XmlElement, XmlError } from "./xml";
 
 /** Pixels per inch that `px` and unitless lengths are read at unless told otherwise: the CSS value. */
 export const DEFAULT_SVG_DPI = 96;
+
+/**
+ * Most elements drawn, counting every copy a `use` makes, so a file whose
+ * references fan out can't freeze the import.
+ */
+export const MAX_SVG_ELEMENTS = 200_000;
 
 export type SvgImportOptions = {
   /**
@@ -34,6 +41,9 @@ export type SvgImportResult = {
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
   warnings: string[];
 };
+
+/** A parsed SVG file, so it can be checked with `svgNeedsDpi` and imported without parsing it twice. */
+export type SvgDocument = { readonly root: XmlElement };
 
 /** The file isn't an SVG document at all; anything less is a warning instead. */
 export class SvgImportError extends Error {}
@@ -60,10 +70,9 @@ const CSS_PX_PER_UNIT: Record<string, number> = {
   pc: 16,
 };
 
-const LENGTH = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*([a-zA-Z]*)\s*$/;
+const LENGTH = new RegExp(String.raw`^\s*(${NUMBER_PATTERN})\s*([a-zA-Z]*)\s*$`);
 
-/** How deep `use` references may nest, against reference cycles. */
-const MAX_USE_DEPTH = 32;
+const INVALID_POSITION = "elements with invalid or relative (%) positions";
 
 type Context = {
   /** From this element's user units to millimetres in stock coordinates. */
@@ -71,10 +80,44 @@ type Context = {
   layer: string;
   /** Name of the closest named group, for shapes with no name of their own (Affinity names groups). */
   name: string;
-  /** Whether this element is a direct child of the root `svg`. */
+  /** Whether groups here are layers: children of the root, or of wrappers around them. */
   topLevel: boolean;
-  useDepth: number;
 };
+
+/** Parses an SVG file. Throws `SvgImportError` if it isn't one. */
+export function parseSvg(text: string): SvgDocument {
+  let root: XmlElement;
+  try {
+    root = parseXml(text);
+  } catch (error) {
+    if (error instanceof XmlError) {
+      throw new SvgImportError(`This file isn't valid XML: ${error.message}`);
+    }
+    throw error;
+  }
+  if (localName(root) !== "svg") throw new SvgImportError("This file isn't an SVG drawing.");
+  return { root };
+}
+
+/**
+ * Whether importing the file depends on the DPI: its size is given in
+ * pixels, or not at all. Then only the user can tell, since every editor can
+ * write files at any DPI.
+ */
+export function svgNeedsDpi(svg: SvgDocument | string): boolean {
+  const { root } = typeof svg === "string" ? parseSvg(svg) : svg;
+  const width = parseLength(root.attributes.width);
+  const height = parseLength(root.attributes.height);
+  const isPixels = (length: ParsedLength | null) => length?.unit === "" || length?.unit === "px";
+  const isAbsolute = (length: ParsedLength | null) => length !== null && !isPixels(length);
+  // With a viewBox and a size in real units, the viewBox is scaled to fit and pixels never matter.
+  return (
+    parseViewBox(root.attributes.viewBox) === null ||
+    isPixels(width) ||
+    isPixels(height) ||
+    !(isAbsolute(width) || isAbsolute(height))
+  );
+}
 
 /**
  * Imports an SVG document as shapes in stock coordinates (ADR-0014): one
@@ -84,8 +127,11 @@ type Context = {
  * them ellipses), elliptical arcs and quadratics as cubics (ADR-0007).
  * Fills, strokes and clipping are ignored, and so are hidden elements.
  */
-export function importSvg(text: string, options: SvgImportOptions = {}): SvgImportResult {
-  const root = parseSvg(text);
+export function importSvg(
+  svg: SvgDocument | string,
+  options: SvgImportOptions = {},
+): SvgImportResult {
+  const { root } = typeof svg === "string" ? parseSvg(svg) : svg;
   const dpi = options.dpi ?? DEFAULT_SVG_DPI;
   if (!(dpi > 0)) throw new RangeError("DPI must be positive");
   const createId = options.createId ?? defaultCreateId;
@@ -97,13 +143,33 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
   const skip = (what: string) => skipped.set(what, (skipped.get(what) ?? 0) + 1);
   const shapes: Shape[] = [];
   const page = pageTransform(root, dpi);
+  /** Elements being drawn, from the root down through `use` references, to catch cycles. */
+  const drawing = new Set<XmlElement>();
+  let drawn = 0;
 
-  function drawChildren(element: XmlElement, context: Context) {
-    for (const child of element.children) draw(child, context);
+  /** Draws `element`'s children, with `element` marked as being drawn. */
+  function within(element: XmlElement, drawInside: () => void) {
+    drawing.add(element);
+    drawInside();
+    drawing.delete(element);
   }
 
-  function draw(element: XmlElement, parent: Context, name = label(element)) {
+  function drawChildren(element: XmlElement, context: Context) {
+    within(element, () => {
+      for (const child of element.children) draw(child, context);
+    });
+  }
+
+  /** `sizedBy` is the `use` drawing an `svg`, whose `width` and `height` size its viewport. */
+  function draw(element: XmlElement, parent: Context, name = label(element), sizedBy?: XmlElement) {
+    if (drawn >= MAX_SVG_ELEMENTS) return;
+    drawn++;
     if (isHidden(element)) return;
+    if (drawing.has(element)) {
+      // SVG draws nothing for a reference to an element that contains it.
+      skip("circular references");
+      return;
+    }
     const tag = localName(element);
     let matrix = parent.matrix;
     const transform = element.attributes.transform;
@@ -114,18 +180,27 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
     }
 
     if (CONTAINERS.has(tag)) {
+      // Legacy Illustrator files wrap their layers in a `switch` and a group of its own.
+      const wrapper = tag === "switch" || element.attributes["i:extraneous"] === "self";
       const isLayer =
-        element.attributes["inkscape:groupmode"] === "layer" || (parent.topLevel && tag === "g");
+        !wrapper &&
+        (element.attributes["inkscape:groupmode"] === "layer" || (parent.topLevel && tag === "g"));
       if (tag === "svg") {
-        // A nested viewport: only its position is applied.
-        matrix = multiply(matrix, translation(length(element, "x"), length(element, "y")));
+        const position = offset(element);
+        if (!position) {
+          skip(INVALID_POSITION);
+          return;
+        }
+        const viewport = viewportTransform(element, sizedBy ? [sizedBy, element] : [element]);
+        if (typeof viewport === "string") skip(viewport);
+        if (viewport === null || typeof viewport === "string") return;
+        matrix = multiply(multiply(matrix, position), viewport);
       }
       const context: Context = {
         matrix,
         layer: isLayer ? label(element) : parent.layer,
-        name: isLayer ? "" : label(element) || parent.name,
-        topLevel: false,
-        useDepth: parent.useDepth,
+        name: isLayer ? "" : wrapper ? parent.name : label(element) || parent.name,
+        topLevel: wrapper && parent.topLevel,
       };
       if (tag === "switch") {
         // Only the first child the renderer supports is drawn; Illustrator puts its private data first.
@@ -134,7 +209,7 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
             localName(child) !== "foreignObject" &&
             child.attributes.requiredExtensions === undefined,
         );
-        if (first) draw(first, context);
+        if (first) within(element, () => draw(first, context));
       } else {
         drawChildren(element, context);
       }
@@ -144,19 +219,37 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
     if (tag === "use") {
       const href = element.attributes.href ?? element.attributes["xlink:href"];
       const target = href?.startsWith("#") ? ids.get(href.slice(1)) : undefined;
-      if (!target || parent.useDepth >= MAX_USE_DEPTH) {
-        skip("references to missing or circular elements");
+      if (!target) {
+        skip("references to missing elements");
+        return;
+      }
+      const position = offset(element);
+      if (!position) {
+        skip(INVALID_POSITION);
         return;
       }
       const context: Context = {
-        matrix: multiply(matrix, translation(length(element, "x"), length(element, "y"))),
+        matrix: multiply(matrix, position),
         layer: parent.layer,
         name: name || label(target) || parent.name,
         topLevel: false,
-        useDepth: parent.useDepth + 1,
       };
-      if (localName(target) === "symbol") drawChildren(target, context);
-      else draw(target, context, name || label(target));
+      const targetTag = localName(target);
+      within(element, () => {
+        if (targetTag !== "symbol") {
+          draw(target, context, name || label(target), targetTag === "svg" ? element : undefined);
+          return;
+        }
+        if (drawing.has(target)) {
+          skip("circular references");
+          return;
+        }
+        // The `use` sizes the symbol's viewport.
+        const viewport = viewportTransform(target, [element, target]);
+        if (typeof viewport === "string") skip(viewport);
+        if (viewport === null || typeof viewport === "string") return;
+        drawChildren(target, { ...context, matrix: multiply(context.matrix, viewport) });
+      });
       return;
     }
 
@@ -177,6 +270,10 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
       const path = toPath(subpath, matrix);
       return path ? [path] : [];
     });
+    if (!paths.every(isFinitePath)) {
+      skip("shapes with coordinates too large to import");
+      return;
+    }
     if (paths.length > 0) {
       shapes.push({
         id: createId(),
@@ -188,18 +285,25 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
     }
   }
 
-  drawChildren(root, { matrix: page.matrix, layer: "", name: "", topLevel: true, useDepth: 0 });
+  drawChildren(root, { matrix: page.matrix, layer: "", name: "", topLevel: true });
 
   const warnings = Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`);
+  if (drawn >= MAX_SVG_ELEMENTS) {
+    warnings.push(
+      `The drawing has more than ${MAX_SVG_ELEMENTS.toLocaleString("en")} elements, counting repeated copies, so the rest was skipped.`,
+    );
+  }
   if (page.height === null && shapes.length > 0) {
     // No page to place: rest the drawing on the stock's bottom edge.
-    const bottom = Math.min(
-      ...shapes.flatMap((shape) =>
-        shape.paths.flatMap((path) => flattenPath(path).map((p) => p[1])),
-      ),
-    );
-    for (const shape of shapes)
+    let bottom = Number.POSITIVE_INFINITY;
+    for (const shape of shapes) {
+      for (const path of shape.paths) {
+        for (const point of flattenPath(path)) bottom = Math.min(bottom, point[1]);
+      }
+    }
+    for (const shape of shapes) {
       shape.paths = shape.paths.map((path) => translatePath(path, -bottom));
+    }
     warnings.push(
       "The file has no page size, so the drawing was placed on the stock's bottom edge.",
     );
@@ -207,40 +311,105 @@ export function importSvg(text: string, options: SvgImportOptions = {}): SvgImpo
   return { shapes, warnings };
 }
 
-/**
- * Whether importing `text` depends on the DPI: its size is given in pixels,
- * or not at all. Then only the user can tell, since every editor can write
- * files at any DPI. Throws `SvgImportError` like `importSvg`.
- */
-export function svgNeedsDpi(text: string): boolean {
-  const root = parseSvg(text);
-  const { width, height } = root.attributes;
-  const viewBox = parseNumbers(root.attributes.viewBox ?? "");
-  const hasViewBox =
-    viewBox.length === 4 && (viewBox[2] as number) > 0 && (viewBox[3] as number) > 0;
-  const unit = (value: string | undefined) => value?.match(LENGTH)?.[2]?.toLowerCase();
-  const isPixels = (value: string | undefined) => ["", "px"].includes(unit(value) ?? "none");
-  const isAbsolute = (value: string | undefined) => (unit(value) ?? "") in ABSOLUTE_UNITS;
-  // With a viewBox and a size in real units, the viewBox is scaled to fit and pixels never matter.
-  return (
-    !hasViewBox || isPixels(width) || isPixels(height) || !(isAbsolute(width) || isAbsolute(height))
-  );
+/** The translation by an element's `x` and `y`, or `null` if they are invalid or relative. */
+function offset(element: XmlElement): Matrix | null {
+  const x = length(element, "x");
+  const y = length(element, "y");
+  return Number.isFinite(x) && Number.isFinite(y) ? translation(x, y) : null;
 }
 
-const ABSOLUTE_UNITS = { mm: true, cm: true, in: true, q: true, pt: true, pc: true };
-
-function parseSvg(text: string): XmlElement {
-  let root: XmlElement;
-  try {
-    root = parseXml(text);
-  } catch (error) {
-    if (error instanceof XmlError) {
-      throw new SvgImportError(`This file isn't valid XML: ${error.message}`);
+/**
+ * The transform into a nested viewport (`svg`, or `symbol` drawn by `use`)
+ * from its `viewBox`, sized by the first of `sizedBy` that gives a size:
+ * `null` if it draws nothing, or what to warn about when it can't be placed.
+ */
+function viewportTransform(element: XmlElement, sizedBy: XmlElement[]): Matrix | null | string {
+  const viewBox = parseViewBox(element.attributes.viewBox);
+  if (!viewBox) return IDENTITY;
+  const size = (name: string) => {
+    for (const source of sizedBy) {
+      const value = optionalLength(source, name);
+      if (value !== undefined) return value;
     }
-    throw error;
+    // The default is 100% of the viewport around it, which isn't tracked.
+    return Number.NaN;
+  };
+  const width = size("width");
+  const height = size("height");
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    return "nested viewports with relative (%) or missing sizes";
   }
-  if (localName(root) !== "svg") throw new SvgImportError("This file isn't an SVG drawing.");
-  return root;
+  if (width <= 0 || height <= 0) return null;
+  return viewBoxTransform(viewBox, width, height, element.attributes.preserveAspectRatio);
+}
+
+type ViewBox = { x: number; y: number; width: number; height: number };
+
+function parseViewBox(text: string | undefined): ViewBox | null {
+  const numbers = parseNumbers(text ?? "");
+  const [x = 0, y = 0, width = 0, height = 0] = numbers;
+  if (numbers.length !== 4 || !(width > 0 && height > 0)) return null;
+  return { x, y, width, height };
+}
+
+/** Maps `viewBox` onto a `width` × `height` viewport as `preserveAspectRatio` says (y down). */
+function viewBoxTransform(
+  viewBox: ViewBox,
+  width: number,
+  height: number,
+  preserveAspectRatio: string | undefined,
+): Matrix {
+  let sx = width / viewBox.width;
+  let sy = height / viewBox.height;
+  let alignX = 0;
+  let alignY = 0;
+  const [align = "xMidYMid", meetOrSlice = "meet"] = (preserveAspectRatio ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word !== "defer" && word !== "");
+  if (align !== "none") {
+    const scale = meetOrSlice === "slice" ? Math.max(sx, sy) : Math.min(sx, sy);
+    sx = scale;
+    sy = scale;
+    const fraction = (position: string) => (position === "Min" ? 0 : position === "Max" ? 1 : 0.5);
+    alignX = (width - viewBox.width * scale) * fraction(align.slice(1, 4));
+    alignY = (height - viewBox.height * scale) * fraction(align.slice(5, 8));
+  }
+  return [sx, 0, 0, sy, alignX - sx * viewBox.x, alignY - sy * viewBox.y];
+}
+
+/**
+ * The transform from the root's user units to millimetres in stock
+ * coordinates, flipping SVG's downward y. `height` is the page height in
+ * millimetres, or `null` when the file gives no page size.
+ */
+function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height: number | null } {
+  const mmPerPx = MM_PER_INCH / dpi;
+  let width = pageLength(root.attributes.width, mmPerPx);
+  let height = pageLength(root.attributes.height, mmPerPx);
+  const viewBox = parseViewBox(root.attributes.viewBox);
+
+  if (!viewBox) {
+    // No viewBox: user units are pixels.
+    return { matrix: [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0], height };
+  }
+  if (width === null && height === null) {
+    width = viewBox.width * mmPerPx;
+    height = viewBox.height * mmPerPx;
+  } else if (width === null) {
+    width = ((height as number) * viewBox.width) / viewBox.height;
+  } else if (height === null) {
+    height = (width * viewBox.height) / viewBox.width;
+  }
+  const pageHeight = height as number;
+  const flip: Matrix = [1, 0, 0, -1, 0, pageHeight];
+  return {
+    matrix: multiply(
+      flip,
+      viewBoxTransform(viewBox, width, pageHeight, root.attributes.preserveAspectRatio),
+    ),
+    height: pageHeight,
+  };
 }
 
 type CircleSubpath = { arc: Path };
@@ -256,11 +425,9 @@ function shapeSubpaths(
 ): (RawSubpath | CircleSubpath)[] | null | undefined {
   const n = (name: string) => length(element, name);
   switch (tag) {
-    case "path": {
-      const { subpaths } = parsePathData(element.attributes.d ?? "");
+    case "path":
       // Like SVG, draw what was read before an error.
-      return subpaths;
-    }
+      return parsePathData(element.attributes.d ?? "").subpaths;
     case "rect": {
       const [x, y, width, height] = [n("x"), n("y"), n("width"), n("height")];
       if (![x, y, width, height].every(Number.isFinite)) return null;
@@ -272,13 +439,7 @@ function shapeSubpaths(
       ry ??= rx;
       rx = Math.min(Math.max(rx, 0), width / 2);
       ry = Math.min(Math.max(ry, 0), height / 2);
-      if (rx === 0 || ry === 0) return pathData(`M${x},${y}H${x + width}V${y + height}H${x}Z`);
-      const arc = `A${rx},${ry},0,0,1`;
-      return pathData(
-        `M${x + rx},${y}H${x + width - rx}${arc},${x + width},${y + ry}` +
-          `V${y + height - ry}${arc},${x + width - rx},${y + height}` +
-          `H${x + rx}${arc},${x},${y + height - ry}V${y + ry}${arc},${x + rx},${y}Z`,
-      );
+      return [rectSubpath(x, y, width, height, rx, ry)];
     }
     case "circle":
     case "ellipse": {
@@ -303,35 +464,86 @@ function shapeSubpaths(
           },
         ];
       }
-      const arc = `A${rx},${ry},0,0,1`;
-      return pathData(
-        `M${cx + rx},${cy}${arc},${cx},${cy + ry}${arc},${cx - rx},${cy}` +
-          `${arc},${cx},${cy - ry}${arc},${cx + rx},${cy}Z`,
-      );
+      return [ellipseSubpath(cx, cy, rx, ry)];
     }
     case "line": {
-      const coordinates = [n("x1"), n("y1"), n("x2"), n("y2")];
-      if (!coordinates.every(Number.isFinite)) return null;
-      const [x1, y1, x2, y2] = coordinates;
-      return pathData(`M${x1},${y1}L${x2},${y2}`);
+      const [x1, y1, x2, y2] = [n("x1"), n("y1"), n("x2"), n("y2")];
+      if (![x1, y1, x2, y2].every(Number.isFinite)) return null;
+      return [{ start: [x1, y1], segments: [{ kind: "line", to: [x2, y2] }], closed: false }];
     }
     case "polyline":
     case "polygon": {
       const numbers = parseNumbers(element.attributes.points ?? "");
-      const points: string[] = [];
+      if (numbers.length < 2) return [];
       // An odd number of coordinates drops the last one, as in SVG.
-      for (let i = 0; i + 1 < numbers.length; i += 2)
-        points.push(`${numbers[i]},${numbers[i + 1]}`);
-      if (points.length === 0) return [];
-      return pathData(`M${points.join("L")}${tag === "polygon" ? "Z" : ""}`);
+      const segments: RawSegment[] = [];
+      for (let i = 2; i + 1 < numbers.length; i += 2) {
+        segments.push({ kind: "line", to: [numbers[i] as number, numbers[i + 1] as number] });
+      }
+      const start: Point = [numbers[0] as number, numbers[1] as number];
+      return [{ start, segments, closed: tag === "polygon" }];
     }
     default:
       return undefined;
   }
 }
 
-function pathData(d: string): RawSubpath[] {
-  return parsePathData(d).subpaths;
+/**
+ * A rect with corners rounded by `rx` × `ry` (both zero for square ones),
+ * drawn as SVG does from the top edge; `toPath` drops sides rounded away.
+ */
+function rectSubpath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rx: number,
+  ry: number,
+): RawSubpath {
+  const rounded = rx > 0 && ry > 0;
+  const start: Point = rounded ? [x + rx, y] : [x, y];
+  const segments: RawSegment[] = [];
+  let current = start;
+  const lineTo = (to: Point) => {
+    segments.push({ kind: "line", to });
+    current = to;
+  };
+  const cornerTo = (to: Point) => {
+    if (rounded) segments.push(...arcToCubics(current, rx, ry, 0, false, true, to));
+    current = to;
+  };
+  if (rounded) {
+    lineTo([x + width - rx, y]);
+    cornerTo([x + width, y + ry]);
+    lineTo([x + width, y + height - ry]);
+    cornerTo([x + width - rx, y + height]);
+    lineTo([x + rx, y + height]);
+    cornerTo([x, y + height - ry]);
+    lineTo([x, y + ry]);
+    cornerTo(start);
+  } else {
+    lineTo([x + width, y]);
+    lineTo([x + width, y + height]);
+    lineTo([x, y + height]);
+  }
+  return { start, segments, closed: true };
+}
+
+/** An ellipse as four quarter arcs from its rightmost point, in the direction SVG draws it. */
+function ellipseSubpath(cx: number, cy: number, rx: number, ry: number): RawSubpath {
+  const quarters: Point[] = [
+    [cx + rx, cy],
+    [cx, cy + ry],
+    [cx - rx, cy],
+    [cx, cy - ry],
+    [cx + rx, cy],
+  ];
+  const segments: RawSegment[] = [];
+  for (let i = 1; i < quarters.length; i++) {
+    const from = quarters[i - 1] as Point;
+    segments.push(...arcToCubics(from, rx, ry, 0, false, true, quarters[i] as Point));
+  }
+  return { start: quarters[0] as Point, segments, closed: true };
 }
 
 /**
@@ -361,6 +573,19 @@ function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   return { start, segments, closed };
 }
 
+/** Whether every coordinate is finite: huge numbers in a file overflow to `Infinity` or `NaN`. */
+function isFinitePath(path: Path): boolean {
+  const finite = ([x, y]: Point) => Number.isFinite(x) && Number.isFinite(y);
+  return (
+    finite(path.start) &&
+    path.segments.every((segment) => {
+      if (segment.kind === "line") return finite(segment.to);
+      if (segment.kind === "arc") return finite(segment.to) && finite(segment.center);
+      return finite(segment.c1) && finite(segment.c2) && finite(segment.to);
+    })
+  );
+}
+
 /** Imported coordinates are rounded to a nanometre, dropping float noise from transforms. */
 function round(value: number): number {
   // Adding 0 turns -0 into 0.
@@ -387,70 +612,26 @@ function translatePath(path: Path, dy: number): Path {
   };
 }
 
-/**
- * The transform from the root's user units to millimetres in stock
- * coordinates, flipping SVG's downward y. `height` is the page height in
- * millimetres, or `null` when the file gives no page size.
- */
-function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height: number | null } {
-  const mmPerPx = MM_PER_INCH / dpi;
-  let width = pageLength(root.attributes.width, mmPerPx);
-  let height = pageLength(root.attributes.height, mmPerPx);
-  const viewBox = parseNumbers(root.attributes.viewBox ?? "");
-  const [vx = 0, vy = 0, vw = 0, vh = 0] = viewBox;
+type ParsedLength = { value: number; unit: string };
 
-  if (viewBox.length !== 4 || !(vw > 0 && vh > 0)) {
-    // No viewBox: user units are pixels.
-    return {
-      matrix: [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0],
-      height,
-    };
-  }
-
-  if (width === null && height === null) {
-    width = vw * mmPerPx;
-    height = vh * mmPerPx;
-  } else if (width === null) {
-    width = ((height as number) * vw) / vh;
-  } else if (height === null) {
-    height = (width * vh) / vw;
-  }
-  const pageHeight = height as number;
-
-  let sx = width / vw;
-  let sy = pageHeight / vh;
-  let alignX = 0;
-  let alignY = 0;
-  const [align = "xMidYMid", meetOrSlice = "meet"] = (root.attributes.preserveAspectRatio ?? "")
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word !== "defer" && word !== "");
-  if (align !== "none") {
-    const scale = meetOrSlice === "slice" ? Math.max(sx, sy) : Math.min(sx, sy);
-    sx = scale;
-    sy = scale;
-    const fraction = (position: string) => (position === "Min" ? 0 : position === "Max" ? 1 : 0.5);
-    alignX = (width - vw * scale) * fraction(align.slice(1, 4));
-    alignY = (pageHeight - vh * scale) * fraction(align.slice(5, 8));
-  }
-  return {
-    matrix: [sx, 0, 0, -sy, alignX - sx * vx, pageHeight - alignY + sy * vy],
-    height: pageHeight,
-  };
+/** A length in a CSS unit we know (lower case, `""` if unitless), or `null` if invalid or relative. */
+function parseLength(text: string | undefined): ParsedLength | null {
+  const match = text?.match(LENGTH);
+  if (!match) return null;
+  const unit = (match[2] as string).toLowerCase();
+  return Object.hasOwn(CSS_PX_PER_UNIT, unit) ? { value: Number(match[1]), unit } : null;
 }
 
 /** A root `width` or `height` in millimetres, or `null` if missing, relative or invalid. */
-function pageLength(value: string | undefined, mmPerPx: number): number | null {
-  const match = value?.match(LENGTH);
-  if (!match) return null;
-  const number = Number(match[1]);
-  const unit = (match[2] as string).toLowerCase();
+function pageLength(text: string | undefined, mmPerPx: number): number | null {
+  const length = parseLength(text);
+  if (!length) return null;
   const mmPerUnit =
-    unit === "" || unit === "px"
+    length.unit === "" || length.unit === "px"
       ? mmPerPx
-      : (CSS_PX_PER_UNIT[unit] ?? Number.NaN) * (MM_PER_INCH / 96);
-  const result = number * mmPerUnit;
-  return result > 0 ? result : null;
+      : (CSS_PX_PER_UNIT[length.unit] as number) * (MM_PER_INCH / 96);
+  const result = length.value * mmPerUnit;
+  return result > 0 && Number.isFinite(result) ? result : null;
 }
 
 /** An attribute's length in user units: 0 if missing, `NaN` if invalid or relative. */
@@ -459,11 +640,10 @@ function length(element: XmlElement, name: string): number {
 }
 
 function optionalLength(element: XmlElement, name: string): number | undefined {
-  const value = element.attributes[name];
-  if (value === undefined || value.trim() === "auto") return undefined;
-  const match = value.match(LENGTH);
-  if (!match) return Number.NaN;
-  return Number(match[1]) * (CSS_PX_PER_UNIT[(match[2] as string).toLowerCase()] ?? Number.NaN);
+  const text = element.attributes[name];
+  if (text === undefined || text.trim() === "auto") return undefined;
+  const length = parseLength(text);
+  return length ? length.value * (CSS_PX_PER_UNIT[length.unit] as number) : Number.NaN;
 }
 
 function isHidden(element: XmlElement): boolean {
