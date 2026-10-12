@@ -1,9 +1,8 @@
-import type { PathRef } from "@furrow/cam-core";
+import { type PathRef, pathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
-import { pathKey } from "@/lib/path-selection";
 
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";

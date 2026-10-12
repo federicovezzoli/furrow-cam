@@ -1,6 +1,6 @@
 import type { Path, Point, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { closedPathsInside, pathAt, pickablePaths } from "./pick";
+import { closedPathsInside, pathAt, pathKey, pickablePaths } from "./pick";
 
 const PART = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";
 const OTHER = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
@@ -35,7 +35,22 @@ function circle(center: Point, radius: number): Path {
 const part = shape(PART, rectangle([0, 0], [100, 60]), circle([20, 30], 5), circle([80, 30], 5));
 const paths = pickablePaths([part]);
 
+describe("pathKey", () => {
+  it("tells paths apart", () => {
+    expect(pathKey({ shapeId: PART, path: 1 })).toBe(pathKey({ shapeId: PART, path: 1 }));
+    expect(pathKey({ shapeId: PART, path: 1 })).not.toBe(pathKey({ shapeId: PART, path: 2 }));
+    expect(pathKey({ shapeId: PART, path: 1 })).not.toBe(pathKey({ shapeId: OTHER, path: 1 }));
+  });
+});
+
 describe("pickablePaths", () => {
+  it("flattens each path once, however often it is asked", () => {
+    const [first] = pickablePaths([part]);
+    const [again] = pickablePaths([{ ...part, id: OTHER }]);
+    expect(again?.points).toBe(first?.points);
+    expect(again?.shapeId).toBe(OTHER);
+  });
+
   it("flattens every path of every shape, with its index, bounds and area", () => {
     const point = shape(OTHER, polyline([[150, 20]], false));
     const pickable = pickablePaths([part, point]);
@@ -123,6 +138,20 @@ describe("pathAt", () => {
     expect(pathAt(points, [15, 10], 2)).toBeNull();
   });
 
+  it("picks a single point by the arms of the cross it is drawn as", () => {
+    const hole = pickablePaths([
+      shape(PART, rectangle([0, 0], [100, 60]), polyline([[50, 30]], false)),
+    ]);
+    // On an arm 3 mm long, 2.5 mm from the point.
+    expect(pathAt(hole, [52.5, 30.2], 0.5, { pointSize: 3 })).toEqual({ shapeId: PART, path: 1 });
+    expect(pathAt(hole, [50.2, 27.5], 0.5, { pointSize: 3 })).toEqual({ shapeId: PART, path: 1 });
+    // Without the cross, that click falls inside the outline.
+    expect(pathAt(hole, [52.5, 30.2], 0.5)).toEqual({ shapeId: PART, path: 0 });
+    // Past the arm's end, or between the arms.
+    expect(pathAt(hole, [54, 30], 0.5, { pointSize: 3 })).toEqual({ shapeId: PART, path: 0 });
+    expect(pathAt(hole, [52, 32], 0.5, { pointSize: 3 })).toEqual({ shapeId: PART, path: 0 });
+  });
+
   it("keeps the earliest of paths as near", () => {
     const twice = pickablePaths([shape(PART, circle([0, 0], 5)), shape(OTHER, circle([0, 0], 5))]);
     expect(pathAt(twice, [5, 0], 1)).toEqual({ shapeId: PART, path: 0 });
@@ -158,15 +187,31 @@ describe("closedPathsInside", () => {
     ]);
   });
 
-  it("includes nested paths and paths touching the line, leaves out the selection", () => {
+  it("includes nested paths and paths touching the line", () => {
     const nested = pickablePaths([
       shape(PART, rectangle([0, 0], [100, 60]), circle([20, 30], 10), circle([20, 30], 4)),
       shape(OTHER, rectangle([0, 0], [10, 10])),
     ]);
-    expect(closedPathsInside(nested, [outline, { shapeId: PART, path: 1 }])).toEqual([
+    expect(closedPathsInside(nested, [outline])).toEqual([
+      { shapeId: PART, path: 1 },
       { shapeId: PART, path: 2 },
       { shapeId: OTHER, path: 0 },
     ]);
+  });
+
+  it("reads the selection with the even-odd rule, leaving out parts in its holes", () => {
+    // A washer, outer and inner circles selected, with a separate part in its
+    // hole and a bump on the ring between them.
+    const washer = pickablePaths([
+      shape(PART, circle([0, 0], 50), circle([0, 0], 20)),
+      shape(OTHER, rectangle([-5, -5], [5, 5]), circle([35, 0], 3)),
+    ]);
+    expect(
+      closedPathsInside(washer, [
+        { shapeId: PART, path: 0 },
+        { shapeId: PART, path: 1 },
+      ]),
+    ).toEqual([{ shapeId: OTHER, path: 1 }]);
   });
 
   it("finds nothing inside open or unknown paths", () => {

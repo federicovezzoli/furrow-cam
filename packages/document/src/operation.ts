@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Point } from "./geometry";
+import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
@@ -22,6 +22,32 @@ export const OperationTarget = z.strictObject({
     .nullable(),
 });
 export type OperationTarget = z.infer<typeof OperationTarget>;
+
+/**
+ * `targets` in the form the document stores: one per shape, in the order of
+ * `geometry`, paths ascending and `null` once they are all the shape's.
+ * Targets of the same shape are merged; shapes and paths not in `geometry`
+ * are skipped, and targets left with no paths dropped.
+ */
+export function normalizeTargets(
+  geometry: readonly Shape[],
+  targets: readonly OperationTarget[],
+): OperationTarget[] {
+  const wanted = new Map<string, Set<number> | null>();
+  for (const { shapeId, paths } of targets) {
+    const previous = wanted.get(shapeId);
+    if (paths === null || previous === null) wanted.set(shapeId, null);
+    else wanted.set(shapeId, new Set([...(previous ?? []), ...paths]));
+  }
+  return geometry.flatMap((shape) => {
+    const paths = wanted.get(shape.id);
+    if (paths === undefined) return [];
+    if (paths === null) return [{ shapeId: shape.id, paths: null }];
+    const kept = shape.paths.flatMap((_, index) => (paths.has(index) ? [index] : []));
+    if (kept.length === 0) return [];
+    return [{ shapeId: shape.id, paths: kept.length === shape.paths.length ? null : kept }];
+  });
+}
 
 const operationFields = {
   id: z.uuid(),

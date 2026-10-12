@@ -1,6 +1,6 @@
 import type { Path, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { pathKey, selectionTargets, shapePaths, targetsLabel } from "./path-selection";
+import { selectionTargets, shapePaths, targetsLabel } from "./path-selection";
 
 const point = (x: number): Path => ({ start: [x, 0], segments: [], closed: false });
 const a: Shape = { id: "a", name: "A", layer: "", paths: [point(0), point(1), point(2)] };
@@ -13,13 +13,6 @@ describe("shapePaths", () => {
       { shapeId: "a", path: 1 },
       { shapeId: "a", path: 2 },
     ]);
-  });
-});
-
-describe("pathKey", () => {
-  it("tells paths apart", () => {
-    expect(pathKey({ shapeId: "a", path: 1 })).toBe(pathKey({ shapeId: "a", path: 1 }));
-    expect(pathKey({ shapeId: "a", path: 1 })).not.toBe(pathKey({ shapeId: "a", path: 2 }));
   });
 });
 

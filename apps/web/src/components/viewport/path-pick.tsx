@@ -1,15 +1,15 @@
 "use client";
 
 import { type PathRef, pathAt, pickablePaths } from "@furrow/cam-core";
-import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
-import { type Camera, type OrthographicCamera, type Ray, Raycaster } from "three";
+import type { Point } from "@furrow/document";
+import { useEffect, useMemo } from "react";
+import { POINT_MARKER_SIZE } from "@/lib/viewport-scene";
 import {
   useDocumentStore,
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "@/stores/workspace-stores";
-import { onStockTop, StockTopCatcher } from "./stock-top";
+import { onStockTop, StockTopCatcher, useStockTopHover } from "./stock-top";
 
 /** How near to a path's line, in pixels, the cursor picks it, however far zoomed. */
 const PICK_RADIUS = 6;
@@ -32,30 +32,21 @@ function PathPicker() {
   const workspace = useWorkspaceStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
-  // Flattened once per geometry, not on every pointer move.
   const paths = useMemo(() => pickablePaths(geometry), [geometry]);
-  const over = useRef(false);
-  const raycaster = useMemo(() => new Raycaster(), []);
 
-  function pathUnder(ray: Ray, camera: Camera): PathRef | null {
-    const point = onStockTop(ray);
-    // The top view is orthographic: its zoom is in pixels per millimetre.
-    return point && pathAt(paths, point, PICK_RADIUS / (camera as OrthographicCamera).zoom);
+  function pathUnder(point: Point | null, millimetresPerPixel: number): PathRef | null {
+    // Drill points are drawn as crosses, which pick them as well as their centre.
+    return (
+      point &&
+      pathAt(paths, point, PICK_RADIUS * millimetresPerPixel, { pointSize: POINT_MARKER_SIZE })
+    );
   }
 
-  /** Hovers the path at `ray`, writing to the store only when it changes. */
-  function hoverAt(ray: Ray | null, camera: Camera) {
-    const hit = ray && pathUnder(ray, camera);
+  // Hovers the path under the cursor, writing to the store only when it changes.
+  const hoverHandlers = useStockTopHover((point, millimetresPerPixel) => {
+    const hit = pathUnder(point, millimetresPerPixel);
     const { hovered, setHovered } = workspace.getState();
     if (hovered?.shapeId !== hit?.shapeId || hovered?.path !== hit?.path) setHovered(hit);
-  }
-
-  // Panning or zooming moves the geometry under a still cursor: hover again
-  // from where the pointer last was.
-  useFrame(({ camera, pointer }) => {
-    if (!over.current) return;
-    raycaster.setFromCamera(pointer, camera);
-    hoverAt(raycaster.ray, camera);
   });
 
   // Leaving the mode (tab editing, picking the zero, the orbit view) drops the
@@ -71,17 +62,10 @@ function PathPicker() {
   return (
     <StockTopCatcher
       z={-thickness - 1}
-      onPointerMove={(event) => {
-        over.current = true;
-        hoverAt(event.ray, event.camera);
-      }}
-      onPointerOut={(event) => {
-        over.current = false;
-        hoverAt(null, event.camera);
-      }}
+      {...hoverHandlers}
       onClick={(event) => {
         if (event.delta > CLICK_THRESHOLD) return;
-        const hit = pathUnder(event.ray, event.camera);
+        const hit = pathUnder(onStockTop(event.ray), 1 / event.camera.zoom);
         const toggle = event.ctrlKey || event.metaKey || event.shiftKey;
         if (hit) workspace.getState().selectPaths([hit], toggle ? "toggle" : "replace");
         else if (!toggle) workspace.getState().selectPaths([]);

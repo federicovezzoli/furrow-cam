@@ -1,10 +1,5 @@
 import type { PathRef } from "@furrow/cam-core";
-import type { OperationTarget, Shape } from "@furrow/document";
-
-/** A key for a path, to compare or collect path references. */
-export function pathKey({ shapeId, path }: PathRef): string {
-  return `${shapeId}:${path}`;
-}
+import { normalizeTargets, type OperationTarget, type Shape } from "@furrow/document";
 
 /** Every path of `shape`, as selecting it in the Geometry pane does. */
 export function shapePaths(shape: Shape): PathRef[] {
@@ -12,25 +7,16 @@ export function shapePaths(shape: Shape): PathRef[] {
 }
 
 /**
- * The operation targets of the selected paths (ADR-0018): one per shape, in
- * document order, with its paths ascending, or `null` once all are selected.
- * Paths no longer in `geometry` are skipped.
+ * The operation targets of the selected paths (ADR-0018), in the form the
+ * document stores (see `normalizeTargets`): `null` once all of a shape's
+ * paths are selected. Paths no longer in `geometry` are skipped.
  */
 export function selectionTargets(geometry: Shape[], selected: PathRef[]): OperationTarget[] {
-  const byShape = new Map<string, Set<number>>();
-  for (const { shapeId, path } of selected) {
-    const paths = byShape.get(shapeId) ?? new Set();
-    byShape.set(shapeId, paths.add(path));
-  }
-  return geometry.flatMap((shape) => {
-    const chosen = byShape.get(shape.id);
-    if (!chosen) return [];
-    const paths = shape.paths.flatMap((_, index) => (chosen.has(index) ? [index] : []));
-    if (paths.length === 0) return [];
-    return [{ shapeId: shape.id, paths: paths.length === shape.paths.length ? null : paths }];
-  });
+  return normalizeTargets(
+    geometry,
+    selected.map(({ shapeId, path }) => ({ shapeId, paths: [path] })),
+  );
 }
-
 /**
  * How many shapes and paths `targets` cut, e.g. `2 selected shapes`,
  * `3 selected paths` or `1 selected shape and 2 paths`: whole shapes count as

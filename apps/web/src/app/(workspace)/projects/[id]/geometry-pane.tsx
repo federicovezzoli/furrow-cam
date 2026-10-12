@@ -10,6 +10,7 @@ import {
   importSvg,
   parseDxf,
   parseSvg,
+  pathKey,
   pickablePaths,
   type SvgDocument,
   SvgImportError,
@@ -22,7 +23,7 @@ import { type ChangeEvent, type FormEvent, type ReactNode, useMemo, useRef, useS
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { pathKey, selectionTargets, shapePaths, targetsLabel } from "@/lib/path-selection";
+import { selectionTargets, shapePaths, targetsLabel } from "@/lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,

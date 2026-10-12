@@ -3,6 +3,7 @@ import {
   canDrill,
   DrillParams,
   Name,
+  normalizeTargets,
   Operation,
   type OperationTarget,
   PocketParams,
@@ -73,28 +74,6 @@ function nextName(document: ProjectDocument, base: string): string {
 }
 
 /**
- * `targets` as the document requires them (ADR-0018): one per shape, in
- * document order, paths ascending and `null` when they are all the shape's.
- * Shapes and paths no longer in the document are skipped.
- */
-function existingTargets(document: ProjectDocument, targets: OperationTarget[]): OperationTarget[] {
-  const wanted = new Map<string, Set<number> | null>();
-  for (const { shapeId, paths } of targets) {
-    const previous = wanted.get(shapeId);
-    if (paths === null || previous === null) wanted.set(shapeId, null);
-    else wanted.set(shapeId, new Set([...(previous ?? []), ...paths]));
-  }
-  return document.geometry.flatMap((shape) => {
-    const paths = wanted.get(shape.id);
-    if (paths === undefined) return [];
-    if (paths === null) return [{ shapeId: shape.id, paths: null }];
-    const kept = shape.paths.flatMap((_, index) => (paths.has(index) ? [index] : []));
-    if (kept.length === 0) return [];
-    return [{ shapeId: shape.id, paths: kept.length === shape.paths.length ? null : kept }];
-  });
-}
-
-/**
  * Appends a profile of `targets` (shapes and paths no longer in the document
  * are skipped) cut with a snapshot of `tool`. Returns the new operation's id,
  * or `null` if none of the targets exist.
@@ -142,7 +121,7 @@ function appendOperation(
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
-  const existing = existingTargets(document, targets);
+  const existing = normalizeTargets(document.geometry, targets);
   if (existing.length === 0) return null;
   const operation = create(document, { id, enabled: true, targets: existing, tool });
   store.getState().change("addOperation", (draft) => {
@@ -221,7 +200,7 @@ export function setOperationTargets(
   id: string,
   targets: OperationTarget[],
 ): ActionResult {
-  const existing = existingTargets(store.getState().document, targets);
+  const existing = normalizeTargets(store.getState().document.geometry, targets);
   if (existing.length === 0) return { ok: false, error: "An operation needs at least one shape" };
   changeOperation(store, "setOperationTargets", id, (operation) => {
     operation.targets = existing;

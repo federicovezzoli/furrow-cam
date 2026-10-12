@@ -1,9 +1,8 @@
 "use client";
 
-import { type Box3, stockBounds, stockOffset } from "@furrow/cam-core";
+import { type Box3, pathKey, stockBounds, stockOffset } from "@furrow/cam-core";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
-import { pathKey } from "@/lib/path-selection";
 import {
   boxCenter,
   gridLinePositions,
@@ -111,16 +110,18 @@ function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const hovered = useWorkspaceStore((s) => s.hovered);
   const selected = useWorkspaceStore((s) => s.selectedPaths);
+  // Built when the geometry or the selection changes, not each time the hover does.
+  const shapes = useMemo(() => new Map(geometry.map((shape) => [shape.id, shape])), [geometry]);
+  const selectedKeys = useMemo(() => new Set(selected.map(pathKey)), [selected]);
   const positions = useMemo(() => {
-    const shape = hovered && geometry.find(({ id }) => id === hovered.shapeId);
+    const shape = hovered && shapes.get(hovered.shapeId);
     if (!hovered || !shape) return pathsLinePositions([]);
-    const keys = new Set(selected.map(pathKey));
     const paths = shape.paths.filter(
       (_, path) =>
         (hovered.path === null || hovered.path === path) &&
-        !keys.has(pathKey({ shapeId: shape.id, path })),
+        !selectedKeys.has(pathKey({ shapeId: shape.id, path })),
     );
     return pathsLinePositions(paths);
-  }, [geometry, hovered, selected]);
+  }, [shapes, hovered, selectedKeys]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }
