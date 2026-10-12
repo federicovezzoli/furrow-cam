@@ -63,6 +63,9 @@ async function MachineList() {
             <TableHead className="text-right">
               Safe Z<Unit>mm</Unit>
             </TableHead>
+            <TableHead className="text-right">
+              Entry clearance<Unit>mm</Unit>
+            </TableHead>
             <TableHead>Post-processor</TableHead>
             <TableHead className="pr-4">
               <span className="sr-only">Actions</span>
@@ -90,6 +93,7 @@ async function MachineList() {
                   : `${formatNumber(machine.spindleRpmMin)}–${formatNumber(machine.spindleRpmMax)}`}
               </TableCell>
               <TableCell className="text-right">{formatNumber(machine.safeZ)}</TableCell>
+              <TableCell className="text-right">{formatNumber(machine.entryClearance)}</TableCell>
               <TableCell>{POST_PROCESSOR_LABELS[machine.postProcessor]}</TableCell>
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">

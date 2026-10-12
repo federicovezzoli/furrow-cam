@@ -56,6 +56,7 @@ export const machine: Machine = {
   spindleRpmMin: 10000,
   spindleRpmMax: 30000,
   safeZ: 5,
+  entryClearance: 1,
   postProcessor: "grbl",
   programStart: null,
   programEnd: null,
@@ -74,6 +75,7 @@ export const lowRider: Machine = {
   spindleRpmMin: null,
   spindleRpmMax: null,
   safeZ: 5,
+  entryClearance: 1,
   postProcessor: "grbl",
   programStart: null,
   programEnd: null,
@@ -119,7 +121,7 @@ export const circle: Shape = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     units: "in",
     stock: {
       width: 300,
