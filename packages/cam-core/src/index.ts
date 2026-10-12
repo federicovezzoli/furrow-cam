@@ -1,4 +1,5 @@
 export * from "./drill";
+export * from "./dxf/import";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";

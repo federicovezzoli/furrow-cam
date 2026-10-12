@@ -1,10 +1,10 @@
 import { type Path, type Point, pointsCoincide, type Segment, type Shape } from "@furrow/document";
 import { flattenPath } from "../flatten";
+import { defaultCreateId, isFinitePath, roundCoordinate, toStock } from "../import-common";
 import { MM_PER_INCH } from "../units";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
 import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
 import {
-  apply,
   determinant,
   IDENTITY,
   isSimilarity,
@@ -577,32 +577,8 @@ function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   return { start, segments, closed };
 }
 
-/** Whether every coordinate is finite: huge numbers in a file overflow to `Infinity` or `NaN`. */
-function isFinitePath(path: Path): boolean {
-  const finite = ([x, y]: Point) => Number.isFinite(x) && Number.isFinite(y);
-  return (
-    finite(path.start) &&
-    path.segments.every((segment) => {
-      if (segment.kind === "line") return finite(segment.to);
-      if (segment.kind === "arc") return finite(segment.to) && finite(segment.center);
-      return finite(segment.c1) && finite(segment.c2) && finite(segment.to);
-    })
-  );
-}
-
-/** Imported coordinates are rounded to a nanometre, dropping float noise from transforms. */
-function round(value: number): number {
-  // Adding 0 turns -0 into 0.
-  return Math.round(value * 1e9) / 1e9 + 0;
-}
-
-function toStock(matrix: Matrix, point: Point): Point {
-  const [x, y] = apply(matrix, point);
-  return [round(x), round(y)];
-}
-
 function translatePath(path: Path, dy: number): Path {
-  const move = ([x, y]: Point): Point => [x, round(y + dy)];
+  const move = ([x, y]: Point): Point => [x, roundCoordinate(y + dy)];
   return {
     start: move(path.start),
     segments: path.segments.map((segment): Segment => {
@@ -676,9 +652,4 @@ function collectIds(element: XmlElement, ids: Map<string, XmlElement>) {
   const id = element.attributes.id;
   if (id !== undefined && !ids.has(id)) ids.set(id, element);
   for (const child of element.children) collectIds(child, ids);
-}
-
-function defaultCreateId(): string {
-  // Workers and Node both have Web Crypto; the package's lib types don't include it.
-  return (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 }

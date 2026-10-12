@@ -3,16 +3,22 @@
 import {
   closedPathsInside,
   DEFAULT_SVG_DPI,
+  type DxfDocument,
+  DxfImportError,
+  dxfNeedsUnits,
+  importDxf,
   importSvg,
+  parseDxf,
   parseSvg,
   pickablePaths,
   type SvgDocument,
   SvgImportError,
   svgNeedsDpi,
 } from "@furrow/cam-core";
+import type { Units } from "@furrow/document";
 import { cn } from "cn";
 import { UploadIcon } from "lucide-react";
-import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -32,8 +38,11 @@ const DPI_OPTIONS = [96, 72, 90, 300] as const;
 
 type Notice = { kind: "error" | "info"; messages: string[] };
 
-/** A file sized in pixels, or not at all, waiting for the user's DPI. */
-type PendingFile = { svg: SvgDocument; name: string };
+/** What a drawing unit is in a DXF file that doesn't say. */
+const UNIT_OPTIONS = [
+  { value: "mm", label: "Millimetres" },
+  { value: "in", label: "Inches" },
+] as const;
 
 /**
  * The Geometry pane: imports SVG files and lists the project's shapes. A
@@ -54,20 +63,22 @@ export function GeometryPane() {
   const picks = useRef(0);
 
   function fail(error: unknown) {
-    if (!(error instanceof SvgImportError)) console.error(error);
-    const message =
-      error instanceof SvgImportError ? error.message : "This file couldn't be imported.";
+    if (!isImportError(error)) console.error(error);
+    const message = isImportError(error) ? error.message : "This file couldn't be imported.";
     setNotice({ kind: "error", messages: [message] });
   }
 
-  function add(file: PendingFile, dpi: number) {
+  function add(request: ImportRequest) {
     try {
-      const { shapes, warnings } = importSvg(file.svg, { dpi, fileName: file.name });
+      const { shapes, warnings } =
+        request.kind === "svg"
+          ? importSvg(request.svg, { dpi: request.dpi, fileName: request.name })
+          : importDxf(request.dxf, { units: request.units, fileName: request.name });
       if (shapes.length === 0) {
         setNotice({ kind: "error", messages: ["This file has no shapes to import.", ...warnings] });
         return;
       }
-      store.getState().change("importSvg", (draft) => {
+      store.getState().change(request.kind === "svg" ? "importSvg" : "importDxf", (draft) => {
         // One by one: spreading a huge array into arguments overflows the stack.
         for (const shape of shapes) draft.geometry.push(shape);
       });
@@ -92,14 +103,28 @@ export function GeometryPane() {
       return;
     }
     try {
+      const name = picked.name;
+      if (/\.dxf$/i.test(name)) {
+        // DXF files name their encoding inside, so they are decoded from bytes.
+        const bytes = new Uint8Array(await picked.arrayBuffer());
+        if (pick !== picks.current) return;
+        const dxf = parseDxf(bytes);
+        if (dxfNeedsUnits(dxf)) {
+          setNotice(null);
+          setPending({ kind: "dxf", dxf, name });
+        } else {
+          add({ kind: "dxf", dxf, name, units: "mm" });
+        }
+        return;
+      }
       const text = await picked.text();
       if (pick !== picks.current) return;
-      const file = { svg: parseSvg(text), name: picked.name };
-      if (svgNeedsDpi(file.svg)) {
+      const svg = parseSvg(text);
+      if (svgNeedsDpi(svg)) {
         setNotice(null);
-        setPending(file);
+        setPending({ kind: "svg", svg, name });
       } else {
-        add(file, DEFAULT_SVG_DPI);
+        add({ kind: "svg", svg, name, dpi: DEFAULT_SVG_DPI });
       }
     } catch (error) {
       if (pick === picks.current) fail(error);
@@ -112,7 +137,7 @@ export function GeometryPane() {
         <input
           ref={input}
           type="file"
-          accept=".svg,image/svg+xml"
+          accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
           onChange={onChange}
           className="sr-only"
           tabIndex={-1}
@@ -120,16 +145,47 @@ export function GeometryPane() {
         />
         <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
           <UploadIcon />
-          Import SVG…
+          Import SVG/DXF…
         </Button>
       </div>
 
-      {pending && (
-        <DpiPrompt
-          fileName={pending.name}
+      {pending?.kind === "svg" && (
+        <ImportPrompt
+          id="svg-dpi"
+          label="DPI"
+          title="Pixels per inch"
+          question={
+            <>
+              <span className="font-medium break-all">{pending.name}</span> gives its size in
+              pixels, or not at all. How many pixels make an inch? Check the export settings of the
+              program that made it.
+            </>
+          }
+          options={DPI_OPTIONS.map((value) => ({ value, label: String(value) }))}
+          initial={DEFAULT_SVG_DPI}
           onImport={(dpi) => {
             setPending(null);
-            add(pending, dpi);
+            add({ ...pending, dpi });
+          }}
+          onCancel={() => setPending(null)}
+        />
+      )}
+      {pending?.kind === "dxf" && (
+        <ImportPrompt
+          id="dxf-units"
+          label="Units"
+          title="Drawing units"
+          question={
+            <>
+              <span className="font-medium break-all">{pending.name}</span> doesn't say what unit
+              its coordinates are in. Check the export settings of the program that made it.
+            </>
+          }
+          options={UNIT_OPTIONS}
+          initial="mm"
+          onImport={(units: Units) => {
+            setPending(null);
+            add({ ...pending, units });
           }}
           onCancel={() => setPending(null)}
         />
@@ -257,47 +313,58 @@ function SelectionHint({
   );
 }
 
-/** Asks what a pixel is in a file whose size depends on it and doesn't say. */
-function DpiPrompt({
-  fileName,
+/** Asks what the file doesn't say but importing it depends on: an SVG's DPI or a DXF's units. */
+function ImportPrompt<T extends string | number>({
+  id,
+  label,
+  title,
+  question,
+  options,
+  initial,
   onImport,
   onCancel,
 }: {
-  fileName: string;
-  onImport: (dpi: number) => void;
+  id: string;
+  label: string;
+  /** The form's accessible name. */
+  title: string;
+  question: ReactNode;
+  options: readonly { value: T; label: string }[];
+  initial: T;
+  onImport: (value: T) => void;
   onCancel: () => void;
 }) {
-  const [dpi, setDpi] = useState<number>(DEFAULT_SVG_DPI);
+  const [value, setValue] = useState<T>(initial);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onImport(dpi);
+    onImport(value);
   }
 
   return (
     <form
       onSubmit={onSubmit}
-      aria-label="Pixels per inch"
+      aria-label={title}
       className="grid gap-2 rounded-md border bg-muted/40 p-2"
     >
-      <p>
-        <span className="font-medium break-all">{fileName}</span> gives its size in pixels, or not
-        at all. How many pixels make an inch? Check the export settings of the program that made it.
-      </p>
+      <p>{question}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <Label htmlFor="svg-dpi" className="text-ui font-normal">
-          DPI
+        <Label htmlFor={id} className="text-ui font-normal">
+          {label}
         </Label>
         <NativeSelect
-          id="svg-dpi"
+          id={id}
           size="sm"
-          value={dpi}
-          onChange={(event) => setDpi(Number(event.target.value))}
+          value={String(value)}
+          onChange={(event) => {
+            const picked = options.find((option) => String(option.value) === event.target.value);
+            if (picked) setValue(picked.value);
+          }}
           className="h-control px-2 pr-7 text-ui"
         >
-          {DPI_OPTIONS.map((value) => (
-            <NativeSelectOption key={value} value={value}>
-              {value}
+          {options.map((option) => (
+            <NativeSelectOption key={option.value} value={String(option.value)}>
+              {option.label}
             </NativeSelectOption>
           ))}
         </NativeSelect>
