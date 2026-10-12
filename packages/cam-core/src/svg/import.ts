@@ -1,5 +1,6 @@
 import { type Path, type Point, pointsCoincide, type Segment, type Shape } from "@furrow/document";
 import { flattenPath } from "../flatten";
+import { union } from "../geometry";
 import { defaultCreateId, isFinitePath, roundCoordinate, toStock } from "../import-common";
 import { MM_PER_INCH } from "../units";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
@@ -548,7 +549,9 @@ function ellipseSubpath(cx: number, cy: number, rx: number, ry: number): RawSubp
 
 /**
  * A subpath in stock coordinates, without the zero-length segments the
- * document rejects; `null` if nothing is left of it.
+ * document rejects; `null` if nothing is left of it. It is closed if it ends
+ * with `Z`, or where it started (see `pointsCoincide`) around an area:
+ * editors often end a closed outline back on its start without a `Z`.
  */
 function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   const start = toStock(matrix, subpath.start);
@@ -569,8 +572,16 @@ function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   }
   if (segments.length === 0) return null;
   // A closed single line would just retrace itself.
-  const closed = subpath.closed && !(segments.length === 1 && segments[0]?.kind === "line");
-  return { start, segments, closed };
+  if (segments.length === 1 && segments[0]?.kind === "line") {
+    return { start, segments, closed: false };
+  }
+  if (subpath.closed) return { start, segments, closed: true };
+  const path: Path = { start, segments, closed: false };
+  // Ending on its start closes it only if that encloses an area: a path that
+  // goes there and back would be a ring the kernel drops without a word.
+  const encloses =
+    pointsCoincide(current, start) && union([flattenPath({ ...path, closed: true })]).length > 0;
+  return { ...path, closed: encloses };
 }
 
 function translatePath(path: Path, dy: number): Path {

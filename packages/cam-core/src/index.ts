@@ -4,6 +4,7 @@ export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";
 export { depthLevels, ENTRY_CLEARANCE } from "./passes";
+export * from "./pick";
 export * from "./pocket";
 export * from "./preview";
 export * from "./profile";

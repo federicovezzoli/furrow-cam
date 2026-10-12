@@ -119,7 +119,7 @@ export const circle: Shape = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     units: "in",
     stock: {
       width: 300,
@@ -136,7 +136,10 @@ export function fullDocument(): ProjectDocument {
         type: "profile",
         name: "Outside profile",
         enabled: true,
-        shapeIds: [SQUARE_ID, CIRCLE_ID],
+        targets: [
+          { shapeId: SQUARE_ID, paths: null },
+          { shapeId: CIRCLE_ID, paths: [0] },
+        ],
         tool: endMill,
         params: {
           side: "outside",

@@ -5,7 +5,7 @@ import type { Point } from "@furrow/document";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
-import { type Camera, type Group, type OrthographicCamera, type Ray, Raycaster } from "three";
+import type { Group } from "three";
 import { pointLabel, snapLabel } from "@/lib/snap-label";
 import { pickXYOrigin, setXYAnchor } from "@/stores/stock-actions";
 import {
@@ -15,7 +15,7 @@ import {
   useWorkspaceStoreApi,
 } from "@/stores/workspace-stores";
 import { RENDER_ORDER } from "./scene-style";
-import { onStockTop, StockTopCatcher } from "./stock-top";
+import { StockTopCatcher, useStockTopHover } from "./stock-top";
 
 /** How near to a snap target, in pixels, the cursor snaps to it, however far zoomed. */
 const SNAP_RADIUS = 10;
@@ -56,40 +56,18 @@ function ZeroPicker({ color }: { color: string }) {
     [width, height, geometry],
   );
   const [hover, setHover] = useState<Pick | null>(null);
-  const over = useRef(false);
-  const raycaster = useMemo(() => new Raycaster(), []);
-
-  /** Shows what a click at `ray` would pick, re-rendering only when that changes. */
-  function hoverAt(ray: Ray, camera: Camera) {
-    const cursor = onStockTop(ray);
-    // The top view is orthographic: its zoom is in pixels per millimetre.
-    const target =
-      cursor &&
-      nearestSnapTarget(targets, cursor, SNAP_RADIUS / (camera as OrthographicCamera).zoom);
+  // Shows what a click would pick, re-rendering only when that changes.
+  const hoverHandlers = useStockTopHover((cursor, millimetresPerPixel) => {
+    const target = cursor && nearestSnapTarget(targets, cursor, SNAP_RADIUS * millimetresPerPixel);
     const next = cursor && { point: target?.point ?? cursor, target };
     setHover((previous) => (samePick(previous, next) ? previous : next));
-  }
-
-  // Panning or zooming moves the stock under a still cursor: pick again from
-  // where the pointer last was.
-  useFrame(({ camera, pointer }) => {
-    if (!over.current) return;
-    raycaster.setFromCamera(pointer, camera);
-    hoverAt(raycaster.ray, camera);
   });
 
   return (
     <>
       <StockTopCatcher
         z={-thickness - 1}
-        onPointerMove={(event) => {
-          over.current = true;
-          hoverAt(event.ray, event.camera);
-        }}
-        onPointerOut={() => {
-          over.current = false;
-          setHover(null);
-        }}
+        {...hoverHandlers}
         onClick={(event) => {
           if (event.delta > CLICK_THRESHOLD || !hover) return;
           if (hover.target?.kind === "stock_anchor") setXYAnchor(store, hover.target.anchor);

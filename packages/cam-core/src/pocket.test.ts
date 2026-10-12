@@ -87,7 +87,7 @@ function operation(
     name: "Pocket",
     enabled: true,
     type: "pocket",
-    shapeIds: shapes.map((shape) => shape.id),
+    targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };

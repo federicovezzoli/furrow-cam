@@ -3,20 +3,40 @@ import { describe, expect, it } from "vitest";
 import { createWorkspaceStore } from "./workspace-store";
 
 describe("workspace store", () => {
-  it("replaces or toggles the shape selection", () => {
+  const a0 = { shapeId: "a", path: 0 };
+  const a1 = { shapeId: "a", path: 1 };
+  const b0 = { shapeId: "b", path: 0 };
+
+  it("replaces the path selection", () => {
     const store = createWorkspaceStore();
-    store.getState().selectShapes(["a", "b", "a"]);
-    expect(store.getState().selectedShapeIds).toEqual(["a", "b"]);
-    store.getState().selectShapes(["b", "c"], "toggle");
-    expect(store.getState().selectedShapeIds).toEqual(["a", "c"]);
+    store.getState().selectPaths([a0, b0, { ...a0 }]);
+    expect(store.getState().selectedPaths).toEqual([a0, b0]);
+    store.getState().selectPaths([a1]);
+    expect(store.getState().selectedPaths).toEqual([a1]);
+    store.getState().selectPaths([]);
+    expect(store.getState().selectedPaths).toEqual([]);
+  });
+
+  it("toggles paths: off when all are selected, otherwise on", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectPaths([a0]);
+    store.getState().selectPaths([b0], "toggle");
+    expect(store.getState().selectedPaths).toEqual([a0, b0]);
+    store.getState().selectPaths([{ ...a0 }], "toggle");
+    expect(store.getState().selectedPaths).toEqual([b0]);
+    // A shape with some paths selected: toggling all its paths selects the rest.
+    store.getState().selectPaths([a0, a1], "toggle");
+    expect(store.getState().selectedPaths).toEqual([b0, a0, a1]);
+    store.getState().selectPaths([a0, a1], "toggle");
+    expect(store.getState().selectedPaths).toEqual([b0]);
   });
 
   it("clears shapes and operation together", () => {
     const store = createWorkspaceStore();
-    store.getState().selectShapes(["a"]);
+    store.getState().selectPaths([a0]);
     store.getState().selectOperation("op");
     store.getState().clearSelection();
-    expect(store.getState()).toMatchObject({ selectedShapeIds: [], selectedOperationId: null });
+    expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
   });
 
   it("starts in the top view and switches to the orbit view", () => {
@@ -54,7 +74,7 @@ describe("workspace store", () => {
     expect(store.getState().pickingZero).toBe(false);
 
     store.getState().setPickingZero(true);
-    store.getState().selectShapes(["a"]);
+    store.getState().selectPaths([a0]);
     expect(store.getState().pickingZero).toBe(false);
     store.getState().clearSelection();
     store.getState().setPickingZero(true);
@@ -99,33 +119,46 @@ describe("workspace store", () => {
     expect(store.getState()).toMatchObject({ editingTabs: false, selectedOperationId: "op" });
   });
 
-  it("prunes ids that are no longer in the document, keeping an unchanged selection", () => {
+  it("prunes ids and paths that are no longer in the document, keeping an unchanged selection", () => {
     const store = createWorkspaceStore();
-    const shape = (id: string) => ({ id }) as ProjectDocument["geometry"][number];
+    const shape = (id: string) =>
+      ({ id, paths: id === "a" ? [{}, {}] : [{}] }) as ProjectDocument["geometry"][number];
     const operation = (id: string) => ({ id }) as ProjectDocument["operations"][number];
     const document = (shapes: string[], operations: string[]): ProjectDocument => ({
       ...createProjectDocument(),
       geometry: shapes.map(shape),
       operations: operations.map(operation),
     });
-    store.getState().selectShapes(["a", "b"]);
+    store.getState().selectPaths([a0, a1, b0]);
     store.getState().selectOperation("op");
-    store.getState().setHoveredShape("b");
+    store.getState().setHovered({ shapeId: "b", path: null });
     store.getState().setEditingTabs(true);
     store.getState().setToolpathVisible("op", false);
 
-    const selected = store.getState().selectedShapeIds;
+    const selected = store.getState().selectedPaths;
     store.getState().prune(document(["a", "b"], ["op"]));
-    expect(store.getState().selectedShapeIds).toBe(selected);
+    expect(store.getState().selectedPaths).toBe(selected);
+    expect(store.getState().hovered).toEqual({ shapeId: "b", path: null });
 
     store.getState().prune(document(["a"], []));
     expect(store.getState()).toMatchObject({
-      selectedShapeIds: ["a"],
+      selectedPaths: [a0, a1],
       selectedOperationId: null,
-      hoveredShapeId: null,
+      hovered: null,
       editingTabs: false,
       hiddenToolpathIds: [],
     });
+  });
+
+  it("drops hovered paths past a shape's paths", () => {
+    const store = createWorkspaceStore();
+    const geometry = [{ id: "a", paths: [{}] }] as ProjectDocument["geometry"];
+    store.getState().setHovered({ shapeId: "a", path: 0 });
+    store.getState().prune({ ...createProjectDocument(), geometry });
+    expect(store.getState().hovered).toEqual({ shapeId: "a", path: 0 });
+    store.getState().setHovered({ shapeId: "a", path: 1 });
+    store.getState().prune({ ...createProjectDocument(), geometry });
+    expect(store.getState().hovered).toBeNull();
   });
 
   it("hides and shows an operation's toolpath", () => {

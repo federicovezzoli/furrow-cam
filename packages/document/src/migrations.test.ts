@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument } from "./document";
-import { fullDocument } from "./fixtures";
+import { CIRCLE_ID, fullDocument, SQUARE_ID } from "./fixtures";
 import {
   type Migration,
   migrateProjectDocument,
@@ -85,6 +85,34 @@ describe("migrateProjectDocument", () => {
     ]) {
       expect(() => migrateProjectDocument(json, chain, 3)).toThrow(ProjectDocumentVersionError);
     }
+  });
+});
+
+describe("migrations", () => {
+  it("turns v1 shape ids into whole-shape targets", () => {
+    const { schemaVersion: _, operations, ...rest } = fullDocument();
+    const [operation] = operations;
+    if (!operation) throw new Error("fixture");
+    const { targets: _targets, ...fields } = operation;
+    const v1 = {
+      ...rest,
+      schemaVersion: 1,
+      operations: [{ ...fields, shapeIds: [SQUARE_ID, CIRCLE_ID] }],
+    };
+    expect(parseProjectDocument(v1).operations).toEqual([
+      {
+        ...fields,
+        targets: [
+          { shapeId: SQUARE_ID, paths: null },
+          { shapeId: CIRCLE_ID, paths: null },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves v1 documents without operations alone", () => {
+    const { schemaVersion: _, ...rest } = createProjectDocument();
+    expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());
   });
 });
 

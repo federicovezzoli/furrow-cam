@@ -1,4 +1,10 @@
-import { createProjectDocument, ProjectDocument, type Shape, type Tool } from "@furrow/document";
+import {
+  createProjectDocument,
+  type OperationTarget,
+  ProjectDocument,
+  type Shape,
+  type Tool,
+} from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -14,7 +20,7 @@ import {
   removeTab,
   renameOperation,
   setOperationEnabled,
-  setOperationShapes,
+  setOperationTargets,
   setOperationTool,
   updateDrillParams,
   updatePocketParams,
@@ -81,15 +87,48 @@ const circle: Shape = {
   ],
 };
 
+/** A part in one shape, as an OpenSCAD export has it: an outline and two holes. */
+const plate: Shape = {
+  id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
+  name: "Plate",
+  layer: "0",
+  paths: [
+    {
+      start: [200, 0],
+      segments: [
+        { kind: "line", to: [300, 0] },
+        { kind: "line", to: [300, 60] },
+        { kind: "line", to: [200, 60] },
+      ],
+      closed: true,
+    },
+    ...[220, 280].map((x) => ({
+      start: [x + 5, 30] as [number, number],
+      segments: [
+        {
+          kind: "arc" as const,
+          to: [x + 5, 30] as [number, number],
+          center: [x, 30] as [number, number],
+          clockwise: false,
+        },
+      ],
+      closed: true,
+    })),
+  ],
+};
+
+const whole = (shape: Shape): OperationTarget => ({ shapeId: shape.id, paths: null });
+const missing = { shapeId: MISSING_ID, paths: null };
+
 function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
-    geometry: [square, circle],
+    geometry: [square, circle, plate],
   });
   const document = () => store.getState().document;
   const operations = () => document().operations;
-  const add = (shapeIds = [square.id]) => {
-    const id = addProfileOperation(store, { shapeIds, tool: endMill });
+  const add = (targets: OperationTarget[] = [whole(square)]) => {
+    const id = addProfileOperation(store, { targets, tool: endMill });
     if (!id) throw new Error("not added");
     return id;
   };
@@ -104,11 +143,11 @@ function setup() {
 describe("addProfileOperation", () => {
   it("appends a valid, enabled profile through the stock with the tool", () => {
     const { store, document, add, profile } = setup();
-    const id = add([circle.id, square.id, MISSING_ID]);
+    const id = add([whole(circle), whole(square), missing]);
     expect(profile(id)).toMatchObject({
       name: "Profile 1",
       enabled: true,
-      shapeIds: [square.id, circle.id],
+      targets: [whole(square), whole(circle)],
       tool: endMill,
       params: { side: "outside", direction: "climb", depth: 18, allowance: 0, finishPass: false },
     });
@@ -131,7 +170,7 @@ describe("addProfileOperation", () => {
 
   it("adds nothing without shapes that exist", () => {
     const { store, operations } = setup();
-    expect(addProfileOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+    expect(addProfileOperation(store, { targets: [missing], tool: endMill })).toBeNull();
     expect(operations()).toEqual([]);
     expect(store.getState().past).toEqual([]);
   });
@@ -181,13 +220,38 @@ describe("operation edits", () => {
     expect(profile(id).tool).toEqual(vBit);
   });
 
-  it("sets the shapes, rejecting none", () => {
+  it("sets the targets, rejecting none", () => {
     const { store, add, profile } = setup();
     const id = add();
-    expect(setOperationShapes(store, id, [circle.id, MISSING_ID])).toEqual({ ok: true });
-    expect(profile(id).shapeIds).toEqual([circle.id]);
-    expect(setOperationShapes(store, id, [MISSING_ID])).toMatchObject({ ok: false });
-    expect(profile(id).shapeIds).toEqual([circle.id]);
+    expect(setOperationTargets(store, id, [whole(circle), missing])).toEqual({ ok: true });
+    expect(profile(id).targets).toEqual([whole(circle)]);
+    expect(setOperationTargets(store, id, [missing])).toMatchObject({ ok: false });
+    expect(setOperationTargets(store, id, [{ shapeId: plate.id, paths: [7] }])).toMatchObject({
+      ok: false,
+    });
+    expect(profile(id).targets).toEqual([whole(circle)]);
+  });
+
+  it("keeps targeted paths that exist, ascending, whole once all are targeted", () => {
+    const { store, document, add, profile } = setup();
+    const id = add([{ shapeId: plate.id, paths: [2, 0, 9] }]);
+    expect(profile(id).targets).toEqual([{ shapeId: plate.id, paths: [0, 2] }]);
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    setOperationTargets(store, id, [
+      { shapeId: plate.id, paths: [2] },
+      { shapeId: plate.id, paths: [0, 1] },
+      { shapeId: square.id, paths: [0] },
+    ]);
+    expect(profile(id).targets).toEqual([whole(square), whole(plate)]);
+  });
+
+  it("cuts only the targeted paths", () => {
+    const { document, add, profile } = setup();
+    const id = add([{ shapeId: plate.id, paths: [1, 2] }]);
+    const tabs = defaultTabs(document(), profile(id));
+    // Four tabs on each of the two holes, none on the outline.
+    expect(tabs.positions).toHaveLength(8);
+    for (const [x] of tabs.positions) expect(x).toBeGreaterThan(200);
   });
 
   it("does nothing to operations that no longer exist", () => {
@@ -204,23 +268,23 @@ describe("operation edits", () => {
 describe("addPocketOperation", () => {
   it("appends a valid pocket half through the stock, ramping in", () => {
     const { store, document, operations } = setup();
-    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    const id = addPocketOperation(store, { targets: [whole(square)], tool: endMill });
     expect(operations().find((operation) => operation.id === id)).toMatchObject({
       type: "pocket",
       name: "Pocket 1",
       enabled: true,
-      shapeIds: [square.id],
+      targets: [whole(square)],
       tool: endMill,
       params: { direction: "climb", depth: 9, allowance: 0, finishPass: false, ramp: true },
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
-    expect(addPocketOperation(store, { shapeIds: [MISSING_ID], tool: endMill })).toBeNull();
+    expect(addPocketOperation(store, { targets: [missing], tool: endMill })).toBeNull();
   });
 });
 
 describe("addDrillOperation", () => {
   const addDrill = (store: ReturnType<typeof setup>["store"]) => {
-    const id = addDrillOperation(store, { shapeIds: [circle.id], tool: endMill });
+    const id = addDrillOperation(store, { targets: [whole(circle)], tool: endMill });
     if (!id) throw new Error("not added");
     return id;
   };
@@ -232,7 +296,7 @@ describe("addDrillOperation", () => {
       type: "drill",
       name: "Drill 1",
       enabled: true,
-      shapeIds: [circle.id],
+      targets: [whole(circle)],
       tool: endMill,
       params: { depth: 18, peck: true },
     });
@@ -241,7 +305,7 @@ describe("addDrillOperation", () => {
 
   it("refuses V-bits, adding or switching tools", () => {
     const { store, operations } = setup();
-    expect(addDrillOperation(store, { shapeIds: [circle.id], tool: vBit })).toBeNull();
+    expect(addDrillOperation(store, { targets: [whole(circle)], tool: vBit })).toBeNull();
     const id = addDrill(store);
     expect(setOperationTool(store, id, vBit)).toEqual({ ok: false, error: "V-bits can't drill" });
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
@@ -261,7 +325,7 @@ describe("addDrillOperation", () => {
 
 describe("updatePocketParams", () => {
   const addPocket = (store: ReturnType<typeof setup>["store"]) => {
-    const id = addPocketOperation(store, { shapeIds: [square.id], tool: endMill });
+    const id = addPocketOperation(store, { targets: [whole(square)], tool: endMill });
     if (!id) throw new Error("not added");
     return id;
   };
@@ -336,7 +400,7 @@ describe("updateProfileParams", () => {
 describe("tabs", () => {
   function withTabs() {
     const context = setup();
-    const id = context.add([square.id, circle.id]);
+    const id = context.add([whole(square), whole(circle)]);
     const tabs = defaultTabs(context.document(), context.profile(id));
     updateProfileParams(context.store, id, { tabs });
     return { ...context, id };
