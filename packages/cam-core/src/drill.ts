@@ -90,13 +90,13 @@ export function drillToolpath(
   }
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
 
-  const builder = new ToolpathBuilder(options.safeZ);
-  const clearance = Math.min(options.entryClearance, options.safeZ);
+  const builder = new ToolpathBuilder(options.safeZ, options.entryClearance);
+  const { clearance } = builder;
   const levels = params.peck ? depthLevels(params.depth, tool.stepDown) : [-params.depth];
   for (const { center, bore } of drillOrder(unique(found))) {
     const [x, y] = center;
     if (bore !== null) {
-      boreHole(builder, center, bore, -params.depth, clearance, tool);
+      boreHole(builder, center, bore, -params.depth, tool);
       continue;
     }
     builder.travel(x, y);
@@ -146,7 +146,8 @@ function unique(holes: Hole[]): Hole[] {
  * down to `bottom`: one ring at `bore`, or when that would leave a core,
  * rings from the tool radius out to `bore` no further apart than its
  * step-over, inside out so the tool always has room on one side. Between
- * rings the tool rises to `clearance` and stays in the hole; it leaves from
+ * rings the tool goes over the top at the retract height, since the entry
+ * clearance may be too close to the uncut stock between them; it leaves from
  * the centre.
  */
 function boreHole(
@@ -154,7 +155,6 @@ function boreHole(
   center: Point,
   bore: number,
   bottom: number,
-  clearance: number,
   tool: Tool,
 ) {
   const radius = tool.diameter / 2;
@@ -162,10 +162,8 @@ function boreHole(
   const extra = bore > radius ? Math.ceil((bore - radius) / stepOver - 1e-9) : 0;
   for (let i = 0; i <= extra; i++) {
     const ring = extra === 0 ? bore : radius + ((bore - radius) * i) / extra;
-    const at = builder.position;
-    if (i > 0 && at) builder.rapid([at[0], at[1], clearance]);
-    else builder.travel(center[0] + ring, center[1]);
-    boreRing(builder, center, ring, bottom, clearance, tool);
+    builder.travel(center[0] + ring, center[1]);
+    boreRing(builder, center, ring, bottom, tool);
   }
   builder.feed([center[0], center[1], bottom], tool.feedRate);
 }
@@ -183,9 +181,9 @@ function boreRing(
   center: Point,
   ring: number,
   bottom: number,
-  clearance: number,
   tool: Tool,
 ) {
+  const { clearance } = builder;
   const chords = Math.ceil((2 * Math.PI) / arcStep(ring));
   const at = (i: number): Point => {
     const angle = (2 * Math.PI * i) / chords;

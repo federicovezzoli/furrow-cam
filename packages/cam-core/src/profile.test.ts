@@ -1,17 +1,13 @@
-import type {
-  ProfileOperation,
-  ProfileParams,
-  ProjectDocument,
-  Shape,
-  Tool,
-} from "@furrow/document";
-import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ENTRY_CLEARANCE,
-  DEFAULT_SAFE_Z,
-  generateToolpath,
-  toolpathInput,
-} from "./generate";
+  type ProfileOperation,
+  type ProfileParams,
+  type ProjectDocument,
+  type Shape,
+  type Tool,
+} from "@furrow/document";
+import { describe, expect, it } from "vitest";
+import { DEFAULT_SAFE_Z, generateToolpath, toolpathInput } from "./generate";
 import { signedArea } from "./geometry";
 import { depthLevels } from "./passes";
 import { profileToolpath } from "./profile";

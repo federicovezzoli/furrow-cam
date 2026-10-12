@@ -1,6 +1,6 @@
 "use client";
 
-import type { Machine } from "@furrow/document";
+import { DEFAULT_ENTRY_CLEARANCE, type Machine } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
@@ -15,7 +15,7 @@ import { POST_PROCESSOR_LABELS } from "./labels";
 /** Starting values for a new machine; the rest of the fields start empty. */
 const NEW_MACHINE: Partial<Machine> = {
   safeZ: 5,
-  entryClearance: 1,
+  entryClearance: DEFAULT_ENTRY_CLEARANCE,
   postProcessor: "grbl",
 };
 

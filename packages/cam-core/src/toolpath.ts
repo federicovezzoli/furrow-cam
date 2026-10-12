@@ -26,7 +26,15 @@ export class ToolpathBuilder {
   readonly moves: ToolpathMove[] = [];
   private current: Vec3 | null = null;
 
-  constructor(readonly safeZ: number) {}
+  /** Height above the stock top where rapids down stop and feeding starts, at most `safeZ`. */
+  readonly clearance: number;
+
+  constructor(
+    readonly safeZ: number,
+    entryClearance: number,
+  ) {
+    this.clearance = Math.min(entryClearance, safeZ);
+  }
 
   /** Where the last move went, or `null` before the first. */
   get position(): Vec3 | null {

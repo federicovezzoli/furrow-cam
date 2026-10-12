@@ -256,6 +256,11 @@ describe("drillToolpath", () => {
     expect(toolpath.moves.map((move) => move.to[2])).toEqual([5, 2.5, -4, 2.5, -1.5, -8, 5]);
   });
 
+  it("feeds from the stock top at a zero entry clearance", () => {
+    const toolpath = drill([shape(point([0, 0]))], {}, 5, {}, 0);
+    expect(toolpath.moves.map((move) => move.to[2])).toEqual([5, 0, -10, 5]);
+  });
+
   it("feeds from the retract height when it is below the entry clearance", () => {
     const toolpath = drill([shape(point([0, 0]))], {}, 0.5);
     expect(toolpath.moves.map((move) => move.to[2])).toEqual([0.5, -10, 0.5]);
@@ -412,8 +417,16 @@ describe("helical boring", () => {
       expect(ring).toBeGreaterThan(rings[i] as number);
       expect(ring - (rings[i] as number)).toBeLessThanOrEqual(0.8 + 1e-9);
     });
-    // Between rings the tool only rises to just above the stock.
-    expect(toolpath.moves.filter((move) => move.to[2] === 5)).toHaveLength(2);
+    // Between rings the tool crosses the uncut stock at the retract height.
+    const moves = toolpath.moves;
+    const across = moves.filter(
+      (move, i) =>
+        i > 0 &&
+        move.kind === "rapid" &&
+        (move.to[0] !== moves[i - 1]?.to[0] || move.to[1] !== moves[i - 1]?.to[1]),
+    );
+    expect(across).toHaveLength(rings.length - 1);
+    for (const move of across) expect(move.to[2]).toBe(5);
   });
 
   it("plunges a step-down at a time into a bore too short to ramp along", () => {

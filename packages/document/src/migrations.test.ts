@@ -120,6 +120,13 @@ describe("migrations", () => {
     expect(parseProjectDocument({ ...v2, machine: null }).machine).toBeNull();
   });
 
+  it("caps the migrated entry clearance at a safe Z below 1 mm", () => {
+    const doc = fullDocument();
+    const { entryClearance: _, ...machine } = doc.machine ?? {};
+    const v2 = { ...doc, schemaVersion: 2, machine: { ...machine, safeZ: 0.5 } };
+    expect(parseProjectDocument(v2).machine).toMatchObject({ safeZ: 0.5, entryClearance: 0.5 });
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

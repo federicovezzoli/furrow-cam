@@ -38,8 +38,6 @@ const LEAD_IN_ATTEMPTS = 4;
 /** Everything the passes of one profile share. */
 type Cut = {
   builder: ToolpathBuilder;
-  /** Height above the stock top where rapids down stop and feeding starts. */
-  clearance: number;
   feedRate: number;
   plungeRate: number;
   /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
@@ -108,8 +106,7 @@ export function profileToolpath(
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
 
   const cut: Cut = {
-    builder: new ToolpathBuilder(options.safeZ),
-    clearance: Math.min(options.entryClearance, options.safeZ),
+    builder: new ToolpathBuilder(options.safeZ, options.entryClearance),
     feedRate: tool.feedRate,
     plungeRate: tool.plungeRate,
     rampRun:
@@ -418,7 +415,7 @@ function leadInArc(loop: Point[], radius: number, wasteLeft: boolean, tolerance:
 function enter(cut: Cut, point: Point) {
   const { builder } = cut;
   builder.travel(point[0], point[1]);
-  builder.rapid([point[0], point[1], cut.clearance]);
+  builder.rapid([point[0], point[1], builder.clearance]);
   builder.feed([point[0], point[1], 0], cut.plungeRate);
 }
 

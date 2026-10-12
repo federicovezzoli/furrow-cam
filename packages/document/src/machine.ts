@@ -15,6 +15,9 @@ export const GcodeBlock = z
   .max(10_000, "Must be at most 10,000 characters")
   .nullable();
 
+/** Entry clearance of new machines, and of toolpaths without a machine profile. */
+export const DEFAULT_ENTRY_CLEARANCE = 1;
+
 /**
  * A machine profile (#11). Used to validate the user's machines and stored as
  * a snapshot in each project (ADR-0003). Strict like the rest of the document:

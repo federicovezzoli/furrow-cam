@@ -1,4 +1,10 @@
-import type { Operation, OperationTarget, ProjectDocument, Shape } from "@furrow/document";
+import {
+  DEFAULT_ENTRY_CLEARANCE,
+  type Operation,
+  type OperationTarget,
+  type ProjectDocument,
+  type Shape,
+} from "@furrow/document";
 import { drillToolpath } from "./drill";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
@@ -6,9 +12,6 @@ import type { Toolpath } from "./toolpath";
 
 /** Retract height above the stock top when the project has no machine profile. */
 export const DEFAULT_SAFE_Z = 5;
-
-/** Height above the stock top where rapids down stop, when the project has no machine profile. */
-export const DEFAULT_ENTRY_CLEARANCE = 1;
 
 /** Everything a toolpath depends on, small enough to post to a worker. */
 export type ToolpathInput = {

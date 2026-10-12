@@ -23,9 +23,14 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
-  // #44: machine profiles gained an entry clearance; snapshots keep the old fixed 1 mm.
+  // #44: machine profiles gained an entry clearance. Snapshots keep what
+  // toolpaths used before: a fixed 1 mm (not today's default), capped at the
+  // safe Z.
   2: (doc) => {
-    if (isObject(doc.machine)) doc.machine.entryClearance = 1;
+    const machine = doc.machine;
+    if (isObject(machine)) {
+      machine.entryClearance = typeof machine.safeZ === "number" ? Math.min(1, machine.safeZ) : 1;
+    }
     return doc;
   },
 };
