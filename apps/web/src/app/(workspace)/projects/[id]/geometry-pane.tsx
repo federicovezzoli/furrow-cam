@@ -45,7 +45,24 @@ const UNIT_OPTIONS = [
 ] as const;
 
 /**
- * The Geometry pane: imports SVG files and lists the project's shapes. A
+ * A file waiting for the user: an SVG sized in pixels, or not at all, for its
+ * DPI; a DXF with no units for them.
+ */
+type PendingFile =
+  | { kind: "svg"; svg: SvgDocument; name: string }
+  | { kind: "dxf"; dxf: DxfDocument; name: string };
+
+/** A parsed file and what to import it with. */
+type ImportRequest =
+  | { kind: "svg"; svg: SvgDocument; name: string; dpi: number }
+  | { kind: "dxf"; dxf: DxfDocument; name: string; units: Units };
+
+function isImportError(error: unknown): error is SvgImportError | DxfImportError {
+  return error instanceof SvgImportError || error instanceof DxfImportError;
+}
+
+/**
+ * The Geometry pane: imports SVG and DXF files and lists the project's shapes. A
  * click selects all of a shape's paths; Ctrl/Cmd/Shift+click adds or removes
  * them. A shape with only some paths selected (in the viewport) says how many.
  */
