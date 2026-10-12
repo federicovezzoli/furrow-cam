@@ -94,9 +94,11 @@ describe("migrations", () => {
     const [operation] = operations;
     if (!operation) throw new Error("fixture");
     const { targets: _targets, ...fields } = operation;
+    const { entryClearance: _clearance, ...machine } = rest.machine ?? {};
     const v1 = {
       ...rest,
       schemaVersion: 1,
+      machine,
       operations: [{ ...fields, shapeIds: [SQUARE_ID, CIRCLE_ID] }],
     };
     expect(parseProjectDocument(v1).operations).toEqual([
@@ -108,6 +110,14 @@ describe("migrations", () => {
         ],
       },
     ]);
+  });
+
+  it("gives v2 machine snapshots the old 1 mm entry clearance", () => {
+    const doc = fullDocument();
+    const { entryClearance: _, ...machine } = doc.machine ?? {};
+    const v2 = { ...doc, schemaVersion: 2, machine };
+    expect(parseProjectDocument(v2).machine).toEqual({ ...machine, entryClearance: 1 });
+    expect(parseProjectDocument({ ...v2, machine: null }).machine).toBeNull();
   });
 
   it("leaves v1 documents without operations alone", () => {

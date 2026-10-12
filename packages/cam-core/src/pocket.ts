@@ -9,22 +9,15 @@ import {
   type PolygonWithHoles,
   signedArea,
 } from "./geometry";
-import {
-  type Box,
-  bounds,
-  depthLevels,
-  ENTRY_CLEARANCE,
-  inBox,
-  plural,
-  rampZ,
-  Track,
-} from "./passes";
+import { type Box, bounds, depthLevels, inBox, plural, rampZ, Track } from "./passes";
 import { projectOnLoop } from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type PocketOptions = {
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
+  entryClearance: number;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
 };
@@ -50,6 +43,8 @@ type Layout = { stepOver: number; radius: number; reverse: boolean; tolerance: n
 /** Everything the passes of one pocket share. */
 type Cut = {
   builder: ToolpathBuilder;
+  /** Height above the stock top where rapids down stop and feeding starts. */
+  clearance: number;
   feedRate: number;
   plungeRate: number;
   /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
@@ -156,6 +151,7 @@ export function pocketToolpath(
 
   const cut: Cut = {
     builder: new ToolpathBuilder(options.safeZ),
+    clearance: Math.min(options.entryClearance, options.safeZ),
     feedRate: tool.feedRate,
     plungeRate: tool.plungeRate,
     rampRun:
@@ -405,9 +401,8 @@ function finishPiece(cut: Cut, piece: Piece, depth: number) {
  * down through the cleared stock.
  */
 function reach(cut: Cut, point: Point, container: Piece, clearedZ: number) {
-  const { builder } = cut;
+  const { builder, clearance } = cut;
   const here = builder.position;
-  const clearance = Math.min(ENTRY_CLEARANCE, builder.safeZ);
   const inside =
     here && here[2] <= clearedZ + 1e-9 && crossesOnlyInside(container, [here[0], here[1]], point);
   if (here && inside && clearedZ < 0) {

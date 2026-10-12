@@ -10,7 +10,7 @@ import {
 } from "@furrow/document";
 import { arcStep, flattenPath } from "./flatten";
 import { signedArea } from "./geometry";
-import { depthLevels, ENTRY_CLEARANCE, plural } from "./passes";
+import { depthLevels, plural } from "./passes";
 import { projectOnLoop } from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
@@ -20,6 +20,8 @@ export const DRILL_DIAMETER_TOLERANCE = 0.1;
 export type DrillOptions = {
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
+  entryClearance: number;
 };
 
 /**
@@ -89,7 +91,7 @@ export function drillToolpath(
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
 
   const builder = new ToolpathBuilder(options.safeZ);
-  const clearance = Math.min(ENTRY_CLEARANCE, options.safeZ);
+  const clearance = Math.min(options.entryClearance, options.safeZ);
   const levels = params.peck ? depthLevels(params.depth, tool.stepDown) : [-params.depth];
   for (const { center, bore } of drillOrder(unique(found))) {
     const [x, y] = center;

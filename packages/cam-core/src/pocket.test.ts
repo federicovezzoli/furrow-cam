@@ -1,7 +1,6 @@
 import type { PocketOperation, PocketParams, Shape, Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { generateToolpath } from "./generate";
-import { ENTRY_CLEARANCE } from "./passes";
 import { pocketToolpath } from "./pocket";
 import type { Vec3 } from "./stock";
 import type { Toolpath, ToolpathMove } from "./toolpath";
@@ -74,7 +73,10 @@ function pocket(
   shapes: Shape[] = [square],
   toolOverrides: Partial<Tool> = {},
 ): Toolpath {
-  return pocketToolpath(operation(overrides, shapes, toolOverrides), shapes, { safeZ: 5 });
+  return pocketToolpath(operation(overrides, shapes, toolOverrides), shapes, {
+    safeZ: 5,
+    entryClearance: 1,
+  });
 }
 
 function operation(
@@ -399,11 +401,20 @@ describe("pocketToolpath", () => {
     for (const [from, move] of steps(toolpath)) {
       if (move.kind !== "rapid") continue;
       // Down or up to the entry clearance, or up and across at the retract height.
-      if (move.to[2] < from[2]) expect(move.to[2]).toBe(ENTRY_CLEARANCE);
-      else expect([ENTRY_CLEARANCE, 5]).toContain(move.to[2]);
+      if (move.to[2] < from[2]) expect(move.to[2]).toBe(1);
+      else expect([1, 5]).toContain(move.to[2]);
     }
     expect(toolpath.moves[0]).toMatchObject({ kind: "rapid" });
     expect(toolpath.moves.at(-1)).toMatchObject({ kind: "rapid" });
+  });
+
+  it("rapids down to the machine's entry clearance", () => {
+    const toolpath = pocketToolpath(operation(), [square], { safeZ: 5, entryClearance: 2.5 });
+    const downs = steps(toolpath).filter(
+      ([from, move]) => move.kind === "rapid" && move.to[2] < from[2],
+    );
+    expect(downs.length).toBeGreaterThan(0);
+    for (const [, move] of downs) expect(move.to[2]).toBe(2.5);
   });
 
   it("plunges straight down at the plunge rate without a ramp", () => {
@@ -460,8 +471,8 @@ describe("pocketToolpath", () => {
   });
 
   it("is what generateToolpath returns for a pocket", () => {
-    expect(generateToolpath({ operation: operation(), shapes: [square], safeZ: 5 })).toEqual(
-      pocket(),
-    );
+    expect(
+      generateToolpath({ operation: operation(), shapes: [square], safeZ: 5, entryClearance: 1 }),
+    ).toEqual(pocket());
   });
 });

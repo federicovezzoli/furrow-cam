@@ -15,6 +15,7 @@ import { POST_PROCESSOR_LABELS } from "./labels";
 /** Starting values for a new machine; the rest of the fields start empty. */
 const NEW_MACHINE: Partial<Machine> = {
   safeZ: 5,
+  entryClearance: 1,
   postProcessor: "grbl",
 };
 
@@ -69,6 +70,12 @@ export function MachineForm({
         <NumberField label="Y travel" {...number("workAreaY")} quantity="length" min={0} />
         <NumberField label="Z travel" {...number("workAreaZ")} quantity="length" min={0} />
         <NumberField label="Safe Z (above stock)" {...number("safeZ")} quantity="length" min={0} />
+        <NumberField
+          label="Entry clearance (above stock)"
+          {...number("entryClearance")}
+          quantity="length"
+          min={0}
+        />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

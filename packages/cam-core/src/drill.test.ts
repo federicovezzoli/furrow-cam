@@ -65,6 +65,7 @@ function drill(
   overrides: Partial<DrillParams> = {},
   safeZ = 5,
   toolOverrides: Partial<Tool> = {},
+  entryClearance = 1,
 ): Toolpath {
   const operation: DrillOperation = {
     id: "11111111-2222-4333-8444-555555555555",
@@ -75,7 +76,7 @@ function drill(
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
-  return drillToolpath(operation, shapes, { safeZ });
+  return drillToolpath(operation, shapes, { safeZ, entryClearance });
 }
 
 /** The `[x, y]` of each feed move, once per hole in order. */
@@ -250,6 +251,11 @@ describe("drillToolpath", () => {
     expect(toolpath.warnings).toEqual(["The depth exceeds the tool's flute length."]);
   });
 
+  it("rapids down to the entry clearance before each peck", () => {
+    const toolpath = drill([shape(point([0, 0]))], { peck: true, depth: 8 }, 5, {}, 2.5);
+    expect(toolpath.moves.map((move) => move.to[2])).toEqual([5, 2.5, -4, 2.5, -1.5, -8, 5]);
+  });
+
   it("feeds from the retract height when it is below the entry clearance", () => {
     const toolpath = drill([shape(point([0, 0]))], {}, 0.5);
     expect(toolpath.moves.map((move) => move.to[2])).toEqual([0.5, -10, 0.5]);
@@ -266,8 +272,8 @@ describe("drillToolpath", () => {
       tool,
       params,
     };
-    expect(generateToolpath({ operation, shapes, safeZ: 5 })).toEqual(
-      drillToolpath(operation, shapes, { safeZ: 5 }),
+    expect(generateToolpath({ operation, shapes, safeZ: 5, entryClearance: 1 })).toEqual(
+      drillToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 }),
     );
   });
 });

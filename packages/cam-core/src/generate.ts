@@ -7,6 +7,9 @@ import type { Toolpath } from "./toolpath";
 /** Retract height above the stock top when the project has no machine profile. */
 export const DEFAULT_SAFE_Z = 5;
 
+/** Height above the stock top where rapids down stop, when the project has no machine profile. */
+export const DEFAULT_ENTRY_CLEARANCE = 1;
+
 /** Everything a toolpath depends on, small enough to post to a worker. */
 export type ToolpathInput = {
   operation: Operation;
@@ -14,6 +17,8 @@ export type ToolpathInput = {
   shapes: Shape[];
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts. */
+  entryClearance: number;
 };
 
 /** Collects the inputs of `operationId` from the document. */
@@ -30,10 +35,12 @@ export function toolpathInputs(
 ): ToolpathInput[] {
   const shapes = new Map(doc.geometry.map((shape) => [shape.id, shape]));
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
+  const entryClearance = doc.machine?.entryClearance ?? DEFAULT_ENTRY_CLEARANCE;
   return operations.map((operation) => ({
     operation,
     shapes: targetedShapes(shapes, operation.targets),
     safeZ,
+    entryClearance,
   }));
 }
 
@@ -60,7 +67,7 @@ export function targetedShapes(
  * names, colours, notes and the enabled flag are left out, so renaming an
  * operation, its tool or its shapes never recomputes it.
  */
-export function toolpathKey({ operation, shapes, safeZ }: ToolpathInput): string {
+export function toolpathKey({ operation, shapes, safeZ, entryClearance }: ToolpathInput): string {
   const { name: _name, color: _color, notes: _notes, ...tool } = operation.tool;
   return JSON.stringify([
     operation.type,
@@ -68,17 +75,18 @@ export function toolpathKey({ operation, shapes, safeZ }: ToolpathInput): string
     tool,
     shapes.map((shape) => shape.paths),
     safeZ,
+    entryClearance,
   ]);
 }
 
 /** Computes an operation's toolpath. Runs in a Web Worker (ADR-0004). */
-export function generateToolpath({ operation, shapes, safeZ }: ToolpathInput): Toolpath {
+export function generateToolpath({ operation, shapes, ...options }: ToolpathInput): Toolpath {
   switch (operation.type) {
     case "profile":
-      return profileToolpath(operation, shapes, { safeZ });
+      return profileToolpath(operation, shapes, options);
     case "pocket":
-      return pocketToolpath(operation, shapes, { safeZ });
+      return pocketToolpath(operation, shapes, options);
     case "drill":
-      return drillToolpath(operation, shapes, { safeZ });
+      return drillToolpath(operation, shapes, options);
   }
 }

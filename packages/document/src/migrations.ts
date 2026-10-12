@@ -23,6 +23,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #44: machine profiles gained an entry clearance; snapshots keep the old fixed 1 mm.
+  2: (doc) => {
+    if (isObject(doc.machine)) doc.machine.entryClearance = 1;
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

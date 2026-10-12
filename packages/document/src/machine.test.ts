@@ -49,4 +49,13 @@ describe("Machine", () => {
     expect(Machine.safeParse({ ...machine, safeZ: -1 }).success).toBe(false);
     expect(Machine.safeParse({ ...machine, safeZ: machine.workAreaZ }).success).toBe(false);
   });
+
+  it("accepts an entry clearance from zero up to the safe Z", () => {
+    for (const entryClearance of [0, 0.5, machine.safeZ]) {
+      expect(Machine.parse({ ...machine, entryClearance }).entryClearance).toBe(entryClearance);
+    }
+    expect(Machine.safeParse({ ...machine, entryClearance: -0.1 }).success).toBe(false);
+    const above = Machine.safeParse({ ...machine, entryClearance: machine.safeZ + 0.1 });
+    expect(above.error?.issues).toMatchObject([{ path: ["entryClearance"] }]);
+  });
 });

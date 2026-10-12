@@ -33,6 +33,8 @@ export const Machine = z
     spindleRpmMax: SpindleRpm.nullable(),
     /** Default retract height above the stock. */
     safeZ: PositiveLength,
+    /** Height above the stock top where rapids down stop and feeding starts, at most `safeZ`. */
+    entryClearance: z.number().nonnegative(),
     postProcessor: PostProcessorId,
     /** Replaces the default preamble (units, absolute mode, feed mode…). */
     programStart: GcodeBlock,
@@ -49,6 +51,13 @@ export const Machine = z
         code: "custom",
         path: ["safeZ"],
         message: "Must be less than the Z travel",
+      });
+    }
+    if (machine.entryClearance > machine.safeZ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["entryClearance"],
+        message: "Must be at most the safe Z",
       });
     }
     const { spindleRpmMin: min, spindleRpmMax: max } = machine;
