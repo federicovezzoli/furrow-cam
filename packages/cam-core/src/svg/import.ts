@@ -548,7 +548,9 @@ function ellipseSubpath(cx: number, cy: number, rx: number, ry: number): RawSubp
 
 /**
  * A subpath in stock coordinates, without the zero-length segments the
- * document rejects; `null` if nothing is left of it.
+ * document rejects; `null` if nothing is left of it. It is closed if it ends
+ * with `Z` or where it started (see `pointsCoincide`): editors often end a
+ * closed outline back on its start without a `Z`.
  */
 function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   const start = toStock(matrix, subpath.start);
@@ -569,7 +571,9 @@ function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   }
   if (segments.length === 0) return null;
   // A closed single line would just retrace itself.
-  const closed = subpath.closed && !(segments.length === 1 && segments[0]?.kind === "line");
+  const closed =
+    (subpath.closed || pointsCoincide(current, start)) &&
+    !(segments.length === 1 && segments[0]?.kind === "line");
   return { start, segments, closed };
 }
 

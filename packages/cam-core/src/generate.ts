@@ -1,4 +1,4 @@
-import type { Operation, ProjectDocument, Shape } from "@furrow/document";
+import type { Operation, OperationTarget, ProjectDocument, Shape } from "@furrow/document";
 import { drillToolpath } from "./drill";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
@@ -10,7 +10,7 @@ export const DEFAULT_SAFE_Z = 5;
 /** Everything a toolpath depends on, small enough to post to a worker. */
 export type ToolpathInput = {
   operation: Operation;
-  /** The operation's shapes, in its order. */
+  /** The operation's shapes, in its order, with only the paths it targets. */
   shapes: Shape[];
   /** Retract height above the stock top. */
   safeZ: number;
@@ -32,9 +32,27 @@ export function toolpathInputs(
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
   return operations.map((operation) => ({
     operation,
-    shapes: operation.shapeIds.flatMap((id) => shapes.get(id) ?? []),
+    shapes: targetedShapes(shapes, operation.targets),
     safeZ,
   }));
+}
+
+/**
+ * The shapes `targets` refer to, in their order, each with only its targeted
+ * paths (ADR-0018). Targets of shapes not in `shapes` and indices past a
+ * shape's paths are skipped.
+ */
+export function targetedShapes(
+  shapes: ReadonlyMap<string, Shape>,
+  targets: readonly OperationTarget[],
+): Shape[] {
+  return targets.flatMap(({ shapeId, paths }) => {
+    const shape = shapes.get(shapeId);
+    if (!shape) return [];
+    if (paths === null) return [shape];
+    const kept = paths.flatMap((index) => shape.paths[index] ?? []);
+    return kept.length > 0 ? [{ ...shape, paths: kept }] : [];
+  });
 }
 
 /**

@@ -236,6 +236,15 @@ describe("importSvg", () => {
     expect(Shape.safeParse(shape).success).toBe(true);
   });
 
+  it("closes subpaths that end on their start without Z", () => {
+    const shape = importOne(
+      '<path d="M0 0 H10 V10 H0 V0 M20 0 H30 V10 H20.0002 V0.0003 M40 0 H50 V10 H40 V0.01"/>',
+    );
+    expect(shape.paths.map((path) => path.closed)).toEqual([true, true, false]);
+    const polyline = importOne('<polyline points="0,0 10,0 10,10 0,0"/>');
+    expect(polyline.paths[0]?.closed).toBe(true);
+  });
+
   it("draws use references with their offset, including symbols", () => {
     const { shapes } = importSvg(
       svg(

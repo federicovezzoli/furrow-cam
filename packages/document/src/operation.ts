@@ -6,12 +6,29 @@ import { Name, PositiveLength } from "./units";
 export const OperationType = z.enum(["profile", "pocket", "drill"]);
 export type OperationType = z.infer<typeof OperationType>;
 
+/**
+ * Some or all of a shape's paths (ADR-0018). Shapes aren't edited after
+ * import, so path indices are stable.
+ */
+export const OperationTarget = z.strictObject({
+  shapeId: z.uuid(),
+  /** Indices into the shape's `paths`, ascending, or `null` for all of them. */
+  paths: z
+    .array(z.int().nonnegative())
+    .min(1)
+    .refine((paths) => paths.every((path, i) => i === 0 || path > (paths[i - 1] as number)), {
+      message: "Path indices must be ascending, each once",
+    })
+    .nullable(),
+});
+export type OperationTarget = z.infer<typeof OperationTarget>;
+
 const operationFields = {
   id: z.uuid(),
   name: Name,
   enabled: z.boolean(),
-  /** Ids of the shapes this operation cuts. */
-  shapeIds: z.array(z.uuid()),
+  /** What this operation cuts, one target per shape. */
+  targets: z.array(OperationTarget),
   /** Snapshot of the tool at the time it was picked (ADR-0003). */
   tool: Tool,
 };

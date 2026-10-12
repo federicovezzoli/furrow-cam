@@ -1,9 +1,10 @@
-import { autoTabPositions, type TabPlacement } from "@furrow/cam-core";
+import { autoTabPositions, type TabPlacement, targetedShapes } from "@furrow/cam-core";
 import {
   canDrill,
   DrillParams,
   Name,
   Operation,
+  type OperationTarget,
   PocketParams,
   type Point,
   type ProfileOperation,
@@ -71,16 +72,32 @@ function nextName(document: ProjectDocument, base: string): string {
   return `${base} ${n}`;
 }
 
-/** The ids among `shapeIds` that are in the document, once each, in document order. */
-function existingShapeIds(document: ProjectDocument, shapeIds: string[]): string[] {
-  const wanted = new Set(shapeIds);
-  return document.geometry.filter((shape) => wanted.has(shape.id)).map((shape) => shape.id);
+/**
+ * `targets` as the document requires them (ADR-0018): one per shape, in
+ * document order, paths ascending and `null` when they are all the shape's.
+ * Shapes and paths no longer in the document are skipped.
+ */
+function existingTargets(document: ProjectDocument, targets: OperationTarget[]): OperationTarget[] {
+  const wanted = new Map<string, Set<number> | null>();
+  for (const { shapeId, paths } of targets) {
+    const previous = wanted.get(shapeId);
+    if (paths === null || previous === null) wanted.set(shapeId, null);
+    else wanted.set(shapeId, new Set([...(previous ?? []), ...paths]));
+  }
+  return document.geometry.flatMap((shape) => {
+    const paths = wanted.get(shape.id);
+    if (paths === undefined) return [];
+    if (paths === null) return [{ shapeId: shape.id, paths: null }];
+    const kept = shape.paths.flatMap((_, index) => (paths.has(index) ? [index] : []));
+    if (kept.length === 0) return [];
+    return [{ shapeId: shape.id, paths: kept.length === shape.paths.length ? null : kept }];
+  });
 }
 
 /**
- * Appends a profile of `shapeIds` (ids no longer in the document are skipped)
- * cut with a snapshot of `tool`. Returns the new operation's id, or `null` if
- * none of the shapes exist.
+ * Appends a profile of `targets` (shapes and paths no longer in the document
+ * are skipped) cut with a snapshot of `tool`. Returns the new operation's id,
+ * or `null` if none of the targets exist.
  */
 export function addProfileOperation(store: DocumentStore, options: NewOperation): string | null {
   return appendOperation(store, options, (document, fields) => ({
@@ -91,7 +108,7 @@ export function addProfileOperation(store: DocumentStore, options: NewOperation)
   }));
 }
 
-/** Appends a pocket of `shapeIds`, like `addProfileOperation`. */
+/** Appends a pocket of `targets`, like `addProfileOperation`. */
 export function addPocketOperation(store: DocumentStore, options: NewOperation): string | null {
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
@@ -102,7 +119,7 @@ export function addPocketOperation(store: DocumentStore, options: NewOperation):
 }
 
 /**
- * Appends a drill operation on `shapeIds`, like `addProfileOperation`.
+ * Appends a drill operation on `targets`, like `addProfileOperation`.
  * Returns `null` as well if `tool` can't drill.
  */
 export function addDrillOperation(store: DocumentStore, options: NewOperation): string | null {
@@ -115,19 +132,19 @@ export function addDrillOperation(store: DocumentStore, options: NewOperation): 
   }));
 }
 
-type NewOperation = { shapeIds: string[]; tool: Tool; id?: string };
+type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string };
 
-type OperationFields = Pick<Operation, "id" | "enabled" | "shapeIds" | "tool">;
+type OperationFields = Pick<Operation, "id" | "enabled" | "targets" | "tool">;
 
 function appendOperation(
   store: DocumentStore,
-  { shapeIds, tool, id = crypto.randomUUID() }: NewOperation,
+  { targets, tool, id = crypto.randomUUID() }: NewOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
-  const shapes = existingShapeIds(document, shapeIds);
-  if (shapes.length === 0) return null;
-  const operation = create(document, { id, enabled: true, shapeIds: shapes, tool });
+  const existing = existingTargets(document, targets);
+  if (existing.length === 0) return null;
+  const operation = create(document, { id, enabled: true, targets: existing, tool });
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
@@ -198,16 +215,16 @@ export function setOperationTool(store: DocumentStore, id: string, tool: Tool): 
   return OK;
 }
 
-/** Sets the shapes the operation cuts; ids no longer in the document are skipped. */
-export function setOperationShapes(
+/** Sets what the operation cuts; shapes and paths no longer in the document are skipped. */
+export function setOperationTargets(
   store: DocumentStore,
   id: string,
-  shapeIds: string[],
+  targets: OperationTarget[],
 ): ActionResult {
-  const shapes = existingShapeIds(store.getState().document, shapeIds);
-  if (shapes.length === 0) return { ok: false, error: "An operation needs at least one shape" };
-  changeOperation(store, "setOperationShapes", id, (operation) => {
-    operation.shapeIds = shapes;
+  const existing = existingTargets(store.getState().document, targets);
+  if (existing.length === 0) return { ok: false, error: "An operation needs at least one shape" };
+  changeOperation(store, "setOperationTargets", id, (operation) => {
+    operation.targets = existing;
   });
   return OK;
 }
@@ -266,10 +283,10 @@ function updateParams<T extends Operation["type"]>(
 /** Tabs per contour when they're turned on. */
 export const DEFAULT_TAB_COUNT = 4;
 
-/** The operation's shapes, in its order. */
+/** The operation's shapes, in its order, with only the paths it targets. */
 function operationShapes(document: ProjectDocument, operation: Operation): Shape[] {
   const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
-  return operation.shapeIds.flatMap((id) => shapes.get(id) ?? []);
+  return targetedShapes(shapes, operation.targets);
 }
 
 /**

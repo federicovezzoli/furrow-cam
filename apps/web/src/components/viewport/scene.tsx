@@ -1,12 +1,18 @@
 "use client";
 
 import { type Box3, stockBounds, stockOffset } from "@furrow/cam-core";
-import type { Shape } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
-import { boxCenter, gridLinePositions, shapesLinePositions } from "@/lib/viewport-scene";
+import { pathKey } from "@/lib/path-selection";
+import {
+  boxCenter,
+  gridLinePositions,
+  pathsLinePositions,
+  shapesLinePositions,
+} from "@/lib/viewport-scene";
 import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 import { Lines, useLineGeometry } from "./lines";
+import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 import { Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
@@ -24,6 +30,7 @@ export function Scene({ box, palette }: { box: Box3; palette: Palette }) {
       <Toolpaths palette={palette} />
       <Tabs color={palette.tab} />
       <ZeroPick color={palette.snap} />
+      <PathPick />
     </>
   );
 }
@@ -69,15 +76,15 @@ function Stock({ box, palette }: { box: Box3; palette: Palette }) {
 
 /**
  * Imported geometry on the stock top: all shapes in one draw call, then the
- * selected and hovered shapes (from the workspace store) drawn over them.
+ * selected and hovered paths (from the workspace store) drawn over them.
  * Each layer subscribes on its own, so hovering redraws only its overlay.
  */
 function Shapes({ palette }: { palette: Palette }) {
   return (
     <>
       <AllShapes color={palette.shape} />
-      <SelectedShapes color={palette.selected} />
-      <HoveredShape color={palette.hovered} />
+      <SelectedPaths color={palette.selected} />
+      <HoveredPaths color={palette.hovered} />
     </>
   );
 }
@@ -88,27 +95,32 @@ function AllShapes({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
 }
 
-function SelectedShapes({ color }: { color: string }) {
+function SelectedPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
-    const selected = new Set(selectedIds);
-    return shapesLinePositions(geometry.filter((shape) => selected.has(shape.id)));
-  }, [geometry, selectedIds]);
+    const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
+    const paths = selected.flatMap(({ shapeId, path }) => shapes.get(shapeId)?.paths[path] ?? []);
+    return pathsLinePositions(paths);
+  }, [geometry, selected]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.selected} />;
 }
 
-/** The hovered shape, unless it is selected: selection wins. */
-function HoveredShape({ color }: { color: string }) {
+/** The hovered path, or the hovered shape's paths, except selected ones: selection wins. */
+function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const hoveredId = useWorkspaceStore((s) =>
-    s.hoveredShapeId !== null && !s.selectedShapeIds.includes(s.hoveredShapeId)
-      ? s.hoveredShapeId
-      : null,
-  );
+  const hovered = useWorkspaceStore((s) => s.hovered);
+  const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
-    const hovered = geometry.filter((shape: Shape) => shape.id === hoveredId);
-    return shapesLinePositions(hovered);
-  }, [geometry, hoveredId]);
+    const shape = hovered && geometry.find(({ id }) => id === hovered.shapeId);
+    if (!hovered || !shape) return pathsLinePositions([]);
+    const keys = new Set(selected.map(pathKey));
+    const paths = shape.paths.filter(
+      (_, path) =>
+        (hovered.path === null || hovered.path === path) &&
+        !keys.has(pathKey({ shapeId: shape.id, path })),
+    );
+    return pathsLinePositions(paths);
+  }, [geometry, hovered, selected]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }

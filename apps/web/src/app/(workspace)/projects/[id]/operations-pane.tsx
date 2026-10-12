@@ -14,8 +14,9 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { selectionTargets, targetsLabel } from "@/lib/path-selection";
 import {
   addDrillOperation,
   addPocketOperation,
@@ -35,26 +36,28 @@ import {
 import { OperationNameInput } from "./operation-name-input";
 import { defaultToolChoice, drillToolChoice, useToolLibrary } from "./tool-library";
 
-/** The Operations pane: adds profiles, pockets and drill operations from the selected shapes and lists operations in cutting order. */
+/** The Operations pane: adds profiles, pockets and drill operations from the selected paths and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const operations = useDocumentStore((s) => s.document.operations);
-  const shapeIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
+  const targets = useMemo(
+    () => selectionTargets(geometry, selectedPaths),
+    [geometry, selectedPaths],
+  );
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
   const drillTool = drillToolChoice(tools);
 
   function add(addOperation: typeof addProfileOperation, choice = tool) {
     if (!choice) return;
-    const id = addOperation(store, { shapeIds, tool: choice.tool });
+    const id = addOperation(store, { targets, tool: choice.tool });
     if (id) workspace.getState().selectOperation(id);
   }
 
-  const target =
-    shapeIds.length === 0
-      ? undefined
-      : `${shapeIds.length} selected ${shapeIds.length === 1 ? "shape" : "shapes"}`;
+  const target = targets.length === 0 ? undefined : targetsLabel(targets);
 
   return (
     <div className="grid gap-2 p-3 text-ui">
@@ -104,9 +107,10 @@ export function OperationsPane() {
           to create operations.
         </p>
       ) : (
-        shapeIds.length === 0 && (
+        !target && (
           <p className="text-muted-foreground">
-            Select the shapes to cut in the Geometry pane, then add an operation for them.
+            Select the shapes to cut in the Geometry pane, or paths in the top view, then add an
+            operation for them.
           </p>
         )
       )}

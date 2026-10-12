@@ -1,6 +1,13 @@
 "use client";
 
-import { closedLoops, nearestOnLoops, type TabFrame, tabFrame, type Vec3 } from "@furrow/cam-core";
+import {
+  closedLoops,
+  nearestOnLoops,
+  type TabFrame,
+  tabFrame,
+  targetedShapes,
+  type Vec3,
+} from "@furrow/cam-core";
 import type { Point, ProfileOperation } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
@@ -43,11 +50,12 @@ export function Tabs({ color }: { color: string }) {
   const editing = useWorkspaceStore((s) => s.editingTabs);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
-  const shapeIds = operation?.shapeIds;
-  const shapes = useMemo(() => {
-    const ids = new Set(shapeIds);
-    return geometry.filter((shape) => ids.has(shape.id));
-  }, [geometry, shapeIds]);
+  const targets = operation?.targets;
+  // Only the paths the profile cuts, as its toolpath has them.
+  const shapes = useMemo(
+    () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
+    [geometry, targets],
+  );
   // Flattened once per set of shapes, not on every pointer move.
   const loops = useMemo(() => closedLoops(shapes), [shapes]);
   const tabs = operation?.params.tabs;

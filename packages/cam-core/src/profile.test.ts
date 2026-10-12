@@ -92,7 +92,7 @@ function profile(
     name: "Profile",
     enabled: true,
     type: "profile",
-    shapeIds: shapes.map((shape) => shape.id),
+    targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
@@ -473,7 +473,7 @@ describe("profileToolpath with tabs", () => {
 
 describe("generateToolpath", () => {
   const doc = (machineSafeZ: number | null): ProjectDocument => ({
-    schemaVersion: 1,
+    schemaVersion: 2,
     units: "mm",
     stock: {
       width: 200,
@@ -508,7 +508,7 @@ describe("generateToolpath", () => {
         name: "Profile",
         enabled: true,
         type: "profile",
-        shapeIds: [hole.id],
+        targets: [{ shapeId: hole.id, paths: null }],
         tool,
         params,
       },

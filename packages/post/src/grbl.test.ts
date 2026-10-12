@@ -19,7 +19,7 @@ function operation(name: string, tool: Tool = endMill): Operation {
     type: "drill",
     name,
     enabled: true,
-    shapeIds: [],
+    targets: [],
     tool,
     params: { depth: 5, peck: false },
   };

@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  closedPathsInside,
   DEFAULT_SVG_DPI,
   importSvg,
   parseSvg,
+  pickablePaths,
   type SvgDocument,
   SvgImportError,
   svgNeedsDpi,
@@ -14,6 +16,7 @@ import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from "rea
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { pathKey, selectionTargets, shapePaths, targetsLabel } from "@/lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -34,14 +37,16 @@ type PendingFile = { svg: SvgDocument; name: string };
 
 /**
  * The Geometry pane: imports SVG files and lists the project's shapes. A
- * click selects a shape; Ctrl/Cmd/Shift+click adds or removes it.
+ * click selects all of a shape's paths; Ctrl/Cmd/Shift+click adds or removes
+ * them. A shape with only some paths selected (in the viewport) says how many.
  */
 export function GeometryPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const shapes = useDocumentStore((s) => s.document.geometry);
-  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
-  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
+  const selected = useMemo(() => new Set(selectedPaths.map(pathKey)), [selectedPaths]);
+  const targets = useMemo(() => selectionTargets(shapes, selectedPaths), [shapes, selectedPaths]);
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -149,35 +154,55 @@ export function GeometryPane() {
         <p className="text-muted-foreground">Import an SVG or DXF file to add geometry.</p>
       ) : (
         <SelectionHint
-          count={selectedIds.length}
-          onClear={() => workspace.getState().selectShapes([])}
+          label={targets.length > 0 ? targetsLabel(targets) : null}
+          onClear={() => workspace.getState().selectPaths([])}
+          onSelectInside={() => {
+            const { selectedPaths, selectPaths } = workspace.getState();
+            const inside = closedPathsInside(pickablePaths(shapes), selectedPaths);
+            selectPaths([...selectedPaths, ...inside]);
+          }}
         />
       )}
       {shapes.length > 0 && (
         <ul aria-label="Shapes" className="grid gap-0.5">
           {shapes.map((shape) => {
-            const isSelected = selected.has(shape.id);
+            const count = shape.paths.reduce(
+              (n, _, path) => n + (selected.has(pathKey({ shapeId: shape.id, path })) ? 1 : 0),
+              0,
+            );
+            const all = count === shape.paths.length;
             return (
               <li key={shape.id}>
                 <button
                   type="button"
-                  aria-pressed={isSelected}
+                  aria-pressed={all ? true : count > 0 ? "mixed" : false}
                   onClick={(event) =>
                     workspace
                       .getState()
-                      .selectShapes(
-                        [shape.id],
+                      .selectPaths(
+                        shapePaths(shape),
                         event.ctrlKey || event.metaKey || event.shiftKey ? "toggle" : "replace",
                       )
                   }
-                  onPointerEnter={() => workspace.getState().setHoveredShape(shape.id)}
-                  onPointerLeave={() => workspace.getState().setHoveredShape(null)}
+                  onPointerEnter={() =>
+                    workspace.getState().setHovered({ shapeId: shape.id, path: null })
+                  }
+                  onPointerLeave={() => workspace.getState().setHovered(null)}
                   className={cn(
                     "flex w-full min-w-0 items-baseline gap-2 rounded-md px-1.5 py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+                    all
+                      ? "bg-accent text-accent-foreground"
+                      : count > 0
+                        ? "bg-accent/50 hover:bg-accent/70"
+                        : "hover:bg-muted/60",
                   )}
                 >
                   <span className="truncate">{shape.name || "Unnamed shape"}</span>
+                  {count > 0 && !all && (
+                    <span className="shrink-0 tabular-nums">
+                      {count} of {shape.paths.length} paths
+                    </span>
+                  )}
                   {shape.layer && (
                     <span className="ml-auto shrink-0 truncate text-muted-foreground">
                       {shape.layer}
@@ -193,20 +218,38 @@ export function GeometryPane() {
   );
 }
 
-/** How to select shapes while none are, else how many are and a way to clear them. */
-function SelectionHint({ count, onClear }: { count: number; onClear: () => void }) {
-  if (count === 0) {
+/**
+ * How to select shapes while none are, else what is (`label`), a way to add
+ * the closed paths inside it (a pocket's islands) and a way to clear it.
+ */
+function SelectionHint({
+  label,
+  onClear,
+  onSelectInside,
+}: {
+  label: string | null;
+  onClear: () => void;
+  onSelectInside: () => void;
+}) {
+  if (label === null) {
     return (
       <p className="text-muted-foreground">
-        Click a shape to select it for an operation; Ctrl/Cmd/Shift+click to select more.
+        Click a shape here, or a path in the top view, to select it for an operation;
+        Ctrl/Cmd/Shift+click to select more.
       </p>
     );
   }
   return (
     <div className="flex items-center gap-2">
-      <p className="flex-1">
-        {count} {count === 1 ? "shape" : "shapes"} selected
-      </p>
+      <p className="flex-1">{label}</p>
+      <Button
+        variant="ghost"
+        size="compact"
+        onClick={onSelectInside}
+        title="Also select the closed paths inside the selected ones, such as a pocket's islands"
+      >
+        Select inside
+      </Button>
       <Button variant="ghost" size="compact" onClick={onClear}>
         Clear
       </Button>

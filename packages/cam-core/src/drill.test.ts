@@ -71,7 +71,7 @@ function drill(
     name: "Drill",
     enabled: true,
     type: "drill",
-    shapeIds: shapes.map((s) => s.id),
+    targets: shapes.map((s) => ({ shapeId: s.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
@@ -262,7 +262,7 @@ describe("drillToolpath", () => {
       name: "Drill",
       enabled: true,
       type: "drill",
-      shapeIds: shapes.map((s) => s.id),
+      targets: shapes.map((s) => ({ shapeId: s.id, paths: null })),
       tool,
       params,
     };

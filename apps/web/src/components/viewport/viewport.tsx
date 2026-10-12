@@ -30,6 +30,8 @@ export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
+  // A path hovered in the viewport, not a shape hovered in the Geometry pane.
+  const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
@@ -46,7 +48,10 @@ export function Viewport() {
 
   return (
     <div
-      className={cn("relative h-full", (editingTabs || pickingZero) && "cursor-crosshair")}
+      className={cn(
+        "relative h-full",
+        editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
+      )}
       {...cancelPick}
     >
       <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
