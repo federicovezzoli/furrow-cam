@@ -8,14 +8,8 @@ import {
   type Shape,
   type Units,
 } from "@furrow/document";
-import {
-  apply,
-  determinant,
-  isSimilarity,
-  type Matrix,
-  multiply,
-  translation,
-} from "../svg/transform";
+import { defaultCreateId, isFinitePath, toStock } from "../import-common";
+import { determinant, isSimilarity, type Matrix, multiply, translation } from "../svg/transform";
 import { MM_PER_INCH } from "../units";
 import { joinPaths } from "./join";
 import {
@@ -166,8 +160,7 @@ export function parseDxf(input: string | Uint8Array): DxfDocument {
 }
 
 /** Millimetres per drawing unit as `$INSUNITS` says, or `null` if it is missing, unitless or unknown. */
-export function dxfUnitScale(dxf: DxfDocument | string): number | null {
-  const { header } = typeof dxf === "string" ? parseDxf(dxf) : dxf;
+export function dxfUnitScale({ header }: DxfDocument): number | null {
   const value = header.get("$INSUNITS")?.find((pair) => pair.code === 70)?.value;
   if (value === undefined) return null;
   return DXF_UNITS[Number(value.trim())] ?? null;
@@ -178,7 +171,7 @@ export function dxfUnitScale(dxf: DxfDocument | string): number | null {
  * unitless or unknown. Then only the user can tell; nothing else in the file
  * says what a drawing unit is.
  */
-export function dxfNeedsUnits(dxf: DxfDocument | string): boolean {
+export function dxfNeedsUnits(dxf: DxfDocument): boolean {
   return dxfUnitScale(dxf) === null;
 }
 
@@ -201,15 +194,28 @@ export function importDxf(
 
   const skipped = new Map<string, number>();
   const skip = (what: string) => skipped.set(what, (skipped.get(what) ?? 0) + 1);
-  const hiddenLayers = readHiddenLayers(document.sections.get("TABLES"));
+  const layers = readLayers(document.sections.get("TABLES"));
+  /** One spelling per layer, the table's or else the first seen: DXF layer names ignore case. */
+  const spelling = (name: string) => {
+    const key = name.toLowerCase();
+    const known = layers.names.get(key);
+    if (known !== undefined) return known;
+    layers.names.set(key, name);
+    return name;
+  };
   const blocks = readBlocks(document.sections.get("BLOCKS"));
   const pieces: Piece[] = [];
   /** Blocks being drawn, to catch references to a block from inside itself. */
   const drawing = new Set<Block>();
   let drawn = 0;
+  /** Set when an entity wasn't drawn because the cap was reached. */
+  let truncated = false;
 
   function draw(entity: Entity, context: Context) {
-    if (drawn >= MAX_DXF_ENTITIES) return;
+    if (drawn >= MAX_DXF_ENTITIES) {
+      truncated = true;
+      return;
+    }
     drawn++;
     const { type, fields } = entity;
     if (IGNORED.has(type)) return;
@@ -219,9 +225,9 @@ export function importDxf(
       skip("paper-space entities (layouts)");
       return;
     }
-    const ownLayer = decodeName(fields.text(8) ?? "0");
+    const ownLayer = spelling(decodeName(fields.text(8) ?? "0"));
     const layer = context.layer !== null && ownLayer === "0" ? context.layer : ownLayer;
-    if (hiddenLayers.has(layer.toLowerCase())) {
+    if (layers.hidden.has(layer.toLowerCase())) {
       skip("entities on layers that are off or frozen");
       return;
     }
@@ -301,10 +307,12 @@ export function importDxf(
       [sx, 0, 0, sy, 0, 0],
       translation(-block.base[0], -block.base[1]),
     );
+    if (block.entities.length === 0) return;
     const name = block.name.startsWith("*") ? context.name : block.name;
     drawing.add(block);
-    for (let row = 0; row < rows; row++) {
-      for (let column = 0; column < columns; column++) {
+    // Stop at the cap: an array can ask for 32767 × 32767 copies.
+    for (let row = 0; row < rows && !truncated; row++) {
+      for (let column = 0; column < columns && !truncated; column++) {
         // Array copies are spaced along the reference's rotated axes, before its scale.
         const placed = multiply(
           multiply(translation(...insertion), rotation),
@@ -329,7 +337,7 @@ export function importDxf(
     ...document.warnings,
     ...Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`),
   ];
-  if (drawn >= MAX_DXF_ENTITIES) {
+  if (truncated) {
     warnings.push(
       `The drawing has more than ${MAX_DXF_ENTITIES.toLocaleString("en")} entities, counting repeated copies, so the rest was skipped.`,
     );
@@ -514,10 +522,15 @@ function ellipsePaths(fields: Fields): EntityPaths {
   };
 }
 
-/** A sweep from end minus start, in `(0, turn]`, or 0 when they are equal. */
+/**
+ * A sweep from end minus start, in `(0, turn]`, or 0 when they are equal. A
+ * difference of a full turn or more is a full turn: writers round 360° and 2π
+ * either way, and wrapping 2π + 1e-15 would leave an arc of almost nothing.
+ */
 function normalizeSweep(sweep: number, turn: number): number {
   if (!Number.isFinite(sweep)) return Number.NaN;
   if (sweep === 0) return 0;
+  if (Math.abs(sweep) >= turn) return turn;
   let result = sweep % turn;
   if (result <= 0) result += turn;
   return result;
@@ -732,45 +745,25 @@ function readBlocks(records: DxfRecord[] | undefined): Map<string, Block> {
   return blocks;
 }
 
-/** Lower-case names of the layers that are off (negative colour) or frozen (flag 1). */
-function readHiddenLayers(records: DxfRecord[] | undefined): Set<string> {
+/**
+ * The layer table: each layer's spelling by lower-case name, and the
+ * lower-case names of those that are off (negative colour) or frozen (flag 1).
+ */
+function readLayers(records: DxfRecord[] | undefined): {
+  names: Map<string, string>;
+  hidden: Set<string>;
+} {
+  const names = new Map<string, string>();
   const hidden = new Set<string>();
   for (const record of records ?? []) {
     if (record.type !== "LAYER") continue;
     const fields = new Fields(record.pairs);
     const name = fields.text(2);
     if (name === undefined) continue;
+    const decoded = decodeName(name);
+    if (!names.has(decoded.toLowerCase())) names.set(decoded.toLowerCase(), decoded);
     if (fields.number(62, 7) < 0 || (fields.number(70, 0) & 1) !== 0)
-      hidden.add(decodeName(name).toLowerCase());
+      hidden.add(decoded.toLowerCase());
   }
-  return hidden;
-}
-
-/** Whether every coordinate is finite: huge numbers in a file overflow to `Infinity` or `NaN`. */
-function isFinitePath(path: Path): boolean {
-  const finite = ([x, y]: Point) => Number.isFinite(x) && Number.isFinite(y);
-  return (
-    finite(path.start) &&
-    path.segments.every((segment) => {
-      if (segment.kind === "line") return finite(segment.to);
-      if (segment.kind === "arc") return finite(segment.to) && finite(segment.center);
-      return finite(segment.c1) && finite(segment.c2) && finite(segment.to);
-    })
-  );
-}
-
-/** Imported coordinates are rounded to a nanometre, dropping float noise from transforms. */
-function round(value: number): number {
-  // Adding 0 turns -0 into 0.
-  return Math.round(value * 1e9) / 1e9 + 0;
-}
-
-function toStock(matrix: Matrix, point: Point): Point {
-  const [x, y] = apply(matrix, point);
-  return [round(x), round(y)];
-}
-
-function defaultCreateId(): string {
-  // Workers and Node both have Web Crypto; the package's lib types don't include it.
-  return (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+  return { names, hidden };
 }

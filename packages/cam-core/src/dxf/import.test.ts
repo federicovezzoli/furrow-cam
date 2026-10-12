@@ -149,6 +149,22 @@ describe("parseDxf", () => {
     expect(warnings).toEqual([expect.stringContaining("DOS850")]);
   });
 
+  it("finds the code page in files with CR line endings and padded names", () => {
+    const text = dxf([line(0, 0, 1, 0, [8, "Слой"])])
+      .replace(
+        "  9\n$INSUNITS",
+        "  9\n$ACADVER \n  1\nAC1015\n  9\n  $DWGCODEPAGE\n  3\nANSI_1251\n  9\n$INSUNITS",
+      )
+      .replaceAll("\n", "\r");
+    // "Слой" in Windows-1251.
+    const bytes = Uint8Array.from(text, (char) => {
+      const code = char.charCodeAt(0);
+      // Cyrillic А–я are 0xC0–0xFF in Windows-1251.
+      return code < 128 ? code : code - 0x410 + 0xc0;
+    });
+    expect(importDxf(parseDxf(bytes)).shapes[0]?.layer).toBe("Слой");
+  });
+
   it("decodes \\U+ escapes in names", () => {
     expect(importOne(line(0, 0, 1, 0, [8, "Caf\\U+00E9"])).layer).toBe("Café");
   });
@@ -171,7 +187,7 @@ describe("units", () => {
   ])("reads $INSUNITS %i", (units, length) => {
     const { shapes } = importDxf(dxf([line(0, 0, 1, 0)], { units }));
     expect(shapes[0]?.paths[0]?.segments[0]?.to[0]).toBeCloseTo(length, 9);
-    expect(dxfNeedsUnits(dxf([], { units }))).toBe(false);
+    expect(dxfNeedsUnits(parseDxf(dxf([], { units })))).toBe(false);
   });
 
   it.each([
@@ -180,7 +196,7 @@ describe("units", () => {
     ["unknown", 99],
   ])("asks when $INSUNITS is %s, reading the given units", (_, units) => {
     const text = dxf([line(0, 0, 1, 0)], { units });
-    expect(dxfNeedsUnits(text)).toBe(true);
+    expect(dxfNeedsUnits(parseDxf(text))).toBe(true);
     expect(importDxf(text).shapes[0]?.paths[0]?.segments[0]?.to[0]).toBe(1);
     expect(importDxf(text, { units: "in" }).shapes[0]?.paths[0]?.segments[0]?.to[0]).toBeCloseTo(
       25.4,
@@ -232,6 +248,47 @@ describe("importDxf", () => {
   it("imports an arc from 0° to 360° as a circle", () => {
     const path = importOne(entity("ARC", [8, "0"], [10, 0], [20, 0], [40, 10], [50, 0], [51, 360]))
       .paths[0];
+    expect(path?.closed).toBe(true);
+    expect(path?.segments).toEqual([
+      { kind: "arc", to: [10, 0], center: [0, 0], clockwise: false },
+    ]);
+  });
+
+  it.each([
+    [
+      "an ARC ending just past 360°",
+      entity("ARC", [8, "0"], [10, 0], [20, 0], [40, 10], [50, 0], [51, 360.0000001]),
+    ],
+    [
+      "an ELLIPSE ending just past 2π",
+      entity(
+        "ELLIPSE",
+        [8, "0"],
+        [10, 0],
+        [20, 0],
+        [11, 10],
+        [21, 0],
+        [40, 1],
+        [41, 0],
+        [42, 6.28318530717959],
+      ),
+    ],
+    [
+      "an ELLIPSE ending just short of 2π",
+      entity(
+        "ELLIPSE",
+        [8, "0"],
+        [10, 0],
+        [20, 0],
+        [11, 10],
+        [21, 0],
+        [40, 1],
+        [41, 0],
+        [42, 6.2831853071795],
+      ),
+    ],
+  ])("imports %s as a full circle", (_, circle) => {
+    const path = importOne(circle).paths[0];
     expect(path?.closed).toBe(true);
     expect(path?.segments).toEqual([
       { kind: "arc", to: [10, 0], center: [0, 0], clockwise: false },
@@ -659,9 +716,51 @@ describe("block references", () => {
       `The drawing has more than ${MAX_DXF_ENTITIES.toLocaleString("en")} entities, counting repeated copies, so the rest was skipped.`,
     );
   });
+
+  it("stops a huge array at the cap", () => {
+    const { warnings } = importDxf(
+      dxf([entity("INSERT", [8, "0"], [2, "Dot"], [70, 32767], [71, 32767], [44, 1], [45, 1])], {
+        blocks: [block("Dot", [0, 0], entity("POINT", [8, "0"], [10, 0], [20, 0]))],
+      }),
+    );
+    expect(warnings).toHaveLength(1);
+  });
+
+  it("doesn't warn about a drawing of exactly the cap", () => {
+    // The reference and its MAX_DXF_ENTITIES - 1 copies of a point.
+    const { shapes, warnings } = importDxf(
+      dxf([entity("INSERT", [8, "0"], [2, "Dot"], [70, MAX_DXF_ENTITIES - 1], [44, 1])], {
+        blocks: [block("Dot", [0, 0], entity("POINT", [8, "0"], [10, 0], [20, 0]))],
+      }),
+    );
+    expect(shapes).toHaveLength(MAX_DXF_ENTITIES - 1);
+    expect(warnings).toEqual([]);
+  });
 });
 
 describe("joining", () => {
+  it("joins a chain of more entities than fit in a function call's arguments", () => {
+    const count = 150_000;
+    const { shapes } = importDxf(
+      dxf([entity("INSERT", [8, "0"], [2, "Step"], [70, count], [44, 1])], {
+        blocks: [block("Step", [0, 0], line(0, 0, 1, 0))],
+      }),
+    );
+    expect(shapes).toHaveLength(1);
+    expect(shapes[0]?.paths[0]?.segments).toHaveLength(count);
+  });
+
+  it("joins layers whose names differ only in case, as DXF does", () => {
+    const { shapes } = shapesOf(
+      dxf([line(0, 0, 10, 0, [8, "Cut"]), line(10, 0, 10, 10, [8, "CUT"])], {
+        tables: [layer("cut", [62, 7], [70, 0])],
+      }),
+    );
+    expect(shapes).toHaveLength(1);
+    // The layer table's spelling.
+    expect(shapes[0]?.layer).toBe("cut");
+  });
+
   it("joins lines whose ends meet into a closed path, whatever their direction", () => {
     const { shapes } = shapesOf(
       dxf([line(0, 0, 10, 0), line(10, 10, 10, 0), line(10, 10, 0, 10), line(0, 0, 0, 10)]),
@@ -767,14 +866,14 @@ describe("real exports", () => {
   }
 
   it("imports Inkscape's R14 export (splines and polylines, in millimetres)", () => {
-    expect(dxfNeedsUnits(inkscapeR14)).toBe(false);
+    expect(dxfNeedsUnits(parseDxf(inkscapeR14))).toBe(false);
     const { shapes, warnings } = shapesOf(inkscapeR14);
     expect(warnings).toEqual([]);
     expectPart(shapes);
   });
 
   it("imports Inkscape's R12 export (flattened polylines, with no units)", () => {
-    expect(dxfNeedsUnits(inkscapeR12)).toBe(true);
+    expect(dxfNeedsUnits(parseDxf(inkscapeR12))).toBe(true);
     const { shapes, warnings } = shapesOf(inkscapeR12, { units: "mm" });
     expect(warnings).toEqual([]);
     expectPart(shapes);

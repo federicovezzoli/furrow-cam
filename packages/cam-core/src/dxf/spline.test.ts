@@ -197,6 +197,23 @@ describe("splineToSegments", () => {
     expect(maxDeviation(spline)).toBeLessThanOrEqual(GEOMETRY_TOLERANCE);
   });
 
+  // The test timeout is the check: the quadratic extraction took billions of steps here.
+  it("converts long splines in linear time", () => {
+    const count = 50_000;
+    const controlPoints = Array.from({ length: count }, (_, i): Point => [i, i % 2]);
+    const knots = [
+      0,
+      0,
+      0,
+      ...Array.from({ length: count - 2 }, (_, i) => i),
+      count - 3,
+      count - 3,
+      count - 3,
+    ];
+    const result = splineToSegments({ degree: 3, knots, controlPoints });
+    expect(result?.segments).toHaveLength(count - 3);
+  });
+
   it("treats equal weights as non-rational", () => {
     const result = splineToSegments({
       degree: 3,

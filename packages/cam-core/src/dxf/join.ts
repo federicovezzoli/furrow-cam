@@ -10,6 +10,9 @@ import {
 /** A joined path and the indices, in `paths`, of the paths it was made from. */
 export type Chain = { path: Path; parts: number[] };
 
+/** A chain with the smallest index among its parts, to put chains in drawing order. */
+type Ordered = Chain & { order: number };
+
 /** One end of a path: `end` 0 is its start, 1 its last point. */
 type End = { path: number; end: 0 | 1 };
 
@@ -69,10 +72,10 @@ export function joinPaths(paths: Path[]): Chain[] {
   });
 
   const used = new Set<number>();
-  const chains: Chain[] = [];
+  const chains: Ordered[] = [];
 
   /** Follows links from `path`, entered at `entry`, until a free end or back to `first`. */
-  function walk(first: number, entry: 0 | 1): Chain {
+  function walk(first: number, entry: 0 | 1): Ordered {
     const parts: number[] = [];
     let built: Path | null = null;
     let path = first;
@@ -97,7 +100,14 @@ export function joinPaths(paths: Path[]): Chain[] {
     const path0 = built as Path;
     const [only] = path0.segments;
     const single = path0.segments.length === 1 && only?.kind === "line";
-    return { path: { ...path0, closed: closed && path0.segments.length > 0 && !single }, parts };
+    let order = first;
+    // A loop, not a spread: a chain can have as many parts as the drawing has entities.
+    for (const part of parts) if (part < order) order = part;
+    return {
+      path: { ...path0, closed: closed && path0.segments.length > 0 && !single },
+      parts,
+      order,
+    };
   }
 
   // Chains with a free end first, from that end; what is left are loops.
@@ -110,8 +120,8 @@ export function joinPaths(paths: Path[]): Chain[] {
   paths.forEach((_, path) => {
     if (!used.has(path)) chains.push(walk(path, 0));
   });
-  chains.sort((a, b) => Math.min(...a.parts) - Math.min(...b.parts));
-  return chains;
+  chains.sort((a, b) => a.order - b.order);
+  return chains.map(({ path, parts }) => ({ path, parts }));
 }
 
 function lastPoint(path: Path): Point {

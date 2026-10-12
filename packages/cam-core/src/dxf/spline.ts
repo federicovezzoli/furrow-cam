@@ -75,27 +75,37 @@ export function splineToSegments(
 }
 
 /**
- * Splits a B-spline into Bézier pieces by inserting every knot in its domain
- * until it has multiplicity `p` (Boehm's algorithm). Each piece has `p + 1`
- * control points; pieces of zero length in the parameter are left out.
+ * Splits a B-spline into Bézier pieces, one per non-empty knot span of its
+ * domain. Each piece has `p + 1` control points. A span depends only on the
+ * `p + 1` control points and `2p + 2` knots around it, so each is converted
+ * on its own (`spanBezier`), in time linear in the size of the spline.
  */
 function bezierPieces(p: number, knots: number[], points: Homogeneous[]): Homogeneous[][] {
-  const first = knots[p] as number;
-  const last = knots[points.length] as number;
-  if (!(last > first)) return [];
-  const values = [...new Set(knots.filter((knot) => knot >= first && knot <= last))];
-  for (const u of values) {
+  const pieces: Homogeneous[][] = [];
+  for (let i = p; i < points.length; i++) {
+    if (!((knots[i + 1] as number) > (knots[i] as number))) continue;
+    pieces.push(spanBezier(p, knots.slice(i - p, i + p + 2), points.slice(i - p, i + 1)));
+  }
+  return pieces;
+}
+
+/**
+ * The Bézier control points of a B-spline with `p + 1` control points, whose
+ * domain is the single span `[knots[p], knots[p + 1]]`: both ends are
+ * inserted until they have multiplicity `p` (Boehm's algorithm).
+ */
+function spanBezier(p: number, knots: number[], points: Homogeneous[]): Homogeneous[] {
+  for (const u of [knots[p] as number, knots[p + 1] as number]) {
     let multiplicity = knots.filter((knot) => knot === u).length;
     while (multiplicity < p) {
       insertKnot(p, knots, points, u);
       multiplicity++;
     }
   }
-  const pieces: Homogeneous[][] = [];
-  for (let i = p; i < points.length; i++) {
-    if ((knots[i + 1] as number) > (knots[i] as number)) pieces.push(points.slice(i - p, i + 1));
-  }
-  return pieces;
+  // The span is the only non-empty one in the domain, now with its Bézier points around it.
+  let i = p;
+  while (!((knots[i + 1] as number) > (knots[i] as number))) i++;
+  return points.slice(i - p, i + 1);
 }
 
 /** Inserts `u` once, in place, into the last span that starts at or before it, within the domain. */

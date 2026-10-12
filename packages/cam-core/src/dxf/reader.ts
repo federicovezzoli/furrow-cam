@@ -47,12 +47,8 @@ const Decoder = (globalThis as unknown as { TextDecoder: TextDecoderConstructor 
  */
 export function decodeDxf(bytes: Uint8Array): { text: string; warnings: string[] } {
   // Every DXF encoding is ASCII-compatible, so the header can be read as Latin-1 first.
+  // Binary files decode to text that starts with their sentinel, which `readPairs` rejects.
   const latin1 = new Decoder("latin1").decode(bytes.subarray(0, 64 * 1024));
-  if (latin1.startsWith(BINARY_SENTINEL)) {
-    throw new DxfImportError(
-      "This is a binary DXF file, which isn't supported. Export it as ASCII DXF.",
-    );
-  }
   const version = headerValue(latin1, "$ACADVER");
   const codepage = headerValue(latin1, "$DWGCODEPAGE");
   if (version !== null && version.toUpperCase() >= UTF8_VERSION) {
@@ -75,11 +71,16 @@ export function decodeDxf(bytes: Uint8Array): { text: string; warnings: string[]
   }
 }
 
-/** The value of a header variable with a single string value, read without parsing the file. */
+/**
+ * The value of a header variable with a single string value, read without
+ * parsing the file, with any line endings and padding `readPairs` accepts.
+ */
 function headerValue(text: string, name: string): string | null {
   const escaped = name.replace("$", "\\$");
+  const end = String.raw`[ \t]*(?:\r\n|\r|\n)[ \t]*`;
+  // In multiline mode `^` also matches after a lone `\r`.
   const match = text.match(
-    new RegExp(String.raw`^\s*9\r?\n${escaped}\r?\n\s*\d+\r?\n([^\r\n]*)`, "m"),
+    new RegExp(String.raw`^[ \t]*9${end}${escaped}${end}\d+${end}([^\r\n]*)`, "m"),
   );
   return match ? (match[1] as string).trim() : null;
 }
