@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { requireUserEmail } from "@/lib/session";
+import { requireSession } from "@/lib/session";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -37,5 +37,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 }
 
 async function SignedInAccountMenu() {
-  return <AccountMenu email={await requireUserEmail()} />;
+  const { user } = await requireSession();
+  return <AccountMenu email={user.email} />;
 }
