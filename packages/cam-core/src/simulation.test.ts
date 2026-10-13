@@ -76,7 +76,9 @@ function profileCut(shape: Shape, overrides: Partial<ProfileParams>): Simulation
     tool,
     params: { ...params, ...overrides },
   };
-  const { feeds, rapids } = toolpathLines(profileToolpath(operation, [shape], { safeZ: 5 }));
+  const { feeds, rapids } = toolpathLines(
+    profileToolpath(operation, [shape], { safeZ: 5, entryClearance: 1 }),
+  );
   const segments = new Float32Array(feeds.length + rapids.length);
   segments.set(feeds);
   segments.set(rapids, feeds.length);
