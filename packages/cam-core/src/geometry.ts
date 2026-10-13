@@ -154,10 +154,21 @@ export function nest(polygons: Polygon[], fillRule: FillRule = "evenOdd"): Polyg
  * rounded ring.
  */
 export function containment(point: Point, polygon: Polygon): Containment {
-  const result = clipPointInPolygon(toPoint(point), toPath(polygon));
-  if (result === PointInPolygonResult.IsInside) return "inside";
-  if (result === PointInPolygonResult.IsOutside) return "outside";
-  return "on";
+  return containmentIn(polygon)(point);
+}
+
+/**
+ * `containment` for many points against one polygon: the polygon is converted
+ * to Clipper2 units once, not on every call.
+ */
+export function containmentIn(polygon: Polygon): (point: Point) => Containment {
+  const path = toPath(polygon);
+  return (point) => {
+    const result = clipPointInPolygon(toPoint(point), path);
+    if (result === PointInPolygonResult.IsInside) return "inside";
+    if (result === PointInPolygonResult.IsOutside) return "outside";
+    return "on";
+  };
 }
 
 /** Signed area in mm²: positive for counter-clockwise rings (y up). */

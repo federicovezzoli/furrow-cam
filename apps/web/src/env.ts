@@ -6,10 +6,13 @@ const Env = z.object({
   BETTER_AUTH_URL: z.url(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().min(1),
+  // GoatCounter endpoint, e.g. https://<code>.goatcounter.com/count (ADR-0020). Unset: no analytics.
+  NEXT_PUBLIC_GOATCOUNTER_URL: z.url().optional(),
 });
 
 /** Server-side environment, validated on first import. Never import from client components. */
 export const env = Env.parse({
   ...process.env,
   RESEND_API_KEY: process.env.RESEND_API_KEY || undefined,
+  NEXT_PUBLIC_GOATCOUNTER_URL: process.env.NEXT_PUBLIC_GOATCOUNTER_URL || undefined,
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Machine } from "@furrow/document";
+import { type Machine, NEW_MACHINE_DEFAULTS, type RequiredPresetField } from "@furrow/document";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
@@ -12,12 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { type MachineFormErrors, saveMachine } from "./actions";
 import { POST_PROCESSOR_LABELS } from "./labels";
 
-/** Starting values for a new machine; the rest of the fields start empty. */
-const NEW_MACHINE: Partial<Machine> = {
-  safeZ: 5,
-  postProcessor: "grbl",
-};
-
 const GCODE_BLOCKS = [
   { name: "programStart", label: "Program start", placeholder: "G21\nG90\nG94" },
   { name: "programEnd", label: "Program end", placeholder: "M5\nM30" },
@@ -25,16 +19,22 @@ const GCODE_BLOCKS = [
   { name: "toolChange", label: "Tool change", placeholder: "M5\nM0 (Change the bit)" },
 ] as const satisfies { name: keyof Machine; label: string; placeholder: string }[];
 
-/** Edits the machine `id`, or creates one when `id` is `null`. */
+/**
+ * Edits the machine `id`, or creates one when `id` is `null`, starting from
+ * `values` (e.g. a preset's). `asked` fields are marked for the user to fill in.
+ */
 export function MachineForm({
   id = null,
   values = {},
+  asked = [],
 }: {
   id?: string | null;
   values?: Partial<Machine>;
+  asked?: RequiredPresetField[];
 }) {
-  const machine = id === null ? { ...NEW_MACHINE, ...values } : values;
-  const [manualSpindle, setManualSpindle] = useState(id !== null && machine.spindleRpmMin == null);
+  const machine = id === null ? { ...NEW_MACHINE_DEFAULTS, ...values } : values;
+  // A new machine leaves the speeds out (unset) unless a preset says the spindle is manual (`null`).
+  const [manualSpindle, setManualSpindle] = useState(machine.spindleRpmMin === null);
   const [errors, setErrors] = useState<MachineFormErrors>({});
   const [pending, startTransition] = useTransition();
 
@@ -49,6 +49,7 @@ export function MachineForm({
 
   const field = fieldProps(machine, errors);
   const number = fieldProps(machine, errors, null);
+  const ask = (name: RequiredPresetField) => asked.includes(name) && <AskedHint />;
 
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
@@ -65,16 +66,37 @@ export function MachineForm({
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Work area</legend>
-        <NumberField label="X travel" {...number("workAreaX")} quantity="length" min={0} />
-        <NumberField label="Y travel" {...number("workAreaY")} quantity="length" min={0} />
-        <NumberField label="Z travel" {...number("workAreaZ")} quantity="length" min={0} />
+        <div className="grid content-start gap-1">
+          <NumberField label="X travel" {...number("workAreaX")} quantity="length" min={0} />
+          {ask("workAreaX")}
+        </div>
+        <div className="grid content-start gap-1">
+          <NumberField label="Y travel" {...number("workAreaY")} quantity="length" min={0} />
+          {ask("workAreaY")}
+        </div>
+        <div className="grid content-start gap-1">
+          <NumberField label="Z travel" {...number("workAreaZ")} quantity="length" min={0} />
+          {ask("workAreaZ")}
+        </div>
         <NumberField label="Safe Z (above stock)" {...number("safeZ")} quantity="length" min={0} />
+        <NumberField
+          label="Entry clearance (above stock)"
+          {...number("entryClearance")}
+          quantity="length"
+          min={0}
+        />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">Limits</legend>
-        <NumberField label="Max feed X/Y" {...number("maxFeedXY")} quantity="feed" min={0} />
-        <NumberField label="Max feed Z" {...number("maxFeedZ")} quantity="feed" min={0} />
+        <div className="grid content-start gap-1">
+          <NumberField label="Max feed X/Y" {...number("maxFeedXY")} quantity="feed" min={0} />
+          {ask("maxFeedXY")}
+        </div>
+        <div className="grid content-start gap-1">
+          <NumberField label="Max feed Z" {...number("maxFeedZ")} quantity="feed" min={0} />
+          {ask("maxFeedZ")}
+        </div>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,6 +116,12 @@ export function MachineForm({
             Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.
           </span>
         </div>
+        {/* Ticking Manual spindle answers the question too. */}
+        {asked.includes("spindleRpmMin") && !manualSpindle && (
+          <div className="sm:col-span-full">
+            <AskedHint />
+          </div>
+        )}
         {/* Hidden rather than unmounted, so unticking brings back the speeds typed earlier.
             The server ignores them while the spindle is manual. */}
         <div className="contents" hidden={manualSpindle}>
@@ -153,4 +181,9 @@ export function MachineForm({
       </div>
     </form>
   );
+}
+
+/** Marks a field the preset left for the user, because no official source states it. */
+function AskedHint() {
+  return <p className="text-sm text-muted-foreground">Fill in for your machine.</p>;
 }

@@ -31,3 +31,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0014](0014-stock-coordinates.md) | Geometry is stored in stock coordinates | Accepted |
 | [0015](0015-clipper2-typescript-port.md) | Clipper2 TypeScript port (clipper2-ts) | Accepted |
 | [0016](0016-zero-point-anchors.md) | XY zero on any stock anchor or a custom point | Proposed |
+| [0017](0017-freemium-limit-enforcement.md) | Enforcing freemium usage limits | Proposed |
+| [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed |
+| [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
+| [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed |

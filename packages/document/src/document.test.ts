@@ -21,7 +21,7 @@ describe("ProjectDocument", () => {
     expect(
       ProjectDocument.safeParse({ ...doc, stock: { ...doc.stock, xyOrigin: "left" } }).success,
     ).toBe(false);
-    expect(ProjectDocument.safeParse({ ...doc, schemaVersion: 2 }).success).toBe(false);
+    expect(ProjectDocument.safeParse({ ...doc, schemaVersion: 1 }).success).toBe(false);
   });
 
   it("rejects duplicate ids and references to missing shapes", () => {
@@ -34,10 +34,34 @@ describe("ProjectDocument", () => {
     expect(ProjectDocument.safeParse({ ...doc, operations: [operation, operation] }).success).toBe(
       false,
     );
-    const twice = { ...operation, shapeIds: [SQUARE_ID, SQUARE_ID] };
+    const whole = { shapeId: SQUARE_ID, paths: null };
+    const twice = { ...operation, targets: [whole, whole] };
     expect(ProjectDocument.safeParse({ ...doc, operations: [twice] }).success).toBe(false);
-    const dangling = { ...operation, shapeIds: ["11111111-2222-4333-8444-555555555555"] };
+    const dangling = {
+      ...operation,
+      targets: [{ shapeId: "11111111-2222-4333-8444-555555555555", paths: null }],
+    };
     expect(ProjectDocument.safeParse({ ...doc, operations: [dangling] }).success).toBe(false);
+  });
+
+  it("checks the targeted paths", () => {
+    const doc = fullDocument();
+    const [operation] = doc.operations;
+    if (!operation) throw new Error("fixture");
+    const parse = (paths: unknown) =>
+      ProjectDocument.safeParse({
+        ...doc,
+        operations: [{ ...operation, targets: [{ shapeId: SQUARE_ID, paths }] }],
+      });
+    expect(parse(null).success).toBe(true);
+    expect(parse([0]).success).toBe(true);
+    // The square has a single path.
+    expect(parse([1]).error?.issues.map((issue) => issue.path)).toEqual([
+      ["operations", 0, "targets", 0, "paths", 0],
+    ]);
+    for (const paths of [[], [-1], [0.5], [0, 0], undefined]) {
+      expect(parse(paths).success).toBe(false);
+    }
   });
 
   it("rejects unknown keys and blank operation names", () => {
@@ -59,7 +83,7 @@ describe("ProjectDocument", () => {
       type: "pocket",
       name: "Pocket",
       enabled: true,
-      shapeIds: [SQUARE_ID],
+      targets: [{ shapeId: SQUARE_ID, paths: null }],
       tool: doc.operations[0]?.tool,
       params: { stepOver: 40 },
     };

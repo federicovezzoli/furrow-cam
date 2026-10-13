@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { FormField } from "@/components/auth/form-field";
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,13 +48,7 @@ export default function SignUpPage() {
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
           <FormField label="Email" id="email" type="email" autoComplete="email" />
-          <FormField
-            label="Password"
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            minLength={8}
-          />
+          <PasswordField label="Password" id="password" autoComplete="new-password" minLength={8} />
           <FormError message={error} />
           <Button type="submit" disabled={pending}>
             {pending ? "Creating account…" : "Create account"}

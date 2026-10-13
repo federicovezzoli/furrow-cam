@@ -46,7 +46,7 @@ function referenceProject(): ProjectDocument {
     type: "profile",
     name: "Cut out",
     enabled: true,
-    shapeIds: [plate.id],
+    targets: [{ shapeId: plate.id, paths: null }],
     tool: endMill,
     params: {
       side: "outside",
@@ -76,7 +76,7 @@ function referenceProject(): ProjectDocument {
         type: "drill",
         name: "Holes",
         enabled: true,
-        shapeIds: [holes.id],
+        targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
         params: { depth: 6, peck: true },
       },
@@ -85,7 +85,7 @@ function referenceProject(): ProjectDocument {
         type: "pocket",
         name: "Recess",
         enabled: true,
-        shapeIds: [recess.id],
+        targets: [{ shapeId: recess.id, paths: null }],
         tool: endMill,
         params: { direction: "climb", depth: 3, allowance: 0, finishPass: false, ramp: true },
       },
@@ -116,7 +116,15 @@ describe("exportGcode", () => {
 
   it("includes the toolpath warnings, named by operation", () => {
     const doc = referenceProject();
-    doc.operations = [{ ...(doc.operations[0] as Operation), shapeIds: [plate.id, holes.id] }];
+    doc.operations = [
+      {
+        ...(doc.operations[0] as Operation),
+        targets: [
+          { shapeId: plate.id, paths: null },
+          { shapeId: holes.id, paths: null },
+        ],
+      },
+    ];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
       "Holes: Skipped 1 path: drilling needs circles or points.",
     ]);
@@ -125,7 +133,7 @@ describe("exportGcode", () => {
   it("warns about enabled operations left out for having no toolpath", () => {
     const doc = referenceProject();
     const [holes, ...rest] = doc.operations as [Operation, ...Operation[]];
-    doc.operations = [{ ...holes, shapeIds: [] }, ...rest];
+    doc.operations = [{ ...holes, targets: [] }, ...rest];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
       "Holes: no toolpath, left out of the program.",
     ]);
@@ -141,7 +149,12 @@ describe("exportGcode", () => {
     ).toThrow("There are no enabled operations to export.");
     expect(() =>
       exportGcode(
-        { ...doc, operations: [{ ...(doc.operations[0] as Operation), shapeIds: [plate.id] }] },
+        {
+          ...doc,
+          operations: [
+            { ...(doc.operations[0] as Operation), targets: [{ shapeId: plate.id, paths: null }] },
+          ],
+        },
         "Plate",
       ),
     ).toThrow("None of the enabled operations has a toolpath to export.");

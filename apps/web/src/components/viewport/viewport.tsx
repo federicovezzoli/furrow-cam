@@ -1,13 +1,15 @@
 "use client";
 
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { cn } from "cn";
-import { BoxIcon, ScanIcon, SquareIcon } from "lucide-react";
+import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useSimulation } from "@/hooks/use-simulation";
 import { belongsElsewhere } from "@/lib/keyboard-target";
+import { heightmapCellLimit } from "@/lib/simulation-mesh";
 import { boxWithPoint } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
 import {
@@ -21,7 +23,7 @@ import { PALETTES } from "./scene-style";
 
 /**
  * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry
- * and toolpaths in one scene, seen from an orthographic top view or a perspective
+ * and toolpaths (or the stock as simulated after cutting, ADR-0019) in one scene, seen from an orthographic top view or a perspective
  * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014),
  * so changing the work origin moves only the origin marker and the grid.
  * Browser-only: load it with `next/dynamic` and `ssr: false`.
@@ -30,6 +32,14 @@ export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
+  const simulating = useWorkspaceStore((s) => s.simulating);
+  // Known once the renderer is up, inside the canvas.
+  const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
+  const simulation = useSimulation(
+    simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
+  );
+  // A path hovered in the viewport, not a shape hovered in the Geometry pane.
+  const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
@@ -43,10 +53,24 @@ export function Viewport() {
   const [fits, setFits] = useState(0);
   const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
   const [poses] = useState<CameraPoses>(() => new Map());
+  // A simulation of the stock before a resize would sit at the old size and depth.
+  const sim = simulation.stock;
+  const heightmap =
+    simulating &&
+    sim !== null &&
+    sim.width === width &&
+    sim.height === height &&
+    sim.thickness === thickness
+      ? simulation.heightmap
+      : null;
+  const status = simulating ? simulationStatus(simulation) : [];
 
   return (
     <div
-      className={cn("relative h-full", (editingTabs || pickingZero) && "cursor-crosshair")}
+      className={cn(
+        "relative h-full",
+        editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
+      )}
       {...cancelPick}
     >
       <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
@@ -55,11 +79,46 @@ export function Viewport() {
         ) : (
           <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         )}
-        <Scene box={box} palette={palette} />
+        <Scene box={box} palette={palette} heightmap={heightmap} />
+        <TextureLimit onLimit={setMaxTextureSize} />
       </Canvas>
       <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
+      {status.length > 0 && (
+        <div
+          role="status"
+          className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
+        >
+          {status.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+/** What the simulation is doing, and what it leaves out, one line each. */
+function simulationStatus({
+  pending,
+  error,
+  skipped,
+}: {
+  pending: boolean;
+  error: string | null;
+  skipped: string[];
+}): string[] {
+  const lines: string[] = [];
+  if (pending) lines.push("Simulating…");
+  else if (error) lines.push(`Simulation failed: ${error}`);
+  if (skipped.length > 0) lines.push(`Not simulated, toolpath failed: ${skipped.join(", ")}`);
+  return lines;
+}
+
+/** Reports the tallest texture the viewport's renderer supports, which caps the heightmap. */
+function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) => void }) {
+  const maxTextureSize = useThree((s) => s.gl.capabilities.maxTextureSize);
+  useEffect(() => onLimit(maxTextureSize), [maxTextureSize, onLimit]);
+  return null;
 }
 
 /** Pointer travel, in pixels, past which a right-button press pans rather than clicks. */
@@ -120,32 +179,78 @@ const VIEWS: { value: ViewMode; label: string; Icon: typeof SquareIcon; hint: st
 function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
   const setView = useWorkspaceStore((s) => s.setView);
   return (
-    <div
-      role="toolbar"
-      aria-label="View"
-      className="absolute top-2 left-2 flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs"
-    >
-      {VIEWS.map(({ value, label, Icon, hint }) => (
+    <div className="absolute top-2 left-2 flex items-center gap-2">
+      <div role="toolbar" aria-label="View" className={TOOLBAR_GROUP}>
+        {VIEWS.map(({ value, label, Icon, hint }) => (
+          <Button
+            key={value}
+            variant={view === value ? "secondary" : "ghost"}
+            size="icon-compact"
+            aria-label={label}
+            aria-pressed={view === value}
+            title={`${label}: ${hint}`}
+            onClick={() => setView(value)}
+          >
+            <Icon />
+          </Button>
+        ))}
         <Button
-          key={value}
-          variant={view === value ? "secondary" : "ghost"}
+          variant="ghost"
           size="icon-compact"
-          aria-label={label}
-          aria-pressed={view === value}
-          title={`${label}: ${hint}`}
-          onClick={() => setView(value)}
+          aria-label="Fit stock"
+          title="Fit stock"
+          onClick={onFit}
         >
-          <Icon />
+          <ScanIcon />
         </Button>
-      ))}
+      </div>
+      <CutToolbar />
+    </div>
+  );
+}
+
+const TOOLBAR_GROUP =
+  "flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs";
+
+/**
+ * What the viewport shows of the cut: the toolpaths of the enabled operations,
+ * all shown or hidden at once (the Operations pane does it per operation),
+ * and the simulated stock.
+ */
+function CutToolbar() {
+  const workspace = useWorkspaceStoreApi();
+  const simulating = useWorkspaceStore((s) => s.simulating);
+  const operations = useDocumentStore((s) => s.document.operations);
+  const operationIds = useMemo(
+    () => operations.filter((op) => op.enabled).map((op) => op.id),
+    [operations],
+  );
+  const anyShown = useWorkspaceStore((s) =>
+    operationIds.some((id) => !s.hiddenToolpathIds.includes(id)),
+  );
+  const ToolpathsIcon = anyShown ? RouteIcon : RouteOffIcon;
+  return (
+    <div role="toolbar" aria-label="Cut" className={TOOLBAR_GROUP}>
       <Button
-        variant="ghost"
+        variant={anyShown ? "secondary" : "ghost"}
         size="icon-compact"
-        aria-label="Fit stock"
-        title="Fit stock"
-        onClick={onFit}
+        aria-label="Show toolpaths"
+        aria-pressed={anyShown}
+        title={anyShown ? "Hide all toolpaths" : "Show all toolpaths"}
+        disabled={operationIds.length === 0}
+        onClick={() => workspace.getState().setToolpathsVisible(operationIds, !anyShown)}
       >
-        <ScanIcon />
+        <ToolpathsIcon />
+      </Button>
+      <Button
+        variant={simulating ? "secondary" : "ghost"}
+        size="icon-compact"
+        aria-label="Simulate cutting"
+        aria-pressed={simulating}
+        title="Simulate cutting: show the stock as it will look after the toolpaths"
+        onClick={() => workspace.getState().setSimulating(!simulating)}
+      >
+        <LayersIcon />
       </Button>
     </div>
   );

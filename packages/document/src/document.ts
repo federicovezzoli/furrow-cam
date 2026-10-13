@@ -4,7 +4,7 @@ import { Machine } from "./machine";
 import { Operation } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -73,16 +73,17 @@ export const ProjectDocument = z
     operations: z.array(Operation),
   })
   .superRefine((doc, ctx) => {
-    const shapeIds = new Set<string>();
+    /** Each shape's number of paths, by id. */
+    const pathCounts = new Map<string, number>();
     doc.geometry.forEach((shape, i) => {
-      if (shapeIds.has(shape.id)) {
+      if (pathCounts.has(shape.id)) {
         ctx.addIssue({
           code: "custom",
           path: ["geometry", i, "id"],
           message: "Duplicate shape id",
         });
       }
-      shapeIds.add(shape.id);
+      pathCounts.set(shape.id, shape.paths.length);
     });
 
     const operationIds = new Set<string>();
@@ -96,22 +97,33 @@ export const ProjectDocument = z
       }
       operationIds.add(operation.id);
       const seen = new Set<string>();
-      operation.shapeIds.forEach((shapeId, j) => {
+      operation.targets.forEach(({ shapeId, paths }, j) => {
         if (seen.has(shapeId)) {
           ctx.addIssue({
             code: "custom",
-            path: ["operations", i, "shapeIds", j],
+            path: ["operations", i, "targets", j, "shapeId"],
             message: "Duplicate shape id",
           });
         }
         seen.add(shapeId);
-        if (!shapeIds.has(shapeId)) {
+        const count = pathCounts.get(shapeId);
+        if (count === undefined) {
           ctx.addIssue({
             code: "custom",
-            path: ["operations", i, "shapeIds", j],
+            path: ["operations", i, "targets", j, "shapeId"],
             message: "Unknown shape id",
           });
+          return;
         }
+        paths?.forEach((path, k) => {
+          if (path >= count) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["operations", i, "targets", j, "paths", k],
+              message: "Unknown path",
+            });
+          }
+        });
       });
     });
   });

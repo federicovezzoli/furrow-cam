@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { fullDocument } from "./fixtures";
-import { DrillOperation, DrillParams, PocketParams, ProfileParams } from "./operation";
+import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
+import {
+  DrillOperation,
+  DrillParams,
+  normalizeTargets,
+  OperationTarget,
+  PocketParams,
+  ProfileParams,
+} from "./operation";
 
 const params = fullDocument().operations[0]?.params as ProfileParams;
 
@@ -96,5 +103,66 @@ describe("DrillOperation", () => {
     expect(DrillParams.safeParse({ depth: 0, peck: false }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: "yes" }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: true, peckDepth: 2 }).success).toBe(false);
+  });
+});
+
+describe("OperationTarget", () => {
+  const shapeId = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";
+
+  it("accepts whole shapes and ascending path indices", () => {
+    expect(OperationTarget.safeParse({ shapeId, paths: null }).success).toBe(true);
+    expect(OperationTarget.safeParse({ shapeId, paths: [0, 2, 7] }).success).toBe(true);
+  });
+
+  it("rejects empty, unordered, repeated or negative indices", () => {
+    for (const paths of [[], [2, 1], [1, 1], [-1], [1.5]]) {
+      expect(OperationTarget.safeParse({ shapeId, paths }).success).toBe(false);
+    }
+    expect(OperationTarget.safeParse({ shapeId }).success).toBe(false);
+  });
+});
+
+describe("normalizeTargets", () => {
+  const point = (x: number) => ({ start: [x, 0] as [number, number], segments: [], closed: false });
+  const three = { ...square, paths: [point(0), point(1), point(2)] };
+  const geometry = [three, circle];
+  const missing = "11111111-2222-4333-8444-555555555555";
+
+  it("puts targets in document order, one per shape, paths ascending", () => {
+    expect(
+      normalizeTargets(geometry, [
+        { shapeId: CIRCLE_ID, paths: null },
+        { shapeId: SQUARE_ID, paths: [2] },
+        { shapeId: SQUARE_ID, paths: [0] },
+      ]),
+    ).toEqual([
+      { shapeId: SQUARE_ID, paths: [0, 2] },
+      { shapeId: CIRCLE_ID, paths: null },
+    ]);
+  });
+
+  it("makes a target whole once all its shape's paths are in it", () => {
+    expect(normalizeTargets(geometry, [{ shapeId: SQUARE_ID, paths: [2, 1, 0] }])).toEqual([
+      { shapeId: SQUARE_ID, paths: null },
+    ]);
+    expect(normalizeTargets(geometry, [{ shapeId: CIRCLE_ID, paths: [0] }])).toEqual([
+      { shapeId: CIRCLE_ID, paths: null },
+    ]);
+    expect(
+      normalizeTargets(geometry, [
+        { shapeId: SQUARE_ID, paths: [1] },
+        { shapeId: SQUARE_ID, paths: null },
+      ]),
+    ).toEqual([{ shapeId: SQUARE_ID, paths: null }]);
+  });
+
+  it("skips shapes and paths that aren't there", () => {
+    expect(
+      normalizeTargets(geometry, [
+        { shapeId: missing, paths: null },
+        { shapeId: SQUARE_ID, paths: [7] },
+        { shapeId: CIRCLE_ID, paths: [0, 4] },
+      ]),
+    ).toEqual([{ shapeId: CIRCLE_ID, paths: null }]);
   });
 });

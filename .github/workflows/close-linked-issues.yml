@@ -1,0 +1,53 @@
+name: Close linked issues
+
+# GitHub only honours closing keywords ("Closes #12") when a PR merges into the
+# default branch (main). Our PRs merge into dev (ADR-0012), so this workflow
+# closes the referenced issues itself when a PR is merged into dev.
+#
+# pull_request_target gives the token write access to issues for PRs from forks too.
+# It is safe here because the workflow never checks out or runs the PR's code.
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [dev]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close issues referenced with closing keywords
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Passed via env, never interpolated into the script, to avoid injection.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          numbers=$(printf '%s' "$PR_BODY" \
+            | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+#[0-9]+' \
+            | grep -oE '[0-9]+$' | sort -un || true)
+
+          if [ -z "$numbers" ]; then
+            echo "No closing keywords in PR #$PR_NUMBER."
+            exit 0
+          fi
+
+          for n in $numbers; do
+            info=$(gh api "repos/$GH_REPO/issues/$n" --jq '[.state, (.pull_request != null)] | @tsv' 2>/dev/null) || {
+              echo "#$n not found, skipping."; continue; }
+            state=${info%%$'\t'*}
+            is_pr=${info##*$'\t'}
+            if [ "$is_pr" = "true" ]; then
+              echo "#$n is a pull request, skipping."
+            elif [ "$state" = "closed" ]; then
+              echo "#$n is already closed."
+            else
+              gh issue close "$n" --reason completed --comment "Completed in #$PR_NUMBER (merged into \`dev\`)."
+            fi
+          done

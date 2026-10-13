@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { FormError } from "@/components/auth/form-error";
-import { FormField } from "@/components/auth/form-field";
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,10 +46,9 @@ export function ResetPasswordForm() {
       {token && (
         <CardContent>
           <form onSubmit={onSubmit} className="grid gap-4">
-            <FormField
+            <PasswordField
               label="New password"
               id="password"
-              type="password"
               autoComplete="new-password"
               minLength={8}
             />

@@ -1,50 +1,54 @@
 import { type Box3, flattenPath, type Vec3 } from "@furrow/cam-core";
-import type { Shape } from "@furrow/document";
+import type { Path, Shape } from "@furrow/document";
 
 /** Arm length in millimetres of the cross drawn for a single-point path (a drill location). */
 export const POINT_MARKER_SIZE = 3;
 
 /**
- * A shape as `LineSegments` positions on the stock top (`z = 0`, stock
+ * A path as `LineSegments` positions on the stock top (`z = 0`, stock
  * coordinates, ADR-0014): `[x, y, z]` per vertex, two vertices per segment.
+ * A single-point path (a drill location) is drawn as a cross.
  */
-export function shapeLinePositions(shape: Shape): Float32Array {
+export function pathLinePositions(path: Path): Float32Array {
+  const points = flattenPath(path);
+  if (points.length === 1) {
+    const [[x, y]] = points as [[number, number]];
+    const s = POINT_MARKER_SIZE;
+    return new Float32Array([x - s, y, 0, x + s, y, 0, x, y - s, 0, x, y + s, 0]);
+  }
   const values: number[] = [];
-  for (const path of shape.paths) {
-    const points = flattenPath(path);
-    if (points.length === 1) {
-      const [[x, y]] = points as [[number, number]];
-      const s = POINT_MARKER_SIZE;
-      values.push(x - s, y, 0, x + s, y, 0, x, y - s, 0, x, y + s, 0);
-      continue;
-    }
-    for (let i = 1; i < points.length; i++) {
-      const [ax, ay] = points[i - 1] as [number, number];
-      const [bx, by] = points[i] as [number, number];
-      values.push(ax, ay, 0, bx, by, 0);
-    }
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1] as [number, number];
+    const [bx, by] = points[i] as [number, number];
+    values.push(ax, ay, 0, bx, by, 0);
   }
   return new Float32Array(values);
 }
 
-/**
- * Flattened shapes by identity. Immer keeps unchanged shapes as the same
- * objects (ADR-0010), so only new or edited shapes are flattened again.
- */
-const shapeCache = new WeakMap<Shape, Float32Array>();
+/** A shape's paths as `LineSegments` positions, like `pathLinePositions`. */
+export function shapeLinePositions(shape: Shape): Float32Array {
+  return pathsLinePositions(shape.paths);
+}
 
-function cachedShapeLinePositions(shape: Shape): Float32Array {
-  let positions = shapeCache.get(shape);
+/**
+ * Flattened paths by identity. Immer keeps unchanged shapes and their paths
+ * as the same objects (ADR-0010), so only new or edited paths are flattened
+ * again.
+ */
+const pathCache = new WeakMap<Path, Float32Array>();
+
+function cachedPathLinePositions(path: Path): Float32Array {
+  let positions = pathCache.get(path);
   if (!positions) {
-    positions = shapeLinePositions(shape);
-    shapeCache.set(shape, positions);
+    positions = pathLinePositions(path);
+    pathCache.set(path, positions);
   }
   return positions;
 }
 
-/** Several shapes' line positions in one buffer, to draw them in a single call (ADR-0008). */
-export function shapesLinePositions(shapes: Iterable<Shape>): Float32Array {
-  const parts = Array.from(shapes, cachedShapeLinePositions);
+/** Several paths' line positions in one buffer, to draw them in a single call (ADR-0008). */
+export function pathsLinePositions(paths: Iterable<Path>): Float32Array {
+  const parts = Array.from(paths, cachedPathLinePositions);
   const merged = new Float32Array(parts.reduce((length, part) => length + part.length, 0));
   let offset = 0;
   for (const part of parts) {
@@ -52,6 +56,11 @@ export function shapesLinePositions(shapes: Iterable<Shape>): Float32Array {
     offset += part.length;
   }
   return merged;
+}
+
+/** Several shapes' line positions in one buffer, like `pathsLinePositions`. */
+export function shapesLinePositions(shapes: Iterable<Shape>): Float32Array {
+  return pathsLinePositions(Array.from(shapes, (shape) => shape.paths).flat());
 }
 
 export type GridLines = { minor: Float32Array; major: Float32Array };

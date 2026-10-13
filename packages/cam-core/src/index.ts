@@ -1,12 +1,15 @@
 export * from "./drill";
+export * from "./dxf/import";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";
-export { depthLevels, ENTRY_CLEARANCE } from "./passes";
+export { depthLevels } from "./passes";
+export * from "./pick";
 export * from "./pocket";
 export * from "./preview";
 export * from "./profile";
 export * from "./quantity";
+export * from "./simulation";
 export * from "./snap";
 export * from "./stock";
 export * from "./svg/import";

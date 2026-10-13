@@ -1,4 +1,10 @@
-import type { Operation, ProjectDocument, Shape } from "@furrow/document";
+import {
+  DEFAULT_ENTRY_CLEARANCE,
+  type Operation,
+  type OperationTarget,
+  type ProjectDocument,
+  type Shape,
+} from "@furrow/document";
 import { drillToolpath } from "./drill";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
@@ -10,10 +16,12 @@ export const DEFAULT_SAFE_Z = 5;
 /** Everything a toolpath depends on, small enough to post to a worker. */
 export type ToolpathInput = {
   operation: Operation;
-  /** The operation's shapes, in its order. */
+  /** The operation's shapes, in its order, with only the paths it targets. */
   shapes: Shape[];
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts. */
+  entryClearance: number;
 };
 
 /** Collects the inputs of `operationId` from the document. */
@@ -30,11 +38,31 @@ export function toolpathInputs(
 ): ToolpathInput[] {
   const shapes = new Map(doc.geometry.map((shape) => [shape.id, shape]));
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
+  const entryClearance = doc.machine?.entryClearance ?? DEFAULT_ENTRY_CLEARANCE;
   return operations.map((operation) => ({
     operation,
-    shapes: operation.shapeIds.flatMap((id) => shapes.get(id) ?? []),
+    shapes: targetedShapes(shapes, operation.targets),
     safeZ,
+    entryClearance,
   }));
+}
+
+/**
+ * The shapes `targets` refer to, in their order, each with only its targeted
+ * paths (ADR-0018). Targets of shapes not in `shapes` and indices past a
+ * shape's paths are skipped.
+ */
+export function targetedShapes(
+  shapes: ReadonlyMap<string, Shape>,
+  targets: readonly OperationTarget[],
+): Shape[] {
+  return targets.flatMap(({ shapeId, paths }) => {
+    const shape = shapes.get(shapeId);
+    if (!shape) return [];
+    if (paths === null) return [shape];
+    const kept = paths.flatMap((index) => shape.paths[index] ?? []);
+    return kept.length > 0 ? [{ ...shape, paths: kept }] : [];
+  });
 }
 
 /**
@@ -42,7 +70,7 @@ export function toolpathInputs(
  * names, colours, notes and the enabled flag are left out, so renaming an
  * operation, its tool or its shapes never recomputes it.
  */
-export function toolpathKey({ operation, shapes, safeZ }: ToolpathInput): string {
+export function toolpathKey({ operation, shapes, safeZ, entryClearance }: ToolpathInput): string {
   const { name: _name, color: _color, notes: _notes, ...tool } = operation.tool;
   return JSON.stringify([
     operation.type,
@@ -50,17 +78,18 @@ export function toolpathKey({ operation, shapes, safeZ }: ToolpathInput): string
     tool,
     shapes.map((shape) => shape.paths),
     safeZ,
+    entryClearance,
   ]);
 }
 
 /** Computes an operation's toolpath. Runs in a Web Worker (ADR-0004). */
-export function generateToolpath({ operation, shapes, safeZ }: ToolpathInput): Toolpath {
+export function generateToolpath({ operation, shapes, ...options }: ToolpathInput): Toolpath {
   switch (operation.type) {
     case "profile":
-      return profileToolpath(operation, shapes, { safeZ });
+      return profileToolpath(operation, shapes, options);
     case "pocket":
-      return pocketToolpath(operation, shapes, { safeZ });
+      return pocketToolpath(operation, shapes, options);
     case "drill":
-      return drillToolpath(operation, shapes, { safeZ });
+      return drillToolpath(operation, shapes, options);
   }
 }

@@ -1,14 +1,15 @@
-import type {
-  ProfileOperation,
-  ProfileParams,
-  ProjectDocument,
-  Shape,
-  Tool,
+import {
+  DEFAULT_ENTRY_CLEARANCE,
+  type ProfileOperation,
+  type ProfileParams,
+  type ProjectDocument,
+  type Shape,
+  type Tool,
 } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SAFE_Z, generateToolpath, toolpathInput } from "./generate";
 import { signedArea } from "./geometry";
-import { depthLevels, ENTRY_CLEARANCE } from "./passes";
+import { depthLevels } from "./passes";
 import { profileToolpath } from "./profile";
 import type { Vec3 } from "./stock";
 import type { Toolpath, ToolpathMove } from "./toolpath";
@@ -92,11 +93,11 @@ function profile(
     name: "Profile",
     enabled: true,
     type: "profile",
-    shapeIds: shapes.map((shape) => shape.id),
+    targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
-  return profileToolpath(operation, shapes, { safeZ: 5 });
+  return profileToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 });
 }
 
 /** Consecutive moves as `[from, move]`, starting from the first move's target. */
@@ -175,12 +176,12 @@ describe("profileToolpath", () => {
     for (const [from, move] of steps(toolpath)) {
       if (move.kind !== "rapid") continue;
       // Down to the entry clearance, or up and across at the retract height.
-      if (move.to[2] < from[2]) expect(move.to[2]).toBe(ENTRY_CLEARANCE);
+      if (move.to[2] < from[2]) expect(move.to[2]).toBe(1);
       else expect(move.to[2]).toBe(5);
     }
     // The last millimetre before the stock is fed, not rapid.
     for (const [from, move] of steps(toolpath)) {
-      if (from[2] === ENTRY_CLEARANCE) expect(move).toMatchObject({ kind: "feed", feedRate: 500 });
+      if (from[2] === 1) expect(move).toMatchObject({ kind: "feed", feedRate: 500 });
     }
     expect(toolpath.moves[0]).toMatchObject({ kind: "rapid" });
     expect(toolpath.moves.at(-1)).toMatchObject({ kind: "rapid" });
@@ -472,8 +473,8 @@ describe("profileToolpath with tabs", () => {
 });
 
 describe("generateToolpath", () => {
-  const doc = (machineSafeZ: number | null): ProjectDocument => ({
-    schemaVersion: 1,
+  const doc = (machineSafeZ: number | null, entryClearance = 1): ProjectDocument => ({
+    schemaVersion: 3,
     units: "mm",
     stock: {
       width: 200,
@@ -495,6 +496,7 @@ describe("generateToolpath", () => {
             spindleRpmMin: null,
             spindleRpmMax: null,
             safeZ: machineSafeZ,
+            entryClearance,
             postProcessor: "grbl",
             programStart: null,
             programEnd: null,
@@ -508,7 +510,7 @@ describe("generateToolpath", () => {
         name: "Profile",
         enabled: true,
         type: "profile",
-        shapeIds: [hole.id],
+        targets: [{ shapeId: hole.id, paths: null }],
         tool,
         params,
       },
@@ -523,6 +525,15 @@ describe("generateToolpath", () => {
       DEFAULT_SAFE_Z,
     );
     expect(generateToolpath(input).moves[0]?.to[2]).toBe(12);
+  });
+
+  it("collects the machine's entry clearance, or the default without a machine", () => {
+    const input = toolpathInput(doc(12, 3), "11111111-2222-4333-8444-555555555555");
+    expect(input.entryClearance).toBe(3);
+    expect(generateToolpath(input).moves[1]?.to[2]).toBe(3);
+    expect(toolpathInput(doc(null), "11111111-2222-4333-8444-555555555555").entryClearance).toBe(
+      DEFAULT_ENTRY_CLEARANCE,
+    );
   });
 
   it("rejects unknown operations", () => {

@@ -1,5 +1,5 @@
 import type { Box3 } from "@furrow/cam-core";
-import type { Shape } from "@furrow/document";
+import type { Path, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import {
   boxCenter,
@@ -9,6 +9,8 @@ import {
   gridLinePositions,
   MAX_GRID_LINES,
   POINT_MARKER_SIZE,
+  pathLinePositions,
+  pathsLinePositions,
   pixelsPerMillimetre,
   shapeLinePositions,
   shapesLinePositions,
@@ -55,6 +57,13 @@ describe("shapeLinePositions", () => {
       ...shapeLinePositions(point),
     ]);
     expect(shapesLinePositions([])).toHaveLength(0);
+  });
+
+  it("draws chosen paths of a shape on their own", () => {
+    const point: Path = { start: [1, 2], segments: [], closed: false };
+    const two = shape("b", [...square.paths, point]);
+    expect([...pathsLinePositions(two.paths.slice(1))]).toEqual([...pathLinePositions(point)]);
+    expect([...pathsLinePositions(two.paths)]).toEqual([...shapeLinePositions(two)]);
   });
 });
 

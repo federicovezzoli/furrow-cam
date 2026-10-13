@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { FormField } from "@/components/auth/form-field";
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
@@ -50,12 +51,7 @@ export default function SignInPage() {
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
           <FormField label="Email" id="email" type="email" autoComplete="email" />
-          <FormField
-            label="Password"
-            id="password"
-            type="password"
-            autoComplete="current-password"
-          />
+          <PasswordField label="Password" id="password" autoComplete="current-password" />
           <FormError message={error} />
           {unverifiedEmail && (
             <Button type="button" variant="outline" onClick={resendVerification}>

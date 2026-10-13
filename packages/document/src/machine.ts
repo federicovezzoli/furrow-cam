@@ -15,6 +15,19 @@ export const GcodeBlock = z
   .max(10_000, "Must be at most 10,000 characters")
   .nullable();
 
+/** Entry clearance of new machines, and of toolpaths without a machine profile. */
+export const DEFAULT_ENTRY_CLEARANCE = 1;
+
+/**
+ * Starting values of every new machine, from scratch or from a preset: Furrow
+ * CAM's own defaults rather than facts about a machine.
+ */
+export const NEW_MACHINE_DEFAULTS = {
+  safeZ: 5,
+  entryClearance: DEFAULT_ENTRY_CLEARANCE,
+  postProcessor: "grbl",
+} as const satisfies Partial<Machine>;
+
 /**
  * A machine profile (#11). Used to validate the user's machines and stored as
  * a snapshot in each project (ADR-0003). Strict like the rest of the document:
@@ -33,6 +46,8 @@ export const Machine = z
     spindleRpmMax: SpindleRpm.nullable(),
     /** Default retract height above the stock. */
     safeZ: PositiveLength,
+    /** Height above the stock top where rapids down stop and feeding starts, at most `safeZ`. */
+    entryClearance: z.number().nonnegative(),
     postProcessor: PostProcessorId,
     /** Replaces the default preamble (units, absolute mode, feed mode…). */
     programStart: GcodeBlock,
@@ -49,6 +64,13 @@ export const Machine = z
         code: "custom",
         path: ["safeZ"],
         message: "Must be less than the Z travel",
+      });
+    }
+    if (machine.entryClearance > machine.safeZ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["entryClearance"],
+        message: "Must be at most the safe Z",
       });
     }
     const { spindleRpmMin: min, spindleRpmMax: max } = machine;

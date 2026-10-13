@@ -5,6 +5,7 @@ import {
   canDrill,
   type DrillOperation,
   MillingDirection,
+  type OperationTarget,
   type PocketOperation,
   type ProfileOperation,
   ProfileSide,
@@ -18,6 +19,7 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { selectionTargets, targetsLabel } from "@/lib/path-selection";
 import { gestureHandlers } from "@/stores/gesture-handlers";
 import {
   type ActionResult,
@@ -25,7 +27,7 @@ import {
   DEFAULT_TAB_COUNT,
   defaultTabs,
   renameOperation,
-  setOperationShapes,
+  setOperationTargets,
   setOperationTool,
   updateDrillParams,
   updatePocketParams,
@@ -38,6 +40,7 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "@/stores/workspace-stores";
+import { EditBitButton } from "./edit-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
 import { matchingToolChoice, useToolLibrary } from "./tool-library";
 
@@ -91,7 +94,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
         tool={operation.tool}
         drilling={operation.type === "drill"}
       />
-      <ShapesField operationId={operation.id} shapeIds={operation.shapeIds} />
+      <TargetsField operationId={operation.id} targets={operation.targets} />
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
       {operation.type === "drill" && <DrillFields operation={operation} />}
@@ -137,32 +140,36 @@ function ToolPicker({
   return (
     <>
       <Row id="operation-tool" label="Tool">
-        <NativeSelect
-          id="operation-tool"
-          size="sm"
-          value={current?.id ?? ""}
-          onChange={(event) => {
-            const choice = tools.find((candidate) => candidate.id === event.target.value);
-            if (!choice) return;
-            const result = setOperationTool(store, operationId, choice.tool);
-            setRejected(result.ok ? null : { tool, error: result.error });
-          }}
-          className={SELECT_CLASS}
-        >
-          {!current && (
-            // The snapshot differs from every library tool (edited or deleted since it was picked).
-            <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
-          )}
-          {tools.map((choice) => (
-            <NativeSelectOption
-              key={choice.id}
-              value={choice.id}
-              disabled={drilling && !canDrill(choice.tool)}
-            >
-              {choice.tool.name}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+        {/* Lets a long tool name shrink the select instead of pushing the button out. */}
+        <div className="flex min-w-0 items-center gap-1 *:data-[slot=native-select-wrapper]:min-w-0">
+          <NativeSelect
+            id="operation-tool"
+            size="sm"
+            value={current?.id ?? ""}
+            onChange={(event) => {
+              const choice = tools.find((candidate) => candidate.id === event.target.value);
+              if (!choice) return;
+              const result = setOperationTool(store, operationId, choice.tool);
+              setRejected(result.ok ? null : { tool, error: result.error });
+            }}
+            className={SELECT_CLASS}
+          >
+            {!current && (
+              // The snapshot differs from every library tool (edited or deleted since it was picked).
+              <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
+            )}
+            {tools.map((choice) => (
+              <NativeSelectOption
+                key={choice.id}
+                value={choice.id}
+                disabled={drilling && !canDrill(choice.tool)}
+              >
+                {choice.tool.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <EditBitButton choice={current} />
+        </div>
       </Row>
       {error && (
         <p role="alert" className="text-destructive">
@@ -173,14 +180,27 @@ function ToolPicker({
   );
 }
 
-function ShapesField({ operationId, shapeIds }: { operationId: string; shapeIds: string[] }) {
+function TargetsField({
+  operationId,
+  targets,
+}: {
+  operationId: string;
+  targets: OperationTarget[];
+}) {
   const store = useDocumentStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selected = useWorkspaceStore((s) => s.selectedShapeIds);
-  const shapes = useMemo(() => {
-    const ids = new Set(shapeIds);
-    return geometry.filter((shape) => ids.has(shape.id));
-  }, [geometry, shapeIds]);
+  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
+  const selected = useMemo(
+    () => selectionTargets(geometry, selectedPaths),
+    [geometry, selectedPaths],
+  );
+  const rows = useMemo(() => {
+    const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
+    return targets.flatMap((target) => {
+      const shape = shapes.get(target.shapeId);
+      return shape ? [{ shape, paths: target.paths }] : [];
+    });
+  }, [geometry, targets]);
 
   return (
     <section aria-labelledby="operation-shapes-heading" className="grid gap-1">
@@ -192,29 +212,38 @@ function ShapesField({ operationId, shapeIds }: { operationId: string; shapeIds:
           variant="outline"
           size="compact"
           disabled={selected.length === 0}
-          onClick={() => setOperationShapes(store, operationId, selected)}
-          title="Cut the shapes selected in the Geometry pane instead"
+          onClick={() => setOperationTargets(store, operationId, selected)}
+          title={
+            selected.length > 0
+              ? `Cut the ${targetsLabel(selected)} instead`
+              : "Select shapes or paths to cut them instead"
+          }
         >
-          Use selected ({selected.length})
+          Use selected
         </Button>
       </div>
       <ul className="grid gap-0.5">
-        {shapes.map((shape) => (
+        {rows.map(({ shape, paths }) => (
           <li key={shape.id} className="flex min-w-0 items-center gap-1">
             <span className="min-w-0 flex-1 truncate">{shape.name || "Unnamed shape"}</span>
+            {paths && (
+              <span className="shrink-0 text-muted-foreground tabular-nums">
+                {paths.length} of {shape.paths.length} paths
+              </span>
+            )}
             <Button
               variant="ghost"
               size="icon-compact"
-              disabled={shapes.length === 1}
+              disabled={rows.length === 1}
               onClick={() =>
-                setOperationShapes(
+                setOperationTargets(
                   store,
                   operationId,
-                  shapeIds.filter((id) => id !== shape.id),
+                  targets.filter((target) => target.shapeId !== shape.id),
                 )
               }
               aria-label={`Remove ${shape.name || "unnamed shape"}`}
-              title={shapes.length === 1 ? "An operation needs at least one shape" : "Remove"}
+              title={rows.length === 1 ? "An operation needs at least one shape" : "Remove"}
             >
               <XIcon />
             </Button>

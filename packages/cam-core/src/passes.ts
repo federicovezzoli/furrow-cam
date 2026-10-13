@@ -2,9 +2,6 @@ import { distance, type Point } from "@furrow/document";
 
 // Helpers the toolpath generators share.
 
-/** Height above the stock top where rapids down stop and feeding starts. */
-export const ENTRY_CLEARANCE = 1;
-
 /** Pass depths, as negative z: `depth` split into equal steps no deeper than `stepDown`. */
 export function depthLevels(depth: number, stepDown: number): number[] {
   const count = Math.max(1, Math.ceil(depth / stepDown - 1e-9));

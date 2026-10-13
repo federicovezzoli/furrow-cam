@@ -10,7 +10,30 @@ export type Migration = (doc: UnknownDocument) => UnknownDocument;
  * schema change after the first production deploy bumps
  * `CURRENT_SCHEMA_VERSION` and adds an entry here.
  */
-export const migrations: Readonly<Record<number, Migration>> = {};
+export const migrations: Readonly<Record<number, Migration>> = {
+  // ADR-0018: operations target paths. A v1 operation cut its shapes whole.
+  1: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && Array.isArray(operation.shapeIds)) {
+          operation.targets = operation.shapeIds.map((shapeId) => ({ shapeId, paths: null }));
+          delete operation.shapeIds;
+        }
+      }
+    }
+    return doc;
+  },
+  // #44: machine profiles gained an entry clearance. Snapshots keep what
+  // toolpaths used before: a fixed 1 mm (not today's default), capped at the
+  // safe Z.
+  2: (doc) => {
+    const machine = doc.machine;
+    if (isObject(machine)) {
+      machine.entryClearance = typeof machine.safeZ === "number" ? Math.min(1, machine.safeZ) : 1;
+    }
+    return doc;
+  },
+};
 
 /** Thrown when a document can't be upgraded to the current schema version. */
 export class ProjectDocumentVersionError extends Error {

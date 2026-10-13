@@ -14,14 +14,19 @@ export function parseProjectId(id: unknown): string | null {
   return result.success ? result.data : null;
 }
 
-/** The signed-in user's projects, most recently saved first. Documents are left out. */
+/**
+ * The signed-in user's projects, most recently saved first, with their
+ * machine's name (`null` without one). Documents are left out.
+ */
 export function listProjects(userId: string) {
   return db.project.findMany({
     where: { userId },
-    select: { id: true, name: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, machineName: true, createdAt: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
   });
 }
+
+export type ProjectListRow = Awaited<ReturnType<typeof listProjects>>[number];
 
 export type ProjectRow = { id: string; name: string; updatedAt: Date };
 
@@ -64,10 +69,11 @@ export async function getProject(
   }
 }
 
-/** The columns that store a validated document (ADR-0003). */
+/** The columns that store a validated document (ADR-0003), with the copies kept of its fields. */
 export function documentColumns(document: ProjectDocument) {
   return {
     schemaVersion: document.schemaVersion,
+    machineName: document.machine?.name ?? null,
     document: document as Prisma.InputJsonObject,
   };
 }

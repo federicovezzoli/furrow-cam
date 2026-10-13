@@ -148,6 +148,8 @@ model Machine {
   spindleRpmMin  Int?
   spindleRpmMax  Int?
   safeZ          Float
+  /// Height above the stock where rapids down stop and feeding starts, at most `safeZ`.
+  entryClearance Float
   postProcessor  PostProcessor
   /// Custom G-code replacing the post-processor's default at that point; `NULL` keeps the default.
   programStart   String?
@@ -171,6 +173,8 @@ model Project {
   name          String
   /// Copy of `document.schemaVersion`, so stale documents can be found without reading them.
   schemaVersion Int
+  /// Copy of `document.machine.name`, so the project list can show it without reading documents.
+  machineName   String?
   document      Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

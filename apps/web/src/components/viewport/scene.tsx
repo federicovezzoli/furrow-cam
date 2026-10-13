@@ -1,13 +1,19 @@
 "use client";
 
-import { type Box3, stockBounds, stockOffset } from "@furrow/cam-core";
-import type { Shape } from "@furrow/document";
+import { type Box3, type Heightmap, pathKey, stockBounds, stockOffset } from "@furrow/cam-core";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
-import { boxCenter, gridLinePositions, shapesLinePositions } from "@/lib/viewport-scene";
+import {
+  boxCenter,
+  gridLinePositions,
+  pathsLinePositions,
+  shapesLinePositions,
+} from "@/lib/viewport-scene";
 import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 import { Lines, useLineGeometry } from "./lines";
+import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
+import { SimulatedStock } from "./simulated-stock";
 import { Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
@@ -15,15 +21,33 @@ import { ZeroPick } from "./zero-pick";
 /** Length in millimetres of the origin marker's axes. */
 const ORIGIN_MARKER_SIZE = 40;
 
-export function Scene({ box, palette }: { box: Box3; palette: Palette }) {
+/**
+ * With a `heightmap`, the scene shows the stock as simulated after cutting in
+ * place of the stock box; the toolpaths stay, as the Operations pane shows or
+ * hides them.
+ */
+export function Scene({
+  box,
+  palette,
+  heightmap,
+}: {
+  box: Box3;
+  palette: Palette;
+  heightmap: Heightmap | null;
+}) {
   return (
     <>
       <WorkOrigin palette={palette} />
-      <Stock box={box} palette={palette} />
+      {heightmap ? (
+        <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
+      ) : (
+        <Stock box={box} palette={palette} />
+      )}
       <Shapes palette={palette} />
       <Toolpaths palette={palette} />
       <Tabs color={palette.tab} />
       <ZeroPick color={palette.snap} />
+      <PathPick />
     </>
   );
 }
@@ -69,15 +93,15 @@ function Stock({ box, palette }: { box: Box3; palette: Palette }) {
 
 /**
  * Imported geometry on the stock top: all shapes in one draw call, then the
- * selected and hovered shapes (from the workspace store) drawn over them.
+ * selected and hovered paths (from the workspace store) drawn over them.
  * Each layer subscribes on its own, so hovering redraws only its overlay.
  */
 function Shapes({ palette }: { palette: Palette }) {
   return (
     <>
       <AllShapes color={palette.shape} />
-      <SelectedShapes color={palette.selected} />
-      <HoveredShape color={palette.hovered} />
+      <SelectedPaths color={palette.selected} />
+      <HoveredPaths color={palette.hovered} />
     </>
   );
 }
@@ -88,27 +112,34 @@ function AllShapes({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
 }
 
-function SelectedShapes({ color }: { color: string }) {
+function SelectedPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedIds = useWorkspaceStore((s) => s.selectedShapeIds);
+  const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
-    const selected = new Set(selectedIds);
-    return shapesLinePositions(geometry.filter((shape) => selected.has(shape.id)));
-  }, [geometry, selectedIds]);
+    const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
+    const paths = selected.flatMap(({ shapeId, path }) => shapes.get(shapeId)?.paths[path] ?? []);
+    return pathsLinePositions(paths);
+  }, [geometry, selected]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.selected} />;
 }
 
-/** The hovered shape, unless it is selected: selection wins. */
-function HoveredShape({ color }: { color: string }) {
+/** The hovered path, or the hovered shape's paths, except selected ones: selection wins. */
+function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const hoveredId = useWorkspaceStore((s) =>
-    s.hoveredShapeId !== null && !s.selectedShapeIds.includes(s.hoveredShapeId)
-      ? s.hoveredShapeId
-      : null,
-  );
+  const hovered = useWorkspaceStore((s) => s.hovered);
+  const selected = useWorkspaceStore((s) => s.selectedPaths);
+  // Built when the geometry or the selection changes, not each time the hover does.
+  const shapes = useMemo(() => new Map(geometry.map((shape) => [shape.id, shape])), [geometry]);
+  const selectedKeys = useMemo(() => new Set(selected.map(pathKey)), [selected]);
   const positions = useMemo(() => {
-    const hovered = geometry.filter((shape: Shape) => shape.id === hoveredId);
-    return shapesLinePositions(hovered);
-  }, [geometry, hoveredId]);
+    const shape = hovered && shapes.get(hovered.shapeId);
+    if (!hovered || !shape) return pathsLinePositions([]);
+    const paths = shape.paths.filter(
+      (_, path) =>
+        (hovered.path === null || hovered.path === path) &&
+        !selectedKeys.has(pathKey({ shapeId: shape.id, path })),
+    );
+    return pathsLinePositions(paths);
+  }, [shapes, hovered, selectedKeys]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }

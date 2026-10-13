@@ -9,22 +9,15 @@ import {
   type PolygonWithHoles,
   signedArea,
 } from "./geometry";
-import {
-  type Box,
-  bounds,
-  depthLevels,
-  ENTRY_CLEARANCE,
-  inBox,
-  plural,
-  rampZ,
-  Track,
-} from "./passes";
+import { type Box, bounds, depthLevels, inBox, plural, rampZ, Track } from "./passes";
 import { projectOnLoop } from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type PocketOptions = {
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
+  entryClearance: number;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
 };
@@ -155,7 +148,7 @@ export function pocketToolpath(
   }
 
   const cut: Cut = {
-    builder: new ToolpathBuilder(options.safeZ),
+    builder: new ToolpathBuilder(options.safeZ, options.entryClearance),
     feedRate: tool.feedRate,
     plungeRate: tool.plungeRate,
     rampRun:
@@ -399,29 +392,26 @@ function finishPiece(cut: Cut, piece: Piece, depth: number) {
 
 /**
  * Gets the tool to `point` at `clearedZ`, which the tool has cleared all over
- * `container`. When the tool is down in `container` and the move stays inside
- * it, it crosses at that height, or just above the stock on the first pass;
- * otherwise it goes over the top at the retract height. Either way it goes
- * down through the cleared stock.
+ * `container`. When the tool is down in `container`, below the stock top, and
+ * the move stays inside it, it crosses at that height; otherwise it goes over
+ * the top at the retract height, since the entry clearance may be too close to
+ * uncut stock to cross it. Either way it goes down through the cleared stock.
  */
 function reach(cut: Cut, point: Point, container: Piece, clearedZ: number) {
   const { builder } = cut;
   const here = builder.position;
-  const clearance = Math.min(ENTRY_CLEARANCE, builder.safeZ);
-  const inside =
-    here && here[2] <= clearedZ + 1e-9 && crossesOnlyInside(container, [here[0], here[1]], point);
-  if (here && inside && clearedZ < 0) {
+  if (
+    here &&
+    clearedZ < 0 &&
+    here[2] <= clearedZ + 1e-9 &&
+    crossesOnlyInside(container, [here[0], here[1]], point)
+  ) {
     builder.feed([here[0], here[1], clearedZ], cut.feedRate);
     builder.feed([point[0], point[1], clearedZ], cut.feedRate);
     return;
   }
-  if (here && inside) {
-    builder.rapid([here[0], here[1], clearance]);
-    builder.rapid([point[0], point[1], clearance]);
-  } else {
-    builder.travel(point[0], point[1]);
-    builder.rapid([point[0], point[1], clearance]);
-  }
+  builder.travel(point[0], point[1]);
+  builder.rapid([point[0], point[1], builder.clearance]);
   builder.feed([point[0], point[1], clearedZ], cut.plungeRate);
 }
 

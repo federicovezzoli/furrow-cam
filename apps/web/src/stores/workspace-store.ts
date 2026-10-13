@@ -1,3 +1,4 @@
+import { type PathRef, pathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -6,22 +7,28 @@ import { createStore } from "zustand/vanilla";
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";
 
+/** What the pointer is over: a path in the viewport, or a whole shape (`path` null) in the Geometry pane. */
+export type HoveredGeometry = { shapeId: string; path: number | null };
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
  * The camera pose stays inside the viewport, which its controls change on
  * every pointer move.
  *
- * An undo can remove a selected shape or operation, so `prune` drops ids that
- * are no longer in the document (selected, hovered and hidden ones), ends
+ * Selection is by path (ADR-0018): selecting a shape selects all its paths.
+ * An undo can remove a selected shape or operation, so `prune` drops ids and
+ * paths that are no longer in the document (selected, hovered and hidden
+ * ones), ends
  * editing tabs the selected profile no longer has and ends picking the zero
  * once it isn't custom; the workspace calls it on every document change, and
  * readers can trust the ids.
  */
 export type WorkspaceState = {
   view: ViewMode;
-  selectedShapeIds: string[];
+  /** In the order they were selected. */
+  selectedPaths: PathRef[];
   selectedOperationId: string | null;
-  hoveredShapeId: string | null;
+  hovered: HoveredGeometry | null;
   /**
    * Editing the selected profile's tabs in the viewport. Only in the top
    * view, and ends when the selection or the view changes.
@@ -36,20 +43,32 @@ export type WorkspaceState = {
   pickingZero: boolean;
   /** Operations whose toolpaths the viewport hides. */
   hiddenToolpathIds: string[];
+  /**
+   * The viewport shows the stock as simulated after cutting (PRD-0001 R10,
+   * ADR-0019) in place of the stock box; toolpaths still show. Editing tabs
+   * and picking the zero work on the uncut stock top, so each ends the other.
+   */
+  simulating: boolean;
 
   setView: (view: ViewMode) => void;
-  /** `replace` selects only `ids`; `toggle` flips each of them (Ctrl/Cmd/Shift+click). */
-  selectShapes: (ids: string[], mode?: "replace" | "toggle") => void;
+  /**
+   * `replace` selects only `paths`; `toggle` (Ctrl/Cmd/Shift+click) deselects
+   * them if all are selected, otherwise adds the others.
+   */
+  selectPaths: (paths: PathRef[], mode?: "replace" | "toggle") => void;
   selectOperation: (id: string | null) => void;
-  setHoveredShape: (id: string | null) => void;
+  setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
   setEditingTabs: (editing: boolean) => void;
   /** Switches to the top view when turned on. */
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
+  /** Shows or hides the toolpaths of all of `operationIds` at once. */
+  setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
+  setSimulating: (simulating: boolean) => void;
   clearSelection: () => void;
   /**
-   * Drops selected, hovered and hidden ids that aren't in `document`, tab
+   * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs and picking the zero without a custom zero.
    */
   prune: (document: ProjectDocument) => void;
@@ -62,12 +81,13 @@ export function createWorkspaceStore() {
     devtools(
       immer((set) => ({
         view: "top",
-        selectedShapeIds: [],
+        selectedPaths: [],
         selectedOperationId: null,
-        hoveredShapeId: null,
+        hovered: null,
         editingTabs: false,
         pickingZero: false,
         hiddenToolpathIds: [],
+        simulating: false,
 
         setView(view) {
           set(
@@ -83,24 +103,25 @@ export function createWorkspaceStore() {
           );
         },
 
-        selectShapes(ids, mode = "replace") {
+        selectPaths(paths, mode = "replace") {
           set(
             (state) => {
+              const unique = new Map(paths.map((path) => [pathKey(path), path]));
               if (mode === "replace") {
-                state.selectedShapeIds = [...new Set(ids)];
-                if (ids.length > 0) state.pickingZero = false;
-                return;
+                state.selectedPaths = [...unique.values()];
+              } else {
+                const selected = new Map(state.selectedPaths.map((path) => [pathKey(path), path]));
+                const deselect = [...unique.keys()].every((key) => selected.has(key));
+                for (const [key, path] of unique) {
+                  if (deselect) selected.delete(key);
+                  else selected.set(key, path);
+                }
+                state.selectedPaths = [...selected.values()];
               }
-              const selected = new Set(state.selectedShapeIds);
-              for (const id of new Set(ids)) {
-                if (selected.has(id)) selected.delete(id);
-                else selected.add(id);
-              }
-              state.selectedShapeIds = [...selected];
-              if (selected.size > 0) state.pickingZero = false;
+              if (state.selectedPaths.length > 0) state.pickingZero = false;
             },
             false,
-            "selectShapes",
+            "selectPaths",
           );
         },
 
@@ -116,13 +137,13 @@ export function createWorkspaceStore() {
           );
         },
 
-        setHoveredShape(id) {
+        setHovered(hovered) {
           set(
             (state) => {
-              state.hoveredShapeId = id;
+              state.hovered = hovered;
             },
             false,
-            "setHoveredShape",
+            "setHovered",
           );
         },
 
@@ -133,6 +154,7 @@ export function createWorkspaceStore() {
               if (editing) {
                 state.view = "top";
                 state.pickingZero = false;
+                state.simulating = false;
               }
             },
             false,
@@ -147,6 +169,7 @@ export function createWorkspaceStore() {
               if (picking) {
                 state.view = "top";
                 state.editingTabs = false;
+                state.simulating = false;
               }
             },
             false,
@@ -171,10 +194,36 @@ export function createWorkspaceStore() {
           );
         },
 
+        setToolpathsVisible(operationIds, visible) {
+          set(
+            (state) => {
+              const ids = new Set(operationIds);
+              const kept = state.hiddenToolpathIds.filter((id) => !ids.has(id));
+              state.hiddenToolpathIds = visible ? kept : [...kept, ...ids];
+            },
+            false,
+            "setToolpathsVisible",
+          );
+        },
+
+        setSimulating(simulating) {
+          set(
+            (state) => {
+              state.simulating = simulating;
+              if (simulating) {
+                state.editingTabs = false;
+                state.pickingZero = false;
+              }
+            },
+            false,
+            "setSimulating",
+          );
+        },
+
         clearSelection() {
           set(
             (state) => {
-              state.selectedShapeIds = [];
+              state.selectedPaths = [];
               state.selectedOperationId = null;
               state.editingTabs = false;
             },
@@ -192,14 +241,18 @@ export function createWorkspaceStore() {
                   operationIds.has(id),
                 );
               }
-              const shapeIds = new Set(document.geometry.map((shape) => shape.id));
+              const pathCounts = new Map(
+                document.geometry.map((shape) => [shape.id, shape.paths.length]),
+              );
+              const exists = ({ shapeId, path }: HoveredGeometry) => {
+                const count = pathCounts.get(shapeId);
+                return count !== undefined && (path === null || path < count);
+              };
               // Assigned only when something went, so unchanged selections keep their identity.
-              if (state.selectedShapeIds.some((id) => !shapeIds.has(id))) {
-                state.selectedShapeIds = state.selectedShapeIds.filter((id) => shapeIds.has(id));
+              if (!state.selectedPaths.every(exists)) {
+                state.selectedPaths = state.selectedPaths.filter(exists);
               }
-              if (state.hoveredShapeId !== null && !shapeIds.has(state.hoveredShapeId)) {
-                state.hoveredShapeId = null;
-              }
+              if (state.hovered !== null && !exists(state.hovered)) state.hovered = null;
               const operationId = state.selectedOperationId;
               const operation = document.operations.find(({ id }) => id === operationId);
               if (operationId !== null && !operation) state.selectedOperationId = null;

@@ -1,7 +1,6 @@
 import type { PocketOperation, PocketParams, Shape, Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { generateToolpath } from "./generate";
-import { ENTRY_CLEARANCE } from "./passes";
 import { pocketToolpath } from "./pocket";
 import type { Vec3 } from "./stock";
 import type { Toolpath, ToolpathMove } from "./toolpath";
@@ -74,7 +73,10 @@ function pocket(
   shapes: Shape[] = [square],
   toolOverrides: Partial<Tool> = {},
 ): Toolpath {
-  return pocketToolpath(operation(overrides, shapes, toolOverrides), shapes, { safeZ: 5 });
+  return pocketToolpath(operation(overrides, shapes, toolOverrides), shapes, {
+    safeZ: 5,
+    entryClearance: 1,
+  });
 }
 
 function operation(
@@ -87,7 +89,7 @@ function operation(
     name: "Pocket",
     enabled: true,
     type: "pocket",
-    shapeIds: shapes.map((shape) => shape.id),
+    targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
@@ -277,25 +279,32 @@ describe("pocketToolpath", () => {
     for (const [a, b] of aroundIsland) expect(b[1]).toBeLessThanOrEqual(a[1] + 1e-9);
   });
 
-  it("retracts only at the end of a pocket", () => {
+  it("retracts only on the first pass and at the end of a pocket", () => {
     for (const ramp of [false, true]) {
       expect(retracts(pocket({ ramp }))).toBe(1);
-      expect(retracts(pocket({ ramp }, [square, island]))).toBe(1);
-      const finished = pocket({ ramp, allowance: 0.5, finishPass: true }, [square, island]);
-      expect(retracts(finished)).toBe(1);
+      for (const toolpath of [
+        pocket({ ramp }, [square, island]),
+        pocket({ ramp, allowance: 0.5, finishPass: true }, [square, island]),
+      ]) {
+        // Below the first pass the stock above is cleared, so the tool stays down.
+        const deeper = toolpath.moves.findIndex((move) => move.to[2] < -2 - 1e-9);
+        expect(retracts({ ...toolpath, moves: toolpath.moves.slice(deeper) })).toBe(1);
+      }
     }
   });
 
-  it("crosses above the stock on the first pass and at the cleared depth after", () => {
-    const toolpath = pocket({}, [square, island]);
+  it("crosses uncut stock at the retract height and cleared stock at its depth", () => {
+    // At a zero entry clearance a rapid across the stock top would rub it.
+    const toolpath = pocketToolpath(operation({}, [square, island]), [square, island], {
+      safeZ: 5,
+      entryClearance: 0,
+    });
     const across = steps(toolpath).filter(
-      ([from, move]) =>
-        from[2] === move.to[2] && Math.hypot(move.to[0] - from[0], move.to[1] - from[1]) > 6,
+      ([from, move]) => move.to[0] !== from[0] || move.to[1] !== from[1],
     );
-    expect(across.length).toBeGreaterThan(0);
+    expect(across.some(([from]) => from[2] === 5)).toBe(true);
     for (const [from, move] of across) {
-      if (from[2] > 0)
-        expect(move).toMatchObject({ kind: "rapid", to: [move.to[0], move.to[1], 1] });
+      if (move.kind === "rapid") expect([from[2], move.to[2]]).toEqual([5, 5]);
       else expect([-2, -4, -6]).toContain(from[2]);
     }
   });
@@ -399,11 +408,22 @@ describe("pocketToolpath", () => {
     for (const [from, move] of steps(toolpath)) {
       if (move.kind !== "rapid") continue;
       // Down or up to the entry clearance, or up and across at the retract height.
-      if (move.to[2] < from[2]) expect(move.to[2]).toBe(ENTRY_CLEARANCE);
-      else expect([ENTRY_CLEARANCE, 5]).toContain(move.to[2]);
+      if (move.to[2] < from[2]) expect(move.to[2]).toBe(1);
+      else expect([1, 5]).toContain(move.to[2]);
     }
     expect(toolpath.moves[0]).toMatchObject({ kind: "rapid" });
     expect(toolpath.moves.at(-1)).toMatchObject({ kind: "rapid" });
+  });
+
+  it("rapids down to the machine's entry clearance", () => {
+    for (const entryClearance of [0, 2.5]) {
+      const toolpath = pocketToolpath(operation(), [square], { safeZ: 5, entryClearance });
+      const downs = steps(toolpath).filter(
+        ([from, move]) => move.kind === "rapid" && move.to[2] < from[2],
+      );
+      expect(downs.length).toBeGreaterThan(0);
+      for (const [, move] of downs) expect(move.to[2]).toBe(entryClearance);
+    }
   });
 
   it("plunges straight down at the plunge rate without a ramp", () => {
@@ -460,8 +480,8 @@ describe("pocketToolpath", () => {
   });
 
   it("is what generateToolpath returns for a pocket", () => {
-    expect(generateToolpath({ operation: operation(), shapes: [square], safeZ: 5 })).toEqual(
-      pocket(),
-    );
+    expect(
+      generateToolpath({ operation: operation(), shapes: [square], safeZ: 5, entryClearance: 1 }),
+    ).toEqual(pocket());
   });
 });
