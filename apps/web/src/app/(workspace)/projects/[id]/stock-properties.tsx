@@ -5,7 +5,7 @@ import { cn } from "cn";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import {
 } from "@/lib/anchor-grid";
 import type { MachineChoice } from "@/lib/machines";
 import { gestureHandlers } from "@/stores/gesture-handlers";
-import { matchingMachineChoice, setMachine } from "@/stores/machine-actions";
+import { machineKey, matchingMachineChoice, setMachine } from "@/stores/machine-actions";
 import {
   type StockDimension,
   setCustomOrigin,
@@ -117,11 +117,19 @@ const SNAPSHOT = "";
 function MachineField({ machines }: { machines: MachineChoice[] }) {
   const store = useDocumentStoreApi();
   const machine = useDocumentStore((s) => s.document.machine);
-  const current = matchingMachineChoice(machines, machine);
+  // Tells apart machines with identical settings, which the snapshot alone can't.
+  const [chosenId, setChosenId] = useState<string | null>(null);
+  const chosen = machines.find((choice) => choice.id === chosenId);
+  const current =
+    chosen && machine && machineKey(chosen.machine) === machineKey(machine)
+      ? chosen
+      : matchingMachineChoice(machines, machine);
 
   function choose(id: string) {
     const choice = machines.find((m) => m.id === id);
-    if (choice) setMachine(store, choice.machine);
+    if (!choice) return;
+    setChosenId(id);
+    setMachine(store, choice.machine);
   }
 
   return (

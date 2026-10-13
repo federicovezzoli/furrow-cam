@@ -24,6 +24,21 @@ import { importProject } from "./actions";
 const MAX_FILE_SIZE = 4_000_000;
 
 /**
+ * Whether `file` is a project without a machine snapshot. Anything it can't
+ * read is left to the server to explain.
+ */
+async function needsMachine(file: File): Promise<boolean> {
+  try {
+    const json: unknown = JSON.parse(await file.text());
+    return typeof json === "object" && json !== null && "schemaVersion" in json
+      ? !("machine" in json) || json.machine === null
+      : false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Picks an exported project file and creates a project from it. A file
  * without a machine gets the user's only machine, or asks which of
  * `machines` (at least one) to use.
@@ -66,8 +81,17 @@ export function ImportProjectButton({ machines }: { machines: MachineOption[] })
       setError("This file is too large to import (the limit is 4 MB).");
       return;
     }
-    // With several machines, the server says whether the file needs one chosen.
-    upload(file, only?.id ?? null);
+    if (only) {
+      upload(file, only.id);
+      return;
+    }
+    startTransition(async () => {
+      // Asks first rather than uploading the file twice; the server still checks.
+      if (await needsMachine(file)) {
+        setError(null);
+        setChoosing(file);
+      } else upload(file, null);
+    });
   }
 
   function onChoose(event: FormEvent<HTMLFormElement>) {

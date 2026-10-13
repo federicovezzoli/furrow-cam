@@ -9,7 +9,12 @@ const mocks = vi.hoisted(() => ({
   userId: "user-1" as string | null,
   /** The machine rows, by id, with their owner. */
   machines: new Map<string, Machine & { userId: string }>(),
-  created: [] as { userId: string; name: string; document: ProjectDocument }[],
+  created: [] as {
+    userId: string;
+    name: string;
+    machineName: string | null;
+    document: ProjectDocument;
+  }[],
 }));
 
 vi.mock("@/lib/session", () => ({ getUserId: async () => mocks.userId }));
@@ -26,8 +31,10 @@ vi.mock("@/lib/db", () => ({
         const row = mocks.machines.get(where.id);
         return row && row.userId === where.userId ? row : null;
       },
-      count: async ({ where }: { where: { userId: string } }) =>
-        [...mocks.machines.values()].filter((row) => row.userId === where.userId).length,
+      findMany: async ({ where }: { where: { userId: string } }) =>
+        [...mocks.machines.entries()]
+          .filter(([, row]) => row.userId === where.userId)
+          .map(([id, row]) => ({ ...row, id })),
     },
     project: {
       create: async ({ data }: { data: (typeof mocks.created)[number] }) => {
@@ -68,6 +75,7 @@ describe("createProject", () => {
       "redirect /projects/project-1",
     );
     expect(mocks.created[0]?.document.machine).toEqual(machine);
+    expect(mocks.created[0]?.machineName).toBe(machine.name);
   });
 
   it("rejects another user's machine", async () => {
@@ -93,6 +101,13 @@ describe("importProject", () => {
       error: "Add a machine before importing a project.",
     });
     expect(mocks.created).toHaveLength(0);
+  });
+
+  it("rejects a machine-less file when none of the user's machines is valid", async () => {
+    mocks.machines.set(MACHINE_ID, { ...machine, safeZ: 500, userId: USER });
+    expect(await importProject(projectFile(createProjectDocument()), null)).toEqual({
+      error: "Add a machine before importing a project.",
+    });
   });
 
   it("asks for a machine for a machine-less file", async () => {
@@ -124,5 +139,6 @@ describe("importProject", () => {
     const document = { ...createProjectDocument(), machine: lowRider };
     await expect(importProject(projectFile(document), MACHINE_ID)).rejects.toThrow("redirect");
     expect(mocks.created[0]?.document.machine).toEqual(lowRider);
+    expect(mocks.created[0]?.machineName).toBe(lowRider.name);
   });
 });

@@ -13,15 +13,11 @@ export function getMachine(userId: string, id: string) {
 
 /**
  * Copies a machine profile into the shape stored in a project document
- * (ADR-0003). The snapshot keeps no link to the row, so editing or deleting
- * the machine later never changes existing projects.
+ * (ADR-0003), or `null` for a row that fails today's rules. The snapshot
+ * keeps no link to the row, so editing or deleting the machine later never
+ * changes existing projects.
  */
-export function snapshotMachine(row: Machine): Machine {
-  return Machine.parse(machineFields(row));
-}
-
-/** Like `snapshotMachine`, but `null` for a row that fails today's rules instead of throwing. */
-export function safeSnapshotMachine(row: Machine): Machine | null {
+export function snapshotMachine(row: Machine): Machine | null {
   const machine = Machine.safeParse(machineFields(row));
   return machine.success ? machine.data : null;
 }
@@ -36,7 +32,7 @@ export type MachineChoice = { id: string; machine: Machine };
 export async function listMachineChoices(userId: string): Promise<MachineChoice[]> {
   const rows = await listMachines(userId);
   return rows.flatMap((row) => {
-    const machine = safeSnapshotMachine(row);
+    const machine = snapshotMachine(row);
     return machine ? [{ id: row.id, machine }] : [];
   });
 }

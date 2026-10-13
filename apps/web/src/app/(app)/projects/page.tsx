@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listMachineChoices, type MachineOption } from "@/lib/machines";
+import { listMachines, type MachineOption, snapshotMachine } from "@/lib/machines";
 import { listProjects, type ProjectListRow } from "@/lib/projects";
 import { requireUserId } from "@/lib/session";
 import { deleteProject } from "./actions";
@@ -37,22 +37,27 @@ export default function ProjectsPage() {
  */
 async function Projects() {
   const userId = await requireUserId();
-  const [machines, projects] = await Promise.all([
-    listMachineChoices(userId),
-    listProjects(userId),
-  ]);
-  const options: MachineOption[] = machines.map(({ id, machine }) => ({ id, name: machine.name }));
+  const [machines, projects] = await Promise.all([listMachines(userId), listProjects(userId)]);
+  // Machines that fail today's rules can't be snapshotted until they are fixed.
+  const options: MachineOption[] = machines
+    .filter((row) => snapshotMachine(row) !== null)
+    .map(({ id, name }) => ({ id, name }));
 
   return (
     <>
       {options.length === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
           <p className="text-muted-foreground">
-            Projects are set up for a machine. Describe your router once, then create or import
-            projects for it.
+            {machines.length === 0
+              ? "Projects are set up for a machine. Describe your router once, then create or import projects for it."
+              : "Projects are set up for a machine, and your machines' settings need fixing before they can be used."}
           </p>
           <Button asChild>
-            <Link href="/machines/new">Add a machine first</Link>
+            {machines.length === 0 ? (
+              <Link href="/machines/new">Add a machine first</Link>
+            ) : (
+              <Link href="/machines">Fix your machines</Link>
+            )}
           </Button>
         </div>
       ) : (

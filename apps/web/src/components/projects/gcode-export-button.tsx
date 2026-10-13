@@ -45,17 +45,24 @@ export function GcodeExportButton({
     }
   }
 
-  return (
+  const button = (
     <Button
       variant="ghost"
       size="compact"
       onClick={onClick}
       disabled={pending || disabledReason !== undefined}
-      title={disabledReason ?? "Export G-code"}
+      title={disabledReason === undefined ? "Export G-code" : undefined}
     >
       <FileCodeIcon />
       G-code
     </Button>
+  );
+  if (disabledReason === undefined) return button;
+  // A disabled button gets no pointer events, so its wrapper shows why.
+  return (
+    <span title={disabledReason} className="inline-flex">
+      {button}
+    </span>
   );
 }
 

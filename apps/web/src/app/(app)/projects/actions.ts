@@ -13,7 +13,7 @@ import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
-import { getMachine, safeSnapshotMachine } from "@/lib/machines";
+import { getMachine, listMachineChoices, snapshotMachine } from "@/lib/machines";
 import { documentColumns, getProject, parseProjectFile, parseProjectId } from "@/lib/projects";
 import { getUserId } from "@/lib/session";
 
@@ -46,7 +46,7 @@ async function snapshotUserMachine(
   if (typeof id !== "string" || id === "") return { error: "Choose a machine." };
   const row = await getMachine(userId, id);
   if (!row) return { error: "This machine no longer exists." };
-  const machine = safeSnapshotMachine(row);
+  const machine = snapshotMachine(row);
   if (!machine) {
     return { error: "This machine's settings are no longer valid. Fix them on the Machines page." };
   }
@@ -97,8 +97,9 @@ export async function importProject(file: File, machineId: string | null): Promi
   let document = parsed.document;
   if (document.machine === null) {
     if (machineId === null) {
-      const machines = await db.machine.count({ where: { userId } });
-      if (machines === 0) return { error: "Add a machine before importing a project." };
+      // The machines the import dialog offers: rows that fail today's rules aren't.
+      const machines = await listMachineChoices(userId);
+      if (machines.length === 0) return { error: "Add a machine before importing a project." };
       return { chooseMachine: true };
     }
     const snapshot = await snapshotUserMachine(userId, machineId);
