@@ -1,0 +1,6 @@
+---
+"@furrow/cam-core": minor
+"@furrow/web": minor
+---
+
+Simulate material removal (PRD-0001 R10, ADR-0019): a new group in the viewport toolbar holds a toggle that shows the stock as it will look after cutting in place of the stock box, with the toolpaths still drawn over it, and a button that shows or hides every operation's toolpath at once (the Operations pane still does it per operation). The simulation is a heightmap over the stock with six cells across the smallest tool in use, capped at 2048 × 4096 cells (fewer on devices whose textures can't hold them). Each move of every enabled operation, rapids included, sweeps its tool's shape across it (flat for end mills and drills, a hemisphere for ball end mills, a cone over the tip for V-bits), exactly along ramps. It runs in its own Web Worker whenever the toolpaths or the stock change while it is shown, and is drawn as one instanced surface lifted from a float texture, with walls down to the stock bottom and cuts darker the deeper they go. Turning on tab editing or zero picking turns it off. `@furrow/cam-core` adds `simulateCuts`, `heightmapGrid`, `cutterProfile`, `smallestDiameter`, `heightmapBuffers`, `CELLS_PER_DIAMETER` and `MAX_HEIGHTMAP_CELLS`.

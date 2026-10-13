@@ -43,6 +43,12 @@ export type WorkspaceState = {
   pickingZero: boolean;
   /** Operations whose toolpaths the viewport hides. */
   hiddenToolpathIds: string[];
+  /**
+   * The viewport shows the stock as simulated after cutting (PRD-0001 R10,
+   * ADR-0019) in place of the stock box; toolpaths still show. Editing tabs
+   * and picking the zero work on the uncut stock top, so each ends the other.
+   */
+  simulating: boolean;
 
   setView: (view: ViewMode) => void;
   /**
@@ -57,6 +63,9 @@ export type WorkspaceState = {
   /** Switches to the top view when turned on. */
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
+  /** Shows or hides the toolpaths of all of `operationIds` at once. */
+  setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
+  setSimulating: (simulating: boolean) => void;
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
@@ -78,6 +87,7 @@ export function createWorkspaceStore() {
         editingTabs: false,
         pickingZero: false,
         hiddenToolpathIds: [],
+        simulating: false,
 
         setView(view) {
           set(
@@ -144,6 +154,7 @@ export function createWorkspaceStore() {
               if (editing) {
                 state.view = "top";
                 state.pickingZero = false;
+                state.simulating = false;
               }
             },
             false,
@@ -158,6 +169,7 @@ export function createWorkspaceStore() {
               if (picking) {
                 state.view = "top";
                 state.editingTabs = false;
+                state.simulating = false;
               }
             },
             false,
@@ -179,6 +191,32 @@ export function createWorkspaceStore() {
             },
             false,
             "setToolpathVisible",
+          );
+        },
+
+        setToolpathsVisible(operationIds, visible) {
+          set(
+            (state) => {
+              const ids = new Set(operationIds);
+              const kept = state.hiddenToolpathIds.filter((id) => !ids.has(id));
+              state.hiddenToolpathIds = visible ? kept : [...kept, ...ids];
+            },
+            false,
+            "setToolpathsVisible",
+          );
+        },
+
+        setSimulating(simulating) {
+          set(
+            (state) => {
+              state.simulating = simulating;
+              if (simulating) {
+                state.editingTabs = false;
+                state.pickingZero = false;
+              }
+            },
+            false,
+            "setSimulating",
           );
         },
 

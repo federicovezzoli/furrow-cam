@@ -3,10 +3,11 @@
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
 import { Canvas } from "@react-three/fiber";
 import { cn } from "cn";
-import { BoxIcon, ScanIcon, SquareIcon } from "lucide-react";
+import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useSimulation } from "@/hooks/use-simulation";
 import { belongsElsewhere } from "@/lib/keyboard-target";
 import { boxWithPoint } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
@@ -21,7 +22,7 @@ import { PALETTES } from "./scene-style";
 
 /**
  * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry
- * and toolpaths in one scene, seen from an orthographic top view or a perspective
+ * and toolpaths (or the stock as simulated after cutting, ADR-0019) in one scene, seen from an orthographic top view or a perspective
  * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014),
  * so changing the work origin moves only the origin marker and the grid.
  * Browser-only: load it with `next/dynamic` and `ssr: false`.
@@ -30,6 +31,8 @@ export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
+  const simulating = useWorkspaceStore((s) => s.simulating);
+  const simulation = useSimulation(simulating);
   // A path hovered in the viewport, not a shape hovered in the Geometry pane.
   const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
@@ -60,9 +63,17 @@ export function Viewport() {
         ) : (
           <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         )}
-        <Scene box={box} palette={palette} />
+        <Scene box={box} palette={palette} heightmap={simulating ? simulation.heightmap : null} />
       </Canvas>
       <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
+      {simulating && (simulation.pending || simulation.error) && (
+        <p
+          role="status"
+          className="absolute bottom-2 left-2 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
+        >
+          {simulation.pending ? "Simulating…" : `Simulation failed: ${simulation.error}`}
+        </p>
+      )}
     </div>
   );
 }
@@ -125,32 +136,78 @@ const VIEWS: { value: ViewMode; label: string; Icon: typeof SquareIcon; hint: st
 function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
   const setView = useWorkspaceStore((s) => s.setView);
   return (
-    <div
-      role="toolbar"
-      aria-label="View"
-      className="absolute top-2 left-2 flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs"
-    >
-      {VIEWS.map(({ value, label, Icon, hint }) => (
+    <div className="absolute top-2 left-2 flex items-center gap-2">
+      <div role="toolbar" aria-label="View" className={TOOLBAR_GROUP}>
+        {VIEWS.map(({ value, label, Icon, hint }) => (
+          <Button
+            key={value}
+            variant={view === value ? "secondary" : "ghost"}
+            size="icon-compact"
+            aria-label={label}
+            aria-pressed={view === value}
+            title={`${label}: ${hint}`}
+            onClick={() => setView(value)}
+          >
+            <Icon />
+          </Button>
+        ))}
         <Button
-          key={value}
-          variant={view === value ? "secondary" : "ghost"}
+          variant="ghost"
           size="icon-compact"
-          aria-label={label}
-          aria-pressed={view === value}
-          title={`${label}: ${hint}`}
-          onClick={() => setView(value)}
+          aria-label="Fit stock"
+          title="Fit stock"
+          onClick={onFit}
         >
-          <Icon />
+          <ScanIcon />
         </Button>
-      ))}
+      </div>
+      <CutToolbar />
+    </div>
+  );
+}
+
+const TOOLBAR_GROUP =
+  "flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs";
+
+/**
+ * What the viewport shows of the cut: the toolpaths of the enabled operations,
+ * all shown or hidden at once (the Operations pane does it per operation),
+ * and the simulated stock.
+ */
+function CutToolbar() {
+  const workspace = useWorkspaceStoreApi();
+  const simulating = useWorkspaceStore((s) => s.simulating);
+  const operations = useDocumentStore((s) => s.document.operations);
+  const operationIds = useMemo(
+    () => operations.filter((op) => op.enabled).map((op) => op.id),
+    [operations],
+  );
+  const anyShown = useWorkspaceStore((s) =>
+    operationIds.some((id) => !s.hiddenToolpathIds.includes(id)),
+  );
+  const ToolpathsIcon = anyShown ? RouteIcon : RouteOffIcon;
+  return (
+    <div role="toolbar" aria-label="Cut" className={TOOLBAR_GROUP}>
       <Button
-        variant="ghost"
+        variant={anyShown ? "secondary" : "ghost"}
         size="icon-compact"
-        aria-label="Fit stock"
-        title="Fit stock"
-        onClick={onFit}
+        aria-label="Show toolpaths"
+        aria-pressed={anyShown}
+        title={anyShown ? "Hide all toolpaths" : "Show all toolpaths"}
+        disabled={operationIds.length === 0}
+        onClick={() => workspace.getState().setToolpathsVisible(operationIds, !anyShown)}
       >
-        <ScanIcon />
+        <ToolpathsIcon />
+      </Button>
+      <Button
+        variant={simulating ? "secondary" : "ghost"}
+        size="icon-compact"
+        aria-label="Simulate cutting"
+        aria-pressed={simulating}
+        title="Simulate cutting: show the stock as it will look after the toolpaths"
+        onClick={() => workspace.getState().setSimulating(!simulating)}
+      >
+        <LayersIcon />
       </Button>
     </div>
   );

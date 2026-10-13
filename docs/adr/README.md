@@ -33,3 +33,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0016](0016-zero-point-anchors.md) | XY zero on any stock anchor or a custom point | Proposed |
 | [0017](0017-freemium-limit-enforcement.md) | Enforcing freemium usage limits | Proposed |
 | [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed |
+| [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
