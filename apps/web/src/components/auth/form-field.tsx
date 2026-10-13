@@ -1,16 +1,21 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+/** A labelled auth input; `children` are overlaid inside it (e.g. a trailing button). */
 export function FormField({
   label,
   id,
+  children,
   ...props
-}: ComponentProps<typeof Input> & { label: string; id: string }) {
+}: ComponentProps<typeof Input> & { label: string; id: string; children?: ReactNode }) {
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} name={id} required {...props} />
+      <div className="relative">
+        <Input id={id} name={id} required {...props} />
+        {children}
+      </div>
     </div>
   );
 }
