@@ -1,4 +1,4 @@
-import { type Machine, NEW_MACHINE_DEFAULTS } from "./machine";
+import type { Machine } from "./machine";
 
 /**
  * The fields a preset can fill: facts about the machine. Name, safe Z, entry
@@ -78,11 +78,11 @@ export function askedFields(preset: MachinePreset): RequiredPresetField[] {
 }
 
 /**
- * The starting values of a machine created from `preset`. The fields it asks
- * for are left out, for the user to fill in.
+ * The values `preset` gives a new machine, on top of `NEW_MACHINE_DEFAULTS`.
+ * The fields it asks for are left out, for the user to fill in.
  */
 export function presetMachine(preset: MachinePreset): Partial<Machine> {
-  return { ...NEW_MACHINE_DEFAULTS, name: presetName(preset), ...preset.values };
+  return { name: presetName(preset), ...preset.values };
 }
 
 const V1E_MILLING_BASICS: PresetSource = {
@@ -103,8 +103,9 @@ G1 Z10 F900
 M0 (MSG Remove probe)
 M62 P1 (If used start spindle pin27 )`;
 
+/** The Jackpot G-code uses FluidNC commands (`M62`/`M63`, `G38.2 … P`, `$HZ`) that GRBL rejects. */
 const V1E_FIRMWARE =
-  "Requires FluidNC on V1 Engineering's Jackpot board (the Jackpot3 also runs grblHAL), or GRBL. Marlin builds aren't supported yet.";
+  "Requires FluidNC on V1 Engineering's Jackpot board: the program start, tool change and end use FluidNC commands. GRBL, grblHAL and Marlin builds aren't supported yet.";
 
 const V1E_NOTES = [
   "Manual router (e.g. a Makita RT0701C): set its speed on its dial; the G-code sets none.",
@@ -166,7 +167,7 @@ function longMill(
     values: { ...workArea, maxFeedXY: 4000, maxFeedZ: 3000 },
     ask: [LONGMILL_SPINDLE],
     notes: [
-      `The work area is the firmware's maximum travel ($130–$132). ${advertised}`,
+      `The work area is the smaller of the firmware's maximum travel ($130–$132) and Sienci's advertised area. ${advertised}`,
       "Max feed Z is the LongBoard's 3000 mm/min; the SuperLongBoard allows 4000 mm/min.",
       "Homing is off by default: zero X, Y and Z on the stock, e.g. with a touch plate.",
     ],
@@ -185,7 +186,7 @@ const GENMITSU_ASK: PresetQuestion[] = [
   },
   {
     fields: ["spindleRpmMin", "spindleRpmMax"],
-    help: "Spindle: the stock 775 spindle is rated 9,000 RPM, and SainSmart publishes no minimum. Send $$ and check $31 (minimum) and $30 (maximum).",
+    help: "Spindle: the stock 775 spindle is rated 9,000 RPM, and SainSmart publishes no minimum. Enter the slowest and fastest speeds you run it at, in RPM. The G-code's S words are in RPM, so GRBL's $30 (maximum spindle speed) should match the maximum.",
   },
 ];
 
@@ -361,17 +362,18 @@ M30`,
   longMill(
     "12x30",
     { workAreaX: 810, workAreaY: 355, workAreaZ: 120 },
-    "Sienci advertises 820 × 368 mm, with about 125 mm of Z.",
+    "Sienci advertises 820 × 368 mm, with about 125 mm of Z; the firmware's 810 × 355 × 120 mm is used.",
   ),
   longMill(
     "30x30",
     { workAreaX: 810, workAreaY: 855, workAreaZ: 120 },
-    "Sienci advertises 820 × 868 mm, with about 125 mm of Z.",
+    "Sienci advertises 820 × 868 mm, with about 125 mm of Z; the firmware's 810 × 855 × 120 mm is used.",
   ),
+  // Sienci states a 48 × 30 in working area, smaller than the firmware's 1270 × 855 mm travel.
   longMill(
     "48x30",
-    { workAreaX: 1270, workAreaY: 855, workAreaZ: 120 },
-    "Sienci advertises 48 × 30 in.",
+    { workAreaX: 1219.2, workAreaY: 762, workAreaZ: 120 },
+    "Sienci advertises 48 × 30 in (1219.2 × 762 mm), which this preset uses for X and Y; the firmware allows 1270 × 855 mm.",
   ),
   {
     id: "sainsmart-genmitsu-3018-rex",

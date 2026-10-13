@@ -116,7 +116,8 @@ export function MachineForm({
             Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.
           </span>
         </div>
-        {asked.includes("spindleRpmMin") && (
+        {/* Ticking Manual spindle answers the question too. */}
+        {asked.includes("spindleRpmMin") && !manualSpindle && (
           <div className="sm:col-span-full">
             <AskedHint />
           </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Machine } from "./machine";
+import { Machine, NEW_MACHINE_DEFAULTS } from "./machine";
 import {
   askedFields,
   MACHINE_PRESETS,
@@ -79,6 +79,7 @@ describe("MACHINE_PRESETS", () => {
           programEnd: null,
           operationStart: null,
           toolChange: null,
+          ...NEW_MACHINE_DEFAULTS,
           ...presetMachine(preset),
           ...answers,
         };

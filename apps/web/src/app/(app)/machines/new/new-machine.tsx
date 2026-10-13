@@ -30,6 +30,23 @@ const RADIO_CARD =
 export function NewMachine() {
   const [start, setStart] = useState<Start>("preset");
   const [preset, setPreset] = useState<MachinePreset | null>(null);
+  /** Something was typed in the form, which switching would throw away. */
+  const [edited, setEdited] = useState(false);
+
+  /** Asks before a switch that unmounts an edited form; `true` to go ahead. */
+  function discardEdits(): boolean {
+    if (edited && !window.confirm("Discard the values you've entered?")) return false;
+    setEdited(false);
+    return true;
+  }
+
+  function chooseStart(value: Start) {
+    if (value !== start && discardEdits()) setStart(value);
+  }
+
+  function choosePreset(value: MachinePreset) {
+    if (value.id !== preset?.id && discardEdits()) setPreset(value);
+  }
 
   return (
     <div className="grid gap-8">
@@ -41,7 +58,7 @@ export function NewMachine() {
               name="start"
               value={value}
               checked={start === value}
-              onChange={() => setStart(value)}
+              onChange={() => chooseStart(value)}
               className="sr-only"
             />
             <span className="font-medium">{START_LABELS[value]}</span>
@@ -54,24 +71,23 @@ export function NewMachine() {
         ))}
       </div>
 
-      {start === "scratch" ? (
-        <MachineForm />
-      ) : (
-        <>
-          <PresetPicker value={preset} onChange={setPreset} />
-          {preset && (
-            <>
-              <PresetDetails preset={preset} />
-              {/* Remounted per preset: the form's fields take their values on mount. */}
-              <MachineForm
-                key={preset.id}
-                values={presetMachine(preset)}
-                asked={askedFields(preset)}
-              />
-            </>
-          )}
-        </>
-      )}
+      {start === "preset" && <PresetPicker value={preset} onChange={choosePreset} />}
+      {start === "preset" && preset && <PresetDetails preset={preset} />}
+      {/* Notes edits, which bubble up as input events, so switching can ask first. */}
+      <div onInput={() => setEdited(true)} className="contents">
+        {start === "scratch" ? (
+          <MachineForm />
+        ) : (
+          preset && (
+            // Remounted per preset: the form's fields take their values on mount.
+            <MachineForm
+              key={preset.id}
+              values={presetMachine(preset)}
+              asked={askedFields(preset)}
+            />
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -83,7 +99,11 @@ function searchText(preset: MachinePreset): string {
 
 /** The catalog grouped by maker, makers in alphabetical order. */
 function groupByMaker(presets: MachinePreset[]): [string, MachinePreset[]][] {
-  const groups = Map.groupBy(presets, (preset) => preset.maker);
+  // Not `Map.groupBy`, which is newer than Next's default browser targets.
+  const groups = new Map<string, MachinePreset[]>();
+  for (const preset of presets) {
+    groups.set(preset.maker, [...(groups.get(preset.maker) ?? []), preset]);
+  }
   return [...groups].sort(([a], [b]) => a.localeCompare(b));
 }
 
@@ -99,6 +119,10 @@ function PresetPicker({
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const matches = MACHINE_PRESETS.filter((preset) =>
     words.every((word) => searchText(preset).includes(word)),
+  );
+  // The chosen preset stays listed, so the form below never belongs to a hidden one.
+  const shown = MACHINE_PRESETS.filter(
+    (preset) => preset.id === value?.id || matches.includes(preset),
   );
 
   return (
@@ -116,13 +140,14 @@ function PresetPicker({
           className="max-w-xs"
         />
       </div>
-      {matches.length === 0 ? (
+      {matches.length === 0 && (
         <p className="text-muted-foreground">
           No preset matches “{query}”. Start from scratch to describe your machine yourself.
         </p>
-      ) : (
+      )}
+      {shown.length > 0 && (
         <div role="radiogroup" aria-labelledby="presets-heading" className="grid gap-4">
-          {groupByMaker(matches).map(([maker, presets]) => (
+          {groupByMaker(shown).map(([maker, presets]) => (
             <div key={maker} className="grid gap-2">
               <h3 className="text-sm text-muted-foreground">{maker}</h3>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
