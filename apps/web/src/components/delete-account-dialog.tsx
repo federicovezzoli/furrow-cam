@@ -33,9 +33,14 @@ export function DeleteAccountDialog({
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError(null);
-    const { error } = await authClient.deleteUser({ password: String(form.get("password")) });
-    setPending(false);
-    if (error) return setError(error.message ?? "Could not delete the account.");
+    try {
+      const { error } = await authClient.deleteUser({ password: String(form.get("password")) });
+      if (error) return setError(error.message ?? "Could not delete the account.");
+    } catch {
+      return setError("Could not delete the account. Check your connection and try again.");
+    } finally {
+      setPending(false);
+    }
     // The deletion signed the user out: close the dialog so it doesn't linger while navigating away.
     onOpenChange(false);
     router.push("/");

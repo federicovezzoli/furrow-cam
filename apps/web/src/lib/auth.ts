@@ -36,7 +36,17 @@ export const auth = betterAuth({
   },
   // Account deletion (#28) is immediate and cascades to projects, tools, machines and sessions.
   user: {
-    deleteUser: { enabled: true },
+    deleteUser: {
+      enabled: true,
+      // Pending password-reset tokens hold the user id; the privacy policy promises nothing is left.
+      afterDelete: async (user) => {
+        await db.verification.deleteMany({ where: { value: user.id } });
+      },
+    },
+  },
+  // `/delete-user` checks the password, so it gets the same strict limit Better Auth gives sign-in.
+  rateLimit: {
+    customRules: { "/delete-user": { window: 10, max: 3 } },
   },
   hooks: {
     // Better Auth also deletes without a password when the session is fresh; we always ask for it.

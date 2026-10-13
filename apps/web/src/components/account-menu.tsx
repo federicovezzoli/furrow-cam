@@ -28,7 +28,8 @@ export function AccountMenu({ email }: { email: string }) {
 
   return (
     <>
-      <DropdownMenu>
+      {/* Not modal: a modal menu closing while the dialog opens can leave the page unclickable. */}
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             Account
@@ -44,13 +45,13 @@ export function AccountMenu({ email }: { email: string }) {
             <LogOutIcon />
             Sign out
           </DropdownMenuItem>
-          {/* Opened from outside the menu, so closing the menu doesn't unmount it. */}
           <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(true)}>
             <Trash2Icon />
             Delete account…
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {/* Outside the menu, so closing the menu doesn't unmount it. */}
       <DeleteAccountDialog open={deleting} onOpenChange={setDeleting} />
     </>
   );
