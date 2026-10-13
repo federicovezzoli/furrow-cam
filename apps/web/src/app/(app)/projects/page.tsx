@@ -49,12 +49,12 @@ async function Projects() {
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
           <p className="text-muted-foreground">
             {machines.length === 0
-              ? "Projects are set up for a machine. Describe your router once, then create or import projects for it."
+              ? "Projects are set up for a machine. Pick your router from the presets, or describe it once, then create or import projects for it."
               : "Projects are set up for a machine, and your machines' settings need fixing before they can be used."}
           </p>
           <Button asChild>
             {machines.length === 0 ? (
-              <Link href="/machines/new">Add a machine first</Link>
+              <Link href="/machines/new">Add your machine</Link>
             ) : (
               <Link href="/machines">Fix your machines</Link>
             )}
