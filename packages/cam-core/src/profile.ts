@@ -1,16 +1,7 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
-import {
-  type Box,
-  bounds,
-  depthLevels,
-  ENTRY_CLEARANCE,
-  inBox,
-  plural,
-  rampZ,
-  Track,
-} from "./passes";
+import { type Box, bounds, depthLevels, inBox, plural, rampZ, Track } from "./passes";
 import {
   coveredSpans,
   freeSpans,
@@ -25,6 +16,8 @@ import { type Toolpath, ToolpathBuilder } from "./toolpath";
 export type ProfileOptions = {
   /** Retract height above the stock top. */
   safeZ: number;
+  /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
+  entryClearance: number;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
 };
@@ -113,7 +106,7 @@ export function profileToolpath(
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
 
   const cut: Cut = {
-    builder: new ToolpathBuilder(options.safeZ),
+    builder: new ToolpathBuilder(options.safeZ, options.entryClearance),
     feedRate: tool.feedRate,
     plungeRate: tool.plungeRate,
     rampRun:
@@ -422,7 +415,7 @@ function leadInArc(loop: Point[], radius: number, wasteLeft: boolean, tolerance:
 function enter(cut: Cut, point: Point) {
   const { builder } = cut;
   builder.travel(point[0], point[1]);
-  builder.rapid([point[0], point[1], Math.min(ENTRY_CLEARANCE, builder.safeZ)]);
+  builder.rapid([point[0], point[1], builder.clearance]);
   builder.feed([point[0], point[1], 0], cut.plungeRate);
 }
 

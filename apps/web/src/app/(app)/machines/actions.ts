@@ -42,6 +42,7 @@ function parseMachineForm(form: FormData) {
     spindleRpmMin: manualSpindle ? null : numberField(form, "spindleRpmMin"),
     spindleRpmMax: manualSpindle ? null : numberField(form, "spindleRpmMax"),
     safeZ: numberField(form, "safeZ"),
+    entryClearance: numberField(form, "entryClearance"),
     postProcessor: form.get("postProcessor"),
     programStart: gcodeField(form, "programStart"),
     programEnd: gcodeField(form, "programEnd"),

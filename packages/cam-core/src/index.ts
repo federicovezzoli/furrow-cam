@@ -3,7 +3,7 @@ export * from "./dxf/import";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";
-export { depthLevels, ENTRY_CLEARANCE } from "./passes";
+export { depthLevels } from "./passes";
 export * from "./pick";
 export * from "./pocket";
 export * from "./preview";

@@ -65,6 +65,7 @@ function drill(
   overrides: Partial<DrillParams> = {},
   safeZ = 5,
   toolOverrides: Partial<Tool> = {},
+  entryClearance = 1,
 ): Toolpath {
   const operation: DrillOperation = {
     id: "11111111-2222-4333-8444-555555555555",
@@ -75,7 +76,7 @@ function drill(
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
-  return drillToolpath(operation, shapes, { safeZ });
+  return drillToolpath(operation, shapes, { safeZ, entryClearance });
 }
 
 /** The `[x, y]` of each feed move, once per hole in order. */
@@ -250,6 +251,16 @@ describe("drillToolpath", () => {
     expect(toolpath.warnings).toEqual(["The depth exceeds the tool's flute length."]);
   });
 
+  it("rapids down to the entry clearance before each peck", () => {
+    const toolpath = drill([shape(point([0, 0]))], { peck: true, depth: 8 }, 5, {}, 2.5);
+    expect(toolpath.moves.map((move) => move.to[2])).toEqual([5, 2.5, -4, 2.5, -1.5, -8, 5]);
+  });
+
+  it("feeds from the stock top at a zero entry clearance", () => {
+    const toolpath = drill([shape(point([0, 0]))], {}, 5, {}, 0);
+    expect(toolpath.moves.map((move) => move.to[2])).toEqual([5, 0, -10, 5]);
+  });
+
   it("feeds from the retract height when it is below the entry clearance", () => {
     const toolpath = drill([shape(point([0, 0]))], {}, 0.5);
     expect(toolpath.moves.map((move) => move.to[2])).toEqual([0.5, -10, 0.5]);
@@ -266,8 +277,8 @@ describe("drillToolpath", () => {
       tool,
       params,
     };
-    expect(generateToolpath({ operation, shapes, safeZ: 5 })).toEqual(
-      drillToolpath(operation, shapes, { safeZ: 5 }),
+    expect(generateToolpath({ operation, shapes, safeZ: 5, entryClearance: 1 })).toEqual(
+      drillToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 }),
     );
   });
 });
@@ -406,8 +417,16 @@ describe("helical boring", () => {
       expect(ring).toBeGreaterThan(rings[i] as number);
       expect(ring - (rings[i] as number)).toBeLessThanOrEqual(0.8 + 1e-9);
     });
-    // Between rings the tool only rises to just above the stock.
-    expect(toolpath.moves.filter((move) => move.to[2] === 5)).toHaveLength(2);
+    // Between rings the tool crosses the uncut stock at the retract height.
+    const moves = toolpath.moves;
+    const across = moves.filter(
+      (move, i) =>
+        i > 0 &&
+        move.kind === "rapid" &&
+        (move.to[0] !== moves[i - 1]?.to[0] || move.to[1] !== moves[i - 1]?.to[1]),
+    );
+    expect(across).toHaveLength(rings.length - 1);
+    for (const move of across) expect(move.to[2]).toBe(5);
   });
 
   it("plunges a step-down at a time into a bore too short to ramp along", () => {

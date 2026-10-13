@@ -106,6 +106,7 @@ function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
   return (
     a.operation === b.operation &&
     a.safeZ === b.safeZ &&
+    a.entryClearance === b.entryClearance &&
     a.shapes.length === b.shapes.length &&
     a.shapes.every((shape, i) => shape === b.shapes[i])
   );
