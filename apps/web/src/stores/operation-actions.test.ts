@@ -19,6 +19,7 @@ import {
   moveTab,
   removeTab,
   renameOperation,
+  replaceToolSnapshots,
   setOperationEnabled,
   setOperationTargets,
   setOperationTool,
@@ -459,5 +460,52 @@ describe("tabs", () => {
     removeTab(store, id, 3);
     expect(store.getState().document).toBe(withEmpty);
     expect(profile(id).params.tabs?.positions).toEqual([]);
+  });
+});
+
+describe("replaceToolSnapshots", () => {
+  const edited: Tool = { ...endMill, feedRate: 900, stepDown: 1.5 };
+
+  it("re-snapshots every operation that had the old tool, as one undo step", () => {
+    const { store, operations, add, profile } = setup();
+    const [a, b] = [add(), add()];
+    const other = add();
+    setOperationTool(store, other, vBit);
+    const drill = addDrillOperation(store, { targets: [whole(circle)], tool: endMill });
+    const before = store.getState().past.length;
+
+    expect(replaceToolSnapshots(store, endMill, edited)).toEqual([]);
+    expect(operations().map((operation) => operation.tool)).toEqual([edited, edited, vBit, edited]);
+    expect(store.getState().past).toHaveLength(before + 1);
+
+    store.getState().undo();
+    expect(profile(a).tool).toEqual(endMill);
+    expect(profile(b).tool).toEqual(endMill);
+    expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
+  });
+
+  it("keeps the old tool on operations that reject the new one, and says which", () => {
+    const { store, operations, add } = setup();
+    const id = add();
+    const drill = addDrillOperation(store, { targets: [whole(circle)], tool: endMill });
+    if (!drill) throw new Error("not added");
+    const asVBit: Tool = { ...vBit, name: endMill.name };
+
+    expect(replaceToolSnapshots(store, endMill, asVBit)).toEqual([
+      { id: drill, name: "Drill 1", error: "V-bits can't drill" },
+    ]);
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(asVBit);
+    expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
+  });
+
+  it("changes nothing when no operation had the old tool, or the tool is unchanged", () => {
+    const { store, add } = setup();
+    add();
+    const document = store.getState().document;
+    const before = store.getState().past.length;
+    expect(replaceToolSnapshots(store, vBit, edited)).toEqual([]);
+    expect(replaceToolSnapshots(store, endMill, { ...endMill })).toEqual([]);
+    expect(store.getState().document).toBe(document);
+    expect(store.getState().past).toHaveLength(before);
   });
 });

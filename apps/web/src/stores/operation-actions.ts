@@ -194,6 +194,46 @@ export function setOperationTool(store: DocumentStore, id: string, tool: Tool): 
   return OK;
 }
 
+/**
+ * Whether two tool snapshots are the same. Both are parsed by `Tool`, so
+ * their keys come in the same order.
+ */
+export function sameTool(a: Tool, b: Tool): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** An operation left with its old tool by `replaceToolSnapshots`, and why. */
+export type RejectedOperation = { id: string; name: string; error: string };
+
+/**
+ * Gives every operation whose tool snapshot is `previous` the snapshot `next`
+ * instead, as one undo step (e.g. after the library bit was edited).
+ * Operations that can't take `next`, such as a drill operation given a V-bit,
+ * keep their tool and are returned.
+ */
+export function replaceToolSnapshots(
+  store: DocumentStore,
+  previous: Tool,
+  next: Tool,
+): RejectedOperation[] {
+  const rejected: RejectedOperation[] = [];
+  const accepted = new Set<string>();
+  for (const operation of store.getState().document.operations) {
+    if (!sameTool(operation.tool, previous)) continue;
+    const parsed = Operation.safeParse({ ...operation, tool: next });
+    if (parsed.success) accepted.add(operation.id);
+    else rejected.push({ id: operation.id, name: operation.name, error: firstError(parsed.error) });
+  }
+  if (accepted.size > 0 && !sameTool(previous, next)) {
+    store.getState().change("replaceToolSnapshots", (draft) => {
+      for (const operation of draft.operations) {
+        if (accepted.has(operation.id)) operation.tool = next;
+      }
+    });
+  }
+  return rejected;
+}
+
 /** Sets what the operation cuts; shapes and paths no longer in the document are skipped. */
 export function setOperationTargets(
   store: DocumentStore,

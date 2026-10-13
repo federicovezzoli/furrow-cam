@@ -60,15 +60,15 @@ function parseToolForm(form: FormData) {
   return { errors: issuesToFormErrors<keyof Tool>(result.error.issues, input) };
 }
 
-/**
- * Creates a tool, or updates it when `id` is given. A user's first tool
- * becomes their default. Redirects to the library on success.
- */
-export async function saveTool(id: string | null, form: FormData): Promise<ToolFormErrors> {
+/** Creates a tool, or updates it when `id` is given. A user's first tool becomes their default. */
+async function writeTool(
+  id: string | null,
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
   const userId = await getUserId();
-  if (!userId) return { form: SIGNED_OUT };
+  if (!userId) return { errors: { form: SIGNED_OUT } };
   const parsed = parseToolForm(form);
-  if (parsed.errors) return parsed.errors;
+  if (parsed.errors) return { errors: parsed.errors };
   const { tool } = parsed;
 
   if (id === null) {
@@ -79,12 +79,30 @@ export async function saveTool(id: string | null, form: FormData): Promise<ToolF
     });
   } else {
     const toolId = z.uuid().safeParse(id);
-    if (!toolId.success) return { form: NOT_FOUND };
+    if (!toolId.success) return { errors: { form: NOT_FOUND } };
     const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
-    if (count === 0) return { form: NOT_FOUND };
+    if (count === 0) return { errors: { form: NOT_FOUND } };
   }
   revalidatePath("/tools");
+  return { tool };
+}
+
+/** Creates a tool, or updates it when `id` is given, then redirects to the library. */
+export async function saveTool(id: string | null, form: FormData): Promise<ToolFormErrors> {
+  const result = await writeTool(id, form);
+  if ("errors" in result) return result.errors;
   redirect("/tools");
+}
+
+/**
+ * Updates the tool `id` without leaving the page, e.g. from the workspace.
+ * Returns the saved tool as an operation snapshot (ADR-0003).
+ */
+export async function updateTool(
+  id: string,
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+  return writeTool(id, form);
 }
 
 /** Deletes a tool. Deleting the default makes the first remaining tool, by name, the default. */
