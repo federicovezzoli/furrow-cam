@@ -10,14 +10,17 @@ import type { GcodeRequest, GcodeResponse } from "@/workers/gcode.worker";
 /**
  * Downloads the open project's G-code for its machine's post-processor
  * (PRD-0001 R11). The program is computed in a Web Worker started for the
- * export (ADR-0004), from the document as it is on screen.
+ * export (ADR-0004), from the document as it is on screen. Disabled while
+ * `disabledReason` says why.
  */
 export function GcodeExportButton({
   name,
   getDocument,
+  disabledReason,
 }: {
   name: string;
   getDocument: () => ProjectDocument;
+  disabledReason?: string;
 }) {
   const [pending, setPending] = useState(false);
 
@@ -47,8 +50,8 @@ export function GcodeExportButton({
       variant="ghost"
       size="compact"
       onClick={onClick}
-      disabled={pending}
-      title="Export G-code"
+      disabled={pending || disabledReason !== undefined}
+      title={disabledReason ?? "Export G-code"}
     >
       <FileCodeIcon />
       G-code

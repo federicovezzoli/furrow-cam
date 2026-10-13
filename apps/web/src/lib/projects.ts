@@ -14,13 +14,26 @@ export function parseProjectId(id: unknown): string | null {
   return result.success ? result.data : null;
 }
 
-/** The signed-in user's projects, most recently saved first. Documents are left out. */
+export type ProjectListRow = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  /** The name in the project's machine snapshot, or `null` if it has none. */
+  machineName: string | null;
+};
+
+/**
+ * The signed-in user's projects, most recently saved first. Documents are
+ * left out: only the machine snapshot's name is read from them.
+ */
 export function listProjects(userId: string) {
-  return db.project.findMany({
-    where: { userId },
-    select: { id: true, name: true, createdAt: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  return db.$queryRaw<ProjectListRow[]>`
+    SELECT "id", "name", "createdAt", "updatedAt", "document" #>> '{machine,name}' AS "machineName"
+    FROM "project"
+    WHERE "userId" = ${userId}
+    ORDER BY "updatedAt" DESC
+  `;
 }
 
 export type ProjectRow = { id: string; name: string; updatedAt: Date };

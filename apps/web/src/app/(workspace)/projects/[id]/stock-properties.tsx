@@ -2,7 +2,8 @@
 
 import { Units, ZOrigin } from "@furrow/document";
 import { cn } from "cn";
-import { CrosshairIcon } from "lucide-react";
+import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
+import Link from "next/link";
 import type * as React from "react";
 import { useRef } from "react";
 import { NumberField } from "@/components/number-field";
@@ -15,7 +16,9 @@ import {
   type ZeroChoice,
   zeroChoiceInDirection,
 } from "@/lib/anchor-grid";
+import type { MachineChoice } from "@/lib/machines";
 import { gestureHandlers } from "@/stores/gesture-handlers";
+import { matchingMachineChoice, setMachine } from "@/stores/machine-actions";
 import {
   type StockDimension,
   setCustomOrigin,
@@ -47,14 +50,18 @@ const Z_ORIGIN_LABELS: Record<ZOrigin, string> = {
   machine_bed: "Machine bed",
 };
 
-/** The project's display units, stock size and zero point, shown while nothing is selected. */
-export function StockProperties() {
+/**
+ * The project's machine, display units, stock size and zero point, shown
+ * while nothing is selected. `machines` are the user's machine profiles.
+ */
+export function StockProperties({ machines }: { machines: MachineChoice[] }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
 
   return (
     <div className="grid gap-4 p-3 text-ui">
+      <MachineField machines={machines} />
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
         <Label htmlFor="units" className="text-ui font-normal">
           Units
@@ -95,6 +102,72 @@ export function StockProperties() {
       </section>
 
       <ZeroSection />
+    </div>
+  );
+}
+
+/** Value of the machine select for a snapshot that matches none of the user's machines. */
+const SNAPSHOT = "";
+
+/**
+ * The machine the project is for (PRD-0001 R19). Choosing one snapshots it
+ * into the document (ADR-0003) as an undoable edit; choosing the same machine
+ * again picks up changes made to it since.
+ */
+function MachineField({ machines }: { machines: MachineChoice[] }) {
+  const store = useDocumentStoreApi();
+  const machine = useDocumentStore((s) => s.document.machine);
+  const current = matchingMachineChoice(machines, machine);
+
+  function choose(id: string) {
+    const choice = machines.find((m) => m.id === id);
+    if (choice) setMachine(store, choice.machine);
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+        <Label htmlFor="machine" className="text-ui font-normal">
+          Machine
+        </Label>
+        <NativeSelect
+          id="machine"
+          size="sm"
+          value={current?.id ?? SNAPSHOT}
+          onChange={(event) => choose(event.target.value)}
+          disabled={machines.length === 0 && machine === null}
+          className="h-control w-full px-2 pr-7 text-ui"
+        >
+          <NativeSelectOption value={SNAPSHOT} disabled>
+            {machine === null
+              ? "Choose a machine…"
+              : // Edited or deleted since it was snapshotted: the project keeps its copy.
+                `${machine.name} (project copy)`}
+          </NativeSelectOption>
+          {machines.map((choice) => (
+            <NativeSelectOption key={choice.id} value={choice.id}>
+              {choice.machine.name}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+      {machine === null && (
+        <p role="status" className="flex gap-1.5 text-destructive">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            No machine set. Choose the machine this project is for to export G-code.
+            {machines.length === 0 && (
+              <>
+                {" "}
+                <Link href="/machines/new" className="underline">
+                  Add a machine
+                </Link>
+                .
+              </>
+            )}
+          </span>
+        </p>
+      )}
     </div>
   );
 }

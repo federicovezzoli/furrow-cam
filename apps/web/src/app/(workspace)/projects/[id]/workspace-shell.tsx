@@ -16,11 +16,13 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { useAutosave } from "@/hooks/use-autosave";
 import { useToolpaths } from "@/hooks/use-toolpaths";
 import { useUndoShortcuts } from "@/hooks/use-undo-shortcuts";
+import type { MachineChoice } from "@/lib/machines";
 import type { getProject, ProjectRow } from "@/lib/projects";
 import type { ToolChoice } from "@/lib/tools";
 import { saveWorkspaceLayout, type WorkspaceLayout } from "@/lib/workspace-layout";
 import type { AutosaveStatus } from "@/stores/autosave";
 import {
+  useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
   WorkspaceStoresProvider,
@@ -49,15 +51,18 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * geometry and operations on the left, the viewport in the centre and
  * properties on the right. Panel contents land with their own issues.
  * Panel sizes are remembered in a cookie (`layout` is what it held).
- * `tools` is the user's tool library, offered for operations.
+ * `tools` is the user's tool library, offered for operations, and
+ * `machines` their machine profiles, offered for the project.
  */
 export function WorkspaceShell({
   project,
   tools,
+  machines,
   layout,
 }: {
   project: WorkspaceProject;
   tools: ToolChoice[];
+  machines: MachineChoice[];
   layout: WorkspaceLayout;
 }) {
   if (project.error !== undefined) {
@@ -74,15 +79,24 @@ export function WorkspaceShell({
   return (
     <WorkspaceStoresProvider key={project.id} project={project}>
       <ToolLibraryProvider tools={tools}>
-        <Workspace project={project} layout={layout} />
+        <Workspace project={project} machines={machines} layout={layout} />
       </ToolLibraryProvider>
     </WorkspaceStoresProvider>
   );
 }
 
 /** The workspace of a project that opened; its document lives in the stores (ADR-0010). */
-function Workspace({ project, layout }: { project: ProjectRow; layout: WorkspaceLayout }) {
+function Workspace({
+  project,
+  machines,
+  layout,
+}: {
+  project: ProjectRow;
+  machines: MachineChoice[];
+  layout: WorkspaceLayout;
+}) {
   const saveStatus = useAutosave();
+  const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   useUndoShortcuts();
   useToolpaths();
   const documentStore = useDocumentStoreApi();
@@ -102,6 +116,7 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
       <TopBar
         project={project}
         saveStatus={saveStatus}
+        machineName={machineName}
         getDocument={() => documentStore.getState().document}
       />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
@@ -155,7 +170,7 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
             groupResizeBehavior="preserve-pixel-size"
           >
             <Pane title="Properties">
-              <Properties />
+              <Properties machines={machines} />
             </Pane>
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -165,21 +180,27 @@ function Workspace({ project, layout }: { project: ProjectRow; layout: Workspace
 }
 
 /** The selected operation's properties, or the project's while none is selected. */
-function Properties() {
+function Properties({ machines }: { machines: MachineChoice[] }) {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
   // Keyed, so nothing typed or rejected for one operation shows on the next.
   if (selectedId !== null) return <OperationProperties key={selectedId} operationId={selectedId} />;
-  return <StockProperties />;
+  return <StockProperties machines={machines} />;
 }
 
-/** `saveStatus` and `getDocument` are left out when the project couldn't be opened. */
+/**
+ * `saveStatus`, `machineName` and `getDocument` are left out when the project
+ * couldn't be opened. `machineName` is `null` for a project without a machine,
+ * which can't export G-code until one is chosen.
+ */
 function TopBar({
   project,
   saveStatus,
+  machineName,
   getDocument,
 }: {
   project: ProjectRow;
   saveStatus?: AutosaveStatus;
+  machineName?: string | null;
   getDocument?: () => ProjectDocument;
 }) {
   return (
@@ -192,9 +213,25 @@ function TopBar({
       <h1 className="min-w-0 truncate text-sm font-semibold" title={project.name}>
         {project.name}
       </h1>
+      {machineName !== undefined && (
+        <span
+          className="min-w-0 truncate text-ui text-muted-foreground"
+          title={machineName ?? undefined}
+        >
+          {machineName ?? "No machine set"}
+        </span>
+      )}
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
-        {getDocument && <GcodeExportButton name={project.name} getDocument={getDocument} />}
+        {getDocument && (
+          <GcodeExportButton
+            name={project.name}
+            getDocument={getDocument}
+            disabledReason={
+              machineName === null ? "Choose a machine in the project properties first" : undefined
+            }
+          />
+        )}
         {getDocument && (
           <ExportButton
             id={project.id}
