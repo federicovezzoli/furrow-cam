@@ -36,12 +36,12 @@ Many hobby routers come from a handful of communities with well-documented machi
 | --- | --- | --- |
 | M1 | A catalog of machine presets lives in the repository (versioned with the code, reviewed through PRs), not in the database. Each preset has: maker, model, variant (e.g. size), supported controller firmware, values for the `Machine` fields, notes, and source URLs for its values | Must |
 | M2 | First round: V1 Engineering **LowRider v4** and **MPCNC Primo**, **Maslow 4**, Sienci **LongMill MK2**, SainSmart **Genmitsu 3018** (variants decided while researching each machine) | Must |
-| M3 | **No guessed values:** every value comes from official documentation (maker docs, product pages, firmware configs) with its source in the catalog. A value with no official source is left empty in the preset, and the user is asked to fill it in | Must |
+| M3 | **No guessed values:** every value comes from official documentation (maker docs, product pages, firmware configs) with its source in the catalog. A value with no official source is left empty in the preset, and the user is asked to fill it in. When official sources disagree, the preset uses the most conservative value, cites both and mentions the other in its notes | Must |
 | M4 | **Build-to-size machines** (LowRider, MPCNC) have no default work area: the preset asks for the user's build dimensions, with a short explanation of how to measure them | Must |
 | M5 | Picking a preset creates an ordinary machine in the user's library, pre-filled from the preset and fully editable, with the model name as its default name | Must |
 | M6 | The **New machine** page offers "Start from a preset" (grouped by maker, searchable) or "Start from scratch" | Must |
-| M7 | Each preset states its required firmware; the picker shows it, e.g. "Requires FluidNC (Jackpot board) or GRBL. Marlin builds aren't supported yet" | Must |
-| M8 | Preset notes are shown when picking it, e.g. manual trim-router spindle, or for Maslow: keep the job inside the frame, the firmware doesn't enforce limits | Must |
+| M7 | Each preset states its required firmware; the picker shows it, e.g. "Requires FluidNC on the Jackpot board. GRBL, grblHAL and Marlin builds aren't supported yet" | Must |
+| M8 | Preset notes are shown when picking it, e.g. manual trim-router spindle, or for Maslow: keep the job inside the area you can cut, the firmware flattens moves outside its work area onto the edge instead of stopping | Must |
 | M9 | A new user with no machines is offered the preset picker when they first need a machine (e.g. before their first export) | Should |
 | M10 | Machines created from a preset count towards the machine limit when freemium limits are on (PRD-0003) | Must |
 | M11 | Tests check that every preset is valid against the `Machine` schema (with sample values for user-provided fields) and lists at least one source | Must |
@@ -49,7 +49,7 @@ Many hobby routers come from a handful of communities with well-documented machi
 ## User flow
 
 1. A LowRider v4 owner signs up and clicks **New machine**.
-2. They pick **V1 Engineering → LowRider v4**. The page explains it needs a FluidNC (Jackpot) or GRBL controller and asks for the build's X/Y working area.
+2. They pick **V1 Engineering → LowRider v4**. The page explains it needs a Jackpot board running FluidNC and asks for the build's X/Y working area.
 3. They enter their dimensions; the remaining values are pre-filled from V1 Engineering's documentation. They save.
 4. In their first project they select the machine and export G-code that runs on their LowRider without edits.
 
@@ -60,8 +60,9 @@ Many hobby routers come from a handful of communities with well-documented machi
 
 ## Open questions
 
-- Which variants to include for each machine (e.g. LongMill sizes, Genmitsu 3018 revisions): decided per machine while researching its sources.
+- ~~Which variants to include for each machine~~: decided while researching (#80): one preset each for the LowRider v4, MPCNC Primo and Maslow 4, the LongMill MK2 per size (12x30, 30x30, 48x30), and the Genmitsu 3018 REX and PROVer V2 (the 3018-PRO's official figures conflict; other revisions are discontinued or not GRBL).
 
 ## Changelog
 
 - 2026-10-13: initial draft
+- 2026-10-13: M3 picks the most conservative of conflicting official values; M8's Maslow example corrected (its firmware clamps moves to its work area); variants decided; V1 Engineering presets need FluidNC, since their G-code uses FluidNC commands

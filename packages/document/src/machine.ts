@@ -19,6 +19,16 @@ export const GcodeBlock = z
 export const DEFAULT_ENTRY_CLEARANCE = 1;
 
 /**
+ * Starting values of every new machine, from scratch or from a preset: Furrow
+ * CAM's own defaults rather than facts about a machine.
+ */
+export const NEW_MACHINE_DEFAULTS = {
+  safeZ: 5,
+  entryClearance: DEFAULT_ENTRY_CLEARANCE,
+  postProcessor: "grbl",
+} as const satisfies Partial<Machine>;
+
+/**
  * A machine profile (#11). Used to validate the user's machines and stored as
  * a snapshot in each project (ADR-0003). Strict like the rest of the document:
  * read a database row with `machineFields` first.

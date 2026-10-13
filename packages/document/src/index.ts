@@ -2,6 +2,7 @@ export * from "./document";
 export * from "./file";
 export * from "./geometry";
 export * from "./machine";
+export * from "./machine-presets";
 export * from "./migrations";
 export * from "./operation";
 export * from "./tool";
