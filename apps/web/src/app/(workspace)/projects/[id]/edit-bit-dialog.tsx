@@ -2,6 +2,7 @@
 
 import type { Tool } from "@furrow/document";
 import { PencilIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ToolForm } from "@/app/(app)/tools/tool-form";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { useUpdateTool } from "./tool-library";
  */
 export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
   const store = useDocumentStoreApi();
+  const router = useRouter();
   const updateTool = useUpdateTool();
   // Kept while open: once saved, the operation may no longer match a library bit.
   const [editing, setEditing] = useState<ToolChoice | null>(null);
@@ -37,7 +39,10 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
 
   function onSaved(tool: Tool) {
     if (!editing) return;
+    // Applied at once so the re-snapshotted operations keep matching it; the
+    // refresh then brings the library as the server has it (e.g. by name).
     updateTool(editing.id, tool);
+    router.refresh();
     const left = replaceToolSnapshots(store, editing.tool, tool);
     if (left.length > 0) setRejected(left);
     else close();

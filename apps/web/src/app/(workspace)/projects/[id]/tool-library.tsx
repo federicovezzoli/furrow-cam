@@ -2,16 +2,16 @@
 
 import { canDrill, type Tool } from "@furrow/document";
 import type * as React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import type { ToolChoice } from "@/lib/tools";
-import { sameTool } from "@/stores/operation-actions";
+import { toolKey } from "@/stores/operation-actions";
 
 const ToolLibraryContext = createContext<ToolChoice[]>([]);
 const UpdateToolContext = createContext<(id: string, tool: Tool) => void>(() => {});
 
 /**
- * The signed-in user's tool library, as loaded with the workspace and then
- * kept up to date with the bits edited from it.
+ * The signed-in user's tool library, as loaded with the workspace, with the
+ * bits edited from it applied until the server sends the library again.
  */
 export function ToolLibraryProvider({
   tools: initial,
@@ -21,11 +21,17 @@ export function ToolLibraryProvider({
   children: React.ReactNode;
 }) {
   const [tools, setTools] = useState(initial);
-  function updateTool(id: string, tool: Tool) {
+  const [loaded, setLoaded] = useState(initial);
+  if (loaded !== initial) {
+    // The server sent the library again (e.g. after a refresh): it wins.
+    setLoaded(initial);
+    setTools(initial);
+  }
+  const updateTool = useCallback((id: string, tool: Tool) => {
     setTools((current) =>
       current.map((choice) => (choice.id === id ? { ...choice, tool } : choice)),
     );
-  }
+  }, []);
   return (
     <ToolLibraryContext value={tools}>
       <UpdateToolContext value={updateTool}>{children}</UpdateToolContext>
@@ -57,5 +63,6 @@ export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
 
 /** The library tool an operation's snapshot was taken from, if it hasn't been edited since. */
 export function matchingToolChoice(tools: ToolChoice[], tool: Tool): ToolChoice | undefined {
-  return tools.find((choice) => sameTool(choice.tool, tool));
+  const key = toolKey(tool);
+  return tools.find((choice) => toolKey(choice.tool) === key);
 }

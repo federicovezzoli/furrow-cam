@@ -51,7 +51,10 @@ export function ToolForm({ id = null, values, onSaved, onCancel }: ToolFormProps
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
       if (onSaved && id !== null) {
-        const result = await updateTool(id, form);
+        // Staying on the page, so a failure must not fall into the error boundary.
+        const result = await updateTool(id, form).catch(() => ({
+          errors: { form: "The bit couldn't be saved. Check your connection and try again." },
+        }));
         if ("errors" in result) setErrors(result.errors);
         else onSaved(result.tool);
         return;

@@ -195,11 +195,11 @@ export function setOperationTool(store: DocumentStore, id: string, tool: Tool): 
 }
 
 /**
- * Whether two tool snapshots are the same. Both are parsed by `Tool`, so
- * their keys come in the same order.
+ * Equal for tool snapshots with the same settings. Snapshots are parsed by
+ * `Tool`, so their keys come in the same order.
  */
-export function sameTool(a: Tool, b: Tool): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+export function toolKey(tool: Tool): string {
+  return JSON.stringify(tool);
 }
 
 /** An operation left with its old tool by `replaceToolSnapshots`, and why. */
@@ -216,15 +216,17 @@ export function replaceToolSnapshots(
   previous: Tool,
   next: Tool,
 ): RejectedOperation[] {
+  const key = toolKey(previous);
+  if (key === toolKey(next)) return [];
   const rejected: RejectedOperation[] = [];
   const accepted = new Set<string>();
   for (const operation of store.getState().document.operations) {
-    if (!sameTool(operation.tool, previous)) continue;
+    if (toolKey(operation.tool) !== key) continue;
     const parsed = Operation.safeParse({ ...operation, tool: next });
     if (parsed.success) accepted.add(operation.id);
     else rejected.push({ id: operation.id, name: operation.name, error: firstError(parsed.error) });
   }
-  if (accepted.size > 0 && !sameTool(previous, next)) {
+  if (accepted.size > 0) {
     store.getState().change("replaceToolSnapshots", (draft) => {
       for (const operation of draft.operations) {
         if (accepted.has(operation.id)) operation.tool = next;
