@@ -173,6 +173,8 @@ model Project {
   name          String
   /// Copy of `document.schemaVersion`, so stale documents can be found without reading them.
   schemaVersion Int
+  /// Copy of `document.machine.name`, so the project list can show it without reading documents.
+  machineName   String?
   document      Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
