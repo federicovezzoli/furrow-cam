@@ -2,6 +2,13 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
+/** The signed-in user's email; redirects to sign-in otherwise. Read it inside `<Suspense>`. */
+export async function requireUserEmail(): Promise<string> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/sign-in");
+  return session.user.email;
+}
+
 /** The signed-in user's id, or `null` when signed out. Read it inside `<Suspense>`. */
 export async function getUserId(): Promise<string | null> {
   const session = await auth.api.getSession({ headers: await headers() });
