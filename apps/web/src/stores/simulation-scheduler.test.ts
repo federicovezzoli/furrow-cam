@@ -125,6 +125,8 @@ function setup() {
   return { documents, toolpaths, requests, results, schedule };
 }
 
+const stock = { width: 600, height: 400, thickness: 18 };
+
 const heightmap = {
   columns: 2,
   rows: 2,
@@ -142,8 +144,8 @@ describe("scheduleSimulation", () => {
     expect(requests).toHaveLength(1);
 
     const [first] = requests as [SimulationRequest];
-    schedule.receive({ key: first.key, heightmap });
-    expect(results).toEqual([{ key: first.key, heightmap }]);
+    schedule.receive({ key: first.key, heightmap, stock });
+    expect(results).toEqual([{ key: first.key, heightmap, stock }]);
 
     documents.getState().change("Inches", (draft) => {
       draft.units = "in";
@@ -153,7 +155,7 @@ describe("scheduleSimulation", () => {
       draft.stock.thickness = 20;
     });
     expect(requests).toHaveLength(2);
-    schedule.receive({ key: requests[1]?.key ?? "", heightmap });
+    schedule.receive({ key: requests[1]?.key ?? "", heightmap, stock });
     ready(toolpaths, DRILL_ID, "c");
     expect(requests).toHaveLength(3);
   });
@@ -165,10 +167,25 @@ describe("scheduleSimulation", () => {
     for (const hash of ["c", "d", "e"]) ready(toolpaths, DRILL_ID, hash);
     expect(requests).toHaveLength(1);
 
-    schedule.receive({ key: requests[0]?.key ?? "", heightmap });
+    schedule.receive({ key: requests[0]?.key ?? "", heightmap, stock });
     expect(requests).toHaveLength(2);
     expect(requests[1]?.key).toContain('"e"');
-    schedule.receive({ key: requests[1]?.key ?? "", heightmap });
+    schedule.receive({ key: requests[1]?.key ?? "", heightmap, stock });
+    expect(requests).toHaveLength(2);
+  });
+
+  it("sends the waiting request after a failure, and ignores failures while idle", () => {
+    const { toolpaths, requests, results, schedule } = setup();
+    ready(toolpaths, PROFILE_ID, "a");
+    ready(toolpaths, DRILL_ID, "b");
+    ready(toolpaths, DRILL_ID, "c");
+    schedule.fail("Out of memory");
+    expect(results).toEqual([{ key: requests[0]?.key, error: "Out of memory" }]);
+    expect(requests).toHaveLength(2);
+
+    schedule.receive({ key: requests[1]?.key ?? "", heightmap, stock });
+    schedule.fail("The simulation worker stopped");
+    expect(results).toHaveLength(2);
     expect(requests).toHaveLength(2);
   });
 

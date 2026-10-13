@@ -16,6 +16,13 @@ describe("heightmapCellLimit", () => {
 });
 
 describe("simulationTexture", () => {
+  it("uses a buffer already padded to whole rows as it is", () => {
+    const padded = new Float32Array(new ArrayBuffer(TEXTURE_WIDTH * 2 * 4), 0, TEXTURE_WIDTH + 1);
+    const { data, height } = simulationTexture(padded);
+    expect(height).toBe(2);
+    expect(data.buffer).toBe(padded.buffer);
+  });
+
   it("wraps the heights onto whole texture rows", () => {
     const heights = new Float32Array(TEXTURE_WIDTH + 1).fill(-2);
     const { data, height } = simulationTexture(heights);

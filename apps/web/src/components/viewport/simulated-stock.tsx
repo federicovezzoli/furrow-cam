@@ -111,37 +111,28 @@ export function SimulatedStock({
     return g;
   }, [columns, rows]);
 
-  const uniforms = useMemo(
-    () => ({
-      heights: { value: null as DataTexture | null },
-      grid: { value: [0, 0] },
-      cell: { value: [0, 0] },
-      thickness: { value: 1 },
-      color: { value: new Color() },
-    }),
-    [],
-  );
+  // Built with its uniforms from the current props, so no frame draws the
+  // new geometry with the old grid or texture. Programs are cached by shader,
+  // so a new material per heightmap doesn't recompile.
   const material = useMemo(
     () =>
       new ShaderMaterial({
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
-        uniforms,
-        /** Lines on the uncut top (shapes) draw over it instead of flickering. */
+        uniforms: {
+          heights: { value: texture },
+          grid: { value: [columns, rows] },
+          cell: { value: [cellWidth, cellHeight] },
+          thickness: { value: thickness },
+          color: { value: new Color(color) },
+        },
+        // Lines on the uncut top (shapes) draw over it instead of flickering.
         polygonOffset: true,
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
       }),
-    [uniforms],
+    [texture, columns, rows, cellWidth, cellHeight, thickness, color],
   );
-  useEffect(() => {
-    uniforms.heights.value = texture;
-    uniforms.grid.value = [columns, rows];
-    uniforms.cell.value = [cellWidth, cellHeight];
-    uniforms.thickness.value = thickness;
-    uniforms.color.value.set(color);
-    invalidate();
-  }, [uniforms, texture, columns, rows, cellWidth, cellHeight, thickness, color, invalidate]);
 
   const skirt = useMemo(() => {
     const g = new BufferGeometry();
@@ -159,7 +150,13 @@ export function SimulatedStock({
   );
   useEffect(() => () => surface.dispose(), [surface]);
   useEffect(() => () => skirt.dispose(), [skirt]);
-  useEffect(() => () => material.dispose(), [material]);
+  useEffect(
+    () => () => {
+      material.dispose();
+      invalidate();
+    },
+    [material, invalidate],
+  );
 
   return (
     <>

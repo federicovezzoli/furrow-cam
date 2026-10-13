@@ -174,6 +174,12 @@ describe("simulateCuts", () => {
     expect(heightAt(map, 10.5, 10.5)).toBe(0);
   });
 
+  it("pads the buffer under the heights to whole rows when asked", () => {
+    const { heights } = simulateCuts(stock, [], grid, 2048);
+    expect(heights).toHaveLength(120 * 60);
+    expect(heights.buffer.byteLength).toBe(4 * 2048 * 4);
+  });
+
   it("never cuts below the stock bottom", () => {
     const map = simulateCuts(stock, [moves(flat, [10, 10, -20], [50, 10, -20])], grid);
     expect(Math.min(...map.heights)).toBe(-6);

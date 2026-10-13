@@ -1,7 +1,7 @@
 "use client";
 
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { cn } from "cn";
 import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useSimulation } from "@/hooks/use-simulation";
 import { belongsElsewhere } from "@/lib/keyboard-target";
+import { heightmapCellLimit } from "@/lib/simulation-mesh";
 import { boxWithPoint } from "@/lib/viewport-scene";
 import type { ViewMode } from "@/stores/workspace-store";
 import {
@@ -32,7 +33,11 @@ export function Viewport() {
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
   const simulating = useWorkspaceStore((s) => s.simulating);
-  const simulation = useSimulation(simulating);
+  // Known once the renderer is up, inside the canvas.
+  const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
+  const simulation = useSimulation(
+    simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
+  );
   // A path hovered in the viewport, not a shape hovered in the Geometry pane.
   const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
@@ -48,6 +53,17 @@ export function Viewport() {
   const [fits, setFits] = useState(0);
   const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
   const [poses] = useState<CameraPoses>(() => new Map());
+  // A simulation of the stock before a resize would sit at the old size and depth.
+  const sim = simulation.stock;
+  const heightmap =
+    simulating &&
+    sim !== null &&
+    sim.width === width &&
+    sim.height === height &&
+    sim.thickness === thickness
+      ? simulation.heightmap
+      : null;
+  const status = simulating ? simulationStatus(simulation) : [];
 
   return (
     <div
@@ -63,19 +79,46 @@ export function Viewport() {
         ) : (
           <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         )}
-        <Scene box={box} palette={palette} heightmap={simulating ? simulation.heightmap : null} />
+        <Scene box={box} palette={palette} heightmap={heightmap} />
+        <TextureLimit onLimit={setMaxTextureSize} />
       </Canvas>
       <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
-      {simulating && (simulation.pending || simulation.error) && (
-        <p
+      {status.length > 0 && (
+        <div
           role="status"
-          className="absolute bottom-2 left-2 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
+          className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
         >
-          {simulation.pending ? "Simulating…" : `Simulation failed: ${simulation.error}`}
-        </p>
+          {status.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       )}
     </div>
   );
+}
+
+/** What the simulation is doing, and what it leaves out, one line each. */
+function simulationStatus({
+  pending,
+  error,
+  skipped,
+}: {
+  pending: boolean;
+  error: string | null;
+  skipped: string[];
+}): string[] {
+  const lines: string[] = [];
+  if (pending) lines.push("Simulating…");
+  else if (error) lines.push(`Simulation failed: ${error}`);
+  if (skipped.length > 0) lines.push(`Not simulated, toolpath failed: ${skipped.join(", ")}`);
+  return lines;
+}
+
+/** Reports the tallest texture the viewport's renderer supports, which caps the heightmap. */
+function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) => void }) {
+  const maxTextureSize = useThree((s) => s.gl.capabilities.maxTextureSize);
+  useEffect(() => onLimit(maxTextureSize), [maxTextureSize, onLimit]);
+  return null;
 }
 
 /** Pointer travel, in pixels, past which a right-button press pans rather than clicks. */

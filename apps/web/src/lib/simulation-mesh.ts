@@ -16,24 +16,16 @@ export function heightmapCellLimit(maxTextureSize: number): number {
   return Math.min(TEXTURE_WIDTH * Math.max(maxTextureSize, TEXTURE_WIDTH), MAX_HEIGHTMAP_CELLS);
 }
 
-let maxTextureSize: number | undefined;
-
 /**
- * `heightmapCellLimit` for this browser's WebGL 2, asked once of a throwaway
- * context; 2048 texels, the least WebGL 2 guarantees, if it can't tell.
+ * `heights` padded to whole texture rows of `TEXTURE_WIDTH`: the buffer under
+ * them when it already is (as `simulateCuts` pads it when asked), else a copy.
  */
-export function deviceHeightmapCellLimit(): number {
-  if (maxTextureSize === undefined) {
-    const gl = document.createElement("canvas").getContext("webgl2");
-    maxTextureSize = gl?.getParameter(gl.MAX_TEXTURE_SIZE) ?? TEXTURE_WIDTH;
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
-  }
-  return heightmapCellLimit(maxTextureSize ?? TEXTURE_WIDTH);
-}
-
-/** `heights` padded to whole texture rows of `TEXTURE_WIDTH`. */
 export function simulationTexture(heights: Float32Array): { data: Float32Array; height: number } {
   const height = Math.max(1, Math.ceil(heights.length / TEXTURE_WIDTH));
+  const { buffer, byteOffset } = heights;
+  if (byteOffset === 0 && buffer.byteLength === TEXTURE_WIDTH * height * 4) {
+    return { data: new Float32Array(buffer), height };
+  }
   const data = new Float32Array(TEXTURE_WIDTH * height);
   data.set(heights);
   return { data, height };

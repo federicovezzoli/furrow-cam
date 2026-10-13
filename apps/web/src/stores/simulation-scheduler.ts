@@ -13,7 +13,11 @@ export type SimulationInput = {
 
 export type SimulationRequest = { key: string; input: SimulationInput };
 
-export type SimulationResponse = { key: string } & ({ heightmap: Heightmap } | { error: string });
+/** A heightmap comes back with the stock it was simulated on, which may have changed since. */
+export type SimulationResponse = { key: string } & (
+  | { heightmap: Heightmap; stock: SimulationInput["stock"] }
+  | { error: string }
+);
 
 /**
  * The simulation of the enabled operations' toolpaths, or `null` while any of
@@ -53,8 +57,8 @@ export function simulationRequest(
  * worker through `post`; `receive` hands the worker's latest response to
  * `onResult`. One request at a time, like the toolpaths: changes made while
  * the worker simulates wait, and only the latest is sent once it answers.
- * `stop` stops listening; `fail` gives up on the request in flight, e.g. when
- * the worker crashed and was replaced.
+ * `stop` stops listening; `fail` reports the request in flight as failed,
+ * e.g. when the worker crashed, and sends the one waiting, if any.
  */
 export function scheduleSimulation(
   documents: DocumentStore,
@@ -105,10 +109,14 @@ export function scheduleSimulation(
       if (next) send(next);
     },
     fail(error: string) {
-      if (sentKey !== null) onResult({ key: sentKey, error });
+      // An idle worker lost nothing: the simulation showing is still good.
+      if (!inFlight || sentKey === null) return;
       inFlight = false;
+      onResult({ key: sentKey, error });
+      // Without one waiting, it simulates again once the toolpaths or the stock change.
+      const next = waiting;
       waiting = null;
-      /** Simulated again once the toolpaths or the stock change. */
+      if (next) send(next);
     },
   };
 }

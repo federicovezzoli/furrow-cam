@@ -72,13 +72,20 @@ export function heightmapGrid(
  * stays above the stock top or goes below its bottom. Cuts are applied in any
  * order: each cell keeps the lowest the tool reached there. Runs in a Web
  * Worker (ADR-0004); the result is derived data and never stored.
+ *
+ * The buffer under `heights` is padded to a multiple of `bufferMultiple`
+ * cells, so a renderer that wraps the cells onto rows of that many texels can
+ * upload it as it is, without a copy.
  */
 export function simulateCuts(
   stock: Pick<Stock, "width" | "height" | "thickness">,
   cuts: readonly SimulationCut[],
   grid: HeightmapGrid = heightmapGrid(stock, smallestDiameter(cuts)),
+  bufferMultiple = 1,
 ): Heightmap {
-  const heights = new Float32Array(grid.columns * grid.rows);
+  const cells = grid.columns * grid.rows;
+  const padded = Math.ceil(cells / bufferMultiple) * bufferMultiple;
+  const heights = new Float32Array(new ArrayBuffer(padded * 4), 0, cells);
   for (const { tool, segments } of cuts) {
     const profile = cutterProfile(tool);
     for (let i = 0; i + 5 < segments.length; i += 6) {
@@ -111,7 +118,8 @@ type CutterProfile = {
 /**
  * Flat end mills and drills cut a flat bottom (the document has no drill
  * point angle), ball end mills a hemisphere, V-bits a cone over their flat
- * tip. Each profile rises with distance and is convex, which `sweep` relies on.
+ * tip (always narrower than the bit, the tool schema says). Each profile
+ * rises with distance and is convex, which `sweep` relies on.
  */
 export function cutterProfile({ type, diameter, vAngle, tipDiameter }: CutterShape): CutterProfile {
   const radius = diameter / 2;
@@ -128,7 +136,7 @@ export function cutterProfile({ type, diameter, vAngle, tipDiameter }: CutterSha
     case "v_bit": {
       const tip = (tipDiameter ?? 0) / 2;
       const slope = 1 / Math.tan((((vAngle ?? 90) / 2) * Math.PI) / 180);
-      return { radius, flat: tip >= radius, height: (d) => Math.max(d - tip, 0) * slope };
+      return { radius, flat: false, height: (d) => Math.max(d - tip, 0) * slope };
     }
   }
 }
@@ -216,15 +224,16 @@ function sweep(
         closest = Math.min(Math.max(along, start), end);
       }
 
-      const at = (t: number) => {
-        const px = qx - dx * t;
-        const py = qy - dy * t;
-        return az + dz * t + height(Math.sqrt(px * px + py * py));
-      };
       let lowest: number;
-      if (dz === 0) lowest = at(closest);
-      else if (flat) lowest = az + dz * (dz < 0 ? end : start);
-      else lowest = goldenMinimum(at, start, end);
+      if (dz === 0) {
+        const px = qx - dx * closest;
+        const py = qy - dy * closest;
+        lowest = az + height(Math.sqrt(px * px + py * py));
+      } else if (flat) {
+        lowest = az + dz * (dz < 0 ? end : start);
+      } else {
+        lowest = lowestAlong(qx, qy, dx, dy, az, dz, height, start, end);
+      }
 
       const cell = row * columns + column;
       if (lowest < (heights[cell] as number)) heights[cell] = lowest;
@@ -232,30 +241,65 @@ function sweep(
   }
 }
 
-/** The least value of the convex `f` on `[a, b]`. */
-function goldenMinimum(f: (t: number) => number, a: number, b: number): number {
+/** How low the tool reaches at `q` from `t` along the move: `az + dz·t + height(|q − p(t)|)`. */
+function reachAt(
+  qx: number,
+  qy: number,
+  dx: number,
+  dy: number,
+  az: number,
+  dz: number,
+  height: (distance: number) => number,
+  t: number,
+): number {
+  const px = qx - dx * t;
+  const py = qy - dy * t;
+  return az + dz * t + height(Math.sqrt(px * px + py * py));
+}
+
+/**
+ * The least of `reachAt` for `t` in `[a, b]`, by golden-section search.
+ * Plain functions rather than a closure per cell: this runs for every cell a
+ * ramp passes.
+ */
+function lowestAlong(
+  qx: number,
+  qy: number,
+  dx: number,
+  dy: number,
+  az: number,
+  dz: number,
+  height: (distance: number) => number,
+  a: number,
+  b: number,
+): number {
   let lo = a;
   let hi = b;
   let c = hi - INVERSE_PHI * (hi - lo);
   let d = lo + INVERSE_PHI * (hi - lo);
-  let fc = f(c);
-  let fd = f(d);
+  let fc = reachAt(qx, qy, dx, dy, az, dz, height, c);
+  let fd = reachAt(qx, qy, dx, dy, az, dz, height, d);
   for (let step = 0; step < SEARCH_STEPS; step++) {
     if (fc < fd) {
       hi = d;
       d = c;
       fd = fc;
       c = hi - INVERSE_PHI * (hi - lo);
-      fc = f(c);
+      fc = reachAt(qx, qy, dx, dy, az, dz, height, c);
     } else {
       lo = c;
       c = d;
       fc = fd;
       d = lo + INVERSE_PHI * (hi - lo);
-      fd = f(d);
+      fd = reachAt(qx, qy, dx, dy, az, dz, height, d);
     }
   }
-  return Math.min(fc, fd, f(a), f(b));
+  return Math.min(
+    fc,
+    fd,
+    reachAt(qx, qy, dx, dy, az, dz, height, a),
+    reachAt(qx, qy, dx, dy, az, dz, height, b),
+  );
 }
 
 /** The buffer of `heightmap`, to transfer it to another thread instead of copying. */
