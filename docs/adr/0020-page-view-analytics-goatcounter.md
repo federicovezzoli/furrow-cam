@@ -21,22 +21,26 @@ ADR-0013 limits the personal data we collect to the email address and requires a
 
 ## Decision
 
-We will count page views with **GoatCounter**, loaded only when `NEXT_PUBLIC_GOATCOUNTER_URL` (the `/count` endpoint, hosted or self-hosted) is set. It is unset in development and CI, so nothing is counted there; GoatCounter also skips `localhost` by default.
+We will count page views with **GoatCounter**, only when `NEXT_PUBLIC_GOATCOUNTER_URL` (the `/count` endpoint, hosted or self-hosted) is set. It is unset in development and CI, so nothing is counted there.
 
-What GoatCounter receives for each page view:
+We send each hit ourselves, with `navigator.sendBeacon`, instead of loading GoatCounter's `count.js`. That script always adds `location.search` to the hit, so a page such as `/reset-password?token=…` would hand a live token to a third party, and it falls back to the full `document.referrer`, which after an in-app full page load is the previous page's URL with its IDs. It is also an unversioned third-party script running on every page with the user's session. Not loading it means no third-party code runs in the app.
 
-- the **route pattern** as path and title, e.g. `/projects/[id]`, never the concrete URL: no record IDs, query strings or hashes;
-- the **referrer**, user agent and screen size;
-- the visitor's **IP address**, used for the country lookup and, with the user agent, for a session hash that rotates daily. GoatCounter does not store the IP address.
+What GoatCounter receives for each page view, and nothing else:
+
+- the **route pattern** as path and title, e.g. `/projects/[id]`, never the concrete URL: no record IDs, query strings or hashes. The pattern is the pathname with each dynamic param value replaced by its name. Not-found pages have no params, so their path is sent as typed; a mistyped or broken link (e.g. `/projects/<id>/oops`) can therefore reach GoatCounter. We accept that for 404s rather than maintain a list of routes;
+- on the first page view only, the **origin** of an external referrer (e.g. `https://example.com`); same-origin referrers are never sent;
+- the **screen size**;
+- from the request itself, the visitor's **IP address** and **user agent**: GoatCounter uses them for the country lookup, browser statistics and a session hash that rotates daily, and does not store the IP address.
 
 GoatCounter sets no cookies and stores nothing in the browser, so no consent banner is needed. We record page views only: no custom events (e.g. G-code export) without a new decision.
 
-The App Router navigates client-side, so `count.js`'s own count on load (which only sees the first page) is turned off with `no_onload`; a client component in the root layout counts every navigation, the first one included, exactly once.
+The App Router navigates client-side, so a client component in the root layout watches the pathname and counts every navigation, the first one included, exactly once.
 
 ## Consequences
 
 - We get aggregate usage numbers: pages, referrers, browsers, countries.
 - No data is tied to an account, and record IDs never leave our servers.
 - GoatCounter becomes a third party processing request data, alongside Vercel and Resend (ADR-0013 Consequences); the privacy policy, once written, must mention it.
-- Visitors who block third-party scripts are not counted; the numbers are a lower bound.
+- Visitors whose blockers stop requests to GoatCounter are not counted; the numbers are a lower bound.
+- Without `count.js` we do not get its extras (click events, the `#toggle-goatcounter` opt-out).
 - Choosing hosted goatcounter.com or a self-hosted instance is a deployment setting, not a code change.
