@@ -18,3 +18,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0001](0001-mvp.md) | MVP: 2D vector → G-code for hobby CNC routers | Draft |
 | [0002](0002-zero-point.md) | Zero point selection | Draft |
 | [0003](0003-freemium-limits.md) | Freemium usage limits | Draft |
+| [0004](0004-machine-presets.md) | Machine presets | Draft |
