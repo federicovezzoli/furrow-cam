@@ -1,5 +1,14 @@
 # @furrow/post
 
+## 0.2.1
+
+### Patch Changes
+
+- [#72](https://github.com/federicovezzoli/furrow-cam/pull/72) [`abf54ba`](https://github.com/federicovezzoli/furrow-cam/commit/abf54ba52f541274a4c33631c17ca3e24492382f) Thanks [@federicovezzoli](https://github.com/federicovezzoli)! - Select paths by clicking in the viewport, and cut single paths of a shape ([#54](https://github.com/federicovezzoli/furrow-cam/issues/54), ADR-0018). Operations now reference `targets: [{ shapeId, paths }]` (`paths` the indices of the shape's paths, ascending, or `null` for all of them) instead of `shapeIds`, in project document schema v2; v1 documents migrate to whole-shape targets. Toolpaths are generated from the targeted paths only, so an outline and its holes imported as one element can be profiled and drilled separately. In the top view, clicking a path selects it, Ctrl/Cmd/Shift+click toggles it and clicking outside every path clears the selection; the path under the cursor is highlighted. A path is picked when its line is within 6 pixels of the cursor, or else by being the innermost closed path around it. Selecting a shape in the Geometry pane selects all its paths, and a shape with only some selected shows how many. **Select inside** in the Geometry pane adds every closed path inside the area the selected ones enclose (even-odd, as pockets read it), of any shape, so a pocket's islands are selected in one click. Drill points are picked by the cross they are drawn as. **Add …** and **Use selected** use the selected paths, and the operation's shape list says how many of a shape's paths it cuts. `@furrow/document` adds `normalizeTargets`; `@furrow/cam-core` adds `targetedShapes`, `pickablePaths`, `pathAt`, `pathKey`, `closedPathsInside` and `containmentIn`.
+- Updated dependencies [[`6a41b05`](https://github.com/federicovezzoli/furrow-cam/commit/6a41b05ab4404433e91abd63f83095bd7f51d7fd), [`bcfc0e3`](https://github.com/federicovezzoli/furrow-cam/commit/bcfc0e31f382495aeac322f79137adbe1f69f211), [`0d7829b`](https://github.com/federicovezzoli/furrow-cam/commit/0d7829b880820ab9c59ade81e0757428d35ee73d), [`2315823`](https://github.com/federicovezzoli/furrow-cam/commit/23158238f910388fce08bbf046583611ed4ef879), [`abf54ba`](https://github.com/federicovezzoli/furrow-cam/commit/abf54ba52f541274a4c33631c17ca3e24492382f), [`abf54ba`](https://github.com/federicovezzoli/furrow-cam/commit/abf54ba52f541274a4c33631c17ca3e24492382f)]:
+  - @furrow/cam-core@0.3.0
+  - @furrow/document@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
