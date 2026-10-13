@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { PageViewAnalytics } from "@/components/page-view-analytics";
 import { ThemeProvider } from "@/components/theme-provider";
+import { env } from "@/env";
 import "./globals.css";
 
 const jetBrainsMono = JetBrains_Mono({
@@ -22,6 +25,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
+        {env.NEXT_PUBLIC_GOATCOUNTER_URL && (
+          // Reads the current route, which is request data on dynamic pages.
+          <Suspense>
+            <PageViewAnalytics endpoint={env.NEXT_PUBLIC_GOATCOUNTER_URL} />
+          </Suspense>
+        )}
       </body>
     </html>
   );
