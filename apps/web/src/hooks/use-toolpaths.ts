@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import type { ToolpathResponse } from "@/stores/toolpath-scheduler";
+import { lazyWorker } from "@/lib/lazy-worker";
+import type { ToolpathRequest, ToolpathResponse } from "@/stores/toolpath-scheduler";
 import { scheduleToolpaths } from "@/stores/toolpath-scheduler";
 import { useDocumentStoreApi, useToolpathStoreApi } from "@/stores/workspace-stores";
 
@@ -14,32 +15,21 @@ export function useToolpaths() {
   const toolpaths = useToolpathStoreApi();
 
   useEffect(() => {
-    function start() {
-      const started = new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), {
-        type: "module",
-      });
-      started.onmessage = ({ data }: MessageEvent<ToolpathResponse>) => schedule.receive(data);
-      // Without these, a worker that fails to load or crashes would leave
-      // every operation computing forever.
-      started.onerror = (event) => {
-        event.preventDefault();
-        restart(event.message || "The toolpath worker stopped");
-      };
-      started.onmessageerror = () => restart("A toolpath couldn't be read from the worker");
-      return started;
-    }
-
-    /** Fails the pending toolpaths and replaces the worker; editing an operation retries it. */
-    function restart(error: string) {
-      worker.terminate();
-      schedule.fail(error);
-      worker = start();
-    }
-
-    let worker = start();
-    const schedule = scheduleToolpaths(documents, toolpaths, (request) =>
-      worker.postMessage(request),
+    const worker = lazyWorker<ToolpathRequest, ToolpathResponse>(
+      () =>
+        new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), { type: "module" }),
+      {
+        onMessage: (response) => schedule.receive(response),
+        // Without this, a worker that fails to load or crashes would leave
+        // every operation computing forever; editing an operation retries it.
+        onFail: (error) => schedule.fail(error),
+        failures: {
+          stopped: "The toolpath worker stopped",
+          unreadable: "A toolpath couldn't be read from the worker",
+        },
+      },
     );
+    const schedule = scheduleToolpaths(documents, toolpaths, (request) => worker.post(request));
     return () => {
       schedule.stop();
       worker.terminate();

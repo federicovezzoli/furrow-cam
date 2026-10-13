@@ -1,6 +1,6 @@
 "use client";
 
-import { type Box3, pathKey, stockBounds, stockOffset } from "@furrow/cam-core";
+import { type Box3, type Heightmap, pathKey, stockBounds, stockOffset } from "@furrow/cam-core";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
 import {
@@ -13,6 +13,7 @@ import { useDocumentStore, useWorkspaceStore } from "@/stores/workspace-stores";
 import { Lines, useLineGeometry } from "./lines";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
+import { SimulatedStock } from "./simulated-stock";
 import { Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
@@ -20,11 +21,28 @@ import { ZeroPick } from "./zero-pick";
 /** Length in millimetres of the origin marker's axes. */
 const ORIGIN_MARKER_SIZE = 40;
 
-export function Scene({ box, palette }: { box: Box3; palette: Palette }) {
+/**
+ * With a `heightmap`, the scene shows the stock as simulated after cutting in
+ * place of the stock box; the toolpaths stay, as the Operations pane shows or
+ * hides them.
+ */
+export function Scene({
+  box,
+  palette,
+  heightmap,
+}: {
+  box: Box3;
+  palette: Palette;
+  heightmap: Heightmap | null;
+}) {
   return (
     <>
       <WorkOrigin palette={palette} />
-      <Stock box={box} palette={palette} />
+      {heightmap ? (
+        <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
+      ) : (
+        <Stock box={box} palette={palette} />
+      )}
       <Shapes palette={palette} />
       <Toolpaths palette={palette} />
       <Tabs color={palette.tab} />

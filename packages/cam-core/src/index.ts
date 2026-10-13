@@ -9,6 +9,7 @@ export * from "./pocket";
 export * from "./preview";
 export * from "./profile";
 export * from "./quantity";
+export * from "./simulation";
 export * from "./snap";
 export * from "./stock";
 export * from "./svg/import";

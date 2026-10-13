@@ -39,6 +39,29 @@ describe("workspace store", () => {
     expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
   });
 
+  it("shows or hides several toolpaths at once", () => {
+    const store = createWorkspaceStore();
+    store.getState().setToolpathVisible("a", false);
+    store.getState().setToolpathsVisible(["a", "b", "c"], false);
+    expect(store.getState().hiddenToolpathIds).toEqual(["a", "b", "c"]);
+    store.getState().setToolpathsVisible(["a", "b"], true);
+    expect(store.getState().hiddenToolpathIds).toEqual(["c"]);
+  });
+
+  it("simulates instead of editing tabs or picking the zero", () => {
+    const store = createWorkspaceStore();
+    expect(store.getState().simulating).toBe(false);
+    store.getState().setEditingTabs(true);
+    store.getState().setSimulating(true);
+    expect(store.getState()).toMatchObject({ simulating: true, editingTabs: false });
+    store.getState().setPickingZero(true);
+    expect(store.getState()).toMatchObject({ simulating: false, pickingZero: true });
+    store.getState().setSimulating(true);
+    expect(store.getState().pickingZero).toBe(false);
+    store.getState().setEditingTabs(true);
+    expect(store.getState().simulating).toBe(false);
+  });
+
   it("starts in the top view and switches to the orbit view", () => {
     const store = createWorkspaceStore();
     expect(store.getState().view).toBe("top");
