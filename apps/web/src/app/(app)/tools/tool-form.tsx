@@ -9,7 +9,7 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { saveTool, type ToolFormErrors } from "./actions";
+import { saveTool, type ToolFormErrors, updateTool } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 
@@ -26,8 +26,20 @@ const NEW_TOOL: Partial<Tool> = {
   stepOver: 40,
 };
 
-/** Edits the tool `id`, or creates one when `id` is `null`, starting from `NEW_TOOL` plus `values`. */
-export function ToolForm({ id = null, values }: { id?: string | null; values: Partial<Tool> }) {
+type ToolFormProps = {
+  values: Partial<Tool>;
+} & (
+  | { id?: string | null; onSaved?: undefined; onCancel?: undefined }
+  /** Stays on the page: hands the saved tool to `onSaved` instead of redirecting to the library. */
+  | { id: string; onSaved: (tool: Tool) => void; onCancel: () => void }
+);
+
+/**
+ * Edits the tool `id`, or creates one when `id` is `null`, starting from
+ * `NEW_TOOL` plus `values`. Saving or cancelling goes back to the library,
+ * unless `onSaved` and `onCancel` are given.
+ */
+export function ToolForm({ id = null, values, onSaved, onCancel }: ToolFormProps) {
   const tool = id === null ? { ...NEW_TOOL, ...values } : values;
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
   const [errors, setErrors] = useState<ToolFormErrors>({});
@@ -38,6 +50,15 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
+      if (onSaved && id !== null) {
+        // Staying on the page, so a failure must not fall into the error boundary.
+        const result = await updateTool(id, form).catch(() => ({
+          errors: { form: "The bit couldn't be saved. Check your connection and try again." },
+        }));
+        if ("errors" in result) setErrors(result.errors);
+        else onSaved(result.tool);
+        return;
+      }
       // Redirects to the library on success, so only errors come back.
       setErrors(await saveTool(id, form));
     });
@@ -124,9 +145,15 @@ export function ToolForm({ id = null, values }: { id?: string | null; values: Pa
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : id ? "Save changes" : "Add bit"}
         </Button>
-        <Button asChild variant="outline">
-          <Link href="/tools">Cancel</Link>
-        </Button>
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Button asChild variant="outline">
+            <Link href="/tools">Cancel</Link>
+          </Button>
+        )}
       </div>
     </form>
   );
