@@ -53,6 +53,13 @@ export default function SignUpPage() {
           <Button type="submit" disabled={pending}>
             {pending ? "Creating account…" : "Create account"}
           </Button>
+          <p className="text-xs text-muted-foreground">
+            We only ask for your email address. Read the{" "}
+            <Link href="/privacy" className="underline">
+              privacy policy
+            </Link>
+            .
+          </p>
         </form>
       </CardContent>
       <CardFooter className="text-sm text-muted-foreground">

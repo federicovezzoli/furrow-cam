@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { env } from "@/env";
 import { db } from "@/lib/db";
@@ -32,6 +33,30 @@ export const auth = betterAuth({
         text: `Open this link to verify your email address:\n${url}`,
       });
     },
+  },
+  // Account deletion (#28) is immediate and cascades to projects, tools, machines and sessions.
+  user: {
+    deleteUser: {
+      enabled: true,
+      // Pending password-reset tokens hold the user id; the privacy policy promises nothing is left.
+      afterDelete: async (user) => {
+        await db.verification.deleteMany({ where: { value: user.id } });
+      },
+    },
+  },
+  // `/delete-user` checks the password, so it gets the same strict limit Better Auth gives sign-in.
+  rateLimit: {
+    customRules: { "/delete-user": { window: 10, max: 3 } },
+  },
+  hooks: {
+    // Better Auth also deletes without a password when the session is fresh; we always ask for it.
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/delete-user" && !ctx.body?.password) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Enter your password to delete your account.",
+        });
+      }
+    }),
   },
   // Data minimisation (ADR-0013): `name` is a required Better Auth column; it always mirrors the email.
   databaseHooks: {
