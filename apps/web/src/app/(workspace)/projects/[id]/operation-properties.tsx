@@ -577,6 +577,11 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
           ))}
         </NativeSelect>
       </Row>
+      {strategy.type === "linear" && (
+        <p className="text-muted-foreground">
+          Linear passes alternate direction; this one applies to the laps and the finish pass.
+        </p>
+      )}
       <NumberField
         id="pocket-depth"
         label="Depth"

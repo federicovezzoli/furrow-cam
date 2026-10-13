@@ -1,7 +1,17 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
-import { type Box, bounds, depthLevels, descend, inBox, plural, rampZ, Track } from "./passes";
+import {
+  type Box,
+  bounds,
+  type Descent,
+  depthLevels,
+  descend,
+  inBox,
+  plural,
+  rampZ,
+  Track,
+} from "./passes";
 import {
   coveredSpans,
   freeSpans,
@@ -36,14 +46,8 @@ type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
 const LEAD_IN_ATTEMPTS = 4;
 
 /** Everything the passes of one profile share. */
-type Cut = {
-  builder: ToolpathBuilder;
+type Cut = Descent & {
   feedRate: number;
-  plungeRate: number;
-  /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
-  rampRun: number | null;
-  /** Ramps along anything shorter than this plunge instead. */
-  minRampLength: number;
   leadInRadius: number | null;
   /** Height the tool stays at or above over tabs, or `null` without tabs. */
   tabTop: number | null;

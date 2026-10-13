@@ -7,11 +7,10 @@ import {
   type PolygonWithHoles,
   signedArea,
 } from "./geometry";
-import { type Box, bounds, inBox, rampZ, Track } from "./passes";
+import { type Box, bounds, type Descent, inBox, rampZ, Track } from "./passes";
 import type { LinearPlan } from "./pocket-linear";
 import type { PeelPlan } from "./pocket-peel";
 import { projectOnLoop } from "./tabs";
-import type { ToolpathBuilder } from "./toolpath";
 
 // What the pocket strategies share: the pieces they clear and the moves
 // between and into them.
@@ -36,14 +35,8 @@ export type Piece = {
 export type Layout = { stepOver: number; radius: number; reverse: boolean; tolerance: number };
 
 /** Everything the passes of one pocket share. */
-export type Cut = {
-  builder: ToolpathBuilder;
+export type Cut = Descent & {
   feedRate: number;
-  plungeRate: number;
-  /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
-  rampRun: number | null;
-  /** Ramps along anything shorter than this plunge instead. */
-  minRampLength: number;
   /** Longest move from one ring to the next that stays down. */
   maxStep: number;
 };
@@ -110,13 +103,42 @@ export function crossesOnlyInside(piece: Piece, a: Point, b: Point): boolean {
  * without crossing.
  */
 function crosses(a: Point, b: Point, c: Point, d: Point): boolean {
-  const side = (p: Point, q: Point, r: Point) => {
-    const length = distance(p, q);
-    if (length === 0) return 0;
-    const offLine = ((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])) / length;
-    return Math.abs(offLine) < 1e-6 ? 0 : Math.sign(offLine);
-  };
   return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
+}
+
+/**
+ * Where along `ab`, from 0 to 1 and ends excluded, segment `cd` crosses it,
+ * or `null`. Half-open in `cd`: a crossing at `c` counts and one at `d`
+ * doesn't, so a ring crossing `ab` at one of its vertices crosses it once.
+ */
+export function crossingAt(a: Point, b: Point, c: Point, d: Point): number | null {
+  // Most segments are nowhere near each other.
+  const margin = 1e-6;
+  if (
+    Math.max(c[0], d[0]) < Math.min(a[0], b[0]) - margin ||
+    Math.min(c[0], d[0]) > Math.max(a[0], b[0]) + margin ||
+    Math.max(c[1], d[1]) < Math.min(a[1], b[1]) - margin ||
+    Math.min(c[1], d[1]) > Math.max(a[1], b[1]) + margin
+  ) {
+    return null;
+  }
+  const sc = side(a, b, c);
+  const sd = side(a, b, d);
+  // `c` on the line counts with the side `d` is not on.
+  if (sd === 0 || (sc !== 0 && sc === sd) || side(c, d, a) * side(c, d, b) >= 0) return null;
+  const denominator = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+  return ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / denominator;
+}
+
+/**
+ * Which side of the line through `p` and `q` point `r` lies on: 1 on the
+ * left, -1 on the right, 0 within rounding of it.
+ */
+function side(p: Point, q: Point, r: Point): number {
+  const length = distance(p, q);
+  if (length === 0) return 0;
+  const offLine = ((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])) / length;
+  return Math.abs(offLine) < 1e-6 ? 0 : Math.sign(offLine);
 }
 
 /**

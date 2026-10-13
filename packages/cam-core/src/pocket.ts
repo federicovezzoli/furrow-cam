@@ -1,6 +1,6 @@
 import type { PocketOperation, Point, Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
-import { difference, nest, offset, type Polygon } from "./geometry";
+import { difference, offset, type Polygon } from "./geometry";
 import { depthLevels, plural } from "./passes";
 import {
   type Cut,
@@ -18,7 +18,7 @@ import {
   reach,
 } from "./pocket-cut";
 import { cutLinear, linearPlan } from "./pocket-linear";
-import { cutPeel, PEEL_ISLAND_WARNING, peelPlans } from "./pocket-peel";
+import { cutPeel, peelArea, peelPlans } from "./pocket-peel";
 import { projectOnLoop } from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
@@ -105,16 +105,10 @@ export function pocketToolpath(
   const offsetOptions = { arcTolerance: tolerance };
   const { strategy } = params;
   // Clean rings once, so each offset below starts from the same area.
-  let area = offset(closed, 0, { fillRule: "evenOdd", arcTolerance: tolerance });
-  let skipped = false;
-  if (strategy.type === "peel" && strategy.start === "inside") {
-    // Each disjoint pocket needs the one island it peels from.
-    const pockets = nest(area);
-    const kept = pockets.filter((pocket) => pocket.holes.length === 1);
-    skipped = kept.length < pockets.length;
-    if (skipped) warnings.push(PEEL_ISLAND_WARNING);
-    area = kept.flatMap((pocket) => [pocket.outer, ...pocket.holes]);
-  }
+  const drawn = offset(closed, 0, { fillRule: "evenOdd", arcTolerance: tolerance });
+  const { area, warnings: skipped } =
+    strategy.type === "peel" ? peelArea(drawn, strategy.start) : { area: drawn, warnings: [] };
+  warnings.push(...skipped);
   const clearing = radius + params.allowance;
   let roots: Piece[];
   if (strategy.type === "offset") {
@@ -155,9 +149,10 @@ export function pocketToolpath(
   } else {
     for (const root of roots) regions.push({ pieces: [root], container: root, finishing: null });
   }
+  // Unless the strategy left nothing to clear, having said why.
   if (
     closed.length > 0 &&
-    (area.length > 0 || !skipped) &&
+    (area.length > 0 || drawn.length === 0) &&
     regions.every((region) => region.pieces.length === 0)
   ) {
     warnings.push("The closed paths are too small for the tool.");

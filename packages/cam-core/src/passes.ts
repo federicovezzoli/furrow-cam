@@ -37,6 +37,18 @@ export function rampZ(z: number, level: number, travelled: number, total: number
   return travelled >= total - 1e-9 ? level : z + ((level - z) * travelled) / total;
 }
 
+/** Distance from `point` to the segment from `a` to `b`. */
+export function distanceToSegment(point: Point, a: Point, b: Point): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  const t =
+    lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared))
+      : 0;
+  return Math.hypot(a[0] + t * dx - point[0], a[1] + t * dy - point[1]);
+}
+
 /** How a generator goes down into the stock. */
 export type Descent = {
   builder: ToolpathBuilder;

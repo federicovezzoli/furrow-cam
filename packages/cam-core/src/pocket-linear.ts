@@ -1,4 +1,5 @@
 import { distance, type LinearAngle, type Point } from "@furrow/document";
+import { Track } from "./passes";
 import {
   type Cut,
   cutRing,
@@ -10,6 +11,8 @@ import {
   reach,
   staysDown,
 } from "./pocket-cut";
+import type { Vec3 } from "./stock";
+import { projectOnLoop } from "./tabs";
 
 // Linear clearing (#57): zig-zag passes at a preset angle between the laps
 // around a piece's walls and islands.
@@ -84,9 +87,10 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
  * offset ring, then the passes, each from lap to lap so the tool enters them
  * at depth. A pass is linked to the next on a neighbouring line along the
  * lap when the link stays between the two lines, within one step-over, which
- * makes the passes zig-zag; otherwise the tool gets to the nearest pass left
- * through the cleared depth, or over the top, and goes straight down onto the
- * cleared lap.
+ * makes the passes zig-zag. Otherwise the tool goes to the nearest pass left:
+ * along the lap it is on, which this level has cut, when the pass starts on
+ * it; or through the cleared depth, or over the top, and straight down onto
+ * the cleared lap.
  */
 export function cutLinear(
   cut: Cut,
@@ -100,18 +104,18 @@ export function cutLinear(
     cutRing(cut, ring, piece, container, z, clearedZ);
   }
   const left = new Set(plan.lines.flat());
-  let last: { end: End; line: number } | null = null;
+  let onLap = lapAt(piece.rings, cut.builder.position);
+  let line: number | null = null;
   let sweep = 1;
   while (left.size > 0) {
-    const linked = last && link(plan, piece.rings, left, last, sweep);
-    let pass: Pass;
-    let start: End;
-    if (linked) {
-      ({ pass, start } = linked);
-      if (last) sweep = Math.sign(pass.line - last.line);
-      feedAlong(cut, linked.path, z);
+    const linked: Next | null =
+      onLap && line !== null ? link(plan, piece.rings, left, onLap, line, sweep) : null;
+    const next: Next = linked || nearestPass(cut, piece.rings, left, onLap, container, clearedZ);
+    const { pass, start, path } = next;
+    if (linked && line !== null) sweep = Math.sign(pass.line - line);
+    if (path) {
+      feedAlong(cut, path, z);
     } else {
-      ({ pass, start } = nearestPass(cut, left, container, clearedZ));
       reach(cut, start.point, container, clearedZ);
       // Through the lap, which this level has cleared.
       cut.builder.feed([start.point[0], start.point[1], z], cut.plungeRate);
@@ -119,37 +123,51 @@ export function cutLinear(
     const end = pass.ends[0] === start ? pass.ends[1] : pass.ends[0];
     feedAlong(cut, [end.point], z);
     left.delete(pass);
-    last = { end, line: pass.line };
+    onLap = end;
+    line = pass.line;
   }
 }
 
+/** Where on `rings` the tool at `here` is, if on one. */
+function lapAt(rings: Ring[], here: Vec3 | null): End | null {
+  if (!here) return null;
+  const point: Point = [here[0], here[1]];
+  for (const [ring, { loop }] of rings.entries()) {
+    const on = projectOnLoop(loop, point);
+    if (on.distance < 1e-6) return { point, ring, at: on.at };
+  }
+  return null;
+}
+
 /**
- * The pass left on a line next to `last` (the line in the sweep's direction
- * first) that the shortest link along the lap reaches from `last.end`
- * without leaving the strip between the two lines, with that link.
+ * The pass left on a line next to `line` (the line in the sweep's direction
+ * first) that the shortest link along the lap reaches from `from`, the end of
+ * the last pass, without leaving the strip between the two lines, with that
+ * link.
  */
 function link(
   plan: LinearPlan,
   rings: Ring[],
   left: Set<Pass>,
-  last: { end: End; line: number },
+  from: End,
+  line: number,
   sweep: number,
-): { pass: Pass; start: End; path: Point[] } | null {
+): Next | null {
   for (const step of [sweep, -sweep]) {
-    let best: { pass: Pass; start: End; path: Point[]; length: number } | null = null;
-    for (const pass of plan.lines[last.line + step] ?? []) {
+    let best: (Next & { length: number }) | null = null;
+    for (const pass of plan.lines[line + step] ?? []) {
       if (!left.has(pass)) continue;
       for (const start of pass.ends) {
         const ring = rings[start.ring];
-        if (start.ring !== last.end.ring || !ring) continue;
-        const lo = Math.min(plan.across(last.end.point), plan.across(start.point));
-        const hi = Math.max(plan.across(last.end.point), plan.across(start.point));
-        for (const path of lapPaths(ring, last.end.at, start.at)) {
+        if (start.ring !== from.ring || !ring) continue;
+        const lo = Math.min(plan.across(from.point), plan.across(start.point));
+        const hi = Math.max(plan.across(from.point), plan.across(start.point));
+        for (const path of lapPaths(ring, from.at, start.at)) {
           const inStrip = path.every((point) => {
             const v = plan.across(point);
             return v >= lo - plan.tolerance && v <= hi + plan.tolerance;
           });
-          const length = pathLength(last.end.point, path);
+          const length = new Track([from.point, ...path]).length;
           if (inStrip && (!best || length < best.length)) best = { pass, start, path, length };
         }
       }
@@ -170,35 +188,41 @@ function lapPaths({ track }: Ring, from: number, to: number): Point[][] {
   return [ahead, behind];
 }
 
-function pathLength(from: Point, path: Point[]): number {
-  let length = 0;
-  let previous = from;
-  for (const point of path) {
-    length += distance(previous, point);
-    previous = point;
-  }
-  return length;
-}
+/** The next pass, the end it starts from and the way along the lap there, if the tool goes that way. */
+type Next = { pass: Pass; start: End; path: Point[] | null };
 
 /**
- * The pass left with an end nearest to the tool, and that end: of those the
- * tool reaches without retracting, if any.
+ * The pass left with an end nearest to the tool, and that end: of those it
+ * reaches without retracting, if any. The tool reaches the ends on the lap it
+ * is on, `onLap`, the shorter way along it.
  */
 function nearestPass(
   cut: Cut,
+  rings: Ring[],
   left: Set<Pass>,
+  onLap: End | null,
   container: Piece,
   clearedZ: number,
-): { pass: Pass; start: End } {
+): Next {
   const here = cut.builder.position;
-  let best: { pass: Pass; start: End; down: boolean; distance: number } | null = null;
+  let best: (Next & { down: boolean; distance: number }) | null = null;
   for (const pass of left) {
     for (const start of pass.ends) {
-      const d = here ? distance([here[0], here[1]], start.point) : 0;
+      const ring = rings[start.ring];
+      let path: Point[] | null = null;
+      let d = here ? distance([here[0], here[1]], start.point) : 0;
+      if (onLap && ring && start.ring === onLap.ring) {
+        const [ahead, behind] = lapPaths(ring, onLap.at, start.at).map((way) => ({
+          way,
+          length: new Track([onLap.point, ...way]).length,
+        }));
+        const shorter = ahead && behind && ahead.length <= behind.length ? ahead : behind;
+        if (shorter) ({ way: path, length: d } = shorter);
+      }
       if (best?.down && d >= best.distance) continue;
-      const down = staysDown(cut, start.point, container, clearedZ);
+      const down = path !== null || staysDown(cut, start.point, container, clearedZ);
       if (!best || (down && !best.down) || (down === best.down && d < best.distance)) {
-        best = { pass, start, down, distance: d };
+        best = { pass, start, path, down, distance: d };
       }
     }
   }

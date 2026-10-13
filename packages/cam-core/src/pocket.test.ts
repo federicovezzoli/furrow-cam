@@ -560,8 +560,18 @@ describe.each(STRATEGIES.map((strategy) => [Object.values(strategy).join(" "), s
       for (const stepOver of [60, 100]) {
         const toolpath = clear({ depth: 2 }, [square, island], { stepOver });
         expect(missed(toolpath, -2, 3 + 1e-2, (p) => inSquare(p) && offIsland(p), 0.5)).toEqual([]);
+        for (const cut of cutsBelowTop(toolpath)) {
+          expect(distanceToSegment([50, 50], cut)).toBeGreaterThanOrEqual(13 - 1e-2);
+        }
       }
     });
+
+    it.skipIf(strategy.type === "peel" && strategy.start === "inside")(
+      "moves at depth over what it has cut rather than retracting",
+      () => {
+        expect(retracts(clear({}, [square]))).toBe(1);
+      },
+    );
 
     it("leaves the allowance and finishes the walls at full depth", () => {
       const toolpath = clear({ allowance: 0.5, finishPass: true });
@@ -581,14 +591,17 @@ describe.each(STRATEGIES.map((strategy) => [Object.values(strategy).join(" "), s
     });
 
     it("climbs counter-clockwise along the walls and clockwise around islands", () => {
-      // Linear passes go both ways; its laps carry the direction.
+      // Linear passes, and the moves along the laps between them, go both
+      // ways; its laps, cut first, carry the direction.
       const directed = (toolpath: Toolpath) => {
         const cuts = cutsAt(toolpath, -6);
         if (strategy.type !== "linear") return cuts;
-        return cuts.slice(
-          0,
-          cuts.findIndex(([a, b]) => !onLap([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])),
-        );
+        // Both laps: 4 × 94 mm and a little under 2π × 13 mm.
+        let length = 0;
+        return cuts.filter(([a, b]) => {
+          length += Math.hypot(b[0] - a[0], b[1] - a[1]);
+          return length <= 4 * 94 + 81;
+        });
       };
       const rising = (toolpath: Toolpath) =>
         directed(toolpath)
@@ -849,7 +862,8 @@ describe("pocketToolpath with peel clearing", () => {
   it("crosses the core a helix wider than the tool leaves", () => {
     const toolpath = peel("centre", {}, [square], { stepOver: 90 });
     for (const z of [-2, -4, -6]) {
-      expect(cutsAt(toolpath, z).some((cut) => distanceToSegment([50, 50], cut) < 1e-6)).toBe(true);
+      // Through the point furthest from the helix, give or take the tolerance.
+      expect(cutsAt(toolpath, z).some((cut) => distanceToSegment([50, 50], cut) < 1e-2)).toBe(true);
     }
   });
 
