@@ -1,0 +1,7 @@
+---
+"@furrow/document": minor
+"@furrow/cam-core": minor
+"@furrow/web": minor
+---
+
+Pocket clearing strategies (PRD-0001 R20). `PocketParams.strategy` is `{ type: "offset" }` (today's rings from the centre out), `{ type: "linear", angle }` with an angle of 0, 90, 45 or −45 degrees, or `{ type: "peel", start }` starting from the `centre`, the `inside` (the pocket's single island) or the `outside` (the outer wall). Document schema version 4: the migration gives existing pockets offset clearing, and new pockets start with it. Linear clearing cuts a lap around every wall and island on each level, then zig-zag passes one step-over apart from lap to lap, linked along the lap when the link stays between neighbouring passes, so passes are entered at depth. Peel clearing grows the cleared area a step-over at a time from a starting cut (a helix one step-over across the point furthest from the walls, or a full lap along the island or the outer wall), cutting only what each step adds, so the tool never cuts wider than the step-over after the starting cut; a pocket without exactly one island gets no toolpath and the warning "Peel from the island needs exactly one island." Allowance, finish pass, ramping, direction and retract minimisation work as before for every strategy. The pocket form gains a strategy picker with the angle or the start. `@furrow/cam-core` adds `simplify` to the geometry adapter.

@@ -43,12 +43,13 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
 }
 
 /**
- * New pockets go half through the stock, climb milling, ramping in: an end
- * mill plunging straight into the middle of a pocket has nowhere to clear its
- * chips.
+ * New pockets go half through the stock with offset clearing, climb milling,
+ * ramping in: an end mill plunging straight into the middle of a pocket has
+ * nowhere to clear its chips.
  */
 export function defaultPocketParams(document: ProjectDocument): PocketParams {
   return {
+    strategy: { type: "offset" },
     direction: "climb",
     depth: document.stock.thickness / 2,
     allowance: 0,

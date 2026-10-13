@@ -1,4 +1,4 @@
-import type { PocketOperation, PocketParams, Shape, Tool } from "@furrow/document";
+import type { PocketOperation, PocketParams, PocketStrategy, Shape, Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { generateToolpath } from "./generate";
 import { pocketToolpath } from "./pocket";
@@ -25,6 +25,7 @@ const tool: Tool = {
 };
 
 const params: PocketParams = {
+  strategy: { type: "offset" },
   direction: "climb",
   depth: 6,
   allowance: 0,
@@ -148,13 +149,34 @@ function missed(
   keep: (point: [number, number]) => boolean,
   spacing = 1,
 ): [number, number][] {
-  const cuts = cutsAt(toolpath, z);
+  // Each cut filed under every cell `reach` wide it comes within `reach` of.
+  const cells = new Map<string, [[number, number], [number, number]][]>();
+  for (const cut of cutsAt(toolpath, z)) {
+    const [[ax, ay], [bx, by]] = cut;
+    for (
+      let i = Math.floor(Math.min(ax, bx) / reach) - 1;
+      i <= Math.floor(Math.max(ax, bx) / reach) + 1;
+      i++
+    ) {
+      for (
+        let j = Math.floor(Math.min(ay, by) / reach) - 1;
+        j <= Math.floor(Math.max(ay, by) / reach) + 1;
+        j++
+      ) {
+        const key = `${i},${j}`;
+        const cell = cells.get(key) ?? [];
+        cell.push(cut);
+        cells.set(key, cell);
+      }
+    }
+  }
   const result: [number, number][] = [];
   for (let x = 0; x <= 100; x += spacing) {
     for (let y = 0; y <= 100; y += spacing) {
       const point: [number, number] = [x, y];
       if (!keep(point)) continue;
-      if (cuts.every((cut) => distanceToSegment(point, cut) > reach)) result.push(point);
+      const nearby = cells.get(`${Math.floor(x / reach)},${Math.floor(y / reach)}`) ?? [];
+      if (nearby.every((cut) => distanceToSegment(point, cut) > reach)) result.push(point);
     }
   }
   return result;
@@ -175,6 +197,36 @@ const inSquare = ([x, y]: [number, number]) =>
   y < 100 &&
   Math.hypot(Math.max(0, 3 - x, x - 97), Math.max(0, 3 - y, y - 97)) <= 3;
 const offIsland = ([x, y]: [number, number]) => Math.hypot(x - 50, y - 50) > 10;
+
+/**
+ * Two 40 mm squares joined by a 7 mm neck: wider than the 6 mm tool, too
+ * narrow for clearing 1 mm of allowance off both walls.
+ */
+const dumbbellCorners: [number, number][] = [
+  [40, 0],
+  [40, 16.5],
+  [60, 16.5],
+  [60, 0],
+  [100, 0],
+  [100, 40],
+  [60, 40],
+  [60, 23.5],
+  [40, 23.5],
+  [40, 40],
+  [0, 40],
+];
+const dumbbell: Shape = {
+  id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
+  name: "Dumbbell",
+  layer: "0",
+  paths: [
+    {
+      start: [0, 0],
+      segments: dumbbellCorners.map((to) => ({ kind: "line" as const, to })),
+      closed: true,
+    },
+  ],
+};
 
 describe("pocketToolpath", () => {
   it("clears the whole pocket at every depth, down to the final depth", () => {
@@ -344,33 +396,6 @@ describe("pocketToolpath", () => {
   });
 
   describe("with a neck the clearing rings can't pass", () => {
-    // Two 40 mm squares joined by a 7 mm neck: wider than the 6 mm tool, too
-    // narrow for rings 1 mm of allowance off both walls.
-    const corners: [number, number][] = [
-      [40, 0],
-      [40, 16.5],
-      [60, 16.5],
-      [60, 0],
-      [100, 0],
-      [100, 40],
-      [60, 40],
-      [60, 23.5],
-      [40, 23.5],
-      [40, 40],
-      [0, 40],
-    ];
-    const dumbbell: Shape = {
-      id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
-      name: "Dumbbell",
-      layer: "0",
-      paths: [
-        {
-          start: [0, 0],
-          segments: corners.map((to) => ({ kind: "line" as const, to })),
-          closed: true,
-        },
-      ],
-    };
     const toolpath = pocket({ allowance: 1, finishPass: true }, [dumbbell]);
 
     it("clears the neck in depth passes", () => {
@@ -483,5 +508,396 @@ describe("pocketToolpath", () => {
     expect(
       generateToolpath({ operation: operation(), shapes: [square], safeZ: 5, entryClearance: 1 }),
     ).toEqual(pocket());
+  });
+});
+
+const STRATEGIES: PocketStrategy[] = [
+  { type: "linear", angle: 0 },
+  { type: "linear", angle: 90 },
+  { type: "linear", angle: 45 },
+  { type: "linear", angle: -45 },
+  { type: "peel", start: "centre" },
+  { type: "peel", start: "inside" },
+  { type: "peel", start: "outside" },
+];
+
+/** Distance from the lap around the square's walls, 3 mm in. */
+const offWallLap = ([x, y]: [number, number]) =>
+  Math.abs(Math.max(Math.abs(x - 50), Math.abs(y - 50)) - 47);
+/** Distance from the lap around the island, 3 mm out. */
+const offIslandLap = ([x, y]: [number, number]) => Math.abs(Math.hypot(x - 50, y - 50) - 13);
+const onLap = (point: [number, number]) => Math.min(offWallLap(point), offIslandLap(point)) < 1e-2;
+
+/** Moves that go down, as `[from, to]`. */
+function descents(toolpath: Toolpath): [Vec3, Vec3][] {
+  return steps(toolpath)
+    .filter(([from, move]) => move.kind === "feed" && move.to[2] < from[2] - 1e-9)
+    .map(([from, move]) => [from, move.to]);
+}
+
+describe.each(STRATEGIES.map((strategy) => [Object.values(strategy).join(" "), strategy] as const))(
+  "pocketToolpath with %s clearing",
+  (_, strategy) => {
+    const clear = (overrides: Partial<PocketParams> = {}, shapes = [square, island], tools = {}) =>
+      pocket({ strategy, ...overrides }, shapes, tools);
+
+    it("clears around the island at every depth without cutting it", () => {
+      const toolpath = clear();
+      for (const z of [-2, -4, -6]) {
+        expect(missed(toolpath, z, 3 + 1e-2, (p) => inSquare(p) && offIsland(p))).toEqual([]);
+      }
+      for (const cut of cutsBelowTop(toolpath)) {
+        expect(distanceToSegment([50, 50], cut)).toBeGreaterThanOrEqual(13 - 1e-2);
+        for (const value of cut.flat()) {
+          expect(value).toBeGreaterThanOrEqual(3 - 1e-3);
+          expect(value).toBeLessThanOrEqual(97 + 1e-3);
+        }
+      }
+      expect(toolpath.warnings).toEqual([]);
+    });
+
+    it("clears with a step-over over half the diameter", () => {
+      for (const stepOver of [60, 100]) {
+        const toolpath = clear({ depth: 2 }, [square, island], { stepOver });
+        expect(missed(toolpath, -2, 3 + 1e-2, (p) => inSquare(p) && offIsland(p), 0.5)).toEqual([]);
+      }
+    });
+
+    it("leaves the allowance and finishes the walls at full depth", () => {
+      const toolpath = clear({ allowance: 0.5, finishPass: true });
+      const extent = (z: number) =>
+        cutsAt(toolpath, z)
+          .flat()
+          .reduce((max, [x]) => Math.max(max, x), -Infinity);
+      expect(extent(-2)).toBeCloseTo(96.5, 2);
+      expect(extent(-4)).toBeCloseTo(96.5, 2);
+      expect(extent(-6)).toBeCloseTo(97, 2);
+      const last = cutsAt(toolpath, -6).flat().slice(-4);
+      for (const point of last) expect(onLap(point)).toBe(true);
+      expect(clear({ allowance: 0.5 }).warnings).toEqual([]);
+      for (const value of cutsBelowTop(clear({ allowance: 0.5 })).flat(2)) {
+        expect(value).toBeGreaterThanOrEqual(3.5 - 1e-3);
+      }
+    });
+
+    it("climbs counter-clockwise along the walls and clockwise around islands", () => {
+      // Linear passes go both ways; its laps carry the direction.
+      const directed = (toolpath: Toolpath) => {
+        const cuts = cutsAt(toolpath, -6);
+        if (strategy.type !== "linear") return cuts;
+        return cuts.slice(
+          0,
+          cuts.findIndex(([a, b]) => !onLap([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])),
+        );
+      };
+      const rising = (toolpath: Toolpath) =>
+        directed(toolpath)
+          .filter(([a, b]) => Math.abs(a[0] - 97) < 1e-3 && Math.abs(b[0] - 97) < 1e-3)
+          .map(([a, b]) => Math.sign(b[1] - a[1]));
+      expect(rising(clear())).toContain(1);
+      expect(rising(clear())).not.toContain(-1);
+      expect(rising(clear({ direction: "conventional" }))).not.toContain(1);
+      const aroundIsland = directed(clear()).filter(
+        ([a, b]) => offIslandLap(a) < 1e-2 && offIslandLap(b) < 1e-2 && a[0] > 62,
+      );
+      expect(aroundIsland.length).toBeGreaterThan(0);
+      for (const [a, b] of aroundIsland) expect(b[1]).toBeLessThanOrEqual(a[1] + 1e-9);
+    });
+
+    it("rapids only above the stock and retracts only on the first pass and at the end", () => {
+      const toolpath = clear(
+        { ramp: true },
+        strategy.type === "peel" ? [square, island] : [square],
+      );
+      for (const [from, move] of steps(toolpath)) {
+        if (move.kind !== "rapid") continue;
+        if (move.to[2] < from[2]) expect(move.to[2]).toBe(1);
+        else expect([1, 5]).toContain(move.to[2]);
+      }
+      if (strategy.type === "linear" || (strategy.type === "peel" && strategy.start === "inside")) {
+        const deeper = toolpath.moves.findIndex((move) => move.to[2] < -2 - 1e-9);
+        expect(retracts({ ...toolpath, moves: toolpath.moves.slice(deeper) })).toBe(1);
+      }
+    });
+
+    it("plunges straight down at the plunge rate without a ramp", () => {
+      for (const [from, move] of steps(clear())) {
+        if (move.kind === "feed" && move.to[2] < from[2]) {
+          expect(Math.hypot(move.to[0] - from[0], move.to[1] - from[1])).toBeLessThan(1e-9);
+          expect(move.feedRate).toBe(tool.plungeRate);
+        }
+      }
+    });
+
+    it("ramps no steeper than the plunge angle into uncut stock", () => {
+      const toolpath = clear({ ramp: true });
+      const cutAt = new Map<number, [[number, number], [number, number]][]>();
+      let ramps = 0;
+      for (const [from, move] of steps(toolpath)) {
+        const { to } = move;
+        if (move.kind === "feed" && from[2] === to[2]) {
+          const cuts = cutAt.get(to[2]) ?? [];
+          cuts.push([
+            [from[0], from[1]],
+            [to[0], to[1]],
+          ]);
+          cutAt.set(to[2], cuts);
+        }
+        if (move.kind !== "feed" || to[2] >= from[2] || from[2] > 0) continue;
+        const run = Math.hypot(to[0] - from[0], to[1] - from[1]);
+        if (run < 1e-9) {
+          // Straight down only onto what the tool has cut at that depth, give
+          // or take the chord tolerance.
+          const landed = cutAt.get(to[2]) ?? [];
+          expect(landed.some((cut) => distanceToSegment([to[0], to[1]], cut) < 2e-2)).toBe(true);
+        } else {
+          ramps++;
+          expect((Math.atan2(from[2] - to[2], run) * 180) / Math.PI).toBeLessThanOrEqual(3 + 1e-6);
+        }
+      }
+      expect(ramps).toBeGreaterThan(0);
+    });
+
+    it.skipIf(strategy.type === "peel" && strategy.start === "inside")(
+      "clears necks the clearing can't pass in depth passes",
+      () => {
+        const toolpath = clear({ allowance: 1, finishPass: true }, [dumbbell]);
+        for (const z of [-2, -4]) {
+          const throughNeck = cutsAt(toolpath, z).filter(
+            ([a, b]) =>
+              Math.min(a[0], b[0]) < 50 && Math.max(a[0], b[0]) > 50 && a[1] > 16 && a[1] < 24,
+          );
+          expect(throughNeck.length).toBeGreaterThan(0);
+        }
+        expect(toolpath.warnings).toEqual([]);
+      },
+    );
+  },
+);
+
+describe("pocketToolpath with linear clearing", () => {
+  const linear = (
+    angle: 0 | 90 | 45 | -45,
+    overrides: Partial<PocketParams> = {},
+    shapes = [square, island],
+  ) => pocket({ strategy: { type: "linear", angle }, ...overrides }, shapes);
+
+  it("cuts the laps around the walls and the island first on each level", () => {
+    const toolpath = linear(0);
+    for (const z of [-2, -4, -6]) {
+      const cuts = cutsAt(toolpath, z);
+      const firstPass = cuts.findIndex(([a, b]) => !onLap([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]));
+      const laps = cuts.slice(0, firstPass);
+      // Every point of both laps, every millimetre.
+      for (let t = 0; t < 1; t += 1 / 376) {
+        const along = t * 376;
+        const side = Math.floor(along / 94);
+        const d = along % 94;
+        const point: [number, number] = [
+          [3 + d, 97, 97 - d, 3][side] as number,
+          [3, 3 + d, 97, 97 - d][side] as number,
+        ];
+        expect(laps.some((cut) => distanceToSegment(point, cut) < 1e-2)).toBe(true);
+      }
+      for (let angle = 0; angle < 360; angle += 5) {
+        const radians = (angle * Math.PI) / 180;
+        const point: [number, number] = [50 + 13 * Math.cos(radians), 50 + 13 * Math.sin(radians)];
+        expect(laps.some((cut) => distanceToSegment(point, cut) < 2e-2)).toBe(true);
+      }
+    }
+  });
+
+  it("cuts passes at the angle, one step-over apart, alternating direction", () => {
+    for (const angle of [0, 90, 45, -45] as const) {
+      const radians = (angle * Math.PI) / 180;
+      const direction: [number, number] = [Math.cos(radians), Math.sin(radians)];
+      const across = ([x, y]: [number, number]) => y * direction[0] - x * direction[1];
+      const passes = cutsAt(linear(angle, {}, [square]), -6).filter(
+        ([a, b]) => offWallLap([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]) > 1e-2,
+      );
+      expect(passes.length).toBeGreaterThan(20);
+      const lines = new Set<number>();
+      let alternations = 0;
+      passes.forEach(([a, b], i) => {
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const dot = ((b[0] - a[0]) * direction[0] + (b[1] - a[1]) * direction[1]) / length;
+        expect(Math.abs(dot)).toBeCloseTo(1, 6);
+        lines.add(Math.round(across(a) * 1000));
+        const previous = passes[i - 1];
+        // Consecutive passes on neighbouring lines go opposite ways.
+        if (previous && Math.abs(Math.abs(across(a) - across(previous[0])) - 2.4) < 1e-6) {
+          const previousDot =
+            (previous[1][0] - previous[0][0]) * direction[0] +
+            (previous[1][1] - previous[0][1]) * direction[1];
+          expect(Math.sign(previousDot)).toBe(-Math.sign(dot));
+          alternations++;
+        }
+      });
+      expect(alternations).toBeGreaterThan(10);
+      const positions = [...lines].sort((a, b) => a - b).map((line) => line / 1000);
+      for (let i = 1; i < positions.length; i++) {
+        expect((positions[i] as number) - (positions[i - 1] as number)).toBeCloseTo(2.4, 6);
+      }
+    }
+  });
+
+  it("starts and ends every pass on the lap, entering at depth", () => {
+    for (const ramp of [false, true]) {
+      const toolpath = linear(45, { ramp });
+      for (const [a, b] of cutsAt(toolpath, -4)) {
+        if (onLap([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])) continue;
+        expect(onLap(a)).toBe(true);
+        expect(onLap(b)).toBe(true);
+      }
+      // Every descent below the stock top lands on a lap.
+      for (const [from, to] of descents(toolpath)) {
+        if (from[2] <= 0) expect(onLap([to[0], to[1]])).toBe(true);
+      }
+    }
+  });
+});
+
+describe("pocketToolpath with peel clearing", () => {
+  const peel = (
+    start: "centre" | "inside" | "outside",
+    overrides: Partial<PocketParams> = {},
+    shapes = [square, island],
+    toolOverrides: Partial<Tool> = {},
+  ) => pocket({ strategy: { type: "peel", start }, ...overrides }, shapes, toolOverrides);
+
+  /**
+   * How far from the cuts before it at `z` the tool centre gets, the cuts
+   * `starting` holds for left out: how wide it cuts sideways.
+   */
+  function widestCut(
+    toolpath: Toolpath,
+    z: number,
+    starting: (point: [number, number]) => boolean,
+  ): number {
+    const cuts = cutsAt(toolpath, z);
+    let widest = 0;
+    cuts.forEach(([a, b], i) => {
+      for (const t of [0.25, 0.5, 0.75, 1]) {
+        const point: [number, number] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        if (starting(point)) continue;
+        let nearest = Infinity;
+        for (let j = 0; j < i; j++) {
+          nearest = Math.min(
+            nearest,
+            distanceToSegment(point, cuts[j] as [[number, number], [number, number]]),
+          );
+        }
+        // Along a cut, its own start.
+        nearest = Math.min(
+          nearest,
+          Math.hypot(point[0] - a[0], point[1] - a[1]) * (i === 0 ? Infinity : 1),
+        );
+        widest = Math.max(widest, nearest);
+      }
+    });
+    return widest;
+  }
+
+  it("never cuts wider than the step-over after the starting cut", () => {
+    const starts = {
+      centre: (shapes: Shape[]) =>
+        shapes.length === 1
+          ? ([x, y]: [number, number]) => Math.hypot(x - 50, y - 50) <= 2.4 + 1e-2
+          : () => false,
+      inside: () => (point: [number, number]) => offIslandLap(point) < 1e-2,
+      outside: () => (point: [number, number]) => offWallLap(point) < 1e-2,
+    };
+    for (const [start, shapes] of [
+      ["centre", [square]],
+      ["inside", [square, island]],
+      ["outside", [square, island]],
+    ] as const) {
+      const toolpath = peel(start, { depth: 2 }, [...shapes]);
+      // The step-over, give or take the chord tolerance the fronts are drawn to.
+      expect(widestCut(toolpath, -2, starts[start]([...shapes]))).toBeLessThanOrEqual(2.4 + 2e-2);
+    }
+  });
+
+  it("enters the centre with a helix one step-over around the point furthest from the walls", () => {
+    /** The moves down to each level, from the depth the last one cleared. */
+    const entries = (toolpath: Toolpath) =>
+      [-2, -4, -6].map((z) => {
+        const { moves } = toolpath;
+        let i = moves.findIndex((move) => move.to[2] === z);
+        const entry: ToolpathMove[] = [];
+        // Back to the move that got to the depth the last level cleared.
+        while (i > 0) {
+          entry.unshift(moves[i] as ToolpathMove);
+          if ((moves[i - 1] as ToolpathMove).to[2] >= z + 2 - 1e-9) break;
+          i--;
+        }
+        return entry;
+      });
+    const onCircle = ([x, y]: Vec3) => Math.abs(Math.hypot(x - 50, y - 50) - 2.4) < 1e-2;
+    // Ramping: around the circle, given or taken the chord tolerance it is drawn to.
+    for (const entry of entries(peel("centre", { ramp: true }, [square]))) {
+      expect(entry.length).toBeGreaterThan(1);
+      for (const move of entry) expect(onCircle(move.to)).toBe(true);
+    }
+    // Without a ramp, a straight plunge onto the circle.
+    for (const entry of entries(peel("centre", {}, [square]))) {
+      expect(entry).toHaveLength(1);
+      expect(onCircle((entry[0] as ToolpathMove).to)).toBe(true);
+    }
+  });
+
+  it("crosses the core a helix wider than the tool leaves", () => {
+    const toolpath = peel("centre", {}, [square], { stepOver: 90 });
+    for (const z of [-2, -4, -6]) {
+      expect(cutsAt(toolpath, z).some((cut) => distanceToSegment([50, 50], cut) < 1e-6)).toBe(true);
+    }
+  });
+
+  it("ramps along the first pass where the helix doesn't fit", () => {
+    // 4 mm of tool centre across: less than the 4.8 mm helix.
+    const slot = rectangle("0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a", 0, 0, 100, 10);
+    const toolpath = peel("centre", { ramp: true }, [slot]);
+    const inSlot = ([x, y]: [number, number]) =>
+      inSquare([x, y]) &&
+      y < 10 &&
+      Math.hypot(Math.max(0, 3 - x, x - 97), Math.max(0, 3 - y, y - 7)) <= 3;
+    expect(missed(toolpath, -6, 3 + 1e-2, inSlot, 0.5)).toEqual([]);
+    expect(toolpath.warnings).toEqual([]);
+    const first = descents(toolpath).filter(([from]) => from[2] <= 0);
+    for (const [, to] of first) {
+      expect(to[1]).toBeGreaterThanOrEqual(3 - 1e-3);
+      expect(to[1]).toBeLessThanOrEqual(7 + 1e-3);
+    }
+  });
+
+  it("starts along the island or the outer wall", () => {
+    for (const [start, lap] of [
+      ["inside", offIslandLap],
+      ["outside", offWallLap],
+    ] as const) {
+      const toolpath = peel(start);
+      for (const z of [-2, -4, -6]) {
+        const [first] = cutsAt(toolpath, z);
+        if (!first) throw new Error("No cuts");
+        expect(lap(first[0])).toBeLessThan(1e-2);
+        expect(lap(first[1])).toBeLessThan(1e-2);
+      }
+    }
+  });
+
+  it("needs exactly one island per pocket to start from it", () => {
+    const warning = "Peel from the island needs exactly one island.";
+    const second: Shape = {
+      ...rectangle("0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a", 10, 10, 10, 10),
+    };
+    for (const shapes of [[square], [square, island, second]]) {
+      expect(peel("inside", {}, shapes)).toEqual({ moves: [], warnings: [warning] });
+    }
+    // Only the pocket with one island is cleared, with one warning for the other.
+    const other = rectangle("5e4d3c2b-1a0f-4e9d-8c7b-6a5f4e3d2c1b", 120, 0, 40, 40);
+    const toolpath = peel("inside", {}, [square, island, other]);
+    expect(toolpath.warnings).toEqual([warning]);
+    expect(toolpath.moves.length).toBeGreaterThan(0);
+    for (const move of toolpath.moves) expect(move.to[0]).toBeLessThanOrEqual(100);
   });
 });

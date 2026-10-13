@@ -57,6 +57,7 @@ describe("ProfileParams", () => {
 
 describe("PocketParams", () => {
   const pocket: PocketParams = {
+    strategy: { type: "offset" },
     direction: "climb",
     depth: 6,
     allowance: 0.3,
@@ -80,6 +81,32 @@ describe("PocketParams", () => {
 
   it("needs an allowance for a finish pass", () => {
     expect(PocketParams.safeParse({ ...pocket, allowance: 0 }).success).toBe(false);
+  });
+
+  it("accepts the clearing strategies and their presets", () => {
+    for (const angle of [0, 90, 45, -45]) {
+      const strategy = { type: "linear", angle };
+      expect(PocketParams.parse({ ...pocket, strategy }).strategy).toEqual(strategy);
+    }
+    for (const start of ["centre", "inside", "outside"]) {
+      const strategy = { type: "peel", start };
+      expect(PocketParams.parse({ ...pocket, strategy }).strategy).toEqual(strategy);
+    }
+  });
+
+  it("rejects free angles, unknown strategies and missing parameters", () => {
+    for (const strategy of [
+      { type: "linear", angle: 30 },
+      { type: "linear" },
+      { type: "peel", start: "middle" },
+      { type: "peel" },
+      { type: "offset", angle: 0 },
+      { type: "spiral" },
+    ]) {
+      expect(PocketParams.safeParse({ ...pocket, strategy }).success).toBe(false);
+    }
+    const { strategy: _, ...withoutStrategy } = pocket;
+    expect(PocketParams.safeParse(withoutStrategy).success).toBe(false);
   });
 });
 

@@ -121,7 +121,7 @@ export const circle: Shape = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     units: "in",
     stock: {
       width: 300,

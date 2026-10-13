@@ -1,6 +1,7 @@
 import {
   createProjectDocument,
   type OperationTarget,
+  type PocketParams,
   ProjectDocument,
   type Shape,
   type Tool,
@@ -276,7 +277,14 @@ describe("addPocketOperation", () => {
       enabled: true,
       targets: [whole(square)],
       tool: endMill,
-      params: { direction: "climb", depth: 9, allowance: 0, finishPass: false, ramp: true },
+      params: {
+        strategy: { type: "offset" },
+        direction: "climb",
+        depth: 9,
+        allowance: 0,
+        finishPass: false,
+        ramp: true,
+      },
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
     expect(addPocketOperation(store, { targets: [missing], tool: endMill })).toBeNull();
@@ -341,6 +349,22 @@ describe("updatePocketParams", () => {
     expect(params()).toMatchObject({ allowance: 0.5, finishPass: true });
     store.getState().undo();
     expect(params()).toMatchObject({ allowance: 0, finishPass: false });
+  });
+
+  it("switches the clearing strategy", () => {
+    const { store, operations } = setup();
+    const id = addPocket(store);
+    const strategy = () => operations().find((operation) => operation.id === id)?.params;
+    expect(updatePocketParams(store, id, { strategy: { type: "linear", angle: 45 } })).toEqual({
+      ok: true,
+    });
+    expect(strategy()).toMatchObject({ strategy: { type: "linear", angle: 45 } });
+    expect(
+      updatePocketParams(store, id, {
+        strategy: { type: "linear", angle: 30 } as unknown as PocketParams["strategy"],
+      }),
+    ).toMatchObject({ ok: false });
+    expect(strategy()).toMatchObject({ strategy: { type: "linear", angle: 45 } });
   });
 
   it("rejects invalid params and other operation types", () => {

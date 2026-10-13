@@ -4,9 +4,12 @@ import { DRILL_DIAMETER_TOLERANCE, formatQuantity, unitLabel } from "@furrow/cam
 import {
   canDrill,
   type DrillOperation,
+  LinearAngle,
   MillingDirection,
   type OperationTarget,
+  PeelStart,
   type PocketOperation,
+  type PocketStrategy,
   type ProfileOperation,
   ProfileSide,
   type ProfileTabs,
@@ -53,6 +56,34 @@ const SIDE_LABELS: Record<ProfileSide, string> = {
 const DIRECTION_LABELS: Record<MillingDirection, string> = {
   climb: "Climb",
   conventional: "Conventional",
+};
+
+const STRATEGY_LABELS: Record<PocketStrategy["type"], string> = {
+  offset: "Offset",
+  linear: "Linear",
+  peel: "Peel",
+};
+
+/** What each strategy does with the tool's step-over and step-down. */
+const STRATEGY_HINTS: Record<PocketStrategy["type"], string> = {
+  offset: "Rings parallel to the walls, cleared from the centre out",
+  linear: "Zig-zag passes at an angle, after a lap around the walls",
+  peel: "Cuts no wider than the step-over, growing from the start",
+};
+
+/** The strategy each type starts as when picked. */
+const DEFAULT_STRATEGIES: Record<PocketStrategy["type"], PocketStrategy> = {
+  offset: { type: "offset" },
+  linear: { type: "linear", angle: 0 },
+  peel: { type: "peel", start: "centre" },
+};
+
+const LINEAR_ANGLES = LinearAngle.options.map((option) => option.value);
+
+const PEEL_START_LABELS: Record<PeelStart, string> = {
+  centre: "Centre",
+  inside: "Island",
+  outside: "Outer wall",
 };
 
 /** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
@@ -449,6 +480,7 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const { params, tool } = operation;
+  const { strategy } = params;
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updatePocketParams(store, operation.id, changes),
   );
@@ -465,8 +497,68 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       <h4 id="pocket-heading" className="font-medium">
         Pocket
       </h4>
+      <Row id="pocket-strategy" label="Strategy">
+        <NativeSelect
+          id="pocket-strategy"
+          size="sm"
+          value={strategy.type}
+          onChange={(event) => {
+            const type = event.target.value as PocketStrategy["type"];
+            if (type !== strategy.type) update("strategy", { strategy: DEFAULT_STRATEGIES[type] });
+          }}
+          className={SELECT_CLASS}
+        >
+          {Object.entries(STRATEGY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      {strategy.type === "linear" && (
+        <Row id="pocket-angle" label="Angle">
+          <NativeSelect
+            id="pocket-angle"
+            size="sm"
+            value={strategy.angle}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "linear", angle: LinearAngle.parse(Number(event.target.value)) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {LINEAR_ANGLES.map((angle) => (
+              <NativeSelectOption key={angle} value={angle}>
+                {`${angle < 0 ? "−" : ""}${Math.abs(angle)}°`}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      {strategy.type === "peel" && (
+        <Row id="pocket-peel-start" label="Start from">
+          <NativeSelect
+            id="pocket-peel-start"
+            size="sm"
+            value={strategy.start}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "peel", start: PeelStart.parse(event.target.value) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {PeelStart.options.map((start) => (
+              <NativeSelectOption key={start} value={start}>
+                {PEEL_START_LABELS[start]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
       <p className="text-muted-foreground">
-        Cleared from the centre out at the tool's step-over ({tool.stepOver}%) and step-down.
+        {STRATEGY_HINTS[strategy.type]}, at the tool's step-over ({tool.stepOver}%) and step-down.
       </p>
       <Row id="pocket-direction" label="Direction">
         <NativeSelect
@@ -524,9 +616,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
-      {(errors.direction ?? errors.finishPass ?? errors.ramp) && (
+      {(errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
-          {errors.direction ?? errors.finishPass ?? errors.ramp}
+          {errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp}
         </p>
       )}
     </section>
