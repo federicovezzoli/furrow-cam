@@ -3,6 +3,7 @@ import { endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   engraveToolpath,
+  exceedsVBitCone,
   grooveWidth,
   vBitConeDepth,
   vBitDepthForWidth,
@@ -204,6 +205,14 @@ describe("V-bit line width", () => {
   it("is no wider than the bit", () => {
     expect(vBitLineWidth(flatTip, 10)).toBe(6);
     expect(vBitConeDepth(flatTip)).toBeCloseTo(2.9, 12);
+  });
+
+  it("tells when the depth is past the cone, ignoring rounding", () => {
+    const cone = vBitConeDepth(flatTip) as number;
+    expect(exceedsVBitCone(flatTip, vBitDepthForWidth(flatTip, 6) as number)).toBe(false);
+    expect(exceedsVBitCone(flatTip, cone + 1e-12)).toBe(false);
+    expect(exceedsVBitCone(flatTip, cone + 0.01)).toBe(true);
+    expect(exceedsVBitCone(endMill, 100)).toBe(false);
   });
 
   it("converts back to the depth, including the tip", () => {

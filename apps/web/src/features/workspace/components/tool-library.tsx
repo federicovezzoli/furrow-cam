@@ -53,12 +53,15 @@ export function defaultToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return tools.find((choice) => choice.isDefault) ?? tools[0];
 }
 
+/** The default tool if it passes `test`, else the first that does. */
+function toolChoiceFor(tools: ToolChoice[], test: (tool: Tool) => boolean): ToolChoice | undefined {
+  const fallback = defaultToolChoice(tools);
+  return fallback && test(fallback.tool) ? fallback : tools.find((choice) => test(choice.tool));
+}
+
 /** The tool new drill operations start with: the default one if it can drill, else the first that can. */
 export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  const fallback = defaultToolChoice(tools);
-  return fallback && canDrill(fallback.tool)
-    ? fallback
-    : tools.find((choice) => canDrill(choice.tool));
+  return toolChoiceFor(tools, canDrill);
 }
 
 /**
@@ -67,15 +70,7 @@ export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
  * the first that can.
  */
 export function engraveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  const fallback = defaultToolChoice(tools);
-  const isVBit = (choice: ToolChoice) => choice.tool.type === "v_bit";
-  if (fallback && isVBit(fallback)) return fallback;
-  return (
-    tools.find(isVBit) ??
-    (fallback && canEngrave(fallback.tool)
-      ? fallback
-      : tools.find((choice) => canEngrave(choice.tool)))
-  );
+  return toolChoiceFor(tools, (tool) => tool.type === "v_bit") ?? toolChoiceFor(tools, canEngrave);
 }
 
 /** The library tool an operation's snapshot was taken from, if it hasn't been edited since. */

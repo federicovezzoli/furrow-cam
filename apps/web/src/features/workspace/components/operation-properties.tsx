@@ -2,20 +2,18 @@
 
 import {
   DRILL_DIAMETER_TOLERANCE,
+  exceedsVBitCone,
   formatQuantity,
   unitLabel,
-  vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
 } from "@furrow/cam-core";
 import {
-  canDrill,
-  canEngrave,
   type DrillOperation,
   type EngraveOperation,
   LinearAngle,
   MillingDirection,
-  type Operation,
+  Operation,
   type OperationTarget,
   PeelStart,
   type PocketOperation,
@@ -64,12 +62,6 @@ const SIDE_LABELS: Record<ProfileSide, string> = {
   on: "On the line",
 };
 
-const ENGRAVE_SIDE_LABELS: Record<ProfileSide, string> = {
-  on: "On the path",
-  inside: "Inside",
-  outside: "Outside",
-};
-
 const DIRECTION_LABELS: Record<MillingDirection, string> = {
   climb: "Climb",
   conventional: "Conventional",
@@ -101,12 +93,6 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
   centre: "Centre",
   inside: "Island",
   outside: "Outer wall",
-};
-
-/** Which library tools each operation type can take; the others are disabled in the picker. */
-const USABLE_TOOLS: Partial<Record<Operation["type"], (tool: Tool) => boolean>> = {
-  drill: canDrill,
-  engrave: canEngrave,
 };
 
 /** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
@@ -143,11 +129,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           onRename={(name) => renameOperation(store, operation.id, name)}
         />
       </Row>
-      <ToolPicker
-        operationId={operation.id}
-        tool={operation.tool}
-        usable={USABLE_TOOLS[operation.type]}
-      />
+      <ToolPicker operation={operation} />
       <TargetsField operationId={operation.id} targets={operation.targets} />
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -175,18 +157,21 @@ function Row({ id, label, children }: { id: string; label: string; children: Rea
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
-function ToolPicker({
-  operationId,
-  tool,
-  usable,
-}: {
-  operationId: string;
-  tool: Tool;
-  /** The tools the operation can take, or all of them without it. */
-  usable?: (tool: Tool) => boolean;
-}) {
+/** Picks the operation's tool; library tools the operation can't take, such as a V-bit to drill, are disabled. */
+function ToolPicker({ operation }: { operation: Operation }) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
+  const { id: operationId, tool } = operation;
+  // The same check `setOperationTool` makes.
+  const usable = useMemo(
+    () =>
+      new Set(
+        tools
+          .filter((choice) => Operation.safeParse({ ...operation, tool: choice.tool }).success)
+          .map((choice) => choice.id),
+      ),
+    [tools, operation],
+  );
   const current = matchingToolChoice(tools, tool);
   // Cleared once the operation's tool changes.
   const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
@@ -217,7 +202,7 @@ function ToolPicker({
               <NativeSelectOption
                 key={choice.id}
                 value={choice.id}
-                disabled={usable ? !usable(choice.tool) : false}
+                disabled={!usable.has(choice.id)}
               >
                 {choice.tool.name}
               </NativeSelectOption>
@@ -717,7 +702,8 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
     ...gestureHandlers(store),
   } as const;
   const width = vBitLineWidth(tool, params.depth);
-  const cone = vBitConeDepth(tool);
+  // The narrowest line the depth field allows, so the two fields share a floor.
+  const minWidth = vBitLineWidth(tool, MIN_LENGTH);
   const tip = tool.tipDiameter ?? 0;
 
   return (
@@ -735,14 +721,14 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         >
           {(["on", "inside", "outside"] as const).map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {ENGRAVE_SIDE_LABELS[option]}
+              {SIDE_LABELS[option]}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
       <p className="text-muted-foreground">
         {params.side === "on"
-          ? "Follows every path, open and closed, centred on the line, "
+          ? "Follows every path, open and closed, on the line, "
           : `Follows the closed paths ${params.side} the line, with an edge of the groove on it, `}
         in passes no deeper than the tool's step-down.
       </p>
@@ -755,12 +741,12 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         error={errors.depth}
         {...length}
       />
-      {width !== null && cone !== null && (
+      {width !== null && minWidth !== null && (
         <>
           <NumberField
             id="engrave-width"
             label="Line width"
-            min={tip + MIN_LENGTH}
+            min={minWidth}
             max={tool.diameter}
             value={width}
             onValueChange={(value) => {
@@ -770,7 +756,7 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
             {...length}
           />
           <p className="text-muted-foreground">
-            {params.depth > cone
+            {exceedsVBitCone(tool, params.depth)
               ? "Deeper than the cone, so the line is as wide as the bit."
               : `At the stock top, from the bit's ${tool.vAngle}° angle${
                   tip > 0

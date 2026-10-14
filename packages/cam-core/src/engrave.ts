@@ -1,5 +1,5 @@
 import type { EngraveOperation, Shape, Tool } from "@furrow/document";
-import { offsetProfileToolpath, type ProfileOptions } from "./profile";
+import { contourToolpath, type ProfileOptions } from "./profile";
 import type { Toolpath } from "./toolpath";
 
 export type EngraveOptions = ProfileOptions;
@@ -23,27 +23,19 @@ export function engraveToolpath(
   options: EngraveOptions,
 ): Toolpath {
   const { tool, params } = operation;
-  const toolpath = offsetProfileToolpath(
-    {
-      ...operation,
-      type: "profile",
-      params: {
-        side: params.side,
-        direction: "climb",
-        depth: params.depth,
-        allowance: 0,
-        finishPass: false,
-        leadIn: null,
-        ramp: params.ramp,
-        tabs: null,
-      },
-    },
+  const toolpath = contourToolpath(
+    tool,
     shapes,
+    {
+      side: params.side,
+      direction: "climb",
+      depth: params.depth,
+      ramp: params.ramp,
+      offset: grooveWidth(tool, params.depth) / 2,
+    },
     options,
-    grooveWidth(tool, params.depth) / 2,
   );
-  const cone = vBitConeDepth(tool);
-  if (cone !== null && params.depth > cone + 1e-9) {
+  if (exceedsVBitCone(tool, params.depth)) {
     toolpath.warnings.push(
       "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
     );
@@ -78,6 +70,16 @@ function halfAngle(tool: Tool): number {
 export function vBitConeDepth(tool: Tool): number | null {
   if (tool.type !== "v_bit") return null;
   return (tool.diameter - (tool.tipDiameter ?? 0)) / 2 / Math.tan(halfAngle(tool));
+}
+
+/**
+ * Whether a V-bit at `depth` goes deeper than its cone, so its line is as
+ * wide as the bit. Rounding is ignored: a depth set from a line as wide as
+ * the bit is the cone's own. `false` for other tools.
+ */
+export function exceedsVBitCone(tool: Tool, depth: number): boolean {
+  const cone = vBitConeDepth(tool);
+  return cone !== null && depth > cone + 1e-9;
 }
 
 /**
