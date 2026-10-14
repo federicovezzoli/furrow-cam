@@ -55,7 +55,8 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 /**
  * The CAM workspace (ADR-0009): a top bar over two resizable columns,
- * operations over properties on the left and the viewport on the right.
+ * operations over the project's properties on the left and the viewport on
+ * the right, with the selected operation's properties floating over it.
  * Panes collapse to their headers; panel sizes are remembered in a cookie
  * (`layout` is what it held).
  * `tools` is the user's tool library, offered for operations, and
@@ -189,7 +190,7 @@ function Workspace({
                   />
                 }
               >
-                <Properties machines={machines} />
+                <StockProperties machines={machines} />
               </Pane>
             </ResizablePanelGroup>
           </ResizablePanel>
@@ -198,6 +199,7 @@ function Workspace({
             <section aria-label="Viewport" className="relative h-full bg-muted/40">
               <Viewport />
               <GeometryImport />
+              <SelectedOperation />
             </section>
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -206,12 +208,19 @@ function Workspace({
   );
 }
 
-/** The selected operation's properties, or the project's while none is selected. */
-function Properties({ machines }: { machines: MachineChoice[] }) {
+/** The selected operation's properties, in a panel floating over the viewport's top right corner. */
+function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
-  // Keyed, so nothing typed or rejected for one operation shows on the next.
-  if (selectedId !== null) return <OperationProperties key={selectedId} operationId={selectedId} />;
-  return <StockProperties machines={machines} />;
+  if (selectedId === null) return null;
+  return (
+    <aside
+      aria-label="Operation properties"
+      className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
+    >
+      {/* Keyed, so nothing typed or rejected for one operation shows on the next. */}
+      <OperationProperties key={selectedId} operationId={selectedId} />
+    </aside>
+  );
 }
 
 /**

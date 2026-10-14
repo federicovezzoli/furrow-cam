@@ -98,7 +98,7 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
 /** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
 
-/** The selected operation's name, tool, shapes and params; replaces the stock while one is selected. */
+/** The selected operation's name, tool, shapes and params. */
 export function OperationProperties({ operationId }: { operationId: string }) {
   const operation = useDocumentStore((s) =>
     s.document.operations.find((candidate) => candidate.id === operationId),
