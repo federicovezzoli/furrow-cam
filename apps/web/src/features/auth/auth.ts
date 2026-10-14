@@ -3,8 +3,17 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { env } from "@/env";
+import { isPasswordBreached } from "@/features/auth/lib/breached-password";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+
+// Endpoints that set a password, and the body field holding it (ADR-0023).
+const NEW_PASSWORD_FIELDS: Record<string, string> = {
+  "/sign-up/email": "password",
+  "/reset-password": "newPassword",
+  "/change-password": "newPassword",
+};
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -12,6 +21,8 @@ export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
+    maxPasswordLength: PASSWORD_MAX_LENGTH,
     requireEmailVerification: true,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
@@ -48,11 +59,30 @@ export const auth = betterAuth({
     customRules: { "/delete-user": { window: 10, max: 3 } },
   },
   hooks: {
-    // Better Auth also deletes without a password when the session is fresh; we always ask for it.
     before: createAuthMiddleware(async (ctx) => {
+      // Better Auth also deletes without a password when the session is fresh; we always ask for it.
       if (ctx.path === "/delete-user" && !ctx.body?.password) {
         throw new APIError("BAD_REQUEST", {
           message: "Enter your password to delete your account.",
+        });
+      }
+      // Reject breached passwords (ADR-0023). Out-of-range lengths are left to Better Auth,
+      // and the check fails open: if Have I Been Pwned is unreachable, the password is accepted.
+      const field = NEW_PASSWORD_FIELDS[ctx.path];
+      const password: unknown = field ? ctx.body?.[field] : undefined;
+      if (
+        typeof password !== "string" ||
+        password.length < PASSWORD_MIN_LENGTH ||
+        password.length > PASSWORD_MAX_LENGTH
+      ) {
+        return;
+      }
+      const breached = await isPasswordBreached(password);
+      if (breached === null) {
+        console.warn(`Breached-password check unavailable on ${ctx.path}; accepting the password.`);
+      } else if (breached) {
+        throw new APIError("BAD_REQUEST", {
+          message: "This password has appeared in a data breach. Please choose a different one.",
         });
       }
     }),

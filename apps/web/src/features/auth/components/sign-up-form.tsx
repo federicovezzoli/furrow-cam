@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { FormField } from "./form-field";
 import { PasswordField } from "./password-field";
 
@@ -48,7 +49,13 @@ export function SignUpForm() {
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
           <FormField label="Email" id="email" type="email" autoComplete="email" />
-          <PasswordField label="Password" id="password" autoComplete="new-password" minLength={8} />
+          <PasswordField
+            label="Password"
+            id="password"
+            autoComplete="new-password"
+            minLength={PASSWORD_MIN_LENGTH}
+            maxLength={PASSWORD_MAX_LENGTH}
+          />
           <FormError message={error} />
           <Button type="submit" disabled={pending}>
             {pending ? "Creating account…" : "Create account"}
