@@ -9,6 +9,7 @@ pnpm install                  # also runs `prisma generate` in apps/web
 pnpm db:up                    # local PostgreSQL 18 (docker compose)
 pnpm db:migrate               # prisma migrate dev (local database only)
 pnpm dev                      # http://localhost:3000
+pnpm email:dev                # preview email templates (apps/web/src/emails) at :3001
 
 pnpm check:fix && pnpm check  # Biome lint + format (no ESLint/Prettier)
 pnpm typecheck
