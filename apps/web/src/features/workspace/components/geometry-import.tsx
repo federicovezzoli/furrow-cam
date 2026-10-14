@@ -15,7 +15,14 @@ import {
 } from "@furrow/cam-core";
 import type { Units } from "@furrow/document";
 import { UploadIcon, XIcon } from "lucide-react";
-import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -72,6 +79,20 @@ export function GeometryImport() {
   const [notice, setNotice] = useState<Notice | null>(null);
   /** Counts picks, so a slow file read can't land after the user picked another file. */
   const picks = useRef(0);
+  /** Set by a successful import, whose warnings outlive the geometry it adds. */
+  const imported = useRef(false);
+  const wasEmpty = useRef(empty);
+
+  // Undo, redo or another tab can add or remove the geometry under an open prompt,
+  // an unfinished file read or a notice: they belong to the file before.
+  useEffect(() => {
+    if (wasEmpty.current === empty) return;
+    wasEmpty.current = empty;
+    picks.current++;
+    setPending(null);
+    if (!imported.current) setNotice(null);
+    imported.current = false;
+  }, [empty]);
 
   function fail(error: unknown) {
     if (!isImportError(error)) console.error(error);
@@ -93,6 +114,7 @@ export function GeometryImport() {
         setNotice({ kind: "error", messages: [ONE_FILE] });
         return;
       }
+      imported.current = true;
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
       fail(error);

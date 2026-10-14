@@ -104,11 +104,15 @@ function Workspace({
 }) {
   const saveStatus = useAutosave();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
-  const hasOperations = useDocumentStore((s) => s.document.operations.length > 0);
+  const hasEnabledOperations = useDocumentStore((s) =>
+    s.document.operations.some((operation) => operation.enabled),
+  );
   useUndoShortcuts();
   useToolpaths();
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
+  const operationsPanel = usePanelRef();
+  const propertiesPanel = usePanelRef();
   const saved = useRef(layout);
 
   function remember(group: keyof WorkspaceLayout) {
@@ -148,6 +152,8 @@ function Workspace({
               <Pane
                 id="operations"
                 title="Operations"
+                panel={operationsPanel}
+                sibling={propertiesPanel}
                 defaultSize="40"
                 footer={
                   <GcodeExportButton
@@ -156,8 +162,8 @@ function Workspace({
                     disabledReason={
                       machineName === null
                         ? "Choose a machine in the project properties first"
-                        : !hasOperations
-                          ? "Add an operation first"
+                        : !hasEnabledOperations
+                          ? "Add or enable an operation first"
                           : undefined
                     }
                     className="w-full"
@@ -170,6 +176,8 @@ function Workspace({
               <Pane
                 id="properties"
                 title="Properties"
+                panel={propertiesPanel}
+                sibling={operationsPanel}
                 defaultSize="60"
                 footer={
                   <ExportButton
@@ -263,28 +271,45 @@ function SaveFailed({ message }: { message: string | undefined }) {
   );
 }
 
+type PanelRef = ReturnType<typeof usePanelRef>;
+
 /** The height of a pane's header (`h-control`), all that a collapsed pane shows. */
-const PANE_HEADER = 28;
+const PANE_HEADER = "1.75rem";
 
 /**
  * A sidebar pane: dragging its edge resizes it, and its header collapses it to
- * just the header or expands it. `footer` stays at its bottom while the rest scrolls.
+ * just the header or expands it. Collapsing it expands its `sibling` if that
+ * is collapsed: one of the two always shows. `footer` stays at its bottom while
+ * the rest scrolls.
  */
 function Pane({
   id,
   title,
+  panel,
+  sibling,
   defaultSize,
   footer,
   children,
 }: {
   id: string;
   title: string;
+  panel: PanelRef;
+  sibling: PanelRef;
   defaultSize: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const panel = usePanelRef();
   const [collapsed, setCollapsed] = useState(false);
+
+  function toggle() {
+    if (collapsed) {
+      panel.current?.expand();
+      return;
+    }
+    if (sibling.current?.isCollapsed()) sibling.current.expand();
+    panel.current?.collapse();
+  }
+
   return (
     <ResizablePanel
       id={id}
@@ -300,7 +325,7 @@ function Pane({
           <button
             type="button"
             aria-expanded={!collapsed}
-            onClick={() => (collapsed ? panel.current?.expand() : panel.current?.collapse())}
+            onClick={toggle}
             className="flex size-full items-center gap-1 px-2 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             <ChevronDownIcon

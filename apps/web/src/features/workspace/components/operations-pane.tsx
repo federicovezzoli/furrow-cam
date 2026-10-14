@@ -74,6 +74,7 @@ export function OperationsPane() {
     addOperation: typeof addProfileOperation;
     choice: typeof tool;
     hint: string;
+    /** Why there is no fitting tool when the library has others. */
     missingTool?: string;
   }[] = [
     {
@@ -96,7 +97,9 @@ export function OperationsPane() {
       addOperation: addDrillOperation,
       choice: drillTool,
       hint: `Drill the points and circles of the ${target}`,
-      missingTool: "Add a drill or an end mill to your tool library: V-bits can't drill",
+      missingTool: tool
+        ? "Add a drill or an end mill to your tool library: V-bits can't drill"
+        : undefined,
     },
     {
       type: "engrave",
@@ -104,43 +107,62 @@ export function OperationsPane() {
       addOperation: addEngraveOperation,
       choice: engraveTool,
       hint: `Engrave along the lines of the ${target}`,
-      missingTool: "Add a V-bit or an end mill to your tool library: drill bits can't engrave",
+      missingTool: tool
+        ? "Add a V-bit or an end mill to your tool library: drill bits can't engrave"
+        : undefined,
     },
   ];
 
   return (
     <div className="grid gap-2 p-3 text-ui">
-      {geometry.length > 0 && (
-        <Selection
-          target={target}
-          onClear={() => workspace.getState().selectPaths([])}
-          onSelectInside={() => {
-            const { selectedPaths, selectPaths } = workspace.getState();
-            selectPaths([
-              ...selectedPaths,
-              ...closedPathsInside(pickablePaths(geometry), selectedPaths),
-            ]);
-          }}
-        />
-      )}
+      <Selection
+        target={target}
+        onClear={() => workspace.getState().selectPaths([])}
+        onSelectInside={() => {
+          const { selectedPaths, selectPaths } = workspace.getState();
+          selectPaths([
+            ...selectedPaths,
+            ...closedPathsInside(pickablePaths(geometry), selectedPaths),
+          ]);
+        }}
+      />
       <div className="@container">
         <div className="grid grid-cols-2 gap-1 @[13rem]:grid-cols-4">
-          {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => (
-            <Button
-              key={type}
-              variant="outline"
-              disabled={!target || !choice}
-              onClick={() => add(addOperation, choice)}
-              aria-label={`Add ${type}`}
-              title={tool && !choice ? missingTool : target ? hint : `Add ${type}`}
-              className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
-            >
-              <OperationTypeIcon type={type} />
-              <span className="max-w-full truncate text-ui-label">{label}</span>
-            </Button>
-          ))}
+          {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
+            const disabledReason = !choice
+              ? (missingTool ?? "Add a tool to your tool library first")
+              : !target
+                ? "Select paths in the viewport first"
+                : undefined;
+            const button = (
+              <Button
+                key={type}
+                variant="outline"
+                disabled={disabledReason !== undefined}
+                onClick={() => add(addOperation, choice)}
+                aria-label={`Add ${type}`}
+                title={disabledReason === undefined ? hint : undefined}
+                className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
+              >
+                <OperationTypeIcon type={type} />
+                <span className="max-w-full truncate text-ui-label">{label}</span>
+              </Button>
+            );
+            if (disabledReason === undefined) return button;
+            // A disabled button gets no pointer events, so its wrapper shows why.
+            return (
+              <span key={type} title={disabledReason} className="grid min-w-0">
+                {button}
+              </span>
+            );
+          })}
         </div>
       </div>
+      {tool && !target && geometry.length > 0 && (
+        <p className="text-muted-foreground">
+          Click paths in the top view to select what to cut; Ctrl/Cmd/Shift+click to select more.
+        </p>
+      )}
       {!tool && (
         <p className="text-muted-foreground">
           Add a tool to your{" "}

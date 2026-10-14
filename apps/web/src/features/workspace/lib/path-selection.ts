@@ -1,11 +1,6 @@
 import type { PathRef } from "@furrow/cam-core";
 import { normalizeTargets, type OperationTarget, type Shape } from "@furrow/document";
 
-/** Every path of `shape`. */
-export function shapePaths(shape: Shape): PathRef[] {
-  return shape.paths.map((_, path) => ({ shapeId: shape.id, path }));
-}
-
 /**
  * The operation targets of the selected paths (ADR-0018), in the form the
  * document stores (see `normalizeTargets`): `null` once all of a shape's

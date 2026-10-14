@@ -56,7 +56,8 @@ export function ExportButton({
       className={className}
       onClick={onClick}
       disabled={pending}
-      aria-label={`Export ${name}`}
+      // The labelled button names itself; the icon is one of a list of projects.
+      aria-label={size === "compact" ? undefined : `Export ${name}`}
       title="Export file"
     >
       <DownloadIcon />

@@ -39,8 +39,7 @@ export function Viewport() {
   const simulation = useSimulation(
     simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
   );
-  // A path hovered in the viewport, not a whole shape.
-  const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
+  const overPath = useWorkspaceStore((s) => s.hovered !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];

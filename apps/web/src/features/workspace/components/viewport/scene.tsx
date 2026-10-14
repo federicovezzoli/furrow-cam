@@ -126,7 +126,7 @@ function SelectedPaths({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.selected} />;
 }
 
-/** The hovered path, or the hovered shape's paths, except selected ones: selection wins. */
+/** The hovered path, unless it is selected: selection wins. */
 function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const hovered = useWorkspaceStore((s) => s.hovered);
@@ -135,14 +135,9 @@ function HoveredPaths({ color }: { color: string }) {
   const shapes = useMemo(() => new Map(geometry.map((shape) => [shape.id, shape])), [geometry]);
   const selectedKeys = useMemo(() => new Set(selected.map(pathKey)), [selected]);
   const positions = useMemo(() => {
-    const shape = hovered && shapes.get(hovered.shapeId);
-    if (!hovered || !shape) return pathsLinePositions([]);
-    const paths = shape.paths.filter(
-      (_, path) =>
-        (hovered.path === null || hovered.path === path) &&
-        !selectedKeys.has(pathKey({ shapeId: shape.id, path })),
-    );
-    return pathsLinePositions(paths);
+    const path = hovered && shapes.get(hovered.shapeId)?.paths[hovered.path];
+    if (!hovered || !path || selectedKeys.has(pathKey(hovered))) return pathsLinePositions([]);
+    return pathsLinePositions([path]);
   }, [shapes, hovered, selectedKeys]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }
