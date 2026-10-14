@@ -154,14 +154,14 @@ describe("workspace store", () => {
     });
     store.getState().selectPaths([a0, a1, b0]);
     store.getState().selectOperation("op");
-    store.getState().setHovered({ shapeId: "b", path: null });
+    store.getState().setHovered({ shapeId: "b", path: 0 });
     store.getState().setEditingTabs(true);
     store.getState().setToolpathVisible("op", false);
 
     const selected = store.getState().selectedPaths;
     store.getState().prune(document(["a", "b"], ["op"]));
     expect(store.getState().selectedPaths).toBe(selected);
-    expect(store.getState().hovered).toEqual({ shapeId: "b", path: null });
+    expect(store.getState().hovered).toEqual({ shapeId: "b", path: 0 });
 
     store.getState().prune(document(["a"], []));
     expect(store.getState()).toMatchObject({

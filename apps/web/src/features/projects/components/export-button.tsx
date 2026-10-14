@@ -10,19 +10,21 @@ import { downloadFile } from "@/lib/download";
 /**
  * Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version.
  * `getDocument` exports the open document as it is on screen instead of the stored copy, which
- * may lack unsaved changes. `compact` is the labelled button of the workspace top bar; the
- * default is an icon.
+ * may lack unsaved changes. `compact` is the labelled button of the workspace's Properties
+ * pane; the default is an icon.
  */
 export function ExportButton({
   id,
   name,
   getDocument,
   size = "icon-sm",
+  className,
 }: {
   id: string;
   name: string;
   getDocument?: () => ProjectDocument;
   size?: "icon-sm" | "compact";
+  className?: string;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -49,15 +51,17 @@ export function ExportButton({
 
   return (
     <Button
-      variant="ghost"
+      variant={size === "compact" ? "outline" : "ghost"}
       size={size}
+      className={className}
       onClick={onClick}
       disabled={pending}
-      aria-label={`Export ${name}`}
+      // The labelled button names itself; the icon is one of a list of projects.
+      aria-label={size === "compact" ? undefined : `Export ${name}`}
       title="Export file"
     >
       <DownloadIcon />
-      {size === "compact" && "Export"}
+      {size === "compact" && "Export project file"}
     </Button>
   );
 }

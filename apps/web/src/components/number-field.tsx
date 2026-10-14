@@ -9,11 +9,11 @@ import {
   unitLabel,
 } from "@furrow/cam-core";
 import type { Units } from "@furrow/document";
-import { cn } from "cn";
 import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 /** One arrow-key step, in display units; Shift multiplies it by 10 and Alt by 0.1. */
 const DEFAULT_STEPS: Record<Quantity, Record<Units, number>> = {
