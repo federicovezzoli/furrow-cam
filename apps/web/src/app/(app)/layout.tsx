@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { AccountMenu } from "@/components/account-menu";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { requireSession } from "@/lib/session";
+import { AccountMenu } from "@/features/auth/components/account-menu";
+import { requireSession } from "@/features/auth/server";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (

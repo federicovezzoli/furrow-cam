@@ -35,3 +35,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed |
 | [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
 | [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed |
+| [0021](0021-web-app-feature-folders.md) | Feature folders in the web app | Proposed |

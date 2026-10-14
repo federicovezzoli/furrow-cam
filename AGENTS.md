@@ -12,7 +12,7 @@ pnpm dev                      # http://localhost:3000
 
 pnpm check:fix && pnpm check  # Biome lint + format (no ESLint/Prettier)
 pnpm typecheck
-pnpm test                     # Vitest in packages/* and apps/web (stores)
+pnpm test                     # Vitest in packages/* and apps/web (src/**/*.test.ts)
 pnpm build
 pnpm changeset                # add a changeset for behaviour changes
 ```
@@ -31,19 +31,30 @@ packages/post/       post-processors, toolpaths → G-code
 - Dependency direction: `web → post → cam-core → document`.
 - `packages/*` must not import React, Next.js or three.js (Biome enforces it). They are consumed as TypeScript source; keep them worker-safe (no DOM).
 
+Inside `apps/web/src` (ADR-0021):
+
+```
+app/              routes only (page, layout, error, route files) rendering feature components
+features/<name>/  auth, tools, machines, projects, workspace: actions.ts (server actions only),
+                  server.ts ("server-only" logic), components/ hooks/ providers/ stores/ lib/ workers/
+components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnostic code
+```
+
+- Nothing outside `app/` imports `@/app/*`; `components/`, `lib/`, `hooks/` never import `@/features/*` (Biome enforces both). Features import each other's files directly, no barrel `index.ts`.
+
 ## Architecture rules
 
 - **CAM runs in the browser**, in Web Workers (ADR-0004). The server never computes toolpaths or G-code; it only authenticates, stores and validates.
 - **Persistence (ADR-0003):** relational tables for users, tools, machines and project metadata; each project's contents are one versioned JSON document (`Project.document`, `jsonb`) validated by the Zod schema in `@furrow/document`. Tools and machines are *snapshotted* into the document when used. Toolpaths are derived data and never stored.
 - **Units:** millimetres internally (`float64`); convert only at the UI edge.
 - **UI:** shadcn/ui on Radix + Tailwind (ADR-0009), Zustand + Immer with patch-based undo (ADR-0010), three.js via React Three Fiber (ADR-0008).
-- **Privacy (ADR-0013):** the only personal data we collect is the email address. `user.name` always mirrors the email, `user.image` is always `NULL` (enforced by hooks in `apps/web/src/lib/auth.ts`). Any new personal data needs a new ADR.
+- **Privacy (ADR-0013):** the only personal data we collect is the email address. `user.name` always mirrors the email, `user.image` is always `NULL` (enforced by hooks in `apps/web/src/features/auth/auth.ts`). Any new personal data needs a new ADR.
 
 ## Database and environment
 
 - `apps/web/.env` is for local dev and points at the Docker database. `apps/web/.env.neon` holds the Neon production URLs (pooled `DATABASE_URL`, direct `DIRECT_URL`) for copying into Vercel; the app never reads it. **Never run `prisma migrate dev` against Neon**; production uses `prisma migrate deploy` (Vercel's `vercel-build` script).
 - Schema changes: edit `apps/web/prisma/schema.prisma`, then `pnpm --filter @furrow/web exec prisma migrate dev --name <name>`. Never edit a migration that has been applied anywhere; add a new one.
-- The four Better Auth models are generated: `pnpm dlx auth@<better-auth version> generate --config src/lib/auth.ts` (run in `apps/web`).
+- The four Better Auth models are generated: `pnpm dlx auth@<better-auth version> generate --config src/features/auth/auth.ts` (run in `apps/web`).
 - Environment variables are validated by `apps/web/src/env.ts`; a new variable must also be added to `turbo.json` (`build.env`, Turborepo strict mode), `.env.example` and the CI placeholders in `.github/workflows/ci.yml` if the build needs it.
 - Without `RESEND_API_KEY`, emails are printed to the dev server console.
 
