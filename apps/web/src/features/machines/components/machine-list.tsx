@@ -1,6 +1,7 @@
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { DeleteButton } from "@/components/delete-button";
+import { formatNumber, Unit } from "@/components/table-format";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -97,14 +98,4 @@ export function MachineList({ machines }: { machines: MachineRow[] }) {
       </Table>
     </div>
   );
-}
-
-function Unit({ children }: { children: string }) {
-  return <span className="block text-xs font-normal text-muted-foreground">{children}</span>;
-}
-
-const numberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
-
-function formatNumber(value: number): string {
-  return numberFormat.format(value);
 }

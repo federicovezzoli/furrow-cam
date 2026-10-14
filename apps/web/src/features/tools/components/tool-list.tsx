@@ -1,6 +1,7 @@
 import { Tool } from "@furrow/document";
 import { PencilIcon } from "lucide-react";
 import { DeleteButton } from "@/components/delete-button";
+import { formatNumber, Unit } from "@/components/table-format";
 import {
   Table,
   TableBody,
@@ -149,16 +150,6 @@ export function ToolList({ tools }: { tools: ToolRow[] }) {
       </Table>
     </div>
   );
-}
-
-function Unit({ children }: { children: string }) {
-  return <span className="block text-xs font-normal text-muted-foreground">{children}</span>;
-}
-
-const numberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
-
-function formatNumber(value: number): string {
-  return numberFormat.format(value);
 }
 
 /** Cut direction for end mills, angle and tip for V-bits, nothing for drills. */

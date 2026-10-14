@@ -1,8 +1,9 @@
 import "server-only";
 import { Tool } from "@furrow/document";
+import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { issuesToFormErrors, numberField } from "@/lib/form-data";
+import { type FormErrors, issuesToFormErrors, numberField } from "@/lib/form-data";
 
 /** The signed-in user's tool library, by name. */
 export function listTools(userId: string) {
@@ -128,4 +129,36 @@ export function parseToolForm(form: FormData) {
   if (result.success) return { tool: result.data };
 
   return { errors: issuesToFormErrors<keyof Tool>(result.error.issues, input) };
+}
+
+export type ToolFormErrors = FormErrors<keyof Tool>;
+
+export const TOOL_NOT_FOUND = "This bit no longer exists.";
+
+/**
+ * Creates the user's tool, or updates it when `id` is given. A user's first
+ * tool becomes their default. Returns the saved tool as an operation snapshot.
+ */
+export async function writeTool(
+  userId: string,
+  id: string | null,
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+  const parsed = parseToolForm(form);
+  if (parsed.errors) return { errors: parsed.errors };
+  const { tool } = parsed;
+
+  if (id === null) {
+    await db.$transaction(async (tx) => {
+      await lockLibrary(tx, userId);
+      const hasDefault = await tx.tool.count({ where: { userId, isDefault: true } });
+      await tx.tool.create({ data: { ...tool, userId, isDefault: hasDefault === 0 } });
+    });
+  } else {
+    const toolId = z.uuid().safeParse(id);
+    if (!toolId.success) return { errors: { form: TOOL_NOT_FOUND } };
+    const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
+    if (count === 0) return { errors: { form: TOOL_NOT_FOUND } };
+  }
+  return { tool };
 }
