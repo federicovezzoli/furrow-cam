@@ -159,6 +159,9 @@ importers:
       clipper2-ts:
         specifier: 2.0.1-18
         version: 2.0.1-18
+      delaunator:
+        specifier: ^5.1.0
+        version: 5.1.0
     devDependencies:
       typescript:
         specifier: 'catalog:'
