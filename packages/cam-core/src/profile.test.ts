@@ -474,7 +474,7 @@ describe("profileToolpath with tabs", () => {
 
 describe("generateToolpath", () => {
   const doc = (machineSafeZ: number | null, entryClearance = 1): ProjectDocument => ({
-    schemaVersion: 3,
+    schemaVersion: 4,
     units: "mm",
     stock: {
       width: 200,

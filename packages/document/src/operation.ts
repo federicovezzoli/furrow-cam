@@ -122,13 +122,42 @@ export const ProfileOperation = z.strictObject({
 });
 export type ProfileOperation = z.infer<typeof ProfileOperation>;
 
+/** Linear clearing angles: degrees counter-clockwise from the stock's X axis, presets only. */
+export const LinearAngle = z.union([z.literal(0), z.literal(90), z.literal(45), z.literal(-45)]);
+export type LinearAngle = z.infer<typeof LinearAngle>;
+
+/** Where a peel starts: the point furthest from the walls, the single island or the outer wall. */
+export const PeelStart = z.enum(["centre", "inside", "outside"]);
+export type PeelStart = z.infer<typeof PeelStart>;
+
 /**
- * Pocket parameters (#23): offset clearing of the area inside the closed
- * paths, islands left standing. The step-over, step-down and ramp angle come
- * from the tool.
+ * How a pocket's area is cleared (#57, PRD-0001 R20): concentric offset rings
+ * from the centre out, zig-zag passes at a preset angle, or engagement-limited
+ * peeling grown from a starting cut.
+ */
+export const PocketStrategy = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("offset") }),
+  z.strictObject({
+    type: z.literal("linear"),
+    /** Degrees counter-clockwise from the stock's X axis. */
+    angle: LinearAngle,
+  }),
+  z.strictObject({
+    type: z.literal("peel"),
+    /** Where the cleared area starts growing from. */
+    start: PeelStart,
+  }),
+]);
+export type PocketStrategy = z.infer<typeof PocketStrategy>;
+
+/**
+ * Pocket parameters (#23): clearing of the area inside the closed paths,
+ * islands left standing. The step-over, step-down and ramp angle come from
+ * the tool.
  */
 export const PocketParams = z
   .strictObject({
+    strategy: PocketStrategy,
     direction: MillingDirection,
     /** Final depth below the stock top. */
     depth: PositiveLength,

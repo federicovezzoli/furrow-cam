@@ -1,4 +1,5 @@
 import { distance, type Point } from "@furrow/document";
+import type { ToolpathBuilder } from "./toolpath";
 
 // Helpers the toolpath generators share.
 
@@ -34,6 +35,58 @@ export function inBox(point: Point, box: Box, margin: number): boolean {
 /** Height `travelled` along a ramp of length `total` from `z` to `level`, ending exactly on `level`. */
 export function rampZ(z: number, level: number, travelled: number, total: number): number {
   return travelled >= total - 1e-9 ? level : z + ((level - z) * travelled) / total;
+}
+
+/** Distance from `point` to the segment from `a` to `b`. */
+export function distanceToSegment(point: Point, a: Point, b: Point): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  const t =
+    lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared))
+      : 0;
+  return Math.hypot(a[0] + t * dx - point[0], a[1] + t * dy - point[1]);
+}
+
+/** How a generator goes down into the stock. */
+export type Descent = {
+  builder: ToolpathBuilder;
+  plungeRate: number;
+  /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
+  rampRun: number | null;
+  /** Ramps along anything shorter than this plunge instead. */
+  minRampLength: number;
+};
+
+/**
+ * Gets from `z` down to `level` at `path[0]`: ramping back and forth along
+ * `path` as many times as the plunge angle needs, or straight down.
+ */
+export function descend(cut: Descent, path: Point[], z: number, level: number) {
+  const start = path[0] as Point;
+  const track = new Track(path);
+  if (cut.rampRun === null || track.length < cut.minRampLength) {
+    cut.builder.feed([start[0], start[1], level], cut.plungeRate);
+    return;
+  }
+  const run = (z - level) * cut.rampRun;
+  // Go no further along the path than one trip there and back needs.
+  const reach = Math.min(track.length, run / 2);
+  const there = [...track.walk(0, reach)].map(([point]) => point);
+  const back = [...there].reverse().slice(1);
+  back.push(start);
+  const trips = Math.ceil(run / (2 * reach));
+  const total = 2 * trips * reach;
+  let travelled = 0;
+  let previous = start;
+  for (let i = 0; i < trips; i++) {
+    for (const point of [...there, ...back]) {
+      travelled += distance(previous, point);
+      previous = point;
+      cut.builder.feed([point[0], point[1], rampZ(z, level, travelled, total)], cut.plungeRate);
+    }
+  }
 }
 
 /** A polyline measured by length; a closed one repeats its first point at the end. */

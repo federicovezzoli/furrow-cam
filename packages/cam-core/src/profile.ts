@@ -1,7 +1,17 @@
 import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
-import { type Box, bounds, depthLevels, inBox, plural, rampZ, Track } from "./passes";
+import {
+  type Box,
+  bounds,
+  type Descent,
+  depthLevels,
+  descend,
+  inBox,
+  plural,
+  rampZ,
+  Track,
+} from "./passes";
 import {
   coveredSpans,
   freeSpans,
@@ -36,14 +46,8 @@ type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
 const LEAD_IN_ATTEMPTS = 4;
 
 /** Everything the passes of one profile share. */
-type Cut = {
-  builder: ToolpathBuilder;
+type Cut = Descent & {
   feedRate: number;
-  plungeRate: number;
-  /** Horizontal travel per millimetre of descent when ramping, or `null` to plunge. */
-  rampRun: number | null;
-  /** Ramps along anything shorter than this plunge instead. */
-  minRampLength: number;
   leadInRadius: number | null;
   /** Height the tool stays at or above over tabs, or `null` without tabs. */
   tabTop: number | null;
@@ -417,36 +421,6 @@ function enter(cut: Cut, point: Point) {
   builder.travel(point[0], point[1]);
   builder.rapid([point[0], point[1], builder.clearance]);
   builder.feed([point[0], point[1], 0], cut.plungeRate);
-}
-
-/**
- * Gets from `z` down to `level` at `path[0]`: ramping back and forth along
- * `path` as many times as the plunge angle needs, or straight down.
- */
-function descend(cut: Cut, path: Point[], z: number, level: number) {
-  const start = path[0] as Point;
-  const track = new Track(path);
-  if (cut.rampRun === null || track.length < cut.minRampLength) {
-    cut.builder.feed([start[0], start[1], level], cut.plungeRate);
-    return;
-  }
-  const run = (z - level) * cut.rampRun;
-  // Go no further along the path than one trip there and back needs.
-  const reach = Math.min(track.length, run / 2);
-  const there = [...track.walk(0, reach)].map(([point]) => point);
-  const back = [...there].reverse().slice(1);
-  back.push(start);
-  const trips = Math.ceil(run / (2 * reach));
-  const total = 2 * trips * reach;
-  let travelled = 0;
-  let previous = start;
-  for (let i = 0; i < trips; i++) {
-    for (const point of [...there, ...back]) {
-      travelled += distance(previous, point);
-      previous = point;
-      cut.builder.feed([point[0], point[1], rampZ(z, level, travelled, total)], cut.plungeRate);
-    }
-  }
 }
 
 /**
