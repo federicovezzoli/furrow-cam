@@ -5,6 +5,7 @@ import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { NumberField } from "@/components/number-field";
+import { useToolDialogBusy } from "@/components/tool-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,7 @@ export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
+  useToolDialogBusy(pending);
   const isEndMill = type === "flat_end_mill" || type === "ball_end_mill";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -139,7 +141,7 @@ export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : id ? "Save changes" : "Add bit"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
       </div>

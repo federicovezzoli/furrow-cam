@@ -1,4 +1,5 @@
-import type { Tool } from "@furrow/document";
+import { Tool } from "@furrow/document";
+import { PencilIcon } from "lucide-react";
 import type * as React from "react";
 import { Suspense } from "react";
 import { DeleteButton } from "@/components/delete-button";
@@ -11,13 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { Tool as ToolRow } from "@/generated/prisma/client";
 import { requireUserId } from "@/lib/session";
 import { listTools, nextToolColor } from "@/lib/tools";
 import { deleteTool } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
+import { OpenToolButton, ToolDialogProvider } from "./library-dialog";
 import { SetDefaultButton } from "./set-default-button";
-import { EditToolButton, EditToolName, NewToolButton, ToolDialogProvider } from "./tool-dialog";
 
 export default function ToolsPage() {
   return (
@@ -51,17 +53,21 @@ async function ToolLibrary() {
   const tools = await listTools(await requireUserId());
   return (
     <>
-      <Header action={<NewToolButton color={nextToolColor(tools)} />} />
+      <Header
+        action={
+          <OpenToolButton id={null} values={{ color: nextToolColor(tools) }}>
+            New bit
+          </OpenToolButton>
+        }
+      />
       <ToolList tools={tools} />
     </>
   );
 }
 
-type ToolRow = Awaited<ReturnType<typeof listTools>>[number];
-
-/** The row's fields the bit form edits. */
-function toolValues({ id, userId, isDefault, createdAt, updatedAt, ...values }: ToolRow) {
-  return values;
+/** The row's fields the bit form edits: the `Tool` schema's, leaving out ids and timestamps. */
+function toolValues(row: ToolRow): Partial<Tool> {
+  return Object.fromEntries(Tool.keyof().options.map((key) => [key, row[key]]));
 }
 
 function ToolList({ tools }: { tools: ToolRow[] }) {
@@ -122,53 +128,72 @@ function ToolList({ tools }: { tools: ToolRow[] }) {
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
-          {tools.map((tool) => (
-            <TableRow key={tool.id}>
-              <TableCell className="pl-2">
-                <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="size-3 shrink-0 border"
-                    style={{ backgroundColor: tool.color }}
-                    aria-hidden="true"
-                  />
-                  <EditToolName id={tool.id} values={toolValues(tool)} />
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <BitTypeIcon type={tool.type} className="h-7 w-3.5 text-muted-foreground" />
-                  {TOOL_TYPE_LABELS[tool.type]}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">{formatNumber(tool.diameter)}</TableCell>
-              <TableCell className="text-right">{tool.fluteCount}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.fluteLength)}</TableCell>
-              <TableCell>{describeCut(tool)}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.plungeAngle)}</TableCell>
-              <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
-              <TableCell className="text-right">
-                {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}
-                <span className="text-muted-foreground">({formatNumber(tool.stepOver)}%)</span>
-              </TableCell>
-              <TableCell className="pr-4">
-                <div className="flex justify-end gap-1">
-                  <EditToolButton id={tool.id} values={toolValues(tool)} />
-                  <DeleteButton
-                    name={tool.name}
-                    // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
-                    confirmText={`Delete "${tool.name}"? Existing projects keep their copy of this bit.`}
-                    action={deleteTool.bind(null, tool.id)}
-                  />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {tools.map((tool) => {
+            const values = toolValues(tool);
+            return (
+              <TableRow key={tool.id}>
+                <TableCell className="pl-2">
+                  <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="size-3 shrink-0 border"
+                      style={{ backgroundColor: tool.color }}
+                      aria-hidden="true"
+                    />
+                    <OpenToolButton
+                      id={tool.id}
+                      values={values}
+                      variant="link"
+                      className="h-auto p-0 font-medium text-foreground"
+                    >
+                      {tool.name}
+                    </OpenToolButton>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <BitTypeIcon type={tool.type} className="h-7 w-3.5 text-muted-foreground" />
+                    {TOOL_TYPE_LABELS[tool.type]}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">{formatNumber(tool.diameter)}</TableCell>
+                <TableCell className="text-right">{tool.fluteCount}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.fluteLength)}</TableCell>
+                <TableCell>{describeCut(tool)}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.plungeAngle)}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
+                <TableCell className="text-right">
+                  {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}
+                  <span className="text-muted-foreground">({formatNumber(tool.stepOver)}%)</span>
+                </TableCell>
+                <TableCell className="pr-4">
+                  <div className="flex justify-end gap-1">
+                    <OpenToolButton
+                      id={tool.id}
+                      values={values}
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Edit"
+                      aria-label={`Edit ${tool.name}`}
+                    >
+                      <PencilIcon />
+                    </OpenToolButton>
+                    <DeleteButton
+                      name={tool.name}
+                      // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
+                      confirmText={`Delete "${tool.name}"? Existing projects keep their copy of this bit.`}
+                      action={deleteTool.bind(null, tool.id)}
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
