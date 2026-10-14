@@ -9,10 +9,10 @@ export async function isPasswordBreached(
   password: string,
   { fetch: fetchFn = fetch, timeoutMs = 3000 }: { fetch?: typeof fetch; timeoutMs?: number } = {},
 ): Promise<boolean | null> {
-  const hash = await sha1Hex(password);
-  const prefix = hash.slice(0, 5);
-  const suffix = hash.slice(5);
   try {
+    const hash = await sha1Hex(password);
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
     const response = await fetchFn(RANGE_URL + prefix, {
       headers: { "Add-Padding": "true", "User-Agent": "Furrow CAM" },
       signal: AbortSignal.timeout(timeoutMs),

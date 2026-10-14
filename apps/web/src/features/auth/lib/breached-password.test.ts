@@ -51,6 +51,14 @@ describe("isPasswordBreached", () => {
     expect(await isPasswordBreached(PASSWORD, { fetch })).toBeNull();
   });
 
+  it("returns null when hashing fails", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockRejectedValueOnce(new Error("no SHA-1"));
+    const fetch = respond("");
+    expect(await isPasswordBreached(PASSWORD, { fetch })).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+    digest.mockRestore();
+  });
+
   it("returns null when the API does not answer in time", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(
       (_url, init) =>

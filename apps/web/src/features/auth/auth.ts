@@ -55,8 +55,13 @@ export const auth = betterAuth({
     },
   },
   // `/delete-user` checks the password, so it gets the same strict limit Better Auth gives sign-in.
+  // `/reset-password` too: the breached-password check below runs before Better Auth validates the
+  // token, so each request can hold an outbound HIBP call open (ADR-0023).
   rateLimit: {
-    customRules: { "/delete-user": { window: 10, max: 3 } },
+    customRules: {
+      "/delete-user": { window: 10, max: 3 },
+      "/reset-password": { window: 10, max: 3 },
+    },
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
@@ -68,6 +73,8 @@ export const auth = betterAuth({
       }
       // Reject breached passwords (ADR-0023). Out-of-range lengths are left to Better Auth,
       // and the check fails open: if Have I Been Pwned is unreachable, the password is accepted.
+      // It runs here rather than when Better Auth hashes the password because `/reset-password`
+      // consumes the token before hashing: a rejection there would burn the reset link.
       const field = NEW_PASSWORD_FIELDS[ctx.path];
       const password: unknown = field ? ctx.body?.[field] : undefined;
       if (
