@@ -37,4 +37,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed |
 | [0021](0021-web-app-feature-folders.md) | Feature folders in the web app | Proposed |
 | [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed |
-| [0023](0023-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |
+| [0023](0023-password-policy-breached-passwords.md) | Password length limits and breached-password check | Proposed |
+| [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |

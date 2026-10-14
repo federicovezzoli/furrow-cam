@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020).
-const LAST_UPDATED = "13 October 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023).
+const LAST_UPDATED = "14 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -92,6 +92,13 @@ export default function PrivacyPage() {
               (domain only, on your first page view), your screen size, and, with the request, your
               IP address and user agent. It uses these for country and browser statistics and
               doesn&apos;t store your IP address. Page views are not linked to your account.
+            </li>
+            <li>
+              <External href="https://haveibeenpwned.com/Privacy">Have I Been Pwned</External>{" "}
+              checks whether a new password appears in known data breaches when you sign up or reset
+              your password. Our server sends it only the first 5 characters of the password&apos;s
+              SHA-1 hash, shared by hundreds of other passwords, and does the comparison itself.
+              Neither your password, your email address nor your IP address is sent.
             </li>
           </List>
           <p>
