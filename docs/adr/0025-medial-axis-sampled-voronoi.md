@@ -15,11 +15,11 @@ The spike (issue #96) ran a prototype of option 1 in a Node.js `worker_threads` 
 
 | Spacing | Sign, median | Radius too large by (max) | Left uncarved (worst glyph, the S) |
 | --- | --- | --- | --- |
-| 0.1 mm | ~160 ms | 6 × 10⁻⁵ mm | none |
-| **0.2 mm** | **~64 ms** | 6 × 10⁻⁵ mm | 0.006 % of the area, at most 0.04 mm deep |
-| 0.5 mm | ~24 ms | 6 × 10⁻⁵ mm | 0.013 %, at most 0.1 mm deep |
+| 0.1 mm | ~200 ms | 7 × 10⁻⁵ mm | none |
+| **0.2 mm** | **~83 ms** | 7 × 10⁻⁵ mm | 0.002 % of the area, at most 0.03 mm deep |
+| 0.5 mm | ~40 ms | 7 × 10⁻⁵ mm | 0.004 %, at most 0.04 mm deep |
 
-The rectangle's axis is exact (centre line at radius 10, four corner branches to the corners at radius 0), the O gives one closed loop at radius 4 within the flattening tolerance, every convex corner of the E, C and star gets a branch, and no reflex corner does. Delaunator's standalone build, including `robust-predicates`, is 7.9 KB minified, 3.1 KB gzip.
+The rectangle's axis is exact (centre line at radius 10, four corner branches to the corners at radius 0), the O gives one closed loop at radius 4 within the flattening tolerance, every convex corner of the E, C and star gets a branch, and no reflex corner does. Wedges of 2° to 5° and a 10 × 0.5 mm sliver are carved right to their tips (see the graded sampling below). Delaunator's standalone build, including `robust-predicates`, is 7.9 KB minified, 3.1 KB gzip.
 
 ## Options considered
 
@@ -33,14 +33,16 @@ The rectangle's axis is exact (centre line at radius 10, four corner branches to
 
 - Use **option 1 on `delaunator`** behind a **`medialAxis`** function in `@furrow/cam-core` (`src/medial-axis.ts`). Only that file imports Delaunator; Biome's `noRestrictedImports` enforces it, as for Clipper2.
 - `medialAxis(polygons, { spacing, minAngle, fillRule })` takes millimetre rings (resolved with the fill rule through the geometry adapter, `nonZero` by default) and returns **branches**: runs of points between ends and junctions, each point with its radius. A branch around a ring closes on its first point.
-- Boundaries are sampled every **0.2 mm** by default: accurate to hundredths of a millimetre at ~2 ms per glyph.
+- Boundaries are sampled every **0.2 mm** by default: accurate to hundredths of a millimetre at ~3 ms per glyph.
 - Radii are the **exact distance to the edges** the triangle's samples lie on, never the circumradius, so a radius is never larger than the true distance by more than ~10⁻⁴ mm.
 - Spurs are pruned by an **angle rule**: an axis edge is kept only when its two nearest samples lie on different edges and subtend at least `minAngle` (30° by default) from it. Corners sharper than 150° keep a branch, which is extended to the corner itself at radius 0; the near-flat vertices of flattened curves get none.
+- Near those sharp corners the samples are **graded**: spacing shrinks to half the wedge's width, down to 0.001 mm from the tip. With uniform samples, a wedge narrower than the spacing only has sliver triangles whose circumcentres fall outside the shape, and the axis of a 4° corner stopped 0.5 mm short of the tip. A 90° corner adds a few samples, a 4° corner a few hundred.
 
 ## Consequences
 
 - No WebAssembly, no asynchronous start-up and ~3 KB more in the worker bundle.
 - Accuracy and speed are tuned by one parameter, `spacing`; V-carve (#97) can expose it or tie it to the chord tolerance.
 - Branches are dense (about one point per sample), so the V-carve toolpath should simplify them, keeping depth within tolerance, before emitting G-code.
+- Thin necks narrower than the spacing that are not corners (two edges nearly touching) still lose their axis; a smaller `spacing` is the remedy.
 - Corners between 150° and 180° lose their branch and leave a sliver of at most a few hundredths of a millimetre; `minAngle` trades that against spurs on curves.
 - If an exact algorithm is ever needed, a licence-compatible one can replace the sampling inside the adapter without changing callers; the spike's cases are kept as adapter tests.

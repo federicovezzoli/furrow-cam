@@ -1,4 +1,4 @@
-import type { Point } from "@furrow/document";
+import { GEOMETRY_TOLERANCE, type Point } from "@furrow/document";
 import Delaunator from "delaunator";
 import { type FillRule, type Polygon, union } from "./geometry";
 
@@ -37,13 +37,20 @@ export const DEFAULT_MEDIAL_AXIS_ANGLE = 30;
 /** Disk centres closer than this many millimetres are one node. */
 const MERGE_DISTANCE = 1e-6;
 
+/** Closest sample to a sharp corner, in millimetres: the axis reaches the tip from there. */
+const CORNER_RESOLUTION = GEOMETRY_TOLERANCE;
+
+/** Sample spacing near a sharp corner, as a fraction of the wedge's width. */
+const CORNER_GRADING = 0.5;
+
 /**
  * The medial axis of the area covered by `polygons`: the centres of the
  * maximal disks inside it, with their radii, as branches between ends and
  * junctions. A V-bit following it at a depth set by the radius cuts up to the
  * edges and never past them.
  *
- * The boundary is sampled every `spacing` millimetres and the Voronoi vertices
+ * The boundary is sampled every `spacing` millimetres, closer towards sharp
+ * corners so the axis reaches their tips, and the Voronoi vertices
  * of the samples (Delaunay circumcentres) inside the area are joined where two
  * samples on different, not nearly parallel, edges are equally near. Radii are
  * the exact distance to those edges, so they are never larger than the true
@@ -57,12 +64,17 @@ export function medialAxis(
   if (!(spacing > 0)) throw new RangeError("Sample spacing must be positive");
   const minAngle = ((options.minAngle ?? DEFAULT_MEDIAL_AXIS_ANGLE) * Math.PI) / 180;
   // Outer boundaries counter-clockwise and holes clockwise: the area is left of every edge.
-  const boundary = new Boundary(union(polygons, options.fillRule ?? "nonZero"), spacing);
+  const maxTurnCosine = Math.cos(minAngle);
+  const boundary = new Boundary(
+    union(polygons, options.fillRule ?? "nonZero"),
+    spacing,
+    maxTurnCosine,
+  );
   if (boundary.sampleCount < 3) return [];
   const disks = new Disks(boundary);
   const graph = new Graph(disks);
   joinVoronoiEdges(graph, disks, Math.sin(minAngle / 2));
-  joinCorners(graph, disks, Math.cos(minAngle));
+  joinCorners(graph, disks);
   return graph.branches();
 }
 
@@ -81,12 +93,24 @@ class Boundary {
   readonly edge: number[] = [];
   readonly isVertex: boolean[] = [];
 
-  constructor(rings: Polygon[], spacing: number) {
+  /** Whether edge `e` starts at a convex corner sharp enough to get its own branch. */
+  readonly startsAtSharpCorner: boolean[] = [];
+
+  constructor(rings: Polygon[], spacing: number, maxTurnCosine: number) {
     const coords: number[] = [];
     for (const ring of rings) {
       const n = ring.length;
       if (n < 3) continue;
       const first = this.ax.length;
+      // tan(half the inside angle) at each sharp convex corner, 0 elsewhere.
+      const corners = ring.map((_, i) =>
+        cornerSlope(
+          ring[(i + n - 1) % n] as Point,
+          ring[i] as Point,
+          ring[(i + 1) % n] as Point,
+          maxTurnCosine,
+        ),
+      );
       for (let i = 0; i < n; i++) {
         const [ax, ay] = ring[i] as Point;
         const [bx, by] = ring[(i + 1) % n] as Point;
@@ -96,12 +120,15 @@ class Boundary {
         this.bx.push(bx);
         this.by.push(by);
         this.previous.push(i === 0 ? first + n - 1 : e - 1);
-        const steps = Math.ceil(Math.hypot(bx - ax, by - ay) / spacing);
-        for (let j = 0; j < steps; j++) {
-          coords.push(ax + ((bx - ax) * j) / steps, ay + ((by - ay) * j) / steps);
+        const startSlope = corners[i] as number;
+        this.startsAtSharpCorner.push(startSlope > 0);
+        const length = Math.hypot(bx - ax, by - ay);
+        const along = edgeSamples(length, spacing, startSlope, corners[(i + 1) % n] as number);
+        along.forEach((d, j) => {
+          coords.push(ax + ((bx - ax) * d) / length, ay + ((by - ay) * d) / length);
           this.edge.push(e);
           this.isVertex.push(j === 0);
-        }
+        });
       }
     }
     this.coords = Float64Array.from(coords);
@@ -137,14 +164,6 @@ class Boundary {
     return ux * vy - uy * vx;
   }
 
-  /** Cosine of the turning angle at vertex sample `s`: 1 where the boundary runs straight on. */
-  turnCosine(s: number): number {
-    const e = this.edge[s] as number;
-    const [ux, uy] = this.direction(this.previous[e] as number);
-    const [vx, vy] = this.direction(e);
-    return (ux * vx + uy * vy) / (Math.hypot(ux, uy) * Math.hypot(vx, vy));
-  }
-
   /** Distance from (x, y) to the edges sample `s` lies on. */
   distance(s: number, x: number, y: number): number {
     const e = this.edge[s] as number;
@@ -176,6 +195,67 @@ class Boundary {
     const t = length2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / length2)) : 0;
     return Math.hypot(x - ax - t * dx, y - ay - t * dy);
   }
+}
+
+/**
+ * tan of half the inside angle at `corner` if it is convex and turns by more
+ * than the angle whose cosine is `maxTurnCosine`, otherwise 0. The area near
+ * such a corner is a wedge as wide as this many times the distance to it.
+ */
+function cornerSlope(before: Point, corner: Point, after: Point, maxTurnCosine: number): number {
+  const ux = corner[0] - before[0];
+  const uy = corner[1] - before[1];
+  const vx = after[0] - corner[0];
+  const vy = after[1] - corner[1];
+  const length = Math.hypot(ux, uy) * Math.hypot(vx, vy);
+  const sin = (ux * vy - uy * vx) / length;
+  const cos = (ux * vx + uy * vy) / length;
+  // Half the inside angle is a right angle minus half the turn: tan = cot(turn / 2).
+  return sin > 0 && cos <= maxTurnCosine ? (1 + cos) / sin : 0;
+}
+
+/**
+ * Distances along an edge of `length` at which to sample it, starting with 0
+ * (the vertex): every `spacing` millimetres, closer near a sharp corner at
+ * either end (non-zero `startSlope` or `endSlope`, see `cornerSlope`). Where a
+ * wedge is narrower than the spacing, the Delaunay triangles across it are
+ * slivers whose circumcentres fall outside the area, and the axis would stop
+ * short of the tip; graded samples keep the spacing within the wedge's width
+ * down to `CORNER_RESOLUTION` from the corner.
+ */
+function edgeSamples(
+  length: number,
+  spacing: number,
+  startSlope: number,
+  endSlope: number,
+): number[] {
+  const graded = (slope: number) => {
+    const result: number[] = [];
+    if (slope === 0) return result;
+    for (let d = CORNER_RESOLUTION; d < length / 2; ) {
+      const step = d * slope * CORNER_GRADING;
+      if (step >= spacing) break;
+      result.push(d);
+      d += step;
+    }
+    return result;
+  };
+  const fromStart = graded(startSlope);
+  const fromEnd = graded(endSlope);
+  const lo = fromStart.at(-1) ?? 0;
+  const hi = length - (fromEnd.at(-1) ?? 0);
+  const steps = Math.max(1, Math.ceil((hi - lo) / spacing));
+  const uniform = Array.from({ length: steps - 1 }, (_, j) => lo + ((hi - lo) * (j + 1)) / steps);
+  return [
+    0,
+    ...fromStart,
+    ...uniform,
+    ...(fromEnd.length ? [hi] : []),
+    ...fromEnd
+      .slice(0, -1)
+      .reverse()
+      .map((d) => length - d),
+  ];
 }
 
 /** The empty circumcircles of the Delaunay triangles of the samples, and which lie inside the area. */
@@ -371,14 +451,15 @@ function joinVoronoiEdges(graph: Graph, disks: Disks, minHalfSine: number) {
  * touching the corner is joined to the corner itself, at radius 0, so the
  * V-bit carves right into it.
  */
-function joinCorners(graph: Graph, disks: Disks, maxTurnCosine: number) {
+function joinCorners(graph: Graph, disks: Disks) {
   const { triangles, inside, circumradius, boundary } = disks;
   const smallest = new Map<number, number>();
   for (let t = 0; t < inside.length; t++) {
     if (!inside[t]) continue;
     for (let k = 0; k < 3; k++) {
       const s = triangles[3 * t + k] as number;
-      if (!boundary.isVertex[s]) continue;
+      if (!boundary.isVertex[s] || !boundary.startsAtSharpCorner[boundary.edge[s] as number])
+        continue;
       const current = smallest.get(s);
       if (
         current === undefined ||
@@ -389,7 +470,6 @@ function joinCorners(graph: Graph, disks: Disks, maxTurnCosine: number) {
     }
   }
   for (const [s, t] of smallest) {
-    if (boundary.turn(s) <= 0 || boundary.turnCosine(s) > maxTurnCosine) continue;
     const corner = graph.addNode(
       boundary.coords[2 * s] as number,
       boundary.coords[2 * s + 1] as number,

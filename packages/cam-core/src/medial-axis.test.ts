@@ -1,4 +1,4 @@
-import { distance, type Path, type Point } from "@furrow/document";
+import { distance, GEOMETRY_TOLERANCE, type Path, type Point } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, type Polygon } from "./geometry";
@@ -121,14 +121,15 @@ describe("medialAxis", () => {
     expect(axis).toHaveLength(5);
     const all = nodes(axis);
     expect(Math.max(...all.map(({ radius = 0 }) => radius))).toBeCloseTo(10, 9);
-    // The centre line runs from (10, 10) to (90, 10) at radius 10.
+    // The centre line runs from (10, 10) to (90, 10) at radius 10; samples graded
+    // towards the corners put its ends within the geometry tolerance.
     for (const end of [
       [10, 10],
       [90, 10],
     ] as Point[]) {
-      expect(all.some(({ point, radius }) => distance(point, end) < 1e-6 && radius === 10)).toBe(
-        true,
-      );
+      expect(
+        all.some(({ point, radius }) => distance(point, end) < GEOMETRY_TOLERANCE && radius === 10),
+      ).toBe(true);
     }
     expect(tips(axis).sort((a, b) => a[0] - b[0] || a[1] - b[1])).toEqual([
       [0, 0],
@@ -159,6 +160,29 @@ describe("medialAxis", () => {
     const eTips = tips(medialAxis([letterE]));
     expect(eTips).toHaveLength(8);
     for (const tip of eTips) expect(Math.abs(tip[0]) === 12 || tip[0] === 8).toBe(true);
+  });
+
+  it("reaches the tip of corners far narrower than the sample spacing", () => {
+    for (const degrees of [2, 4, 5]) {
+      const wedge: Polygon = [
+        [0, 0],
+        [20, 0],
+        [20, 20 * Math.tan((degrees * Math.PI) / 180)],
+      ];
+      expect(tips(medialAxis([wedge]))).toContainEqual([0, 0]);
+    }
+    // A 10 × 0.5 mm sliver: both ~5.7° ends are reached.
+    const sliver = tips(
+      medialAxis([
+        [
+          [0, 0],
+          [10, 0],
+          [5, 0.5],
+        ],
+      ]),
+    );
+    expect(sliver).toContainEqual([0, 0]);
+    expect(sliver).toContainEqual([10, 0]);
   });
 
   it("drops spurs into the vertices of flattened curves", () => {
