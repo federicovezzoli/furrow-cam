@@ -67,7 +67,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@/app", "@/app/**"],
+                    "group": ["@/app", "@/app/**", "../**/app", "../**/app/**"],
                     "message": "Only route files live in app/; import the feature instead (ADR-0021)."
                   }
                 ]
@@ -87,11 +87,11 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@/app", "@/app/**"],
+                    "group": ["@/app", "@/app/**", "../**/app", "../**/app/**"],
                     "message": "Only route files live in app/; import the feature instead (ADR-0021)."
                   },
                   {
-                    "group": ["@/features", "@/features/**"],
+                    "group": ["@/features", "@/features/**", "../**/features", "../**/features/**"],
                     "message": "Shared code must not depend on features; move it into the feature (ADR-0021)."
                   }
                 ]
