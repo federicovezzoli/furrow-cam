@@ -2,7 +2,6 @@
 
 import { Tool } from "@furrow/document";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
@@ -87,16 +86,19 @@ async function writeTool(
   return { tool };
 }
 
-/** Creates a tool, or updates it when `id` is given, then redirects to the library. */
-export async function saveTool(id: string | null, form: FormData): Promise<ToolFormErrors> {
-  const result = await writeTool(id, form);
-  if ("errors" in result) return result.errors;
-  redirect("/tools");
+/**
+ * Creates a tool. A user's first tool becomes their default.
+ * Returns the saved tool as an operation snapshot (ADR-0003).
+ */
+export async function createTool(
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+  return writeTool(null, form);
 }
 
 /**
- * Updates the tool `id` without leaving the page, e.g. from the workspace.
- * Returns the saved tool as an operation snapshot (ADR-0003).
+ * Updates the tool `id`. Returns the saved tool as an operation snapshot
+ * (ADR-0003), e.g. for the workspace to re-snapshot its operations.
  */
 export async function updateTool(
   id: string,

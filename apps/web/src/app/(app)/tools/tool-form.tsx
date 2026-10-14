@@ -1,15 +1,15 @@
 "use client";
 
 import { type Tool, ToolType } from "@furrow/document";
-import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { FormError } from "@/components/auth/form-error";
 import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
 import { NumberField } from "@/components/number-field";
+import { useToolDialogBusy } from "@/components/tool-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { saveTool, type ToolFormErrors, updateTool } from "./actions";
+import { createTool, type ToolFormErrors, updateTool } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 
@@ -27,40 +27,36 @@ const NEW_TOOL: Partial<Tool> = {
 };
 
 type ToolFormProps = {
+  /** The tool to edit, or `null` to create one. */
+  id: string | null;
   values: Partial<Tool>;
-} & (
-  | { id?: string | null; onSaved?: undefined; onCancel?: undefined }
-  /** Stays on the page: hands the saved tool to `onSaved` instead of redirecting to the library. */
-  | { id: string; onSaved: (tool: Tool) => void; onCancel: () => void }
-);
+  /** Called with the saved tool, as an operation snapshot. */
+  onSaved: (tool: Tool) => void;
+  onCancel: () => void;
+};
 
 /**
  * Edits the tool `id`, or creates one when `id` is `null`, starting from
- * `NEW_TOOL` plus `values`. Saving or cancelling goes back to the library,
- * unless `onSaved` and `onCancel` are given.
+ * `NEW_TOOL` plus `values`. Shown in a dialog, so saving never leaves the page.
  */
-export function ToolForm({ id = null, values, onSaved, onCancel }: ToolFormProps) {
+export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
   const tool = id === null ? { ...NEW_TOOL, ...values } : values;
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
+  useToolDialogBusy(pending);
   const isEndMill = type === "flat_end_mill" || type === "ball_end_mill";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
-      if (onSaved && id !== null) {
-        // Staying on the page, so a failure must not fall into the error boundary.
-        const result = await updateTool(id, form).catch(() => ({
-          errors: { form: "The bit couldn't be saved. Check your connection and try again." },
-        }));
-        if ("errors" in result) setErrors(result.errors);
-        else onSaved(result.tool);
-        return;
-      }
-      // Redirects to the library on success, so only errors come back.
-      setErrors(await saveTool(id, form));
+      // Staying on the page, so a failure must not fall into the error boundary.
+      const result = await (id === null ? createTool(form) : updateTool(id, form)).catch(() => ({
+        errors: { form: "The bit couldn't be saved. Check your connection and try again." },
+      }));
+      if ("errors" in result) setErrors(result.errors);
+      else onSaved(result.tool);
     });
   }
 
@@ -145,15 +141,9 @@ export function ToolForm({ id = null, values, onSaved, onCancel }: ToolFormProps
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : id ? "Save changes" : "Add bit"}
         </Button>
-        {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        ) : (
-          <Button asChild variant="outline">
-            <Link href="/tools">Cancel</Link>
-          </Button>
-        )}
+        <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
+          Cancel
+        </Button>
       </div>
     </form>
   );
