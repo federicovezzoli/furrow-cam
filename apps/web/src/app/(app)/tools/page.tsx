@@ -78,7 +78,10 @@ function ToolList({ tools }: { tools: ToolRow[] }) {
       <Table>
         <TableHeader>
           <TableRow className="[&>th]:h-auto [&>th]:py-2 [&>th]:align-bottom">
-            <TableHead className="pl-4">Name</TableHead>
+            <TableHead className="w-0 pl-2">
+              <span className="sr-only">Default</span>
+            </TableHead>
+            <TableHead>Name</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="text-right">
               Ø<Unit>mm</Unit>
@@ -121,7 +124,10 @@ function ToolList({ tools }: { tools: ToolRow[] }) {
         <TableBody className="tabular-nums">
           {tools.map((tool) => (
             <TableRow key={tool.id}>
-              <TableCell className="pl-4">
+              <TableCell className="pl-2">
+                <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
+              </TableCell>
+              <TableCell>
                 <div className="flex items-center gap-2">
                   <span
                     className="size-3 shrink-0 border"
@@ -152,7 +158,6 @@ function ToolList({ tools }: { tools: ToolRow[] }) {
               </TableCell>
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">
-                  <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
                   <EditToolButton id={tool.id} values={toolValues(tool)} />
                   <DeleteButton
                     name={tool.name}
