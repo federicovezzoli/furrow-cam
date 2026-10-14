@@ -1,4 +1,6 @@
-import { createProjectDocument } from "@furrow/document";
+import { anchorPoint, shapesBounds, xyOriginPosition } from "@furrow/cam-core";
+import { createProjectDocument, type ProjectDocument, StockAnchor } from "@furrow/document";
+import { fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -17,6 +19,39 @@ function newStore() {
 }
 
 const stock = (store: ReturnType<typeof newStore>) => store.getState().document.stock;
+
+/** 300 × 200 mm stock zeroed at its bottom-left corner, with a square, a hole and a tab. */
+function drawingStore() {
+  const document = fullDocument();
+  document.stock.xyOrigin = { anchor: "bottom_left" };
+  return createDocumentStore(document);
+}
+
+/** The point of the drawing's bounding box that `anchor` names. */
+function drawingAnchor({ geometry }: ProjectDocument, anchor: StockAnchor) {
+  const bounds = shapesBounds(geometry);
+  if (!bounds) throw new Error("No drawing");
+  return anchorPoint(bounds, anchor);
+}
+
+/** How far the drawing (the square's first point) and the first tab are from where they were. */
+function moved(before: ProjectDocument, after: ProjectDocument) {
+  const first = (document: ProjectDocument) => document.geometry[0]?.paths[0]?.start ?? [0, 0];
+  const tab = (document: ProjectDocument) => {
+    const operation = document.operations[0];
+    return (operation?.type === "profile" && operation.params.tabs?.positions[0]) || [0, 0];
+  };
+  const delta = (a: number[], b: number[]) => [
+    (b[0] ?? 0) - (a[0] ?? 0),
+    (b[1] ?? 0) - (a[1] ?? 0),
+  ];
+  return { drawing: delta(first(before), first(after)), tab: delta(tab(before), tab(after)) };
+}
+
+const expectClose = (actual: number[], expected: number[]) =>
+  actual.forEach((value, i) => {
+    expect(value).toBeCloseTo(expected[i] as number, 6);
+  });
 
 describe("setUnits", () => {
   it("changes the display units as one undo step", () => {
@@ -45,6 +80,34 @@ describe("setStockDimension", () => {
     setStockDimension(store, "width", 500);
     expect(stock(store).xyOrigin).toEqual({ anchor: "top_right" });
   });
+
+  it.each(StockAnchor.options)("keeps the drawing aligned to a %s zero", (anchor) => {
+    const store = drawingStore();
+    setXYAnchor(store, anchor === "center" ? "bottom_left" : "center");
+    setXYAnchor(store, anchor);
+    const before = store.getState().document;
+    setStockDimension(store, "width", 400);
+    setStockDimension(store, "height", 300);
+    const after = store.getState().document;
+    expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
+    const { drawing, tab } = moved(before, after);
+    expectClose(tab, drawing);
+    store.getState().undo();
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
+  });
+
+  it("leaves the drawing in place under a custom zero, or for a new thickness", () => {
+    const store = drawingStore();
+    setXYAnchor(store, "center");
+    const { geometry, operations } = store.getState().document;
+    setStockDimension(store, "thickness", 12);
+    pickXYOrigin(store, [50, 50]);
+    setStockDimension(store, "width", 400);
+    expect(store.getState().document.geometry).toBe(geometry);
+    expect(store.getState().document.operations).toBe(operations);
+    expect(stock(store).xyOrigin).toEqual({ anchor: "custom", x: 50, y: 50 });
+  });
 });
 
 describe("setXYAnchor", () => {
@@ -61,6 +124,40 @@ describe("setXYAnchor", () => {
     const store = newStore();
     setXYAnchor(store, "bottom_left");
     expect(store.getState().past).toHaveLength(0);
+  });
+
+  it.each(StockAnchor.options)("aligns the drawing to the stock at %s", (anchor) => {
+    const store = drawingStore();
+    setXYAnchor(store, "center");
+    const before = store.getState().document;
+    setXYAnchor(store, anchor);
+    const after = store.getState().document;
+    expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
+    const { drawing, tab } = moved(before, after);
+    expectClose(tab, drawing);
+    if (anchor === "center") {
+      expect(after).toBe(before);
+      return;
+    }
+    expect(store.getState().past).toHaveLength(2);
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
+  });
+
+  it("puts the drawing's bottom-left corner on the stock's", () => {
+    const store = drawingStore();
+    setXYAnchor(store, "center");
+    setXYAnchor(store, "bottom_left");
+    expectClose(drawingAnchor(store.getState().document, "bottom_left"), [0, 0]);
+  });
+
+  it("re-aligns the drawing when leaving a custom zero", () => {
+    const store = drawingStore();
+    setXYAnchor(store, "top_right");
+    pickXYOrigin(store, [50, 50]);
+    setXYAnchor(store, "center");
+    const after = store.getState().document;
+    expectClose(drawingAnchor(after, "center"), [150, 100]);
   });
 });
 
@@ -123,6 +220,17 @@ describe("pickXYOrigin", () => {
     expect(store.getState().past).toHaveLength(2);
     store.getState().undo();
     expect(stock(store).xyOrigin).toEqual({ anchor: "center" });
+  });
+
+  it("keeps the drawing where it is on the stock", () => {
+    const store = drawingStore();
+    setXYAnchor(store, "center");
+    const { geometry, operations } = store.getState().document;
+    setCustomXYOrigin(store);
+    pickXYOrigin(store, [200, 150]);
+    setCustomOrigin(store, "x", 210);
+    expect(store.getState().document.geometry).toBe(geometry);
+    expect(store.getState().document.operations).toBe(operations);
   });
 
   it("moves an existing custom zero, and adds no undo step for the same point", () => {

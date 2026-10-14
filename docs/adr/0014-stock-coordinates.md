@@ -1,6 +1,6 @@
 # ADR-0014: Geometry is stored in stock coordinates
 
-- **Status:** Accepted
+- **Status:** Accepted; superseded in part by [ADR-0022](0022-drawing-aligned-to-anchor.md) (the drawing is aligned to the stock at the zero's anchor)
 - **Date:** 2026-10-09
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R1, R2, R3), ADR-0003, ADR-0008
