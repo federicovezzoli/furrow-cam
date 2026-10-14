@@ -1,5 +1,19 @@
 # @furrow/post
 
+## 0.3.0
+
+### Minor Changes
+
+- [#108](https://github.com/federicovezzoli/furrow-cam/pull/108) [`c37461f`](https://github.com/federicovezzoli/furrow-cam/commit/c37461f8e309bebc17b358d464d260eaa35b933e) Thanks [@federicovezzoli](https://github.com/federicovezzoli)! - Add a V-carve operation (PRD-0001 R16): a V-bit follows the medial axis of the selected closed paths, as deep at each point as its angle and tip need to reach the nearest edge, so corners are carved right into and wider parts go deeper. Islands, such as the middle of an O, stay standing. It goes no deeper than the operation's maximum depth or the bit's cone, in passes no deeper than the bit's step-down, and feeds back along the groove it already cut between passes instead of retracting. Without a flat bottom, parts wider than the bit reaches at the maximum depth are carved along the axis only, with a warning. With one, a flat end mill clears them flat at that depth first, and the V-bit then carves their walls. The G-code cuts the two as separate steps with a tool change between them (ADR-0026). The preview shades V-carve toolpaths darker the deeper they go and draws the clearing moves in the end mill's colour, and the simulation cuts them with the end mill. The simulation's grid now has six cells across the narrowest groove rather than the smallest tool: a V-bit's groove a quarter of the way down its deepest cut, a ball end mill's chord at its depth. Each move only sweeps as far as the tool reaches below the stock top, so V-carves and shallow V-bit engravings show their shape instead of a few coarse cells. New V-carves go as deep as the bit's cone, but no deeper than half the stock. Documents move to schema version 6 with no changes to existing data.
+  
+  `@furrow/document` adds `VCarveParams`, `VCarveOperation`, `canVCarve`, `canClearFlatBottom` and `clearingTool`. `@furrow/cam-core` adds `vcarveToolpath` and `clearPocket` (a pocket of polygons), an optional `clearing` move list on `Toolpath`, and `feedColors` on `ToolpathLines` (`shadeDepth` option); `smallestDiameter` is replaced by `smallestCutWidth`. `medialAxis` no longer returns the specks that graded sampling grows at each step of a drawn edge (rounded coordinates, dense polylines), which V-carving cut as hundreds of separate runs, each with a plunge and a retract; a tiny piece within 0.01 mm of the rest of the axis, such as the tip of a very sharp corner, is joined to it instead. `@furrow/post` adds `postSteps`, which splits each operation into one step per tool.
+
+### Patch Changes
+
+- Updated dependencies [[`cc7ae78`](https://github.com/federicovezzoli/furrow-cam/commit/cc7ae785bdfd27dc7a20fba74779275fedd4999b), [`eb7b875`](https://github.com/federicovezzoli/furrow-cam/commit/eb7b875b9b01c5ee60da1b1795a130513acb3a11), [`d94bb85`](https://github.com/federicovezzoli/furrow-cam/commit/d94bb8589fcf968d9171ede3c540de3c678c4e51), [`f328969`](https://github.com/federicovezzoli/furrow-cam/commit/f32896993f837f894efa8b8aee9b4d9bec1d2f4f), [`c37461f`](https://github.com/federicovezzoli/furrow-cam/commit/c37461f8e309bebc17b358d464d260eaa35b933e)]:
+  - @furrow/cam-core@0.4.0
+  - @furrow/document@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes
