@@ -1,7 +1,6 @@
 "use client";
 
 import { Units, ZOrigin } from "@furrow/document";
-import { cn } from "cn";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
@@ -37,6 +36,7 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "@/features/workspace/stores/stock-actions";
+import { cn } from "@/lib/utils";
 
 const UNIT_LABELS: Record<Units, string> = { mm: "Millimetres", in: "Inches" };
 

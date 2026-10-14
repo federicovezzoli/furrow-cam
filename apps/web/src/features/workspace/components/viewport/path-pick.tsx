@@ -49,12 +49,11 @@ function PathPicker() {
     if (hovered?.shapeId !== hit?.shapeId || hovered?.path !== hit?.path) setHovered(hit);
   });
 
-  // Leaving the mode (tab editing, picking the zero, the orbit view) drops the
-  // viewport's hover; a shape hovered in the Geometry pane stays.
+  // Leaving the mode (tab editing, picking the zero, the orbit view) drops the hover.
   useEffect(
     () => () => {
       const { hovered, setHovered } = workspace.getState();
-      if (hovered && hovered.path !== null) setHovered(null);
+      if (hovered) setHovered(null);
     },
     [workspace],
   );

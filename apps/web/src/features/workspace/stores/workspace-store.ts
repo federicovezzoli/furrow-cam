@@ -7,8 +7,8 @@ import { createStore } from "zustand/vanilla";
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";
 
-/** What the pointer is over: a path in the viewport, or a whole shape (`path` null) in the Geometry pane. */
-export type HoveredGeometry = { shapeId: string; path: number | null };
+/** The path the pointer is over in the viewport. */
+export type HoveredGeometry = { shapeId: string; path: number };
 
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
@@ -246,7 +246,7 @@ export function createWorkspaceStore() {
               );
               const exists = ({ shapeId, path }: HoveredGeometry) => {
                 const count = pathCounts.get(shapeId);
-                return count !== undefined && (path === null || path < count);
+                return count !== undefined && path < count;
               };
               // Assigned only when something went, so unchanged selections keep their identity.
               if (!state.selectedPaths.every(exists)) {

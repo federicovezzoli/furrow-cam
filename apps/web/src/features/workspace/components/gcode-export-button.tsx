@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { GcodeRequest, GcodeResponse } from "@/features/workspace/workers/gcode.worker";
 import { downloadFile } from "@/lib/download";
+import { cn } from "@/lib/utils";
 
 /**
  * Downloads the open project's G-code for its machine's post-processor
@@ -17,10 +18,12 @@ export function GcodeExportButton({
   name,
   getDocument,
   disabledReason,
+  className,
 }: {
   name: string;
   getDocument: () => ProjectDocument;
   disabledReason?: string;
+  className?: string;
 }) {
   const [pending, setPending] = useState(false);
 
@@ -47,20 +50,19 @@ export function GcodeExportButton({
 
   const button = (
     <Button
-      variant="ghost"
       size="compact"
       onClick={onClick}
       disabled={pending || disabledReason !== undefined}
-      title={disabledReason === undefined ? "Export G-code" : undefined}
+      className={className}
     >
       <FileCodeIcon />
-      G-code
+      Export G-code
     </Button>
   );
   if (disabledReason === undefined) return button;
   // A disabled button gets no pointer events, so its wrapper shows why.
   return (
-    <span title={disabledReason} className="inline-flex">
+    <span title={disabledReason} className={cn("inline-flex", className)}>
       {button}
     </span>
   );

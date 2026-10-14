@@ -28,6 +28,19 @@ export function parseWorkspaceLayout(cookie: string | undefined): WorkspaceLayou
   }
 }
 
+/**
+ * `layout` if it sizes exactly the panels `ids`, else nothing: a layout saved
+ * before panels were added, removed or renamed doesn't fit the panels there are now.
+ */
+export function savedLayout(
+  layout: Record<string, number> | undefined,
+  ids: string[],
+): Record<string, number> | undefined {
+  if (!layout) return undefined;
+  const keys = Object.keys(layout);
+  return keys.length === ids.length && ids.every((id) => keys.includes(id)) ? layout : undefined;
+}
+
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /** Stores `layout` for the next page load. Browser only. */

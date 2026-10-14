@@ -1,12 +1,11 @@
 "use client";
 
-import type { ProjectDocument } from "@furrow/document";
-import { ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type * as React from "react";
-import { useRef } from "react";
-import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
+import { useRef, useState } from "react";
+import { type Layout, type LayoutChangedMeta, usePanelRef } from "react-resizable-panels";
 import { FormError } from "@/components/form-error";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { useAutosave } from "@/features/workspace/hooks/use-autosave";
 import { useToolpaths } from "@/features/workspace/hooks/use-toolpaths";
 import { useUndoShortcuts } from "@/features/workspace/hooks/use-undo-shortcuts";
 import {
+  savedLayout,
   saveWorkspaceLayout,
   type WorkspaceLayout,
 } from "@/features/workspace/lib/workspace-layout";
@@ -29,8 +29,9 @@ import {
   WorkspaceStoresProvider,
 } from "@/features/workspace/providers/workspace-stores";
 import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
+import { cn } from "@/lib/utils";
 import { GcodeExportButton } from "./gcode-export-button";
-import { GeometryPane } from "./geometry-pane";
+import { GeometryImport } from "./geometry-import";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { SaveStatus } from "./save-status";
@@ -53,10 +54,10 @@ const Viewport = dynamic(
 type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 /**
- * The CAM workspace (ADR-0009): a top bar over three resizable columns,
- * geometry and operations on the left, the viewport in the centre and
- * properties on the right. Panel contents land with their own issues.
- * Panel sizes are remembered in a cookie (`layout` is what it held).
+ * The CAM workspace (ADR-0009): a top bar over two resizable columns,
+ * operations over properties on the left and the viewport on the right.
+ * Panes collapse to their headers; panel sizes are remembered in a cookie
+ * (`layout` is what it held).
  * `tools` is the user's tool library, offered for operations, and
  * `machines` their machine profiles, offered for the project.
  */
@@ -103,9 +104,15 @@ function Workspace({
 }) {
   const saveStatus = useAutosave();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
+  const hasEnabledOperations = useDocumentStore((s) =>
+    s.document.operations.some((operation) => operation.enabled),
+  );
   useUndoShortcuts();
   useToolpaths();
   const documentStore = useDocumentStoreApi();
+  const getDocument = () => documentStore.getState().document;
+  const operationsPanel = usePanelRef();
+  const propertiesPanel = usePanelRef();
   const saved = useRef(layout);
 
   function remember(group: keyof WorkspaceLayout) {
@@ -119,65 +126,79 @@ function Workspace({
 
   return (
     <>
-      <TopBar
-        project={project}
-        saveStatus={saveStatus}
-        machineName={machineName}
-        getDocument={() => documentStore.getState().document}
-      />
+      <TopBar project={project} saveStatus={saveStatus} machineName={machineName} />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
-      {/* Below the panels' minimum widths (180 + 200 + 200px), scroll sideways instead of clipping them. */}
+      {/* Below the panels' minimum widths (200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
         <ResizablePanelGroup
           orientation="horizontal"
-          className="min-w-148"
-          defaultLayout={layout.columns}
+          className="min-w-100"
+          defaultLayout={savedLayout(layout.columns, ["sidebar", "viewport"])}
           onLayoutChanged={remember("columns")}
         >
           <ResizablePanel
             id="sidebar"
-            defaultSize={260}
-            minSize={180}
-            maxSize="40%"
+            defaultSize={300}
+            minSize={200}
+            maxSize="50%"
             collapsible
             groupResizeBehavior="preserve-pixel-size"
           >
             <ResizablePanelGroup
               orientation="vertical"
-              defaultLayout={layout.sidebar}
+              defaultLayout={savedLayout(layout.sidebar, ["operations", "properties"])}
               onLayoutChanged={remember("sidebar")}
             >
-              <ResizablePanel id="geometry" minSize={80}>
-                <Pane title="Geometry">
-                  <GeometryPane />
-                </Pane>
-              </ResizablePanel>
+              <Pane
+                id="operations"
+                title="Operations"
+                panel={operationsPanel}
+                sibling={propertiesPanel}
+                defaultSize="40"
+                footer={
+                  <GcodeExportButton
+                    name={project.name}
+                    getDocument={getDocument}
+                    disabledReason={
+                      machineName === null
+                        ? "Choose a machine in the project properties first"
+                        : !hasEnabledOperations
+                          ? "Add or enable an operation first"
+                          : undefined
+                    }
+                    className="w-full"
+                  />
+                }
+              >
+                <OperationsPane />
+              </Pane>
               <ResizableHandle />
-              <ResizablePanel id="operations" minSize={80}>
-                <Pane title="Operations">
-                  <OperationsPane />
-                </Pane>
-              </ResizablePanel>
+              <Pane
+                id="properties"
+                title="Properties"
+                panel={propertiesPanel}
+                sibling={operationsPanel}
+                defaultSize="60"
+                footer={
+                  <ExportButton
+                    id={project.id}
+                    name={project.name}
+                    getDocument={getDocument}
+                    size="compact"
+                    className="w-full"
+                  />
+                }
+              >
+                <Properties machines={machines} />
+              </Pane>
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
-            <section aria-label="Viewport" className="h-full bg-muted/40">
+            <section aria-label="Viewport" className="relative h-full bg-muted/40">
               <Viewport />
+              <GeometryImport />
             </section>
-          </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel
-            id="properties"
-            defaultSize={280}
-            minSize={200}
-            maxSize="40%"
-            collapsible
-            groupResizeBehavior="preserve-pixel-size"
-          >
-            <Pane title="Properties">
-              <Properties machines={machines} />
-            </Pane>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
@@ -194,20 +215,17 @@ function Properties({ machines }: { machines: MachineChoice[] }) {
 }
 
 /**
- * `saveStatus`, `machineName` and `getDocument` are left out when the project
- * couldn't be opened. `machineName` is `null` for a project without a machine,
- * which can't export G-code until one is chosen.
+ * `saveStatus` and `machineName` are left out when the project couldn't be
+ * opened. `machineName` is `null` for a project without a machine.
  */
 function TopBar({
   project,
   saveStatus,
   machineName,
-  getDocument,
 }: {
   project: ProjectRow;
   saveStatus?: AutosaveStatus;
   machineName?: string | null;
-  getDocument?: () => ProjectDocument;
 }) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
@@ -229,23 +247,6 @@ function TopBar({
       )}
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
-        {getDocument && (
-          <GcodeExportButton
-            name={project.name}
-            getDocument={getDocument}
-            disabledReason={
-              machineName === null ? "Choose a machine in the project properties first" : undefined
-            }
-          />
-        )}
-        {getDocument && (
-          <ExportButton
-            id={project.id}
-            name={project.name}
-            getDocument={getDocument}
-            size="compact"
-          />
-        )}
         <ThemeToggle size="icon-compact" />
       </div>
     </header>
@@ -270,14 +271,77 @@ function SaveFailed({ message }: { message: string | undefined }) {
   );
 }
 
-function Pane({ title, children }: { title: string; children: React.ReactNode }) {
+type PanelRef = ReturnType<typeof usePanelRef>;
+
+/** The height of a pane's header (`h-control`), all that a collapsed pane shows. */
+const PANE_HEADER = "1.75rem";
+
+/**
+ * A sidebar pane: dragging its edge resizes it, and its header collapses it to
+ * just the header or expands it. Collapsing it expands its `sibling` if that
+ * is collapsed: one of the two always shows. `footer` stays at its bottom while
+ * the rest scrolls.
+ */
+function Pane({
+  id,
+  title,
+  panel,
+  sibling,
+  defaultSize,
+  footer,
+  children,
+}: {
+  id: string;
+  title: string;
+  panel: PanelRef;
+  sibling: PanelRef;
+  defaultSize: string;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  function toggle() {
+    if (collapsed) {
+      panel.current?.expand();
+      return;
+    }
+    if (sibling.current?.isCollapsed()) sibling.current.expand();
+    panel.current?.collapse();
+  }
+
   return (
-    <section aria-label={title} className="flex h-full flex-col">
-      <h2 className="flex h-control shrink-0 items-center border-b px-3 text-ui-label font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
-      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
-    </section>
+    <ResizablePanel
+      id={id}
+      panelRef={panel}
+      defaultSize={defaultSize}
+      minSize={96}
+      collapsible
+      collapsedSize={PANE_HEADER}
+      onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
+    >
+      <section aria-label={title} className="flex h-full flex-col">
+        <h2 className="h-control shrink-0 border-b text-ui-label font-medium tracking-wide text-muted-foreground uppercase">
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            onClick={toggle}
+            className="flex size-full items-center gap-1 px-2 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          >
+            <ChevronDownIcon
+              className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
+            />
+            {title}
+          </button>
+        </h2>
+        {!collapsed && (
+          <>
+            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+            {footer && <div className="shrink-0 border-t p-2">{footer}</div>}
+          </>
+        )}
+      </section>
+    </ResizablePanel>
   );
 }
 
