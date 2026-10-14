@@ -34,9 +34,13 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
+import { addImportedShapes } from "@/features/workspace/stores/geometry-actions";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
 const MAX_FILE_SIZE = 20_000_000;
+
+/** Why importing is off: a project holds one drawing for now (ADR-0022). */
+const ONE_FILE = "A project holds one imported file.";
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -100,10 +104,10 @@ export function GeometryPane() {
         setNotice({ kind: "error", messages: ["This file has no shapes to import.", ...warnings] });
         return;
       }
-      store.getState().change(request.kind === "svg" ? "importSvg" : "importDxf", (draft) => {
-        // One by one: spreading a huge array into arguments overflows the stack.
-        for (const shape of shapes) draft.geometry.push(shape);
-      });
+      if (!addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
+        setNotice({ kind: "error", messages: [ONE_FILE] });
+        return;
+      }
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
       fail(error);
@@ -165,10 +169,16 @@ export function GeometryPane() {
           tabIndex={-1}
           aria-hidden
         />
-        <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+        <Button
+          variant="outline"
+          size="compact"
+          disabled={shapes.length > 0}
+          onClick={() => input.current?.click()}
+        >
           <UploadIcon />
           Import SVG/DXF…
         </Button>
+        {shapes.length > 0 && <p className="mt-1 text-muted-foreground">{ONE_FILE}</p>}
       </div>
 
       {pending?.kind === "svg" && (

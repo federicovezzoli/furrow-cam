@@ -1,4 +1,6 @@
-import type { Stock, StockAnchor } from "@furrow/document";
+import type { Point, Shape, Stock, StockAnchor } from "@furrow/document";
+import { type Rect, shapesBounds } from "./bounds";
+import { roundCoordinate } from "./import-common";
 
 /** `[x, y, z]` in millimetres. */
 export type Vec3 = [number, number, number];
@@ -19,6 +21,12 @@ const ANCHOR_FRACTIONS = {
   top_right: [1, 1],
 } as const satisfies Record<StockAnchor, readonly [number, number]>;
 
+/** The point of `rect` that `anchor` names, e.g. its top-right corner. */
+export function anchorPoint({ min, max }: Rect, anchor: StockAnchor): Point {
+  const [fx, fy] = ANCHOR_FRACTIONS[anchor];
+  return [min[0] + fx * (max[0] - min[0]), min[1] + fy * (max[1] - min[1])];
+}
+
 /**
  * The XY zero in stock coordinates. Anchors follow the stock's size; a custom
  * zero is already in stock coordinates.
@@ -29,15 +37,32 @@ export function xyOriginPosition({
   xyOrigin: origin,
 }: Pick<Stock, "width" | "height" | "xyOrigin">): [number, number] {
   if (origin.anchor === "custom") return [origin.x, origin.y];
-  const [fx, fy] = ANCHOR_FRACTIONS[origin.anchor];
-  return [fx * width, fy * height];
+  return anchorPoint({ min: [0, 0], max: [width, height] }, origin.anchor);
+}
+
+/**
+ * How far to move `shapes` so their bounding box sits on the stock at
+ * `anchor` (ADR-0022): `bottom_left` puts the drawing's bottom-left corner on
+ * the stock's, `center` centres it on the stock. `[0, 0]` if there are no
+ * shapes or they are aligned already.
+ */
+export function anchorAlignment(
+  stock: Pick<Stock, "width" | "height">,
+  shapes: Shape[],
+  anchor: StockAnchor,
+): Point {
+  const bounds = shapesBounds(shapes);
+  if (!bounds) return [0, 0];
+  const [x, y] = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
+  const [bx, by] = anchorPoint(bounds, anchor);
+  // Rounded like stored coordinates, so an aligned drawing's offset is exactly `0`.
+  return [roundCoordinate(x - bx), roundCoordinate(y - by)];
 }
 
 /**
  * Where the stock coordinate frame sits in work coordinates (ADR-0014,
  * ADR-0016). Geometry is stored in stock coordinates: `(0, 0)` is the stock's
- * bottom-left corner and `z = 0` its top, so changing the work origin never
- * moves the design on the stock.
+ * bottom-left corner and `z = 0` its top.
  * Work coordinates have their origin where the stock's XY and Z origins say,
  * which is where the machine is zeroed and what G-code is written in.
  */

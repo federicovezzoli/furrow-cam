@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-11
-- **Related:** PRD-0001 (R3), ADR-0014; issues #49, #50, #51, #26
+- **Related:** PRD-0001 (R3), ADR-0014, ADR-0016, ADR-0022; issues #49, #50, #51, #26, #91
 
 ## Problem
 
@@ -24,7 +24,8 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 ## Goals
 
 - The user can put the XY zero wherever they will physically zero the machine, in a couple of clicks.
-- Changing the zero never moves the design on the stock (ADR-0014): only the G-code coordinates change.
+- The anchor says how the drawing sits on the stock: on import, when an anchor is chosen and when the stock is resized, the drawing's bounding box is aligned to the stock at that anchor, so the zero is the same point of both (ADR-0022).
+- A custom zero is picked on what is already on the stock: the drawing stays where it is, and only the G-code coordinates change.
 - The chosen zero is always visible in the viewport, so it's obvious where to zero the machine.
 
 ## Non-goals
@@ -42,7 +43,7 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 | --- | --- | --- |
 | Z1 | XY zero can be any of 9 stock anchors: the 4 corners, the 4 edge midpoints and the centre | Must |
 | Z2 | A 3×3 picker in the stock properties selects the anchor, laid out like the stock as seen from above in the viewport | Must |
-| Z3 | Anchors follow the stock: resizing the stock keeps the zero on the same anchor | Must |
+| Z3 | Anchors follow the stock: resizing the stock keeps the zero on the same anchor, and the drawing stays aligned to it (ADR-0022) | Must |
 | Z4 | Custom XY zero: the user types X and Y, measured from the stock's bottom-left corner, in project units (unit-aware input). It may lie outside the stock (e.g. on a fixture corner or a fence) | Must |
 | Z5 | Custom XY zero by picking a point in the viewport, with snapping to stock anchors, shape vertices, arc and circle centres, and shape bounding-box corners and centres | Should |
 | Z6 | A custom zero stays at its stock position when the stock is resized or the design changes | Must |
@@ -54,14 +55,14 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 ## User flow
 
 1. Open the stock properties.
-2. Click one of the 9 cells in the zero picker. The marker in the viewport jumps to that anchor.
+2. Click one of the 9 cells in the zero picker. The drawing is aligned to the stock at that anchor, and the marker in the viewport jumps there.
 3. Or choose **Custom**: type X/Y, or click **Pick in viewport**, hover until the cursor snaps to the hole centre, and click.
 4. Export G-code. On the machine, jog the bit to the same point and zero X/Y there.
 
 ## Success criteria
 
 - A part zeroed on each of the 9 anchors and on a picked hole centre cuts in the right place on a GRBL machine with no manual G-code edits.
-- Switching between anchors never moves the design in the viewport, only the zero marker.
+- Wherever a drawing sits in its file, it lands on the stock aligned at the chosen anchor, and choosing another anchor re-aligns it.
 
 ## Open questions
 
@@ -71,3 +72,4 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 
 - 2026-10-11: initial draft
 - 2026-10-11: custom zero may lie outside the stock (Z4)
+- 2026-10-14: the drawing is aligned to the stock at the zero's anchor on import, when an anchor is chosen and when the stock is resized, replacing "changing the zero never moves the design" (goals, Z3, user flow, success criteria; #91, ADR-0022)
