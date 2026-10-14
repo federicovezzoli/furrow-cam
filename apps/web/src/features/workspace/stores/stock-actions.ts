@@ -1,8 +1,9 @@
 import {
   anchorAlignment,
   translatePoint,
-  translateShape,
+  translateShapes,
   xyOriginPosition,
+  xyOriginShift,
 } from "@furrow/cam-core";
 import type { Point, ProjectDocument, StockAnchor, Units, ZOrigin } from "@furrow/document";
 import type { Draft } from "immer";
@@ -33,9 +34,10 @@ function moveDrawing(
   geometry: ProjectDocument["geometry"],
   offset: Point,
 ) {
-  if (offset[0] === 0 && offset[1] === 0) return;
+  const moved = translateShapes(geometry, offset);
+  if (moved === geometry) return;
   // One assignment, so the undo step is one patch rather than one per point.
-  draft.geometry = geometry.map((shape) => translateShape(shape, offset));
+  draft.geometry = moved;
   for (const operation of draft.operations) {
     if (operation.type !== "profile" || !operation.params.tabs) continue;
     const { tabs } = operation.params;
@@ -45,16 +47,13 @@ function moveDrawing(
 
 /**
  * Resizes the stock along one dimension, in millimetres. An anchored zero
- * follows the stock and the drawing stays aligned to it (ADR-0022); with a
- * custom zero, the drawing stays where it is.
+ * follows the stock and the drawing moves with it (ADR-0022), so a drawing
+ * aligned to the anchor stays aligned; a custom zero and the drawing stay
+ * where they are.
  */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
   const { stock, geometry } = store.getState().document;
-  const { anchor } = stock.xyOrigin;
-  const offset =
-    anchor === "custom"
-      ? ([0, 0] as Point)
-      : anchorAlignment({ ...stock, [dimension]: value }, geometry, anchor);
+  const offset = xyOriginShift(stock, { ...stock, [dimension]: value });
   store.getState().change(`setStock.${dimension}`, (draft) => {
     draft.stock[dimension] = value;
     moveDrawing(draft, geometry, offset);
@@ -64,15 +63,14 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
 /**
  * Puts the XY zero on a stock anchor (ADR-0016) and aligns the drawing to the
  * stock at the same anchor (ADR-0022), so the zero is that point of the
- * drawing too.
+ * drawing too. Choosing the current anchor aligns a drawing that isn't.
  */
 export function setXYAnchor(store: DocumentStore, anchor: StockAnchor) {
   const { stock, geometry } = store.getState().document;
-  // Checked here: assigning a new object would be a change even for the same anchor.
-  if (stock.xyOrigin.anchor === anchor) return;
   const offset = anchorAlignment(stock, geometry, anchor);
   store.getState().change("setStock.xyOrigin", (draft) => {
-    draft.stock.xyOrigin = { anchor };
+    // Checked: assigning a new object would be a change even for the same anchor.
+    if (draft.stock.xyOrigin.anchor !== anchor) draft.stock.xyOrigin = { anchor };
     moveDrawing(draft, geometry, offset);
   });
 }

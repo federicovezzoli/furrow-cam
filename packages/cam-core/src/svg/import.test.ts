@@ -95,14 +95,14 @@ describe("importSvg", () => {
     expect(importSvg(svg('<path d="M0 50 H1"/>', left)).shapes[0]?.paths[0]?.start).toEqual([0, 0]);
   });
 
-  it("rests a drawing with no page size on y = 0", () => {
+  it("flips y about the origin when there is no page size", () => {
     const { shapes, warnings } = importSvg(
       svg('<path d="M0 -30 H10"/><path d="M0 -10 H10"/>', 'viewBox="0 0 0 0"'),
       { dpi: 25.4 },
     );
     expect(shapes.map((shape) => shape.paths[0]?.start)).toEqual([
-      [0, 20],
-      [0, 0],
+      [0, 30],
+      [0, 10],
     ]);
     expect(warnings).toEqual([]);
   });

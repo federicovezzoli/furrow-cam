@@ -6,6 +6,7 @@ import {
   type Stock,
   StockAnchor,
 } from "@furrow/document";
+import { shapesBounds } from "./bounds";
 import { circleCenter } from "./drill";
 import { flattenPath } from "./flatten";
 import { xyOriginPosition } from "./stock";
@@ -45,8 +46,6 @@ export function snapTargets(stock: Pick<Stock, "width" | "height">, shapes: Shap
   const arcCenters: SnapTarget[] = [];
   const bounds: SnapTarget[] = [];
   for (const shape of shapes) {
-    let min: Point = [Infinity, Infinity];
-    let max: Point = [-Infinity, -Infinity];
     for (const path of shape.paths) {
       const loop = flattenPath(path);
       const center = circleCenter(path, loop);
@@ -58,12 +57,11 @@ export function snapTargets(stock: Pick<Stock, "width" | "height">, shapes: Shap
           arcCenters.push({ kind: "arc_center", point: segment.center });
         }
       }
-      // Flattened, so curves bulging past their end points count.
-      for (const [x, y] of loop) {
-        min = [Math.min(min[0], x), Math.min(min[1], y)];
-        max = [Math.max(max[0], x), Math.max(max[1], y)];
-      }
     }
+    // Exact, like the box the drawing is aligned by (ADR-0022): curves bulging past their ends count.
+    const box = shapesBounds([shape]);
+    if (!box) continue;
+    const { min, max } = box;
     const [cx, cy] = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2];
     for (const point of [min, [max[0], min[1]], max, [min[0], max[1]]] as Point[]) {
       bounds.push({ kind: "bounds_corner", point });

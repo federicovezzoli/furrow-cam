@@ -28,3 +28,9 @@ export function translatePath(path: Path, offset: Point): Path {
 export function translateShape(shape: Shape, offset: Point): Shape {
   return { ...shape, paths: shape.paths.map((path) => translatePath(path, offset)) };
 }
+
+/** `shapes` moved by `offset`: the same array when it doesn't move them. */
+export function translateShapes(shapes: Shape[], offset: Point): Shape[] {
+  if (offset[0] === 0 && offset[1] === 0) return shapes;
+  return shapes.map((shape) => translateShape(shape, offset));
+}

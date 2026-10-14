@@ -2,7 +2,6 @@ import { type Path, type Point, pointsCoincide, type Segment, type Shape } from 
 import { flattenPath } from "../flatten";
 import { union } from "../geometry";
 import { defaultCreateId, isFinitePath, toStock } from "../import-common";
-import { translatePath } from "../translate";
 import { MM_PER_INCH } from "../units";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
 import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
@@ -123,9 +122,9 @@ export function svgNeedsDpi(svg: SvgDocument | string): boolean {
 
 /**
  * Imports an SVG document as shapes, one per drawn element, one path per
- * subpath. Coordinates are in millimetres from the page's bottom-left corner
- * (its size taken from `width`/`height` and `viewBox`), with Y up; the
- * workspace then aligns the drawing to the stock (ADR-0022). Curves are kept: circles as arcs (unless a transform makes
+ * subpath, in millimetres with Y up. Only their positions relative to each
+ * other matter: the workspace aligns the drawing to the stock by its bounding
+ * box (ADR-0022). Curves are kept: circles as arcs (unless a transform makes
  * them ellipses), elliptical arcs and quadratics as cubics (ADR-0007).
  * Fills, strokes and clipping are ignored, and so are hidden elements.
  */
@@ -287,25 +286,13 @@ export function importSvg(
     }
   }
 
-  drawChildren(root, { matrix: page.matrix, layer: "", name: "", topLevel: true });
+  drawChildren(root, { matrix: page, layer: "", name: "", topLevel: true });
 
   const warnings = Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`);
   if (drawn >= MAX_SVG_ELEMENTS) {
     warnings.push(
       `The drawing has more than ${MAX_SVG_ELEMENTS.toLocaleString("en")} elements, counting repeated copies, so the rest was skipped.`,
     );
-  }
-  if (page.height === null && shapes.length > 0) {
-    // No page to measure from: rest the drawing on y = 0.
-    let bottom = Number.POSITIVE_INFINITY;
-    for (const shape of shapes) {
-      for (const path of shape.paths) {
-        for (const point of flattenPath(path)) bottom = Math.min(bottom, point[1]);
-      }
-    }
-    for (const shape of shapes) {
-      shape.paths = shape.paths.map((path) => translatePath(path, [0, -bottom]));
-    }
   }
   return { shapes, warnings };
 }
@@ -378,11 +365,11 @@ function viewBoxTransform(
 }
 
 /**
- * The transform from the root's user units to millimetres in stock
- * coordinates, flipping SVG's downward y. `height` is the page height in
- * millimetres, or `null` when the file gives no page size.
+ * The transform from the root's user units to millimetres from the page's
+ * bottom-left corner, flipping SVG's downward y. Without a page size, y is
+ * flipped about the root's origin.
  */
-function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height: number | null } {
+function pageTransform(root: XmlElement, dpi: number): Matrix {
   const mmPerPx = MM_PER_INCH / dpi;
   let width = pageLength(root.attributes.width, mmPerPx);
   let height = pageLength(root.attributes.height, mmPerPx);
@@ -390,7 +377,7 @@ function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height:
 
   if (!viewBox) {
     // No viewBox: user units are pixels.
-    return { matrix: [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0], height };
+    return [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0];
   }
   if (width === null && height === null) {
     width = viewBox.width * mmPerPx;
@@ -402,13 +389,10 @@ function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height:
   }
   const pageHeight = height as number;
   const flip: Matrix = [1, 0, 0, -1, 0, pageHeight];
-  return {
-    matrix: multiply(
-      flip,
-      viewBoxTransform(viewBox, width, pageHeight, root.attributes.preserveAspectRatio),
-    ),
-    height: pageHeight,
-  };
+  return multiply(
+    flip,
+    viewBoxTransform(viewBox, width, pageHeight, root.attributes.preserveAspectRatio),
+  );
 }
 
 type CircleSubpath = { arc: Path };

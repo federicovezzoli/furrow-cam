@@ -1,7 +1,8 @@
-import { anchorPoint, importDxf, importSvg, shapesBounds } from "@furrow/cam-core";
+import { anchorPoint, importDxf, importSvg } from "@furrow/cam-core";
 import { createProjectDocument, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
+import { drawingAnchor } from "./drawing-test-utils";
 import { addImportedShapes } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
 
@@ -16,20 +17,11 @@ const DXF = [
 const SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm" viewBox="0 0 100 50"><rect x="40" y="20" width="30" height="10"/></svg>';
 
-type Store = ReturnType<typeof createDocumentStore>;
-
 /** A 600 × 400 mm stock zeroed at `anchor`. */
 function storeAt(anchor: StockAnchor) {
   const store = createDocumentStore(createProjectDocument());
   setXYAnchor(store, anchor);
   return store;
-}
-
-/** The point of the drawing's bounding box that `anchor` names. */
-function drawingAnchor(store: Store, anchor: StockAnchor) {
-  const bounds = shapesBounds(store.getState().document.geometry);
-  if (!bounds) throw new Error("No drawing");
-  return anchorPoint(bounds, anchor);
 }
 
 const stockAnchor = (anchor: StockAnchor) => anchorPoint({ min: [0, 0], max: [600, 400] }, anchor);
@@ -39,21 +31,21 @@ describe("addImportedShapes", () => {
     const store = storeAt(anchor);
     const before = store.getState().past.length;
     expect(addImportedShapes(store, "importDxf", importDxf(DXF).shapes)).toBe(true);
-    expect(drawingAnchor(store, anchor)).toEqual(stockAnchor(anchor));
+    expect(drawingAnchor(store.getState().document, anchor)).toEqual(stockAnchor(anchor));
     expect(store.getState().past).toHaveLength(before + 1);
   });
 
   it.each(StockAnchor.options)("aligns an SVG drawing, not its page, at %s", (anchor) => {
     const store = storeAt(anchor);
     addImportedShapes(store, "importSvg", importSvg(SVG).shapes);
-    expect(drawingAnchor(store, anchor)).toEqual(stockAnchor(anchor));
+    expect(drawingAnchor(store.getState().document, anchor)).toEqual(stockAnchor(anchor));
   });
 
   it("aligns at the stock's bottom-left corner under a custom zero", () => {
     const store = storeAt("center");
     pickXYOrigin(store, [-20, 35.5]);
     addImportedShapes(store, "importDxf", importDxf(DXF).shapes);
-    expect(drawingAnchor(store, "bottom_left")).toEqual([0, 0]);
+    expect(drawingAnchor(store.getState().document, "bottom_left")).toEqual([0, 0]);
     expect(store.getState().document.stock.xyOrigin).toEqual({ anchor: "custom", x: -20, y: 35.5 });
   });
 

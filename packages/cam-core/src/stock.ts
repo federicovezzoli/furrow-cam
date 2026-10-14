@@ -1,6 +1,7 @@
 import type { Point, Shape, Stock, StockAnchor } from "@furrow/document";
 import { type Rect, shapesBounds } from "./bounds";
 import { roundCoordinate } from "./import-common";
+import { translateShapes } from "./translate";
 
 /** `[x, y, z]` in millimetres. */
 export type Vec3 = [number, number, number];
@@ -60,6 +61,20 @@ export function anchorAlignment(
 }
 
 /**
+ * How far the XY zero moves on the stock from `before` to `after`, rounded
+ * like stored coordinates: what moves a drawing with an anchored zero when
+ * the stock is resized (ADR-0022).
+ */
+export function xyOriginShift(
+  before: Pick<Stock, "width" | "height" | "xyOrigin">,
+  after: Pick<Stock, "width" | "height" | "xyOrigin">,
+): Point {
+  const [x0, y0] = xyOriginPosition(before);
+  const [x1, y1] = xyOriginPosition(after);
+  return [roundCoordinate(x1 - x0), roundCoordinate(y1 - y0)];
+}
+
+/**
  * Where the stock coordinate frame sits in work coordinates (ADR-0014,
  * ADR-0016). Geometry is stored in stock coordinates: `(0, 0)` is the stock's
  * bottom-left corner and `z = 0` its top.
@@ -85,4 +100,13 @@ export function stockBounds(stock: Stock): Box3 {
     min: [min[0] + x, min[1] + y, min[2] + z],
     max: [max[0] + x, max[1] + y, max[2] + z],
   };
+}
+
+/** `shapes` aligned to the stock at `anchor` (see `anchorAlignment`): the same array if they already are. */
+export function alignShapes(
+  stock: Pick<Stock, "width" | "height">,
+  shapes: Shape[],
+  anchor: StockAnchor,
+): Shape[] {
+  return translateShapes(shapes, anchorAlignment(stock, shapes, anchor));
 }

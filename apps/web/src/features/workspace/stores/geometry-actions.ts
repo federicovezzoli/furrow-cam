@@ -1,4 +1,4 @@
-import { anchorAlignment, translateShape } from "@furrow/cam-core";
+import { alignShapes } from "@furrow/cam-core";
 import type { Shape } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 
@@ -12,14 +12,10 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   const { stock, geometry } = store.getState().document;
   if (geometry.length > 0) return false;
   const { anchor } = stock.xyOrigin;
-  const offset = anchorAlignment(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
-  const placed =
-    offset[0] === 0 && offset[1] === 0
-      ? shapes
-      : shapes.map((shape) => translateShape(shape, offset));
+  const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
   store.getState().change(name, (draft) => {
-    // One by one: spreading a huge array into arguments overflows the stack.
-    for (const shape of placed) draft.geometry.push(shape);
+    // The project has no shapes, so one assignment adds them as one patch.
+    draft.geometry = placed;
   });
   return true;
 }

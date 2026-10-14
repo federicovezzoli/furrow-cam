@@ -2,11 +2,6 @@ import type { Path, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { pathBounds, shapesBounds } from "./bounds";
 
-const close = (actual: number[], expected: number[]) =>
-  actual.forEach((value, i) => {
-    expect(value).toBeCloseTo(expected[i] as number, 9);
-  });
-
 describe("pathBounds", () => {
   it("is the points of a polyline", () => {
     expect(
@@ -49,14 +44,14 @@ describe("pathBounds", () => {
   });
 
   it("covers where a cubic bulges past its ends", () => {
-    const { min, max } = pathBounds({
-      start: [0, 0],
-      segments: [{ kind: "cubic", c1: [0, 10], c2: [10, 10], to: [10, 0] }],
-      closed: false,
-    });
-    close(min, [0, 0]);
-    // The curve peaks at t = 0.5: 3 × 0.25 × 10 = 7.5.
-    close(max, [10, 7.5]);
+    // The curve peaks at t = 0.5: 0.375 × 10 + 0.375 × 10 = 7.5.
+    expect(
+      pathBounds({
+        start: [0, 0],
+        segments: [{ kind: "cubic", c1: [0, 10], c2: [10, 10], to: [10, 0] }],
+        closed: false,
+      }),
+    ).toEqual({ min: [0, 0], max: [10, 7.5] });
   });
 });
 

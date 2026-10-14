@@ -1,12 +1,14 @@
 import type { Shape, Stock, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import {
+  alignShapes,
   anchorAlignment,
   anchorPoint,
   stockBounds,
   stockBox,
   stockOffset,
   xyOriginPosition,
+  xyOriginShift,
 } from "./stock";
 
 const stock: Stock = {
@@ -115,6 +117,15 @@ describe("anchorAlignment", () => {
     expect(anchorAlignment({ width: 20, height: 10 }, [part], "top_right")).toEqual([10, 5]);
     expect(anchorAlignment(stock, [], "center")).toEqual([0, 0]);
   });
+
+  it("aligns shapes, keeping the array when they already are", () => {
+    const [aligned] = alignShapes(stock, [part], "center");
+    expect(aligned?.paths[0]?.start).toEqual([290, 195]);
+    const shapes = [part];
+    expect(alignShapes({ width: 20, height: 10 }, shapes, "center")).not.toBe(shapes);
+    const centred = alignShapes({ width: 0, height: 0 }, shapes, "center");
+    expect(centred).toBe(shapes);
+  });
 });
 
 describe("anchorAlignment rounding", () => {
@@ -128,5 +139,15 @@ describe("anchorAlignment rounding", () => {
       ],
     };
     expect(anchorAlignment({ width: 1, height: 0.4 }, [shape], "center")).toEqual([0, 0]);
+  });
+});
+
+describe("xyOriginShift", () => {
+  it("is how far an anchored zero moves with the stock, and nothing for a custom zero", () => {
+    const centred: Stock = { ...stock, xyOrigin: { anchor: "center" } };
+    expect(xyOriginShift(centred, { ...centred, width: 400 })).toEqual([-100, 0]);
+    expect(xyOriginShift(stock, { ...stock, height: 100 })).toEqual([0, 0]);
+    const custom: Stock = { ...stock, xyOrigin: { anchor: "custom", x: 5, y: 5 } };
+    expect(xyOriginShift(custom, { ...custom, width: 100 })).toEqual([0, 0]);
   });
 });

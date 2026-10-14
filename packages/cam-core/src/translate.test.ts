@@ -1,6 +1,6 @@
 import type { Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { translatePath, translatePoint, translateShape } from "./translate";
+import { translatePath, translatePoint, translateShape, translateShapes } from "./translate";
 
 describe("translatePoint", () => {
   it("rounds away float noise", () => {
@@ -51,5 +51,13 @@ describe("translateShape", () => {
       ...shape,
       paths: [{ start: [0, 10], segments: [], closed: false }],
     });
+  });
+});
+
+describe("translateShapes", () => {
+  it("returns the same array when nothing moves", () => {
+    const shapes: Shape[] = [];
+    expect(translateShapes(shapes, [0, 0])).toBe(shapes);
+    expect(translateShapes(shapes, [1, 0])).not.toBe(shapes);
   });
 });
