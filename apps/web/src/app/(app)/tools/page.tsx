@@ -1,6 +1,5 @@
 import type { Tool } from "@furrow/document";
-import { PencilIcon } from "lucide-react";
-import Link from "next/link";
+import type * as React from "react";
 import { Suspense } from "react";
 import { DeleteButton } from "@/components/delete-button";
 import { Button } from "@/components/ui/button";
@@ -13,30 +12,59 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireUserId } from "@/lib/session";
-import { listTools } from "@/lib/tools";
+import { listTools, nextToolColor } from "@/lib/tools";
 import { deleteTool } from "./actions";
 import { BitTypeIcon } from "./bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "./labels";
 import { SetDefaultButton } from "./set-default-button";
+import { EditToolButton, EditToolName, NewToolButton, ToolDialogProvider } from "./tool-dialog";
 
 export default function ToolsPage() {
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Bits library</h1>
-        <Button asChild>
-          <Link href="/tools/new">New bit</Link>
-        </Button>
-      </div>
-      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <ToolList />
-      </Suspense>
+      <ToolDialogProvider>
+        <Suspense
+          fallback={
+            <>
+              <Header action={<Button disabled>New bit</Button>} />
+              <p className="text-muted-foreground">Loading…</p>
+            </>
+          }
+        >
+          <ToolLibrary />
+        </Suspense>
+      </ToolDialogProvider>
     </main>
   );
 }
 
-async function ToolList() {
+function Header({ action }: { action: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="text-2xl font-semibold tracking-tight">Bits library</h1>
+      {action}
+    </div>
+  );
+}
+
+async function ToolLibrary() {
   const tools = await listTools(await requireUserId());
+  return (
+    <>
+      <Header action={<NewToolButton color={nextToolColor(tools)} />} />
+      <ToolList tools={tools} />
+    </>
+  );
+}
+
+type ToolRow = Awaited<ReturnType<typeof listTools>>[number];
+
+/** The row's fields the bit form edits. */
+function toolValues({ id, userId, isDefault, createdAt, updatedAt, ...values }: ToolRow) {
+  return values;
+}
+
+function ToolList({ tools }: { tools: ToolRow[] }) {
   if (tools.length === 0) {
     return (
       <p className="rounded-lg border p-4 text-muted-foreground">
@@ -100,9 +128,7 @@ async function ToolList() {
                     style={{ backgroundColor: tool.color }}
                     aria-hidden="true"
                   />
-                  <Link href={`/tools/${tool.id}`} className="font-medium hover:underline">
-                    {tool.name}
-                  </Link>
+                  <EditToolName id={tool.id} values={toolValues(tool)} />
                 </div>
               </TableCell>
               <TableCell>
@@ -127,11 +153,7 @@ async function ToolList() {
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">
                   <SetDefaultButton id={tool.id} name={tool.name} isDefault={tool.isDefault} />
-                  <Button asChild variant="ghost" size="icon-sm" title="Edit">
-                    <Link href={`/tools/${tool.id}`} aria-label={`Edit ${tool.name}`}>
-                      <PencilIcon />
-                    </Link>
-                  </Button>
+                  <EditToolButton id={tool.id} values={toolValues(tool)} />
                   <DeleteButton
                     name={tool.name}
                     // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).

@@ -4,16 +4,10 @@ import type { Tool } from "@furrow/document";
 import { PencilIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ToolDialog } from "@/app/(app)/tools/tool-dialog";
 import { ToolForm } from "@/app/(app)/tools/tool-form";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import type { ToolChoice } from "@/lib/tools";
 import { type RejectedOperation, replaceToolSnapshots } from "@/stores/operation-actions";
 import { useDocumentStoreApi } from "@/stores/workspace-stores";
@@ -60,23 +54,20 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
       >
         <PencilIcon />
       </Button>
-      <Dialog open={editing !== null} onOpenChange={(open) => !open && close()}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Edit bit</DialogTitle>
-            <DialogDescription>
-              Changes the bit in your library and in every operation of this project that uses it.
-            </DialogDescription>
-          </DialogHeader>
-          {rejected ? (
-            <NotUpdated operations={rejected} onClose={close} />
-          ) : (
-            editing && (
-              <ToolForm id={editing.id} values={editing.tool} onSaved={onSaved} onCancel={close} />
-            )
-          )}
-        </DialogContent>
-      </Dialog>
+      <ToolDialog
+        open={editing !== null}
+        onClose={close}
+        title="Edit bit"
+        description="Changes the bit in your library and in every operation of this project that uses it."
+      >
+        {rejected ? (
+          <NotUpdated operations={rejected} onClose={close} />
+        ) : (
+          editing && (
+            <ToolForm id={editing.id} values={editing.tool} onSaved={onSaved} onCancel={close} />
+          )
+        )}
+      </ToolDialog>
     </>
   );
 }
