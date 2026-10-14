@@ -52,6 +52,56 @@
       }
     },
     {
+      "includes": [
+        "apps/web/src/**",
+        "!apps/web/src/app/**",
+        "!apps/web/src/components/**",
+        "!apps/web/src/hooks/**",
+        "!apps/web/src/lib/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app", "@/app/**"],
+                    "message": "Only route files live in app/; import the feature instead (ADR-0021)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/components/**", "apps/web/src/hooks/**", "apps/web/src/lib/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app", "@/app/**"],
+                    "message": "Only route files live in app/; import the feature instead (ADR-0021)."
+                  },
+                  {
+                    "group": ["@/features", "@/features/**"],
+                    "message": "Shared code must not depend on features; move it into the feature (ADR-0021)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/**"],
       "linter": {
         "rules": {

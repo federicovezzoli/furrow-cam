@@ -1,4 +1,4 @@
-import { NewMachine } from "./new-machine";
+import { NewMachine } from "@/features/machines/components/new-machine";
 
 export default function NewMachinePage() {
   return (
