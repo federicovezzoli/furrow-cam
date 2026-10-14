@@ -1,11 +1,21 @@
 "use client";
 
-import { DRILL_DIAMETER_TOLERANCE, formatQuantity, unitLabel } from "@furrow/cam-core";
+import {
+  DRILL_DIAMETER_TOLERANCE,
+  formatQuantity,
+  unitLabel,
+  vBitConeDepth,
+  vBitDepthForWidth,
+  vBitLineWidth,
+} from "@furrow/cam-core";
 import {
   canDrill,
+  canEngrave,
   type DrillOperation,
+  type EngraveOperation,
   LinearAngle,
   MillingDirection,
+  type Operation,
   type OperationTarget,
   PeelStart,
   type PocketOperation,
@@ -40,6 +50,7 @@ import {
   setOperationTargets,
   setOperationTool,
   updateDrillParams,
+  updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
 } from "@/features/workspace/stores/operation-actions";
@@ -51,6 +62,12 @@ const SIDE_LABELS: Record<ProfileSide, string> = {
   outside: "Outside",
   inside: "Inside",
   on: "On the line",
+};
+
+const ENGRAVE_SIDE_LABELS: Record<ProfileSide, string> = {
+  on: "On the path",
+  inside: "Inside",
+  outside: "Outside",
 };
 
 const DIRECTION_LABELS: Record<MillingDirection, string> = {
@@ -84,6 +101,12 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
   centre: "Centre",
   inside: "Island",
   outside: "Outer wall",
+};
+
+/** Which library tools each operation type can take; the others are disabled in the picker. */
+const USABLE_TOOLS: Partial<Record<Operation["type"], (tool: Tool) => boolean>> = {
+  drill: canDrill,
+  engrave: canEngrave,
 };
 
 /** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
@@ -123,12 +146,13 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       <ToolPicker
         operationId={operation.id}
         tool={operation.tool}
-        drilling={operation.type === "drill"}
+        usable={USABLE_TOOLS[operation.type]}
       />
       <TargetsField operationId={operation.id} targets={operation.targets} />
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
       {operation.type === "drill" && <DrillFields operation={operation} />}
+      {operation.type === "engrave" && <EngraveFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
@@ -154,12 +178,12 @@ const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 function ToolPicker({
   operationId,
   tool,
-  drilling,
+  usable,
 }: {
   operationId: string;
   tool: Tool;
-  /** Disables the tools that can't drill. */
-  drilling: boolean;
+  /** The tools the operation can take, or all of them without it. */
+  usable?: (tool: Tool) => boolean;
 }) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
@@ -193,7 +217,7 @@ function ToolPicker({
               <NativeSelectOption
                 key={choice.id}
                 value={choice.id}
-                disabled={drilling && !canDrill(choice.tool)}
+                disabled={usable ? !usable(choice.tool) : false}
               >
                 {choice.tool.name}
               </NativeSelectOption>
@@ -673,6 +697,98 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
       {errors.peck && (
         <p role="alert" className="text-destructive">
           {errors.peck}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function EngraveFields({ operation }: { operation: EngraveOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const { params, tool } = operation;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateEngraveParams(store, operation.id, changes),
+  );
+  const length = {
+    layout: "inline",
+    quantity: "length",
+    units,
+    ...gestureHandlers(store),
+  } as const;
+  const width = vBitLineWidth(tool, params.depth);
+  const cone = vBitConeDepth(tool);
+  const tip = tool.tipDiameter ?? 0;
+
+  return (
+    <section aria-labelledby="engrave-heading" className="grid gap-2">
+      <h4 id="engrave-heading" className="font-medium">
+        Engrave
+      </h4>
+      <Row id="engrave-side" label="Position">
+        <NativeSelect
+          id="engrave-side"
+          size="sm"
+          value={params.side}
+          onChange={(event) => update("side", { side: ProfileSide.parse(event.target.value) })}
+          className={SELECT_CLASS}
+        >
+          {(["on", "inside", "outside"] as const).map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {ENGRAVE_SIDE_LABELS[option]}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      <p className="text-muted-foreground">
+        {params.side === "on"
+          ? "Follows every path, open and closed, centred on the line, "
+          : `Follows the closed paths ${params.side} the line, with an edge of the groove on it, `}
+        in passes no deeper than the tool's step-down.
+      </p>
+      <NumberField
+        id="engrave-depth"
+        label="Depth"
+        min={MIN_LENGTH}
+        value={params.depth}
+        onValueChange={(depth) => update("depth", { depth })}
+        error={errors.depth}
+        {...length}
+      />
+      {width !== null && cone !== null && (
+        <>
+          <NumberField
+            id="engrave-width"
+            label="Line width"
+            min={tip + MIN_LENGTH}
+            max={tool.diameter}
+            value={width}
+            onValueChange={(value) => {
+              const depth = vBitDepthForWidth(tool, value);
+              if (depth !== null) update("depth", { depth });
+            }}
+            {...length}
+          />
+          <p className="text-muted-foreground">
+            {params.depth > cone
+              ? "Deeper than the cone, so the line is as wide as the bit."
+              : `At the stock top, from the bit's ${tool.vAngle}° angle${
+                  tip > 0
+                    ? ` and ${formatQuantity(tip, "length", units)} ${unitLabel("length", units)} tip`
+                    : ""
+                }.`}
+          </p>
+        </>
+      )}
+      <RampCheckbox
+        id="engrave-ramp"
+        tool={tool}
+        checked={params.ramp}
+        onChange={(ramp) => update("ramp", { ramp })}
+      />
+      {(errors.side ?? errors.ramp) && (
+        <p role="alert" className="text-destructive">
+          {errors.side ?? errors.ramp}
         </p>
       )}
     </section>

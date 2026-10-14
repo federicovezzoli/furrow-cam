@@ -145,6 +145,11 @@ describe("migrations", () => {
     ]);
   });
 
+  it("leaves v4 documents as they are", () => {
+    const doc = fullDocument();
+    expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

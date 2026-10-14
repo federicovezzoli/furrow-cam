@@ -1,6 +1,7 @@
 export * from "./bounds";
 export * from "./drill";
 export * from "./dxf/import";
+export * from "./engrave";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";

@@ -6,6 +6,7 @@ import {
   type Shape,
 } from "@furrow/document";
 import { drillToolpath } from "./drill";
+import { engraveToolpath } from "./engrave";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
 import type { Toolpath } from "./toolpath";
@@ -91,5 +92,7 @@ export function generateToolpath({ operation, shapes, ...options }: ToolpathInpu
       return pocketToolpath(operation, shapes, options);
     case "drill":
       return drillToolpath(operation, shapes, options);
+    case "engrave":
+      return engraveToolpath(operation, shapes, options);
   }
 }

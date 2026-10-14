@@ -1,6 +1,6 @@
 "use client";
 
-import { canDrill, type Tool } from "@furrow/document";
+import { canDrill, canEngrave, type Tool } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
 import type { ToolChoice } from "@/features/tools/server";
@@ -59,6 +59,23 @@ export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return fallback && canDrill(fallback.tool)
     ? fallback
     : tools.find((choice) => canDrill(choice.tool));
+}
+
+/**
+ * The tool new engrave operations start with: the default one if it is a
+ * V-bit, else the first V-bit, else the default one if it can engrave, else
+ * the first that can.
+ */
+export function engraveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
+  const fallback = defaultToolChoice(tools);
+  const isVBit = (choice: ToolChoice) => choice.tool.type === "v_bit";
+  if (fallback && isVBit(fallback)) return fallback;
+  return (
+    tools.find(isVBit) ??
+    (fallback && canEngrave(fallback.tool)
+      ? fallback
+      : tools.find((choice) => canEngrave(choice.tool)))
+  );
 }
 
 /** The library tool an operation's snapshot was taken from, if it hasn't been edited since. */

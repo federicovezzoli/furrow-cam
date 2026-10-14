@@ -86,6 +86,20 @@ export function profileToolpath(
   shapes: Shape[],
   options: ProfileOptions,
 ): Toolpath {
+  return offsetProfileToolpath(operation, shapes, options, operation.tool.diameter / 2);
+}
+
+/**
+ * `profileToolpath` with the tool centre `offset` from the closed paths
+ * inside or outside instead of the tool radius, e.g. to keep one edge of a
+ * V-bit's groove on the line. The allowance adds to it.
+ */
+export function offsetProfileToolpath(
+  operation: ProfileOperation,
+  shapes: Shape[],
+  options: ProfileOptions,
+  offset: number,
+): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const radius = tool.diameter / 2;
@@ -104,7 +118,7 @@ export function profileToolpath(
   if (points > 0) warnings.push(`Skipped ${plural(points, "point")}: drill them instead.`);
   if (open.length > 0 && params.side !== "on") {
     warnings.push(
-      `Skipped ${plural(open.length, "open path")}: inside and outside profiles need closed paths.`,
+      `Skipped ${plural(open.length, "open path")}: inside and outside cuts need closed paths.`,
     );
   }
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
@@ -125,8 +139,8 @@ export function profileToolpath(
   };
   const levels = depthLevels(params.depth, tool.stepDown);
 
-  const roughing = contours(closed, operation, radius + params.allowance);
-  const finishing = params.finishPass ? contours(closed, operation, radius) : null;
+  const roughing = contours(closed, operation, offset + params.allowance);
+  const finishing = params.finishPass ? contours(closed, operation, offset) : null;
   if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
     warnings.push("The closed paths are too small for the tool.");
   }
@@ -138,10 +152,10 @@ export function profileToolpath(
     }
     cut.tabTop = Math.min(0, tabs.height - params.depth);
     const span = tabs.width + tool.diameter;
-    const reach = radius + params.allowance + tabs.width;
+    const reach = offset + params.allowance + tabs.width;
     const missed = placeTabs(roughing.contours, tabs.positions, reach, span);
     const missedFinishing = finishing
-      ? placeTabs(finishing.contours, tabs.positions, radius + tabs.width, span)
+      ? placeTabs(finishing.contours, tabs.positions, offset + tabs.width, span)
       : missed;
     // A tab the finish lap leaves out is cut away at full depth, so it counts as missed too.
     const left =

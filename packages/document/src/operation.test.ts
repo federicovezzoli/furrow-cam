@@ -3,7 +3,10 @@ import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
 import {
   DrillOperation,
   DrillParams,
+  EngraveOperation,
+  EngraveParams,
   normalizeTargets,
+  Operation,
   OperationTarget,
   PocketParams,
   ProfileParams,
@@ -130,6 +133,37 @@ describe("DrillOperation", () => {
     expect(DrillParams.safeParse({ depth: 0, peck: false }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: "yes" }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: true, peckDepth: 2 }).success).toBe(false);
+  });
+});
+
+describe("EngraveOperation", () => {
+  const profile = fullDocument().operations[0];
+  if (!profile) throw new Error("The fixture has an operation");
+  const engrave = { ...profile, type: "engrave", params: { side: "on", depth: 0.5, ramp: false } };
+  const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+
+  it("accepts V-bits, ball and flat end mills, as an operation too", () => {
+    expect(EngraveOperation.safeParse(engrave).success).toBe(true);
+    expect(EngraveOperation.safeParse({ ...engrave, tool: vBit }).success).toBe(true);
+    const ball = { ...profile.tool, type: "ball_end_mill" };
+    expect(EngraveOperation.safeParse({ ...engrave, tool: ball }).success).toBe(true);
+    expect(Operation.parse(engrave)).toEqual(engrave);
+  });
+
+  it("rejects drill bits", () => {
+    const drillBit = { ...profile.tool, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(EngraveOperation.safeParse({ ...engrave, tool: drillBit }).success).toBe(false);
+  });
+
+  it("rejects invalid params and the profile's options", () => {
+    const valid = { side: "outside", depth: 1, ramp: false };
+    expect(EngraveParams.safeParse(valid).success).toBe(true);
+    expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
+    expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);
+    expect(EngraveParams.safeParse({ depth: 1, ramp: false }).success).toBe(false);
+    for (const extra of [{ allowance: 0 }, { tabs: null }, { leadIn: null }]) {
+      expect(EngraveParams.safeParse({ ...valid, ...extra }).success).toBe(false);
+    }
   });
 });
 
