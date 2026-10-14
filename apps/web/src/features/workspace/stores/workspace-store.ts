@@ -7,7 +7,7 @@ import { createStore } from "zustand/vanilla";
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";
 
-/** What the pointer is over: a path in the viewport, or a whole shape (`path` null) in the Geometry pane. */
+/** What the pointer is over: a path in the viewport, or a whole shape (`path` null). */
 export type HoveredGeometry = { shapeId: string; path: number | null };
 
 /**

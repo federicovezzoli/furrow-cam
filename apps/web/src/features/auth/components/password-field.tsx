@@ -1,10 +1,10 @@
 "use client";
 
-import { cn } from "cn";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { FormField } from "./form-field";
 
 export function PasswordField({

@@ -1,7 +1,7 @@
 import type { PathRef } from "@furrow/cam-core";
 import { normalizeTargets, type OperationTarget, type Shape } from "@furrow/document";
 
-/** Every path of `shape`, as selecting it in the Geometry pane does. */
+/** Every path of `shape`. */
 export function shapePaths(shape: Shape): PathRef[] {
   return shape.paths.map((_, path) => ({ shapeId: shape.id, path }));
 }

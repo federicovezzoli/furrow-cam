@@ -1,9 +1,9 @@
 "use client";
 
-import { cn } from "cn";
 import type * as React from "react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /** The body of an `error.tsx` boundary: logs the error and offers to retry. */
 export function ErrorFallback({

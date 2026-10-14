@@ -1,7 +1,7 @@
 "use client";
 
+import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
 import type { Operation } from "@furrow/document";
-import { cn } from "cn";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -9,9 +9,9 @@ import {
   EyeIcon,
   EyeOffIcon,
   LoaderCircleIcon,
-  PlusIcon,
   Trash2Icon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -34,7 +34,9 @@ import {
   renameOperation,
   setOperationEnabled,
 } from "@/features/workspace/stores/operation-actions";
+import { cn } from "@/lib/utils";
 import { OperationNameInput } from "./operation-name-input";
+import { OperationTypeIcon } from "./operation-type-icon";
 import {
   defaultToolChoice,
   drillToolChoice,
@@ -42,7 +44,7 @@ import {
   useToolLibrary,
 } from "./tool-library";
 
-/** The Operations pane: adds profiles, pockets, drill and engrave operations from the selected paths and lists operations in cutting order. */
+/** The Operations pane: shows the selected paths, adds profiles, pockets, drill and engrave operations from the selected paths and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -66,60 +68,80 @@ export function OperationsPane() {
 
   const target = targets.length === 0 ? undefined : targetsLabel(targets);
 
+  const kinds: {
+    type: Operation["type"];
+    label: string;
+    addOperation: typeof addProfileOperation;
+    choice: typeof tool;
+    hint: string;
+    missingTool?: string;
+  }[] = [
+    {
+      type: "profile",
+      label: "Profile",
+      addOperation: addProfileOperation,
+      choice: tool,
+      hint: `Cut around the ${target}`,
+    },
+    {
+      type: "pocket",
+      label: "Pocket",
+      addOperation: addPocketOperation,
+      choice: tool,
+      hint: `Clear the area inside the ${target}`,
+    },
+    {
+      type: "drill",
+      label: "Drill",
+      addOperation: addDrillOperation,
+      choice: drillTool,
+      hint: `Drill the points and circles of the ${target}`,
+      missingTool: "Add a drill or an end mill to your tool library: V-bits can't drill",
+    },
+    {
+      type: "engrave",
+      label: "Engrave",
+      addOperation: addEngraveOperation,
+      choice: engraveTool,
+      hint: `Engrave along the lines of the ${target}`,
+      missingTool: "Add a V-bit or an end mill to your tool library: drill bits can't engrave",
+    },
+  ];
+
   return (
     <div className="grid gap-2 p-3 text-ui">
-      <div className="flex flex-wrap gap-1">
-        <Button
-          variant="outline"
-          size="compact"
-          disabled={!target || !tool}
-          onClick={() => add(addProfileOperation)}
-          title={target && `Cut around the ${target}`}
-        >
-          <PlusIcon />
-          Add profile
-        </Button>
-        <Button
-          variant="outline"
-          size="compact"
-          disabled={!target || !tool}
-          onClick={() => add(addPocketOperation)}
-          title={target && `Clear the area inside the ${target}`}
-        >
-          <PlusIcon />
-          Add pocket
-        </Button>
-        <Button
-          variant="outline"
-          size="compact"
-          disabled={!target || !drillTool}
-          onClick={() => add(addDrillOperation, drillTool)}
-          title={
-            tool && !drillTool
-              ? "Add a drill or an end mill to your tool library: V-bits can't drill"
-              : target && `Drill the points and circles of the ${target}`
-          }
-        >
-          <PlusIcon />
-          Add drill
-        </Button>
-        <Button
-          variant="outline"
-          size="compact"
-          disabled={!target || !engraveTool}
-          onClick={() => add(addEngraveOperation, engraveTool)}
-          title={
-            tool && !engraveTool
-              ? "Add a V-bit or an end mill to your tool library: drill bits can't engrave"
-              : target && `Engrave along the lines of the ${target}`
-          }
-        >
-          <PlusIcon />
-          Add engrave
-        </Button>
+      {geometry.length > 0 && (
+        <Selection
+          target={target}
+          onClear={() => workspace.getState().selectPaths([])}
+          onSelectInside={() => {
+            const { selectedPaths, selectPaths } = workspace.getState();
+            selectPaths([
+              ...selectedPaths,
+              ...closedPathsInside(pickablePaths(geometry), selectedPaths),
+            ]);
+          }}
+        />
+      )}
+      <div className="@container">
+        <div className="grid grid-cols-2 gap-1 @[13rem]:grid-cols-4">
+          {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => (
+            <Button
+              key={type}
+              variant="outline"
+              disabled={!target || !choice}
+              onClick={() => add(addOperation, choice)}
+              aria-label={`Add ${type}`}
+              title={tool && !choice ? missingTool : target ? hint : `Add ${type}`}
+              className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
+            >
+              <OperationTypeIcon type={type} />
+              <span className="max-w-full truncate text-ui-label">{label}</span>
+            </Button>
+          ))}
+        </div>
       </div>
-      {target && tool && <p className="text-muted-foreground">For the {target}.</p>}
-      {!tool ? (
+      {!tool && (
         <p className="text-muted-foreground">
           Add a tool to your{" "}
           <Link href="/tools" className="underline underline-offset-2">
@@ -127,13 +149,6 @@ export function OperationsPane() {
           </Link>{" "}
           to create operations.
         </p>
-      ) : (
-        !target && (
-          <p className="text-muted-foreground">
-            Select the shapes to cut in the Geometry pane, or paths in the top view, then add an
-            operation for them.
-          </p>
-        )
       )}
 
       {operations.length > 0 && (
@@ -149,6 +164,46 @@ export function OperationsPane() {
           ))}
         </ol>
       )}
+    </div>
+  );
+}
+
+/**
+ * What is selected (`target`), if anything, with a way to add the closed
+ * paths inside it (a pocket's islands) and a way to clear it.
+ */
+function Selection({
+  target,
+  onClear,
+  onSelectInside,
+}: {
+  target: string | undefined;
+  onClear: () => void;
+  onSelectInside: () => void;
+}) {
+  if (!target) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-1">
+      <p className="flex-[1_1_7rem] first-letter:uppercase">{target}</p>
+      <div className="ml-auto flex">
+        <Button
+          variant="ghost"
+          size="compact"
+          onClick={onSelectInside}
+          title="Also select the closed paths inside the selected ones, such as a pocket's islands"
+        >
+          Select inside
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-compact"
+          onClick={onClear}
+          aria-label="Clear selection"
+          title="Clear selection"
+        >
+          <XIcon />
+        </Button>
+      </div>
     </div>
   );
 }

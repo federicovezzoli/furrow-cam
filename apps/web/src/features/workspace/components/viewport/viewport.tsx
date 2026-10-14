@@ -2,7 +2,6 @@
 
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
 import { Canvas, useThree } from "@react-three/fiber";
-import { cn } from "cn";
 import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +16,7 @@ import {
   useWorkspaceStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
 import type { ViewMode } from "@/features/workspace/stores/workspace-store";
+import { cn } from "@/lib/utils";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { Scene } from "./scene";
 import { PALETTES } from "./scene-style";
@@ -39,7 +39,7 @@ export function Viewport() {
   const simulation = useSimulation(
     simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
   );
-  // A path hovered in the viewport, not a shape hovered in the Geometry pane.
+  // A path hovered in the viewport, not a whole shape.
   const overPath = useWorkspaceStore((s) => s.hovered !== null && s.hovered.path !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
   const { resolvedTheme } = useTheme();

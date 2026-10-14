@@ -1,6 +1,6 @@
 import type { ToolType } from "@furrow/document";
-import { cn } from "cn";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /** Side profile of each bit type: shank at the top, cutting end at the bottom. */
 const PROFILES: Record<ToolType, ReactNode> = {

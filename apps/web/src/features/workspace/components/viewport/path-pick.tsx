@@ -50,7 +50,7 @@ function PathPicker() {
   });
 
   // Leaving the mode (tab editing, picking the zero, the orbit view) drops the
-  // viewport's hover; a shape hovered in the Geometry pane stays.
+  // viewport's hover; a whole shape hovered stays.
   useEffect(
     () => () => {
       const { hovered, setHovered } = workspace.getState();
