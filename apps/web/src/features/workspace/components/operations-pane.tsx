@@ -29,6 +29,7 @@ import {
   addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
+  addVCarveOperation,
   deleteOperation,
   moveOperation,
   renameOperation,
@@ -42,9 +43,10 @@ import {
   drillToolChoice,
   engraveToolChoice,
   useToolLibrary,
+  vcarveToolChoice,
 } from "./tool-library";
 
-/** The Operations pane: shows the selected paths, adds profiles, pockets, drill and engrave operations from the selected paths and lists operations in cutting order. */
+/** The Operations pane: shows the selected paths, adds profiles, pockets, drill, engrave and V-carve operations from the selected paths and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -59,6 +61,7 @@ export function OperationsPane() {
   const tool = defaultToolChoice(tools);
   const drillTool = drillToolChoice(tools);
   const engraveTool = engraveToolChoice(tools);
+  const vcarveTool = vcarveToolChoice(tools);
 
   function add(addOperation: typeof addProfileOperation, choice = tool) {
     if (!choice) return;
@@ -111,6 +114,14 @@ export function OperationsPane() {
         ? "Add a V-bit or an end mill to your tool library: drill bits can't engrave"
         : undefined,
     },
+    {
+      type: "vcarve",
+      label: "V-carve",
+      addOperation: addVCarveOperation,
+      choice: vcarveTool,
+      hint: `Carve inside the ${target} with a V-bit, deeper where they are wider`,
+      missingTool: tool ? "Add a V-bit to your tool library to V-carve" : undefined,
+    },
   ];
 
   return (
@@ -127,7 +138,7 @@ export function OperationsPane() {
         }}
       />
       <div className="@container">
-        <div className="grid grid-cols-2 gap-1 @[13rem]:grid-cols-4">
+        <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
           {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
             const disabledReason = !choice
               ? (missingTool ?? "Add a tool to your tool library first")

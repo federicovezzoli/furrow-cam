@@ -10,6 +10,7 @@ import { engraveToolpath } from "./engrave";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
 import type { Toolpath } from "./toolpath";
+import { vcarveToolpath } from "./vcarve";
 
 /** Retract height above the stock top when the project has no machine profile. */
 export const DEFAULT_SAFE_Z = 5;
@@ -94,5 +95,7 @@ export function generateToolpath({ operation, shapes, ...options }: ToolpathInpu
       return drillToolpath(operation, shapes, options);
     case "engrave":
       return engraveToolpath(operation, shapes, options);
+    case "vcarve":
+      return vcarveToolpath(operation, shapes, options);
   }
 }

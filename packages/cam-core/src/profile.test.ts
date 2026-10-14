@@ -1,4 +1,5 @@
 import {
+  CURRENT_SCHEMA_VERSION,
   DEFAULT_ENTRY_CLEARANCE,
   type ProfileOperation,
   type ProfileParams,
@@ -474,7 +475,7 @@ describe("profileToolpath with tabs", () => {
 
 describe("generateToolpath", () => {
   const doc = (machineSafeZ: number | null, entryClearance = 1): ProjectDocument => ({
-    schemaVersion: 5,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     units: "mm",
     stock: {
       width: 200,

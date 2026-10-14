@@ -3,7 +3,7 @@ import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
-export const OperationType = z.enum(["profile", "pocket", "drill", "engrave"]);
+export const OperationType = z.enum(["profile", "pocket", "drill", "engrave", "vcarve"]);
 export type OperationType = z.infer<typeof OperationType>;
 
 /**
@@ -251,10 +251,72 @@ export const EngraveOperation = z
   });
 export type EngraveOperation = z.infer<typeof EngraveOperation>;
 
+/**
+ * V-carve parameters (#97, PRD-0001 R16): the V-bit follows the medial axis
+ * of the area inside the closed paths, as deep as the bit's angle and tip
+ * need to reach the edges there, down to `maxDepth`. The step-down comes from
+ * the tool.
+ */
+export const VCarveParams = z
+  .strictObject({
+    /** Deepest the V-bit goes below the stock top; wider parts are carved no deeper. */
+    maxDepth: PositiveLength,
+    /**
+     * Where the shape is wider than the V-bit reaches at `maxDepth`, the bit
+     * carves the walls down to it and `tool`, a flat end mill, clears the
+     * floor between them flat, before the V-bit. `null` leaves those parts
+     * carved to `maxDepth` along the axis only.
+     */
+    flatBottom: z.strictObject({ tool: Tool }).nullable(),
+  })
+  .superRefine((params, ctx) => {
+    const tool = params.flatBottom?.tool;
+    if (tool && !canClearFlatBottom(tool)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["flatBottom", "tool", "type"],
+        message: "Only flat end mills clear a flat bottom",
+      });
+    }
+  });
+export type VCarveParams = z.infer<typeof VCarveParams>;
+
+/** Only V-bits V-carve: the depth comes from the bit's angle. */
+export function canVCarve(tool: Tool): boolean {
+  return tool.type === "v_bit";
+}
+
+/** Only flat end mills clear a V-carve's flat bottom. */
+export function canClearFlatBottom(tool: Tool): boolean {
+  return tool.type === "flat_end_mill";
+}
+
+export const VCarveOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("vcarve"),
+    params: VCarveParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (!canVCarve(operation.tool)) {
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Only V-bits V-carve" });
+    }
+  });
+export type VCarveOperation = z.infer<typeof VCarveOperation>;
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,
   DrillOperation,
   EngraveOperation,
+  VCarveOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
+
+/**
+ * The second tool an operation cuts with, before its own (ADR-0026): a
+ * V-carve's flat-bottom end mill. `null` for every other operation.
+ */
+export function clearingTool(operation: Operation): Tool | null {
+  return operation.type === "vcarve" ? (operation.params.flatBottom?.tool ?? null) : null;
+}

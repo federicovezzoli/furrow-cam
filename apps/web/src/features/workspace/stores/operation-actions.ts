@@ -1,7 +1,13 @@
-import { autoTabPositions, type TabPlacement, targetedShapes } from "@furrow/cam-core";
+import {
+  autoTabPositions,
+  type TabPlacement,
+  targetedShapes,
+  vBitConeDepth,
+} from "@furrow/cam-core";
 import {
   canDrill,
   canEngrave,
+  canVCarve,
   DrillParams,
   EngraveParams,
   Name,
@@ -16,6 +22,7 @@ import {
   type ProjectDocument,
   type Shape,
   type Tool,
+  VCarveParams,
 } from "@furrow/document";
 import type { z } from "zod";
 import type { DocumentStore } from "./document-store";
@@ -83,6 +90,15 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
   };
 }
 
+/**
+ * New V-carves go as deep as the bit's cone, but no deeper than half the
+ * stock, without a flat bottom.
+ */
+export function defaultVCarveParams(document: ProjectDocument, tool: Tool): VCarveParams {
+  const half = document.stock.thickness / 2;
+  return { maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -140,6 +156,20 @@ export function addEngraveOperation(store: DocumentStore, options: NewOperation)
     type: "engrave",
     name: nextName(document, "Engrave"),
     params: defaultEngraveParams(document),
+  }));
+}
+
+/**
+ * Appends a V-carve of `targets`, like `addProfileOperation`. Returns `null`
+ * as well if `tool` isn't a V-bit.
+ */
+export function addVCarveOperation(store: DocumentStore, options: NewOperation): string | null {
+  if (!canVCarve(options.tool)) return null;
+  return appendOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "vcarve",
+    name: nextName(document, "V-carve"),
+    params: defaultVCarveParams(document, options.tool),
   }));
 }
 
@@ -239,9 +269,9 @@ export type RejectedOperation = { id: string; name: string; error: string };
 
 /**
  * Gives every operation whose tool snapshot is `previous` the snapshot `next`
- * instead, as one undo step (e.g. after the library bit was edited).
- * Operations that can't take `next`, such as a drill operation given a V-bit,
- * keep their tool and are returned.
+ * instead, as one undo step (e.g. after the library bit was edited), its
+ * flat-bottom tool as well as its own. Operations that can't take `next`,
+ * such as a drill operation given a V-bit, keep their tools and are returned.
  */
 export function replaceToolSnapshots(
   store: DocumentStore,
@@ -252,16 +282,28 @@ export function replaceToolSnapshots(
   if (key === toolKey(next)) return [];
   const rejected: RejectedOperation[] = [];
   const accepted = new Set<string>();
+  const replace = (operation: Operation) => {
+    if (toolKey(operation.tool) === key) operation.tool = next;
+    if (operation.type === "vcarve" && operation.params.flatBottom) {
+      const { flatBottom } = operation.params;
+      if (toolKey(flatBottom.tool) === key) flatBottom.tool = next;
+    }
+  };
   for (const operation of store.getState().document.operations) {
-    if (toolKey(operation.tool) !== key) continue;
-    const parsed = Operation.safeParse({ ...operation, tool: next });
+    const flatBottom = operation.type === "vcarve" ? operation.params.flatBottom : null;
+    const uses =
+      toolKey(operation.tool) === key || (flatBottom && toolKey(flatBottom.tool) === key);
+    if (!uses) continue;
+    const candidate = structuredClone(operation);
+    replace(candidate);
+    const parsed = Operation.safeParse(candidate);
     if (parsed.success) accepted.add(operation.id);
     else rejected.push({ id: operation.id, name: operation.name, error: firstError(parsed.error) });
   }
   if (accepted.size > 0) {
     store.getState().change("replaceToolSnapshots", (draft) => {
       for (const operation of draft.operations) {
-        if (accepted.has(operation.id)) operation.tool = next;
+        if (accepted.has(operation.id)) replace(operation);
       }
     });
   }
@@ -310,6 +352,15 @@ export function updateDrillParams(
   changes: Partial<DrillParams>,
 ): ActionResult {
   return updateParams(store, id, "drill", DrillParams, "updateDrillParams", changes);
+}
+
+/** Changes some of a V-carve's params at once, like `updateProfileParams`. */
+export function updateVCarveParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<VCarveParams>,
+): ActionResult {
+  return updateParams(store, id, "vcarve", VCarveParams, "updateVCarveParams", changes);
 }
 
 /** Changes some of an engrave operation's params at once, like `updateProfileParams`. */

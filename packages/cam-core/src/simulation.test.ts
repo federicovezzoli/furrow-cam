@@ -11,6 +11,7 @@ import {
   MAX_HEIGHTMAP_CELLS,
   type SimulationCut,
   simulateCuts,
+  smallestCutWidth,
 } from "./simulation";
 
 const tool: Tool = {
@@ -155,6 +156,39 @@ describe("cutterProfile", () => {
   });
 });
 
+describe("cutterProfile reach", () => {
+  it("is how far off the axis the edge dips below a depth, at most the radius", () => {
+    expect(cutterProfile(flat).reach(0.1)).toBe(3);
+    expect(cutterProfile(ball).reach(1)).toBeCloseTo(Math.sqrt(5));
+    expect(cutterProfile(ball).reach(4)).toBe(3);
+    expect(cutterProfile(vBit).reach(4)).toBeCloseTo(4);
+    expect(cutterProfile(vBit).reach(10)).toBe(6);
+    expect(cutterProfile({ ...vBit, tipDiameter: 2 }).reach(3)).toBeCloseTo(4);
+  });
+});
+
+describe("smallestCutWidth", () => {
+  it("is a flat tool's diameter, however shallow", () => {
+    expect(smallestCutWidth([moves(flat, [0, 0, -0.1], [10, 0, -0.1])])).toBe(6);
+  });
+
+  it("is a ball's chord at its deepest move", () => {
+    expect(smallestCutWidth([moves(ball, [0, 0, -1], [10, 0, -1])])).toBeCloseTo(2 * Math.sqrt(5));
+  });
+
+  it("is a V-bit's groove a quarter of the way down its deepest move, far narrower than the bit", () => {
+    // 90°: 8 mm deep at most, so the groove 2 mm down, 4 mm wide.
+    expect(smallestCutWidth([moves(vBit, [0, 0, 0], [10, 0, -8], [20, 0, -1])])).toBeCloseTo(4);
+  });
+
+  it("takes the narrowest cut and ignores moves above the stock", () => {
+    const above = moves(flat, [0, 0, 5], [10, 0, 0]);
+    expect(smallestCutWidth([above])).toBe(Infinity);
+    expect(smallestCutWidth([])).toBe(Infinity);
+    expect(smallestCutWidth([above, moves(vBit, [0, 0, -4], [10, 0, -4])])).toBeCloseTo(2);
+  });
+});
+
 describe("simulateCuts", () => {
   it("leaves the stock whole without cuts", () => {
     const { heights } = simulateCuts(stock, [], grid);
@@ -237,6 +271,17 @@ describe("simulateCuts", () => {
     expect(heightAt(map, 40.5, 30.5)).toBeCloseTo(-3);
     expect(heightAt(map, 40.5, 32.5)).toBeCloseTo(-1);
     expect(heightAt(map, 40.5, 34.5)).toBe(0);
+  });
+
+  it("sweeps a V-bit along a slope out to where it leaves the stock", () => {
+    // 0.1 mm down per mm, from the top to 7 mm deep: the V-carve's moves.
+    const map = simulateCuts(stock, [moves(vBit, [10.5, 30.5, 0], [80.5, 30.5, -7])], grid);
+    // 3 mm off the move at 3.5 mm deep: the cone reaches lowest a little further on.
+    const u = 0.3 / Math.sqrt(0.99);
+    expect(heightAt(map, 45.5, 33.5)).toBeCloseTo(-3.5 - 0.1 * u + Math.sqrt(9 + u * u), 4);
+    // At the end, 6 mm off: the bit's full radius, 1 mm below the top.
+    expect(heightAt(map, 80.5, 36.5)).toBeCloseTo(-1, 4);
+    expect(heightAt(map, 20.5, 33.5)).toBe(0);
   });
 
   it("drills a hole the size of the tool", () => {

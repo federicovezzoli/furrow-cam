@@ -1,6 +1,6 @@
 "use client";
 
-import { canDrill, canEngrave, type Tool } from "@furrow/document";
+import { canClearFlatBottom, canDrill, canEngrave, canVCarve, type Tool } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
 import type { ToolChoice } from "@/features/tools/server";
@@ -71,6 +71,16 @@ export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
  */
 export function engraveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return toolChoiceFor(tools, (tool) => tool.type === "v_bit") ?? toolChoiceFor(tools, canEngrave);
+}
+
+/** The tool new V-carves start with: the default one if it is a V-bit, else the first V-bit. */
+export function vcarveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
+  return toolChoiceFor(tools, canVCarve);
+}
+
+/** The tool a V-carve's flat bottom starts with: the default one if it is a flat end mill, else the first. */
+export function flatBottomToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
+  return toolChoiceFor(tools, canClearFlatBottom);
 }
 
 /** The library tool an operation's snapshot was taken from, if it hasn't been edited since. */

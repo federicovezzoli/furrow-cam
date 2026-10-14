@@ -1,8 +1,8 @@
 import type { Stock, Tool } from "@furrow/document";
 
 /**
- * Cells across the smallest tool in use: enough for a slot as narrow as the
- * tool to show its floor and walls (ADR-0019).
+ * Cells across the narrowest cut: enough for a slot that narrow to show its
+ * floor and walls (ADR-0019).
  */
 export const CELLS_PER_DIAMETER = 6;
 
@@ -42,17 +42,17 @@ export type Heightmap = {
 export type HeightmapGrid = Omit<Heightmap, "heights">;
 
 /**
- * The grid for simulating cuts with tools no smaller than `smallestDiameter`
- * on `stock`: `CELLS_PER_DIAMETER` cells across that tool, coarser if it
- * would take more than `maxCells`, and at least two each way.
+ * The grid for simulating cuts no narrower than `smallestWidth` on `stock`
+ * (see `smallestCutWidth`): `CELLS_PER_DIAMETER` cells across that width,
+ * coarser if it would take more than `maxCells`, and at least two each way.
  * Cells are as close to square as the stock's size allows and cover it exactly.
  */
 export function heightmapGrid(
   { width, height }: Pick<Stock, "width" | "height">,
-  smallestDiameter: number,
+  smallestWidth: number,
   maxCells = MAX_HEIGHTMAP_CELLS,
 ): HeightmapGrid {
-  let size = smallestDiameter / CELLS_PER_DIAMETER;
+  let size = smallestWidth / CELLS_PER_DIAMETER;
   const wanted = Math.ceil(width / size) * Math.ceil(height / size);
   if (wanted > maxCells) size *= Math.sqrt(wanted / maxCells);
   /** At least two cells each way, so there is a surface between cell centres to draw. */
@@ -80,7 +80,7 @@ export function heightmapGrid(
 export function simulateCuts(
   stock: Pick<Stock, "width" | "height" | "thickness">,
   cuts: readonly SimulationCut[],
-  grid: HeightmapGrid = heightmapGrid(stock, smallestDiameter(cuts)),
+  grid: HeightmapGrid = heightmapGrid(stock, smallestCutWidth(cuts)),
   bufferMultiple = 1,
 ): Heightmap {
   const cells = grid.columns * grid.rows;
@@ -99,9 +99,32 @@ export function simulateCuts(
   return { ...grid, heights };
 }
 
-/** The smallest diameter of the tools of `cuts`, or `Infinity` with none. */
-export function smallestDiameter(cuts: readonly SimulationCut[]): number {
-  return cuts.reduce((least, { tool }) => Math.min(least, tool.diameter), Infinity);
+/**
+ * Of a V-bit cut's deepest move, how deep the groove whose width sets the
+ * grid is: V-carving narrows to nothing towards corners and thin strokes, so
+ * the widest groove alone would leave those a cell or two across.
+ */
+const V_BIT_DEPTH_FRACTION = 0.25;
+
+/**
+ * The narrowest of `cuts`: the width each tool cuts at the stock top at its
+ * deepest move, its diameter for flat end mills and drills, less for V-bits
+ * and ball end mills cutting shallower than their cone or radius. For V-bits,
+ * at `V_BIT_DEPTH_FRACTION` of that depth. `Infinity` when nothing goes into
+ * the stock.
+ */
+export function smallestCutWidth(cuts: readonly SimulationCut[]): number {
+  let least = Infinity;
+  for (const { tool, segments } of cuts) {
+    let deepest = 0;
+    for (let i = 2; i < segments.length; i += 3) {
+      deepest = Math.min(deepest, segments[i] as number);
+    }
+    if (deepest >= 0) continue;
+    const depth = tool.type === "v_bit" ? -deepest * V_BIT_DEPTH_FRACTION : -deepest;
+    least = Math.min(least, 2 * cutterProfile(tool).reach(depth));
+  }
+  return least;
 }
 
 /**
@@ -113,6 +136,8 @@ type CutterProfile = {
   /** Whether the edge is level across the whole radius (flat end mills, drills). */
   flat: boolean;
   height: (distance: number) => number;
+  /** How far from its axis the edge is less than `depth` above the tip: the inverse of `height`, at most `radius`. */
+  reach: (depth: number) => number;
 };
 
 /**
@@ -126,17 +151,24 @@ export function cutterProfile({ type, diameter, vAngle, tipDiameter }: CutterSha
   switch (type) {
     case "flat_end_mill":
     case "drill":
-      return { radius, flat: true, height: () => 0 };
+      return { radius, flat: true, height: () => 0, reach: () => radius };
     case "ball_end_mill":
       return {
         radius,
         flat: false,
         height: (d) => radius - Math.sqrt(Math.max(radius * radius - d * d, 0)),
+        reach: (depth) =>
+          depth >= radius ? radius : Math.sqrt(radius * radius - (radius - depth) ** 2),
       };
     case "v_bit": {
       const tip = (tipDiameter ?? 0) / 2;
       const slope = 1 / Math.tan((((vAngle ?? 90) / 2) * Math.PI) / 180);
-      return { radius, flat: false, height: (d) => Math.max(d - tip, 0) * slope };
+      return {
+        radius,
+        flat: false,
+        height: (d) => Math.max(d - tip, 0) * slope,
+        reach: (depth) => Math.min(radius, tip + depth / slope),
+      };
     }
   }
 }
@@ -147,6 +179,9 @@ const INVERSE_PHI = (Math.sqrt(5) - 1) / 2;
 
 /**
  * Lowers the cells the tool passes below on the move `segments[i..i + 5]`.
+ * Only cells within the tool's reach at the move's deepest point can go
+ * below the stock top, so a V-bit carving shallow sweeps a narrow band, not
+ * its whole diameter.
  * At a cell `q` the tool reaches down to `min z(t) + height(|q − p(t)|)` over
  * the move's points `p(t)` within its radius: `z` is linear in `t` and the
  * profile rises and is convex with distance, so that is a convex function of
@@ -157,7 +192,7 @@ const INVERSE_PHI = (Math.sqrt(5) - 1) / 2;
 function sweep(
   grid: HeightmapGrid,
   heights: Float32Array,
-  { radius, flat, height }: CutterProfile,
+  { radius: fullRadius, flat, height, reach }: CutterProfile,
   segments: Float32Array,
   i: number,
 ) {
@@ -169,7 +204,9 @@ function sweep(
   const dy = (segments[i + 4] as number) - ay;
   const dz = (segments[i + 5] as number) - az;
   /** Above the stock, the tool cuts nothing. */
-  if (Math.min(az, az + dz) >= 0) return;
+  const deepest = Math.min(az, az + dz);
+  if (deepest >= 0) return;
+  const radius = Math.min(fullRadius, reach(-deepest));
   const length2 = dx * dx + dy * dy;
   const radius2 = radius * radius;
 

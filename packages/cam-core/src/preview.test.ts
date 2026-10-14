@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toolpathLines, toolpathLinesBuffers } from "./preview";
+import { DEEPEST_SHADE, toolpathLines, toolpathLinesBuffers } from "./preview";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 
 const rapid = (x: number, y: number, z: number): ToolpathMove => ({ kind: "rapid", to: [x, y, z] });
@@ -84,6 +84,23 @@ describe("toolpathLines", () => {
       lines.rapids.buffer,
       lines.rapidDistances.buffer,
       lines.holes.buffer,
+      lines.feedColors.buffer,
     ]);
+  });
+
+  it("shades no feeds unless asked", () => {
+    expect(toolpathLines(drilled).feedColors).toHaveLength(0);
+  });
+
+  it("shades feeds darker the deeper they are, from the stock top down", () => {
+    const carved = toolpath(rapid(0, 0, 5), feed(0, 0, 1), feed(5, 0, -2), feed(10, 0, -4));
+    const { feeds, feedColors } = toolpathLines(carved, { shadeDepth: true });
+    expect(feedColors).toHaveLength(feeds.length);
+    const half = 1 - (1 - DEEPEST_SHADE) / 2;
+    // Above the stock counts as the top; every vertex is grey, R = G = B.
+    expect(vertices(feedColors).map((color) => color[0])).toEqual(
+      [1, 1, 1, half, half, DEEPEST_SHADE].map(Math.fround),
+    );
+    for (const [r, g, b] of vertices(feedColors)) expect([g, b]).toEqual([r, r]);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
 import {
+  clearingTool,
   DrillOperation,
   DrillParams,
   EngraveOperation,
@@ -10,6 +11,8 @@ import {
   OperationTarget,
   PocketParams,
   ProfileParams,
+  VCarveOperation,
+  VCarveParams,
 } from "./operation";
 
 const params = fullDocument().operations[0]?.params as ProfileParams;
@@ -164,6 +167,54 @@ describe("EngraveOperation", () => {
     for (const extra of [{ allowance: 0 }, { tabs: null }, { leadIn: null }]) {
       expect(EngraveParams.safeParse({ ...valid, ...extra }).success).toBe(false);
     }
+  });
+});
+
+describe("VCarveOperation", () => {
+  const profile = fullDocument().operations[0];
+  if (!profile) throw new Error("The fixture has an operation");
+  const endMill = profile.tool;
+  const vBit = { ...endMill, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+  const vcarve = {
+    ...profile,
+    type: "vcarve",
+    tool: vBit,
+    params: { maxDepth: 5, flatBottom: null },
+  };
+
+  it("accepts V-bits, with or without a flat bottom, as an operation too", () => {
+    expect(VCarveOperation.safeParse(vcarve).success).toBe(true);
+    const flat = { ...vcarve, params: { maxDepth: 3, flatBottom: { tool: endMill } } };
+    expect(Operation.parse(flat)).toEqual(flat);
+    expect(Operation.parse(vcarve)).toEqual(vcarve);
+  });
+
+  it("rejects other tools", () => {
+    expect(VCarveOperation.safeParse({ ...vcarve, tool: endMill }).success).toBe(false);
+    const ball = { ...endMill, type: "ball_end_mill" };
+    expect(VCarveOperation.safeParse({ ...vcarve, tool: ball }).success).toBe(false);
+  });
+
+  it("clears a flat bottom with flat end mills only", () => {
+    for (const tool of [vBit, { ...endMill, type: "ball_end_mill" }]) {
+      const params = { maxDepth: 3, flatBottom: { tool } };
+      expect(VCarveOperation.safeParse({ ...vcarve, params }).success).toBe(false);
+    }
+  });
+
+  it("rejects invalid params and unknown keys", () => {
+    expect(VCarveParams.safeParse({ maxDepth: 0, flatBottom: null }).success).toBe(false);
+    expect(VCarveParams.safeParse({ flatBottom: null }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2 }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2, flatBottom: {} }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2, flatBottom: null, depth: 1 }).success).toBe(false);
+  });
+
+  it("names the flat-bottom tool as the clearing tool", () => {
+    expect(clearingTool(VCarveOperation.parse(vcarve))).toBeNull();
+    const params = { maxDepth: 3, flatBottom: { tool: endMill } };
+    expect(clearingTool(VCarveOperation.parse({ ...vcarve, params }))).toEqual(endMill);
+    expect(clearingTool(profile)).toBeNull();
   });
 });
 

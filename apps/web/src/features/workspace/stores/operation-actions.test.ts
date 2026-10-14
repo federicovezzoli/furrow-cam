@@ -14,6 +14,7 @@ import {
   addPocketOperation,
   addProfileOperation,
   addTab,
+  addVCarveOperation,
   autoPlaceTabs,
   defaultTabs,
   deleteOperation,
@@ -29,6 +30,7 @@ import {
   updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
+  updateVCarveParams,
 } from "./operation-actions";
 
 const MISSING_ID = "11111111-2222-4333-8444-555555555555";
@@ -382,6 +384,65 @@ describe("addEngraveOperation", () => {
   });
 });
 
+describe("addVCarveOperation", () => {
+  const addVCarve = (store: ReturnType<typeof setup>["store"]) => {
+    const id = addVCarveOperation(store, { targets: [whole(square)], tool: vBit });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("appends a valid V-carve as deep as the bit's cone, without a flat bottom", () => {
+    const { store, document, operations } = setup();
+    const id = addVCarve(store);
+    const operation = operations().find((candidate) => candidate.id === id);
+    expect(operation).toMatchObject({
+      type: "vcarve",
+      name: "V-carve 1",
+      enabled: true,
+      targets: [whole(square)],
+      tool: vBit,
+      params: { flatBottom: null },
+    });
+    // A 6 mm 60° bit reaches its full width 3 / tan 30° deep.
+    expect(operation?.params).toHaveProperty("maxDepth", 3 / Math.tan(Math.PI / 6));
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("goes no deeper than half the stock", () => {
+    const { store, operations } = setup();
+    store.getState().change("thin", (draft) => {
+      draft.stock.thickness = 4;
+    });
+    addVCarve(store);
+    expect(operations()[0]?.params).toEqual({ maxDepth: 2, flatBottom: null });
+  });
+
+  it("takes V-bits only, adding or switching tools", () => {
+    const { store, operations } = setup();
+    expect(addVCarveOperation(store, { targets: [whole(square)], tool: endMill })).toBeNull();
+    const id = addVCarve(store);
+    expect(setOperationTool(store, id, endMill)).toEqual({
+      ok: false,
+      error: "Only V-bits V-carve",
+    });
+    expect(operations()[0]?.tool).toEqual(vBit);
+  });
+
+  it("updates its params, flat bottom included, rejecting invalid ones", () => {
+    const { store, operations } = setup();
+    const id = addVCarve(store);
+    expect(updateVCarveParams(store, id, { maxDepth: 2, flatBottom: { tool: endMill } })).toEqual({
+      ok: true,
+    });
+    expect(operations()[0]?.params).toEqual({ maxDepth: 2, flatBottom: { tool: endMill } });
+    expect(updateVCarveParams(store, id, { maxDepth: 0 })).toMatchObject({ ok: false });
+    expect(updateVCarveParams(store, id, { flatBottom: { tool: vBit } })).toEqual({
+      ok: false,
+      error: "Only flat end mills clear a flat bottom",
+    });
+  });
+});
+
 describe("updatePocketParams", () => {
   const addPocket = (store: ReturnType<typeof setup>["store"]) => {
     const id = addPocketOperation(store, { targets: [whole(square)], tool: endMill });
@@ -570,6 +631,22 @@ describe("replaceToolSnapshots", () => {
     ]);
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(asVBit);
     expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
+  });
+
+  it("re-snapshots flat-bottom tools too", () => {
+    const { store, operations } = setup();
+    const id = addVCarveOperation(store, { targets: [whole(square)], tool: vBit });
+    if (!id) throw new Error("not added");
+    updateVCarveParams(store, id, { flatBottom: { tool: endMill } });
+
+    expect(replaceToolSnapshots(store, endMill, edited)).toEqual([]);
+    expect(operations()[0]).toMatchObject({ tool: vBit, params: { flatBottom: { tool: edited } } });
+
+    const asBall: Tool = { ...edited, type: "ball_end_mill" };
+    expect(replaceToolSnapshots(store, edited, asBall)).toEqual([
+      { id, name: "V-carve 1", error: "Only flat end mills clear a flat bottom" },
+    ]);
+    expect(operations()[0]).toMatchObject({ params: { flatBottom: { tool: edited } } });
   });
 
   it("changes nothing when no operation had the old tool, or the tool is unchanged", () => {

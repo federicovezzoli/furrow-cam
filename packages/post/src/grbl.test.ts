@@ -1,9 +1,9 @@
 import type { Toolpath, Vec3 } from "@furrow/cam-core";
 import type { Machine, Operation, Stock, StockAnchor, Tool } from "@furrow/document";
-import { drill as drillBit, endMill, lowRider, machine } from "@furrow/document/fixtures";
+import { drill as drillBit, endMill, lowRider, machine, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { formatNumber, grbl } from "./grbl";
-import type { PostInput } from "./post";
+import { type PostInput, postSteps } from "./post";
 
 const stock: Stock = {
   width: 300,
@@ -227,6 +227,52 @@ describe("grbl", () => {
           "G0 X20 Y0",
         ].join("\n"),
       );
+    });
+  });
+
+  describe("clearing tools (ADR-0026)", () => {
+    const vcarve: Operation = {
+      ...operation("Sign", vBit),
+      type: "vcarve",
+      params: { maxDepth: 3, flatBottom: { tool: endMill } },
+    };
+    const toolpath = { ...plunge([30, 0]), clearing: plunge([40, 0]).moves };
+
+    it("cuts the clearing moves first, with the clearing tool", () => {
+      const { gcode } = post({ operations: [{ operation: vcarve, toolpath }] });
+      expect(gcode).toContain(
+        [
+          '(Tool: 1/4" 2-flute upcut, 6.35 mm)',
+          "(Operation: Sign, clearing)",
+          "G0 Z5",
+          "M3 S18000",
+          "G0 X40 Y0",
+          "G1 Z-5 F500",
+          "G0 Z5",
+          "(Tool: 60° V-bit, 6.35 mm)",
+          "M5",
+          "G0 Z5",
+          "M0 (Change the bit to 60° V-bit, 6.35 mm and zero Z again)",
+          "(Operation: Sign)",
+        ].join("\n"),
+      );
+      expect(gcode).toContain("(Zero Z again after each tool change)");
+    });
+
+    it("splits operations into a step per tool, leaving out empty ones", () => {
+      expect(postSteps([{ operation: vcarve, toolpath }])).toEqual([
+        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
+        { name: "Sign", tool: vBit, moves: toolpath.moves },
+      ]);
+      const onlyClearing = { ...toolpath, moves: [] };
+      expect(postSteps([{ operation: vcarve, toolpath: onlyClearing }])).toEqual([
+        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
+      ]);
+      // Without a clearing tool, stray clearing moves aren't cut.
+      const plain = { ...vcarve, params: { maxDepth: 3, flatBottom: null } } as Operation;
+      expect(postSteps([{ operation: plain, toolpath }])).toEqual([
+        { name: "Sign", tool: vBit, moves: toolpath.moves },
+      ]);
     });
   });
 

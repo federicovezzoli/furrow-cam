@@ -79,8 +79,10 @@ export function scheduleToolpaths(
       inFlight.delete(operationId);
       const { setResult, setError } = toolpaths.getState();
       if ("error" in response) setError(operationId, inputHash, response.error);
-      else
-        setResult(operationId, inputHash, { warnings: response.warnings, lines: response.lines });
+      else {
+        const { operationId: _, inputHash: __, ...preview } = response;
+        setResult(operationId, inputHash, preview);
+      }
       const next = waiting.get(operationId);
       if (next) {
         waiting.delete(operationId);
