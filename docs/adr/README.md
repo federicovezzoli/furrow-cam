@@ -39,3 +39,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed |
 | [0023](0023-password-policy-breached-passwords.md) | Password length limits and breached-password check | Proposed |
 | [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |
+| [0025](0025-medial-axis-sampled-voronoi.md) | Medial axis from a Voronoi diagram of boundary samples | Proposed |

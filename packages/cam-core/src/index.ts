@@ -5,6 +5,7 @@ export * from "./engrave";
 export * from "./flatten";
 export * from "./generate";
 export * from "./geometry";
+export * from "./medial-axis";
 export { depthLevels } from "./passes";
 export * from "./pick";
 export * from "./pocket";
