@@ -1,4 +1,4 @@
-import type { PocketOperation, Point, Shape } from "@furrow/document";
+import type { PocketOperation, PocketParams, Point, Shape, Tool } from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { difference, offset, type Polygon } from "./geometry";
 import { depthLevels, plural } from "./passes";
@@ -77,7 +77,6 @@ export function pocketToolpath(
 ): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
-  const radius = tool.diameter / 2;
   const warnings: string[] = [];
 
   const closed: Polygon[] = [];
@@ -95,7 +94,23 @@ export function pocketToolpath(
     warnings.push(`Skipped ${plural(open, "open path")}: pockets need closed paths.`);
   }
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  const toolpath = clearPocket(tool, params, closed, options);
+  return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+}
 
+/**
+ * The toolpath of a pocket of the area inside the rings `closed`, nested
+ * rings toggling inside and outside (even-odd), as `pocketToolpath` describes.
+ */
+export function clearPocket(
+  tool: Tool,
+  params: PocketParams,
+  closed: Polygon[],
+  options: PocketOptions,
+): Toolpath {
+  const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
+  const radius = tool.diameter / 2;
+  const warnings: string[] = [];
   const layout: Layout = {
     stepOver: (tool.diameter * tool.stepOver) / 100,
     radius,

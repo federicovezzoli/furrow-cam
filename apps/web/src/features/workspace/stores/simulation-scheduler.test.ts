@@ -1,6 +1,6 @@
 import type { ToolpathLines } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument } from "@furrow/document";
-import { drill, endMill } from "@furrow/document/fixtures";
+import { drill, endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -56,6 +56,7 @@ function lines(feed: number): ToolpathLines {
     rapids: new Float32Array([0, 0, 5, 0, 0, 0]),
     rapidDistances: new Float32Array([0, 5]),
     holes: new Float32Array(),
+    feedColors: new Float32Array(),
   };
 }
 
@@ -82,6 +83,35 @@ describe("simulationRequest", () => {
       segments: preview.feeds,
     });
     expect(request?.input.cuts[3]?.segments).toBe(preview.rapids);
+  });
+
+  it("cuts a toolpath's clearing moves with the clearing tool", () => {
+    const document: ProjectDocument = {
+      ...createProjectDocument(),
+      operations: [
+        {
+          id: PROFILE_ID,
+          name: "Sign",
+          enabled: true,
+          type: "vcarve",
+          targets: [],
+          tool: vBit,
+          params: { maxDepth: 3, flatBottom: { tool: endMill } },
+        },
+      ],
+    };
+    const toolpaths = createToolpathStore();
+    const carving = lines(10);
+    const clearing = lines(20);
+    toolpaths.getState().startComputing(PROFILE_ID, "a");
+    toolpaths.getState().setResult(PROFILE_ID, "a", { warnings: [], lines: carving, clearing });
+    const cuts = simulationRequest(document, toolpaths.getState().entries, MAX_CELLS)?.input.cuts;
+    expect(cuts?.map(({ tool, segments }) => [tool.type, segments])).toEqual([
+      ["flat_end_mill", clearing.feeds],
+      ["flat_end_mill", clearing.rapids],
+      ["v_bit", carving.feeds],
+      ["v_bit", carving.rapids],
+    ]);
   });
 
   it("leaves out disabled and failed operations, changing the key", () => {

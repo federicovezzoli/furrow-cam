@@ -1,6 +1,7 @@
 "use client";
 
-import type { Operation } from "@furrow/document";
+import type { ToolpathLines } from "@furrow/cam-core";
+import { clearingTool, type Operation } from "@furrow/document";
 import {
   useDocumentStore,
   useToolpathStore,
@@ -14,8 +15,9 @@ const STALE_OPACITY = 0.35;
 
 /**
  * The toolpaths of the enabled operations not hidden in the Operations pane
- * (PRD-0001 R9): cutting moves solid in the tool's colour, rapids dashed in
- * the palette's. Everything drawn is built in the worker (ADR-0008), so even
+ * (PRD-0001 R9): cutting moves solid in the tool's colour, darker the deeper
+ * they go for V-carves, rapids dashed in the palette's. Clearing moves
+ * (ADR-0026) are drawn the same way in the clearing tool's colour. Everything drawn is built in the worker (ADR-0008), so even
  * 100k-segment pockets are a handful of draw calls and no work here. In the
  * top view a circle the size of the hole marks each drilled hole, which would
  * otherwise be invisible from above.
@@ -49,7 +51,42 @@ function OperationToolpath({
   const lines = entry && entry.status !== "error" ? entry.lines : undefined;
   if (!entry || !lines) return null;
   const opacity = entry.status === "ready" ? 1 : STALE_OPACITY;
-  const { color } = operation.tool;
+  const clearing = clearingTool(operation);
+  return (
+    <>
+      {clearing && entry.status !== "error" && entry.clearing && (
+        <ToolpathLinesView
+          lines={entry.clearing}
+          color={clearing.color}
+          rapidColor={rapidColor}
+          opacity={opacity}
+          showHoles={false}
+        />
+      )}
+      <ToolpathLinesView
+        lines={lines}
+        color={operation.tool.color}
+        rapidColor={rapidColor}
+        opacity={opacity}
+        showHoles={showHoles}
+      />
+    </>
+  );
+}
+
+function ToolpathLinesView({
+  lines,
+  color,
+  rapidColor,
+  opacity,
+  showHoles,
+}: {
+  lines: ToolpathLines;
+  color: string;
+  rapidColor: string;
+  opacity: number;
+  showHoles: boolean;
+}) {
   return (
     <>
       <DashedLines
@@ -61,6 +98,7 @@ function OperationToolpath({
       />
       <Lines
         positions={lines.feeds}
+        colors={lines.feedColors}
         color={color}
         renderOrder={RENDER_ORDER.feeds}
         opacity={opacity}

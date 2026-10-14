@@ -5,10 +5,12 @@ import {
   exceedsVBitCone,
   formatQuantity,
   unitLabel,
+  vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
 } from "@furrow/cam-core";
 import {
+  canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
   LinearAngle,
@@ -22,6 +24,7 @@ import {
   ProfileSide,
   type ProfileTabs,
   type Tool,
+  type VCarveOperation,
 } from "@furrow/document";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
@@ -51,10 +54,11 @@ import {
   updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
+  updateVCarveParams,
 } from "@/features/workspace/stores/operation-actions";
 import { EditBitButton } from "./edit-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
-import { matchingToolChoice, useToolLibrary } from "./tool-library";
+import { flatBottomToolChoice, matchingToolChoice, useToolLibrary } from "./tool-library";
 
 const SIDE_LABELS: Record<ProfileSide, string> = {
   outside: "Outside",
@@ -135,6 +139,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "pocket" && <PocketFields operation={operation} />}
       {operation.type === "drill" && <DrillFields operation={operation} />}
       {operation.type === "engrave" && <EngraveFields operation={operation} />}
+      {operation.type === "vcarve" && <VCarveFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
@@ -775,6 +780,104 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
       {(errors.side ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.ramp}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function VCarveFields({ operation }: { operation: VCarveOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const tools = useToolLibrary();
+  const { params, tool } = operation;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateVCarveParams(store, operation.id, changes),
+  );
+  const length = (value: number) =>
+    `${formatQuantity(value, "length", units)} ${unitLabel("length", units)}`;
+  const cone = vBitConeDepth(tool);
+  const width = vBitLineWidth(tool, params.maxDepth);
+  const flatTool = params.flatBottom?.tool ?? null;
+  const defaultFlatTool = flatBottomToolChoice(tools);
+  const current = flatTool ? matchingToolChoice(tools, flatTool) : undefined;
+
+  return (
+    <section aria-labelledby="vcarve-heading" className="grid gap-2">
+      <h4 id="vcarve-heading" className="font-medium">
+        V-carve
+      </h4>
+      <p className="text-muted-foreground">
+        Follows the middle of the closed paths, as deep as the bit's angle needs to reach their
+        edges, in passes no deeper than the tool's step-down. Islands stay standing.
+      </p>
+      <NumberField
+        id="vcarve-max-depth"
+        label="Max depth"
+        min={MIN_LENGTH}
+        value={params.maxDepth}
+        onValueChange={(maxDepth) => update("maxDepth", { maxDepth })}
+        error={errors.maxDepth}
+        layout="inline"
+        quantity="length"
+        units={units}
+        {...gestureHandlers(store)}
+      />
+      {cone !== null && width !== null && (
+        <p className="text-muted-foreground">
+          {exceedsVBitCone(tool, params.maxDepth)
+            ? `Deeper than the cone, so the bit carves no deeper than ${length(cone)}.`
+            : `Parts wider than ${length(width)} reach it.`}
+        </p>
+      )}
+      <Checkbox
+        id="vcarve-flat-bottom"
+        label="Flat bottom"
+        hint={
+          flatTool
+            ? "The end mill clears those parts flat first; the V-bit then carves their walls."
+            : defaultFlatTool
+              ? "Clear the parts that reach the max depth flat with an end mill."
+              : "Add a flat end mill to your tool library to clear a flat bottom."
+        }
+        checked={flatTool !== null}
+        disabled={flatTool === null && !defaultFlatTool}
+        onChange={(checked) =>
+          update("flatBottom", {
+            flatBottom: checked && defaultFlatTool ? { tool: defaultFlatTool.tool } : null,
+          })
+        }
+      />
+      {flatTool && (
+        <Row id="vcarve-flat-tool" label="End mill">
+          <NativeSelect
+            id="vcarve-flat-tool"
+            size="sm"
+            value={current?.id ?? ""}
+            onChange={(event) => {
+              const choice = tools.find((candidate) => candidate.id === event.target.value);
+              if (choice) update("flatBottom", { flatBottom: { tool: choice.tool } });
+            }}
+            className={SELECT_CLASS}
+          >
+            {!current && (
+              <NativeSelectOption value="">{flatTool.name} (as picked)</NativeSelectOption>
+            )}
+            {tools.map((choice) => (
+              <NativeSelectOption
+                key={choice.id}
+                value={choice.id}
+                disabled={!canClearFlatBottom(choice.tool)}
+              >
+                {choice.tool.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      {errors.flatBottom && (
+        <p role="alert" className="text-destructive">
+          {errors.flatBottom}
         </p>
       )}
     </section>

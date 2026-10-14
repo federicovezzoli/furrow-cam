@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 /**
  * Top view of each operation: the shape it cuts drawn faint, the toolpath drawn solid.
  * Profile loops around the shape, pocket clears inside it, drill plunges on its centre,
- * engrave traces the line itself.
+ * engrave traces the line itself, V-carve runs down the middle of the shape into its corners.
  */
 const PATHS: Record<Operation["type"], ReactNode> = {
   profile: (
@@ -32,6 +32,12 @@ const PATHS: Record<Operation["type"], ReactNode> = {
     <>
       <path d="M3 18c2.5-9 5.5-12 8-7s5.5 6 10-6" />
       <circle cx="21" cy="5" r="1.5" fill="currentColor" />
+    </>
+  ),
+  vcarve: (
+    <>
+      <rect x="3" y="7" width="18" height="10" rx="0.5" opacity="0.45" />
+      <path d="M3 7l5 5-5 5M21 7l-5 5 5 5M8 12h8" />
     </>
   ),
 };

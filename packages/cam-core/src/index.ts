@@ -20,3 +20,4 @@ export * from "./tabs";
 export * from "./toolpath";
 export * from "./translate";
 export * from "./units";
+export { vcarveToolpath } from "./vcarve";

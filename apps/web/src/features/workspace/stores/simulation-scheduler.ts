@@ -1,5 +1,5 @@
-import type { Heightmap, SimulationCut } from "@furrow/cam-core";
-import type { ProjectDocument, Stock } from "@furrow/document";
+import type { Heightmap, SimulationCut, ToolpathLines } from "@furrow/cam-core";
+import { clearingTool, type ProjectDocument, type Stock, type Tool } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 import type { ToolpathState, ToolpathStore } from "./toolpath-store";
 
@@ -22,7 +22,7 @@ export type SimulationResponse = { key: string } & (
 /**
  * The simulation of the enabled operations' toolpaths, or `null` while any of
  * them is still computing: a stock with only some of its cuts would flash on
- * every edit. Operations whose toolpath failed are left out, and hidden
+ * every edit. Clearing moves (ADR-0026) are cut with the clearing tool. Operations whose toolpath failed are left out, and hidden
  * toolpaths still cut. Rapids are simulated too: one that runs through the
  * stock would cut it. `key` changes exactly when the result may, so an
  * unchanged key needs no new simulation.
@@ -40,15 +40,24 @@ export function simulationRequest(
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;
     if (entry.status === "error") continue;
-    const { type, diameter, vAngle, tipDiameter } = operation.tool;
-    const tool = { type, diameter, vAngle, tipDiameter };
-    cuts.push({ tool, segments: entry.lines.feeds }, { tool, segments: entry.lines.rapids });
+    const clearing = clearingTool(operation);
+    if (clearing && entry.clearing) cuts.push(...lineCuts(clearing, entry.clearing));
+    cuts.push(...lineCuts(operation.tool, entry.lines));
     hashes.push(entry.inputHash);
   }
   return {
     key: JSON.stringify([width, height, thickness, hashes]),
     input: { stock: { width, height, thickness }, cuts, maxCells },
   };
+}
+
+/** The cuts of `lines`, feeds and rapids alike, made with `tool`. */
+function lineCuts({ type, diameter, vAngle, tipDiameter }: Tool, lines: ToolpathLines) {
+  const tool = { type, diameter, vAngle, tipDiameter };
+  return [
+    { tool, segments: lines.feeds },
+    { tool, segments: lines.rapids },
+  ];
 }
 
 /**

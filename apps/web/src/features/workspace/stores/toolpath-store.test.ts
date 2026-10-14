@@ -7,6 +7,7 @@ const lines: ToolpathLines = {
   rapids: new Float32Array(),
   rapidDistances: new Float32Array(),
   holes: new Float32Array(),
+  feedColors: new Float32Array(),
 };
 const stale: ToolpathPreview = { warnings: ["stale"], lines };
 const fresh: ToolpathPreview = { warnings: [], lines };
@@ -37,6 +38,20 @@ describe("toolpath store", () => {
     store.getState().setError("op", "2", "boom");
     store.getState().startComputing("op", "3");
     expect(store.getState().entries.op).toEqual({ inputHash: "3", status: "computing" });
+  });
+
+  it("keeps the last clearing lines while recomputing too", () => {
+    const store = createToolpathStore();
+    const clearing = { ...lines, feeds: new Float32Array([0, 0, -1, 2, 0, -1]) };
+    store.getState().startComputing("op", "1");
+    store.getState().setResult("op", "1", { ...fresh, clearing });
+    store.getState().startComputing("op", "2");
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "2",
+      status: "computing",
+      lines,
+      clearing,
+    });
   });
 
   it("drops errors and results of operations it isn't computing", () => {

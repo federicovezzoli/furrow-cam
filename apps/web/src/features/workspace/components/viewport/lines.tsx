@@ -8,21 +8,27 @@ import { pixelsPerMillimetre } from "@/features/workspace/lib/viewport-scene";
 /**
  * A `BufferGeometry` for line positions, disposed when replaced or unmounted.
  * The arrays are used as they are, not copied. `distances` are the
- * `lineDistance` values a dashed material needs.
+ * `lineDistance` values a dashed material needs, `colors` RGB values per
+ * vertex that multiply the material's colour.
  *
  * Replacing or unmounting it also requests a frame: the canvas only renders
  * on demand, and React Three Fiber 9 doesn't when an object is removed
  * (`removeChild` unlinks the parent `invalidateInstance` needs), so hidden or
  * emptied lines would stay on screen until the next interaction.
  */
-export function useLineGeometry(positions: Float32Array, distances?: Float32Array) {
+export function useLineGeometry(
+  positions: Float32Array,
+  distances?: Float32Array,
+  colors?: Float32Array,
+) {
   const invalidate = useThree((s) => s.invalidate);
   const geometry = useMemo(() => {
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(positions, 3));
     if (distances) g.setAttribute("lineDistance", new BufferAttribute(distances, 1));
+    if (colors) g.setAttribute("color", new BufferAttribute(colors, 3));
     return g;
-  }, [positions, distances]);
+  }, [positions, distances, colors]);
   useEffect(
     () => () => {
       geometry.dispose();
@@ -36,16 +42,26 @@ export function useLineGeometry(positions: Float32Array, distances?: Float32Arra
 type LinesProps = {
   positions: Float32Array;
   color: string;
+  /** Per-vertex multipliers of `color`, as in `useLineGeometry`; empty for none. */
+  colors?: Float32Array;
   renderOrder: number;
   opacity?: number;
 };
 
-export function Lines({ positions, color, renderOrder, opacity = 1 }: LinesProps) {
-  const geometry = useLineGeometry(positions);
+export function Lines({ positions, color, colors, renderOrder, opacity = 1 }: LinesProps) {
+  const shaded = colors !== undefined && colors.length > 0;
+  const geometry = useLineGeometry(positions, undefined, shaded ? colors : undefined);
   if (positions.length === 0) return null;
   return (
     <lineSegments geometry={geometry} renderOrder={renderOrder}>
-      <lineBasicMaterial color={color} transparent opacity={opacity} />
+      {/* Keyed: three.js compiles a material with or without vertex colours. */}
+      <lineBasicMaterial
+        key={String(shaded)}
+        color={color}
+        vertexColors={shaded}
+        transparent
+        opacity={opacity}
+      />
     </lineSegments>
   );
 }

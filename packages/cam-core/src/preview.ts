@@ -22,6 +22,13 @@ export type ToolpathLines = {
    * top view would otherwise show as nothing. Empty unless asked for.
    */
   holes: Float32Array;
+  /**
+   * An RGB multiplier of the line colour at each vertex of `feeds`, darker
+   * the deeper it is: `1` at the stock top down to `DEEPEST_SHADE` at the
+   * toolpath's deepest point (`vertexColors` in three.js). Empty unless
+   * asked for.
+   */
+  feedColors: Float32Array;
 };
 
 export type ToolpathLinesOptions = {
@@ -32,7 +39,12 @@ export type ToolpathLinesOptions = {
    * the deeper of the two.
    */
   holeRadius?: number | null;
+  /** Shades `feeds` by depth into `feedColors`, for V-carving, whose depth varies along a pass. */
+  shadeDepth?: boolean;
 };
+
+/** The colour multiplier at the deepest point of a depth-shaded toolpath. */
+export const DEEPEST_SHADE = 0.35;
 
 /** Sides of the circles that mark holes. */
 const HOLE_SIDES = 24;
@@ -40,7 +52,7 @@ const HOLE_SIDES = 24;
 /** Builds the viewport lines of `toolpath`. */
 export function toolpathLines(
   { moves }: Toolpath,
-  { holeRadius = null }: ToolpathLinesOptions = {},
+  { holeRadius = null, shadeDepth = false }: ToolpathLinesOptions = {},
 ): ToolpathLines {
   let feedCount = 0;
   for (let i = 1; i < moves.length; i++) if (moves[i]?.kind === "feed") feedCount++;
@@ -83,7 +95,20 @@ export function toolpathLines(
   }
 
   const holes = holeRadius === null ? new Float32Array() : circles(plunges, holeRadius);
-  return { feeds, rapids, rapidDistances, holes };
+  const feedColors = shadeDepth ? depthShades(feeds) : new Float32Array();
+  return { feeds, rapids, rapidDistances, holes, feedColors };
+}
+
+/** The `feedColors` of `feeds`: each vertex's depth below the stock top as a shade. */
+function depthShades(feeds: Float32Array): Float32Array {
+  let deepest = 0;
+  for (let i = 2; i < feeds.length; i += 3) deepest = Math.min(deepest, feeds[i] as number);
+  const colors = new Float32Array(feeds.length);
+  for (let i = 0; i < feeds.length; i += 3) {
+    const depth = deepest < 0 ? Math.min(1, Math.max(0, (feeds[i + 2] as number) / deepest)) : 0;
+    colors.fill(1 - (1 - DEEPEST_SHADE) * depth, i, i + 3);
+  }
+  return colors;
 }
 
 /** A circle of `radius` around each `[x, y, z]` of `centers`, as `LineSegments` positions. */
@@ -111,6 +136,12 @@ function circles(centers: number[], radius: number): Float32Array {
 
 /** The buffers of `lines`, to transfer them to another thread instead of copying. */
 export function toolpathLinesBuffers(lines: ToolpathLines): ArrayBuffer[] {
-  const { feeds, rapids, rapidDistances, holes } = lines;
-  return [feeds.buffer, rapids.buffer, rapidDistances.buffer, holes.buffer] as ArrayBuffer[];
+  const { feeds, rapids, rapidDistances, holes, feedColors } = lines;
+  return [
+    feeds.buffer,
+    rapids.buffer,
+    rapidDistances.buffer,
+    holes.buffer,
+    feedColors.buffer,
+  ] as ArrayBuffer[];
 }

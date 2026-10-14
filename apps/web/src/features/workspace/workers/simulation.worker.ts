@@ -1,4 +1,4 @@
-import { heightmapBuffers, heightmapGrid, simulateCuts, smallestDiameter } from "@furrow/cam-core";
+import { heightmapBuffers, heightmapGrid, simulateCuts, smallestCutWidth } from "@furrow/cam-core";
 import { TEXTURE_WIDTH } from "@/features/workspace/lib/simulation-mesh";
 import type {
   SimulationRequest,
@@ -15,7 +15,7 @@ const scope = self as unknown as {
 scope.onmessage = ({ data: { key, input } }) => {
   try {
     const { stock, cuts, maxCells } = input;
-    const grid = heightmapGrid(stock, smallestDiameter(cuts), maxCells);
+    const grid = heightmapGrid(stock, smallestCutWidth(cuts), maxCells);
     // Padded to whole texture rows, so the viewport uploads it without a copy.
     const heightmap = simulateCuts(stock, cuts, grid, TEXTURE_WIDTH);
     scope.postMessage({ key, heightmap, stock }, heightmapBuffers(heightmap));

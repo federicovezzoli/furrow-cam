@@ -190,6 +190,22 @@ describe("medialAxis", () => {
     expect(tips(medialAxis([letterC()]))).toHaveLength(4);
   });
 
+  it("leaves out the specks the steps of a rounded polyline grow", () => {
+    // A quarter band 6 mm wide drawn every 0.05°, coordinates rounded to 0.02 mm:
+    // each step is a sharp corner of its own.
+    const round = ([x, y]: Point): Point => [
+      Math.round(x / 0.02) * 0.02,
+      Math.round(y / 0.02) * 0.02,
+    ];
+    const arc = (r: number) =>
+      Array.from({ length: 1801 }, (_, i) => round(polar(r, (i / 1800) * (Math.PI / 2))));
+    const band: Polygon = [...arc(56), ...arc(50).reverse()];
+    const axis = medialAxis([band]);
+    // The centre arc and the branches into the band's four corners, as when drawn exactly.
+    expect(axis).toHaveLength(5);
+    expect(tips(axis)).toHaveLength(4);
+  });
+
   it("never goes deeper than the edges allow and leaves almost nothing behind", () => {
     for (const rings of [[letterC()], [letterS()], [star], [circle(20), circle(12, true)]]) {
       const axis = medialAxis(rings);

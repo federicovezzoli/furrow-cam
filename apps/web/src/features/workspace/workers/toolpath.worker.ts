@@ -15,14 +15,25 @@ scope.onmessage = ({ data }) => {
   const { operationId, inputHash } = data;
   try {
     const { operation } = data.input;
-    const { moves, warnings } = generateToolpath(data.input);
+    const toolpath = generateToolpath(data.input);
+    const { warnings } = toolpath;
     // Only drills make holes; other straight plunges enter a cut that shows.
     const holeRadius = operation.type === "drill" ? operation.tool.diameter / 2 : null;
-    const lines = toolpathLines({ moves, warnings }, { holeRadius });
+    // A V-carve's depth varies along each pass, which a top view wouldn't show.
+    const shadeDepth = operation.type === "vcarve";
+    const lines = toolpathLines(toolpath, { holeRadius, shadeDepth });
+    const clearing = toolpath.clearing
+      ? toolpathLines({ moves: toolpath.clearing, warnings: [] })
+      : undefined;
     // Only what the main thread shows crosses over, and the viewport's typed
     // arrays move there instead of being copied: cloning every move would cost
     // more than drawing them.
-    scope.postMessage({ operationId, inputHash, warnings, lines }, toolpathLinesBuffers(lines));
+    scope.postMessage(
+      clearing
+        ? { operationId, inputHash, warnings, lines, clearing }
+        : { operationId, inputHash, warnings, lines },
+      [...toolpathLinesBuffers(lines), ...(clearing ? toolpathLinesBuffers(clearing) : [])],
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     scope.postMessage({ operationId, inputHash, error: message });

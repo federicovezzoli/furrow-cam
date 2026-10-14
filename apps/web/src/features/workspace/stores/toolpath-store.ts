@@ -5,20 +5,25 @@ import { createStore } from "zustand/vanilla";
 
 /**
  * What the workspace shows of a toolpath: its warnings and its lines in the
- * viewport. The moves stay in the worker (ADR-0004).
+ * viewport, with those of its clearing moves (ADR-0026) if it has any. The
+ * moves stay in the worker (ADR-0004).
  */
-export type ToolpathPreview = { warnings: string[]; lines: ToolpathLines };
+export type ToolpathPreview = {
+  warnings: string[];
+  lines: ToolpathLines;
+  clearing?: ToolpathLines;
+};
 
 /**
  * A toolpath computed in a worker (ADR-0004) for one operation. `inputHash`
  * identifies the inputs it was computed from (the operation, its shapes, tool
  * and retract height), so an entry is stale once the hash of the current
- * inputs differs. `lines` are the toolpath as the viewport draws it; while an
- * operation recomputes it keeps those of its last toolpath, so the preview
- * doesn't flicker while a value is scrubbed.
+ * inputs differs. `lines` (and `clearing`) are the toolpath as the viewport
+ * draws it; while an operation recomputes it keeps those of its last
+ * toolpath, so the preview doesn't flicker while a value is scrubbed.
  */
 export type ToolpathEntry = { inputHash: string } & (
-  | { status: "computing"; lines?: ToolpathLines }
+  | { status: "computing"; lines?: ToolpathLines; clearing?: ToolpathLines }
   | ({ status: "ready" } & ToolpathPreview)
   | { status: "error"; error: string }
 );
@@ -48,10 +53,14 @@ export function createToolpathStore() {
           set(
             (state) => {
               const previous = state.entries[operationId];
-              const lines = previous?.status === "error" ? undefined : previous?.lines;
-              state.entries[operationId] = lines
-                ? { inputHash, status: "computing", lines }
-                : { inputHash, status: "computing" };
+              const kept = previous?.status === "error" ? undefined : previous;
+              const { lines, clearing } = kept ?? {};
+              state.entries[operationId] = {
+                inputHash,
+                status: "computing",
+                ...(lines && { lines }),
+                ...(lines && clearing && { clearing }),
+              };
             },
             false,
             "startComputing",

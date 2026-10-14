@@ -40,6 +40,14 @@ const MERGE_DISTANCE = 1e-6;
 /** Closest sample to a sharp corner, in millimetres: the axis reaches the tip from there. */
 const CORNER_RESOLUTION = GEOMETRY_TOLERANCE;
 
+/**
+ * Smallest radius, in millimetres, of the largest disk a separate part of the
+ * axis needs to stand on its own: a V-bit following one under it carves a
+ * groove no wider than twice that. Such a part is joined to the axis within
+ * this distance, or dropped.
+ */
+const MIN_COMPONENT_RADIUS = 0.01;
+
 /** Sample spacing near a sharp corner, as a fraction of the wedge's width. */
 const CORNER_GRADING = 0.5;
 
@@ -339,7 +347,7 @@ class Graph {
     return this.x.length - 1;
   }
 
-  /** Chains the edges into branches between nodes that are not on a plain run. */
+  /** Chains the edges into branches between nodes that are not on a plain run, specks left out. */
   branches(): MedialAxisBranch[] {
     const node = this.mergeCoincident();
     const neighbours = new Map<number, Set<number>>();
@@ -355,6 +363,7 @@ class Graph {
       link(a, b);
       link(b, a);
     }
+    this.settleSpecks(neighbours);
     const walked = new Set<string>();
     const key = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
     const result: MedialAxisBranch[] = [];
@@ -388,6 +397,83 @@ class Graph {
       for (const b of around) if (!walked.has(key(a, b))) walk(a, b);
     }
     return result;
+  }
+
+  /**
+   * Settles the parts of the axis whose disks are all under
+   * `MIN_COMPONENT_RADIUS`: one within that distance of the rest of the axis
+   * is joined to it at its nearest node (the tip of a corner sharper than the
+   * sampling links up to the axis that way); any other is a speck graded
+   * sampling grew at a step of a drawn edge (rounded coordinates, dense
+   * polylines), which would be carved as a run of its own cutting nothing,
+   * and goes.
+   */
+  private settleSpecks(neighbours: Map<number, Set<number>>) {
+    const component = new Map<number, number>();
+    const specks: number[][] = [];
+    for (const start of neighbours.keys()) {
+      if (component.has(start)) continue;
+      const nodes = [start];
+      component.set(start, start);
+      let largest = 0;
+      for (let k = 0; k < nodes.length; k++) {
+        const n = nodes[k] as number;
+        largest = Math.max(largest, this.radius[n] as number);
+        for (const m of neighbours.get(n) ?? []) {
+          if (!component.has(m)) {
+            component.set(m, start);
+            nodes.push(m);
+          }
+        }
+      }
+      if (largest < MIN_COMPONENT_RADIUS) specks.push(nodes);
+    }
+    if (specks.length === 0) return;
+
+    const size = MIN_COMPONENT_RADIUS;
+    const cellOf = (n: number) =>
+      [Math.floor((this.x[n] as number) / size), Math.floor((this.y[n] as number) / size)] as const;
+    const cells = new Map<string, number[]>();
+    for (const n of neighbours.keys()) {
+      const [cx, cy] = cellOf(n);
+      const key = `${cx},${cy}`;
+      const list = cells.get(key);
+      if (list) list.push(n);
+      else cells.set(key, [n]);
+    }
+    for (const nodes of specks) {
+      const own = component.get(nodes[0] as number);
+      let best: [number, number] | null = null;
+      let bestDistance = size;
+      for (const n of nodes) {
+        const [cx, cy] = cellOf(n);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            for (const m of cells.get(`${cx + dx},${cy + dy}`) ?? []) {
+              if (component.get(m) === own) continue;
+              const d = Math.hypot(
+                (this.x[n] as number) - (this.x[m] as number),
+                (this.y[n] as number) - (this.y[m] as number),
+              );
+              if (d < bestDistance) {
+                bestDistance = d;
+                best = [n, m];
+              }
+            }
+          }
+        }
+      }
+      if (best) {
+        const [n, m] = best;
+        neighbours.get(n)?.add(m);
+        neighbours.get(m)?.add(n);
+        // Joined pieces are one: a later speck may join this one.
+        const joined = component.get(m) as number;
+        for (const node of nodes) component.set(node, joined);
+      } else {
+        for (const n of nodes) neighbours.delete(n);
+      }
+    }
   }
 
   /** Joins nodes that coincide (cocircular samples share a circumcentre); returns each node's representative. */
