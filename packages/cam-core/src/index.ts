@@ -1,3 +1,4 @@
+export * from "./bounds";
 export * from "./drill";
 export * from "./dxf/import";
 export * from "./flatten";
@@ -15,4 +16,5 @@ export * from "./stock";
 export * from "./svg/import";
 export * from "./tabs";
 export * from "./toolpath";
+export * from "./translate";
 export * from "./units";

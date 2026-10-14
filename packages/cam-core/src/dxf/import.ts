@@ -107,7 +107,7 @@ type RawSegment =
 type RawPath = { start: Point; segments: RawSegment[]; closed: boolean };
 
 type Context = {
-  /** From the current block's coordinates to millimetres in stock coordinates. */
+  /** From the current block's coordinates to millimetres, from the file's origin. */
   matrix: Matrix;
   /** Layer of the block reference being drawn, which entities on layer 0 take; `null` at the top level. */
   layer: string | null;
@@ -176,9 +176,9 @@ export function dxfNeedsUnits(dxf: DxfDocument): boolean {
 }
 
 /**
- * Imports a DXF drawing's model space as shapes in stock coordinates
- * (ADR-0014), keeping its coordinates: DXF `(0, 0)` is the stock's bottom-left
- * corner. Open entities on a layer whose ends meet are joined into one path
+ * Imports a DXF drawing's model space as shapes, keeping its coordinates
+ * (scaled to millimetres); the workspace then aligns the drawing to the stock
+ * (ADR-0022). Open entities on a layer whose ends meet are joined into one path
  * (`joinPaths`), one shape per path; closed entities and points are a shape
  * each. Arcs and circles stay arcs (unless a block reference stretches them),
  * ellipses and splines become cubics (ADR-0007). Z is ignored; entities on
@@ -605,7 +605,7 @@ function pointsOf(pairs: DxfPair[], xCode: number, yCode: number): Point[] {
 }
 
 /**
- * A path in stock coordinates, without the zero-length segments the document
+ * A path in millimetres, without the zero-length segments the document
  * rejects; `null` if nothing is left of it. Arcs become cubics when `matrix`
  * doesn't keep circles circular.
  */

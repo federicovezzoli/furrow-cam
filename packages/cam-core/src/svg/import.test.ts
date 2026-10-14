@@ -34,7 +34,7 @@ function importOne(body: string) {
 }
 
 describe("importSvg", () => {
-  it("flips y so the page's bottom-left corner is the stock's", () => {
+  it("flips y so the page's bottom-left corner is the origin", () => {
     const shape = importOne('<path d="M0 0 L10 0"/>');
     expect(shape.paths[0]).toEqual({
       start: [0, 50],
@@ -95,16 +95,16 @@ describe("importSvg", () => {
     expect(importSvg(svg('<path d="M0 50 H1"/>', left)).shapes[0]?.paths[0]?.start).toEqual([0, 0]);
   });
 
-  it("rests a drawing with no page size on the stock's bottom edge", () => {
+  it("flips y about the origin when there is no page size", () => {
     const { shapes, warnings } = importSvg(
       svg('<path d="M0 -30 H10"/><path d="M0 -10 H10"/>', 'viewBox="0 0 0 0"'),
       { dpi: 25.4 },
     );
     expect(shapes.map((shape) => shape.paths[0]?.start)).toEqual([
-      [0, 20],
-      [0, 0],
+      [0, 30],
+      [0, 10],
     ]);
-    expect(warnings).toEqual([expect.stringContaining("no page size")]);
+    expect(warnings).toEqual([]);
   });
 
   it("applies nested transforms", () => {

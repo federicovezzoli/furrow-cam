@@ -1,5 +1,12 @@
-import { xyOriginPosition } from "@furrow/cam-core";
-import type { Point, StockAnchor, Units, ZOrigin } from "@furrow/document";
+import {
+  anchorAlignment,
+  translatePoint,
+  translateShapes,
+  xyOriginPosition,
+  xyOriginShift,
+} from "@furrow/cam-core";
+import type { Point, ProjectDocument, StockAnchor, Units, ZOrigin } from "@furrow/document";
+import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
 
 /**
@@ -16,25 +23,62 @@ export function setUnits(store: DocumentStore, units: Units) {
   });
 }
 
-/** Resizes the stock along one dimension, in millimetres. */
+/**
+ * Moves the drawing on the stock by `offset`: its shapes and everything else
+ * stored in stock coordinates with them, the profiles' tab positions.
+ * `geometry` is the document's, read outside the draft: reading every point
+ * through it would be slow.
+ */
+function moveDrawing(
+  draft: Draft<ProjectDocument>,
+  geometry: ProjectDocument["geometry"],
+  offset: Point,
+) {
+  const moved = translateShapes(geometry, offset);
+  if (moved === geometry) return;
+  // One assignment, so the undo step is one patch rather than one per point.
+  draft.geometry = moved;
+  for (const operation of draft.operations) {
+    if (operation.type !== "profile" || !operation.params.tabs) continue;
+    const { tabs } = operation.params;
+    tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
+  }
+}
+
+/**
+ * Resizes the stock along one dimension, in millimetres. An anchored zero
+ * follows the stock and the drawing moves with it (ADR-0022), so a drawing
+ * aligned to the anchor stays aligned; a custom zero and the drawing stay
+ * where they are.
+ */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
+  const { stock, geometry } = store.getState().document;
+  const offset = xyOriginShift(stock, { ...stock, [dimension]: value });
   store.getState().change(`setStock.${dimension}`, (draft) => {
     draft.stock[dimension] = value;
+    moveDrawing(draft, geometry, offset);
   });
 }
 
-/** Puts the XY zero on a stock anchor (ADR-0016). */
+/**
+ * Puts the XY zero on a stock anchor (ADR-0016) and aligns the drawing to the
+ * stock at the same anchor (ADR-0022), so the zero is that point of the
+ * drawing too. Choosing the current anchor aligns a drawing that isn't.
+ */
 export function setXYAnchor(store: DocumentStore, anchor: StockAnchor) {
-  // Checked here: assigning a new object would be a change even for the same anchor.
-  if (store.getState().document.stock.xyOrigin.anchor === anchor) return;
+  const { stock, geometry } = store.getState().document;
+  const offset = anchorAlignment(stock, geometry, anchor);
   store.getState().change("setStock.xyOrigin", (draft) => {
-    draft.stock.xyOrigin = { anchor };
+    // Checked: assigning a new object would be a change even for the same anchor.
+    if (draft.stock.xyOrigin.anchor !== anchor) draft.stock.xyOrigin = { anchor };
+    moveDrawing(draft, geometry, offset);
   });
 }
 
 /**
  * Switches the XY zero to a custom point where the zero is now, so it doesn't
- * jump; the user then moves it with `setCustomOrigin`.
+ * jump; the user then moves it with `setCustomOrigin`. A custom zero moves on
+ * the stock and the drawing stays where it is (PRD-0002 Z4–Z6).
  */
 export function setCustomXYOrigin(store: DocumentStore) {
   const { stock } = store.getState().document;

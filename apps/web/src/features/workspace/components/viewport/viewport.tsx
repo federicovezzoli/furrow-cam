@@ -24,8 +24,9 @@ import { PALETTES } from "./scene-style";
 /**
  * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry
  * and toolpaths (or the stock as simulated after cutting, ADR-0019) in one scene, seen from an orthographic top view or a perspective
- * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014),
- * so changing the work origin moves only the origin marker and the grid.
+ * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014):
+ * the stock stays put, and changing the work origin moves the origin marker
+ * and the grid, and the drawing when an anchor is chosen (ADR-0022).
  * Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
 export function Viewport() {

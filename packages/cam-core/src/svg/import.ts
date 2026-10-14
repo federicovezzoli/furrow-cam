@@ -1,7 +1,7 @@
 import { type Path, type Point, pointsCoincide, type Segment, type Shape } from "@furrow/document";
 import { flattenPath } from "../flatten";
 import { union } from "../geometry";
-import { defaultCreateId, isFinitePath, roundCoordinate, toStock } from "../import-common";
+import { defaultCreateId, isFinitePath, toStock } from "../import-common";
 import { MM_PER_INCH } from "../units";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
 import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
@@ -76,7 +76,7 @@ const LENGTH = new RegExp(String.raw`^\s*(${NUMBER_PATTERN})\s*([a-zA-Z]*)\s*$`)
 const INVALID_POSITION = "elements with invalid or relative (%) positions";
 
 type Context = {
-  /** From this element's user units to millimetres in stock coordinates. */
+  /** From this element's user units to millimetres, from the file's origin. */
   matrix: Matrix;
   layer: string;
   /** Name of the closest named group, for shapes with no name of their own (Affinity names groups). */
@@ -121,10 +121,10 @@ export function svgNeedsDpi(svg: SvgDocument | string): boolean {
 }
 
 /**
- * Imports an SVG document as shapes in stock coordinates (ADR-0014): one
- * shape per drawn element, one path per subpath. The page is placed with its
- * bottom-left corner on the stock's, its size taken from `width`/`height`
- * and `viewBox`. Curves are kept: circles as arcs (unless a transform makes
+ * Imports an SVG document as shapes, one per drawn element, one path per
+ * subpath, in millimetres with Y up. Only their positions relative to each
+ * other matter: the workspace aligns the drawing to the stock by its bounding
+ * box (ADR-0022). Curves are kept: circles as arcs (unless a transform makes
  * them ellipses), elliptical arcs and quadratics as cubics (ADR-0007).
  * Fills, strokes and clipping are ignored, and so are hidden elements.
  */
@@ -286,27 +286,12 @@ export function importSvg(
     }
   }
 
-  drawChildren(root, { matrix: page.matrix, layer: "", name: "", topLevel: true });
+  drawChildren(root, { matrix: page, layer: "", name: "", topLevel: true });
 
   const warnings = Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`);
   if (drawn >= MAX_SVG_ELEMENTS) {
     warnings.push(
       `The drawing has more than ${MAX_SVG_ELEMENTS.toLocaleString("en")} elements, counting repeated copies, so the rest was skipped.`,
-    );
-  }
-  if (page.height === null && shapes.length > 0) {
-    // No page to place: rest the drawing on the stock's bottom edge.
-    let bottom = Number.POSITIVE_INFINITY;
-    for (const shape of shapes) {
-      for (const path of shape.paths) {
-        for (const point of flattenPath(path)) bottom = Math.min(bottom, point[1]);
-      }
-    }
-    for (const shape of shapes) {
-      shape.paths = shape.paths.map((path) => translatePath(path, -bottom));
-    }
-    warnings.push(
-      "The file has no page size, so the drawing was placed on the stock's bottom edge.",
     );
   }
   return { shapes, warnings };
@@ -380,11 +365,11 @@ function viewBoxTransform(
 }
 
 /**
- * The transform from the root's user units to millimetres in stock
- * coordinates, flipping SVG's downward y. `height` is the page height in
- * millimetres, or `null` when the file gives no page size.
+ * The transform from the root's user units to millimetres from the page's
+ * bottom-left corner, flipping SVG's downward y. Without a page size, y is
+ * flipped about the root's origin.
  */
-function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height: number | null } {
+function pageTransform(root: XmlElement, dpi: number): Matrix {
   const mmPerPx = MM_PER_INCH / dpi;
   let width = pageLength(root.attributes.width, mmPerPx);
   let height = pageLength(root.attributes.height, mmPerPx);
@@ -392,7 +377,7 @@ function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height:
 
   if (!viewBox) {
     // No viewBox: user units are pixels.
-    return { matrix: [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0], height };
+    return [mmPerPx, 0, 0, -mmPerPx, 0, height ?? 0];
   }
   if (width === null && height === null) {
     width = viewBox.width * mmPerPx;
@@ -404,13 +389,10 @@ function pageTransform(root: XmlElement, dpi: number): { matrix: Matrix; height:
   }
   const pageHeight = height as number;
   const flip: Matrix = [1, 0, 0, -1, 0, pageHeight];
-  return {
-    matrix: multiply(
-      flip,
-      viewBoxTransform(viewBox, width, pageHeight, root.attributes.preserveAspectRatio),
-    ),
-    height: pageHeight,
-  };
+  return multiply(
+    flip,
+    viewBoxTransform(viewBox, width, pageHeight, root.attributes.preserveAspectRatio),
+  );
 }
 
 type CircleSubpath = { arc: Path };
@@ -548,7 +530,7 @@ function ellipseSubpath(cx: number, cy: number, rx: number, ry: number): RawSubp
 }
 
 /**
- * A subpath in stock coordinates, without the zero-length segments the
+ * A subpath in millimetres, without the zero-length segments the
  * document rejects; `null` if nothing is left of it. It is closed if it ends
  * with `Z`, or where it started (see `pointsCoincide`) around an area:
  * editors often end a closed outline back on its start without a `Z`.
@@ -582,21 +564,6 @@ function toPath(subpath: RawSubpath, matrix: Matrix): Path | null {
   const encloses =
     pointsCoincide(current, start) && union([flattenPath({ ...path, closed: true })]).length > 0;
   return { ...path, closed: encloses };
-}
-
-function translatePath(path: Path, dy: number): Path {
-  const move = ([x, y]: Point): Point => [x, roundCoordinate(y + dy)];
-  return {
-    start: move(path.start),
-    segments: path.segments.map((segment): Segment => {
-      if (segment.kind === "line") return { kind: "line", to: move(segment.to) };
-      if (segment.kind === "arc") {
-        return { ...segment, to: move(segment.to), center: move(segment.center) };
-      }
-      return { kind: "cubic", c1: move(segment.c1), c2: move(segment.c2), to: move(segment.to) };
-    }),
-    closed: path.closed,
-  };
 }
 
 type ParsedLength = { value: number; unit: string };

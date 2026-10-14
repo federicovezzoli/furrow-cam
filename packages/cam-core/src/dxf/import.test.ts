@@ -211,7 +211,7 @@ describe("units", () => {
 });
 
 describe("importDxf", () => {
-  it("keeps the drawing's coordinates, so its origin is the stock's corner", () => {
+  it("keeps the drawing's coordinates", () => {
     expect(importOne(line(-5, 3, 10, 3)).paths[0]).toEqual({
       start: [-5, 3],
       segments: [{ kind: "line", to: [10, 3] }],

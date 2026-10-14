@@ -1,6 +1,6 @@
 # ADR-0016: XY zero on any stock anchor or a custom point
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0022](0022-drawing-aligned-to-anchor.md) (the drawing is aligned to the stock at the zero's anchor)
 - **Date:** 2026-10-11
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0002 (Z1, Z3, Z4, Z6, Z8), ADR-0014, ADR-0003

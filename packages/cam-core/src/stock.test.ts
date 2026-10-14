@@ -1,6 +1,15 @@
-import type { Stock, StockAnchor } from "@furrow/document";
+import type { Shape, Stock, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { stockBounds, stockBox, stockOffset, xyOriginPosition } from "./stock";
+import {
+  alignShapes,
+  anchorAlignment,
+  anchorPoint,
+  stockBounds,
+  stockBox,
+  stockOffset,
+  xyOriginPosition,
+  xyOriginShift,
+} from "./stock";
 
 const stock: Stock = {
   width: 600,
@@ -64,5 +73,81 @@ describe("stock placement", () => {
     const fence: Stock = { ...stock, xyOrigin: { anchor: "custom", x: -20, y: 450 } };
     expect(stockOffset(fence)).toEqual([20, -450, 0]);
     expect(stockBounds(fence)).toEqual({ min: [20, -450, -18], max: [620, -50, 0] });
+  });
+});
+
+describe("anchorPoint", () => {
+  it("measures from the rectangle's corner", () => {
+    const rect = { min: [-10, 20] as [number, number], max: [30, 60] as [number, number] };
+    expect(anchorPoint(rect, "bottom_left")).toEqual([-10, 20]);
+    expect(anchorPoint(rect, "center")).toEqual([10, 40]);
+    expect(anchorPoint(rect, "top_right")).toEqual([30, 60]);
+  });
+});
+
+describe("anchorAlignment", () => {
+  /** A 20 × 10 rectangle centred on (0, 0). */
+  const part: Shape = {
+    id: "00000000-0000-4000-8000-000000000000",
+    name: "",
+    layer: "0",
+    paths: [
+      {
+        start: [-10, -5],
+        segments: [
+          { kind: "line", to: [10, -5] },
+          { kind: "line", to: [10, 5] },
+          { kind: "line", to: [-10, 5] },
+        ],
+        closed: true,
+      },
+    ],
+  };
+
+  it.each<[StockAnchor, [number, number]]>([
+    ["bottom_left", [10, 5]],
+    ["center", [300, 200]],
+    ["top_right", [590, 395]],
+    ["middle_left", [10, 200]],
+  ])("puts the drawing's %s on the stock's", (anchor, offset) => {
+    expect(anchorAlignment(stock, [part], anchor)).toEqual(offset);
+  });
+
+  it("doesn't move an aligned drawing, or no drawing", () => {
+    expect(anchorAlignment({ width: 20, height: 10 }, [part], "top_right")).toEqual([10, 5]);
+    expect(anchorAlignment(stock, [], "center")).toEqual([0, 0]);
+  });
+
+  it("aligns shapes, keeping the array when they already are", () => {
+    const [aligned] = alignShapes(stock, [part], "center");
+    expect(aligned?.paths[0]?.start).toEqual([290, 195]);
+    const shapes = [part];
+    expect(alignShapes({ width: 20, height: 10 }, shapes, "center")).not.toBe(shapes);
+    const centred = alignShapes({ width: 0, height: 0 }, shapes, "center");
+    expect(centred).toBe(shapes);
+  });
+});
+
+describe("anchorAlignment rounding", () => {
+  it("is exactly zero for a drawing aligned up to float noise", () => {
+    const shape: Shape = {
+      id: "00000000-0000-4000-8000-000000000000",
+      name: "",
+      layer: "0",
+      paths: [
+        { start: [0.1 + 0.2, 0], segments: [{ kind: "line", to: [0.7, 0.4] }], closed: false },
+      ],
+    };
+    expect(anchorAlignment({ width: 1, height: 0.4 }, [shape], "center")).toEqual([0, 0]);
+  });
+});
+
+describe("xyOriginShift", () => {
+  it("is how far an anchored zero moves with the stock, and nothing for a custom zero", () => {
+    const centred: Stock = { ...stock, xyOrigin: { anchor: "center" } };
+    expect(xyOriginShift(centred, { ...centred, width: 400 })).toEqual([-100, 0]);
+    expect(xyOriginShift(stock, { ...stock, height: 100 })).toEqual([0, 0]);
+    const custom: Stock = { ...stock, xyOrigin: { anchor: "custom", x: 5, y: 5 } };
+    expect(xyOriginShift(custom, { ...custom, width: 100 })).toEqual([0, 0]);
   });
 });
