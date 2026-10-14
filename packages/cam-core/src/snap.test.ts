@@ -82,7 +82,8 @@ describe("snapTargets", () => {
     expect(corner?.[1]).toBeCloseTo(-5);
     const [, , opposite] = kinds(targets, "bounds_corner");
     expect(opposite?.[0]).toBeCloseTo(100);
-    expect(opposite?.[1]).toBeCloseTo(10, 2);
+    // Exact, like the box drawings are aligned by: the arc's top, not a flattened vertex.
+    expect(opposite?.[1]).toBe(10);
     expect(kinds(targets, "arc_center")).toEqual([[10, 0]]);
     // A single-point path (a drill location) is a vertex.
     expect(kinds(targets, "vertex")).toContainEqual([100, -5]);

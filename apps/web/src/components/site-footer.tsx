@@ -1,3 +1,4 @@
+import Link from "next/link";
 import packageJson from "../../package.json";
 
 const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
@@ -38,6 +39,9 @@ export function SiteFooter() {
           <GitHubIcon />
           GitHub
         </ExternalLink>
+        <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
+          Privacy
+        </Link>
         {/* The project's start year, deliberately not computed at runtime. */}
         <span>
           © 2026 <ExternalLink href={AUTHOR_URL}>Federico Vezzoli</ExternalLink> ·{" "}

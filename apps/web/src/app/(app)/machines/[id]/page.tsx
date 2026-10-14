@@ -2,9 +2,9 @@ import { machineFields } from "@furrow/document";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
-import { getMachine } from "@/lib/machines";
-import { requireUserId } from "@/lib/session";
-import { MachineForm } from "../machine-form";
+import { requireUserId } from "@/features/auth/server";
+import { MachineForm } from "@/features/machines/components/machine-form";
+import { getMachine } from "@/features/machines/server";
 
 export default function EditMachinePage({ params }: PageProps<"/machines/[id]">) {
   return (

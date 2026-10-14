@@ -3,7 +3,8 @@ import type { Vec3 } from "./stock";
 /**
  * One straight move of the tool, in stock coordinates (ADR-0014). Feed rates
  * are in mm/min: the tool's plunge rate for moves that go down, its feed rate
- * otherwise.
+ * otherwise. V-carving follows slopes no steeper than the tool's plunge angle
+ * at its feed rate.
  */
 export type ToolpathMove =
   | { kind: "rapid"; to: Vec3 }
@@ -17,6 +18,12 @@ export type ToolpathMove =
  */
 export type Toolpath = {
   moves: ToolpathMove[];
+  /**
+   * Moves cut before `moves` with the operation's clearing tool (ADR-0026),
+   * such as a V-carve's flat bottom, under the same contract. Absent when
+   * the operation has no clearing tool.
+   */
+  clearing?: ToolpathMove[];
   /** Problems that didn't stop the toolpath, e.g. paths it had to skip. */
   warnings: string[];
 };

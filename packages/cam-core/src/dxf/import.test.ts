@@ -15,6 +15,9 @@ import {
 type Pair = [number, string | number];
 
 /** Node and browsers have `TextEncoder`; the package's lib types don't include it. */
+/** Tests importing a million entities, up to the cap: slow on a busy CI runner, so they get longer than the 5 s default. */
+const CAP_TEST_TIMEOUT = 30_000;
+
 const encoder = new (
   globalThis as unknown as { TextEncoder: new () => { encode(text: string): Uint8Array } }
 ).TextEncoder();
@@ -211,7 +214,7 @@ describe("units", () => {
 });
 
 describe("importDxf", () => {
-  it("keeps the drawing's coordinates, so its origin is the stock's corner", () => {
+  it("keeps the drawing's coordinates", () => {
     expect(importOne(line(-5, 3, 10, 3)).paths[0]).toEqual({
       start: [-5, 3],
       segments: [{ kind: "line", to: [10, 3] }],
@@ -702,7 +705,7 @@ describe("block references", () => {
     ]);
   });
 
-  it("stops after too many entities", () => {
+  it("stops after too many entities", { timeout: CAP_TEST_TIMEOUT }, () => {
     // Ten references to ten references to … a line: 10^6 lines.
     const blocks = [block("L0", [0, 0], line(0, 0, 1, 0))];
     for (let level = 1; level <= 6; level++) {
@@ -717,7 +720,7 @@ describe("block references", () => {
     );
   });
 
-  it("stops a huge array at the cap", () => {
+  it("stops a huge array at the cap", { timeout: CAP_TEST_TIMEOUT }, () => {
     const { warnings } = importDxf(
       dxf([entity("INSERT", [8, "0"], [2, "Dot"], [70, 32767], [71, 32767], [44, 1], [45, 1])], {
         blocks: [block("Dot", [0, 0], entity("POINT", [8, "0"], [10, 0], [20, 0]))],
@@ -726,7 +729,7 @@ describe("block references", () => {
     expect(warnings).toHaveLength(1);
   });
 
-  it("doesn't warn about a drawing of exactly the cap", () => {
+  it("doesn't warn about a drawing of exactly the cap", { timeout: CAP_TEST_TIMEOUT }, () => {
     // The reference and its MAX_DXF_ENTITIES - 1 copies of a point.
     const { shapes, warnings } = importDxf(
       dxf([entity("INSERT", [8, "0"], [2, "Dot"], [70, MAX_DXF_ENTITIES - 1], [44, 1])], {

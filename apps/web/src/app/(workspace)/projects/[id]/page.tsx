@@ -1,12 +1,15 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { listMachineChoices } from "@/lib/machines";
-import { getProject } from "@/lib/projects";
-import { requireUserId } from "@/lib/session";
-import { listToolChoices } from "@/lib/tools";
-import { parseWorkspaceLayout, WORKSPACE_LAYOUT_COOKIE } from "@/lib/workspace-layout";
-import { WorkspaceShell } from "./workspace-shell";
+import { requireUserId } from "@/features/auth/server";
+import { listMachineChoices } from "@/features/machines/server";
+import { getProject } from "@/features/projects/server";
+import { listToolChoices } from "@/features/tools/server";
+import { WorkspaceShell } from "@/features/workspace/components/workspace-shell";
+import {
+  parseWorkspaceLayout,
+  WORKSPACE_LAYOUT_COOKIE,
+} from "@/features/workspace/lib/workspace-layout";
 
 export default function WorkspacePage({ params }: PageProps<"/projects/[id]">) {
   return (

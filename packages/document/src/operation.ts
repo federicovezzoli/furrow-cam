@@ -3,7 +3,7 @@ import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
-export const OperationType = z.enum(["profile", "pocket", "drill"]);
+export const OperationType = z.enum(["profile", "pocket", "drill", "engrave", "vcarve"]);
 export type OperationType = z.infer<typeof OperationType>;
 
 /**
@@ -122,13 +122,42 @@ export const ProfileOperation = z.strictObject({
 });
 export type ProfileOperation = z.infer<typeof ProfileOperation>;
 
+/** Linear clearing angles: degrees counter-clockwise from the stock's X axis, presets only. */
+export const LinearAngle = z.union([z.literal(0), z.literal(90), z.literal(45), z.literal(-45)]);
+export type LinearAngle = z.infer<typeof LinearAngle>;
+
+/** Where a peel starts: the point furthest from the walls, the single island or the outer wall. */
+export const PeelStart = z.enum(["centre", "inside", "outside"]);
+export type PeelStart = z.infer<typeof PeelStart>;
+
 /**
- * Pocket parameters (#23): offset clearing of the area inside the closed
- * paths, islands left standing. The step-over, step-down and ramp angle come
- * from the tool.
+ * How a pocket's area is cleared (#57, PRD-0001 R20): concentric offset rings
+ * from the centre out, zig-zag passes at a preset angle, or engagement-limited
+ * peeling grown from a starting cut.
+ */
+export const PocketStrategy = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("offset") }),
+  z.strictObject({
+    type: z.literal("linear"),
+    /** Degrees counter-clockwise from the stock's X axis. */
+    angle: LinearAngle,
+  }),
+  z.strictObject({
+    type: z.literal("peel"),
+    /** Where the cleared area starts growing from. */
+    start: PeelStart,
+  }),
+]);
+export type PocketStrategy = z.infer<typeof PocketStrategy>;
+
+/**
+ * Pocket parameters (#23): clearing of the area inside the closed paths,
+ * islands left standing. The step-over, step-down and ramp angle come from
+ * the tool.
  */
 export const PocketParams = z
   .strictObject({
+    strategy: PocketStrategy,
     direction: MillingDirection,
     /** Final depth below the stock top. */
     depth: PositiveLength,
@@ -187,9 +216,107 @@ export const DrillOperation = z
   });
 export type DrillOperation = z.infer<typeof DrillOperation>;
 
+/**
+ * Engrave parameters (#95): the paths followed on the line, or inside or
+ * outside the closed ones with an edge of the groove on the line, cut to
+ * `depth` in passes no deeper than the tool's step-down. With a V-bit the
+ * depth sets the line width; the width isn't stored, so it follows the bit
+ * the operation uses.
+ */
+export const EngraveParams = z.strictObject({
+  /** Where the groove is: centred on the line, or inside or outside it. */
+  side: ProfileSide,
+  /** Depth of the tool tip below the stock top. */
+  depth: PositiveLength,
+  /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+  ramp: z.boolean(),
+});
+export type EngraveParams = z.infer<typeof EngraveParams>;
+
+/** V-bits, ball and flat end mills engrave: a drill bit can't cut sideways. */
+export function canEngrave(tool: Tool): boolean {
+  return tool.type !== "drill";
+}
+
+export const EngraveOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("engrave"),
+    params: EngraveParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (!canEngrave(operation.tool)) {
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Drill bits can't engrave" });
+    }
+  });
+export type EngraveOperation = z.infer<typeof EngraveOperation>;
+
+/**
+ * V-carve parameters (#97, PRD-0001 R16): the V-bit follows the medial axis
+ * of the area inside the closed paths, as deep as the bit's angle and tip
+ * need to reach the edges there, down to `maxDepth`. The step-down comes from
+ * the tool.
+ */
+export const VCarveParams = z
+  .strictObject({
+    /** Deepest the V-bit goes below the stock top; wider parts are carved no deeper. */
+    maxDepth: PositiveLength,
+    /**
+     * Where the shape is wider than the V-bit reaches at `maxDepth`, the bit
+     * carves the walls down to it and `tool`, a flat end mill, clears the
+     * floor between them flat, before the V-bit. `null` leaves those parts
+     * carved to `maxDepth` along the axis only.
+     */
+    flatBottom: z.strictObject({ tool: Tool }).nullable(),
+  })
+  .superRefine((params, ctx) => {
+    const tool = params.flatBottom?.tool;
+    if (tool && !canClearFlatBottom(tool)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["flatBottom", "tool", "type"],
+        message: "Only flat end mills clear a flat bottom",
+      });
+    }
+  });
+export type VCarveParams = z.infer<typeof VCarveParams>;
+
+/** Only V-bits V-carve: the depth comes from the bit's angle. */
+export function canVCarve(tool: Tool): boolean {
+  return tool.type === "v_bit";
+}
+
+/** Only flat end mills clear a V-carve's flat bottom. */
+export function canClearFlatBottom(tool: Tool): boolean {
+  return tool.type === "flat_end_mill";
+}
+
+export const VCarveOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("vcarve"),
+    params: VCarveParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (!canVCarve(operation.tool)) {
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Only V-bits V-carve" });
+    }
+  });
+export type VCarveOperation = z.infer<typeof VCarveOperation>;
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,
   DrillOperation,
+  EngraveOperation,
+  VCarveOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
+
+/**
+ * The second tool an operation cuts with, before its own (ADR-0026): a
+ * V-carve's flat-bottom end mill. `null` for every other operation.
+ */
+export function clearingTool(operation: Operation): Tool | null {
+  return operation.type === "vcarve" ? (operation.params.flatBottom?.tool ?? null) : null;
+}

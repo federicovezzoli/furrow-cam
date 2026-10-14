@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { SignOutButton } from "@/components/sign-out-button";
+import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AccountMenu } from "@/features/auth/components/account-menu";
+import { requireSession } from "@/features/auth/server";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -22,7 +24,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <SignOutButton />
+            <Suspense>
+              <SignedInAccountMenu />
+            </Suspense>
           </div>
         </nav>
       </header>
@@ -30,4 +34,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <SiteFooter />
     </>
   );
+}
+
+async function SignedInAccountMenu() {
+  const { user } = await requireSession();
+  return <AccountMenu email={user.email} />;
 }

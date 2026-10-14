@@ -33,6 +33,22 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #85: pockets choose a clearing strategy. Existing ones keep offset clearing.
+  3: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "pocket" && isObject(operation.params)) {
+          operation.params.strategy = { type: "offset" };
+        }
+      }
+    }
+    return doc;
+  },
+  // #95: engrave operations. Nothing to change; the bump keeps releases
+  // without them from opening documents that have them.
+  4: (doc) => doc,
+  // #97: V-carve operations. Nothing to change, as for #95.
+  5: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

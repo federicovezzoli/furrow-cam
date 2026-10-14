@@ -6,7 +6,7 @@ import {
   type ProjectDocument,
   type Shape,
 } from "@furrow/document";
-import { drill, endMill, lowRider, machine as shapeoko } from "@furrow/document/fixtures";
+import { drill, endMill, lowRider, machine as shapeoko, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
 
@@ -87,7 +87,14 @@ function referenceProject(): ProjectDocument {
         enabled: true,
         targets: [{ shapeId: recess.id, paths: null }],
         tool: endMill,
-        params: { direction: "climb", depth: 3, allowance: 0, finishPass: false, ramp: true },
+        params: {
+          strategy: { type: "offset" },
+          direction: "climb",
+          depth: 3,
+          allowance: 0,
+          finishPass: false,
+          ramp: true,
+        },
       },
       profile,
       { ...profile, id: id(4), name: "Disabled", enabled: false },
@@ -112,6 +119,28 @@ describe("exportGcode", () => {
     const { gcode } = exportGcode(doc, "Plate");
     expect(gcode).not.toMatch(/ S\d/);
     await expect(gcode).toMatchFileSnapshot("__snapshots__/plate-lowrider.gcode");
+  });
+
+  it("cuts a V-carve's flat bottom with its end mill first", () => {
+    const doc = referenceProject();
+    doc.operations = [
+      {
+        id: id(5),
+        type: "vcarve",
+        name: "Carve",
+        enabled: true,
+        targets: [{ shapeId: recess.id, paths: null }],
+        tool: vBit,
+        params: { maxDepth: 2, flatBottom: { tool: endMill } },
+      },
+    ];
+    const { gcode, warnings } = exportGcode(doc, "Plate");
+    expect(warnings).toEqual([]);
+    const clearing = gcode.indexOf("(Operation: Carve, clearing)");
+    const carving = gcode.indexOf("(Operation: Carve)");
+    expect(clearing).toBeGreaterThan(-1);
+    expect(carving).toBeGreaterThan(clearing);
+    expect(gcode.slice(clearing, carving)).toContain("M0 (Change the bit to 60° V-bit");
   });
 
   it("includes the toolpath warnings, named by operation", () => {

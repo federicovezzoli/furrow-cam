@@ -15,6 +15,7 @@ import {
   PointInPolygonResult,
   type PolyPath64,
   PolyTree64,
+  simplifyPaths,
 } from "clipper2-ts";
 import { DEFAULT_CHORD_TOLERANCE } from "./flatten";
 
@@ -100,6 +101,15 @@ export function offset(polygons: Polygon[], delta: number, options: OffsetOption
     arcTolerance * CLIPPER_SCALE,
   );
   return fromPaths(result);
+}
+
+/**
+ * `polygons` with the vertices dropped that lie within `epsilon` millimetres
+ * of the line through their neighbours. Chained offsets add join vertices on
+ * every pass; this keeps their count in check.
+ */
+export function simplify(polygons: Polygon[], epsilon: number): Polygon[] {
+  return fromPaths(simplifyPaths(toPaths(polygons), epsilon * CLIPPER_SCALE, true));
 }
 
 /** The area covered by any of `polygons`. */

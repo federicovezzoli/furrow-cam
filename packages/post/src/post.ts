@@ -1,5 +1,12 @@
-import type { Toolpath } from "@furrow/cam-core";
-import type { Machine, Operation, PostProcessorId, Stock } from "@furrow/document";
+import type { Toolpath, ToolpathMove } from "@furrow/cam-core";
+import {
+  clearingTool,
+  type Machine,
+  type Operation,
+  type PostProcessorId,
+  type Stock,
+  type Tool,
+} from "@furrow/document";
 
 /** Everything a post-processor needs to write one program. */
 export type PostInput = {
@@ -33,3 +40,29 @@ export type PostProcessor = {
   extension: string;
   post(input: PostInput): PostOutput;
 };
+
+/** The moves of one operation cut with one tool: a block of the program. */
+export type PostStep = { name: string; tool: Tool; moves: ToolpathMove[] };
+
+/**
+ * The steps of `operations`, in cutting order: each operation's own moves,
+ * after its clearing moves with its clearing tool when it has them (ADR-0026),
+ * named "<operation>, clearing". Steps with no moves are left out.
+ */
+export function postSteps(operations: PostInput["operations"]): PostStep[] {
+  return operations.flatMap(({ operation, toolpath }) => {
+    const steps: PostStep[] = [];
+    const clearing = clearingTool(operation);
+    if (clearing && toolpath.clearing && toolpath.clearing.length > 0) {
+      steps.push({
+        name: `${operation.name}, clearing`,
+        tool: clearing,
+        moves: toolpath.clearing,
+      });
+    }
+    if (toolpath.moves.length > 0) {
+      steps.push({ name: operation.name, tool: operation.tool, moves: toolpath.moves });
+    }
+    return steps;
+  });
+}

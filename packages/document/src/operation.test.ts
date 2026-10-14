@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
 import {
+  clearingTool,
   DrillOperation,
   DrillParams,
+  EngraveOperation,
+  EngraveParams,
   normalizeTargets,
+  Operation,
   OperationTarget,
   PocketParams,
   ProfileParams,
+  VCarveOperation,
+  VCarveParams,
 } from "./operation";
 
 const params = fullDocument().operations[0]?.params as ProfileParams;
@@ -57,6 +63,7 @@ describe("ProfileParams", () => {
 
 describe("PocketParams", () => {
   const pocket: PocketParams = {
+    strategy: { type: "offset" },
     direction: "climb",
     depth: 6,
     allowance: 0.3,
@@ -81,6 +88,32 @@ describe("PocketParams", () => {
   it("needs an allowance for a finish pass", () => {
     expect(PocketParams.safeParse({ ...pocket, allowance: 0 }).success).toBe(false);
   });
+
+  it("accepts the clearing strategies and their presets", () => {
+    for (const angle of [0, 90, 45, -45]) {
+      const strategy = { type: "linear", angle };
+      expect(PocketParams.parse({ ...pocket, strategy }).strategy).toEqual(strategy);
+    }
+    for (const start of ["centre", "inside", "outside"]) {
+      const strategy = { type: "peel", start };
+      expect(PocketParams.parse({ ...pocket, strategy }).strategy).toEqual(strategy);
+    }
+  });
+
+  it("rejects free angles, unknown strategies and missing parameters", () => {
+    for (const strategy of [
+      { type: "linear", angle: 30 },
+      { type: "linear" },
+      { type: "peel", start: "middle" },
+      { type: "peel" },
+      { type: "offset", angle: 0 },
+      { type: "spiral" },
+    ]) {
+      expect(PocketParams.safeParse({ ...pocket, strategy }).success).toBe(false);
+    }
+    const { strategy: _, ...withoutStrategy } = pocket;
+    expect(PocketParams.safeParse(withoutStrategy).success).toBe(false);
+  });
 });
 
 describe("DrillOperation", () => {
@@ -103,6 +136,85 @@ describe("DrillOperation", () => {
     expect(DrillParams.safeParse({ depth: 0, peck: false }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: "yes" }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: true, peckDepth: 2 }).success).toBe(false);
+  });
+});
+
+describe("EngraveOperation", () => {
+  const profile = fullDocument().operations[0];
+  if (!profile) throw new Error("The fixture has an operation");
+  const engrave = { ...profile, type: "engrave", params: { side: "on", depth: 0.5, ramp: false } };
+  const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+
+  it("accepts V-bits, ball and flat end mills, as an operation too", () => {
+    expect(EngraveOperation.safeParse(engrave).success).toBe(true);
+    expect(EngraveOperation.safeParse({ ...engrave, tool: vBit }).success).toBe(true);
+    const ball = { ...profile.tool, type: "ball_end_mill" };
+    expect(EngraveOperation.safeParse({ ...engrave, tool: ball }).success).toBe(true);
+    expect(Operation.parse(engrave)).toEqual(engrave);
+  });
+
+  it("rejects drill bits", () => {
+    const drillBit = { ...profile.tool, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(EngraveOperation.safeParse({ ...engrave, tool: drillBit }).success).toBe(false);
+  });
+
+  it("rejects invalid params and the profile's options", () => {
+    const valid = { side: "outside", depth: 1, ramp: false };
+    expect(EngraveParams.safeParse(valid).success).toBe(true);
+    expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
+    expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);
+    expect(EngraveParams.safeParse({ depth: 1, ramp: false }).success).toBe(false);
+    for (const extra of [{ allowance: 0 }, { tabs: null }, { leadIn: null }]) {
+      expect(EngraveParams.safeParse({ ...valid, ...extra }).success).toBe(false);
+    }
+  });
+});
+
+describe("VCarveOperation", () => {
+  const profile = fullDocument().operations[0];
+  if (!profile) throw new Error("The fixture has an operation");
+  const endMill = profile.tool;
+  const vBit = { ...endMill, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+  const vcarve = {
+    ...profile,
+    type: "vcarve",
+    tool: vBit,
+    params: { maxDepth: 5, flatBottom: null },
+  };
+
+  it("accepts V-bits, with or without a flat bottom, as an operation too", () => {
+    expect(VCarveOperation.safeParse(vcarve).success).toBe(true);
+    const flat = { ...vcarve, params: { maxDepth: 3, flatBottom: { tool: endMill } } };
+    expect(Operation.parse(flat)).toEqual(flat);
+    expect(Operation.parse(vcarve)).toEqual(vcarve);
+  });
+
+  it("rejects other tools", () => {
+    expect(VCarveOperation.safeParse({ ...vcarve, tool: endMill }).success).toBe(false);
+    const ball = { ...endMill, type: "ball_end_mill" };
+    expect(VCarveOperation.safeParse({ ...vcarve, tool: ball }).success).toBe(false);
+  });
+
+  it("clears a flat bottom with flat end mills only", () => {
+    for (const tool of [vBit, { ...endMill, type: "ball_end_mill" }]) {
+      const params = { maxDepth: 3, flatBottom: { tool } };
+      expect(VCarveOperation.safeParse({ ...vcarve, params }).success).toBe(false);
+    }
+  });
+
+  it("rejects invalid params and unknown keys", () => {
+    expect(VCarveParams.safeParse({ maxDepth: 0, flatBottom: null }).success).toBe(false);
+    expect(VCarveParams.safeParse({ flatBottom: null }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2 }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2, flatBottom: {} }).success).toBe(false);
+    expect(VCarveParams.safeParse({ maxDepth: 2, flatBottom: null, depth: 1 }).success).toBe(false);
+  });
+
+  it("names the flat-bottom tool as the clearing tool", () => {
+    expect(clearingTool(VCarveOperation.parse(vcarve))).toBeNull();
+    const params = { maxDepth: 3, flatBottom: { tool: endMill } };
+    expect(clearingTool(VCarveOperation.parse({ ...vcarve, params }))).toEqual(endMill);
+    expect(clearingTool(profile)).toBeNull();
   });
 });
 

@@ -127,6 +127,30 @@ describe("migrations", () => {
     expect(parseProjectDocument(v2).machine).toMatchObject({ safeZ: 0.5, entryClearance: 0.5 });
   });
 
+  it("gives v3 pockets offset clearing and leaves other operations alone", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (profile?.type !== "profile") throw new Error("fixture");
+    const pocket = {
+      ...profile,
+      id: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+      type: "pocket",
+      name: "Pocket",
+      params: { direction: "climb", depth: 6, allowance: 0, finishPass: false, ramp: true },
+    };
+    const v3 = { ...doc, schemaVersion: 3, operations: [profile, pocket] };
+    expect(parseProjectDocument(v3).operations).toEqual([
+      profile,
+      { ...pocket, params: { ...pocket.params, strategy: { type: "offset" } } },
+    ]);
+  });
+
+  it("leaves v4 and v5 documents as they are", () => {
+    const doc = fullDocument();
+    expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
+    expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());
