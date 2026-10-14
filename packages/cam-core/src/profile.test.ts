@@ -321,7 +321,7 @@ describe("profileToolpath", () => {
     const point: Shape = { ...line, paths: [{ start: [5, 5], segments: [], closed: false }] };
     expect(profile({}, [line, point]).warnings).toEqual([
       "Skipped 1 point: drill them instead.",
-      "Skipped 1 open path: inside and outside profiles need closed paths.",
+      "Skipped 1 open path: inside and outside cuts need closed paths.",
     ]);
     expect(profile({ side: "inside" }, [square], { diameter: 120 }).warnings).toEqual([
       "The closed paths are too small for the tool.",
@@ -474,7 +474,7 @@ describe("profileToolpath with tabs", () => {
 
 describe("generateToolpath", () => {
   const doc = (machineSafeZ: number | null, entryClearance = 1): ProjectDocument => ({
-    schemaVersion: 4,
+    schemaVersion: 5,
     units: "mm",
     stock: {
       width: 200,

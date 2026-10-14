@@ -1,4 +1,13 @@
-import { distance, type Point, type ProfileOperation, type Shape } from "@furrow/document";
+import {
+  distance,
+  type MillingDirection,
+  type Point,
+  type ProfileOperation,
+  type ProfileSide,
+  type ProfileTabs,
+  type Shape,
+  type Tool,
+} from "@furrow/document";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "./flatten";
 import { containment, offset, type Polygon, signedArea } from "./geometry";
 import {
@@ -87,6 +96,42 @@ export function profileToolpath(
   options: ProfileOptions,
 ): Toolpath {
   const { tool, params } = operation;
+  return contourToolpath(tool, shapes, { ...params, offset: tool.diameter / 2 }, options);
+}
+
+/**
+ * A cut along the paths, as profiles (R5) and engravings (R21) make it. The
+ * allowance, finish pass, lead-in and tabs are off when left out.
+ */
+export type ContourCut = {
+  side: ProfileSide;
+  direction: MillingDirection;
+  /** Final depth below the stock top. */
+  depth: number;
+  /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+  ramp: boolean;
+  /**
+   * How far the tool centre stays from the closed paths `inside` or
+   * `outside`, before the allowance: the tool radius for a profile. Only the
+   * contours move with it; how short a path may be ramped along and how far
+   * the tool stays up over a tab go by the tool's own size.
+   */
+  offset: number;
+  allowance?: number;
+  finishPass?: boolean;
+  leadIn?: { radius: number } | null;
+  tabs?: ProfileTabs | null;
+};
+
+/** The toolpath of `settings` along `shapes` with `tool`, as `profileToolpath` describes. */
+export function contourToolpath(
+  tool: Tool,
+  shapes: Shape[],
+  settings: ContourCut,
+  options: ProfileOptions,
+): Toolpath {
+  const params = { allowance: 0, finishPass: false, leadIn: null, tabs: null, ...settings };
+  const { offset } = params;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const radius = tool.diameter / 2;
   const warnings: string[] = [];
@@ -104,7 +149,7 @@ export function profileToolpath(
   if (points > 0) warnings.push(`Skipped ${plural(points, "point")}: drill them instead.`);
   if (open.length > 0 && params.side !== "on") {
     warnings.push(
-      `Skipped ${plural(open.length, "open path")}: inside and outside profiles need closed paths.`,
+      `Skipped ${plural(open.length, "open path")}: inside and outside cuts need closed paths.`,
     );
   }
   if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
@@ -125,8 +170,8 @@ export function profileToolpath(
   };
   const levels = depthLevels(params.depth, tool.stepDown);
 
-  const roughing = contours(closed, operation, radius + params.allowance);
-  const finishing = params.finishPass ? contours(closed, operation, radius) : null;
+  const roughing = contours(closed, params, offset + params.allowance);
+  const finishing = params.finishPass ? contours(closed, params, offset) : null;
   if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
     warnings.push("The closed paths are too small for the tool.");
   }
@@ -138,10 +183,10 @@ export function profileToolpath(
     }
     cut.tabTop = Math.min(0, tabs.height - params.depth);
     const span = tabs.width + tool.diameter;
-    const reach = radius + params.allowance + tabs.width;
+    const reach = offset + params.allowance + tabs.width;
     const missed = placeTabs(roughing.contours, tabs.positions, reach, span);
     const missedFinishing = finishing
-      ? placeTabs(finishing.contours, tabs.positions, radius + tabs.width, span)
+      ? placeTabs(finishing.contours, tabs.positions, offset + tabs.width, span)
       : missed;
     // A tab the finish lap leaves out is cut away at full depth, so it counts as missed too.
     const left =
@@ -194,10 +239,13 @@ export function profileToolpath(
 
 /**
  * The rings the tool centre follows, `distance` away from the closed paths on
- * the operation's side, in cutting direction and cutting order.
+ * `side`, in cutting direction and cutting order.
  */
-function contours(closed: Polygon[], operation: ProfileOperation, distance: number): Contours {
-  const { side, direction } = operation.params;
+function contours(
+  closed: Polygon[],
+  { side, direction }: Pick<ContourCut, "side" | "direction">,
+  distance: number,
+): Contours {
   // Every ring here has the area it bounds on its left: the kept material for
   // `outside` and `on`, the waste for `inside`.
   const rings = (

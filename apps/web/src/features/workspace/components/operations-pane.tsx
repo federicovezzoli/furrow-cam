@@ -26,6 +26,7 @@ import {
 } from "@/features/workspace/providers/workspace-stores";
 import {
   addDrillOperation,
+  addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
   deleteOperation,
@@ -34,9 +35,14 @@ import {
   setOperationEnabled,
 } from "@/features/workspace/stores/operation-actions";
 import { OperationNameInput } from "./operation-name-input";
-import { defaultToolChoice, drillToolChoice, useToolLibrary } from "./tool-library";
+import {
+  defaultToolChoice,
+  drillToolChoice,
+  engraveToolChoice,
+  useToolLibrary,
+} from "./tool-library";
 
-/** The Operations pane: adds profiles, pockets and drill operations from the selected paths and lists operations in cutting order. */
+/** The Operations pane: adds profiles, pockets, drill and engrave operations from the selected paths and lists operations in cutting order. */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -50,6 +56,7 @@ export function OperationsPane() {
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
   const drillTool = drillToolChoice(tools);
+  const engraveTool = engraveToolChoice(tools);
 
   function add(addOperation: typeof addProfileOperation, choice = tool) {
     if (!choice) return;
@@ -95,6 +102,20 @@ export function OperationsPane() {
         >
           <PlusIcon />
           Add drill
+        </Button>
+        <Button
+          variant="outline"
+          size="compact"
+          disabled={!target || !engraveTool}
+          onClick={() => add(addEngraveOperation, engraveTool)}
+          title={
+            tool && !engraveTool
+              ? "Add a V-bit or an end mill to your tool library: drill bits can't engrave"
+              : target && `Engrave along the lines of the ${target}`
+          }
+        >
+          <PlusIcon />
+          Add engrave
         </Button>
       </div>
       {target && tool && <p className="text-muted-foreground">For the {target}.</p>}

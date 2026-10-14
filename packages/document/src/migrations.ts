@@ -44,6 +44,9 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #95: engrave operations. Nothing to change; the bump keeps releases
+  // without them from opening documents that have them.
+  4: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

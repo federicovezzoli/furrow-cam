@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
   addDrillOperation,
+  addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
   addTab,
@@ -25,6 +26,7 @@ import {
   setOperationTargets,
   setOperationTool,
   updateDrillParams,
+  updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
 } from "./operation-actions";
@@ -329,6 +331,54 @@ describe("addDrillOperation", () => {
       peck: false,
     });
     expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
+  });
+});
+
+describe("addEngraveOperation", () => {
+  const addEngrave = (store: ReturnType<typeof setup>["store"], tool: Tool = vBit) => {
+    const id = addEngraveOperation(store, { targets: [whole(square)], tool });
+    if (!id) throw new Error("not added");
+    return id;
+  };
+
+  it("appends a valid engrave operation on the line, 1 mm deep, plunging", () => {
+    const { store, document, operations } = setup();
+    const id = addEngrave(store);
+    expect(operations().find((operation) => operation.id === id)).toMatchObject({
+      type: "engrave",
+      name: "Engrave 1",
+      enabled: true,
+      targets: [whole(square)],
+      tool: vBit,
+      params: { side: "on", depth: 1, ramp: false },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+  });
+
+  it("refuses drill bits, adding or switching tools", () => {
+    const { store, operations } = setup();
+    const drillBit: Tool = { ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(addEngraveOperation(store, { targets: [whole(square)], tool: drillBit })).toBeNull();
+    const id = addEngrave(store, endMill);
+    expect(setOperationTool(store, id, drillBit)).toEqual({
+      ok: false,
+      error: "Drill bits can't engrave",
+    });
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const { store, operations } = setup();
+    const id = addEngrave(store);
+    expect(updateEngraveParams(store, id, { side: "inside", depth: 0.4, ramp: true })).toEqual({
+      ok: true,
+    });
+    expect(operations().find((operation) => operation.id === id)?.params).toEqual({
+      side: "inside",
+      depth: 0.4,
+      ramp: true,
+    });
+    expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
   });
 });
 

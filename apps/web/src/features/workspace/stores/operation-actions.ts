@@ -1,7 +1,9 @@
 import { autoTabPositions, type TabPlacement, targetedShapes } from "@furrow/cam-core";
 import {
   canDrill,
+  canEngrave,
   DrillParams,
+  EngraveParams,
   Name,
   normalizeTargets,
   Operation,
@@ -66,6 +68,21 @@ export function defaultDrillParams(document: ProjectDocument): DrillParams {
   return { depth: document.stock.thickness, peck: true };
 }
 
+/** How deep new engravings go, unless the stock is thinner. */
+export const DEFAULT_ENGRAVE_DEPTH = 1;
+
+/**
+ * New engravings follow the paths on the line, `DEFAULT_ENGRAVE_DEPTH` deep,
+ * plunging: a shallow cut needs no ramp.
+ */
+export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
+  return {
+    side: "on",
+    depth: Math.min(DEFAULT_ENGRAVE_DEPTH, document.stock.thickness),
+    ramp: false,
+  };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -109,6 +126,20 @@ export function addDrillOperation(store: DocumentStore, options: NewOperation): 
     type: "drill",
     name: nextName(document, "Drill"),
     params: defaultDrillParams(document),
+  }));
+}
+
+/**
+ * Appends an engrave operation on `targets`, like `addProfileOperation`.
+ * Returns `null` as well if `tool` can't engrave.
+ */
+export function addEngraveOperation(store: DocumentStore, options: NewOperation): string | null {
+  if (!canEngrave(options.tool)) return null;
+  return appendOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "engrave",
+    name: nextName(document, "Engrave"),
+    params: defaultEngraveParams(document),
   }));
 }
 
@@ -279,6 +310,15 @@ export function updateDrillParams(
   changes: Partial<DrillParams>,
 ): ActionResult {
   return updateParams(store, id, "drill", DrillParams, "updateDrillParams", changes);
+}
+
+/** Changes some of an engrave operation's params at once, like `updateProfileParams`. */
+export function updateEngraveParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<EngraveParams>,
+): ActionResult {
+  return updateParams(store, id, "engrave", EngraveParams, "updateEngraveParams", changes);
 }
 
 type ParamsOf<T extends Operation["type"]> = Extract<Operation, { type: T }>["params"];

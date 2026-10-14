@@ -3,7 +3,7 @@ import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
-export const OperationType = z.enum(["profile", "pocket", "drill"]);
+export const OperationType = z.enum(["profile", "pocket", "drill", "engrave"]);
 export type OperationType = z.infer<typeof OperationType>;
 
 /**
@@ -216,9 +216,45 @@ export const DrillOperation = z
   });
 export type DrillOperation = z.infer<typeof DrillOperation>;
 
+/**
+ * Engrave parameters (#95): the paths followed on the line, or inside or
+ * outside the closed ones with an edge of the groove on the line, cut to
+ * `depth` in passes no deeper than the tool's step-down. With a V-bit the
+ * depth sets the line width; the width isn't stored, so it follows the bit
+ * the operation uses.
+ */
+export const EngraveParams = z.strictObject({
+  /** Where the groove is: centred on the line, or inside or outside it. */
+  side: ProfileSide,
+  /** Depth of the tool tip below the stock top. */
+  depth: PositiveLength,
+  /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+  ramp: z.boolean(),
+});
+export type EngraveParams = z.infer<typeof EngraveParams>;
+
+/** V-bits, ball and flat end mills engrave: a drill bit can't cut sideways. */
+export function canEngrave(tool: Tool): boolean {
+  return tool.type !== "drill";
+}
+
+export const EngraveOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("engrave"),
+    params: EngraveParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (!canEngrave(operation.tool)) {
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Drill bits can't engrave" });
+    }
+  });
+export type EngraveOperation = z.infer<typeof EngraveOperation>;
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,
   DrillOperation,
+  EngraveOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
