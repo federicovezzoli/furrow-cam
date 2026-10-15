@@ -29,14 +29,17 @@ import {
   restoreVersion,
   type VersionsResult,
 } from "@/features/projects/actions";
+import { VERSION_LABEL_MAX } from "@/features/projects/lib/versions";
 import type { VersionRow } from "@/features/projects/server";
 import {
   useAutosaveApi,
   useDocumentStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
+import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { rememberSavedVersion } from "@/features/workspace/stores/saved-versions";
 
 const UNSAVED = "The project has changes that couldn't be saved. Save them first.";
+const EDITING = "Finish the change you're making first.";
 
 /**
  * The Versions pane (ADR-0028): lists the project's versions, newest first,
@@ -71,19 +74,11 @@ export function VersionsPane({ projectId }: { projectId: string }) {
     });
   }
 
-  /** The `updatedAt` of the stored document once pending changes are saved, or why they aren't. */
-  async function savedAt(): Promise<{ savedAt: Date; error?: never } | { error: string }> {
-    const status = await autosave.settle();
-    return status.state === "saved"
-      ? { savedAt: status.savedAt }
-      : { error: status.error ?? UNSAVED };
-  }
-
   function save() {
     run(async () => {
-      const saved = await savedAt();
-      if (saved.error !== undefined) return saved;
-      const result = await createVersion(projectId, label, saved.savedAt);
+      const status = await autosave.settle();
+      if (status.state !== "saved") return { error: notSaved(status) };
+      const result = await createVersion(projectId, label, status.savedAt);
       if (result.error === undefined) setLabel("");
       return result;
     });
@@ -98,12 +93,25 @@ export function VersionsPane({ projectId }: { projectId: string }) {
       return;
     }
     run(async () => {
-      const saved = await savedAt();
-      if (saved.error !== undefined) return saved;
-      const result = await restoreVersion(version.id, saved.savedAt);
-      if (result.error !== undefined) return result;
-      // A restore isn't an undo step: the store starts over from the restored document.
-      autosave.reset(result.document, result.updatedAt);
+      // No save may start while the server replaces the document: it would conflict.
+      const status = await autosave.hold();
+      let result: Awaited<ReturnType<typeof restoreVersion>>;
+      try {
+        result =
+          status.state === "saved"
+            ? await restoreVersion(version.id, status.savedAt)
+            : { error: notSaved(status) };
+      } catch (error) {
+        autosave.release();
+        throw error;
+      }
+      if (result.error !== undefined) {
+        autosave.release();
+        return result;
+      }
+      // A restore isn't an undo step: the store starts over from the restored
+      // document, replacing any change made while it ran.
+      autosave.release({ document: result.document, savedAt: result.updatedAt });
       documentStore.getState().load(result.document);
       rememberSavedVersion(projectId, { document: result.document, updatedAt: result.updatedAt });
       return result;
@@ -116,13 +124,25 @@ export function VersionsPane({ projectId }: { projectId: string }) {
       version.label ?? "",
     );
     if (newLabel === null || newLabel.trim() === (version.label ?? "")) return;
-    run(() => renameVersion(version.id, newLabel));
+    startTransition(async () => {
+      const result = await renameVersion(version.id, newLabel);
+      setError(result?.error);
+      if (result) return;
+      const renamed = newLabel.trim() || null;
+      setVersions(
+        (list) => list?.map((v) => (v.id === version.id ? { ...v, label: renamed } : v)) ?? null,
+      );
+    });
   }
 
   function remove(version: VersionRow) {
     if (!window.confirm(`Delete the version "${versionName(version)}"? This can't be undone.`))
       return;
-    run(() => deleteVersion(version.id));
+    startTransition(async () => {
+      const result = await deleteVersion(version.id);
+      setError(result?.error);
+      if (!result) setVersions((list) => list?.filter((v) => v.id !== version.id) ?? null);
+    });
   }
 
   function openAsProject(version: VersionRow) {
@@ -217,7 +237,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
           onChange={(event) => setLabel(event.target.value)}
           placeholder="Label (optional)"
           aria-label="Version label"
-          maxLength={100}
+          maxLength={VERSION_LABEL_MAX}
           className="h-control min-w-0 flex-1 px-2 text-ui md:text-ui"
         />
         <Button type="submit" variant="outline" size="compact" disabled={pending}>
@@ -227,6 +247,13 @@ export function VersionsPane({ projectId }: { projectId: string }) {
       </form>
     </div>
   );
+}
+
+/** Why a version can't be saved or restored now: `status` isn't `saved`. */
+function notSaved(status: AutosaveStatus) {
+  // Mid-gesture (a drag), autosave waits for it to end; nothing failed.
+  if (status.state === "unsaved") return EDITING;
+  return status.error ?? UNSAVED;
 }
 
 /** How a version is named in prompts: its label, or its date. */

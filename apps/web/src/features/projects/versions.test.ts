@@ -33,8 +33,10 @@ const mocks = vi.hoisted(() => ({
   userId: "user-1" as string | null,
   projects: [] as ProjectRow[],
   versions: [] as VersionRow[],
-  /** Makes the next project update fail as if it had been saved elsewhere meanwhile. */
-  raceNextUpdate: false,
+  /** Makes the next project update fail as if it had been saved or deleted elsewhere meanwhile. */
+  raceNextUpdate: null as "saved" | "deleted" | null,
+  /** Projects whose row a transaction locked. */
+  locked: [] as string[],
   clock: 0,
 }));
 
@@ -59,6 +61,8 @@ vi.mock("@/lib/db", () => {
     project: {
       findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
         mocks.projects.find((p) => p.id === where.id && p.userId === where.userId) ?? null,
+      count: async ({ where }: { where: { id: string; userId: string } }) =>
+        mocks.projects.filter((p) => p.id === where.id && p.userId === where.userId).length,
       update: async ({
         where,
         data,
@@ -73,7 +77,6 @@ vi.mock("@/lib/db", () => {
             p.updatedAt.getTime() === where.updatedAt.getTime() &&
             !mocks.raceNextUpdate,
         );
-        mocks.raceNextUpdate = false;
         if (!row) {
           throw new Prisma.PrismaClientKnownRequestError("Not found", {
             code: "P2025",
@@ -110,12 +113,20 @@ vi.mock("@/lib/db", () => {
         });
       },
       updateMany: async ({ where, data }: { where: VersionWhere; data: Partial<VersionRow> }) => {
-        for (const version of ownedVersions(where)) Object.assign(version, data);
+        const rows = ownedVersions(where);
+        for (const version of rows) Object.assign(version, data);
+        return { count: rows.length };
       },
       deleteMany: async ({ where }: { where: VersionWhere }) => {
         const ids = new Set(ownedVersions(where).map((v) => v.id));
         mocks.versions = mocks.versions.filter((v) => !ids.has(v.id));
+        return { count: ids.size };
       },
+    },
+    /** Only `lockProject`'s `SELECT … FOR UPDATE` is expected. */
+    $executeRaw: async (_sql: TemplateStringsArray, projectId: string) => {
+      mocks.locked.push(projectId);
+      return 1;
     },
   };
   const db = {
@@ -129,6 +140,12 @@ vi.mock("@/lib/db", () => {
       } catch (error) {
         mocks.projects = projects;
         mocks.versions = versions;
+        // The other request's write isn't rolled back with this transaction.
+        if (mocks.raceNextUpdate === "deleted") {
+          mocks.projects = [];
+          mocks.versions = [];
+        }
+        mocks.raceNextUpdate = null;
         throw error;
       }
     },
@@ -174,7 +191,8 @@ function versionsOf(result: { versions: ListedVersion[] } | { error: string }) {
 
 beforeEach(() => {
   mocks.userId = USER;
-  mocks.raceNextUpdate = false;
+  mocks.raceNextUpdate = null;
+  mocks.locked = [];
   mocks.clock = 0;
   mocks.projects = [
     {
@@ -218,6 +236,8 @@ describe("createVersion", () => {
     for (let i = 0; i < 50; i++) addVersion(documentWithWidth(i));
     expect((await createVersion(PROJECT, "", LOADED_AT)).error).toMatch(/already has 50 versions/);
     expect(mocks.versions).toHaveLength(50);
+    // Counted with the project's row locked, so concurrent writes can't both pass.
+    expect(mocks.locked).toEqual([PROJECT]);
   });
 });
 
@@ -255,7 +275,7 @@ describe("restoreVersion", () => {
 
   it("rolls the automatic version back when the project is saved during the restore", async () => {
     const id = addVersion(documentWithWidth(42));
-    mocks.raceNextUpdate = true;
+    mocks.raceNextUpdate = "saved";
     const result = await restoreVersion(id, LOADED_AT);
     expect(result.error).toMatch(/changed somewhere else/);
     expect(project().document).toEqual(documentWithWidth(100));
@@ -297,6 +317,15 @@ describe("restoreVersion", () => {
     const id = addVersion(documentWithWidth(42));
     expect((await restoreVersion(id, LOADED_AT)).error).toMatch(/already has 50 versions/);
     expect(project().document).toEqual(documentWithWidth(100));
+    expect(mocks.locked).toEqual([PROJECT]);
+  });
+
+  it("says the project is gone when it's deleted during the restore", async () => {
+    const id = addVersion(documentWithWidth(42));
+    mocks.raceNextUpdate = "deleted";
+    expect(await restoreVersion(id, LOADED_AT)).toEqual({
+      error: "This project no longer exists.",
+    });
   });
 
   it("refuses another user's version", async () => {
@@ -311,13 +340,19 @@ describe("restoreVersion", () => {
 describe("managing versions", () => {
   it("renames and deletes the user's versions only", async () => {
     const id = addVersion(documentWithWidth(42), "Old");
-    expect(versionsOf(await renameVersion(id, "New"))[0]?.label).toBe("New");
-    expect(versionsOf(await renameVersion(id, ""))[0]?.label).toBeNull();
+    expect(await renameVersion(id, " New ")).toBeUndefined();
+    expect(mocks.versions[0]?.label).toBe("New");
+    await renameVersion(id, "");
+    expect(mocks.versions[0]?.label).toBeNull();
 
     mocks.userId = "user-2";
-    expect((await deleteVersion(id)).error).toBe("This version no longer exists.");
+    const gone = { error: "This version no longer exists." };
+    expect(await renameVersion(id, "Mine")).toEqual(gone);
+    expect(await deleteVersion(id)).toEqual(gone);
+    expect(mocks.versions).toHaveLength(1);
     mocks.userId = USER;
-    expect(await deleteVersion(id)).toEqual({ versions: [] });
+    expect(await deleteVersion(id)).toBeUndefined();
+    expect(mocks.versions).toHaveLength(0);
   });
 
   it("opens a version as a new project named after it", async () => {
@@ -329,5 +364,18 @@ describe("managing versions", () => {
     const unlabelled = addVersion(documentWithWidth(7));
     await expect(openVersionAsProject(unlabelled, "15 Oct 2026")).rejects.toThrow(/redirect/);
     expect(mocks.projects[2]?.name).toBe("Shelf (15 Oct 2026)");
+  });
+
+  it("shortens a long project name, not the label, to keep the name within limits", async () => {
+    project().name = "N".repeat(95);
+    const id = addVersion(documentWithWidth(42), "First pass");
+    await expect(openVersionAsProject(id, "")).rejects.toThrow(/redirect/);
+    expect(mocks.projects[1]?.name).toBe(`${"N".repeat(87)} (First pass)`);
+  });
+
+  it("names an unlabelled version without a usable date after its project alone", async () => {
+    const id = addVersion(documentWithWidth(42));
+    await expect(openVersionAsProject(id, "x".repeat(101))).rejects.toThrow(/redirect/);
+    expect(mocks.projects[1]?.name).toBe("Shelf");
   });
 });

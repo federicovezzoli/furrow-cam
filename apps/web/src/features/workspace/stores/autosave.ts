@@ -50,6 +50,8 @@ export function createAutosave(
   /** The running save, settled either way; resolves when it's done. */
   let inFlight: Promise<unknown> = Promise.resolve();
   let started = false;
+  /** While held, no save starts: the server's document is being replaced (a restore). */
+  let held = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
@@ -92,7 +94,7 @@ export function createAutosave(
 
   async function run() {
     timer = undefined;
-    if (saving || status.state === "failed") return;
+    if (saving || held || status.state === "failed") return;
     const { document, inTransaction } = store.getState();
     if (inTransaction || isSaved(document)) return;
 
@@ -187,16 +189,32 @@ export function createAutosave(
     flush,
     settle,
     /**
-     * Starts over from a document the server just stored (a restored
-     * version), saved at `savedAt`. Call it before loading `document` into
-     * the store, and only once `settle` says nothing is being saved.
+     * Settles, then holds: no save starts until `release`, while the server's
+     * document is replaced (a restore). Resolves with the settled status;
+     * `release` must follow either way.
      */
-    reset(document: ProjectDocument, savedAt: Date) {
+    async hold(): Promise<AutosaveStatus> {
+      const settled = await settle();
+      held = true;
       clearTimeout(timer);
       timer = undefined;
-      savedDocument = document;
-      status = { state: "saved", savedAt };
-      for (const listener of listeners) listener();
+      return settled;
+    },
+    /**
+     * Lets saves start again. `restored` is the document the server stored
+     * while held and when: autosave starts over from it. Load it into the
+     * store right after; changes made while held are replaced by it.
+     */
+    release(restored?: { document: ProjectDocument; savedAt: Date }) {
+      held = false;
+      if (restored) {
+        savedDocument = restored.document;
+        status = { state: "saved", savedAt: restored.savedAt };
+        for (const listener of listeners) listener();
+        // Loading it into the store schedules what's next.
+        return;
+      }
+      if (started) schedule();
     },
   };
 }

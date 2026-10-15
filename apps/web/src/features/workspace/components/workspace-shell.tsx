@@ -300,8 +300,9 @@ const PANE_HEADER = "1.75rem";
 /**
  * A sidebar pane: dragging its edge resizes it, and its header collapses it to
  * just the header or expands it. Collapsing it expands the first of its
- * `siblings` if they are all collapsed: one pane always shows. `footer` stays at its bottom while
- * the rest scrolls.
+ * `siblings` if they are all collapsed: one pane always shows. `footer` stays
+ * at its bottom while the rest scrolls. A collapsed pane's content stays
+ * mounted, only hidden.
  */
 function Pane({
   id,
@@ -355,11 +356,14 @@ function Pane({
             {title}
           </button>
         </h2>
-        {!collapsed && (
-          <>
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
-            {footer && <div className="shrink-0 border-t p-2">{footer}</div>}
-          </>
+        {/* Hidden rather than unmounted, so a collapsed pane keeps its state and running actions. */}
+        <div hidden={collapsed} className="min-h-0 flex-1 overflow-auto">
+          {children}
+        </div>
+        {footer && (
+          <div hidden={collapsed} className="shrink-0 border-t p-2">
+            {footer}
+          </div>
         )}
       </section>
     </ResizablePanel>

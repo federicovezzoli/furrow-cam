@@ -225,25 +225,40 @@ describe("createAutosave", () => {
     expect(save).toHaveBeenCalledOnce();
   });
 
-  it("starts over from a reset document", async () => {
-    const save = vi.fn<SaveDocument>(async () => ({ error: "Conflict" }));
-    const { store, autosave, setWidth } = setup(save);
+  it("starts no save while held, and saves what changed meanwhile on release", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({ updatedAt: SAVED_AT }));
+    const { autosave, setWidth } = setup(save);
+    expect(await autosave.hold()).toEqual({ state: "saved", savedAt: LOADED_AT });
     setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY * 5);
+    autosave.flush();
+    expect(save).not.toHaveBeenCalled();
+
+    autosave.release();
     await vi.advanceTimersByTimeAsync(DELAY);
-    expect(autosave.status.state).toBe("failed");
+    expect(save).toHaveBeenCalledOnce();
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+  });
+
+  it("starts over from a document restored while held, dropping changes made meanwhile", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({ updatedAt: LOADED_AT }));
+    const { store, autosave, setWidth } = setup(save);
+    await autosave.hold();
+    // An edit while the restore is in flight: without the hold, its save would conflict.
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY * 5);
 
     const restored = createProjectDocument();
     restored.stock.width = 42;
-    autosave.reset(restored, SAVED_AT);
+    autosave.release({ document: restored, savedAt: SAVED_AT });
     store.getState().load(restored);
     await vi.advanceTimersByTimeAsync(DELAY * 5);
-    expect(save).toHaveBeenCalledOnce();
+    expect(save).not.toHaveBeenCalled();
     expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
 
-    save.mockResolvedValue({ updatedAt: LOADED_AT });
     setWidth(300);
     await vi.advanceTimersByTimeAsync(DELAY);
-    expect(save).toHaveBeenCalledTimes(2);
-    expect(save.mock.calls[1]?.[1]).toEqual(SAVED_AT);
+    expect(save).toHaveBeenCalledOnce();
+    expect(save.mock.calls[0]?.[1]).toEqual(SAVED_AT);
   });
 });

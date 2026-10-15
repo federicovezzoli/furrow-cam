@@ -12,6 +12,7 @@ import { z } from "zod";
 import { getMachine, snapshotMachine } from "@/features/machines/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { VERSION_LABEL_MAX } from "./lib/versions";
 
 /** A project id from the URL or the client, or `null` if it can't be one. */
 export function parseProjectId(id: unknown): string | null {
@@ -93,10 +94,6 @@ export function documentColumns(document: ProjectDocument) {
     document: document as Prisma.InputJsonObject,
   };
 }
-
-/** Versions a project keeps, automatic ones included (ADR-0028). */
-export const MAX_VERSIONS = 50;
-export const VERSION_LABEL_MAX = 100;
 
 const VersionLabel = z
   .string()

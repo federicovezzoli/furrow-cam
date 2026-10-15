@@ -9,11 +9,11 @@ import { listMachineChoices } from "@/features/machines/server";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
+import { MAX_VERSIONS, VERSION_LABEL_MAX } from "./lib/versions";
 import {
   documentColumns,
   getProject,
   listVersions,
-  MAX_VERSIONS,
   PROJECT_NAME_MAX,
   parseName,
   parseProjectFile,
@@ -22,7 +22,6 @@ import {
   parseVersionLabel,
   snapshotUserMachine,
   truncate,
-  VERSION_LABEL_MAX,
   type VersionRow,
 } from "./server";
 
@@ -173,6 +172,16 @@ export async function saveProject(
   }
 }
 
+type Transaction = Prisma.TransactionClient;
+
+/**
+ * Locks the project's row until the transaction ends, so concurrent version
+ * writes are counted against `MAX_VERSIONS` one at a time.
+ */
+async function lockProject(tx: Transaction, projectId: string) {
+  await tx.$executeRaw`SELECT 1 FROM "project" WHERE "id" = ${projectId} FOR UPDATE`;
+}
+
 /** A project's versions after an action on them, newest first, or why the action failed. */
 export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: string };
 
@@ -203,6 +212,7 @@ export async function createVersion(
   if (!parsed.success) return { error: `Label: ${parsed.error.issues[0]?.message}` };
 
   const error = await db.$transaction(async (tx) => {
+    await lockProject(tx, id);
     const project = await tx.project.findFirst({
       where: { id, userId },
       select: { schemaVersion: true, document: true, updatedAt: true },
@@ -226,7 +236,7 @@ export async function createVersion(
 }
 
 /** Relabels one of the user's versions; a blank label shows its date instead. */
-export async function renameVersion(id: string, label: string): Promise<VersionsResult> {
+export async function renameVersion(id: string, label: string): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
   const versionId = parseProjectId(id);
@@ -234,28 +244,23 @@ export async function renameVersion(id: string, label: string): Promise<Versions
   const parsed = parseVersionLabel(label);
   if (!parsed.success) return { error: `Label: ${parsed.error.issues[0]?.message}` };
 
-  const version = await db.projectVersion.findFirst({
+  const { count } = await db.projectVersion.updateMany({
     where: { id: versionId, project: { userId } },
-    select: { projectId: true },
+    data: { label: parsed.data },
   });
-  if (!version) return { error: VERSION_NOT_FOUND };
-  await db.projectVersion.updateMany({ where: { id: versionId }, data: { label: parsed.data } });
-  return { versions: await listVersions(userId, version.projectId) };
+  if (count === 0) return { error: VERSION_NOT_FOUND };
 }
 
-export async function deleteVersion(id: string): Promise<VersionsResult> {
+export async function deleteVersion(id: string): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
   const versionId = parseProjectId(id);
   if (!versionId) return { error: VERSION_NOT_FOUND };
 
-  const version = await db.projectVersion.findFirst({
+  const { count } = await db.projectVersion.deleteMany({
     where: { id: versionId, project: { userId } },
-    select: { projectId: true },
   });
-  if (!version) return { error: VERSION_NOT_FOUND };
-  await db.projectVersion.deleteMany({ where: { id: versionId } });
-  return { versions: await listVersions(userId, version.projectId) };
+  if (count === 0) return { error: VERSION_NOT_FOUND };
 }
 
 /**
@@ -278,6 +283,7 @@ export async function restoreVersion(
   if (!versionId) return { error: VERSION_NOT_FOUND };
 
   let result: { error: string } | { projectId: string; document: ProjectDocument; updatedAt: Date };
+  let projectId: string | undefined;
   try {
     result = await db.$transaction(async (tx) => {
       const version = await tx.projectVersion.findFirst({
@@ -290,9 +296,11 @@ export async function restoreVersion(
       });
       if (!version) return { error: VERSION_NOT_FOUND };
       const { project } = version;
+      projectId = project.id;
       const parsed = parseStoredDocument(version.document, "This version can't be restored");
       if (parsed.error !== undefined) return { error: parsed.error };
       if (project.updatedAt.getTime() !== updatedAt.getTime()) return { error: CONFLICT };
+      await lockProject(tx, project.id);
       if ((await tx.projectVersion.count({ where: { projectId: project.id } })) >= MAX_VERSIONS) {
         return { error: TOO_MANY_VERSIONS };
       }
@@ -311,7 +319,7 @@ export async function restoreVersion(
         },
       });
       const saved = await tx.project.update({
-        // Checked again here: the read above doesn't lock the row.
+        // Checked again here: it was read before the row was locked.
         where: { id: project.id, userId, updatedAt },
         data: documentColumns(parsed.document),
         select: { updatedAt: true },
@@ -319,21 +327,22 @@ export async function restoreVersion(
       return { projectId: project.id, document: parsed.document, updatedAt: saved.updatedAt };
     });
   } catch (error) {
-    // Saved elsewhere between the check and the update; the transaction was rolled back.
+    // Saved or deleted elsewhere since the check; the transaction was rolled back.
     if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025")) {
       throw error;
     }
-    return { error: CONFLICT };
+    const exists = await db.project.count({ where: { id: projectId, userId } });
+    return { error: exists ? CONFLICT : NOT_FOUND };
   }
   if ("error" in result) return result;
-  const { projectId, ...restored } = result;
-  return { ...restored, versions: await listVersions(userId, projectId) };
+  const { projectId: restoredId, ...restored } = result;
+  return { ...restored, versions: await listVersions(userId, restoredId) };
 }
 
 /**
- * Creates a project from version `id` and opens it, named after its project
- * and the version's label, or `dateLabel` (the version's date as the user
- * sees it) for an unlabelled one. Only errors come back.
+ * Creates a project from version `id` and opens it, named "<project>
+ * (<label>)": the version's label, or `dateLabel` (its date as the user sees
+ * it, read like a label) for an unlabelled one. Only errors come back.
  */
 export async function openVersionAsProject(id: string, dateLabel: string): Promise<ActionResult> {
   const userId = await getUserId();
@@ -348,8 +357,13 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
   if (!version) return { error: VERSION_NOT_FOUND };
   const parsed = parseStoredDocument(version.document, "This version can't be opened");
   if (parsed.error !== undefined) return { error: parsed.error };
-  const label = version.label ?? (typeof dateLabel === "string" ? dateLabel : "");
-  const name = parseName(truncate(`${version.project.name} (${label})`, PROJECT_NAME_MAX));
+  const date = parseVersionLabel(dateLabel);
+  const label = version.label ?? (date.success ? date.data : null);
+  // The project name is cut, not the label, so the parentheses stay balanced.
+  const suffix = label === null ? "" : ` (${truncate(label, PROJECT_NAME_MAX - 4)})`;
+  const name = parseName(
+    truncate(version.project.name, PROJECT_NAME_MAX - suffix.length).trimEnd() + suffix,
+  );
 
   const { id: projectId } = await db.project.create({
     data: {
