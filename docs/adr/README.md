@@ -43,3 +43,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0026](0026-operation-clearing-tool.md) | An operation may cut with a second, clearing tool | Proposed |
 | [0027](0027-compact-release-notes.md) | Compact release notes | Proposed |
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
+| [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Proposed |
+| [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
