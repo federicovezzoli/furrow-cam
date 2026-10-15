@@ -1,5 +1,11 @@
 # @furrow/web
 
+## 0.6.0
+
+### Minor Changes
+
+- Projects can be saved as named versions from the new Versions pane, then restored, renamed, deleted or opened as a new project. Restoring keeps the current state as a version first. ([#110](https://github.com/federicovezzoli/furrow-cam/pull/110))
+
 ## 0.5.0
 
 ### Minor Changes
