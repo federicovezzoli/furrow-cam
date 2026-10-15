@@ -12,12 +12,18 @@ import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data"
 import {
   documentColumns,
   getProject,
+  listVersions,
+  MAX_VERSIONS,
   PROJECT_NAME_MAX,
   parseName,
   parseProjectFile,
   parseProjectId,
+  parseStoredDocument,
+  parseVersionLabel,
   snapshotUserMachine,
   truncate,
+  VERSION_LABEL_MAX,
+  type VersionRow,
 } from "./server";
 
 export type ProjectFormErrors = FormErrors<"name" | "machine">;
@@ -26,6 +32,8 @@ export type ProjectFormErrors = FormErrors<"name" | "machine">;
 export type ImportResult = ActionResult | { chooseMachine: true; error?: never };
 
 const NOT_FOUND = "This project no longer exists.";
+const VERSION_NOT_FOUND = "This version no longer exists.";
+const TOO_MANY_VERSIONS = `This project already has ${MAX_VERSIONS} versions, the most it can keep. Delete one first.`;
 const CONFLICT =
   "This project was changed somewhere else since you opened it. Reload it to see the latest version.";
 
@@ -163,4 +171,194 @@ export async function saveProject(
     const exists = await db.project.count({ where: { id: projectId, userId } });
     return { error: exists ? CONFLICT : NOT_FOUND };
   }
+}
+
+/** A project's versions after an action on them, newest first, or why the action failed. */
+export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: string };
+
+/** The versions of one of the user's projects (ADR-0028). */
+export async function getVersions(projectId: string): Promise<VersionsResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const id = parseProjectId(projectId);
+  if (!id) return { error: NOT_FOUND };
+  return { versions: await listVersions(userId, id) };
+}
+
+/**
+ * Saves the project's stored document as a version, not one sent by the
+ * client: flush autosave first. `updatedAt` is the version the client last
+ * saved; if the project was saved elsewhere since, nothing is created.
+ */
+export async function createVersion(
+  projectId: string,
+  label: string,
+  updatedAt: Date,
+): Promise<VersionsResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const id = parseProjectId(projectId);
+  if (!id) return { error: NOT_FOUND };
+  const parsed = parseVersionLabel(label);
+  if (!parsed.success) return { error: `Label: ${parsed.error.issues[0]?.message}` };
+
+  const error = await db.$transaction(async (tx) => {
+    const project = await tx.project.findFirst({
+      where: { id, userId },
+      select: { schemaVersion: true, document: true, updatedAt: true },
+    });
+    if (!project) return NOT_FOUND;
+    if (project.updatedAt.getTime() !== updatedAt.getTime()) return CONFLICT;
+    if ((await tx.projectVersion.count({ where: { projectId: id } })) >= MAX_VERSIONS) {
+      return TOO_MANY_VERSIONS;
+    }
+    await tx.projectVersion.create({
+      data: {
+        projectId: id,
+        label: parsed.data,
+        schemaVersion: project.schemaVersion,
+        document: project.document as Prisma.InputJsonObject,
+      },
+    });
+  });
+  if (error) return { error };
+  return { versions: await listVersions(userId, id) };
+}
+
+/** Relabels one of the user's versions; a blank label shows its date instead. */
+export async function renameVersion(id: string, label: string): Promise<VersionsResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const versionId = parseProjectId(id);
+  if (!versionId) return { error: VERSION_NOT_FOUND };
+  const parsed = parseVersionLabel(label);
+  if (!parsed.success) return { error: `Label: ${parsed.error.issues[0]?.message}` };
+
+  const version = await db.projectVersion.findFirst({
+    where: { id: versionId, project: { userId } },
+    select: { projectId: true },
+  });
+  if (!version) return { error: VERSION_NOT_FOUND };
+  await db.projectVersion.updateMany({ where: { id: versionId }, data: { label: parsed.data } });
+  return { versions: await listVersions(userId, version.projectId) };
+}
+
+export async function deleteVersion(id: string): Promise<VersionsResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const versionId = parseProjectId(id);
+  if (!versionId) return { error: VERSION_NOT_FOUND };
+
+  const version = await db.projectVersion.findFirst({
+    where: { id: versionId, project: { userId } },
+    select: { projectId: true },
+  });
+  if (!version) return { error: VERSION_NOT_FOUND };
+  await db.projectVersion.deleteMany({ where: { id: versionId } });
+  return { versions: await listVersions(userId, version.projectId) };
+}
+
+/**
+ * Replaces the project's document with version `id`, upgraded to the current
+ * schema version (ADR-0028). The document it replaces is kept as an automatic
+ * version first, so a restore can be undone; both happen or neither does.
+ * `updatedAt` is checked as by `saveProject`. Returns the restored document
+ * and its `updatedAt`, which the client loads in place of its own.
+ */
+export async function restoreVersion(
+  id: string,
+  updatedAt: Date,
+): Promise<
+  | { document: ProjectDocument; updatedAt: Date; versions: VersionRow[]; error?: never }
+  | { error: string }
+> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const versionId = parseProjectId(id);
+  if (!versionId) return { error: VERSION_NOT_FOUND };
+
+  let result: { error: string } | { projectId: string; document: ProjectDocument; updatedAt: Date };
+  try {
+    result = await db.$transaction(async (tx) => {
+      const version = await tx.projectVersion.findFirst({
+        where: { id: versionId, project: { userId } },
+        select: {
+          label: true,
+          document: true,
+          project: { select: { id: true, schemaVersion: true, document: true, updatedAt: true } },
+        },
+      });
+      if (!version) return { error: VERSION_NOT_FOUND };
+      const { project } = version;
+      const parsed = parseStoredDocument(version.document, "This version can't be restored");
+      if (parsed.error !== undefined) return { error: parsed.error };
+      if (project.updatedAt.getTime() !== updatedAt.getTime()) return { error: CONFLICT };
+      if ((await tx.projectVersion.count({ where: { projectId: project.id } })) >= MAX_VERSIONS) {
+        return { error: TOO_MANY_VERSIONS };
+      }
+
+      await tx.projectVersion.create({
+        data: {
+          projectId: project.id,
+          label: truncate(
+            version.label === null
+              ? "Before restoring an earlier version"
+              : `Before restoring “${version.label}”`,
+            VERSION_LABEL_MAX,
+          ),
+          schemaVersion: project.schemaVersion,
+          document: project.document as Prisma.InputJsonObject,
+        },
+      });
+      const saved = await tx.project.update({
+        // Checked again here: the read above doesn't lock the row.
+        where: { id: project.id, userId, updatedAt },
+        data: documentColumns(parsed.document),
+        select: { updatedAt: true },
+      });
+      return { projectId: project.id, document: parsed.document, updatedAt: saved.updatedAt };
+    });
+  } catch (error) {
+    // Saved elsewhere between the check and the update; the transaction was rolled back.
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025")) {
+      throw error;
+    }
+    return { error: CONFLICT };
+  }
+  if ("error" in result) return result;
+  const { projectId, ...restored } = result;
+  return { ...restored, versions: await listVersions(userId, projectId) };
+}
+
+/**
+ * Creates a project from version `id` and opens it, named after its project
+ * and the version's label, or `dateLabel` (the version's date as the user
+ * sees it) for an unlabelled one. Only errors come back.
+ */
+export async function openVersionAsProject(id: string, dateLabel: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const versionId = parseProjectId(id);
+  if (!versionId) return { error: VERSION_NOT_FOUND };
+
+  const version = await db.projectVersion.findFirst({
+    where: { id: versionId, project: { userId } },
+    select: { label: true, document: true, project: { select: { name: true } } },
+  });
+  if (!version) return { error: VERSION_NOT_FOUND };
+  const parsed = parseStoredDocument(version.document, "This version can't be opened");
+  if (parsed.error !== undefined) return { error: parsed.error };
+  const label = version.label ?? (typeof dateLabel === "string" ? dateLabel : "");
+  const name = parseName(truncate(`${version.project.name} (${label})`, PROJECT_NAME_MAX));
+
+  const { id: projectId } = await db.project.create({
+    data: {
+      userId,
+      name: name.success ? name.data : version.project.name,
+      ...documentColumns(parsed.document),
+    },
+    select: { id: true },
+  });
+  revalidatePath("/projects");
+  redirect(`/projects/${projectId}`);
 }

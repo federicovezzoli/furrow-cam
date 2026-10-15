@@ -47,6 +47,8 @@ export function createAutosave(
   let status: AutosaveStatus = { state: "saved", savedAt };
   let savedDocument = store.getState().document;
   let saving = false;
+  /** The running save, settled either way; resolves when it's done. */
+  let inFlight: Promise<unknown> = Promise.resolve();
   let started = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let unsubscribe: (() => void) | undefined;
@@ -98,7 +100,9 @@ export function createAutosave(
     update("saving");
     let result: Awaited<ReturnType<SaveDocument>>;
     try {
-      result = await save(document, status.savedAt);
+      const saved = save(document, status.savedAt);
+      inFlight = saved.catch(() => {});
+      result = await saved;
     } catch {
       saving = false;
       update("error", OFFLINE);
@@ -124,6 +128,28 @@ export function createAutosave(
   function flush() {
     clearTimeout(timer);
     void run();
+  }
+
+  /**
+   * Saves pending changes now and resolves with the status once no save is
+   * running: `saved` if the server has what's on screen. A connection error
+   * isn't retried more than once.
+   */
+  async function settle(): Promise<AutosaveStatus> {
+    let attempted = false;
+    for (;;) {
+      clearTimeout(timer);
+      timer = undefined;
+      if (saving) {
+        await inFlight;
+        continue;
+      }
+      if (attempted && status.state === "error") return status;
+      attempted = true;
+      const running = run();
+      if (!saving) return status;
+      await running;
+    }
   }
 
   return {
@@ -159,6 +185,19 @@ export function createAutosave(
     },
     /** Saves pending changes now instead of waiting for the delay. */
     flush,
+    settle,
+    /**
+     * Starts over from a document the server just stored (a restored
+     * version), saved at `savedAt`. Call it before loading `document` into
+     * the store, and only once `settle` says nothing is being saved.
+     */
+    reset(document: ProjectDocument, savedAt: Date) {
+      clearTimeout(timer);
+      timer = undefined;
+      savedDocument = document;
+      status = { state: "saved", savedAt };
+      for (const listener of listeners) listener();
+    },
   };
 }
 
