@@ -6,7 +6,7 @@ import { createElement } from "react";
 import ResetPassword, { resetPasswordSubject } from "@/emails/reset-password";
 import VerifyEmail, { verifyEmailSubject } from "@/emails/verify-email";
 import { env } from "@/env";
-import { deletePrefix, userPrefix } from "@/features/assets/server";
+import { deleteUserObjects } from "@/features/assets/server";
 import { isPasswordBreached } from "@/features/auth/lib/breached-password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { db } from "@/lib/db";
@@ -57,7 +57,7 @@ export const auth = betterAuth({
       afterDelete: async (user) => {
         await db.verification.deleteMany({ where: { value: user.id } });
         // Project rows cascade; their meshes (ADR-0029) are objects under the user's prefix.
-        await deletePrefix(userPrefix(user.id));
+        await deleteUserObjects(user.id);
       },
     },
   },

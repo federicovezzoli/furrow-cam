@@ -165,6 +165,19 @@ export async function deletePrefix(prefix: string) {
 }
 
 /**
+ * Deletes all of a user's objects after their account is gone. Failures are
+ * logged, not thrown: the account is already deleted, so the request must
+ * still succeed, and the log says which objects were left behind.
+ */
+export async function deleteUserObjects(userId: string) {
+  try {
+    await deletePrefix(userPrefix(userId));
+  } catch (error) {
+    console.error(`Couldn't delete the objects of deleted user ${userId}`, error);
+  }
+}
+
+/**
  * Deletes a project's objects after its rows are gone. Failures are logged,
  * not thrown: the project is already deleted, and objects under its prefix
  * can't be reached any more.
