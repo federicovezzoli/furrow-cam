@@ -1,4 +1,5 @@
-# Local development database. Production uses Neon (ADR-0005); keep the major version in sync.
+# Local development database and object storage. Production uses Neon (ADR-0005) and an
+# S3-compatible bucket (ADR-0029); keep the Postgres major version in sync.
 services:
   postgres:
     image: postgres:18-alpine
@@ -17,5 +18,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible storage for meshes (ADR-0029); `pnpm storage:init` creates the bucket.
+  # MinIO no longer publishes images, so RustFS.
+  storage:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: furrow
+      RUSTFS_SECRET_KEY: furrow-secret
+    ports:
+      - "9000:9000"
+    volumes:
+      - storage-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:9000/health || exit 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
 volumes:
   postgres-data:
+  storage-data:

@@ -49,6 +49,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
   4: (doc) => doc,
   // #97: V-carve operations. Nothing to change, as for #95.
   5: (doc) => doc,
+  // #113: imported 3D models (PRD-0005). Existing documents have none.
+  6: (doc) => {
+    doc.models = [];
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

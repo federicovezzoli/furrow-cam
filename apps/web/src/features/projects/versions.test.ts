@@ -3,7 +3,7 @@ import {
   createProjectDocument,
   type ProjectDocument,
 } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@/generated/prisma/client";
 import type { VersionRow as ListedVersion } from "./server";
@@ -38,6 +38,12 @@ const mocks = vi.hoisted(() => ({
   /** Projects whose row a transaction locked. */
   locked: [] as string[],
   clock: 0,
+  /** Assets in the fake storage (ADR-0029). */
+  assets: [] as { projectId: string; sha256: string; verified: boolean }[],
+  storage: true,
+  copyFails: false,
+  /** Projects whose objects were deleted. */
+  deletedObjects: [] as string[],
 }));
 
 vi.mock("@/features/auth/server", () => ({ getUserId: async () => mocks.userId }));
@@ -45,6 +51,22 @@ vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new Error(`redirect ${url}`);
+  },
+}));
+vi.mock("@/features/assets/server", () => ({
+  isStorageConfigured: () => mocks.storage,
+  missingAssets: async (userId: string, projectId: string, sha256s: string[]) =>
+    sha256s.filter(
+      (sha256) =>
+        !mocks.projects.some((p) => p.id === projectId && p.userId === userId) ||
+        !mocks.assets.some((a) => a.projectId === projectId && a.sha256 === sha256 && a.verified),
+    ),
+  copyAssets: async (_userId: string, _from: string, to: string, sha256s: string[]) => {
+    if (mocks.copyFails) throw new Error("Copy failed");
+    for (const sha256 of sha256s) mocks.assets.push({ projectId: to, sha256, verified: true });
+  },
+  deleteProjectObjects: async (_userId: string, projectId: string) => {
+    mocks.deletedObjects.push(projectId);
   },
 }));
 vi.mock("@/lib/db", () => {
@@ -90,6 +112,13 @@ vi.mock("@/lib/db", () => {
         const id = crypto.randomUUID();
         mocks.projects.push({ ...data, id, updatedAt: new Date() });
         return { id };
+      },
+      deleteMany: async ({ where }: { where: { id: string; userId: string } }) => {
+        const before = mocks.projects.length;
+        mocks.projects = mocks.projects.filter(
+          (p) => !(p.id === where.id && p.userId === where.userId),
+        );
+        return { count: before - mocks.projects.length };
       },
     },
     projectVersion: {
@@ -155,11 +184,13 @@ vi.mock("@/lib/db", () => {
 
 const {
   createVersion,
+  deleteProject,
   deleteVersion,
   getVersions,
   openVersionAsProject,
   renameVersion,
   restoreVersion,
+  saveProject,
 } = await import("./actions");
 
 function documentWithWidth(width: number): ProjectDocument {
@@ -205,6 +236,10 @@ beforeEach(() => {
     },
   ];
   mocks.versions = [];
+  mocks.assets = [];
+  mocks.storage = true;
+  mocks.copyFails = false;
+  mocks.deletedObjects = [];
 });
 
 describe("createVersion", () => {
@@ -377,5 +412,69 @@ describe("managing versions", () => {
     const id = addVersion(documentWithWidth(42));
     await expect(openVersionAsProject(id, "x".repeat(101))).rejects.toThrow(/redirect/);
     expect(mocks.projects[1]?.name).toBe("Shelf");
+  });
+});
+
+describe("meshes", () => {
+  const withModel = () => ({ ...documentWithWidth(100), models: [model] });
+
+  it("saves a document only once its meshes are verified assets of the project", async () => {
+    const unsaved = {
+      error: "The project couldn't be saved: a model's mesh hasn't been uploaded.",
+    };
+    expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toEqual(unsaved);
+    mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: false });
+    expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toEqual(unsaved);
+    expect(project().document).toEqual(documentWithWidth(100));
+
+    mocks.assets[0] = { projectId: PROJECT, sha256: model.sha256, verified: true };
+    expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toHaveProperty("updatedAt");
+    expect(project().document).toEqual(withModel());
+  });
+
+  it("doesn't accept another project's mesh", async () => {
+    mocks.assets.push({ projectId: crypto.randomUUID(), sha256: model.sha256, verified: true });
+    expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toHaveProperty("error");
+  });
+
+  it("opens a version with meshes as a project with its own copies", async () => {
+    mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: true });
+    const id = addVersion(withModel(), "Relief");
+    await expect(openVersionAsProject(id, "")).rejects.toThrow(/redirect/);
+    const copy = mocks.projects[1]?.id;
+    expect(mocks.assets).toContainEqual({ projectId: copy, sha256: model.sha256, verified: true });
+  });
+
+  it("creates nothing when a version's mesh is missing or there's no storage", async () => {
+    const id = addVersion(withModel(), "Relief");
+    expect(await openVersionAsProject(id, "")).toEqual({
+      error: "This version can't be opened: a model's mesh hasn't been uploaded.",
+    });
+    mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: true });
+    mocks.storage = false;
+    expect(await openVersionAsProject(id, "")).toHaveProperty("error");
+    expect(mocks.projects).toHaveLength(1);
+  });
+
+  it("deletes the new project when its meshes can't be copied", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: true });
+    mocks.copyFails = true;
+    const id = addVersion(withModel(), "Relief");
+    expect(await openVersionAsProject(id, "")).toEqual({
+      error: "The 3D models couldn't be copied. Try again.",
+    });
+    expect(mocks.projects).toHaveLength(1);
+    expect(mocks.deletedObjects).toHaveLength(1);
+  });
+
+  it("deletes a project's objects with it, and nobody else's", async () => {
+    mocks.userId = "someone-else";
+    expect(await deleteProject(PROJECT)).toHaveProperty("error");
+    expect(mocks.deletedObjects).toEqual([]);
+    mocks.userId = USER;
+    await deleteProject(PROJECT);
+    expect(mocks.projects).toEqual([]);
+    expect(mocks.deletedObjects).toEqual([PROJECT]);
   });
 });

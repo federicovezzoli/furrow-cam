@@ -1,6 +1,6 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type { Machine, ProjectDocument, Shape, Tool } from "./index";
+import type { Machine, Model, ProjectDocument, Shape, Tool } from "./index";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -119,9 +119,19 @@ export const circle: Shape = {
   ],
 };
 
+/** An imported STL relief (PRD-0005); its mesh is a project asset (ADR-0029). */
+export const model: Model = {
+  id: "5f0c2a8e-3b7d-4e19-9c6a-2d8f1b4e7a30",
+  sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  fileName: "emblem.stl",
+  size: 684,
+  triangles: 12,
+  bounds: { min: [-50, -40, 0], max: [50, 40, 12] },
+};
+
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     units: "in",
     stock: {
       width: 300,
@@ -132,6 +142,7 @@ export function fullDocument(): ProjectDocument {
     },
     machine,
     geometry: [square, circle],
+    models: [],
     operations: [
       {
         id: OPERATION_ID,

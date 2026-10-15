@@ -13,9 +13,12 @@
     "typecheck": "next typegen && tsc --noEmit",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "storage:init": "node --env-file-if-exists=.env scripts/storage-init.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/s3-request-presigner": "^3.1151.0",
     "@furrow/cam-core": "workspace:*",
     "@furrow/document": "workspace:*",
     "@furrow/post": "workspace:*",

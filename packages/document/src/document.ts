@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { Shape } from "./geometry";
 import { Machine } from "./machine";
+import { Model } from "./model";
 import { Operation } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -69,6 +70,8 @@ export const ProjectDocument = z
     /** Snapshot of the machine profile, or `null` if none is picked. */
     machine: Machine.nullable(),
     geometry: z.array(Shape),
+    /** Imported 3D models, whose meshes are project assets (ADR-0029). */
+    models: z.array(Model),
     /** In cutting order. */
     operations: z.array(Operation),
   })
@@ -84,6 +87,14 @@ export const ProjectDocument = z
         });
       }
       pathCounts.set(shape.id, shape.paths.length);
+    });
+
+    const modelIds = new Set<string>();
+    doc.models.forEach((model, i) => {
+      if (modelIds.has(model.id)) {
+        ctx.addIssue({ code: "custom", path: ["models", i, "id"], message: "Duplicate model id" });
+      }
+      modelIds.add(model.id);
     });
 
     const operationIds = new Set<string>();
@@ -143,6 +154,7 @@ export function createProjectDocument(): ProjectDocument {
     },
     machine: null,
     geometry: [],
+    models: [],
     operations: [],
   };
 }

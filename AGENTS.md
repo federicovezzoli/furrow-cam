@@ -6,7 +6,7 @@ Open source, web-based 2.5D CAM for CNC routers: import SVG/DXF, define operatio
 
 ```sh
 pnpm install                  # also runs `prisma generate` in apps/web
-pnpm db:up                    # local PostgreSQL 18 (docker compose)
+pnpm db:up                    # local PostgreSQL 18 and S3 storage (docker compose)
 pnpm db:migrate               # prisma migrate dev (local database only)
 pnpm dev                      # http://localhost:3000
 pnpm email:dev                # preview email templates (apps/web/src/emails) at :3001
@@ -36,7 +36,7 @@ Inside `apps/web/src` (ADR-0021):
 
 ```
 app/              routes only (page, layout, error, route files) rendering feature components
-features/<name>/  auth, tools, machines, projects, workspace: actions.ts (server actions only),
+features/<name>/  auth, tools, machines, projects, assets, workspace: actions.ts (server actions only),
                   server.ts ("server-only" logic), components/ hooks/ providers/ stores/ lib/ workers/
 components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnostic code
 ```

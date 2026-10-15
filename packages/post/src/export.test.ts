@@ -70,6 +70,7 @@ function referenceProject(): ProjectDocument {
     },
     machine: shapeoko,
     geometry: [plate, holes, recess],
+    models: [],
     operations: [
       {
         id: id(2),
