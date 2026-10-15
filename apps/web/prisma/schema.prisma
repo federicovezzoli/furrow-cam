@@ -178,7 +178,24 @@ model Project {
   document      Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  versions      ProjectVersion[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@map("project")
+}
+
+/// A saved copy of a project's document (ADR-0028), restorable later.
+model ProjectVersion {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// `null` for an unlabelled version, shown by its date.
+  label         String?
+  /// Copy of `document.schemaVersion`, as on `Project`.
+  schemaVersion Int
+  document      Json
+  createdAt     DateTime @default(now())
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("project_version")
 }

@@ -37,6 +37,7 @@ import { OperationsPane } from "./operations-pane";
 import { SaveStatus } from "./save-status";
 import { StockProperties } from "./stock-properties";
 import { ToolLibraryProvider } from "./tool-library";
+import { VersionsPane } from "./versions-pane";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
 const Viewport = dynamic(
@@ -55,8 +56,8 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 /**
  * The CAM workspace (ADR-0009): a top bar over two resizable columns,
- * operations over the project's properties on the left and the viewport on
- * the right, with the selected operation's properties floating over it.
+ * operations over the project's properties and its versions (ADR-0028) on
+ * the left and the viewport on the right, with the selected operation's properties floating over it.
  * Panes collapse to their headers; panel sizes are remembered in a cookie
  * (`layout` is what it held).
  * `tools` is the user's tool library, offered for operations, and
@@ -114,6 +115,7 @@ function Workspace({
   const getDocument = () => documentStore.getState().document;
   const operationsPanel = usePanelRef();
   const propertiesPanel = usePanelRef();
+  const versionsPanel = usePanelRef();
   const saved = useRef(layout);
 
   function remember(group: keyof WorkspaceLayout) {
@@ -147,15 +149,15 @@ function Workspace({
           >
             <ResizablePanelGroup
               orientation="vertical"
-              defaultLayout={savedLayout(layout.sidebar, ["operations", "properties"])}
+              defaultLayout={savedLayout(layout.sidebar, ["operations", "properties", "versions"])}
               onLayoutChanged={remember("sidebar")}
             >
               <Pane
                 id="operations"
                 title="Operations"
                 panel={operationsPanel}
-                sibling={propertiesPanel}
-                defaultSize="40"
+                siblings={[propertiesPanel, versionsPanel]}
+                defaultSize="35"
                 footer={
                   <GcodeExportButton
                     name={project.name}
@@ -178,8 +180,8 @@ function Workspace({
                 id="properties"
                 title="Properties"
                 panel={propertiesPanel}
-                sibling={operationsPanel}
-                defaultSize="60"
+                siblings={[operationsPanel, versionsPanel]}
+                defaultSize="45"
                 footer={
                   <ExportButton
                     id={project.id}
@@ -191,6 +193,16 @@ function Workspace({
                 }
               >
                 <StockProperties machines={machines} />
+              </Pane>
+              <ResizableHandle />
+              <Pane
+                id="versions"
+                title="Versions"
+                panel={versionsPanel}
+                siblings={[operationsPanel, propertiesPanel]}
+                defaultSize="20"
+              >
+                <VersionsPane projectId={project.id} />
               </Pane>
             </ResizablePanelGroup>
           </ResizablePanel>
@@ -287,15 +299,16 @@ const PANE_HEADER = "1.75rem";
 
 /**
  * A sidebar pane: dragging its edge resizes it, and its header collapses it to
- * just the header or expands it. Collapsing it expands its `sibling` if that
- * is collapsed: one of the two always shows. `footer` stays at its bottom while
- * the rest scrolls.
+ * just the header or expands it. Collapsing it expands the first of its
+ * `siblings` if they are all collapsed: one pane always shows. `footer` stays
+ * at its bottom while the rest scrolls. A collapsed pane's content stays
+ * mounted, only hidden.
  */
 function Pane({
   id,
   title,
   panel,
-  sibling,
+  siblings,
   defaultSize,
   footer,
   children,
@@ -303,7 +316,7 @@ function Pane({
   id: string;
   title: string;
   panel: PanelRef;
-  sibling: PanelRef;
+  siblings: PanelRef[];
   defaultSize: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
@@ -315,7 +328,7 @@ function Pane({
       panel.current?.expand();
       return;
     }
-    if (sibling.current?.isCollapsed()) sibling.current.expand();
+    if (siblings.every((sibling) => sibling.current?.isCollapsed())) siblings[0]?.current?.expand();
     panel.current?.collapse();
   }
 
@@ -343,11 +356,14 @@ function Pane({
             {title}
           </button>
         </h2>
-        {!collapsed && (
-          <>
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
-            {footer && <div className="shrink-0 border-t p-2">{footer}</div>}
-          </>
+        {/* Hidden rather than unmounted, so a collapsed pane keeps its state and running actions. */}
+        <div hidden={collapsed} className="min-h-0 flex-1 overflow-auto">
+          {children}
+        </div>
+        {footer && (
+          <div hidden={collapsed} className="shrink-0 border-t p-2">
+            {footer}
+          </div>
         )}
       </section>
     </ResizablePanel>

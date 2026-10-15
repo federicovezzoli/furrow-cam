@@ -184,4 +184,81 @@ describe("createAutosave", () => {
     expect(calls).toHaveLength(2);
     expect(calls[1]?.savedAt).toEqual(SAVED_AT);
   });
+
+  it("settles a pending change: saves it now and resolves once it's stored", async () => {
+    const { save, calls } = deferredSave();
+    const { autosave, setWidth } = setup(save);
+    setWidth(100);
+    const settled = autosave.settle();
+    expect(calls).toHaveLength(1);
+    calls[0]?.resolve({ updatedAt: SAVED_AT });
+    expect(await settled).toEqual({ state: "saved", savedAt: SAVED_AT });
+  });
+
+  it("settles after a running save and the changes made during it", async () => {
+    const { save, calls } = deferredSave();
+    const { autosave, setWidth } = setup(save);
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    setWidth(200);
+    const settled = autosave.settle();
+    calls[0]?.resolve({ updatedAt: SAVED_AT });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls[1]).toMatchObject({ width: 200, savedAt: SAVED_AT });
+    const later = new Date("2026-10-03T00:00:00Z");
+    calls[1]?.resolve({ updatedAt: later });
+    expect(await settled).toEqual({ state: "saved", savedAt: later });
+  });
+
+  it("settles at once when nothing is pending", async () => {
+    const save = vi.fn<SaveDocument>();
+    const { autosave } = setup(save);
+    expect(await autosave.settle()).toEqual({ state: "saved", savedAt: LOADED_AT });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("settles with the error when the connection fails", async () => {
+    const save = vi.fn<SaveDocument>().mockRejectedValue(new Error("offline"));
+    const { autosave, setWidth } = setup(save);
+    setWidth(100);
+    expect(await autosave.settle()).toMatchObject({ state: "error", error: OFFLINE });
+    expect(save).toHaveBeenCalledOnce();
+  });
+
+  it("starts no save while held, and saves what changed meanwhile on release", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({ updatedAt: SAVED_AT }));
+    const { autosave, setWidth } = setup(save);
+    expect(await autosave.hold()).toEqual({ state: "saved", savedAt: LOADED_AT });
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY * 5);
+    autosave.flush();
+    expect(save).not.toHaveBeenCalled();
+
+    autosave.release();
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(save).toHaveBeenCalledOnce();
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+  });
+
+  it("starts over from a document restored while held, dropping changes made meanwhile", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({ updatedAt: LOADED_AT }));
+    const { store, autosave, setWidth } = setup(save);
+    await autosave.hold();
+    // An edit while the restore is in flight: without the hold, its save would conflict.
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY * 5);
+
+    const restored = createProjectDocument();
+    restored.stock.width = 42;
+    autosave.release({ document: restored, savedAt: SAVED_AT });
+    store.getState().load(restored);
+    await vi.advanceTimersByTimeAsync(DELAY * 5);
+    expect(save).not.toHaveBeenCalled();
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+
+    setWidth(300);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(save).toHaveBeenCalledOnce();
+    expect(save.mock.calls[0]?.[1]).toEqual(SAVED_AT);
+  });
 });

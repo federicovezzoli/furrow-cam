@@ -47,7 +47,11 @@ export function createAutosave(
   let status: AutosaveStatus = { state: "saved", savedAt };
   let savedDocument = store.getState().document;
   let saving = false;
+  /** The running save, settled either way; resolves when it's done. */
+  let inFlight: Promise<unknown> = Promise.resolve();
   let started = false;
+  /** While held, no save starts: the server's document is being replaced (a restore). */
+  let held = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
@@ -90,7 +94,7 @@ export function createAutosave(
 
   async function run() {
     timer = undefined;
-    if (saving || status.state === "failed") return;
+    if (saving || held || status.state === "failed") return;
     const { document, inTransaction } = store.getState();
     if (inTransaction || isSaved(document)) return;
 
@@ -98,7 +102,9 @@ export function createAutosave(
     update("saving");
     let result: Awaited<ReturnType<SaveDocument>>;
     try {
-      result = await save(document, status.savedAt);
+      const saved = save(document, status.savedAt);
+      inFlight = saved.catch(() => {});
+      result = await saved;
     } catch {
       saving = false;
       update("error", OFFLINE);
@@ -124,6 +130,28 @@ export function createAutosave(
   function flush() {
     clearTimeout(timer);
     void run();
+  }
+
+  /**
+   * Saves pending changes now and resolves with the status once no save is
+   * running: `saved` if the server has what's on screen. A connection error
+   * isn't retried more than once.
+   */
+  async function settle(): Promise<AutosaveStatus> {
+    let attempted = false;
+    for (;;) {
+      clearTimeout(timer);
+      timer = undefined;
+      if (saving) {
+        await inFlight;
+        continue;
+      }
+      if (attempted && status.state === "error") return status;
+      attempted = true;
+      const running = run();
+      if (!saving) return status;
+      await running;
+    }
   }
 
   return {
@@ -159,6 +187,35 @@ export function createAutosave(
     },
     /** Saves pending changes now instead of waiting for the delay. */
     flush,
+    settle,
+    /**
+     * Settles, then holds: no save starts until `release`, while the server's
+     * document is replaced (a restore). Resolves with the settled status;
+     * `release` must follow either way.
+     */
+    async hold(): Promise<AutosaveStatus> {
+      const settled = await settle();
+      held = true;
+      clearTimeout(timer);
+      timer = undefined;
+      return settled;
+    },
+    /**
+     * Lets saves start again. `restored` is the document the server stored
+     * while held and when: autosave starts over from it. Load it into the
+     * store right after; changes made while held are replaced by it.
+     */
+    release(restored?: { document: ProjectDocument; savedAt: Date }) {
+      held = false;
+      if (restored) {
+        savedDocument = restored.document;
+        status = { state: "saved", savedAt: restored.savedAt };
+        for (const listener of listeners) listener();
+        // Loading it into the store schedules what's next.
+        return;
+      }
+      if (started) schedule();
+    },
   };
 }
 

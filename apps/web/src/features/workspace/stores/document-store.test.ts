@@ -170,3 +170,25 @@ describe("transactions", () => {
     expect(store.getState().past).toHaveLength(1);
   });
 });
+
+describe("load", () => {
+  it("replaces the document and clears undo/redo history", () => {
+    const { store, setWidth, width } = setup();
+    setWidth(100);
+    setWidth(200);
+    store.getState().undo();
+    store.getState().beginTransaction();
+    setWidth(300);
+
+    const loaded = createProjectDocument();
+    loaded.stock.width = 42;
+    store.getState().load(loaded);
+    expect(width()).toBe(42);
+    expect(store.getState()).toMatchObject({ past: [], future: [], inTransaction: false });
+
+    store.getState().commitTransaction();
+    expect(store.getState().past).toHaveLength(0);
+    store.getState().undo();
+    expect(width()).toBe(42);
+  });
+});

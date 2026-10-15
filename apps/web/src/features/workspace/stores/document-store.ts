@@ -39,6 +39,12 @@ export type DocumentState = {
   /** Undo and redo do nothing mid-transaction. */
   undo: () => void;
   redo: () => void;
+  /**
+   * Replaces the document with one loaded from the server (a restored
+   * version), which isn't an undo step: undo/redo history is cleared and any
+   * open transaction dropped.
+   */
+  load: (document: ProjectDocument) => void;
 };
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
@@ -164,6 +170,11 @@ export function createDocumentStore(document: ProjectDocument) {
             false,
             "redo",
           );
+        },
+
+        load(document) {
+          transaction = null;
+          set({ document, past: [], future: [], inTransaction: false }, false, "load");
         },
       }),
       { name: "document", enabled: process.env.NODE_ENV !== "production" },
