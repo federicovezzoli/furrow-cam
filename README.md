@@ -95,7 +95,7 @@ The most useful contributions right now:
 Work is tracked in [GitHub issues](https://github.com/federicovezzoli/furrow-cam/issues), grouped into the [MVP](https://github.com/federicovezzoli/furrow-cam/milestone/1) and [Post-MVP](https://github.com/federicovezzoli/furrow-cam/milestone/2) milestones. For code changes:
 
 1. Branch off `dev` as `<type>/issue-<number>` (`feat`, `fix` or `chore`), e.g. `feat/issue-9`.
-2. Open a PR to `dev` (not `main`, the default branch) with `Closes #<number>` and a changeset (`pnpm changeset`) if the change affects behaviour.
+2. Open a PR to `dev` (the default branch) with `Closes #<number>` and a changeset (`pnpm changeset`) if the change affects behaviour.
 3. Releases are cut by merging `dev` into `main`; see [ADR-0012](docs/adr/0012-ci-and-releases.md).
 
 ## License

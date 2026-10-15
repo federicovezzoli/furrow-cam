@@ -78,5 +78,5 @@ themselves. Stop once code, tests and changeset are ready, and hand back:
 - Commit message(s) following this repo's convention: one short line, `type: description`
   (`feat:`, `fix:`, `chore:`, `ci:`, `docs:`, `test:`), split by concern — see recent
   `git log` for tone.
-- A PR title/body suggestion: PR to `dev` (not `main`, which is the default branch), body
+- A PR title/body suggestion: PR to `dev` (the default branch, never `main`), body
   following `.github/pull_request_template.md` with `Closes #<n>`.

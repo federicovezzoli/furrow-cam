@@ -61,7 +61,7 @@ components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnos
 
 ## Conventions
 
-- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev`, never `main` (`main` is the default branch, so pass `--base dev`). Write `Closes #<n>` in the PR body: `.github/workflows/close-linked-issues.yml` closes those issues when the PR merges into `dev` (GitHub itself only does it for `main`). Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
+- Branches: `<type>/issue-<n>` off `dev` (`feat`, `fix`, `chore`). PRs go to `dev` (the default branch), never `main`. Write `Closes #<n>` in the PR body so GitHub closes the issue when the PR merges. Releases: merge `dev` into `main`; Changesets opens a version PR (ADR-0012).
 - Commits: one short line, conventional prefix (`feat:`, `fix:`, `chore:`, `ci:`, `docs:`, `test:`), split by concern.
 - Changesets for every behaviour change, bumping the affected `@furrow/*` packages. A changeset is a release note for users: one or two sentences on what changed, no implementation details or lists of new exports (those go in the PR description). See ADR-0027.
 - Docs: accepted ADRs are not edited; write a new ADR that supersedes them. Update the PRD when requirements change.
