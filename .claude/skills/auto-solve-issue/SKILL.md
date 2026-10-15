@@ -46,7 +46,7 @@ don't discard someone's in-progress work), `git checkout dev && git pull`, branc
 `<type>/issue-<n>` (`bug` label → `fix`; spikes/CI/deployment/docs → `chore`; otherwise
 `feat`), then implement following the project rules in `AGENTS.md`.
 
-Add tests and a changeset. Run before moving on:
+Add tests and a changeset (one or two user-facing sentences, ADR-0027). Run before moving on:
 
 ```bash
 pnpm check:fix && pnpm check
@@ -62,8 +62,8 @@ Fix anything these surface. Don't proceed to commit with anything red.
 - Commit with this repo's convention: one short line, `type: description`, split by
   concern (e.g. code / docs) — match recent `git log`.
 - `git push -u origin <type>/issue-<n>`
-- Open the PR **against `dev`** (`main` is the default branch, so `--base dev` is
-  required), following `.github/pull_request_template.md`:
+- Open the PR **against `dev`**, the default branch (pass `--base dev` anyway, never
+  `main`), following `.github/pull_request_template.md`:
 
 ```bash
 gh pr create --base dev --title "<type>: <description>" --body "$(cat <<'EOF'

@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  CURRENT_SCHEMA_VERSION,
   type Machine,
   Name,
   type ProjectDocument,
@@ -11,6 +12,7 @@ import { z } from "zod";
 import { getMachine, snapshotMachine } from "@/features/machines/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { VERSION_LABEL_MAX } from "./lib/versions";
 
 /** A project id from the URL or the client, or `null` if it can't be one. */
 export function parseProjectId(id: unknown): string | null {
@@ -56,18 +58,29 @@ export async function getProject(
   if (!row) return null;
 
   const { document, ...project } = row;
+  return { ...project, ...parseStoredDocument(document, "This project can't be opened") };
+}
+
+/**
+ * A stored document (a project's or a version's), upgraded to the current
+ * schema version and validated, or why it can't be: `failure` starts the message.
+ */
+export function parseStoredDocument(
+  json: unknown,
+  failure: string,
+): { document: ProjectDocument; error?: never } | { document?: never; error: string } {
   try {
-    return { ...project, document: parseProjectDocument(document) };
+    return { document: parseProjectDocument(json) };
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) {
-      return { ...project, error: `This project can't be opened: ${savedByNewerRelease(error)}` };
+      return { error: `${failure}: ${savedByNewerRelease(error)}` };
     }
     // e.g. a missing migration.
     if (error instanceof ProjectDocumentVersionError) {
-      return { ...project, error: `This project can't be opened: ${error.message}.` };
+      return { error: `${failure}: ${error.message}.` };
     }
     if (error instanceof z.ZodError) {
-      return { ...project, error: "This project can't be opened: its contents are invalid." };
+      return { error: `${failure}: its contents are invalid.` };
     }
     throw error;
   }
@@ -81,6 +94,42 @@ export function documentColumns(document: ProjectDocument) {
     document: document as Prisma.InputJsonObject,
   };
 }
+
+const VersionLabel = z
+  .string()
+  .trim()
+  .max(VERSION_LABEL_MAX, `Must be at most ${VERSION_LABEL_MAX} characters`)
+  .transform((label) => label || null);
+
+/** Reads a version label typed by the user: `null` when it's left blank. */
+export function parseVersionLabel(value: unknown) {
+  return VersionLabel.safeParse(typeof value === "string" ? value : "");
+}
+
+/**
+ * The versions of the user's project `projectId`, newest first (none if it
+ * isn't theirs). Documents are left out; `error` says why a version saved by
+ * a newer release can't be restored.
+ */
+export async function listVersions(userId: string, projectId: string): Promise<VersionRow[]> {
+  const rows = await db.projectVersion.findMany({
+    where: { projectId, project: { userId } },
+    select: { id: true, label: true, schemaVersion: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(({ schemaVersion, ...version }) =>
+    schemaVersion > CURRENT_SCHEMA_VERSION
+      ? {
+          ...version,
+          error: `This version can't be restored: ${savedByNewerRelease(
+            new ProjectDocumentTooNewError(schemaVersion, CURRENT_SCHEMA_VERSION),
+          )}`,
+        }
+      : version,
+  );
+}
+
+export type VersionRow = { id: string; label: string | null; createdAt: Date; error?: string };
 
 function savedByNewerRelease(error: ProjectDocumentTooNewError) {
   return `it was saved by a newer version of Furrow CAM (document version ${error.version}; this version reads up to ${error.supportedVersion}).`;

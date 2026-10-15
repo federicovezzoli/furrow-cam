@@ -41,3 +41,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |
 | [0025](0025-medial-axis-sampled-voronoi.md) | Medial axis from a Voronoi diagram of boundary samples | Proposed |
 | [0026](0026-operation-clearing-tool.md) | An operation may cut with a second, clearing tool | Proposed |
+| [0027](0027-compact-release-notes.md) | Compact release notes | Proposed |
+| [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
