@@ -19,3 +19,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0002](0002-zero-point.md) | Zero point selection | Draft |
 | [0003](0003-freemium-limits.md) | Freemium usage limits | Draft |
 | [0004](0004-machine-presets.md) | Machine presets | Draft |
+| [0005](0005-stl-relief-machining.md) | STL relief machining | Draft |
