@@ -20,6 +20,9 @@ const URL_LIFETIME = 15 * 60;
 /** Largest STL file accepted, in bytes (PRD-0005 S1). */
 export const MAX_MESH_BYTES = env.STL_MAX_FILE_MB * 1_000_000;
 
+/** The most an STL file may hold, as the browser checks it before uploading (PRD-0005 S1). */
+export type MeshLimits = { maxBytes: number; maxTriangles: number };
+
 const bucket = env.S3_BUCKET;
 
 /** The storage client, or `null` when the instance has none: STL import is off (ADR-0029). */
@@ -42,6 +45,11 @@ const client =
 
 export function isStorageConfigured() {
   return client !== null;
+}
+
+/** What STL files the browser may import, or `null` when import is off: no storage. */
+export function meshLimits(): MeshLimits | null {
+  return client ? { maxBytes: MAX_MESH_BYTES, maxTriangles: env.STL_MAX_TRIANGLES } : null;
 }
 
 function storage() {

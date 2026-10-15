@@ -10,6 +10,7 @@ import { FormError } from "@/components/form-error";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import type { MeshLimits } from "@/features/assets/server";
 import type { MachineChoice } from "@/features/machines/server";
 import { ExportButton } from "@/features/projects/components/export-button";
 import type { getProject, ProjectRow } from "@/features/projects/server";
@@ -32,6 +33,7 @@ import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { cn } from "@/lib/utils";
 import { GcodeExportButton } from "./gcode-export-button";
 import { GeometryImport } from "./geometry-import";
+import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { SaveStatus } from "./save-status";
@@ -61,17 +63,20 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * Panes collapse to their headers; panel sizes are remembered in a cookie
  * (`layout` is what it held).
  * `tools` is the user's tool library, offered for operations, and
- * `machines` their machine profiles, offered for the project.
+ * `machines` their machine profiles, offered for the project. `meshLimits`
+ * are the STL files the server stores, `null` when STL import is off.
  */
 export function WorkspaceShell({
   project,
   tools,
   machines,
+  meshLimits,
   layout,
 }: {
   project: WorkspaceProject;
   tools: ToolChoice[];
   machines: MachineChoice[];
+  meshLimits: MeshLimits | null;
   layout: WorkspaceLayout;
 }) {
   if (project.error !== undefined) {
@@ -86,7 +91,7 @@ export function WorkspaceShell({
     );
   }
   return (
-    <WorkspaceStoresProvider key={project.id} project={project}>
+    <WorkspaceStoresProvider key={project.id} project={project} meshLimits={meshLimits}>
       <ToolLibraryProvider tools={tools}>
         <Workspace project={project} machines={machines} layout={layout} />
       </ToolLibraryProvider>
@@ -220,17 +225,26 @@ function Workspace({
   );
 }
 
-/** The selected operation's properties, in a panel floating over the viewport's top right corner. */
+/**
+ * The selected operation's properties, or the selected model's placement, in
+ * a panel floating over the viewport's top right corner, so the project's
+ * stock stays in the Properties pane.
+ */
 function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
-  if (selectedId === null) return null;
+  const modelId = useWorkspaceStore((s) => s.selectedModelId);
+  if (selectedId === null && modelId === null) return null;
   return (
     <aside
-      aria-label="Operation properties"
+      aria-label={selectedId !== null ? "Operation properties" : "Model properties"}
       className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
     >
-      {/* Keyed, so nothing typed or rejected for one operation shows on the next. */}
-      <OperationProperties key={selectedId} operationId={selectedId} />
+      {/* Keyed, so nothing typed or rejected for one operation or model shows on the next. */}
+      {selectedId !== null ? (
+        <OperationProperties key={selectedId} operationId={selectedId} />
+      ) : (
+        modelId !== null && <ModelProperties key={modelId} modelId={modelId} />
+      )}
     </aside>
   );
 }

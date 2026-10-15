@@ -39,6 +39,39 @@ describe("workspace store", () => {
     expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
   });
 
+  it("selects a model or paths, not both", () => {
+    const store = createWorkspaceStore();
+    store.getState().setPickingZero(true);
+    store.getState().selectPaths([a0]);
+    store.getState().selectModel("model");
+    expect(store.getState()).toMatchObject({
+      selectedModelId: "model",
+      selectedPaths: [],
+      pickingZero: false,
+    });
+    store.getState().selectPaths([b0], "toggle");
+    expect(store.getState()).toMatchObject({ selectedModelId: null, selectedPaths: [b0] });
+    store.getState().selectModel("model");
+    store.getState().clearSelection();
+    expect(store.getState().selectedModelId).toBeNull();
+  });
+
+  it("shows a model's placement or an operation's properties, not both", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectOperation("op");
+    store.getState().selectModel("model");
+    expect(store.getState()).toMatchObject({ selectedModelId: "model", selectedOperationId: null });
+    store.getState().selectOperation("op");
+    expect(store.getState()).toMatchObject({ selectedModelId: null, selectedOperationId: "op" });
+  });
+
+  it("drops a selected model that is no longer in the document", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectModel("model");
+    store.getState().prune(createProjectDocument());
+    expect(store.getState().selectedModelId).toBeNull();
+  });
+
   it("shows or hides several toolpaths at once", () => {
     const store = createWorkspaceStore();
     store.getState().setToolpathVisible("a", false);

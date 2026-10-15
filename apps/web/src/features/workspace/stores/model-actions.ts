@@ -1,0 +1,150 @@
+import {
+  anchorPoint,
+  fitScale,
+  initialPlacement,
+  modelRect,
+  positionAt,
+  replacePlacement,
+  translatePoint,
+  turnModel,
+  xyOriginPosition,
+} from "@furrow/cam-core";
+import type { Model, ModelPlacement, Point, Stock, StockAnchor } from "@furrow/document";
+import type { Draft } from "immer";
+import type { DocumentStore } from "./document-store";
+import { hasImportedFile } from "./geometry-actions";
+
+/**
+ * Document store actions on imported 3D models (PRD-0005 S2, ADR-0031): each
+ * change is one undo step, or part of the open transaction.
+ */
+
+/**
+ * The point of a model that is measured from the zero and stays put when it
+ * is turned or scaled: the zero's anchor, or the bottom-left corner for a
+ * custom zero.
+ */
+export function modelAnchor(stock: Pick<Stock, "xyOrigin">): StockAnchor {
+  const { anchor } = stock.xyOrigin;
+  return anchor === "custom" ? "bottom_left" : anchor;
+}
+
+/** Where a model is relative to the XY zero: its point at `modelAnchor`, in millimetres. */
+export function modelOffset(stock: Stock, model: Pick<Model, "bounds" | "placement">): Point {
+  const [x, y] = anchorPoint(modelRect(model), modelAnchor(stock));
+  const [zx, zy] = xyOriginPosition(stock);
+  return [x - zx, y - zy];
+}
+
+function changeModel(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  recipe: (model: Draft<Model>, current: Model) => void,
+) {
+  const current = store.getState().document.models.find((model) => model.id === id);
+  if (!current) return;
+  store.getState().change(name, (draft) => {
+    const model = draft.models.find((m) => m.id === id);
+    if (model) recipe(model, current);
+  });
+}
+
+/** Assigns the fields of `placement` that differ, so an unchanged value adds no undo step. */
+function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
+  const draft = model.placement;
+  if (draft.rotation.some((turn, i) => turn !== placement.rotation[i])) {
+    draft.rotation = placement.rotation;
+  }
+  if (draft.scale !== placement.scale) draft.scale = placement.scale;
+  if (draft.depth !== placement.depth) draft.depth = placement.depth;
+  if (draft.position[0] !== placement.position[0] || draft.position[1] !== placement.position[1]) {
+    draft.position = placement.position;
+  }
+}
+
+/**
+ * Adds an imported mesh as a model, as one undo step: scaled to fit the
+ * stock, its top at the stock top and aligned to the stock at the zero's
+ * anchor (ADR-0031). Projects hold one imported file for now: returns
+ * `null`, adding nothing, if the project already has shapes or a model;
+ * otherwise the model's id.
+ */
+export function addModel(
+  store: DocumentStore,
+  mesh: Omit<Model, "id" | "placement">,
+): string | null {
+  const { document } = store.getState();
+  if (hasImportedFile(document)) return null;
+  const { stock } = document;
+  const id = crypto.randomUUID();
+  const placement = initialPlacement(mesh.bounds, stock, modelAnchor(stock));
+  store.getState().change("addModel", (draft) => {
+    draft.models.push({ ...mesh, id, placement });
+  });
+  return id;
+}
+
+export function removeModel(store: DocumentStore, id: string) {
+  store.getState().change("removeModel", (draft) => {
+    const index = draft.models.findIndex((model) => model.id === id);
+    if (index !== -1) draft.models.splice(index, 1);
+  });
+}
+
+/** Turns a model a quarter turn about the stock's `axis`, keeping its anchor point in place. */
+export function turnModelAbout(store: DocumentStore, id: string, axis: 0 | 1 | 2) {
+  const { stock } = store.getState().document;
+  changeModel(store, "turnModel", id, (model, current) => {
+    const rotation = turnModel(current.placement.rotation, axis);
+    assignPlacement(model, replacePlacement(current, { rotation }, modelAnchor(stock)));
+  });
+}
+
+/** Scales a model in X and Y, keeping its anchor point in place. Its depth stays. */
+export function setModelScale(store: DocumentStore, id: string, scale: number) {
+  const { stock } = store.getState().document;
+  changeModel(store, "setModel.scale", id, (model, current) => {
+    assignPlacement(model, replacePlacement(current, { scale }, modelAnchor(stock)));
+  });
+}
+
+/** Scales a model to fit the stock's width and height, aligned to it at the anchor. */
+export function fitModelToStock(store: DocumentStore, id: string) {
+  const { stock } = store.getState().document;
+  changeModel(store, "fitModel", id, (model, current) => {
+    const { rotation } = current.placement;
+    const scale = fitScale(current.bounds, rotation, stock);
+    const anchor = modelAnchor(stock);
+    const point = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
+    assignPlacement(model, {
+      ...current.placement,
+      scale,
+      position: positionAt(current.bounds, { rotation, scale }, anchor, point),
+    });
+  });
+}
+
+/** How far a model reaches into the stock from its top, in millimetres. */
+export function setModelDepth(store: DocumentStore, id: string, depth: number) {
+  changeModel(store, "setModel.depth", id, (model) => {
+    model.placement.depth = depth;
+  });
+}
+
+/**
+ * Moves a model along one axis so that its anchor point is `value`
+ * millimetres from the XY zero (`modelOffset`).
+ */
+export function setModelOffset(store: DocumentStore, id: string, axis: "x" | "y", value: number) {
+  const { stock } = store.getState().document;
+  changeModel(store, `setModel.position.${axis}`, id, (model, current) => {
+    const i = axis === "x" ? 0 : 1;
+    const delta: Point = [0, 0];
+    delta[i] = value - (modelOffset(stock, current)[i] as number);
+    assignPlacement(model, {
+      ...current.placement,
+      position: translatePoint(current.placement.position, delta),
+    });
+  });
+}

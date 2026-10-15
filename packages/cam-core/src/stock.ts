@@ -52,7 +52,15 @@ export function anchorAlignment(
   shapes: Shape[],
   anchor: StockAnchor,
 ): Point {
-  const bounds = shapesBounds(shapes);
+  return rectAlignment(stock, shapesBounds(shapes), anchor);
+}
+
+/** How far to move `bounds` to sit on the stock at `anchor`, like `anchorAlignment`. */
+export function rectAlignment(
+  stock: Pick<Stock, "width" | "height">,
+  bounds: Rect | null,
+  anchor: StockAnchor,
+): Point {
   if (!bounds) return [0, 0];
   const [x, y] = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
   const [bx, by] = anchorPoint(bounds, anchor);

@@ -45,3 +45,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
 | [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Proposed |
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed |

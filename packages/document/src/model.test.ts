@@ -30,6 +30,18 @@ describe("Model", () => {
     ]);
   });
 
+  it("accepts quarter turns only, and a positive scale and depth", () => {
+    const placed = (placement: object) => ({
+      ...model,
+      placement: { ...model.placement, ...placement },
+    });
+    expect(Model.safeParse(placed({ rotation: [90, 180, 270] })).success).toBe(true);
+    expect(Model.safeParse(placed({ rotation: [45, 0, 0] })).success).toBe(false);
+    expect(Model.safeParse(placed({ rotation: [360, 0, 0] })).success).toBe(false);
+    expect(Model.safeParse(placed({ scale: 0 })).success).toBe(false);
+    expect(Model.safeParse(placed({ depth: -1 })).success).toBe(false);
+  });
+
   it("rejects empty files, fractional counts and unknown keys", () => {
     expect(Model.safeParse({ ...model, size: 0 }).success).toBe(false);
     expect(Model.safeParse({ ...model, triangles: 1.5 }).success).toBe(false);

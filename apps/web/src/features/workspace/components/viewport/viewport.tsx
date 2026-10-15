@@ -6,6 +6,7 @@ import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } fr
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useModelPreviews } from "@/features/workspace/hooks/use-model-previews";
 import { useSimulation } from "@/features/workspace/hooks/use-simulation";
 import { belongsElsewhere } from "@/features/workspace/lib/keyboard-target";
 import { heightmapCellLimit } from "@/features/workspace/lib/simulation-mesh";
@@ -22,8 +23,8 @@ import { Scene } from "./scene";
 import { PALETTES } from "./scene-style";
 
 /**
- * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry
- * and toolpaths (or the stock as simulated after cutting, ADR-0019) in one scene, seen from an orthographic top view or a perspective
+ * The workspace's 3D viewport (ADR-0008): stock, grid, work origin, geometry,
+ * 3D models (PRD-0005 S3) and toolpaths (or the stock as simulated after cutting, ADR-0019) in one scene, seen from an orthographic top view or a perspective
  * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014):
  * the stock stays put, and changing the work origin moves the origin marker
  * and the grid, and the drawing when an anchor is chosen (ADR-0022).
@@ -39,6 +40,7 @@ export function Viewport() {
   const simulation = useSimulation(
     simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
   );
+  const modelPreviews = useModelPreviews();
   const overPath = useWorkspaceStore((s) => s.hovered !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
   const { resolvedTheme } = useTheme();
@@ -79,7 +81,7 @@ export function Viewport() {
         ) : (
           <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         )}
-        <Scene box={box} palette={palette} heightmap={heightmap} />
+        <Scene box={box} palette={palette} heightmap={heightmap} modelPreviews={modelPreviews} />
         <TextureLimit onLimit={setMaxTextureSize} />
       </Canvas>
       <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
