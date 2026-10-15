@@ -2,18 +2,31 @@
 
 **Open source, web-based 2.5D CAM.** Turn 2D vector designs into G-code for CNC routers, right in your browser.
 
-> ⚠️ **Status: pre-alpha / design phase.** There is no usable software yet. We are currently defining scope and architecture. See [docs/](docs/).
+**Try it at [app.furrow.cam](https://app.furrow.cam)** (free account, email and password).
+
+> **Status: alpha.** The MVP features are live and usable, but expect rough edges, and check your G-code in a simulator before the first cut on a new setup. See the [releases](https://github.com/federicovezzoli/furrow-cam/releases) for what changed.
 
 ## What is it?
 
 Furrow CAM is a Computer-Aided Manufacturing tool for **2.5D machining**: operations where the tool moves in X/Y at a series of fixed Z depths. That covers most hobby and small-shop CNC router work:
 
-- **Profiling**: cutting parts out along a contour (inside / outside / on-line, with tabs)
-- **Pocketing**: clearing material inside a closed shape
-- **Drilling**: plunging holes at points or circle centers
-- **Engraving / V-carving**: following lines, or variable-depth carving with V-bits *(planned)*
+- **Profiling**: cutting parts out along a contour (inside / outside / on the line), with depth passes, ramp entry and holding tabs
+- **Pocketing**: clearing material inside closed shapes, with offset, linear or peel strategies
+- **Drilling**: plunging holes at circle centres or points
+- **Engraving**: following lines at a fixed depth, or a fixed line width with a V-bit
+- **V-carving**: variable-depth carving with a V-bit, for crisp lettering and sharp corners
 
-It is **not** a full 3D CAM (no surface finishing of freeform models), and it is not a CAD tool. You design elsewhere, import here.
+It is **not** a full 3D CAM (no surface finishing of freeform models; STL relief machining is being scoped in [#101](https://github.com/federicovezzoli/furrow-cam/issues/101)), and it is not a CAD tool. You design elsewhere, import here.
+
+## Features
+
+- **Import** SVG and DXF drawings
+- **Zero point** on any of the stock's 9 anchors, a typed position, or a point picked in the viewport with snapping
+- **Tool library** and **machine profiles** saved to your account, with presets for popular hobby routers: V1 Engineering LowRider v4 and MPCNC Primo, Maslow 4, Sienci LongMill MK2, SainSmart Genmitsu 3018
+- **Preview**: toolpaths in a 2D/3D viewport, rapids and cuts shown apart, plus a simulation of the stock after cutting
+- **G-code export** for GRBL-compatible controllers (GRBL, grblHAL, FluidNC), with optional custom start, end and tool-change blocks per machine
+- **Projects** saved to your account, with undo/redo, and export/import as a file
+- Metric and imperial units, light and dark theme
 
 ## Goals
 
@@ -47,6 +60,7 @@ Without `RESEND_API_KEY`, verification and password reset emails are printed to 
 Other commands:
 
 ```sh
+pnpm email:dev    # preview the email templates
 pnpm test         # unit tests (Vitest)
 pnpm typecheck    # TypeScript across all packages
 pnpm check        # lint + format check (Biome); pnpm check:fix to apply fixes
@@ -61,8 +75,8 @@ The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hos
 ### Repository layout
 
 ```
-apps/web/            Next.js app: UI, viewport, server code
-packages/document/   project document schema (Zod) and migrations
+apps/web/            Next.js app: UI, viewport, server code (organised by feature, ADR-0021)
+packages/document/   project document schema (Zod), migrations and machine presets
 packages/cam-core/   framework-agnostic geometry and toolpath generation
 packages/post/       post-processors (toolpaths → G-code)
 docs/                PRDs and ADRs
@@ -72,9 +86,13 @@ See [ADR-0011](docs/adr/0011-monorepo-structure-and-tooling.md) for the reasonin
 
 ## Contributing
 
-The project is just getting started. The most useful contributions right now are feedback on the [PRDs](docs/prd/) and [ADRs](docs/adr/). Open an issue or a PR against the relevant document.
+The most useful contributions right now:
 
-Work is tracked in [GitHub issues](https://github.com/federicovezzoli/furrow-cam/issues) under the [MVP milestone](https://github.com/federicovezzoli/furrow-cam/milestone/1). For code changes:
+- **Try it on your machine** and [open an issue](https://github.com/federicovezzoli/furrow-cam/issues) for anything that cuts wrong or is confusing.
+- **Machine presets**: add your router to `packages/document/src/machine-presets.ts`, with a source for every value.
+- **Feedback on the docs**: [PRDs](docs/prd/) say what we build and why, [ADRs](docs/adr/) how and why we build it that way.
+
+Work is tracked in [GitHub issues](https://github.com/federicovezzoli/furrow-cam/issues), grouped into the [MVP](https://github.com/federicovezzoli/furrow-cam/milestone/1) and [Post-MVP](https://github.com/federicovezzoli/furrow-cam/milestone/2) milestones. For code changes:
 
 1. Branch off `dev` as `<type>/issue-<number>` (`feat`, `fix` or `chore`), e.g. `feat/issue-9`.
 2. Open a PR to `dev` (not `main`, the default branch) with `Closes #<number>` and a changeset (`pnpm changeset`) if the change affects behaviour.
