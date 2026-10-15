@@ -151,6 +151,11 @@ describe("migrations", () => {
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
   });
 
+  it("gives v6 documents no models", () => {
+    const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
+    expect(parseProjectDocument(v6)).toEqual(fullDocument());
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

@@ -1,5 +1,5 @@
 import { createProjectDocument, type Machine, type ProjectDocument } from "@furrow/document";
-import { lowRider, machine } from "@furrow/document/fixtures";
+import { lowRider, machine, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const USER = "user-1";
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/features/auth/server", () => ({ getUserId: async () => mocks.userId }));
+vi.mock("@/features/assets/server", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -140,5 +141,13 @@ describe("importProject", () => {
     await expect(importProject(projectFile(document), MACHINE_ID)).rejects.toThrow("redirect");
     expect(mocks.created[0]?.document.machine).toEqual(lowRider);
     expect(mocks.created[0]?.machineName).toBe(lowRider.name);
+  });
+
+  it("refuses a .furrow.json file with models, whose meshes it can't hold", async () => {
+    const document = { ...createProjectDocument(), machine: lowRider, models: [model] };
+    expect(await importProject(projectFile(document), MACHINE_ID)).toEqual({
+      error: "This project has 3D models: import its .zip export instead.",
+    });
+    expect(mocks.created).toHaveLength(0);
   });
 });

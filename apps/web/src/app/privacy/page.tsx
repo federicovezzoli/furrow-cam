@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023).
-const LAST_UPDATED = "14 October 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029).
+const LAST_UPDATED = "15 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -45,8 +45,9 @@ export default function PrivacyPage() {
               you sign out and expires after 7 days without use.
             </li>
             <li>
-              <strong>Your projects, bits and machines</strong>: imported drawings, operations and
-              settings. Toolpaths and G-code are computed in your browser and never sent to us.
+              <strong>Your projects, bits and machines</strong>: imported drawings and 3D models,
+              operations and settings. Toolpaths and G-code are computed in your browser and never
+              sent to us.
             </li>
           </List>
           <p>
@@ -80,6 +81,11 @@ export default function PrivacyPage() {
             <li>
               <External href="https://neon.com/privacy-policy">Neon</External> hosts our database,
               in Frankfurt (AWS eu-central-1).
+            </li>
+            <li>
+              <External href="https://www.cloudflare.com/privacypolicy/">Cloudflare</External>{" "}
+              stores the 3D model files you import (Cloudflare R2), in a bucket restricted to the
+              European Union. They are only reachable through short-lived links the app gives you.
             </li>
             <li>
               <External href="https://resend.com/legal/privacy-policy">Resend</External> sends our
@@ -120,7 +126,8 @@ export default function PrivacyPage() {
           <p>
             You can delete your account at any time from the Account menu in the app header, after
             confirming your password. Deletion is immediate and permanent: your email address,
-            password hash, sessions, projects, bits and machines are removed from our database.
+            password hash, sessions, projects, bits and machines are removed from our database, and
+            your 3D model files from our file storage. Deleting a project deletes its files too.
             Copies in our providers&apos; logs and backups are deleted on their own schedules.
           </p>
         </Section>

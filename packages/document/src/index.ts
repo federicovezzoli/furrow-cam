@@ -4,6 +4,7 @@ export * from "./geometry";
 export * from "./machine";
 export * from "./machine-presets";
 export * from "./migrations";
+export * from "./model";
 export * from "./operation";
 export * from "./tool";
 export * from "./units";

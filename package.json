@@ -10,9 +10,10 @@
     "check": "biome check",
     "check:fix": "biome check --write",
     "check:ci": "biome ci",
-    "db:up": "docker compose up -d --wait",
+    "db:up": "docker compose up -d --wait && pnpm storage:init",
     "db:migrate": "pnpm --filter @furrow/web db:migrate",
     "db:studio": "pnpm --filter @furrow/web db:studio",
+    "storage:init": "pnpm --filter @furrow/web storage:init",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"

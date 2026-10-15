@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument, ProjectDocument, StockAnchor, XYOrigin } from "./document";
-import { fullDocument, OPERATION_ID, SQUARE_ID } from "./fixtures";
+import { fullDocument, model, OPERATION_ID, SQUARE_ID } from "./fixtures";
 
 describe("ProjectDocument", () => {
   it("accepts a document with machine, geometry and operations", () => {
@@ -42,6 +42,15 @@ describe("ProjectDocument", () => {
       targets: [{ shapeId: "11111111-2222-4333-8444-555555555555", paths: null }],
     };
     expect(ProjectDocument.safeParse({ ...doc, operations: [dangling] }).success).toBe(false);
+  });
+
+  it("accepts models and rejects duplicate model ids", () => {
+    const doc = { ...fullDocument(), models: [model] };
+    expect(ProjectDocument.parse(doc)).toEqual(doc);
+    const copy = { ...model, fileName: "copy.stl" };
+    expect(ProjectDocument.safeParse({ ...doc, models: [model, copy] }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["models", 1, "id"], message: "Duplicate model id" }),
+    ]);
   });
 
   it("checks the targeted paths", () => {
@@ -164,6 +173,7 @@ describe("createProjectDocument", () => {
       },
       machine: null,
       geometry: [],
+      models: [],
       operations: [],
     });
   });

@@ -4,6 +4,12 @@ import { createProjectDocument, ProjectDocument, projectNameFromFileName } from 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  copyAssets,
+  deleteProjectObjects,
+  isStorageConfigured,
+  missingAssets,
+} from "@/features/assets/server";
 import { getUserId } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { Prisma } from "@/generated/prisma/client";
@@ -33,6 +39,7 @@ export type ImportResult = ActionResult | { chooseMachine: true; error?: never }
 const NOT_FOUND = "This project no longer exists.";
 const VERSION_NOT_FOUND = "This version no longer exists.";
 const TOO_MANY_VERSIONS = `This project already has ${MAX_VERSIONS} versions, the most it can keep. Delete one first.`;
+const MESH_MISSING = "a model's mesh hasn't been uploaded.";
 const CONFLICT =
   "This project was changed somewhere else since you opened it. Reload it to see the latest version.";
 
@@ -68,6 +75,10 @@ export async function importProject(file: File, machineId: string | null): Promi
   const parsed = parseProjectFile(await file.text());
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
+  // Their meshes aren't in a `.furrow.json` file, only in a zip export (ADR-0029).
+  if (document.models.length > 0) {
+    return { error: "This project has 3D models: import its .zip export instead." };
+  }
   if (document.machine === null) {
     if (machineId === null) {
       // The machines the import dialog offers: rows that fail today's rules aren't.
@@ -117,6 +128,7 @@ export async function deleteProject(id: string): Promise<ActionResult> {
 
   const { count } = await db.project.deleteMany({ where: { id: projectId, userId } });
   if (count === 0) return { error: NOT_FOUND };
+  await deleteProjectObjects(userId, projectId);
   revalidatePath("/projects");
 }
 
@@ -154,6 +166,10 @@ export async function saveProject(
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
     return { error: `The project couldn't be saved: ${z.prettifyError(parsed.error)}` };
+  }
+  const meshes = parsed.data.models.map(({ sha256 }) => sha256);
+  if ((await missingAssets(userId, projectId, meshes)).length > 0) {
+    return { error: `The project couldn't be saved: ${MESH_MISSING}` };
   }
 
   try {
@@ -352,7 +368,7 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
 
   const version = await db.projectVersion.findFirst({
     where: { id: versionId, project: { userId } },
-    select: { label: true, document: true, project: { select: { name: true } } },
+    select: { label: true, document: true, project: { select: { id: true, name: true } } },
   });
   if (!version) return { error: VERSION_NOT_FOUND };
   const parsed = parseStoredDocument(version.document, "This version can't be opened");
@@ -365,6 +381,15 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
     truncate(version.project.name, PROJECT_NAME_MAX - suffix.length).trimEnd() + suffix,
   );
 
+  const meshes = [...new Set(parsed.document.models.map(({ sha256 }) => sha256))];
+  if (meshes.length > 0) {
+    if (!isStorageConfigured())
+      return { error: "This version has 3D models, which this server can't store." };
+    if ((await missingAssets(userId, version.project.id, meshes)).length > 0) {
+      return { error: `This version can't be opened: ${MESH_MISSING}` };
+    }
+  }
+
   const { id: projectId } = await db.project.create({
     data: {
       userId,
@@ -373,6 +398,29 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
     },
     select: { id: true },
   });
+  // Projects never share objects (ADR-0029): the new one gets copies.
+  const error = await copyMeshes(userId, version.project.id, projectId, meshes);
+  if (error) return { error };
   revalidatePath("/projects");
   redirect(`/projects/${projectId}`);
+}
+
+/**
+ * Copies the meshes `sha256s` of project `from` to the new project `to`. If
+ * that fails, `to` is deleted with its objects and an error comes back.
+ */
+async function copyMeshes(
+  userId: string,
+  from: string,
+  to: string,
+  sha256s: readonly string[],
+): Promise<string | undefined> {
+  try {
+    await copyAssets(userId, from, to, sha256s);
+  } catch (error) {
+    console.error(`Couldn't copy the meshes of project ${from}`, error);
+    await db.project.deleteMany({ where: { id: to, userId } });
+    await deleteProjectObjects(userId, to);
+    return "The 3D models couldn't be copied. Try again.";
+  }
 }

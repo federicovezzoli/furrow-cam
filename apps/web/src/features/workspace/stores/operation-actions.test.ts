@@ -130,6 +130,7 @@ function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
     geometry: [square, circle, plate],
+    models: [],
   });
   const document = () => store.getState().document;
   const operations = () => document().operations;

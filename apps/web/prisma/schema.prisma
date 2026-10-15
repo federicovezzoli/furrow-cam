@@ -179,6 +179,7 @@ model Project {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   versions      ProjectVersion[]
+  assets        ProjectAsset[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@map("project")
@@ -198,4 +199,23 @@ model ProjectVersion {
 
   @@index([projectId, createdAt(sort: Desc)])
   @@map("project_version")
+}
+
+/// A file stored outside the document, in S3-compatible storage (ADR-0029): today an STL mesh.
+/// The object key is `<userId>/<projectId>/<sha256>`. Kept as long as the project, so its
+/// versions can reference it too.
+model ProjectAsset {
+  id         String    @id @default(uuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the file's bytes, in lowercase hex, as documents reference it.
+  sha256     String
+  /// In bytes.
+  size       Int
+  /// When the stored object was checked against `sha256` and `size`; until then, documents can't use it.
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([projectId, sha256])
+  @@map("project_asset")
 }
