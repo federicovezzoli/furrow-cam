@@ -46,7 +46,7 @@ don't discard someone's in-progress work), `git checkout dev && git pull`, branc
 `<type>/issue-<n>` (`bug` label → `fix`; spikes/CI/deployment/docs → `chore`; otherwise
 `feat`), then implement following the project rules in `AGENTS.md`.
 
-Add tests and a changeset. Run before moving on:
+Add tests and a changeset (one or two user-facing sentences, ADR-0027). Run before moving on:
 
 ```bash
 pnpm check:fix && pnpm check

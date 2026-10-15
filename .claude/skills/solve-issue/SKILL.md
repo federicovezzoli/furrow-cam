@@ -67,7 +67,8 @@ pnpm build
 
 Add tests alongside the change (Vitest in `packages/*`). Add a changeset with
 `pnpm changeset` (or write `.changeset/<name>.md` directly) for any behaviour change,
-bumping the affected `@furrow/*` packages.
+bumping the affected `@furrow/*` packages. Keep it to one or two user-facing sentences
+(ADR-0027): what changed, not how or which exports were added.
 
 ## 4. When the work is ready
 
