@@ -1,6 +1,6 @@
 import type { StlLimits } from "@furrow/cam-core";
 import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
-import type { DocumentStore } from "@/features/workspace/stores/document-store";
+import type { DocumentState, DocumentStore } from "@/features/workspace/stores/document-store";
 import { hasImportedFile, ONE_FILE } from "@/features/workspace/stores/geometry-actions";
 import { addModel } from "@/features/workspace/stores/model-actions";
 import type { WorkspaceStore } from "@/features/workspace/stores/workspace-store";
@@ -33,6 +33,18 @@ export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSu
     };
     worker.postMessage({ kind: "parse", id: 0, bytes, limits }, [bytes]);
   });
+}
+
+/**
+ * Whether the document or its undo and redo steps refer to mesh `sha256`,
+ * e.g. the same file imported twice at once and the model since removed.
+ * A hash can't occur by chance, so the patches are searched as text.
+ */
+export function usesMesh({ document, past, future }: DocumentState, sha256: string): boolean {
+  return (
+    document.models.some((model) => model.sha256 === sha256) ||
+    JSON.stringify([past, future]).includes(sha256)
+  );
 }
 
 /**
@@ -86,10 +98,8 @@ export async function importModel(
   // A drawing may have been imported, or a step redone, while this one uploaded.
   const id = addModel(document, { ...mesh, fileName, size: file.size });
   if (id === null) {
-    // Only a mesh this import uploaded goes: one the project had may be in a version or the
-    // undo history. The same file imported twice at once may be in the document already.
-    const current = document.getState().document;
-    if (upload.uploaded && !current.models.some(({ sha256 }) => sha256 === mesh.sha256)) {
+    // Only a mesh this import uploaded goes, and the server keeps one that something saved uses.
+    if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
       await discardUpload(projectId, mesh.sha256);
     }
     fail(ONE_FILE);

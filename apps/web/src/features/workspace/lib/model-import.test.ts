@@ -4,7 +4,7 @@ import { fullDocument, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
 import { addImportedShapes, ONE_FILE } from "../stores/geometry-actions";
-import { addModel } from "../stores/model-actions";
+import { addModel, removeModel } from "../stores/model-actions";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import { importModel } from "./model-import";
 
@@ -88,6 +88,18 @@ describe("importModel", () => {
     await importFile();
     expect(meshes.discardUpload).not.toHaveBeenCalled();
     expect(workspace.getState().modelImport?.error).toBe(ONE_FILE);
+  });
+
+  it("keeps a mesh the undo history refers to: the same file imported and removed meanwhile", async () => {
+    const { sha256, triangles, bounds, size } = model;
+    uploadWhile(() => {
+      const id = addModel(document, { sha256, triangles, bounds, size, fileName: "copy.stl" });
+      if (id) removeModel(document, id);
+      addImportedShapes(document, "importSvg", fullDocument().geometry);
+    });
+    await importFile();
+    expect(meshes.discardUpload).not.toHaveBeenCalled();
+    expect(document.getState().document.models).toEqual([]);
   });
 
   it("uploads nothing into a project that has a file", async () => {
