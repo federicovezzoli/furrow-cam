@@ -3,6 +3,12 @@ import { parseStl, StlImportError } from "./stl";
 
 type Triangle = [number, number, number][];
 
+/** Node and browsers have `TextEncoder`; the package's lib types don't include it. */
+const encoder = new (
+  globalThis as unknown as { TextEncoder: new () => { encode(text: string): Uint8Array } }
+).TextEncoder();
+const encode = (text: string) => encoder.encode(text);
+
 /** A unit pyramid's four sides over its 1 × 1 base, apex at `z = 1`. */
 const PYRAMID: Triangle[] = [
   [
@@ -29,7 +35,7 @@ const PYRAMID: Triangle[] = [
 
 function binaryStl(triangles: Triangle[], header = "binary"): Uint8Array {
   const bytes = new Uint8Array(84 + triangles.length * 50);
-  bytes.set(new TextEncoder().encode(header).subarray(0, 80));
+  bytes.set(encode(header).subarray(0, 80));
   const view = new DataView(bytes.buffer);
   view.setUint32(80, triangles.length, true);
   triangles.forEach((triangle, t) => {
@@ -49,8 +55,6 @@ function asciiStl(triangles: Triangle[]): string {
   );
   return `solid pyramid\n${facets.join("")}endsolid pyramid\n`;
 }
-
-const encode = (text: string) => new TextEncoder().encode(text);
 
 const PYRAMID_BOUNDS = { min: [0, 0, 0], max: [1, 1, 1] };
 
