@@ -49,7 +49,8 @@ const HEIGHTMAP_SHARE = 0.4;
  * leave. At each level, the cells of the offset model above it are islands,
  * and the boundary (the model's outline or the whole stock, which the tool's
  * centre reaches) less the islands is cleared like a pocket with the
- * operation's strategy, which keeps the tool a radius away from them. Lower
+ * operation's strategy and step-over (the tool's unless it sets its own),
+ * which keeps the tool a radius away from them. Lower
  * levels only clear less, so the tool crosses what the level above cleared
  * at that level's height.
  */
@@ -95,8 +96,9 @@ export function* reliefRoughSteps(
     [area.max[0] + radius, area.max[1] + radius],
     [area.min[0] - radius, area.max[1] + radius],
   ];
+  const stepOver = params.stepOver ?? tool.stepOver;
   const clearing = new LevelClearing(
-    tool,
+    { ...tool, stepOver },
     { strategy: params.strategy, direction: params.direction, allowance: 0, ramp: params.ramp },
     { safeZ, entryClearance, tolerance },
   );

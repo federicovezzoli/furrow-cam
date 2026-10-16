@@ -21,8 +21,11 @@ export type ToolpathPreview = {
  * inputs differs. `lines` (and `clearing`) are the toolpath as the viewport
  * draws it; while an operation recomputes it keeps those of its last
  * toolpath, so the preview doesn't flicker while a value is scrubbed.
+ * `previewKey` says what the lines look like: they are kept only for inputs
+ * with the same key, so a toolpath laid out differently (another strategy,
+ * say) doesn't show the old one until it is ready.
  */
-export type ToolpathEntry = { inputHash: string } & (
+export type ToolpathEntry = { inputHash: string; previewKey?: string } & (
   | {
       status: "computing";
       lines?: ToolpathLines;
@@ -49,7 +52,8 @@ export type ToolpathState = {
   /** Operation id → its latest toolpath. */
   entries: Record<string, ToolpathEntry>;
 
-  startComputing: (operationId: string, inputHash: string) => void;
+  /** Lines of the last toolpath are kept if it had the same `previewKey`. */
+  startComputing: (operationId: string, inputHash: string, previewKey?: string) => void;
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
   setResult: (operationId: string, inputHash: string, preview: ToolpathPreview) => void;
   setError: (operationId: string, inputHash: string, error: string) => void;
@@ -87,14 +91,18 @@ export function createToolpathStore() {
       immer((set) => ({
         entries: {},
 
-        startComputing(operationId, inputHash) {
+        startComputing(operationId, inputHash, previewKey) {
           set(
             (state) => {
               const previous = state.entries[operationId];
-              const kept = previous?.status === "error" ? undefined : previous;
+              const kept =
+                previous?.status === "error" || previous?.previewKey !== previewKey
+                  ? undefined
+                  : previous;
               const { lines, clearing } = kept ?? {};
               state.entries[operationId] = {
                 inputHash,
+                ...(previewKey !== undefined && { previewKey }),
                 status: "computing",
                 ...(lines && { lines }),
                 ...(lines && clearing && { clearing }),
@@ -108,8 +116,15 @@ export function createToolpathStore() {
         setResult(operationId, inputHash, preview) {
           set(
             (state) => {
-              if (state.entries[operationId]?.inputHash !== inputHash) return;
-              state.entries[operationId] = { inputHash, status: "ready", ...preview };
+              const entry = state.entries[operationId];
+              if (entry?.inputHash !== inputHash) return;
+              const { previewKey } = entry;
+              state.entries[operationId] = {
+                inputHash,
+                ...(previewKey !== undefined && { previewKey }),
+                status: "ready",
+                ...preview,
+              };
             },
             false,
             "setResult",

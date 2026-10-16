@@ -512,6 +512,7 @@ describe("addReliefRoughOperation", () => {
         modelId: model.id,
         strategy: { type: "offset" },
         direction: "climb",
+        stepOver: null,
         stockToLeave: 0.5,
         boundary: "model",
         ramp: true,
@@ -532,8 +533,10 @@ describe("addReliefRoughOperation", () => {
       updateReliefRoughParams(store, id, {
         strategy: { type: "linear", angle: 45 },
         boundary: "stock",
+        stepOver: 25,
       }),
     ).toEqual({ ok: true });
+    expect(updateReliefRoughParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
     expect(
       updateReliefRoughParams(store, id, { strategy: { type: "peel", start: "inside" } }),
     ).toMatchObject({ ok: false });
@@ -541,8 +544,10 @@ describe("addReliefRoughOperation", () => {
     expect(store.getState().document.operations[0]?.params).toMatchObject({
       strategy: { type: "linear", angle: 45 },
       boundary: "stock",
+      stepOver: 25,
       stockToLeave: 0.5,
     });
+    expect(store.getState().document.operations[0]?.tool).toEqual(endMill);
   });
 });
 

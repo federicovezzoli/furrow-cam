@@ -1005,9 +1005,37 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         </Row>
       )}
       <p className="text-muted-foreground">
-        {STRATEGY_HINTS[strategy.type]}, at the tool's step-over ({tool.stepOver}%), in levels no
-        more than its step-down ({stepDown}) apart.
+        {STRATEGY_HINTS[strategy.type]}, in levels no more than the tool's step-down ({stepDown})
+        apart.
       </p>
+      <NumberField
+        id="relief-rough-step-over"
+        label="Step-over"
+        layout="inline"
+        suffix="%"
+        min={1}
+        max={100}
+        value={params.stepOver ?? tool.stepOver}
+        onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        error={errors.stepOver}
+        {...gestureHandlers(store)}
+      />
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <p className="flex-1">
+          {params.stepOver === null
+            ? "The tool's step-over. Changing it here leaves the tool alone."
+            : `For this operation only; the tool's is ${tool.stepOver}%.`}
+        </p>
+        {params.stepOver !== null && (
+          <Button
+            variant="outline"
+            size="compact"
+            onClick={() => update("stepOver", { stepOver: null })}
+          >
+            Use the tool's
+          </Button>
+        )}
+      </div>
       <Row id="relief-rough-direction" label="Direction">
         <NativeSelect
           id="relief-rough-direction"

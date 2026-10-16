@@ -176,6 +176,7 @@ export const reliefRough: ReliefRoughOperation = {
     modelId: model.id,
     strategy: { type: "offset" },
     direction: "climb",
+    stepOver: null,
     stockToLeave: 0.5,
     boundary: "model",
     ramp: true,

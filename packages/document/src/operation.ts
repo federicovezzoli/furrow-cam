@@ -359,7 +359,8 @@ export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
 /**
  * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,
  * offset by the stock to leave, cleared in levels with a pocket strategy
- * (ADR-0030). The step-over, step-down and ramp angle come from the tool.
+ * (ADR-0030). The step-down and ramp angle come from the tool, and the
+ * step-over too unless the operation sets its own.
  */
 export const ReliefRoughParams = z
   .strictObject({
@@ -367,6 +368,11 @@ export const ReliefRoughParams = z
     modelId: z.uuid(),
     strategy: PocketStrategy,
     direction: MillingDirection,
+    /**
+     * Distance between passes, as a percentage of the tool's diameter, or
+     * `null` for the tool's own step-over. The tool itself is left alone.
+     */
+    stepOver: z.number().gt(0).max(100).nullable(),
     /** Material left on the model in every direction, walls included. */
     stockToLeave: z.number().nonnegative(),
     boundary: RoughingBoundary,

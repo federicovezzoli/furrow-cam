@@ -273,6 +273,20 @@ describe("reliefRoughSteps", () => {
     expect(at([30, 20])).toBeCloseTo(-9.5);
   });
 
+  it("spaces the passes by its own step-over, if it has one", () => {
+    const passes = (toolpath: Toolpath) =>
+      new Set(
+        feedPoints(toolpath)
+          .filter(([, , z]) => Math.abs(z + 9.5) < 1e-9)
+          .map(([, y]) => y.toFixed(6)),
+      ).size;
+    const linear = { strategy: { type: "linear", angle: 0 } } as const;
+    const own = rough(endMill, linear);
+    expect(own).toEqual(rough({ ...endMill, stepOver: 40 }, { ...linear, stepOver: null }));
+    expect(rough(endMill, { ...linear, stepOver: 40 })).toEqual(own);
+    expect(passes(rough(endMill, { ...linear, stepOver: 10 }))).toBeGreaterThan(passes(own));
+  });
+
   it("starts and ends at the retract height", () => {
     const { moves } = rough(endMill);
     expect(moves[0]).toMatchObject({

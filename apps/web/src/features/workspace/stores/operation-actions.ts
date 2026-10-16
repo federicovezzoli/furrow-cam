@@ -120,14 +120,15 @@ export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
 
 /**
  * New 3D roughing operations on `modelId` clear the model's outline with
- * offset clearing, climb milling and ramping in, leaving 0.5 mm of stock for
- * finishing (PRD-0005).
+ * offset clearing at the tool's step-over, climb milling and ramping in,
+ * leaving 0.5 mm of stock for finishing (PRD-0005).
  */
 export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
   return {
     modelId,
     strategy: { type: "offset" },
     direction: "climb",
+    stepOver: null,
     stockToLeave: 0.5,
     boundary: "model",
     ramp: true,

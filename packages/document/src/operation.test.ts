@@ -342,6 +342,7 @@ describe("ReliefRoughOperation", () => {
       { strategy: { type: "peel", start: "centre" } },
       { strategy: { type: "peel", start: "outside" } },
       { boundary: "stock" },
+      { stepOver: 25 },
       { direction: "conventional", ramp: false, stockToLeave: 0 },
     ]) {
       expect(ReliefRoughParams.safeParse({ ...params, ...changes }).success).toBe(true);
@@ -352,6 +353,8 @@ describe("ReliefRoughOperation", () => {
     const { params } = reliefRough;
     for (const changes of [
       { stockToLeave: -0.1 },
+      { stepOver: 0 },
+      { stepOver: 101 },
       { boundary: "drawing" },
       { strategy: { type: "linear", angle: 30 } },
       { modelId: "emblem" },

@@ -130,7 +130,7 @@ export function scheduleToolpaths(
       const id = input.operation.id;
       const inputHash = hashInput(input);
       if (toolpaths.getState().entries[id]?.inputHash === inputHash) continue;
-      toolpaths.getState().startComputing(id, inputHash);
+      toolpaths.getState().startComputing(id, inputHash, previewKey(input));
       const request = { operationId: id, inputHash, input };
       if (inFlight.has(id)) {
         waiting.set(id, request);
@@ -186,7 +186,7 @@ export function scheduleToolpaths(
       const [input] = toolpathInputs(document, [operation]);
       if (!input) return;
       const inputHash = hashInput(input);
-      toolpaths.getState().startComputing(id, inputHash);
+      toolpaths.getState().startComputing(id, inputHash, previewKey(input));
       send({ operationId: id, inputHash, input });
     },
     fail(error: string) {
@@ -202,6 +202,18 @@ export function scheduleToolpaths(
 }
 
 /**
+ * What a toolpath looks like, whatever its numbers: the operation's type
+ * and params with every number left out. Scrubbing a depth or a step-over
+ * keeps the key, and the last toolpath shows meanwhile; picking another
+ * strategy, side or direction changes it.
+ */
+export function previewKey({ operation }: ToolpathInput): string {
+  return JSON.stringify([operation.type, operation.params], (_, value) =>
+    typeof value === "number" ? 0 : value,
+  );
+}
+
+/**
  * Whether two inputs hold the same objects. Immer replaces every object on the
  * path to a change, so unchanged operations and shapes keep their identity.
  */
@@ -209,6 +221,8 @@ function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
   return (
     a.operation === b.operation &&
     a.model === b.model &&
+    // A new rectangle every time, for the operations that have one.
+    JSON.stringify(a.stock) === JSON.stringify(b.stock) &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     a.shapes.length === b.shapes.length &&
