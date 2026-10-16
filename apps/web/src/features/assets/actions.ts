@@ -135,3 +135,28 @@ export async function getMeshUrl(
   if (!asset) return { error: ASSET_NOT_FOUND };
   return { url: await presignDownload(project.key) };
 }
+
+/**
+ * Deletes the mesh `sha256` from the user's project when nothing saved refers
+ * to it: neither the document nor any version (ADR-0029). For an upload the
+ * import then didn't use, such as one that lost the race to another import.
+ */
+export async function discardMesh(projectId: string, sha256: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const project = await findProject(userId, projectId, sha256);
+  if (project.error !== undefined) return { error: project.error };
+  const uses = { path: ["models"], array_contains: [{ sha256: project.sha256 }] };
+  const referenced = await db.project.count({
+    where: {
+      id: project.projectId,
+      OR: [{ document: uses }, { versions: { some: { document: uses } } }],
+    },
+  });
+  if (referenced > 0) return;
+  const { count } = await db.projectAsset.deleteMany({
+    where: { projectId: project.projectId, sha256: project.sha256 },
+  });
+  // Rows go first: an object left behind has no row, which the storage sweep deletes.
+  if (count > 0) await deleteObject(project.key);
+}

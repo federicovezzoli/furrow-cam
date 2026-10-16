@@ -1,6 +1,6 @@
 import { model } from "@furrow/document/fixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { downloadMesh, uploadMesh } from "./meshes";
+import { discardUpload, downloadMesh, uploadMesh } from "./meshes";
 
 const PROJECT = "00000000-0000-4000-8000-000000000001";
 const SHA = model.sha256;
@@ -9,6 +9,7 @@ const actions = vi.hoisted(() => ({
   requestMeshUpload: vi.fn(),
   verifyMeshUpload: vi.fn(),
   getMeshUrl: vi.fn(),
+  discardMesh: vi.fn(),
 }));
 vi.mock("@/features/assets/actions", () => actions);
 
@@ -31,7 +32,7 @@ describe("uploadMesh", () => {
   it("uploads the file with the signed headers, then verifies it", async () => {
     actions.requestMeshUpload.mockResolvedValue({ upload });
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-    expect(await uploadMesh(PROJECT, SHA, file)).toBeUndefined();
+    expect(await uploadMesh(PROJECT, SHA, file)).toEqual({ uploaded: true });
     expect(actions.requestMeshUpload).toHaveBeenCalledWith(PROJECT, SHA, file.size);
     expect(fetchMock).toHaveBeenCalledWith(upload.url, {
       method: "PUT",
@@ -43,7 +44,7 @@ describe("uploadMesh", () => {
 
   it("skips uploading a file the project already has", async () => {
     actions.requestMeshUpload.mockResolvedValue({ uploaded: true });
-    expect(await uploadMesh(PROJECT, SHA, file)).toBeUndefined();
+    expect(await uploadMesh(PROJECT, SHA, file)).toEqual({ uploaded: false });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(actions.verifyMeshUpload).not.toHaveBeenCalled();
   });
@@ -51,24 +52,41 @@ describe("uploadMesh", () => {
   it("verifies when an earlier upload already stored the file", async () => {
     actions.requestMeshUpload.mockResolvedValue({ upload });
     fetchMock.mockResolvedValue(new Response(null, { status: 412 }));
-    expect(await uploadMesh(PROJECT, SHA, file)).toBeUndefined();
+    expect(await uploadMesh(PROJECT, SHA, file)).toEqual({ uploaded: true });
     expect(actions.verifyMeshUpload).toHaveBeenCalled();
   });
 
   it("returns the server's refusals and upload failures", async () => {
     actions.requestMeshUpload.mockResolvedValue({ error: "STL import isn't available." });
-    expect(await uploadMesh(PROJECT, SHA, file)).toBe("STL import isn't available.");
+    expect(await uploadMesh(PROJECT, SHA, file)).toEqual({
+      error: "STL import isn't available.",
+    });
 
     actions.requestMeshUpload.mockResolvedValue({ upload });
     fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
-    expect(await uploadMesh(PROJECT, SHA, file)).toMatch(/couldn't be uploaded/);
+    expect((await uploadMesh(PROJECT, SHA, file)).error).toMatch(/couldn't be uploaded/);
 
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
     actions.verifyMeshUpload.mockResolvedValue({ error: "Doesn't match." });
-    expect(await uploadMesh(PROJECT, SHA, file)).toBe("Doesn't match.");
+    expect(await uploadMesh(PROJECT, SHA, file)).toEqual({ error: "Doesn't match." });
 
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
-    expect(await uploadMesh(PROJECT, SHA, file)).toMatch(/couldn't be uploaded/);
+    expect((await uploadMesh(PROJECT, SHA, file)).error).toMatch(/couldn't be uploaded/);
+  });
+});
+
+describe("discardUpload", () => {
+  it("asks the server to delete the mesh, and only logs failures", async () => {
+    actions.discardMesh.mockResolvedValue(undefined);
+    await discardUpload(PROJECT, SHA);
+    expect(actions.discardMesh).toHaveBeenCalledWith(PROJECT, SHA);
+    expect(console.error).not.toHaveBeenCalled();
+
+    actions.discardMesh.mockResolvedValue({ error: "This project no longer exists." });
+    await discardUpload(PROJECT, SHA);
+    actions.discardMesh.mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(discardUpload(PROJECT, SHA)).resolves.toBeUndefined();
+    expect(console.error).toHaveBeenCalledTimes(2);
   });
 });
 

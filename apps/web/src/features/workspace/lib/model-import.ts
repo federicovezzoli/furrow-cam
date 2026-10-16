@@ -1,5 +1,5 @@
 import type { StlLimits } from "@furrow/cam-core";
-import { uploadMesh } from "@/features/assets/lib/meshes";
+import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
 import type { DocumentStore } from "@/features/workspace/stores/document-store";
 import { hasImportedFile, ONE_FILE } from "@/features/workspace/stores/geometry-actions";
 import { addModel } from "@/features/workspace/stores/model-actions";
@@ -77,15 +77,21 @@ export async function importModel(
     fail(error instanceof Error ? error.message : "This file couldn't be read.");
     return;
   }
-  const error = await uploadMesh(projectId, mesh.sha256, file);
-  if (error !== undefined) {
-    fail(error);
+  const upload = await uploadMesh(projectId, mesh.sha256, file);
+  if (upload.error !== undefined) {
+    fail(upload.error);
     return;
   }
   await cacheMesh(mesh.sha256, file);
   // A drawing may have been imported, or a step redone, while this one uploaded.
   const id = addModel(document, { ...mesh, fileName, size: file.size });
   if (id === null) {
+    // Only a mesh this import uploaded goes: one the project had may be in a version or the
+    // undo history. The same file imported twice at once may be in the document already.
+    const current = document.getState().document;
+    if (upload.uploaded && !current.models.some(({ sha256 }) => sha256 === mesh.sha256)) {
+      await discardUpload(projectId, mesh.sha256);
+    }
     fail(ONE_FILE);
     return;
   }
