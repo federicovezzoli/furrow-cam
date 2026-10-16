@@ -4,6 +4,7 @@ import type { ProjectDocument } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
+import type { MeshLimits } from "@/features/assets/server";
 import { saveProject } from "@/features/projects/actions";
 import { type Autosave, createAutosave } from "@/features/workspace/stores/autosave";
 import {
@@ -27,6 +28,9 @@ import {
 export const AUTOSAVE_DELAY = 1000;
 
 type Stores = {
+  projectId: string;
+  /** The STL files the server stores, or `null` when STL import is off (ADR-0029). */
+  meshLimits: MeshLimits | null;
   document: DocumentStore;
   workspace: WorkspaceStore;
   toolpaths: ToolpathStore;
@@ -43,10 +47,12 @@ const StoresContext = createContext<Stores | null>(null);
  */
 export function WorkspaceStoresProvider({
   project,
+  meshLimits = null,
   children,
 }: {
   /** As rendered by the server. */
   project: { id: string; document: ProjectDocument; updatedAt: Date };
+  meshLimits?: MeshLimits | null;
   children: React.ReactNode;
 }) {
   const [stores] = useState<Stores>(() => {
@@ -58,6 +64,8 @@ export function WorkspaceStoresProvider({
       if (state.document !== previous.document) workspaceStore.getState().prune(state.document);
     });
     return {
+      projectId: project.id,
+      meshLimits,
       document: documentStore,
       workspace: workspaceStore,
       toolpaths: createToolpathStore(),
@@ -110,6 +118,15 @@ export function useWorkspaceStoreApi() {
 
 export function useToolpathStoreApi() {
   return useStores().toolpaths;
+}
+
+export function useProjectId() {
+  return useStores().projectId;
+}
+
+/** What STL files may be imported, or `null` when STL import is off. */
+export function useMeshLimits() {
+  return useStores().meshLimits;
 }
 
 /** The open project's autosave; `useAutosave` starts it. */

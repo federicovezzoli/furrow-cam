@@ -127,6 +127,7 @@ export const model: Model = {
   size: 684,
   triangles: 12,
   bounds: { min: [-50, -40, 0], max: [50, 40, 12] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 12, position: [0, 0] },
 };
 
 export function fullDocument(): ProjectDocument {

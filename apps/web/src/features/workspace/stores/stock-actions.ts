@@ -1,5 +1,5 @@
 import {
-  anchorAlignment,
+  designAlignment,
   translatePoint,
   translateShapes,
   xyOriginPosition,
@@ -24,20 +24,22 @@ export function setUnits(store: DocumentStore, units: Units) {
 }
 
 /**
- * Moves the drawing on the stock by `offset`: its shapes and everything else
- * stored in stock coordinates with them, the profiles' tab positions.
- * `geometry` is the document's, read outside the draft: reading every point
- * through it would be slow.
+ * Moves the design on the stock by `offset`: its shapes, the models placed
+ * with them (ADR-0031) and everything else stored in stock coordinates with
+ * them, the profiles' tab positions. `geometry` is the document's, read
+ * outside the draft: reading every point through it would be slow.
  */
 function moveDrawing(
   draft: Draft<ProjectDocument>,
   geometry: ProjectDocument["geometry"],
   offset: Point,
 ) {
-  const moved = translateShapes(geometry, offset);
-  if (moved === geometry) return;
+  if (offset[0] === 0 && offset[1] === 0) return;
   // One assignment, so the undo step is one patch rather than one per point.
-  draft.geometry = moved;
+  draft.geometry = translateShapes(geometry, offset);
+  for (const { placement } of draft.models) {
+    placement.position = translatePoint(placement.position, offset);
+  }
   for (const operation of draft.operations) {
     if (operation.type !== "profile" || !operation.params.tabs) continue;
     const { tabs } = operation.params;
@@ -61,13 +63,14 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
 }
 
 /**
- * Puts the XY zero on a stock anchor (ADR-0016) and aligns the drawing to the
- * stock at the same anchor (ADR-0022), so the zero is that point of the
- * drawing too. Choosing the current anchor aligns a drawing that isn't.
+ * Puts the XY zero on a stock anchor (ADR-0016) and aligns the design, the
+ * drawing and the models together, to the stock at the same anchor (ADR-0022,
+ * ADR-0031), so the zero is that point of the design too. Choosing the
+ * current anchor aligns a design that isn't.
  */
 export function setXYAnchor(store: DocumentStore, anchor: StockAnchor) {
-  const { stock, geometry } = store.getState().document;
-  const offset = anchorAlignment(stock, geometry, anchor);
+  const { stock, geometry, models } = store.getState().document;
+  const offset = designAlignment(stock, geometry, models, anchor);
   store.getState().change("setStock.xyOrigin", (draft) => {
     // Checked: assigning a new object would be a change even for the same anchor.
     if (draft.stock.xyOrigin.anchor !== anchor) draft.stock.xyOrigin = { anchor };

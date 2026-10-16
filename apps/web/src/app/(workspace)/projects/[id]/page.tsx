@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { meshLimits } from "@/features/assets/server";
 import { requireUserId } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { getProject } from "@/features/projects/server";
@@ -31,5 +32,13 @@ async function Workspace({ params }: Pick<PageProps<"/projects/[id]">, "params">
 
   const layout = parseWorkspaceLayout((await cookies()).get(WORKSPACE_LAYOUT_COOKIE)?.value);
 
-  return <WorkspaceShell project={project} tools={tools} machines={machines} layout={layout} />;
+  return (
+    <WorkspaceShell
+      project={project}
+      tools={tools}
+      machines={machines}
+      meshLimits={meshLimits()}
+      layout={layout}
+    />
+  );
 }

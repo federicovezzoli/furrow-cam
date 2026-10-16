@@ -18,6 +18,8 @@ const Env = z
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     // Largest STL file accepted, in megabytes (PRD-0005 S1).
     STL_MAX_FILE_MB: z.coerce.number().int().positive().default(50),
+    // Most triangles an STL model may have (PRD-0005 S1).
+    STL_MAX_TRIANGLES: z.coerce.number().int().positive().default(2_000_000),
   })
   .refine(
     ({ S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY }) =>
@@ -46,5 +48,6 @@ export const env = Env.parse({
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
     "STL_MAX_FILE_MB",
+    "STL_MAX_TRIANGLES",
   ),
 });

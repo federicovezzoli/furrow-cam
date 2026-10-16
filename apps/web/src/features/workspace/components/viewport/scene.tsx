@@ -13,7 +13,9 @@ import {
   useDocumentStore,
   useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
+import type { ModelPreview } from "@/features/workspace/stores/model-preview-scheduler";
 import { Lines, useLineGeometry } from "./lines";
+import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SimulatedStock } from "./simulated-stock";
@@ -26,17 +28,19 @@ const ORIGIN_MARKER_SIZE = 40;
 
 /**
  * With a `heightmap`, the scene shows the stock as simulated after cutting in
- * place of the stock box; the toolpaths stay, as the Operations pane shows or
- * hides them.
+ * place of the stock box and the models; the toolpaths stay, as the
+ * Operations pane shows or hides them. `modelPreviews` draw the models.
  */
 export function Scene({
   box,
   palette,
   heightmap,
+  modelPreviews,
 }: {
   box: Box3;
   palette: Palette;
   heightmap: Heightmap | null;
+  modelPreviews: ReadonlyMap<string, ModelPreview>;
 }) {
   return (
     <>
@@ -44,7 +48,10 @@ export function Scene({
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
       ) : (
-        <Stock box={box} palette={palette} />
+        <>
+          <Stock box={box} palette={palette} />
+          <Models previews={modelPreviews} palette={palette} />
+        </>
       )}
       <Shapes palette={palette} />
       <Toolpaths palette={palette} />
