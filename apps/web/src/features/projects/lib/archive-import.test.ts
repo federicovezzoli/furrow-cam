@@ -38,7 +38,7 @@ beforeEach(() => {
   });
   actions.saveProject.mockResolvedValue({ updatedAt: new Date() });
   actions.deleteProject.mockResolvedValue(undefined);
-  uploadMesh.mockResolvedValue(undefined);
+  uploadMesh.mockResolvedValue({ uploaded: true });
 });
 
 describe("importArchive", () => {
@@ -79,7 +79,7 @@ describe("importArchive", () => {
   });
 
   it("deletes the project when an upload fails", async () => {
-    uploadMesh.mockResolvedValue("The model couldn't be uploaded.");
+    uploadMesh.mockResolvedValue({ error: "The model couldn't be uploaded." });
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({
       error: "The model couldn't be uploaded.",
     });

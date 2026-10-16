@@ -92,8 +92,8 @@ async function finish(
       // The server checked that each model has its mesh.
       if (!bytes) return IMPORT_FAILED;
       const blob = new Blob([bytes as Uint8Array<ArrayBuffer>]);
-      const error = await uploadMesh(projectId, sha256, blob);
-      if (error !== undefined) return error;
+      const uploaded = await uploadMesh(projectId, sha256, blob);
+      if (uploaded.error !== undefined) return uploaded.error;
       await cacheMesh(sha256, blob);
     }
     const saved = await saveProject(projectId, document, updatedAt);

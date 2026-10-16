@@ -21,6 +21,7 @@ import {
   documentColumns,
   getProject,
   listVersions,
+  lockProject,
   PROJECT_NAME_MAX,
   parseName,
   parseProjectFile,
@@ -255,16 +256,20 @@ export async function saveProject(
     return { error: `The project couldn't be saved: ${z.prettifyError(parsed.error)}` };
   }
   const meshes = parsed.data.models.map(({ sha256 }) => sha256);
-  if ((await missingAssets(userId, projectId, meshes)).length > 0) {
-    return { error: `The project couldn't be saved: ${MESH_MISSING}` };
-  }
 
   try {
-    // No revalidation: the list is rendered per request, and autosave would invalidate it constantly.
-    return await db.project.update({
-      where: { id: projectId, userId, updatedAt },
-      data: documentColumns(parsed.data),
-      select: { updatedAt: true },
+    return await db.$transaction(async (tx) => {
+      // Locked so a mesh can't be discarded between the check and the write (`discardMesh`).
+      await lockProject(tx, projectId);
+      if ((await missingAssets(userId, projectId, meshes, tx)).length > 0) {
+        return { error: `The project couldn't be saved: ${MESH_MISSING}` };
+      }
+      // No revalidation: the list is rendered per request, and autosave would invalidate it constantly.
+      return await tx.project.update({
+        where: { id: projectId, userId, updatedAt },
+        data: documentColumns(parsed.data),
+        select: { updatedAt: true },
+      });
     });
   } catch (error) {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025")) {
@@ -273,16 +278,6 @@ export async function saveProject(
     const exists = await db.project.count({ where: { id: projectId, userId } });
     return { error: exists ? CONFLICT : NOT_FOUND };
   }
-}
-
-type Transaction = Prisma.TransactionClient;
-
-/**
- * Locks the project's row until the transaction ends, so concurrent version
- * writes are counted against `MAX_VERSIONS` one at a time.
- */
-async function lockProject(tx: Transaction, projectId: string) {
-  await tx.$executeRaw`SELECT 1 FROM "project" WHERE "id" = ${projectId} FOR UPDATE`;
 }
 
 /** A project's versions after an action on them, newest first, or why the action failed. */

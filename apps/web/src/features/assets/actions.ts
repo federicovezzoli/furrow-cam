@@ -2,7 +2,7 @@
 
 import { Sha256 } from "@furrow/document";
 import { getUserId } from "@/features/auth/server";
-import { parseProjectId } from "@/features/projects/server";
+import { lockProject, parseProjectId } from "@/features/projects/server";
 import { db } from "@/lib/db";
 import { type ActionResult, SIGNED_OUT } from "@/lib/form-data";
 import {
@@ -139,4 +139,30 @@ export async function getMeshUrl(
   });
   if (!asset) return { error: ASSET_NOT_FOUND };
   return { url: await presignDownload(project.key) };
+}
+
+/**
+ * Deletes the mesh `sha256` from the user's project when nothing saved refers
+ * to it: neither the document nor any version (ADR-0029). For an upload the
+ * import then didn't use, such as one that lost the race to another import.
+ */
+export async function discardMesh(projectId: string, sha256: string): Promise<ActionResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  const project = await findProject(userId, projectId, sha256);
+  if (project.error !== undefined) return { error: project.error };
+  const { projectId: id, sha256: hash } = project;
+  const uses = { path: ["models"], array_contains: [{ sha256: hash }] };
+  const count = await db.$transaction(async (tx) => {
+    // Locked so a save can't start referring to the mesh between the check and the delete.
+    await lockProject(tx, id);
+    const referenced = await tx.project.count({
+      where: { id, OR: [{ document: uses }, { versions: { some: { document: uses } } }] },
+    });
+    if (referenced > 0) return 0;
+    const deleted = await tx.projectAsset.deleteMany({ where: { projectId: id, sha256: hash } });
+    return deleted.count;
+  });
+  // Rows go first: an object left behind has no row, which the storage sweep deletes.
+  if (count > 0) await deleteObject(project.key);
 }
