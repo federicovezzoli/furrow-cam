@@ -390,6 +390,7 @@ describe("generateToolpath", () => {
     operation: finishing(endMill),
     shapes: [],
     model: STEP,
+    stock: null,
     ...options,
   };
 

@@ -7,11 +7,13 @@ import {
   type ProjectDocument,
   type Shape,
 } from "@furrow/document";
+import type { Rect } from "./bounds";
 import { drillToolpath } from "./drill";
 import { engraveToolpath } from "./engrave";
 import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
 import { type ReliefCache, reliefFinishSteps, runSteps } from "./relief";
+import { reliefRoughSteps } from "./relief-rough";
 import type { Toolpath } from "./toolpath";
 import { vcarveToolpath } from "./vcarve";
 
@@ -25,6 +27,8 @@ export type ToolpathInput = {
   shapes: Shape[];
   /** The model a 3D operation machines (PRD-0005), `null` for the others. */
   model: Model | null;
+  /** The stock seen from above, for 3D roughing up to its edges; `null` for the others. */
+  stock: Rect | null;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -47,10 +51,14 @@ export function toolpathInputs(
   const models = new Map(doc.models.map((model) => [model.id, model]));
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
   const entryClearance = doc.machine?.entryClearance ?? DEFAULT_ENTRY_CLEARANCE;
+  const stock: Rect = { min: [0, 0], max: [doc.stock.width, doc.stock.height] };
   return operations.map((operation) => ({
     operation,
     shapes: targetedShapes(shapes, operation.targets),
     model: models.get(operationModelId(operation) ?? "") ?? null,
+    // Only this boundary depends on the stock, so resizing it recomputes nothing else.
+    stock:
+      operation.type === "relief_rough" && operation.params.boundary === "stock" ? stock : null,
     safeZ,
     entryClearance,
   }));
@@ -83,6 +91,7 @@ export function toolpathKey({
   operation,
   shapes,
   model,
+  stock,
   safeZ,
   entryClearance,
 }: ToolpathInput): string {
@@ -93,6 +102,7 @@ export function toolpathKey({
     tool,
     shapes.map((shape) => shape.paths),
     model && [model.sha256, model.bounds, model.placement],
+    stock,
     safeZ,
     entryClearance,
   ]);
@@ -121,7 +131,7 @@ export class MissingMeshError extends Error {
  * progress and stop between steps (ADR-0004).
  */
 export function* toolpathSteps(
-  { operation, shapes, model, ...options }: ToolpathInput,
+  { operation, shapes, model, stock, ...options }: ToolpathInput,
   { mesh, cache }: ToolpathContext = {},
 ): Generator<number, Toolpath> {
   switch (operation.type) {
@@ -140,6 +150,12 @@ export function* toolpathSteps(
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
       return yield* reliefFinishSteps(operation, model, positions, { ...options, cache });
+    }
+    case "relief_rough": {
+      if (!model) return { moves: [], warnings: ["The model to machine is missing."] };
+      const positions = mesh?.(model.sha256);
+      if (!positions) throw new MissingMeshError(model.sha256);
+      return yield* reliefRoughSteps(operation, model, positions, { ...options, stock, cache });
     }
   }
 }

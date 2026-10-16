@@ -510,6 +510,7 @@ describe("pocketToolpath", () => {
         operation: operation(),
         shapes: [square],
         model: null,
+        stock: null,
         safeZ: 5,
         entryClearance: 1,
       }),

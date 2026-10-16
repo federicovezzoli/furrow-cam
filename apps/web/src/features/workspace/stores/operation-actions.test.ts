@@ -15,6 +15,7 @@ import {
   addPocketOperation,
   addProfileOperation,
   addReliefFinishOperation,
+  addReliefRoughOperation,
   addTab,
   addVCarveOperation,
   autoPlaceTabs,
@@ -33,6 +34,7 @@ import {
   updatePocketParams,
   updateProfileParams,
   updateReliefFinishParams,
+  updateReliefRoughParams,
   updateVCarveParams,
 } from "./operation-actions";
 
@@ -486,6 +488,60 @@ describe("addReliefFinishOperation", () => {
       direction: "one_way",
       stepOver: 10,
       stockToLeave: 0,
+    });
+  });
+});
+
+describe("addReliefRoughOperation", () => {
+  function storeWithModel() {
+    return createDocumentStore({ ...createProjectDocument(), models: [model] });
+  }
+
+  it("appends a valid roughing of the model's outline, leaving 0.5 mm", () => {
+    const store = storeWithModel();
+    const id = addReliefRoughOperation(store, { modelId: model.id, tool: endMill });
+    const { document } = store.getState();
+    expect(ProjectDocument.safeParse(document).success).toBe(true);
+    expect(document.operations[0]).toMatchObject({
+      id,
+      type: "relief_rough",
+      name: "3D rough 1",
+      targets: [],
+      tool: endMill,
+      params: {
+        modelId: model.id,
+        strategy: { type: "offset" },
+        direction: "climb",
+        stockToLeave: 0.5,
+        boundary: "model",
+        ramp: true,
+      },
+    });
+  });
+
+  it("adds nothing for a model that isn't there", () => {
+    const store = storeWithModel();
+    expect(addReliefRoughOperation(store, { modelId: MISSING_ID, tool: endMill })).toBeNull();
+    expect(store.getState().document.operations).toEqual([]);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const store = storeWithModel();
+    const id = addReliefRoughOperation(store, { modelId: model.id, tool: endMill }) as string;
+    expect(
+      updateReliefRoughParams(store, id, {
+        strategy: { type: "linear", angle: 45 },
+        boundary: "stock",
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      updateReliefRoughParams(store, id, { strategy: { type: "peel", start: "inside" } }),
+    ).toMatchObject({ ok: false });
+    expect(updateReliefRoughParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
+    expect(store.getState().document.operations[0]?.params).toMatchObject({
+      strategy: { type: "linear", angle: 45 },
+      boundary: "stock",
+      stockToLeave: 0.5,
     });
   });
 });

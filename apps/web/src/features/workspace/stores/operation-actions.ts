@@ -21,6 +21,7 @@ import {
   type ProfileTabs,
   type ProjectDocument,
   ReliefFinishParams,
+  ReliefRoughParams,
   type Shape,
   type Tool,
   VCarveParams,
@@ -117,6 +118,22 @@ export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
   };
 }
 
+/**
+ * New 3D roughing operations on `modelId` clear the model's outline with
+ * offset clearing, climb milling and ramping in, leaving 0.5 mm of stock for
+ * finishing (PRD-0005).
+ */
+export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
+  return {
+    modelId,
+    strategy: { type: "offset" },
+    direction: "climb",
+    stockToLeave: 0.5,
+    boundary: "model",
+    ramp: true,
+  };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -196,21 +213,35 @@ export function addVCarveOperation(store: DocumentStore, options: NewOperation):
  * of `tool`. Returns the new operation's id, or `null` if the model isn't in
  * the document.
  */
-export function addReliefFinishOperation(
+export function addReliefFinishOperation(store: DocumentStore, options: NewModelOperation) {
+  return appendModelOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "relief_finish",
+    name: nextName(document, "3D finish"),
+    params: defaultReliefFinishParams(options.modelId),
+  }));
+}
+
+/** Appends a 3D roughing operation on the model `modelId`, like `addReliefFinishOperation`. */
+export function addReliefRoughOperation(store: DocumentStore, options: NewModelOperation) {
+  return appendModelOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "relief_rough",
+    name: nextName(document, "3D rough"),
+    params: defaultReliefRoughParams(options.modelId),
+  }));
+}
+
+type NewModelOperation = { modelId: string; tool: Tool; id?: string };
+
+function appendModelOperation(
   store: DocumentStore,
-  { modelId, tool, id = crypto.randomUUID() }: { modelId: string; tool: Tool; id?: string },
+  { modelId, tool, id = crypto.randomUUID() }: NewModelOperation,
+  create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
   if (!document.models.some((model) => model.id === modelId)) return null;
-  const operation: Operation = {
-    id,
-    type: "relief_finish",
-    name: nextName(document, "3D finish"),
-    enabled: true,
-    targets: [],
-    tool,
-    params: defaultReliefFinishParams(modelId),
-  };
+  const operation = create(document, { id, enabled: true, targets: [], tool });
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
@@ -419,6 +450,22 @@ export function updateReliefFinishParams(
     "relief_finish",
     ReliefFinishParams,
     "updateReliefFinishParams",
+    changes,
+  );
+}
+
+/** Changes some of a 3D roughing operation's params at once, like `updateProfileParams`. */
+export function updateReliefRoughParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<Omit<ReliefRoughParams, "modelId">>,
+): ActionResult {
+  return updateParams(
+    store,
+    id,
+    "relief_rough",
+    ReliefRoughParams,
+    "updateReliefRoughParams",
     changes,
   );
 }

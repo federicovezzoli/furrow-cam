@@ -20,7 +20,7 @@ import {
 import { cutLinear, linearPlan } from "./pocket-linear";
 import { cutPeel, peelArea, peelPlans } from "./pocket-peel";
 import { projectOnLoop } from "./tabs";
-import { type Toolpath, ToolpathBuilder } from "./toolpath";
+import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "./toolpath";
 
 export type PocketOptions = {
   /** Retract height above the stock top. */
@@ -109,6 +109,52 @@ export function clearPocket(
   options: PocketOptions,
 ): Toolpath {
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
+  const { regions, drawn, area, warnings } = planPocket(tool, params, closed, tolerance);
+  // Unless the strategy left nothing to clear, having said why.
+  if (
+    closed.length > 0 &&
+    (area.length > 0 || drawn.length === 0) &&
+    regions.every((region) => region.pieces.length === 0)
+  ) {
+    warnings.push("The closed paths are too small for the tool.");
+  }
+
+  const cut = pocketCut(tool, params.ramp, options);
+  const levels = depthLevels(params.depth, tool.stepDown);
+  for (const region of nearestFirst(cut, regions, (region) =>
+    loops(region.pieces.flatMap(innermostRings)),
+  )) {
+    levels.forEach((z, i) => {
+      cutRegionLevel(cut, region, z, levels[i - 1] ?? 0);
+    });
+    if (region.finishing) finishPiece(cut, region.finishing, -params.depth);
+  }
+  cut.builder.retract();
+  return { moves: cut.builder.moves, warnings };
+}
+
+/** How a pocket's area is cleared, whatever its depth. */
+export type ClearingParams = Pick<
+  PocketParams,
+  "strategy" | "direction" | "allowance" | "finishPass" | "ramp"
+>;
+
+/** A pocket's regions, laid out once and cut at each level. */
+type PocketPlan = {
+  regions: Region[];
+  /** The rings cleaned up, before the strategy changes them. */
+  drawn: Polygon[];
+  /** The area the strategy clears. */
+  area: Polygon[];
+  warnings: string[];
+};
+
+function planPocket(
+  tool: Tool,
+  params: ClearingParams,
+  closed: Polygon[],
+  tolerance: number,
+): PocketPlan {
   const radius = tool.diameter / 2;
   const warnings: string[] = [];
   const layout: Layout = {
@@ -164,41 +210,73 @@ export function clearPocket(
   } else {
     for (const root of roots) regions.push({ pieces: [root], container: root, finishing: null });
   }
-  // Unless the strategy left nothing to clear, having said why.
-  if (
-    closed.length > 0 &&
-    (area.length > 0 || drawn.length === 0) &&
-    regions.every((region) => region.pieces.length === 0)
-  ) {
-    warnings.push("The closed paths are too small for the tool.");
-  }
+  return { regions, drawn, area, warnings };
+}
 
-  const cut: Cut = {
+/** What every pass of a pocket shares, `ramp` saying whether it ramps in. */
+function pocketCut(tool: Tool, ramp: boolean, options: PocketOptions): Cut {
+  const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
+  return {
     builder: new ToolpathBuilder(options.safeZ, options.entryClearance),
     feedRate: tool.feedRate,
     plungeRate: tool.plungeRate,
     rampRun:
-      params.ramp && tool.plungeAngle < 90
-        ? 1 / Math.tan((tool.plungeAngle * Math.PI) / 180)
-        : null,
-    minRampLength: radius,
+      ramp && tool.plungeAngle < 90 ? 1 / Math.tan((tool.plungeAngle * Math.PI) / 180) : null,
+    minRampLength: tool.diameter / 2,
     maxStep: tool.diameter + tolerance,
   };
-  const levels = depthLevels(params.depth, tool.stepDown);
-  for (const region of nearestFirst(cut, regions, (region) =>
-    loops(region.pieces.flatMap(innermostRings)),
-  )) {
-    levels.forEach((z, i) => {
-      for (const piece of nearestFirst(cut, region.pieces, (piece) =>
-        loops(innermostRings(piece)),
-      )) {
-        cutPiece(cut, piece, region.container, z, levels[i - 1] ?? 0);
-      }
-    });
-    if (region.finishing) finishPiece(cut, region.finishing, -params.depth);
+}
+
+/** Clears the pieces of `region` at `z`, nearest first, crossing it at `clearedZ`. */
+function cutRegionLevel(cut: Cut, region: Region, z: number, clearedZ: number) {
+  for (const piece of nearestFirst(cut, region.pieces, (piece) => loops(innermostRings(piece)))) {
+    cutPiece(cut, piece, region.container, z, clearedZ);
   }
-  cut.builder.retract();
-  return { moves: cut.builder.moves, warnings };
+}
+
+/**
+ * Clears a different area at each of a series of levels, each inside the
+ * one before, into one toolpath, as a pocket clears its area at each depth
+ * pass: 3D roughing (PRD-0005 S5), where islands grow as the levels go down.
+ * The tool may cross what the level before cleared at that level's height.
+ */
+export class LevelClearing {
+  private readonly cut: Cut;
+  private readonly tolerance: number;
+  private clearedZ = 0;
+
+  constructor(
+    private readonly tool: Tool,
+    private readonly params: Omit<ClearingParams, "finishPass">,
+    options: PocketOptions,
+  ) {
+    this.tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
+    this.cut = pocketCut(tool, params.ramp, options);
+  }
+
+  /**
+   * Clears the area inside the rings `closed` (even-odd) at `z`, below the
+   * last level. Returns the warnings of the strategy, such as a peel that
+   * skips pockets.
+   */
+  clear(closed: Polygon[], z: number): string[] {
+    const { cut, clearedZ } = this;
+    const params = { ...this.params, finishPass: false };
+    const { regions, warnings } = planPocket(this.tool, params, closed, this.tolerance);
+    for (const region of nearestFirst(cut, regions, (region) =>
+      loops(region.pieces.flatMap(innermostRings)),
+    )) {
+      cutRegionLevel(cut, region, z, clearedZ);
+    }
+    this.clearedZ = z;
+    return warnings;
+  }
+
+  /** The moves so far, ending with a retract. */
+  finish(): ToolpathMove[] {
+    this.cut.builder.retract();
+    return this.cut.builder.moves;
+  }
 }
 
 /**

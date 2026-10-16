@@ -12,6 +12,7 @@ import {
   lowRider,
   model,
   reliefFinish,
+  reliefRough,
   machine as shapeoko,
   vBit,
 } from "@furrow/document/fixtures";
@@ -172,6 +173,25 @@ describe("exportGcode", () => {
     expect(gcode).toContain("(Operation: Finish)");
     // Down onto the flat top, and across it.
     expect(gcode).toContain("G1 Z0 F500\nG1 X99.963 F1500\n");
+  });
+
+  it("roughs a model out before finishing it", () => {
+    const mesh = new Float32Array([
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12, -50, -40, -12, 50, 40, -12, -50, 40, -12],
+      ...[-50, -40, 0, -49.9, -40, 0, -50, -39.9, 0],
+    ]);
+    const doc = { ...referenceProject(), models: [model] };
+    doc.operations = [
+      reliefRough,
+      { ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } },
+    ];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(warnings).toEqual([]);
+    const roughing = gcode.indexOf("(Operation: Rough)");
+    expect(roughing).toBeGreaterThan(-1);
+    expect(gcode.indexOf("(Operation: Finish)")).toBeGreaterThan(roughing);
   });
 
   it("includes the toolpath warnings, named by operation", () => {

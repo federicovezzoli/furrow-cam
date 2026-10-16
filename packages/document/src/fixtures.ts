@@ -1,6 +1,14 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type { Machine, Model, ProjectDocument, ReliefFinishOperation, Shape, Tool } from "./index";
+import type {
+  Machine,
+  Model,
+  ProjectDocument,
+  ReliefFinishOperation,
+  ReliefRoughOperation,
+  Shape,
+  Tool,
+} from "./index";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -154,9 +162,29 @@ export const reliefFinish: ReliefFinishOperation = {
   params: { modelId: model.id, angle: 0, stepOver: 10, direction: "zigzag", stockToLeave: 0 },
 };
 
+export const RELIEF_ROUGH_ID = "3a9d6e1f-2b4c-4d8e-9f7a-6c5b0e2d1a48";
+
+/** A 3D roughing operation on `model` (#116). */
+export const reliefRough: ReliefRoughOperation = {
+  id: RELIEF_ROUGH_ID,
+  type: "relief_rough",
+  name: "Rough",
+  enabled: true,
+  targets: [],
+  tool: endMill,
+  params: {
+    modelId: model.id,
+    strategy: { type: "offset" },
+    direction: "climb",
+    stockToLeave: 0.5,
+    boundary: "model",
+    ramp: true,
+  },
+};
+
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     units: "in",
     stock: {
       width: 300,

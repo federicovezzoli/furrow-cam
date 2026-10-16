@@ -111,8 +111,12 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
   const { warnings } = toolpath;
   // Only drills make holes; other straight plunges enter a cut that shows.
   const holeRadius = operation.type === "drill" ? operation.tool.diameter / 2 : null;
-  // A V-carve's or a relief's depth varies along each pass, which a top view wouldn't show.
-  const shadeDepth = operation.type === "vcarve" || operation.type === "relief_finish";
+  // A V-carve's or a relief's depth varies along each pass, and 3D roughing's
+  // levels lie on top of each other, which a top view wouldn't show.
+  const shadeDepth =
+    operation.type === "vcarve" ||
+    operation.type === "relief_finish" ||
+    operation.type === "relief_rough";
   const lines = toolpathLines(toolpath, { holeRadius, shadeDepth });
   const clearing = toolpath.clearing
     ? toolpathLines({ moves: toolpath.clearing, warnings: [] })

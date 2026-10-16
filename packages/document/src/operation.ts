@@ -10,6 +10,7 @@ export const OperationType = z.enum([
   "engrave",
   "vcarve",
   "relief_finish",
+  "relief_rough",
 ]);
 export type OperationType = z.infer<typeof OperationType>;
 
@@ -332,22 +333,72 @@ export const ReliefFinishParams = z.strictObject({
 });
 export type ReliefFinishParams = z.infer<typeof ReliefFinishParams>;
 
+/** Operations on a model have no shapes to cut. */
+function refineModelTargets(operation: { targets: OperationTarget[] }, ctx: z.RefinementCtx) {
+  if (operation.targets.length > 0) {
+    ctx.addIssue({ code: "custom", path: ["targets"], message: "Machines a model, not shapes" });
+  }
+}
+
 export const ReliefFinishOperation = z
   .strictObject({
     ...operationFields,
     type: z.literal("relief_finish"),
     params: ReliefFinishParams,
   })
-  .superRefine((operation, ctx) => {
-    if (operation.targets.length > 0) {
-      ctx.addIssue({ code: "custom", path: ["targets"], message: "Machines a model, not shapes" });
+  .superRefine(refineModelTargets);
+export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
+
+/**
+ * What 3D roughing clears: the model's outline, or the whole stock, the
+ * tool's centre reaching its edges.
+ */
+export const RoughingBoundary = z.enum(["model", "stock"]);
+export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
+
+/**
+ * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,
+ * offset by the stock to leave, cleared in levels with a pocket strategy
+ * (ADR-0030). The step-over, step-down and ramp angle come from the tool.
+ */
+export const ReliefRoughParams = z
+  .strictObject({
+    /** The model it machines, one of the document's `models`. */
+    modelId: z.uuid(),
+    strategy: PocketStrategy,
+    direction: MillingDirection,
+    /** Material left on the model in every direction, walls included. */
+    stockToLeave: z.number().nonnegative(),
+    boundary: RoughingBoundary,
+    /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+    ramp: z.boolean(),
+  })
+  .superRefine((params, ctx) => {
+    // The islands change from level to level, so there is no single one to start from.
+    if (params.strategy.type === "peel" && params.strategy.start === "inside") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["strategy", "start"],
+        message: "Peeling starts from the centre or the outer wall",
+      });
     }
   });
-export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
+export type ReliefRoughParams = z.infer<typeof ReliefRoughParams>;
+
+export const ReliefRoughOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("relief_rough"),
+    params: ReliefRoughParams,
+  })
+  .superRefine(refineModelTargets);
+export type ReliefRoughOperation = z.infer<typeof ReliefRoughOperation>;
 
 /** Operations that machine a model (PRD-0005) rather than shapes. */
 export function operationModelId(operation: Operation): string | null {
-  return operation.type === "relief_finish" ? operation.params.modelId : null;
+  return operation.type === "relief_finish" || operation.type === "relief_rough"
+    ? operation.params.modelId
+    : null;
 }
 
 export const Operation = z.discriminatedUnion("type", [
@@ -357,6 +408,7 @@ export const Operation = z.discriminatedUnion("type", [
   EngraveOperation,
   VCarveOperation,
   ReliefFinishOperation,
+  ReliefRoughOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
 

@@ -56,6 +56,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
   },
   // #115: 3D finishing operations. Nothing to change, as for #95.
   7: (doc) => doc,
+  // #116: 3D roughing operations. Nothing to change, as for #95.
+  8: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
