@@ -16,6 +16,8 @@ const Env = z
     S3_BUCKET: z.string().min(1).optional(),
     S3_ACCESS_KEY_ID: z.string().min(1).optional(),
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    // Bearer token Vercel Cron sends to the monthly storage sweep (ADR-0029). Unset: the sweep is off.
+    CRON_SECRET: z.string().min(16).optional(),
     // Largest STL file accepted, in megabytes (PRD-0005 S1).
     STL_MAX_FILE_MB: z.coerce.number().int().positive().default(50),
     // Most triangles an STL model may have (PRD-0005 S1).
@@ -47,6 +49,7 @@ export const env = Env.parse({
     "S3_BUCKET",
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
+    "CRON_SECRET",
     "STL_MAX_FILE_MB",
     "STL_MAX_TRIANGLES",
   ),

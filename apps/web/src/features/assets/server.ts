@@ -16,7 +16,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
 /** How long a presigned upload or download URL works, in seconds. */
-const URL_LIFETIME = 15 * 60;
+export const URL_LIFETIME = 15 * 60;
 
 /** Largest STL file accepted, in bytes (PRD-0005 S1). */
 export const MAX_MESH_BYTES = env.STL_MAX_FILE_MB * 1_000_000;
@@ -155,22 +155,42 @@ export async function deleteObject(key: string) {
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }
 
-/** Deletes every object whose key starts with `prefix`. Does nothing without storage. */
-export async function deletePrefix(prefix: string) {
-  if (!client || !bucket) return;
+/** A stored object: its key, and when it was last written. */
+export type StoredObject = { key: string; lastModified: Date };
+
+/** The objects whose key starts with `prefix` (all of them by default), a page at a time. */
+export async function* listObjects(prefix = ""): AsyncGenerator<StoredObject[]> {
+  const { client, bucket } = storage();
   let token: string | undefined;
   do {
     const page = await client.send(
       new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }),
     );
-    const objects = (page.Contents ?? []).flatMap(({ Key }) => (Key ? [{ Key }] : []));
-    if (objects.length > 0) {
-      await client.send(
-        new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects, Quiet: true } }),
-      );
-    }
+    yield (page.Contents ?? []).flatMap(({ Key, LastModified }) =>
+      Key && LastModified ? [{ key: Key, lastModified: LastModified }] : [],
+    );
     token = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (token);
+}
+
+/** Deletes the objects at `keys`, at most 1000 (one listed page). */
+export async function deleteObjects(keys: readonly string[]) {
+  if (keys.length === 0) return;
+  const { client, bucket } = storage();
+  await client.send(
+    new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+    }),
+  );
+}
+
+/** Deletes every object whose key starts with `prefix`. Does nothing without storage. */
+export async function deletePrefix(prefix: string) {
+  if (!client) return;
+  for await (const objects of listObjects(prefix)) {
+    await deleteObjects(objects.map(({ key }) => key));
+  }
 }
 
 /**
