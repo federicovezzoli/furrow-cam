@@ -12,6 +12,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/env";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
 /** How long a presigned upload or download URL works, in seconds. */
@@ -206,9 +207,10 @@ export async function missingAssets(
   userId: string,
   projectId: string,
   sha256s: readonly string[],
+  client: Prisma.TransactionClient = db,
 ): Promise<string[]> {
   if (sha256s.length === 0) return [];
-  const rows = await db.projectAsset.findMany({
+  const rows = await client.projectAsset.findMany({
     where: {
       projectId,
       project: { userId },

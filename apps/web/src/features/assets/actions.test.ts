@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   projects: [] as { id: string; userId: string }[],
   /** Hashes of the meshes that each project's saved document or versions refer to. */
   referenced: new Map<string, Set<string>>(),
+  /** Projects whose row a transaction locked. */
+  locked: [] as string[],
   assets: [] as Asset[],
   /** Stored objects by key: their size and hash. */
   objects: new Map<string, { size: number; sha256: string }>(),
@@ -40,45 +42,51 @@ vi.mock("@/lib/db", () => {
   type Unique = { projectId_sha256: { projectId: string; sha256: string } };
   const find = ({ projectId_sha256: { projectId, sha256 } }: Unique) =>
     mocks.assets.find((a) => a.projectId === projectId && a.sha256 === sha256);
-  return {
-    db: {
-      project: {
-        findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
-          mocks.projects.find((p) => p.id === where.id && p.userId === where.userId) ?? null,
-        // Only the query `discardMesh` makes: does the project's document or a version use the mesh?
-        count: async ({
-          where,
-        }: {
-          where: { id: string; OR: { document: { array_contains: { sha256: string }[] } }[] };
-        }) => {
-          const [{ sha256 }] = where.OR[0]?.document.array_contains ?? [{ sha256: "" }];
-          return mocks.referenced.get(where.id)?.has(sha256) ? 1 : 0;
-        },
-      },
-      projectAsset: {
-        upsert: async ({ where, create }: { where: Unique; create: Omit<Asset, "verifiedAt"> }) => {
-          const existing = find(where);
-          if (existing) return existing;
-          const asset = { ...create, verifiedAt: null };
-          mocks.assets.push(asset);
-          return asset;
-        },
-        update: async ({ where, data }: { where: Unique; data: Partial<Asset> }) =>
-          Object.assign(find(where) ?? {}, data),
-        findUnique: async ({ where }: { where: Unique }) => find(where) ?? null,
-        deleteMany: async ({ where }: { where: { projectId: string; sha256: string } }) => {
-          const before = mocks.assets.length;
-          mocks.assets = mocks.assets.filter(
-            (a) => a.projectId !== where.projectId || a.sha256 !== where.sha256,
-          );
-          return { count: before - mocks.assets.length };
-        },
-        findFirst: async ({ where }: { where: { projectId: string; sha256: string } }) =>
-          mocks.assets.find(
-            (a) => a.projectId === where.projectId && a.sha256 === where.sha256 && a.verifiedAt,
-          ) ?? null,
+  const models = {
+    /** Only `lockProject`'s `SELECT … FOR UPDATE` is expected. */
+    $executeRaw: async (_sql: TemplateStringsArray, projectId: string) => {
+      mocks.locked.push(projectId);
+      return 1;
+    },
+    project: {
+      findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
+        mocks.projects.find((p) => p.id === where.id && p.userId === where.userId) ?? null,
+      // Only the query `discardMesh` makes: does the project's document or a version use the mesh?
+      count: async ({
+        where,
+      }: {
+        where: { id: string; OR: { document: { array_contains: { sha256: string }[] } }[] };
+      }) => {
+        const [{ sha256 }] = where.OR[0]?.document.array_contains ?? [{ sha256: "" }];
+        return mocks.referenced.get(where.id)?.has(sha256) ? 1 : 0;
       },
     },
+    projectAsset: {
+      upsert: async ({ where, create }: { where: Unique; create: Omit<Asset, "verifiedAt"> }) => {
+        const existing = find(where);
+        if (existing) return existing;
+        const asset = { ...create, verifiedAt: null };
+        mocks.assets.push(asset);
+        return asset;
+      },
+      update: async ({ where, data }: { where: Unique; data: Partial<Asset> }) =>
+        Object.assign(find(where) ?? {}, data),
+      findUnique: async ({ where }: { where: Unique }) => find(where) ?? null,
+      deleteMany: async ({ where }: { where: { projectId: string; sha256: string } }) => {
+        const before = mocks.assets.length;
+        mocks.assets = mocks.assets.filter(
+          (a) => a.projectId !== where.projectId || a.sha256 !== where.sha256,
+        );
+        return { count: before - mocks.assets.length };
+      },
+      findFirst: async ({ where }: { where: { projectId: string; sha256: string } }) =>
+        mocks.assets.find(
+          (a) => a.projectId === where.projectId && a.sha256 === where.sha256 && a.verifiedAt,
+        ) ?? null,
+    },
+  };
+  return {
+    db: { ...models, $transaction: <T>(fn: (tx: typeof models) => Promise<T>) => fn(models) },
   };
 });
 
@@ -95,6 +103,7 @@ beforeEach(() => {
   mocks.projects = [{ id: PROJECT, userId: USER }];
   mocks.assets = [];
   mocks.referenced.clear();
+  mocks.locked = [];
   mocks.objects.clear();
 });
 
@@ -220,6 +229,8 @@ describe("discardMesh", () => {
     expect(await discardMesh(PROJECT, SHA)).toBeUndefined();
     expect(mocks.assets).toEqual([]);
     expect(mocks.objects.has(KEY)).toBe(false);
+    // As saves do, so neither runs between the other's check and write.
+    expect(mocks.locked).toEqual([PROJECT]);
   });
 
   it("keeps a mesh that the saved document or a version refers to", async () => {

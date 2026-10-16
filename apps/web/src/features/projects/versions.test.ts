@@ -430,6 +430,8 @@ describe("meshes", () => {
     mocks.assets[0] = { projectId: PROJECT, sha256: model.sha256, verified: true };
     expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toHaveProperty("updatedAt");
     expect(project().document).toEqual(withModel());
+    // As `discardMesh` does, so a mesh can't go between the check and the write.
+    expect(mocks.locked).toContain(PROJECT);
   });
 
   it("doesn't accept another project's mesh", async () => {
