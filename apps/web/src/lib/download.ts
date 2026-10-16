@@ -1,6 +1,6 @@
 /** Saves `contents` as a file called `fileName` through the browser's downloads. */
-export function downloadFile(contents: string, fileName: string, type: string) {
-  const url = URL.createObjectURL(new Blob([contents], { type }));
+export function downloadFile(contents: string | Uint8Array, fileName: string, type: string) {
+  const url = URL.createObjectURL(new Blob([contents as BlobPart], { type }));
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;

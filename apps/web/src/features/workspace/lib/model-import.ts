@@ -12,7 +12,7 @@ import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
  * then goes away with the mesh. Throws an `Error` for the user if the file
  * can't be imported.
  */
-function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSummary> {
+export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSummary> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../workers/mesh.worker.ts", import.meta.url), {
       type: "module",

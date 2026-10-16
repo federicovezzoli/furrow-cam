@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import { meshLimits } from "@/features/assets/server";
 import { requireUserId } from "@/features/auth/server";
 import { listMachines, type MachineOption, snapshotMachine } from "@/features/machines/server";
 import { ImportProjectButton } from "@/features/projects/components/import-project-button";
@@ -51,7 +52,7 @@ async function Projects() {
       ) : (
         <div className="flex flex-wrap items-end justify-between gap-4">
           <NewProjectForm machines={options} />
-          <ImportProjectButton machines={options} />
+          <ImportProjectButton machines={options} meshLimits={meshLimits()} />
         </div>
       )}
       <ProjectList projects={projects} />

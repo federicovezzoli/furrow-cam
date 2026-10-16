@@ -1,3 +1,4 @@
+export * from "./archive";
 export * from "./document";
 export * from "./file";
 export * from "./geometry";

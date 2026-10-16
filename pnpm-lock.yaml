@@ -178,6 +178,9 @@ importers:
 
   packages/document:
     dependencies:
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       zod:
         specifier: 'catalog:'
         version: 4.6.5

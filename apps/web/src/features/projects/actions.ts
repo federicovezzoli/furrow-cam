@@ -8,6 +8,7 @@ import {
   copyAssets,
   deleteProjectObjects,
   isStorageConfigured,
+  MAX_MESH_BYTES,
   missingAssets,
 } from "@/features/assets/server";
 import { getUserId } from "@/features/auth/server";
@@ -62,21 +63,29 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
 }
 
 /**
- * Creates a project from an exported file and opens it. The file is upgraded
- * to the current schema version and validated; the name comes from the file
- * name. A file's machine snapshot is kept; a file without one gets the
- * user's machine `machineId`, and `chooseMachine` comes back when it is
- * missing. Only errors come back otherwise.
+ * The document of an exported file `contents` called `fileName`, upgraded to
+ * the current schema version and validated, with a machine and the name to
+ * give its project. A file's machine snapshot is kept; a file without one
+ * gets the user's machine `machineId`, and `chooseMachine` comes back when it
+ * is missing. Models are refused unless the file is a zip export, which
+ * carries their meshes (ADR-0029).
  */
-export async function importProject(file: File, machineId: string | null): Promise<ImportResult> {
-  const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
-  if (!(file instanceof File)) return { error: "Pick a file to import." };
-  const parsed = parseProjectFile(await file.text());
+async function prepareImport(
+  userId: string,
+  contents: string,
+  fileName: string,
+  machineId: string | null,
+  { archive }: { archive: boolean },
+): Promise<
+  | { document: ProjectDocument; name: string; error?: never }
+  | { error: string }
+  | { chooseMachine: true; error?: never }
+> {
+  const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
-  // Their meshes aren't in a `.furrow.json` file, only in a zip export (ADR-0029).
-  if (document.models.length > 0) {
+  // Checked before asking for a machine, which wouldn't help.
+  if (!archive && document.models.length > 0) {
     return { error: "This project has 3D models: import its .zip export instead." };
   }
   if (document.machine === null) {
@@ -90,18 +99,96 @@ export async function importProject(file: File, machineId: string | null): Promi
     if (snapshot.error !== undefined) return { error: snapshot.error };
     document = { ...document, machine: snapshot.machine };
   }
-  const name = parseName(truncate(projectNameFromFileName(file.name) ?? "", PROJECT_NAME_MAX));
+  const name = parseName(truncate(projectNameFromFileName(fileName) ?? "", PROJECT_NAME_MAX));
+  return { document, name: name.success ? name.data : "Imported project" };
+}
+
+/**
+ * Creates a project from an exported `.furrow.json` file and opens it; the
+ * name comes from the file name. A file without a machine snapshot gets the
+ * user's machine `machineId`, and `chooseMachine` comes back when it is
+ * missing. Only errors come back otherwise.
+ */
+export async function importProject(file: File, machineId: string | null): Promise<ImportResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  if (!(file instanceof File)) return { error: "Pick a file to import." };
+  const prepared = await prepareImport(userId, await file.text(), file.name, machineId, {
+    archive: false,
+  });
+  if (!("document" in prepared)) return prepared;
+  const { document, name } = prepared;
 
   const { id } = await db.project.create({
-    data: {
-      userId,
-      name: name.success ? name.data : "Imported project",
-      ...documentColumns(document),
-    },
+    data: { userId, name, ...documentColumns(document) },
     select: { id: true },
   });
   revalidatePath("/projects");
   redirect(`/projects/${id}`);
+}
+
+/** What `startArchiveImport` returns: the new project to finish, or as `ImportResult`. */
+export type ArchiveImportResult =
+  | { projectId: string; document: ProjectDocument; updatedAt: Date; error?: never }
+  | ImportResult;
+
+/**
+ * Starts importing a `.furrow.zip` export (ADR-0029): `documentFile` is its
+ * document (a file, so it is sent as is rather than escaped into JSON),
+ * `meshes` the hashes and sizes of the mesh files the browser found in it,
+ * and `fileName` the zip's name. The document is prepared as by
+ * `importProject`, and every model must have its mesh. The project is created
+ * with an empty document; the browser then uploads the meshes and saves the
+ * returned document with `saveProject`, or deletes the project if a step
+ * fails.
+ */
+export async function startArchiveImport(
+  documentFile: File,
+  fileName: string,
+  meshes: { sha256: string; size: number }[],
+  machineId: string | null,
+): Promise<ArchiveImportResult> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  if (!isStorageConfigured()) {
+    return { error: "This project has 3D models, which this server can't store." };
+  }
+  if (!(documentFile instanceof File)) return { error: "Pick a file to import." };
+  const prepared = await prepareImport(
+    userId,
+    await documentFile.text(),
+    String(fileName),
+    machineId,
+    { archive: true },
+  );
+  if (!("document" in prepared)) return prepared;
+  const { document, name } = prepared;
+  const sizes = new Map(
+    Array.isArray(meshes) ? meshes.map(({ sha256, size }) => [sha256, size]) : [],
+  );
+  for (const model of document.models) {
+    const size = sizes.get(model.sha256);
+    if (size === undefined) {
+      return { error: `This file can't be imported: the mesh of ${model.fileName} is missing.` };
+    }
+    if (typeof size !== "number" || size > MAX_MESH_BYTES) {
+      return {
+        error: `This file can't be imported: ${model.fileName} is larger than ${MAX_MESH_BYTES / 1_000_000} MB, the most allowed.`,
+      };
+    }
+  }
+
+  const { id, updatedAt } = await db.project.create({
+    data: {
+      userId,
+      name,
+      // Meshes it references are uploaded first: saving checks that they are (ADR-0029).
+      ...documentColumns({ ...createProjectDocument(), machine: document.machine }),
+    },
+    select: { id: true, updatedAt: true },
+  });
+  revalidatePath("/projects");
+  return { projectId: id, document, updatedAt };
 }
 
 export async function renameProject(id: string, name: string): Promise<ActionResult> {
