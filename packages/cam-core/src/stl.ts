@@ -19,6 +19,11 @@ export type StlMesh = {
   bounds: Box3;
 };
 
+/** Workers, browsers and Node all have `TextDecoder`; the package's lib types don't include it. */
+const Decoder = (
+  globalThis as unknown as { TextDecoder: new () => { decode(bytes: Uint8Array): string } }
+).TextDecoder;
+
 /** A binary STL's header and triangle count, then 50 bytes per triangle. */
 const HEADER_BYTES = 84;
 const TRIANGLE_BYTES = 50;
@@ -53,7 +58,7 @@ export function parseStl(bytes: Uint8Array, limits: StlLimits = DEFAULT_STL_LIMI
 function startsWithSolid(bytes: Uint8Array): boolean {
   let i = 0;
   while (i < bytes.length && /\s/.test(String.fromCharCode(bytes[i] as number))) i++;
-  return new TextDecoder().decode(bytes.subarray(i, i + 5)).toLowerCase() === "solid";
+  return new Decoder().decode(bytes.subarray(i, i + 5)).toLowerCase() === "solid";
 }
 
 function checkTriangleCount(count: number, limits: StlLimits) {
@@ -95,7 +100,7 @@ function parseBinary(bytes: Uint8Array, count: number, limits: StlLimits): StlMe
  * `endsolid`. Several solids in one file are read as one mesh.
  */
 function parseAscii(bytes: Uint8Array, limits: StlLimits): StlMesh {
-  const text = new TextDecoder().decode(bytes);
+  const text = new Decoder().decode(bytes);
   let positions = new Float32Array(9 * 1024);
   let triangles = 0;
   /** Vertices read in the open facet, or `-1` outside one. */
