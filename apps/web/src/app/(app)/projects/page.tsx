@@ -35,7 +35,10 @@ async function Projects() {
   return (
     <>
       {options.length === 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
+        <div
+          data-tour="new-project"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
+        >
           <p className="text-muted-foreground">
             {machines.length === 0
               ? "Projects are set up for a machine. Pick your router from the presets, or describe it once, then create or import projects for it."
@@ -50,7 +53,7 @@ async function Projects() {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div data-tour="new-project" className="flex flex-wrap items-end justify-between gap-4">
           <NewProjectForm machines={options} />
           <ImportProjectButton machines={options} meshLimits={meshLimits()} />
         </div>

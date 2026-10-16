@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, LogOutIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,11 @@ import {
 import { authClient } from "@/features/auth/lib/auth-client";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
-/** The header's account menu: the signed-in email, account deletion and sign-out. */
-export function AccountMenu({ email }: { email: string }) {
+/**
+ * The header's account menu: the signed-in email, the guided tour
+ * (`onTakeTour` replays it), account deletion and sign-out.
+ */
+export function AccountMenu({ email, onTakeTour }: { email: string; onTakeTour?: () => void }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
 
@@ -41,6 +44,12 @@ export function AccountMenu({ email }: { email: string }) {
             {email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {onTakeTour && (
+            <DropdownMenuItem onSelect={onTakeTour}>
+              <CircleHelpIcon />
+              Take the tour
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={signOut}>
             <LogOutIcon />
             Sign out
