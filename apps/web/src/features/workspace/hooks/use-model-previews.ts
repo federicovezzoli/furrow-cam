@@ -52,6 +52,7 @@ export function useModelPreviews(): ReadonlyMap<string, ModelPreview> {
     return () => {
       stopped = true;
       unsubscribe();
+      schedule.stop();
       worker.terminate();
     };
   }, [documents, projectId]);
