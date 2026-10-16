@@ -24,7 +24,7 @@ import {
   toolpathKey,
 } from "./generate";
 import { createCache, remainingRuns } from "./relief";
-import type { SimulationCut } from "./simulation";
+import { cutterProfile, type SimulationCut, simulateCuts, sweepMoves } from "./simulation";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
@@ -176,6 +176,51 @@ describe("rest machining", () => {
     });
   }
 
+  const sequences: [string, () => Operation[]][] = [
+    ["offset roughing", () => [roughing(bigMill), roughing(smallMill, { rest: true })]],
+    [
+      "linear roughing",
+      () => [
+        roughing(bigMill),
+        roughing(smallMill, { strategy: { type: "linear", angle: 0 }, rest: true }),
+      ],
+    ],
+    [
+      "finishing",
+      () => [roughing(endMill, { stockToLeave: 0.5 }), finishing(ballEndMill, { rest: true })],
+    ],
+  ];
+  for (const [label, operations] of sequences) {
+    it(`never rapids into the stock left, with ${label}`, () => {
+      const toolpathContext = context();
+      const inputs = toolpathInputs(project(operations()));
+      const earlier = inputs.slice(0, -1).flatMap((input) => {
+        const toolpath = generateToolpath(input, toolpathContext);
+        return toolpathCuts(input.operation, toolpath);
+      });
+      const restInput = inputs.at(-1);
+      if (!restInput) throw new Error("no input");
+      const { moves, warnings } = generateToolpath(restInput, toolpathContext);
+      expect(warnings).toEqual([]);
+      // Each move in order, on the stock as it is then: a rapid must never cut.
+      const grid = { columns: 400, rows: 400, cellWidth: 0.1, cellHeight: 0.1 };
+      const heights = simulateCuts({ width: 40, height: 40, thickness: 18 }, earlier, grid).heights;
+      const profile = cutterProfile(restInput.operation.tool);
+      let deepest = 0;
+      for (let i = 1; i < moves.length; i++) {
+        const move = moves[i] as ToolpathMove;
+        const segment = new Float32Array([...(moves[i - 1] as ToolpathMove).to, ...move.to]);
+        const before = move.kind === "rapid" ? heights.slice() : null;
+        sweepMoves(grid, heights, profile, segment, 0, 1);
+        if (!before) continue;
+        for (let k = 0; k < heights.length; k++) {
+          deepest = Math.max(deepest, (before[k] as number) - (heights[k] as number));
+        }
+      }
+      expect(deepest).toBeLessThan(1e-3);
+    });
+  }
+
   it("rapids across the pocket between the corners", () => {
     const toolpath = last([
       roughing(bigMill),
@@ -254,6 +299,14 @@ describe("toolpathInputs", () => {
     expect(key([{ ...big, enabled: false }, small], 1)).not.toBe(key([big, small], 1));
     // Renaming it doesn't.
     expect(key([{ ...big, name: "Renamed" }, small], 1)).toBe(key([big, small], 1));
+  });
+
+  it("keeps keys linear in the operations before it, however many rest operations chain", () => {
+    const chain = Array.from({ length: 20 }, () => roughing(smallMill, { rest: true }));
+    const inputs = toolpathInputs(project(chain));
+    const one = toolpathKey(inputs[0] as never).length;
+    const last = toolpathKey(inputs.at(-1) as never).length;
+    expect(last).toBeLessThan(25 * one);
   });
 
   it("leaves other operations' keys alone", () => {

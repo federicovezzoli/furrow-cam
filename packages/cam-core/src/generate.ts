@@ -15,6 +15,7 @@ import { pocketToolpath } from "./pocket";
 import { profileToolpath } from "./profile";
 import {
   type Cache,
+  createCache,
   type ReliefCache,
   type RestOptions,
   reliefFinishSteps,
@@ -128,9 +129,17 @@ export function targetedShapes(
 /**
  * A string that changes exactly when the toolpath of `input` may change:
  * names, colours, notes and the enabled flag are left out, so renaming an
- * operation, its tool or its shapes never recomputes it.
+ * operation, its tool or its shapes never recomputes it. A rest operation's
+ * key holds those of the operations before it, without their own `before`:
+ * that is a part of its own, so nesting it would grow the key exponentially
+ * with chained rest operations.
  */
-export function toolpathKey({
+export function toolpathKey(input: ToolpathInput): string {
+  return JSON.stringify([...ownKey(input), input.before.map(ownKey)]);
+}
+
+/** What `toolpathKey` holds of `input` itself. */
+function ownKey({
   operation,
   shapes,
   model,
@@ -138,10 +147,9 @@ export function toolpathKey({
   stockBottom,
   safeZ,
   entryClearance,
-  before,
-}: ToolpathInput): string {
+}: ToolpathInput): unknown[] {
   const { name: _name, color: _color, notes: _notes, ...tool } = operation.tool;
-  return JSON.stringify([
+  return [
     operation.type,
     operation.params,
     tool,
@@ -151,9 +159,7 @@ export function toolpathKey({
     stockBottom,
     safeZ,
     entryClearance,
-    // A rest operation changes whenever one before it does.
-    before.map(toolpathKey),
-  ]);
+  ];
 }
 
 /** What toolpaths of 3D operations need besides their input. */
@@ -171,12 +177,13 @@ export type ToolpathContext = {
 
 /**
  * The hashes of the meshes computing `input` may need: its own model's and,
- * for rest machining, those of the operations before it.
+ * for rest machining, those of the operations before it (whose own `before`
+ * are among them).
  */
-export function toolpathMeshes(input: ToolpathInput, into = new Set<string>()): Set<string> {
-  if (input.model) into.add(input.model.sha256);
-  for (const before of input.before) toolpathMeshes(before, into);
-  return into;
+export function toolpathMeshes({ model, before }: ToolpathInput): Set<string> {
+  const meshes = new Set<string>();
+  for (const input of [...before, { model }]) if (input.model) meshes.add(input.model.sha256);
+  return meshes;
 }
 
 /** Thrown when a 3D operation's mesh isn't in the `ToolpathContext`. */
@@ -290,7 +297,12 @@ function* operationSteps(
       let rest: RestOptions | null = null;
       let share = 0;
       if (operation.params.rest) {
-        const cuts = restCuts(before, context, warnings);
+        // Without a cache, an earlier rest operation would compute the ones
+        // before it again, and so on down the chain.
+        const restContext = context.cuts
+          ? context
+          : { ...context, cuts: createCache<SimulationCut[]>(before.length + 1) };
+        const cuts = restCuts(before, restContext, warnings);
         for (let step = cuts.next(); ; step = cuts.next()) {
           if (step.done) {
             rest = { cuts: step.value, stock };

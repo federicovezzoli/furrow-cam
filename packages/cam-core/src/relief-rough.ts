@@ -389,12 +389,13 @@ function* rasterLevels(
         const us = cuts.map((_, i) => uAt(a + i));
         const startU = us[0] as number;
         const startZ = cuts[0] as number;
-        const restTip = stockTips ? (stockTips[order(a)] as number) : null;
+        // What the earlier operations left under the whole tool at the start.
+        const restTop = restDropper ? restDropper.highestUnder(startU, startU, v) : null;
         if (index > 0) {
           // Across the gap, clear of what is left there.
           const before = runs[index - 1]?.[1] as number;
           const lift = liftHeight(
-            (i) => (stockTips as Float64Array)[i] as number,
+            (restDropper as RestDropper).highestUnder(uAt(before), startU, v),
             cutAt,
             order(before),
             order(a),
@@ -432,11 +433,11 @@ function* rasterLevels(
         // Over the stock, down to what the level above (or an earlier
         // operation) cut, then into this one.
         const [x, y] = toStock(grid, startU, v);
-        const top = Math.max(startZ, restTip === null ? above : Math.min(above, restTip));
+        const top = Math.max(startZ, restTop === null ? above : Math.min(above, restTop));
         const entry =
-          restTip === null
+          restTop === null
             ? builder.clearance
-            : Math.min(builder.clearance, restTip + builder.clearance);
+            : Math.min(builder.clearance, restTop + builder.clearance);
         if (index === 0) builder.travel(x, y);
         else builder.rapid([x, y, builder.position?.[2] ?? safeZ]);
         builder.rapid([x, y, Math.max(entry, top)]);

@@ -218,8 +218,11 @@ export function previewKey({ operation }: ToolpathInput): string {
 /**
  * Whether two inputs hold the same objects. Immer replaces every object on the
  * path to a change, so unchanged operations and shapes keep their identity.
+ * The inputs before a rest operation are compared without their own
+ * `before`, which is a part of its own: recursing would take exponential time
+ * with chained rest operations.
  */
-function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
+function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
   return (
     a.operation === b.operation &&
     a.model === b.model &&
@@ -232,7 +235,8 @@ function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
     a.shapes.every((shape, i) => shape === b.shapes[i]) &&
     // A rest operation's inputs hold those of the operations before it.
     a.before.length === b.before.length &&
-    a.before.every((before, i) => sameInput(before, b.before[i] as ToolpathInput))
+    (!nested ||
+      a.before.every((before, i) => sameInput(before, b.before[i] as ToolpathInput, false)))
   );
 }
 

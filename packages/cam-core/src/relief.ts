@@ -628,20 +628,21 @@ export function remainingRuns(
 
 /**
  * The height a rest operation rapids across the samples `from` to `to` of a
- * pass at: the entry clearance above the highest of the stock left there and
- * the pass itself, at most `safeZ`, never below either end of the pass.
+ * pass at: the entry clearance above the highest of `stock` (the stock left
+ * under the tool along the way, `RestDropper.highestUnder`) and the pass
+ * itself, at most `safeZ`, never below either end of the pass.
  */
 export function liftHeight(
-  stockAt: (i: number) => number,
+  stock: number,
   passAt: (i: number) => number,
   from: number,
   to: number,
   clearance: number,
   safeZ: number,
 ): number {
-  let highest = -Infinity;
+  let highest = stock;
   for (let i = Math.min(from, to); i <= Math.max(from, to); i++) {
-    highest = Math.max(highest, stockAt(i), passAt(i));
+    highest = Math.max(highest, passAt(i));
   }
   return Math.max(Math.min(safeZ, highest + clearance), passAt(from), passAt(to));
 }
@@ -678,19 +679,51 @@ export function* restStockSteps(
 
 /**
  * Drops a rest operation's tool (its `restProfile`) onto the stock left, at
- * the samples of the operation's own grid. The rest grid is coarser, but
- * each sample drops the tool at its own position: the stock an earlier pass
- * of the same tool left there is never above it, whatever the cells.
+ * the samples of the operation's own grid, to find where to cut. The rest
+ * grid is coarser, but each sample drops the tool at its own position: the
+ * stock an earlier pass of the same tool left there is never above it,
+ * whatever the cells. Rapids go by `highestUnder` instead, the whole tool.
  */
 export class RestDropper {
   private readonly dropper: ToolDropper;
+  /** How far from the tool's axis a cell may hold stock it meets: its radius and a cell's diagonal. */
+  private readonly reach: number;
 
   constructor(
-    stock: RestStock,
+    private readonly stock: RestStock,
     private readonly grid: HeightmapGrid,
     profile: CutterProfile,
   ) {
     this.dropper = new ToolDropper(stock.heights, stock.grid, restProfile(profile));
+    this.reach = profile.radius + Math.hypot(stock.grid.cellWidth, stock.grid.cellHeight);
+  }
+
+  /**
+   * The highest stock left that the whole tool may meet on the way from
+   * `u0` to `u1` along the line `v` (in grid coordinates), whatever its
+   * shape and whatever lies between the cells: the highest cell within its
+   * radius and a cell's diagonal. Past the grid, the stock's top.
+   */
+  highestUnder(u0: number, u1: number, v: number): number {
+    const { columns, rows, cellWidth, cellHeight } = this.stock.grid;
+    const { heights } = this.stock;
+    const reach = this.reach;
+    const low = Math.min(u0, u1) - reach;
+    const high = Math.max(u0, u1) + reach;
+    let highest =
+      low < 0 || high > columns * cellWidth || v - reach < 0 || v + reach > rows * cellHeight
+        ? 0
+        : -Infinity;
+    const firstRow = Math.max(0, Math.floor((v - reach) / cellHeight));
+    const lastRow = Math.min(rows - 1, Math.floor((v + reach) / cellHeight));
+    const firstColumn = Math.max(0, Math.floor(low / cellWidth));
+    const lastColumn = Math.min(columns - 1, Math.floor(high / cellWidth));
+    for (let row = firstRow; row <= lastRow; row++) {
+      for (let column = firstColumn; column <= lastColumn; column++) {
+        highest = Math.max(highest, heights[row * columns + column] as number);
+      }
+    }
+    return highest;
   }
 
   /**
@@ -840,10 +873,10 @@ export function* reliefFinishSteps(
         runs = runs.map(([a, b]): [number, number] => [samples - 1 - b, samples - 1 - a]).reverse();
       }
       const u = (i: number) => ((reversed ? last - i : first + i) + 0.5) * cellWidth;
-      /** The entry clearance above what the earlier operations left at sample `i`. */
+      /** The entry clearance above what the earlier operations left under the tool at sample `i`. */
       const entryAt = (i: number) =>
         restDropper
-          ? Math.min(builder.clearance, (left[i] as number) + builder.clearance)
+          ? Math.min(builder.clearance, restDropper.highestUnder(u(i), u(i), v) + builder.clearance)
           : builder.clearance;
       for (const [index, [a, b]] of runs.entries()) {
         const startU = u(a);
@@ -852,7 +885,7 @@ export function* reliefFinishSteps(
           // Across the gap, clear of what is left there.
           const before = runs[index - 1]?.[1] as number;
           const lift = liftHeight(
-            (i) => left[i] as number,
+            (restDropper as RestDropper).highestUnder(u(before), u(a), v),
             (i) => pass[i] as number,
             before,
             a,
