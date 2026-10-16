@@ -35,7 +35,9 @@ export type ToolpathResponse = { operationId: string; inputHash: string } & (
  * Keeps the toolpath store in step with the document: whenever the inputs of
  * an enabled operation change, it marks the operation as computing and sends
  * a request to the worker through `post`; `receive` files the worker's
- * responses. Disabled and deleted operations lose their toolpaths.
+ * responses. Disabled and deleted operations lose their toolpaths. A rest
+ * operation's inputs hold those of the enabled operations before it, so it
+ * is computed again whenever one of them changes.
  *
  * Each operation has at most one request at the worker: changes made while it
  * computes (scrubbing a value) cancel it and wait, and only the latest is sent
@@ -227,7 +229,10 @@ function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     a.shapes.length === b.shapes.length &&
-    a.shapes.every((shape, i) => shape === b.shapes[i])
+    a.shapes.every((shape, i) => shape === b.shapes[i]) &&
+    // A rest operation's inputs hold those of the operations before it.
+    a.before.length === b.before.length &&
+    a.before.every((before, i) => sameInput(before, b.before[i] as ToolpathInput))
   );
 }
 

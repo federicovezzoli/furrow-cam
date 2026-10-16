@@ -159,7 +159,14 @@ export const reliefFinish: ReliefFinishOperation = {
   enabled: true,
   targets: [],
   tool: ballEndMill,
-  params: { modelId: model.id, angle: 0, stepOver: 10, direction: "zigzag", stockToLeave: 0 },
+  params: {
+    modelId: model.id,
+    angle: 0,
+    stepOver: 10,
+    direction: "zigzag",
+    stockToLeave: 0,
+    rest: false,
+  },
 };
 
 export const RELIEF_ROUGH_ID = "3a9d6e1f-2b4c-4d8e-9f7a-6c5b0e2d1a48";
@@ -180,12 +187,13 @@ export const reliefRough: ReliefRoughOperation = {
     stockToLeave: 0.5,
     boundary: "model",
     ramp: true,
+    rest: false,
   },
 };
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 9,
+    schemaVersion: 10,
     units: "in",
     stock: {
       width: 300,

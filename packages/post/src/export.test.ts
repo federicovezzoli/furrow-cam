@@ -211,6 +211,30 @@ describe("exportGcode", () => {
     expect(gcode.indexOf("(Operation: Finish)")).toBeGreaterThan(roughing);
   });
 
+  it("leaves out a rest operation the operations before it left nothing for", () => {
+    const mesh = new Float32Array([
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12, -50, -40, -12, 50, 40, -12, -50, 40, -12],
+      ...[-50, -40, 0, -49.9, -40, 0, -50, -39.9, 0],
+    ]);
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [model] };
+    doc.operations = [
+      reliefRough,
+      {
+        ...reliefRough,
+        id: "8b2f1c4d-5e6a-4b7c-9d8e-0f1a2b3c4d5e",
+        name: "Rest",
+        params: { ...reliefRough.params, rest: true },
+      },
+    ];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(gcode).toContain("(Operation: Rough)");
+    expect(gcode).not.toContain("(Operation: Rest)");
+    expect(warnings).toEqual(["Rest: no toolpath, left out of the program."]);
+  });
+
   it("includes the toolpath warnings, named by operation", () => {
     const doc = referenceProject();
     doc.operations = [

@@ -465,7 +465,14 @@ describe("addReliefFinishOperation", () => {
       name: "3D finish 1",
       targets: [],
       tool: endMill,
-      params: { modelId: model.id, angle: 0, stepOver: 10, direction: "zigzag", stockToLeave: 0 },
+      params: {
+        modelId: model.id,
+        angle: 0,
+        stepOver: 10,
+        direction: "zigzag",
+        stockToLeave: 0,
+        rest: false,
+      },
     });
   });
 
@@ -478,9 +485,9 @@ describe("addReliefFinishOperation", () => {
   it("updates its params, rejecting invalid ones", () => {
     const store = storeWithModel();
     const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill }) as string;
-    expect(updateReliefFinishParams(store, id, { angle: 45, direction: "one_way" })).toEqual({
-      ok: true,
-    });
+    expect(
+      updateReliefFinishParams(store, id, { angle: 45, direction: "one_way", rest: true }),
+    ).toEqual({ ok: true });
     expect(updateReliefFinishParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
     expect(updateReliefFinishParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
     expect(store.getState().document.operations[0]?.params).toMatchObject({
@@ -488,6 +495,7 @@ describe("addReliefFinishOperation", () => {
       direction: "one_way",
       stepOver: 10,
       stockToLeave: 0,
+      rest: true,
     });
   });
 });
@@ -516,6 +524,7 @@ describe("addReliefRoughOperation", () => {
         stockToLeave: 0.5,
         boundary: "model",
         ramp: true,
+        rest: false,
       },
     });
   });
@@ -534,6 +543,7 @@ describe("addReliefRoughOperation", () => {
         strategy: { type: "linear", angle: 45 },
         boundary: "stock",
         stepOver: 25,
+        rest: true,
       }),
     ).toEqual({ ok: true });
     expect(updateReliefRoughParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
@@ -546,6 +556,7 @@ describe("addReliefRoughOperation", () => {
       boundary: "stock",
       stepOver: 25,
       stockToLeave: 0.5,
+      rest: true,
     });
     expect(store.getState().document.operations[0]?.tool).toEqual(endMill);
   });
