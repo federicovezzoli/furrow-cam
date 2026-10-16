@@ -1,5 +1,20 @@
 # @furrow/document
 
+## 0.5.0
+
+### Minor Changes
+
+- Projects can store 3D model files in S3-compatible storage, the groundwork for STL import. The privacy policy now lists Cloudflare R2, which stores those files in the European Union. ([#122](https://github.com/federicovezzoli/furrow-cam/pull/122))
+- Projects with 3D models now export as a single `.furrow.zip` file holding the project and its STL meshes, and import back from it; projects without models still export as `.furrow.json`. ([#135](https://github.com/federicovezzoli/furrow-cam/pull/135))
+- Finish STL models with 3D parallel passes at any angle, with step-over, one-way or zig-zag direction and stock to leave, then preview, simulate and export them to G-code like other operations. Long toolpaths show their progress and can be cancelled. ([#129](https://github.com/federicovezzoli/furrow-cam/pull/129))
+- 3D roughing and finishing can now cut only the material the operations before them left, so a smaller bit only works where a larger one couldn't reach, without cutting air. ([#136](https://github.com/federicovezzoli/furrow-cam/pull/136))
+- Rough out STL models in Z levels with the pocket clearing strategies, leaving stock for finishing, across the model's outline or the whole stock, with a step-over of their own if needed. Changing an operation's strategy or another choice no longer shows its old toolpath while the new one computes. ([#131](https://github.com/federicovezzoli/furrow-cam/pull/131))
+- Import STL models (binary or ASCII) into a project, turn, size and position them on the stock, and see them in the viewport as they will be cut from the top. Instances can limit an STL file's size and triangle count. ([#124](https://github.com/federicovezzoli/furrow-cam/pull/124))
+
+### Patch Changes
+
+- Models keep their proportions: resizing one scales its depth too, and a model deeper than the stock is no longer squashed to fit but cut off at the stock's bottom. ([#131](https://github.com/federicovezzoli/furrow-cam/pull/131))
+
 ## 0.4.0
 
 ### Minor Changes
