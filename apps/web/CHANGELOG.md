@@ -1,5 +1,28 @@
 # @furrow/web
 
+## 0.7.0
+
+### Minor Changes
+
+- New accounts get a short guided tour of the app and of the workspace, pointing at the bits, machines, import, properties, operations, preview and G-code export. It shows once per account, and **Take the tour** in the account menu or the workspace's **?** button replays it. ([#143](https://github.com/federicovezzoli/furrow-cam/pull/143))
+- Projects can store 3D model files in S3-compatible storage, the groundwork for STL import. The privacy policy now lists Cloudflare R2, which stores those files in the European Union. ([#122](https://github.com/federicovezzoli/furrow-cam/pull/122))
+- The operation's tool select ends with a "New bit…" option, so you can add a bit to your library and pick it without leaving the workspace. ([#142](https://github.com/federicovezzoli/furrow-cam/pull/142))
+- Projects with 3D models now export as a single `.furrow.zip` file holding the project and its STL meshes, and import back from it; projects without models still export as `.furrow.json`. ([#135](https://github.com/federicovezzoli/furrow-cam/pull/135))
+- Finish STL models with 3D parallel passes at any angle, with step-over, one-way or zig-zag direction and stock to leave, then preview, simulate and export them to G-code like other operations. Long toolpaths show their progress and can be cancelled. ([#129](https://github.com/federicovezzoli/furrow-cam/pull/129))
+- 3D roughing and finishing can now cut only the material the operations before them left, so a smaller bit only works where a larger one couldn't reach, without cutting air. ([#136](https://github.com/federicovezzoli/furrow-cam/pull/136))
+- Rough out STL models in Z levels with the pocket clearing strategies, leaving stock for finishing, across the model's outline or the whole stock, with a step-over of their own if needed. Changing an operation's strategy or another choice no longer shows its old toolpath while the new one computes. ([#131](https://github.com/federicovezzoli/furrow-cam/pull/131))
+- Import STL models (binary or ASCII) into a project, turn, size and position them on the stock, and see them in the viewport as they will be cut from the top. Instances can limit an STL file's size and triangle count. ([#124](https://github.com/federicovezzoli/furrow-cam/pull/124))
+- A monthly clean-up deletes uploaded 3D models that were never finished, and models uploaded after their project was deleted. ([#137](https://github.com/federicovezzoli/furrow-cam/pull/137))
+
+### Patch Changes
+
+- An STL import that fails because another file was imported while it uploaded no longer leaves its upload in storage. ([#139](https://github.com/federicovezzoli/furrow-cam/pull/139))
+- Collapsing or expanding a sidebar pane no longer opens or closes the other panes, and the workspace page no longer scrolls past the window. ([`08c4e68`](https://github.com/federicovezzoli/furrow-cam/commit/08c4e68c08c9a9f2754707708565b261798a3528))
+- Models keep their proportions: resizing one scales its depth too, and a model deeper than the stock is no longer squashed to fit but cut off at the stock's bottom. ([#131](https://github.com/federicovezzoli/furrow-cam/pull/131))
+- A model whose copy in the browser's cache is damaged is now downloaded again, instead of showing "The stored model doesn't match its file." until the site's data is cleared. ([#141](https://github.com/federicovezzoli/furrow-cam/pull/141))
+- A model preview that failed because the model worker stopped or its file couldn't be downloaded is now tried again, instead of showing only the model's outline until the page is reloaded. ([#140](https://github.com/federicovezzoli/furrow-cam/pull/140))
+- Updated dependencies: @furrow/document@0.5.0, @furrow/cam-core@0.5.0, @furrow/post@0.4.0
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.4.0
+
+### Minor Changes
+
+- Finish STL models with 3D parallel passes at any angle, with step-over, one-way or zig-zag direction and stock to leave, then preview, simulate and export them to G-code like other operations. Long toolpaths show their progress and can be cancelled. ([#129](https://github.com/federicovezzoli/furrow-cam/pull/129))
+- 3D roughing and finishing can now cut only the material the operations before them left, so a smaller bit only works where a larger one couldn't reach, without cutting air. ([#136](https://github.com/federicovezzoli/furrow-cam/pull/136))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.5.0, @furrow/cam-core@0.5.0
+
 ## 0.3.0
 
 ### Minor Changes
