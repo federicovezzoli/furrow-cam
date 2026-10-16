@@ -2,6 +2,7 @@ import type { ModelPlacement } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
+  depthForThickness,
   designAlignment,
   designBounds,
   fitScale,
@@ -112,6 +113,33 @@ describe("initialPlacement", () => {
 
   it("keeps the depth the scale gives when the stock is thicker", () => {
     expect(initialPlacement(BOUNDS, { ...stock, thickness: 50 }, "center").depth).toBe(30);
+  });
+});
+
+describe("depthForThickness", () => {
+  // The fixture is 12 mm high at scale 1; at scale 2.5, 30 mm.
+  const capped = placed({ scale: 2.5, depth: 18 });
+
+  it("follows a stock that capped it, up to the model's own height", () => {
+    expect(depthForThickness(capped, 18, 25)).toBe(25);
+    expect(depthForThickness(capped, 18, 50)).toBe(30);
+    expect(depthForThickness(capped, 18, 10)).toBe(10);
+  });
+
+  it("leaves a depth set below the stock, unless the stock gets thinner than it", () => {
+    const set = placed({ scale: 2.5, depth: 6 });
+    expect(depthForThickness(set, 18, 50)).toBe(6);
+    expect(depthForThickness(set, 18, 4)).toBe(4);
+    // At its own height already.
+    expect(depthForThickness(placed({ depth: 12 }), 12, 20)).toBe(12);
+  });
+
+  it("leaves a flat model alone", () => {
+    const flat = {
+      ...placed({ depth: 18 }),
+      bounds: { min: [0, 0, 0], max: [10, 10, 0] },
+    } as const;
+    expect(depthForThickness(flat as never, 18, 4)).toBe(18);
   });
 });
 

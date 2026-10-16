@@ -48,3 +48,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Proposed |
 | [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Proposed |
+| [0034](0034-model-depth-follows-stock.md) | A model's depth capped by the stock follows its thickness | Proposed |

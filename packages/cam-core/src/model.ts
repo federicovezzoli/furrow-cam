@@ -226,6 +226,22 @@ export function initialPlacement(
 }
 
 /**
+ * A model's depth once the stock goes from `before` to `after` thick: a
+ * depth the stock caps follows it (ADR-0031 caps it on import), up to the
+ * model's own height at its scale, so a model squashed into a thin stock
+ * gets its relief back on a thicker one. A depth set below the cap stays,
+ * and a flat model has none to change.
+ */
+export function depthForThickness(model: PlacedModel, before: number, after: number): number {
+  const { depth, scale, rotation } = model.placement;
+  const height = rotatedSize(model.bounds, rotation)[2] * scale;
+  if (!(height > 0)) return depth;
+  if (depth > after) return after;
+  if (Math.abs(depth - before) < 1e-9 && depth < height) return Math.min(height, after);
+  return depth;
+}
+
+/**
  * `placement` with a new rotation or scale, moved so that the model's point
  * at `anchor` stays where it is: a model aligned to the stock stays aligned.
  */

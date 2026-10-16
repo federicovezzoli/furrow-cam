@@ -1,4 +1,5 @@
 import {
+  depthForThickness,
   designAlignment,
   translatePoint,
   translateShapes,
@@ -51,14 +52,21 @@ function moveDrawing(
  * Resizes the stock along one dimension, in millimetres. An anchored zero
  * follows the stock and the drawing moves with it (ADR-0022), so a drawing
  * aligned to the anchor stays aligned; a custom zero and the drawing stay
- * where they are.
+ * where they are. A model's depth capped by the thickness follows it
+ * (`depthForThickness`).
  */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
-  const { stock, geometry } = store.getState().document;
+  const { stock, geometry, models } = store.getState().document;
   const offset = xyOriginShift(stock, { ...stock, [dimension]: value });
   store.getState().change(`setStock.${dimension}`, (draft) => {
     draft.stock[dimension] = value;
     moveDrawing(draft, geometry, offset);
+    if (dimension !== "thickness") return;
+    models.forEach((model, i) => {
+      const depth = depthForThickness(model, stock.thickness, value);
+      const placement = draft.models[i]?.placement;
+      if (placement && placement.depth !== depth) placement.depth = depth;
+    });
   });
 }
 

@@ -1,6 +1,6 @@
 import { xyOriginPosition } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument, StockAnchor } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
@@ -117,6 +117,24 @@ describe("setStockDimension", () => {
     expect(store.getState().document.geometry).toBe(geometry);
     expect(store.getState().document.operations).toBe(operations);
     expect(stock(store).xyOrigin).toEqual({ anchor: "custom", x: 50, y: 50 });
+  });
+});
+
+describe("setStockDimension on a model", () => {
+  it("gives a model squashed into a thin stock its depth back, in the same undo step", () => {
+    // The fixture model is 12 mm high: imported into 8 mm of stock, it is 8 mm deep.
+    const document = { ...createProjectDocument(), models: [model] };
+    document.stock.thickness = 8;
+    document.models = [{ ...model, placement: { ...model.placement, depth: 8 } }];
+    const store = createDocumentStore(document);
+    setStockDimension(store, "thickness", 20);
+    expect(store.getState().document.models[0]?.placement.depth).toBe(12);
+    expect(store.getState().past).toHaveLength(1);
+    setStockDimension(store, "thickness", 10);
+    expect(store.getState().document.models[0]?.placement.depth).toBe(10);
+    store.getState().undo();
+    store.getState().undo();
+    expect(store.getState().document.models[0]?.placement.depth).toBe(8);
   });
 });
 
