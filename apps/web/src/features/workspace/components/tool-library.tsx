@@ -1,6 +1,14 @@
 "use client";
 
-import { canClearFlatBottom, canDrill, canEngrave, canVCarve, type Tool } from "@furrow/document";
+import {
+  canClearFlatBottom,
+  canDrill,
+  canEngrave,
+  canVCarve,
+  type Operation,
+  type Tool,
+  type ToolType,
+} from "@furrow/document";
 import type * as React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
 import type { ToolChoice } from "@/features/tools/server";
@@ -8,10 +16,11 @@ import { toolKey } from "@/features/workspace/stores/operation-actions";
 
 const ToolLibraryContext = createContext<ToolChoice[]>([]);
 const UpdateToolContext = createContext<(id: string, tool: Tool) => void>(() => {});
+const AddToolContext = createContext<(choice: ToolChoice) => void>(() => {});
 
 /**
  * The signed-in user's tool library, as loaded with the workspace, with the
- * bits edited from it applied until the server sends the library again.
+ * bits added or edited from it applied until the server sends the library again.
  */
 export function ToolLibraryProvider({
   tools: initial,
@@ -28,15 +37,32 @@ export function ToolLibraryProvider({
     setTools(initial);
   }
   const updateTool = useCallback((id: string, tool: Tool) => {
-    setTools((current) =>
-      current.map((choice) => (choice.id === id ? { ...choice, tool } : choice)),
-    );
+    setTools((current) => withUpdatedTool(current, id, tool));
+  }, []);
+  const addTool = useCallback((choice: ToolChoice) => {
+    setTools((current) => withAddedTool(current, choice));
   }, []);
   return (
     <ToolLibraryContext value={tools}>
-      <UpdateToolContext value={updateTool}>{children}</UpdateToolContext>
+      <UpdateToolContext value={updateTool}>
+        <AddToolContext value={addTool}>{children}</AddToolContext>
+      </UpdateToolContext>
     </ToolLibraryContext>
   );
+}
+
+/** `tools` with the tool `id` replaced by its saved version. */
+export function withUpdatedTool(tools: ToolChoice[], id: string, tool: Tool): ToolChoice[] {
+  return tools.map((choice) => (choice.id === id ? { ...choice, tool } : choice));
+}
+
+/** `tools` with `choice` added, keeping the library's order by name. */
+export function withAddedTool(tools: ToolChoice[], choice: ToolChoice): ToolChoice[] {
+  if (tools.some((existing) => existing.id === choice.id)) return tools;
+  const index = tools.findIndex(
+    (existing) => existing.tool.name.localeCompare(choice.tool.name) > 0,
+  );
+  return index === -1 ? [...tools, choice] : tools.toSpliced(index, 0, choice);
 }
 
 export function useToolLibrary() {
@@ -46,6 +72,11 @@ export function useToolLibrary() {
 /** Replaces the library tool `id` with its saved version. */
 export function useUpdateTool() {
   return useContext(UpdateToolContext);
+}
+
+/** Adds a tool just created in the library. */
+export function useAddTool() {
+  return useContext(AddToolContext);
 }
 
 /** The tool new operations start with: the default one, else the first. */
@@ -103,4 +134,19 @@ export function flatBottomToolChoice(tools: ToolChoice[]): ToolChoice | undefine
 export function matchingToolChoice(tools: ToolChoice[], tool: Tool): ToolChoice | undefined {
   const key = toolKey(tool);
   return tools.find((choice) => toolKey(choice.tool) === key);
+}
+
+/** The bit type a new bit starts as when created for an operation of `type`. */
+export function newBitType(type: Operation["type"]): ToolType {
+  switch (type) {
+    case "drill":
+      return "drill";
+    case "engrave":
+    case "vcarve":
+      return "v_bit";
+    case "relief_finish":
+      return "ball_end_mill";
+    default:
+      return "flat_end_mill";
+  }
 }

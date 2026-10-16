@@ -63,6 +63,7 @@ import {
   updateVCarveParams,
 } from "@/features/workspace/stores/operation-actions";
 import { EditBitButton } from "./edit-bit-dialog";
+import { NewBitDialog } from "./new-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
 import { flatBottomToolChoice, matchingToolChoice, useToolLibrary } from "./tool-library";
 
@@ -193,7 +194,13 @@ function Row({ id, label, children }: { id: string; label: string; children: Rea
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
-/** Picks the operation's tool; library tools the operation can't take, such as a V-bit to drill, are disabled. */
+/** The tool select's last option, which opens the form for a new bit instead of picking one. */
+const NEW_BIT = "__new";
+
+/**
+ * Picks the operation's tool; library tools the operation can't take, such as
+ * a V-bit to drill, are disabled. "New bit…" creates one in place and picks it.
+ */
 function ToolPicker({ operation }: { operation: Operation }) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
@@ -212,6 +219,12 @@ function ToolPicker({ operation }: { operation: Operation }) {
   // Cleared once the operation's tool changes.
   const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
   const error = rejected?.tool === tool ? rejected.error : null;
+  const [creating, setCreating] = useState(false);
+
+  function pick(picked: Tool) {
+    const result = setOperationTool(store, operationId, picked);
+    setRejected(result.ok ? null : { tool, error: result.error });
+  }
 
   return (
     <>
@@ -223,10 +236,10 @@ function ToolPicker({ operation }: { operation: Operation }) {
             size="sm"
             value={current?.id ?? ""}
             onChange={(event) => {
+              // Controlled, so the select keeps showing the current tool meanwhile.
+              if (event.target.value === NEW_BIT) return setCreating(true);
               const choice = tools.find((candidate) => candidate.id === event.target.value);
-              if (!choice) return;
-              const result = setOperationTool(store, operationId, choice.tool);
-              setRejected(result.ok ? null : { tool, error: result.error });
+              if (choice) pick(choice.tool);
             }}
             className={SELECT_CLASS}
           >
@@ -243,10 +256,22 @@ function ToolPicker({ operation }: { operation: Operation }) {
                 {choice.tool.name}
               </NativeSelectOption>
             ))}
+            <hr />
+            <NativeSelectOption value={NEW_BIT}>New bit…</NativeSelectOption>
           </NativeSelect>
           <EditBitButton choice={current} />
         </div>
       </Row>
+      <NewBitDialog
+        operation={operation}
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSaved={(saved) => {
+          setCreating(false);
+          // A bit the operation can't take stays in the library; the error says why.
+          pick(saved.tool);
+        }}
+      />
       {error && (
         <p role="alert" className="text-destructive">
           {error}
