@@ -8,7 +8,12 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createTool, type ToolFormErrors, updateTool } from "@/features/tools/actions";
+import {
+  createTool,
+  type SavedTool,
+  type ToolFormErrors,
+  updateTool,
+} from "@/features/tools/actions";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@/features/tools/labels";
 import { BitTypeIcon } from "./bit-type-icon";
 import { useToolDialogBusy } from "./tool-dialog";
@@ -30,8 +35,8 @@ type ToolFormProps = {
   /** The tool to edit, or `null` to create one. */
   id: string | null;
   values: Partial<Tool>;
-  /** Called with the saved tool, as an operation snapshot. */
-  onSaved: (tool: Tool) => void;
+  /** Called with the saved tool's id and the tool, as an operation snapshot. */
+  onSaved: (saved: SavedTool) => void;
   onCancel: () => void;
 };
 
@@ -56,7 +61,7 @@ export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
         errors: { form: "The bit couldn't be saved. Check your connection and try again." },
       }));
       if ("errors" in result) setErrors(result.errors);
-      else onSaved(result.tool);
+      else onSaved(result);
     });
   }
 
