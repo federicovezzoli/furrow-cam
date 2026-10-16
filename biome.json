@@ -130,7 +130,7 @@
       }
     },
     {
-      "includes": ["packages/cam-core/src/geometry.ts"],
+      "includes": ["packages/cam-core/src/geometry/clipper.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -157,7 +157,7 @@
       }
     },
     {
-      "includes": ["packages/cam-core/src/medial-axis.ts"],
+      "includes": ["packages/cam-core/src/geometry/medial-axis.ts"],
       "linter": {
         "rules": {
           "style": {

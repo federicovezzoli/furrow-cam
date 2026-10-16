@@ -31,6 +31,7 @@ packages/post/       post-processors, toolpaths → G-code
 
 - Dependency direction: `web → post → cam-core → document`.
 - `packages/*` must not import React, Next.js or three.js (Biome enforces it). They are consumed as TypeScript source; keep them worker-safe (no DOM).
+- `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/` and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
 
 Inside `apps/web/src` (ADR-0021):
 

@@ -51,3 +51,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
 | [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Proposed |
 | [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Proposed |
+| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed |
