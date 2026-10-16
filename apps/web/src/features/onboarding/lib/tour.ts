@@ -103,23 +103,21 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
   ],
 };
 
-/** A running tour: the steps that were on screen when it started, and the one shown. */
+/**
+ * A running tour: its steps, less those dropped because their anchor wasn't
+ * on screen when reached, and the one shown.
+ */
 export interface TourState {
   steps: readonly TourStep[];
   index: number;
 }
 
 /**
- * Starts a tour with the steps `isAvailable` accepts, or returns `null` when
- * none is. A step inside a pane is available when the pane is, since the
- * tour expands it.
+ * Starts a tour at its first step. Anchors are only looked for when their
+ * step is reached: the page may still be streaming in when the tour starts.
  */
-export function startTour(
-  steps: readonly TourStep[],
-  isAvailable: (step: TourStep) => boolean,
-): TourState | null {
-  const available = steps.filter(isAvailable);
-  return available.length > 0 ? { steps: available, index: 0 } : null;
+export function startTour(steps: readonly TourStep[]): TourState {
+  return { steps, index: 0 };
 }
 
 /** Moves one step forward or back; `null` when moving past the last step ends the tour. */

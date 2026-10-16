@@ -9,12 +9,12 @@ import { Tour, useTour } from "./tour";
  * the first visit to the project list, unless the account finished it
  * (`done`), and the menu replays it on any page.
  */
-export function AppTour({ email, done }: { email: string; done: boolean }) {
-  const tour = useTour("app", { done, autoStart: usePathname() === "/projects" });
+export function AppTour({ userId, email, done }: { userId: string; email: string; done: boolean }) {
+  const tour = useTour("app", { userId, done, autoStart: usePathname() === "/projects" });
   return (
     <>
       <AccountMenu email={email} onTakeTour={tour.start} />
-      <Tour id="app" running={tour.running} onEnd={tour.end} />
+      <Tour id="app" running={tour.running} origin={tour.origin} onEnd={tour.end} />
     </>
   );
 }

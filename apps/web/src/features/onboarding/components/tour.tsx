@@ -18,35 +18,49 @@ import {
 } from "@/features/onboarding/lib/tour";
 
 /**
- * Tours finished or skipped since the page loaded: the server's timestamps
- * only come back on the next load, so this keeps a tour from starting again
- * on a client-side navigation.
+ * Tours finished or skipped since the page loaded, as `<user id>:<tour>`: the
+ * server's timestamps only come back on the next load, so this keeps a tour
+ * from starting again on a client-side navigation. Keyed by user, since
+ * another account can sign in without a reload.
  */
-const finished = new Set<TourId>();
+const finished = new Set<string>();
 
 /**
  * Whether tour `id` is running, starting it on mount when `autoStart` holds
- * and the account hasn't finished it (`done`). `end` stops it and, the first
- * time, stores on the account that it was seen, without waiting for the save.
+ * and the account `userId` hasn't finished it (`done`). `start` takes the
+ * element to give focus back to when the tour ends. `end` stops it and, the
+ * first time a step was `seen`, stores on the account that the tour was
+ * seen, without waiting for the save.
  */
-export function useTour(id: TourId, { done, autoStart }: { done: boolean; autoStart: boolean }) {
+export function useTour(
+  id: TourId,
+  { userId, done, autoStart }: { userId: string; done: boolean; autoStart: boolean },
+) {
   const [running, setRunning] = useState(false);
+  const [origin, setOrigin] = useState<HTMLElement | null>(null);
+  const key = `${userId}:${id}`;
 
   useEffect(() => {
-    if (autoStart && !done && !finished.has(id)) setRunning(true);
-  }, [id, done, autoStart]);
+    if (autoStart && !done && !finished.has(key)) setRunning(true);
+  }, [key, done, autoStart]);
 
-  const start = useCallback(() => setRunning(true), []);
-  const end = useCallback(() => {
-    setRunning(false);
-    if (done || finished.has(id)) return;
-    finished.add(id);
-    finishTour(id).catch((error: unknown) => {
-      console.error(`Failed to remember that the ${id} tour was seen`, error);
-    });
-  }, [id, done]);
+  const start = useCallback((from?: HTMLElement | null) => {
+    setOrigin(from ?? null);
+    setRunning(true);
+  }, []);
+  const end = useCallback(
+    (seen: boolean) => {
+      setRunning(false);
+      if (!seen || done || finished.has(key)) return;
+      finished.add(key);
+      finishTour(id).catch((error: unknown) => {
+        console.error(`Failed to remember that the ${id} tour was seen`, error);
+      });
+    },
+    [id, key, done],
+  );
 
-  return { running, start, end };
+  return { running, origin, start, end };
 }
 
 function findAnchor(name: string) {
@@ -65,19 +79,23 @@ function onScreen(element: HTMLElement | null): element is HTMLElement {
 
 /**
  * A step a time of tour `id` while `running`, in a popover beside its
- * anchor over a dimmed page; `onEnd` is called when it is finished, skipped
- * (Esc too) or has no step on screen. `revealPane` expands a collapsed
- * workspace pane before its step is shown.
+ * anchor over a dimmed page. A step whose anchor isn't on screen when
+ * reached is dropped. `onEnd` is called when the tour is finished, skipped
+ * (Esc too) or runs out of steps, with whether any step was shown; focus then
+ * goes back to `origin`, or to where it was when the tour started.
+ * `revealPane` expands a collapsed workspace pane before its step is shown.
  */
 export function Tour({
   id,
   running,
+  origin,
   onEnd,
   revealPane,
 }: {
   id: TourId;
   running: boolean;
-  onEnd: () => void;
+  origin?: HTMLElement | null;
+  onEnd: (seen: boolean) => void;
   revealPane?: (pane: TourPane) => void;
 }) {
   const [state, setState] = useState<TourState | null>(null);
@@ -92,13 +110,15 @@ export function Tour({
     number: number;
     count: number;
   } | null>(null);
-  /** Where focus was when the tour started, to give it back. */
+  /** Where focus goes back to when the tour ends. */
   const returnFocus = useRef<Element | null>(null);
+  /** Whether a step was shown since the tour started. */
+  const seen = useRef(false);
 
   function end() {
     setState(null);
     setShown(null);
-    onEnd();
+    onEnd(seen.current);
     // After the popover unmounts: until then its focus trap pulls focus back in.
     const target = returnFocus.current;
     requestAnimationFrame(() => {
@@ -107,18 +127,14 @@ export function Tour({
   }
   const endFromEffect = useEffectEvent(end);
   const reveal = useEffectEvent((pane: TourPane) => revealPane?.(pane));
+  const startFrom = useEffectEvent(() => origin ?? document.activeElement);
 
-  // Start with the steps on screen; a step inside a pane needs only the pane, which it expands.
   useEffect(() => {
     if (!running) return;
-    const frame = requestAnimationFrame(() => {
-      returnFocus.current = document.activeElement;
-      const tour = startTour(TOURS[id], (step) => onScreen(findAnchor(step.pane ?? step.anchor)));
-      setDirection(1);
-      if (tour) setState(tour);
-      else endFromEffect();
-    });
-    return () => cancelAnimationFrame(frame);
+    returnFocus.current = startFrom();
+    seen.current = false;
+    setDirection(1);
+    setState(startTour(TOURS[id]));
   }, [running, id]);
 
   // Show the step: expand its pane, let it lay out, then find its anchor or drop the step.
@@ -130,6 +146,7 @@ export function Tour({
       frame = requestAnimationFrame(() => {
         const element = findAnchor(step.anchor);
         if (onScreen(element)) {
+          seen.current = true;
           setShown({ step, element, number: state.index + 1, count: state.steps.length });
           return;
         }
@@ -191,9 +208,11 @@ function StepPopover({
   const ids = useId();
   const next = useRef<HTMLButtonElement>(null);
   // Large areas (the viewport) get the popover inside their top edge rather than beside them.
+  // `contextElement` lets the positioning watch the anchor itself for moves and resizes.
   const virtualRef = useMemo(
     () => ({
       current: {
+        contextElement: anchor,
         getBoundingClientRect: () => {
           const rect = anchor.getBoundingClientRect();
           return step.side === "inside"
@@ -212,8 +231,6 @@ function StepPopover({
         side={step.side === "inside" ? "bottom" : step.side}
         sideOffset={8}
         collisionPadding={8}
-        // Panes resize while the tour expands them: follow the anchor every frame.
-        updatePositionStrategy="always"
         aria-labelledby={`${ids}-count ${ids}-title`}
         aria-describedby={`${ids}-body`}
         onOpenAutoFocus={(event) => {
@@ -262,26 +279,32 @@ const INSIDE_OFFSET = 16;
 /** How far the highlight extends past its element, in pixels. */
 const SPOTLIGHT_PADDING = 4;
 
-/** Dims the page around `element`, following it as it moves or resizes. */
+/**
+ * Dims the page around `element`. It is measured again when the element or
+ * the page resizes, or anything scrolls; while the tour is up, those are the
+ * only ways it can move.
+ */
 function Spotlight({ element }: { element: HTMLElement }) {
   const [rect, setRect] = useState(() => element.getBoundingClientRect());
 
   useEffect(() => {
     let frame = 0;
-    function track() {
-      const next = element.getBoundingClientRect();
-      setRect((last) =>
-        last.top === next.top &&
-        last.left === next.left &&
-        last.width === next.width &&
-        last.height === next.height
-          ? last
-          : next,
-      );
-      frame = requestAnimationFrame(track);
+    function measure() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setRect(element.getBoundingClientRect()));
     }
-    track();
-    return () => cancelAnimationFrame(frame);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    observer.observe(document.documentElement);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { capture: true, passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, { capture: true });
+    };
   }, [element]);
 
   return createPortal(

@@ -40,6 +40,7 @@ async function Workspace({ params }: Pick<PageProps<"/projects/[id]">, "params">
       machines={machines}
       meshLimits={meshLimits()}
       layout={layout}
+      userId={userId}
       tourDone={user.workspaceTourDoneAt != null}
     />
   );

@@ -3,13 +3,15 @@
 import { z } from "zod";
 import { getUserId } from "@/features/auth/server";
 import { db } from "@/lib/db";
+import type { TourId } from "./lib/tour";
 
+/** The `User` column remembering each tour. */
 const TOUR_COLUMNS = {
   app: "appTourDoneAt",
   workspace: "workspaceTourDoneAt",
-} as const;
+} as const satisfies Record<TourId, string>;
 
-const TourId = z.enum(["app", "workspace"]);
+const Tour = z.enum(Object.keys(TOUR_COLUMNS) as [TourId, ...TourId[]]);
 
 /**
  * Remembers on the account that the user finished or skipped a tour, so it
@@ -18,7 +20,7 @@ const TourId = z.enum(["app", "workspace"]);
  */
 export async function finishTour(tour: unknown): Promise<void> {
   const userId = await getUserId();
-  const parsed = TourId.safeParse(tour);
+  const parsed = Tour.safeParse(tour);
   if (!userId || !parsed.success) return;
   const column = TOUR_COLUMNS[parsed.data];
   await db.user.updateMany({

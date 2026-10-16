@@ -2,7 +2,7 @@
 
 import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,10 +17,18 @@ import { DeleteAccountDialog } from "./delete-account-dialog";
 
 /**
  * The header's account menu: the signed-in email, the guided tour
- * (`onTakeTour` replays it), account deletion and sign-out.
+ * (`onTakeTour` replays it, given the menu's button to give focus back to),
+ * account deletion and sign-out.
  */
-export function AccountMenu({ email, onTakeTour }: { email: string; onTakeTour?: () => void }) {
+export function AccountMenu({
+  email,
+  onTakeTour,
+}: {
+  email: string;
+  onTakeTour?: (trigger: HTMLElement | null) => void;
+}) {
   const router = useRouter();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState(false);
 
   async function signOut() {
@@ -34,7 +42,7 @@ export function AccountMenu({ email, onTakeTour }: { email: string; onTakeTour?:
       {/* Not modal: a modal menu closing while the dialog opens can leave the page unclickable. */}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button ref={trigger} variant="outline" size="sm">
             Account
             <ChevronDownIcon />
           </Button>
@@ -45,7 +53,7 @@ export function AccountMenu({ email, onTakeTour }: { email: string; onTakeTour?:
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {onTakeTour && (
-            <DropdownMenuItem onSelect={onTakeTour}>
+            <DropdownMenuItem onSelect={() => onTakeTour(trigger.current)}>
               <CircleHelpIcon />
               Take the tour
             </DropdownMenuItem>

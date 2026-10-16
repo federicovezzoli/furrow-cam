@@ -46,5 +46,5 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 
 async function SignedInAccountMenu() {
   const { user } = await requireSession();
-  return <AppTour email={user.email} done={user.appTourDoneAt != null} />;
+  return <AppTour userId={user.id} email={user.email} done={user.appTourDoneAt != null} />;
 }

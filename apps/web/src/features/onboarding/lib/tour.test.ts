@@ -13,12 +13,8 @@ describe("TOURS", () => {
 });
 
 describe("startTour", () => {
-  it("keeps only the available steps, in order", () => {
-    expect(ids(startTour(steps, (s) => s.id !== "b"))).toEqual({ steps: ["a", "c"], at: "a" });
-  });
-
-  it("doesn't start when no step is available", () => {
-    expect(startTour(steps, () => false)).toBeNull();
+  it("starts at the first step, with every step", () => {
+    expect(ids(startTour(steps))).toEqual({ steps: ["a", "b", "c"], at: "a" });
   });
 });
 

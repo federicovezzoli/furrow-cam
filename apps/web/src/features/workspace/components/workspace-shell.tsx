@@ -73,8 +73,8 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * `tools` is the user's tool library, offered for operations, and
  * `machines` their machine profiles, offered for the project. `meshLimits`
  * are the STL files the server stores, `null` when STL import is off.
- * `tourDone` says the account finished the workspace tour (PRD-0001 R22),
- * which otherwise starts when the workspace opens.
+ * `tourDone` says the account `userId` finished the workspace tour
+ * (PRD-0001 R22), which otherwise starts when the workspace opens.
  */
 export function WorkspaceShell({
   project,
@@ -82,6 +82,7 @@ export function WorkspaceShell({
   machines,
   meshLimits,
   layout,
+  userId,
   tourDone,
 }: {
   project: WorkspaceProject;
@@ -89,6 +90,7 @@ export function WorkspaceShell({
   machines: MachineChoice[];
   meshLimits: MeshLimits | null;
   layout: WorkspaceLayout;
+  userId: string;
   tourDone: boolean;
 }) {
   if (project.error !== undefined) {
@@ -105,7 +107,13 @@ export function WorkspaceShell({
   return (
     <WorkspaceStoresProvider key={project.id} project={project} meshLimits={meshLimits}>
       <ToolLibraryProvider tools={tools}>
-        <Workspace project={project} machines={machines} layout={layout} tourDone={tourDone} />
+        <Workspace
+          project={project}
+          machines={machines}
+          layout={layout}
+          userId={userId}
+          tourDone={tourDone}
+        />
       </ToolLibraryProvider>
     </WorkspaceStoresProvider>
   );
@@ -116,11 +124,13 @@ function Workspace({
   project,
   machines,
   layout,
+  userId,
   tourDone,
 }: {
   project: ProjectRow;
   machines: MachineChoice[];
   layout: WorkspaceLayout;
+  userId: string;
   tourDone: boolean;
 }) {
   const saveStatus = useAutosave();
@@ -130,7 +140,7 @@ function Workspace({
   );
   useUndoShortcuts();
   useToolpaths();
-  const tour = useTour("workspace", { done: tourDone, autoStart: true });
+  const tour = useTour("workspace", { userId, done: tourDone, autoStart: true });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
   const sidebar = useGroupRef();
@@ -157,9 +167,10 @@ function Workspace({
 
   /**
    * Collapses or expands pane `id` without opening or closing any other: with
-   * every pane collapsed, the space below their headers is left empty.
+   * every pane collapsed, the space below their headers is left empty. The
+   * new layout is saved unless `persist` is false.
    */
-  function toggle(id: keyof typeof panes) {
+  function toggle(id: keyof typeof panes, persist = true) {
     const group = sidebar.current;
     const panel = panes[id].current;
     if (!group || !panel) return;
@@ -184,13 +195,14 @@ function Workspace({
         minSize: PANE_MIN_SIZE * percentPerPixel,
       }),
     );
+    if (!persist) return;
     saved.current = { ...saved.current, sidebar: sizes };
     saveWorkspaceLayout(saved.current);
   }
 
-  /** Expands pane `id` for the tour's step inside it. */
+  /** Expands pane `id` for the tour's step inside it, leaving the saved layout as the user set it. */
   function reveal(id: TourPane) {
-    if (panes[id].current?.isCollapsed()) toggle(id);
+    if (panes[id].current?.isCollapsed()) toggle(id, false);
   }
 
   return (
@@ -199,9 +211,15 @@ function Workspace({
         project={project}
         saveStatus={saveStatus}
         machineName={machineName}
-        onTakeTour={tour.start}
+        onTakeTour={(from) => tour.start(from)}
       />
-      <Tour id="workspace" running={tour.running} onEnd={tour.end} revealPane={reveal} />
+      <Tour
+        id="workspace"
+        running={tour.running}
+        origin={tour.origin}
+        onEnd={tour.end}
+        revealPane={reveal}
+      />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
       {/* Below the panels' minimum widths (200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
@@ -339,7 +357,7 @@ function TopBar({
   project: ProjectRow;
   saveStatus?: AutosaveStatus;
   machineName?: string | null;
-  onTakeTour?: () => void;
+  onTakeTour?: (from: HTMLElement) => void;
 }) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
@@ -365,7 +383,7 @@ function TopBar({
           <Button
             variant="ghost"
             size="icon-compact"
-            onClick={onTakeTour}
+            onClick={(event) => onTakeTour(event.currentTarget)}
             aria-label="Take the tour"
             title="Take the tour"
           >
