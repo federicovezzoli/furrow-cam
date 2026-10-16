@@ -196,6 +196,19 @@ describe("simplifyContour", () => {
     expect(difference([ring], offset([simple], 0.2, { join: "miter" }))).toEqual([]);
   });
 
+  it("keeps rings no wider than the tolerance, which would enclose nothing", () => {
+    const grid = { columns: 5, rows: 5, cellWidth: 1, cellHeight: 1 };
+    const cell = Array.from({ length: 25 }, (_, i) => (i === 12 ? 5 : 0));
+    const strip = Array.from({ length: 25 }, (_, i) => (i >= 10 && i < 15 ? 5 : 0));
+    for (const heights of [cell, strip]) {
+      const [ring] = heightContours(heights, grid, 1);
+      if (!ring) throw new Error("no contour");
+      const simple = simplifyContour(ring, 1);
+      expect(simple).toEqual(ring);
+      expect(difference([ring], offset([simple], 2, { join: "miter" }))).toEqual([]);
+    }
+  });
+
   it("leaves a square alone", () => {
     const square: Polygon = [
       [0, 0],
@@ -244,6 +257,17 @@ describe("reliefRoughSteps", () => {
       }
     });
   }
+
+  it("leaves a fin one cell wide standing", () => {
+    // A 0.1 mm fin up to -2 across the floor, one cell of the 0.1 mm grid.
+    const mesh = new Float32Array([...stepMesh, ...rect(14.95, 0, 15.05, 10, -2)]);
+    for (const strategy of [{ type: "offset" }, { type: "peel", start: "centre" }] as const) {
+      const operation = roughing(endMill, { strategy, stockToLeave: 0 });
+      const toolpath = runSteps(reliefRoughSteps(operation, STEP, mesh, options));
+      const stock = simulate(toolpath, endMill);
+      expect(stock.at([15, 5])).toBeGreaterThanOrEqual(-2 - 1e-4);
+    }
+  });
 
   it("keeps the stock to leave on vertical walls, and little more", () => {
     const toolpath = rough(endMill, { stockToLeave: 0.5 });

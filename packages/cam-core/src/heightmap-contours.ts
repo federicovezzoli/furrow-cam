@@ -94,6 +94,8 @@ export function heightContours(
  * the result (Douglas-Peucker), so the result grown by twice `tolerance`
  * covers the area `ring` encloses, whatever its winding. Contours along
  * cell edges are staircases, and offsetting every step of them is slow.
+ * A ring no wider than `tolerance`, such as a single cell, would shrink to
+ * a line that encloses nothing: it is kept as it is.
  */
 export function simplifyContour(ring: Polygon, tolerance: number): Polygon {
   const count = ring.length;
@@ -135,5 +137,5 @@ export function simplifyContour(ring: Polygon, tolerance: number): Polygon {
   }
   const kept: Point[] = [];
   for (let i = 0; i < count; i++) if (keep[i]) kept.push(ring[i] as Point);
-  return kept;
+  return kept.length >= 3 ? kept : ring;
 }
