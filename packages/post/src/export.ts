@@ -1,4 +1,10 @@
-import { generateToolpath, type ToolpathContext, toolpathInputs } from "@furrow/cam-core";
+import {
+  createCache,
+  generateToolpath,
+  type SimulationCut,
+  type ToolpathContext,
+  toolpathInputs,
+} from "@furrow/cam-core";
 import { type PostProcessorId, type ProjectDocument, projectFileName } from "@furrow/document";
 import { grbl } from "./grbl";
 import type { PostOutput, PostProcessor } from "./post";
@@ -15,7 +21,8 @@ export type GcodeExport = PostOutput & { fileName: string };
  * The G-code of the project `name`, for its machine's post-processor: the
  * enabled operations in order, toolpath warnings included. Computes every
  * toolpath, so it runs in a Web Worker (ADR-0004); 3D operations take their
- * models' meshes from `context`. Throws when there is nothing to cut.
+ * models' meshes from `context`. Rest operations take the toolpaths before
+ * them from the ones computed here. Throws when there is nothing to cut.
  */
 export function exportGcode(
   doc: ProjectDocument,
@@ -30,8 +37,12 @@ export function exportGcode(
   if (first === undefined) throw new Error("There are no enabled operations to export.");
 
   const warnings: string[] = [];
+  const toolpathContext: ToolpathContext = {
+    ...context,
+    cuts: context?.cuts ?? createCache<SimulationCut[]>(inputs.length),
+  };
   const operations = inputs.flatMap((input) => {
-    const toolpath = generateToolpath(input, context);
+    const toolpath = generateToolpath(input, toolpathContext);
     const { name: operationName } = input.operation;
     warnings.push(...toolpath.warnings.map((warning) => `${operationName}: ${warning}`));
     if (toolpath.moves.length > 0 || (toolpath.clearing?.length ?? 0) > 0) {

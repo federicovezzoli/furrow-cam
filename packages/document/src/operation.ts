@@ -330,6 +330,8 @@ export const ReliefFinishParams = z.strictObject({
   direction: RasterDirection,
   /** Material left on the model in every direction, walls included. */
   stockToLeave: z.number().nonnegative(),
+  /** Rest machining (#118): only cut where the earlier operations left material. */
+  rest: z.boolean(),
 });
 export type ReliefFinishParams = z.infer<typeof ReliefFinishParams>;
 
@@ -378,6 +380,8 @@ export const ReliefRoughParams = z
     boundary: RoughingBoundary,
     /** Ramp in at the tool's plunge angle instead of plunging straight down. */
     ramp: z.boolean(),
+    /** Rest machining (#118): only cut where the earlier operations left material. */
+    rest: z.boolean(),
   })
   .superRefine((params, ctx) => {
     // The islands change from level to level, so there is no single one to start from.

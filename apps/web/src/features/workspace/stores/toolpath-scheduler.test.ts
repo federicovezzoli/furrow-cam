@@ -1,5 +1,6 @@
 import { generateToolpath, type ToolpathInput, toolpathLines } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument, type Tool } from "@furrow/document";
+import { model, reliefFinish } from "@furrow/document/fixtures";
 import { describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "./document-store";
 import {
@@ -75,8 +76,8 @@ function documentWithProfile(): ProjectDocument {
   };
 }
 
-function setup() {
-  const documents = createDocumentStore(documentWithProfile());
+function setup(document = documentWithProfile()) {
+  const documents = createDocumentStore(document);
   const toolpaths = createToolpathStore();
   const requests: ToolpathRequest[] = [];
   const cancels: string[] = [];
@@ -168,6 +169,39 @@ describe("scheduleToolpaths", () => {
     deepen(documents, 6);
     expect(requests).toHaveLength(2);
     expect(requests[1]?.inputHash).not.toBe(requests[0]?.inputHash);
+  });
+
+  it("recomputes a rest operation when an enabled operation before it changes", () => {
+    const withFinish = (rest: boolean): ProjectDocument => {
+      const document = documentWithProfile();
+      const finish = { ...reliefFinish, params: { ...reliefFinish.params, rest } };
+      return { ...document, models: [model], operations: [...document.operations, finish] };
+    };
+    const ids = (requests: ToolpathRequest[]) => requests.map(({ operationId }) => operationId);
+
+    const rest = setup(withFinish(true));
+    expect(ids(rest.requests)).toEqual([OPERATION_ID, reliefFinish.id]);
+    expect(rest.requests[1]?.input.before.map(({ operation }) => operation.id)).toEqual([
+      OPERATION_ID,
+    ]);
+    rest.documents.getState().change("Rename", (draft) => {
+      const operation = draft.operations[0];
+      if (operation) operation.name = "Renamed";
+    });
+    expect(rest.requests).toHaveLength(2);
+    deepen(rest.documents, 6);
+    // Both are at the worker: the new requests wait for them to answer.
+    expect(rest.cancels).toEqual([OPERATION_ID, reliefFinish.id]);
+    rest.documents.getState().change("Disable", (draft) => {
+      const operation = draft.operations[0];
+      if (operation) operation.enabled = false;
+    });
+    expect(rest.cancels).toHaveLength(2);
+
+    // An operation that cuts everything doesn't depend on the ones before it.
+    const plain = setup(withFinish(false));
+    deepen(plain.documents, 6);
+    expect(plain.cancels).toEqual([OPERATION_ID]);
   });
 
   it("keeps one request per operation at the worker and sends only the latest next", () => {

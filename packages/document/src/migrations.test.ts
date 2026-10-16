@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument } from "./document";
-import { CIRCLE_ID, fullDocument, SQUARE_ID } from "./fixtures";
+import { CIRCLE_ID, fullDocument, model, reliefFinish, reliefRough, SQUARE_ID } from "./fixtures";
 import {
   type Migration,
   migrateProjectDocument,
@@ -160,6 +160,19 @@ describe("migrations", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 7 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 8 })).toEqual(doc);
+  });
+
+  it("gives v9 3D operations no rest machining and leaves the others alone", () => {
+    const doc = fullDocument();
+    doc.models = [model];
+    doc.operations.push(reliefFinish, reliefRough);
+    const v9 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      operations: { params: Record<string, unknown> }[];
+    };
+    v9.schemaVersion = 9;
+    for (const operation of v9.operations.slice(-2)) delete operation.params.rest;
+    expect(parseProjectDocument(v9)).toEqual(doc);
   });
 
   it("leaves v1 documents without operations alone", () => {

@@ -100,6 +100,29 @@ export function simulateCuts(
 }
 
 /**
+ * Lowers the cells of `heights` that the moves `first` to `last - 1` of
+ * `segments` (six numbers each, as in `SimulationCut`) pass below, as
+ * `simulateCuts` does, without clamping: for sweeping a long toolpath a slice
+ * at a time. Where a sloped move's lowest point is searched for, it is found
+ * to within `tolerance` along the move, which leaves cells no lower than
+ * the exact sweep would and is much faster for long toolpaths.
+ */
+export function sweepMoves(
+  grid: HeightmapGrid,
+  heights: Float32Array,
+  profile: CutterProfile,
+  segments: Float32Array,
+  first: number,
+  last: number,
+  tolerance = 0,
+) {
+  const end = Math.min(last, Math.floor(segments.length / 6));
+  for (let move = first; move < end; move++) {
+    sweep(grid, heights, profile, segments, move * 6, tolerance);
+  }
+}
+
+/**
  * Of a V-bit cut's deepest move, how deep the groove whose width sets the
  * grid is: V-carving narrows to nothing towards corners and thin strokes, so
  * the widest groove alone would leave those a cell or two across.
@@ -187,7 +210,8 @@ const INVERSE_PHI = (Math.sqrt(5) - 1) / 2;
  * profile rises and is convex with distance, so that is a convex function of
  * `t`. Its minimum lies at the closest point on a level move and at an end of
  * the range within reach for a flat tool; otherwise a golden-section search
- * finds it.
+ * finds it, to within `tolerance` along the move (`0` for exact). Stopping
+ * early can only leave a cell higher than the exact sweep would.
  */
 function sweep(
   grid: HeightmapGrid,
@@ -195,6 +219,7 @@ function sweep(
   { radius: fullRadius, flat, height, reach }: CutterProfile,
   segments: Float32Array,
   i: number,
+  tolerance = 0,
 ) {
   const { columns, rows, cellWidth, cellHeight } = grid;
   const ax = segments[i] as number;
@@ -209,6 +234,16 @@ function sweep(
   const radius = Math.min(fullRadius, reach(-deepest));
   const length2 = dx * dx + dy * dy;
   const radius2 = radius * radius;
+  const steps =
+    tolerance > 0
+      ? Math.min(
+          SEARCH_STEPS,
+          Math.max(
+            0,
+            Math.ceil(Math.log(Math.hypot(dx, dy, dz) / tolerance) / -Math.log(INVERSE_PHI)),
+          ),
+        )
+      : SEARCH_STEPS;
 
   const firstRow = Math.max(0, Math.ceil((Math.min(ay, ay + dy) - radius) / cellHeight - 0.5));
   const lastRow = Math.min(
@@ -245,14 +280,17 @@ function sweep(
       let start: number;
       let end: number;
       let closest: number;
+      /** The least distance from `q` to the move's line. */
+      let across2: number;
       if (length2 === 0) {
-        if (qx * qx + qy * qy > radius2) continue;
+        across2 = qx * qx + qy * qy;
+        if (across2 > radius2) continue;
         start = 0;
         end = 1;
         closest = 0;
       } else {
         const along = (qx * dx + qy * dy) / length2;
-        const across2 = qx * qx + qy * qy - along * along * length2;
+        across2 = qx * qx + qy * qy - along * along * length2;
         if (across2 > radius2) continue;
         const half = Math.sqrt((radius2 - across2) / length2);
         start = Math.max(0, along - half);
@@ -261,6 +299,8 @@ function sweep(
         closest = Math.min(Math.max(along, start), end);
       }
 
+      const cell = row * columns + column;
+      const current = heights[cell] as number;
       let lowest: number;
       if (dz === 0) {
         const px = qx - dx * closest;
@@ -269,11 +309,15 @@ function sweep(
       } else if (flat) {
         lowest = az + dz * (dz < 0 ? end : start);
       } else {
-        lowest = lowestAlong(qx, qy, dx, dy, az, dz, height, start, end);
+        // The move's lowest point in reach, with the tool's edge at its least
+        // distance, bounds what the search can find: skip it when the cell
+        // is already lower, as it mostly is where passes overlap.
+        const bound = az + dz * (dz < 0 ? end : start) + height(Math.sqrt(Math.max(across2, 0)));
+        if (bound >= current) continue;
+        lowest = lowestAlong(qx, qy, dx, dy, az, dz, height, start, end, steps);
       }
 
-      const cell = row * columns + column;
-      if (lowest < (heights[cell] as number)) heights[cell] = lowest;
+      if (lowest < current) heights[cell] = lowest;
     }
   }
 }
@@ -309,6 +353,7 @@ function lowestAlong(
   height: (distance: number) => number,
   a: number,
   b: number,
+  steps: number,
 ): number {
   let lo = a;
   let hi = b;
@@ -316,7 +361,7 @@ function lowestAlong(
   let d = lo + INVERSE_PHI * (hi - lo);
   let fc = reachAt(qx, qy, dx, dy, az, dz, height, c);
   let fd = reachAt(qx, qy, dx, dy, az, dz, height, d);
-  for (let step = 0; step < SEARCH_STEPS; step++) {
+  for (let step = 0; step < steps; step++) {
     if (fc < fd) {
       hi = d;
       d = c;

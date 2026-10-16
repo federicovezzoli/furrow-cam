@@ -1,7 +1,14 @@
 import type { Model, ReliefFinishOperation, Tool } from "@furrow/document";
+import type { Rect } from "./bounds";
 import { rasterizeTriangles } from "./mesh-raster";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
-import { type CutterProfile, cutterProfile, type HeightmapGrid } from "./simulation";
+import {
+  type CutterProfile,
+  cutterProfile,
+  type HeightmapGrid,
+  type SimulationCut,
+  sweepMoves,
+} from "./simulation";
 import type { Vec3 } from "./stock";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
@@ -308,12 +315,20 @@ export class ToolDropper {
     const lastRow = Math.min(rows - 1, Math.floor((y + radius) / cellHeight - 0.5));
     const firstColumn = Math.max(0, Math.ceil((x - radius) / cellWidth - 0.5));
     const lastColumn = Math.min(columns - 1, Math.floor((x + radius) / cellWidth - 0.5));
+    const radius2 = radius * radius;
     for (let row = firstRow; row <= lastRow; row++) {
       const dy = (row + 0.5) * cellHeight - y;
+      const dy2 = dy * dy;
+      if (dy2 > radius2) continue;
+      const start = row * columns;
       for (let column = firstColumn; column <= lastColumn; column++) {
-        const d = Math.hypot((column + 0.5) * cellWidth - x, dy);
-        if (d > radius) continue;
-        const value = (heights[row * columns + column] as number) - profile.height(d);
+        const cell = heights[start + column] as number;
+        // The profile is never below the tip: a cell no higher can't win.
+        if (cell <= best) continue;
+        const dx = (column + 0.5) * cellWidth - x;
+        const d2 = dx * dx + dy2;
+        if (d2 > radius2) continue;
+        const value = cell - profile.height(Math.sqrt(d2));
         if (value > best) best = value;
       }
     }
@@ -406,27 +421,35 @@ export function outlineSpan(outline: [number, number][], v: number): [number, nu
   return low <= high ? [low, high] : null;
 }
 
-/** Model heightmaps kept between toolpaths, by `reliefCacheKey`. */
-export type ReliefCache = {
-  get(key: string): Float32Array | undefined;
-  set(key: string, heights: Float32Array): void;
+/** Values kept between toolpaths, by key. */
+export type Cache<T> = {
+  get(key: string): T | undefined;
+  set(key: string, value: T): void;
 };
+
+/** Model heightmaps kept between toolpaths, by `reliefCacheKey`. */
+export type ReliefCache = Cache<Float32Array>;
 
 /** A `ReliefCache` holding the last `capacity` heightmaps used. */
 export function createReliefCache(capacity = 2): ReliefCache {
-  const entries = new Map<string, Float32Array>();
+  return createCache(capacity);
+}
+
+/** A `Cache` holding the last `capacity` values used. */
+export function createCache<T>(capacity: number): Cache<T> {
+  const entries = new Map<string, T>();
   return {
     get(key) {
-      const heights = entries.get(key);
-      if (heights) {
+      const value = entries.get(key);
+      if (value !== undefined) {
         entries.delete(key);
-        entries.set(key, heights);
+        entries.set(key, value);
       }
-      return heights;
+      return value;
     },
-    set(key, heights) {
+    set(key, value) {
       entries.delete(key);
-      entries.set(key, heights);
+      entries.set(key, value);
       for (const oldest of entries.keys()) {
         if (entries.size <= capacity) break;
         entries.delete(oldest);
@@ -479,6 +502,243 @@ export function* modelHeightsSteps(
   }
 }
 
+/**
+ * How far above a rest operation's own cut the stock left by the earlier
+ * operations must be for it to cut there (#118): less is noise, such as the
+ * `RELIEF_TOLERANCE` a pass of the same tool leaves, or `float32` rounding.
+ */
+export const REST_MATERIAL = 0.05;
+
+/**
+ * How wide material left by the earlier operations must be for a rest
+ * operation to cut it (#118): roughing leaves slivers a cell or two wide on
+ * walls, which aren't worth chasing along every wall.
+ */
+export const REST_MIN_WIDTH = 0.5;
+
+/**
+ * The profile a rest operation drops onto the stock left to find material:
+ * the tool's own, cut short by half of `REST_MIN_WIDTH` (or half its
+ * radius), so slivers at the edge of its reach don't count.
+ */
+export function restProfile(profile: CutterProfile): CutterProfile {
+  const radius = profile.radius - Math.min(REST_MIN_WIDTH / 2, profile.radius / 2);
+  return { ...profile, radius, reach: (depth) => Math.min(radius, profile.reach(depth)) };
+}
+
+/**
+ * How closely, in cells, the rest stock's sweep finds a sloped move's lowest
+ * point: far quicker than exactly, and it only ever leaves more stock.
+ */
+const REST_SWEEP_TOLERANCE = 1 / 8;
+
+/** Moves swept between two progress reports. */
+const MOVES_PER_STEP = 4096;
+
+/**
+ * The grid the stock left before a rest operation is simulated on: over the
+ * same area as the operation's `grid`, in the same frame, with cells no
+ * smaller than half of `REST_MIN_WIDTH`. Narrower material doesn't count,
+ * and sweeping a finishing toolpath's many short moves on the operation's
+ * own cells would take minutes.
+ */
+export function restGrid(grid: ReliefGrid): ReliefGrid {
+  const size = Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+  const width = grid.columns * grid.cellWidth;
+  const length = grid.rows * grid.cellHeight;
+  const columns = Math.max(2, Math.ceil(width / size - 1e-9));
+  const rows = Math.max(2, Math.ceil(length / size - 1e-9));
+  return { ...grid, columns, rows, cellWidth: width / columns, cellHeight: length / rows };
+}
+
+/**
+ * The stock left by `cuts` over each cell of `grid` (PRD-0005 S8, ADR-0030):
+ * the heightmap simulation (ADR-0019), its moves turned into the grid's frame. Cells inside `stock` start at its top,
+ * those outside at `bottom` (no material); nothing goes below `bottom`.
+ * Yields the fraction done every few thousand moves.
+ */
+export function* restHeightsSteps(
+  grid: ReliefGrid,
+  cuts: readonly SimulationCut[],
+  stock: Rect | null,
+  bottom: number,
+): Generator<number, Float32Array> {
+  const { columns, rows, cellWidth, cellHeight } = grid;
+  const heights = new Float32Array(columns * rows);
+  const tolerance = Math.min(cellWidth, cellHeight) * REST_SWEEP_TOLERANCE;
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const [x, y] = toStock(grid, (column + 0.5) * cellWidth, (row + 0.5) * cellHeight);
+      const inside =
+        !stock ||
+        (x >= stock.min[0] && x <= stock.max[0] && y >= stock.min[1] && y <= stock.max[1]);
+      heights[row * columns + column] = inside ? 0 : bottom;
+    }
+  }
+  let total = 0;
+  for (const { segments } of cuts) total += Math.floor(segments.length / 6);
+  let done = 0;
+  for (const { tool, segments } of cuts) {
+    const moved = new Float32Array(segments.length);
+    for (let i = 0; i + 2 < segments.length; i += 3) {
+      const [u, v] = toPassFrame(grid.angle, [segments[i] as number, segments[i + 1] as number]);
+      moved[i] = u - grid.origin[0];
+      moved[i + 1] = v - grid.origin[1];
+      moved[i + 2] = segments[i + 2] as number;
+    }
+    const profile = cutterProfile(tool);
+    const count = Math.floor(moved.length / 6);
+    for (let first = 0; first < count; first += MOVES_PER_STEP) {
+      sweepMoves(grid, heights, profile, moved, first, first + MOVES_PER_STEP, tolerance);
+      done += Math.min(MOVES_PER_STEP, count - first);
+      yield done / total;
+    }
+  }
+  for (let i = 0; i < heights.length; i++) {
+    if ((heights[i] as number) < bottom) heights[i] = bottom;
+  }
+  return heights;
+}
+
+/**
+ * The runs of samples `0` to `count - 1` a rest operation cuts: those where
+ * `remaining` says material is left, each grown by a sample on both sides
+ * (the moves to and from them may touch it), and joined across gaps of at
+ * most `gap` samples, which aren't worth leaving the cut for.
+ */
+export function remainingRuns(
+  remaining: (i: number) => boolean,
+  count: number,
+  gap: number,
+): [number, number][] {
+  const runs: [number, number][] = [];
+  for (let i = 0; i < count; i++) {
+    if (!remaining(i)) continue;
+    const start = Math.max(0, i - 1);
+    let end = i;
+    while (end + 1 < count && remaining(end + 1)) end++;
+    const run: [number, number] = [start, Math.min(count - 1, end + 1)];
+    const last = runs.at(-1);
+    if (last && run[0] - last[1] <= gap) last[1] = run[1];
+    else runs.push(run);
+    i = end;
+  }
+  return runs;
+}
+
+/**
+ * The height a rest operation rapids across the samples `from` to `to` of a
+ * pass at: the entry clearance above the highest of `stock` (the stock left
+ * under the tool along the way, `RestDropper.highestUnder`) and the pass
+ * itself, at most `safeZ`, never below either end of the pass.
+ */
+export function liftHeight(
+  stock: number,
+  passAt: (i: number) => number,
+  from: number,
+  to: number,
+  clearance: number,
+  safeZ: number,
+): number {
+  let highest = stock;
+  for (let i = Math.min(from, to); i <= Math.max(from, to); i++) {
+    highest = Math.max(highest, passAt(i));
+  }
+  return Math.max(Math.min(safeZ, highest + clearance), passAt(from), passAt(to));
+}
+
+/** The rest stock of an operation: the toolpaths cut before it, and the stock they cut. */
+export type RestOptions = {
+  /** The moves of the earlier enabled operations. */
+  cuts: readonly SimulationCut[];
+  /** The stock seen from above; outside it there is no material. */
+  stock: Rect | null;
+};
+
+/** The stock left before a rest operation, on its `restGrid`. */
+export type RestStock = { grid: ReliefGrid; heights: Float32Array };
+
+/**
+ * The stock left by `rest` on the `restGrid` of `grid`, with the progress
+ * scaled into `[from, to]`.
+ */
+export function* restStockSteps(
+  grid: ReliefGrid,
+  rest: RestOptions,
+  bottom: number,
+  from: number,
+  to: number,
+): Generator<number, RestStock> {
+  const coarse = restGrid(grid);
+  const steps = restHeightsSteps(coarse, rest.cuts, rest.stock, bottom);
+  for (let step = steps.next(); ; step = steps.next()) {
+    if (step.done) return { grid: coarse, heights: step.value };
+    yield from + (to - from) * step.value;
+  }
+}
+
+/**
+ * Drops a rest operation's tool (its `restProfile`) onto the stock left, at
+ * the samples of the operation's own grid, to find where to cut. The rest
+ * grid is coarser, but each sample drops the tool at its own position: the
+ * stock an earlier pass of the same tool left there is never above it,
+ * whatever the cells. Rapids go by `highestUnder` instead, the whole tool.
+ */
+export class RestDropper {
+  private readonly dropper: ToolDropper;
+  /** How far from the tool's axis a cell may hold stock it meets: its radius and a cell's diagonal. */
+  private readonly reach: number;
+
+  constructor(
+    private readonly stock: RestStock,
+    private readonly grid: HeightmapGrid,
+    profile: CutterProfile,
+  ) {
+    this.dropper = new ToolDropper(stock.heights, stock.grid, restProfile(profile));
+    this.reach = profile.radius + Math.hypot(stock.grid.cellWidth, stock.grid.cellHeight);
+  }
+
+  /**
+   * The highest stock left that the whole tool may meet on the way from
+   * `u0` to `u1` along the line `v` (in grid coordinates), whatever its
+   * shape and whatever lies between the cells: the highest cell within its
+   * radius and a cell's diagonal. Past the grid, the stock's top.
+   */
+  highestUnder(u0: number, u1: number, v: number): number {
+    const { columns, rows, cellWidth, cellHeight } = this.stock.grid;
+    const { heights } = this.stock;
+    const reach = this.reach;
+    const low = Math.min(u0, u1) - reach;
+    const high = Math.max(u0, u1) + reach;
+    let highest =
+      low < 0 || high > columns * cellWidth || v - reach < 0 || v + reach > rows * cellHeight
+        ? 0
+        : -Infinity;
+    const firstRow = Math.max(0, Math.floor((v - reach) / cellHeight));
+    const lastRow = Math.min(rows - 1, Math.floor((v + reach) / cellHeight));
+    const firstColumn = Math.max(0, Math.floor(low / cellWidth));
+    const lastColumn = Math.min(columns - 1, Math.floor(high / cellWidth));
+    for (let row = firstRow; row <= lastRow; row++) {
+      for (let column = firstColumn; column <= lastColumn; column++) {
+        highest = Math.max(highest, heights[row * columns + column] as number);
+      }
+    }
+    return highest;
+  }
+
+  /**
+   * Raises `out[i]` to the tip height on the stock at the centre of column
+   * `first + i` of the operation's grid, on the line `y`, for columns
+   * `first` to `last`.
+   */
+  dropLine(y: number, first: number, last: number, out: Float64Array) {
+    const { cellWidth } = this.grid;
+    for (let i = first; i <= last; i++) {
+      out[i - first] = this.dropper.dropPoint((i + 0.5) * cellWidth, y, out[i - first] as number);
+    }
+  }
+}
+
 export type ReliefFinishOptions = {
   /** Retract height above the stock top. */
   safeZ: number;
@@ -488,10 +748,15 @@ export type ReliefFinishOptions = {
   stockBottom?: number | null;
   /** Model heightmaps kept between toolpaths. */
   cache?: ReliefCache;
+  /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
+  rest?: RestOptions | null;
 };
 
 /** Share of the progress the model heightmap takes; the passes take the rest. */
 const HEIGHTMAP_SHARE = 0.4;
+
+/** Of `HEIGHTMAP_SHARE`, what the rest stock takes, for rest operations. */
+const REST_SHARE = 0.25;
 
 /**
  * The toolpath of a 3D finishing operation (PRD-0005 S4, ADR-0030), in stock
@@ -507,12 +772,19 @@ const HEIGHTMAP_SHARE = 0.4;
  * Each pass starts with a rapid down to the entry clearance above the stock
  * top and a plunge at the tool's plunge rate, which is safe whether or not
  * the model was roughed out; the passes themselves cut at its feed rate.
+ *
+ * With `rest` (S8), the tool is also dropped onto the stock the earlier
+ * operations left, and a pass only cuts where that is more than
+ * `REST_MATERIAL` above it, and more than half of `REST_MIN_WIDTH` inside
+ * the tool's reach. Across the gaps the tool rapids at the entry
+ * clearance above what is left; it enters at that clearance too, and
+ * links zig-zag passes only when they are close.
  */
 export function* reliefFinishSteps(
   operation: ReliefFinishOperation,
   model: Model,
   positions: Float32Array,
-  { safeZ, entryClearance, stockBottom = null, cache }: ReliefFinishOptions,
+  { safeZ, entryClearance, stockBottom = null, cache, rest = null }: ReliefFinishOptions,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
   const warnings: string[] = [];
@@ -523,6 +795,7 @@ export function* reliefFinishSteps(
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
+  const modelShare = rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE;
   const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
   for (let step = heightsSteps.next(); ; step = heightsSteps.next()) {
@@ -530,12 +803,20 @@ export function* reliefFinishSteps(
       heights = step.value;
       break;
     }
-    yield HEIGHTMAP_SHARE * step.value;
+    yield modelShare * step.value;
   }
 
   const { columns, rows, cellWidth, cellHeight } = grid;
-  const dropper = new ToolDropper(heights, grid, cutterProfile(tool));
+  const profile = cutterProfile(tool);
+  const dropper = new ToolDropper(heights, grid, profile);
   const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
+  const restDropper = rest
+    ? new RestDropper(
+        yield* restStockSteps(grid, rest, stockBottom ?? grid.base, modelShare, HEIGHTMAP_SHARE),
+        grid,
+        profile,
+      )
+    : null;
   // Passes run along row centres, where the heights are exact: from the
   // first row to the last, evenly spread, no more rows apart than fit in the
   // step-over, so rounding never spreads them further.
@@ -544,15 +825,19 @@ export function* reliefFinishSteps(
   const count = Math.ceil((rows - 1) / rowsApart) + 1;
   let lastRow = -1;
   const tips = new Float64Array(columns);
+  const stockTips = new Float64Array(columns);
+  // Gaps narrower than the tool aren't worth leaving the cut for.
+  const gap = Math.ceil(tool.diameter / cellWidth);
+  const maxLink = 2 * tool.diameter;
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const zigzag = params.direction === "zigzag";
   let previous: { u: number; v: number; z: number } | null = null;
   let reversed = false;
 
   const at = (u: number, v: number, z: number): Vec3 => [...toStock(grid, u, v), z];
-  function startPass([x, y, z]: Vec3) {
-    builder.travel(x, y);
-    builder.rapid([x, y, Math.max(builder.clearance, z)]);
+  /** Down to `z` from `entry`, the stock top's entry clearance unless lower. */
+  function enter([x, y, z]: Vec3, entry = builder.clearance) {
+    builder.rapid([x, y, Math.max(entry, z)]);
     builder.feed([x, y, z], tool.plungeRate);
   }
 
@@ -569,39 +854,88 @@ export function* reliefFinishSteps(
       const pass = tips.subarray(0, samples);
       pass.fill(floor);
       dropper.dropLine(v, first, last, pass);
-      if (reversed) pass.reverse();
-      const kept = simplifyHeights(pass, RELIEF_TOLERANCE);
-      const u = (i: number) => ((reversed ? last - i : first + i) + 0.5) * cellWidth;
-      const startU = u(0);
-      if (previous && zigzag) {
-        // A link that follows the model to the next pass.
-        const du = startU - previous.u;
-        const dv = v - previous.v;
-        const steps = Math.max(1, Math.ceil(Math.hypot(du, dv) / Math.min(cellWidth, cellHeight)));
-        const link = new Float64Array(steps + 1);
-        link[0] = previous.z;
-        for (let k = 1; k < steps; k++) {
-          link[k] = dropper.dropPoint(
-            previous.u + (du * k) / steps,
-            previous.v + (dv * k) / steps,
-            floor,
-          );
-        }
-        link[steps] = pass[0] as number;
-        for (const k of simplifyHeights(link, RELIEF_TOLERANCE)) {
-          if (k === 0) continue;
-          const point = at(
-            previous.u + (du * k) / steps,
-            previous.v + (dv * k) / steps,
-            link[k] as number,
-          );
-          builder.feed(point, tool.feedRate);
-        }
-      } else {
-        startPass(at(startU, v, pass[0] as number));
+      const left = stockTips.subarray(0, samples);
+      let runs: [number, number][] = [[0, samples - 1]];
+      if (restDropper) {
+        // Only stock more than `REST_MATERIAL` above the pass counts, so the
+        // tool dropped onto it starts there, which spares scanning most cells.
+        for (let i = 0; i < samples; i++) left[i] = (pass[i] as number) + REST_MATERIAL;
+        restDropper.dropLine(v, first, last, left);
+        runs = remainingRuns(
+          (i) => (left[i] as number) > (pass[i] as number) + REST_MATERIAL,
+          samples,
+          gap,
+        );
       }
-      for (const i of kept) builder.feed(at(u(i), v, pass[i] as number), tool.feedRate);
-      previous = { u: u(samples - 1), v, z: pass[samples - 1] as number };
+      if (reversed) {
+        pass.reverse();
+        left.reverse();
+        runs = runs.map(([a, b]): [number, number] => [samples - 1 - b, samples - 1 - a]).reverse();
+      }
+      const u = (i: number) => ((reversed ? last - i : first + i) + 0.5) * cellWidth;
+      /** The entry clearance above what the earlier operations left under the tool at sample `i`. */
+      const entryAt = (i: number) =>
+        restDropper
+          ? Math.min(builder.clearance, restDropper.highestUnder(u(i), u(i), v) + builder.clearance)
+          : builder.clearance;
+      for (const [index, [a, b]] of runs.entries()) {
+        const startU = u(a);
+        const start = at(startU, v, pass[a] as number);
+        if (index > 0) {
+          // Across the gap, clear of what is left there.
+          const before = runs[index - 1]?.[1] as number;
+          const lift = liftHeight(
+            (restDropper as RestDropper).highestUnder(u(before), u(a), v),
+            (i) => pass[i] as number,
+            before,
+            a,
+            builder.clearance,
+            safeZ,
+          );
+          const [x, y] = toStock(grid, u(before), v);
+          builder.rapid([x, y, lift]);
+          builder.rapid([start[0], start[1], lift]);
+          enter(start, entryAt(a));
+        } else if (
+          previous &&
+          zigzag &&
+          (!restDropper || Math.hypot(startU - previous.u, v - previous.v) <= maxLink)
+        ) {
+          // A link that follows the model to the next pass.
+          const du = startU - previous.u;
+          const dv = v - previous.v;
+          const steps = Math.max(
+            1,
+            Math.ceil(Math.hypot(du, dv) / Math.min(cellWidth, cellHeight)),
+          );
+          const link = new Float64Array(steps + 1);
+          link[0] = previous.z;
+          for (let k = 1; k < steps; k++) {
+            link[k] = dropper.dropPoint(
+              previous.u + (du * k) / steps,
+              previous.v + (dv * k) / steps,
+              floor,
+            );
+          }
+          link[steps] = pass[a] as number;
+          for (const k of simplifyHeights(link, RELIEF_TOLERANCE)) {
+            if (k === 0) continue;
+            const point = at(
+              previous.u + (du * k) / steps,
+              previous.v + (dv * k) / steps,
+              link[k] as number,
+            );
+            builder.feed(point, tool.feedRate);
+          }
+        } else {
+          builder.travel(start[0], start[1]);
+          enter(start, entryAt(a));
+        }
+        for (const i of simplifyHeights(pass.subarray(a, b + 1), RELIEF_TOLERANCE)) {
+          builder.feed(at(u(a + i), v, pass[a + i] as number), tool.feedRate);
+        }
+        previous = { u: u(b), v, z: pass[b] as number };
+      }
       if (zigzag) reversed = !reversed;
     }
     yield HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (line + 1)) / count;

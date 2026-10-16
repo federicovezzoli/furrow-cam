@@ -166,6 +166,7 @@ describe("engraveToolpath", () => {
         model: null,
         stock: null,
         stockBottom: null,
+        before: [],
         ...options,
       }),
     ).toEqual(engrave([line]));

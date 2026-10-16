@@ -71,6 +71,7 @@ function finishing(
       stepOver: 50,
       direction: "zigzag",
       stockToLeave: 0,
+      rest: false,
       ...params,
     },
   };
@@ -404,6 +405,7 @@ describe("generateToolpath", () => {
     model: STEP,
     stock: null,
     stockBottom: null,
+    before: [],
     ...options,
   };
 

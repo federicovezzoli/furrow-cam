@@ -1,11 +1,14 @@
 import {
+  createCache,
   createReliefCache,
   MissingMeshError,
   parseStl,
+  type SimulationCut,
   type StlMesh,
   type Toolpath,
   toolpathLines,
   toolpathLinesBuffers,
+  toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
 import { sha256Hex } from "@/features/workspace/lib/mesh-worker-protocol";
@@ -34,6 +37,12 @@ const meshes = new Map<string, StlMesh>();
 const KEPT_MESHES = 2;
 /** Model heightmaps (up to 64 MB each), kept so changing the step-over doesn't rasterise again. */
 const reliefCache = createReliefCache(2);
+/**
+ * The moves of the last toolpaths computed (24 bytes a move), so a rest
+ * operation (#118) takes the operations before it from here instead of
+ * computing them again.
+ */
+const cuts = createCache<SimulationCut[]>(8);
 
 function keep(sha256: string, mesh: StlMesh) {
   meshes.delete(sha256);
@@ -74,15 +83,16 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     scope.postMessage({ operationId, inputHash, cancelled: true });
     return;
   }
-  const model = input.model;
-  if (bytes && model) {
-    if ((await sha256Hex(bytes)) !== model.sha256) {
+  if (bytes) {
+    // The mesh of the operation's model, or of one before it for rest machining.
+    const sha256 = await sha256Hex(bytes);
+    if (!toolpathMeshes(input).has(sha256)) {
       throw new Error("The stored model doesn't match its file.");
     }
-    keep(model.sha256, parseStl(new Uint8Array(bytes), NO_LIMITS));
+    keep(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS));
   }
 
-  const steps = toolpathSteps(input, { mesh, cache: reliefCache });
+  const steps = toolpathSteps(input, { mesh, cache: reliefCache, cuts });
   let toolpath: Toolpath;
   let slice = performance.now();
   let reported = slice;

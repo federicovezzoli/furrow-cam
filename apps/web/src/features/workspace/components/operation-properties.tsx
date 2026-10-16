@@ -1101,12 +1101,38 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
-      {(errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp) && (
+      <RestCheckbox
+        id="relief-rough-rest"
+        checked={params.rest}
+        onChange={(rest) => update("rest", { rest })}
+      />
+      {(errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest) && (
         <p role="alert" className="text-destructive">
-          {errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp}
+          {errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest}
         </p>
       )}
     </section>
+  );
+}
+
+/** Rest machining (PRD-0005 S8): the switch and what it does. */
+function RestCheckbox({
+  id,
+  checked,
+  onChange,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Checkbox
+      id={id}
+      label="Only cut remaining material"
+      hint="Skips what the enabled operations above this one already cut, so a smaller tool only works where the last one couldn't reach."
+      checked={checked}
+      onChange={onChange}
+    />
   );
 }
 
@@ -1195,9 +1221,14 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         error={errors.stockToLeave}
         {...gestures}
       />
-      {errors.direction && (
+      <RestCheckbox
+        id="relief-finish-rest"
+        checked={params.rest}
+        onChange={(rest) => update("rest", { rest })}
+      />
+      {(errors.direction ?? errors.rest) && (
         <p role="alert" className="text-destructive">
-          {errors.direction}
+          {errors.direction ?? errors.rest}
         </p>
       )}
     </section>
