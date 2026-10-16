@@ -9,7 +9,13 @@ const JUST_NOW = new Date(NOW.getTime() - 5 * 60 * 1000);
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);
 
-type Asset = { projectId: string; sha256: string; verifiedAt: Date | null; createdAt: Date };
+type Asset = {
+  id: string;
+  projectId: string;
+  sha256: string;
+  verifiedAt: Date | null;
+  createdAt: Date;
+};
 
 const mocks = vi.hoisted(() => ({
   storage: true,
@@ -48,9 +54,29 @@ vi.mock("@/lib/db", () => ({
         mocks.assets.flatMap((a) => {
           const project = mocks.projects.find((p) => p.id === a.projectId);
           return project && where.projectId.in.includes(a.projectId)
-            ? [{ projectId: a.projectId, sha256: a.sha256, project: { userId: project.userId } }]
+            ? [
+                {
+                  id: a.id,
+                  projectId: a.projectId,
+                  sha256: a.sha256,
+                  project: { userId: project.userId },
+                },
+              ]
             : [];
         }),
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: { id: { in: string[] }; verifiedAt: { lte: Date } };
+        data: Partial<Asset>;
+      }) => {
+        const matched = mocks.assets.filter(
+          (a) => where.id.in.includes(a.id) && a.verifiedAt && a.verifiedAt <= where.verifiedAt.lte,
+        );
+        for (const a of matched) Object.assign(a, data);
+        return { count: matched.length };
+      },
     },
   },
 }));
@@ -58,7 +84,7 @@ vi.mock("@/lib/db", () => ({
 const { handleSweepRequest, sweepAssets } = await import("./sweep");
 
 /** An in-memory bucket, listed in pages of `pageSize`. */
-function fakeStorage(objects: StoredObject[], pageSize = 2) {
+function fakeStorage(objects: StoredObject[], pageSize = 2, onDelete = () => {}) {
   const stored = new Map(objects.map((object) => [object.key, object]));
   return {
     keys: () => [...stored.keys()].sort(),
@@ -67,13 +93,20 @@ function fakeStorage(objects: StoredObject[], pageSize = 2) {
       for (let i = 0; i < all.length; i += pageSize) yield all.slice(i, i + pageSize);
     },
     async deleteObjects(keys: readonly string[]) {
+      onDelete();
       for (const key of keys) stored.delete(key);
     },
   };
 }
 
 function asset(projectId: string, sha256: string, verified: boolean, createdAt = LONG_AGO) {
-  return { projectId, sha256, verifiedAt: verified ? createdAt : null, createdAt };
+  return {
+    id: `${projectId}-${sha256}`,
+    projectId,
+    sha256,
+    verifiedAt: verified ? createdAt : null,
+    createdAt,
+  };
 }
 
 beforeEach(() => {
@@ -97,7 +130,7 @@ describe("sweepAssets", () => {
       { key: `u1/deleted/${SHA_B}`, lastModified: LONG_AGO },
       { key: `u3/gone/${SHA_A}`, lastModified: LONG_AGO },
     ]);
-    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 3 });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 3, unverified: 0 });
     expect(storage.keys()).toEqual([`u1/live/${SHA_A}`, `u2/other/${SHA_A}`]);
   });
 
@@ -110,9 +143,21 @@ describe("sweepAssets", () => {
       { key: `u1/live/${SHA_A}`, lastModified: LONG_AGO },
       { key: `u1/live/${SHA_B}`, lastModified: LONG_AGO },
     ]);
-    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 1, objects: 1 });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 1, objects: 1, unverified: 0 });
     expect(mocks.assets.map(({ sha256 }) => sha256)).toEqual([SHA_B]);
     expect(storage.keys()).toEqual([`u1/live/${SHA_B}`]);
+  });
+
+  it("unverifies an asset verified against an object while the sweep deleted it", async () => {
+    // Phase 1 deletes the stale row; then the user imports the same file again, and the
+    // upload request finds the old object and verifies a new row before it's deleted.
+    mocks.assets = [asset("live", SHA_A, false)];
+    const storage = fakeStorage([{ key: `u1/live/${SHA_A}`, lastModified: LONG_AGO }], 2, () => {
+      mocks.assets.push({ ...asset("live", SHA_A, true, new Date()), id: "retried" });
+    });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 1, objects: 1, unverified: 1 });
+    expect(storage.keys()).toEqual([]);
+    expect(mocks.assets).toMatchObject([{ id: "retried", verifiedAt: null }]);
   });
 
   it("never touches recent objects, so uploads in flight finish", async () => {
@@ -120,14 +165,14 @@ describe("sweepAssets", () => {
       { key: `u1/deleted/${SHA_A}`, lastModified: JUST_NOW },
       { key: `u1/live/${SHA_B}`, lastModified: JUST_NOW },
     ]);
-    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 0 });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 0, unverified: 0 });
     expect(storage.keys()).toHaveLength(2);
   });
 
   it("keeps objects under the right project but the wrong user", async () => {
     mocks.assets = [asset("live", SHA_A, true)];
     const storage = fakeStorage([{ key: `u2/live/${SHA_A}`, lastModified: LONG_AGO }]);
-    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 1 });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 1, unverified: 0 });
   });
 
   it("leaves keys that aren't asset keys alone", async () => {
@@ -136,7 +181,7 @@ describe("sweepAssets", () => {
       { key: "a/b/c/d", lastModified: LONG_AGO },
       { key: "u1//x", lastModified: LONG_AGO },
     ]);
-    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 0 });
+    expect(await sweepAssets(storage, NOW)).toEqual({ assets: 0, objects: 0, unverified: 0 });
     expect(storage.keys()).toHaveLength(3);
   });
 
@@ -144,7 +189,7 @@ describe("sweepAssets", () => {
     const storage = fakeStorage([{ key: `u1/deleted/${SHA_A}`, lastModified: LONG_AGO }]);
     await sweepAssets(storage, NOW);
     expect(console.info).toHaveBeenCalledWith(
-      "Asset sweep: deleted 0 unverified assets and 1 objects",
+      "Asset sweep: deleted 0 unverified assets and 1 objects, unverified 0 assets",
     );
   });
 });
@@ -166,7 +211,7 @@ describe("handleSweepRequest", () => {
   it("sweeps for callers with the secret", async () => {
     const response = await handleSweepRequest(request("Bearer cron-secret-of-sixteen"));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assets: 0, objects: 0 });
+    expect(await response.json()).toEqual({ assets: 0, objects: 0, unverified: 0 });
   });
 
   it("is off without storage", async () => {

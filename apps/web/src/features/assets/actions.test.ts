@@ -6,7 +6,13 @@ const PROJECT = "00000000-0000-4000-8000-000000000001";
 const SHA = model.sha256;
 const KEY = `${USER}/${PROJECT}/${SHA}`;
 
-type Asset = { projectId: string; sha256: string; size: number; verifiedAt: Date | null };
+type Asset = {
+  projectId: string;
+  sha256: string;
+  size: number;
+  verifiedAt: Date | null;
+  createdAt?: Date;
+};
 
 const mocks = vi.hoisted(() => ({
   userId: "user-1" as string | null,
@@ -51,6 +57,17 @@ vi.mock("@/lib/db", () => {
           const asset = { ...create, verifiedAt: null };
           mocks.assets.push(asset);
           return asset;
+        },
+        updateMany: async ({
+          where,
+          data,
+        }: {
+          where: { projectId: string; sha256: string; verifiedAt: null };
+          data: Partial<Asset>;
+        }) => {
+          const asset = find({ projectId_sha256: where });
+          if (asset && asset.verifiedAt === null) Object.assign(asset, data);
+          return { count: asset && asset.verifiedAt === null ? 1 : 0 };
         },
         update: async ({ where, data }: { where: Unique; data: Partial<Asset> }) =>
           Object.assign(find(where) ?? {}, data),
@@ -104,6 +121,19 @@ describe("requestMeshUpload", () => {
     upload();
     expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({ uploaded: true });
     expect(mocks.assets[0]?.verifiedAt).toBeInstanceOf(Date);
+  });
+
+  it("restarts the sweep's clock when an unverified upload is retried", async () => {
+    const old = new Date("2026-01-01T00:00:00Z");
+    mocks.assets.push({
+      projectId: PROJECT,
+      sha256: SHA,
+      size: model.size,
+      verifiedAt: null,
+      createdAt: old,
+    });
+    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toHaveProperty("upload");
+    expect(mocks.assets[0]?.createdAt?.getTime()).toBeGreaterThan(old.getTime());
   });
 
   it("replaces stored bytes that don't match", async () => {
