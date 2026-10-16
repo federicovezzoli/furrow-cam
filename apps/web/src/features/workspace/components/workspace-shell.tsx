@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon, CircleHelpIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type * as React from "react";
@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import type { MeshLimits } from "@/features/assets/server";
 import type { MachineChoice } from "@/features/machines/server";
+import { Tour, useTour } from "@/features/onboarding/components/tour";
+import type { TourPane } from "@/features/onboarding/lib/tour";
 import { ExportButton } from "@/features/projects/components/export-button";
 import type { getProject, ProjectRow } from "@/features/projects/server";
 import type { ToolChoice } from "@/features/tools/server";
@@ -71,6 +73,8 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * `tools` is the user's tool library, offered for operations, and
  * `machines` their machine profiles, offered for the project. `meshLimits`
  * are the STL files the server stores, `null` when STL import is off.
+ * `tourDone` says the account `userId` finished the workspace tour
+ * (PRD-0001 R22), which otherwise starts when the workspace opens.
  */
 export function WorkspaceShell({
   project,
@@ -78,12 +82,16 @@ export function WorkspaceShell({
   machines,
   meshLimits,
   layout,
+  userId,
+  tourDone,
 }: {
   project: WorkspaceProject;
   tools: ToolChoice[];
   machines: MachineChoice[];
   meshLimits: MeshLimits | null;
   layout: WorkspaceLayout;
+  userId: string;
+  tourDone: boolean;
 }) {
   if (project.error !== undefined) {
     return (
@@ -99,7 +107,13 @@ export function WorkspaceShell({
   return (
     <WorkspaceStoresProvider key={project.id} project={project} meshLimits={meshLimits}>
       <ToolLibraryProvider tools={tools}>
-        <Workspace project={project} machines={machines} layout={layout} />
+        <Workspace
+          project={project}
+          machines={machines}
+          layout={layout}
+          userId={userId}
+          tourDone={tourDone}
+        />
       </ToolLibraryProvider>
     </WorkspaceStoresProvider>
   );
@@ -110,10 +124,14 @@ function Workspace({
   project,
   machines,
   layout,
+  userId,
+  tourDone,
 }: {
   project: ProjectRow;
   machines: MachineChoice[];
   layout: WorkspaceLayout;
+  userId: string;
+  tourDone: boolean;
 }) {
   const saveStatus = useAutosave();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
@@ -122,6 +140,7 @@ function Workspace({
   );
   useUndoShortcuts();
   useToolpaths();
+  const tour = useTour("workspace", { userId, done: tourDone, autoStart: true });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
   const sidebar = useGroupRef();
@@ -148,9 +167,10 @@ function Workspace({
 
   /**
    * Collapses or expands pane `id` without opening or closing any other: with
-   * every pane collapsed, the space below their headers is left empty.
+   * every pane collapsed, the space below their headers is left empty. The
+   * new layout is saved unless `persist` is false.
    */
-  function toggle(id: keyof typeof panes) {
+  function toggle(id: keyof typeof panes, persist = true) {
     const group = sidebar.current;
     const panel = panes[id].current;
     if (!group || !panel) return;
@@ -175,13 +195,31 @@ function Workspace({
         minSize: PANE_MIN_SIZE * percentPerPixel,
       }),
     );
+    if (!persist) return;
     saved.current = { ...saved.current, sidebar: sizes };
     saveWorkspaceLayout(saved.current);
   }
 
+  /** Expands pane `id` for the tour's step inside it, leaving the saved layout as the user set it. */
+  function reveal(id: TourPane) {
+    if (panes[id].current?.isCollapsed()) toggle(id, false);
+  }
+
   return (
     <>
-      <TopBar project={project} saveStatus={saveStatus} machineName={machineName} />
+      <TopBar
+        project={project}
+        saveStatus={saveStatus}
+        machineName={machineName}
+        onTakeTour={(from) => tour.start(from)}
+      />
+      <Tour
+        id="workspace"
+        running={tour.running}
+        origin={tour.origin}
+        onEnd={tour.end}
+        revealPane={reveal}
+      />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
       {/* Below the panels' minimum widths (200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
@@ -212,18 +250,20 @@ function Workspace({
                 onToggle={() => toggle("operations")}
                 defaultSize="35"
                 footer={
-                  <GcodeExportButton
-                    name={project.name}
-                    getDocument={getDocument}
-                    disabledReason={
-                      machineName === null
-                        ? "Choose a machine in the project properties first"
-                        : !hasEnabledOperations
-                          ? "Add or enable an operation first"
-                          : undefined
-                    }
-                    className="w-full"
-                  />
+                  <div data-tour="export-gcode">
+                    <GcodeExportButton
+                      name={project.name}
+                      getDocument={getDocument}
+                      disabledReason={
+                        machineName === null
+                          ? "Choose a machine in the project properties first"
+                          : !hasEnabledOperations
+                            ? "Add or enable an operation first"
+                            : undefined
+                      }
+                      className="w-full"
+                    />
+                  </div>
                 }
               >
                 <OperationsPane />
@@ -263,7 +303,11 @@ function Workspace({
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
-            <section aria-label="Viewport" className="relative h-full bg-muted/40">
+            <section
+              aria-label="Viewport"
+              data-tour="viewport"
+              className="relative h-full bg-muted/40"
+            >
               <Viewport />
               <GeometryImport />
               <SelectedOperation />
@@ -300,17 +344,20 @@ function SelectedOperation() {
 }
 
 /**
- * `saveStatus` and `machineName` are left out when the project couldn't be
- * opened. `machineName` is `null` for a project without a machine.
+ * `saveStatus`, `machineName` and `onTakeTour` are left out when the project
+ * couldn't be opened. `machineName` is `null` for a project without a
+ * machine; `onTakeTour` replays the workspace tour.
  */
 function TopBar({
   project,
   saveStatus,
   machineName,
+  onTakeTour,
 }: {
   project: ProjectRow;
   saveStatus?: AutosaveStatus;
   machineName?: string | null;
+  onTakeTour?: (from: HTMLElement) => void;
 }) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
@@ -332,6 +379,17 @@ function TopBar({
       )}
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
+        {onTakeTour && (
+          <Button
+            variant="ghost"
+            size="icon-compact"
+            onClick={(event) => onTakeTour(event.currentTarget)}
+            aria-label="Take the tour"
+            title="Take the tour"
+          >
+            <CircleHelpIcon />
+          </Button>
+        )}
         <ThemeToggle size="icon-compact" />
       </div>
     </header>
@@ -402,7 +460,7 @@ function Pane({
       collapsedSize={`${PANE_HEADER_REM}rem`}
       onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
     >
-      <section aria-label={title} className="flex h-full flex-col">
+      <section aria-label={title} data-tour={id} className="flex h-full flex-col">
         <h2 className="h-control shrink-0 border-b text-ui-label font-medium tracking-wide text-muted-foreground uppercase">
           <button
             type="button"
