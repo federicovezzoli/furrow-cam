@@ -164,7 +164,9 @@ describe("exportGcode", () => {
       ...model,
       bounds: { min: [-50, -40, -12], max: [50, 40, z] } as typeof model.bounds,
     };
-    const doc = { ...referenceProject(), models: [placed] };
+    // 18 mm of stock, deep enough for the 12 mm model.
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [placed] };
     doc.operations = [{ ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } }];
     const { gcode, warnings } = exportGcode(doc, "Relief", {
       mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
@@ -175,12 +177,27 @@ describe("exportGcode", () => {
     expect(gcode).toContain("G1 Z0 F500\nG1 X99.963 F1500\n");
   });
 
+  it("cuts a model deeper than the stock no deeper than its bottom, and says so", () => {
+    const doc = { ...referenceProject(), models: [model], operations: [reliefRough] };
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) =>
+        sha256 === model.sha256
+          ? new Float32Array([
+              -50, -40, -12, 50, -40, -12, 50, 40, -12, -50, 40, 0, -49, 40, 0, -50, 39, 0,
+            ])
+          : undefined,
+    });
+    expect(warnings).toEqual([expect.stringContaining("no deeper than the stock's bottom")]);
+    expect(gcode).toContain("(Operation: Rough)");
+  });
+
   it("roughs a model out before finishing it", () => {
     const mesh = new Float32Array([
       ...[-50, -40, -12, 50, -40, -12, 50, 40, -12, -50, -40, -12, 50, 40, -12, -50, 40, -12],
       ...[-50, -40, 0, -49.9, -40, 0, -50, -39.9, 0],
     ]);
-    const doc = { ...referenceProject(), models: [model] };
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [model] };
     doc.operations = [
       reliefRough,
       { ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } },
