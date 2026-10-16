@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { requireUserId } from "@/features/auth/server";
 import { OpenToolButton, ToolDialogProvider } from "@/features/tools/components/library-dialog";
 import { ToolList } from "@/features/tools/components/tool-list";
-import { listTools, nextToolColor } from "@/features/tools/server";
+import { nextToolColor } from "@/features/tools/lib/colors";
+import { listTools } from "@/features/tools/server";
 
 export default function ToolsPage() {
   return (

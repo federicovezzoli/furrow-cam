@@ -1,22 +1,25 @@
 "use server";
 
-import type { Tool } from "@furrow/document";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getUserId } from "@/features/auth/server";
 import { db } from "@/lib/db";
 import { type ActionResult, SIGNED_OUT } from "@/lib/form-data";
-import { lockLibrary, TOOL_NOT_FOUND, type ToolFormErrors, writeTool } from "./server";
+import {
+  lockLibrary,
+  type SavedTool,
+  TOOL_NOT_FOUND,
+  type ToolFormErrors,
+  writeTool,
+} from "./server";
 
-export type { ToolFormErrors } from "./server";
+export type { SavedTool, ToolFormErrors } from "./server";
 
 /**
- * Creates a tool. A user's first tool becomes their default.
- * Returns the saved tool as an operation snapshot (ADR-0003).
+ * Creates a tool. A user's first tool becomes their default. Returns its id
+ * and the saved tool as an operation snapshot (ADR-0003).
  */
-export async function createTool(
-  form: FormData,
-): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+export async function createTool(form: FormData): Promise<{ errors: ToolFormErrors } | SavedTool> {
   const userId = await getUserId();
   if (!userId) return { errors: { form: SIGNED_OUT } };
   const result = await writeTool(userId, null, form);
@@ -31,7 +34,7 @@ export async function createTool(
 export async function updateTool(
   id: string,
   form: FormData,
-): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+): Promise<{ errors: ToolFormErrors } | SavedTool> {
   const userId = await getUserId();
   if (!userId) return { errors: { form: SIGNED_OUT } };
   const result = await writeTool(userId, id, form);
