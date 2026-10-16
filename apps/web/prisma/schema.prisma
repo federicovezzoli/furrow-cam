@@ -214,6 +214,7 @@ model ProjectAsset {
   size       Int
   /// When the stored object was checked against `sha256` and `size`; until then, documents can't use it.
   verifiedAt DateTime?
+  /// Until verified, refreshed on each upload request: the storage sweep deletes unverified assets a day old.
   createdAt  DateTime  @default(now())
 
   @@unique([projectId, sha256])

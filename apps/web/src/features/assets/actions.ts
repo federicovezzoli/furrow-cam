@@ -74,6 +74,11 @@ export async function requestMeshUpload(
   }
 
   const where = { projectId_sha256: { projectId: project.projectId, sha256: project.sha256 } };
+  // Retrying an unverified upload restarts its day before the sweep deletes it.
+  await db.projectAsset.updateMany({
+    where: { projectId: project.projectId, sha256: project.sha256, verifiedAt: null },
+    data: { createdAt: new Date() },
+  });
   const asset = await db.projectAsset.upsert({
     where,
     create: { projectId: project.projectId, sha256: project.sha256, size },
