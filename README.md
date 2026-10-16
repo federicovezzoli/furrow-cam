@@ -70,7 +70,7 @@ pnpm db:studio    # browse the database (Prisma Studio)
 
 ### Deployment
 
-The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hosting-vercel-neon.md)). Set the project's root directory to `apps/web` and configure the variables listed in [`apps/web/.env.example`](apps/web/.env.example). Vercel runs the `vercel-build` script, which generates the Prisma client (`prisma generate`) and applies pending migrations (`prisma migrate deploy`) before building, so the build does not depend on install scripts running on a cached install.
+The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hosting-vercel-neon.md)). Set the project's root directory to `apps/web` and configure the variables listed in [`apps/web/.env.example`](apps/web/.env.example). Vercel runs the `vercel-build` script, which generates the Prisma client (`prisma generate`) and applies pending migrations (`prisma migrate deploy`) before building, so the build does not depend on install scripts running on a cached install. With storage configured, set `CRON_SECRET` too: `apps/web/vercel.json` schedules a monthly sweep (`/api/cron/sweep-assets`) that deletes abandoned and orphaned uploads. Other hosts can call that route with `Authorization: Bearer <CRON_SECRET>`.
 
 ### Repository layout
 
