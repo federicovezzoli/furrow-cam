@@ -2,10 +2,10 @@ import { z } from "zod";
 import { Shape } from "./geometry";
 import { Machine } from "./machine";
 import { Model } from "./model";
-import { Operation } from "./operation";
+import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -107,6 +107,14 @@ export const ProjectDocument = z
         });
       }
       operationIds.add(operation.id);
+      const modelId = operationModelId(operation);
+      if (modelId !== null && !modelIds.has(modelId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["operations", i, "params", "modelId"],
+          message: "Unknown model id",
+        });
+      }
       const seen = new Set<string>();
       operation.targets.forEach(({ shapeId, paths }, j) => {
         if (seen.has(shapeId)) {

@@ -9,7 +9,16 @@ import {
   turnModel,
   xyOriginPosition,
 } from "@furrow/cam-core";
-import type { Model, ModelPlacement, Point, Stock, StockAnchor } from "@furrow/document";
+import {
+  type Model,
+  type ModelPlacement,
+  type Operation,
+  operationModelId,
+  type Point,
+  type ProjectDocument,
+  type Stock,
+  type StockAnchor,
+} from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
 import { hasImportedFile } from "./geometry-actions";
@@ -85,10 +94,20 @@ export function addModel(
   return id;
 }
 
+/** The operations that machine the model `id`, which go with it. */
+export function modelOperations(document: ProjectDocument, id: string): Operation[] {
+  return document.operations.filter((operation) => operationModelId(operation) === id);
+}
+
+/** Removes a model and the operations that machine it, as one undo step. */
 export function removeModel(store: DocumentStore, id: string) {
   store.getState().change("removeModel", (draft) => {
     const index = draft.models.findIndex((model) => model.id === id);
-    if (index !== -1) draft.models.splice(index, 1);
+    if (index === -1) return;
+    draft.models.splice(index, 1);
+    draft.operations = draft.operations.filter(
+      (operation) => operationModelId(operation as Operation) !== id,
+    );
   });
 }
 

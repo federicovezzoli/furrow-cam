@@ -1,3 +1,5 @@
+import { downloadMesh } from "@/features/assets/lib/meshes";
+
 /**
  * STL files kept in the browser's Cache Storage by hash, so a model is
  * downloaded once rather than each time its project opens (ADR-0029). The
@@ -30,4 +32,13 @@ export async function cacheMesh(sha256: string, file: Blob) {
   } catch {
     // Downloaded again next time.
   }
+}
+
+/** A mesh's file from the browser's cache, or else downloaded and cached (ADR-0029). */
+export async function loadMesh(projectId: string, sha256: string): Promise<ArrayBuffer> {
+  const cached = await readCachedMesh(sha256);
+  if (cached) return cached;
+  const bytes = await downloadMesh(projectId, sha256);
+  await cacheMesh(sha256, new Blob([bytes]));
+  return bytes;
 }

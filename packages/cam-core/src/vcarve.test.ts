@@ -292,9 +292,9 @@ describe("vcarveToolpath", () => {
 
   it("is what generateToolpath computes for V-carve operations", () => {
     const operation = vcarve({ maxDepth: 4, flatBottom: { tool: endMill } });
-    expect(generateToolpath({ operation, shapes: [bar], safeZ: 5, entryClearance: 1 })).toEqual(
-      vcarveToolpath(operation, [bar], options),
-    );
+    expect(
+      generateToolpath({ operation, shapes: [bar], model: null, safeZ: 5, entryClearance: 1 }),
+    ).toEqual(vcarveToolpath(operation, [bar], options));
   });
 });
 

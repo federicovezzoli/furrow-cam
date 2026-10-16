@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { downloadMesh } from "@/features/assets/lib/meshes";
-import { cacheMesh, readCachedMesh } from "@/features/workspace/lib/mesh-cache";
+import { loadMesh } from "@/features/workspace/lib/mesh-cache";
 import type { MeshRequest, MeshResponse } from "@/features/workspace/lib/mesh-worker-protocol";
 import { useDocumentStoreApi, useProjectId } from "@/features/workspace/providers/workspace-stores";
 import {
@@ -10,15 +9,6 @@ import {
   scheduleModelPreviews,
 } from "@/features/workspace/stores/model-preview-scheduler";
 import { lazyWorker } from "@/lib/lazy-worker";
-
-/** A mesh's file from the browser's cache, or else downloaded and cached (ADR-0029). */
-async function loadMesh(projectId: string, sha256: string): Promise<ArrayBuffer> {
-  const cached = await readCachedMesh(sha256);
-  if (cached) return cached;
-  const bytes = await downloadMesh(projectId, sha256);
-  await cacheMesh(sha256, new Blob([bytes]));
-  return bytes;
-}
 
 /**
  * The previews of the open project's models, by `previewKey`, drawn in a Web

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
+import {
+  CIRCLE_ID,
+  circle,
+  drill,
+  endMill,
+  fullDocument,
+  reliefFinish,
+  SQUARE_ID,
+  square,
+  vBit,
+} from "./fixtures";
 import {
   clearingTool,
   DrillOperation,
@@ -9,8 +19,11 @@ import {
   normalizeTargets,
   Operation,
   OperationTarget,
+  operationModelId,
   PocketParams,
   ProfileParams,
+  ReliefFinishOperation,
+  ReliefFinishParams,
   VCarveOperation,
   VCarveParams,
 } from "./operation";
@@ -276,5 +289,42 @@ describe("normalizeTargets", () => {
         { shapeId: CIRCLE_ID, paths: [0, 4] },
       ]),
     ).toEqual([{ shapeId: CIRCLE_ID, paths: null }]);
+  });
+});
+
+describe("ReliefFinishOperation", () => {
+  it("accepts the fixture with every tool shape", () => {
+    expect(Operation.parse(reliefFinish)).toEqual(reliefFinish);
+    for (const tool of [endMill, vBit, drill]) {
+      expect(ReliefFinishOperation.safeParse({ ...reliefFinish, tool }).success).toBe(true);
+    }
+  });
+
+  it("rejects out-of-range params", () => {
+    const { params } = reliefFinish;
+    for (const changes of [
+      { angle: -1 },
+      { angle: 180 },
+      { stepOver: 0 },
+      { stepOver: 101 },
+      { stockToLeave: -0.1 },
+      { direction: "spiral" },
+      { modelId: "emblem" },
+    ]) {
+      expect(ReliefFinishParams.safeParse({ ...params, ...changes }).success).toBe(false);
+    }
+    expect(ReliefFinishParams.safeParse({ ...params, angle: 179.5 }).success).toBe(true);
+  });
+
+  it("machines a model, not shapes", () => {
+    const targets = [{ shapeId: SQUARE_ID, paths: null }];
+    expect(ReliefFinishOperation.safeParse({ ...reliefFinish, targets }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["targets"] }),
+    ]);
+  });
+
+  it("names the model it machines", () => {
+    expect(operationModelId(reliefFinish)).toBe(reliefFinish.params.modelId);
+    expect(operationModelId(fullDocument().operations[0] as Operation)).toBeNull();
   });
 });

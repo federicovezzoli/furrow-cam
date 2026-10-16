@@ -15,6 +15,7 @@ import {
   fitModelToStock,
   modelAnchor,
   modelOffset,
+  modelOperations,
   removeModel,
   setModelDepth,
   setModelOffset,
@@ -38,6 +39,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
   const model = useDocumentStore((s) => s.document.models.find(({ id }) => id === modelId));
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
+  const operationCount = useDocumentStore((s) => modelOperations(s.document, modelId).length);
   if (!model) return null;
 
   const { placement } = model;
@@ -160,7 +162,16 @@ export function ModelProperties({ modelId }: { modelId: string }) {
       </section>
 
       <div className="flex justify-end">
-        <Button variant="outline" size="compact" onClick={() => removeModel(store, model.id)}>
+        <Button
+          variant="outline"
+          size="compact"
+          onClick={() => removeModel(store, model.id)}
+          title={
+            operationCount > 0
+              ? `Also removes the ${operationCount === 1 ? "operation" : `${operationCount} operations`} that machine it`
+              : undefined
+          }
+        >
           <Trash2Icon />
           Remove model
         </Button>

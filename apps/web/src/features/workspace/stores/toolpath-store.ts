@@ -23,10 +23,26 @@ export type ToolpathPreview = {
  * toolpath, so the preview doesn't flicker while a value is scrubbed.
  */
 export type ToolpathEntry = { inputHash: string } & (
-  | { status: "computing"; lines?: ToolpathLines; clearing?: ToolpathLines }
+  | {
+      status: "computing";
+      lines?: ToolpathLines;
+      clearing?: ToolpathLines;
+      /** How much is done, from 0 to 1, for toolpaths that report it (3D operations). */
+      progress?: number;
+    }
   | ({ status: "ready" } & ToolpathPreview)
-  | { status: "error"; error: string }
+  /** `cancelled` when it was stopped before it finished, rather than failing. */
+  | { status: "error"; error: string; cancelled?: boolean }
 );
+
+/** Stops or restarts computing an operation's toolpath; the workspace's scheduler provides them. */
+export type ToolpathControls = {
+  cancel: (operationId: string) => void;
+  retry: (operationId: string) => void;
+};
+
+/** What a cancelled toolpath says. */
+export const CANCELLED = "Cancelled before it finished.";
 
 /** Derived data (ADR-0010): never undoable, never saved. */
 export type ToolpathState = {
@@ -37,11 +53,33 @@ export type ToolpathState = {
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
   setResult: (operationId: string, inputHash: string, preview: ToolpathPreview) => void;
   setError: (operationId: string, inputHash: string, error: string) => void;
+  setProgress: (operationId: string, inputHash: string, progress: number) => void;
+  setCancelled: (operationId: string, inputHash: string) => void;
   /** Drops entries of operations that are no longer in the document. */
   retain: (operationIds: Iterable<string>) => void;
+  /** No-ops until the scheduler sets them (`setControls`). */
+  controls: ToolpathControls;
+  setControls: (controls: ToolpathControls | null) => void;
 };
 
 export type ToolpathStore = ReturnType<typeof createToolpathStore>;
+
+const NO_CONTROLS: ToolpathControls = { cancel() {}, retry() {} };
+
+/**
+ * The state as Redux DevTools shows it: typed arrays (a 3D finish's lines run
+ * to tens of megabytes) as their length, so recording an action, such as
+ * each progress report, doesn't serialise them.
+ */
+export function sanitizeForDevtools(state: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(state, (_, value) =>
+      ArrayBuffer.isView(value)
+        ? `${value.constructor.name}(${(value as Float32Array).length})`
+        : value,
+    ),
+  );
+}
 
 export function createToolpathStore() {
   return createStore<ToolpathState>()(
@@ -89,6 +127,40 @@ export function createToolpathStore() {
           );
         },
 
+        setProgress(operationId, inputHash, progress) {
+          set(
+            (state) => {
+              const entry = state.entries[operationId];
+              if (entry?.inputHash !== inputHash || entry.status !== "computing") return;
+              entry.progress = progress;
+            },
+            false,
+            "setProgress",
+          );
+        },
+
+        setCancelled(operationId, inputHash) {
+          set(
+            (state) => {
+              if (state.entries[operationId]?.inputHash !== inputHash) return;
+              state.entries[operationId] = {
+                inputHash,
+                status: "error",
+                error: CANCELLED,
+                cancelled: true,
+              };
+            },
+            false,
+            "setCancelled",
+          );
+        },
+
+        controls: NO_CONTROLS,
+
+        setControls(controls) {
+          set({ controls: controls ?? NO_CONTROLS }, false, "setControls");
+        },
+
         retain(operationIds) {
           set(
             (state) => {
@@ -102,7 +174,11 @@ export function createToolpathStore() {
           );
         },
       })),
-      { name: "toolpaths", enabled: process.env.NODE_ENV !== "production" },
+      {
+        name: "toolpaths",
+        enabled: process.env.NODE_ENV !== "production",
+        stateSanitizer: sanitizeForDevtools,
+      },
     ),
   );
 }

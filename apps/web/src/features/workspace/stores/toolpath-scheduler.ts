@@ -2,11 +2,33 @@ import { type ToolpathInput, toolpathInputs, toolpathKey } from "@furrow/cam-cor
 import type { DocumentStore } from "./document-store";
 import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
 
-export type ToolpathRequest = { operationId: string; inputHash: string; input: ToolpathInput };
+/**
+ * Computes the toolpath of `input`. A 3D operation's request carries its
+ * model's STL file in `mesh` once the worker said it lacks it.
+ */
+export type ToolpathRequest = {
+  operationId: string;
+  inputHash: string;
+  input: ToolpathInput;
+  mesh?: ArrayBuffer;
+};
 
+/** Stops computing the operation's request, if the worker hasn't answered it yet. */
+export type ToolpathCancel = { cancel: string };
+
+export type ToolpathMessage = ToolpathRequest | ToolpathCancel;
+
+/**
+ * The worker's answers: the toolpath, why it failed, how far it got (any
+ * number of times before the others), that it was cancelled, or that it
+ * needs the mesh `missingMesh` to be sent with the request.
+ */
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | ToolpathPreview
   | { error: string }
+  | { progress: number }
+  | { cancelled: true }
+  | { missingMesh: string }
 );
 
 /**
@@ -16,25 +38,73 @@ export type ToolpathResponse = { operationId: string; inputHash: string } & (
  * responses. Disabled and deleted operations lose their toolpaths.
  *
  * Each operation has at most one request at the worker: changes made while it
- * computes (scrubbing a value) wait, and only the latest is sent once it
- * answers. `stop` stops listening; `fail` gives up on every pending request,
+ * computes (scrubbing a value) cancel it and wait, and only the latest is sent
+ * once it answers. When the worker lacks a model's mesh, `loadMesh` fetches
+ * its file and the request is sent again with it. `cancel` stops computing an
+ * operation, which stays cancelled until it changes or `retry` computes it
+ * again. `stop` stops listening; `fail` gives up on every pending request,
  * e.g. when the worker crashed and was replaced.
  */
 export function scheduleToolpaths(
   documents: DocumentStore,
   toolpaths: ToolpathStore,
-  post: (request: ToolpathRequest) => void,
+  post: (message: ToolpathMessage) => void,
+  loadMesh: (sha256: string) => Promise<ArrayBuffer> = () =>
+    Promise.reject(new Error("Models can't be loaded here")),
 ) {
   /** The inputs each operation was last hashed with, so unchanged ones skip hashing. */
   const hashed = new Map<string, { input: ToolpathInput; inputHash: string }>();
-  /** Operations with a request at the worker. */
-  const inFlight = new Set<string>();
+  /** The request each operation has at the worker (or waiting for its mesh). */
+  const inFlight = new Map<string, ToolpathRequest>();
   /** The latest request of each operation still waiting for its previous one. */
   const waiting = new Map<string, ToolpathRequest>();
+  /** Operations whose request at the worker was asked to stop. */
+  const cancelled = new Set<string>();
 
   function send(request: ToolpathRequest) {
-    inFlight.add(request.operationId);
+    inFlight.set(request.operationId, request);
     post(request);
+  }
+
+  function cancelInFlight(id: string) {
+    if (!inFlight.has(id) || cancelled.has(id)) return;
+    cancelled.add(id);
+    post({ cancel: id });
+  }
+
+  /** Ends the operation's request at the worker and sends the one waiting, if any. */
+  function settle(id: string) {
+    inFlight.delete(id);
+    cancelled.delete(id);
+    const next = waiting.get(id);
+    if (next) {
+      waiting.delete(id);
+      send(next);
+    }
+  }
+
+  async function sendWithMesh(request: ToolpathRequest, sha256: string) {
+    const id = request.operationId;
+    let mesh: ArrayBuffer;
+    try {
+      mesh = await loadMesh(sha256);
+    } catch (error) {
+      if (inFlight.get(id) !== request) return;
+      const message = error instanceof Error ? error.message : String(error);
+      toolpaths.getState().setError(id, request.inputHash, message);
+      settle(id);
+      return;
+    }
+    // Stopped, failed or cancelled while the file loaded.
+    if (inFlight.get(id) !== request) return;
+    const next = waiting.get(id) ?? (cancelled.has(id) ? null : request);
+    waiting.delete(id);
+    cancelled.delete(id);
+    if (next) send({ ...next, mesh });
+    else {
+      inFlight.delete(id);
+      toolpaths.getState().setCancelled(id, request.inputHash);
+    }
   }
 
   /** The hash of `input`, reusing the last one when nothing it holds was replaced. */
@@ -55,14 +125,17 @@ export function scheduleToolpaths(
     for (const map of [hashed, waiting]) {
       for (const id of map.keys()) if (!ids.has(id)) map.delete(id);
     }
+    for (const id of inFlight.keys()) if (!ids.has(id)) cancelInFlight(id);
     for (const input of toolpathInputs(document, enabled)) {
       const id = input.operation.id;
       const inputHash = hashInput(input);
       if (toolpaths.getState().entries[id]?.inputHash === inputHash) continue;
       toolpaths.getState().startComputing(id, inputHash);
       const request = { operationId: id, inputHash, input };
-      if (inFlight.has(id)) waiting.set(id, request);
-      else send(request);
+      if (inFlight.has(id)) {
+        waiting.set(id, request);
+        cancelInFlight(id);
+      } else send(request);
     }
   }
 
@@ -76,22 +149,50 @@ export function scheduleToolpaths(
     stop,
     receive(response: ToolpathResponse) {
       const { operationId, inputHash } = response;
-      inFlight.delete(operationId);
-      const { setResult, setError } = toolpaths.getState();
-      if ("error" in response) setError(operationId, inputHash, response.error);
+      const { setResult, setError, setProgress, setCancelled } = toolpaths.getState();
+      if ("progress" in response) {
+        setProgress(operationId, inputHash, response.progress);
+        return;
+      }
+      if ("missingMesh" in response) {
+        const request = inFlight.get(operationId);
+        if (request && !waiting.has(operationId) && !cancelled.has(operationId)) {
+          void sendWithMesh(request, response.missingMesh);
+          return;
+        }
+        // Changed or cancelled meanwhile: the latest request asks again.
+        if (!waiting.has(operationId)) setCancelled(operationId, inputHash);
+      } else if ("cancelled" in response) {
+        // Only an operation nobody changed since stays cancelled.
+        if (!waiting.has(operationId)) setCancelled(operationId, inputHash);
+      } else if ("error" in response) setError(operationId, inputHash, response.error);
       else {
         const { operationId: _, inputHash: __, ...preview } = response;
         setResult(operationId, inputHash, preview);
       }
-      const next = waiting.get(operationId);
-      if (next) {
-        waiting.delete(operationId);
-        send(next);
-      }
+      settle(operationId);
+    },
+    /** Stops computing the operation `id`; its toolpath stays cancelled until `retry` or a change. */
+    cancel(id: string) {
+      waiting.delete(id);
+      cancelInFlight(id);
+    },
+    /** Computes the operation `id` again, e.g. after it was cancelled. */
+    retry(id: string) {
+      if (inFlight.has(id)) return;
+      const { document } = documents.getState();
+      const operation = document.operations.find((candidate) => candidate.id === id);
+      if (!operation?.enabled) return;
+      const [input] = toolpathInputs(document, [operation]);
+      if (!input) return;
+      const inputHash = hashInput(input);
+      toolpaths.getState().startComputing(id, inputHash);
+      send({ operationId: id, inputHash, input });
     },
     fail(error: string) {
       inFlight.clear();
       waiting.clear();
+      cancelled.clear();
       const { entries, setError } = toolpaths.getState();
       for (const [id, entry] of Object.entries(entries)) {
         if (entry.status === "computing") setError(id, entry.inputHash, error);
@@ -107,6 +208,7 @@ export function scheduleToolpaths(
 function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
   return (
     a.operation === b.operation &&
+    a.model === b.model &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     a.shapes.length === b.shapes.length &&

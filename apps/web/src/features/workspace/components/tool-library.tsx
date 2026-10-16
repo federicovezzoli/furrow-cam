@@ -78,6 +78,14 @@ export function vcarveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return toolChoiceFor(tools, canVCarve);
 }
 
+/**
+ * The tool new 3D finishing operations start with: the default one if it is
+ * a ball end mill, else the first ball end mill, else the default one.
+ */
+export function reliefFinishToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
+  return toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ?? defaultToolChoice(tools);
+}
+
 /** The tool a V-carve's flat bottom starts with: the default one if it is a flat end mill, else the first. */
 export function flatBottomToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return toolChoiceFor(tools, canClearFlatBottom);

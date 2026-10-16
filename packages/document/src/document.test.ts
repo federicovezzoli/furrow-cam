@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument, ProjectDocument, StockAnchor, XYOrigin } from "./document";
-import { fullDocument, model, OPERATION_ID, SQUARE_ID } from "./fixtures";
+import { fullDocument, model, OPERATION_ID, reliefFinish, SQUARE_ID } from "./fixtures";
 
 describe("ProjectDocument", () => {
   it("accepts a document with machine, geometry and operations", () => {
@@ -50,6 +50,17 @@ describe("ProjectDocument", () => {
     const copy = { ...model, fileName: "copy.stl" };
     expect(ProjectDocument.safeParse({ ...doc, models: [model, copy] }).error?.issues).toEqual([
       expect.objectContaining({ path: ["models", 1, "id"], message: "Duplicate model id" }),
+    ]);
+  });
+
+  it("checks the model a 3D operation machines", () => {
+    const doc = { ...fullDocument(), models: [model], operations: [reliefFinish] };
+    expect(ProjectDocument.parse(doc)).toEqual(doc);
+    expect(ProjectDocument.safeParse({ ...doc, models: [] }).error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["operations", 0, "params", "modelId"],
+        message: "Unknown model id",
+      }),
     ]);
   });
 

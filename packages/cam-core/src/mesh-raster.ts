@@ -17,17 +17,35 @@ import type { Box3 } from "./stock";
 export function rasterizeMesh(
   positions: Float32Array,
   transform: readonly number[],
-  { columns, rows, cellWidth, cellHeight }: HeightmapGrid,
+  grid: HeightmapGrid,
   base: number,
 ): Float32Array {
-  const heights = new Float32Array(columns * rows).fill(base);
+  const heights = new Float32Array(grid.columns * grid.rows).fill(base);
+  rasterizeTriangles(positions, transform, grid, heights, 0, positions.length / 9);
+  return heights;
+}
+
+/**
+ * Raises `heights` to the triangles `first` to `end` (excluded) of a mesh,
+ * as `rasterizeMesh` does for all of them: a large mesh can be rasterised a
+ * slice at a time.
+ */
+export function rasterizeTriangles(
+  positions: Float32Array,
+  transform: readonly number[],
+  { columns, rows, cellWidth, cellHeight }: HeightmapGrid,
+  heights: Float32Array,
+  first: number,
+  end: number,
+) {
   const [m00 = 0, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 0, m12 = 0, m13 = 0] = transform;
   const [m20 = 0, m21 = 0, m22 = 0, m23 = 0] = transform.slice(8);
   // Vertices in cell units, so cell centres are at `index + 0.5`.
   const vx = new Float64Array(3);
   const vy = new Float64Array(3);
   const vz = new Float64Array(3);
-  for (let t = 0; t < positions.length; t += 9) {
+  const stop = Math.min(end * 9, positions.length);
+  for (let t = first * 9; t < stop; t += 9) {
     for (let v = 0; v < 3; v++) {
       const x = positions[t + v * 3] as number;
       const y = positions[t + v * 3 + 1] as number;
@@ -70,7 +88,6 @@ export function rasterizeMesh(
       }
     }
   }
-  return heights;
 }
 
 /** Cells of a model's preview heightmap: 1024 × 1024, enough to show it, quick to compute. */

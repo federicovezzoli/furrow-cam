@@ -1,6 +1,6 @@
 import { modelRect } from "@furrow/cam-core";
 import { createProjectDocument, type Model, ProjectDocument } from "@furrow/document";
-import { fullDocument, model } from "@furrow/document/fixtures";
+import { ballEndMill, fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
@@ -8,12 +8,14 @@ import {
   addModel,
   fitModelToStock,
   modelOffset,
+  modelOperations,
   removeModel,
   setModelDepth,
   setModelOffset,
   setModelScale,
   turnModelAbout,
 } from "./model-actions";
+import { addReliefFinishOperation } from "./operation-actions";
 import { setCustomXYOrigin, setStockDimension, setXYAnchor } from "./stock-actions";
 
 /** The fixture's 100 × 80 × 12 mesh, without an id or placement. */
@@ -109,6 +111,16 @@ describe("placement edits", () => {
     expect(store.getState().document.models).toEqual([]);
     store.getState().undo();
     expect(store.getState().document.models).toHaveLength(1);
+  });
+
+  it("removes the operations that machine it with it", () => {
+    const { store, id } = storeWithModel();
+    addReliefFinishOperation(store, { modelId: id, tool: ballEndMill });
+    expect(modelOperations(store.getState().document, id)).toHaveLength(1);
+    removeModel(store, id);
+    expect(store.getState().document.operations).toEqual([]);
+    store.getState().undo();
+    expect(store.getState().document.operations).toHaveLength(1);
   });
 });
 

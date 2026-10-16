@@ -3,7 +3,14 @@ import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
-export const OperationType = z.enum(["profile", "pocket", "drill", "engrave", "vcarve"]);
+export const OperationType = z.enum([
+  "profile",
+  "pocket",
+  "drill",
+  "engrave",
+  "vcarve",
+  "relief_finish",
+]);
 export type OperationType = z.infer<typeof OperationType>;
 
 /**
@@ -304,12 +311,52 @@ export const VCarveOperation = z
   });
 export type VCarveOperation = z.infer<typeof VCarveOperation>;
 
+/** How raster passes follow each other: all cut the same way, or every other one back. */
+export const RasterDirection = z.enum(["one_way", "zigzag"]);
+export type RasterDirection = z.infer<typeof RasterDirection>;
+
+/**
+ * 3D finishing parameters (#115, PRD-0005 S4): parallel passes over a model,
+ * the tool dropped onto the model at every point along them (ADR-0030).
+ */
+export const ReliefFinishParams = z.strictObject({
+  /** The model it machines, one of the document's `models`. */
+  modelId: z.uuid(),
+  /** Direction of the passes, in degrees counter-clockwise from the stock's X axis. */
+  angle: z.number().min(0).lt(180),
+  /** Distance between passes, as a percentage of the tool's diameter. */
+  stepOver: z.number().gt(0).max(100),
+  direction: RasterDirection,
+  /** Material left on the model in every direction, walls included. */
+  stockToLeave: z.number().nonnegative(),
+});
+export type ReliefFinishParams = z.infer<typeof ReliefFinishParams>;
+
+export const ReliefFinishOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("relief_finish"),
+    params: ReliefFinishParams,
+  })
+  .superRefine((operation, ctx) => {
+    if (operation.targets.length > 0) {
+      ctx.addIssue({ code: "custom", path: ["targets"], message: "Machines a model, not shapes" });
+    }
+  });
+export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
+
+/** Operations that machine a model (PRD-0005) rather than shapes. */
+export function operationModelId(operation: Operation): string | null {
+  return operation.type === "relief_finish" ? operation.params.modelId : null;
+}
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,
   DrillOperation,
   EngraveOperation,
   VCarveOperation,
+  ReliefFinishOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
 

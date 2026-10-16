@@ -6,6 +6,7 @@ import {
   type Shape,
   type Tool,
 } from "@furrow/document";
+import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -13,6 +14,7 @@ import {
   addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
+  addReliefFinishOperation,
   addTab,
   addVCarveOperation,
   autoPlaceTabs,
@@ -30,6 +32,7 @@ import {
   updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
+  updateReliefFinishParams,
   updateVCarveParams,
 } from "./operation-actions";
 
@@ -440,6 +443,49 @@ describe("addVCarveOperation", () => {
     expect(updateVCarveParams(store, id, { flatBottom: { tool: vBit } })).toEqual({
       ok: false,
       error: "Only flat end mills clear a flat bottom",
+    });
+  });
+});
+
+describe("addReliefFinishOperation", () => {
+  function storeWithModel() {
+    return createDocumentStore({ ...createProjectDocument(), models: [model] });
+  }
+
+  it("appends a valid zig-zag finish of the model at a 10% step-over", () => {
+    const store = storeWithModel();
+    const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill });
+    const { document } = store.getState();
+    expect(ProjectDocument.safeParse(document).success).toBe(true);
+    expect(document.operations[0]).toMatchObject({
+      id,
+      type: "relief_finish",
+      name: "3D finish 1",
+      targets: [],
+      tool: endMill,
+      params: { modelId: model.id, angle: 0, stepOver: 10, direction: "zigzag", stockToLeave: 0 },
+    });
+  });
+
+  it("adds nothing for a model that isn't there", () => {
+    const store = storeWithModel();
+    expect(addReliefFinishOperation(store, { modelId: MISSING_ID, tool: endMill })).toBeNull();
+    expect(store.getState().document.operations).toEqual([]);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const store = storeWithModel();
+    const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill }) as string;
+    expect(updateReliefFinishParams(store, id, { angle: 45, direction: "one_way" })).toEqual({
+      ok: true,
+    });
+    expect(updateReliefFinishParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
+    expect(updateReliefFinishParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
+    expect(store.getState().document.operations[0]?.params).toMatchObject({
+      angle: 45,
+      direction: "one_way",
+      stepOver: 10,
+      stockToLeave: 0,
     });
   });
 });
