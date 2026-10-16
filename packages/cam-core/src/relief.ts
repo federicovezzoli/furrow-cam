@@ -118,13 +118,13 @@ function cosSin(angle: number): [number, number] {
 }
 
 /** A stock point in the passes' frame: turned by `-angle`. */
-function toPassFrame(angle: number, [x, y]: [number, number]): [number, number] {
+export function toPassFrame(angle: number, [x, y]: [number, number]): [number, number] {
   const [c, s] = cosSin(angle);
   return [c * x + s * y, -s * x + c * y];
 }
 
 /** A point of `grid` back in stock coordinates. */
-function toStock({ angle, origin }: ReliefGrid, u: number, v: number): [number, number] {
+export function toStock({ angle, origin }: ReliefGrid, u: number, v: number): [number, number] {
   const [c, s] = cosSin(angle);
   const pu = u + origin[0];
   const pv = v + origin[1];
@@ -385,7 +385,7 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
 }
 
 /** Where a pass at `v` crosses `outline`, as the range of `u` inside it, or `null`. */
-function outlineSpan(outline: [number, number][], v: number): [number, number] | null {
+export function outlineSpan(outline: [number, number][], v: number): [number, number] | null {
   let low = Infinity;
   let high = -Infinity;
   for (let i = 0; i < outline.length; i++) {

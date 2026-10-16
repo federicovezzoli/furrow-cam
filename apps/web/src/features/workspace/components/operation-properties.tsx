@@ -115,6 +115,12 @@ const BOUNDARY_LABELS: Record<RoughingBoundary, string> = {
   stock: "Whole stock",
 };
 
+/** What each strategy does at each level of 3D roughing: linear clearing has no laps there. */
+const ROUGHING_STRATEGY_HINTS: Record<PocketStrategy["type"], string> = {
+  ...STRATEGY_HINTS,
+  linear: "Straight zig-zag passes at an angle, rising over the model where it is higher",
+};
+
 /** Where peeling may start in 3D roughing: its islands change from level to level. */
 const ROUGHING_PEEL_STARTS = PeelStart.options.filter((start) => start !== "inside");
 
@@ -1005,8 +1011,8 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         </Row>
       )}
       <p className="text-muted-foreground">
-        {STRATEGY_HINTS[strategy.type]}, in levels no more than the tool's step-down ({stepDown})
-        apart.
+        {ROUGHING_STRATEGY_HINTS[strategy.type]}, in levels no more than the tool's step-down (
+        {stepDown}) apart.
       </p>
       <NumberField
         id="relief-rough-step-over"
@@ -1036,23 +1042,25 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           </Button>
         )}
       </div>
-      <Row id="relief-rough-direction" label="Direction">
-        <NativeSelect
-          id="relief-rough-direction"
-          size="sm"
-          value={params.direction}
-          onChange={(event) =>
-            update("direction", { direction: MillingDirection.parse(event.target.value) })
-          }
-          className={SELECT_CLASS}
-        >
-          {MillingDirection.options.map((option) => (
-            <NativeSelectOption key={option} value={option}>
-              {DIRECTION_LABELS[option]}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Row>
+      {strategy.type !== "linear" && (
+        <Row id="relief-rough-direction" label="Direction">
+          <NativeSelect
+            id="relief-rough-direction"
+            size="sm"
+            value={params.direction}
+            onChange={(event) =>
+              update("direction", { direction: MillingDirection.parse(event.target.value) })
+            }
+            className={SELECT_CLASS}
+          >
+            {MillingDirection.options.map((option) => (
+              <NativeSelectOption key={option} value={option}>
+                {DIRECTION_LABELS[option]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
       <NumberField
         id="relief-rough-stock-to-leave"
         label="Stock to leave"

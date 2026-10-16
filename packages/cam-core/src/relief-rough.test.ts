@@ -257,29 +257,41 @@ describe("reliefRoughSteps", () => {
     expect(stock.at([5, 5])).toBeCloseTo(-1.9);
   });
 
-  it("clears linearly with passes alone, no laps around the islands", () => {
+  it("clears linearly with straight passes that rise over the model", () => {
     const tool = { ...endMill, stepOver: 20 };
     const toolpath = rough(tool, { strategy: { type: "linear", angle: 0 }, ramp: false });
-    const { moves } = toolpath;
     const spacing = (tool.diameter * tool.stepOver) / 100;
-    // Across the passes, the tool only steps to the next one: a lap would run
-    // along the plateau's 10 mm wall.
-    for (let i = 1; i < moves.length; i++) {
-      const [a, b] = [moves[i - 1]?.to, moves[i]?.to] as [number[], number[]];
-      if (moves[i]?.kind !== "feed" || a[2] !== b[2]) continue;
-      expect(Math.abs((b[1] as number) - (a[1] as number))).toBeLessThanOrEqual(spacing + 0.01);
+    // Every move starts and ends on a pass: none follows the model's edges.
+    const ys = new Set(feedPoints(toolpath).map(([, y]) => y.toFixed(6)));
+    const rows = [...ys].map(Number).sort((a, b) => a - b);
+    expect(rows.length).toBeLessThan(12);
+    for (let i = 1; i < rows.length; i++) {
+      expect((rows[i] as number) - (rows[i - 1] as number)).toBeLessThanOrEqual(spacing);
     }
-    // And it still reaches the outline's far edges.
-    const ys = feedPoints(toolpath).map(([, y]) => y);
-    expect(Math.min(...ys)).toBeCloseTo(0, 1);
-    expect(Math.max(...ys)).toBeCloseTo(10, 1);
+    // Over the plateau, the level at -3.8 rides on its offset top, -3.5.
+    expect(feedPoints(toolpath).some(([x, , z]) => x < 9 && Math.abs(z + 3.5) < 1e-3)).toBe(true);
+    // Passes reach the outline's far edges, within a cell.
+    const all = feedPoints(toolpath).map(([, y]) => y);
+    expect(Math.min(...all)).toBeLessThan(0.1);
+    expect(Math.max(...all)).toBeGreaterThan(9.9);
+  });
+
+  it("trims passes to where the level above left material", () => {
+    const toolpath = rough(endMill, { strategy: { type: "linear", angle: 0 }, ramp: false });
+    // Below the plateau's offset top, levels only cut beside it.
+    for (const [x, , z] of feedPoints(toolpath)) {
+      if (z < -4) expect(x).toBeGreaterThan(10);
+    }
   });
 
   it("brings the tool's centre to the model's outline, or to the stock's", () => {
     const xs = (toolpath: Toolpath) => feedPoints(toolpath).map(([x]) => x);
+    // Passes sample cell centres, so they stop within a cell of the edges.
     const model = rough(endMill, { strategy: { type: "linear", angle: 0 } });
-    expect(Math.min(...xs(model))).toBeCloseTo(0, 1);
-    expect(Math.max(...xs(model))).toBeCloseTo(20, 1);
+    expect(Math.min(...xs(model))).toBeGreaterThanOrEqual(0);
+    expect(Math.min(...xs(model))).toBeLessThan(0.1);
+    expect(Math.max(...xs(model))).toBeLessThanOrEqual(20);
+    expect(Math.max(...xs(model))).toBeGreaterThan(19.9);
 
     const stock = { min: [0, 0] as Point, max: [40, 30] as Point };
     const whole = rough(
@@ -287,7 +299,7 @@ describe("reliefRoughSteps", () => {
       { strategy: { type: "linear", angle: 0 }, boundary: "stock" },
       { stock },
     );
-    expect(Math.max(...xs(whole))).toBeCloseTo(40, 1);
+    expect(Math.max(...xs(whole))).toBeGreaterThan(39.9);
     const at = simulate(whole, endMill, 40, 30).at;
     expect(at([30, 20])).toBeCloseTo(-9.5);
   });
