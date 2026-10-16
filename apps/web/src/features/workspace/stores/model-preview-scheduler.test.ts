@@ -1,9 +1,14 @@
 import type { Heightmap } from "@furrow/cam-core";
 import type { Model } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MeshRequest } from "@/features/workspace/lib/mesh-worker-protocol";
-import { type ModelPreview, previewKey, scheduleModelPreviews } from "./model-preview-scheduler";
+import {
+  type ModelPreview,
+  previewKey,
+  RETRY_DELAYS_MS,
+  scheduleModelPreviews,
+} from "./model-preview-scheduler";
 
 const heightmap: Heightmap = {
   columns: 2,
@@ -13,7 +18,7 @@ const heightmap: Heightmap = {
   heights: new Float32Array(4),
 };
 
-function setup(loadBytes = async () => new ArrayBuffer(8)) {
+function setup(loadBytes: () => Promise<ArrayBuffer> = async () => new ArrayBuffer(8)) {
   const posted: MeshRequest[] = [];
   let previews: ReadonlyMap<string, ModelPreview> = new Map();
   const schedule = scheduleModelPreviews({
@@ -86,5 +91,69 @@ describe("scheduleModelPreviews", () => {
     expect(previews().get(previewKey(model))).toEqual({ error: "The worker stopped." });
     await schedule.receive({ kind: "preview", id: (posted[0] as MeshRequest).id, heightmap });
     expect(previews().get(previewKey(model))).toEqual({ error: "The worker stopped." });
+  });
+
+  describe("retries", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("asks again after the worker stopped, keeping the error until answered", async () => {
+      const { schedule, posted, previews } = setup();
+      schedule.update([model]);
+      schedule.fail("The worker stopped.");
+      schedule.update([model]);
+      expect(posted).toHaveLength(2);
+      expect(previews().get(previewKey(model))).toEqual({ error: "The worker stopped." });
+      await schedule.receive({ kind: "preview", id: (posted[1] as MeshRequest).id, heightmap });
+      expect(previews().get(previewKey(model))).toEqual({ heightmap });
+      schedule.update([model]);
+      expect(posted).toHaveLength(2);
+    });
+
+    it("asks again after a failed download, by itself and a few times only", async () => {
+      vi.useFakeTimers();
+      const { schedule, posted, previews } = setup(async () => {
+        throw new Error("Offline.");
+      });
+      schedule.update([model]);
+      for (const delay of RETRY_DELAYS_MS) {
+        const asked = posted.length;
+        await schedule.receive({ kind: "missing", id: (posted.at(-1) as MeshRequest).id });
+        expect(previews().get(previewKey(model))).toEqual({ error: "Offline." });
+        vi.advanceTimersByTime(delay);
+        expect(posted).toHaveLength(asked + 1);
+      }
+      await schedule.receive({ kind: "missing", id: (posted.at(-1) as MeshRequest).id });
+      vi.runAllTimers();
+      expect(posted).toHaveLength(RETRY_DELAYS_MS.length + 1);
+    });
+
+    it("doesn't ask again for a file the worker refused", async () => {
+      vi.useFakeTimers();
+      const { schedule, posted } = setup();
+      schedule.update([model]);
+      await schedule.receive({
+        kind: "failed",
+        id: (posted[0] as MeshRequest).id,
+        error: "Broken.",
+      });
+      vi.runAllTimers();
+      schedule.update([model]);
+      expect(posted).toHaveLength(1);
+    });
+
+    it("stops retrying a model removed, or once stopped", () => {
+      vi.useFakeTimers();
+      const { schedule, posted } = setup();
+      schedule.update([model, turned]);
+      schedule.fail("The worker stopped.");
+      schedule.update([turned]);
+      expect(posted).toHaveLength(3);
+      schedule.fail("The worker stopped.");
+      schedule.stop();
+      vi.runAllTimers();
+      expect(posted).toHaveLength(3);
+    });
   });
 });
