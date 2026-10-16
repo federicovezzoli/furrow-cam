@@ -110,7 +110,9 @@ export function* reliefRoughSteps(
   const clearing = new LevelClearing(
     { ...tool, stepOver },
     { strategy: params.strategy, direction: params.direction, allowance: 0, ramp: params.ramp },
-    { safeZ, entryClearance, tolerance },
+    // Islands change at every level, so laps around them would stack into
+    // rings; the passes reach the model, and finishing does the rest.
+    { safeZ, entryClearance, tolerance, laps: false },
   );
   // Outlines are simplified within a cell and grown by two, so they still
   // hold every cell above the level: offsetting each step of a staircase

@@ -149,11 +149,13 @@ type PocketPlan = {
   warnings: string[];
 };
 
+/** `laps: false` leaves out linear clearing's laps around the walls (`linearPlan`). */
 function planPocket(
   tool: Tool,
   params: ClearingParams,
   closed: Polygon[],
   tolerance: number,
+  laps = true,
 ): PocketPlan {
   const radius = tool.diameter / 2;
   const warnings: string[] = [];
@@ -177,7 +179,7 @@ function planPocket(
   } else {
     roots = pieces(offset(area, -clearing, offsetOptions), layout);
     if (strategy.type === "linear") {
-      for (const root of roots) root.plan = linearPlan(root, strategy.angle, layout);
+      for (const root of roots) root.plan = linearPlan(root, strategy.angle, layout, laps);
     } else {
       peelPlans(roots, area, strategy.start, clearing, layout);
     }
@@ -243,14 +245,17 @@ function cutRegionLevel(cut: Cut, region: Region, z: number, clearedZ: number) {
 export class LevelClearing {
   private readonly cut: Cut;
   private readonly tolerance: number;
+  private readonly laps: boolean;
   private clearedZ = 0;
 
+  /** `laps: false` leaves out linear clearing's laps around the walls and islands. */
   constructor(
     private readonly tool: Tool,
     private readonly params: Omit<ClearingParams, "finishPass">,
-    options: PocketOptions,
+    options: PocketOptions & { laps?: boolean },
   ) {
     this.tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
+    this.laps = options.laps ?? true;
     this.cut = pocketCut(tool, params.ramp, options);
   }
 
@@ -262,7 +267,7 @@ export class LevelClearing {
   clear(closed: Polygon[], z: number): string[] {
     const { cut, clearedZ } = this;
     const params = { ...this.params, finishPass: false };
-    const { regions, warnings } = planPocket(this.tool, params, closed, this.tolerance);
+    const { regions, warnings } = planPocket(this.tool, params, closed, this.tolerance, this.laps);
     for (const region of nearestFirst(cut, regions, (region) =>
       loops(region.pieces.flatMap(innermostRings)),
     )) {

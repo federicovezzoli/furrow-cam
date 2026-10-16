@@ -1,5 +1,5 @@
 import { distance, type LinearAngle, type Point } from "@furrow/document";
-import { Track } from "./passes";
+import { descend, Track } from "./passes";
 import {
   type Cut,
   cutRing,
@@ -30,6 +30,8 @@ export type LinearPlan = {
   /** Position across the passes, in millimetres. */
   across: (point: Point) => number;
   tolerance: number;
+  /** Whether a lap of each ring comes before the passes. */
+  laps: boolean;
 };
 
 /**
@@ -37,9 +39,16 @@ export type LinearPlan = {
  * X axis): along lines one step-over apart from the piece's edge, each split
  * where the line crosses the piece's laps. The laps clear what the lines
  * leave near them, so lines nearer the far edge than the tolerance are left
- * out, and so are passes shorter than it.
+ * out, and so are passes shorter than it. Without `laps`, the lines run from
+ * edge to edge instead, evenly spread no more than a step-over apart, so the
+ * passes alone reach everywhere the laps would have.
  */
-export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): LinearPlan {
+export function linearPlan(
+  piece: Piece,
+  angle: LinearAngle,
+  layout: Layout,
+  laps = true,
+): LinearPlan {
   const radians = (angle * Math.PI) / 180;
   const cos = Math.cos(radians);
   const sin = Math.sin(radians);
@@ -47,11 +56,21 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
   const across = ([x, y]: Point) => y * cos - x * sin;
   const { stepOver, tolerance } = layout;
 
-  const positions = piece.area.outer.map(across);
-  const min = Math.min(...positions);
-  const max = Math.max(...positions);
+  const extents = piece.area.outer.map(across);
+  const min = Math.min(...extents);
+  const max = Math.max(...extents);
   const lines: Pass[][] = [];
-  for (let v = min + stepOver; v < max - tolerance; v += stepOver) {
+  const positions: number[] = [];
+  if (laps) {
+    for (let v = min + stepOver; v < max - tolerance; v += stepOver) positions.push(v);
+  } else {
+    // Just inside the edges, where the lines still cross the piece.
+    const first = min + tolerance;
+    const last = max - tolerance;
+    const count = Math.max(1, Math.ceil((last - first) / stepOver - 1e-9));
+    for (let i = 0; i <= count; i++) positions.push(first + ((last - first) * i) / count);
+  }
+  for (const v of positions) {
     const crossings: End[] = [];
     piece.rings.forEach(({ loop }, ring) => {
       let at = 0;
@@ -79,7 +98,7 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
     }
     lines.push(passes);
   }
-  return { kind: "linear", lines, across, tolerance };
+  return { kind: "linear", lines, across, tolerance, laps };
 }
 
 /**
@@ -90,7 +109,8 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
  * makes the passes zig-zag. Otherwise the tool goes to the nearest pass left:
  * along the lap it is on, which this level has cut, when the pass starts on
  * it; or through the cleared depth, or over the top, and straight down onto
- * the cleared lap.
+ * the cleared lap. Without laps, the tool goes down into the pass itself,
+ * ramping along it when the cut ramps.
  */
 export function cutLinear(
   cut: Cut,
@@ -100,8 +120,10 @@ export function cutLinear(
   z: number,
   clearedZ: number,
 ) {
-  for (const ring of nearestFirst(cut, piece.rings, (ring) => [ring.loop])) {
-    cutRing(cut, ring, piece, container, z, clearedZ);
+  if (plan.laps) {
+    for (const ring of nearestFirst(cut, piece.rings, (ring) => [ring.loop])) {
+      cutRing(cut, ring, piece, container, z, clearedZ);
+    }
   }
   const left = new Set(plan.lines.flat());
   let onLap = lapAt(piece.rings, cut.builder.position);
@@ -113,14 +135,18 @@ export function cutLinear(
     const next: Next = linked || nearestPass(cut, piece.rings, left, onLap, container, clearedZ);
     const { pass, start, path } = next;
     if (linked && line !== null) sweep = Math.sign(pass.line - line);
+    const end = pass.ends[0] === start ? pass.ends[1] : pass.ends[0];
     if (path) {
       feedAlong(cut, path, z);
     } else {
       reach(cut, start.point, container, clearedZ);
-      // Through the lap, which this level has cleared.
-      cut.builder.feed([start.point[0], start.point[1], z], cut.plungeRate);
+      if (plan.laps) {
+        // Through the lap, which this level has cleared.
+        cut.builder.feed([start.point[0], start.point[1], z], cut.plungeRate);
+      } else {
+        descend(cut, [start.point, end.point], cut.builder.position?.[2] ?? clearedZ, z);
+      }
     }
-    const end = pass.ends[0] === start ? pass.ends[1] : pass.ends[0];
     feedAlong(cut, [end.point], z);
     left.delete(pass);
     onLap = end;

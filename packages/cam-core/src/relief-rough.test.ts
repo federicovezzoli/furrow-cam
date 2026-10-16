@@ -220,6 +220,7 @@ describe("reliefRoughSteps", () => {
   for (const [label, tool, params] of [
     ["offset clearing", endMill, { strategy: { type: "offset" } }],
     ["linear clearing", endMill, { strategy: { type: "linear", angle: 45 }, ramp: false }],
+    ["linear clearing, ramping in", endMill, { strategy: { type: "linear", angle: 0 } }],
     ["peeling", endMill, { strategy: { type: "peel", start: "centre" } }],
     ["a ball end mill", ballEndMill, { stockToLeave: 0.2, direction: "conventional" }],
   ] as const) {
@@ -254,6 +255,24 @@ describe("reliefRoughSteps", () => {
     expect(stock.at([11, 5])).toBeCloseTo(-9.5);
     // The plateau's offset top, -3.5, is between two levels: the one above is as low as it goes.
     expect(stock.at([5, 5])).toBeCloseTo(-1.9);
+  });
+
+  it("clears linearly with passes alone, no laps around the islands", () => {
+    const tool = { ...endMill, stepOver: 20 };
+    const toolpath = rough(tool, { strategy: { type: "linear", angle: 0 }, ramp: false });
+    const { moves } = toolpath;
+    const spacing = (tool.diameter * tool.stepOver) / 100;
+    // Across the passes, the tool only steps to the next one: a lap would run
+    // along the plateau's 10 mm wall.
+    for (let i = 1; i < moves.length; i++) {
+      const [a, b] = [moves[i - 1]?.to, moves[i]?.to] as [number[], number[]];
+      if (moves[i]?.kind !== "feed" || a[2] !== b[2]) continue;
+      expect(Math.abs((b[1] as number) - (a[1] as number))).toBeLessThanOrEqual(spacing + 0.01);
+    }
+    // And it still reaches the outline's far edges.
+    const ys = feedPoints(toolpath).map(([, y]) => y);
+    expect(Math.min(...ys)).toBeCloseTo(0, 1);
+    expect(Math.max(...ys)).toBeCloseTo(10, 1);
   });
 
   it("brings the tool's centre to the model's outline, or to the stock's", () => {
