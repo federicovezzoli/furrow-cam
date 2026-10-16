@@ -37,7 +37,8 @@ const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
 
 /**
  * Packs `document` with the mesh files its models reference, from `meshes`
- * by hash. Throws if one is missing.
+ * by hash. Throws if one is missing, and a `ProjectArchiveError` if there are
+ * more than `readProjectArchive` accepts.
  */
 export function packProjectArchive(
   document: ProjectDocument,
@@ -46,7 +47,9 @@ export function packProjectArchive(
   const files: Record<string, Uint8Array> = {
     [ARCHIVE_DOCUMENT_PATH]: strToU8(`${JSON.stringify(document, null, 2)}\n`),
   };
-  for (const { sha256 } of document.models) {
+  const sha256s = new Set(document.models.map(({ sha256 }) => sha256));
+  if (sha256s.size > MAX_ARCHIVE_MESHES) throw tooManyMeshes();
+  for (const sha256 of sha256s) {
     const mesh = meshes.get(sha256);
     if (!mesh) throw new Error(`The mesh ${sha256} is missing`);
     files[archiveMeshPath(sha256)] = mesh;
@@ -82,11 +85,7 @@ export async function readProjectArchive(
           return true;
         }
         if (!MESH_PATH.test(name)) return false;
-        if (++meshCount > MAX_ARCHIVE_MESHES) {
-          throw new ProjectArchiveError(
-            `This file holds more than ${MAX_ARCHIVE_MESHES} models, the most allowed.`,
-          );
-        }
+        if (++meshCount > MAX_ARCHIVE_MESHES) throw tooManyMeshes();
         if (originalSize > maxMeshBytes) throw meshTooLarge(maxMeshBytes);
         return true;
       },
@@ -122,6 +121,12 @@ export function missingArchiveMeshes(
   );
 }
 
+function tooManyMeshes() {
+  return new ProjectArchiveError(
+    `A project file holds at most ${MAX_ARCHIVE_MESHES} different 3D models.`,
+  );
+}
+
 function tooLarge(maxMeshBytes: number) {
   const mb = Math.round(maxArchiveBytes(maxMeshBytes) / 1_000_000);
   return new ProjectArchiveError(`This file is too large to import (the limit is ${mb} MB).`);
@@ -134,7 +139,7 @@ function meshTooLarge(maxMeshBytes: number) {
 }
 
 /** The SHA-256 of `bytes` in lowercase hex, as models identify their meshes. */
-async function sha256Hex(bytes: Uint8Array): Promise<string> {
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   // Web Crypto is global in browsers, workers and Node; this package has no DOM types.
   const { subtle } = (
     globalThis as unknown as {

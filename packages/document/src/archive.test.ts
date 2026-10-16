@@ -9,6 +9,7 @@ import {
   ProjectArchiveError,
   packProjectArchive,
   readProjectArchive,
+  sha256Hex,
 } from "./archive";
 import { createProjectDocument, type ProjectDocument } from "./document";
 import { model } from "./fixtures";
@@ -18,9 +19,7 @@ const MAX_MESH_BYTES = 1_000;
 /** A mesh file and its hash. */
 async function mesh(text: string) {
   const bytes = strToU8(text);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  const sha256 = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return { bytes, sha256 };
+  return { bytes, sha256: await sha256Hex(bytes) };
 }
 
 async function projectWithModel() {
@@ -59,6 +58,17 @@ describe("packProjectArchive and readProjectArchive", () => {
   it("refuse to pack a document whose mesh is missing", async () => {
     const { document } = await projectWithModel();
     expect(() => packProjectArchive(document, new Map())).toThrow(/missing/);
+  });
+
+  it("refuse to pack more meshes than an archive may hold, so every export imports", async () => {
+    const { document, meshes } = await projectWithModel();
+    const [first] = document.models;
+    for (let i = 0; i < MAX_ARCHIVE_MESHES; i++) {
+      const { bytes, sha256 } = await mesh(`solid ${i}\n`);
+      meshes.set(sha256, bytes);
+      document.models.push({ ...(first as (typeof document.models)[number]), sha256 });
+    }
+    expect(() => packProjectArchive(document, meshes)).toThrow(ProjectArchiveError);
   });
 });
 
@@ -102,7 +112,7 @@ describe("readProjectArchive", () => {
       const { bytes, sha256 } = await mesh(`solid ${i}\n`);
       files[archiveMeshPath(sha256)] = bytes;
     }
-    expect(await readError(zipSync(files))).toMatch(/more than/);
+    expect(await readError(zipSync(files))).toMatch(/at most/);
   });
 
   it("ignores files other than the document and meshes", async () => {
