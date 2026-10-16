@@ -1,6 +1,11 @@
 import type { ToolpathLines } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { CANCELLED, createToolpathStore, type ToolpathPreview } from "./toolpath-store";
+import {
+  CANCELLED,
+  createToolpathStore,
+  sanitizeForDevtools,
+  type ToolpathPreview,
+} from "./toolpath-store";
 
 const lines: ToolpathLines = {
   feeds: new Float32Array([0, 0, 0, 1, 0, 0]),
@@ -101,6 +106,15 @@ describe("toolpath store", () => {
     store.getState().setControls(null);
     store.getState().controls.cancel("op");
     expect(cancelled).toEqual(["op"]);
+  });
+
+  it("shows typed arrays to the devtools as their length", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setResult("op", "1", fresh);
+    expect(sanitizeForDevtools(store.getState())).toMatchObject({
+      entries: { op: { status: "ready", lines: { feeds: "Float32Array(6)" } } },
+    });
   });
 
   it("retains only the given operations", () => {

@@ -66,6 +66,21 @@ export type ToolpathStore = ReturnType<typeof createToolpathStore>;
 
 const NO_CONTROLS: ToolpathControls = { cancel() {}, retry() {} };
 
+/**
+ * The state as Redux DevTools shows it: typed arrays (a 3D finish's lines run
+ * to tens of megabytes) as their length, so recording an action, such as
+ * each progress report, doesn't serialise them.
+ */
+export function sanitizeForDevtools(state: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(state, (_, value) =>
+      ArrayBuffer.isView(value)
+        ? `${value.constructor.name}(${(value as Float32Array).length})`
+        : value,
+    ),
+  );
+}
+
 export function createToolpathStore() {
   return createStore<ToolpathState>()(
     devtools(
@@ -159,7 +174,11 @@ export function createToolpathStore() {
           );
         },
       })),
-      { name: "toolpaths", enabled: process.env.NODE_ENV !== "production" },
+      {
+        name: "toolpaths",
+        enabled: process.env.NODE_ENV !== "production",
+        stateSanitizer: sanitizeForDevtools,
+      },
     ),
   );
 }
