@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029).
-const LAST_UPDATED = "15 October 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036).
+const LAST_UPDATED = "16 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -48,6 +48,10 @@ export default function PrivacyPage() {
               <strong>Your projects, bits and machines</strong>: imported drawings and 3D models,
               operations and settings. Toolpaths and G-code are computed in your browser and never
               sent to us.
+            </li>
+            <li>
+              <strong>When you first finished or skipped each guided tour</strong>, so it isn&apos;t
+              shown to you again on another device.
             </li>
           </List>
           <p>

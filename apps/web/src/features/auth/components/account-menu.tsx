@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronDownIcon, LogOutIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,9 +15,20 @@ import {
 import { authClient } from "@/features/auth/lib/auth-client";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
-/** The header's account menu: the signed-in email, account deletion and sign-out. */
-export function AccountMenu({ email }: { email: string }) {
+/**
+ * The header's account menu: the signed-in email, the guided tour
+ * (`onTakeTour` replays it, given the menu's button to give focus back to),
+ * account deletion and sign-out.
+ */
+export function AccountMenu({
+  email,
+  onTakeTour,
+}: {
+  email: string;
+  onTakeTour?: (trigger: HTMLElement | null) => void;
+}) {
   const router = useRouter();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState(false);
 
   async function signOut() {
@@ -31,7 +42,7 @@ export function AccountMenu({ email }: { email: string }) {
       {/* Not modal: a modal menu closing while the dialog opens can leave the page unclickable. */}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button ref={trigger} variant="outline" size="sm">
             Account
             <ChevronDownIcon />
           </Button>
@@ -41,6 +52,12 @@ export function AccountMenu({ email }: { email: string }) {
             {email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {onTakeTour && (
+            <DropdownMenuItem onSelect={() => onTakeTour(trigger.current)}>
+              <CircleHelpIcon />
+              Take the tour
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={signOut}>
             <LogOutIcon />
             Sign out

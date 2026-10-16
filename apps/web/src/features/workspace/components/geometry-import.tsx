@@ -182,7 +182,10 @@ export function GeometryImport() {
         empty ? "items-center justify-center" : "items-end justify-end p-2",
       )}
     >
-      <div className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs">
+      <div
+        data-tour={empty ? "import" : undefined}
+        className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs"
+      >
         {empty && (
           <p className="text-muted-foreground">
             Import an SVG or DXF drawing, or an STL model, to start.

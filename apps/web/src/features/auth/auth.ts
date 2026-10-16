@@ -51,6 +51,11 @@ export const auth = betterAuth({
   // Account deletion (#28) is immediate and cascades to projects, tools, machines and sessions.
   // Meshes are deleted from storage too.
   user: {
+    // When the user finished or skipped each guided tour (#138); they come back on the session.
+    additionalFields: {
+      appTourDoneAt: { type: "date", required: false, input: false },
+      workspaceTourDoneAt: { type: "date", required: false, input: false },
+    },
     deleteUser: {
       enabled: true,
       // Pending password-reset tokens hold the user id; the privacy policy promises nothing is left.

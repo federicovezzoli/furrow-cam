@@ -1,4 +1,4 @@
-# ADR-0036: Layer folders in cam-core
+# ADR-0037: Layer folders in cam-core
 
 - **Status:** Proposed
 - **Date:** 2026-10-16

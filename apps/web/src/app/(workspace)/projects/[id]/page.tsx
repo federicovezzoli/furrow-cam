@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { meshLimits } from "@/features/assets/server";
-import { requireUserId } from "@/features/auth/server";
+import { requireSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { getProject } from "@/features/projects/server";
 import { listToolChoices } from "@/features/tools/server";
@@ -22,7 +22,8 @@ export default function WorkspacePage({ params }: PageProps<"/projects/[id]">) {
 
 async function Workspace({ params }: Pick<PageProps<"/projects/[id]">, "params">) {
   const { id } = await params;
-  const userId = await requireUserId();
+  const { user } = await requireSession();
+  const userId = user.id;
   const [project, tools, machines] = await Promise.all([
     getProject(userId, id),
     listToolChoices(userId),
@@ -39,6 +40,8 @@ async function Workspace({ params }: Pick<PageProps<"/projects/[id]">, "params">
       machines={machines}
       meshLimits={meshLimits()}
       layout={layout}
+      userId={userId}
+      tourDone={user.workspaceTourDoneAt != null}
     />
   );
 }
