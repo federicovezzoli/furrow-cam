@@ -129,6 +129,18 @@ describe("scheduleModelPreviews", () => {
       expect(posted).toHaveLength(RETRY_DELAYS_MS.length + 1);
     });
 
+    it("counts the retries edits make against the same limit", () => {
+      vi.useFakeTimers();
+      const { schedule, posted } = setup();
+      schedule.update([model]);
+      for (let retry = 0; retry <= RETRY_DELAYS_MS.length; retry++) {
+        schedule.fail("The worker stopped.");
+        schedule.update([model]);
+      }
+      vi.runAllTimers();
+      expect(posted).toHaveLength(RETRY_DELAYS_MS.length + 1);
+    });
+
     it("doesn't ask again for a file the worker refused", async () => {
       vi.useFakeTimers();
       const { schedule, posted } = setup();

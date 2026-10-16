@@ -30,8 +30,10 @@ export const RETRY_DELAYS_MS = [2_000, 8_000, 30_000];
  * up on every request at the worker, e.g. when it crashed.
  *
  * A preview that failed for a passing reason (the worker stopped, the file
- * couldn't be downloaded) is asked for again on the next `update` and after
- * each of `RETRY_DELAYS_MS`; one the worker refused (a broken file) isn't.
+ * couldn't be downloaded) is asked for again on the next `update` or after
+ * the next of `RETRY_DELAYS_MS`, whichever comes first, as many times as
+ * there are delays: a mesh that crashes the worker mustn't restart it on
+ * every edit. One the worker refused (a broken file) isn't asked for again.
  * `stop` cancels the retries waiting.
  */
 export function scheduleModelPreviews({
@@ -68,7 +70,12 @@ export function scheduleModelPreviews({
   /** Asks for the preview `key`, unless it is filed for good or already asked for. */
   function request(key: string) {
     const model = wanted.get(key);
-    if (!model || requested.has(key) || (previews.has(key) && !retryable.has(key))) return;
+    if (!model || requested.has(key)) return;
+    if (previews.has(key)) {
+      const retries = retryable.get(key);
+      if (retries === undefined || retries >= RETRY_DELAYS_MS.length) return;
+      retryable.set(key, retries + 1);
+    }
     cancelRetry(key);
     requested.add(key);
     const { sha256, bounds, placement } = model;
@@ -88,7 +95,6 @@ export function scheduleModelPreviews({
           key,
           setTimeout(() => {
             timers.delete(key);
-            retryable.set(key, retries + 1);
             request(key);
           }, delay),
         );
