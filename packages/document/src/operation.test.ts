@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { CIRCLE_ID, circle, fullDocument, SQUARE_ID, square } from "./fixtures";
+import {
+  CIRCLE_ID,
+  circle,
+  drill,
+  endMill,
+  fullDocument,
+  reliefFinish,
+  reliefRough,
+  SQUARE_ID,
+  square,
+  vBit,
+} from "./fixtures";
 import {
   clearingTool,
   DrillOperation,
@@ -9,8 +20,13 @@ import {
   normalizeTargets,
   Operation,
   OperationTarget,
+  operationModelId,
   PocketParams,
   ProfileParams,
+  ReliefFinishOperation,
+  ReliefFinishParams,
+  ReliefRoughOperation,
+  ReliefRoughParams,
   VCarveOperation,
   VCarveParams,
 } from "./operation";
@@ -276,5 +292,88 @@ describe("normalizeTargets", () => {
         { shapeId: CIRCLE_ID, paths: [0, 4] },
       ]),
     ).toEqual([{ shapeId: CIRCLE_ID, paths: null }]);
+  });
+});
+
+describe("ReliefFinishOperation", () => {
+  it("accepts the fixture with every tool shape", () => {
+    expect(Operation.parse(reliefFinish)).toEqual(reliefFinish);
+    for (const tool of [endMill, vBit, drill]) {
+      expect(ReliefFinishOperation.safeParse({ ...reliefFinish, tool }).success).toBe(true);
+    }
+  });
+
+  it("rejects out-of-range params", () => {
+    const { params } = reliefFinish;
+    for (const changes of [
+      { angle: -1 },
+      { angle: 180 },
+      { stepOver: 0 },
+      { stepOver: 101 },
+      { stockToLeave: -0.1 },
+      { direction: "spiral" },
+      { modelId: "emblem" },
+    ]) {
+      expect(ReliefFinishParams.safeParse({ ...params, ...changes }).success).toBe(false);
+    }
+    expect(ReliefFinishParams.safeParse({ ...params, angle: 179.5 }).success).toBe(true);
+  });
+
+  it("machines a model, not shapes", () => {
+    const targets = [{ shapeId: SQUARE_ID, paths: null }];
+    expect(ReliefFinishOperation.safeParse({ ...reliefFinish, targets }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["targets"] }),
+    ]);
+  });
+
+  it("names the model it machines", () => {
+    expect(operationModelId(reliefFinish)).toBe(reliefFinish.params.modelId);
+    expect(operationModelId(reliefRough)).toBe(reliefRough.params.modelId);
+    expect(operationModelId(fullDocument().operations[0] as Operation)).toBeNull();
+  });
+});
+
+describe("ReliefRoughOperation", () => {
+  it("accepts the fixture with every strategy and boundary", () => {
+    expect(Operation.parse(reliefRough)).toEqual(reliefRough);
+    const { params } = reliefRough;
+    for (const changes of [
+      { strategy: { type: "linear", angle: 45 } },
+      { strategy: { type: "peel", start: "centre" } },
+      { strategy: { type: "peel", start: "outside" } },
+      { boundary: "stock" },
+      { stepOver: 25 },
+      { direction: "conventional", ramp: false, stockToLeave: 0 },
+    ]) {
+      expect(ReliefRoughParams.safeParse({ ...params, ...changes }).success).toBe(true);
+    }
+  });
+
+  it("rejects out-of-range params", () => {
+    const { params } = reliefRough;
+    for (const changes of [
+      { stockToLeave: -0.1 },
+      { stepOver: 0 },
+      { stepOver: 101 },
+      { boundary: "drawing" },
+      { strategy: { type: "linear", angle: 30 } },
+      { modelId: "emblem" },
+    ]) {
+      expect(ReliefRoughParams.safeParse({ ...params, ...changes }).success).toBe(false);
+    }
+  });
+
+  it("doesn't peel from an island, which changes from level to level", () => {
+    const strategy = { type: "peel", start: "inside" };
+    expect(ReliefRoughParams.safeParse({ ...reliefRough.params, strategy }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["strategy", "start"] }),
+    ]);
+  });
+
+  it("machines a model, not shapes", () => {
+    const targets = [{ shapeId: SQUARE_ID, paths: null }];
+    expect(ReliefRoughOperation.safeParse({ ...reliefRough, targets }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["targets"] }),
+    ]);
   });
 });

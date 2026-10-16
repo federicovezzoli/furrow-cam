@@ -6,6 +6,7 @@ import { createElement } from "react";
 import ResetPassword, { resetPasswordSubject } from "@/emails/reset-password";
 import VerifyEmail, { verifyEmailSubject } from "@/emails/verify-email";
 import { env } from "@/env";
+import { deleteUserObjects } from "@/features/assets/server";
 import { isPasswordBreached } from "@/features/auth/lib/breached-password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { db } from "@/lib/db";
@@ -48,12 +49,20 @@ export const auth = betterAuth({
     },
   },
   // Account deletion (#28) is immediate and cascades to projects, tools, machines and sessions.
+  // Meshes are deleted from storage too.
   user: {
+    // When the user finished or skipped each guided tour (#138); they come back on the session.
+    additionalFields: {
+      appTourDoneAt: { type: "date", required: false, input: false },
+      workspaceTourDoneAt: { type: "date", required: false, input: false },
+    },
     deleteUser: {
       enabled: true,
       // Pending password-reset tokens hold the user id; the privacy policy promises nothing is left.
       afterDelete: async (user) => {
         await db.verification.deleteMany({ where: { value: user.id } });
+        // Project rows cascade; their meshes (ADR-0029) are objects under the user's prefix.
+        await deleteUserObjects(user.id);
       },
     },
   },

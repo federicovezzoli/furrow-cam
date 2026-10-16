@@ -1,16 +1,24 @@
 "use client";
 
-import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon, CircleHelpIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type * as React from "react";
 import { useRef, useState } from "react";
-import { type Layout, type LayoutChangedMeta, usePanelRef } from "react-resizable-panels";
+import {
+  type Layout,
+  type LayoutChangedMeta,
+  useGroupRef,
+  usePanelRef,
+} from "react-resizable-panels";
 import { FormError } from "@/components/form-error";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import type { MeshLimits } from "@/features/assets/server";
 import type { MachineChoice } from "@/features/machines/server";
+import { Tour, useTour } from "@/features/onboarding/components/tour";
+import type { TourPane } from "@/features/onboarding/lib/tour";
 import { ExportButton } from "@/features/projects/components/export-button";
 import type { getProject, ProjectRow } from "@/features/projects/server";
 import type { ToolChoice } from "@/features/tools/server";
@@ -20,6 +28,7 @@ import { useUndoShortcuts } from "@/features/workspace/hooks/use-undo-shortcuts"
 import {
   savedLayout,
   saveWorkspaceLayout,
+  toggledPaneLayout,
   type WorkspaceLayout,
 } from "@/features/workspace/lib/workspace-layout";
 import {
@@ -32,6 +41,7 @@ import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { cn } from "@/lib/utils";
 import { GcodeExportButton } from "./gcode-export-button";
 import { GeometryImport } from "./geometry-import";
+import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { SaveStatus } from "./save-status";
@@ -58,21 +68,30 @@ type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * The CAM workspace (ADR-0009): a top bar over two resizable columns,
  * operations over the project's properties and its versions (ADR-0028) on
  * the left and the viewport on the right, with the selected operation's properties floating over it.
- * Panes collapse to their headers; panel sizes are remembered in a cookie
- * (`layout` is what it held).
+ * Panes collapse to their headers, each on its own; panel sizes are
+ * remembered in a cookie (`layout` is what it held).
  * `tools` is the user's tool library, offered for operations, and
- * `machines` their machine profiles, offered for the project.
+ * `machines` their machine profiles, offered for the project. `meshLimits`
+ * are the STL files the server stores, `null` when STL import is off.
+ * `tourDone` says the account `userId` finished the workspace tour
+ * (PRD-0001 R22), which otherwise starts when the workspace opens.
  */
 export function WorkspaceShell({
   project,
   tools,
   machines,
+  meshLimits,
   layout,
+  userId,
+  tourDone,
 }: {
   project: WorkspaceProject;
   tools: ToolChoice[];
   machines: MachineChoice[];
+  meshLimits: MeshLimits | null;
   layout: WorkspaceLayout;
+  userId: string;
+  tourDone: boolean;
 }) {
   if (project.error !== undefined) {
     return (
@@ -86,9 +105,15 @@ export function WorkspaceShell({
     );
   }
   return (
-    <WorkspaceStoresProvider key={project.id} project={project}>
+    <WorkspaceStoresProvider key={project.id} project={project} meshLimits={meshLimits}>
       <ToolLibraryProvider tools={tools}>
-        <Workspace project={project} machines={machines} layout={layout} />
+        <Workspace
+          project={project}
+          machines={machines}
+          layout={layout}
+          userId={userId}
+          tourDone={tourDone}
+        />
       </ToolLibraryProvider>
     </WorkspaceStoresProvider>
   );
@@ -99,10 +124,14 @@ function Workspace({
   project,
   machines,
   layout,
+  userId,
+  tourDone,
 }: {
   project: ProjectRow;
   machines: MachineChoice[];
   layout: WorkspaceLayout;
+  userId: string;
+  tourDone: boolean;
 }) {
   const saveStatus = useAutosave();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
@@ -111,12 +140,21 @@ function Workspace({
   );
   useUndoShortcuts();
   useToolpaths();
+  const tour = useTour("workspace", { userId, done: tourDone, autoStart: true });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
+  const sidebar = useGroupRef();
   const operationsPanel = usePanelRef();
   const propertiesPanel = usePanelRef();
   const versionsPanel = usePanelRef();
   const saved = useRef(layout);
+  const panes = {
+    operations: operationsPanel,
+    properties: propertiesPanel,
+    versions: versionsPanel,
+  };
+  /** The size each pane had when last collapsed, to expand it back to (percent). */
+  const openSizes = useRef({ operations: 35, properties: 45, versions: 20 });
 
   function remember(group: keyof WorkspaceLayout) {
     return (sizes: Layout, meta: LayoutChangedMeta) => {
@@ -127,9 +165,61 @@ function Workspace({
     };
   }
 
+  /**
+   * Collapses or expands pane `id` without opening or closing any other: with
+   * every pane collapsed, the space below their headers is left empty. The
+   * new layout is saved unless `persist` is false.
+   */
+  function toggle(id: keyof typeof panes, persist = true) {
+    const group = sidebar.current;
+    const panel = panes[id].current;
+    if (!group || !panel) return;
+    const layout = group.getLayout();
+    const { inPixels, asPercentage } = panel.getSize();
+    if (inPixels === 0) return;
+    const percentPerPixel = asPercentage / inPixels;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const collapsed = new Set(
+      Object.entries(panes).flatMap(([pane, ref]) => (ref.current?.isCollapsed() ? [pane] : [])),
+    );
+    if (!collapsed.has(id)) openSizes.current[id] = layout[id] ?? openSizes.current[id];
+    const sizes = group.setLayout(
+      toggledPaneLayout({
+        layout,
+        panes: Object.keys(panes),
+        rest: SIDEBAR_REST,
+        collapsed,
+        target: id,
+        headerSize: PANE_HEADER_REM * rem * percentPerPixel,
+        openSize: openSizes.current[id],
+        minSize: PANE_MIN_SIZE * percentPerPixel,
+      }),
+    );
+    if (!persist) return;
+    saved.current = { ...saved.current, sidebar: sizes };
+    saveWorkspaceLayout(saved.current);
+  }
+
+  /** Expands pane `id` for the tour's step inside it, leaving the saved layout as the user set it. */
+  function reveal(id: TourPane) {
+    if (panes[id].current?.isCollapsed()) toggle(id, false);
+  }
+
   return (
     <>
-      <TopBar project={project} saveStatus={saveStatus} machineName={machineName} />
+      <TopBar
+        project={project}
+        saveStatus={saveStatus}
+        machineName={machineName}
+        onTakeTour={(from) => tour.start(from)}
+      />
+      <Tour
+        id="workspace"
+        running={tour.running}
+        origin={tour.origin}
+        onEnd={tour.end}
+        revealPane={reveal}
+      />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
       {/* Below the panels' minimum widths (200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
@@ -149,28 +239,31 @@ function Workspace({
           >
             <ResizablePanelGroup
               orientation="vertical"
-              defaultLayout={savedLayout(layout.sidebar, ["operations", "properties", "versions"])}
+              groupRef={sidebar}
+              defaultLayout={savedLayout(layout.sidebar, [...Object.keys(panes), SIDEBAR_REST])}
               onLayoutChanged={remember("sidebar")}
             >
               <Pane
                 id="operations"
                 title="Operations"
                 panel={operationsPanel}
-                siblings={[propertiesPanel, versionsPanel]}
+                onToggle={() => toggle("operations")}
                 defaultSize="35"
                 footer={
-                  <GcodeExportButton
-                    name={project.name}
-                    getDocument={getDocument}
-                    disabledReason={
-                      machineName === null
-                        ? "Choose a machine in the project properties first"
-                        : !hasEnabledOperations
-                          ? "Add or enable an operation first"
-                          : undefined
-                    }
-                    className="w-full"
-                  />
+                  <div data-tour="export-gcode">
+                    <GcodeExportButton
+                      name={project.name}
+                      getDocument={getDocument}
+                      disabledReason={
+                        machineName === null
+                          ? "Choose a machine in the project properties first"
+                          : !hasEnabledOperations
+                            ? "Add or enable an operation first"
+                            : undefined
+                      }
+                      className="w-full"
+                    />
+                  </div>
                 }
               >
                 <OperationsPane />
@@ -180,7 +273,7 @@ function Workspace({
                 id="properties"
                 title="Properties"
                 panel={propertiesPanel}
-                siblings={[operationsPanel, versionsPanel]}
+                onToggle={() => toggle("properties")}
                 defaultSize="45"
                 footer={
                   <ExportButton
@@ -199,16 +292,22 @@ function Workspace({
                 id="versions"
                 title="Versions"
                 panel={versionsPanel}
-                siblings={[operationsPanel, propertiesPanel]}
+                onToggle={() => toggle("versions")}
                 defaultSize="20"
               >
                 <VersionsPane projectId={project.id} />
               </Pane>
+              {/* No handle: it only holds the space below the headers while every pane is collapsed. */}
+              <ResizablePanel id={SIDEBAR_REST} defaultSize="0" minSize={0} />
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
-            <section aria-label="Viewport" className="relative h-full bg-muted/40">
+            <section
+              aria-label="Viewport"
+              data-tour="viewport"
+              className="relative h-full bg-muted/40"
+            >
               <Viewport />
               <GeometryImport />
               <SelectedOperation />
@@ -220,33 +319,45 @@ function Workspace({
   );
 }
 
-/** The selected operation's properties, in a panel floating over the viewport's top right corner. */
+/**
+ * The selected operation's properties, or the selected model's placement, in
+ * a panel floating over the viewport's top right corner, so the project's
+ * stock stays in the Properties pane.
+ */
 function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
-  if (selectedId === null) return null;
+  const modelId = useWorkspaceStore((s) => s.selectedModelId);
+  if (selectedId === null && modelId === null) return null;
   return (
     <aside
-      aria-label="Operation properties"
+      aria-label={selectedId !== null ? "Operation properties" : "Model properties"}
       className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
     >
-      {/* Keyed, so nothing typed or rejected for one operation shows on the next. */}
-      <OperationProperties key={selectedId} operationId={selectedId} />
+      {/* Keyed, so nothing typed or rejected for one operation or model shows on the next. */}
+      {selectedId !== null ? (
+        <OperationProperties key={selectedId} operationId={selectedId} />
+      ) : (
+        modelId !== null && <ModelProperties key={modelId} modelId={modelId} />
+      )}
     </aside>
   );
 }
 
 /**
- * `saveStatus` and `machineName` are left out when the project couldn't be
- * opened. `machineName` is `null` for a project without a machine.
+ * `saveStatus`, `machineName` and `onTakeTour` are left out when the project
+ * couldn't be opened. `machineName` is `null` for a project without a
+ * machine; `onTakeTour` replays the workspace tour.
  */
 function TopBar({
   project,
   saveStatus,
   machineName,
+  onTakeTour,
 }: {
   project: ProjectRow;
   saveStatus?: AutosaveStatus;
   machineName?: string | null;
+  onTakeTour?: (from: HTMLElement) => void;
 }) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
@@ -268,6 +379,17 @@ function TopBar({
       )}
       {saveStatus && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
+        {onTakeTour && (
+          <Button
+            variant="ghost"
+            size="icon-compact"
+            onClick={(event) => onTakeTour(event.currentTarget)}
+            aria-label="Take the tour"
+            title="Take the tour"
+          >
+            <CircleHelpIcon />
+          </Button>
+        )}
         <ThemeToggle size="icon-compact" />
       </div>
     </header>
@@ -294,13 +416,18 @@ function SaveFailed({ message }: { message: string | undefined }) {
 
 type PanelRef = ReturnType<typeof usePanelRef>;
 
-/** The height of a pane's header (`h-control`), all that a collapsed pane shows. */
-const PANE_HEADER = "1.75rem";
+/** The empty panel under the sidebar's panes. */
+const SIDEBAR_REST = "rest";
+
+/** The height of a pane's header (`h-control`) in rem, all that a collapsed pane shows. */
+const PANE_HEADER_REM = 1.75;
+
+/** The smallest an open pane gets, in pixels. */
+const PANE_MIN_SIZE = 96;
 
 /**
- * A sidebar pane: dragging its edge resizes it, and its header collapses it to
- * just the header or expands it. Collapsing it expands the first of its
- * `siblings` if they are all collapsed: one pane always shows. `footer` stays
+ * A sidebar pane: dragging its edge resizes it, and its header calls
+ * `onToggle` to collapse it to just the header or expand it. `footer` stays
  * at its bottom while the rest scrolls. A collapsed pane's content stays
  * mounted, only hidden.
  */
@@ -308,7 +435,7 @@ function Pane({
   id,
   title,
   panel,
-  siblings,
+  onToggle,
   defaultSize,
   footer,
   children,
@@ -316,38 +443,29 @@ function Pane({
   id: string;
   title: string;
   panel: PanelRef;
-  siblings: PanelRef[];
+  onToggle: () => void;
   defaultSize: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
-  function toggle() {
-    if (collapsed) {
-      panel.current?.expand();
-      return;
-    }
-    if (siblings.every((sibling) => sibling.current?.isCollapsed())) siblings[0]?.current?.expand();
-    panel.current?.collapse();
-  }
-
   return (
     <ResizablePanel
       id={id}
       panelRef={panel}
       defaultSize={defaultSize}
-      minSize={96}
+      minSize={PANE_MIN_SIZE}
       collapsible
-      collapsedSize={PANE_HEADER}
+      collapsedSize={`${PANE_HEADER_REM}rem`}
       onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
     >
-      <section aria-label={title} className="flex h-full flex-col">
+      <section aria-label={title} data-tour={id} className="flex h-full flex-col">
         <h2 className="h-control shrink-0 border-b text-ui-label font-medium tracking-wide text-muted-foreground uppercase">
           <button
             type="button"
             aria-expanded={!collapsed}
-            onClick={toggle}
+            onClick={onToggle}
             className="flex size-full items-center gap-1 px-2 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
           >
             <ChevronDownIcon
@@ -356,8 +474,11 @@ function Pane({
             {title}
           </button>
         </h2>
-        {/* Hidden rather than unmounted, so a collapsed pane keeps its state and running actions. */}
-        <div hidden={collapsed} className="min-h-0 flex-1 overflow-auto">
+        {/*
+          Hidden rather than unmounted, so a collapsed pane keeps its state and running actions.
+          Relative, so absolute content (`sr-only` inputs) scrolls with it instead of growing the page.
+        */}
+        <div hidden={collapsed} className="relative min-h-0 flex-1 overflow-auto">
           {children}
         </div>
         {footer && (

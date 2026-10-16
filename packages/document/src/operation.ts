@@ -3,7 +3,15 @@ import { Point, type Shape } from "./geometry";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
-export const OperationType = z.enum(["profile", "pocket", "drill", "engrave", "vcarve"]);
+export const OperationType = z.enum([
+  "profile",
+  "pocket",
+  "drill",
+  "engrave",
+  "vcarve",
+  "relief_finish",
+  "relief_rough",
+]);
 export type OperationType = z.infer<typeof OperationType>;
 
 /**
@@ -304,12 +312,113 @@ export const VCarveOperation = z
   });
 export type VCarveOperation = z.infer<typeof VCarveOperation>;
 
+/** How raster passes follow each other: all cut the same way, or every other one back. */
+export const RasterDirection = z.enum(["one_way", "zigzag"]);
+export type RasterDirection = z.infer<typeof RasterDirection>;
+
+/**
+ * 3D finishing parameters (#115, PRD-0005 S4): parallel passes over a model,
+ * the tool dropped onto the model at every point along them (ADR-0030).
+ */
+export const ReliefFinishParams = z.strictObject({
+  /** The model it machines, one of the document's `models`. */
+  modelId: z.uuid(),
+  /** Direction of the passes, in degrees counter-clockwise from the stock's X axis. */
+  angle: z.number().min(0).lt(180),
+  /** Distance between passes, as a percentage of the tool's diameter. */
+  stepOver: z.number().gt(0).max(100),
+  direction: RasterDirection,
+  /** Material left on the model in every direction, walls included. */
+  stockToLeave: z.number().nonnegative(),
+  /** Rest machining (#118): only cut where the earlier operations left material. */
+  rest: z.boolean(),
+});
+export type ReliefFinishParams = z.infer<typeof ReliefFinishParams>;
+
+/** Operations on a model have no shapes to cut. */
+function refineModelTargets(operation: { targets: OperationTarget[] }, ctx: z.RefinementCtx) {
+  if (operation.targets.length > 0) {
+    ctx.addIssue({ code: "custom", path: ["targets"], message: "Machines a model, not shapes" });
+  }
+}
+
+export const ReliefFinishOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("relief_finish"),
+    params: ReliefFinishParams,
+  })
+  .superRefine(refineModelTargets);
+export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
+
+/**
+ * What 3D roughing clears: the model's outline, or the whole stock, the
+ * tool's centre reaching its edges.
+ */
+export const RoughingBoundary = z.enum(["model", "stock"]);
+export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
+
+/**
+ * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,
+ * offset by the stock to leave, cleared in levels with a pocket strategy
+ * (ADR-0030). The step-down and ramp angle come from the tool, and the
+ * step-over too unless the operation sets its own.
+ */
+export const ReliefRoughParams = z
+  .strictObject({
+    /** The model it machines, one of the document's `models`. */
+    modelId: z.uuid(),
+    strategy: PocketStrategy,
+    direction: MillingDirection,
+    /**
+     * Distance between passes, as a percentage of the tool's diameter, or
+     * `null` for the tool's own step-over. The tool itself is left alone.
+     */
+    stepOver: z.number().gt(0).max(100).nullable(),
+    /** Material left on the model in every direction, walls included. */
+    stockToLeave: z.number().nonnegative(),
+    boundary: RoughingBoundary,
+    /** Ramp in at the tool's plunge angle instead of plunging straight down. */
+    ramp: z.boolean(),
+    /** Rest machining (#118): only cut where the earlier operations left material. */
+    rest: z.boolean(),
+  })
+  .superRefine((params, ctx) => {
+    // The islands change from level to level, so there is no single one to start from.
+    if (params.strategy.type === "peel" && params.strategy.start === "inside") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["strategy", "start"],
+        message: "Peeling starts from the centre or the outer wall",
+      });
+    }
+  });
+export type ReliefRoughParams = z.infer<typeof ReliefRoughParams>;
+
+export const ReliefRoughOperation = z
+  .strictObject({
+    ...operationFields,
+    type: z.literal("relief_rough"),
+    params: ReliefRoughParams,
+  })
+  .superRefine(refineModelTargets);
+export type ReliefRoughOperation = z.infer<typeof ReliefRoughOperation>;
+
+/** Operations that machine a model (PRD-0005) rather than shapes. */
+export function operationModelId(operation: Operation): string | null {
+  return operation.type === "relief_finish" || operation.type === "relief_rough"
+    ? operation.params.modelId
+    : null;
+}
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,
   DrillOperation,
   EngraveOperation,
   VCarveOperation,
+  ReliefFinishOperation,
+  ReliefRoughOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
 

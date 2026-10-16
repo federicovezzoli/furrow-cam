@@ -85,7 +85,8 @@ const SIDE_SHADE = 0.7;
  * surface through its cell centres, with walls down to the stock bottom
  * around it. Each cell is one instance of a quad that the vertex shader
  * lifts to the heights it reads from a float texture, so a 4-million-cell
- * heightmap costs that texture and no per-vertex buffers.
+ * heightmap costs that texture and no per-vertex buffers. Models are drawn
+ * the same way, from their previews (ADR-0031).
  */
 export function SimulatedStock({
   heightmap,

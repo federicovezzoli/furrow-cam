@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type FormErrors, issuesToFormErrors, numberField } from "@/lib/form-data";
+import { TOOL_COLORS } from "./lib/colors";
 
 /** The signed-in user's tool library, by name. */
 export function listTools(userId: string) {
@@ -43,26 +44,6 @@ export async function listToolChoices(userId: string): Promise<ToolChoice[]> {
     const tool = safeSnapshotTool(row);
     return tool ? [{ id: row.id, isDefault: row.isDefault, tool }] : [];
   });
-}
-
-/** Picked in turn for new tools, so each one is told apart in the preview without choosing a colour. */
-export const TOOL_COLORS = [
-  "#2563eb",
-  "#dc2626",
-  "#16a34a",
-  "#d97706",
-  "#9333ea",
-  "#0891b2",
-  "#db2777",
-  "#65a30d",
-] as const;
-
-/** The first palette colour no tool uses yet, cycling once all are taken. */
-export function nextToolColor(tools: { color: string }[]): string {
-  const used = new Set(tools.map((tool) => tool.color));
-  return (
-    TOOL_COLORS.find((color) => !used.has(color)) ?? TOOL_COLORS[tools.length % TOOL_COLORS.length]
-  );
 }
 
 /** Seeded into every new account, so a first project can be cut without setting up a library. */
@@ -133,32 +114,36 @@ export function parseToolForm(form: FormData) {
 
 export type ToolFormErrors = FormErrors<keyof Tool>;
 
+/** A tool the form saved: its library id, and the tool as an operation snapshot. */
+export type SavedTool = { id: string; tool: Tool };
+
 export const TOOL_NOT_FOUND = "This bit no longer exists.";
 
 /**
  * Creates the user's tool, or updates it when `id` is given. A user's first
- * tool becomes their default. Returns the saved tool as an operation snapshot.
+ * tool becomes their default. Returns the saved tool's id and the tool as an
+ * operation snapshot.
  */
 export async function writeTool(
   userId: string,
   id: string | null,
   form: FormData,
-): Promise<{ errors: ToolFormErrors } | { tool: Tool }> {
+): Promise<{ errors: ToolFormErrors } | SavedTool> {
   const parsed = parseToolForm(form);
   if (parsed.errors) return { errors: parsed.errors };
   const { tool } = parsed;
 
   if (id === null) {
-    await db.$transaction(async (tx) => {
+    const created = await db.$transaction(async (tx) => {
       await lockLibrary(tx, userId);
       const hasDefault = await tx.tool.count({ where: { userId, isDefault: true } });
-      await tx.tool.create({ data: { ...tool, userId, isDefault: hasDefault === 0 } });
+      return tx.tool.create({ data: { ...tool, userId, isDefault: hasDefault === 0 } });
     });
-  } else {
-    const toolId = z.uuid().safeParse(id);
-    if (!toolId.success) return { errors: { form: TOOL_NOT_FOUND } };
-    const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
-    if (count === 0) return { errors: { form: TOOL_NOT_FOUND } };
+    return { id: created.id, tool };
   }
-  return { tool };
+  const toolId = z.uuid().safeParse(id);
+  if (!toolId.success) return { errors: { form: TOOL_NOT_FOUND } };
+  const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
+  if (count === 0) return { errors: { form: TOOL_NOT_FOUND } };
+  return { id: toolId.data, tool };
 }

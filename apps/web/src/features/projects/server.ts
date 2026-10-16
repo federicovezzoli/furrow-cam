@@ -14,6 +14,14 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { VERSION_LABEL_MAX } from "./lib/versions";
 
+/**
+ * Locks the project's row until the transaction ends, so writes that check
+ * its versions or assets first happen one at a time.
+ */
+export async function lockProject(tx: Prisma.TransactionClient, projectId: string) {
+  await tx.$executeRaw`SELECT 1 FROM "project" WHERE "id" = ${projectId} FOR UPDATE`;
+}
+
 /** A project id from the URL or the client, or `null` if it can't be one. */
 export function parseProjectId(id: unknown): string | null {
   const result = z.uuid().safeParse(id);

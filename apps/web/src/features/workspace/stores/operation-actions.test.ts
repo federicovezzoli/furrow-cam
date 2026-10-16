@@ -6,6 +6,7 @@ import {
   type Shape,
   type Tool,
 } from "@furrow/document";
+import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -13,6 +14,8 @@ import {
   addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
+  addReliefFinishOperation,
+  addReliefRoughOperation,
   addTab,
   addVCarveOperation,
   autoPlaceTabs,
@@ -30,6 +33,8 @@ import {
   updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
+  updateReliefFinishParams,
+  updateReliefRoughParams,
   updateVCarveParams,
 } from "./operation-actions";
 
@@ -130,6 +135,7 @@ function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
     geometry: [square, circle, plate],
+    models: [],
   });
   const document = () => store.getState().document;
   const operations = () => document().operations;
@@ -440,6 +446,119 @@ describe("addVCarveOperation", () => {
       ok: false,
       error: "Only flat end mills clear a flat bottom",
     });
+  });
+});
+
+describe("addReliefFinishOperation", () => {
+  function storeWithModel() {
+    return createDocumentStore({ ...createProjectDocument(), models: [model] });
+  }
+
+  it("appends a valid zig-zag finish of the model at a 10% step-over", () => {
+    const store = storeWithModel();
+    const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill });
+    const { document } = store.getState();
+    expect(ProjectDocument.safeParse(document).success).toBe(true);
+    expect(document.operations[0]).toMatchObject({
+      id,
+      type: "relief_finish",
+      name: "3D finish 1",
+      targets: [],
+      tool: endMill,
+      params: {
+        modelId: model.id,
+        angle: 0,
+        stepOver: 10,
+        direction: "zigzag",
+        stockToLeave: 0,
+        rest: false,
+      },
+    });
+  });
+
+  it("adds nothing for a model that isn't there", () => {
+    const store = storeWithModel();
+    expect(addReliefFinishOperation(store, { modelId: MISSING_ID, tool: endMill })).toBeNull();
+    expect(store.getState().document.operations).toEqual([]);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const store = storeWithModel();
+    const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill }) as string;
+    expect(
+      updateReliefFinishParams(store, id, { angle: 45, direction: "one_way", rest: true }),
+    ).toEqual({ ok: true });
+    expect(updateReliefFinishParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
+    expect(updateReliefFinishParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
+    expect(store.getState().document.operations[0]?.params).toMatchObject({
+      angle: 45,
+      direction: "one_way",
+      stepOver: 10,
+      stockToLeave: 0,
+      rest: true,
+    });
+  });
+});
+
+describe("addReliefRoughOperation", () => {
+  function storeWithModel() {
+    return createDocumentStore({ ...createProjectDocument(), models: [model] });
+  }
+
+  it("appends a valid roughing of the model's outline, leaving 0.5 mm", () => {
+    const store = storeWithModel();
+    const id = addReliefRoughOperation(store, { modelId: model.id, tool: endMill });
+    const { document } = store.getState();
+    expect(ProjectDocument.safeParse(document).success).toBe(true);
+    expect(document.operations[0]).toMatchObject({
+      id,
+      type: "relief_rough",
+      name: "3D rough 1",
+      targets: [],
+      tool: endMill,
+      params: {
+        modelId: model.id,
+        strategy: { type: "offset" },
+        direction: "climb",
+        stepOver: null,
+        stockToLeave: 0.5,
+        boundary: "model",
+        ramp: true,
+        rest: false,
+      },
+    });
+  });
+
+  it("adds nothing for a model that isn't there", () => {
+    const store = storeWithModel();
+    expect(addReliefRoughOperation(store, { modelId: MISSING_ID, tool: endMill })).toBeNull();
+    expect(store.getState().document.operations).toEqual([]);
+  });
+
+  it("updates its params, rejecting invalid ones", () => {
+    const store = storeWithModel();
+    const id = addReliefRoughOperation(store, { modelId: model.id, tool: endMill }) as string;
+    expect(
+      updateReliefRoughParams(store, id, {
+        strategy: { type: "linear", angle: 45 },
+        boundary: "stock",
+        stepOver: 25,
+        rest: true,
+      }),
+    ).toEqual({ ok: true });
+    expect(updateReliefRoughParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
+    expect(
+      updateReliefRoughParams(store, id, { strategy: { type: "peel", start: "inside" } }),
+    ).toMatchObject({ ok: false });
+    expect(updateReliefRoughParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
+    expect(store.getState().document.operations[0]?.params).toMatchObject({
+      strategy: { type: "linear", angle: 45 },
+      boundary: "stock",
+      stepOver: 25,
+      stockToLeave: 0.5,
+      rest: true,
+    });
+    expect(store.getState().document.operations[0]?.tool).toEqual(endMill);
   });
 });
 

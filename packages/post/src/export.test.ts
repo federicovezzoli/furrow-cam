@@ -6,7 +6,16 @@ import {
   type ProjectDocument,
   type Shape,
 } from "@furrow/document";
-import { drill, endMill, lowRider, machine as shapeoko, vBit } from "@furrow/document/fixtures";
+import {
+  drill,
+  endMill,
+  lowRider,
+  model,
+  reliefFinish,
+  reliefRough,
+  machine as shapeoko,
+  vBit,
+} from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
 
@@ -70,6 +79,7 @@ function referenceProject(): ProjectDocument {
     },
     machine: shapeoko,
     geometry: [plate, holes, recess],
+    models: [],
     operations: [
       {
         id: id(2),
@@ -141,6 +151,88 @@ describe("exportGcode", () => {
     expect(clearing).toBeGreaterThan(-1);
     expect(carving).toBeGreaterThan(clearing);
     expect(gcode.slice(clearing, carving)).toContain("M0 (Change the bit to 60° V-bit");
+  });
+
+  it("finishes a model from its mesh", () => {
+    // A 100 × 80 mm plate with a flat top, which its placement puts at the stock top.
+    const z = -4;
+    const mesh = new Float32Array([
+      ...[-50, -40, z, 50, -40, z, 50, 40, z, -50, -40, z, 50, 40, z, -50, 40, z],
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12],
+    ]);
+    const placed = {
+      ...model,
+      bounds: { min: [-50, -40, -12], max: [50, 40, z] } as typeof model.bounds,
+    };
+    // 18 mm of stock, deep enough for the 12 mm model.
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [placed] };
+    doc.operations = [{ ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } }];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(warnings).toEqual([]);
+    expect(gcode).toContain("(Operation: Finish)");
+    // Down onto the flat top, and across it.
+    expect(gcode).toContain("G1 Z0 F500\nG1 X99.963 F1500\n");
+  });
+
+  it("cuts a model deeper than the stock no deeper than its bottom, and says so", () => {
+    const doc = { ...referenceProject(), models: [model], operations: [reliefRough] };
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) =>
+        sha256 === model.sha256
+          ? new Float32Array([
+              -50, -40, -12, 50, -40, -12, 50, 40, -12, -50, 40, 0, -49, 40, 0, -50, 39, 0,
+            ])
+          : undefined,
+    });
+    expect(warnings).toEqual([expect.stringContaining("no deeper than the stock's bottom")]);
+    expect(gcode).toContain("(Operation: Rough)");
+  });
+
+  it("roughs a model out before finishing it", () => {
+    const mesh = new Float32Array([
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12, -50, -40, -12, 50, 40, -12, -50, 40, -12],
+      ...[-50, -40, 0, -49.9, -40, 0, -50, -39.9, 0],
+    ]);
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [model] };
+    doc.operations = [
+      reliefRough,
+      { ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } },
+    ];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(warnings).toEqual([]);
+    const roughing = gcode.indexOf("(Operation: Rough)");
+    expect(roughing).toBeGreaterThan(-1);
+    expect(gcode.indexOf("(Operation: Finish)")).toBeGreaterThan(roughing);
+  });
+
+  it("leaves out a rest operation the operations before it left nothing for", () => {
+    const mesh = new Float32Array([
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12, -50, -40, -12, 50, 40, -12, -50, 40, -12],
+      ...[-50, -40, 0, -49.9, -40, 0, -50, -39.9, 0],
+    ]);
+    const reference = referenceProject();
+    const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [model] };
+    doc.operations = [
+      reliefRough,
+      {
+        ...reliefRough,
+        id: "8b2f1c4d-5e6a-4b7c-9d8e-0f1a2b3c4d5e",
+        name: "Rest",
+        params: { ...reliefRough.params, rest: true },
+      },
+    ];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(gcode).toContain("(Operation: Rough)");
+    expect(gcode).not.toContain("(Operation: Rest)");
+    expect(warnings).toEqual(["Rest: no toolpath, left out of the program."]);
   });
 
   it("includes the toolpath warnings, named by operation", () => {

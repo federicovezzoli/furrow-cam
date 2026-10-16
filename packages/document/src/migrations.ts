@@ -49,6 +49,30 @@ export const migrations: Readonly<Record<number, Migration>> = {
   4: (doc) => doc,
   // #97: V-carve operations. Nothing to change, as for #95.
   5: (doc) => doc,
+  // #113: imported 3D models (PRD-0005). Existing documents have none.
+  6: (doc) => {
+    doc.models = [];
+    return doc;
+  },
+  // #115: 3D finishing operations. Nothing to change, as for #95.
+  7: (doc) => doc,
+  // #116: 3D roughing operations. Nothing to change, as for #95.
+  8: (doc) => doc,
+  // #118: rest machining. Existing 3D operations cut everything, as before.
+  9: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          (operation.type === "relief_finish" || operation.type === "relief_rough") &&
+          isObject(operation.params)
+        ) {
+          operation.params.rest = false;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

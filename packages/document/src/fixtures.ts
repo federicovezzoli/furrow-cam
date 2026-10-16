@@ -1,6 +1,14 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type { Machine, ProjectDocument, Shape, Tool } from "./index";
+import type {
+  Machine,
+  Model,
+  ProjectDocument,
+  ReliefFinishOperation,
+  ReliefRoughOperation,
+  Shape,
+  Tool,
+} from "./index";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -29,6 +37,17 @@ export const vBit: Tool = {
   vAngle: 60,
   tipDiameter: 0,
   color: "#d97706",
+};
+
+export const ballEndMill: Tool = {
+  ...endMill,
+  name: "3 mm ball end mill",
+  type: "ball_end_mill",
+  diameter: 3,
+  fluteLength: 12,
+  stepDown: 1,
+  stepOver: 10,
+  color: "#9333ea",
 };
 
 export const drill: Tool = {
@@ -119,9 +138,62 @@ export const circle: Shape = {
   ],
 };
 
+/** An imported STL relief (PRD-0005); its mesh is a project asset (ADR-0029). */
+export const model: Model = {
+  id: "5f0c2a8e-3b7d-4e19-9c6a-2d8f1b4e7a30",
+  sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  fileName: "emblem.stl",
+  size: 684,
+  triangles: 12,
+  bounds: { min: [-50, -40, 0], max: [50, 40, 12] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 12, position: [0, 0] },
+};
+
+export const RELIEF_FINISH_ID = "7c1e4b2a-9d3f-4a6e-8b5c-2f0e1d9a8b7c";
+
+/** A 3D finishing operation on `model` (#115). */
+export const reliefFinish: ReliefFinishOperation = {
+  id: RELIEF_FINISH_ID,
+  type: "relief_finish",
+  name: "Finish",
+  enabled: true,
+  targets: [],
+  tool: ballEndMill,
+  params: {
+    modelId: model.id,
+    angle: 0,
+    stepOver: 10,
+    direction: "zigzag",
+    stockToLeave: 0,
+    rest: false,
+  },
+};
+
+export const RELIEF_ROUGH_ID = "3a9d6e1f-2b4c-4d8e-9f7a-6c5b0e2d1a48";
+
+/** A 3D roughing operation on `model` (#116). */
+export const reliefRough: ReliefRoughOperation = {
+  id: RELIEF_ROUGH_ID,
+  type: "relief_rough",
+  name: "Rough",
+  enabled: true,
+  targets: [],
+  tool: endMill,
+  params: {
+    modelId: model.id,
+    strategy: { type: "offset" },
+    direction: "climb",
+    stepOver: null,
+    stockToLeave: 0.5,
+    boundary: "model",
+    ramp: true,
+    rest: false,
+  },
+};
+
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 6,
+    schemaVersion: 10,
     units: "in",
     stock: {
       width: 300,
@@ -132,6 +204,7 @@ export function fullDocument(): ProjectDocument {
     },
     machine,
     geometry: [square, circle],
+    models: [],
     operations: [
       {
         id: OPERATION_ID,

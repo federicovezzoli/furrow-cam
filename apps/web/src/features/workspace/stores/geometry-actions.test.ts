@@ -1,5 +1,6 @@
 import { anchorPoint, importDxf, importSvg } from "@furrow/cam-core";
 import { createProjectDocument, StockAnchor } from "@furrow/document";
+import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor } from "./drawing-test-utils";
@@ -58,5 +59,12 @@ describe("addImportedShapes", () => {
     expect(store.getState().past).toHaveLength(past.length);
     store.getState().undo();
     expect(store.getState().document.geometry).toEqual([]);
+  });
+
+  it("refuses a drawing in a project with an STL model", () => {
+    const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    const { document } = store.getState();
+    expect(addImportedShapes(store, "importSvg", importSvg(SVG).shapes)).toBe(false);
+    expect(store.getState().document).toBe(document);
   });
 });

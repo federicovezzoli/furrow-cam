@@ -29,15 +29,19 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import {
   useDocumentStore,
   useDocumentStoreApi,
+  useMeshLimits,
+  useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
-import { addImportedShapes } from "@/features/workspace/stores/geometry-actions";
+import {
+  addImportedShapes,
+  hasImportedFile,
+  ONE_FILE,
+} from "@/features/workspace/stores/geometry-actions";
 import { cn } from "@/lib/utils";
+import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
 const MAX_FILE_SIZE = 20_000_000;
-
-/** Why importing is off: a project holds one drawing for now (ADR-0022). */
-const ONE_FILE = "A project holds one imported file.";
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -68,12 +72,17 @@ function isImportError(error: unknown): error is SvgImportError | DxfImportError
 }
 
 /**
- * Imports SVG and DXF files, over the viewport: a card in its centre while the
- * project has no geometry, then any import warnings in its corner until dismissed.
+ * Imports SVG and DXF files and STL models, over the viewport: a card in its
+ * centre while the project is empty (it holds one imported file for now),
+ * then any import warnings in its corner until dismissed. It also says how an
+ * STL import is going.
  */
 export function GeometryImport() {
   const store = useDocumentStoreApi();
-  const empty = useDocumentStore((s) => s.document.geometry.length === 0);
+  const empty = useDocumentStore((s) => !hasImportedFile(s.document));
+  const meshLimits = useMeshLimits();
+  const modelImport = useWorkspaceStore((s) => s.modelImport);
+  const setModelImport = useWorkspaceStore((s) => s.setModelImport);
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -164,7 +173,7 @@ export function GeometryImport() {
     }
   }
 
-  if (!empty && !notice) return null;
+  if (!empty && !notice && !modelImport) return null;
 
   return (
     <div
@@ -173,10 +182,17 @@ export function GeometryImport() {
         empty ? "items-center justify-center" : "items-end justify-end p-2",
       )}
     >
-      <div className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs">
+      <div
+        data-tour={empty ? "import" : undefined}
+        className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs"
+      >
+        {empty && (
+          <p className="text-muted-foreground">
+            Import an SVG or DXF drawing, or an STL model, to start.
+          </p>
+        )}
         {empty && (
           <>
-            <p className="text-muted-foreground">Import an SVG or DXF file to start.</p>
             <input
               ref={input}
               type="file"
@@ -195,6 +211,12 @@ export function GeometryImport() {
               <UploadIcon />
               Import SVG/DXF…
             </Button>
+          </>
+        )}
+        {empty && (
+          <>
+            <ModelImportButton />
+            {!meshLimits && <p className="text-muted-foreground">{STL_IMPORT_OFF}</p>}
           </>
         )}
 
@@ -238,6 +260,33 @@ export function GeometryImport() {
             }}
             onCancel={() => setPending(null)}
           />
+        )}
+
+        {modelImport && (
+          <div className="flex items-start gap-1">
+            {modelImport.error === null ? (
+              <p role="status" className="flex-1 break-all text-muted-foreground">
+                Importing {modelImport.fileName}…
+              </p>
+            ) : (
+              <>
+                <div role="alert" className="grid flex-1 gap-1 text-destructive">
+                  <p className="font-medium break-all">{modelImport.fileName}</p>
+                  <p>{modelImport.error}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-compact"
+                  onClick={() => setModelImport(null)}
+                  aria-label="Dismiss"
+                  title="Dismiss"
+                  className="-mt-1 -mr-1"
+                >
+                  <XIcon />
+                </Button>
+              </>
+            )}
+          </div>
         )}
 
         {notice && (

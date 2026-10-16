@@ -6,7 +6,7 @@ Open source, web-based 2.5D CAM for CNC routers: import SVG/DXF, define operatio
 
 ```sh
 pnpm install                  # also runs `prisma generate` in apps/web
-pnpm db:up                    # local PostgreSQL 18 (docker compose)
+pnpm db:up                    # local PostgreSQL 18 and S3 storage (docker compose)
 pnpm db:migrate               # prisma migrate dev (local database only)
 pnpm dev                      # http://localhost:3000
 pnpm email:dev                # preview email templates (apps/web/src/emails) at :3001
@@ -31,12 +31,13 @@ packages/post/       post-processors, toolpaths → G-code
 
 - Dependency direction: `web → post → cam-core → document`.
 - `packages/*` must not import React, Next.js or three.js (Biome enforces it). They are consumed as TypeScript source; keep them worker-safe (no DOM).
+- `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/` and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
 
 Inside `apps/web/src` (ADR-0021):
 
 ```
 app/              routes only (page, layout, error, route files) rendering feature components
-features/<name>/  auth, tools, machines, projects, workspace: actions.ts (server actions only),
+features/<name>/  auth, tools, machines, projects, assets, workspace: actions.ts (server actions only),
                   server.ts ("server-only" logic), components/ hooks/ providers/ stores/ lib/ workers/
 components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnostic code
 ```

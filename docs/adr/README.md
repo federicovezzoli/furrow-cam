@@ -43,3 +43,12 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0026](0026-operation-clearing-tool.md) | An operation may cut with a second, clearing tool | Proposed |
 | [0027](0027-compact-release-notes.md) | Compact release notes | Proposed |
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
+| [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Proposed |
+| [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed |
+| [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Proposed |
+| [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Proposed |
+| [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
+| [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Proposed |
+| [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Proposed |
+| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed |

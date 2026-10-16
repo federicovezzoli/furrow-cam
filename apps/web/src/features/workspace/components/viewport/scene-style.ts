@@ -1,6 +1,8 @@
 /** Colours of the viewport's scene, per theme. */
 export type Palette = {
   shape: string;
+  /** Imported 3D models, shaded like the simulated stock. */
+  model: string;
   hovered: string;
   selected: string;
   tab: string;
@@ -17,6 +19,7 @@ export type Palette = {
 export const PALETTES: Record<"light" | "dark", Palette> = {
   light: {
     shape: "#27272a",
+    model: "#94a3b8",
     hovered: "#60a5fa",
     selected: "#ea580c",
     tab: "#16a34a",
@@ -29,6 +32,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
   },
   dark: {
     shape: "#e4e4e7",
+    model: "#8b9bb4",
     hovered: "#93c5fd",
     selected: "#fb923c",
     tab: "#4ade80",

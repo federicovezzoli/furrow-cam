@@ -1,11 +1,11 @@
 "use client";
 
-import type { Tool } from "@furrow/document";
 import { PencilIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
+import type { SavedTool } from "@/features/tools/actions";
 import { ToolDialog } from "@/features/tools/components/tool-dialog";
 import { ToolForm } from "@/features/tools/components/tool-form";
 import type { ToolChoice } from "@/features/tools/server";
@@ -34,7 +34,7 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
     setRejected(null);
   }
 
-  function onSaved(tool: Tool) {
+  function onSaved({ tool }: SavedTool) {
     if (!editing) return;
     // Applied at once so the re-snapshotted operations keep matching it; the
     // refresh then brings the library as the server has it (e.g. by name).

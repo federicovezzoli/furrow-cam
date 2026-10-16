@@ -13,18 +13,20 @@ datasource db {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  tools         Tool[]
-  machines      Machine[]
-  projects      Project[]
+  id                  String    @id
+  name                String
+  email               String
+  emailVerified       Boolean   @default(false)
+  image               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  appTourDoneAt       DateTime?
+  workspaceTourDoneAt DateTime?
+  sessions            Session[]
+  accounts            Account[]
+  tools               Tool[]
+  machines            Machine[]
+  projects            Project[]
 
   @@unique([email])
   @@map("user")
@@ -179,6 +181,7 @@ model Project {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   versions      ProjectVersion[]
+  assets        ProjectAsset[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@map("project")
@@ -198,4 +201,24 @@ model ProjectVersion {
 
   @@index([projectId, createdAt(sort: Desc)])
   @@map("project_version")
+}
+
+/// A file stored outside the document, in S3-compatible storage (ADR-0029): today an STL mesh.
+/// The object key is `<userId>/<projectId>/<sha256>`. Kept as long as the project, so its
+/// versions can reference it too.
+model ProjectAsset {
+  id         String    @id @default(uuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the file's bytes, in lowercase hex, as documents reference it.
+  sha256     String
+  /// In bytes.
+  size       Int
+  /// When the stored object was checked against `sha256` and `size`; until then, documents can't use it.
+  verifiedAt DateTime?
+  /// Until verified, refreshed on each upload request: the storage sweep deletes unverified assets a day old.
+  createdAt  DateTime  @default(now())
+
+  @@unique([projectId, sha256])
+  @@map("project_asset")
 }

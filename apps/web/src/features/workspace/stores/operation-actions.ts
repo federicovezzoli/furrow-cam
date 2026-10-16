@@ -20,6 +20,8 @@ import {
   ProfileParams,
   type ProfileTabs,
   type ProjectDocument,
+  ReliefFinishParams,
+  ReliefRoughParams,
   type Shape,
   type Tool,
   VCarveParams,
@@ -99,6 +101,44 @@ export function defaultVCarveParams(document: ProjectDocument, tool: Tool): VCar
   return { maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
 }
 
+/** Step-over of new 3D finishing operations, as a percentage of the tool's diameter. */
+export const DEFAULT_RELIEF_STEP_OVER = 10;
+
+/**
+ * New 3D finishing operations on `modelId` run zig-zag along X at a 10%
+ * step-over (PRD-0005), leaving no stock and cutting everything (no rest
+ * machining).
+ */
+export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
+  return {
+    modelId,
+    angle: 0,
+    stepOver: DEFAULT_RELIEF_STEP_OVER,
+    direction: "zigzag",
+    stockToLeave: 0,
+    rest: false,
+  };
+}
+
+/**
+ * New 3D roughing operations on `modelId` clear the model's outline with
+ * offset clearing at the tool's step-over, climb milling and ramping in,
+ * leaving 0.5 mm of stock for finishing (PRD-0005), and cutting everything
+ * (no rest machining).
+ */
+export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
+  return {
+    modelId,
+    strategy: { type: "offset" },
+    direction: "climb",
+    stepOver: null,
+    stockToLeave: 0.5,
+    boundary: "model",
+    ramp: true,
+    rest: false,
+  };
+}
+
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
 function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
@@ -171,6 +211,46 @@ export function addVCarveOperation(store: DocumentStore, options: NewOperation):
     name: nextName(document, "V-carve"),
     params: defaultVCarveParams(document, options.tool),
   }));
+}
+
+/**
+ * Appends a 3D finishing operation on the model `modelId` cut with a snapshot
+ * of `tool`. Returns the new operation's id, or `null` if the model isn't in
+ * the document.
+ */
+export function addReliefFinishOperation(store: DocumentStore, options: NewModelOperation) {
+  return appendModelOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "relief_finish",
+    name: nextName(document, "3D finish"),
+    params: defaultReliefFinishParams(options.modelId),
+  }));
+}
+
+/** Appends a 3D roughing operation on the model `modelId`, like `addReliefFinishOperation`. */
+export function addReliefRoughOperation(store: DocumentStore, options: NewModelOperation) {
+  return appendModelOperation(store, options, (document, fields) => ({
+    ...fields,
+    type: "relief_rough",
+    name: nextName(document, "3D rough"),
+    params: defaultReliefRoughParams(options.modelId),
+  }));
+}
+
+type NewModelOperation = { modelId: string; tool: Tool; id?: string };
+
+function appendModelOperation(
+  store: DocumentStore,
+  { modelId, tool, id = crypto.randomUUID() }: NewModelOperation,
+  create: (document: ProjectDocument, fields: OperationFields) => Operation,
+): string | null {
+  const { document } = store.getState();
+  if (!document.models.some((model) => model.id === modelId)) return null;
+  const operation = create(document, { id, enabled: true, targets: [], tool });
+  store.getState().change("addOperation", (draft) => {
+    draft.operations.push(operation);
+  });
+  return id;
 }
 
 type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string };
@@ -361,6 +441,38 @@ export function updateVCarveParams(
   changes: Partial<VCarveParams>,
 ): ActionResult {
   return updateParams(store, id, "vcarve", VCarveParams, "updateVCarveParams", changes);
+}
+
+/** Changes some of a 3D finishing operation's params at once, like `updateProfileParams`. */
+export function updateReliefFinishParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<Omit<ReliefFinishParams, "modelId">>,
+): ActionResult {
+  return updateParams(
+    store,
+    id,
+    "relief_finish",
+    ReliefFinishParams,
+    "updateReliefFinishParams",
+    changes,
+  );
+}
+
+/** Changes some of a 3D roughing operation's params at once, like `updateProfileParams`. */
+export function updateReliefRoughParams(
+  store: DocumentStore,
+  id: string,
+  changes: Partial<Omit<ReliefRoughParams, "modelId">>,
+): ActionResult {
+  return updateParams(
+    store,
+    id,
+    "relief_rough",
+    ReliefRoughParams,
+    "updateReliefRoughParams",
+    changes,
+  );
 }
 
 /** Changes some of an engrave operation's params at once, like `updateProfileParams`. */

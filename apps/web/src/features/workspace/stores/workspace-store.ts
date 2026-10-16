@@ -10,13 +10,17 @@ export type ViewMode = "top" | "orbit";
 /** The path the pointer is over in the viewport. */
 export type HoveredGeometry = { shapeId: string; path: number };
 
+/** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
+export type ModelImport = { fileName: string; error: string | null };
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
  * The camera pose stays inside the viewport, which its controls change on
  * every pointer move.
  *
  * Selection is by path (ADR-0018): selecting a shape selects all its paths.
- * An undo can remove a selected shape or operation, so `prune` drops ids and
+ * A 3D model is selected on its own, which drops the selected paths, and
+ * selecting paths drops it. An undo can remove a selected shape, model or operation, so `prune` drops ids and
  * paths that are no longer in the document (selected, hovered and hidden
  * ones), ends
  * editing tabs the selected profile no longer has and ends picking the zero
@@ -27,6 +31,12 @@ export type WorkspaceState = {
   view: ViewMode;
   /** In the order they were selected. */
   selectedPaths: PathRef[];
+  /**
+   * The 3D model whose placement floats over the viewport (PRD-0005 S2). It
+   * takes the place of the selected operation's panel: selecting one drops
+   * the other.
+   */
+  selectedModelId: string | null;
   selectedOperationId: string | null;
   hovered: HoveredGeometry | null;
   /**
@@ -49,6 +59,8 @@ export type WorkspaceState = {
    * and picking the zero work on the uncut stock top, so each ends the other.
    */
   simulating: boolean;
+  /** The STL import under way or the last one that failed, `null` once done or dismissed. */
+  modelImport: ModelImport | null;
 
   setView: (view: ViewMode) => void;
   /**
@@ -56,6 +68,7 @@ export type WorkspaceState = {
    * them if all are selected, otherwise adds the others.
    */
   selectPaths: (paths: PathRef[], mode?: "replace" | "toggle") => void;
+  selectModel: (id: string | null) => void;
   selectOperation: (id: string | null) => void;
   setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
@@ -66,6 +79,7 @@ export type WorkspaceState = {
   /** Shows or hides the toolpaths of all of `operationIds` at once. */
   setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
   setSimulating: (simulating: boolean) => void;
+  setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
@@ -82,12 +96,14 @@ export function createWorkspaceStore() {
       immer((set) => ({
         view: "top",
         selectedPaths: [],
+        selectedModelId: null,
         selectedOperationId: null,
         hovered: null,
         editingTabs: false,
         pickingZero: false,
         hiddenToolpathIds: [],
         simulating: false,
+        modelImport: null,
 
         setView(view) {
           set(
@@ -118,6 +134,7 @@ export function createWorkspaceStore() {
                 }
                 state.selectedPaths = [...selected.values()];
               }
+              state.selectedModelId = null;
               if (state.selectedPaths.length > 0) state.pickingZero = false;
             },
             false,
@@ -125,11 +142,30 @@ export function createWorkspaceStore() {
           );
         },
 
+        selectModel(id) {
+          set(
+            (state) => {
+              state.selectedModelId = id;
+              if (id !== null) {
+                state.selectedPaths = [];
+                state.pickingZero = false;
+                state.selectedOperationId = null;
+                state.editingTabs = false;
+              }
+            },
+            false,
+            "selectModel",
+          );
+        },
+
         selectOperation(id) {
           set(
             (state) => {
               if (state.selectedOperationId !== id) state.editingTabs = false;
-              if (id !== null) state.pickingZero = false;
+              if (id !== null) {
+                state.pickingZero = false;
+                state.selectedModelId = null;
+              }
               state.selectedOperationId = id;
             },
             false,
@@ -220,10 +256,21 @@ export function createWorkspaceStore() {
           );
         },
 
+        setModelImport(modelImport) {
+          set(
+            (state) => {
+              state.modelImport = modelImport;
+            },
+            false,
+            "setModelImport",
+          );
+        },
+
         clearSelection() {
           set(
             (state) => {
               state.selectedPaths = [];
+              state.selectedModelId = null;
               state.selectedOperationId = null;
               state.editingTabs = false;
             },
@@ -253,6 +300,10 @@ export function createWorkspaceStore() {
                 state.selectedPaths = state.selectedPaths.filter(exists);
               }
               if (state.hovered !== null && !exists(state.hovered)) state.hovered = null;
+              const modelId = state.selectedModelId;
+              if (modelId !== null && !document.models.some(({ id }) => id === modelId)) {
+                state.selectedModelId = null;
+              }
               const operationId = state.selectedOperationId;
               const operation = document.operations.find(({ id }) => id === operationId);
               if (operationId !== null && !operation) state.selectedOperationId = null;

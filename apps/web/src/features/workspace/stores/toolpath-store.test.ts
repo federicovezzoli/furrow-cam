@@ -1,6 +1,11 @@
 import type { ToolpathLines } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { createToolpathStore, type ToolpathPreview } from "./toolpath-store";
+import {
+  CANCELLED,
+  createToolpathStore,
+  sanitizeForDevtools,
+  type ToolpathPreview,
+} from "./toolpath-store";
 
 const lines: ToolpathLines = {
   feeds: new Float32Array([0, 0, 0, 1, 0, 0]),
@@ -40,6 +45,20 @@ describe("toolpath store", () => {
     expect(store.getState().entries.op).toEqual({ inputHash: "3", status: "computing" });
   });
 
+  it("keeps the last lines only for inputs with the same preview key", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1", "offset");
+    store.getState().setResult("op", "1", fresh);
+    store.getState().startComputing("op", "2", "offset");
+    expect(store.getState().entries.op).toMatchObject({ previewKey: "offset", lines });
+    store.getState().startComputing("op", "3", "linear");
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "3",
+      previewKey: "linear",
+      status: "computing",
+    });
+  });
+
   it("keeps the last clearing lines while recomputing too", () => {
     const store = createToolpathStore();
     const clearing = { ...lines, feeds: new Float32Array([0, 0, -1, 2, 0, -1]) };
@@ -59,6 +78,57 @@ describe("toolpath store", () => {
     store.getState().setError("op", "hash", "boom");
     store.getState().setResult("op", "hash", fresh);
     expect(store.getState().entries).toEqual({});
+  });
+
+  it("keeps the progress of the latest inputs while computing, from 0 again on a change", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setProgress("op", "1", 0.5);
+    store.getState().setProgress("op", "0", 0.9);
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "1",
+      status: "computing",
+      progress: 0.5,
+    });
+    store.getState().startComputing("op", "2");
+    expect(store.getState().entries.op).toEqual({ inputHash: "2", status: "computing" });
+    store.getState().setResult("op", "2", fresh);
+    store.getState().setProgress("op", "2", 0.9);
+    expect(store.getState().entries.op?.status).toBe("ready");
+  });
+
+  it("marks cancelled toolpaths of the latest inputs", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setCancelled("op", "0");
+    expect(store.getState().entries.op?.status).toBe("computing");
+    store.getState().setCancelled("op", "1");
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "1",
+      status: "error",
+      error: CANCELLED,
+      cancelled: true,
+    });
+  });
+
+  it("has controls that do nothing until the scheduler sets them", () => {
+    const store = createToolpathStore();
+    const cancelled: string[] = [];
+    store.getState().controls.cancel("op");
+    store.getState().setControls({ cancel: (id) => cancelled.push(id), retry() {} });
+    store.getState().controls.cancel("op");
+    store.getState().setControls(null);
+    store.getState().controls.cancel("op");
+    expect(cancelled).toEqual(["op"]);
+  });
+
+  it("shows typed arrays to the devtools as their length", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setResult("op", "1", fresh);
+    expect(sanitizeForDevtools(store.getState())).toMatchObject({
+      entries: { op: { status: "ready", lines: { feeds: "Float32Array(6)" } } },
+    });
   });
 
   it("retains only the given operations", () => {
