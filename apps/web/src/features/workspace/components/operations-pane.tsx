@@ -6,6 +6,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CircleAlertIcon,
+  CircleSlashIcon,
   EyeIcon,
   EyeOffIcon,
   LoaderCircleIcon,
@@ -29,6 +30,7 @@ import {
   addEngraveOperation,
   addPocketOperation,
   addProfileOperation,
+  addReliefFinishOperation,
   addVCarveOperation,
   deleteOperation,
   moveOperation,
@@ -42,11 +44,16 @@ import {
   defaultToolChoice,
   drillToolChoice,
   engraveToolChoice,
+  reliefFinishToolChoice,
   useToolLibrary,
   vcarveToolChoice,
 } from "./tool-library";
 
-/** The Operations pane: shows the selected paths, adds profiles, pockets, drill, engrave and V-carve operations from the selected paths and lists operations in cutting order. */
+/**
+ * The Operations pane: shows the selected paths, adds profiles, pockets,
+ * drill, engrave and V-carve operations from the selected paths and 3D
+ * operations on the project's model, and lists operations in cutting order.
+ */
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -62,6 +69,11 @@ export function OperationsPane() {
   const drillTool = drillToolChoice(tools);
   const engraveTool = engraveToolChoice(tools);
   const vcarveTool = vcarveToolChoice(tools);
+  const models = useDocumentStore((s) => s.document.models);
+  const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
+  // The selected model, or the project's only one.
+  const model =
+    models.find(({ id }) => id === selectedModelId) ?? (models.length === 1 ? models[0] : null);
 
   function add(addOperation: typeof addProfileOperation, choice = tool) {
     if (!choice) return;
@@ -124,8 +136,50 @@ export function OperationsPane() {
     },
   ];
 
+  const reliefTool = reliefFinishToolChoice(tools);
+  const reliefDisabledReason = !reliefTool
+    ? "Add a tool to your tool library first"
+    : !model
+      ? "Select a model in the viewport first"
+      : undefined;
+  const reliefButton = (
+    <Button
+      variant="outline"
+      disabled={reliefDisabledReason !== undefined}
+      onClick={() => {
+        if (!model || !reliefTool) return;
+        const id = addReliefFinishOperation(store, { modelId: model.id, tool: reliefTool.tool });
+        if (id) workspace.getState().selectOperation(id);
+      }}
+      aria-label="Add 3D finish"
+      title={
+        reliefDisabledReason === undefined
+          ? `Finish ${model?.fileName} with parallel passes, a ball end mill being the usual choice`
+          : undefined
+      }
+      className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
+    >
+      <OperationTypeIcon type="relief_finish" />
+      <span className="max-w-full truncate text-ui-label">3D finish</span>
+    </Button>
+  );
+
   return (
     <div className="grid gap-2 p-3 text-ui">
+      {models.length > 0 && (
+        <div className="@container">
+          <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
+            {reliefDisabledReason === undefined ? (
+              reliefButton
+            ) : (
+              // A disabled button gets no pointer events, so its wrapper shows why.
+              <span title={reliefDisabledReason} className="grid min-w-0">
+                {reliefButton}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       <Selection
         target={target}
         onClear={() => workspace.getState().selectPaths([])}
@@ -137,38 +191,40 @@ export function OperationsPane() {
           ]);
         }}
       />
-      <div className="@container">
-        <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
-          {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
-            const disabledReason = !choice
-              ? (missingTool ?? "Add a tool to your tool library first")
-              : !target
-                ? "Select paths in the viewport first"
-                : undefined;
-            const button = (
-              <Button
-                key={type}
-                variant="outline"
-                disabled={disabledReason !== undefined}
-                onClick={() => add(addOperation, choice)}
-                aria-label={`Add ${type}`}
-                title={disabledReason === undefined ? hint : undefined}
-                className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
-              >
-                <OperationTypeIcon type={type} />
-                <span className="max-w-full truncate text-ui-label">{label}</span>
-              </Button>
-            );
-            if (disabledReason === undefined) return button;
-            // A disabled button gets no pointer events, so its wrapper shows why.
-            return (
-              <span key={type} title={disabledReason} className="grid min-w-0">
-                {button}
-              </span>
-            );
-          })}
+      {(geometry.length > 0 || models.length === 0) && (
+        <div className="@container">
+          <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
+            {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
+              const disabledReason = !choice
+                ? (missingTool ?? "Add a tool to your tool library first")
+                : !target
+                  ? "Select paths in the viewport first"
+                  : undefined;
+              const button = (
+                <Button
+                  key={type}
+                  variant="outline"
+                  disabled={disabledReason !== undefined}
+                  onClick={() => add(addOperation, choice)}
+                  aria-label={`Add ${type}`}
+                  title={disabledReason === undefined ? hint : undefined}
+                  className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
+                >
+                  <OperationTypeIcon type={type} />
+                  <span className="max-w-full truncate text-ui-label">{label}</span>
+                </Button>
+              );
+              if (disabledReason === undefined) return button;
+              // A disabled button gets no pointer events, so its wrapper shows why.
+              return (
+                <span key={type} title={disabledReason} className="grid min-w-0">
+                  {button}
+                </span>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
       {tool && !target && geometry.length > 0 && (
         <p className="text-muted-foreground">
           Click paths in the top view to select what to cut; Ctrl/Cmd/Shift+click to select more.
@@ -375,14 +431,29 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
   const entry = useToolpathStore((s) => s.entries[operationId]);
   if (!entry) return null;
   if (entry.status === "computing") {
+    const label =
+      entry.progress === undefined
+        ? "Computing toolpath"
+        : `Computing toolpath, ${Math.floor(entry.progress * 100)}%`;
     return (
       <LoaderCircleIcon
         role="img"
-        aria-label="Computing toolpath"
+        aria-label={label}
         className="size-3.5 shrink-0 animate-spin text-muted-foreground"
       >
-        <title>Computing toolpath</title>
+        <title>{label}</title>
       </LoaderCircleIcon>
+    );
+  }
+  if (entry.status === "error" && entry.cancelled) {
+    return (
+      <CircleSlashIcon
+        role="img"
+        aria-label="Toolpath cancelled"
+        className="size-3.5 shrink-0 text-muted-foreground"
+      >
+        <title>{entry.error}</title>
+      </CircleSlashIcon>
     );
   }
   if (entry.status === "error") {

@@ -23,6 +23,8 @@ import {
   type ProfileOperation,
   ProfileSide,
   type ProfileTabs,
+  RasterDirection,
+  type ReliefFinishOperation,
   type Tool,
   type VCarveOperation,
 } from "@furrow/document";
@@ -54,6 +56,7 @@ import {
   updateEngraveParams,
   updatePocketParams,
   updateProfileParams,
+  updateReliefFinishParams,
   updateVCarveParams,
 } from "@/features/workspace/stores/operation-actions";
 import { EditBitButton } from "./edit-bit-dialog";
@@ -92,6 +95,11 @@ const DEFAULT_STRATEGIES: Record<PocketStrategy["type"], PocketStrategy> = {
 };
 
 const LINEAR_ANGLES = LinearAngle.options.map((option) => option.value);
+
+const RASTER_DIRECTION_LABELS: Record<RasterDirection, string> = {
+  zigzag: "Zig-zag",
+  one_way: "One way",
+};
 
 const PEEL_START_LABELS: Record<PeelStart, string> = {
   centre: "Centre",
@@ -134,12 +142,17 @@ export function OperationProperties({ operationId }: { operationId: string }) {
         />
       </Row>
       <ToolPicker operation={operation} />
-      <TargetsField operationId={operation.id} targets={operation.targets} />
+      {operation.type === "relief_finish" ? (
+        <ModelField modelId={operation.params.modelId} />
+      ) : (
+        <TargetsField operationId={operation.id} targets={operation.targets} />
+      )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
       {operation.type === "drill" && <DrillFields operation={operation} />}
       {operation.type === "engrave" && <EngraveFields operation={operation} />}
       {operation.type === "vcarve" && <VCarveFields operation={operation} />}
+      {operation.type === "relief_finish" && <ReliefFinishFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
@@ -296,6 +309,19 @@ function TargetsField({
         ))}
       </ul>
     </section>
+  );
+}
+
+/** The model a 3D operation machines. */
+function ModelField({ modelId }: { modelId: string }) {
+  const model = useDocumentStore((s) => s.document.models.find(({ id }) => id === modelId));
+  return (
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+      <span>Model</span>
+      <span className="truncate" title={model?.fileName}>
+        {model?.fileName ?? "Missing"}
+      </span>
+    </div>
   );
 }
 
@@ -887,6 +913,100 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
 type PlacementMode = "count" | "spacing";
 
 /** Tab size, auto placement and the switch into editing them in the viewport. */
+/** Steps the passes' angle by 15°. 180° is 0° again, so the field stops short of it. */
+const ANGLE_STEP = 15;
+
+function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const { params, tool } = operation;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateReliefFinishParams(store, operation.id, changes),
+  );
+  const gestures = gestureHandlers(store);
+  const spacing = (tool.diameter * params.stepOver) / 100;
+
+  return (
+    <section aria-labelledby="relief-finish-heading" className="grid gap-2">
+      <h4 id="relief-finish-heading" className="font-medium">
+        3D finish
+      </h4>
+      <p className="text-muted-foreground">
+        Parallel passes over the model, the tool dropped onto it at every point, from the top only.
+        A ball end mill leaves the smoothest surface.
+      </p>
+      <NumberField
+        id="relief-angle"
+        label="Angle"
+        layout="inline"
+        suffix="°"
+        min={0}
+        max={179.9}
+        step={ANGLE_STEP}
+        value={params.angle}
+        onValueChange={(angle) => update("angle", { angle })}
+        error={errors.angle}
+        {...gestures}
+      />
+      <NumberField
+        id="relief-step-over"
+        label="Step-over"
+        layout="inline"
+        suffix="%"
+        min={1}
+        max={100}
+        value={params.stepOver}
+        onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        error={errors.stepOver}
+        {...gestures}
+      />
+      <p className="text-muted-foreground">
+        Of the tool's diameter: passes {formatQuantity(spacing, "length", units)}{" "}
+        {unitLabel("length", units)} apart at most.
+      </p>
+      <Row id="relief-direction" label="Direction">
+        <NativeSelect
+          id="relief-direction"
+          size="sm"
+          value={params.direction}
+          onChange={(event) =>
+            update("direction", { direction: RasterDirection.parse(event.target.value) })
+          }
+          className={SELECT_CLASS}
+        >
+          {RasterDirection.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {RASTER_DIRECTION_LABELS[option]}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      <p className="text-muted-foreground">
+        {params.direction === "zigzag"
+          ? "Every other pass comes back, linked along the model."
+          : "Every pass cuts the same way, retracting in between."}
+      </p>
+      <NumberField
+        id="relief-stock-to-leave"
+        label="Stock to leave"
+        layout="inline"
+        quantity="length"
+        units={units}
+        min={0}
+        value={params.stockToLeave}
+        onValueChange={(stockToLeave) => update("stockToLeave", { stockToLeave })}
+        error={errors.stockToLeave}
+        {...gestures}
+      />
+      {errors.direction && (
+        <p role="alert" className="text-destructive">
+          {errors.direction}
+        </p>
+      )}
+    </section>
+  );
+}
+
 function TabsFields({
   operation,
   tabs,
@@ -1044,11 +1164,47 @@ function Checkbox({
   );
 }
 
-/** The toolpath's state from the worker, with its error or warnings spelt out. */
+/**
+ * The toolpath's state from the worker, with its error or warnings spelt out,
+ * and how far it got with a way to cancel it when it reports that.
+ */
 function ToolpathDetails({ operationId }: { operationId: string }) {
   const entry = useToolpathStore((s) => s.entries[operationId]);
+  const controls = useToolpathStore((s) => s.controls);
   if (!entry || entry.status === "computing") {
-    return <p className="text-muted-foreground">Computing toolpath…</p>;
+    const progress = entry?.status === "computing" ? entry.progress : undefined;
+    if (progress === undefined) {
+      return <p className="text-muted-foreground">Computing toolpath…</p>;
+    }
+    const percent = Math.floor(progress * 100);
+    return (
+      <div className="flex items-center gap-2">
+        <label htmlFor="toolpath-progress" className="shrink-0 text-muted-foreground">
+          Computing toolpath…
+        </label>
+        <progress
+          id="toolpath-progress"
+          max={100}
+          value={percent}
+          className="h-1.5 min-w-0 flex-1 accent-primary"
+        >
+          {percent}%
+        </progress>
+        <Button variant="outline" size="compact" onClick={() => controls.cancel(operationId)}>
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+  if (entry.status === "error" && entry.cancelled) {
+    return (
+      <div className="flex items-center gap-2">
+        <p className="flex-1 text-muted-foreground">{entry.error}</p>
+        <Button variant="outline" size="compact" onClick={() => controls.retry(operationId)}>
+          Compute again
+        </Button>
+      </div>
+    );
   }
   if (entry.status === "error") {
     return (

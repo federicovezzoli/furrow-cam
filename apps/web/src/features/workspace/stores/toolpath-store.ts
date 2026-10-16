@@ -23,10 +23,26 @@ export type ToolpathPreview = {
  * toolpath, so the preview doesn't flicker while a value is scrubbed.
  */
 export type ToolpathEntry = { inputHash: string } & (
-  | { status: "computing"; lines?: ToolpathLines; clearing?: ToolpathLines }
+  | {
+      status: "computing";
+      lines?: ToolpathLines;
+      clearing?: ToolpathLines;
+      /** How much is done, from 0 to 1, for toolpaths that report it (3D operations). */
+      progress?: number;
+    }
   | ({ status: "ready" } & ToolpathPreview)
-  | { status: "error"; error: string }
+  /** `cancelled` when it was stopped before it finished, rather than failing. */
+  | { status: "error"; error: string; cancelled?: boolean }
 );
+
+/** Stops or restarts computing an operation's toolpath; the workspace's scheduler provides them. */
+export type ToolpathControls = {
+  cancel: (operationId: string) => void;
+  retry: (operationId: string) => void;
+};
+
+/** What a cancelled toolpath says. */
+export const CANCELLED = "Cancelled before it finished.";
 
 /** Derived data (ADR-0010): never undoable, never saved. */
 export type ToolpathState = {
@@ -37,11 +53,18 @@ export type ToolpathState = {
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
   setResult: (operationId: string, inputHash: string, preview: ToolpathPreview) => void;
   setError: (operationId: string, inputHash: string, error: string) => void;
+  setProgress: (operationId: string, inputHash: string, progress: number) => void;
+  setCancelled: (operationId: string, inputHash: string) => void;
   /** Drops entries of operations that are no longer in the document. */
   retain: (operationIds: Iterable<string>) => void;
+  /** No-ops until the scheduler sets them (`setControls`). */
+  controls: ToolpathControls;
+  setControls: (controls: ToolpathControls | null) => void;
 };
 
 export type ToolpathStore = ReturnType<typeof createToolpathStore>;
+
+const NO_CONTROLS: ToolpathControls = { cancel() {}, retry() {} };
 
 export function createToolpathStore() {
   return createStore<ToolpathState>()(
@@ -87,6 +110,40 @@ export function createToolpathStore() {
             false,
             "setError",
           );
+        },
+
+        setProgress(operationId, inputHash, progress) {
+          set(
+            (state) => {
+              const entry = state.entries[operationId];
+              if (entry?.inputHash !== inputHash || entry.status !== "computing") return;
+              entry.progress = progress;
+            },
+            false,
+            "setProgress",
+          );
+        },
+
+        setCancelled(operationId, inputHash) {
+          set(
+            (state) => {
+              if (state.entries[operationId]?.inputHash !== inputHash) return;
+              state.entries[operationId] = {
+                inputHash,
+                status: "error",
+                error: CANCELLED,
+                cancelled: true,
+              };
+            },
+            false,
+            "setCancelled",
+          );
+        },
+
+        controls: NO_CONTROLS,
+
+        setControls(controls) {
+          set({ controls: controls ?? NO_CONTROLS }, false, "setControls");
         },
 
         retain(operationIds) {

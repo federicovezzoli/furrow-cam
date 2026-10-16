@@ -1,6 +1,6 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type { Machine, Model, ProjectDocument, Shape, Tool } from "./index";
+import type { Machine, Model, ProjectDocument, ReliefFinishOperation, Shape, Tool } from "./index";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -29,6 +29,17 @@ export const vBit: Tool = {
   vAngle: 60,
   tipDiameter: 0,
   color: "#d97706",
+};
+
+export const ballEndMill: Tool = {
+  ...endMill,
+  name: "3 mm ball end mill",
+  type: "ball_end_mill",
+  diameter: 3,
+  fluteLength: 12,
+  stepDown: 1,
+  stepOver: 10,
+  color: "#9333ea",
 };
 
 export const drill: Tool = {
@@ -130,9 +141,22 @@ export const model: Model = {
   placement: { rotation: [0, 0, 0], scale: 1, depth: 12, position: [0, 0] },
 };
 
+export const RELIEF_FINISH_ID = "7c1e4b2a-9d3f-4a6e-8b5c-2f0e1d9a8b7c";
+
+/** A 3D finishing operation on `model` (#115). */
+export const reliefFinish: ReliefFinishOperation = {
+  id: RELIEF_FINISH_ID,
+  type: "relief_finish",
+  name: "Finish",
+  enabled: true,
+  targets: [],
+  tool: ballEndMill,
+  params: { modelId: model.id, angle: 0, stepOver: 10, direction: "zigzag", stockToLeave: 0 },
+};
+
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     units: "in",
     stock: {
       width: 300,

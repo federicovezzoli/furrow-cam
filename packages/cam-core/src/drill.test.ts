@@ -277,9 +277,9 @@ describe("drillToolpath", () => {
       tool,
       params,
     };
-    expect(generateToolpath({ operation, shapes, safeZ: 5, entryClearance: 1 })).toEqual(
-      drillToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 }),
-    );
+    expect(
+      generateToolpath({ operation, shapes, model: null, safeZ: 5, entryClearance: 1 }),
+    ).toEqual(drillToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 }));
   });
 });
 

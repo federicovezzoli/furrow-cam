@@ -131,7 +131,7 @@ export function smallestCutWidth(cuts: readonly SimulationCut[]): number {
  * A tool's shape as the height of its cutting edge above the tip at each
  * distance from its axis, up to `radius`; nothing cuts beyond.
  */
-type CutterProfile = {
+export type CutterProfile = {
   radius: number;
   /** Whether the edge is level across the whole radius (flat end mills, drills). */
   flat: boolean;

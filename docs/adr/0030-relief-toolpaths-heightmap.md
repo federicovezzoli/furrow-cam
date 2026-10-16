@@ -1,6 +1,6 @@
 # ADR-0030: Relief toolpaths from a model heightmap
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0032](0032-relief-finishing-passes.md) (the finishing grid is laid out along the passes)
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005, ADR-0004, ADR-0007, ADR-0019

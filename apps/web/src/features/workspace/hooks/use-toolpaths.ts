@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
+import { loadMesh } from "@/features/workspace/lib/mesh-cache";
 import {
   useDocumentStoreApi,
+  useProjectId,
   useToolpathStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
 import type {
-  ToolpathRequest,
+  ToolpathMessage,
   ToolpathResponse,
 } from "@/features/workspace/stores/toolpath-scheduler";
 import { scheduleToolpaths } from "@/features/workspace/stores/toolpath-scheduler";
@@ -14,14 +16,17 @@ import { lazyWorker } from "@/lib/lazy-worker";
 
 /**
  * Computes the toolpaths of the open project's enabled operations in a Web
- * Worker (ADR-0004) while mounted, keeping the toolpath store up to date.
+ * Worker (ADR-0004) while mounted, keeping the toolpath store up to date and
+ * its controls (cancel, retry) working.
  */
 export function useToolpaths() {
   const documents = useDocumentStoreApi();
   const toolpaths = useToolpathStoreApi();
+  const projectId = useProjectId();
 
   useEffect(() => {
-    const worker = lazyWorker<ToolpathRequest, ToolpathResponse>(
+    let stopped = false;
+    const worker = lazyWorker<ToolpathMessage, ToolpathResponse>(
       () =>
         new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), { type: "module" }),
       {
@@ -35,12 +40,23 @@ export function useToolpaths() {
         },
       },
     );
-    const schedule = scheduleToolpaths(documents, toolpaths, (request) => worker.post(request));
+    const schedule = scheduleToolpaths(
+      documents,
+      toolpaths,
+      // A mesh that finishes loading after unmounting mustn't start the worker again.
+      (message) => {
+        if (!stopped) worker.post(message);
+      },
+      (sha256) => loadMesh(projectId, sha256),
+    );
+    toolpaths.getState().setControls({ cancel: schedule.cancel, retry: schedule.retry });
     return () => {
+      stopped = true;
+      toolpaths.getState().setControls(null);
       schedule.stop();
       worker.terminate();
       // Requests in flight die with the worker, so nothing may stay computing.
       toolpaths.getState().retain([]);
     };
-  }, [documents, toolpaths]);
+  }, [documents, toolpaths, projectId]);
 }

@@ -6,7 +6,15 @@ import {
   type ProjectDocument,
   type Shape,
 } from "@furrow/document";
-import { drill, endMill, lowRider, machine as shapeoko, vBit } from "@furrow/document/fixtures";
+import {
+  drill,
+  endMill,
+  lowRider,
+  model,
+  reliefFinish,
+  machine as shapeoko,
+  vBit,
+} from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
 
@@ -142,6 +150,28 @@ describe("exportGcode", () => {
     expect(clearing).toBeGreaterThan(-1);
     expect(carving).toBeGreaterThan(clearing);
     expect(gcode.slice(clearing, carving)).toContain("M0 (Change the bit to 60° V-bit");
+  });
+
+  it("finishes a model from its mesh", () => {
+    // A 100 × 80 mm plate with a flat top, which its placement puts at the stock top.
+    const z = -4;
+    const mesh = new Float32Array([
+      ...[-50, -40, z, 50, -40, z, 50, 40, z, -50, -40, z, 50, 40, z, -50, 40, z],
+      ...[-50, -40, -12, 50, -40, -12, 50, 40, -12],
+    ]);
+    const placed = {
+      ...model,
+      bounds: { min: [-50, -40, -12], max: [50, 40, z] } as typeof model.bounds,
+    };
+    const doc = { ...referenceProject(), models: [placed] };
+    doc.operations = [{ ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } }];
+    const { gcode, warnings } = exportGcode(doc, "Relief", {
+      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+    });
+    expect(warnings).toEqual([]);
+    expect(gcode).toContain("(Operation: Finish)");
+    // Down onto the flat top, and across it.
+    expect(gcode).toContain("G1 Z0 F500\nG1 X99.963 F1500\n");
   });
 
   it("includes the toolpath warnings, named by operation", () => {

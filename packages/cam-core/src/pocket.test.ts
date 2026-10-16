@@ -506,7 +506,13 @@ describe("pocketToolpath", () => {
 
   it("is what generateToolpath returns for a pocket", () => {
     expect(
-      generateToolpath({ operation: operation(), shapes: [square], safeZ: 5, entryClearance: 1 }),
+      generateToolpath({
+        operation: operation(),
+        shapes: [square],
+        model: null,
+        safeZ: 5,
+        entryClearance: 1,
+      }),
     ).toEqual(pocket());
   });
 });
