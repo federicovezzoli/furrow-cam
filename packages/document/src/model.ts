@@ -27,7 +27,9 @@ export const ModelPlacement = z.strictObject({
   scale: z.number().positive(),
   /**
    * How far the model reaches into the stock from its top: the rotated
-   * mesh's height is stretched or squashed to it, as relief tools do.
+   * mesh's height is scaled to it. Edits keep it at that height times
+   * `scale`, so the mesh keeps its proportions (ADR-0034); a model placed
+   * before then may still be stretched or squashed by it.
    */
   depth: PositiveLength,
   /** Bottom-left corner of the placed model's bounding box. */

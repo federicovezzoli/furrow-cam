@@ -160,7 +160,14 @@ describe("engraveToolpath", () => {
   it("runs through generateToolpath", () => {
     const operation = engraving([line]);
     expect(
-      generateToolpath({ operation, shapes: [line], model: null, stock: null, ...options }),
+      generateToolpath({
+        operation,
+        shapes: [line],
+        model: null,
+        stock: null,
+        stockBottom: null,
+        ...options,
+      }),
     ).toEqual(engrave([line]));
   });
 

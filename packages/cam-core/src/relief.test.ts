@@ -297,6 +297,18 @@ describe("reliefFinishSteps", () => {
     expect(Math.min(...zs)).toBeCloseTo(-9.5);
   });
 
+  it("cuts no deeper than the stock's bottom, and says so", () => {
+    const steps = reliefFinishSteps(finishing(endMill), STEP, stepMesh, {
+      ...options,
+      stockBottom: -6,
+    });
+    const toolpath = runSteps(steps);
+    const zs = feeds(toolpath).map(({ to }) => to[2]);
+    expect(Math.min(...zs)).toBeCloseTo(-6);
+    expect(Math.max(...zs)).toBeCloseTo(-4);
+    expect(toolpath.warnings).toEqual([expect.stringContaining("no deeper than the stock")]);
+  });
+
   it("spaces passes by the step-over and covers the outline", () => {
     const toolpath = finish(endMill, { stepOver: 50, direction: "one_way" });
     const ys = [...new Set(feeds(toolpath).map(({ to }) => to[1].toFixed(6)))].map(Number);
@@ -391,6 +403,7 @@ describe("generateToolpath", () => {
     shapes: [],
     model: STEP,
     stock: null,
+    stockBottom: null,
     ...options,
   };
 

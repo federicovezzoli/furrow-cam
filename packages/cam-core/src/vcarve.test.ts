@@ -298,6 +298,7 @@ describe("vcarveToolpath", () => {
         shapes: [bar],
         model: null,
         stock: null,
+        stockBottom: null,
         safeZ: 5,
         entryClearance: 1,
       }),

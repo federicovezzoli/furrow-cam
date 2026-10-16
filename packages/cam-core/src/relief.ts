@@ -484,6 +484,8 @@ export type ReliefFinishOptions = {
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
   entryClearance: number;
+  /** The stock's bottom, below which nothing is cut; `null` for no limit. */
+  stockBottom?: number | null;
   /** Model heightmaps kept between toolpaths. */
   cache?: ReliefCache;
 };
@@ -510,7 +512,7 @@ export function* reliefFinishSteps(
   operation: ReliefFinishOperation,
   model: Model,
   positions: Float32Array,
-  { safeZ, entryClearance, cache }: ReliefFinishOptions,
+  { safeZ, entryClearance, stockBottom = null, cache }: ReliefFinishOptions,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
   const warnings: string[] = [];
@@ -533,7 +535,7 @@ export function* reliefFinishSteps(
 
   const { columns, rows, cellWidth, cellHeight } = grid;
   const dropper = new ToolDropper(heights, grid, cutterProfile(tool));
-  const floor = grid.base + params.stockToLeave;
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   // Passes run along row centres, where the heights are exact: from the
   // first row to the last, evenly spread, no more rows apart than fit in the
   // step-over, so rounding never spreads them further.
@@ -606,6 +608,21 @@ export function* reliefFinishSteps(
   }
   builder.retract();
   return { moves: builder.moves, warnings };
+}
+
+/**
+ * The lowest a 3D operation cuts: the model's bottom plus the stock to leave,
+ * `lowest`, but no lower than the stock's bottom, saying so in `warnings`
+ * (ADR-0034): a model deeper than the stock is cut off there.
+ */
+export function reliefFloor(
+  lowest: number,
+  stockBottom: number | null,
+  warnings: string[],
+): number {
+  if (stockBottom === null || lowest >= stockBottom) return lowest;
+  warnings.push("The model reaches below the stock: it is cut no deeper than the stock's bottom.");
+  return stockBottom;
 }
 
 /** Says that `grid` has larger cells than the `wanted` size. */

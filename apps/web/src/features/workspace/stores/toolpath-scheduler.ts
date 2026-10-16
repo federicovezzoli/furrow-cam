@@ -223,6 +223,7 @@ function sameInput(a: ToolpathInput, b: ToolpathInput): boolean {
     a.model === b.model &&
     // A new rectangle every time, for the operations that have one.
     JSON.stringify(a.stock) === JSON.stringify(b.stock) &&
+    a.stockBottom === b.stockBottom &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     a.shapes.length === b.shapes.length &&

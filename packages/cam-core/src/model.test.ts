@@ -2,7 +2,6 @@ import type { ModelPlacement } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
-  depthForThickness,
   designAlignment,
   designBounds,
   fitScale,
@@ -105,41 +104,11 @@ describe("initialPlacement", () => {
     expect(initialPlacement(BOUNDS, stock, "bottom_left")).toEqual({
       rotation: [0, 0, 0],
       scale: 2.5,
-      depth: 18,
+      // 12 mm scaled by 2.5, deeper than the 18 mm stock: never squashed to fit.
+      depth: 30,
       position: [0, 0],
     });
     expect(initialPlacement(BOUNDS, stock, "center").position).toEqual([75, 0]);
-  });
-
-  it("keeps the depth the scale gives when the stock is thicker", () => {
-    expect(initialPlacement(BOUNDS, { ...stock, thickness: 50 }, "center").depth).toBe(30);
-  });
-});
-
-describe("depthForThickness", () => {
-  // The fixture is 12 mm high at scale 1; at scale 2.5, 30 mm.
-  const capped = placed({ scale: 2.5, depth: 18 });
-
-  it("follows a stock that capped it, up to the model's own height", () => {
-    expect(depthForThickness(capped, 18, 25)).toBe(25);
-    expect(depthForThickness(capped, 18, 50)).toBe(30);
-    expect(depthForThickness(capped, 18, 10)).toBe(10);
-  });
-
-  it("leaves a depth set below the stock, unless the stock gets thinner than it", () => {
-    const set = placed({ scale: 2.5, depth: 6 });
-    expect(depthForThickness(set, 18, 50)).toBe(6);
-    expect(depthForThickness(set, 18, 4)).toBe(4);
-    // At its own height already.
-    expect(depthForThickness(placed({ depth: 12 }), 12, 20)).toBe(12);
-  });
-
-  it("leaves a flat model alone", () => {
-    const flat = {
-      ...placed({ depth: 18 }),
-      bounds: { min: [0, 0, 0], max: [10, 10, 0] },
-    } as const;
-    expect(depthForThickness(flat as never, 18, 4)).toBe(18);
   });
 });
 
@@ -153,6 +122,14 @@ describe("replacePlacement", () => {
     const scaled = replacePlacement(m, { scale: 2 }, "bottom_left");
     expect(scaled.position).toEqual([50, 60]);
     expect(scaled.scale).toBe(2);
+  });
+
+  it("scales the depth with the outline, so the mesh keeps its proportions", () => {
+    // 12 mm high at scale 1, stored squashed to 6 mm.
+    const m = placed({ depth: 6 });
+    expect(replacePlacement(m, { scale: 2 }, "center").depth).toBe(24);
+    // Turned on its side, the 80 mm length is the height.
+    expect(replacePlacement(m, { rotation: [90, 0, 0] }, "center").depth).toBe(80);
   });
 });
 

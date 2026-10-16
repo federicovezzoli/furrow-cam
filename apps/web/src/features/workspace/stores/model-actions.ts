@@ -4,6 +4,7 @@ import {
   initialPlacement,
   modelRect,
   positionAt,
+  proportionalDepth,
   replacePlacement,
   translatePoint,
   turnModel,
@@ -120,7 +121,7 @@ export function turnModelAbout(store: DocumentStore, id: string, axis: 0 | 1 | 2
   });
 }
 
-/** Scales a model in X and Y, keeping its anchor point in place. Its depth stays. */
+/** Scales a model in all three directions, keeping its anchor point in place. */
 export function setModelScale(store: DocumentStore, id: string, scale: number) {
   const { stock } = store.getState().document;
   changeModel(store, "setModel.scale", id, (model, current) => {
@@ -139,15 +140,24 @@ export function fitModelToStock(store: DocumentStore, id: string) {
     assignPlacement(model, {
       ...current.placement,
       scale,
+      depth: proportionalDepth(current.bounds, rotation, scale) ?? current.placement.depth,
       position: positionAt(current.bounds, { rotation, scale }, anchor, point),
     });
   });
 }
 
-/** How far a model reaches into the stock from its top, in millimetres. */
+/**
+ * Scales a model so it reaches `depth` millimetres into the stock from its
+ * top, in all three directions: the mesh keeps its proportions (ADR-0034).
+ * A flat model has no depth to set.
+ */
 export function setModelDepth(store: DocumentStore, id: string, depth: number) {
-  changeModel(store, "setModel.depth", id, (model) => {
-    model.placement.depth = depth;
+  const { stock } = store.getState().document;
+  changeModel(store, "setModel.depth", id, (model, current) => {
+    const height = proportionalDepth(current.bounds, current.placement.rotation, 1);
+    if (height === null) return;
+    const scale = depth / height;
+    assignPlacement(model, replacePlacement(current, { scale }, modelAnchor(stock)));
   });
 }
 

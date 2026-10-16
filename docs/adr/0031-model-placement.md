@@ -1,6 +1,6 @@
 # ADR-0031: Models are placed by quarter turns, a scale and a depth, and aligned with the drawing
 
-- **Status:** Proposed; superseded in part by [ADR-0034](0034-model-depth-follows-stock.md) (capped depths follow the stock)
+- **Status:** Proposed; superseded in part by [ADR-0034](0034-model-keeps-proportions.md) (one scale for X, Y and Z; no cap on import)
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S2, S3), ADR-0014, ADR-0016, ADR-0022, ADR-0029, ADR-0030; issue #114

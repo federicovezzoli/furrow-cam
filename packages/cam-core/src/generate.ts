@@ -29,6 +29,8 @@ export type ToolpathInput = {
   model: Model | null;
   /** The stock seen from above, for 3D roughing up to its edges; `null` for the others. */
   stock: Rect | null;
+  /** The stock's bottom, below which 3D operations don't cut; `null` for the others. */
+  stockBottom: number | null;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -59,6 +61,7 @@ export function toolpathInputs(
     // Only this boundary depends on the stock, so resizing it recomputes nothing else.
     stock:
       operation.type === "relief_rough" && operation.params.boundary === "stock" ? stock : null,
+    stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
     safeZ,
     entryClearance,
   }));
@@ -92,6 +95,7 @@ export function toolpathKey({
   shapes,
   model,
   stock,
+  stockBottom,
   safeZ,
   entryClearance,
 }: ToolpathInput): string {
@@ -103,6 +107,7 @@ export function toolpathKey({
     shapes.map((shape) => shape.paths),
     model && [model.sha256, model.bounds, model.placement],
     stock,
+    stockBottom,
     safeZ,
     entryClearance,
   ]);
@@ -131,7 +136,7 @@ export class MissingMeshError extends Error {
  * progress and stop between steps (ADR-0004).
  */
 export function* toolpathSteps(
-  { operation, shapes, model, stock, ...options }: ToolpathInput,
+  { operation, shapes, model, stock, stockBottom, ...options }: ToolpathInput,
   { mesh, cache }: ToolpathContext = {},
 ): Generator<number, Toolpath> {
   switch (operation.type) {
@@ -149,13 +154,22 @@ export function* toolpathSteps(
       if (!model) return { moves: [], warnings: ["The model to machine is missing."] };
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
-      return yield* reliefFinishSteps(operation, model, positions, { ...options, cache });
+      return yield* reliefFinishSteps(operation, model, positions, {
+        ...options,
+        stockBottom,
+        cache,
+      });
     }
     case "relief_rough": {
       if (!model) return { moves: [], warnings: ["The model to machine is missing."] };
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
-      return yield* reliefRoughSteps(operation, model, positions, { ...options, stock, cache });
+      return yield* reliefRoughSteps(operation, model, positions, {
+        ...options,
+        stock,
+        stockBottom,
+        cache,
+      });
     }
   }
 }

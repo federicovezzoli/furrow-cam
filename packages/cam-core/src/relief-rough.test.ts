@@ -299,6 +299,14 @@ describe("reliefRoughSteps", () => {
     });
   });
 
+  it("cuts no deeper than the stock's bottom, and says so", () => {
+    const toolpath = rough(endMill, { stockToLeave: 0.5 }, { stockBottom: -6 });
+    expect(Math.min(...feedPoints(toolpath).map(([, , z]) => z))).toBeCloseTo(-6);
+    expect(toolpath.warnings).toEqual([expect.stringContaining("no deeper than the stock")]);
+    // A stock deep enough changes nothing.
+    expect(rough(endMill, {}, { stockBottom: -20 })).toEqual(rough(endMill));
+  });
+
   it("has nothing to rough when the stock to leave covers the model", () => {
     expect(rough(endMill, { stockToLeave: 10 })).toEqual({
       moves: [],
@@ -332,9 +340,17 @@ describe("generateToolpath", () => {
     expect(generateToolpath(input, { mesh: () => stepMesh })).toEqual(rough(endMill));
   });
 
+  it("stops at the stock's bottom", () => {
+    const doc = document();
+    const [input] = toolpathInputs({ ...doc, stock: { ...doc.stock, thickness: 6 } });
+    expect(input?.stockBottom).toBe(-6);
+    expect(toolpathInputs(fullDocument())[0]?.stockBottom).toBeNull();
+  });
+
   it("depends on the stock's size only for the stock boundary", () => {
     const doc = document();
     const resized = { ...doc, stock: { ...doc.stock, width: 500 } };
+    expect(doc.stock.thickness).toBeGreaterThan(10);
     const key = (d: typeof doc) => toolpathKey(toolpathInputs(d)[0] as never);
     expect(key(resized)).toBe(key(doc));
     const operations = [roughing(endMill, { boundary: "stock" })];

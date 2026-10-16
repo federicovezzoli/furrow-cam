@@ -12,6 +12,7 @@ import {
   modelHeightsSteps,
   type ReliefCache,
   reliefCellSize,
+  reliefFloor,
   reliefGrid,
 } from "./relief";
 import type { Toolpath } from "./toolpath";
@@ -28,6 +29,8 @@ export type ReliefRoughOptions = {
   entryClearance: number;
   /** The stock seen from above, for the `stock` boundary. */
   stock: Rect | null;
+  /** The stock's bottom, below which nothing is cut; `null` for no limit. */
+  stockBottom?: number | null;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
   /** Model heightmaps kept between toolpaths. */
@@ -46,7 +49,7 @@ const HEIGHTMAP_SHARE = 0.4;
  * to leave around it, and offset by the stock to leave in every direction,
  * as for finishing. Levels go down from the stock top in equal steps no
  * deeper than the tool's step-down, to the model's bottom plus the stock to
- * leave. At each level, the cells of the offset model above it are islands,
+ * leave, or the stock's bottom if that is higher. At each level, the cells of the offset model above it are islands,
  * and the boundary (the model's outline or the whole stock, which the tool's
  * centre reaches) less the islands is cleared like a pocket with the
  * operation's strategy and step-over (the tool's unless it sets its own),
@@ -58,7 +61,14 @@ export function* reliefRoughSteps(
   operation: ReliefRoughOperation,
   model: Model,
   positions: Float32Array,
-  { safeZ, entryClearance, stock, tolerance = DEFAULT_CHORD_TOLERANCE, cache }: ReliefRoughOptions,
+  {
+    safeZ,
+    entryClearance,
+    stock,
+    stockBottom = null,
+    tolerance = DEFAULT_CHORD_TOLERANCE,
+    cache,
+  }: ReliefRoughOptions,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
   const warnings: string[] = [];
@@ -70,7 +80,7 @@ export function* reliefRoughSteps(
     return { moves: [], warnings: ["The model has no area seen from above to machine."] };
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
-  const floor = grid.base + params.stockToLeave;
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   if (!(floor < 0)) {
     warnings.push("The stock to leave covers the whole model: there is nothing to rough out.");
     return { moves: [], warnings };
