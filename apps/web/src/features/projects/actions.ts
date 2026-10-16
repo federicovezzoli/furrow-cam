@@ -67,13 +67,15 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
  * the current schema version and validated, with a machine and the name to
  * give its project. A file's machine snapshot is kept; a file without one
  * gets the user's machine `machineId`, and `chooseMachine` comes back when it
- * is missing.
+ * is missing. Models are refused unless the file is a zip export, which
+ * carries their meshes (ADR-0029).
  */
 async function prepareImport(
   userId: string,
   contents: string,
   fileName: string,
   machineId: string | null,
+  { archive }: { archive: boolean },
 ): Promise<
   | { document: ProjectDocument; name: string; error?: never }
   | { error: string }
@@ -82,6 +84,10 @@ async function prepareImport(
   const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
+  // Checked before asking for a machine, which wouldn't help.
+  if (!archive && document.models.length > 0) {
+    return { error: "This project has 3D models: import its .zip export instead." };
+  }
   if (document.machine === null) {
     if (machineId === null) {
       // The machines the import dialog offers: rows that fail today's rules aren't.
@@ -107,13 +113,11 @@ export async function importProject(file: File, machineId: string | null): Promi
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
   if (!(file instanceof File)) return { error: "Pick a file to import." };
-  const prepared = await prepareImport(userId, await file.text(), file.name, machineId);
+  const prepared = await prepareImport(userId, await file.text(), file.name, machineId, {
+    archive: false,
+  });
   if (!("document" in prepared)) return prepared;
   const { document, name } = prepared;
-  // Their meshes aren't in a `.furrow.json` file, only in a zip export (ADR-0029).
-  if (document.models.length > 0) {
-    return { error: "This project has 3D models: import its .zip export instead." };
-  }
 
   const { id } = await db.project.create({
     data: { userId, name, ...documentColumns(document) },
@@ -129,16 +133,17 @@ export type ArchiveImportResult =
   | ImportResult;
 
 /**
- * Starts importing a `.furrow.zip` export (ADR-0029): `contents` is its
- * document, `meshes` the hashes and sizes of the mesh files the browser
- * found in it, and `fileName` the zip's name. The document is prepared as by
+ * Starts importing a `.furrow.zip` export (ADR-0029): `documentFile` is its
+ * document (a file, so it is sent as is rather than escaped into JSON),
+ * `meshes` the hashes and sizes of the mesh files the browser found in it,
+ * and `fileName` the zip's name. The document is prepared as by
  * `importProject`, and every model must have its mesh. The project is created
  * with an empty document; the browser then uploads the meshes and saves the
  * returned document with `saveProject`, or deletes the project if a step
  * fails.
  */
 export async function startArchiveImport(
-  contents: string,
+  documentFile: File,
   fileName: string,
   meshes: { sha256: string; size: number }[],
   machineId: string | null,
@@ -148,7 +153,14 @@ export async function startArchiveImport(
   if (!isStorageConfigured()) {
     return { error: "This project has 3D models, which this server can't store." };
   }
-  const prepared = await prepareImport(userId, String(contents), String(fileName), machineId);
+  if (!(documentFile instanceof File)) return { error: "Pick a file to import." };
+  const prepared = await prepareImport(
+    userId,
+    await documentFile.text(),
+    String(fileName),
+    machineId,
+    { archive: true },
+  );
   if (!("document" in prepared)) return prepared;
   const { document, name } = prepared;
   const sizes = new Map(

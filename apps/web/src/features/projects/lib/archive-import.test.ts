@@ -46,8 +46,10 @@ describe("importArchive", () => {
     expect(await importArchive(archive, "Relief.furrow.zip", null, LIMITS)).toEqual({
       projectId: PROJECT,
     });
+    const [file] = actions.startArchiveImport.mock.calls[0] as [File];
+    expect(await file.text()).toBe(archive.contents);
     expect(actions.startArchiveImport).toHaveBeenCalledWith(
-      archive.contents,
+      expect.any(File),
       "Relief.furrow.zip",
       [{ sha256: model.sha256, size: model.size }],
       null,

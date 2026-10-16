@@ -1,5 +1,6 @@
 import type { StlLimits } from "@furrow/cam-core";
 import {
+  ARCHIVE_DOCUMENT_PATH,
   type ProjectArchive,
   ProjectArchiveError,
   type ProjectDocument,
@@ -58,7 +59,8 @@ export async function importArchive(
   let started: Awaited<ReturnType<typeof startArchiveImport>>;
   try {
     started = await startArchiveImport(
-      archive.contents,
+      // Sent as a file: a string argument would be escaped into JSON, outgrowing the body limit.
+      new File([archive.contents], ARCHIVE_DOCUMENT_PATH, { type: "application/json" }),
       fileName,
       [...archive.meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
       machineId,
