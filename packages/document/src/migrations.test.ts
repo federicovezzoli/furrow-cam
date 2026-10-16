@@ -166,7 +166,7 @@ describe("migrations", () => {
     const doc = fullDocument();
     doc.models = [model];
     doc.operations.push(reliefFinish, reliefRough);
-    const v9 = structuredClone(doc) as unknown as {
+    const v9 = JSON.parse(JSON.stringify(doc)) as {
       schemaVersion: number;
       operations: { params: Record<string, unknown> }[];
     };
