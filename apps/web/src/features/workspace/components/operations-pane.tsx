@@ -31,6 +31,7 @@ import {
   addPocketOperation,
   addProfileOperation,
   addReliefFinishOperation,
+  addReliefRoughOperation,
   addVCarveOperation,
   deleteOperation,
   moveOperation,
@@ -45,6 +46,7 @@ import {
   drillToolChoice,
   engraveToolChoice,
   reliefFinishToolChoice,
+  reliefRoughToolChoice,
   useToolLibrary,
   vcarveToolChoice,
 } from "./tool-library";
@@ -136,47 +138,67 @@ export function OperationsPane() {
     },
   ];
 
-  const reliefTool = reliefFinishToolChoice(tools);
-  const reliefDisabledReason = !reliefTool
-    ? "Add a tool to your tool library first"
-    : !model
-      ? "Select a model in the viewport first"
-      : undefined;
-  const reliefButton = (
-    <Button
-      variant="outline"
-      disabled={reliefDisabledReason !== undefined}
-      onClick={() => {
-        if (!model || !reliefTool) return;
-        const id = addReliefFinishOperation(store, { modelId: model.id, tool: reliefTool.tool });
-        if (id) workspace.getState().selectOperation(id);
-      }}
-      aria-label="Add 3D finish"
-      title={
-        reliefDisabledReason === undefined
-          ? `Finish ${model?.fileName} with parallel passes, a ball end mill being the usual choice`
-          : undefined
-      }
-      className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
-    >
-      <OperationTypeIcon type="relief_finish" />
-      <span className="max-w-full truncate text-ui-label">3D finish</span>
-    </Button>
-  );
+  const modelKinds: {
+    type: Operation["type"];
+    label: string;
+    addOperation: typeof addReliefFinishOperation;
+    choice: typeof tool;
+    hint: string;
+  }[] = [
+    {
+      type: "relief_rough",
+      label: "3D rough",
+      addOperation: addReliefRoughOperation,
+      choice: reliefRoughToolChoice(tools),
+      hint: `Clear the material above ${model?.fileName} in levels, a flat end mill being the usual choice`,
+    },
+    {
+      type: "relief_finish",
+      label: "3D finish",
+      addOperation: addReliefFinishOperation,
+      choice: reliefFinishToolChoice(tools),
+      hint: `Finish ${model?.fileName} with parallel passes, a ball end mill being the usual choice`,
+    },
+  ];
 
   return (
     <div className="grid gap-2 p-3 text-ui">
       {models.length > 0 && (
         <div className="@container">
           <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
-            {reliefDisabledReason === undefined ? (
-              reliefButton
-            ) : (
-              // A disabled button gets no pointer events, so its wrapper shows why.
-              <span title={reliefDisabledReason} className="grid min-w-0">
-                {reliefButton}
-              </span>
-            )}
+            {modelKinds.map(({ type, label, addOperation, choice, hint }) => {
+              const disabledReason = !choice
+                ? "Add a tool to your tool library first"
+                : !model
+                  ? "Select a model in the viewport first"
+                  : undefined;
+              const button = (
+                <Button
+                  key={type}
+                  variant="outline"
+                  disabled={disabledReason !== undefined}
+                  onClick={() => {
+                    if (!model || !choice) return;
+                    const id = addOperation(store, { modelId: model.id, tool: choice.tool });
+                    if (id) workspace.getState().selectOperation(id);
+                  }}
+                  aria-label={`Add ${label}`}
+                  title={disabledReason === undefined ? hint : undefined}
+                  className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
+                >
+                  <OperationTypeIcon type={type} />
+                  <span className="max-w-full truncate text-ui-label">{label}</span>
+                </Button>
+              );
+              return disabledReason === undefined ? (
+                button
+              ) : (
+                // A disabled button gets no pointer events, so its wrapper shows why.
+                <span key={type} title={disabledReason} className="grid min-w-0">
+                  {button}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

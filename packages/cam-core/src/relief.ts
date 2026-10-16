@@ -60,21 +60,24 @@ export type ReliefGrid = HeightmapGrid & {
 /**
  * The grid of `model` for passes at `angle`, with square-ish cells of
  * `cellSize`, larger if the model would take more than `maxCells`, and at
- * least two each way. `null` for a model with no area seen from above.
+ * least two each way. It covers the model's outline grown by `margin` on
+ * every side. `null` for a model with no area seen from above.
  */
 export function reliefGrid(
   model: PlacedModel,
   angle: number,
   cellSize: number,
   maxCells = MAX_RELIEF_CELLS,
+  margin = 0,
 ): ReliefGrid | null {
   const { min, max } = placedModelBox(model);
   if (!(max[0] > min[0] && max[1] > min[1])) return null;
+  const [x0, y0, x1, y1] = [min[0] - margin, min[1] - margin, max[0] + margin, max[1] + margin];
   const corners: [number, number][] = [
-    toPassFrame(angle, [min[0], min[1]]),
-    toPassFrame(angle, [max[0], min[1]]),
-    toPassFrame(angle, [max[0], max[1]]),
-    toPassFrame(angle, [min[0], max[1]]),
+    toPassFrame(angle, [x0, y0]),
+    toPassFrame(angle, [x1, y0]),
+    toPassFrame(angle, [x1, y1]),
+    toPassFrame(angle, [x0, y1]),
   ];
   const us = corners.map(([u]) => u);
   const vs = corners.map(([, v]) => v);
@@ -115,13 +118,13 @@ function cosSin(angle: number): [number, number] {
 }
 
 /** A stock point in the passes' frame: turned by `-angle`. */
-function toPassFrame(angle: number, [x, y]: [number, number]): [number, number] {
+export function toPassFrame(angle: number, [x, y]: [number, number]): [number, number] {
   const [c, s] = cosSin(angle);
   return [c * x + s * y, -s * x + c * y];
 }
 
 /** A point of `grid` back in stock coordinates. */
-function toStock({ angle, origin }: ReliefGrid, u: number, v: number): [number, number] {
+export function toStock({ angle, origin }: ReliefGrid, u: number, v: number): [number, number] {
   const [c, s] = cosSin(angle);
   const pu = u + origin[0];
   const pv = v + origin[1];
@@ -382,7 +385,7 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
 }
 
 /** Where a pass at `v` crosses `outline`, as the range of `u` inside it, or `null`. */
-function outlineSpan(outline: [number, number][], v: number): [number, number] | null {
+export function outlineSpan(outline: [number, number][], v: number): [number, number] | null {
   let low = Infinity;
   let high = -Infinity;
   for (let i = 0; i < outline.length; i++) {
@@ -435,14 +438,14 @@ export function createReliefCache(capacity = 2): ReliefCache {
 /** Everything a model heightmap depends on: the mesh, its placement, the grid and the offset. */
 export function reliefCacheKey(
   { sha256, bounds, placement }: Pick<Model, "sha256" | "bounds" | "placement">,
-  { columns, rows, angle }: ReliefGrid,
+  { columns, rows, angle, origin }: ReliefGrid,
   offset: number,
 ): string {
-  return JSON.stringify([sha256, bounds, placement, angle, columns, rows, offset]);
+  return JSON.stringify([sha256, bounds, placement, angle, origin, columns, rows, offset]);
 }
 
 /** The model heightmap offset by `offset`, from `cache` or computed (and cached), reporting progress. */
-function* modelHeightsSteps(
+export function* modelHeightsSteps(
   model: Model,
   positions: Float32Array,
   grid: ReliefGrid,
@@ -481,6 +484,8 @@ export type ReliefFinishOptions = {
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
   entryClearance: number;
+  /** The stock's bottom, below which nothing is cut; `null` for no limit. */
+  stockBottom?: number | null;
   /** Model heightmaps kept between toolpaths. */
   cache?: ReliefCache;
 };
@@ -507,7 +512,7 @@ export function* reliefFinishSteps(
   operation: ReliefFinishOperation,
   model: Model,
   positions: Float32Array,
-  { safeZ, entryClearance, cache }: ReliefFinishOptions,
+  { safeZ, entryClearance, stockBottom = null, cache }: ReliefFinishOptions,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
   const warnings: string[] = [];
@@ -516,12 +521,7 @@ export function* reliefFinishSteps(
   if (!grid) {
     return { moves: [], warnings: ["The model has no area seen from above to machine."] };
   }
-  if (grid.coarsened) {
-    const size = Math.max(grid.cellWidth, grid.cellHeight);
-    warnings.push(
-      `The model is too large to machine at full resolution with this tool: it is cut with cells of ${size.toFixed(3)} mm instead of ${wanted.toFixed(3)} mm.`,
-    );
-  }
+  if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
   const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
@@ -535,7 +535,7 @@ export function* reliefFinishSteps(
 
   const { columns, rows, cellWidth, cellHeight } = grid;
   const dropper = new ToolDropper(heights, grid, cutterProfile(tool));
-  const floor = grid.base + params.stockToLeave;
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   // Passes run along row centres, where the heights are exact: from the
   // first row to the last, evenly spread, no more rows apart than fit in the
   // step-over, so rounding never spreads them further.
@@ -608,6 +608,27 @@ export function* reliefFinishSteps(
   }
   builder.retract();
   return { moves: builder.moves, warnings };
+}
+
+/**
+ * The lowest a 3D operation cuts: the model's bottom plus the stock to leave,
+ * `lowest`, but no lower than the stock's bottom, saying so in `warnings`
+ * (ADR-0034): a model deeper than the stock is cut off there.
+ */
+export function reliefFloor(
+  lowest: number,
+  stockBottom: number | null,
+  warnings: string[],
+): number {
+  if (stockBottom === null || lowest >= stockBottom) return lowest;
+  warnings.push("The model reaches below the stock: it is cut no deeper than the stock's bottom.");
+  return stockBottom;
+}
+
+/** Says that `grid` has larger cells than the `wanted` size. */
+export function coarsenedWarning(grid: ReliefGrid, wanted: number): string {
+  const size = Math.max(grid.cellWidth, grid.cellHeight);
+  return `The model is too large to machine at full resolution with this tool: it is cut with cells of ${size.toFixed(3)} mm instead of ${wanted.toFixed(3)} mm.`;
 }
 
 /** Runs `steps` to the end, ignoring the progress it reports. */

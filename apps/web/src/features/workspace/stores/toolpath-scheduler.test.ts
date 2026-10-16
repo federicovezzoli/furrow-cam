@@ -116,9 +116,32 @@ describe("scheduleToolpaths", () => {
     schedule.receive({ operationId: OPERATION_ID, inputHash: request.inputHash, ...preview });
     expect(toolpaths.getState().entries[OPERATION_ID]).toEqual({
       inputHash: request.inputHash,
+      previewKey: expect.any(String),
       status: "ready",
       ...preview,
     });
+  });
+
+  it("shows the last toolpath while a number changes, but not after another choice", () => {
+    const { documents, toolpaths, requests, schedule } = setup();
+    const answer = () => {
+      const request = requests.at(-1) as ToolpathRequest;
+      schedule.receive({ ...request, ...compute(request.input) });
+    };
+    const lines = () => {
+      const entry = toolpaths.getState().entries[OPERATION_ID];
+      return entry?.status === "error" ? undefined : entry?.lines;
+    };
+    answer();
+    deepen(documents, 6);
+    expect(lines()).toBeTruthy();
+    answer();
+    documents.getState().change("Side", (draft) => {
+      const operation = draft.operations[0];
+      if (operation?.type === "profile") operation.params.side = "inside";
+    });
+    expect(toolpaths.getState().entries[OPERATION_ID]?.status).toBe("computing");
+    expect(lines()).toBeFalsy();
   });
 
   it("recomputes only when what the toolpath depends on changes", () => {

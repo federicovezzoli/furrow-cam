@@ -47,3 +47,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
 | [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Proposed |
+| [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Proposed |
+| [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |

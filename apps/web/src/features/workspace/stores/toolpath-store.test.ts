@@ -45,6 +45,20 @@ describe("toolpath store", () => {
     expect(store.getState().entries.op).toEqual({ inputHash: "3", status: "computing" });
   });
 
+  it("keeps the last lines only for inputs with the same preview key", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1", "offset");
+    store.getState().setResult("op", "1", fresh);
+    store.getState().startComputing("op", "2", "offset");
+    expect(store.getState().entries.op).toMatchObject({ previewKey: "offset", lines });
+    store.getState().startComputing("op", "3", "linear");
+    expect(store.getState().entries.op).toEqual({
+      inputHash: "3",
+      previewKey: "linear",
+      status: "computing",
+    });
+  });
+
   it("keeps the last clearing lines while recomputing too", () => {
     const store = createToolpathStore();
     const clearing = { ...lines, feeds: new Float32Array([0, 0, -1, 2, 0, -1]) };

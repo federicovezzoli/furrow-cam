@@ -128,7 +128,10 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         {depth > 0 && placement.depth > stock.thickness && (
           <p role="status" className="flex gap-1.5 text-destructive">
             <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>The model reaches deeper than the stock is thick.</span>
+            <span>
+              The model reaches deeper than the stock is thick: it is cut no deeper than the stock's
+              bottom.
+            </span>
           </p>
         )}
         <div className="flex justify-end">

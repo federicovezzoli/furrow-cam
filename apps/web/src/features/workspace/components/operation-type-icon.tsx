@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * Top view of each operation: the shape it cuts drawn faint, the toolpath drawn solid.
  * Profile loops around the shape, pocket clears inside it, drill plunges on its centre,
  * engrave traces the line itself, V-carve runs down the middle of the shape into its corners,
- * 3D finishing zig-zags over the model.
+ * 3D finishing zig-zags over the model, 3D roughing steps down around it in levels.
  */
 const PATHS: Record<Operation["type"], ReactNode> = {
   profile: (
@@ -45,6 +45,12 @@ const PATHS: Record<Operation["type"], ReactNode> = {
     <>
       <circle cx="12" cy="12" r="7" opacity="0.45" />
       <path d="M4 5h16v4.67H4v4.66h16V19H4" />
+    </>
+  ),
+  relief_rough: (
+    <>
+      <circle cx="12" cy="12" r="7" opacity="0.45" />
+      <path d="M3 20h4v-5h3v-5h4v5h3v5h4" />
     </>
   ),
 };

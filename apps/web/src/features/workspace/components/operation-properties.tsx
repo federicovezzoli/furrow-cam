@@ -25,6 +25,8 @@ import {
   type ProfileTabs,
   RasterDirection,
   type ReliefFinishOperation,
+  type ReliefRoughOperation,
+  RoughingBoundary,
   type Tool,
   type VCarveOperation,
 } from "@furrow/document";
@@ -57,6 +59,7 @@ import {
   updatePocketParams,
   updateProfileParams,
   updateReliefFinishParams,
+  updateReliefRoughParams,
   updateVCarveParams,
 } from "@/features/workspace/stores/operation-actions";
 import { EditBitButton } from "./edit-bit-dialog";
@@ -107,6 +110,20 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
   outside: "Outer wall",
 };
 
+const BOUNDARY_LABELS: Record<RoughingBoundary, string> = {
+  model: "Model",
+  stock: "Whole stock",
+};
+
+/** What each strategy does at each level of 3D roughing: linear clearing has no laps there. */
+const ROUGHING_STRATEGY_HINTS: Record<PocketStrategy["type"], string> = {
+  ...STRATEGY_HINTS,
+  linear: "Straight zig-zag passes at an angle, rising over the model where it is higher",
+};
+
+/** Where peeling may start in 3D roughing: its islands change from level to level. */
+const ROUGHING_PEEL_STARTS = PeelStart.options.filter((start) => start !== "inside");
+
 /** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
 
@@ -142,7 +159,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
         />
       </Row>
       <ToolPicker operation={operation} />
-      {operation.type === "relief_finish" ? (
+      {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
         <TargetsField operationId={operation.id} targets={operation.targets} />
@@ -152,6 +169,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "drill" && <DrillFields operation={operation} />}
       {operation.type === "engrave" && <EngraveFields operation={operation} />}
       {operation.type === "vcarve" && <VCarveFields operation={operation} />}
+      {operation.type === "relief_rough" && <ReliefRoughFields operation={operation} />}
       {operation.type === "relief_finish" && <ReliefFinishFields operation={operation} />}
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
@@ -913,6 +931,185 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
 type PlacementMode = "count" | "spacing";
 
 /** Tab size, auto placement and the switch into editing them in the viewport. */
+function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const { params, tool } = operation;
+  const { strategy } = params;
+  const { errors, update } = useParamsUpdate(params, (changes) =>
+    updateReliefRoughParams(store, operation.id, changes),
+  );
+  const stepDown = `${formatQuantity(tool.stepDown, "length", units)} ${unitLabel("length", units)}`;
+
+  return (
+    <section aria-labelledby="relief-rough-heading" className="grid gap-2">
+      <h4 id="relief-rough-heading" className="font-medium">
+        3D rough
+      </h4>
+      <p className="text-muted-foreground">
+        Clears the material above the model in levels, from the top only, leaving the stock to leave
+        for finishing.
+      </p>
+      <Row id="relief-rough-strategy" label="Strategy">
+        <NativeSelect
+          id="relief-rough-strategy"
+          size="sm"
+          value={strategy.type}
+          onChange={(event) => {
+            const type = event.target.value as PocketStrategy["type"];
+            if (type !== strategy.type) update("strategy", { strategy: DEFAULT_STRATEGIES[type] });
+          }}
+          className={SELECT_CLASS}
+        >
+          {Object.entries(STRATEGY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      {strategy.type === "linear" && (
+        <Row id="relief-rough-angle" label="Angle">
+          <NativeSelect
+            id="relief-rough-angle"
+            size="sm"
+            value={strategy.angle}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "linear", angle: LinearAngle.parse(Number(event.target.value)) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {LINEAR_ANGLES.map((angle) => (
+              <NativeSelectOption key={angle} value={angle}>
+                {`${angle < 0 ? "−" : ""}${Math.abs(angle)}°`}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      {strategy.type === "peel" && (
+        <Row id="relief-rough-peel-start" label="Start from">
+          <NativeSelect
+            id="relief-rough-peel-start"
+            size="sm"
+            value={strategy.start}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "peel", start: PeelStart.parse(event.target.value) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {ROUGHING_PEEL_STARTS.map((start) => (
+              <NativeSelectOption key={start} value={start}>
+                {PEEL_START_LABELS[start]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      <p className="text-muted-foreground">
+        {ROUGHING_STRATEGY_HINTS[strategy.type]}, in levels no more than the tool's step-down (
+        {stepDown}) apart.
+      </p>
+      <NumberField
+        id="relief-rough-step-over"
+        label="Step-over"
+        layout="inline"
+        suffix="%"
+        min={1}
+        max={100}
+        value={params.stepOver ?? tool.stepOver}
+        onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        error={errors.stepOver}
+        {...gestureHandlers(store)}
+      />
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <p className="flex-1">
+          {params.stepOver === null
+            ? "The tool's step-over. Changing it here leaves the tool alone."
+            : `For this operation only; the tool's is ${tool.stepOver}%.`}
+        </p>
+        {params.stepOver !== null && (
+          <Button
+            variant="outline"
+            size="compact"
+            onClick={() => update("stepOver", { stepOver: null })}
+          >
+            Use the tool's
+          </Button>
+        )}
+      </div>
+      {strategy.type !== "linear" && (
+        <Row id="relief-rough-direction" label="Direction">
+          <NativeSelect
+            id="relief-rough-direction"
+            size="sm"
+            value={params.direction}
+            onChange={(event) =>
+              update("direction", { direction: MillingDirection.parse(event.target.value) })
+            }
+            className={SELECT_CLASS}
+          >
+            {MillingDirection.options.map((option) => (
+              <NativeSelectOption key={option} value={option}>
+                {DIRECTION_LABELS[option]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      <NumberField
+        id="relief-rough-stock-to-leave"
+        label="Stock to leave"
+        layout="inline"
+        quantity="length"
+        units={units}
+        min={0}
+        value={params.stockToLeave}
+        onValueChange={(stockToLeave) => update("stockToLeave", { stockToLeave })}
+        error={errors.stockToLeave}
+        {...gestureHandlers(store)}
+      />
+      <Row id="relief-rough-boundary" label="Clear">
+        <NativeSelect
+          id="relief-rough-boundary"
+          size="sm"
+          value={params.boundary}
+          onChange={(event) =>
+            update("boundary", { boundary: RoughingBoundary.parse(event.target.value) })
+          }
+          className={SELECT_CLASS}
+        >
+          {RoughingBoundary.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {BOUNDARY_LABELS[option]}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      <p className="text-muted-foreground">
+        {params.boundary === "model"
+          ? "The tool's centre reaches the edges of the model's outline."
+          : "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom."}
+      </p>
+      <RampCheckbox
+        id="relief-rough-ramp"
+        tool={tool}
+        checked={params.ramp}
+        onChange={(ramp) => update("ramp", { ramp })}
+      />
+      {(errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp) && (
+        <p role="alert" className="text-destructive">
+          {errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp}
+        </p>
+      )}
+    </section>
+  );
+}
+
 /** Steps the passes' angle by 15°. 180° is 0° again, so the field stops short of it. */
 const ANGLE_STEP = 15;
 

@@ -159,9 +159,16 @@ describe("engraveToolpath", () => {
 
   it("runs through generateToolpath", () => {
     const operation = engraving([line]);
-    expect(generateToolpath({ operation, shapes: [line], model: null, ...options })).toEqual(
-      engrave([line]),
-    );
+    expect(
+      generateToolpath({
+        operation,
+        shapes: [line],
+        model: null,
+        stock: null,
+        stockBottom: null,
+        ...options,
+      }),
+    ).toEqual(engrave([line]));
   });
 
   it("warns when a V-bit goes deeper than its cone", () => {

@@ -6,6 +6,7 @@ import {
   endMill,
   fullDocument,
   reliefFinish,
+  reliefRough,
   SQUARE_ID,
   square,
   vBit,
@@ -24,6 +25,8 @@ import {
   ProfileParams,
   ReliefFinishOperation,
   ReliefFinishParams,
+  ReliefRoughOperation,
+  ReliefRoughParams,
   VCarveOperation,
   VCarveParams,
 } from "./operation";
@@ -325,6 +328,52 @@ describe("ReliefFinishOperation", () => {
 
   it("names the model it machines", () => {
     expect(operationModelId(reliefFinish)).toBe(reliefFinish.params.modelId);
+    expect(operationModelId(reliefRough)).toBe(reliefRough.params.modelId);
     expect(operationModelId(fullDocument().operations[0] as Operation)).toBeNull();
+  });
+});
+
+describe("ReliefRoughOperation", () => {
+  it("accepts the fixture with every strategy and boundary", () => {
+    expect(Operation.parse(reliefRough)).toEqual(reliefRough);
+    const { params } = reliefRough;
+    for (const changes of [
+      { strategy: { type: "linear", angle: 45 } },
+      { strategy: { type: "peel", start: "centre" } },
+      { strategy: { type: "peel", start: "outside" } },
+      { boundary: "stock" },
+      { stepOver: 25 },
+      { direction: "conventional", ramp: false, stockToLeave: 0 },
+    ]) {
+      expect(ReliefRoughParams.safeParse({ ...params, ...changes }).success).toBe(true);
+    }
+  });
+
+  it("rejects out-of-range params", () => {
+    const { params } = reliefRough;
+    for (const changes of [
+      { stockToLeave: -0.1 },
+      { stepOver: 0 },
+      { stepOver: 101 },
+      { boundary: "drawing" },
+      { strategy: { type: "linear", angle: 30 } },
+      { modelId: "emblem" },
+    ]) {
+      expect(ReliefRoughParams.safeParse({ ...params, ...changes }).success).toBe(false);
+    }
+  });
+
+  it("doesn't peel from an island, which changes from level to level", () => {
+    const strategy = { type: "peel", start: "inside" };
+    expect(ReliefRoughParams.safeParse({ ...reliefRough.params, strategy }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["strategy", "start"] }),
+    ]);
+  });
+
+  it("machines a model, not shapes", () => {
+    const targets = [{ shapeId: SQUARE_ID, paths: null }];
+    expect(ReliefRoughOperation.safeParse({ ...reliefRough, targets }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["targets"] }),
+    ]);
   });
 });

@@ -38,7 +38,8 @@ describe("addModel", () => {
     expect(get().placement).toEqual({
       rotation: [0, 0, 0],
       scale: 5,
-      depth: 18,
+      // The mesh's 12 mm, scaled like its outline, deeper than the stock.
+      depth: 60,
       position: [50, 0],
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
@@ -75,14 +76,16 @@ describe("placement edits", () => {
     expect(store.getState().past).toHaveLength(2);
   });
 
-  it("scales in X and Y only, and stretches the depth on its own", () => {
+  it("scales in all three directions, so the mesh is never stretched", () => {
     const { store, id, get } = storeWithModel();
     setModelScale(store, id, 2);
+    expect(get().placement).toMatchObject({ scale: 2, depth: 24, position: [0, 0] });
     setModelDepth(store, id, 6);
-    expect(get().placement).toMatchObject({ scale: 2, depth: 6, position: [0, 0] });
+    expect(get().placement).toMatchObject({ scale: 0.5, depth: 6, position: [0, 0] });
     // Unchanged values add no undo step.
     const steps = store.getState().past.length;
-    setModelScale(store, id, 2);
+    setModelScale(store, id, 0.5);
+    setModelDepth(store, id, 6);
     expect(store.getState().past).toHaveLength(steps);
   });
 
@@ -92,7 +95,7 @@ describe("placement edits", () => {
     turnModelAbout(store, id, 2);
     fitModelToStock(store, id);
     // 80 × 100 into 600 × 400: 4 times.
-    expect(get().placement).toMatchObject({ scale: 4, position: [0, 0] });
+    expect(get().placement).toMatchObject({ scale: 4, depth: 48, position: [0, 0] });
   });
 
   it("moves the model's anchor point to a distance from the zero", () => {

@@ -12,10 +12,11 @@ import { roundCoordinate } from "./import-common";
 import { anchorPoint, type Box3, rectAlignment, type Vec3 } from "./stock";
 
 /**
- * Placing imported 3D models on the stock (PRD-0005 S2, ADR-0031). A model's
- * mesh is rotated in quarter turns, scaled the same in X and Y, stretched in
- * Z to its depth, and moved so its top is at the stock top and its bounding
- * box's bottom-left corner at its position, all in stock coordinates.
+ * Placing imported 3D models on the stock (PRD-0005 S2, ADR-0031, ADR-0034).
+ * A model's mesh is rotated in quarter turns, scaled the same in X and Y, its
+ * Z scaled to its depth (in proportion, as edits keep it), and moved so its
+ * top is at the stock top and its bounding box's bottom-left corner at its
+ * position, all in stock coordinates.
  */
 
 /** A model's mesh bounds and placement: all its placement depends on. */
@@ -106,6 +107,16 @@ export function rotatedSize(bounds: Box3, rotation: Rotation): Vec3 {
 /** How much the Z of the rotated mesh is stretched to reach `depth`; flat meshes aren't. */
 function depthScale(height: number, depth: number) {
   return height > 0 ? depth / height : 1;
+}
+
+/**
+ * The depth that keeps a mesh with `bounds`, turned by `rotation` and scaled
+ * by `scale`, in proportion: its height scaled like its outline. `null` for
+ * a flat mesh, which has no depth to keep.
+ */
+export function proportionalDepth(bounds: Box3, rotation: Rotation, scale: number): number | null {
+  const height = rotatedSize(bounds, rotation)[2];
+  return height > 0 ? height * scale : null;
 }
 
 /** Where a placed model sits in the stock. A flat model sits on the stock top, with no depth. */
@@ -205,7 +216,7 @@ export function positionAt(
 /**
  * The placement of a newly imported mesh: unrotated, scaled to fit the stock
  * and aligned to it at `anchor` (ADR-0031), its depth what that scale gives
- * it but no deeper than the stock.
+ * it, even deeper than the stock: a mesh is never stretched (ADR-0034).
  */
 export function initialPlacement(
   bounds: Box3,
@@ -214,8 +225,7 @@ export function initialPlacement(
 ): ModelPlacement {
   const rotation: Rotation = [0, 0, 0];
   const scale = fitScale(bounds, rotation, stock);
-  const height = rotatedSize(bounds, rotation)[2];
-  const depth = height > 0 ? Math.min(height * scale, stock.thickness) : stock.thickness;
+  const depth = proportionalDepth(bounds, rotation, scale) ?? stock.thickness;
   const point = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
   return {
     rotation,
@@ -235,6 +245,8 @@ export function replacePlacement(
   anchor: StockAnchor,
 ): ModelPlacement {
   const next = { ...model.placement, ...changes };
+  // The depth follows, so the mesh keeps its proportions (ADR-0034).
+  next.depth = proportionalDepth(model.bounds, next.rotation, next.scale) ?? next.depth;
   const point = anchorPoint(modelRect(model), anchor);
   return { ...next, position: positionAt(model.bounds, next, anchor, point) };
 }
