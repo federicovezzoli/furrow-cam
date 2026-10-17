@@ -1,6 +1,6 @@
 # ADR-0033: Relief roughing clears simplified level outlines with the pocket strategies
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0038](0038-roughing-margin-and-model-border.md) (a margin boundary)
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S5, S6), PRD-0001 (R20), ADR-0007, ADR-0030, ADR-0032; issue #116
