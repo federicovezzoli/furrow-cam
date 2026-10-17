@@ -7,7 +7,7 @@ import type {
   ReliefFinishOperation,
   ReliefRoughOperation,
   Tool,
-  TouchOff,
+  TouchOffDisc,
 } from "@furrow/document";
 import {
   ballEndMill,
@@ -47,9 +47,9 @@ const stepMesh = new Float32Array([
 ]);
 
 /** In the stock's corner, clear of the model. */
-const CORNER: TouchOff = { x: 7.5, y: 7.5, diameter: 15 };
+const CORNER: TouchOffDisc = { x: 7.5, y: 7.5, diameter: 15 };
 /** On the model's floor, past the wall. */
-const ON_MODEL: TouchOff = { x: 31, y: 20, diameter: 5 };
+const ON_MODEL: TouchOffDisc = { x: 31, y: 20, diameter: 5 };
 
 let next = 0;
 function id() {
@@ -83,7 +83,7 @@ function finishing(
   };
 }
 
-function project(operations: Operation[], touchOff: TouchOff | null): ProjectDocument {
+function project(operations: Operation[], touchOff: TouchOffDisc | null): ProjectDocument {
   const doc = fullDocument();
   return {
     ...doc,
@@ -93,7 +93,7 @@ function project(operations: Operation[], touchOff: TouchOff | null): ProjectDoc
       thickness: 18,
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
-      touchOff,
+      touchOff: touchOff && { ...touchOff, toolChange: null },
     },
     models: [STEP],
     operations,
@@ -122,7 +122,7 @@ function simulate(doc: ProjectDocument) {
  * `float32` rounding. Tools may graze the pad's side, so cells within
  * 0.01 mm of its edge don't count.
  */
-function expectPadUncut(at: (x: number, y: number) => number, { x, y, diameter }: TouchOff) {
+function expectPadUncut(at: (x: number, y: number) => number, { x, y, diameter }: TouchOffDisc) {
   const r = diameter / 2 - 0.01;
   let lowest = 0;
   for (let column = 0; column < 600; column++) {
@@ -226,13 +226,13 @@ describe("2D operations and the touch-off pad", () => {
     const profile = doc.operations[0] as Operation;
     const clear = toolpathInputs({
       ...doc,
-      stock: { ...stock, touchOff: { x: -500, y: -500, diameter: 15 } },
+      stock: { ...stock, touchOff: { x: -500, y: -500, diameter: 15, toolChange: null } },
     });
     expect(generateToolpath(clear[0] as never).warnings).not.toContain(TOUCH_OFF_WARNING);
     // A pad over the profile's start.
     const first = generateToolpath(clear[0] as never).moves.find(({ to }) => to[2] < 0)?.to;
     if (!first) throw new Error("no cut");
-    const over = { x: first[0], y: first[1], diameter: 15 };
+    const over = { x: first[0], y: first[1], diameter: 15, toolChange: null };
     const [input] = toolpathInputs({ ...doc, stock: { ...stock, touchOff: over } }, [profile]);
     const toolpath = generateToolpath(input as never);
     expect(toolpath.warnings).toContain(TOUCH_OFF_WARNING);
