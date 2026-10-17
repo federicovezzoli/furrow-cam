@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronDownIcon, ChevronLeftIcon, CircleAlertIcon, CircleHelpIcon } from "lucide-react";
+import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import type * as React from "react";
 import { useRef, useState } from "react";
 import {
@@ -11,19 +10,12 @@ import {
   useGroupRef,
   usePanelRef,
 } from "react-resizable-panels";
-import { FormError } from "@/components/form-error";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import type { MeshLimits } from "@/features/assets/server";
-import type { MachineChoice } from "@/features/machines/server";
 import { Tour, useTour } from "@/features/onboarding/components/tour";
 import type { TourPane } from "@/features/onboarding/lib/tour";
 import { ExportButton } from "@/features/projects/components/export-button";
-import type { getProject, ProjectRow } from "@/features/projects/server";
-import type { ToolChoice } from "@/features/tools/server";
-import { useAutosave } from "@/features/workspace/hooks/use-autosave";
-import { useToolpaths } from "@/features/workspace/hooks/use-toolpaths";
+import { useSaveStatus } from "@/features/workspace/hooks/use-autosave";
 import { useUndoShortcuts } from "@/features/workspace/hooks/use-undo-shortcuts";
 import {
   savedLayout,
@@ -35,18 +27,16 @@ import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
-  WorkspaceStoresProvider,
 } from "@/features/workspace/providers/workspace-stores";
-import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { cn } from "@/lib/utils";
 import { GcodeExportButton } from "./gcode-export-button";
 import { GeometryImport } from "./geometry-import";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
-import { SaveStatus } from "./save-status";
+import { useOpenProject } from "./project-shell";
 import { StockProperties } from "./stock-properties";
-import { ToolLibraryProvider } from "./tool-library";
+import { TopBar } from "./top-bar";
 import { VersionsPane } from "./versions-pane";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
@@ -62,84 +52,22 @@ const Viewport = dynamic(
   },
 );
 
-type WorkspaceProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
-
 /**
  * The CAM workspace (ADR-0009): a top bar over two resizable columns,
  * operations over the project's properties and its versions (ADR-0028) on
  * the left and the viewport on the right, with the selected operation's properties floating over it.
  * Panes collapse to their headers, each on its own; panel sizes are
- * remembered in a cookie (`layout` is what it held).
- * `tools` is the user's tool library, offered for operations, and
- * `machines` their machine profiles, offered for the project. `meshLimits`
- * are the STL files the server stores, `null` when STL import is off.
- * `tourDone` says the account `userId` finished the workspace tour
- * (PRD-0001 R22), which otherwise starts when the workspace opens.
+ * remembered in a cookie (`layout` is what it held). The project and its
+ * stores come from `ProjectShell`, so they outlive this page.
  */
-export function WorkspaceShell({
-  project,
-  tools,
-  machines,
-  meshLimits,
-  layout,
-  userId,
-  tourDone,
-}: {
-  project: WorkspaceProject;
-  tools: ToolChoice[];
-  machines: MachineChoice[];
-  meshLimits: MeshLimits | null;
-  layout: WorkspaceLayout;
-  userId: string;
-  tourDone: boolean;
-}) {
-  if (project.error !== undefined) {
-    return (
-      <>
-        <TopBar project={project} />
-        {/* Retrying can't fix a document this release can't read, so don't fall into error.tsx. */}
-        <main className="mx-auto w-full max-w-2xl p-8">
-          <FormError message={project.error} />
-        </main>
-      </>
-    );
-  }
-  return (
-    <WorkspaceStoresProvider key={project.id} project={project} meshLimits={meshLimits}>
-      <ToolLibraryProvider tools={tools}>
-        <Workspace
-          project={project}
-          machines={machines}
-          layout={layout}
-          userId={userId}
-          tourDone={tourDone}
-        />
-      </ToolLibraryProvider>
-    </WorkspaceStoresProvider>
-  );
-}
-
-/** The workspace of a project that opened; its document lives in the stores (ADR-0010). */
-function Workspace({
-  project,
-  machines,
-  layout,
-  userId,
-  tourDone,
-}: {
-  project: ProjectRow;
-  machines: MachineChoice[];
-  layout: WorkspaceLayout;
-  userId: string;
-  tourDone: boolean;
-}) {
-  const saveStatus = useAutosave();
+export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
+  const { project, machines, userId, tourDone } = useOpenProject();
+  const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   const hasEnabledOperations = useDocumentStore((s) =>
     s.document.operations.some((operation) => operation.enabled),
   );
   useUndoShortcuts();
-  useToolpaths();
   const tour = useTour("workspace", { userId, done: tourDone, autoStart: true });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
@@ -339,59 +267,6 @@ function SelectedOperation() {
         modelId !== null && <ModelProperties key={modelId} modelId={modelId} />
       )}
     </aside>
-  );
-}
-
-/**
- * `saveStatus`, `machineName` and `onTakeTour` are left out when the project
- * couldn't be opened. `machineName` is `null` for a project without a
- * machine; `onTakeTour` replays the workspace tour.
- */
-function TopBar({
-  project,
-  saveStatus,
-  machineName,
-  onTakeTour,
-}: {
-  project: ProjectRow;
-  saveStatus?: AutosaveStatus;
-  machineName?: string | null;
-  onTakeTour?: (from: HTMLElement) => void;
-}) {
-  return (
-    <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
-      <Button variant="ghost" size="icon-compact" asChild>
-        <Link href="/projects" aria-label="All projects" title="All projects">
-          <ChevronLeftIcon />
-        </Link>
-      </Button>
-      <h1 className="min-w-0 truncate text-sm font-semibold" title={project.name}>
-        {project.name}
-      </h1>
-      {machineName !== undefined && (
-        <span
-          className="min-w-0 truncate text-ui text-muted-foreground"
-          title={machineName ?? undefined}
-        >
-          {machineName ?? "No machine set"}
-        </span>
-      )}
-      {saveStatus && <SaveStatus status={saveStatus} />}
-      <div className="ml-auto flex items-center gap-1">
-        {onTakeTour && (
-          <Button
-            variant="ghost"
-            size="icon-compact"
-            onClick={(event) => onTakeTour(event.currentTarget)}
-            aria-label="Take the tour"
-            title="Take the tour"
-          >
-            <CircleHelpIcon />
-          </Button>
-        )}
-        <ThemeToggle size="icon-compact" />
-      </div>
-    </header>
   );
 }
 
