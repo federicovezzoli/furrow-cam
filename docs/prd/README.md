@@ -20,3 +20,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0003](0003-freemium-limits.md) | Freemium usage limits | Draft |
 | [0004](0004-machine-presets.md) | Machine presets | Draft |
 | [0005](0005-stl-relief-machining.md) | STL relief machining | Draft |
+| [0006](0006-gcode-simulation.md) | G-code simulation | Draft |
