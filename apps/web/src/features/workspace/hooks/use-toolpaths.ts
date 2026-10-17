@@ -9,7 +9,7 @@ import {
 } from "@/features/workspace/providers/workspace-stores";
 import type {
   ToolpathMessage,
-  ToolpathResponse,
+  ToolpathWorkerResponse,
 } from "@/features/workspace/stores/toolpath-scheduler";
 import { scheduleToolpaths } from "@/features/workspace/stores/toolpath-scheduler";
 import { lazyWorker } from "@/lib/lazy-worker";
@@ -17,7 +17,7 @@ import { lazyWorker } from "@/lib/lazy-worker";
 /**
  * Computes the toolpaths of the open project's enabled operations in a Web
  * Worker (ADR-0004) while mounted, keeping the toolpath store up to date and
- * its controls (cancel, retry) working.
+ * its controls (cancel, retry, G-code export) working.
  */
 export function useToolpaths() {
   const documents = useDocumentStoreApi();
@@ -26,7 +26,7 @@ export function useToolpaths() {
 
   useEffect(() => {
     let stopped = false;
-    const worker = lazyWorker<ToolpathMessage, ToolpathResponse>(
+    const worker = lazyWorker<ToolpathMessage, ToolpathWorkerResponse>(
       () =>
         new Worker(new URL("../workers/toolpath.worker.ts", import.meta.url), { type: "module" }),
       {
@@ -49,7 +49,11 @@ export function useToolpaths() {
       },
       (sha256) => loadMesh(projectId, sha256),
     );
-    toolpaths.getState().setControls({ cancel: schedule.cancel, retry: schedule.retry });
+    toolpaths.getState().setControls({
+      cancel: schedule.cancel,
+      retry: schedule.retry,
+      exportGcode: schedule.exportGcode,
+    });
     return () => {
       stopped = true;
       toolpaths.getState().setControls(null);

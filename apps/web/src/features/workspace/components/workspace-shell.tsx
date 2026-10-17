@@ -253,7 +253,6 @@ function Workspace({
                   <div data-tour="export-gcode">
                     <GcodeExportButton
                       name={project.name}
-                      getDocument={getDocument}
                       disabledReason={
                         machineName === null
                           ? "Choose a machine in the project properties first"

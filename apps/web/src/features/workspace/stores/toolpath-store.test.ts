@@ -111,12 +111,22 @@ describe("toolpath store", () => {
     });
   });
 
-  it("has controls that do nothing until the scheduler sets them", () => {
+  it("has controls that do nothing until the scheduler sets them", async () => {
     const store = createToolpathStore();
     const cancelled: string[] = [];
     store.getState().controls.cancel("op");
-    store.getState().setControls({ cancel: (id) => cancelled.push(id), retry() {} });
+    await expect(store.getState().controls.exportGcode("Plate")).resolves.toEqual({
+      error: "Toolpaths aren't being computed.",
+    });
+    store.getState().setControls({
+      cancel: (id) => cancelled.push(id),
+      retry() {},
+      exportGcode: async () => ({ gcode: "G0", warnings: [], fileName: "plate.gcode" }),
+    });
     store.getState().controls.cancel("op");
+    await expect(store.getState().controls.exportGcode("Plate")).resolves.toMatchObject({
+      gcode: "G0",
+    });
     store.getState().setControls(null);
     store.getState().controls.cancel("op");
     expect(cancelled).toEqual(["op"]);
