@@ -95,6 +95,22 @@ describe("workspace store", () => {
     expect(store.getState().simulating).toBe(false);
   });
 
+  it("plays back only while simulating", () => {
+    const store = createWorkspaceStore();
+    store.getState().setPickingZero(true);
+    store.getState().setPlayback(true);
+    expect(store.getState()).toMatchObject({
+      playback: true,
+      simulating: true,
+      pickingZero: false,
+    });
+    store.getState().setSimulating(false);
+    expect(store.getState().playback).toBe(false);
+    store.getState().setPlayback(true);
+    store.getState().setEditingTabs(true);
+    expect(store.getState()).toMatchObject({ playback: false, simulating: false });
+  });
+
   it("starts in the top view and switches to the orbit view", () => {
     const store = createWorkspaceStore();
     expect(store.getState().view).toBe("top");

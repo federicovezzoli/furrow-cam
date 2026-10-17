@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { BufferAttribute, BufferGeometry, type LineDashedMaterial, Vector3 } from "three";
 import { pixelsPerMillimetre } from "@/features/workspace/lib/viewport-scene";
 
@@ -46,12 +46,36 @@ type LinesProps = {
   colors?: Float32Array;
   renderOrder: number;
   opacity?: number;
+  /** Draws only segments `[first, end)`, e.g. those a playback has cut (#100). */
+  segments?: [number, number];
+  /** Drawn over everything, even where the stock hides them. */
+  overlay?: boolean;
 };
 
-export function Lines({ positions, color, colors, renderOrder, opacity = 1 }: LinesProps) {
+/** Limits `geometry` to the line segments `[first, end)`, or all of them without `segments`. */
+function useSegmentRange(geometry: BufferGeometry, segments: [number, number] | undefined) {
+  const invalidate = useThree((s) => s.invalidate);
+  const [first, end] = segments ?? [0, Infinity];
+  useLayoutEffect(() => {
+    geometry.setDrawRange(first * 2, end === Infinity ? Infinity : (end - first) * 2);
+    invalidate();
+  }, [geometry, first, end, invalidate]);
+  return end > first;
+}
+
+export function Lines({
+  positions,
+  color,
+  colors,
+  renderOrder,
+  opacity = 1,
+  segments,
+  overlay = false,
+}: LinesProps) {
   const shaded = colors !== undefined && colors.length > 0;
   const geometry = useLineGeometry(positions, undefined, shaded ? colors : undefined);
-  if (positions.length === 0) return null;
+  const any = useSegmentRange(geometry, segments);
+  if (positions.length === 0 || !any) return null;
   return (
     <lineSegments geometry={geometry} renderOrder={renderOrder}>
       {/* Keyed: three.js compiles a material with or without vertex colours. */}
@@ -61,6 +85,7 @@ export function Lines({ positions, color, colors, renderOrder, opacity = 1 }: Li
         vertexColors={shaded}
         transparent
         opacity={opacity}
+        depthTest={!overlay}
       />
     </lineSegments>
   );
@@ -85,8 +110,11 @@ export function DashedLines({
   color,
   renderOrder,
   opacity = 1,
+  segments,
+  overlay = false,
 }: LinesProps & { distances: Float32Array }) {
   const geometry = useLineGeometry(positions, distances);
+  const any = useSegmentRange(geometry, segments);
   const material = useRef<LineDashedMaterial>(null);
   // The material scales line distances (mm) into its dash units: pixels at the
   // camera's current zoom, or at its target's distance in the perspective view.
@@ -96,10 +124,17 @@ export function DashedLines({
     const distance = camera.position.distanceTo(target);
     material.current.scale = pixelsPerMillimetre(camera, size.height, distance);
   });
-  if (positions.length === 0) return null;
+  if (positions.length === 0 || !any) return null;
   return (
     <lineSegments geometry={geometry} renderOrder={renderOrder}>
-      <lineDashedMaterial ref={material} color={color} transparent opacity={opacity} {...DASH} />
+      <lineDashedMaterial
+        ref={material}
+        color={color}
+        transparent
+        opacity={opacity}
+        depthTest={!overlay}
+        {...DASH}
+      />
     </lineSegments>
   );
 }
