@@ -163,10 +163,9 @@ describe("measured", () => {
     }
   });
 
-  // A known bug: with ramping on, a profile goes back down after a tab along
-  // the whole next segment of the contour instead of at the plunge angle,
-  // leaving a wedge of stock behind each tab (#153). Drop `.fails` once it is fixed.
-  it.fails("cuts the SVG part free all along its long edges but at the tabs", () => {
+  // After a tab the tool drops straight back down, even when ramping (#153),
+  // so nothing is left behind the tabs.
+  it("cuts the SVG part free all along its long edges but at the tabs", () => {
     const { above } = program("svg-part");
     for (const y of [-(30 + 3.175), 30 + 3.175]) {
       expect(above([-45, y], [-(4 + 3.175 + 1), y], 0)).toEqual([]);
@@ -300,8 +299,7 @@ describe("measured against Estlcam", () => {
     expect(deepest(feeds("Cut out"))).toBe(-40);
   });
 
-  // The same wedge behind the shelf's 10 mm tabs, 102 to 162 mm long (#153).
-  it.fails("cuts the PC shelf free along its sides but at the tabs", () => {
+  it("cuts the PC shelf free along its sides but at the tabs", () => {
     const { above } = program("pc-shelf");
     for (const x of [-133, 133]) {
       expect(above([x, -170], [x, -(5 + 3 + 1)], -40)).toEqual([]);

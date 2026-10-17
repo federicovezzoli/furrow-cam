@@ -467,8 +467,10 @@ function enter(cut: Cut, point: Point) {
 /**
  * Feeds `run` millimetres along `track` from `at`, at height `z(travelled)`,
  * staying at or above the tab top over `tabs`: straight up at a tab's start,
- * then past its end straight down, or ramping down at the plunge angle when
- * ramping is on. Moves that go down are at the plunge rate.
+ * then past its end straight back down at the plunge rate, even with ramping
+ * on (#153). A ramp at the plunge angle would leave a wedge of stock as long
+ * as the ramp behind each tab, 57 mm from a 3 mm tab at 3°, where the part
+ * should be cut free; ramping is for entering the cut.
  */
 function feedTrack(
   cut: Cut,
@@ -485,10 +487,7 @@ function feedTrack(
     // Contours have a point at each end of a tab, so no step crosses one.
     const middle = (at + (previousTravelled + travelled) / 2) % track.length;
     const lifted = tabTop !== null && inSpans(tabs, middle);
-    const height = (t: number) =>
-      lifted && tabTop !== null
-        ? Math.max(z(t), tabTop)
-        : Math.max(z(t), rampDownFrom(cut, tabs, at + t, track.length));
+    const height = (t: number) => (lifted && tabTop !== null ? Math.max(z(t), tabTop) : z(t));
     const from = height(previousTravelled);
     const current = builder.position?.[2];
     if (current !== undefined && Math.abs(current - from) > 1e-9) {
@@ -502,24 +501,6 @@ function feedTrack(
     previous = point;
     previousTravelled = travelled;
   }
-}
-
-/**
- * How high the tool still is `at` millimetres along a contour of `length`
- * while ramping down after the tabs: the tab top less the descent since the
- * end of the last tab, or `-Infinity` when not ramping.
- */
-function rampDownFrom(cut: Cut, tabs: Span[], at: number, length: number): number {
-  const { tabTop, rampRun } = cut;
-  if (tabTop === null || rampRun === null) return -Infinity;
-  let height = -Infinity;
-  for (const [, end] of tabs) {
-    let past = (((at - end) % length) + length) % length;
-    // Right on the tab's end, give or take rounding.
-    if (past > length - 1e-6) past = 0;
-    height = Math.max(height, tabTop - past / rampRun);
-  }
-  return height;
 }
 
 /**
