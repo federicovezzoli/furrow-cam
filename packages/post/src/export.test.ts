@@ -114,22 +114,21 @@ function referenceProject(): ProjectDocument {
 }
 
 describe("exportGcode", () => {
-  it("posts the reference project for a Shapeoko", async () => {
+  // Whole programs are checked in by the corpus (e2e/corpus.test.ts).
+  it("posts the enabled operations, in a file named after the project", () => {
     const { gcode, warnings, fileName } = exportGcode(referenceProject(), "Plate");
     expect(fileName).toBe("Plate.gcode");
     expect(warnings).toEqual([]);
+    expect(gcode).toContain("(Operation: Cut out)");
     expect(gcode).not.toContain("Disabled");
-    await expect(gcode).toMatchFileSnapshot("__snapshots__/plate-shapeoko.gcode");
   });
 
-  it("posts the reference project for a LowRider, zeroed at the centre of the bed", async () => {
+  it("writes no spindle speeds for a manual spindle", () => {
     const doc = referenceProject();
     doc.machine = lowRider;
-    doc.stock.xyOrigin = { anchor: "center" };
-    doc.stock.zOrigin = "machine_bed";
     const { gcode } = exportGcode(doc, "Plate");
+    expect(gcode).toContain("M3\n");
     expect(gcode).not.toMatch(/ S\d/);
-    await expect(gcode).toMatchFileSnapshot("__snapshots__/plate-lowrider.gcode");
   });
 
   it("cuts a V-carve's flat bottom with its end mill first", () => {
