@@ -33,20 +33,20 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | S1 | Import STL files, binary and ASCII, into a project. Files above **50 MB** or **2,000,000 triangles** are refused with a clear message; the operator can change both limits | Must |
-| S2 | Place the model on the stock: rotate it in 90° steps about each axis, scale it uniformly or fit it to the stock, and set its depth into the stock (its top at the stock top). It is positioned relative to the zero point (ADR-0016) like the 2D drawing | Must |
+| S2 | Place the model on the stock: rotate it in 90° steps about each axis, scale it uniformly or fit it inside the stock less a border, and set its depth into the stock (its top at the stock top). It is positioned relative to the zero point (ADR-0016) like the 2D drawing | Must |
 | S3 | The model is machined from the top only. The UI says that undercuts and overhangs are filled in, and shows the model as it will be cut | Must |
 | S4 | **3D finishing:** parallel (raster) passes over the model with angle, stepover, cut direction (one-way or zig-zag) and stock to leave. Works with every tool shape; ball end mills are the usual choice | Must |
-| S5 | **3D roughing:** clears the material above the model in Z levels with the existing pocket clearing (PRD-0001 R20), leaving a set amount of stock for finishing | Must |
+| S5 | **3D roughing:** clears the material above the model in Z levels with the existing pocket clearing (PRD-0001 R20), leaving a set amount of stock for finishing. It clears the model's outline, the outline and a margin around it (leaving the stock top beyond it uncut, to zero Z on after a tool change), or the whole stock | Must |
 | S6 | Toolpaths, the simulation (PRD-0001 R10) and G-code export work for 3D operations as for 2D ones, and a project can mix both | Must |
 | S7 | Meshes are stored with the project, kept by its saved versions, and deleted with it. A project with meshes exports as one `.zip` file (document and meshes) and imports back from it; projects without meshes still export as `.furrow.json` | Must |
 | S8 | **Rest machining:** an operation can start from the stock left by the operations before it, so a smaller tool only cuts where material remains | Should |
 | S9 | Corner clean-up of the model's concave edges with a small tool | Could |
-| S10 | Other finishing patterns: waterline (constant Z) and spiral | Could |
+| S10 | Other finishing patterns: waterline (constant Z) and spiral | Should |
 | S11 | Rest machining for 2D pockets, reusing S8 | Could |
 
 ## User flow
 
-1. In a project, the user imports `emblem.stl`. It appears on the stock, scaled to fit, its top at the stock top.
+1. In a project, the user imports `emblem.stl`. It appears on the stock, scaled to fit inside a 10 mm border, its top at the stock top.
 2. They rotate it so the right face is up, set its width to 200 mm and its depth to 12 mm, and move the zero point.
 3. They add a 3D roughing operation with a 6 mm flat end mill, leaving 0.5 mm of stock, then a 3D finishing operation with a 3 mm ball end mill at a 10% stepover.
 4. They check the toolpaths and the simulation, then export the G-code.
@@ -63,3 +63,5 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 ## Changelog
 
 - 2026-10-15: initial draft (#101)
+- 2026-10-17: S2 fits models inside a border, S5 clears a margin around the model (#146, ADR-0038)
+- 2026-10-17: S10 (waterline and spiral finishing) moves up to Should and is built (#130, ADR-0039)

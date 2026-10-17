@@ -19,9 +19,9 @@ import {
   createCache,
   type ReliefCache,
   type RestOptions,
-  reliefFinishSteps,
   runSteps,
 } from "./relief/finish";
+import { reliefFinishSteps } from "./relief/finishing";
 import { reliefRoughSteps } from "./relief/rough";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 import { vcarveToolpath } from "./vcarve";
@@ -92,7 +92,7 @@ export function toolpathInputs(
       model: models.get(operationModelId(operation) ?? "") ?? null,
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
-        rest || (operation.type === "relief_rough" && operation.params.boundary === "stock")
+        rest || (operation.type === "relief_rough" && operation.params.boundary.type !== "model")
           ? stock
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,

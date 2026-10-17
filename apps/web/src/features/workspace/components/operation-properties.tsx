@@ -13,6 +13,7 @@ import {
   canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
+  type FinishingStrategy,
   LinearAngle,
   MillingDirection,
   Operation,
@@ -26,7 +27,9 @@ import {
   RasterDirection,
   type ReliefFinishOperation,
   type ReliefRoughOperation,
-  RoughingBoundary,
+  type RoughingBoundary,
+  type RoughingBoundaryType,
+  SpiralStart,
   type Tool,
   type VCarveOperation,
 } from "@furrow/document";
@@ -111,9 +114,25 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
   outside: "Outer wall",
 };
 
-const BOUNDARY_LABELS: Record<RoughingBoundary, string> = {
+const BOUNDARY_LABELS: Record<RoughingBoundaryType, string> = {
   model: "Model",
+  margin: "Model and margin",
   stock: "Whole stock",
+};
+
+/** What picking each boundary sets: a margin starts at 5 mm, inside a fitted model's border. */
+const DEFAULT_BOUNDARIES: Record<RoughingBoundaryType, RoughingBoundary> = {
+  model: { type: "model" },
+  margin: { type: "margin", distance: 5 },
+  stock: { type: "stock" },
+};
+
+const BOUNDARY_HINTS: Record<RoughingBoundaryType, string> = {
+  model: "The tool's centre reaches the edges of the model's outline.",
+  margin:
+    "Clears a frame this wide around the model's outline (at least the tool's radius), keeping the tool inside it: the stock top beyond is left for zeroing Z after a tool change.",
+  stock:
+    "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom.",
 };
 
 /** What each strategy does at each level of 3D roughing: linear clearing has no laps there. */
@@ -1102,24 +1121,39 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         <NativeSelect
           id="relief-rough-boundary"
           size="sm"
-          value={params.boundary}
-          onChange={(event) =>
-            update("boundary", { boundary: RoughingBoundary.parse(event.target.value) })
-          }
+          value={params.boundary.type}
+          onChange={(event) => {
+            const type = event.target.value as RoughingBoundaryType;
+            if (type !== params.boundary.type) {
+              update("boundary", { boundary: DEFAULT_BOUNDARIES[type] });
+            }
+          }}
           className={SELECT_CLASS}
         >
-          {RoughingBoundary.options.map((option) => (
-            <NativeSelectOption key={option} value={option}>
-              {BOUNDARY_LABELS[option]}
+          {Object.entries(BOUNDARY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">
-        {params.boundary === "model"
-          ? "The tool's centre reaches the edges of the model's outline."
-          : "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom."}
-      </p>
+      {params.boundary.type === "margin" && (
+        <NumberField
+          id="relief-rough-margin"
+          label="Margin"
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={params.boundary.distance}
+          onValueChange={(distance) =>
+            update("boundary", { boundary: { type: "margin", distance } })
+          }
+          error={errors.boundary}
+          {...gestureHandlers(store)}
+        />
+      )}
+      <p className="text-muted-foreground">{BOUNDARY_HINTS[params.boundary.type]}</p>
       <RampCheckbox
         id="relief-rough-ramp"
         tool={tool}
@@ -1131,9 +1165,9 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         checked={params.rest}
         onChange={(rest) => update("rest", { rest })}
       />
-      {(errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest) && (
+      {(errors.strategy ?? errors.direction ?? errors.ramp ?? errors.rest) && (
         <p role="alert" className="text-destructive">
-          {errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest}
+          {errors.strategy ?? errors.direction ?? errors.ramp ?? errors.rest}
         </p>
       )}
     </section>
@@ -1161,6 +1195,32 @@ function RestCheckbox({
   );
 }
 
+const FINISHING_STRATEGY_LABELS: Record<FinishingStrategy["type"], string> = {
+  parallel: "Parallel",
+  waterline: "Waterline",
+  spiral: "Spiral",
+};
+
+const FINISHING_STRATEGY_HINTS: Record<FinishingStrategy["type"], string> = {
+  parallel:
+    "Straight passes at an angle. Best on gentle slopes; steep faces along the passes come out rough.",
+  waterline:
+    "Contours at constant height, a step-down apart, so steep faces get as many passes as flat ones get few. Flat areas between contours aren't cut.",
+  spiral: "One continuous cut spiralling over the model's outline, with no retracts.",
+};
+
+/** What picking each finishing strategy sets: contours start 0.5 mm apart, spirals at the outline. */
+const DEFAULT_FINISHING_STRATEGIES: Record<FinishingStrategy["type"], FinishingStrategy> = {
+  parallel: { type: "parallel", angle: 0, direction: "zigzag" },
+  waterline: { type: "waterline", stepDown: 0.5 },
+  spiral: { type: "spiral", start: "outside" },
+};
+
+const SPIRAL_START_LABELS: Record<SpiralStart, string> = {
+  outside: "Outline",
+  centre: "Centre",
+};
+
 /** Steps the passes' angle by 15°. 180° is 0° again, so the field stops short of it. */
 const ANGLE_STEP = 15;
 
@@ -1171,6 +1231,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateReliefFinishParams(store, operation.id, changes),
   );
+  const { strategy } = params;
   const gestures = gestureHandlers(store);
   const spacing = (tool.diameter * params.stepOver) / 100;
 
@@ -1180,60 +1241,130 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         3D finish
       </h4>
       <p className="text-muted-foreground">
-        Parallel passes over the model, the tool dropped onto it at every point, from the top only.
-        A ball end mill leaves the smoothest surface.
+        Passes over the model, the tool dropped onto it at every point, from the top only. A ball
+        end mill leaves the smoothest surface.
       </p>
-      <NumberField
-        id="relief-angle"
-        label="Angle"
-        layout="inline"
-        suffix="°"
-        min={0}
-        max={179.9}
-        step={ANGLE_STEP}
-        value={params.angle}
-        onValueChange={(angle) => update("angle", { angle })}
-        error={errors.angle}
-        {...gestures}
-      />
-      <NumberField
-        id="relief-step-over"
-        label="Step-over"
-        layout="inline"
-        suffix="%"
-        min={1}
-        max={100}
-        value={params.stepOver}
-        onValueChange={(stepOver) => update("stepOver", { stepOver })}
-        error={errors.stepOver}
-        {...gestures}
-      />
-      <p className="text-muted-foreground">
-        Of the tool's diameter: passes {formatQuantity(spacing, "length", units)}{" "}
-        {unitLabel("length", units)} apart at most.
-      </p>
-      <Row id="relief-direction" label="Direction">
+      <Row id="relief-strategy" label="Strategy">
         <NativeSelect
-          id="relief-direction"
+          id="relief-strategy"
           size="sm"
-          value={params.direction}
-          onChange={(event) =>
-            update("direction", { direction: RasterDirection.parse(event.target.value) })
-          }
+          value={strategy.type}
+          onChange={(event) => {
+            const type = event.target.value as FinishingStrategy["type"];
+            if (type !== strategy.type) {
+              update("strategy", { strategy: DEFAULT_FINISHING_STRATEGIES[type] });
+            }
+          }}
           className={SELECT_CLASS}
         >
-          {RasterDirection.options.map((option) => (
-            <NativeSelectOption key={option} value={option}>
-              {RASTER_DIRECTION_LABELS[option]}
+          {Object.entries(FINISHING_STRATEGY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">
-        {params.direction === "zigzag"
-          ? "Every other pass comes back, linked along the model."
-          : "Every pass cuts the same way, retracting in between."}
-      </p>
+      <p className="text-muted-foreground">{FINISHING_STRATEGY_HINTS[strategy.type]}</p>
+      {strategy.type === "parallel" && (
+        <NumberField
+          id="relief-angle"
+          label="Angle"
+          layout="inline"
+          suffix="°"
+          min={0}
+          max={179.9}
+          step={ANGLE_STEP}
+          value={strategy.angle}
+          onValueChange={(angle) => update("strategy", { strategy: { ...strategy, angle } })}
+          error={errors.strategy}
+          {...gestures}
+        />
+      )}
+      {strategy.type === "waterline" && (
+        <NumberField
+          id="relief-step-down"
+          label="Step-down"
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={strategy.stepDown}
+          onValueChange={(stepDown) =>
+            update("strategy", { strategy: { type: "waterline", stepDown } })
+          }
+          error={errors.strategy}
+          {...gestures}
+        />
+      )}
+      {strategy.type === "spiral" && (
+        <Row id="relief-spiral-start" label="Start from">
+          <NativeSelect
+            id="relief-spiral-start"
+            size="sm"
+            value={strategy.start}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "spiral", start: SpiralStart.parse(event.target.value) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {SpiralStart.options.map((start) => (
+              <NativeSelectOption key={start} value={start}>
+                {SPIRAL_START_LABELS[start]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      {strategy.type !== "waterline" && (
+        <>
+          <NumberField
+            id="relief-step-over"
+            label="Step-over"
+            layout="inline"
+            suffix="%"
+            min={1}
+            max={100}
+            value={params.stepOver}
+            onValueChange={(stepOver) => update("stepOver", { stepOver })}
+            error={errors.stepOver}
+            {...gestures}
+          />
+          <p className="text-muted-foreground">
+            Of the tool's diameter: {strategy.type === "spiral" ? "laps" : "passes"}{" "}
+            {formatQuantity(spacing, "length", units)} {unitLabel("length", units)} apart at most.
+          </p>
+        </>
+      )}
+      {strategy.type === "parallel" && (
+        <>
+          <Row id="relief-direction" label="Direction">
+            <NativeSelect
+              id="relief-direction"
+              size="sm"
+              value={strategy.direction}
+              onChange={(event) =>
+                update("strategy", {
+                  strategy: { ...strategy, direction: RasterDirection.parse(event.target.value) },
+                })
+              }
+              className={SELECT_CLASS}
+            >
+              {RasterDirection.options.map((option) => (
+                <NativeSelectOption key={option} value={option}>
+                  {RASTER_DIRECTION_LABELS[option]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Row>
+          <p className="text-muted-foreground">
+            {strategy.direction === "zigzag"
+              ? "Every other pass comes back, linked along the model."
+              : "Every pass cuts the same way, retracting in between."}
+          </p>
+        </>
+      )}
       <NumberField
         id="relief-stock-to-leave"
         label="Stock to leave"
@@ -1251,9 +1382,9 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         checked={params.rest}
         onChange={(rest) => update("rest", { rest })}
       />
-      {(errors.direction ?? errors.rest) && (
+      {errors.rest && (
         <p role="alert" className="text-destructive">
-          {errors.direction ?? errors.rest}
+          {errors.rest}
         </p>
       )}
     </section>

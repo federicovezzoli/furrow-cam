@@ -73,6 +73,40 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #146: 3D roughing boundaries become objects, to hold a margin's distance.
+  10: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          operation.type === "relief_rough" &&
+          isObject(operation.params) &&
+          typeof operation.params.boundary === "string"
+        ) {
+          operation.params.boundary = { type: operation.params.boundary };
+        }
+      }
+    }
+    return doc;
+  },
+  // #130: 3D finishing chooses a strategy. Existing operations keep their
+  // parallel passes.
+  11: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          operation.type === "relief_finish" &&
+          isObject(operation.params) &&
+          !("strategy" in operation.params)
+        ) {
+          const { angle, direction, ...params } = operation.params;
+          operation.params = { ...params, strategy: { type: "parallel", angle, direction } };
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

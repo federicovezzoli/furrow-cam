@@ -1,4 +1,4 @@
-import type { Model, ReliefFinishOperation, Tool } from "@furrow/document";
+import type { FinishingStrategy, Model, ReliefFinishOperation, Tool } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { modelTransform, type PlacedModel, placedModelBox } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
@@ -368,6 +368,20 @@ function slidingMaximum(
 }
 
 /**
+ * `profile` reaching `by` further out, flat over its first `by`: dropped at
+ * two points `by` apart, it keeps the straight move between them clear of
+ * everything the true profile would touch along the way.
+ */
+export function widened(profile: CutterProfile, by: number): CutterProfile {
+  return {
+    radius: profile.radius + by,
+    flat: profile.flat,
+    height: (distance) => profile.height(Math.max(0, distance - by)),
+    reach: (depth) => profile.reach(depth) + by,
+  };
+}
+
+/**
  * Of heights sampled at equal steps along a line, the indices to keep so the
  * straight moves between them never go below a sample and pass no more than
  * `tolerance` above any: each move runs as far as one slope fits every
@@ -727,6 +741,14 @@ export class RestDropper {
   }
 
   /**
+   * Whether the tool at `[x, y]` (in grid coordinates), its tip at `z`, meets
+   * more than `REST_MATERIAL` of the stock left.
+   */
+  remaining(x: number, y: number, z: number): boolean {
+    return this.dropper.dropPoint(x, y, z + REST_MATERIAL) > z + REST_MATERIAL;
+  }
+
+  /**
    * Raises `out[i]` to the tip height on the stock at the centre of column
    * `first + i` of the operation's grid, on the line `y`, for columns
    * `first` to `last`.
@@ -753,49 +775,50 @@ export type ReliefFinishOptions = {
 };
 
 /** Share of the progress the model heightmap takes; the passes take the rest. */
-const HEIGHTMAP_SHARE = 0.4;
+export const FINISH_SETUP_SHARE = 0.4;
 
-/** Of `HEIGHTMAP_SHARE`, what the rest stock takes, for rest operations. */
+/** Of `FINISH_SETUP_SHARE`, what the rest stock takes, for rest operations. */
 const REST_SHARE = 0.25;
 
+/** Said when a model has nothing to machine. */
+export const NO_AREA_WARNING = "The model has no area seen from above to machine.";
+
 /**
- * The toolpath of a 3D finishing operation (PRD-0005 S4, ADR-0030), in stock
- * coordinates, yielding the fraction done as it goes so a worker can report
- * progress and stop between steps.
- *
- * Passes at the operation's angle and step-over cover the model's outline
- * with the tool's centre, from edge to edge. Along each pass the tool is
- * dropped onto the model, offset by the stock to leave, at every cell, and
- * the points are merged into straight moves within `RELIEF_TOLERANCE`.
- * One-way passes all cut in the same direction, retracting between them;
- * zig-zag passes alternate, linked by a move that follows the model.
- * Each pass starts with a rapid down to the entry clearance above the stock
- * top and a plunge at the tool's plunge rate, which is safe whether or not
- * the model was roughed out; the passes themselves cut at its feed rate.
- *
- * With `rest` (S8), the tool is also dropped onto the stock the earlier
- * operations left, and a pass only cuts where that is more than
- * `REST_MATERIAL` above it, and more than half of `REST_MIN_WIDTH` inside
- * the tool's reach. Across the gaps the tool rapids at the entry
- * clearance above what is left; it enters at that clearance too, and
- * links zig-zag passes only when they are close.
+ * What every 3D finishing strategy starts from (ADR-0030): the model offset
+ * by the stock to leave on a grid laid out along `angle`, the tool to drop
+ * onto it, the lowest it may go, and for rest machining the stock left.
  */
-export function* reliefFinishSteps(
+export type FinishSetup = {
+  grid: ReliefGrid;
+  heights: Float32Array;
+  profile: CutterProfile;
+  dropper: ToolDropper;
+  /** The model's bottom plus the stock to leave, or the stock's bottom if higher. */
+  floor: number;
+  restDropper: RestDropper | null;
+  warnings: string[];
+};
+
+/**
+ * The `FinishSetup` of a 3D finishing operation, its grid along `angle`,
+ * yielding the fraction done up to `FINISH_SETUP_SHARE`. `null` for a model
+ * with no area seen from above.
+ */
+export function* finishSetupSteps(
   operation: ReliefFinishOperation,
   model: Model,
   positions: Float32Array,
-  { safeZ, entryClearance, stockBottom = null, cache, rest = null }: ReliefFinishOptions,
-): Generator<number, Toolpath> {
+  angle: number,
+  { stockBottom = null, cache, rest = null }: ReliefFinishOptions,
+): Generator<number, FinishSetup | null> {
   const { tool, params } = operation;
   const warnings: string[] = [];
   const wanted = reliefCellSize(tool);
-  const grid = reliefGrid(model, params.angle, wanted);
-  if (!grid) {
-    return { moves: [], warnings: ["The model has no area seen from above to machine."] };
-  }
+  const grid = reliefGrid(model, angle, wanted);
+  if (!grid) return null;
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
-  const modelShare = rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE;
+  const modelShare = rest ? FINISH_SETUP_SHARE - REST_SHARE : FINISH_SETUP_SHARE;
   const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
   for (let step = heightsSteps.next(); ; step = heightsSteps.next()) {
@@ -806,17 +829,57 @@ export function* reliefFinishSteps(
     yield modelShare * step.value;
   }
 
-  const { columns, rows, cellWidth, cellHeight } = grid;
   const profile = cutterProfile(tool);
-  const dropper = new ToolDropper(heights, grid, profile);
   const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   const restDropper = rest
     ? new RestDropper(
-        yield* restStockSteps(grid, rest, stockBottom ?? grid.base, modelShare, HEIGHTMAP_SHARE),
+        yield* restStockSteps(grid, rest, stockBottom ?? grid.base, modelShare, FINISH_SETUP_SHARE),
         grid,
         profile,
       )
     : null;
+  return {
+    grid,
+    heights,
+    profile,
+    dropper: new ToolDropper(heights, grid, profile),
+    floor,
+    restDropper,
+    warnings,
+  };
+}
+
+/**
+ * Parallel finishing passes (PRD-0005 S4, ADR-0030, ADR-0032) over `setup`,
+ * whose grid is laid out along the strategy's angle, in stock coordinates,
+ * yielding the fraction done from `FINISH_SETUP_SHARE` on.
+ *
+ * Passes at the strategy's angle and the operation's step-over cover the
+ * model's outline with the tool's centre, from edge to edge. Along each pass
+ * the tool is dropped onto the model, offset by the stock to leave, at every
+ * cell, and the points are merged into straight moves within
+ * `RELIEF_TOLERANCE`. One-way passes all cut in the same direction,
+ * retracting between them; zig-zag passes alternate, linked by a move that
+ * follows the model. Each pass starts with a rapid down to the entry
+ * clearance above the stock top and a plunge at the tool's plunge rate,
+ * which is safe whether or not the model was roughed out; the passes
+ * themselves cut at its feed rate.
+ *
+ * With rest machining (S8), the tool is also dropped onto the stock the
+ * earlier operations left, and a pass only cuts where that is more than
+ * `REST_MATERIAL` above it, and more than half of `REST_MIN_WIDTH` inside
+ * the tool's reach. Across the gaps the tool rapids at the entry
+ * clearance above what is left; it enters at that clearance too, and
+ * links zig-zag passes only when they are close.
+ */
+export function* parallelPassesSteps(
+  operation: ReliefFinishOperation,
+  { grid, dropper, floor, restDropper, warnings }: FinishSetup,
+  strategy: Extract<FinishingStrategy, { type: "parallel" }>,
+  { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
+): Generator<number, Toolpath> {
+  const { tool, params } = operation;
+  const { columns, rows, cellWidth, cellHeight } = grid;
   // Passes run along row centres, where the heights are exact: from the
   // first row to the last, evenly spread, no more rows apart than fit in the
   // step-over, so rounding never spreads them further.
@@ -830,7 +893,7 @@ export function* reliefFinishSteps(
   const gap = Math.ceil(tool.diameter / cellWidth);
   const maxLink = 2 * tool.diameter;
   const builder = new ToolpathBuilder(safeZ, entryClearance);
-  const zigzag = params.direction === "zigzag";
+  const zigzag = strategy.direction === "zigzag";
   let previous: { u: number; v: number; z: number } | null = null;
   let reversed = false;
 
@@ -938,7 +1001,7 @@ export function* reliefFinishSteps(
       }
       if (zigzag) reversed = !reversed;
     }
-    yield HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (line + 1)) / count;
+    yield FINISH_SETUP_SHARE + ((1 - FINISH_SETUP_SHARE) * (line + 1)) / count;
   }
   builder.retract();
   return { moves: builder.moves, warnings };
