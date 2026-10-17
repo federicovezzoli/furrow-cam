@@ -1,6 +1,6 @@
 import type { Stock, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { activeTouchOff, defaultTouchOff, touchOffOutsideStock } from "./touch-off";
+import { activeTouchOff, clampTouchOff, defaultTouchOff, touchOffOutsideStock } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -79,5 +79,25 @@ describe("touchOffOutsideStock", () => {
     expect(touchOffOutsideStock(stock, { x: 7.5, y: 7.5, diameter: 15 })).toBe(false);
     expect(touchOffOutsideStock(stock, { x: 5, y: 100, diameter: 15 })).toBe(true);
     expect(touchOffOutsideStock(stock, { x: 296, y: 100, diameter: 15 })).toBe(true);
+  });
+});
+
+describe("clampTouchOff", () => {
+  it("moves a pad past the stock's edges back onto it, keeping its diameter", () => {
+    expect(clampTouchOff(stock, { x: 5, y: 210, diameter: 15 })).toEqual({
+      x: 7.5,
+      y: 192.5,
+      diameter: 15,
+    });
+    expect(clampTouchOff(stock, { x: 310, y: -4, diameter: 20 })).toEqual({
+      x: 290,
+      y: 10,
+      diameter: 20,
+    });
+  });
+
+  it("leaves a pad on the stock where it is", () => {
+    const pad = { x: 100, y: 50, diameter: 15 };
+    expect(clampTouchOff(stock, pad)).toEqual(pad);
   });
 });

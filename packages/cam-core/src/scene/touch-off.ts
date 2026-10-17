@@ -26,6 +26,20 @@ export function touchOffOutsideStock(
 }
 
 /**
+ * `pad` moved the least it takes to be wholly on the stock, its diameter
+ * kept: no larger than the stock's smaller side, it always fits.
+ */
+export function clampTouchOff(
+  { width, height }: Pick<Stock, "width" | "height">,
+  { x, y, diameter }: TouchOff,
+): TouchOff {
+  const r = diameter / 2;
+  const clamp = (value: number, size: number) =>
+    roundCoordinate(Math.min(Math.max(value, r), size - r));
+  return { x: clamp(x, width), y: clamp(y, height), diameter };
+}
+
+/**
  * A new pad for `stock`, `diameter` across (by default `DEFAULT_TOUCH_OFF_DIAMETER`,
  * no wider than the stock's smaller side): at the stock corner nearest the
  * XY zero that the design's bounding box `design` doesn't cover, inset by
