@@ -286,6 +286,15 @@ describe("sampleMoves", () => {
     ]);
   });
 
+  it("climbs straight up from the first sample", () => {
+    // The tool is at the first sample: the climb starts there, before any move along.
+    expect(sampleMoves([-10, -4, -4], 0.1).slice(0, 3)).toEqual([
+      [0, -10],
+      [0, -4],
+      [1, -4],
+    ]);
+  });
+
   it("follows the tool between steep samples where it can drop it there", () => {
     // A wall at a quarter of the way between the samples.
     const between = (_: number, fraction: number) => (fraction <= 0.25 ? -4 : -10);
