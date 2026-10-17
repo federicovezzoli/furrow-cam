@@ -5,6 +5,8 @@
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0006, PRD-0001 (R10, R11), ADR-0004, ADR-0011, ADR-0014, ADR-0016, ADR-0019, ADR-0021, ADR-0041
 
+> **2026-10-17: only part of this was built.** The tool comment (#165), the `/projects/[id]` layout (#167) and the simulator page with toolpath playback (#100, #174) shipped. The parser package and simulating the program's text (#166, #168, #169) were dropped as not planned: the simulator covers seeing the cut, and the e2e corpus (#149) reads every exported program back in CI. The one gap left is custom G-code blocks, which are still copied into the program unchecked; checking them on export is planned instead (#179). The rest of this record stays as the design to pick up if the full simulation comes back.
+
 ## Context
 
 The workspace simulates material removal (ADR-0019) from the toolpaths' line segments. That checks the toolpath generator and nothing after it: the post-processor, the work offset (ADR-0014, ADR-0016), retracts, tool changes, the touch-off pad (ADR-0041) and the machine's custom blocks, which are copied into the program verbatim and may contain `G91`, `G53` or `M6`. PRD-0006 asks for a simulation of the program the machine will run.
