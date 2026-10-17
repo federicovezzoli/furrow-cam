@@ -217,6 +217,49 @@ describe("drillToolpath", () => {
     expect(toolpath.warnings).toEqual(["Skipped 3 paths: drilling needs circles or points."]);
   });
 
+  it("takes large circles exported as coarse polygons, within 1% of their radius (#154)", () => {
+    // Inkscape's R12 DXF writes 24-gons: on a Ø40 mm circle their sides come
+    // 0.17 mm inside it, more than the 0.1 mm a small hole may stray, but
+    // under 1% of the radius. A 35-gon and a 4-cubic circle of the same size too.
+    const k = 20 * 0.5523;
+    const bezier: Path = {
+      start: [120, 30],
+      segments: [
+        { kind: "cubic", c1: [120, 30 + k], c2: [100 + k, 50], to: [100, 50] },
+        { kind: "cubic", c1: [100 - k, 50], c2: [80, 30 + k], to: [80, 30] },
+        { kind: "cubic", c1: [80, 30 - k], c2: [100 - k, 10], to: [100, 10] },
+        { kind: "cubic", c1: [100 + k, 10], c2: [120, 30 - k], to: [120, 30] },
+      ],
+      closed: true,
+    };
+    const paths = [polygon([30, 30], 20, 24), polygon([160, 30], 20, 35), bezier];
+    // An end mill bores them out.
+    const boring: Partial<Tool> = { type: "flat_end_mill", cutDirection: "upcut", plungeAngle: 3 };
+    const toolpath = drill([shape(...paths)], {}, 5, boring);
+    expect(toolpath.warnings).toEqual([]);
+    // Each bored around its centre.
+    for (const [x, y] of [
+      [30, 30],
+      [160, 30],
+      [100, 30],
+    ] as const) {
+      const cuts = toolpath.moves.filter(
+        ({ kind, to }) => kind === "feed" && to[2] < 0 && Math.hypot(to[0] - x, to[1] - y) < 20,
+      );
+      expect(cuts.length).toBeGreaterThan(0);
+    }
+    // Just past the limit, a 22-gon strays 0.204 mm, over 1% of its 20 mm
+    // radius; a 40 mm square, far past it, still isn't a circle either.
+    const past = drill(
+      [shape(polygon([30, 30], 20, 22), polygon([100, 30], 20, 4))],
+      {},
+      5,
+      boring,
+    );
+    expect(past.moves).toEqual([]);
+    expect(past.warnings).toEqual(["Skipped 2 paths: drilling needs circles or points."]);
+  });
+
   it("tells round outlines too large for a drill bit from other paths", () => {
     const toolpath = drill([shape(polygon([10, 10], 4, 36), polygon([30, 10], 3, 6))]);
     expect(toolpath.warnings).toEqual([

@@ -270,8 +270,8 @@ describe("measured against Estlcam", () => {
     // Estlcam turned the plate a quarter turn: 95.1 × 1074.5 mm there.
     expect(span(feeds("Plate"))).toEqual([1074.5, 95.1]);
     expect(deepest(feeds("Plate"))).toBe(-5);
-    // 14 holes, each profiled 1.15 mm from its centre, the Ø5.3 mm hole
-    // less the 3 mm bit, as Estlcam's helix: a 35-gon just inside that circle.
+    // 14 holes, each bored in a helix 1.15 mm from its centre, the Ø5.3 mm
+    // hole less the 3 mm bit, as Estlcam's (#154).
     const holes = feeds("Holes").filter(({ to }) => to[2] < 0);
     expect(deepest(holes)).toBe(-5);
     const clusters: GcodeMove[][] = [];
