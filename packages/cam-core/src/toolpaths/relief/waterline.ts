@@ -7,8 +7,9 @@ import {
   type FinishSetup,
   type ReliefFinishOptions,
   remainingRuns,
-  type ToolDropper,
+  ToolDropper,
   toStock,
+  widened,
 } from "./finish";
 
 /**
@@ -25,6 +26,16 @@ const ROWS_PER_STEP = 32;
 
 /** Of the progress after the setup, what the map of tip heights takes. */
 const TIPS_SHARE = 0.5;
+
+/**
+ * How far past its radius the tool is checked when contour points and moves
+ * are made safe, so they keep a real clearance rather than touching the
+ * model exactly (and rounding into it in `float32` G-code coordinates).
+ */
+const CLEARANCE = 0.001;
+
+/** How many times a move between contour points is halved, at most, to keep it clear of the model. */
+const SAFETY_SPLITS = 6;
 
 /** Halvings that bring a contour point that would cut into the model back towards safety. */
 const SAFETY_HALVINGS = 12;
@@ -50,6 +61,14 @@ export function* tipHeightsSteps(
   }
   return tips;
 }
+
+/**
+ * The tool dropped onto the model as it is (`exact`) and widened by
+ * `CLEARANCE` (`widened`): contour points are placed clear of the widened
+ * one, so the moves between them, checked against the exact one, only sag
+ * into the model where cells are coarse.
+ */
+export type SafetyTools = { exact: ToolDropper; widened: ToolDropper };
 
 /** Squares of cell centres a block of `SquareBlocks` holds along each side. */
 const BLOCK = 16;
@@ -103,7 +122,7 @@ export type IsoLine = { points: [number, number][]; closed: boolean };
  * and leave the grid open at its edge. Where a square's opposite corners
  * are above, its centre (their mean) decides whether they join.
  *
- * With `dropper`, each point is checked: where the tool there would reach
+ * With `tools`, each point is checked: where the tool there would reach
  * above `level`, it moves back along its side towards the cell below the
  * level until it doesn't, so the tool at `level` never cuts into the model
  * at a point.
@@ -112,16 +131,30 @@ export function isoLines(
   values: ArrayLike<number>,
   grid: HeightmapGrid,
   level: number,
-  dropper: ToolDropper | null = null,
+  tools: SafetyTools | null = null,
   blocks: SquareBlocks = squareBlocks(values, grid),
 ): IsoLine[] {
   const { columns, rows, cellWidth, cellHeight } = grid;
   const step = Math.min(cellWidth, cellHeight);
   const above = (cell: number) => (values[cell] as number) > level + AT_LEVEL;
-  /** Where the contour crosses the side `id` of a square: from a cell to the next one right (even) or up (odd). */
-  const point = (id: number): [number, number] => {
+  /** The cells at either end of the side `id` of a square: from a cell to the next one right (even) or up (odd). */
+  const ends = (id: number) => {
     const p = id >> 1;
-    const q = id & 1 ? p + columns : p + 1;
+    return [p, id & 1 ? p + columns : p + 1] as const;
+  };
+  // Between cells less than half a cell apart in height, the tool's height
+  // is near enough straight that the contour needs no check there.
+  const steep = (id: number) => {
+    const [p, q] = ends(id);
+    return Math.abs((values[q] as number) - (values[p] as number)) >= step / 2;
+  };
+  /** Whether the tool at `[x, y]` stays at or below the level: widened by `CLEARANCE`, or exactly. */
+  const clear = (x: number, y: number, exactly = false) =>
+    !tools ||
+    (exactly ? tools.exact : tools.widened).dropPoint(x, y, -Infinity) <= level + AT_LEVEL;
+  /** Where the contour crosses the side `id` of a square. */
+  const point = (id: number): [number, number] => {
+    const [p, q] = ends(id);
     const vp = values[p] as number;
     const vq = values[q] as number;
     const t = Math.min(1, Math.max(0, (level + AT_LEVEL - vp) / (vq - vp)));
@@ -130,13 +163,8 @@ export function isoLines(
     const qx = ((q % columns) + 0.5) * cellWidth;
     const qy = (Math.floor(q / columns) + 0.5) * cellHeight;
     const at = (s: number): [number, number] => [px + (qx - px) * s, py + (qy - py) * s];
-    // Between cells less than half a cell apart in height, the tool's height
-    // is near enough straight that the point needs no check.
-    if (!dropper || Math.abs(vq - vp) < step / 2) return at(t);
-    const safe = (s: number) => {
-      const [x, y] = at(s);
-      return dropper.dropPoint(x, y, -Infinity) <= level + AT_LEVEL;
-    };
+    if (!tools || !steep(id)) return at(t);
+    const safe = (s: number) => clear(...at(s));
     if (safe(t)) return at(t);
     // The cell below the level is safe: its tip is one of `values`.
     let low = vp <= level + AT_LEVEL ? 0 : 1;
@@ -209,14 +237,48 @@ export function isoLines(
   }
 
   const lines: IsoLine[] = [];
+  /**
+   * Points to add between `a` and `b` on a steep side, in order, where the
+   * straight move between them would sag into the model (around a sharp
+   * corner, by up to a cell's length squared over four times the tool's
+   * radius): each halving's middle, where it isn't clear, moved away from
+   * the model (on the move's left) until it is, then both halves again, a
+   * few times over.
+   */
+  const between = (a: [number, number], b: [number, number], depth = 0): [number, number][] => {
+    const middle: [number, number] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (depth >= SAFETY_SPLITS || !(length > 0) || clear(...middle, true)) return [];
+    const left: [number, number] = [-(b[1] - a[1]) / length, (b[0] - a[0]) / length];
+    const at = (s: number): [number, number] => [middle[0] + left[0] * s, middle[1] + left[1] * s];
+    let low = 0;
+    let high = step;
+    if (!clear(...at(high))) return [];
+    for (let i = 0; i < SAFETY_HALVINGS; i++) {
+      const s = (low + high) / 2;
+      if (clear(...at(s))) high = s;
+      else low = s;
+    }
+    const moved = at(high);
+    return [...between(a, moved, depth + 1), moved, ...between(moved, b, depth + 1)];
+  };
   const walk = (start: number, closed: boolean) => {
-    const points: [number, number][] = [point(start)];
+    const ids = [start];
     let id = start;
     for (let to = next.get(id); to !== undefined; to = next.get(id)) {
       next.delete(id);
       id = to;
       if (closed && id === start) break;
-      points.push(point(id));
+      ids.push(id);
+    }
+    const located = ids.map(point);
+    const points: [number, number][] = [];
+    for (let i = 0; i < ids.length; i++) {
+      const a = located[i] as [number, number];
+      points.push(a);
+      const j = i + 1 < ids.length ? i + 1 : closed ? 0 : -1;
+      if (j < 0 || !tools || !(steep(ids[i] as number) || steep(ids[j] as number))) continue;
+      points.push(...between(a, located[j] as [number, number]));
     }
     lines.push({ points: mergeStraight(points, closed), closed });
   };
@@ -231,7 +293,7 @@ export function isoLines(
 }
 
 /** `points` without those on a straight line between their neighbours. */
-function mergeStraight(points: [number, number][], closed: boolean): [number, number][] {
+export function mergeStraight(points: [number, number][], closed: boolean): [number, number][] {
   if (points.length < 3) return points;
   const kept: [number, number][] = [];
   const count = points.length;
@@ -245,6 +307,20 @@ function mergeStraight(points: [number, number][], closed: boolean): [number, nu
     if (isEnd || Math.abs(cross) > 1e-12 || dot <= 0) kept.push(points[i] as [number, number]);
   }
   return kept.length >= 2 ? kept : points;
+}
+
+/** `points` with points added along each straight move, no more than `spacing` apart. */
+function densify(points: [number, number][], spacing: number): [number, number][] {
+  const dense: [number, number][] = points.slice(0, 1);
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1] as [number, number];
+    const [bx, by] = points[i] as [number, number];
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / spacing));
+    for (let k = 1; k <= steps; k++) {
+      dense.push([ax + ((bx - ax) * k) / steps, ay + ((by - ay) * k) / steps]);
+    }
+  }
+  return dense;
 }
 
 /**
@@ -268,7 +344,7 @@ function mergeStraight(points: [number, number][], closed: boolean): [number, nu
  */
 export function* waterlineSteps(
   operation: ReliefFinishOperation,
-  { grid, dropper, floor, restDropper, warnings }: FinishSetup,
+  { grid, heights, profile, dropper, floor, restDropper, warnings }: FinishSetup,
   strategy: Extract<FinishingStrategy, { type: "waterline" }>,
   { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
 ): Generator<number, Toolpath> {
@@ -279,6 +355,7 @@ export function* waterlineSteps(
     FINISH_SETUP_SHARE,
     FINISH_SETUP_SHARE + TIPS_SHARE * share,
   );
+  const checker = new ToolDropper(heights, grid, widened(profile, CLEARANCE));
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const step = Math.min(grid.cellWidth, grid.cellHeight);
   const maxLink = 2 * tool.diameter;
@@ -298,7 +375,7 @@ export function* waterlineSteps(
     for (let k = 1; k < steps; k++) {
       const s = k / steps;
       const z = a[2] + (b[2] - a[2]) * s;
-      const tip = dropper.dropPoint(a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, floor);
+      const tip = checker.dropPoint(a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, floor);
       if (tip > z + AT_LEVEL) return false;
     }
     return true;
@@ -307,7 +384,7 @@ export function* waterlineSteps(
   const levels = depthLevels(-floor, strategy.stepDown);
   const blocks = squareBlocks(tips, grid);
   for (const [index, z] of levels.entries()) {
-    const lines = isoLines(tips, grid, z, dropper, blocks);
+    const lines = isoLines(tips, grid, z, { exact: dropper, widened: checker }, blocks);
     while (lines.length > 0) {
       // The nearest contour next; a closed one from its nearest point.
       const [u0, v0] = previous ?? [0, 0];
@@ -330,7 +407,11 @@ export function* waterlineSteps(
       const points = line.closed
         ? [...line.points.slice(bestPoint), ...line.points.slice(0, bestPoint + 1)]
         : line.points;
-      const path = points.map(([u, v]): [number, number, number] => [u, v, z]);
+      // For rest machining, every cell along the contour is checked, not
+      // only the corners left after merging.
+      const path = (restDropper ? densify(points, step) : points).map(
+        ([u, v]): [number, number, number] => [u, v, z],
+      );
       const runs: [number, number][] = restDropper
         ? remainingRuns(
             (i) => restDropper.remaining(...(path[i] as [number, number, number])),
@@ -348,9 +429,14 @@ export function* waterlineSteps(
           builder.rapid([x, y, Math.max(builder.clearance, z)]);
           builder.feed([x, y, z], tool.plungeRate);
         }
-        for (let i = a + 1; i <= b; i++) {
-          builder.feed(toStock3(path[i] as [number, number, number]), tool.feedRate);
-        }
+        const run = path.slice(a, b + 1);
+        const kept = restDropper
+          ? mergeStraight(
+              run.map(([u, v]): [number, number] => [u, v]),
+              false,
+            ).map(([u, v]): [number, number, number] => [u, v, z])
+          : run;
+        for (const point of kept.slice(1)) builder.feed(toStock3(point), tool.feedRate);
         previous = path[b] as [number, number, number];
       }
     }

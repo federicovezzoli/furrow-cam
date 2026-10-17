@@ -368,6 +368,20 @@ function slidingMaximum(
 }
 
 /**
+ * `profile` reaching `by` further out, flat over its first `by`: dropped at
+ * two points `by` apart, it keeps the straight move between them clear of
+ * everything the true profile would touch along the way.
+ */
+export function widened(profile: CutterProfile, by: number): CutterProfile {
+  return {
+    radius: profile.radius + by,
+    flat: profile.flat,
+    height: (distance) => profile.height(Math.max(0, distance - by)),
+    reach: (depth) => profile.reach(depth) + by,
+  };
+}
+
+/**
  * Of heights sampled at equal steps along a line, the indices to keep so the
  * straight moves between them never go below a sample and pass no more than
  * `tolerance` above any: each move runs as far as one slope fits every

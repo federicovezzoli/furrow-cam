@@ -8,12 +8,18 @@ import type {
 import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../../geometry/clipper";
-import { simulateCuts } from "../../simulation/simulation";
+import { cutterProfile, simulateCuts } from "../../simulation/simulation";
 import type { Toolpath, ToolpathMove } from "../toolpath";
-import { modelHeightsSteps, reliefGrid, runSteps } from "./finish";
+import {
+  modelHeightsSteps,
+  reliefGrid,
+  runSteps,
+  ToolDropper,
+  widened as widenedProfile,
+} from "./finish";
 import { reliefFinishSteps } from "./finishing";
 import { type SpiralRun, spiralRuns } from "./spiral";
-import { isoLines } from "./waterline";
+import { isoLines, tipHeightsSteps } from "./waterline";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
 function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
@@ -127,6 +133,23 @@ function expectNoGouge(
       );
     }
   }
+  if (worst < -tolerance) {
+    for (let row = 0; row < rows; row++)
+      for (let column = 0; column < columns; column++) {
+        const d =
+          (stock.heights[row * columns + column] as number) -
+          Math.min(0, heights[row * grid.columns + column] as number);
+        if (d === worst)
+          console.log(
+            "DBG",
+            tool.type,
+            (column + 0.5) * 0.1,
+            (row + 0.5) * 0.1,
+            heights[row * grid.columns + column],
+            stock.heights[row * columns + column],
+          );
+      }
+  }
   expect(worst).toBeGreaterThanOrEqual(-tolerance);
   return stock;
 }
@@ -204,6 +227,32 @@ describe("isoLines", () => {
     expect(cutsOff(joined, below, above)).toBe(true);
   });
 
+  it("keeps the moves between points clear of the model, not only the points", () => {
+    // A pillar on coarse 0.5 mm cells, where straight moves around its
+    // corners would sag into the flat end mill's reach.
+    const pillar = placed(12, 12, 8);
+    const mesh = new Float32Array([...rect(0, 0, 12, 12, -8), ...rect(5, 5, 7, 7, 0)]);
+    const grid = reliefGrid(pillar, 0, 0.5);
+    if (!grid) throw new Error("no grid");
+    const heights = runSteps(modelHeightsSteps(pillar, mesh, grid, 0, undefined));
+    const dropper = new ToolDropper(heights, grid, cutterProfile(endMill));
+    const tips = runSteps(tipHeightsSteps({ grid, dropper, floor: -8 }));
+    const widened = new ToolDropper(heights, grid, widenedProfile(cutterProfile(endMill), 0.001));
+    const lines = isoLines(tips, grid, -4, { exact: dropper, widened });
+    expect(lines.length).toBeGreaterThan(0);
+    for (const { points, closed } of lines) {
+      const count = closed ? points.length : points.length - 1;
+      for (let i = 0; i < count; i++) {
+        const [ax, ay] = points[i] as Point;
+        const [bx, by] = points[(i + 1) % points.length] as Point;
+        for (let k = 0; k <= 20; k++) {
+          const tip = dropper.dropPoint(ax + ((bx - ax) * k) / 20, ay + ((by - ay) * k) / 20, -8);
+          expect(tip).toBeLessThanOrEqual(-4 + 1e-5);
+        }
+      }
+    }
+  });
+
   it("is empty where nothing crosses the level", () => {
     expect(isoLines([0, 0, 0, 0, 0, 0, 0, 0, 0], grid, 1)).toEqual([]);
     expect(isoLines([5, 5, 5, 5, 5, 5, 5, 5, 5], grid, 1)).toEqual([]);
@@ -245,6 +294,19 @@ describe("waterline", () => {
     });
   });
 
+  it("never cuts into a sharp raised feature", () => {
+    // A 1.8 × 1.8 mm pillar, its top at the stock top, on a floor 8 mm down.
+    // Its edges are on cell edges of both the toolpaths' grids (0.1 and
+    // 0.075 mm) and the simulation's, which see the same pillar.
+    const pillar = placed(12, 12, 8);
+    const mesh = new Float32Array([...rect(0, 0, 12, 12, -8), ...rect(5.1, 5.1, 6.9, 6.9, 0)]);
+    for (const tool of [endMill, ballEndMill]) {
+      const toolpath = finish(tool, waterline(0.5), {}, pillar, mesh);
+      expect(cuts(toolpath, tool).length).toBeGreaterThan(0);
+      expectNoGouge(toolpath, tool, pillar, mesh);
+    }
+  });
+
   it("puts contours a step-down apart on a steep wall, climb milling along it", () => {
     const toolpath = finish(endMill, waterline(1));
     const r = endMill.diameter / 2;
@@ -256,6 +318,23 @@ describe("waterline", () => {
     const level = beside.filter(({ to }) => Math.abs(to[2] + 7) < 1e-9);
     expect((level[0]?.to[1] as number) > (level.at(-1)?.to[1] as number)).toBe(true);
     expectNoGouge(toolpath, endMill, STEP, stepMesh, { tolerance: SAMPLING });
+  });
+
+  it("cuts the middle of a straight contour the earlier operations left, with rest machining", () => {
+    // Earlier cuts along the wall's contours at both ends only, as far as y = 3 and from y = 7.
+    const x = 10 + endMill.diameter / 2;
+    const segments: number[] = [];
+    for (let z = -5; z >= -10; z--) segments.push(x, 0, z, x, 3, z, x, 7, z, x, 10, z);
+    const toolpath = runSteps(
+      reliefFinishSteps(finishing(endMill, waterline(1), { rest: true }), STEP, stepMesh, {
+        ...options,
+        rest: { cuts: [{ tool: endMill, segments: new Float32Array(segments) }], stock: null },
+      }),
+    );
+    const middle = cuts(toolpath, endMill).filter(
+      ({ to }) => Math.abs(to[0] - x) < 0.2 && to[1] > 3.5 && to[1] < 6.5,
+    );
+    expect(middle.length).toBeGreaterThan(0);
   });
 
   it("cuts nothing after the same finishing, with rest machining", () => {
