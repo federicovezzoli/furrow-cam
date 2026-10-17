@@ -127,6 +127,26 @@ describe("roughingArea", () => {
     });
   });
 
+  it("is null when the margin leaves the tool no room on the stock", () => {
+    // The model 200 mm off a 100 mm wide stock.
+    const off: Model = { ...STEP, placement: { ...STEP.placement, position: [200, 10] } };
+    const narrow = { min: [0, 0] as Point, max: [100, 40] as Point };
+    expect(roughingArea({ type: "margin", distance: 10 }, off, narrow, 3)).toBeNull();
+    // Just off the stock: the margin reaches 2 mm onto it, less than the tool.
+    const edge: Model = { ...STEP, placement: { ...STEP.placement, position: [108, 10] } };
+    expect(roughingArea({ type: "margin", distance: 10 }, edge, narrow, 3)).toBeNull();
+    const toolpath = runSteps(
+      reliefRoughSteps(
+        roughing(endMill, { boundary: { type: "margin", distance: 10 } }),
+        off,
+        stepMesh,
+        { ...options, stock: narrow },
+      ),
+    );
+    expect(toolpath.moves).toEqual([]);
+    expect(toolpath.warnings).toEqual([expect.stringContaining("isn't on the stock")]);
+  });
+
   it("brings the tool's centre to the stock's edges the margin reaches", () => {
     // Left and bottom reach the stock's edges; right and top stay inside.
     expect(roughingArea({ type: "margin", distance: 12 }, model, stock, 3)).toEqual({
