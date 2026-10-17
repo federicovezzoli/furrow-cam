@@ -107,10 +107,15 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
-  // #147: touch-off pads. Existing projects have none; importing a drawing
-  // or a model into one adds the default.
+  // #147: touch-off pads. Existing projects have none.
   12: (doc) => {
     if (isObject(doc.stock) && !("touchOff" in doc.stock)) doc.stock.touchOff = null;
+    return doc;
+  },
+  // ADR-0043: a pad's own tool change. Existing pads keep the machine's.
+  13: (doc) => {
+    const pad = isObject(doc.stock) ? doc.stock.touchOff : null;
+    if (isObject(pad) && !("toolChange" in pad)) pad.toolChange = null;
     return doc;
   },
 };

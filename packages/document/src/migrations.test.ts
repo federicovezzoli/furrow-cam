@@ -221,6 +221,17 @@ describe("migrations", () => {
     expect(parseProjectDocument(v12)).toEqual({ ...doc, stock: { ...doc.stock, touchOff: null } });
   });
 
+  it("gives v13 touch-off pads the machine's tool change", () => {
+    const doc = fullDocument();
+    const v13 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      stock: { touchOff: Record<string, unknown> };
+    };
+    v13.schemaVersion = 13;
+    delete v13.stock.touchOff.toolChange;
+    expect(parseProjectDocument(v13)).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());
