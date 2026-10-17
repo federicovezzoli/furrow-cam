@@ -7,9 +7,11 @@ import {
   operationModelId,
   type ProjectDocument,
   type Shape,
+  type TouchOff,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import type { SimulationCut } from "../simulation/simulation";
+import { activeTouchOff } from "../scene/touch-off";
+import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
 import { engraveToolpath } from "./engrave";
 import { pocketToolpath } from "./pocket/pocket";
@@ -19,9 +21,9 @@ import {
   createCache,
   type ReliefCache,
   type RestOptions,
-  reliefFinishSteps,
   runSteps,
 } from "./relief/finish";
+import { reliefFinishSteps } from "./relief/finishing";
 import { reliefRoughSteps } from "./relief/rough";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 import { vcarveToolpath } from "./vcarve";
@@ -52,6 +54,11 @@ export type ToolpathInput = {
    * before this one, in order; empty for every other operation.
    */
   before: ToolpathInput[];
+  /**
+   * The touch-off pad (#147, `activeTouchOff`): 3D operations leave it
+   * uncut, 2D ones warn when they reach it. `null` for none.
+   */
+  touchOff: TouchOff | null;
 };
 
 /** Whether `operation` only cuts the material the operations before it left (PRD-0005 S8). */
@@ -79,6 +86,7 @@ export function toolpathInputs(
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
   const entryClearance = doc.machine?.entryClearance ?? DEFAULT_ENTRY_CLEARANCE;
   const stock: Rect = { min: [0, 0], max: [doc.stock.width, doc.stock.height] };
+  const touchOff = activeTouchOff(doc.stock);
   const enabled = doc.operations.filter((operation) => operation.enabled);
   const inputs = new Map<Operation, ToolpathInput>();
   function inputOf(operation: Operation): ToolpathInput {
@@ -92,7 +100,7 @@ export function toolpathInputs(
       model: models.get(operationModelId(operation) ?? "") ?? null,
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
-        rest || (operation.type === "relief_rough" && operation.params.boundary === "stock")
+        rest || (operation.type === "relief_rough" && operation.params.boundary.type !== "model")
           ? stock
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
@@ -101,6 +109,7 @@ export function toolpathInputs(
       before: rest
         ? enabled.filter((other) => doc.operations.indexOf(other) < index).map(inputOf)
         : [],
+      touchOff,
     };
     inputs.set(operation, input);
     return input;
@@ -147,6 +156,7 @@ function ownKey({
   stockBottom,
   safeZ,
   entryClearance,
+  touchOff,
 }: ToolpathInput): unknown[] {
   const { name: _name, color: _color, notes: _notes, ...tool } = operation.tool;
   return [
@@ -159,6 +169,7 @@ function ownKey({
     stockBottom,
     safeZ,
     entryClearance,
+    touchOff,
   ];
 }
 
@@ -272,22 +283,65 @@ function* restCuts(
   return cuts;
 }
 
+/** Said when a 2D operation cuts into the touch-off pad. */
+export const TOUCH_OFF_WARNING =
+  "This operation cuts into the touch-off pad, so Z can't be zeroed on it after a tool change: move the pad or the cut.";
+
+/**
+ * Whether any cut of `operation`'s toolpath, below the stock top, reaches
+ * into `pad`: the tool's reach at the cut's depth comes within the pad.
+ */
+export function cutsTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOff): boolean {
+  const r = pad.diameter / 2;
+  return toolpathCuts(operation, toolpath).some(({ tool, segments }) => {
+    const profile = cutterProfile(tool);
+    for (let i = 0; i + 5 < segments.length; i += 6) {
+      const [ax, ay, az, bx, by, bz] = segments.subarray(i, i + 6) as unknown as number[];
+      const depth = -Math.min(az as number, bz as number);
+      if (!(depth > 1e-6)) continue;
+      const reach = Math.min(profile.radius, profile.reach(depth));
+      if (
+        segmentDistance(pad.x, pad.y, ax as number, ay as number, bx as number, by as number) <
+        r + reach
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/** The distance from `(px, py)` to the segment from `(ax, ay)` to `(bx, by)`. */
+function segmentDistance(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const length2 = dx * dx + dy * dy;
+  const t = length2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length2)) : 0;
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+}
+
+/** A 2D toolpath, warning when it cuts into the touch-off pad rather than avoiding it (ADR-0041). */
+function checkTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOff | null): Toolpath {
+  if (!pad || !cutsTouchOff(operation, toolpath, pad)) return toolpath;
+  return { ...toolpath, warnings: [...toolpath.warnings, TOUCH_OFF_WARNING] };
+}
+
 function* operationSteps(
-  { operation, shapes, model, stock, stockBottom, before, ...options }: ToolpathInput,
+  { operation, shapes, model, stock, stockBottom, before, touchOff, ...options }: ToolpathInput,
   context: ToolpathContext,
 ): Generator<number, Toolpath> {
   const { mesh, cache } = context;
   switch (operation.type) {
     case "profile":
-      return profileToolpath(operation, shapes, options);
+      return checkTouchOff(operation, profileToolpath(operation, shapes, options), touchOff);
     case "pocket":
-      return pocketToolpath(operation, shapes, options);
+      return checkTouchOff(operation, pocketToolpath(operation, shapes, options), touchOff);
     case "drill":
-      return drillToolpath(operation, shapes, options);
+      return checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff);
     case "engrave":
-      return engraveToolpath(operation, shapes, options);
+      return checkTouchOff(operation, engraveToolpath(operation, shapes, options), touchOff);
     case "vcarve":
-      return vcarveToolpath(operation, shapes, options);
+      return checkTouchOff(operation, vcarveToolpath(operation, shapes, options), touchOff);
     case "relief_finish":
     case "relief_rough": {
       if (!model) return { moves: [], warnings: ["The model to machine is missing."] };
@@ -319,6 +373,7 @@ function* operationSteps(
               stockBottom,
               cache,
               rest,
+              touchOff,
             })
           : reliefRoughSteps(operation, model, positions, {
               ...options,
@@ -326,6 +381,7 @@ function* operationSteps(
               stockBottom,
               cache,
               rest,
+              touchOff,
             });
       for (let step = steps.next(); ; step = steps.next()) {
         if (step.done) {

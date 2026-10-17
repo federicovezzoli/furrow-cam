@@ -1,11 +1,20 @@
 import {
+  defaultTouchOff,
   designAlignment,
+  designBounds,
   translatePoint,
   translateShapes,
   xyOriginPosition,
   xyOriginShift,
 } from "@furrow/cam-core";
-import type { Point, ProjectDocument, StockAnchor, Units, ZOrigin } from "@furrow/document";
+import type {
+  Point,
+  ProjectDocument,
+  StockAnchor,
+  TouchOff,
+  Units,
+  ZOrigin,
+} from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
 
@@ -59,6 +68,10 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
   store.getState().change(`setStock.${dimension}`, (draft) => {
     draft.stock[dimension] = value;
     moveDrawing(draft, geometry, offset);
+    // The pad must fit on the stock (ADR-0041): it shrinks about its centre.
+    const pad = draft.stock.touchOff;
+    const widest = Math.min(draft.stock.width, draft.stock.height);
+    if (pad && pad.diameter > widest) pad.diameter = widest;
   });
 }
 
@@ -119,4 +132,54 @@ export function setZOrigin(store: DocumentStore, zOrigin: ZOrigin) {
   store.getState().change("setStock.zOrigin", (draft) => {
     draft.stock.zOrigin = zOrigin;
   });
+}
+
+/**
+ * The touch-off pad a project with `document`'s stock and design gets by
+ * default (#147, ADR-0041): in the corner nearest the zero the design leaves
+ * free.
+ */
+export function defaultProjectTouchOff(
+  document: Pick<ProjectDocument, "stock" | "geometry" | "models">,
+): TouchOff {
+  return defaultTouchOff(document.stock, designBounds(document.geometry, document.models));
+}
+
+/** Adds the default touch-off pad, as one undo step; nothing if the project has one. */
+export function addTouchOff(store: DocumentStore) {
+  const { document } = store.getState();
+  if (document.stock.touchOff) return;
+  const pad = defaultProjectTouchOff(document);
+  store.getState().change("setStock.touchOff", (draft) => {
+    draft.stock.touchOff = pad;
+  });
+}
+
+/** Removes the touch-off pad, as one undo step. */
+export function removeTouchOff(store: DocumentStore) {
+  store.getState().change("setStock.touchOff", (draft) => {
+    draft.stock.touchOff = null;
+  });
+}
+
+/**
+ * Sets the touch-off pad's centre along one axis (in millimetres from the
+ * stock's bottom-left corner) or its diameter, which keeps the centre where
+ * it is. A diameter wider than the stock's smaller side is refused, as the
+ * document requires; returns whether the value was taken.
+ */
+export function setTouchOffField(
+  store: DocumentStore,
+  field: keyof TouchOff,
+  value: number,
+): boolean {
+  const { stock } = store.getState().document;
+  if (!stock.touchOff) return false;
+  if (field === "diameter" && !(value > 0 && value <= Math.min(stock.width, stock.height))) {
+    return false;
+  }
+  store.getState().change(`setStock.touchOff.${field}`, (draft) => {
+    if (draft.stock.touchOff) draft.stock.touchOff[field] = value;
+  });
+  return true;
 }

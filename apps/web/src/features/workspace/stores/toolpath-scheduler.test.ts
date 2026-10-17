@@ -4,6 +4,7 @@ import { model, reliefFinish } from "@furrow/document/fixtures";
 import { describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "./document-store";
 import {
+  type GcodeExportRequest,
   scheduleToolpaths,
   type ToolpathMessage,
   type ToolpathRequest,
@@ -82,15 +83,19 @@ function setup(document = documentWithProfile()) {
   const requests: ToolpathRequest[] = [];
   const cancels: string[] = [];
   const meshes: string[] = [];
+  const retains: string[][] = [];
+  const exports: GcodeExportRequest[] = [];
   const post = (message: ToolpathMessage) => {
     if ("cancel" in message) cancels.push(message.cancel);
+    else if ("retain" in message) retains.push(message.retain);
+    else if ("export" in message) exports.push(message);
     else requests.push(message);
   };
   const schedule = scheduleToolpaths(documents, toolpaths, post, async (sha256) => {
     meshes.push(sha256);
     return new ArrayBuffer(8);
   });
-  return { documents, toolpaths, requests, cancels, meshes, schedule };
+  return { documents, toolpaths, requests, cancels, meshes, retains, exports, schedule };
 }
 
 function deepen(documents: DocumentStore, depth: number) {
@@ -169,6 +174,32 @@ describe("scheduleToolpaths", () => {
     deepen(documents, 6);
     expect(requests).toHaveLength(2);
     expect(requests[1]?.inputHash).not.toBe(requests[0]?.inputHash);
+  });
+
+  it("recomputes when the touch-off pad changes (#147)", () => {
+    const { documents, requests, schedule } = setup();
+    const answer = () => {
+      const request = requests.at(-1) as ToolpathRequest;
+      schedule.receive({ ...request, ...compute(request.input) });
+    };
+    answer();
+    documents.getState().change("Pad", (draft) => {
+      draft.stock.touchOff = { x: 300, y: 200, diameter: 15 };
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.input.touchOff).toEqual({ x: 300, y: 200, diameter: 15 });
+    answer();
+    documents.getState().change("Pad", (draft) => {
+      if (draft.stock.touchOff) draft.stock.touchOff.diameter = 20;
+    });
+    expect(requests).toHaveLength(3);
+    answer();
+    // Zeroed on the machine bed, the pad isn't used.
+    documents.getState().change("Z zero", (draft) => {
+      draft.stock.zOrigin = "machine_bed";
+    });
+    expect(requests).toHaveLength(4);
+    expect(requests[3]?.input.touchOff).toBeNull();
   });
 
   it("recomputes a rest operation when an enabled operation before it changes", () => {
@@ -328,7 +359,7 @@ describe("scheduleToolpaths", () => {
       documents,
       toolpaths,
       (message) => {
-        if (!("cancel" in message)) requests.push(message);
+        if ("operationId" in message) requests.push(message);
       },
       () => Promise.reject(new Error("offline")),
     );
@@ -337,6 +368,65 @@ describe("scheduleToolpaths", () => {
     await vi.waitFor(() =>
       expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({ error: "offline" }),
     );
+  });
+
+  it("tells the worker which operations' toolpaths to keep (#133)", () => {
+    const { documents, retains } = setup();
+    expect(retains).toEqual([[OPERATION_ID]]);
+    documents.getState().change("Rename", (draft) => {
+      const operation = draft.operations[0];
+      if (operation) operation.name = "Renamed";
+    });
+    expect(retains).toHaveLength(1);
+    documents.getState().change("Disable", (draft) => {
+      const operation = draft.operations[0];
+      if (operation) operation.enabled = false;
+    });
+    expect(retains).toEqual([[OPERATION_ID], []]);
+  });
+
+  it("exports with the inputs and hashes the toolpaths were requested with (#133)", async () => {
+    const { requests, exports, schedule } = setup();
+    const [request] = requests as [ToolpathRequest];
+    schedule.receive({ ...request, ...compute(request.input) });
+    const exported = schedule.exportGcode("Plate");
+    const [message] = exports as [GcodeExportRequest];
+    expect(message.name).toBe("Plate");
+    expect(message.inputs).toEqual([
+      { operationId: OPERATION_ID, inputHash: request.inputHash, input: request.input },
+    ]);
+    schedule.receive({
+      export: message.export,
+      gcode: "G0",
+      warnings: [],
+      fileName: "plate.gcode",
+    });
+    await expect(exported).resolves.toEqual({ gcode: "G0", warnings: [], fileName: "plate.gcode" });
+  });
+
+  it("sends an export again with the mesh the worker lacks", async () => {
+    const { exports, meshes, schedule } = setup();
+    const exported = schedule.exportGcode("Relief");
+    const [first] = exports as [GcodeExportRequest];
+    schedule.receive({ export: first.export, missingMesh: "abc" });
+    await vi.waitFor(() => expect(exports).toHaveLength(2));
+    expect(meshes).toEqual(["abc"]);
+    expect(exports[1]?.meshes).toHaveLength(1);
+    // Another missing mesh: the next attempt carries both.
+    schedule.receive({ export: first.export, missingMesh: "def" });
+    await vi.waitFor(() => expect(exports).toHaveLength(3));
+    expect(exports[2]?.meshes).toHaveLength(2);
+    schedule.receive({ export: first.export, error: "Nothing to cut" });
+    await expect(exported).resolves.toEqual({ error: "Nothing to cut" });
+  });
+
+  it("fails pending exports when the worker fails, and tells a fresh one what to keep", async () => {
+    const { documents, retains, schedule } = setup();
+    const exported = schedule.exportGcode("Plate");
+    schedule.fail("The toolpath worker stopped");
+    await expect(exported).resolves.toEqual({ error: "The toolpath worker stopped" });
+    deepen(documents, 6);
+    expect(retains).toEqual([[OPERATION_ID], [OPERATION_ID]]);
   });
 
   it("stops listening", () => {

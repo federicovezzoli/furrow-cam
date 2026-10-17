@@ -1,27 +1,32 @@
 import {
   createCache,
   createReliefCache,
+  generateToolpath,
   MissingMeshError,
   parseStl,
   type SimulationCut,
   type StlMesh,
   type Toolpath,
+  toolpathCuts,
+  toolpathKey,
   toolpathLines,
   toolpathLinesBuffers,
   toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
 import { sha256Hex } from "@/features/workspace/lib/mesh-worker-protocol";
+import { exportFromResults, ToolpathResults } from "@/features/workspace/lib/toolpath-export";
 import type {
+  GcodeExportRequest,
   ToolpathMessage,
   ToolpathRequest,
-  ToolpathResponse,
+  ToolpathWorkerResponse,
 } from "@/features/workspace/stores/toolpath-scheduler";
 
 /** The worker's global scope; the app's TypeScript lib describes a window instead. */
 const scope = self as unknown as {
   onmessage: (event: MessageEvent<ToolpathMessage>) => void;
-  postMessage: (response: ToolpathResponse, transfer?: Transferable[]) => void;
+  postMessage: (response: ToolpathWorkerResponse, transfer?: Transferable[]) => void;
 };
 
 /** How long a toolpath computes before it lets messages (a cancel) in. */
@@ -43,6 +48,12 @@ const reliefCache = createReliefCache(2);
  * computing them again.
  */
 const cuts = createCache<SimulationCut[]>(8);
+/**
+ * The latest toolpath of each enabled operation, so exporting G-code posts
+ * them instead of computing them again (#133). The scheduler's `retain`
+ * messages drop those of operations disabled or deleted.
+ */
+const results = new ToolpathResults();
 
 function keep(sha256: string, mesh: StlMesh) {
   meshes.delete(sha256);
@@ -73,6 +84,13 @@ function yieldToMessages(): Promise<void> {
   });
 }
 
+/** Keeps a model's STL file, checked against the hashes of the meshes it may be (ADR-0029). */
+async function keepMesh(bytes: ArrayBuffer, hashes: ReadonlySet<string>) {
+  const sha256 = await sha256Hex(bytes);
+  if (!hashes.has(sha256)) throw new Error("The stored model doesn't match its file.");
+  keep(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS));
+}
+
 type Job = { cancelled: boolean };
 
 /** The job of each operation with a request here, so a cancel can reach it. */
@@ -85,11 +103,7 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
   }
   if (bytes) {
     // The mesh of the operation's model, or of one before it for rest machining.
-    const sha256 = await sha256Hex(bytes);
-    if (!toolpathMeshes(input).has(sha256)) {
-      throw new Error("The stored model doesn't match its file.");
-    }
-    keep(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS));
+    await keepMesh(bytes, toolpathMeshes(input));
   }
 
   const steps = toolpathSteps(input, { mesh, cache: reliefCache, cuts });
@@ -117,6 +131,7 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     }
   }
 
+  results.keep(operationId, inputHash, toolpath);
   const { operation } = input;
   const { warnings } = toolpath;
   // Only drills make holes; other straight plunges enter a cut that shows.
@@ -147,10 +162,67 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
 // stops them early.
 let queue = Promise.resolve();
 
+/**
+ * Posts the G-code of an export request (#133) from the toolpaths held for
+ * its inputs, computing the others; asks for a mesh it lacks.
+ */
+async function exportProgram({
+  export: id,
+  document,
+  name,
+  inputs,
+  meshes: files = [],
+}: GcodeExportRequest) {
+  try {
+    // Every mesh asked for so far, for this export only, so the worker's two
+    // kept meshes can't evict one it needs again: each attempt gets further.
+    const hashes = new Set(inputs.flatMap(({ input }) => [...toolpathMeshes(input)]));
+    const exportMeshes = new Map<string, Float32Array>();
+    for (const bytes of files) {
+      const sha256 = await sha256Hex(bytes);
+      if (!hashes.has(sha256)) throw new Error("The stored model doesn't match its file.");
+      exportMeshes.set(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS).positions);
+    }
+    // Room for every operation's cuts, starting with those of the toolpaths
+    // held, so a rest operation computed here takes them instead of computing
+    // the ones before it again.
+    const exportCuts = createCache<SimulationCut[]>(inputs.length + 1);
+    for (const { operationId, inputHash, input } of inputs) {
+      const held = results.get(operationId, inputHash);
+      if (held) exportCuts.set(toolpathKey(input), toolpathCuts(input.operation, held));
+    }
+    const context = {
+      mesh: (sha256: string) => exportMeshes.get(sha256) ?? mesh(sha256),
+      cache: reliefCache,
+      cuts: exportCuts,
+    };
+    const program = exportFromResults(document, name, inputs, results, (input) =>
+      generateToolpath(input, context),
+    );
+    scope.postMessage({ export: id, ...program });
+  } catch (error) {
+    if (error instanceof MissingMeshError) {
+      scope.postMessage({ export: id, missingMesh: error.sha256 });
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      scope.postMessage({ export: id, error: message });
+    }
+  }
+}
+
 scope.onmessage = ({ data }) => {
   if ("cancel" in data) {
     const job = jobs.get(data.cancel);
     if (job) job.cancelled = true;
+    return;
+  }
+  if ("retain" in data) {
+    results.retain(data.retain);
+    return;
+  }
+  if ("export" in data) {
+    // After the requests already here, so toolpaths still computing are held by then.
+    queue = queue.then(() => exportProgram(data));
     return;
   }
   const { operationId, inputHash } = data;

@@ -423,22 +423,26 @@ describe("profileToolpath with tabs", () => {
     expect(alongBottomOrTop || alongSides).toBe(true);
   });
 
-  it("ramps back down after each tab when ramping", () => {
+  it("drops straight back down after each tab, even when ramping (#153)", () => {
     const top = -3;
     const descents = (toolpath: Toolpath) =>
       steps(toolpath).filter(
         ([from, move]) => move.kind === "feed" && from[2] === top && move.to[2] < top,
       );
-    const ramped = profile({ ramp: true, tabs: tabs(midSides) });
-    expect(descents(ramped).length).toBeGreaterThan(0);
-    for (const [from, move] of descents(ramped)) {
-      expect(descentAngle(from, move.to)).toBeLessThanOrEqual(3 + 1e-6);
+    for (const ramp of [true, false]) {
+      const toolpath = profile({ ramp, tabs: tabs(midSides) });
+      expect(descents(toolpath).length).toBeGreaterThan(0);
+      for (const [from, move] of descents(toolpath)) {
+        // Straight down at the tab's edge, at the plunge rate…
+        expect(move.to.slice(0, 2)).toEqual(from.slice(0, 2));
+        expect(move).toMatchObject({ feedRate: tool.plungeRate });
+      }
+      expect(intrusions(toolpath, top)).toEqual([]);
     }
-    expect(intrusions(ramped, top)).toEqual([]);
-    // Without a ramp it drops straight down.
-    for (const [from, move] of descents(profile({ tabs: tabs(midSides) }))) {
-      expect(move.to.slice(0, 2)).toEqual(from.slice(0, 2));
-    }
+    // …so past the tab the edge is cut at full depth: no wedge behind it.
+    const last = profile({ ramp: true, tabs: tabs([[50, 0]]) });
+    const bottom = cutsAt(last, -6).filter(([x, y]) => Math.abs(y + 3) < 1e-6 && x > 55);
+    expect(bottom.length).toBeGreaterThan(0);
   });
 
   it("puts each tab on the nearest contour", () => {
@@ -483,6 +487,7 @@ describe("generateToolpath", () => {
       thickness: 18,
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
+      touchOff: null,
     },
     machine:
       machineSafeZ === null

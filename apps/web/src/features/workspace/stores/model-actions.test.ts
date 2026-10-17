@@ -32,19 +32,26 @@ function storeWithModel(anchor: "bottom_left" | "center" = "bottom_left") {
 }
 
 describe("addModel", () => {
-  it("fits the stock, aligned at the anchor, as one undo step", () => {
+  it("fits inside the stock's border, aligned at the anchor, as one undo step", () => {
     const { store, get } = storeWithModel("center");
-    // 100 × 80 into 600 × 400: 5 times, 500 × 400, centred.
+    // 100 × 80 into 600 × 400 less a 10 mm border: 4.75 times, 475 × 380, centred.
     expect(get().placement).toEqual({
       rotation: [0, 0, 0],
-      scale: 5,
+      scale: 4.75,
       // The mesh's 12 mm, scaled like its outline, deeper than the stock.
-      depth: 60,
-      position: [50, 0],
+      depth: 57,
+      position: [62.5, 10],
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
     store.getState().undo();
     expect(store.getState().document.models).toEqual([]);
+  });
+
+  it("adds the default touch-off pad in a corner the model leaves free", () => {
+    const { store } = storeWithModel("center");
+    // Fitted with a 10 mm border, no corner fits the whole 15 mm pad, so it
+    // goes in the corner nearest the zero whose corner point is clear.
+    expect(store.getState().document.stock.touchOff).toEqual({ x: 7.5, y: 7.5, diameter: 15 });
   });
 
   it("aligns at the bottom-left corner with a custom zero", () => {
@@ -52,7 +59,7 @@ describe("addModel", () => {
     document.stock.xyOrigin = { anchor: "custom", x: 100, y: 100 };
     const store = createDocumentStore(document);
     addModel(store, mesh);
-    expect(store.getState().document.models[0]?.placement.position).toEqual([0, 0]);
+    expect(store.getState().document.models[0]?.placement.position).toEqual([10, 10]);
   });
 
   it("refuses a second file: a project holds one drawing or one model", () => {
@@ -71,17 +78,17 @@ describe("placement edits", () => {
     turnModelAbout(store, id, 2);
     expect(get().placement.rotation).toEqual([0, 0, 90]);
     const { min, max } = modelRect(get());
-    // 400 × 500 now, still centred on the stock.
-    expectClose([min[0], min[1], max[0], max[1]], [100, -50, 500, 450]);
+    // 380 × 475 now, still centred on the stock.
+    expectClose([min[0], min[1], max[0], max[1]], [110, -37.5, 490, 437.5]);
     expect(store.getState().past).toHaveLength(2);
   });
 
   it("scales in all three directions, so the mesh is never stretched", () => {
     const { store, id, get } = storeWithModel();
     setModelScale(store, id, 2);
-    expect(get().placement).toMatchObject({ scale: 2, depth: 24, position: [0, 0] });
+    expect(get().placement).toMatchObject({ scale: 2, depth: 24, position: [10, 10] });
     setModelDepth(store, id, 6);
-    expect(get().placement).toMatchObject({ scale: 0.5, depth: 6, position: [0, 0] });
+    expect(get().placement).toMatchObject({ scale: 0.5, depth: 6, position: [10, 10] });
     // Unchanged values add no undo step.
     const steps = store.getState().past.length;
     setModelScale(store, id, 0.5);
@@ -89,13 +96,14 @@ describe("placement edits", () => {
     expect(store.getState().past).toHaveLength(steps);
   });
 
-  it("fits the stock again after turning", () => {
+  it("fits inside the stock's border again after turning", () => {
     const { store, id, get } = storeWithModel();
     setModelScale(store, id, 1);
     turnModelAbout(store, id, 2);
     fitModelToStock(store, id);
-    // 80 × 100 into 600 × 400: 4 times.
-    expect(get().placement).toMatchObject({ scale: 4, depth: 48, position: [0, 0] });
+    // 80 × 100 into 580 × 380: 3.8 times.
+    expect(get().placement).toMatchObject({ scale: 3.8, position: [10, 10] });
+    expect(get().placement.depth).toBeCloseTo(45.6);
   });
 
   it("moves the model's anchor point to a distance from the zero", () => {
@@ -105,7 +113,7 @@ describe("placement edits", () => {
     setModelOffset(store, id, "x", 25);
     setModelOffset(store, id, "y", -10);
     expect(modelOffset(stock(), get())).toEqual([25, -10]);
-    expect(get().placement.position).toEqual([75, -10]);
+    expect(get().placement.position).toEqual([87.5, 0]);
   });
 
   it("removes a model, undoably", () => {

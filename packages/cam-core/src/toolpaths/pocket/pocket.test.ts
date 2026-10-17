@@ -513,6 +513,7 @@ describe("pocketToolpath", () => {
         stock: null,
         stockBottom: null,
         before: [],
+        touchOff: null,
         safeZ: 5,
         entryClearance: 1,
       }),

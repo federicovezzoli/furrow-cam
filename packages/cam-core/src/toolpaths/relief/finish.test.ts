@@ -10,12 +10,13 @@ import {
   offsetHeightsSteps,
   rasterizeModelSteps,
   reliefCellSize,
-  reliefFinishSteps,
   reliefGrid,
   runSteps,
+  sampleMoves,
   simplifyHeights,
   ToolDropper,
 } from "./finish";
+import { reliefFinishSteps } from "./finishing";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
 function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
@@ -67,9 +68,8 @@ function finishing(
     tool,
     params: {
       modelId: STEP.id,
-      angle: 0,
+      strategy: { type: "parallel", angle: 0, direction: "zigzag" },
       stepOver: 50,
-      direction: "zigzag",
       stockToLeave: 0,
       rest: false,
       ...params,
@@ -78,6 +78,10 @@ function finishing(
 }
 
 const options = { safeZ: 5, entryClearance: 1 };
+
+function parallel(angle: number, direction: "one_way" | "zigzag") {
+  return { type: "parallel", angle, direction } as const;
+}
 
 function finish(
   tool: Tool,
@@ -258,6 +262,49 @@ describe("simplifyHeights", () => {
   });
 });
 
+describe("sampleMoves", () => {
+  it("merges gentle samples like simplifyHeights", () => {
+    expect(sampleMoves([0, 0.1, 0.2, 0.3], 1)).toEqual([
+      [0, 0],
+      [3, 0.3],
+    ]);
+  });
+
+  it("goes over at the higher sample where the tool drops off a wall", () => {
+    expect(sampleMoves([-4, -4, -10, -10], 0.1)).toEqual([
+      [0, -4],
+      [1, -4],
+      [2, -4],
+      [2, -10],
+      [3, -10],
+    ]);
+    // Climbing: straight up, then along.
+    expect(sampleMoves([-10, -4], 0.1)).toEqual([
+      [0, -10],
+      [0, -4],
+      [1, -4],
+    ]);
+  });
+
+  it("climbs straight up from the first sample", () => {
+    // The tool is at the first sample: the climb starts there, before any move along.
+    expect(sampleMoves([-10, -4, -4], 0.1).slice(0, 3)).toEqual([
+      [0, -10],
+      [0, -4],
+      [1, -4],
+    ]);
+  });
+
+  it("follows the tool between steep samples where it can drop it there", () => {
+    // A wall at a quarter of the way between the samples.
+    const between = (_: number, fraction: number) => (fraction <= 0.25 ? -4 : -10);
+    const moves = sampleMoves([-4, -10], 0.1, between);
+    // Along at -4 only to the wall, not to the next sample.
+    expect(moves.filter(([, z]) => z === -4).at(-1)?.[0]).toBeLessThanOrEqual(0.25 + 1 / 16);
+    expect(moves.at(-1)).toEqual([1, -10]);
+  });
+});
+
 describe("reliefFinishSteps", () => {
   it("follows the model with a flat end mill", () => {
     const toolpath = finish(endMill);
@@ -311,7 +358,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("spaces passes by the step-over and covers the outline", () => {
-    const toolpath = finish(endMill, { stepOver: 50, direction: "one_way" });
+    const toolpath = finish(endMill, { stepOver: 50, strategy: parallel(0, "one_way") });
     const ys = [...new Set(feeds(toolpath).map(({ to }) => to[1].toFixed(6)))].map(Number);
     // On row centres from 0.05 to 9.95, no more than 3.175 mm apart: 5 passes.
     expect(ys.sort((a, b) => a - b)).toEqual([0.05, 2.55, 5.05, 7.45, 9.95]);
@@ -322,7 +369,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("alternates zig-zag passes, linked along the model", () => {
-    const toolpath = finish(endMill, { direction: "zigzag" });
+    const toolpath = finish(endMill, { strategy: parallel(0, "zigzag") });
     // One rapid down to the first pass, then it stays down.
     const plunges = toolpath.moves.filter(({ kind }) => kind === "rapid");
     expect(plunges.length).toBe(3);
@@ -333,7 +380,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("retracts between one-way passes, all cut the same way", () => {
-    const toolpath = finish(endMill, { direction: "one_way" });
+    const toolpath = finish(endMill, { strategy: parallel(0, "one_way") });
     const retracts = toolpath.moves.filter(({ kind, to }) => kind === "rapid" && to[2] === 5);
     expect(retracts.length).toBe(10);
     const secondPass = feeds(toolpath).filter(({ to }) => Math.abs(to[1] - 2.55) < 1e-9);
@@ -341,7 +388,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("runs the passes at the angle", () => {
-    const toolpath = finish(endMill, { angle: 90, direction: "one_way" });
+    const toolpath = finish(endMill, { strategy: parallel(90, "one_way") });
     const xs = [...new Set(feeds(toolpath).map(({ to }) => to[0].toFixed(6)))];
     // Along Y, 20 mm across at no more than 3.175 mm: 8 passes.
     expect(xs.length).toBe(8);
@@ -406,6 +453,7 @@ describe("generateToolpath", () => {
     stock: null,
     stockBottom: null,
     before: [],
+    touchOff: null,
     ...options,
   };
 

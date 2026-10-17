@@ -1,26 +1,66 @@
 ---
 name: solve-all-issues
 description: >
-  Bulk-run auto-solve-issue over every open GitHub issue assigned to the current user in
-  furrow-cam, opening one PR per issue (against `dev`) with review requested and
-  addressed on each. Skips `[Scoping]` issues, issues with undecided acceptance criteria
-  and issues blocked by other open issues. Use when the user wants to clear their whole
-  assigned-issue queue in one go rather than naming issues one at a time.
+  Bulk-run auto-solve-issue over a batch of open GitHub issues in furrow-cam: by default
+  every issue assigned to the current user, or, with `--milestone <slug>` (e.g.
+  `/solve-all-issues --milestone stl-import`), every open issue in that milestone. Opens
+  one PR per issue (against `dev`) with review requested and addressed on each. Skips
+  `[Scoping]` issues, issues with undecided acceptance criteria and issues blocked by
+  other open issues. Use when the user wants to clear their assigned-issue queue or a
+  whole milestone in one go rather than naming issues one at a time.
+argument-hint: "[--milestone <slug|number>] [--mine]"
 ---
 
-# Bulk-solving all assigned issues
+# Bulk-solving a batch of issues
 
 Composes `auto-solve-issue` over a filtered issue list. Read that skill first — this one
 adds the listing, filtering, ordering and looping around it.
 
-## 1. List assigned open issues
+## 0. Pick the batch
+
+Arguments: `$ARGUMENTS`
+
+- **No flags**: the batch is every open issue assigned to the current user.
+- **`--milestone <value>`**: the batch is every open issue in that milestone. The value
+  is the milestone's slug (its title lowercased, with runs of non-alphanumeric
+  characters turned into `-`: `STL import` → `stl-import`, `Post-MVP` → `post-mvp`),
+  its number, or its exact title in quotes.
+- **`--mine`** (with `--milestone`): restrict the milestone batch to issues assigned to
+  the current user.
+
+If the user asks in plain words instead ("solve the STL import milestone"), treat it as
+the equivalent flags.
+
+Resolve the milestone before listing:
 
 ```bash
-gh issue list --assignee "@me" --state open --json number,title,labels,milestone,url
+gh api 'repos/{owner}/{repo}/milestones?state=all' --jq '.[] | "\(.state)\t\(.number)\t\(.title)\t\(.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | rtrimstr("-"))"'
 ```
 
-If nothing is assigned, say so and stop; suggest assigning issues
-(`gh issue edit <n> --add-assignee @me`) rather than picking issues on your own.
+Columns: state, number, title, slug. Match the value against the slug, the number or the
+title (case-insensitively). If nothing matches, or more than one does, say so, list the
+open milestones with their slugs and stop; don't guess. If the milestone is closed, say
+so and stop.
+
+## 1. List the open issues
+
+```bash
+# default: assigned to me
+gh issue list --assignee "@me" --state open --limit 200 --json number,title,body,labels,milestone,assignees,url
+
+# milestone (pass the exact milestone title resolved above)
+gh issue list --milestone "<title>" --state open --limit 200 --json number,title,body,labels,milestone,assignees,url
+# --milestone with --mine: add --assignee "@me"
+```
+
+In milestone mode, issues assigned to **someone else** are skipped (someone owns them);
+unassigned issues are in scope — assign each one to yourself
+(`gh issue edit <n> --add-assignee @me`) when you start it, so the milestone shows who
+is working on what.
+
+If the list is empty, say so and stop. With no argument, suggest assigning issues
+(`gh issue edit <n> --add-assignee @me`) or passing `--milestone <slug>`, rather than picking
+issues on your own.
 
 ## 2. Filter and order
 
@@ -28,6 +68,7 @@ Skip, and say why:
 
 - titles starting with `[Scoping]` (case-insensitive), or bodies that read as an open
   design question;
+- issues assigned to someone other than the current user (milestone mode only);
 - issues that still need a decision (a "proposed" list or an open question in the body;
   agreed scope is always recorded in the issue body, not in comments).
 
@@ -57,4 +98,5 @@ decision), report its status and move on rather than aborting the batch.
 ## 4. Final summary
 
 A table: issue number → PR URL → status (ready for review / blocked on X / skipped as
-scoping or blocked), once every issue in the list has been attempted.
+scoping or blocked), once every issue in the list has been attempted. In milestone mode, end with how many
+issues remain open in the milestone and why (skipped, blocked, awaiting merge).

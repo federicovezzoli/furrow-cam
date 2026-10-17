@@ -13,7 +13,7 @@ import { generateToolpath, toolpathInputs, toolpathKey } from "../generate";
 import type { Toolpath } from "../toolpath";
 import { heightContours, simplifyContour } from "./contours";
 import { modelHeightsSteps, reliefGrid, runSteps } from "./finish";
-import { type ReliefRoughOptions, reliefRoughSteps } from "./rough";
+import { type ReliefRoughOptions, reliefRoughSteps, roughingArea } from "./rough";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
 function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
@@ -95,6 +95,70 @@ function inside(rings: Polygon[], point: Point): boolean {
   }
   return winding !== 0;
 }
+
+describe("roughingArea", () => {
+  // A 20 × 10 model at (10, 10) on a 50 × 40 stock, cut with a 3 mm radius.
+  const model: Model = { ...STEP, placement: { ...STEP.placement, position: [10, 10] } };
+  const stock = { min: [0, 0] as Point, max: [50, 40] as Point };
+
+  it("is the model's outline, or the whole stock", () => {
+    expect(roughingArea({ type: "model" }, model, stock, 3)).toEqual({
+      min: [10, 10],
+      max: [30, 20],
+    });
+    expect(roughingArea({ type: "stock" }, model, stock, 3)).toEqual(stock);
+    expect(roughingArea({ type: "stock" }, model, null, 3)).toEqual({
+      min: [10, 10],
+      max: [30, 20],
+    });
+  });
+
+  it("keeps the tool inside the margin", () => {
+    expect(roughingArea({ type: "margin", distance: 5 }, model, stock, 3)).toEqual({
+      min: [8, 8],
+      max: [32, 22],
+    });
+  });
+
+  it("grows by the radius at least, so the tool's centre reaches the model's edges", () => {
+    expect(roughingArea({ type: "margin", distance: 1 }, model, stock, 3)).toEqual({
+      min: [10, 10],
+      max: [30, 20],
+    });
+  });
+
+  it("is null when the margin leaves the tool no room on the stock", () => {
+    // The model 200 mm off a 100 mm wide stock.
+    const off: Model = { ...STEP, placement: { ...STEP.placement, position: [200, 10] } };
+    const narrow = { min: [0, 0] as Point, max: [100, 40] as Point };
+    expect(roughingArea({ type: "margin", distance: 10 }, off, narrow, 3)).toBeNull();
+    // Just off the stock: the margin reaches 2 mm onto it, less than the tool.
+    const edge: Model = { ...STEP, placement: { ...STEP.placement, position: [108, 10] } };
+    expect(roughingArea({ type: "margin", distance: 10 }, edge, narrow, 3)).toBeNull();
+    const toolpath = runSteps(
+      reliefRoughSteps(
+        roughing(endMill, { boundary: { type: "margin", distance: 10 } }),
+        off,
+        stepMesh,
+        { ...options, stock: narrow },
+      ),
+    );
+    expect(toolpath.moves).toEqual([]);
+    expect(toolpath.warnings).toEqual([expect.stringContaining("isn't on the stock")]);
+  });
+
+  it("brings the tool's centre to the stock's edges the margin reaches", () => {
+    // Left and bottom reach the stock's edges; right and top stay inside.
+    expect(roughingArea({ type: "margin", distance: 12 }, model, stock, 3)).toEqual({
+      min: [0, 0],
+      max: [39, 29],
+    });
+    expect(roughingArea({ type: "margin", distance: 12 }, model, null, 3)).toEqual({
+      min: [1, 1],
+      max: [39, 29],
+    });
+  });
+});
 
 describe("heightContours", () => {
   const grid = { columns: 4, rows: 3, cellWidth: 1, cellHeight: 1 };
@@ -300,6 +364,53 @@ describe("reliefRoughSteps", () => {
     expect(Math.max(...all)).toBeGreaterThan(9.9);
   });
 
+  describe("with a margin", () => {
+    // The step model 15 mm in from the stock's left and bottom edges.
+    const inset: Model = { ...STEP, placement: { ...STEP.placement, position: [15, 15] } };
+    const stock = { min: [0, 0] as Point, max: [60, 50] as Point };
+    const boundary = { type: "margin", distance: 10 } as const;
+
+    const strategies = [
+      { type: "offset" },
+      { type: "peel", start: "centre" },
+      { type: "peel", start: "outside" },
+      { type: "linear", angle: 0 },
+    ] as const;
+    for (const strategy of strategies) {
+      const label = strategy.type === "peel" ? `peel from the ${strategy.start}` : strategy.type;
+      it(`clears the model's outline grown by the margin and no further, with ${label}`, () => {
+        const toolpath = runSteps(
+          reliefRoughSteps(roughing(endMill, { strategy, boundary }), inset, stepMesh, {
+            ...options,
+            stock,
+          }),
+        );
+        const { at } = simulate(toolpath, endMill, 60, 50);
+        // The margin runs from (5, 5) to (45, 35); the stock top beyond it is left alone.
+        for (const point of [
+          [4.8, 20],
+          [45.2, 20],
+          [25, 4.8],
+          [25, 35.2],
+          [2, 2],
+          [55, 45],
+        ] as Point[]) {
+          expect(at(point)).toBe(0);
+        }
+        // Inside it, everything around the model goes down to its bottom plus the stock to leave.
+        for (const point of [
+          [5.5, 20],
+          [44.5, 20],
+          [25, 5.5],
+          [25, 34.5],
+          [32, 20],
+        ] as Point[]) {
+          expect(at(point)).toBeCloseTo(-9.5);
+        }
+      });
+    }
+  });
+
   it("trims passes to where the level above left material", () => {
     const toolpath = rough(endMill, { strategy: { type: "linear", angle: 0 }, ramp: false });
     // Below the plateau's offset top, levels only cut beside it.
@@ -320,7 +431,7 @@ describe("reliefRoughSteps", () => {
     const stock = { min: [0, 0] as Point, max: [40, 30] as Point };
     const whole = rough(
       endMill,
-      { strategy: { type: "linear", angle: 0 }, boundary: "stock" },
+      { strategy: { type: "linear", angle: 0 }, boundary: { type: "stock" } },
       { stock },
     );
     expect(Math.max(...xs(whole))).toBeGreaterThan(39.9);
@@ -402,13 +513,15 @@ describe("generateToolpath", () => {
     expect(toolpathInputs(fullDocument())[0]?.stockBottom).toBeNull();
   });
 
-  it("depends on the stock's size only for the stock boundary", () => {
+  it("depends on the stock's size only for the stock and margin boundaries", () => {
     const doc = document();
     const resized = { ...doc, stock: { ...doc.stock, width: 500 } };
     expect(doc.stock.thickness).toBeGreaterThan(10);
     const key = (d: typeof doc) => toolpathKey(toolpathInputs(d)[0] as never);
     expect(key(resized)).toBe(key(doc));
-    const operations = [roughing(endMill, { boundary: "stock" })];
-    expect(key({ ...resized, operations })).not.toBe(key({ ...doc, operations }));
+    for (const boundary of [{ type: "stock" }, { type: "margin", distance: 5 }] as const) {
+      const operations = [roughing(endMill, { boundary })];
+      expect(key({ ...resized, operations })).not.toBe(key({ ...doc, operations }));
+    }
   });
 });

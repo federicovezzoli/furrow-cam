@@ -305,18 +305,32 @@ describe("ReliefFinishOperation", () => {
 
   it("rejects out-of-range params", () => {
     const { params } = reliefFinish;
+    const parallel = { type: "parallel", angle: 0, direction: "zigzag" };
     for (const changes of [
-      { angle: -1 },
-      { angle: 180 },
+      { strategy: { ...parallel, angle: -1 } },
+      { strategy: { ...parallel, angle: 180 } },
+      { strategy: { ...parallel, direction: "spiral" } },
+      { strategy: { type: "parallel", angle: 0 } },
+      { strategy: { type: "waterline", stepDown: 0 } },
+      { strategy: { type: "waterline", stepDown: 1, angle: 0 } },
+      { strategy: { type: "spiral", start: "inside" } },
+      { strategy: { type: "contour" } },
+      { angle: 0 },
       { stepOver: 0 },
       { stepOver: 101 },
       { stockToLeave: -0.1 },
-      { direction: "spiral" },
       { modelId: "emblem" },
     ]) {
       expect(ReliefFinishParams.safeParse({ ...params, ...changes }).success).toBe(false);
     }
-    expect(ReliefFinishParams.safeParse({ ...params, angle: 179.5 }).success).toBe(true);
+    for (const strategy of [
+      { ...parallel, angle: 179.5, direction: "one_way" },
+      { type: "waterline", stepDown: 0.5 },
+      { type: "spiral", start: "outside" },
+      { type: "spiral", start: "centre" },
+    ]) {
+      expect(ReliefFinishParams.safeParse({ ...params, strategy }).success).toBe(true);
+    }
   });
 
   it("machines a model, not shapes", () => {
@@ -341,7 +355,8 @@ describe("ReliefRoughOperation", () => {
       { strategy: { type: "linear", angle: 45 } },
       { strategy: { type: "peel", start: "centre" } },
       { strategy: { type: "peel", start: "outside" } },
-      { boundary: "stock" },
+      { boundary: { type: "stock" } },
+      { boundary: { type: "margin", distance: 10 } },
       { stepOver: 25 },
       { direction: "conventional", ramp: false, stockToLeave: 0 },
     ]) {
@@ -355,7 +370,11 @@ describe("ReliefRoughOperation", () => {
       { stockToLeave: -0.1 },
       { stepOver: 0 },
       { stepOver: 101 },
-      { boundary: "drawing" },
+      { boundary: { type: "drawing" } },
+      { boundary: "model" },
+      { boundary: { type: "margin", distance: 0 } },
+      { boundary: { type: "margin" } },
+      { boundary: { type: "model", distance: 10 } },
       { strategy: { type: "linear", angle: 30 } },
       { modelId: "emblem" },
     ]) {

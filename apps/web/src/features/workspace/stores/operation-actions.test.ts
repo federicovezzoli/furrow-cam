@@ -467,9 +467,8 @@ describe("addReliefFinishOperation", () => {
       tool: endMill,
       params: {
         modelId: model.id,
-        angle: 0,
+        strategy: { type: "parallel", angle: 0, direction: "zigzag" },
         stepOver: 10,
-        direction: "zigzag",
         stockToLeave: 0,
         rest: false,
       },
@@ -486,13 +485,18 @@ describe("addReliefFinishOperation", () => {
     const store = storeWithModel();
     const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill }) as string;
     expect(
-      updateReliefFinishParams(store, id, { angle: 45, direction: "one_way", rest: true }),
+      updateReliefFinishParams(store, id, {
+        strategy: { type: "parallel", angle: 45, direction: "one_way" },
+        rest: true,
+      }),
     ).toEqual({ ok: true });
+    expect(
+      updateReliefFinishParams(store, id, { strategy: { type: "waterline", stepDown: 0 } }),
+    ).toMatchObject({ ok: false });
     expect(updateReliefFinishParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
     expect(updateReliefFinishParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
     expect(store.getState().document.operations[0]?.params).toMatchObject({
-      angle: 45,
-      direction: "one_way",
+      strategy: { type: "parallel", angle: 45, direction: "one_way" },
       stepOver: 10,
       stockToLeave: 0,
       rest: true,
@@ -522,7 +526,7 @@ describe("addReliefRoughOperation", () => {
         direction: "climb",
         stepOver: null,
         stockToLeave: 0.5,
-        boundary: "model",
+        boundary: { type: "model" },
         ramp: true,
         rest: false,
       },
@@ -541,7 +545,7 @@ describe("addReliefRoughOperation", () => {
     expect(
       updateReliefRoughParams(store, id, {
         strategy: { type: "linear", angle: 45 },
-        boundary: "stock",
+        boundary: { type: "margin", distance: 10 },
         stepOver: 25,
         rest: true,
       }),
@@ -553,7 +557,7 @@ describe("addReliefRoughOperation", () => {
     expect(updateReliefRoughParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
     expect(store.getState().document.operations[0]?.params).toMatchObject({
       strategy: { type: "linear", angle: 45 },
-      boundary: "stock",
+      boundary: { type: "margin", distance: 10 },
       stepOver: 25,
       stockToLeave: 0.5,
       rest: true,

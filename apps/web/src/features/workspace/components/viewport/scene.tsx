@@ -1,6 +1,13 @@
 "use client";
 
-import { type Box3, type Heightmap, pathKey, stockBounds, stockOffset } from "@furrow/cam-core";
+import {
+  activeTouchOff,
+  type Box3,
+  type Heightmap,
+  pathKey,
+  stockBounds,
+  stockOffset,
+} from "@furrow/cam-core";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
 import {
@@ -45,6 +52,7 @@ export function Scene({
   return (
     <>
       <WorkOrigin palette={palette} />
+      <TouchOffPad color={palette.tab} />
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
       ) : (
@@ -85,6 +93,29 @@ function WorkOrigin({ palette }: { palette: Palette }) {
         material-transparent
         material-depthTest={false}
       />
+    </group>
+  );
+}
+
+/**
+ * The touch-off pad (#147, ADR-0041) on the stock top, at its diameter: a
+ * ring over a faint disc, in the colour of the other stock left uncut (tabs).
+ * Not drawn with Z zeroed on the machine bed, where it isn't used.
+ */
+function TouchOffPad({ color }: { color: string }) {
+  const pad = useDocumentStore((s) => activeTouchOff(s.document.stock));
+  if (!pad) return null;
+  const r = pad.diameter / 2;
+  return (
+    <group position={[pad.x, pad.y, 0]} renderOrder={RENDER_ORDER.origin}>
+      <mesh renderOrder={RENDER_ORDER.origin}>
+        <circleGeometry args={[r, 64]} />
+        <meshBasicMaterial color={color} transparent opacity={0.2} depthTest={false} />
+      </mesh>
+      <mesh renderOrder={RENDER_ORDER.origin}>
+        <ringGeometry args={[Math.max(0, r - Math.max(0.3, r * 0.06)), r, 64]} />
+        <meshBasicMaterial color={color} transparent depthTest={false} />
+      </mesh>
     </group>
   );
 }

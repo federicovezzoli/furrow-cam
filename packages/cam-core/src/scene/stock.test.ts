@@ -17,6 +17,7 @@ const stock: Stock = {
   thickness: 18,
   xyOrigin: { anchor: "bottom_left" },
   zOrigin: "stock_top",
+  touchOff: null,
 };
 
 describe("stock placement", () => {

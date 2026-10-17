@@ -11,6 +11,7 @@ const stock: Stock = {
   thickness: 18,
   xyOrigin: { anchor: "bottom_left" },
   zOrigin: "stock_top",
+  touchOff: null,
 };
 
 function operation(name: string, tool: Tool = endMill): Operation {
@@ -227,6 +228,65 @@ describe("grbl", () => {
           "G0 X20 Y0",
         ].join("\n"),
       );
+    });
+  });
+
+  describe("tool changes with a touch-off pad (ADR-0041)", () => {
+    const drill: Tool = { ...drillBit, diameter: 6.35 };
+    const operations = [
+      { operation: operation("Profile"), toolpath: plunge([0, 0]) },
+      { operation: operation("Holes", drill), toolpath: plunge([20, 0]) },
+    ];
+    const pad = { x: 7.5, y: 192.5, diameter: 15 };
+
+    it("move over the pad before pausing, measured from the zero", () => {
+      for (const [xyOrigin, at] of [
+        [{ anchor: "bottom_left" }, "X7.5 Y192.5"],
+        [{ anchor: "center" }, "X-142.5 Y92.5"],
+        [{ anchor: "top_right" }, "X-292.5 Y-7.5"],
+        [{ anchor: "custom", x: 10, y: 200 }, "X-2.5 Y-7.5"],
+      ] as const) {
+        const { gcode } = post({ operations, stock: { ...stock, xyOrigin, touchOff: pad } });
+        expect(gcode).toContain(
+          [
+            "(Tool: 6 mm drill, 6.35 mm)",
+            "M5",
+            "G0 Z5",
+            `G0 ${at}`,
+            "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z on the touch-off pad)",
+          ].join("\n"),
+        );
+        expect(gcode).toContain(
+          `(Zero Z again on the touch-off pad after each tool change: ${at}, 15 mm across)`,
+        );
+      }
+    });
+
+    it("move over the pad before a custom tool-change block", () => {
+      const { gcode } = post({
+        operations,
+        stock: { ...stock, touchOff: pad },
+        machine: { ...machine, toolChange: "M5\nM0 (Change the bit)" },
+      });
+      expect(gcode).toContain(
+        [
+          "(Tool: 6 mm drill, 6.35 mm)",
+          "G0 Z5",
+          "G0 X7.5 Y192.5",
+          "M5",
+          "M0 (Change the bit)",
+        ].join("\n"),
+      );
+    });
+
+    it("ignore the pad with the Z zero on the machine bed", () => {
+      const onBed = post({
+        operations,
+        stock: { ...stock, zOrigin: "machine_bed", touchOff: pad },
+      });
+      const without = post({ operations, stock: { ...stock, zOrigin: "machine_bed" } });
+      expect(onBed.gcode).toBe(without.gcode);
+      expect(onBed.gcode).not.toContain("touch-off");
     });
   });
 

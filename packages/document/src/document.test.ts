@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createProjectDocument, ProjectDocument, StockAnchor, XYOrigin } from "./document";
+import { createProjectDocument, ProjectDocument, Stock, StockAnchor, XYOrigin } from "./document";
 import {
   fullDocument,
   model,
@@ -180,6 +180,36 @@ describe("XYOrigin", () => {
   });
 });
 
+describe("Stock", () => {
+  const stock = fullDocument().stock;
+
+  it("accepts a touch-off pad on the stock, or none", () => {
+    expect(Stock.safeParse(stock).success).toBe(true);
+    expect(Stock.safeParse({ ...stock, touchOff: null }).success).toBe(true);
+    // As wide as the stock's smaller side, and off the stock: the pad lying
+    // outside it is a warning, not an error.
+    const widest = { x: 100, y: 100, diameter: 200 };
+    expect(Stock.safeParse({ ...stock, touchOff: widest }).success).toBe(true);
+    expect(Stock.safeParse({ ...stock, touchOff: { x: -50, y: 10, diameter: 15 } }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects pads with no diameter or wider than the stock", () => {
+    for (const touchOff of [
+      { x: 10, y: 10, diameter: 0 },
+      { x: 10, y: 10, diameter: 201 },
+      { x: 10, y: 10 },
+      { x: 10, y: 10, diameter: 15, z: 0 },
+    ]) {
+      expect(Stock.safeParse({ ...stock, touchOff }).success).toBe(false);
+    }
+    expect(
+      Stock.safeParse({ ...stock, touchOff: { x: 10, y: 10, diameter: 201 } }).error?.issues,
+    ).toEqual([expect.objectContaining({ path: ["touchOff", "diameter"] })]);
+  });
+});
+
 describe("createProjectDocument", () => {
   it("returns a valid empty project with the default stock", () => {
     const doc = createProjectDocument();
@@ -192,6 +222,7 @@ describe("createProjectDocument", () => {
         thickness: 18,
         xyOrigin: { anchor: "bottom_left" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       machine: null,
       geometry: [],
