@@ -180,7 +180,7 @@ describe("migrations", () => {
     doc.models = [model];
     const stock: typeof reliefRough = {
       ...reliefRough,
-      id: crypto.randomUUID(),
+      id: "5b1e2c4d-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
       params: { ...reliefRough.params, boundary: { type: "stock" } },
     };
     doc.operations.push(reliefFinish, reliefRough, stock);
