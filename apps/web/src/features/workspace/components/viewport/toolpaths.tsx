@@ -25,12 +25,19 @@ const STALE_OPACITY = 0.35;
  * moves cut so far are drawn, trailing behind the tool, over the stock that
  * would otherwise hide them in its cuts.
  */
-export function Toolpaths({ palette }: { palette: Palette }) {
+export function Toolpaths({
+  palette,
+  showHidden = false,
+}: {
+  palette: Palette;
+  /** Draws the toolpaths hidden in the Operations pane too, as the simulator does. */
+  showHidden?: boolean;
+}) {
   const operations = useDocumentStore((s) => s.document.operations);
   const hidden = useWorkspaceStore((s) => s.hiddenToolpathIds);
   const topView = useWorkspaceStore((s) => s.view === "top");
   return operations
-    .filter((operation) => operation.enabled && !hidden.includes(operation.id))
+    .filter((operation) => operation.enabled && (showHidden || !hidden.includes(operation.id)))
     .map((operation) => (
       <OperationToolpath
         key={operation.id}

@@ -142,7 +142,8 @@ function SimulatorScene({
       ) : (
         <Stock box={box} palette={palette} />
       )}
-      {showToolpaths && <Toolpaths palette={palette} />}
+      {/* Its own toggle decides, whatever the Operations pane hides. */}
+      {showToolpaths && <Toolpaths palette={palette} showHidden />}
       <PlaybackTool />
     </>
   );
