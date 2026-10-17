@@ -133,23 +133,6 @@ function expectNoGouge(
       );
     }
   }
-  if (worst < -tolerance) {
-    for (let row = 0; row < rows; row++)
-      for (let column = 0; column < columns; column++) {
-        const d =
-          (stock.heights[row * columns + column] as number) -
-          Math.min(0, heights[row * grid.columns + column] as number);
-        if (d === worst)
-          console.log(
-            "DBG",
-            tool.type,
-            (column + 0.5) * 0.1,
-            (row + 0.5) * 0.1,
-            heights[row * grid.columns + column],
-            stock.heights[row * columns + column],
-          );
-      }
-  }
   expect(worst).toBeGreaterThanOrEqual(-tolerance);
   return stock;
 }
