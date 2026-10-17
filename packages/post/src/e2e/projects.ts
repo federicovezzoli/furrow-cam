@@ -427,7 +427,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
     size: pyramidStl.length,
     triangles: mesh.triangles,
     bounds: mesh.bounds,
-    // The stock's size: 40 × 30 × 8 mm.
+    // Fitted inside the stock's 7.5 mm border (ADR-0038): 20 × 15 × 4 mm.
     placement: initialPlacement(mesh.bounds, base.stock, "bottom_left"),
   };
   const finish = (name: string, tool: Tool, rest: boolean): Operation => ({
@@ -439,9 +439,8 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
     tool,
     params: {
       modelId: model.id,
-      angle: 45,
+      strategy: { type: "parallel", angle: 45, direction: "zigzag" },
       stepOver: 50,
-      direction: "zigzag",
       stockToLeave: 0,
       rest,
     },
@@ -464,7 +463,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
             direction: "climb",
             stepOver: null,
             stockToLeave: 0.5,
-            boundary: "stock",
+            boundary: { type: "stock" },
             ramp: true,
             rest: false,
           },

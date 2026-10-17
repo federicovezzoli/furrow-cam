@@ -58,7 +58,7 @@ function program(name: string) {
     }
     return left;
   };
-  return { gcode, feeds, above };
+  return { project, gcode, feeds, above };
 }
 
 const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -195,20 +195,22 @@ describe("measured", () => {
   });
 
   it("finishes the relief no deeper than the model, inside the stock", () => {
-    const { feeds } = program("relief");
+    const { feeds, project } = program("relief");
     const extent = (moves: GcodeMove[], axis: number) =>
       moves.map(({ to }) => (to as Vec3)[axis] as number);
+    // The model's top is at the stock top, its base as deep as it is placed.
+    const depth = project.document.models[0]?.placement.depth as number;
+    expect(depth).toBe(4);
     for (const operation of ["Rough", "Finish", "Rest finish"]) {
       const moves = feeds(operation);
       expect(Math.min(...extent(moves, 0))).toBeGreaterThanOrEqual(0);
       expect(Math.max(...extent(moves, 0))).toBeLessThanOrEqual(40);
       expect(Math.min(...extent(moves, 1))).toBeGreaterThanOrEqual(0);
       expect(Math.max(...extent(moves, 1))).toBeLessThanOrEqual(30);
-      // The pyramid is 8 mm high, its top at the stock top.
-      expect(deepest(moves)).toBeGreaterThanOrEqual(-8);
+      expect(deepest(moves)).toBeGreaterThanOrEqual(-depth);
     }
-    // Roughing leaves 0.5 mm, which finishing takes off.
-    expect(deepest(feeds("Rough"))).toBeGreaterThan(deepest(feeds("Finish")) + 0.5);
+    // Roughing leaves its 0.5 mm on the model, down to its base.
+    expect(deepest(feeds("Rough"))).toBe(-depth + 0.5);
   });
 });
 
