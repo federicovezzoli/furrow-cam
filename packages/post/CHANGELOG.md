@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.5.0
+
+### Minor Changes
+
+- Exporting G-code reuses the toolpaths the workspace has already computed instead of computing every one again, so a project with 3D operations exports at once. ([#158](https://github.com/federicovezzoli/furrow-cam/pull/158))
+- Projects zeroed on the stock top get a touch-off pad: a spot of the stock top that 3D operations never cut and 2D operations warn about, where the machine stops at each tool change so Z can be zeroed again. Its position and size are set with the zero point. ([#157](https://github.com/federicovezzoli/furrow-cam/pull/157))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/cam-core@0.6.0, @furrow/document@0.6.0
+
 ## 0.4.0
 
 ### Minor Changes
