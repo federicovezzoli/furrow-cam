@@ -115,6 +115,7 @@ export function PlaybackTimeline({
       </div>
       <NativeSelect
         aria-label="Playback speed"
+        size="sm"
         className="h-control px-2 pr-7 text-ui"
         value={speed}
         onChange={(event) => setSpeed(Number(event.currentTarget.value) as PlaybackSpeed)}

@@ -59,11 +59,6 @@ export type WorkspaceState = {
    * and picking the zero work on the uncut stock top, so each ends the other.
    */
   simulating: boolean;
-  /**
-   * The simulated stock is played back move by move (#100), with a timeline
-   * under the viewport; only while `simulating`.
-   */
-  playback: boolean;
   /** The STL import under way or the last one that failed, `null` once done or dismissed. */
   modelImport: ModelImport | null;
 
@@ -84,8 +79,6 @@ export type WorkspaceState = {
   /** Shows or hides the toolpaths of all of `operationIds` at once. */
   setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
   setSimulating: (simulating: boolean) => void;
-  /** Turning it on simulates too. */
-  setPlayback: (playback: boolean) => void;
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
@@ -110,7 +103,6 @@ export function createWorkspaceStore() {
         pickingZero: false,
         hiddenToolpathIds: [],
         simulating: false,
-        playback: false,
         modelImport: null,
 
         setView(view) {
@@ -199,7 +191,6 @@ export function createWorkspaceStore() {
                 state.view = "top";
                 state.pickingZero = false;
                 state.simulating = false;
-                state.playback = false;
               }
             },
             false,
@@ -215,7 +206,6 @@ export function createWorkspaceStore() {
                 state.view = "top";
                 state.editingTabs = false;
                 state.simulating = false;
-                state.playback = false;
               }
             },
             false,
@@ -259,27 +249,10 @@ export function createWorkspaceStore() {
               if (simulating) {
                 state.editingTabs = false;
                 state.pickingZero = false;
-              } else {
-                state.playback = false;
               }
             },
             false,
             "setSimulating",
-          );
-        },
-
-        setPlayback(playback) {
-          set(
-            (state) => {
-              state.playback = playback;
-              if (playback) {
-                state.simulating = true;
-                state.editingTabs = false;
-                state.pickingZero = false;
-              }
-            },
-            false,
-            "setPlayback",
           );
         },
 
