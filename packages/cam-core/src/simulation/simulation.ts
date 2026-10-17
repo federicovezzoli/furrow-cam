@@ -2,9 +2,10 @@ import type { Stock, Tool } from "@furrow/document";
 
 /**
  * Cells across the narrowest cut: enough for a slot that narrow to show its
- * floor and walls (ADR-0019).
+ * floor and walls, and for a hole that size to look round where cells are
+ * drawn as columns (ADR-0019).
  */
-export const CELLS_PER_DIAMETER = 6;
+export const CELLS_PER_DIAMETER = 12;
 
 /**
  * Most cells a heightmap may have: 2048 × 4096 (32 MB of heights), which keeps

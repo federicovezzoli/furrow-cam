@@ -89,7 +89,8 @@ describe("playbackPath", () => {
 });
 
 describe("heightmapPlayback", () => {
-  const grid = heightmapGrid(stock, smallestCutWidth(cuts));
+  // Six cells across the narrowest cut, coarser than the default: the same logic, faster.
+  const grid = heightmapGrid(stock, 2 * smallestCutWidth(cuts));
 
   function heightsAfter(path: PlaybackPath, distance: number) {
     const playback = heightmapPlayback(stock, path, grid);

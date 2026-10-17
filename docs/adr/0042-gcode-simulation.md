@@ -64,7 +64,7 @@ Any other word is skipped, with a warning that gives its line number. A line tha
 
 **Where it runs.** Parsing, interpreting and the heightmap all run in a Web Worker (ADR-0004). Playback applies the sweep (`sweepMoves`) to a prefix of the moves, as ADR-0019 anticipated.
 
-**UI.** The simulation gets its own route, `/projects/[id]/gcode`, opened by a button next to Export G-code. The workspace's providers and stores move into a layout for `/projects/[id]`, so the toolpaths already computed survive the navigation both ways. When the route is opened directly, it computes them first. The page shows:
+**UI.** The project's simulator gets its own route, `/projects/[id]/simulate`, opened by a **Simulate** button next to Export G-code, so the workspace stays about setting up the cut. It is one page for both simulations: it plays back the toolpaths first (#100), and simulating the posted program adds the program text and its warnings to it instead of a second page. The workspace keeps its static simulated stock (ADR-0019), not the playback. The workspace's providers and stores move into a layout for `/projects/[id]`, so the toolpaths already computed survive the navigation both ways. When the route is opened directly, it computes them first. The page shows:
 
 - the program text with line numbers, virtualised so that programs of tens of MB scroll smoothly;
 - a viewport with the simulated stock and the tool, drawn with its shape and diameter;
@@ -76,6 +76,6 @@ Any other word is skipped, with a warning that gives its line number. A line tha
 - What the simulation shows is what the post wrote: a wrong offset, a missing retract, a tool change with the wrong cutter or a custom block that plunges into the stock all show up in the stock or as warnings.
 - Toolpath generation and the post share `stockOffset`, so a bug in it shifts both simulations the same way and isn't caught by comparing them.
 - Exported programs gain one comment per tool change. The format is ours, so it can change; we'll version it only if outside tools start reading it.
-- Playback in the workspace (#100) and on this route need the same incremental heightmap and timeline. They should share one implementation fed by different move lists.
+- Toolpath playback (#100) and the G-code simulation share the page, its incremental heightmap and its timeline, fed by different move lists.
 - Moving the workspace's providers into a layout touches every workspace component that reads the stores, but not their behaviour.
 - Opening outside `.nc` files would build on the same parser, adding a way to pick a cutter for programs without our tool comment.
