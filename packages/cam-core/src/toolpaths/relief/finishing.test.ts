@@ -153,6 +153,73 @@ function distanceTo(points: readonly Point[], [x, y]: Point): number {
   return best;
 }
 
+describe("parallel", () => {
+  // Passes at angles whose grid shares cell edges with the simulation's, so
+  // a wall is at the same place in both: on a grid turned otherwise, it is
+  // only known within a cell (ADR-0030), which the simulation's cell centres
+  // show as a cut down the whole wall.
+  for (const angle of [0, 60, 90]) {
+    it(`never nicks a wall a flat end mill drops off, at ${angle}°`, () => {
+      for (const direction of ["zigzag", "one_way"] as const) {
+        const toolpath = finish(endMill, { type: "parallel", angle, direction });
+        expectNoGouge(toolpath, endMill, STEP, stepMesh, { tolerance: SAMPLING });
+      }
+    });
+  }
+
+  it("never cuts below the model with a ball end mill", () => {
+    const strategy = { type: "parallel", angle: 30, direction: "zigzag" } as const;
+    const toolpath = finish(ballEndMill, strategy, {}, PYRAMID, pyramidMesh);
+    expectNoGouge(toolpath, ballEndMill, PYRAMID, pyramidMesh, { tolerance: SAMPLING });
+  });
+});
+
+describe("a wall right at the start of a run", () => {
+  // Floor up to x = 3.2, a plateau at -4 beyond, which the heightmap starts
+  // at the cell centred on 3.25. A flat end mill 3.199 mm in radius at
+  // x = 0.05 doesn't reach it, but does within the first sixteenth of the
+  // way to the next sample, so the climb starts at the first sample.
+  const ledge = placed(20, 10, 10);
+  const mesh = new Float32Array([
+    ...rect(0, 0, 3.2, 10, -10),
+    ...rect(3.2, 0, 20, 10, -4),
+    ...wall(3.2, 0, 10, -10, -4),
+    ...rect(19.99, 9.99, 20, 10, 0),
+  ]);
+  const tool = { ...endMill, diameter: 6.398 };
+
+  /** Fails if a feed moves along while rising or dropping steeper than 45°. */
+  function expectSteepMovesVertical(toolpath: Toolpath) {
+    const { moves } = toolpath;
+    for (let i = 1; i < moves.length; i++) {
+      const [ax, ay, az] = moves[i - 1]?.to ?? [0, 0, 0];
+      const [bx, by, bz] = moves[i]?.to ?? [0, 0, 0];
+      const along = Math.hypot(bx - ax, by - ay);
+      if (moves[i]?.kind === "feed" && along > 1e-9) {
+        expect(Math.abs(bz - az)).toBeLessThanOrEqual(along + 1e-6);
+      }
+    }
+  }
+
+  it("is climbed straight up by a spiral", () => {
+    expectSteepMovesVertical(finish(tool, { type: "spiral", start: "outside" }, {}, ledge, mesh));
+  });
+
+  it("is climbed straight up by zig-zag links", () => {
+    // Mirrored, the plateau below x = 16.8: passes along Y run a cell apart
+    // from x = 19.95 down, and the link from the first to the second climbs
+    // the wall within its first sixteenth.
+    const mirrored = new Float32Array([
+      ...rect(16.8, 0, 20, 10, -10),
+      ...rect(0, 0, 16.8, 10, -4),
+      ...wall(16.8, 0, 10, -10, -4),
+      ...rect(19.99, 9.99, 20, 10, 0),
+    ]);
+    const strategy = { type: "parallel", angle: 90, direction: "zigzag" } as const;
+    expectSteepMovesVertical(finish(tool, strategy, { stepOver: 1.5 }, ledge, mirrored));
+  });
+});
+
 describe("isoLines", () => {
   const grid = { columns: 3, rows: 3, cellWidth: 1, cellHeight: 1 };
 

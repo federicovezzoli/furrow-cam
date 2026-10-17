@@ -12,6 +12,7 @@ import {
   reliefCellSize,
   reliefGrid,
   runSteps,
+  sampleMoves,
   simplifyHeights,
   ToolDropper,
 } from "./finish";
@@ -258,6 +259,49 @@ describe("simplifyHeights", () => {
         expect(chord).toBeLessThanOrEqual((heights[i] as number) + 0.01 + 1e-9);
       }
     }
+  });
+});
+
+describe("sampleMoves", () => {
+  it("merges gentle samples like simplifyHeights", () => {
+    expect(sampleMoves([0, 0.1, 0.2, 0.3], 1)).toEqual([
+      [0, 0],
+      [3, 0.3],
+    ]);
+  });
+
+  it("goes over at the higher sample where the tool drops off a wall", () => {
+    expect(sampleMoves([-4, -4, -10, -10], 0.1)).toEqual([
+      [0, -4],
+      [1, -4],
+      [2, -4],
+      [2, -10],
+      [3, -10],
+    ]);
+    // Climbing: straight up, then along.
+    expect(sampleMoves([-10, -4], 0.1)).toEqual([
+      [0, -10],
+      [0, -4],
+      [1, -4],
+    ]);
+  });
+
+  it("climbs straight up from the first sample", () => {
+    // The tool is at the first sample: the climb starts there, before any move along.
+    expect(sampleMoves([-10, -4, -4], 0.1).slice(0, 3)).toEqual([
+      [0, -10],
+      [0, -4],
+      [1, -4],
+    ]);
+  });
+
+  it("follows the tool between steep samples where it can drop it there", () => {
+    // A wall at a quarter of the way between the samples.
+    const between = (_: number, fraction: number) => (fraction <= 0.25 ? -4 : -10);
+    const moves = sampleMoves([-4, -10], 0.1, between);
+    // Along at -4 only to the wall, not to the next sample.
+    expect(moves.filter(([, z]) => z === -4).at(-1)?.[0]).toBeLessThanOrEqual(0.25 + 1 / 16);
+    expect(moves.at(-1)).toEqual([1, -10]);
   });
 });
 

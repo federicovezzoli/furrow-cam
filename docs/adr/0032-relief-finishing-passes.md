@@ -1,6 +1,6 @@
 # ADR-0032: Relief finishing passes in their own frame, cancelled between slices
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0040](0040-steep-moves-between-samples.md) (steep jumps between samples)
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4, S6), ADR-0004, ADR-0019, ADR-0030; issue #115
