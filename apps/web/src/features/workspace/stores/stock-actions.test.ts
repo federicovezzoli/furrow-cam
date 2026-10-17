@@ -1,5 +1,5 @@
 import { xyOriginPosition } from "@furrow/cam-core";
-import { createProjectDocument, type ProjectDocument, StockAnchor } from "@furrow/document";
+import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
@@ -305,6 +305,19 @@ describe("touch-off pad", () => {
     expect(setTouchOffField(store, "diameter", 401)).toBe(false);
     expect(setTouchOffField(store, "diameter", 0)).toBe(false);
     expect(stock(store).touchOff).toEqual({ x: 100, y: 50, diameter: 30 });
+  });
+
+  it("shrinks about its centre when the stock gets narrower than it, keeping the document valid", () => {
+    const store = newStore();
+    addTouchOff(store);
+    setTouchOffField(store, "diameter", 30);
+    const { x, y } = stock(store).touchOff ?? { x: 0, y: 0 };
+    setStockDimension(store, "width", 20);
+    expect(stock(store).touchOff).toEqual({ x, y, diameter: 20 });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    // Wider again, it stays as it is.
+    setStockDimension(store, "width", 600);
+    expect(stock(store).touchOff?.diameter).toBe(20);
   });
 
   it("can't be edited when there is none", () => {

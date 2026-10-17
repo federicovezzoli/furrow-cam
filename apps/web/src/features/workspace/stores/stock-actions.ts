@@ -68,6 +68,10 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
   store.getState().change(`setStock.${dimension}`, (draft) => {
     draft.stock[dimension] = value;
     moveDrawing(draft, geometry, offset);
+    // The pad must fit on the stock (ADR-0041): it shrinks about its centre.
+    const pad = draft.stock.touchOff;
+    const widest = Math.min(draft.stock.width, draft.stock.height);
+    if (pad && pad.diameter > widest) pad.diameter = widest;
   });
 }
 
