@@ -148,7 +148,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             variant="outline"
             size="compact"
             onClick={() => setModelScale(store, model.id, 1)}
-            disabled={placement.scale === 1}
+            disabled={placement.scale === 1 && (depth === 0 || placement.depth === depth)}
             title="Scale the model back to its size in the file"
           >
             <Undo2Icon />
