@@ -8,7 +8,7 @@ Each project in [`projects.ts`](projects.ts) goes through the same steps as the 
 
 The `measured` tests check what the stored programs can't show at a glance: depths, tab heights, hole positions and, on the stock the program leaves (`simulateGcode`), that parts are cut free everywhere but at their tabs.
 
-The last four projects are real workshop jobs: a strut plate exported from OpenSCAD, a PC shelf and its handle drawn in Inkscape, and fluted cabinet doors. They use the same drawings, bits, depths and tabs as the Estlcam programs that cut them, and `measured against Estlcam` checks that the tool paths come out the same size. Where Furrow can't do what Estlcam did, the project says so: polygon holes are profiled instead of drilled, and the doors' bowl bit is a ball end mill as wide.
+The last four projects are real workshop jobs: a strut plate exported from OpenSCAD, a PC shelf and its handle drawn in Inkscape, and fluted cabinet doors. They use the same drawings, bits, depths and tabs as the Estlcam programs that cut them, and `measured against Estlcam` checks that the tool paths come out the same size. Where Furrow can't do what Estlcam did, the project says so: the doors' bowl bit is a ball end mill as wide.
 
 All of it runs in `pnpm test`.
 

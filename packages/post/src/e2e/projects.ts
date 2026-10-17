@@ -593,7 +593,7 @@ function outsideProfile(
 /**
  * Two 5 mm strut plates exported from OpenSCAD as one path, their 28 Ø5.3 mm
  * holes 35-sided polygons. Estlcam drilled the left plate's holes with a
- * helix; drilling needs circles, so here they are profiled from the inside
+ * helix; drilling takes the polygons as circles and bores them the same way
  * (#154).
  */
 function strutPlate(): ProjectDocument {
@@ -620,21 +620,12 @@ function strutPlate(): ProjectDocument {
     operations: [
       {
         id: id(),
-        type: "profile",
+        type: "drill",
         name: "Holes",
         enabled: true,
         targets: [{ shapeId: plates.id, paths: holes }],
         tool: spiral3,
-        params: {
-          side: "inside",
-          direction: "climb",
-          depth: 5,
-          allowance: 0,
-          finishPass: false,
-          leadIn: null,
-          ramp: false,
-          tabs: null,
-        },
+        params: { depth: 5, peck: false },
       },
       outsideProfile(id, "Plate", [{ shapeId: plates.id, paths: [0] }], spiral6, 5, null),
     ],
@@ -817,7 +808,7 @@ export function corpus(): CorpusProject[] {
     {
       name: "strut-plate",
       title: "Strut plate",
-      covers: "an OpenSCAD export: holes as polygons, a metre-long plate on a LowRider",
+      covers: "an OpenSCAD export: holes as polygons, bored, a metre-long plate on a LowRider",
       document: valid(strutPlate()),
     },
     {
