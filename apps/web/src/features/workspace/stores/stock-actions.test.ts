@@ -1,4 +1,4 @@
-import { xyOriginPosition } from "@furrow/cam-core";
+import { touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
@@ -12,6 +12,7 @@ import {
   setCustomXYOrigin,
   setStockDimension,
   setTouchOffField,
+  setTouchOffToolChange,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -278,13 +279,15 @@ describe("setZOrigin", () => {
 });
 
 describe("touch-off pad", () => {
-  it("is added in the corner nearest the zero the design leaves free, and removed", () => {
-    // The drawing store's square sits on the bottom-left corner.
-    const store = drawingStore();
+  /** A pad with the machine's tool change. */
+  const pad = (x: number, y: number, diameter = 15) => ({ x, y, diameter, toolChange: null });
+
+  it("is added centred on the XY zero, and removed", () => {
+    // Imports add none (ADR-0043): the user ticks it.
+    const store = newStore();
+    setXYAnchor(store, "center");
     addTouchOff(store);
-    const pad = stock(store).touchOff;
-    expect(pad?.diameter).toBe(15);
-    expect(pad).not.toEqual({ x: 7.5, y: 7.5, diameter: 15 });
+    expect(stock(store).touchOff).toEqual(pad(300, 200));
     // Adding again keeps it.
     const steps = store.getState().past.length;
     addTouchOff(store);
@@ -292,7 +295,7 @@ describe("touch-off pad", () => {
     removeTouchOff(store);
     expect(stock(store).touchOff).toBeNull();
     store.getState().undo();
-    expect(stock(store).touchOff).toEqual(pad);
+    expect(stock(store).touchOff).toEqual(pad(300, 200));
   });
 
   it("moves and resizes about its centre, refusing a pad wider than the stock", () => {
@@ -301,23 +304,105 @@ describe("touch-off pad", () => {
     expect(setTouchOffField(store, "x", 100)).toBe(true);
     expect(setTouchOffField(store, "y", 50)).toBe(true);
     expect(setTouchOffField(store, "diameter", 30)).toBe(true);
-    expect(stock(store).touchOff).toEqual({ x: 100, y: 50, diameter: 30 });
+    expect(stock(store).touchOff).toEqual(pad(100, 50, 30));
     expect(setTouchOffField(store, "diameter", 401)).toBe(false);
     expect(setTouchOffField(store, "diameter", 0)).toBe(false);
-    expect(stock(store).touchOff).toEqual({ x: 100, y: 50, diameter: 30 });
+    expect(stock(store).touchOff).toEqual(pad(100, 50, 30));
+  });
+
+  it("takes its own tool change, blank text going back to the machine's", () => {
+    const store = newStore();
+    setTouchOffToolChange(store, "M0");
+    expect(stock(store).touchOff).toBeNull();
+    addTouchOff(store);
+    setTouchOffToolChange(store, "G0 X{padX} Y{padY}\nM0");
+    expect(stock(store).touchOff?.toolChange).toBe("G0 X{padX} Y{padY}\nM0");
+    const steps = store.getState().past.length;
+    setTouchOffToolChange(store, "  \n");
+    expect(stock(store).touchOff?.toolChange).toBeNull();
+    setTouchOffToolChange(store, null);
+    expect(store.getState().past).toHaveLength(steps + 1);
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
   });
 
   it("shrinks about its centre when the stock gets narrower than it, keeping the document valid", () => {
     const store = newStore();
     addTouchOff(store);
     setTouchOffField(store, "diameter", 30);
-    const { x, y } = stock(store).touchOff ?? { x: 0, y: 0 };
     setStockDimension(store, "width", 20);
-    expect(stock(store).touchOff).toEqual({ x, y, diameter: 20 });
+    expect(stock(store).touchOff).toEqual(pad(0, 0, 20));
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
     // Wider again, it stays as it is.
     setStockDimension(store, "width", 600);
     expect(stock(store).touchOff?.diameter).toBe(20);
+  });
+
+  it("follows an anchored zero when the stock is resized, as one undo step", () => {
+    const store = newStore();
+    setXYAnchor(store, "top_left");
+    addTouchOff(store);
+    expect(stock(store).touchOff).toEqual(pad(0, 400));
+    const steps = store.getState().past.length;
+    setStockDimension(store, "height", 300);
+    expect(stock(store).touchOff).toEqual(pad(0, 300));
+    expect(store.getState().past).toHaveLength(steps + 1);
+    store.getState().undo();
+    expect(stock(store).touchOff).toEqual(pad(0, 400));
+  });
+
+  it("stays on the stock when a resize would push it off", () => {
+    // A centre zero moves the drawing, and the pad, by half the change.
+    const store = newStore();
+    setXYAnchor(store, "center");
+    addTouchOff(store);
+    setTouchOffField(store, "x", 7.5);
+    setTouchOffField(store, "y", 7.5);
+    setStockDimension(store, "width", 400);
+    setStockDimension(store, "height", 100);
+    expect(stock(store).touchOff).toEqual(pad(7.5, 7.5));
+    // Narrower than the pad: it shrinks and stays on the stock.
+    setStockDimension(store, "height", 10);
+    const shrunk = stock(store).touchOff;
+    expect(shrunk).toEqual(pad(7.5, 5, 10));
+    expect(shrunk && touchOffOutsideStock(stock(store), shrunk)).toBe(false);
+  });
+
+  it("is only kept on the stock when it was on it", () => {
+    // Centred on a bottom-left zero, three quarters of it are off the stock.
+    const store = newStore();
+    setXYAnchor(store, "top_left");
+    addTouchOff(store);
+    setStockDimension(store, "height", 300);
+    expect(stock(store).touchOff).toEqual(pad(0, 300));
+  });
+
+  it("moves with the design when the XY anchor changes", () => {
+    const store = drawingStore();
+    setXYAnchor(store, "center");
+    addTouchOff(store);
+    const before = store.getState().document;
+    setXYAnchor(store, "top_right");
+    const after = store.getState().document;
+    const { drawing } = moved(before, after);
+    const at = (document: ProjectDocument) => {
+      const { x, y } = document.stock.touchOff ?? { x: 0, y: 0 };
+      return [x, y];
+    };
+    const [x, y] = at(before);
+    expectClose(at(after), [(x ?? 0) + (drawing[0] ?? 0), (y ?? 0) + (drawing[1] ?? 0)]);
+  });
+
+  it("is clamped, not moved, under a custom zero", () => {
+    const store = newStore();
+    addTouchOff(store);
+    setTouchOffField(store, "x", 7.5);
+    setTouchOffField(store, "y", 7.5);
+    pickXYOrigin(store, [50, 50]);
+    setStockDimension(store, "width", 400);
+    expect(stock(store).touchOff).toEqual(pad(7.5, 7.5));
+    setTouchOffField(store, "x", 392.5);
+    setStockDimension(store, "width", 300);
+    expect(stock(store).touchOff).toEqual(pad(292.5, 7.5));
   });
 
   it("can't be edited when there is none", () => {

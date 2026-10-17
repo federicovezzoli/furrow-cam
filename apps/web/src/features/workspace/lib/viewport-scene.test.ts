@@ -14,6 +14,7 @@ import {
   pixelsPerMillimetre,
   shapeLinePositions,
   shapesLinePositions,
+  touchOffLinePositions,
 } from "./viewport-scene";
 
 const shape = (id: string, paths: Shape["paths"]): Shape => ({ id, name: "", layer: "0", paths });
@@ -158,5 +159,20 @@ describe("pixelsPerMillimetre", () => {
     // 90° fov: 200 mm visible at 100 mm away.
     expect(pixelsPerMillimetre({ zoom: 1, fov: 90 }, 800, 100)).toBeCloseTo(4);
     expect(pixelsPerMillimetre({ zoom: 1, fov: 90 }, 800, 200)).toBeCloseTo(2);
+  });
+});
+
+describe("touchOffLinePositions", () => {
+  it("draws a ring at the pad's diameter around a cross at its centre", () => {
+    const { ring, distances, cross } = touchOffLinePositions({ x: 20, y: 10, diameter: 15 });
+    expect(ring.length / 3).toBe(distances.length);
+    for (let i = 0; i < ring.length; i += 3) {
+      expect(Math.hypot((ring[i] ?? 0) - 20, (ring[i + 1] ?? 0) - 10)).toBeCloseTo(7.5, 4);
+      expect(ring[i + 2]).toBe(0);
+    }
+    // Distances run along the ring, to about its circumference.
+    expect(distances[0]).toBe(0);
+    expect(distances.at(-1)).toBeCloseTo(15 * Math.PI, 1);
+    expect(Array.from(cross)).toEqual([17.5, 10, 0, 22.5, 10, 0, 20, 7.5, 0, 20, 12.5, 0]);
   });
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import { formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
+import { DEFAULT_SAFE_Z, formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
 import { Units, ZOrigin } from "@furrow/document";
+import { suggestTouchOffToolChange } from "@furrow/post";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
@@ -10,6 +11,7 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type { MachineChoice } from "@/features/machines/server";
 import {
   ANCHOR_GRID,
@@ -36,6 +38,7 @@ import {
   setCustomXYOrigin,
   setStockDimension,
   setTouchOffField,
+  setTouchOffToolChange,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -341,7 +344,7 @@ function ZeroSection() {
 }
 
 /**
- * The touch-off pad (#147, ADR-0041): a spot of the stock top no operation
+ * The touch-off pad (#147, ADR-0041, ADR-0043): a spot of the stock top no operation
  * cuts, for zeroing Z on after a tool change. Only with Z zeroed on the
  * stock top.
  */
@@ -414,8 +417,88 @@ function TouchOffFields() {
               Part of the pad is off the stock, so there may be nothing to zero Z on there.
             </p>
           )}
+          <TouchOffToolChange toolChange={pad.toolChange} />
         </>
       )}
     </>
+  );
+}
+
+/**
+ * The pad's own tool change (ADR-0043), in place of the machine's: edited as
+ * text, saved as one undo step when the field loses focus (Escape reverts).
+ * **Suggest** starts it from the machine's block with its move put on the
+ * pad, every other command kept.
+ */
+function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
+  const store = useDocumentStoreApi();
+  const machine = useDocumentStore((s) => s.document.machine);
+  /** What's typed while editing; `null` shows the saved block. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const machineBlock = machine?.toolChange ?? null;
+
+  function save() {
+    if (draft !== null && draft !== (toolChange ?? "")) setTouchOffToolChange(store, draft);
+    setDraft(null);
+  }
+
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor="touch-off-tool-change" className="text-ui font-normal">
+        Tool change on the pad
+      </Label>
+      <Textarea
+        id="touch-off-tool-change"
+        value={draft ?? toolChange ?? ""}
+        placeholder={machineBlock ?? "M5\nM0 (Change the bit)"}
+        rows={5}
+        maxLength={10_000}
+        spellCheck={false}
+        className="font-mono text-xs md:text-xs"
+        aria-describedby="touch-off-tool-change-hint"
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={save}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setDraft(null);
+          }
+        }}
+      />
+      <p id="touch-off-tool-change-hint" className="text-muted-foreground">
+        Empty, the program moves over the pad, then runs the machine's tool change. Filled in, this
+        replaces both; <code>{"{padX}"}</code> and <code>{"{padY}"}</code> stand for the pad's
+        centre, measured from the zero.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="compact"
+          onClick={() => {
+            setDraft(null);
+            setTouchOffToolChange(
+              store,
+              suggestTouchOffToolChange(machineBlock, machine?.safeZ ?? DEFAULT_SAFE_Z),
+            );
+          }}
+        >
+          Suggest
+        </Button>
+        {toolChange !== null && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="compact"
+            onClick={() => {
+              setDraft(null);
+              setTouchOffToolChange(store, null);
+            }}
+          >
+            Use the machine's
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

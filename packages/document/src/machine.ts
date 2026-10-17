@@ -6,8 +6,8 @@ export type PostProcessorId = z.infer<typeof PostProcessorId>;
 
 /**
  * Custom G-code written verbatim at one point of the program, replacing what
- * the post-processor writes there by default. `null` keeps the default. No
- * placeholders: the text is copied as is.
+ * the post-processor writes there by default. `null` keeps the default. A
+ * machine's blocks have no placeholders: the text is copied as is.
  */
 export const GcodeBlock = z
   .string()

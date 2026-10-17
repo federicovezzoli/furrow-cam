@@ -338,8 +338,8 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     a.stockBottom === b.stockBottom &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
-    // The stock's own pad, kept as long as nothing about it changes.
-    a.touchOff === b.touchOff &&
+    // A new disc every time, like the stock rectangle.
+    JSON.stringify(a.touchOff) === JSON.stringify(b.touchOff) &&
     a.shapes.length === b.shapes.length &&
     a.shapes.every((shape, i) => shape === b.shapes[i]) &&
     // A rest operation's inputs hold those of the operations before it.

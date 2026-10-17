@@ -8,20 +8,21 @@ import {
   stockBounds,
   stockOffset,
 } from "@furrow/cam-core";
-import { Edges } from "@react-three/drei";
+import { Edges, Html } from "@react-three/drei";
 import { useMemo } from "react";
 import {
   boxCenter,
   gridLinePositions,
   pathsLinePositions,
   shapesLinePositions,
+  touchOffLinePositions,
 } from "@/features/workspace/lib/viewport-scene";
 import {
   useDocumentStore,
   useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
 import type { ModelPreview } from "@/features/workspace/stores/model-preview-scheduler";
-import { Lines, useLineGeometry } from "./lines";
+import { DashedLines, Lines, useLineGeometry } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
@@ -52,7 +53,7 @@ export function Scene({
   return (
     <>
       <WorkOrigin palette={palette} />
-      <TouchOffPad color={palette.tab} />
+      <TouchOffPad color={palette.touchOff} />
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
       ) : (
@@ -98,25 +99,35 @@ export function WorkOrigin({ palette }: { palette: Palette }) {
 }
 
 /**
- * The touch-off pad (#147, ADR-0041) on the stock top, at its diameter: a
- * ring over a faint disc, in the colour of the other stock left uncut (tabs).
- * Not drawn with Z zeroed on the machine bed, where it isn't used.
+ * The touch-off pad (#147, ADR-0041) on the stock top, drawn as a spot to
+ * zero on rather than a solid object (ADR-0043): a dashed ring at its
+ * diameter, a cross at its centre and a label a fixed size on screen, in a
+ * colour of its own. Not drawn with Z zeroed on the machine bed, where it
+ * isn't used.
  */
 function TouchOffPad({ color }: { color: string }) {
   const pad = useDocumentStore((s) => activeTouchOff(s.document.stock));
-  if (!pad) return null;
-  const r = pad.diameter / 2;
+  const lines = useMemo(() => pad && touchOffLinePositions(pad), [pad]);
+  if (!pad || !lines) return null;
   return (
-    <group position={[pad.x, pad.y, 0]} renderOrder={RENDER_ORDER.origin}>
-      <mesh renderOrder={RENDER_ORDER.origin}>
-        <circleGeometry args={[r, 64]} />
-        <meshBasicMaterial color={color} transparent opacity={0.2} depthTest={false} />
-      </mesh>
-      <mesh renderOrder={RENDER_ORDER.origin}>
-        <ringGeometry args={[Math.max(0, r - Math.max(0.3, r * 0.06)), r, 64]} />
-        <meshBasicMaterial color={color} transparent depthTest={false} />
-      </mesh>
-    </group>
+    <>
+      <DashedLines
+        positions={lines.ring}
+        distances={lines.distances}
+        color={color}
+        renderOrder={RENDER_ORDER.origin}
+        overlay
+      />
+      <Lines positions={lines.cross} color={color} renderOrder={RENDER_ORDER.origin} overlay />
+      <Html position={[pad.x + pad.diameter / 2, pad.y, 0]} style={{ pointerEvents: "none" }}>
+        <div
+          className="ml-1.5 -translate-y-1/2 rounded-sm bg-background/80 px-1 font-medium text-[10px] whitespace-nowrap"
+          style={{ color }}
+        >
+          Z touch-off
+        </div>
+      </Html>
+    </>
   );
 }
 

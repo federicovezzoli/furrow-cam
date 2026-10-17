@@ -188,25 +188,27 @@ describe("Stock", () => {
     expect(Stock.safeParse({ ...stock, touchOff: null }).success).toBe(true);
     // As wide as the stock's smaller side, and off the stock: the pad lying
     // outside it is a warning, not an error.
-    const widest = { x: 100, y: 100, diameter: 200 };
+    const widest = { x: 100, y: 100, diameter: 200, toolChange: null };
     expect(Stock.safeParse({ ...stock, touchOff: widest }).success).toBe(true);
-    expect(Stock.safeParse({ ...stock, touchOff: { x: -50, y: 10, diameter: 15 } }).success).toBe(
-      true,
-    );
+    const off = { x: -50, y: 10, diameter: 15, toolChange: "G0 X{padX} Y{padY}\nM0" };
+    expect(Stock.safeParse({ ...stock, touchOff: off }).success).toBe(true);
   });
 
-  it("rejects pads with no diameter or wider than the stock", () => {
+  it("rejects pads with no diameter, wider than the stock, or a blank tool change", () => {
     for (const touchOff of [
-      { x: 10, y: 10, diameter: 0 },
-      { x: 10, y: 10, diameter: 201 },
-      { x: 10, y: 10 },
-      { x: 10, y: 10, diameter: 15, z: 0 },
+      { x: 10, y: 10, diameter: 0, toolChange: null },
+      { x: 10, y: 10, diameter: 201, toolChange: null },
+      { x: 10, y: 10, toolChange: null },
+      { x: 10, y: 10, diameter: 15 },
+      { x: 10, y: 10, diameter: 15, toolChange: " \n" },
+      { x: 10, y: 10, diameter: 15, toolChange: null, z: 0 },
     ]) {
       expect(Stock.safeParse({ ...stock, touchOff }).success).toBe(false);
     }
-    expect(
-      Stock.safeParse({ ...stock, touchOff: { x: 10, y: 10, diameter: 201 } }).error?.issues,
-    ).toEqual([expect.objectContaining({ path: ["touchOff", "diameter"] })]);
+    const wide = { x: 10, y: 10, diameter: 201, toolChange: null };
+    expect(Stock.safeParse({ ...stock, touchOff: wide }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["touchOff", "diameter"] }),
+    ]);
   });
 });
 

@@ -1,6 +1,8 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
 import type { Machine, Stock, StockAnchor, Tool, TouchOff } from "@furrow/document";
+import { formatNumber } from "./format";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
+import { fillTouchOffBlock } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
@@ -22,7 +24,9 @@ const MODES = "G21 G90 G94 G17";
  *   GRBL has no `M6`, so the tool change turns the spindle off, rises and
  *   pauses with `M0`, asking for Z to be zeroed again: there are no tool
  *   length offsets. With a touch-off pad (ADR-0041), it rapids over the
- *   pad's centre before pausing, and before a custom tool-change block.
+ *   pad's centre before pausing, and before a custom tool-change block. A
+ *   pad's own tool change (ADR-0043) replaces all of it, its placeholders
+ *   filled in.
  * - Each tool's cutter shape is written in a machine-readable comment
  *   (`toolShapeComment`, ADR-0042) when the cutter is in the spindle: for the
  *   first tool in the header, before the program-start block; at a tool
@@ -73,7 +77,10 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       out.comment(`Tool: ${toolLabel(step.tool)}`);
       if (tool !== null) {
         out.forget();
-        if (machine?.toolChange) {
+        if (pad?.toolChange) {
+          // The project's own tool change on the pad (ADR-0043) replaces it all.
+          custom(fillTouchOffBlock(pad.toolChange, stock, pad));
+        } else if (machine?.toolChange) {
           // Over the pad first, where Z is zeroed; the block may stop the spindle.
           if (pad) {
             out.rapid({ z: safeZ });
@@ -219,12 +226,6 @@ class GcodeWriter {
     }
     this.lines.push([code, ...words].join(" "));
   }
-}
-
-/** At most 3 decimals (a micrometre), without trailing zeros or `-0`. */
-export function formatNumber(value: number): string {
-  const text = value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
-  return text === "-0" ? "0" : text;
 }
 
 /** Where the touch-off pad is, in work coordinates, and how wide. */

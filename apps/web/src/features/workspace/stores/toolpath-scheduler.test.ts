@@ -184,7 +184,7 @@ describe("scheduleToolpaths", () => {
     };
     answer();
     documents.getState().change("Pad", (draft) => {
-      draft.stock.touchOff = { x: 300, y: 200, diameter: 15 };
+      draft.stock.touchOff = { x: 300, y: 200, diameter: 15, toolChange: null };
     });
     expect(requests).toHaveLength(2);
     expect(requests[1]?.input.touchOff).toEqual({ x: 300, y: 200, diameter: 15 });
@@ -194,6 +194,11 @@ describe("scheduleToolpaths", () => {
     });
     expect(requests).toHaveLength(3);
     answer();
+    // Its tool change is only written in the G-code.
+    documents.getState().change("Pad", (draft) => {
+      if (draft.stock.touchOff) draft.stock.touchOff.toolChange = "M0";
+    });
+    expect(requests).toHaveLength(3);
     // Zeroed on the machine bed, the pad isn't used.
     documents.getState().change("Z zero", (draft) => {
       draft.stock.zOrigin = "machine_bed";

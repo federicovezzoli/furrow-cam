@@ -1,7 +1,8 @@
 import {
+  clampTouchOff,
   defaultTouchOff,
   designAlignment,
-  designBounds,
+  touchOffOutsideStock,
   translatePoint,
   translateShapes,
   xyOriginPosition,
@@ -11,7 +12,7 @@ import type {
   Point,
   ProjectDocument,
   StockAnchor,
-  TouchOff,
+  TouchOffDisc,
   Units,
   ZOrigin,
 } from "@furrow/document";
@@ -35,8 +36,9 @@ export function setUnits(store: DocumentStore, units: Units) {
 /**
  * Moves the design on the stock by `offset`: its shapes, the models placed
  * with them (ADR-0031) and everything else stored in stock coordinates with
- * them, the profiles' tab positions. `geometry` is the document's, read
- * outside the draft: reading every point through it would be slow.
+ * them, the profiles' tab positions and the touch-off pad (ADR-0043), which
+ * was placed on the zero the design follows. `geometry` is the document's,
+ * read outside the draft: reading every point through it would be slow.
  */
 function moveDrawing(
   draft: Draft<ProjectDocument>,
@@ -54,13 +56,30 @@ function moveDrawing(
     const { tabs } = operation.params;
     tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
   }
+  const pad = draft.stock.touchOff;
+  if (pad) [pad.x, pad.y] = translatePoint([pad.x, pad.y], offset);
+}
+
+/**
+ * Brings the touch-off pad back onto the stock after a change moved it or
+ * resized the stock, if it was wholly on the stock `before`: one the user
+ * put partly off stays where it is.
+ */
+function keepTouchOffOnStock(draft: Draft<ProjectDocument>, before: ProjectDocument["stock"]) {
+  const pad = draft.stock.touchOff;
+  if (!pad || !before.touchOff || touchOffOutsideStock(before, before.touchOff)) return;
+  const { x, y } = clampTouchOff(draft.stock, pad);
+  // Assigned only when moved, so a pad on the stock adds nothing to the step.
+  if (x !== pad.x) pad.x = x;
+  if (y !== pad.y) pad.y = y;
 }
 
 /**
  * Resizes the stock along one dimension, in millimetres. An anchored zero
  * follows the stock and the drawing moves with it (ADR-0022), so a drawing
  * aligned to the anchor stays aligned; a custom zero and the drawing stay
- * where they are.
+ * where they are. The touch-off pad moves with the drawing and stays on the
+ * stock (ADR-0041).
  */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
   const { stock, geometry } = store.getState().document;
@@ -72,6 +91,7 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     const pad = draft.stock.touchOff;
     const widest = Math.min(draft.stock.width, draft.stock.height);
     if (pad && pad.diameter > widest) pad.diameter = widest;
+    keepTouchOffOnStock(draft, stock);
   });
 }
 
@@ -79,7 +99,8 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
  * Puts the XY zero on a stock anchor (ADR-0016) and aligns the design, the
  * drawing and the models together, to the stock at the same anchor (ADR-0022,
  * ADR-0031), so the zero is that point of the design too. Choosing the
- * current anchor aligns a design that isn't.
+ * current anchor aligns a design that isn't. The touch-off pad moves with the
+ * design and stays on the stock (ADR-0041).
  */
 export function setXYAnchor(store: DocumentStore, anchor: StockAnchor) {
   const { stock, geometry, models } = store.getState().document;
@@ -88,6 +109,7 @@ export function setXYAnchor(store: DocumentStore, anchor: StockAnchor) {
     // Checked: assigning a new object would be a change even for the same anchor.
     if (draft.stock.xyOrigin.anchor !== anchor) draft.stock.xyOrigin = { anchor };
     moveDrawing(draft, geometry, offset);
+    keepTouchOffOnStock(draft, stock);
   });
 }
 
@@ -135,21 +157,13 @@ export function setZOrigin(store: DocumentStore, zOrigin: ZOrigin) {
 }
 
 /**
- * The touch-off pad a project with `document`'s stock and design gets by
- * default (#147, ADR-0041): in the corner nearest the zero the design leaves
- * free.
+ * Adds the default touch-off pad (#147, ADR-0041, ADR-0043), as one undo
+ * step: centred on the XY zero. Nothing if the project has one.
  */
-export function defaultProjectTouchOff(
-  document: Pick<ProjectDocument, "stock" | "geometry" | "models">,
-): TouchOff {
-  return defaultTouchOff(document.stock, designBounds(document.geometry, document.models));
-}
-
-/** Adds the default touch-off pad, as one undo step; nothing if the project has one. */
 export function addTouchOff(store: DocumentStore) {
-  const { document } = store.getState();
-  if (document.stock.touchOff) return;
-  const pad = defaultProjectTouchOff(document);
+  const { stock } = store.getState().document;
+  if (stock.touchOff) return;
+  const pad = defaultTouchOff(stock);
   store.getState().change("setStock.touchOff", (draft) => {
     draft.stock.touchOff = pad;
   });
@@ -170,7 +184,7 @@ export function removeTouchOff(store: DocumentStore) {
  */
 export function setTouchOffField(
   store: DocumentStore,
-  field: keyof TouchOff,
+  field: keyof TouchOffDisc,
   value: number,
 ): boolean {
   const { stock } = store.getState().document;
@@ -182,4 +196,17 @@ export function setTouchOffField(
     if (draft.stock.touchOff) draft.stock.touchOff[field] = value;
   });
   return true;
+}
+
+/**
+ * Sets the touch-off pad's own tool change (ADR-0043), in place of the
+ * machine's, as one undo step; `null` or blank text goes back to the
+ * machine's. Nothing without a pad.
+ */
+export function setTouchOffToolChange(store: DocumentStore, block: string | null) {
+  const toolChange = block?.trim() ? block : null;
+  store.getState().change("setStock.touchOff.toolChange", (draft) => {
+    const pad = draft.stock.touchOff;
+    if (pad && pad.toolChange !== toolChange) pad.toolChange = toolChange;
+  });
 }
