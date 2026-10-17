@@ -37,6 +37,8 @@ describe("toolpathLines", () => {
     );
     expect([...lines.rapids]).toEqual([10, 0, -1, 10, 0, 5]);
     expect([...lines.feeds]).toEqual([0, 0, 5, 0, 0, -1, 0, 0, -1, 10, 0, -1]);
+    // In the order the tool makes them: two feeds, then the rapid.
+    expect([...lines.kinds]).toEqual([0, 0, 1]);
   });
 
   it("measures each rapid from its own start, for dashes", () => {
@@ -85,6 +87,7 @@ describe("toolpathLines", () => {
       lines.rapidDistances.buffer,
       lines.holes.buffer,
       lines.feedColors.buffer,
+      lines.kinds.buffer,
     ]);
   });
 
