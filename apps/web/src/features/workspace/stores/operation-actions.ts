@@ -133,7 +133,7 @@ export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
     direction: "climb",
     stepOver: null,
     stockToLeave: 0.5,
-    boundary: "model",
+    boundary: { type: "model" },
     ramp: true,
     rest: false,
   };

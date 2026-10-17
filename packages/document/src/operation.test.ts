@@ -341,7 +341,8 @@ describe("ReliefRoughOperation", () => {
       { strategy: { type: "linear", angle: 45 } },
       { strategy: { type: "peel", start: "centre" } },
       { strategy: { type: "peel", start: "outside" } },
-      { boundary: "stock" },
+      { boundary: { type: "stock" } },
+      { boundary: { type: "margin", distance: 10 } },
       { stepOver: 25 },
       { direction: "conventional", ramp: false, stockToLeave: 0 },
     ]) {
@@ -355,7 +356,11 @@ describe("ReliefRoughOperation", () => {
       { stockToLeave: -0.1 },
       { stepOver: 0 },
       { stepOver: 101 },
-      { boundary: "drawing" },
+      { boundary: { type: "drawing" } },
+      { boundary: "model" },
+      { boundary: { type: "margin", distance: 0 } },
+      { boundary: { type: "margin" } },
+      { boundary: { type: "model", distance: 10 } },
       { strategy: { type: "linear", angle: 30 } },
       { modelId: "emblem" },
     ]) {

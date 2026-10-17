@@ -185,7 +185,7 @@ export const reliefRough: ReliefRoughOperation = {
     direction: "climb",
     stepOver: null,
     stockToLeave: 0.5,
-    boundary: "model",
+    boundary: { type: "model" },
     ramp: true,
     rest: false,
   },
@@ -193,7 +193,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 10,
+    schemaVersion: 11,
     units: "in",
     stock: {
       width: 300,

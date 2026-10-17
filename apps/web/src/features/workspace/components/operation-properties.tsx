@@ -26,7 +26,8 @@ import {
   RasterDirection,
   type ReliefFinishOperation,
   type ReliefRoughOperation,
-  RoughingBoundary,
+  type RoughingBoundary,
+  type RoughingBoundaryType,
   type Tool,
   type VCarveOperation,
 } from "@furrow/document";
@@ -111,9 +112,25 @@ const PEEL_START_LABELS: Record<PeelStart, string> = {
   outside: "Outer wall",
 };
 
-const BOUNDARY_LABELS: Record<RoughingBoundary, string> = {
+const BOUNDARY_LABELS: Record<RoughingBoundaryType, string> = {
   model: "Model",
+  margin: "Model and margin",
   stock: "Whole stock",
+};
+
+/** What picking each boundary sets: a margin starts at 5 mm, inside a fitted model's border. */
+const DEFAULT_BOUNDARIES: Record<RoughingBoundaryType, RoughingBoundary> = {
+  model: { type: "model" },
+  margin: { type: "margin", distance: 5 },
+  stock: { type: "stock" },
+};
+
+const BOUNDARY_HINTS: Record<RoughingBoundaryType, string> = {
+  model: "The tool's centre reaches the edges of the model's outline.",
+  margin:
+    "Clears a frame this wide around the model's outline (at least the tool's radius), keeping the tool inside it: the stock top beyond is left for zeroing Z after a tool change.",
+  stock:
+    "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom.",
 };
 
 /** What each strategy does at each level of 3D roughing: linear clearing has no laps there. */
@@ -1102,24 +1119,39 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         <NativeSelect
           id="relief-rough-boundary"
           size="sm"
-          value={params.boundary}
-          onChange={(event) =>
-            update("boundary", { boundary: RoughingBoundary.parse(event.target.value) })
-          }
+          value={params.boundary.type}
+          onChange={(event) => {
+            const type = event.target.value as RoughingBoundaryType;
+            if (type !== params.boundary.type) {
+              update("boundary", { boundary: DEFAULT_BOUNDARIES[type] });
+            }
+          }}
           className={SELECT_CLASS}
         >
-          {RoughingBoundary.options.map((option) => (
-            <NativeSelectOption key={option} value={option}>
-              {BOUNDARY_LABELS[option]}
+          {Object.entries(BOUNDARY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">
-        {params.boundary === "model"
-          ? "The tool's centre reaches the edges of the model's outline."
-          : "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom."}
-      </p>
+      {params.boundary.type === "margin" && (
+        <NumberField
+          id="relief-rough-margin"
+          label="Margin"
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={params.boundary.distance}
+          onValueChange={(distance) =>
+            update("boundary", { boundary: { type: "margin", distance } })
+          }
+          error={errors.boundary}
+          {...gestureHandlers(store)}
+        />
+      )}
+      <p className="text-muted-foreground">{BOUNDARY_HINTS[params.boundary.type]}</p>
       <RampCheckbox
         id="relief-rough-ramp"
         tool={tool}
@@ -1131,9 +1163,9 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         checked={params.rest}
         onChange={(rest) => update("rest", { rest })}
       />
-      {(errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest) && (
+      {(errors.strategy ?? errors.direction ?? errors.ramp ?? errors.rest) && (
         <p role="alert" className="text-destructive">
-          {errors.strategy ?? errors.direction ?? errors.boundary ?? errors.ramp ?? errors.rest}
+          {errors.strategy ?? errors.direction ?? errors.ramp ?? errors.rest}
         </p>
       )}
     </section>

@@ -1,11 +1,10 @@
 import {
   anchorPoint,
-  fitScale,
   initialPlacement,
   modelRect,
-  positionAt,
   proportionalDepth,
   replacePlacement,
+  stockFit,
   translatePoint,
   turnModel,
   xyOriginPosition,
@@ -74,9 +73,9 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
 }
 
 /**
- * Adds an imported mesh as a model, as one undo step: scaled to fit the
- * stock, its top at the stock top and aligned to the stock at the zero's
- * anchor (ADR-0031). Projects hold one imported file for now: returns
+ * Adds an imported mesh as a model, as one undo step: fitted inside the
+ * stock less a border, its top at the stock top and aligned at the zero's
+ * anchor (ADR-0031, ADR-0038). Projects hold one imported file for now: returns
  * `null`, adding nothing, if the project already has shapes or a model;
  * otherwise the model's id.
  */
@@ -129,19 +128,20 @@ export function setModelScale(store: DocumentStore, id: string, scale: number) {
   });
 }
 
-/** Scales a model to fit the stock's width and height, aligned to it at the anchor. */
+/**
+ * Scales a model to fit inside the stock less a border, aligned to it at the
+ * anchor (`stockFit`).
+ */
 export function fitModelToStock(store: DocumentStore, id: string) {
   const { stock } = store.getState().document;
   changeModel(store, "fitModel", id, (model, current) => {
     const { rotation } = current.placement;
-    const scale = fitScale(current.bounds, rotation, stock);
-    const anchor = modelAnchor(stock);
-    const point = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
+    const { scale, position } = stockFit(current.bounds, rotation, stock, modelAnchor(stock));
     assignPlacement(model, {
       ...current.placement,
       scale,
       depth: proportionalDepth(current.bounds, rotation, scale) ?? current.placement.depth,
-      position: positionAt(current.bounds, { rotation, scale }, anchor, point),
+      position,
     });
   });
 }

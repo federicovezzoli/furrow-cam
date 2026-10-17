@@ -7,6 +7,7 @@ import {
   fitScale,
   initialPlacement,
   modelAt,
+  modelBorder,
   modelRect,
   modelTransform,
   placedModelBox,
@@ -14,6 +15,7 @@ import {
   replacePlacement,
   rotatedBounds,
   rotatedSize,
+  stockFit,
   turnModel,
 } from "./model";
 import type { Box3, Vec3 } from "./stock";
@@ -98,17 +100,41 @@ describe("placedModelBox and modelTransform", () => {
 });
 
 describe("initialPlacement", () => {
-  it("fits the stock and aligns to it at the anchor", () => {
-    // 100 × 80 into 400 × 200: the length limits it, to 2.5.
+  it("fits inside the stock less a border and aligns to it at the anchor", () => {
+    // 100 × 80 into 400 × 200 with a 10 mm border, so 380 × 180: the length limits it, to 2.25.
     expect(fitScale(BOUNDS, [0, 0, 0], stock)).toBe(2.5);
     expect(initialPlacement(BOUNDS, stock, "bottom_left")).toEqual({
       rotation: [0, 0, 0],
-      scale: 2.5,
-      // 12 mm scaled by 2.5, deeper than the 18 mm stock: never squashed to fit.
-      depth: 30,
-      position: [0, 0],
+      scale: 2.25,
+      // 12 mm scaled by 2.25, deeper than the 18 mm stock: never squashed to fit.
+      depth: 27,
+      position: [10, 10],
     });
-    expect(initialPlacement(BOUNDS, stock, "center").position).toEqual([75, 0]);
+    // 225 × 180 placed.
+    expect(initialPlacement(BOUNDS, stock, "center").position).toEqual([87.5, 10]);
+    expect(initialPlacement(BOUNDS, stock, "top_right").position).toEqual([165, 10]);
+    expect(initialPlacement(BOUNDS, stock, "middle_left").position).toEqual([10, 10]);
+  });
+});
+
+describe("modelBorder", () => {
+  it("is 10 mm, never more than a quarter of the stock's smaller side", () => {
+    expect(modelBorder(stock)).toBe(10);
+    expect(modelBorder({ width: 30, height: 100 })).toBe(7.5);
+  });
+});
+
+describe("stockFit", () => {
+  it("fits a turned mesh inside the border of a small stock", () => {
+    // Turned a quarter about Z: 80 × 100 into 40 × 40 less 10 mm, so 20 × 20.
+    expect(stockFit(BOUNDS, [0, 0, 90], { width: 40, height: 40 }, "bottom_left")).toEqual({
+      scale: 0.2,
+      position: [10, 10],
+    });
+    expect(stockFit(BOUNDS, [0, 0, 90], { width: 40, height: 40 }, "top_right")).toEqual({
+      scale: 0.2,
+      position: [14, 10],
+    });
   });
 });
 
