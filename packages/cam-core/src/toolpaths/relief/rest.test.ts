@@ -181,6 +181,34 @@ describe("rest machining", () => {
     });
   }
 
+  it("keeps to the margin, with nothing to cut after the same roughing", () => {
+    // The pocket model at (20, 20) on the 300 × 200 stock: the margin is (15, 15) to (65, 65).
+    const inset: Model = { ...POCKET, placement: { ...POCKET.placement, position: [20, 20] } };
+    const boundary = { type: "margin", distance: 5 } as const;
+    const run = (operations: Operation[]) => {
+      const inputs = toolpathInputs({ ...project(operations), models: [inset] });
+      let toolpath: Toolpath = { moves: [], warnings: [] };
+      for (const input of inputs) toolpath = generateToolpath(input, context());
+      return toolpath;
+    };
+    const small = run([
+      roughing(bigMill, { boundary }),
+      roughing(smallMill, { boundary, rest: true }),
+    ]);
+    expect(cutsBelow(small, -0.5).length).toBeGreaterThan(0);
+    for (const { to } of small.moves.filter(({ kind }) => kind === "feed")) {
+      expect(to[0]).toBeGreaterThanOrEqual(15 + 1.5 - 1e-6);
+      expect(to[0]).toBeLessThanOrEqual(65 - 1.5 + 1e-6);
+      expect(to[1]).toBeGreaterThanOrEqual(15 + 1.5 - 1e-6);
+      expect(to[1]).toBeLessThanOrEqual(65 - 1.5 + 1e-6);
+    }
+    const again = run([
+      roughing(bigMill, { boundary }),
+      roughing(bigMill, { boundary, rest: true }),
+    ]);
+    expect(again.moves.filter(({ kind }) => kind === "feed")).toEqual([]);
+  });
+
   const sequences: [string, () => Operation[]][] = [
     ["offset roughing", () => [roughing(bigMill), roughing(smallMill, { rest: true })]],
     [

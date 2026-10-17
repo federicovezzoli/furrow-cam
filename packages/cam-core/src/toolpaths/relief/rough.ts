@@ -1,8 +1,8 @@
-import type { Model, ReliefRoughOperation, Tool } from "@furrow/document";
+import type { Model, Point, ReliefRoughOperation, RoughingBoundary, Tool } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
-import { modelRect } from "../../scene/model";
+import { modelRect, type PlacedModel } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
 import { type CutterProfile, cutterProfile } from "../../simulation/simulation";
 import { type Descent, depthLevels, descend } from "../passes";
@@ -44,7 +44,7 @@ export type ReliefRoughOptions = {
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
   entryClearance: number;
-  /** The stock seen from above, for the `stock` boundary. */
+  /** The stock seen from above, for the `stock` and `margin` boundaries. */
   stock: Rect | null;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
@@ -72,7 +72,7 @@ const REST_SHARE = 0.25;
  * for finishing. Levels go down from the stock top in equal steps no deeper
  * than the tool's step-down, to the model's bottom plus the stock to leave,
  * or the stock's bottom if that is higher. The tool's centre covers the
- * boundary: the model's outline or the whole stock.
+ * boundary's `roughingArea`.
  *
  * - Linear: straight passes at the strategy's angle, one step-over apart,
  *   at each level, the tool rising over the model where it is higher than
@@ -146,7 +146,11 @@ export function* reliefRoughSteps(
       )
     : null;
 
-  const area = params.boundary === "stock" && stock ? stock : modelRect(model);
+  const area = roughingArea(params.boundary, model, stock, radius);
+  if (!area) {
+    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
+    return { moves: [], warnings };
+  }
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -215,6 +219,42 @@ export function* reliefRoughSteps(
     yield progress(i);
   }
   return { moves: clearing.finish(), warnings: [...warnings, ...skipped] };
+}
+
+/**
+ * The rectangle the tool's centre covers when roughing within `boundary`
+ * (ADR-0033, ADR-0038), in stock coordinates:
+ *
+ * - `model`: the model's outline, so the tool cuts a radius past it.
+ * - `stock`: the whole stock, the tool overhanging its edges by its radius.
+ * - `margin`: the model's outline grown by the distance, or by the radius if
+ *   that is more, so finishing never meets uncut material at the model's
+ *   edge. The tool stays inside it, except where it reaches the stock's
+ *   edge: there the centre goes to the edge, as for the whole stock.
+ *
+ * Without `stock`, the whole stock is the model's outline and a margin isn't
+ * clipped. `null` when the margin leaves the tool no room inside the stock:
+ * the model is off the stock, or only a sliver narrower than the tool of the
+ * margin is on it.
+ */
+export function roughingArea(
+  boundary: RoughingBoundary,
+  model: PlacedModel,
+  stock: Rect | null,
+  radius: number,
+): Rect | null {
+  const rect = modelRect(model);
+  if (boundary.type === "model") return rect;
+  if (boundary.type === "stock") return stock ?? rect;
+  const grow = Math.max(boundary.distance, radius);
+  const side = (edge: number, direction: 1 | -1, stockEdge: number | undefined) => {
+    const cut = edge + direction * grow;
+    if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
+    return cut - direction * radius;
+  };
+  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
+  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
+  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
 }
 
 /** One straight pass along a row of the grid: the tip dropped onto the model at each sample. */

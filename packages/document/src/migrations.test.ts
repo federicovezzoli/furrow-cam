@@ -175,6 +175,26 @@ describe("migrations", () => {
     expect(parseProjectDocument(v9)).toEqual(doc);
   });
 
+  it("turns v10 roughing boundaries into objects", () => {
+    const doc = fullDocument();
+    doc.models = [model];
+    const stock: typeof reliefRough = {
+      ...reliefRough,
+      id: "5b1e2c4d-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+      params: { ...reliefRough.params, boundary: { type: "stock" } },
+    };
+    doc.operations.push(reliefFinish, reliefRough, stock);
+    const v10 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      operations: { params: Record<string, unknown> }[];
+    };
+    v10.schemaVersion = 10;
+    const [, model10, stock10] = v10.operations.slice(-3);
+    if (model10) model10.params.boundary = "model";
+    if (stock10) stock10.params.boundary = "stock";
+    expect(parseProjectDocument(v10)).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

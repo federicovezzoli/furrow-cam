@@ -352,11 +352,17 @@ export const ReliefFinishOperation = z
 export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
 
 /**
- * What 3D roughing clears: the model's outline, or the whole stock, the
- * tool's centre reaching its edges.
+ * What 3D roughing clears (ADR-0038): the model's outline or the whole
+ * stock, the tool's centre reaching its edges, or the model's outline grown
+ * by `distance` millimetres, the tool staying inside it.
  */
-export const RoughingBoundary = z.enum(["model", "stock"]);
+export const RoughingBoundary = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("model") }),
+  z.strictObject({ type: z.literal("margin"), distance: PositiveLength }),
+  z.strictObject({ type: z.literal("stock") }),
+]);
 export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
+export type RoughingBoundaryType = RoughingBoundary["type"];
 
 /**
  * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,

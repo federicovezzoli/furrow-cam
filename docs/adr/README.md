@@ -52,3 +52,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Proposed |
 | [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Proposed |
 | [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed |
+| [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed |

@@ -213,10 +213,45 @@ export function positionAt(
   return [roundCoordinate(x - ax), roundCoordinate(y - ay)];
 }
 
+/** The border left around a model fitted to the stock (ADR-0038), in millimetres. */
+export const MODEL_BORDER = 10;
+
 /**
- * The placement of a newly imported mesh: unrotated, scaled to fit the stock
- * and aligned to it at `anchor` (ADR-0031), its depth what that scale gives
- * it, even deeper than the stock: a mesh is never stretched (ADR-0034).
+ * The border left on every side of a model fitted to `stock`: `MODEL_BORDER`,
+ * but never more than a quarter of the stock's smaller side.
+ */
+export function modelBorder({ width, height }: Pick<Stock, "width" | "height">): number {
+  return Math.min(MODEL_BORDER, Math.min(width, height) / 4);
+}
+
+/**
+ * The scale and position that fit a mesh rotated by `rotation` inside the
+ * stock less its `modelBorder`, aligned to that inset rectangle at `anchor`
+ * (ADR-0031, ADR-0038).
+ */
+export function stockFit(
+  bounds: Box3,
+  rotation: Rotation,
+  stock: Pick<Stock, "width" | "height">,
+  anchor: StockAnchor,
+): Pick<ModelPlacement, "scale" | "position"> {
+  const border = modelBorder(stock);
+  const inset: Rect = { min: [border, border], max: [stock.width - border, stock.height - border] };
+  const scale = fitScale(bounds, rotation, {
+    width: inset.max[0] - inset.min[0],
+    height: inset.max[1] - inset.min[1],
+  });
+  return {
+    scale,
+    position: positionAt(bounds, { rotation, scale }, anchor, anchorPoint(inset, anchor)),
+  };
+}
+
+/**
+ * The placement of a newly imported mesh: unrotated, fitted inside the stock
+ * less a border and aligned at `anchor` (`stockFit`), its depth what that
+ * scale gives it, even deeper than the stock: a mesh is never stretched
+ * (ADR-0034).
  */
 export function initialPlacement(
   bounds: Box3,
@@ -224,15 +259,9 @@ export function initialPlacement(
   anchor: StockAnchor,
 ): ModelPlacement {
   const rotation: Rotation = [0, 0, 0];
-  const scale = fitScale(bounds, rotation, stock);
+  const { scale, position } = stockFit(bounds, rotation, stock, anchor);
   const depth = proportionalDepth(bounds, rotation, scale) ?? stock.thickness;
-  const point = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
-  return {
-    rotation,
-    scale,
-    depth,
-    position: positionAt(bounds, { rotation, scale }, anchor, point),
-  };
+  return { rotation, scale, depth, position };
 }
 
 /**
