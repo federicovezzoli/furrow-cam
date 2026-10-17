@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A 3 × 2 in panel, drawn in inches: a frame, a window with a knob in it and a label. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="4in" height="3in" viewBox="0 0 4 3">
+  <g id="Cuts">
+    <rect id="Frame" x="0.5" y="0.5" width="3" height="2" fill="none" stroke="black" stroke-width="0.01"/>
+    <rect id="Window" x="1" y="0.9" width="1.5" height="1" fill="none" stroke="black" stroke-width="0.01"/>
+    <circle id="Knob" cx="1.75" cy="1.4" r="0.2" fill="none" stroke="black" stroke-width="0.01"/>
+    <polyline id="Label" points="2.75,0.8 2.95,1.2 3.15,0.8" fill="none" stroke="black" stroke-width="0.01"/>
+  </g>
+</svg>
