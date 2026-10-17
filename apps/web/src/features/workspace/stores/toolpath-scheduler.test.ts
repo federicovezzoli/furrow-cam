@@ -171,6 +171,32 @@ describe("scheduleToolpaths", () => {
     expect(requests[1]?.inputHash).not.toBe(requests[0]?.inputHash);
   });
 
+  it("recomputes when the touch-off pad changes (#147)", () => {
+    const { documents, requests, schedule } = setup();
+    const answer = () => {
+      const request = requests.at(-1) as ToolpathRequest;
+      schedule.receive({ ...request, ...compute(request.input) });
+    };
+    answer();
+    documents.getState().change("Pad", (draft) => {
+      draft.stock.touchOff = { x: 300, y: 200, diameter: 15 };
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.input.touchOff).toEqual({ x: 300, y: 200, diameter: 15 });
+    answer();
+    documents.getState().change("Pad", (draft) => {
+      if (draft.stock.touchOff) draft.stock.touchOff.diameter = 20;
+    });
+    expect(requests).toHaveLength(3);
+    answer();
+    // Zeroed on the machine bed, the pad isn't used.
+    documents.getState().change("Z zero", (draft) => {
+      draft.stock.zOrigin = "machine_bed";
+    });
+    expect(requests).toHaveLength(4);
+    expect(requests[3]?.input.touchOff).toBeNull();
+  });
+
   it("recomputes a rest operation when an enabled operation before it changes", () => {
     const withFinish = (rest: boolean): ProjectDocument => {
       const document = documentWithProfile();
