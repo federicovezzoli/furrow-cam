@@ -188,6 +188,19 @@ describe("the touch-off pad", () => {
     expectPadUncut(simulate(project(operations, CORNER)), CORNER);
   });
 
+  it("is left alone by linear roughing's links along the stock's edge, past the model", () => {
+    // Passes along X a whole tool apart, linked along the stock's left edge.
+    // A small pad 3 mm in from it, somewhere between two passes, is out of
+    // the passes' reach near the edge but in a straight link's.
+    for (let y = 20; y < 20 + endMill.diameter; y += 0.5) {
+      const pad = { x: 3, y, diameter: 1 };
+      const operations = [
+        roughing({ type: "linear", angle: 0 }, { boundary: { type: "stock" }, stepOver: 100 }),
+      ];
+      expectPadUncut(simulate(project(operations, pad)), pad);
+    }
+  });
+
   it("is ignored with the Z zero on the machine bed", () => {
     const operations = [roughing({ type: "offset" }, { boundary: { type: "stock" } })];
     const doc = project(operations, CORNER);

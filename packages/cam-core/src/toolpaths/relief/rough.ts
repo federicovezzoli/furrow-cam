@@ -406,8 +406,6 @@ function* rasterLevels(
   };
   const maxLink = 2 * tool.diameter;
   const at = (u: number, v: number, z: number): Vec3 => [...toStock(grid, u, v), z];
-  const inGrid = (u: number, v: number) =>
-    u >= 0 && u <= columns * cellWidth && v >= 0 && v <= rows * cellHeight;
   /** Feeds along a run of a pass: heights `cuts` at `us`. */
   function cutRun(cuts: number[], us: number[], v: number) {
     for (const i of simplifyHeights(cuts, RELIEF_TOLERANCE)) {
@@ -480,7 +478,8 @@ function* rasterLevels(
           for (let k = 1; k < steps; k++) {
             const u = from.u + (du * k) / steps;
             const w = from.v + (dv * k) / steps;
-            link[k] = Math.max(z, inGrid(u, w) ? dropper.dropPoint(u, w, floor) : floor);
+            // Past the grid, only the model's bottom and the pad are in reach.
+            link[k] = Math.max(z, dropper.dropPoint(u, w, floor));
           }
           link[steps] = startZ;
           for (const k of simplifyHeights(link, RELIEF_TOLERANCE)) {
