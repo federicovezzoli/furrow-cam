@@ -112,18 +112,18 @@ const groove: Shape = {
 };
 
 describe("heightmapGrid", () => {
-  it("puts six cells across the smallest tool, covering the stock exactly", () => {
+  it("puts twelve cells across the smallest tool, covering the stock exactly", () => {
     expect(heightmapGrid({ width: 120, height: 60 }, 6)).toEqual({
-      columns: 120,
-      rows: 60,
-      cellWidth: 1,
-      cellHeight: 1,
+      columns: 240,
+      rows: 120,
+      cellWidth: 0.5,
+      cellHeight: 0.5,
     });
     const { columns, rows, cellWidth, cellHeight } = heightmapGrid({ width: 100, height: 33 }, 3);
     expect(columns * cellWidth).toBeCloseTo(100);
     expect(rows * cellHeight).toBeCloseTo(33);
-    expect(cellWidth).toBeLessThanOrEqual(0.5);
-    expect(cellHeight).toBeLessThanOrEqual(0.5);
+    expect(cellWidth).toBeLessThanOrEqual(0.25);
+    expect(cellHeight).toBeLessThanOrEqual(0.25);
   });
 
   it("caps the cells on a full sheet with a 3 mm tool", () => {

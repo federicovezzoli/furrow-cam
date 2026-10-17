@@ -13,6 +13,7 @@ const lines: ToolpathLines = {
   rapidDistances: new Float32Array(),
   holes: new Float32Array(),
   feedColors: new Float32Array(),
+  kinds: new Uint8Array([0]),
 };
 const stale: ToolpathPreview = { warnings: ["stale"], lines };
 const fresh: ToolpathPreview = { warnings: [], lines };

@@ -57,6 +57,7 @@ function lines(feed: number): ToolpathLines {
     rapidDistances: new Float32Array([0, 5]),
     holes: new Float32Array(),
     feedColors: new Float32Array(),
+    kinds: new Uint8Array([1, 0]),
   };
 }
 

@@ -29,6 +29,12 @@ export type ToolpathLines = {
    * asked for.
    */
   feedColors: Float32Array;
+  /**
+   * The order the tool makes the segments in: one per segment, `1` for the
+   * next of `rapids` and `0` for the next of `feeds`, for playing the
+   * toolpath back move by move (#100).
+   */
+  kinds: Uint8Array;
 };
 
 export type ToolpathLinesOptions = {
@@ -60,6 +66,7 @@ export function toolpathLines(
   const rapidCount = Math.max(moves.length - 1 - feedCount, 0);
   const rapids = new Float32Array(rapidCount * 6);
   const rapidDistances = new Float32Array(rapidCount * 2);
+  const kinds = new Uint8Array(Math.max(moves.length - 1, 0));
   const plunges: number[] = [];
   let f = 0;
   let r = 0;
@@ -77,6 +84,7 @@ export function toolpathLines(
     target[at + 4] = by;
     target[at + 5] = bz;
     if (move.kind === "rapid") {
+      kinds[i - 1] = 1;
       rapidDistances[r / 3 + 1] = Math.hypot(bx - ax, by - ay, bz - az);
       r += 6;
       continue;
@@ -96,7 +104,7 @@ export function toolpathLines(
 
   const holes = holeRadius === null ? new Float32Array() : circles(plunges, holeRadius);
   const feedColors = shadeDepth ? depthShades(feeds) : new Float32Array();
-  return { feeds, rapids, rapidDistances, holes, feedColors };
+  return { feeds, rapids, rapidDistances, holes, feedColors, kinds };
 }
 
 /** The `feedColors` of `feeds`: each vertex's depth below the stock top as a shade. */
@@ -136,12 +144,13 @@ function circles(centers: number[], radius: number): Float32Array {
 
 /** The buffers of `lines`, to transfer them to another thread instead of copying. */
 export function toolpathLinesBuffers(lines: ToolpathLines): ArrayBuffer[] {
-  const { feeds, rapids, rapidDistances, holes, feedColors } = lines;
+  const { feeds, rapids, rapidDistances, holes, feedColors, kinds } = lines;
   return [
     feeds.buffer,
     rapids.buffer,
     rapidDistances.buffer,
     holes.buffer,
     feedColors.buffer,
+    kinds.buffer,
   ] as ArrayBuffer[];
 }

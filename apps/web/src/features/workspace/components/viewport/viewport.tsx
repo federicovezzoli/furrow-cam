@@ -100,7 +100,7 @@ export function Viewport() {
 }
 
 /** What the simulation is doing, and what it leaves out, one line each. */
-function simulationStatus({
+export function simulationStatus({
   pending,
   error,
   skipped,
@@ -117,7 +117,7 @@ function simulationStatus({
 }
 
 /** Reports the tallest texture the viewport's renderer supports, which caps the heightmap. */
-function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) => void }) {
+export function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) => void }) {
   const maxTextureSize = useThree((s) => s.gl.capabilities.maxTextureSize);
   useEffect(() => onLimit(maxTextureSize), [maxTextureSize, onLimit]);
   return null;
@@ -179,39 +179,46 @@ const VIEWS: { value: ViewMode; label: string; Icon: typeof SquareIcon; hint: st
 ];
 
 function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
-  const setView = useWorkspaceStore((s) => s.setView);
   return (
     <div className="absolute top-2 left-2 flex items-center gap-2">
-      <div role="toolbar" aria-label="View" className={TOOLBAR_GROUP}>
-        {VIEWS.map(({ value, label, Icon, hint }) => (
-          <Button
-            key={value}
-            variant={view === value ? "secondary" : "ghost"}
-            size="icon-compact"
-            aria-label={label}
-            aria-pressed={view === value}
-            title={`${label}: ${hint}`}
-            onClick={() => setView(value)}
-          >
-            <Icon />
-          </Button>
-        ))}
-        <Button
-          variant="ghost"
-          size="icon-compact"
-          aria-label="Fit stock"
-          title="Fit stock"
-          onClick={onFit}
-        >
-          <ScanIcon />
-        </Button>
-      </div>
+      <ViewButtons view={view} onFit={onFit} />
       <CutToolbar />
     </div>
   );
 }
 
-const TOOLBAR_GROUP =
+/** Top and 3D view, and fitting the stock in view. */
+export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void }) {
+  const setView = useWorkspaceStore((s) => s.setView);
+  return (
+    <div role="toolbar" aria-label="View" className={TOOLBAR_GROUP}>
+      {VIEWS.map(({ value, label, Icon, hint }) => (
+        <Button
+          key={value}
+          variant={view === value ? "secondary" : "ghost"}
+          size="icon-compact"
+          aria-label={label}
+          aria-pressed={view === value}
+          title={`${label}: ${hint}`}
+          onClick={() => setView(value)}
+        >
+          <Icon />
+        </Button>
+      ))}
+      <Button
+        variant="ghost"
+        size="icon-compact"
+        aria-label="Fit stock"
+        title="Fit stock"
+        onClick={onFit}
+      >
+        <ScanIcon />
+      </Button>
+    </div>
+  );
+}
+
+export const TOOLBAR_GROUP =
   "flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs";
 
 /**

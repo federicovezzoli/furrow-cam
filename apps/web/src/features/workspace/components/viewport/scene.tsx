@@ -71,7 +71,7 @@ export function Scene({
 }
 
 /** The origin marker and the grid aligned to it, placed where the stock's origin settings say. */
-function WorkOrigin({ palette }: { palette: Palette }) {
+export function WorkOrigin({ palette }: { palette: Palette }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const offset = useMemo(() => stockOffset(stock), [stock]);
   const { minor, major } = useMemo(() => gridLinePositions(stockBounds(stock)), [stock]);
@@ -120,7 +120,7 @@ function TouchOffPad({ color }: { color: string }) {
   );
 }
 
-function Stock({ box, palette }: { box: Box3; palette: Palette }) {
+export function Stock({ box, palette }: { box: Box3; palette: Palette }) {
   const { min, max } = box;
   return (
     <mesh position={boxCenter(box)} renderOrder={RENDER_ORDER.stock}>

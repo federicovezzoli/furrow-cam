@@ -23,6 +23,10 @@ const MODES = "G21 G90 G94 G17";
  *   pauses with `M0`, asking for Z to be zeroed again: there are no tool
  *   length offsets. With a touch-off pad (ADR-0041), it rapids over the
  *   pad's centre before pausing, and before a custom tool-change block.
+ * - Each tool's cutter shape is written in a machine-readable comment
+ *   (`toolShapeComment`, ADR-0042) when the cutter is in the spindle: for the
+ *   first tool in the header, before the program-start block; at a tool
+ *   change after the pause or the custom tool-change block.
  * - Feeds are lowered so neither the XY nor the Z component of a move exceeds
  *   the machine's maximum, and spindle speeds are kept in its range; either
  *   warns.
@@ -58,6 +62,8 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
         : "Zero Z again after each tool change",
     );
   }
+  const first = steps[0];
+  if (first) out.line(toolShapeComment(first.tool));
   if (machine?.programStart) custom(machine.programStart);
   else out.line(MODES);
 
@@ -81,6 +87,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
           const zero = pad ? "zero Z on the touch-off pad" : "zero Z again";
           out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and ${zero}`)}`);
         }
+        out.line(toolShapeComment(step.tool));
       }
     }
     tool = step.tool;
@@ -274,6 +281,18 @@ function sameBit(a: Tool, b: Tool): boolean {
     a.vAngle === b.vAngle &&
     a.tipDiameter === b.tipDiameter
   );
+}
+
+/**
+ * The cutter shape the G-code simulation sweeps with (ADR-0042), in
+ * millimetres and degrees, leaving out the fields that don't apply:
+ * `(Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)`.
+ */
+export function toolShapeComment({ type, diameter, vAngle, tipDiameter }: Tool): string {
+  const fields = [`type=${type}`, `diameter=${formatNumber(diameter)}`];
+  if (vAngle !== null) fields.push(`vAngle=${formatNumber(vAngle)}`);
+  if (tipDiameter !== null) fields.push(`tipDiameter=${formatNumber(tipDiameter)}`);
+  return comment(`Furrow tool: ${fields.join(" ")}`);
 }
 
 function toolLabel(tool: Tool): string {

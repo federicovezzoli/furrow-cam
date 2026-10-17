@@ -5,16 +5,12 @@ import { useAutosaveApi } from "@/features/workspace/providers/workspace-stores"
 import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 
 /**
- * Autosaves the open project's document (ADR-0010) while mounted and returns
- * the save status. Leaving the page with unsaved changes asks for confirmation.
+ * Autosaves the open project's document (ADR-0010) while mounted. Leaving the
+ * page with unsaved changes asks for confirmation. `useSaveStatus` reads how
+ * it's going.
  */
-export function useAutosave(): AutosaveStatus {
+export function useAutosave() {
   const autosave = useAutosaveApi();
-  const status = useSyncExternalStore(
-    autosave.subscribe,
-    () => autosave.status,
-    () => autosave.status,
-  );
 
   useEffect(() => {
     const stop = autosave.start();
@@ -28,6 +24,14 @@ export function useAutosave(): AutosaveStatus {
       stop();
     };
   }, [autosave]);
+}
 
-  return status;
+/** The open project's save status. */
+export function useSaveStatus(): AutosaveStatus {
+  const autosave = useAutosaveApi();
+  return useSyncExternalStore(
+    autosave.subscribe,
+    () => autosave.status,
+    () => autosave.status,
+  );
 }
