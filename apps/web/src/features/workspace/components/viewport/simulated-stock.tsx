@@ -1,6 +1,6 @@
 "use client";
 
-import type { Heightmap } from "@furrow/cam-core";
+import type { CellRange, Heightmap } from "@furrow/cam-core";
 import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import {
@@ -15,6 +15,7 @@ import {
   RedFormat,
   ShaderMaterial,
 } from "three";
+import type { HeightmapUpdates } from "@/features/workspace/hooks/use-playback";
 import {
   simulationTexture,
   skirtPositions,
@@ -77,6 +78,19 @@ void main() {
 }
 `;
 
+/**
+ * Asks three.js to upload only the texture rows holding cells `range`. Its
+ * update ranges count four components per texel, whatever the format, so a
+ * one-channel texture's cells are counted four times over.
+ */
+function addTextureRows(texture: DataTexture, { start, end }: CellRange) {
+  for (let row = Math.floor(start / TEXTURE_WIDTH); row * TEXTURE_WIDTH < end; row++) {
+    const from = Math.max(start, row * TEXTURE_WIDTH);
+    const to = Math.min(end, (row + 1) * TEXTURE_WIDTH);
+    texture.addUpdateRange(from * 4, (to - from) * 4);
+  }
+}
+
 /** Shade of the stock's sides, against its uncut top. */
 const SIDE_SHADE = 0.7;
 
@@ -87,15 +101,20 @@ const SIDE_SHADE = 0.7;
  * lifts to the heights it reads from a float texture, so a 4-million-cell
  * heightmap costs that texture and no per-vertex buffers. Models are drawn
  * the same way, from their previews (ADR-0031).
+ *
+ * During a playback (#100) the heights change in place, and `updates` says
+ * which: only those texture rows are uploaded again.
  */
 export function SimulatedStock({
   heightmap,
   thickness,
   color,
+  updates,
 }: {
   heightmap: Heightmap;
   thickness: number;
   color: string;
+  updates?: HeightmapUpdates;
 }) {
   const invalidate = useThree((s) => s.invalidate);
   const { columns, rows, cellWidth, cellHeight } = heightmap;
@@ -145,6 +164,20 @@ export function SimulatedStock({
     return g;
   }, [heightmap, thickness]);
   const sideColor = useMemo(() => new Color(color).multiplyScalar(SIDE_SHADE), [color]);
+
+  useEffect(
+    () =>
+      updates?.subscribe((range) => {
+        addTextureRows(texture, range);
+        texture.needsUpdate = true;
+        // The sides follow the heights along the edges, which cuts there change.
+        const sides = skirt.getAttribute("position") as BufferAttribute;
+        sides.copyArray(skirtPositions(heightmap, thickness));
+        sides.needsUpdate = true;
+        invalidate();
+      }),
+    [updates, texture, skirt, heightmap, thickness, invalidate],
+  );
 
   useEffect(
     () => () => {

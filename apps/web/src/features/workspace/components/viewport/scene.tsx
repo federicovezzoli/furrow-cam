@@ -10,6 +10,7 @@ import {
 } from "@furrow/cam-core";
 import { Edges } from "@react-three/drei";
 import { useMemo } from "react";
+import type { HeightmapUpdates } from "@/features/workspace/hooks/use-playback";
 import {
   boxCenter,
   gridLinePositions,
@@ -24,6 +25,7 @@ import type { ModelPreview } from "@/features/workspace/stores/model-preview-sch
 import { Lines, useLineGeometry } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
+import { PlaybackTool } from "./playback";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SimulatedStock } from "./simulated-stock";
 import { Tabs } from "./tabs";
@@ -37,16 +39,20 @@ const ORIGIN_MARKER_SIZE = 40;
  * With a `heightmap`, the scene shows the stock as simulated after cutting in
  * place of the stock box and the models; the toolpaths stay, as the
  * Operations pane shows or hides them. `modelPreviews` draw the models.
+ * During a playback (#100) the heightmap changes in place, as
+ * `heightmapUpdates` says, and the tool is drawn where it is.
  */
 export function Scene({
   box,
   palette,
   heightmap,
+  heightmapUpdates,
   modelPreviews,
 }: {
   box: Box3;
   palette: Palette;
   heightmap: Heightmap | null;
+  heightmapUpdates?: HeightmapUpdates;
   modelPreviews: ReadonlyMap<string, ModelPreview>;
 }) {
   return (
@@ -54,7 +60,12 @@ export function Scene({
       <WorkOrigin palette={palette} />
       <TouchOffPad color={palette.tab} />
       {heightmap ? (
-        <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
+        <SimulatedStock
+          heightmap={heightmap}
+          thickness={-box.min[2]}
+          color={palette.stock}
+          updates={heightmapUpdates}
+        />
       ) : (
         <>
           <Stock box={box} palette={palette} />
@@ -63,6 +74,7 @@ export function Scene({
       )}
       <Shapes palette={palette} />
       <Toolpaths palette={palette} />
+      <PlaybackTool />
       <Tabs color={palette.tab} />
       <ZeroPick color={palette.snap} />
       <PathPick />

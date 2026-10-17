@@ -8,10 +8,14 @@ import {
   useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
 import { DashedLines, Lines } from "./lines";
+import { usePlaybackProgress } from "./playback";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 
 /** Opacity of a toolpath being recomputed, drawn from its last result meanwhile. */
 const STALE_OPACITY = 0.35;
+
+/** Opacity of the moves a playback hasn't cut yet (#100). */
+const UNCUT_OPACITY = 0.3;
 
 /**
  * The toolpaths of the enabled operations not hidden in the Operations pane
@@ -20,7 +24,9 @@ const STALE_OPACITY = 0.35;
  * (ADR-0026) are drawn the same way in the clearing tool's colour. Everything drawn is built in the worker (ADR-0008), so even
  * 100k-segment pockets are a handful of draw calls and no work here. In the
  * top view a circle the size of the hole marks each drilled hole, which would
- * otherwise be invisible from above.
+ * otherwise be invisible from above. During a playback (#100), the moves
+ * cut so far are drawn as usual and the rest dimmed, through the stock that
+ * would otherwise hide them.
  */
 export function Toolpaths({ palette }: { palette: Palette }) {
   const operations = useDocumentStore((s) => s.document.operations);
@@ -48,6 +54,8 @@ function OperationToolpath({
   showHoles: boolean;
 }) {
   const entry = useToolpathStore((s) => s.entries[operation.id]);
+  const progress = usePlaybackProgress(operation.id, false);
+  const clearingProgress = usePlaybackProgress(operation.id, true);
   const lines = entry && entry.status !== "error" ? entry.lines : undefined;
   if (!entry || !lines) return null;
   const opacity = entry.status === "ready" ? 1 : STALE_OPACITY;
@@ -61,6 +69,7 @@ function OperationToolpath({
           rapidColor={rapidColor}
           opacity={opacity}
           showHoles={false}
+          progress={clearingProgress}
         />
       )}
       <ToolpathLinesView
@@ -69,6 +78,7 @@ function OperationToolpath({
         rapidColor={rapidColor}
         opacity={opacity}
         showHoles={showHoles}
+        progress={progress}
       />
     </>
   );
@@ -80,13 +90,19 @@ function ToolpathLinesView({
   rapidColor,
   opacity,
   showHoles,
+  progress,
 }: {
   lines: ToolpathLines;
   color: string;
   rapidColor: string;
   opacity: number;
   showHoles: boolean;
+  /** The segments a playback has cut; without it, all are drawn alike. */
+  progress?: { feeds: number; rapids: number };
 }) {
+  const rapids = lines.rapids.length / 6;
+  const feeds = lines.feeds.length / 6;
+  const cut = progress ?? { feeds, rapids };
   return (
     <>
       <DashedLines
@@ -95,6 +111,7 @@ function ToolpathLinesView({
         color={rapidColor}
         renderOrder={RENDER_ORDER.rapids}
         opacity={opacity}
+        segments={progress && [0, cut.rapids]}
       />
       <Lines
         positions={lines.feeds}
@@ -102,7 +119,30 @@ function ToolpathLinesView({
         color={color}
         renderOrder={RENDER_ORDER.feeds}
         opacity={opacity}
+        segments={progress && [0, cut.feeds]}
       />
+      {progress && (
+        <>
+          <DashedLines
+            positions={lines.rapids}
+            distances={lines.rapidDistances}
+            color={rapidColor}
+            renderOrder={RENDER_ORDER.rapids}
+            opacity={opacity * UNCUT_OPACITY}
+            segments={[cut.rapids, rapids]}
+            overlay
+          />
+          <Lines
+            positions={lines.feeds}
+            colors={lines.feedColors}
+            color={color}
+            renderOrder={RENDER_ORDER.feeds}
+            opacity={opacity * UNCUT_OPACITY}
+            segments={[cut.feeds, feeds]}
+            overlay
+          />
+        </>
+      )}
       {showHoles && (
         <Lines
           positions={lines.holes}

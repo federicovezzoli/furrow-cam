@@ -2,11 +2,20 @@
 
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
 import { Canvas, useThree } from "@react-three/fiber";
-import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
+import {
+  BoxIcon,
+  FilmIcon,
+  LayersIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ScanIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useModelPreviews } from "@/features/workspace/hooks/use-model-previews";
+import { usePlayback } from "@/features/workspace/hooks/use-playback";
 import { useSimulation } from "@/features/workspace/hooks/use-simulation";
 import { belongsElsewhere } from "@/features/workspace/lib/keyboard-target";
 import { heightmapCellLimit } from "@/features/workspace/lib/simulation-mesh";
@@ -19,6 +28,8 @@ import {
 import type { ViewMode } from "@/features/workspace/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
+import { PlaybackProvider } from "./playback";
+import { PlaybackTimeline } from "./playback-timeline";
 import { Scene } from "./scene";
 import { PALETTES } from "./scene-style";
 
@@ -28,6 +39,8 @@ import { PALETTES } from "./scene-style";
  * orbit view. The scene is in stock coordinates (millimetres, Z up, ADR-0014):
  * the stock stays put, and changing the work origin moves the origin marker
  * and the grid, and the drawing when an anchor is chosen (ADR-0022).
+ * During a playback (#100), the stock is cut move by move instead, with the
+ * tool drawn where it is and a timeline under the scene.
  * Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
 export function Viewport() {
@@ -35,11 +48,13 @@ export function Viewport() {
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
   const simulating = useWorkspaceStore((s) => s.simulating);
+  const playingBack = useWorkspaceStore((s) => s.simulating && s.playback);
   // Known once the renderer is up, inside the canvas.
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
-  const simulation = useSimulation(
-    simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
-  );
+  const maxCells = maxTextureSize === null ? null : heightmapCellLimit(maxTextureSize);
+  const simulation = useSimulation(simulating && !playingBack ? maxCells : null);
+  const playback = usePlayback(playingBack ? maxCells : null);
+  const units = useDocumentStore((s) => s.document.units);
   const modelPreviews = useModelPreviews();
   const overPath = useWorkspaceStore((s) => s.hovered !== null);
   const cancelPick = useCancelZeroPick(pickingZero);
@@ -56,44 +71,78 @@ export function Viewport() {
   const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
   const [poses] = useState<CameraPoses>(() => new Map());
   // A simulation of the stock before a resize would sit at the old size and depth.
-  const sim = simulation.stock;
+  const sim = playingBack ? playback.stock : simulation.stock;
   const heightmap =
     simulating &&
     sim !== null &&
     sim.width === width &&
     sim.height === height &&
     sim.thickness === thickness
-      ? simulation.heightmap
+      ? playingBack
+        ? playback.heightmap
+        : simulation.heightmap
       : null;
-  const status = simulating ? simulationStatus(simulation) : [];
+  const status = !simulating
+    ? []
+    : playingBack
+      ? simulationStatus({ ...playback, skipped: [] })
+      : simulationStatus(simulation);
+  const scene = (
+    <Scene
+      box={box}
+      palette={palette}
+      heightmap={heightmap}
+      heightmapUpdates={playingBack ? playback.updates : undefined}
+      modelPreviews={modelPreviews}
+    />
+  );
 
   return (
-    <div
-      className={cn(
-        "relative h-full",
-        editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
-      )}
-      {...cancelPick}
-    >
-      <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
-        {view === "top" ? (
-          <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
-        ) : (
-          <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
+    <div className="flex h-full flex-col">
+      <div
+        className={cn(
+          "relative min-h-0 flex-1",
+          editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
         )}
-        <Scene box={box} palette={palette} heightmap={heightmap} modelPreviews={modelPreviews} />
-        <TextureLimit onLimit={setMaxTextureSize} />
-      </Canvas>
-      <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
-      {status.length > 0 && (
-        <div
-          role="status"
-          className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
-        >
-          {status.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        </div>
+        {...cancelPick}
+      >
+        <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
+          {view === "top" ? (
+            <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
+          ) : (
+            <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
+          )}
+          {playingBack && playback.path ? (
+            <PlaybackProvider
+              value={{ store: playback.store, path: playback.path, parts: playback.parts }}
+            >
+              {scene}
+            </PlaybackProvider>
+          ) : (
+            scene
+          )}
+          <TextureLimit onLimit={setMaxTextureSize} />
+        </Canvas>
+        <ViewToolbar view={view} onFit={() => setFits((n) => n + 1)} />
+        {status.length > 0 && !playingBack && (
+          <div
+            role="status"
+            className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
+          >
+            {status.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        )}
+      </div>
+      {playingBack && (
+        <PlaybackTimeline
+          store={playback.store}
+          path={playback.path}
+          parts={playback.parts}
+          units={units}
+          status={status}
+        />
       )}
     </div>
   );
@@ -217,11 +266,12 @@ const TOOLBAR_GROUP =
 /**
  * What the viewport shows of the cut: the toolpaths of the enabled operations,
  * all shown or hidden at once (the Operations pane does it per operation),
- * and the simulated stock.
+ * the simulated stock, and its playback.
  */
 function CutToolbar() {
   const workspace = useWorkspaceStoreApi();
   const simulating = useWorkspaceStore((s) => s.simulating);
+  const playback = useWorkspaceStore((s) => s.playback);
   const operations = useDocumentStore((s) => s.document.operations);
   const operationIds = useMemo(
     () => operations.filter((op) => op.enabled).map((op) => op.id),
@@ -253,6 +303,17 @@ function CutToolbar() {
         onClick={() => workspace.getState().setSimulating(!simulating)}
       >
         <LayersIcon />
+      </Button>
+      <Button
+        variant={playback ? "secondary" : "ghost"}
+        size="icon-compact"
+        aria-label="Play back the cut"
+        aria-pressed={playback}
+        title="Play back the cut: watch the tool remove the stock move by move"
+        disabled={operationIds.length === 0}
+        onClick={() => workspace.getState().setPlayback(!playback)}
+      >
+        <FilmIcon />
       </Button>
     </div>
   );
