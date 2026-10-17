@@ -14,8 +14,7 @@ export const DRILL_DIAMETER_TOLERANCE = 0.1;
 
 /**
  * The centre of `path` if it is a circle in the sense drilling uses: a closed
- * path a circle fits within `DRILL_DIAMETER_TOLERANCE` on the diameter, drawn
- * as arcs, a polygon or Béziers. `null` for any other path. `flattened` is
+ * path a circle fits (`isRound`), drawn as arcs, a polygon or Béziers. `null` for any other path. `flattened` is
  * the path from `flattenPath` at the default tolerance, if already at hand.
  */
 export function circleCenter(path: Path, flattened?: Point[]): Point | null {
@@ -24,9 +23,21 @@ export function circleCenter(path: Path, flattened?: Point[]): Point | null {
   return round && isRound(round) ? round.center : null;
 }
 
-/** Whether a circle fits an outline within `DRILL_DIAMETER_TOLERANCE` on the diameter. */
+/**
+ * How far an outline may stray from a circle, as a share of its radius, when
+ * that is more than `DRILL_DIAMETER_TOLERANCE` (#154): a large circle exported
+ * as a coarse polygon (Inkscape's R12 DXF writes 24-gons) strays further
+ * than a small one, in proportion to its size.
+ */
+export const ROUNDNESS_SHARE = 0.01;
+
+/**
+ * Whether a circle fits an outline: its nearest and farthest points from the
+ * centre within `DRILL_DIAMETER_TOLERANCE` of each other, or within
+ * `ROUNDNESS_SHARE` of its radius when that is more.
+ */
 export function isRound({ min, max }: { min: number; max: number }): boolean {
-  return max - min <= DRILL_DIAMETER_TOLERANCE + 2e-9;
+  return max - min <= Math.max(DRILL_DIAMETER_TOLERANCE, ROUNDNESS_SHARE * max) + 2e-9;
 }
 
 /**

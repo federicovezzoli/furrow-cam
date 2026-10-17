@@ -22,10 +22,11 @@ export type DrillOptions = {
  * The toolpath of a drill operation (PRD-0001 R8), in stock coordinates.
  *
  * - Holes are at single-point paths and at the centre of each closed path
- *   a circle fits: every point of the outline within half of
- *   `DRILL_DIAMETER_TOLERANCE` of one radius. That takes in circles drawn as
- *   arcs, and circles exported as polygons or Béziers, with no guess at what
- *   is meant as a circle: a coarse polygon has no circle that fits it. The
+ *   a circle fits (`isRound`): its outline within `DRILL_DIAMETER_TOLERANCE`
+ *   of one radius, or 1% of the radius for large circles. That takes in
+ *   circles drawn as arcs, and circles exported as polygons or Béziers, with
+ *   no guess at what is meant as a circle: a coarse polygon has no circle
+ *   that fits it. The
  *   hole's size is the circle through its farthest points, so the hole
  *   contains the drawn outline. Other paths are skipped.
  * - A point, or a circle the tool fits within that tolerance, is drilled:
