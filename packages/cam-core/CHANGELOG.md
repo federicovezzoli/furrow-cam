@@ -1,5 +1,15 @@
 # @furrow/cam-core
 
+## 0.7.0
+
+### Minor Changes
+
+- Play back the cut move by move: the new Simulate button next to Export G-code opens the project's simulator, where the stock is cut as the tool advances, drawn with its real shape, with the toolpath drawn behind it and a timeline to play, pause, change speed, scrub and jump between operations. ([#173](https://github.com/federicovezzoli/furrow-cam/pull/173))
+
+### Patch Changes
+
+- The simulated stock is sharper: twice the resolution, flat floors and crisp walls, so cuts made with a flat end mill look like they will on the machine. ([#174](https://github.com/federicovezzoli/furrow-cam/pull/174))
+
 ## 0.6.0
 
 ### Minor Changes
