@@ -58,10 +58,15 @@ describe("addImportedShapes", () => {
 
   it("keeps a touch-off pad the project already has", () => {
     const document = createProjectDocument();
-    document.stock.touchOff = { x: 300, y: 200, diameter: 20 };
+    document.stock.touchOff = { x: 300, y: 200, diameter: 20, toolChange: null };
     const store = createDocumentStore(document);
     addImportedShapes(store, "importDxf", importDxf(DXF).shapes);
-    expect(store.getState().document.stock.touchOff).toEqual({ x: 300, y: 200, diameter: 20 });
+    expect(store.getState().document.stock.touchOff).toEqual({
+      x: 300,
+      y: 200,
+      diameter: 20,
+      toolChange: null,
+    });
   });
 
   it("takes one file per project, and undoes as one step", () => {

@@ -1,5 +1,5 @@
 import { type Box3, flattenPath, type Vec3 } from "@furrow/cam-core";
-import type { Path, Shape, TouchOff } from "@furrow/document";
+import type { Path, Shape, TouchOffDisc } from "@furrow/document";
 
 /** Arm length in millimetres of the cross drawn for a single-point path (a drill location). */
 export const POINT_MARKER_SIZE = 3;
@@ -34,7 +34,7 @@ const TOUCH_OFF_SEGMENTS = 96;
  * material needs, and a cross at its centre, a third of its radius across
  * each way.
  */
-export function touchOffLinePositions({ x, y, diameter }: TouchOff): {
+export function touchOffLinePositions({ x, y, diameter }: TouchOffDisc): {
   ring: Float32Array;
   distances: Float32Array;
   cross: Float32Array;

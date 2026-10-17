@@ -2,7 +2,6 @@ import {
   clampTouchOff,
   defaultTouchOff,
   designAlignment,
-  designBounds,
   touchOffOutsideStock,
   translatePoint,
   translateShapes,
@@ -13,7 +12,7 @@ import type {
   Point,
   ProjectDocument,
   StockAnchor,
-  TouchOff,
+  TouchOffDisc,
   Units,
   ZOrigin,
 } from "@furrow/document";
@@ -37,9 +36,9 @@ export function setUnits(store: DocumentStore, units: Units) {
 /**
  * Moves the design on the stock by `offset`: its shapes, the models placed
  * with them (ADR-0031) and everything else stored in stock coordinates with
- * them, the profiles' tab positions and the touch-off pad (ADR-0041), which
- * was placed in the corner nearest the zero the design follows. `geometry` is the document's, read
- * outside the draft: reading every point through it would be slow.
+ * them, the profiles' tab positions and the touch-off pad (ADR-0043), which
+ * was placed on the zero the design follows. `geometry` is the document's,
+ * read outside the draft: reading every point through it would be slow.
  */
 function moveDrawing(
   draft: Draft<ProjectDocument>,
@@ -159,13 +158,12 @@ export function setZOrigin(store: DocumentStore, zOrigin: ZOrigin) {
 
 /**
  * Adds the default touch-off pad (#147, ADR-0041, ADR-0043), as one undo
- * step: in the corner nearest the zero the design leaves free. Nothing if the
- * project has one.
+ * step: centred on the XY zero. Nothing if the project has one.
  */
 export function addTouchOff(store: DocumentStore) {
-  const { document } = store.getState();
-  if (document.stock.touchOff) return;
-  const pad = defaultTouchOff(document.stock, designBounds(document.geometry, document.models));
+  const { stock } = store.getState().document;
+  if (stock.touchOff) return;
+  const pad = defaultTouchOff(stock);
   store.getState().change("setStock.touchOff", (draft) => {
     draft.stock.touchOff = pad;
   });
@@ -186,7 +184,7 @@ export function removeTouchOff(store: DocumentStore) {
  */
 export function setTouchOffField(
   store: DocumentStore,
-  field: keyof TouchOff,
+  field: keyof TouchOffDisc,
   value: number,
 ): boolean {
   const { stock } = store.getState().document;
@@ -198,4 +196,17 @@ export function setTouchOffField(
     if (draft.stock.touchOff) draft.stock.touchOff[field] = value;
   });
   return true;
+}
+
+/**
+ * Sets the touch-off pad's own tool change (ADR-0043), in place of the
+ * machine's, as one undo step; `null` or blank text goes back to the
+ * machine's. Nothing without a pad.
+ */
+export function setTouchOffToolChange(store: DocumentStore, block: string | null) {
+  const toolChange = block?.trim() ? block : null;
+  store.getState().change("setStock.touchOff.toolChange", (draft) => {
+    const pad = draft.stock.touchOff;
+    if (pad && pad.toolChange !== toolChange) pad.toolChange = toolChange;
+  });
 }
