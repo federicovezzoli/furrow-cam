@@ -9,7 +9,8 @@ import {
   vBit,
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { formatNumber, grbl, toolShapeComment } from "./grbl";
+import { formatNumber } from "./format";
+import { grbl, toolShapeComment } from "./grbl";
 import { type PostInput, postSteps } from "./post";
 
 const stock: Stock = {
@@ -247,7 +248,7 @@ describe("grbl", () => {
       { operation: operation("Profile"), toolpath: plunge([0, 0]) },
       { operation: operation("Holes", drill), toolpath: plunge([20, 0]) },
     ];
-    const pad = { x: 7.5, y: 192.5, diameter: 15 };
+    const pad = { x: 7.5, y: 192.5, diameter: 15, toolChange: null };
 
     it("move over the pad before pausing, measured from the zero", () => {
       for (const [xyOrigin, at] of [
@@ -290,6 +291,29 @@ describe("grbl", () => {
           "(Furrow tool: type=drill diameter=6.35)",
         ].join("\n"),
       );
+    });
+
+    it("write the pad's own tool change in place of the machine's, at the pad", () => {
+      const { gcode } = post({
+        operations,
+        stock: {
+          ...stock,
+          xyOrigin: { anchor: "center" },
+          touchOff: { ...pad, toolChange: "M5\nG0 X{padX} Y{padY} F2000\nM0 (Zero Z)" },
+        },
+        machine: { ...machine, toolChange: "M5\nM0 (Change the bit)" },
+      });
+      expect(gcode).toContain(
+        [
+          "(Tool: 6 mm drill, 6.35 mm)",
+          "M5",
+          "G0 X-142.5 Y92.5 F2000",
+          "M0 (Zero Z)",
+          "G21 G90 G94 G17",
+          "(Furrow tool: type=drill diameter=6.35)",
+        ].join("\n"),
+      );
+      expect(gcode).not.toContain("Change the bit");
     });
 
     it("ignore the pad with the Z zero on the machine bed", () => {
