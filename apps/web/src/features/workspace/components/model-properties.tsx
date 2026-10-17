@@ -1,10 +1,18 @@
 "use client";
 
 import { rotatedSize } from "@furrow/cam-core";
-import { CircleAlertIcon, Maximize2Icon, RotateCwIcon, Trash2Icon, XIcon } from "lucide-react";
+import {
+  CircleAlertIcon,
+  Maximize2Icon,
+  RotateCwIcon,
+  Trash2Icon,
+  Undo2Icon,
+  XIcon,
+} from "lucide-react";
 import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { ANCHOR_LABELS } from "@/features/workspace/lib/anchor-grid";
+import { originalSizeLabel } from "@/features/workspace/lib/model-size";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -30,8 +38,8 @@ const AXES = ["X", "Y", "Z"] as const;
 
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
- * quarter turns, size, depth and position from the zero, each an undoable
- * edit. Says that it is cut from the top only (S3).
+ * quarter turns, size (with the size in the file), depth and position from
+ * the zero, each an undoable edit. Says that it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -134,7 +142,18 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             </span>
           </p>
         )}
-        <div className="flex justify-end">
+        <p className="text-muted-foreground">{originalSizeLabel(model, units)}</p>
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="outline"
+            size="compact"
+            onClick={() => setModelScale(store, model.id, 1)}
+            disabled={placement.scale === 1 && (depth === 0 || placement.depth === depth)}
+            title="Scale the model back to its size in the file"
+          >
+            <Undo2Icon />
+            Original size
+          </Button>
           <Button variant="outline" size="compact" onClick={() => fitModelToStock(store, model.id)}>
             <Maximize2Icon />
             Fit to stock
