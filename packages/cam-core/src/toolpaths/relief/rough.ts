@@ -1,4 +1,11 @@
-import type { Model, Point, ReliefRoughOperation, RoughingBoundary, Tool } from "@furrow/document";
+import type {
+  Model,
+  Point,
+  ReliefRoughOperation,
+  RoughingBoundary,
+  Tool,
+  TouchOff,
+} from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
@@ -11,10 +18,12 @@ import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "../toolpath";
 import { heightContours, simplifyContour } from "./contours";
 import {
   coarsenedWarning,
+  type FlatDisc,
   liftHeight,
   MAX_RELIEF_CELLS,
   modelHeightsSteps,
   outlineSpan,
+  padDiscs,
   RELIEF_TOLERANCE,
   REST_MATERIAL,
   REST_MIN_WIDTH,
@@ -55,6 +64,8 @@ export type ReliefRoughOptions = {
   cache?: ReliefCache;
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
   rest?: RestOptions | null;
+  /** The touch-off pad, an island at every level (#147); `null` for none. */
+  touchOff?: TouchOff | null;
 };
 
 /** Share of the progress the model heightmap takes; the levels take the rest. */
@@ -104,6 +115,7 @@ export function* reliefRoughSteps(
     tolerance = DEFAULT_CHORD_TOLERANCE,
     cache,
     rest = null,
+    touchOff = null,
   }: ReliefRoughOptions,
 ): Generator<number, Toolpath> {
   const { params } = operation;
@@ -159,6 +171,7 @@ export function* reliefRoughSteps(
   if (strategy.type === "linear") {
     const moves = yield* rasterLevels(tool, grid, heights, area, levels, floor, {
       restStock,
+      discs: padDiscs(touchOff, grid),
       safeZ,
       entryClearance,
       ramp: params.ramp,
@@ -179,6 +192,8 @@ export function* reliefRoughSteps(
     { strategy, direction: params.direction, allowance: 0, ramp: params.ramp },
     { safeZ, entryClearance, tolerance },
   );
+  // The pad stays at the stock top: an island at every level, on its outside.
+  const pad = touchOff && padPolygon(touchOff, tolerance);
   // Outlines are simplified within a cell and grown by two, so they still
   // hold every cell above the level: offsetting each step of a staircase
   // along the cells is slow.
@@ -192,6 +207,7 @@ export function* reliefRoughSteps(
       join: "miter",
       arcTolerance: tolerance,
     });
+    if (pad) islands.push(pad);
     // Islands may reach past the boundary; the pits inside them are cleared too.
     let cleared = difference([boundary], islands);
     if (restStock) {
@@ -258,6 +274,21 @@ export function roughingArea(
   return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
 }
 
+/**
+ * The touch-off pad as a polygon around it, counter-clockwise, its sides
+ * within `tolerance` of the circle and outside it, so a tool kept a radius
+ * from the polygon never reaches the pad.
+ */
+export function padPolygon({ x, y, diameter }: TouchOff, tolerance: number): Polygon {
+  const r = diameter / 2;
+  const sides = Math.max(16, Math.ceil(Math.PI / Math.acos(Math.max(-1, 1 - tolerance / r))));
+  const corner = r / Math.cos(Math.PI / sides);
+  return Array.from({ length: sides }, (_, i) => {
+    const angle = (2 * Math.PI * i) / sides;
+    return [x + corner * Math.cos(angle), y + corner * Math.sin(angle)];
+  });
+}
+
 /** One straight pass along a row of the grid: the tip dropped onto the model at each sample. */
 type RasterPass = {
   /** Height of the pass in the grid. */
@@ -273,6 +304,8 @@ type RasterPass = {
 type RasterOptions = {
   /** The stock the earlier operations left, for rest machining; `null` to cut everything. */
   restStock: RestStock | null;
+  /** The touch-off pad in the grid's coordinates, which the tool rides over. */
+  discs: FlatDisc[];
   safeZ: number;
   entryClearance: number;
   ramp: boolean;
@@ -304,13 +337,13 @@ function* rasterLevels(
   area: Rect,
   levels: number[],
   floor: number,
-  { restStock, safeZ, entryClearance, ramp, progress }: RasterOptions,
+  { restStock, discs, safeZ, entryClearance, ramp, progress }: RasterOptions,
 ): Generator<number, ToolpathMove[]> {
   const { columns, rows, cellWidth, cellHeight } = grid;
   // Samples are a cell apart, and links no further: between two of them the
   // tool mustn't meet what neither saw.
   const step = Math.max(cellWidth, cellHeight);
-  const dropper = new ToolDropper(heights, grid, widened(cutterProfile(tool), step));
+  const dropper = new ToolDropper(heights, grid, widened(cutterProfile(tool), step), discs);
   const restDropper = restStock ? new RestDropper(restStock, grid, cutterProfile(tool)) : null;
   const rect: [number, number][] = [
     [area.min[0], area.min[1]],
@@ -351,6 +384,8 @@ function* rasterLevels(
     if (row >= 0 && row < rows && from <= to) {
       dropper.dropLine(v, from, to, tips.subarray(from - first, to - first + 1));
     }
+    // The pad may be past the grid, where the pass still goes.
+    dropper.dropDiscs(v, first, last, tips);
     // Only stock more than `REST_MATERIAL` above the pass counts, so the tool
     // dropped onto it starts there, which spares scanning most cells. Past
     // the grid, nothing is left that the model's margin would show.

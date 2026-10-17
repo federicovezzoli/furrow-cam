@@ -210,6 +210,17 @@ describe("migrations", () => {
     expect(parseProjectDocument(v11)).toEqual(doc);
   });
 
+  it("gives v12 stocks no touch-off pad", () => {
+    const doc = fullDocument();
+    const v12 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      stock: Record<string, unknown>;
+    };
+    v12.schemaVersion = 12;
+    delete v12.stock.touchOff;
+    expect(parseProjectDocument(v12)).toEqual({ ...doc, stock: { ...doc.stock, touchOff: null } });
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

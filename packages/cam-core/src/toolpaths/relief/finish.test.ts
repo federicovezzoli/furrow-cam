@@ -444,6 +444,7 @@ describe("generateToolpath", () => {
     stock: null,
     stockBottom: null,
     before: [],
+    touchOff: null,
     ...options,
   };
 

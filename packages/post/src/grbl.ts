@@ -1,5 +1,5 @@
-import { stockOffset, type Vec3 } from "@furrow/cam-core";
-import type { Machine, Stock, StockAnchor, Tool } from "@furrow/document";
+import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
+import type { Machine, Stock, StockAnchor, Tool, TouchOff } from "@furrow/document";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
@@ -21,7 +21,8 @@ const MODES = "G21 G90 G94 G17";
  * - The first tool is assumed loaded. When the next operation's bit differs,
  *   GRBL has no `M6`, so the tool change turns the spindle off, rises and
  *   pauses with `M0`, asking for Z to be zeroed again: there are no tool
- *   length offsets.
+ *   length offsets. With a touch-off pad (ADR-0041), it rapids over the
+ *   pad's centre before pausing, and before a custom tool-change block.
  * - Feeds are lowered so neither the XY nor the Z component of a move exceeds
  *   the machine's maximum, and spindle speeds are kept in its range; either
  *   warns.
@@ -49,7 +50,14 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     const before = steps[i - 1];
     return before !== undefined && !sameBit(before.tool, step.tool);
   });
-  if (changesBit) out.comment("Zero Z again after each tool change");
+  const pad = activeTouchOff(stock);
+  if (changesBit) {
+    out.comment(
+      pad
+        ? `Zero Z again on the touch-off pad after each tool change: ${padLabel(stock, pad)}`
+        : "Zero Z again after each tool change",
+    );
+  }
   if (machine?.programStart) custom(machine.programStart);
   else out.line(MODES);
 
@@ -59,11 +67,19 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       out.comment(`Tool: ${toolLabel(step.tool)}`);
       if (tool !== null) {
         out.forget();
-        if (machine?.toolChange) custom(machine.toolChange);
-        else {
+        if (machine?.toolChange) {
+          // Over the pad first, where Z is zeroed; the block may stop the spindle.
+          if (pad) {
+            out.rapid({ z: safeZ });
+            out.rapid({ x: pad.x, y: pad.y });
+          }
+          custom(machine.toolChange);
+        } else {
           out.line("M5");
           out.rapid({ z: safeZ });
-          out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and zero Z again`)}`);
+          if (pad) out.rapid({ x: pad.x, y: pad.y });
+          const zero = pad ? "zero Z on the touch-off pad" : "zero Z again";
+          out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and ${zero}`)}`);
         }
       }
     }
@@ -202,6 +218,12 @@ class GcodeWriter {
 export function formatNumber(value: number): string {
   const text = value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
   return text === "-0" ? "0" : text;
+}
+
+/** Where the touch-off pad is, in work coordinates, and how wide. */
+function padLabel(stock: Stock, { x, y, diameter }: TouchOff): string {
+  const [ox, oy] = stockOffset(stock);
+  return `X${formatNumber(x + ox)} Y${formatNumber(y + oy)}, ${formatNumber(diameter)} mm across`;
 }
 
 /** A G-code comment. GRBL comments can't nest or span lines. */

@@ -1,4 +1,10 @@
-import type { FinishingStrategy, Model, ReliefFinishOperation, Tool } from "@furrow/document";
+import type {
+  FinishingStrategy,
+  Model,
+  ReliefFinishOperation,
+  Tool,
+  TouchOff,
+} from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { modelTransform, type PlacedModel, placedModelBox } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
@@ -243,10 +249,15 @@ export class ToolDropper {
   private readonly deque: Int32Array;
   private readonly penalty: Float64Array;
 
+  /**
+   * `discs` are flat-topped raised discs the tool is dropped onto too,
+   * wherever they are, inside the grid or past it (the touch-off pad).
+   */
   constructor(
     private readonly heights: Float32Array,
     private readonly grid: HeightmapGrid,
     private readonly profile: CutterProfile,
+    private readonly discs: readonly FlatDisc[] = [],
   ) {
     this.window = new Float64Array(grid.columns);
     this.deque = new Int32Array(grid.columns + 1);
@@ -303,6 +314,28 @@ export class ToolDropper {
         out[i] = best;
       }
     }
+    this.dropDiscs(y, first, last, out);
+  }
+
+  /**
+   * Raises `out[i]` to the tip height over the `discs` alone at the centre of
+   * column `first + i` on the line `y`, for any columns, inside the grid or
+   * past it: the highest point of a disc under the tool is where it is
+   * nearest the tool's axis.
+   */
+  dropDiscs(y: number, first: number, last: number, out: Float64Array) {
+    const { profile, discs } = this;
+    const { cellWidth } = this.grid;
+    for (const disc of discs) {
+      const dy = y - disc.y;
+      if (Math.abs(dy) > disc.radius + profile.radius) continue;
+      for (let i = 0; i <= last - first; i++) {
+        const distance = Math.hypot((first + i + 0.5) * cellWidth - disc.x, dy) - disc.radius;
+        if (distance > profile.radius) continue;
+        const value = disc.top - profile.height(Math.max(0, distance));
+        if (value > (out[i] as number)) out[i] = value;
+      }
+    }
   }
 
   /** The tip height at `[x, y]` (in grid coordinates), no lower than `floor`. */
@@ -332,8 +365,26 @@ export class ToolDropper {
         if (value > best) best = value;
       }
     }
+    for (const disc of this.discs) {
+      const distance = Math.hypot(x - disc.x, y - disc.y) - disc.radius;
+      if (distance > radius) continue;
+      best = Math.max(best, disc.top - profile.height(Math.max(0, distance)));
+    }
     return best;
   }
+}
+
+/** A flat-topped raised disc in a grid's coordinates, its top at `top`. */
+export type FlatDisc = { x: number; y: number; radius: number; top: number };
+
+/**
+ * The touch-off pad as a disc in `grid`'s coordinates, its top at the stock
+ * top, for dropping tools onto (ADR-0041); none without a pad.
+ */
+export function padDiscs(touchOff: TouchOff | null, grid: ReliefGrid): FlatDisc[] {
+  if (!touchOff) return [];
+  const [u, v] = toPassFrame(grid.angle, [touchOff.x, touchOff.y]);
+  return [{ x: u - grid.origin[0], y: v - grid.origin[1], radius: touchOff.diameter / 2, top: 0 }];
 }
 
 /**
@@ -833,6 +884,8 @@ export type ReliefFinishOptions = {
   cache?: ReliefCache;
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
   rest?: RestOptions | null;
+  /** The touch-off pad, which no pass cuts (#147); `null` for none. */
+  touchOff?: TouchOff | null;
 };
 
 /** Share of the progress the model heightmap takes; the passes take the rest. */
@@ -853,6 +906,8 @@ export type FinishSetup = {
   grid: ReliefGrid;
   heights: Float32Array;
   profile: CutterProfile;
+  /** The touch-off pad, as a disc in the grid's coordinates, or none. */
+  discs: FlatDisc[];
   dropper: ToolDropper;
   /** The model's bottom plus the stock to leave, or the stock's bottom if higher. */
   floor: number;
@@ -870,7 +925,7 @@ export function* finishSetupSteps(
   model: Model,
   positions: Float32Array,
   angle: number,
-  { stockBottom = null, cache, rest = null }: ReliefFinishOptions,
+  { stockBottom = null, cache, rest = null, touchOff = null }: ReliefFinishOptions,
 ): Generator<number, FinishSetup | null> {
   const { tool, params } = operation;
   const warnings: string[] = [];
@@ -903,7 +958,8 @@ export function* finishSetupSteps(
     grid,
     heights,
     profile,
-    dropper: new ToolDropper(heights, grid, profile),
+    discs: padDiscs(touchOff, grid),
+    dropper: new ToolDropper(heights, grid, profile, padDiscs(touchOff, grid)),
     floor,
     restDropper,
     warnings,

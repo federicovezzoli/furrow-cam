@@ -483,6 +483,7 @@ describe("generateToolpath", () => {
       thickness: 18,
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
+      touchOff: null,
     },
     machine:
       machineSafeZ === null
