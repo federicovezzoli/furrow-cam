@@ -1097,7 +1097,9 @@ export function* parallelPassesSteps(
           link[steps] = pass[a] as number;
           const linkBetween = (k: number, f: number) => dropper.dropPoint(...linkAt(k + f), floor);
           for (const [k, z] of sampleMoves(link, Math.hypot(du, dv) / steps, linkBetween)) {
-            if (k > 0) builder.feed(at(...linkAt(k), z), tool.feedRate);
+            // The first may climb straight up from where the tool is; the
+            // builder drops a move that goes nowhere.
+            builder.feed(at(...linkAt(k), z), tool.feedRate);
           }
         } else {
           builder.travel(start[0], start[1]);

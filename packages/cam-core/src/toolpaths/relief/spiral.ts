@@ -184,7 +184,9 @@ export function* spiralSteps(
         return dropper.dropPoint(x, y, floor);
       };
       for (const [i, z] of sampleMoves(samples.subarray(a, b + 1), spacing, between)) {
-        if (i > 0) builder.feed(at(a + i, z), tool.feedRate);
+        // The first may climb straight up from where the tool is; the
+        // builder drops a move that goes nowhere.
+        builder.feed(at(a + i, z), tool.feedRate);
       }
       atEnd = b === count - 1;
     }
