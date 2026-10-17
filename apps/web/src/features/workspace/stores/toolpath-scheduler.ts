@@ -1,4 +1,7 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey } from "@furrow/cam-core";
+import type { ProjectDocument } from "@furrow/document";
+import type { GcodeExport } from "@furrow/post";
+import type { ExportInput } from "@/features/workspace/lib/toolpath-export";
 import type { DocumentStore } from "./document-store";
 import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
 
@@ -16,7 +19,35 @@ export type ToolpathRequest = {
 /** Stops computing the operation's request, if the worker hasn't answered it yet. */
 export type ToolpathCancel = { cancel: string };
 
-export type ToolpathMessage = ToolpathRequest | ToolpathCancel;
+/** Drops the toolpaths the worker keeps of operations other than these (#133). */
+export type ToolpathRetain = { retain: string[] };
+
+/**
+ * Exports the G-code of `document` from the toolpaths the worker holds for
+ * `inputs`, the enabled operations' (#133), computing only those it lacks.
+ * It carries every STL file the worker said it lacks so far in `meshes`,
+ * so each attempt gets further than the one before.
+ */
+export type GcodeExportRequest = {
+  export: number;
+  document: ProjectDocument;
+  name: string;
+  inputs: ExportInput[];
+  meshes?: ArrayBuffer[];
+};
+
+export type ToolpathMessage =
+  | ToolpathRequest
+  | ToolpathCancel
+  | ToolpathRetain
+  | GcodeExportRequest;
+
+/** The program, why it couldn't be exported, or the mesh the worker needs for it. */
+export type GcodeExportResult = GcodeExport | { error: string };
+export type GcodeExportResponse = { export: number } & (
+  | GcodeExportResult
+  | { missingMesh: string }
+);
 
 /**
  * The worker's answers: the toolpath, why it failed, how far it got (any
@@ -30,6 +61,9 @@ export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | { cancelled: true }
   | { missingMesh: string }
 );
+
+/** Everything the toolpath worker sends back. */
+export type ToolpathWorkerResponse = ToolpathResponse | GcodeExportResponse;
 
 /**
  * Keeps the toolpath store in step with the document: whenever the inputs of
@@ -46,6 +80,13 @@ export type ToolpathResponse = { operationId: string; inputHash: string } & (
  * operation, which stays cancelled until it changes or `retry` computes it
  * again. `stop` stops listening; `fail` gives up on every pending request,
  * e.g. when the worker crashed and was replaced.
+ *
+ * The worker keeps each operation's latest toolpath; `retain` messages drop
+ * those of operations disabled or deleted. `exportGcode` exports the program
+ * from them (#133): its request carries the enabled operations' inputs and
+ * hashes, the worker posts the toolpaths it holds for those hashes and
+ * computes the rest, and it runs after the requests already at the worker,
+ * so toolpaths still computing finish first.
  */
 export function scheduleToolpaths(
   documents: DocumentStore,
@@ -62,6 +103,14 @@ export function scheduleToolpaths(
   const waiting = new Map<string, ToolpathRequest>();
   /** Operations whose request at the worker was asked to stop. */
   const cancelled = new Set<string>();
+  /** The enabled operations the worker was last told to keep toolpaths of, sorted. */
+  let retained: string | null = null;
+  /** Exports waiting for the worker, by id. */
+  const exports = new Map<
+    number,
+    { request: GcodeExportRequest; resolve: (result: GcodeExportResult) => void }
+  >();
+  let lastExport = 0;
 
   function send(request: ToolpathRequest) {
     inFlight.set(request.operationId, request);
@@ -128,6 +177,11 @@ export function scheduleToolpaths(
       for (const id of map.keys()) if (!ids.has(id)) map.delete(id);
     }
     for (const id of inFlight.keys()) if (!ids.has(id)) cancelInFlight(id);
+    const sorted = JSON.stringify([...ids].sort());
+    if (sorted !== retained) {
+      retained = sorted;
+      post({ retain: [...ids] });
+    }
     for (const input of toolpathInputs(document, enabled)) {
       const id = input.operation.id;
       const inputHash = hashInput(input);
@@ -147,9 +201,58 @@ export function scheduleToolpaths(
     if (state.document !== previous.document) update();
   });
 
+  async function sendExportWithMesh(id: number, sha256: string) {
+    const pending = exports.get(id);
+    if (!pending) return;
+    try {
+      const mesh = await loadMesh(sha256);
+      if (exports.get(id) !== pending) return;
+      pending.request = { ...pending.request, meshes: [...(pending.request.meshes ?? []), mesh] };
+      post(pending.request);
+    } catch (error) {
+      if (exports.get(id) !== pending) return;
+      exports.delete(id);
+      pending.resolve({ error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  function receiveExport(response: GcodeExportResponse) {
+    const id = response.export;
+    if ("missingMesh" in response) {
+      void sendExportWithMesh(id, response.missingMesh);
+      return;
+    }
+    const pending = exports.get(id);
+    if (!pending) return;
+    exports.delete(id);
+    const { export: _, ...result } = response;
+    pending.resolve(result);
+  }
+
   return {
     stop,
-    receive(response: ToolpathResponse) {
+    /** The G-code of the document as it is now, from the toolpaths the worker holds (#133). */
+    exportGcode(name: string): Promise<GcodeExportResult> {
+      const { document } = documents.getState();
+      const enabled = document.operations.filter((operation) => operation.enabled);
+      const inputs = toolpathInputs(document, enabled).map((input) => ({
+        operationId: input.operation.id,
+        inputHash: hashInput(input),
+        input,
+      }));
+      lastExport++;
+      const request: GcodeExportRequest = { export: lastExport, document, name, inputs };
+      return new Promise((resolve) => {
+        exports.set(request.export, { request, resolve });
+        post(request);
+      });
+    },
+    receive(message: ToolpathWorkerResponse) {
+      if ("export" in message) {
+        receiveExport(message);
+        return;
+      }
+      const response = message;
       const { operationId, inputHash } = response;
       const { setResult, setError, setProgress, setCancelled } = toolpaths.getState();
       if ("progress" in response) {
@@ -195,6 +298,10 @@ export function scheduleToolpaths(
       inFlight.clear();
       waiting.clear();
       cancelled.clear();
+      // A fresh worker holds no toolpaths: it is told again what to keep.
+      retained = null;
+      for (const { resolve } of exports.values()) resolve({ error });
+      exports.clear();
       const { entries, setError } = toolpaths.getState();
       for (const [id, entry] of Object.entries(entries)) {
         if (entry.status === "computing") setError(id, entry.inputHash, error);

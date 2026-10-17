@@ -1,6 +1,6 @@
-import type { Vec3 } from "@furrow/cam-core";
+import { createCache, generateToolpath, type SimulationCut, type Vec3 } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { exportGcode } from "../export";
+import { enabledInputs, exportGcode, postToolpaths } from "../export";
 import {
   checkGcode,
   formatViolations,
@@ -27,6 +27,18 @@ describe.each(projects)(
 
     it("warns about what it should, and nothing else", () => {
       expect(warnings).toEqual(expected);
+    });
+
+    it("posts the same program from toolpaths computed beforehand (#133)", () => {
+      // As the workspace's toolpath worker computes them, one at a time with its own cache.
+      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
+      const computed = enabledInputs(document).map((input) => ({
+        input,
+        toolpath: generateToolpath(input, toolpathContext),
+      }));
+      const posted = postToolpaths(document, title, computed);
+      expect(posted.gcode).toBe(gcode);
+      expect(posted.warnings).toEqual(warnings);
     });
   },
 );

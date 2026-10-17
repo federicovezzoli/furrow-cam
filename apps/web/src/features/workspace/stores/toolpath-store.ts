@@ -2,6 +2,7 @@ import type { ToolpathLines } from "@furrow/cam-core";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
+import type { GcodeExportResult } from "./toolpath-scheduler";
 
 /**
  * What the workspace shows of a toolpath: its warnings and its lines in the
@@ -38,10 +39,15 @@ export type ToolpathEntry = { inputHash: string; previewKey?: string } & (
   | { status: "error"; error: string; cancelled?: boolean }
 );
 
-/** Stops or restarts computing an operation's toolpath; the workspace's scheduler provides them. */
+/**
+ * Stops or restarts computing an operation's toolpath, and exports the
+ * program from the toolpaths computed (#133); the workspace's scheduler
+ * provides them.
+ */
 export type ToolpathControls = {
   cancel: (operationId: string) => void;
   retry: (operationId: string) => void;
+  exportGcode: (name: string) => Promise<GcodeExportResult>;
 };
 
 /** What a cancelled toolpath says. */
@@ -68,7 +74,11 @@ export type ToolpathState = {
 
 export type ToolpathStore = ReturnType<typeof createToolpathStore>;
 
-const NO_CONTROLS: ToolpathControls = { cancel() {}, retry() {} };
+const NO_CONTROLS: ToolpathControls = {
+  cancel() {},
+  retry() {},
+  exportGcode: async () => ({ error: "Toolpaths aren't being computed." }),
+};
 
 /**
  * The state as Redux DevTools shows it: typed arrays (a 3D finish's lines run
