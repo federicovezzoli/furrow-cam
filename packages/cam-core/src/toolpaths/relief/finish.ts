@@ -413,6 +413,67 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
   return kept;
 }
 
+/** Most points the tool is dropped at between two samples it rises or drops steeply between. */
+const MAX_SUBSAMPLES = 16;
+
+/**
+ * The moves along heights sampled `spacing` apart on a straight line, as
+ * `[sample, height]` pairs from the first sample, `sample` fractional
+ * between samples: merged with `simplifyHeights`, except where the tool
+ * rises or drops more than `spacing` between two samples (#151). The model
+ * may rise above a straight move there, such as a wall a flat end mill drops
+ * off anywhere between the samples, whose top edge the move would nick.
+ *
+ * With `between` (the tool's height at a fraction of the way from one sample
+ * to the next), the tool is dropped at points between such samples, about
+ * as many as the samples are steep, and follows them. Wherever the tool
+ * still rises or drops more than their spacing between two of them, or
+ * without `between`, it goes over at the higher of the two instead: along
+ * at that height, then straight down or up.
+ */
+export function sampleMoves(
+  heights: ArrayLike<number>,
+  spacing: number,
+  between: ((sample: number, fraction: number) => number) | null = null,
+  tolerance = RELIEF_TOLERANCE,
+): [number, number][] {
+  const moves: [number, number][] = [];
+  const push = (sample: number, height: number) => {
+    const last = moves.at(-1);
+    if (!last || last[0] !== sample || last[1] !== height) moves.push([sample, height]);
+  };
+  /** Over at the higher of two points `a` and `b`. */
+  const over = (a: number, za: number, b: number, zb: number) => {
+    const high = Math.max(za, zb);
+    push(a, high);
+    push(b, high);
+    push(b, zb);
+  };
+  const count = heights.length;
+  let from = 0;
+  for (let k = 0; k < count; k++) {
+    const za = heights[k] as number;
+    const zb = heights[k + 1] as number;
+    const steep = k + 1 < count && Math.abs(zb - za) > spacing;
+    if (k + 1 < count && !steep) continue;
+    const run = Array.from({ length: k - from + 1 }, (_, i) => heights[from + i] as number);
+    for (const i of simplifyHeights(run, tolerance)) push(from + i, run[i] as number);
+    if (steep) {
+      const parts = between ? Math.min(MAX_SUBSAMPLES, Math.ceil(Math.abs(zb - za) / spacing)) : 1;
+      let previous = za;
+      for (let j = 1; j <= parts; j++) {
+        const z = j === parts ? zb : (between as (s: number, f: number) => number)(k, j / parts);
+        const [a, b] = [k + (j - 1) / parts, k + j / parts];
+        if (Math.abs(z - previous) > spacing / parts) over(a, previous, b, z);
+        else push(b, z);
+        previous = z;
+      }
+    }
+    from = k + 1;
+  }
+  return moves;
+}
+
 /** Where a pass at `v` crosses `outline`, as the range of `u` inside it, or `null`. */
 export function outlineSpan(outline: [number, number][], v: number): [number, number] | null {
   let low = Infinity;
@@ -965,37 +1026,30 @@ export function* parallelPassesSteps(
           (!restDropper || Math.hypot(startU - previous.u, v - previous.v) <= maxLink)
         ) {
           // A link that follows the model to the next pass.
-          const du = startU - previous.u;
-          const dv = v - previous.v;
+          const from = previous;
+          const du = startU - from.u;
+          const dv = v - from.v;
           const steps = Math.max(
             1,
             Math.ceil(Math.hypot(du, dv) / Math.min(cellWidth, cellHeight)),
           );
+          const linkAt = (k: number) =>
+            [from.u + (du * k) / steps, from.v + (dv * k) / steps] as const;
           const link = new Float64Array(steps + 1);
-          link[0] = previous.z;
-          for (let k = 1; k < steps; k++) {
-            link[k] = dropper.dropPoint(
-              previous.u + (du * k) / steps,
-              previous.v + (dv * k) / steps,
-              floor,
-            );
-          }
+          link[0] = from.z;
+          for (let k = 1; k < steps; k++) link[k] = dropper.dropPoint(...linkAt(k), floor);
           link[steps] = pass[a] as number;
-          for (const k of simplifyHeights(link, RELIEF_TOLERANCE)) {
-            if (k === 0) continue;
-            const point = at(
-              previous.u + (du * k) / steps,
-              previous.v + (dv * k) / steps,
-              link[k] as number,
-            );
-            builder.feed(point, tool.feedRate);
+          const linkBetween = (k: number, f: number) => dropper.dropPoint(...linkAt(k + f), floor);
+          for (const [k, z] of sampleMoves(link, Math.hypot(du, dv) / steps, linkBetween)) {
+            if (k > 0) builder.feed(at(...linkAt(k), z), tool.feedRate);
           }
         } else {
           builder.travel(start[0], start[1]);
           enter(start, entryAt(a));
         }
-        for (const i of simplifyHeights(pass.subarray(a, b + 1), RELIEF_TOLERANCE)) {
-          builder.feed(at(u(a + i), v, pass[a + i] as number), tool.feedRate);
+        const passBetween = (i: number, f: number) => dropper.dropPoint(u(a + i + f), v, floor);
+        for (const [i, z] of sampleMoves(pass.subarray(a, b + 1), cellWidth, passBetween)) {
+          builder.feed(at(u(a + i), v, z), tool.feedRate);
         }
         previous = { u: u(b), v, z: pass[b] as number };
       }

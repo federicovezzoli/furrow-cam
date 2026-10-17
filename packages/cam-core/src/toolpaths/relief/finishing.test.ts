@@ -153,6 +153,27 @@ function distanceTo(points: readonly Point[], [x, y]: Point): number {
   return best;
 }
 
+describe("parallel", () => {
+  // Passes at angles whose grid shares cell edges with the simulation's, so
+  // a wall is at the same place in both: on a grid turned otherwise, it is
+  // only known within a cell (ADR-0030), which the simulation's cell centres
+  // show as a cut down the whole wall.
+  for (const angle of [0, 60, 90]) {
+    it(`never nicks a wall a flat end mill drops off, at ${angle}°`, () => {
+      for (const direction of ["zigzag", "one_way"] as const) {
+        const toolpath = finish(endMill, { type: "parallel", angle, direction });
+        expectNoGouge(toolpath, endMill, STEP, stepMesh, { tolerance: SAMPLING });
+      }
+    });
+  }
+
+  it("never cuts below the model with a ball end mill", () => {
+    const strategy = { type: "parallel", angle: 30, direction: "zigzag" } as const;
+    const toolpath = finish(ballEndMill, strategy, {}, PYRAMID, pyramidMesh);
+    expectNoGouge(toolpath, ballEndMill, PYRAMID, pyramidMesh, { tolerance: SAMPLING });
+  });
+});
+
 describe("isoLines", () => {
   const grid = { columns: 3, rows: 3, cellWidth: 1, cellHeight: 1 };
 

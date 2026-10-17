@@ -4,10 +4,9 @@ import { type Toolpath, ToolpathBuilder } from "../toolpath";
 import {
   FINISH_SETUP_SHARE,
   type FinishSetup,
-  RELIEF_TOLERANCE,
   type ReliefFinishOptions,
   remainingRuns,
-  simplifyHeights,
+  sampleMoves,
   ToolDropper,
   toStock,
 } from "./finish";
@@ -104,11 +103,9 @@ function transposed(heights: Float32Array, grid: HeightmapGrid) {
  * middle as the strategy says. The tool is dropped onto the model at every
  * cell along each run (along columns, on the heights turned a quarter turn,
  * so both are as quick as parallel passes), and the samples merged into
- * straight moves with `simplifyHeights`, which never cuts below them. Where
- * the tool rises or drops more than a cell's size between two samples, as
- * at a wall a flat end mill drops off, the model may rise above the
- * straight move between them, so the tool goes over at the higher one
- * instead. It enters with a rapid down to the entry clearance and a plunge,
+ * straight moves with `sampleMoves`, which never cuts below them and goes
+ * over at the higher sample where the tool rises or drops more than a
+ * cell's size between two. It enters with a rapid down to the entry clearance and a plunge,
  * and stays down to the end.
  *
  * With rest machining, it only cuts where the tool meets more than
@@ -147,29 +144,24 @@ export function* spiralSteps(
     if (along === "row") dropper.dropLine((line + 0.5) * cellHeight, low, low + count - 1, samples);
     else columnDropper.dropLine((line + 0.5) * cellWidth, low, low + count - 1, samples);
     if (to < from) samples.reverse();
-    const cell = (k: number) => from + (to < from ? -k : k);
-    const at = (k: number, z = samples[k] as number): [number, number, number] => {
-      const [u, v] =
-        along === "row"
-          ? [(cell(k) + 0.5) * cellWidth, (line + 0.5) * cellHeight]
-          : [(line + 0.5) * cellWidth, (cell(k) + 0.5) * cellHeight];
-      return [...toStock(grid, u, v), z];
+    /** Sample `k` of the run (fractional between samples), in grid coordinates. */
+    const position = (k: number): [number, number] => {
+      const cell = from + (to < from ? -k : k);
+      return along === "row"
+        ? [(cell + 0.5) * cellWidth, (line + 0.5) * cellHeight]
+        : [(line + 0.5) * cellWidth, (cell + 0.5) * cellHeight];
     };
+    const at = (k: number, z = samples[k] as number): [number, number, number] => [
+      ...toStock(grid, ...position(k)),
+      z,
+    ];
     const runsLeft: [number, number][] = restDropper
       ? remainingRuns(
-          (k) => {
-            const [u, v] =
-              along === "row"
-                ? [(cell(k) + 0.5) * cellWidth, (line + 0.5) * cellHeight]
-                : [(line + 0.5) * cellWidth, (cell(k) + 0.5) * cellHeight];
-            return restDropper.remaining(u, v, samples[k] as number);
-          },
+          (k) => restDropper.remaining(...position(k), samples[k] as number),
           count,
           gap,
         )
       : [[0, count - 1]];
-    const over = (k: number) =>
-      Math.abs((samples[k + 1] as number) - (samples[k] as number)) > step;
     let continues = atEnd;
     atEnd = false;
     for (const [a, b] of runsLeft) {
@@ -181,19 +173,13 @@ export function* spiralSteps(
         builder.feed(start, tool.plungeRate);
       }
       continues = false;
-      let first = a;
-      for (let k = a; k <= b; k++) {
-        if (k < b && !over(k)) continue;
-        for (const i of simplifyHeights(samples.subarray(first, k + 1), RELIEF_TOLERANCE)) {
-          if (i > 0) builder.feed(at(first + i), tool.feedRate);
-        }
-        if (k < b) {
-          const high = Math.max(samples[k] as number, samples[k + 1] as number);
-          builder.feed(at(k, high), tool.feedRate);
-          builder.feed(at(k + 1, high), tool.feedRate);
-          builder.feed(at(k + 1), tool.feedRate);
-        }
-        first = k + 1;
+      const spacing = along === "row" ? cellWidth : cellHeight;
+      const between = (i: number, f: number) => {
+        const [x, y] = position(a + i + f);
+        return dropper.dropPoint(x, y, floor);
+      };
+      for (const [i, z] of sampleMoves(samples.subarray(a, b + 1), spacing, between)) {
+        if (i > 0) builder.feed(at(a + i, z), tool.feedRate);
       }
       atEnd = b === count - 1;
     }
