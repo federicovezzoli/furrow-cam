@@ -407,7 +407,8 @@ const smallBall: Tool = { ...ballEndMill, name: "1.5 mm ball end mill", diameter
  */
 function relief(): { document: ProjectDocument; context: ToolpathContext } {
   const id = ids("50000000");
-  const mesh = parseStl(new TextEncoder().encode(pyramidStl));
+  // ASCII, one byte per character; the package's lib types have no `TextEncoder`.
+  const mesh = parseStl(Uint8Array.from(pyramidStl, (character) => character.charCodeAt(0)));
   const base = project(
     {
       width: 40,

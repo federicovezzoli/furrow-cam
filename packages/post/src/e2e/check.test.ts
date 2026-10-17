@@ -88,6 +88,8 @@ describe("checkGcode", () => {
     // Down at a point never cut, and across the stock below its top.
     expect(broken(program(["G0 Z5", "G0 X80", "G0 Z-1"]))).toEqual(["12 rapid"]);
     expect(broken(program(["G0 Y30"]))).toEqual(["10 rapid"]);
+    // Up out of the slot, but diagonally through the stock beside it.
+    expect(broken(program(["G0 X80 Z5"]))).toEqual(["10 rapid"]);
     // Down where the tool cut, but deeper than it did.
     expect(broken(program(["G0 Z5", "G0 X30", "G0 Z-3"]))).toEqual(["12 rapid"]);
   });

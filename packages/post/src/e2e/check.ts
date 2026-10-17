@@ -119,10 +119,10 @@ export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
  *   plane are set before the first move.
  * - `work-area`: the program spans no more than the machine's travel.
  * - `stock-bottom`: no move goes below the stock's bottom, into the bed.
- * - `rapid`: no rapid passes through material. The feeds before it are
- *   replayed on a heightmap of the stock with each tool's shape, so a rapid
- *   may go below the stock top where they cut it away: back into a pecked
- *   hole, across what roughing cleared.
+ * - `rapid`: no rapid passes through material, going down, across or back
+ *   up. The feeds before it are replayed on a heightmap of the stock with
+ *   each tool's shape, so a rapid may go below the stock top where they cut
+ *   it away: back into a pecked hole, across what roughing cleared.
  * - `feed`: every cut has a feed rate, its XY and Z components within the
  *   machine's maxima.
  * - `spindle`: the spindle turns while the tool cuts, at a speed in the
@@ -233,7 +233,9 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
     }
     const known = from.every((value) => !Number.isNaN(value)) && !to.some(Number.isNaN);
     if (move.kind === "rapid") {
-      if (to[2] < top - EPSILON) {
+      // A rapid up out of a cut can still cross material on its way.
+      const lowest = Number.isNaN(from[2]) ? to[2] : Math.min(from[2], to[2]);
+      if (lowest < top - EPSILON) {
         if (!known || tool === null) {
           fail(line.number, "rapid", "rapid below the stock top from an unknown position");
         } else {
@@ -241,6 +243,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
           if (depth > MATERIAL_TOLERANCE) {
             fail(line.number, "rapid", `rapid through ${round(depth)} mm of material`);
           }
+          // What it went through is gone, so backing out of it is no second fault.
+          material.cut(tool, from, to);
         }
       }
     } else {
