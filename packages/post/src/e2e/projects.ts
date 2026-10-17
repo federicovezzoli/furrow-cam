@@ -547,7 +547,7 @@ const tornado35: Tool = {
 /**
  * A bowl bit, 44.45 mm across with a 41.91 mm profile: there is no such
  * tool type, so a ball end mill as wide, whose groove at the 4 mm the doors
- * are cut to is as wide within a millimetre.
+ * are cut to is as wide within a millimetre (#155).
  */
 const bowl44: Tool = {
   ...workshopTool,
@@ -593,7 +593,8 @@ function outsideProfile(
 /**
  * Two 5 mm strut plates exported from OpenSCAD as one path, their 28 Ø5.3 mm
  * holes 35-sided polygons. Estlcam drilled the left plate's holes with a
- * helix; drilling needs circles, so here they are profiled from the inside.
+ * helix; drilling needs circles, so here they are profiled from the inside
+ * (#154).
  */
 function strutPlate(): ProjectDocument {
   const id = ids("60000000");
