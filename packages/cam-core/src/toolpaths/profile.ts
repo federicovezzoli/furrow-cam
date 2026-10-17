@@ -497,8 +497,27 @@ function feedTrack(
         from < current ? cut.plungeRate : cut.feedRate,
       );
     }
+    // A ramp down from a tab ends where it meets the pass's own height, part
+    // way along a step: the tool reaches the pass depth there and cuts at it
+    // from there on, rather than sloping down over the whole step (#153).
+    if (!lifted) {
+      const above = (t: number) => rampDownFrom(cut, tabs, at + t, track.length) - z(t);
+      if (above(previousTravelled) > 1e-9 && above(travelled) < -1e-9) {
+        let low = previousTravelled;
+        let high = travelled;
+        for (let i = 0; i < 60 && high - low > 1e-9; i++) {
+          const middle = (low + high) / 2;
+          if (above(middle) > 0) low = middle;
+          else high = middle;
+        }
+        const [x, y] = track.pointAt(at + high);
+        const meet = height(high);
+        builder.feed([x, y, meet], meet < from - 1e-9 ? cut.plungeRate : cut.feedRate);
+      }
+    }
     const to = height(travelled);
-    builder.feed([point[0], point[1], to], to < from - 1e-9 ? cut.plungeRate : cut.feedRate);
+    const last = builder.position?.[2] ?? from;
+    builder.feed([point[0], point[1], to], to < last - 1e-9 ? cut.plungeRate : cut.feedRate);
     previous = point;
     previousTravelled = travelled;
   }

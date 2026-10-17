@@ -379,6 +379,28 @@ describe("profileToolpath with tabs", () => {
     expect(toolpath.warnings).toEqual([]);
   });
 
+  it("ramps back down to the pass depth at the plunge angle after a tab (#153)", () => {
+    // At 45°, the 3 mm from the tab top (-3) down to the last pass (-6) take 3 mm.
+    const toolpath = profile({ ramp: true, tabs: tabs([[50, 0]]) }, [square], { plungeAngle: 45 });
+    const ramps = steps(toolpath).filter(
+      ([from, move]) =>
+        move.kind === "feed" && from[2] === -3 && move.to[2] < -3 && Math.abs(from[1] + 3) < 1e-6,
+    );
+    expect(ramps.length).toBeGreaterThan(0);
+    for (const [from, move] of ramps) {
+      // From a tab edge (x = 45 or 55, the tool's radius past the tab), at 45°.
+      expect(Math.min(Math.abs(from[0] - 45), Math.abs(from[0] - 55))).toBeLessThan(1e-6);
+      expect(descentAngle(from, move.to)).toBeCloseTo(45, 6);
+    }
+    // The last pass's ramp ends 3 mm past the tab, and the edge is cut flat from there.
+    const last = ramps.find(([, move]) => Math.abs(move.to[2] + 6) < 1e-9);
+    if (!last) throw new Error("no ramp to the last pass");
+    const [from, move] = last;
+    expect(Math.abs(move.to[0] - from[0])).toBeCloseTo(3, 6);
+    const flat = cutsAt(toolpath, -6).filter(([, y]) => Math.abs(y + 3) < 1e-6);
+    expect(flat.length).toBeGreaterThan(0);
+  });
+
   it("goes straight up and down at the tab's edges", () => {
     const toolpath = profile({ tabs: tabs([[50, 0]]) });
     const vertical = steps(toolpath).filter(
