@@ -6,6 +6,8 @@ export type Palette = {
   hovered: string;
   selected: string;
   tab: string;
+  /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
+  touchOff: string;
   /** The snap target while picking the zero. */
   snap: string;
   /** Rapid moves; cutting moves take their tool's colour. */
@@ -23,6 +25,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#60a5fa",
     selected: "#ea580c",
     tab: "#16a34a",
+    touchOff: "#0891b2",
     snap: "#c026d3",
     rapid: "#71717a",
     stock: "#d4a373",
@@ -36,6 +39,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     hovered: "#93c5fd",
     selected: "#fb923c",
     tab: "#4ade80",
+    touchOff: "#22d3ee",
     snap: "#e879f9",
     rapid: "#a1a1aa",
     stock: "#a47148",

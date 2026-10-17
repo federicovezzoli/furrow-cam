@@ -1,5 +1,5 @@
 import { type Box3, flattenPath, type Vec3 } from "@furrow/cam-core";
-import type { Path, Shape } from "@furrow/document";
+import type { Path, Shape, TouchOff } from "@furrow/document";
 
 /** Arm length in millimetres of the cross drawn for a single-point path (a drill location). */
 export const POINT_MARKER_SIZE = 3;
@@ -23,6 +23,39 @@ export function pathLinePositions(path: Path): Float32Array {
     values.push(ax, ay, 0, bx, by, 0);
   }
   return new Float32Array(values);
+}
+
+/** Segments of the circle drawn for the touch-off pad. */
+const TOUCH_OFF_SEGMENTS = 96;
+
+/**
+ * The touch-off pad's marker (ADR-0043) as `LineSegments` positions on the
+ * stock top: a ring at its diameter, with the line distances a dashed
+ * material needs, and a cross at its centre, a third of its radius across
+ * each way.
+ */
+export function touchOffLinePositions({ x, y, diameter }: TouchOff): {
+  ring: Float32Array;
+  distances: Float32Array;
+  cross: Float32Array;
+} {
+  const r = diameter / 2;
+  const ring = new Float32Array(TOUCH_OFF_SEGMENTS * 6);
+  const distances = new Float32Array(TOUCH_OFF_SEGMENTS * 2);
+  const step = (2 * Math.PI) / TOUCH_OFF_SEGMENTS;
+  const length = 2 * r * Math.sin(step / 2);
+  for (let i = 0; i < TOUCH_OFF_SEGMENTS; i++) {
+    const a = i * step;
+    const b = a + step;
+    ring.set(
+      [x + r * Math.cos(a), y + r * Math.sin(a), 0, x + r * Math.cos(b), y + r * Math.sin(b), 0],
+      i * 6,
+    );
+    distances.set([i * length, (i + 1) * length], i * 2);
+  }
+  const s = r / 3;
+  const cross = new Float32Array([x - s, y, 0, x + s, y, 0, x, y - s, 0, x, y + s, 0]);
+  return { ring, distances, cross };
 }
 
 /** A shape's paths as `LineSegments` positions, like `pathLinePositions`. */
