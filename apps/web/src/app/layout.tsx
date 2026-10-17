@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import { PageViewAnalytics } from "@/components/page-view-analytics";
@@ -14,6 +14,14 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Furrow CAM",
   description: "Open source, web-based 2.5D CAM for CNC routers.",
+};
+
+// The light and dark --background values in globals.css.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
