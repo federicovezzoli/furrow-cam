@@ -316,18 +316,43 @@ export type VCarveOperation = z.infer<typeof VCarveOperation>;
 export const RasterDirection = z.enum(["one_way", "zigzag"]);
 export type RasterDirection = z.infer<typeof RasterDirection>;
 
+/** Where a spiral finishing pass starts: at the model's outline, or in its middle. */
+export const SpiralStart = z.enum(["outside", "centre"]);
+export type SpiralStart = z.infer<typeof SpiralStart>;
+
 /**
- * 3D finishing parameters (#115, PRD-0005 S4): parallel passes over a model,
- * the tool dropped onto the model at every point along them (ADR-0030).
+ * How 3D finishing covers the model (#130, ADR-0039), each strategy with
+ * only what it uses:
+ *
+ * - `parallel`: straight passes at `angle` degrees counter-clockwise from the
+ *   stock's X axis.
+ * - `waterline`: contours at constant Z, `stepDown` millimetres apart.
+ * - `spiral`: one continuous spiral over the model's outline.
+ */
+export const FinishingStrategy = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("parallel"),
+    angle: z.number().min(0).lt(180),
+    direction: RasterDirection,
+  }),
+  z.strictObject({ type: z.literal("waterline"), stepDown: PositiveLength }),
+  z.strictObject({ type: z.literal("spiral"), start: SpiralStart }),
+]);
+export type FinishingStrategy = z.infer<typeof FinishingStrategy>;
+
+/**
+ * 3D finishing parameters (#115, PRD-0005 S4): passes over a model, the tool
+ * dropped onto the model at every point along them (ADR-0030).
  */
 export const ReliefFinishParams = z.strictObject({
   /** The model it machines, one of the document's `models`. */
   modelId: z.uuid(),
-  /** Direction of the passes, in degrees counter-clockwise from the stock's X axis. */
-  angle: z.number().min(0).lt(180),
-  /** Distance between passes, as a percentage of the tool's diameter. */
+  strategy: FinishingStrategy,
+  /**
+   * Distance between parallel passes or spiral laps, as a percentage of the
+   * tool's diameter. Waterline contours are a step-down apart instead.
+   */
   stepOver: z.number().gt(0).max(100),
-  direction: RasterDirection,
   /** Material left on the model in every direction, walls included. */
   stockToLeave: z.number().nonnegative(),
   /** Rest machining (#118): only cut where the earlier operations left material. */

@@ -195,6 +195,21 @@ describe("migrations", () => {
     expect(parseProjectDocument(v10)).toEqual(doc);
   });
 
+  it("gives v11 finishing operations parallel passes", () => {
+    const doc = fullDocument();
+    doc.models = [model];
+    doc.operations.push(reliefFinish, reliefRough);
+    const v11 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      operations: { params: Record<string, unknown> }[];
+    };
+    v11.schemaVersion = 11;
+    const finish = v11.operations.at(-2) as { params: Record<string, unknown> };
+    const { strategy: _, ...params } = finish.params;
+    finish.params = { ...params, angle: 0, direction: "zigzag" };
+    expect(parseProjectDocument(v11)).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

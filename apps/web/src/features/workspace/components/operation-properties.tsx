@@ -13,6 +13,7 @@ import {
   canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
+  type FinishingStrategy,
   LinearAngle,
   MillingDirection,
   Operation,
@@ -28,6 +29,7 @@ import {
   type ReliefRoughOperation,
   type RoughingBoundary,
   type RoughingBoundaryType,
+  SpiralStart,
   type Tool,
   type VCarveOperation,
 } from "@furrow/document";
@@ -1193,6 +1195,32 @@ function RestCheckbox({
   );
 }
 
+const FINISHING_STRATEGY_LABELS: Record<FinishingStrategy["type"], string> = {
+  parallel: "Parallel",
+  waterline: "Waterline",
+  spiral: "Spiral",
+};
+
+const FINISHING_STRATEGY_HINTS: Record<FinishingStrategy["type"], string> = {
+  parallel:
+    "Straight passes at an angle. Best on gentle slopes; steep faces along the passes come out rough.",
+  waterline:
+    "Contours at constant height, a step-down apart, so steep faces get as many passes as flat ones get few. Flat areas between contours aren't cut.",
+  spiral: "One continuous cut spiralling over the model's outline, with no retracts.",
+};
+
+/** What picking each finishing strategy sets: contours start 0.5 mm apart, spirals at the outline. */
+const DEFAULT_FINISHING_STRATEGIES: Record<FinishingStrategy["type"], FinishingStrategy> = {
+  parallel: { type: "parallel", angle: 0, direction: "zigzag" },
+  waterline: { type: "waterline", stepDown: 0.5 },
+  spiral: { type: "spiral", start: "outside" },
+};
+
+const SPIRAL_START_LABELS: Record<SpiralStart, string> = {
+  outside: "Outline",
+  centre: "Centre",
+};
+
 /** Steps the passes' angle by 15°. 180° is 0° again, so the field stops short of it. */
 const ANGLE_STEP = 15;
 
@@ -1203,6 +1231,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateReliefFinishParams(store, operation.id, changes),
   );
+  const { strategy } = params;
   const gestures = gestureHandlers(store);
   const spacing = (tool.diameter * params.stepOver) / 100;
 
@@ -1212,60 +1241,130 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         3D finish
       </h4>
       <p className="text-muted-foreground">
-        Parallel passes over the model, the tool dropped onto it at every point, from the top only.
-        A ball end mill leaves the smoothest surface.
+        Passes over the model, the tool dropped onto it at every point, from the top only. A ball
+        end mill leaves the smoothest surface.
       </p>
-      <NumberField
-        id="relief-angle"
-        label="Angle"
-        layout="inline"
-        suffix="°"
-        min={0}
-        max={179.9}
-        step={ANGLE_STEP}
-        value={params.angle}
-        onValueChange={(angle) => update("angle", { angle })}
-        error={errors.angle}
-        {...gestures}
-      />
-      <NumberField
-        id="relief-step-over"
-        label="Step-over"
-        layout="inline"
-        suffix="%"
-        min={1}
-        max={100}
-        value={params.stepOver}
-        onValueChange={(stepOver) => update("stepOver", { stepOver })}
-        error={errors.stepOver}
-        {...gestures}
-      />
-      <p className="text-muted-foreground">
-        Of the tool's diameter: passes {formatQuantity(spacing, "length", units)}{" "}
-        {unitLabel("length", units)} apart at most.
-      </p>
-      <Row id="relief-direction" label="Direction">
+      <Row id="relief-strategy" label="Strategy">
         <NativeSelect
-          id="relief-direction"
+          id="relief-strategy"
           size="sm"
-          value={params.direction}
-          onChange={(event) =>
-            update("direction", { direction: RasterDirection.parse(event.target.value) })
-          }
+          value={strategy.type}
+          onChange={(event) => {
+            const type = event.target.value as FinishingStrategy["type"];
+            if (type !== strategy.type) {
+              update("strategy", { strategy: DEFAULT_FINISHING_STRATEGIES[type] });
+            }
+          }}
           className={SELECT_CLASS}
         >
-          {RasterDirection.options.map((option) => (
-            <NativeSelectOption key={option} value={option}>
-              {RASTER_DIRECTION_LABELS[option]}
+          {Object.entries(FINISHING_STRATEGY_LABELS).map(([type, label]) => (
+            <NativeSelectOption key={type} value={type}>
+              {label}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">
-        {params.direction === "zigzag"
-          ? "Every other pass comes back, linked along the model."
-          : "Every pass cuts the same way, retracting in between."}
-      </p>
+      <p className="text-muted-foreground">{FINISHING_STRATEGY_HINTS[strategy.type]}</p>
+      {strategy.type === "parallel" && (
+        <NumberField
+          id="relief-angle"
+          label="Angle"
+          layout="inline"
+          suffix="°"
+          min={0}
+          max={179.9}
+          step={ANGLE_STEP}
+          value={strategy.angle}
+          onValueChange={(angle) => update("strategy", { strategy: { ...strategy, angle } })}
+          error={errors.strategy}
+          {...gestures}
+        />
+      )}
+      {strategy.type === "waterline" && (
+        <NumberField
+          id="relief-step-down"
+          label="Step-down"
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={strategy.stepDown}
+          onValueChange={(stepDown) =>
+            update("strategy", { strategy: { type: "waterline", stepDown } })
+          }
+          error={errors.strategy}
+          {...gestures}
+        />
+      )}
+      {strategy.type === "spiral" && (
+        <Row id="relief-spiral-start" label="Start from">
+          <NativeSelect
+            id="relief-spiral-start"
+            size="sm"
+            value={strategy.start}
+            onChange={(event) =>
+              update("strategy", {
+                strategy: { type: "spiral", start: SpiralStart.parse(event.target.value) },
+              })
+            }
+            className={SELECT_CLASS}
+          >
+            {SpiralStart.options.map((start) => (
+              <NativeSelectOption key={start} value={start}>
+                {SPIRAL_START_LABELS[start]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Row>
+      )}
+      {strategy.type !== "waterline" && (
+        <>
+          <NumberField
+            id="relief-step-over"
+            label="Step-over"
+            layout="inline"
+            suffix="%"
+            min={1}
+            max={100}
+            value={params.stepOver}
+            onValueChange={(stepOver) => update("stepOver", { stepOver })}
+            error={errors.stepOver}
+            {...gestures}
+          />
+          <p className="text-muted-foreground">
+            Of the tool's diameter: {strategy.type === "spiral" ? "laps" : "passes"}{" "}
+            {formatQuantity(spacing, "length", units)} {unitLabel("length", units)} apart at most.
+          </p>
+        </>
+      )}
+      {strategy.type === "parallel" && (
+        <>
+          <Row id="relief-direction" label="Direction">
+            <NativeSelect
+              id="relief-direction"
+              size="sm"
+              value={strategy.direction}
+              onChange={(event) =>
+                update("strategy", {
+                  strategy: { ...strategy, direction: RasterDirection.parse(event.target.value) },
+                })
+              }
+              className={SELECT_CLASS}
+            >
+              {RasterDirection.options.map((option) => (
+                <NativeSelectOption key={option} value={option}>
+                  {RASTER_DIRECTION_LABELS[option]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Row>
+          <p className="text-muted-foreground">
+            {strategy.direction === "zigzag"
+              ? "Every other pass comes back, linked along the model."
+              : "Every pass cuts the same way, retracting in between."}
+          </p>
+        </>
+      )}
       <NumberField
         id="relief-stock-to-leave"
         label="Stock to leave"
@@ -1283,9 +1382,9 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         checked={params.rest}
         onChange={(rest) => update("rest", { rest })}
       />
-      {(errors.direction ?? errors.rest) && (
+      {errors.rest && (
         <p role="alert" className="text-destructive">
-          {errors.direction ?? errors.rest}
+          {errors.rest}
         </p>
       )}
     </section>

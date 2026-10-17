@@ -161,9 +161,8 @@ export const reliefFinish: ReliefFinishOperation = {
   tool: ballEndMill,
   params: {
     modelId: model.id,
-    angle: 0,
+    strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: 10,
-    direction: "zigzag",
     stockToLeave: 0,
     rest: false,
   },
@@ -193,7 +192,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 11,
+    schemaVersion: 12,
     units: "in",
     stock: {
       width: 300,

@@ -305,18 +305,32 @@ describe("ReliefFinishOperation", () => {
 
   it("rejects out-of-range params", () => {
     const { params } = reliefFinish;
+    const parallel = { type: "parallel", angle: 0, direction: "zigzag" };
     for (const changes of [
-      { angle: -1 },
-      { angle: 180 },
+      { strategy: { ...parallel, angle: -1 } },
+      { strategy: { ...parallel, angle: 180 } },
+      { strategy: { ...parallel, direction: "spiral" } },
+      { strategy: { type: "parallel", angle: 0 } },
+      { strategy: { type: "waterline", stepDown: 0 } },
+      { strategy: { type: "waterline", stepDown: 1, angle: 0 } },
+      { strategy: { type: "spiral", start: "inside" } },
+      { strategy: { type: "contour" } },
+      { angle: 0 },
       { stepOver: 0 },
       { stepOver: 101 },
       { stockToLeave: -0.1 },
-      { direction: "spiral" },
       { modelId: "emblem" },
     ]) {
       expect(ReliefFinishParams.safeParse({ ...params, ...changes }).success).toBe(false);
     }
-    expect(ReliefFinishParams.safeParse({ ...params, angle: 179.5 }).success).toBe(true);
+    for (const strategy of [
+      { ...parallel, angle: 179.5, direction: "one_way" },
+      { type: "waterline", stepDown: 0.5 },
+      { type: "spiral", start: "outside" },
+      { type: "spiral", start: "centre" },
+    ]) {
+      expect(ReliefFinishParams.safeParse({ ...params, strategy }).success).toBe(true);
+    }
   });
 
   it("machines a model, not shapes", () => {
