@@ -51,7 +51,7 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 | Z8 | Toolpath and G-code coordinates are measured from the chosen zero for every anchor and for custom zeros; post-processor tests cover all of them | Must |
 | Z9 | Changing the zero is a single undoable action | Must |
 | Z10 | The stock properties let the user choose the Z zero: stock top or machine bed | Must |
-| Z11 | With Z zeroed on the stock top, the user can turn on a touch-off pad (a disc of stock top, 15 mm across by default, off until ticked) that 3D operations keep uncut and 2D operations warn about. The tool moves over it at each tool change. Its position and diameter are edited in the zero section, it moves with the design when the stock is resized or the zero changes anchor, and the viewport marks it with a dashed ring and a label (ADR-0041, ADR-0043) | Should |
+| Z11 | With Z zeroed on the stock top, the user can turn on a touch-off pad (a disc of stock top, 15 mm across by default, off until ticked, centred on the XY zero) that 3D operations keep uncut and 2D operations warn about. The tool moves over it at each tool change, or the project gives the pad its own tool-change block, suggested from the machine's, in place of the machine's. Its position and diameter are edited in the zero section, it moves with the design when the stock is resized or the zero changes anchor, and the viewport marks it with a dashed ring and a label (ADR-0041, ADR-0043) | Should |
 
 ## User flow
 
@@ -75,4 +75,4 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 - 2026-10-11: custom zero may lie outside the stock (Z4)
 - 2026-10-14: the drawing is aligned to the stock at the zero's anchor on import, when an anchor is chosen and when the stock is resized, replacing "changing the zero never moves the design" (goals, Z3, user flow, success criteria; #91, ADR-0022)
 - 2026-10-17: touch-off pad for zeroing Z after a tool change (Z11; #147, ADR-0041)
-- 2026-10-17: the touch-off pad is off until ticked, drawn as a marker, and moves with the design (Z11; #177, #178, ADR-0043)
+- 2026-10-17: the touch-off pad is off until ticked, centred on the zero, drawn as a marker, moves with the design and can have its own tool change (Z11; #177, #178, ADR-0043)
