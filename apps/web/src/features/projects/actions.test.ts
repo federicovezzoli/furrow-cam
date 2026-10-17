@@ -7,6 +7,7 @@ const MACHINE_ID = "machine-1";
 const UPDATED_AT = new Date("2026-10-16T12:00:00Z");
 
 const mocks = vi.hoisted(() => ({
+  limitError: null as string | null,
   userId: "user-1" as string | null,
   storage: true,
   /** The machine rows, by id, with their owner. */
@@ -30,6 +31,17 @@ vi.mock("next/navigation", () => ({
     throw new Error(`redirect ${url}`);
   },
 }));
+// Limits off unless a test sets `mocks.limitError`, as at the free plan's limit.
+vi.mock("@/lib/limits", async () => {
+  const { db } = await import("@/lib/db");
+  return {
+    createWithinLimit: async (
+      _userId: string,
+      _resource: string,
+      create: (client: typeof db) => Promise<unknown>,
+    ) => (mocks.limitError ? { error: mocks.limitError } : { created: await create(db) }),
+  };
+});
 vi.mock("@/lib/db", () => ({
   db: {
     machine: {
@@ -68,7 +80,11 @@ beforeEach(() => {
   mocks.storage = true;
   mocks.machines.clear();
   mocks.created.length = 0;
+  mocks.limitError = null;
 });
+
+const AT_LIMIT =
+  "You've reached the free plan's limit of 3 projects. Delete a project to create a new one.";
 
 describe("createProject", () => {
   it("rejects a missing machine, e.g. when the user has none", async () => {
@@ -98,6 +114,29 @@ describe("createProject", () => {
     expect(await createProject(form({ name: "Board", machine: MACHINE_ID }))).toHaveProperty(
       "machine",
     );
+    expect(mocks.created).toHaveLength(0);
+  });
+});
+
+describe("the free plan's project limit (#68)", () => {
+  it("refuses a new project at the limit, creating nothing", async () => {
+    mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
+    mocks.limitError = AT_LIMIT;
+    expect(await createProject(form({ name: "Board", machine: MACHINE_ID }))).toEqual({
+      form: AT_LIMIT,
+    });
+    expect(mocks.created).toHaveLength(0);
+  });
+
+  it("refuses an imported project at the limit, creating nothing", async () => {
+    mocks.limitError = AT_LIMIT;
+    const document = { ...createProjectDocument(), machine: lowRider };
+    expect(await importProject(projectFile(document), null)).toEqual({ error: AT_LIMIT });
+    const withModels = { ...document, models: [model] };
+    const meshes = [{ sha256: model.sha256, size: model.size }];
+    expect(
+      await startArchiveImport(documentFile(withModels), "Relief.furrow.zip", meshes, null),
+    ).toEqual({ error: AT_LIMIT });
     expect(mocks.created).toHaveLength(0);
   });
 });

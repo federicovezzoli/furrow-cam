@@ -19,7 +19,12 @@
         "S3_SECRET_ACCESS_KEY",
         "CRON_SECRET",
         "STL_MAX_FILE_MB",
-        "STL_MAX_TRIANGLES"
+        "STL_MAX_TRIANGLES",
+        "FREEMIUM_ENABLED",
+        "FREEMIUM_MAX_PROJECTS",
+        "FREEMIUM_MAX_TOOLS",
+        "FREEMIUM_MAX_MACHINES",
+        "FREEMIUM_MAX_DAILY_EXPORTS"
       ],
       "outputs": [".next/**", "!.next/cache/**"]
     },

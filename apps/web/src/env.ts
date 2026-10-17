@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FREEMIUM_VARIABLES, FreemiumEnv } from "@/lib/freemium-env";
 
 const Env = z
   .object({
@@ -33,13 +34,16 @@ const Env = z
     },
   );
 
+/** With the freemium limits' variables (ADR-0017), which `lib/limits.ts` alone reads. */
+const AppEnv = Env.and(FreemiumEnv);
+
 /** Empty variables (as in `.env.example`) count as unset. */
 function unsetIfEmpty(...names: string[]) {
   return Object.fromEntries(names.map((name) => [name, process.env[name] || undefined]));
 }
 
 /** Server-side environment, validated on first import. Never import from client components. */
-export const env = Env.parse({
+export const env = AppEnv.parse({
   ...process.env,
   ...unsetIfEmpty(
     "RESEND_API_KEY",
@@ -52,5 +56,6 @@ export const env = Env.parse({
     "CRON_SECRET",
     "STL_MAX_FILE_MB",
     "STL_MAX_TRIANGLES",
+    ...FREEMIUM_VARIABLES,
   ),
 });

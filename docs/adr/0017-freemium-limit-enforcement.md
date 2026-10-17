@@ -1,6 +1,6 @@
 # ADR-0017: Enforcing freemium usage limits
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-11
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0003, ADR-0003, ADR-0004, ADR-0013

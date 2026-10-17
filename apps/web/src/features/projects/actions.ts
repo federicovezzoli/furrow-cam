@@ -16,6 +16,7 @@ import { listMachineChoices } from "@/features/machines/server";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
+import { createWithinLimit } from "@/lib/limits";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "./lib/versions";
 import {
   documentColumns,
@@ -55,12 +56,15 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
   if (snapshot.error !== undefined) return { machine: snapshot.error };
 
   const document = { ...createProjectDocument(), machine: snapshot.machine };
-  const { id } = await db.project.create({
-    data: { userId, name: name.data, ...documentColumns(document) },
-    select: { id: true },
-  });
+  const result = await createWithinLimit(userId, "projects", (client) =>
+    client.project.create({
+      data: { userId, name: name.data, ...documentColumns(document) },
+      select: { id: true },
+    }),
+  );
+  if (result.error !== undefined) return { form: result.error };
   revalidatePath("/projects");
-  redirect(`/projects/${id}`);
+  redirect(`/projects/${result.created.id}`);
 }
 
 /**
@@ -120,12 +124,15 @@ export async function importProject(file: File, machineId: string | null): Promi
   if (!("document" in prepared)) return prepared;
   const { document, name } = prepared;
 
-  const { id } = await db.project.create({
-    data: { userId, name, ...documentColumns(document) },
-    select: { id: true },
-  });
+  const result = await createWithinLimit(userId, "projects", (client) =>
+    client.project.create({
+      data: { userId, name, ...documentColumns(document) },
+      select: { id: true },
+    }),
+  );
+  if (result.error !== undefined) return { error: result.error };
   revalidatePath("/projects");
-  redirect(`/projects/${id}`);
+  redirect(`/projects/${result.created.id}`);
 }
 
 /** What `startArchiveImport` returns: the new project to finish, or as `ImportResult`. */
@@ -179,15 +186,19 @@ export async function startArchiveImport(
     }
   }
 
-  const { id, updatedAt } = await db.project.create({
-    data: {
-      userId,
-      name,
-      // Meshes it references are uploaded first: saving checks that they are (ADR-0029).
-      ...documentColumns({ ...createProjectDocument(), machine: document.machine }),
-    },
-    select: { id: true, updatedAt: true },
-  });
+  const result = await createWithinLimit(userId, "projects", (client) =>
+    client.project.create({
+      data: {
+        userId,
+        name,
+        // Meshes it references are uploaded first: saving checks that they are (ADR-0029).
+        ...documentColumns({ ...createProjectDocument(), machine: document.machine }),
+      },
+      select: { id: true, updatedAt: true },
+    }),
+  );
+  if (result.error !== undefined) return { error: result.error };
+  const { id, updatedAt } = result.created;
   revalidatePath("/projects");
   return { projectId: id, document, updatedAt };
 }
@@ -472,14 +483,18 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
     }
   }
 
-  const { id: projectId } = await db.project.create({
-    data: {
-      userId,
-      name: name.success ? name.data : version.project.name,
-      ...documentColumns(parsed.document),
-    },
-    select: { id: true },
-  });
+  const result = await createWithinLimit(userId, "projects", (client) =>
+    client.project.create({
+      data: {
+        userId,
+        name: name.success ? name.data : version.project.name,
+        ...documentColumns(parsed.document),
+      },
+      select: { id: true },
+    }),
+  );
+  if (result.error !== undefined) return { error: result.error };
+  const projectId = result.created.id;
   // Projects never share objects (ADR-0029): the new one gets copies.
   const error = await copyMeshes(userId, version.project.id, projectId, meshes);
   if (error) return { error };
