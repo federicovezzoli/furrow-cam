@@ -158,21 +158,14 @@ export function setZOrigin(store: DocumentStore, zOrigin: ZOrigin) {
 }
 
 /**
- * The touch-off pad a project with `document`'s stock and design gets by
- * default (#147, ADR-0041): in the corner nearest the zero the design leaves
- * free.
+ * Adds the default touch-off pad (#147, ADR-0041, ADR-0043), as one undo
+ * step: in the corner nearest the zero the design leaves free. Nothing if the
+ * project has one.
  */
-export function defaultProjectTouchOff(
-  document: Pick<ProjectDocument, "stock" | "geometry" | "models">,
-): TouchOff {
-  return defaultTouchOff(document.stock, designBounds(document.geometry, document.models));
-}
-
-/** Adds the default touch-off pad, as one undo step; nothing if the project has one. */
 export function addTouchOff(store: DocumentStore) {
   const { document } = store.getState();
   if (document.stock.touchOff) return;
-  const pad = defaultProjectTouchOff(document);
+  const pad = defaultTouchOff(document.stock, designBounds(document.geometry, document.models));
   store.getState().change("setStock.touchOff", (draft) => {
     draft.stock.touchOff = pad;
   });

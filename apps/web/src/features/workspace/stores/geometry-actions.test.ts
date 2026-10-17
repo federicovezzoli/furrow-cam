@@ -50,13 +50,9 @@ describe("addImportedShapes", () => {
     expect(store.getState().document.stock.xyOrigin).toEqual({ anchor: "custom", x: -20, y: 35.5 });
   });
 
-  it("adds the default touch-off pad in the corner nearest the zero the drawing leaves free", () => {
-    // The 20 mm circle aligned at the bottom-left corner covers it; the
-    // top-left corner, 400 mm from the zero, is the next nearest.
+  it("adds no touch-off pad", () => {
     const store = storeAt("bottom_left");
     addImportedShapes(store, "importDxf", importDxf(DXF).shapes);
-    expect(store.getState().document.stock.touchOff).toEqual({ x: 7.5, y: 392.5, diameter: 15 });
-    store.getState().undo();
     expect(store.getState().document.stock.touchOff).toBeNull();
   });
 

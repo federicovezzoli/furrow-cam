@@ -16,7 +16,7 @@ import {
   turnModelAbout,
 } from "./model-actions";
 import { addReliefFinishOperation } from "./operation-actions";
-import { setCustomXYOrigin, setStockDimension, setXYAnchor } from "./stock-actions";
+import { addTouchOff, setCustomXYOrigin, setStockDimension, setXYAnchor } from "./stock-actions";
 
 /** The fixture's 100 × 80 × 12 mesh, without an id or placement. */
 const { id: _, placement: __, ...mesh } = model;
@@ -47,8 +47,10 @@ describe("addModel", () => {
     expect(store.getState().document.models).toEqual([]);
   });
 
-  it("adds the default touch-off pad in a corner the model leaves free", () => {
+  it("adds no touch-off pad; ticking it puts it in a corner the model leaves free", () => {
     const { store } = storeWithModel("center");
+    expect(store.getState().document.stock.touchOff).toBeNull();
+    addTouchOff(store);
     // Fitted with a 10 mm border, no corner fits the whole 15 mm pad, so it
     // goes in the corner nearest the zero whose corner point is clear.
     expect(store.getState().document.stock.touchOff).toEqual({ x: 7.5, y: 7.5, diameter: 15 });

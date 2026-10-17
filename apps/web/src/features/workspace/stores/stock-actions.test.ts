@@ -279,6 +279,7 @@ describe("setZOrigin", () => {
 
 describe("touch-off pad", () => {
   it("is added in the corner nearest the zero the design leaves free, and removed", () => {
+    // Imports add none (ADR-0043): the user ticks it.
     // The drawing store's square sits on the bottom-left corner.
     const store = drawingStore();
     addTouchOff(store);
