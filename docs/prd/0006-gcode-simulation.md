@@ -1,9 +1,11 @@
 # PRD-0006: G-code simulation
 
-- **Status:** Draft
+- **Status:** Abandoned
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-17
 - **Related:** PRD-0001 (R10, R11), ADR-0004, ADR-0019, ADR-0042
+
+> **2026-10-17: abandoned after P3 and P7 shipped.** Exported programs name their cutter (P3, #165), and the toolpaths survive moving between the workspace and the simulator (P7, #167). The rest was dropped: the simulator page (#100, #174) plays the toolpaths back move by move, the e2e corpus (#149) checks every exported program in CI, and custom G-code blocks are checked on export (#179). See ADR-0042.
 
 ## Problem
 
