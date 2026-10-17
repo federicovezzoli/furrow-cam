@@ -10,12 +10,12 @@ import {
   offsetHeightsSteps,
   rasterizeModelSteps,
   reliefCellSize,
-  reliefFinishSteps,
   reliefGrid,
   runSteps,
   simplifyHeights,
   ToolDropper,
 } from "./finish";
+import { reliefFinishSteps } from "./finishing";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
 function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
@@ -67,9 +67,8 @@ function finishing(
     tool,
     params: {
       modelId: STEP.id,
-      angle: 0,
+      strategy: { type: "parallel", angle: 0, direction: "zigzag" },
       stepOver: 50,
-      direction: "zigzag",
       stockToLeave: 0,
       rest: false,
       ...params,
@@ -78,6 +77,10 @@ function finishing(
 }
 
 const options = { safeZ: 5, entryClearance: 1 };
+
+function parallel(angle: number, direction: "one_way" | "zigzag") {
+  return { type: "parallel", angle, direction } as const;
+}
 
 function finish(
   tool: Tool,
@@ -311,7 +314,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("spaces passes by the step-over and covers the outline", () => {
-    const toolpath = finish(endMill, { stepOver: 50, direction: "one_way" });
+    const toolpath = finish(endMill, { stepOver: 50, strategy: parallel(0, "one_way") });
     const ys = [...new Set(feeds(toolpath).map(({ to }) => to[1].toFixed(6)))].map(Number);
     // On row centres from 0.05 to 9.95, no more than 3.175 mm apart: 5 passes.
     expect(ys.sort((a, b) => a - b)).toEqual([0.05, 2.55, 5.05, 7.45, 9.95]);
@@ -322,7 +325,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("alternates zig-zag passes, linked along the model", () => {
-    const toolpath = finish(endMill, { direction: "zigzag" });
+    const toolpath = finish(endMill, { strategy: parallel(0, "zigzag") });
     // One rapid down to the first pass, then it stays down.
     const plunges = toolpath.moves.filter(({ kind }) => kind === "rapid");
     expect(plunges.length).toBe(3);
@@ -333,7 +336,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("retracts between one-way passes, all cut the same way", () => {
-    const toolpath = finish(endMill, { direction: "one_way" });
+    const toolpath = finish(endMill, { strategy: parallel(0, "one_way") });
     const retracts = toolpath.moves.filter(({ kind, to }) => kind === "rapid" && to[2] === 5);
     expect(retracts.length).toBe(10);
     const secondPass = feeds(toolpath).filter(({ to }) => Math.abs(to[1] - 2.55) < 1e-9);
@@ -341,7 +344,7 @@ describe("reliefFinishSteps", () => {
   });
 
   it("runs the passes at the angle", () => {
-    const toolpath = finish(endMill, { angle: 90, direction: "one_way" });
+    const toolpath = finish(endMill, { strategy: parallel(90, "one_way") });
     const xs = [...new Set(feeds(toolpath).map(({ to }) => to[0].toFixed(6)))];
     // Along Y, 20 mm across at no more than 3.175 mm: 8 passes.
     expect(xs.length).toBe(8);

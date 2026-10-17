@@ -22,6 +22,7 @@ export * from "./toolpaths/pocket/pocket";
 export * from "./toolpaths/profile";
 export * from "./toolpaths/relief/contours";
 export * from "./toolpaths/relief/finish";
+export * from "./toolpaths/relief/finishing";
 export * from "./toolpaths/relief/mesh-raster";
 export * from "./toolpaths/relief/rough";
 export * from "./toolpaths/tabs";

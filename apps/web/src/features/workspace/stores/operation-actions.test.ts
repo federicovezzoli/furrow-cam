@@ -467,9 +467,8 @@ describe("addReliefFinishOperation", () => {
       tool: endMill,
       params: {
         modelId: model.id,
-        angle: 0,
+        strategy: { type: "parallel", angle: 0, direction: "zigzag" },
         stepOver: 10,
-        direction: "zigzag",
         stockToLeave: 0,
         rest: false,
       },
@@ -486,13 +485,18 @@ describe("addReliefFinishOperation", () => {
     const store = storeWithModel();
     const id = addReliefFinishOperation(store, { modelId: model.id, tool: endMill }) as string;
     expect(
-      updateReliefFinishParams(store, id, { angle: 45, direction: "one_way", rest: true }),
+      updateReliefFinishParams(store, id, {
+        strategy: { type: "parallel", angle: 45, direction: "one_way" },
+        rest: true,
+      }),
     ).toEqual({ ok: true });
+    expect(
+      updateReliefFinishParams(store, id, { strategy: { type: "waterline", stepDown: 0 } }),
+    ).toMatchObject({ ok: false });
     expect(updateReliefFinishParams(store, id, { stepOver: 0 })).toMatchObject({ ok: false });
     expect(updateReliefFinishParams(store, id, { stockToLeave: -1 })).toMatchObject({ ok: false });
     expect(store.getState().document.operations[0]?.params).toMatchObject({
-      angle: 45,
-      direction: "one_way",
+      strategy: { type: "parallel", angle: 45, direction: "one_way" },
       stepOver: 10,
       stockToLeave: 0,
       rest: true,

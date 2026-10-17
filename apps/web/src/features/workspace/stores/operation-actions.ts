@@ -105,16 +105,15 @@ export function defaultVCarveParams(document: ProjectDocument, tool: Tool): VCar
 export const DEFAULT_RELIEF_STEP_OVER = 10;
 
 /**
- * New 3D finishing operations on `modelId` run zig-zag along X at a 10%
- * step-over (PRD-0005), leaving no stock and cutting everything (no rest
- * machining).
+ * New 3D finishing operations on `modelId` run parallel zig-zag passes along
+ * X at a 10% step-over (PRD-0005), leaving no stock and cutting everything
+ * (no rest machining).
  */
 export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
   return {
     modelId,
-    angle: 0,
+    strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: DEFAULT_RELIEF_STEP_OVER,
-    direction: "zigzag",
     stockToLeave: 0,
     rest: false,
   };

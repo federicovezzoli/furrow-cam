@@ -4,7 +4,7 @@ import { difference, intersection, offset, type Polygon } from "../../geometry/c
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
 import { modelRect, type PlacedModel } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
-import { type CutterProfile, cutterProfile } from "../../simulation/simulation";
+import { cutterProfile } from "../../simulation/simulation";
 import { type Descent, depthLevels, descend } from "../passes";
 import { LevelClearing } from "../pocket/pocket";
 import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "../toolpath";
@@ -32,6 +32,7 @@ import {
   ToolDropper,
   toPassFrame,
   toStock,
+  widened,
 } from "./finish";
 
 /**
@@ -278,20 +279,6 @@ type RasterOptions = {
   /** The progress after level `i`. */
   progress: (i: number) => number;
 };
-
-/**
- * `profile` reaching `by` further out, flat over its first `by`: dropped at
- * two points `by` apart, it keeps the straight move between them clear of
- * everything the true profile would touch along the way.
- */
-function widened(profile: CutterProfile, by: number): CutterProfile {
-  return {
-    radius: profile.radius + by,
-    flat: profile.flat,
-    height: (distance) => profile.height(Math.max(0, distance - by)),
-    reach: (depth) => profile.reach(depth) + by,
-  };
-}
 
 /** Below this, a height is as low as another: `float32` heights round. */
 const SAME_HEIGHT = 1e-6;

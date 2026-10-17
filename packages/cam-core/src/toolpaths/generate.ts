@@ -19,9 +19,9 @@ import {
   createCache,
   type ReliefCache,
   type RestOptions,
-  reliefFinishSteps,
   runSteps,
 } from "./relief/finish";
+import { reliefFinishSteps } from "./relief/finishing";
 import { reliefRoughSteps } from "./relief/rough";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 import { vcarveToolpath } from "./vcarve";
