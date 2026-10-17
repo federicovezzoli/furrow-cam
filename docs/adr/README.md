@@ -55,5 +55,6 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed |
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Proposed |
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Proposed |
-| [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed |
+| [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
+| [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, drawn as a marker, and moves with the design | Proposed |
