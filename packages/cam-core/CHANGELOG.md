@@ -1,5 +1,20 @@
 # @furrow/cam-core
 
+## 0.6.0
+
+### Minor Changes
+
+- 3D finishing can cut waterline contours at constant height, which finish steep faces evenly, or one continuous spiral, besides parallel passes. ([#150](https://github.com/federicovezzoli/furrow-cam/pull/150))
+- 3D roughing can clear the model plus a margin around it, leaving the stock top beyond it uncut so Z can be zeroed on it after a tool change. Imported models, and models fitted to the stock again, now leave a 10 mm border around them. ([#148](https://github.com/federicovezzoli/furrow-cam/pull/148))
+- Projects zeroed on the stock top get a touch-off pad: a spot of the stock top that 3D operations never cut and 2D operations warn about, where the machine stops at each tool change so Z can be zeroed again. Its position and size are set with the zero point. ([#157](https://github.com/federicovezzoli/furrow-cam/pull/157))
+
+### Patch Changes
+
+- Drilling recognises large circles exported as coarse polygons, such as the 24-gons of Inkscape's R12 DXF, as holes: an outline may now stray from its circle by 1% of the radius when that is more than 0.1 mm. ([#161](https://github.com/federicovezzoli/furrow-cam/pull/161))
+- 3D finishing passes no longer nick the top edge of a wall a flat end mill drops off: they follow the tool down the wall instead of cutting straight across it. ([#156](https://github.com/federicovezzoli/furrow-cam/pull/156))
+- Profiles with tabs now drop straight back down after each tab, even with ramping on, instead of sloping down over the next segment and leaving a wedge of stock behind the tab. Ramping still applies when entering the cut. ([#160](https://github.com/federicovezzoli/furrow-cam/pull/160))
+- Updated dependencies: @furrow/document@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
