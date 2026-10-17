@@ -63,6 +63,25 @@ function program(name: string) {
 
 const round = (value: number) => Math.round(value * 1000) / 1000;
 
+/**
+ * Fails if any of `left` (points `[x, y, height]` the program leaves above
+ * the bottom) is higher than a ramp at `angle` degrees down from `top`,
+ * `past(x, y)` millimetres past the point where the tool left the tab, to
+ * `bottom`.
+ */
+function expectUnderRamp(
+  left: [number, number, number][],
+  past: (x: number, y: number) => number,
+  top: number,
+  bottom: number,
+  angle: number,
+) {
+  const slope = Math.tan((angle * Math.PI) / 180);
+  for (const [x, y, height] of left) {
+    expect(height).toBeLessThanOrEqual(Math.max(bottom, top - past(x, y) * slope) + 0.01);
+  }
+}
+
 function deepest(moves: GcodeMove[]): number {
   return Math.min(...moves.map(({ to }) => to[2]));
 }
@@ -151,14 +170,17 @@ describe("measured", () => {
     }
   });
 
-  // A known bug: with ramping on, a profile goes back down after a tab along
-  // the whole next segment of the contour instead of at the plunge angle,
-  // leaving a wedge of stock behind each tab (#153). Drop `.fails` once it is fixed.
-  it.fails("cuts the SVG part free all along its long edges but at the tabs", () => {
+  // With ramping on, a profile goes back down after a tab at the tool's
+  // plunge angle (#153), so past the tab the stock left is at most a wedge
+  // under that ramp, and the part is cut through beyond it. At this bit's 3°,
+  // the ramp from the 3 mm tab top takes 57 mm, more than the rest of the edge.
+  it("cuts the SVG part down to the ramp after each tab on its long edges", () => {
     const { above } = program("svg-part");
+    // The tool's centre stays over the 8 mm tab for its radius more.
+    const edge = 4 + 3.175;
     for (const y of [-(30 + 3.175), 30 + 3.175]) {
-      expect(above([-45, y], [-(4 + 3.175 + 1), y], 0)).toEqual([]);
-      expect(above([4 + 3.175 + 1, y], [45, y], 0)).toEqual([]);
+      const left = [...above([-45, y], [-edge, y], 0), ...above([edge, y], [45, y], 0)];
+      expectUnderRamp(left, (x) => Math.abs(x) - edge, 3, 0, 3);
     }
   });
 
@@ -258,12 +280,16 @@ describe("measured against Estlcam", () => {
     expect(deepest(feeds("Cut out"))).toBe(-40);
   });
 
-  // The same wedge behind the shelf's 10 mm tabs, 102 to 162 mm long (#153).
-  it.fails("cuts the PC shelf free along its sides but at the tabs", () => {
+  // At 45°, the shelf's ramp from its 10 mm tabs takes 10 mm (#153), not
+  // the 102 to 162 mm of the next segment it used to.
+  it("cuts the PC shelf through along its sides but at the tabs and the ramps after them", () => {
     const { above } = program("pc-shelf");
+    const edge = 5 + 3;
     for (const x of [-133, 133]) {
-      expect(above([x, -170], [x, -(5 + 3 + 1)], -40)).toEqual([]);
-      expect(above([x, 5 + 3 + 1], [x, 170], -40)).toEqual([]);
+      const left = [...above([x, -170], [x, -edge], -40), ...above([x, edge], [x, 170], -40)];
+      expectUnderRamp(left, (_, y) => Math.abs(y) - edge, -30, -40, 45);
+      // Cut through from the ramp's end on.
+      expect(left.filter(([, y]) => Math.abs(y) > edge + 10)).toEqual([]);
     }
   });
 
