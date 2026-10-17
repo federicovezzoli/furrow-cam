@@ -1,4 +1,4 @@
-import type { Model, ReliefRoughOperation, RoughingBoundary, Tool } from "@furrow/document";
+import type { Model, Point, ReliefRoughOperation, RoughingBoundary, Tool } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
@@ -147,6 +147,10 @@ export function* reliefRoughSteps(
     : null;
 
   const area = roughingArea(params.boundary, model, stock, radius);
+  if (!area) {
+    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
+    return { moves: [], warnings };
+  }
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -229,14 +233,16 @@ export function* reliefRoughSteps(
  *   edge: there the centre goes to the edge, as for the whole stock.
  *
  * Without `stock`, the whole stock is the model's outline and a margin isn't
- * clipped.
+ * clipped. `null` when the margin leaves the tool no room inside the stock:
+ * the model is off the stock, or only a sliver narrower than the tool of the
+ * margin is on it.
  */
 export function roughingArea(
   boundary: RoughingBoundary,
   model: PlacedModel,
   stock: Rect | null,
   radius: number,
-): Rect {
+): Rect | null {
   const rect = modelRect(model);
   if (boundary.type === "model") return rect;
   if (boundary.type === "stock") return stock ?? rect;
@@ -246,10 +252,9 @@ export function roughingArea(
     if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
     return cut - direction * radius;
   };
-  return {
-    min: [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])],
-    max: [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])],
-  };
+  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
+  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
+  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
 }
 
 /** One straight pass along a row of the grid: the tip dropped onto the model at each sample. */
