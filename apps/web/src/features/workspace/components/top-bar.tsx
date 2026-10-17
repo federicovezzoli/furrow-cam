@@ -9,8 +9,9 @@ import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { SaveStatus } from "./save-status";
 
 /**
- * The top bar of an open project's pages. `saveStatus`, `machineName` and
- * `onTakeTour` are left out when the project couldn't be opened.
+ * The top bar of an open project's pages, with a way `back` (to all
+ * projects unless given). `saveStatus`, `machineName` and `onTakeTour` are
+ * left out when the project couldn't be opened.
  * `machineName` is `null` for a project without a machine; `onTakeTour`
  * replays the workspace tour.
  */
@@ -19,8 +20,10 @@ export function TopBar({
   saveStatus,
   machineName,
   onTakeTour,
+  back = { href: "/projects", label: "All projects" },
 }: {
   project: ProjectRow;
+  back?: { href: string; label: string };
   saveStatus?: AutosaveStatus;
   machineName?: string | null;
   onTakeTour?: (from: HTMLElement) => void;
@@ -28,7 +31,7 @@ export function TopBar({
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
-        <Link href="/projects" aria-label="All projects" title="All projects">
+        <Link href={back.href} aria-label={back.label} title={back.label}>
           <ChevronLeftIcon />
         </Link>
       </Button>

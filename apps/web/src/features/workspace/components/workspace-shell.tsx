@@ -35,6 +35,7 @@ import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { useOpenProject } from "./project-shell";
+import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
 import { TopBar } from "./top-bar";
 import { VersionsPane } from "./versions-pane";
@@ -178,17 +179,25 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
                 onToggle={() => toggle("operations")}
                 defaultSize="35"
                 footer={
-                  <div data-tour="export-gcode">
-                    <GcodeExportButton
-                      name={project.name}
+                  <div className="flex gap-2">
+                    <div data-tour="export-gcode" className="min-w-0 flex-1">
+                      <GcodeExportButton
+                        name={project.name}
+                        disabledReason={
+                          machineName === null
+                            ? "Choose a machine in the project properties first"
+                            : !hasEnabledOperations
+                              ? "Add or enable an operation first"
+                              : undefined
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                    <SimulateButton
+                      projectId={project.id}
                       disabledReason={
-                        machineName === null
-                          ? "Choose a machine in the project properties first"
-                          : !hasEnabledOperations
-                            ? "Add or enable an operation first"
-                            : undefined
+                        hasEnabledOperations ? undefined : "Add or enable an operation first"
                       }
-                      className="w-full"
                     />
                   </div>
                 }
