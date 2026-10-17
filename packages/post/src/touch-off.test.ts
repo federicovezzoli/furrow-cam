@@ -49,6 +49,25 @@ describe("suggestTouchOffToolChange", () => {
     expect(suggestTouchOffToolChange("G00X-5.5Y.25", 5)).toBe("G00X{padX}Y{padY}");
   });
 
+  it("keeps the tool over the pad until it zeroes Z, with moves one axis at a time", () => {
+    expect(suggestTouchOffToolChange("G0 X10\nG0 Y10 Z5\nG0 Y12 F500\nM0\nG0 X20", 5)).toBe(
+      "G0 X{padX} Y{padY}\nG0 Z5\nM0\nG0 X20",
+    );
+    expect(suggestTouchOffToolChange("G1 Y10 F800 (to the probe)\nG38.2 Z-50 F100", 5)).toBe(
+      "G1 X{padX} Y{padY} F800 (to the probe)\nG38.2 Z-50 F100",
+    );
+  });
+
+  it("moves to the pad in absolute coordinates where the block moves relatively", () => {
+    expect(suggestTouchOffToolChange("G91\nG0 X10 Y10\nG0 Z-5\nG90\nM0", 5)).toBe(
+      "G91\nG90 G0 X{padX} Y{padY}\nG91\nG0 Z-5\nG90\nM0",
+    );
+    // An arc mode isn't a distance mode.
+    expect(suggestTouchOffToolChange("G91.1\nG0 X10 Y10\nM0", 5)).toBe(
+      "G91.1\nG0 X{padX} Y{padY}\nM0",
+    );
+  });
+
   it("moves over the pad before a block with no XY move in work coordinates", () => {
     const block = "G53 G0 X-10 Y-10\nM0 (Change the bit)";
     expect(suggestTouchOffToolChange(block, 5)).toBe(`G0 Z5\nG0 X{padX} Y{padY}\n${block}`);
