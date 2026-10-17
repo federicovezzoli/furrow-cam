@@ -51,6 +51,7 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 | Z8 | Toolpath and G-code coordinates are measured from the chosen zero for every anchor and for custom zeros; post-processor tests cover all of them | Must |
 | Z9 | Changing the zero is a single undoable action | Must |
 | Z10 | The stock properties let the user choose the Z zero: stock top or machine bed | Must |
+| Z11 | With Z zeroed on the stock top, a touch-off pad (a disc of stock top, 15 mm across by default) is kept uncut by 3D operations, and 2D operations that reach it warn. The tool moves over it at each tool change. Its position and diameter are edited in the zero section and it is drawn in the viewport (ADR-0041) | Should |
 
 ## User flow
 
@@ -73,3 +74,4 @@ Same as PRD-0001: hobbyists and small shops with GRBL-class routers, who zero th
 - 2026-10-11: initial draft
 - 2026-10-11: custom zero may lie outside the stock (Z4)
 - 2026-10-14: the drawing is aligned to the stock at the zero's anchor on import, when an anchor is chosen and when the stock is resized, replacing "changing the zero never moves the design" (goals, Z3, user flow, success criteria; #91, ADR-0022)
+- 2026-10-17: touch-off pad for zeroing Z after a tool change (Z11; #147, ADR-0041)

@@ -3,6 +3,8 @@
 // stock, operations) to a program checked into `programs/`.
 import {
   alignShapes,
+  defaultTouchOff,
+  designBounds,
   importSvg,
   initialPlacement,
   parseStl,
@@ -143,6 +145,7 @@ function plate(): ProjectDocument {
         thickness: 6,
         xyOrigin: { anchor: "bottom_left" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       shapeoko,
     ),
@@ -195,6 +198,7 @@ function svgPart(): ProjectDocument {
         thickness: 12,
         xyOrigin: { anchor: "center" },
         zOrigin: "machine_bed",
+        touchOff: null,
       },
       shapeoko,
     ),
@@ -281,6 +285,7 @@ function svgSign(): ProjectDocument {
         thickness: 18,
         xyOrigin: { anchor: "bottom_left" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       lowRider,
     ),
@@ -340,6 +345,7 @@ function inchPanel(): ProjectDocument {
           thickness: 0.5 * inch,
           xyOrigin: { anchor: "custom", x: inch, y: inch },
           zOrigin: "stock_top",
+          touchOff: null,
         },
         shapeoko,
       ),
@@ -416,6 +422,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
       thickness: 10,
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
+      touchOff: null,
     },
     shapeoko,
   );
@@ -607,6 +614,7 @@ function strutPlate(): ProjectDocument {
         thickness: 5,
         xyOrigin: { anchor: "center" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       workshopLowRider,
     ),
@@ -657,6 +665,7 @@ function pcShelf(): ProjectDocument {
         thickness: 40,
         xyOrigin: { anchor: "center" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       workshopLowRider,
     ),
@@ -711,6 +720,7 @@ function pcShelfHandle(): ProjectDocument {
         thickness: 18,
         xyOrigin: { anchor: "center" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       workshopLowRider,
     ),
@@ -741,6 +751,7 @@ function flutedDoors(): ProjectDocument {
         thickness: 18,
         xyOrigin: { anchor: "center" },
         zOrigin: "stock_top",
+        touchOff: null,
       },
       workshopLowRider,
     ),
@@ -772,6 +783,12 @@ export function corpus(): CorpusProject[] {
     zOrigin: "machine_bed",
   };
   const pyramid = relief();
+  const padded = relief();
+  // A 6 mm pad in the corner the model's border leaves free (ADR-0041).
+  padded.document.stock = {
+    ...padded.document.stock,
+    touchOff: defaultTouchOff(padded.document.stock, designBounds([], padded.document.models), 6),
+  };
   return [
     {
       name: "plate-shapeoko",
@@ -813,6 +830,13 @@ export function corpus(): CorpusProject[] {
       covers: "STL import, 3D roughing, finishing and rest finishing",
       document: valid(pyramid.document),
       context: pyramid.context,
+    },
+    {
+      name: "relief-touch-off",
+      title: "Relief",
+      covers: "the same relief with a touch-off pad, left uncut and visited at each tool change",
+      document: valid(padded.document),
+      context: padded.context,
     },
     {
       name: "strut-plate",

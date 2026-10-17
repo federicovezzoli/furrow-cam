@@ -20,6 +20,7 @@ const project: CheckedProject = {
     thickness: 6,
     xyOrigin: { anchor: "bottom_left" },
     zOrigin: "stock_top",
+    touchOff: null,
   },
   machine,
   operations: [

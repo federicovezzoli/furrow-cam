@@ -214,6 +214,36 @@ describe("measured", () => {
   });
 });
 
+describe("measured: the touch-off pad (ADR-0041)", () => {
+  it("is left at the stock top and visited before every tool change", () => {
+    const { project, gcode, above } = program("relief-touch-off");
+    const pad = project.document.stock.touchOff;
+    if (!pad) throw new Error("no pad");
+    // Zeroed at the bottom-left corner of the stock top: work coordinates are stock ones.
+    const r = pad.diameter / 2 - 0.1;
+    for (const [from, to] of [
+      [
+        [pad.x - r, pad.y],
+        [pad.x + r, pad.y],
+      ],
+      [
+        [pad.x, pad.y - r],
+        [pad.x, pad.y + r],
+      ],
+    ] as [[number, number], [number, number]][]) {
+      // Every point across it is above the cut, as every point is above the stock bottom.
+      expect(above(from, to, -0.05, 0.1)).toEqual(above(from, to, -1000, 0.1));
+    }
+    const lines = gcode.split("\n");
+    const pauses = lines.flatMap((line, i) => (line.startsWith("M0") ? [i] : []));
+    expect(pauses.length).toBeGreaterThan(0);
+    for (const i of pauses) {
+      expect(lines[i - 1]).toBe(`G0 X${pad.x} Y${pad.y}`);
+      expect(lines[i]).toContain("zero Z on the touch-off pad");
+    }
+  });
+});
+
 // The workshop's jobs, measured against the Estlcam programs that cut them:
 // the same drawings and bits give tool paths the same size, to the micron.
 describe("measured against Estlcam", () => {

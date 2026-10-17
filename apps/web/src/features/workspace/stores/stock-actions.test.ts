@@ -1,14 +1,17 @@
 import { xyOriginPosition } from "@furrow/cam-core";
-import { createProjectDocument, type ProjectDocument, StockAnchor } from "@furrow/document";
+import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
 import {
+  addTouchOff,
   pickXYOrigin,
+  removeTouchOff,
   setCustomOrigin,
   setCustomXYOrigin,
   setStockDimension,
+  setTouchOffField,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -271,5 +274,55 @@ describe("setZOrigin", () => {
     expect(stock(store).zOrigin).toBe("machine_bed");
     setZOrigin(store, "machine_bed");
     expect(store.getState().past).toHaveLength(1);
+  });
+});
+
+describe("touch-off pad", () => {
+  it("is added in the corner nearest the zero the design leaves free, and removed", () => {
+    // The drawing store's square sits on the bottom-left corner.
+    const store = drawingStore();
+    addTouchOff(store);
+    const pad = stock(store).touchOff;
+    expect(pad?.diameter).toBe(15);
+    expect(pad).not.toEqual({ x: 7.5, y: 7.5, diameter: 15 });
+    // Adding again keeps it.
+    const steps = store.getState().past.length;
+    addTouchOff(store);
+    expect(store.getState().past).toHaveLength(steps);
+    removeTouchOff(store);
+    expect(stock(store).touchOff).toBeNull();
+    store.getState().undo();
+    expect(stock(store).touchOff).toEqual(pad);
+  });
+
+  it("moves and resizes about its centre, refusing a pad wider than the stock", () => {
+    const store = newStore();
+    addTouchOff(store);
+    expect(setTouchOffField(store, "x", 100)).toBe(true);
+    expect(setTouchOffField(store, "y", 50)).toBe(true);
+    expect(setTouchOffField(store, "diameter", 30)).toBe(true);
+    expect(stock(store).touchOff).toEqual({ x: 100, y: 50, diameter: 30 });
+    expect(setTouchOffField(store, "diameter", 401)).toBe(false);
+    expect(setTouchOffField(store, "diameter", 0)).toBe(false);
+    expect(stock(store).touchOff).toEqual({ x: 100, y: 50, diameter: 30 });
+  });
+
+  it("shrinks about its centre when the stock gets narrower than it, keeping the document valid", () => {
+    const store = newStore();
+    addTouchOff(store);
+    setTouchOffField(store, "diameter", 30);
+    const { x, y } = stock(store).touchOff ?? { x: 0, y: 0 };
+    setStockDimension(store, "width", 20);
+    expect(stock(store).touchOff).toEqual({ x, y, diameter: 20 });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    // Wider again, it stays as it is.
+    setStockDimension(store, "width", 600);
+    expect(stock(store).touchOff?.diameter).toBe(20);
+  });
+
+  it("can't be edited when there is none", () => {
+    const store = newStore();
+    expect(setTouchOffField(store, "x", 100)).toBe(false);
+    expect(stock(store).touchOff).toBeNull();
   });
 });

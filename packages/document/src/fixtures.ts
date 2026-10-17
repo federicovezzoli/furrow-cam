@@ -192,7 +192,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 12,
+    schemaVersion: 13,
     units: "in",
     stock: {
       width: 300,
@@ -200,6 +200,7 @@ export function fullDocument(): ProjectDocument {
       thickness: 18,
       xyOrigin: { anchor: "center" },
       zOrigin: "machine_bed",
+      touchOff: { x: 10, y: 10, diameter: 15 },
     },
     machine,
     geometry: [square, circle],

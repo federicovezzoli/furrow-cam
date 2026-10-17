@@ -12,6 +12,7 @@ export * from "./scene/model";
 export * from "./scene/pick";
 export * from "./scene/snap";
 export * from "./scene/stock";
+export * from "./scene/touch-off";
 export * from "./simulation/preview";
 export * from "./simulation/simulation";
 export * from "./toolpaths/drill";

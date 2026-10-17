@@ -1,5 +1,6 @@
 "use client";
 
+import { formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
 import { Units, ZOrigin } from "@furrow/document";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
 import Link from "next/link";
@@ -28,10 +29,13 @@ import {
   setMachine,
 } from "@/features/workspace/stores/machine-actions";
 import {
+  addTouchOff,
+  removeTouchOff,
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
   setStockDimension,
+  setTouchOffField,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -331,6 +335,87 @@ function ZeroSection() {
           ))}
         </NativeSelect>
       </div>
+      {zOrigin === "stock_top" && <TouchOffFields />}
     </section>
+  );
+}
+
+/**
+ * The touch-off pad (#147, ADR-0041): a spot of the stock top no operation
+ * cuts, for zeroing Z on after a tool change. Only with Z zeroed on the
+ * stock top.
+ */
+function TouchOffFields() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const pad = stock.touchOff;
+  const [refused, setRefused] = useState<number | null>(null);
+  const widest = Math.min(stock.width, stock.height);
+
+  return (
+    <>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
+        <input
+          type="checkbox"
+          id="touch-off"
+          checked={pad !== null}
+          onChange={(event) => (event.target.checked ? addTouchOff(store) : removeTouchOff(store))}
+          aria-describedby="touch-off-hint"
+          className="size-3.5 accent-primary"
+        />
+        <Label htmlFor="touch-off" className="text-ui font-normal">
+          Touch-off pad
+        </Label>
+        <p id="touch-off-hint" className="col-start-2 text-muted-foreground">
+          A spot of the stock top no operation cuts, so Z can be zeroed on it after a tool change.
+        </p>
+      </div>
+      {pad && (
+        <>
+          {(["x", "y"] as const).map((axis) => (
+            <NumberField
+              key={axis}
+              id={`touch-off-${axis}`}
+              label={`Pad ${axis.toUpperCase()}`}
+              layout="inline"
+              quantity="length"
+              units={units}
+              value={pad[axis]}
+              onValueChange={(value) => setTouchOffField(store, axis, value)}
+              {...gestureHandlers(store)}
+            />
+          ))}
+          <NumberField
+            id="touch-off-diameter"
+            label="Pad diameter"
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={pad.diameter}
+            onValueChange={(diameter) =>
+              setRefused(setTouchOffField(store, "diameter", diameter) ? null : diameter)
+            }
+            error={
+              refused === null
+                ? undefined
+                : `Must fit on the stock: at most ${formatQuantity(widest, "length", units)} ${unitLabel("length", units)}`
+            }
+            {...gestureHandlers(store)}
+          />
+          <p className="text-muted-foreground">
+            Its centre, from the stock's bottom-left corner. Resizing it keeps the centre where it
+            is.
+          </p>
+          {touchOffOutsideStock(stock, pad) && (
+            <p role="alert" className="flex gap-1.5 text-destructive">
+              <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              Part of the pad is off the stock, so there may be nothing to zero Z on there.
+            </p>
+          )}
+        </>
+      )}
+    </>
   );
 }

@@ -47,6 +47,13 @@ describe("addModel", () => {
     expect(store.getState().document.models).toEqual([]);
   });
 
+  it("adds the default touch-off pad in a corner the model leaves free", () => {
+    const { store } = storeWithModel("center");
+    // Fitted with a 10 mm border, no corner fits the whole 15 mm pad, so it
+    // goes in the corner nearest the zero whose corner point is clear.
+    expect(store.getState().document.stock.touchOff).toEqual({ x: 7.5, y: 7.5, diameter: 15 });
+  });
+
   it("aligns at the bottom-left corner with a custom zero", () => {
     const document = createProjectDocument();
     document.stock.xyOrigin = { anchor: "custom", x: 100, y: 100 };

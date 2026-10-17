@@ -5,7 +5,7 @@ import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 12;
+export const CURRENT_SCHEMA_VERSION = 13;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -44,13 +44,38 @@ export type XYOrigin = z.infer<typeof XYOrigin>;
 export const ZOrigin = z.enum(["stock_top", "machine_bed"]);
 export type ZOrigin = z.infer<typeof ZOrigin>;
 
-export const Stock = z.strictObject({
-  width: PositiveLength,
-  height: PositiveLength,
-  thickness: PositiveLength,
-  xyOrigin: XYOrigin,
-  zOrigin: ZOrigin,
+/**
+ * A spot of the stock top no operation cuts (#147, ADR-0041), for zeroing Z
+ * on after a tool change: GRBL has no tool length offsets. A disc, its
+ * centre in stock coordinates and its diameter in millimetres, no larger
+ * than the stock's smaller side. Only used with `zOrigin: "stock_top"`.
+ */
+export const TouchOff = z.strictObject({
+  x: z.number(),
+  y: z.number(),
+  diameter: PositiveLength,
 });
+export type TouchOff = z.infer<typeof TouchOff>;
+
+export const Stock = z
+  .strictObject({
+    width: PositiveLength,
+    height: PositiveLength,
+    thickness: PositiveLength,
+    xyOrigin: XYOrigin,
+    zOrigin: ZOrigin,
+    /** The touch-off pad, or `null` for none. */
+    touchOff: TouchOff.nullable(),
+  })
+  .superRefine((stock, ctx) => {
+    if (stock.touchOff && stock.touchOff.diameter > Math.min(stock.width, stock.height)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["touchOff", "diameter"],
+        message: "The touch-off pad must fit on the stock",
+      });
+    }
+  });
 export type Stock = z.infer<typeof Stock>;
 
 /**
@@ -159,6 +184,7 @@ export function createProjectDocument(): ProjectDocument {
       thickness: 18,
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
+      touchOff: null,
     },
     machine: null,
     geometry: [],
