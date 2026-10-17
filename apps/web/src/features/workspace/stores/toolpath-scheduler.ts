@@ -25,14 +25,15 @@ export type ToolpathRetain = { retain: string[] };
 /**
  * Exports the G-code of `document` from the toolpaths the worker holds for
  * `inputs`, the enabled operations' (#133), computing only those it lacks.
- * It carries the STL file in `mesh` once the worker said it lacks it.
+ * It carries every STL file the worker said it lacks so far in `meshes`,
+ * so each attempt gets further than the one before.
  */
 export type GcodeExportRequest = {
   export: number;
   document: ProjectDocument;
   name: string;
   inputs: ExportInput[];
-  mesh?: ArrayBuffer;
+  meshes?: ArrayBuffer[];
 };
 
 export type ToolpathMessage =
@@ -206,7 +207,7 @@ export function scheduleToolpaths(
     try {
       const mesh = await loadMesh(sha256);
       if (exports.get(id) !== pending) return;
-      pending.request = { ...pending.request, mesh };
+      pending.request = { ...pending.request, meshes: [...(pending.request.meshes ?? []), mesh] };
       post(pending.request);
     } catch (error) {
       if (exports.get(id) !== pending) return;

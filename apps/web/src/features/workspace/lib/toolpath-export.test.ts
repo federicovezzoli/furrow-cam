@@ -49,6 +49,17 @@ describe("exportFromResults", () => {
 });
 
 describe("ToolpathResults", () => {
+  it("keeps nothing of an operation left out of the last retain", () => {
+    const results = new ToolpathResults();
+    const toolpath = { moves: [], warnings: [] };
+    results.retain(["a"]);
+    // E.g. an export queued before "b" was deleted computes it.
+    results.keep("b", "1", toolpath);
+    results.keep("a", "1", toolpath);
+    expect(results.size).toBe(1);
+    expect(results.get("b", "1")).toBeUndefined();
+  });
+
   it("keeps one toolpath per operation, and only those retained", () => {
     const results = new ToolpathResults();
     const toolpath = { moves: [], warnings: [] };

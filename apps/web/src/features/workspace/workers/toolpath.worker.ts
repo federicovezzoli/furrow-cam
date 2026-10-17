@@ -7,6 +7,8 @@ import {
   type SimulationCut,
   type StlMesh,
   type Toolpath,
+  toolpathCuts,
+  toolpathKey,
   toolpathLines,
   toolpathLinesBuffers,
   toolpathMeshes,
@@ -169,14 +171,31 @@ async function exportProgram({
   document,
   name,
   inputs,
-  mesh: bytes,
+  meshes: files = [],
 }: GcodeExportRequest) {
   try {
-    if (bytes) {
-      const hashes = new Set(inputs.flatMap(({ input }) => [...toolpathMeshes(input)]));
-      await keepMesh(bytes, hashes);
+    // Every mesh asked for so far, for this export only, so the worker's two
+    // kept meshes can't evict one it needs again: each attempt gets further.
+    const hashes = new Set(inputs.flatMap(({ input }) => [...toolpathMeshes(input)]));
+    const exportMeshes = new Map<string, Float32Array>();
+    for (const bytes of files) {
+      const sha256 = await sha256Hex(bytes);
+      if (!hashes.has(sha256)) throw new Error("The stored model doesn't match its file.");
+      exportMeshes.set(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS).positions);
     }
-    const context = { mesh, cache: reliefCache, cuts };
+    // Room for every operation's cuts, starting with those of the toolpaths
+    // held, so a rest operation computed here takes them instead of computing
+    // the ones before it again.
+    const exportCuts = createCache<SimulationCut[]>(inputs.length + 1);
+    for (const { operationId, inputHash, input } of inputs) {
+      const held = results.get(operationId, inputHash);
+      if (held) exportCuts.set(toolpathKey(input), toolpathCuts(input.operation, held));
+    }
+    const context = {
+      mesh: (sha256: string) => exportMeshes.get(sha256) ?? mesh(sha256),
+      cache: reliefCache,
+      cuts: exportCuts,
+    };
     const program = exportFromResults(document, name, inputs, results, (input) =>
       generateToolpath(input, context),
     );
@@ -185,10 +204,8 @@ async function exportProgram({
     if (error instanceof MissingMeshError) {
       scope.postMessage({ export: id, missingMesh: error.sha256 });
     } else {
-      scope.postMessage({
-        export: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      scope.postMessage({ export: id, error: message });
     }
   }
 }

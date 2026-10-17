@@ -14,9 +14,16 @@ export type ExportInput = { operationId: string; inputHash: string; input: Toolp
  */
 export class ToolpathResults {
   private readonly results = new Map<string, { inputHash: string; toolpath: Toolpath }>();
+  /** The operations last retained, or `null` before the first `retain`. */
+  private retained: Set<string> | null = null;
 
-  /** Keeps `toolpath` as the operation's latest, replacing the one before. */
+  /**
+   * Keeps `toolpath` as the operation's latest, replacing the one before,
+   * unless the operation was left out of the last `retain`: an export queued
+   * before it was disabled or deleted mustn't bring it back.
+   */
   keep(operationId: string, inputHash: string, toolpath: Toolpath) {
+    if (this.retained && !this.retained.has(operationId)) return;
     this.results.set(operationId, { inputHash, toolpath });
   }
 
@@ -26,10 +33,10 @@ export class ToolpathResults {
     return result?.inputHash === inputHash ? result.toolpath : undefined;
   }
 
-  /** Drops the toolpaths of operations other than `operationIds`. */
+  /** Drops the toolpaths of operations other than `operationIds`, and keeps no others from now on. */
   retain(operationIds: Iterable<string>) {
-    const kept = new Set(operationIds);
-    for (const id of this.results.keys()) if (!kept.has(id)) this.results.delete(id);
+    this.retained = new Set(operationIds);
+    for (const id of this.results.keys()) if (!this.retained.has(id)) this.results.delete(id);
   }
 
   get size(): number {

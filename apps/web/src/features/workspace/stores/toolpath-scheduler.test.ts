@@ -385,7 +385,11 @@ describe("scheduleToolpaths", () => {
     schedule.receive({ export: first.export, missingMesh: "abc" });
     await vi.waitFor(() => expect(exports).toHaveLength(2));
     expect(meshes).toEqual(["abc"]);
-    expect(exports[1]?.mesh).toBeInstanceOf(ArrayBuffer);
+    expect(exports[1]?.meshes).toHaveLength(1);
+    // Another missing mesh: the next attempt carries both.
+    schedule.receive({ export: first.export, missingMesh: "def" });
+    await vi.waitFor(() => expect(exports).toHaveLength(3));
+    expect(exports[2]?.meshes).toHaveLength(2);
     schedule.receive({ export: first.export, error: "Nothing to cut" });
     await expect(exported).resolves.toEqual({ error: "Nothing to cut" });
   });
