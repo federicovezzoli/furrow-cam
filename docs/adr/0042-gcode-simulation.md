@@ -37,21 +37,22 @@ G-code is derived data and isn't stored (ADR-0003, ADR-0004). Since #133, the wo
 
 **Source.** The simulation runs on the program generated on demand from the open document, posted from the toolpaths the workspace already computed (#133), the same bytes Export downloads. Nothing is stored. Opening outside files is out of scope for now (PRD-0006 non-goals).
 
-**Tool comment.** At each tool change, including the first tool, the GRBL post writes a machine-readable comment next to the readable one, with the `CutterShape` fields as `key=value` pairs in millimetres and degrees, omitting fields that don't apply:
+**Tool comment.** The GRBL post writes a machine-readable comment for each tool, with the `CutterShape` fields as `key=value` pairs in millimetres and degrees, omitting fields that don't apply:
 
 ```
-(Tool: 1/4" ball, 6.35 mm)
 (Furrow tool: type=ball_end_mill diameter=6.35)
 (Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)
 ```
 
-GRBL ignores comments, so the program runs the same. The interpreter takes the cutter from the last such comment. A cutting move before any such comment, or a comment that doesn't parse, is an error. Every program we simulate comes from our post, so either case means a bug in it.
+The comment marks the moment the new cutter is in the spindle. The first tool is assumed loaded, so its comment comes in the header, before the machine's program-start block. At a tool change, it comes after the `M0` pause or the machine's tool-change block, and before the next operation starts. The moves before it still use the old cutter: the retract and the rapid over the touch-off pad, and any moves in a custom tool-change block. The readable `(Tool: …)` comment stays where it is, before the change, telling the user which bit to load.
+
+GRBL ignores comments, so the program runs the same. The interpreter sweeps every move with the cutter of the last such comment before it. A move before any such comment, or a comment that doesn't parse, is an error. Every program we simulate comes from our post, so either case means a bug in it.
 
 **Dialect.** The parser covers the GRBL 1.1 subset that our post and typical custom blocks use:
 
 - motion: `G0`, `G1`, and `G2`/`G3` with `I J K` or `R`, split into chords within a fixed tolerance in the active plane (`G17`–`G19`);
 - modes: `G20`/`G21` (inches are converted to millimetres), `G90`/`G91`, `G94`;
-- `G53`: a `G53` Z move is a retract to above the stock. A `G53` XY move makes the position unknown until the next absolute XY move, and a cutting move from an unknown position is an error;
+- `G53` (machine coordinates): the offset between machine and work coordinates isn't known, so a `G53` move makes the axes it names unknown, with a warning naming its line. Until the next absolute move on that axis, its position is unknown and nothing is cut along the way. The first move that ends with every axis known again is simulated as coming straight down from above the stock top to its end point, so a block that comes back down into the stock still shows. A feed (`G1`–`G3`) that starts from an unknown position is an error, since what it cuts can't be known;
 - `M0`, `M3`, `M5`, `M6`, `M30`, and the words `F`, `S`, `T`, `N`;
 - comments, both `( … )` and `; …`.
 
