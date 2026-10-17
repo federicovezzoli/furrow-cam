@@ -108,6 +108,7 @@ describe("partProgress", () => {
     lines: lines(10),
     firstMove: 3,
     moves: 3,
+    rapidsBefore: new Uint32Array([0, 1, 1, 2]),
   };
 
   it("counts the feeds and rapids done", () => {

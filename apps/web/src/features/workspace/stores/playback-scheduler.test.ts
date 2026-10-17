@@ -66,6 +66,21 @@ describe("schedulePlayback", () => {
     expect(frames).toEqual([]);
   });
 
+  it("drops a seek queued for the last path when loading another", () => {
+    const { schedule, posted } = setup();
+    schedule.load(load);
+    schedule.receive({ key: "a", type: "loaded", grid });
+    schedule.seek(5, 0);
+    schedule.seek(9, 0);
+    schedule.load({ ...load, key: "b" });
+    schedule.receive({ key: "b", type: "loaded", grid });
+    schedule.seek(2, 0);
+    schedule.receive({ key: "b", type: "frame", start: 0, values: new Float32Array() });
+    expect(posted.filter((r) => r.key === "b" && r.type === "seek")).toEqual([
+      { type: "seek", key: "b", move: 2, fraction: 0 },
+    ]);
+  });
+
   it("reports errors and a stopped worker", () => {
     const { schedule, errors } = setup();
     schedule.load(load);

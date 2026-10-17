@@ -68,9 +68,9 @@ export function PlaybackTool() {
     const { store, path } = playback;
     function place(distance: number) {
       const at = playbackPosition(path, distance);
-      if (!at || !group.current) return;
-      group.current.position.set(...at.point);
+      if (!at) return;
       setCut(at.cut);
+      group.current?.position.set(...at.point);
       invalidate();
     }
     place(store.getState().distance);
@@ -79,6 +79,7 @@ export function PlaybackTool() {
     });
   }, [playback, invalidate]);
 
+  // A path that lost cuts may leave `cut` past its end until the next move.
   const tool = playback?.path.cuts[cut]?.tool ?? null;
   const geometry = useMemo(() => {
     if (!tool) return null;
@@ -93,12 +94,15 @@ export function PlaybackTool() {
     },
     [geometry, invalidate],
   );
-  if (!playback || !geometry) return null;
+  if (!playback) return null;
+  // The group stays mounted, so it is placed even while there is no tool to draw.
   return (
     <group ref={group}>
-      <mesh geometry={geometry}>
-        <meshMatcapMaterial color={playback.parts[cut]?.color ?? "#71717a"} />
-      </mesh>
+      {geometry && (
+        <mesh geometry={geometry}>
+          <meshMatcapMaterial color={playback.parts[cut]?.color ?? "#71717a"} />
+        </mesh>
+      )}
     </group>
   );
 }

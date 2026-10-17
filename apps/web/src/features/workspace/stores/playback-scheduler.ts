@@ -64,6 +64,8 @@ export function schedulePlayback(
       key = request.key;
       loaded = false;
       inFlight = true;
+      // A seek queued for the last path would land elsewhere on this one.
+      waiting = null;
       sent = { move: 0, fraction: 0 };
       post({ type: "load", ...request });
     },

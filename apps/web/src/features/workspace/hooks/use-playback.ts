@@ -43,8 +43,9 @@ type Loaded = {
  * where the tool is (`store`), along which moves (`path`, `parts`), and the
  * stock it has cut so far, swept in a Web Worker as the playback moves
  * (ADR-0004, ADR-0019). `heightmap` changes in place; `updates` says which
- * cells did. While toolpaths recompute, the last moves stay and `pending` is
- * true. Derived data: none of it is saved.
+ * cells did. While toolpaths recompute, the last moves and stock stay,
+ * `pending` is true and the playback is paused: it neither plays nor cuts
+ * until the new moves are in. Derived data: none of it is saved.
  */
 export function usePlayback(maxCells: number | null) {
   const operations = useDocumentStore((s) => s.document.operations);
@@ -69,6 +70,9 @@ export function usePlayback(maxCells: number | null) {
   if (latest !== null && latest.key !== moves?.key) setMoves(latest);
   if (!enabled && moves !== null) setMoves(null);
   const path = useMemo(() => (moves ? playbackPath(moves.cuts) : null), [moves]);
+  const computing = enabled && latest === null;
+  const computingRef = useRef(computing);
+  computingRef.current = computing;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const schedule = useRef<ReturnType<typeof schedulePlayback> | null>(null);
@@ -112,6 +116,7 @@ export function usePlayback(maxCells: number | null) {
     });
     schedule.current = scheduler;
     function seekTo(distance: number) {
+      if (computingRef.current) return;
       const at = pathRef.current && playbackPosition(pathRef.current, distance);
       if (at) scheduler.seek(at.move, at.fraction);
     }
@@ -141,9 +146,15 @@ export function usePlayback(maxCells: number | null) {
     });
   }, [path, moves, width, height, thickness, maxCells, store]);
 
-  usePlaybackClock(store, path?.length ?? 0);
+  useEffect(() => {
+    if (computing) store.getState().setPlaying(false);
+  }, [computing, store]);
+  usePlaybackClock(store, path?.length ?? 0, computing);
 
-  const parts: PlaybackPart[] = moves?.parts ?? [];
+  // The same moves, with names and colours as they are now: renaming an
+  // operation or recolouring its tool doesn't change its toolpath.
+  const parts: PlaybackPart[] =
+    (latest !== null && latest.key === moves?.key ? latest.parts : moves?.parts) ?? [];
   return {
     store,
     path,
@@ -156,11 +167,15 @@ export function usePlayback(maxCells: number | null) {
   };
 }
 
-/** Moves `store`'s playback along while it is playing, stopping at `length`. */
-export function usePlaybackClock(store: PlaybackStore, length: number) {
+/** Moves `store`'s playback along while it is playing, stopping at `length`; not while `held`. */
+export function usePlaybackClock(store: PlaybackStore, length: number, held = false) {
   const playing = useStore(store, (s) => s.playing);
   useEffect(() => {
     if (!playing) return;
+    if (held) {
+      store.getState().setPlaying(false);
+      return;
+    }
     let frame = 0;
     let last: number | null = null;
     function tick(now: number) {
@@ -176,5 +191,5 @@ export function usePlaybackClock(store: PlaybackStore, length: number) {
     }
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, store, length]);
+  }, [playing, store, length, held]);
 }

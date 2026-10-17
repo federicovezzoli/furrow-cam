@@ -6,6 +6,7 @@ import type { ToolpathState } from "@/features/workspace/stores/toolpath-store";
  * One tool's moves of an operation in a playback: its clearing moves
  * (ADR-0026) or its own, cut with the tool coloured `color`. `firstMove`
  * numbers its first move among all the playback's, `moves` counts them.
+ * `rapidsBefore[i]` counts the rapids among its first `i` moves.
  */
 export type PlaybackPart = {
   operationId: string;
@@ -15,6 +16,7 @@ export type PlaybackPart = {
   lines: ToolpathLines;
   firstMove: number;
   moves: number;
+  rapidsBefore: Uint32Array;
 };
 
 /**
@@ -45,7 +47,20 @@ export function playbackMoves(
     if (moves === 0) return;
     const { type, diameter, vAngle, tipDiameter } = tool;
     cuts.push({ tool: { type, diameter, vAngle, tipDiameter }, segments: orderedSegments(lines) });
-    parts.push({ operationId, name, clearing, color: tool.color, lines, firstMove, moves });
+    const rapidsBefore = new Uint32Array(moves + 1);
+    for (let i = 0; i < moves; i++) {
+      rapidsBefore[i + 1] = (rapidsBefore[i] as number) + (lines.kinds[i] as number);
+    }
+    parts.push({
+      operationId,
+      name,
+      clearing,
+      color: tool.color,
+      lines,
+      firstMove,
+      moves,
+      rapidsBefore,
+    });
     firstMove += moves;
   }
   for (const operation of operations) {
@@ -85,10 +100,7 @@ export function orderedSegments({ feeds, rapids, kinds }: ToolpathLines): Float3
  * of the whole playback: all of them once it is past, none before it starts.
  */
 export function partProgress(part: PlaybackPart, move: number): { feeds: number; rapids: number } {
-  const { kinds, feeds, rapids: allRapids } = part.lines;
   const done = Math.min(Math.max(move - part.firstMove, 0), part.moves);
-  if (done === part.moves) return { feeds: feeds.length / 6, rapids: allRapids.length / 6 };
-  let rapids = 0;
-  for (let i = 0; i < done; i++) rapids += kinds[i] as number;
+  const rapids = part.rapidsBefore[done] as number;
   return { feeds: done - rapids, rapids };
 }
