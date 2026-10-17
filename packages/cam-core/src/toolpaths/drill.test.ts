@@ -248,9 +248,16 @@ describe("drillToolpath", () => {
       );
       expect(cuts.length).toBeGreaterThan(0);
     }
-    // A 40 mm square still isn't a circle.
-    const square = drill([shape(polygon([30, 30], 20, 4))], {}, 5, boring);
-    expect(square.warnings).toEqual(["Skipped 1 path: drilling needs circles or points."]);
+    // Just past the limit, a 22-gon strays 0.204 mm, over 1% of its 20 mm
+    // radius; a 40 mm square, far past it, still isn't a circle either.
+    const past = drill(
+      [shape(polygon([30, 30], 20, 22), polygon([100, 30], 20, 4))],
+      {},
+      5,
+      boring,
+    );
+    expect(past.moves).toEqual([]);
+    expect(past.warnings).toEqual(["Skipped 2 paths: drilling needs circles or points."]);
   });
 
   it("tells round outlines too large for a drill bit from other paths", () => {
