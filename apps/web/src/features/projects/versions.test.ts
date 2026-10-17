@@ -30,6 +30,7 @@ type VersionRow = {
 };
 
 const mocks = vi.hoisted(() => ({
+  limitError: null as string | null,
   userId: "user-1" as string | null,
   projects: [] as ProjectRow[],
   versions: [] as VersionRow[],
@@ -69,6 +70,17 @@ vi.mock("@/features/assets/server", () => ({
     mocks.deletedObjects.push(projectId);
   },
 }));
+// Limits off unless a test sets `mocks.limitError`, as at the free plan's limit.
+vi.mock("@/lib/limits", async () => {
+  const { db } = await import("@/lib/db");
+  return {
+    createWithinLimit: async (
+      _userId: string,
+      _resource: string,
+      create: (client: typeof db) => Promise<unknown>,
+    ) => (mocks.limitError ? { error: mocks.limitError } : { created: await create(db) }),
+  };
+});
 vi.mock("@/lib/db", () => {
   type VersionWhere = { id?: string; projectId?: string; project?: { userId: string } };
   const ownedVersions = (where: VersionWhere) =>

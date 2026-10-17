@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type FormErrors, issuesToFormErrors, numberField } from "@/lib/form-data";
+import { limitError } from "@/lib/limits";
 import { TOOL_COLORS } from "./lib/colors";
 
 /** The signed-in user's tool library, by name. */
@@ -66,7 +67,10 @@ export const DEFAULT_TOOL: Tool = Tool.parse({
   color: TOOL_COLORS[0],
 });
 
-/** Seeds the account's library with `DEFAULT_TOOL`, selected as the default tool. */
+/**
+ * Seeds the account's library with `DEFAULT_TOOL`, selected as the default
+ * tool. Never limited (PRD-0003 F5): limits are at least 1.
+ */
 export async function createDefaultTool(userId: string): Promise<void> {
   await db.tool.create({ data: { ...DEFAULT_TOOL, userId, isDefault: true } });
 }
@@ -136,9 +140,12 @@ export async function writeTool(
   if (id === null) {
     const created = await db.$transaction(async (tx) => {
       await lockLibrary(tx, userId);
+      const error = await limitError(tx, userId, "tools");
+      if (error) return { error };
       const hasDefault = await tx.tool.count({ where: { userId, isDefault: true } });
       return tx.tool.create({ data: { ...tool, userId, isDefault: hasDefault === 0 } });
     });
+    if ("error" in created) return { errors: { form: created.error } };
     return { id: created.id, tool };
   }
   const toolId = z.uuid().safeParse(id);

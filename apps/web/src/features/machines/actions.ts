@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getUserId } from "@/features/auth/server";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
+import { createWithinLimit } from "@/lib/limits";
 import { parseMachineForm } from "./server";
 
 export type MachineFormErrors = FormErrors<keyof Machine>;
@@ -22,7 +23,10 @@ export async function saveMachine(id: string | null, form: FormData): Promise<Ma
   const { machine } = parsed;
 
   if (id === null) {
-    await db.machine.create({ data: { ...machine, userId } });
+    const result = await createWithinLimit(userId, "machines", (client) =>
+      client.machine.create({ data: { ...machine, userId } }),
+    );
+    if (result.error !== undefined) return { form: result.error };
   } else {
     const machineId = z.uuid().safeParse(id);
     if (!machineId.success) return { form: NOT_FOUND };

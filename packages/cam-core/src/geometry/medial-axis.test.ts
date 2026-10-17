@@ -214,7 +214,8 @@ describe("medialAxis", () => {
       }
       expect(uncarved(rings, axis, 0.25)).toBeLessThan(0.05);
     }
-  });
+    // About 2.5 s alone: over the default 5 s while the other packages' tests run too.
+  }, 20_000);
 
   it("combines rings with the fill rule", () => {
     // Both rings counter-clockwise: a hole only with even-odd. The frame is widest on
