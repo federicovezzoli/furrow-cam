@@ -1,6 +1,5 @@
 import type { Machine } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
-import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import {
   Dialog,
@@ -20,8 +19,9 @@ import { api } from "./api";
 import type { Page } from "./desktop-host";
 
 /**
- * The start screen (PRD-0007 D4): New project, Open and the recent files,
- * with any unsaved changes left by a crash offered for restoring first (D7).
+ * The start screen (PRD-0007 D4), inside the app's navbar and footer: New
+ * project, Open and the recent files, with any unsaved changes left by a
+ * crash offered for restoring first (D7).
  */
 export function StartScreen({
   machines,
@@ -55,11 +55,8 @@ export function StartScreen({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-8 p-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Furrow CAM</h1>
-        <ThemeToggle />
-      </header>
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
+      <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
 
       {recoveries.length > 0 && (
         <section aria-labelledby="recover" className="grid gap-2 rounded-md border p-4">
@@ -131,15 +128,6 @@ export function StartScreen({
           </ul>
         )}
       </section>
-
-      <nav className="mt-auto flex gap-4 text-sm">
-        <button type="button" className="underline" onClick={() => navigate({ name: "tools" })}>
-          Bits library
-        </button>
-        <button type="button" className="underline" onClick={() => navigate({ name: "machines" })}>
-          Machines
-        </button>
-      </nav>
 
       <NewProjectDialog
         open={newProject}

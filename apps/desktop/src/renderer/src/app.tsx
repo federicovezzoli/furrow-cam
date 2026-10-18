@@ -3,6 +3,7 @@ import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Recovery } from "../../shared/api";
 import { api } from "./api";
+import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
 import { parseMachines, parseSettings, parseTools, type Settings } from "./library";
 import { LibraryPage } from "./library-pages";
@@ -273,13 +274,15 @@ export function App() {
 
   const libraryPage =
     page.name === "tools" || page.name === "machines" || page.name === "machine" ? (
-      <LibraryPage
-        page={page}
-        library={library}
-        updateLibrary={updateLibrary}
-        navigate={navigate}
-        back={session ? { name: "workspace" } : { name: "start" }}
-      />
+      <AppFrame navigate={navigate}>
+        <LibraryPage
+          page={page}
+          library={library}
+          updateLibrary={updateLibrary}
+          navigate={navigate}
+          back={session ? { name: "workspace" } : { name: "start" }}
+        />
+      </AppFrame>
     ) : null;
 
   if (session) {
@@ -299,19 +302,21 @@ export function App() {
 
   return (
     libraryPage ?? (
-      <StartScreen
-        machines={library.machines}
-        recoveries={recoveries}
-        error={error}
-        newProject={newProject}
-        onNewProject={setNewProject}
-        onCreate={createProject}
-        onOpen={() => void openDialog()}
-        onOpenPath={(path) => void openPath(path)}
-        onRestore={(recovery) => void restore(recovery)}
-        onDiscardRecovery={(recovery) => void discardRecovery(recovery)}
-        navigate={navigate}
-      />
+      <AppFrame navigate={navigate}>
+        <StartScreen
+          machines={library.machines}
+          recoveries={recoveries}
+          error={error}
+          newProject={newProject}
+          onNewProject={setNewProject}
+          onCreate={createProject}
+          onOpen={() => void openDialog()}
+          onOpenPath={(path) => void openPath(path)}
+          onRestore={(recovery) => void restore(recovery)}
+          onDiscardRecovery={(recovery) => void discardRecovery(recovery)}
+          navigate={navigate}
+        />
+      </AppFrame>
     )
   );
 }

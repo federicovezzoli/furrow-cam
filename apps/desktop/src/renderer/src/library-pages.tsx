@@ -34,19 +34,24 @@ type LibraryProps = {
   navigate: (page: Page) => void;
 };
 
-/** The bits library and the machines (PRD-0007 D9), kept on this computer. `back` leaves them. */
+/**
+ * The bits library and the machines (PRD-0007 D9), kept on this computer.
+ * With a project open, `back` returns to it.
+ */
 export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Page; back: Page }) {
   return (
-    <main className="mx-auto flex w-full max-w-screen-lg flex-col gap-6 p-8">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-3 self-start"
-        onClick={() => props.navigate(back)}
-      >
-        <ChevronLeftIcon />
-        {back.name === "workspace" ? "Back to the project" : "Back"}
-      </Button>
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
+      {back.name === "workspace" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-3 self-start"
+          onClick={() => props.navigate(back)}
+        >
+          <ChevronLeftIcon />
+          Back to the project
+        </Button>
+      )}
       {page.name === "tools" && <Tools {...props} />}
       {page.name === "machines" && <Machines {...props} />}
       {page.name === "machine" && <MachinePage id={page.id} {...props} />}
