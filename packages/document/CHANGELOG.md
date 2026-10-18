@@ -1,5 +1,12 @@
 # @furrow/document
 
+## 0.7.0
+
+### Minor Changes
+
+- Project files can now carry the project's saved versions, ready for the desktop app's `.furrow` files. Import also accepts `.furrow` files, bringing in the project without its versions. ([#192](https://github.com/federicovezzoli/furrow-cam/pull/192))
+- Importing a file no longer adds a touch-off pad: tick **Touch-off pad** in the zero settings, and it is placed on the XY zero. The pad can have its own tool-change G-code, suggested from the machine's with its move put on the pad, and the viewport marks it with a dashed ring and a "Z touch-off" label instead of a disc that looked like the bit. ([#182](https://github.com/federicovezzoli/furrow-cam/pull/182))
+
 ## 0.6.0
 
 ### Minor Changes

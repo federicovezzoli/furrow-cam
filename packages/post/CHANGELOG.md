@@ -1,5 +1,15 @@
 # @furrow/post
 
+## 0.7.0
+
+### Minor Changes
+
+- Importing a file no longer adds a touch-off pad: tick **Touch-off pad** in the zero settings, and it is placed on the XY zero. The pad can have its own tool-change G-code, suggested from the machine's with its move put on the pad, and the viewport marks it with a dashed ring and a "Z touch-off" label instead of a disc that looked like the bit. ([#182](https://github.com/federicovezzoli/furrow-cam/pull/182))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.7.0, @furrow/cam-core@0.8.0
+
 ## 0.6.0
 
 ### Minor Changes
