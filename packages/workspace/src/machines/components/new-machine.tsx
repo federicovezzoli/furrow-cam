@@ -9,8 +9,9 @@ import {
 } from "@furrow/document";
 import { Input } from "@furrow/ui/components/ui/input";
 import { ExternalLinkIcon } from "lucide-react";
+import type * as React from "react";
 import { useState } from "react";
-import { MachineForm } from "./machine-form";
+import { MachineForm, type SaveMachine } from "./machine-form";
 
 type Start = "preset" | "scratch";
 
@@ -27,7 +28,7 @@ const RADIO_CARD =
  * (M5), or fill it in from scratch. Either way the machine is saved like any
  * other, so it's fully editable and counts towards the machine limit (M10).
  */
-export function NewMachine() {
+export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.ReactElement }) {
   const [start, setStart] = useState<Start>("preset");
   const [preset, setPreset] = useState<MachinePreset | null>(null);
   /** Something was typed in the form, which switching would throw away. */
@@ -76,11 +77,13 @@ export function NewMachine() {
       {/* Notes edits, which bubble up as input events, so switching can ask first. */}
       <div onInput={() => setEdited(true)} className="contents">
         {start === "scratch" ? (
-          <MachineForm />
+          <MachineForm save={save} cancel={cancel} />
         ) : (
           preset && (
             // Remounted per preset: the form's fields take their values on mount.
             <MachineForm
+              save={save}
+              cancel={cancel}
               key={preset.id}
               values={presetMachine(preset)}
               asked={askedFields(preset)}
