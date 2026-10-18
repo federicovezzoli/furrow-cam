@@ -11,6 +11,7 @@ on:
       - packages/**
       - .github/workflows/desktop.yml
       - pnpm-lock.yaml
+      - .nvmrc
   workflow_dispatch:
   workflow_call:
     inputs:
