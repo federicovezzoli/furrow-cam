@@ -1,5 +1,11 @@
 # @furrow/web
 
+## 0.10.2
+
+### Patch Changes
+
+- The Furrow CAM logo is now a toolpath tracing the outline of an F, used for the favicons, the installable web app and the desktop app icon. ([`033a756`](https://github.com/federicovezzoli/furrow-cam/commit/033a756b90c6014de4ab969143c415999782d157))
+
 ## 0.10.1
 
 ### Patch Changes
