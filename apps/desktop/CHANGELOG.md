@@ -1,5 +1,16 @@
 # @furrow/desktop
 
+## 0.3.0
+
+### Minor Changes
+
+- The desktop app can tell you when a new version is released: it asks on first start whether to check at start-up, and Help → Check for Updates… checks at any time. It links to the download page; nothing is installed automatically. ([#215](https://github.com/federicovezzoli/furrow-cam/pull/215))
+
+### Patch Changes
+
+- The Furrow CAM logo is now a toolpath tracing the outline of an F, used for the favicons, the installable web app and the desktop app icon. ([`033a756`](https://github.com/federicovezzoli/furrow-cam/commit/033a756b90c6014de4ab969143c415999782d157))
+- The macOS app no longer fails to open as "damaged" after downloading it; macOS now shows its usual warning for apps from unidentified developers, which **Open Anyway** in Privacy & Security gets past. ([#214](https://github.com/federicovezzoli/furrow-cam/pull/214))
+
 ## 0.2.1
 
 ### Patch Changes
