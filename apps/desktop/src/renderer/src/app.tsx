@@ -50,20 +50,34 @@ export function App() {
       };
       // The first start seeds the default bit; store it, so its id stays the same.
       if (tools === null) void api.writeData("tools", loaded.tools);
+      stored.current = loaded;
       setLibrary(loaded);
     });
     void api.listRecoveries().then(setRecoveries);
   }, []);
 
-  const updateLibrary = useCallback((change: (current: LibraryState) => LibraryState) => {
-    setLibrary((current) => {
-      if (!current) return current;
-      const next = change(current);
-      if (next.tools !== current.tools) void api.writeData("tools", next.tools);
-      if (next.machines !== current.machines) void api.writeData("machines", next.machines);
-      if (next.settings !== current.settings) void api.writeData("settings", next.settings);
-      return next;
-    });
+  /** The library as last stored, for changes that build on the one before. */
+  const stored = useRef(library);
+
+  /**
+   * Applies `change` to the library and stores it, showing it once it's on
+   * disk. Rejects with an `Error` for the user if it couldn't be stored, and
+   * the library stays as it was.
+   */
+  const updateLibrary = useCallback(async (change: (state: LibraryState) => LibraryState) => {
+    const before = stored.current;
+    if (!before) return;
+    const next = change(before);
+    try {
+      if (next.tools !== before.tools) await api.writeData("tools", next.tools);
+      if (next.machines !== before.machines) await api.writeData("machines", next.machines);
+      if (next.settings !== before.settings) await api.writeData("settings", next.settings);
+    } catch (error) {
+      console.error(error);
+      throw new Error("The change couldn't be saved to this computer's library.");
+    }
+    stored.current = next;
+    setLibrary(next);
   }, []);
 
   function open(
@@ -76,8 +90,8 @@ export function App() {
       ...options,
       file,
       onChange: () => setRevision((n) => n + 1),
-      writeRecovery: (bytes) => void api.writeRecovery(recovery(), bytes),
-      deleteRecovery: () => void api.deleteRecovery(created.id),
+      writeRecovery: (bytes) => api.writeRecovery(recovery(), bytes),
+      deleteRecovery: () => api.deleteRecovery(created.id),
       openAsProject: (copy, name) =>
         void replaceWith(() => open(copy, { path: null, name, modified: true })),
     });
@@ -95,20 +109,21 @@ export function App() {
     const session = current.current;
     if (!session) return false;
     await flush.current();
-    let bytes: Uint8Array;
+    let prepared: ReturnType<ProjectSession["prepareSave"]>;
     try {
-      bytes = session.toFile();
+      prepared = session.prepareSave();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "The project couldn't be saved.");
       return false;
     }
-    const result = await api.saveFile(as ? null : session.path, session.name, bytes);
+    const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);
     if (result === null) return false;
     if ("error" in result) {
       window.alert(result.error);
       return false;
     }
-    session.markSaved(result.path, result.name);
+    // Edits made while the file was written stay unsaved.
+    session.markSaved(result.path, result.name, prepared.contents);
     return true;
   }
 
@@ -122,10 +137,10 @@ export function App() {
       if (choice === "cancel") return false;
       if (choice === "save" && !(await save())) return false;
     }
-    session.discard();
+    const discarded = session.discard();
     current.current = null;
     setSession(null);
-    void api.listRecoveries().then(setRecoveries);
+    void discarded.then(() => api.listRecoveries()).then(setRecoveries);
     return true;
   }
 
@@ -134,12 +149,18 @@ export function App() {
     if (await closeOpen()) next();
   }
 
+  /** Shows why something failed: on the start screen, or in a dialog over an open project. */
+  function report(message: string) {
+    if (current.current) window.alert(message);
+    else setError(message);
+  }
+
   async function openBytes(bytes: Uint8Array, path: string, name: string) {
     let file: ProjectFile;
     try {
       file = await readProjectFile(bytes);
     } catch (error) {
-      setError(
+      report(
         `${name} couldn't be opened: ${error instanceof Error ? error.message : "it couldn't be read."}`,
       );
       return;
@@ -152,13 +173,13 @@ export function App() {
   async function openDialog() {
     const result = await api.openFile();
     if (result === null) return;
-    if ("error" in result) setError(result.error);
+    if ("error" in result) report(result.error);
     else await openBytes(result.bytes, result.path, result.name);
   }
 
   async function openPath(path: string) {
     const result = await api.readFile(path);
-    if ("error" in result) setError(result.error);
+    if ("error" in result) report(result.error);
     else await openBytes(result.bytes, result.path, result.name);
   }
 

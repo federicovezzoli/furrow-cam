@@ -8,13 +8,18 @@ const VERSION_NOT_FOUND = "This version no longer exists.";
 
 export type ProjectSession = ReturnType<typeof createProjectSession>;
 
+/** What a save wrote, so changes made while it ran stay unsaved. */
+export type SavedContents = { document: string; versions: readonly ArchiveVersion[] };
+
 /**
  * One open project in the desktop app (ADR-0047): the document, meshes and
  * versions in memory, the file they came from (`path`, `null` until first
  * saved) and whether they differ from it. The workspace's autosave and the
  * versions pane change it through `host`; Save writes `toFile()` and calls
  * `markSaved`. While there are unsaved changes, each change is handed to
- * `writeRecovery`; `deleteRecovery` is called once there are none.
+ * `writeRecovery`; `deleteRecovery` is called once there are none. Both run
+ * one at a time, in order, so an older copy never lands after a newer one or
+ * after the copy was deleted.
  */
 export function createProjectSession({
   id = crypto.randomUUID(),
@@ -36,8 +41,9 @@ export function createProjectSession({
   modified?: boolean;
   /** Called when `path`, `name` or `modified` change. */
   onChange?: () => void;
-  writeRecovery?: (bytes: Uint8Array) => void;
-  deleteRecovery?: () => void;
+  /** May return a promise; the next recovery operation waits for it. */
+  writeRecovery?: (bytes: Uint8Array) => unknown;
+  deleteRecovery?: () => unknown;
   openAsProject?: (file: ProjectFile, name: string) => void;
 }) {
   let currentPath = path;
@@ -51,6 +57,16 @@ export function createProjectSession({
   let versionsChanged = false;
   let modified = startModified;
   let savedAt = new Date();
+  /** Closed without saving: nothing more reaches the recovery copy. */
+  let closed = false;
+  /** Recovery writes and deletes, run one after another. */
+  let recovery: Promise<unknown> = Promise.resolve();
+
+  function queueRecovery(operation: (() => unknown) | undefined) {
+    if (!operation) return recovery;
+    recovery = recovery.then(operation).catch((error: unknown) => console.error(error));
+    return recovery;
+  }
 
   /** A save time after the last, even within the same millisecond. */
   function tick() {
@@ -64,15 +80,18 @@ export function createProjectSession({
 
   /** Works out `modified` again after a change, and keeps the recovery copy up to date. */
   function changed() {
+    if (closed) return;
     const now = versionsChanged || savedDocument !== JSON.stringify(document);
     if (now) {
+      let bytes: Uint8Array | undefined;
       try {
-        writeRecovery?.(toFile());
+        bytes = toFile();
       } catch (error) {
         // Past the file's limits: Save will say so; the recovery copy waits for a valid project.
         console.error(error);
       }
-    } else if (modified) deleteRecovery?.();
+      if (bytes && writeRecovery) queueRecovery(() => writeRecovery(bytes));
+    } else if (modified) queueRecovery(deleteRecovery);
     if (now !== modified) {
       modified = now;
       onChange?.();
@@ -80,9 +99,14 @@ export function createProjectSession({
   }
 
   function rows(): VersionRow[] {
+    // Newest first; versions made in the same millisecond keep the order they were made in.
     return versions
-      .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .map(({ id, label, createdAt }) => ({ id, label, createdAt }));
+      .map((version, index) => ({ version, index }))
+      .sort(
+        (a, b) =>
+          b.version.createdAt.getTime() - a.version.createdAt.getTime() || b.index - a.index,
+      )
+      .map(({ version: { id, label, createdAt } }) => ({ id, label, createdAt }));
   }
 
   function addVersion(label: string | null, automatic: boolean, source: ProjectDocument) {
@@ -202,19 +226,29 @@ export function createProjectSession({
       return savedAt;
     },
     toFile,
-    /** The project was written to `path`, as it is now. */
-    markSaved(path: string, name: string) {
+    /** The file to write for Save, and what it holds, for `markSaved` once written. */
+    prepareSave(): { bytes: Uint8Array; contents: SavedContents } {
+      return { bytes: toFile(), contents: { document: JSON.stringify(document), versions } };
+    },
+    /**
+     * The project was written to `path` with `contents`. Changes made since
+     * `prepareSave` stay unsaved, with their recovery copy.
+     */
+    markSaved(path: string, name: string, contents: SavedContents) {
       currentPath = path;
       currentName = name;
-      savedDocument = JSON.stringify(document);
-      versionsChanged = false;
-      modified = false;
-      deleteRecovery?.();
+      savedDocument = contents.document;
+      // Version changes always replace the list, so the same list means none since.
+      versionsChanged = versions !== contents.versions;
+      // Taken as modified, so `changed` deletes the recovery copy if nothing is left unsaved.
+      modified = true;
+      changed();
       onChange?.();
     },
-    /** The project is closed without saving: its recovery copy goes. */
-    discard() {
-      deleteRecovery?.();
+    /** The project is closed without saving: its recovery copy goes. Resolves once it has. */
+    discard(): Promise<unknown> {
+      closed = true;
+      return queueRecovery(deleteRecovery);
     },
   };
 }

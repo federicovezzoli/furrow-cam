@@ -11,7 +11,7 @@ import { useAutosaveApi } from "@furrow/workspace/providers/workspace-stores";
 import type * as React from "react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
 import type { LibraryState } from "./app";
-import { saveTool } from "./library";
+import { messageOf, saveTool } from "./library";
 import type { ProjectSession } from "./session";
 
 /** What the window shows: navigation is view state, not routes (ADR-0045). */
@@ -68,7 +68,7 @@ export function ProjectView({
   session: ProjectSession;
   page: Page;
   library: LibraryState;
-  updateLibrary: (change: (state: LibraryState) => LibraryState) => void;
+  updateLibrary: (change: (state: LibraryState) => LibraryState) => Promise<void>;
   navigate: (page: Page) => void;
   flush: RefObject<() => Promise<unknown>>;
   children: React.ReactNode;
@@ -96,7 +96,11 @@ export function ProjectView({
         saveTool: async (id, form) => {
           const result = saveTool(latest.current.tools, id, form);
           if ("errors" in result) return result;
-          updateLibrary((state) => ({ ...state, tools: result.tools }));
+          try {
+            await updateLibrary((state) => ({ ...state, tools: result.tools }));
+          } catch (error) {
+            return { errors: { form: messageOf(error) } };
+          }
           return result.saved;
         },
       },
@@ -104,7 +108,7 @@ export function ProjectView({
         account: "desktop",
         tourDone: settings.workspaceTourDone,
         finishTour: async () => {
-          updateLibrary((state) => ({ ...state, settings: { workspaceTourDone: true } }));
+          await updateLibrary((state) => ({ ...state, settings: { workspaceTourDone: true } }));
         },
       },
       navigation: { Link: DesktopLink },

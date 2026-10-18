@@ -10,6 +10,9 @@ function file(document: ProjectDocument = createProjectDocument()): ProjectFile 
   return { document, meshes: new Map(), versions: [] };
 }
 
+/** Lets queued recovery writes and deletes run. */
+const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 function widened(document: ProjectDocument, width: number): ProjectDocument {
   return { ...document, stock: { ...document.stock, width } };
 }
@@ -42,12 +45,14 @@ describe("createProjectSession", () => {
     const { session, writeRecovery, deleteRecovery, onChange } = setup();
     const original = session.document;
     await session.host.save(widened(original, 321), session.savedAt);
+    await settled();
     expect(session.modified).toBe(true);
     expect(writeRecovery).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledTimes(1);
 
     // An undo gives back an equal document, though not the same object.
     await session.host.save(structuredClone(original), session.savedAt);
+    await settled();
     expect(session.modified).toBe(false);
     expect(deleteRecovery).toHaveBeenCalledTimes(1);
   });
@@ -55,8 +60,9 @@ describe("createProjectSession", () => {
   it("is clean after saving, and writes what's on screen", async () => {
     const { session, deleteRecovery } = setup();
     await session.host.save(widened(session.document, 321), session.savedAt);
-    const bytes = session.toFile();
-    session.markSaved("/p/Coasters 2.furrow", "Coasters 2");
+    const { bytes, contents } = session.prepareSave();
+    session.markSaved("/p/Coasters 2.furrow", "Coasters 2", contents);
+    await settled();
     expect(session).toMatchObject({
       modified: false,
       path: "/p/Coasters 2.furrow",
@@ -64,6 +70,52 @@ describe("createProjectSession", () => {
     });
     expect(deleteRecovery).toHaveBeenCalled();
     expect((await readProjectFile(bytes)).document.stock.width).toBe(321);
+  });
+
+  it("keeps changes made while a save was written unsaved, with their recovery copy", async () => {
+    const { session, versions, writeRecovery, deleteRecovery } = setup();
+    await session.host.save(widened(session.document, 321), session.savedAt);
+    const { contents } = session.prepareSave();
+    // The file is being written; the user goes on editing.
+    await session.host.save(widened(session.document, 654), session.savedAt);
+    session.markSaved("/p/Coasters.furrow", "Coasters", contents);
+    await settled();
+    expect(session.modified).toBe(true);
+    expect(deleteRecovery).not.toHaveBeenCalled();
+    expect(writeRecovery).toHaveBeenCalledTimes(3);
+
+    const { contents: next } = session.prepareSave();
+    await versions.create("during save", session.savedAt);
+    session.markSaved("/p/Coasters.furrow", "Coasters", next);
+    expect(session.modified).toBe(true);
+  });
+
+  it("runs recovery writes and deletes in order, and none after closing", async () => {
+    const done: string[] = [];
+    let release: () => void = () => {};
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const session = createProjectSession({
+      path: null,
+      name: "Untitled",
+      file: file(),
+      writeRecovery: async () => {
+        await blocked;
+        done.push("write");
+      },
+      deleteRecovery: () => {
+        done.push("delete");
+      },
+    });
+    const original = session.document;
+    await session.host.save(widened(original, 321), session.savedAt);
+    await session.host.save(structuredClone(original), session.savedAt);
+    const closed = session.discard();
+    await session.host.save(widened(original, 999), session.savedAt);
+    release();
+    await closed;
+    expect(done).toEqual(["write", "delete", "delete"]);
   });
 
   it("starts modified when restored from a recovery copy", () => {
@@ -111,7 +163,7 @@ describe("createProjectSession", () => {
     if (created.error !== undefined) throw new Error(created.error);
     const id = created.versions[0]?.id ?? "";
     expect(created.versions[0]?.label).toBeNull();
-    session.markSaved("/p/Coasters.furrow", "Coasters");
+    session.markSaved("/p/Coasters.furrow", "Coasters", session.prepareSave().contents);
 
     expect(await versions.rename(id, "  final  ")).toBeUndefined();
     expect(session.modified).toBe(true);

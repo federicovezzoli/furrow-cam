@@ -14,11 +14,23 @@ import type * as React from "react";
 import { useState } from "react";
 import type { LibraryState } from "./app";
 import type { Page } from "./desktop-host";
-import { deleteMachine, deleteTool, saveMachine, saveTool, setDefaultTool } from "./library";
+import {
+  deleteMachine,
+  deleteTool,
+  messageOf,
+  saveMachine,
+  saveTool,
+  setDefaultTool,
+} from "./library";
+
+/** Says why a library change failed; the library stays as it was. */
+function alertFailure(error: unknown) {
+  window.alert(messageOf(error));
+}
 
 type LibraryProps = {
   library: LibraryState;
-  updateLibrary: (change: (state: LibraryState) => LibraryState) => void;
+  updateLibrary: (change: (state: LibraryState) => LibraryState) => Promise<void>;
   navigate: (page: Page) => void;
 };
 
@@ -90,7 +102,10 @@ function Tools({ library, updateLibrary }: LibraryProps) {
                 aria-label={isDefault ? "Default bit" : `Make ${tool.name} the default bit`}
                 title={isDefault ? "Default bit for new operations" : "Make default"}
                 onClick={() =>
-                  updateLibrary((state) => ({ ...state, tools: setDefaultTool(state.tools, id) }))
+                  updateLibrary((state) => ({
+                    ...state,
+                    tools: setDefaultTool(state.tools, id),
+                  })).catch(alertFailure)
                 }
               >
                 <StarIcon className={isDefault ? "fill-current" : undefined} />
@@ -112,7 +127,10 @@ function Tools({ library, updateLibrary }: LibraryProps) {
                 onClick={() => {
                   if (!window.confirm(`Delete the bit "${tool.name}"? Projects keep their copy.`))
                     return;
-                  updateLibrary((state) => ({ ...state, tools: deleteTool(state.tools, id) }));
+                  updateLibrary((state) => ({
+                    ...state,
+                    tools: deleteTool(state.tools, id),
+                  })).catch(alertFailure);
                 }}
               >
                 <Trash2Icon />
@@ -134,7 +152,11 @@ function Tools({ library, updateLibrary }: LibraryProps) {
             save={async (id, form) => {
               const result = saveTool(library.tools, id, form);
               if ("errors" in result) return result;
-              updateLibrary((state) => ({ ...state, tools: result.tools }));
+              try {
+                await updateLibrary((state) => ({ ...state, tools: result.tools }));
+              } catch (error) {
+                return { errors: { form: messageOf(error) } };
+              }
               return result.saved;
             }}
             onSaved={() => setEditing(null)}
@@ -193,7 +215,7 @@ function Machines({ library, updateLibrary, navigate }: LibraryProps) {
                   updateLibrary((state) => ({
                     ...state,
                     machines: deleteMachine(state.machines, id),
-                  }));
+                  })).catch(alertFailure);
                 }}
               >
                 <Trash2Icon />
@@ -217,7 +239,11 @@ function MachinePage({
   const save = async (machineId: string | null, form: FormData) => {
     const result = saveMachine(library.machines, machineId, form);
     if ("errors" in result) return result.errors;
-    updateLibrary((state) => ({ ...state, machines: result.machines }));
+    try {
+      await updateLibrary((state) => ({ ...state, machines: result.machines }));
+    } catch (error) {
+      return { form: messageOf(error) };
+    }
     toList();
     return {};
   };

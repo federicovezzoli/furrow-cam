@@ -134,3 +134,8 @@ export function parseSettings(json: unknown): Settings {
         : false,
   };
 }
+
+/** `error`'s message for the user. */
+export function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
