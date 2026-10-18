@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadMesh } from "@/features/workspace/lib/mesh-cache";
 import type { MeshRequest, MeshResponse } from "@/features/workspace/lib/mesh-worker-protocol";
-import { useDocumentStoreApi, useProjectId } from "@/features/workspace/providers/workspace-stores";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
+import { useDocumentStoreApi } from "@/features/workspace/providers/workspace-stores";
 import {
   type ModelPreview,
   scheduleModelPreviews,
@@ -17,7 +17,7 @@ import { lazyWorker } from "@/lib/lazy-worker";
  */
 export function useModelPreviews(): ReadonlyMap<string, ModelPreview> {
   const documents = useDocumentStoreApi();
-  const projectId = useProjectId();
+  const meshes = useWorkspaceHost().meshes;
   const [previews, setPreviews] = useState<ReadonlyMap<string, ModelPreview>>(() => new Map());
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function useModelPreviews(): ReadonlyMap<string, ModelPreview> {
       post: (request) => {
         if (!stopped) worker.post(request);
       },
-      loadBytes: (sha256) => loadMesh(projectId, sha256),
+      loadBytes: meshes.get,
       onChange: (next) => {
         if (!stopped) setPreviews(next);
       },
@@ -55,7 +55,7 @@ export function useModelPreviews(): ReadonlyMap<string, ModelPreview> {
       schedule.stop();
       worker.terminate();
     };
-  }, [documents, projectId]);
+  }, [documents, meshes]);
 
   return previews;
 }

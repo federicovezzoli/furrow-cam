@@ -4,10 +4,9 @@ import { FileBoxIcon } from "lucide-react";
 import { type ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { importModel } from "@/features/workspace/lib/model-import";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStoreApi,
-  useMeshLimits,
-  useProjectId,
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
@@ -23,8 +22,8 @@ export const STL_IMPORT_OFF = "STL import isn't available on this server.";
 export function ModelImportButton() {
   const document = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
-  const projectId = useProjectId();
-  const limits = useMeshLimits();
+  const host = useWorkspaceHost();
+  const limits = host.limits.meshes;
   const importing = useWorkspaceStore(
     (s) => s.modelImport !== null && s.modelImport.error === null,
   );
@@ -34,7 +33,8 @@ export function ModelImportButton() {
     const file = event.currentTarget.files?.[0];
     // Lets the same file be picked again after fixing it.
     event.currentTarget.value = "";
-    if (file && limits) void importModel(file, { projectId, limits, document, workspace });
+    if (file && limits)
+      void importModel(file, { meshes: host.meshes, limits, document, workspace });
   }
 
   return (

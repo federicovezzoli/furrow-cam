@@ -1,14 +1,13 @@
 "use client";
 
 import { PencilIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import type { SavedTool } from "@/features/tools/actions";
 import { ToolDialog } from "@/features/tools/components/tool-dialog";
 import { ToolForm } from "@/features/tools/components/tool-form";
-import type { ToolChoice } from "@/features/tools/server";
+import type { SavedTool, ToolChoice } from "@/features/tools/server";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import { useDocumentStoreApi } from "@/features/workspace/providers/workspace-stores";
 import {
   type RejectedOperation,
@@ -23,7 +22,7 @@ import { useUpdateTool } from "./tool-library";
  */
 export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
   const store = useDocumentStoreApi();
-  const router = useRouter();
+  const { library } = useWorkspaceHost();
   const updateTool = useUpdateTool();
   // Kept while open: once saved, the operation may no longer match a library bit.
   const [editing, setEditing] = useState<ToolChoice | null>(null);
@@ -36,10 +35,9 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
 
   function onSaved({ tool }: SavedTool) {
     if (!editing) return;
-    // Applied at once so the re-snapshotted operations keep matching it; the
-    // refresh then brings the library as the server has it (e.g. by name).
+    // Applied at once so the re-snapshotted operations keep matching it until
+    // the host has the library again (e.g. sorted by name).
     updateTool(editing.id, tool);
-    router.refresh();
     const left = replaceToolSnapshots(store, editing.tool, tool);
     if (left.length > 0) setRejected(left);
     else close();
@@ -67,7 +65,13 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
           <NotUpdated operations={rejected} onClose={close} />
         ) : (
           editing && (
-            <ToolForm id={editing.id} values={editing.tool} onSaved={onSaved} onCancel={close} />
+            <ToolForm
+              id={editing.id}
+              values={editing.tool}
+              save={library.saveTool}
+              onSaved={onSaved}
+              onCancel={close}
+            />
           )
         )}
       </ToolDialog>

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { loadMesh } from "@/features/workspace/lib/mesh-cache";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStoreApi,
-  useProjectId,
   useToolpathStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
 import type {
@@ -22,7 +21,7 @@ import { lazyWorker } from "@/lib/lazy-worker";
 export function useToolpaths() {
   const documents = useDocumentStoreApi();
   const toolpaths = useToolpathStoreApi();
-  const projectId = useProjectId();
+  const meshes = useWorkspaceHost().meshes;
 
   useEffect(() => {
     let stopped = false;
@@ -47,7 +46,7 @@ export function useToolpaths() {
       (message) => {
         if (!stopped) worker.post(message);
       },
-      (sha256) => loadMesh(projectId, sha256),
+      meshes.get,
     );
     toolpaths.getState().setControls({
       cancel: schedule.cancel,
@@ -62,5 +61,5 @@ export function useToolpaths() {
       // Requests in flight die with the worker, so nothing may stay computing.
       toolpaths.getState().retain([]);
     };
-  }, [documents, toolpaths, projectId]);
+  }, [documents, toolpaths, meshes]);
 }

@@ -1,11 +1,10 @@
 import type { StlLimits } from "@furrow/cam-core";
-import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
 import type { DocumentState, DocumentStore } from "@/features/workspace/stores/document-store";
 import { hasImportedFile, ONE_FILE } from "@/features/workspace/stores/geometry-actions";
 import { addModel } from "@/features/workspace/stores/model-actions";
 import type { WorkspaceStore } from "@/features/workspace/stores/workspace-store";
-import { cacheMesh } from "./mesh-cache";
 import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
+import type { WorkspaceHost } from "./workspace-host";
 
 /**
  * Reads and checks an STL file in a Web Worker of its own (ADR-0004), which
@@ -49,21 +48,20 @@ export function usesMesh({ document, past, future }: DocumentState, sha256: stri
 
 /**
  * Imports an STL file into the open project (PRD-0005 S1, ADR-0029): reads
- * and checks it, uploads it as a project asset, caches it, then adds it to
- * the document as one undo step and selects it. A project holds one
- * imported file for now, so nothing is uploaded into one that has a drawing
- * or a model. The workspace's
- * `modelImport` says how it is going.
+ * and checks it, stores it in the project's `meshes`, then adds it to the
+ * document as one undo step and selects it. A project holds one imported
+ * file for now, so nothing is stored into one that has a drawing or a model.
+ * The workspace's `modelImport` says how it is going.
  */
 export async function importModel(
   file: File,
   {
-    projectId,
+    meshes,
     limits,
     document,
     workspace,
   }: {
-    projectId: string;
+    meshes: WorkspaceHost["meshes"];
     limits: StlLimits;
     document: DocumentStore;
     workspace: WorkspaceStore;
@@ -89,18 +87,17 @@ export async function importModel(
     fail(error instanceof Error ? error.message : "This file couldn't be read.");
     return;
   }
-  const upload = await uploadMesh(projectId, mesh.sha256, file);
+  const upload = await meshes.put(mesh.sha256, file);
   if (upload.error !== undefined) {
     fail(upload.error);
     return;
   }
-  await cacheMesh(mesh.sha256, file);
   // A drawing may have been imported, or a step redone, while this one uploaded.
   const id = addModel(document, { ...mesh, fileName, size: file.size });
   if (id === null) {
-    // Only a mesh this import uploaded goes, and the server keeps one that something saved uses.
+    // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
-      await discardUpload(projectId, mesh.sha256);
+      await meshes.discard(mesh.sha256);
     }
     fail(ONE_FILE);
     return;

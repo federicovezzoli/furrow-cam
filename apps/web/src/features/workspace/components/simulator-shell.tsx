@@ -1,21 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { lazy } from "react";
 import { useSaveStatus } from "@/features/workspace/hooks/use-autosave";
 import { useDocumentStore } from "@/features/workspace/providers/workspace-stores";
-import { useOpenProject } from "./project-shell";
+import { BrowserOnly } from "./browser-only";
 import { TopBar } from "./top-bar";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
-const SimulatorViewport = dynamic(
-  () =>
-    import("@/features/workspace/components/viewport/simulator-viewport").then(
-      (m) => m.SimulatorViewport,
-    ),
-  {
-    ssr: false,
-    loading: () => <p className="m-auto p-3 text-ui text-muted-foreground">Loading simulator…</p>,
-  },
+const SimulatorViewport = lazy(() =>
+  import("@/features/workspace/components/viewport/simulator-viewport").then((m) => ({
+    default: m.SimulatorViewport,
+  })),
 );
 
 /**
@@ -26,19 +21,21 @@ const SimulatorViewport = dynamic(
  * survive going back and forth.
  */
 export function SimulatorShell() {
-  const { project } = useOpenProject();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   return (
     <>
       <TopBar
-        project={project}
         saveStatus={saveStatus}
         machineName={machineName}
-        back={{ href: `/projects/${project.id}`, label: "Back to the workspace" }}
+        back={{ to: "workspace", label: "Back to the workspace" }}
       />
       <main className="flex min-h-0 flex-1 flex-col">
-        <SimulatorViewport />
+        <BrowserOnly
+          fallback={<p className="m-auto p-3 text-ui text-muted-foreground">Loading simulator…</p>}
+        >
+          <SimulatorViewport />
+        </BrowserOnly>
       </main>
     </>
   );

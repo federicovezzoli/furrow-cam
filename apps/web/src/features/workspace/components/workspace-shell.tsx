@@ -1,9 +1,8 @@
 "use client";
 
 import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
-import dynamic from "next/dynamic";
 import type * as React from "react";
-import { useRef, useState } from "react";
+import { lazy, useRef, useState } from "react";
 import {
   type Layout,
   type LayoutChangedMeta,
@@ -14,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tour, useTour } from "@/features/onboarding/components/tour";
 import type { TourPane } from "@/features/onboarding/lib/tour";
-import { ExportButton } from "@/features/projects/components/export-button";
 import { useSaveStatus } from "@/features/workspace/hooks/use-autosave";
 import { useUndoShortcuts } from "@/features/workspace/hooks/use-undo-shortcuts";
 import {
@@ -23,34 +21,30 @@ import {
   toggledPaneLayout,
   type WorkspaceLayout,
 } from "@/features/workspace/lib/workspace-layout";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
 import { cn } from "@/lib/utils";
+import { BrowserOnly } from "./browser-only";
+import { ExportProjectButton } from "./export-project-button";
 import { GcodeExportButton } from "./gcode-export-button";
 import { GeometryImport } from "./geometry-import";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
-import { useOpenProject } from "./project-shell";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
 import { TopBar } from "./top-bar";
 import { VersionsPane } from "./versions-pane";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
-const Viewport = dynamic(
-  () => import("@/features/workspace/components/viewport/viewport").then((m) => m.Viewport),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center">
-        <EmptyState>Loading viewport…</EmptyState>
-      </div>
-    ),
-  },
+const Viewport = lazy(() =>
+  import("@/features/workspace/components/viewport/viewport").then((m) => ({
+    default: m.Viewport,
+  })),
 );
 
 /**
@@ -62,14 +56,19 @@ const Viewport = dynamic(
  * stores come from `ProjectShell`, so they outlive this page.
  */
 export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
-  const { project, machines, userId, tourDone } = useOpenProject();
+  const { project, library, settings } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   const hasEnabledOperations = useDocumentStore((s) =>
     s.document.operations.some((operation) => operation.enabled),
   );
   useUndoShortcuts();
-  const tour = useTour("workspace", { userId, done: tourDone, autoStart: true });
+  const tour = useTour("workspace", {
+    userId: settings.account,
+    done: settings.tourDone,
+    autoStart: true,
+    finish: settings.finishTour,
+  });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
   const sidebar = useGroupRef();
@@ -137,7 +136,6 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
   return (
     <>
       <TopBar
-        project={project}
         saveStatus={saveStatus}
         machineName={machineName}
         onTakeTour={(from) => tour.start(from)}
@@ -194,7 +192,6 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
                       />
                     </div>
                     <SimulateButton
-                      projectId={project.id}
                       disabledReason={
                         hasEnabledOperations ? undefined : "Add or enable an operation first"
                       }
@@ -211,17 +208,9 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
                 panel={propertiesPanel}
                 onToggle={() => toggle("properties")}
                 defaultSize="45"
-                footer={
-                  <ExportButton
-                    id={project.id}
-                    name={project.name}
-                    getDocument={getDocument}
-                    size="compact"
-                    className="w-full"
-                  />
-                }
+                footer={<ExportProjectButton getDocument={getDocument} className="w-full" />}
               >
-                <StockProperties machines={machines} />
+                <StockProperties machines={library.machines} />
               </Pane>
               <ResizableHandle />
               <Pane
@@ -231,7 +220,7 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
                 onToggle={() => toggle("versions")}
                 defaultSize="20"
               >
-                <VersionsPane projectId={project.id} />
+                <VersionsPane />
               </Pane>
               {/* No handle: it only holds the space below the headers while every pane is collapsed. */}
               <ResizablePanel id={SIDEBAR_REST} defaultSize="0" minSize={0} />
@@ -244,7 +233,15 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
               data-tour="viewport"
               className="relative h-full bg-muted/40"
             >
-              <Viewport />
+              <BrowserOnly
+                fallback={
+                  <div className="flex h-full items-center justify-center">
+                    <EmptyState>Loading viewport…</EmptyState>
+                  </div>
+                }
+              >
+                <Viewport />
+              </BrowserOnly>
               <GeometryImport />
               <SelectedOperation />
             </section>

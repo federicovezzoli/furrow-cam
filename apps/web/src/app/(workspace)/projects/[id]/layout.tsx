@@ -5,7 +5,7 @@ import { requireSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { getProject } from "@/features/projects/server";
 import { listToolChoices } from "@/features/tools/server";
-import { ProjectShell } from "@/features/workspace/components/project-shell";
+import { WebProjectShell } from "@/features/workspace/host/web-project-shell";
 
 /**
  * Loads the project once for all its pages and keeps its stores while the
@@ -34,7 +34,7 @@ async function Project({
   if (!project) notFound();
 
   return (
-    <ProjectShell
+    <WebProjectShell
       project={project}
       tools={tools}
       machines={machines}
@@ -43,6 +43,6 @@ async function Project({
       tourDone={user.workspaceTourDoneAt != null}
     >
       {children}
-    </ProjectShell>
+    </WebProjectShell>
   );
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sha256Hex } from "@/features/workspace/lib/mesh-worker-protocol";
 import { loadMesh, readCachedMesh } from "./mesh-cache";
-import { sha256Hex } from "./mesh-worker-protocol";
 
 const PROJECT = "00000000-0000-4000-8000-000000000001";
 

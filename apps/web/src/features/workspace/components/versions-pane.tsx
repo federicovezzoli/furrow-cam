@@ -20,23 +20,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  createVersion,
-  deleteVersion,
-  getVersions,
-  openVersionAsProject,
-  renameVersion,
-  restoreVersion,
-  type VersionsResult,
-} from "@/features/projects/actions";
 import { VERSION_LABEL_MAX } from "@/features/projects/lib/versions";
 import type { VersionRow } from "@/features/projects/server";
+import type {
+  RestoreResult,
+  VersionsResult,
+  WorkspaceHost,
+} from "@/features/workspace/lib/workspace-host";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useAutosaveApi,
   useDocumentStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
 import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
-import { rememberSavedVersion } from "@/features/workspace/stores/saved-versions";
 
 const UNSAVED = "The project has changes that couldn't be saved. Save them first.";
 const EDITING = "Finish the change you're making first.";
@@ -44,9 +40,18 @@ const EDITING = "Finish the change you're making first.";
 /**
  * The Versions pane (ADR-0028): lists the project's versions, newest first,
  * to restore, rename, delete or open as a new project, over a form that saves
- * a new one. The list is fetched when the pane opens.
+ * a new one. The list is fetched when the pane opens. Says so where the
+ * workspace host keeps no versions.
  */
-export function VersionsPane({ projectId }: { projectId: string }) {
+export function VersionsPane() {
+  const { versions } = useWorkspaceHost();
+  if (!versions) {
+    return <p className="p-2 text-ui text-muted-foreground">Versions aren't available here.</p>;
+  }
+  return <Versions host={versions} />;
+}
+
+function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const autosave = useAutosaveApi();
   const documentStore = useDocumentStoreApi();
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
@@ -56,7 +61,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     let current = true;
-    void getVersions(projectId).then((result) => {
+    void host.list().then((result) => {
       if (!current) return;
       if (result.error !== undefined) setError(result.error);
       else setVersions(result.versions);
@@ -64,7 +69,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
     return () => {
       current = false;
     };
-  }, [projectId]);
+  }, [host]);
 
   function run(action: () => Promise<VersionsResult>) {
     startTransition(async () => {
@@ -78,7 +83,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
     run(async () => {
       const status = await autosave.settle();
       if (status.state !== "saved") return { error: notSaved(status) };
-      const result = await createVersion(projectId, label, status.savedAt);
+      const result = await host.create(label, status.savedAt);
       if (result.error === undefined) setLabel("");
       return result;
     });
@@ -93,13 +98,13 @@ export function VersionsPane({ projectId }: { projectId: string }) {
       return;
     }
     run(async () => {
-      // No save may start while the server replaces the document: it would conflict.
+      // No save may start while the host replaces the document: it would conflict.
       const status = await autosave.hold();
-      let result: Awaited<ReturnType<typeof restoreVersion>>;
+      let result: RestoreResult;
       try {
         result =
           status.state === "saved"
-            ? await restoreVersion(version.id, status.savedAt)
+            ? await host.restore(version.id, status.savedAt)
             : { error: notSaved(status) };
       } catch (error) {
         autosave.release();
@@ -113,7 +118,6 @@ export function VersionsPane({ projectId }: { projectId: string }) {
       // document, replacing any change made while it ran.
       autosave.release({ document: result.document, savedAt: result.updatedAt });
       documentStore.getState().load(result.document);
-      rememberSavedVersion(projectId, { document: result.document, updatedAt: result.updatedAt });
       return result;
     });
   }
@@ -125,7 +129,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
     );
     if (newLabel === null || newLabel.trim() === (version.label ?? "")) return;
     startTransition(async () => {
-      const result = await renameVersion(version.id, newLabel);
+      const result = await host.rename(version.id, newLabel);
       setError(result?.error);
       if (result) return;
       const renamed = newLabel.trim() || null;
@@ -139,7 +143,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
     if (!window.confirm(`Delete the version "${versionName(version)}"? This can't be undone.`))
       return;
     startTransition(async () => {
-      const result = await deleteVersion(version.id);
+      const result = await host.delete(version.id);
       setError(result?.error);
       if (!result) setVersions((list) => list?.filter((v) => v.id !== version.id) ?? null);
     });
@@ -147,7 +151,7 @@ export function VersionsPane({ projectId }: { projectId: string }) {
 
   function openAsProject(version: VersionRow) {
     startTransition(async () => {
-      const result = await openVersionAsProject(version.id, formatLocalDate(version.createdAt));
+      const result = await host.openAsProject(version.id, formatLocalDate(version.createdAt));
       if (result) setError(result.error);
     });
   }
