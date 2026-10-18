@@ -21,7 +21,10 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
-  identity: null
+  # Ad-hoc signature: unsigned arm64 apps are reported as "damaged" by Gatekeeper.
+  identity: "-"
+  # Only needed for notarization; with an ad-hoc signature it breaks library validation.
+  hardenedRuntime: false
 win:
   target:
     - target: nsis
