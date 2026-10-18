@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseWorkspaceLayout, savedLayout, toggledPaneLayout } from "./workspace-layout";
+import { savedLayout, toggledPaneLayout, toWorkspaceLayout } from "./workspace-layout";
 
 describe("savedLayout", () => {
   it("keeps a layout that sizes exactly the panels there are", () => {
@@ -21,14 +21,15 @@ describe("savedLayout", () => {
   });
 });
 
-describe("parseWorkspaceLayout", () => {
-  it("reads both groups and ignores an unreadable cookie", () => {
+describe("toWorkspaceLayout", () => {
+  it("reads both groups and ignores anything else", () => {
     const layout = {
       columns: { sidebar: 30, viewport: 70 },
       sidebar: { operations: 40, properties: 60 },
     };
-    expect(parseWorkspaceLayout(JSON.stringify(layout))).toEqual(layout);
-    expect(parseWorkspaceLayout("{")).toEqual({});
+    expect(toWorkspaceLayout(layout)).toEqual(layout);
+    expect(toWorkspaceLayout({ columns: { sidebar: 130 } })).toEqual({});
+    expect(toWorkspaceLayout(null)).toEqual({});
   });
 });
 

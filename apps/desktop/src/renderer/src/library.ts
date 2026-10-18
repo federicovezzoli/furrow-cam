@@ -5,6 +5,7 @@ import type {
   ToolChoice,
   ToolFormErrors,
 } from "@furrow/workspace/lib/workspace-host";
+import { toWorkspaceLayout, type WorkspaceLayout } from "@furrow/workspace/lib/workspace-layout";
 import {
   type MachineFormErrors,
   parseMachineForm,
@@ -123,15 +124,16 @@ export function deleteMachine(machines: readonly MachineChoice[], id: string): M
   return machines.filter((choice) => choice.id !== id);
 }
 
-/** Per-computer settings: which tours were seen. */
-export type Settings = { workspaceTourDone: boolean };
+/** Per-computer settings: which tours were seen, and the workspace's panel sizes. */
+export type Settings = { workspaceTourDone: boolean; workspaceLayout: WorkspaceLayout };
 
 export function parseSettings(json: unknown): Settings {
+  const stored = typeof json === "object" && json !== null ? json : {};
   return {
-    workspaceTourDone:
-      typeof json === "object" && json !== null && "workspaceTourDone" in json
-        ? json.workspaceTourDone === true
-        : false,
+    workspaceTourDone: "workspaceTourDone" in stored && stored.workspaceTourDone === true,
+    workspaceLayout: toWorkspaceLayout(
+      "workspaceLayout" in stored ? stored.workspaceLayout : undefined,
+    ),
   };
 }
 

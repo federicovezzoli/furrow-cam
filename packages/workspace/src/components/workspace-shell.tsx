@@ -18,12 +18,7 @@ import {
 } from "react-resizable-panels";
 import { useSaveStatus } from "../hooks/use-autosave";
 import { useUndoShortcuts } from "../hooks/use-undo-shortcuts";
-import {
-  savedLayout,
-  saveWorkspaceLayout,
-  toggledPaneLayout,
-  type WorkspaceLayout,
-} from "../lib/workspace-layout";
+import { savedLayout, toggledPaneLayout, type WorkspaceLayout } from "../lib/workspace-layout";
 import { Tour, useTour } from "../onboarding/components/tour";
 import type { TourPane } from "../onboarding/lib/tour";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -56,10 +51,10 @@ const Viewport = lazy(() =>
  * operations over the project's properties and its versions (ADR-0028) on
  * the left and the viewport on the right, with the selected operation's properties floating over it.
  * Panes collapse to their headers, each on its own; panel sizes are
- * remembered in a cookie (`layout` is what it held). The project and its
+ * remembered by the host (`settings.layout`). The project and its
  * stores come from `ProjectShell`, so they outlive this page.
  */
-export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
+export function WorkspaceShell() {
   const { project, library, settings } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
@@ -79,6 +74,7 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
   const operationsPanel = usePanelRef();
   const propertiesPanel = usePanelRef();
   const versionsPanel = usePanelRef();
+  const [layout] = useState(() => settings.layout);
   const saved = useRef(layout);
   const panes = {
     operations: operationsPanel,
@@ -93,7 +89,7 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
       // Window resizes and the initial mount aren't a choice worth keeping.
       if (!meta.isUserInteraction) return;
       saved.current = { ...saved.current, [group]: sizes };
-      saveWorkspaceLayout(saved.current);
+      settings.saveLayout(saved.current);
     };
   }
 
@@ -129,7 +125,7 @@ export function WorkspaceShell({ layout }: { layout: WorkspaceLayout }) {
     );
     if (!persist) return;
     saved.current = { ...saved.current, sidebar: sizes };
-    saveWorkspaceLayout(saved.current);
+    settings.saveLayout(saved.current);
   }
 
   /** Expands pane `id` for the tour's step inside it, leaving the saved layout as the user set it. */

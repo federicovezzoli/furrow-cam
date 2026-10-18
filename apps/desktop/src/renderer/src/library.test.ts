@@ -90,7 +90,16 @@ describe("machines", () => {
 
 describe("parseSettings", () => {
   it("reads whether the tour was seen", () => {
-    expect(parseSettings(null)).toEqual({ workspaceTourDone: false });
-    expect(parseSettings({ workspaceTourDone: true })).toEqual({ workspaceTourDone: true });
+    expect(parseSettings(null)).toEqual({ workspaceTourDone: false, workspaceLayout: {} });
+    expect(parseSettings({ workspaceTourDone: true })).toEqual({
+      workspaceTourDone: true,
+      workspaceLayout: {},
+    });
+  });
+
+  it("reads the workspace layout, dropping one it can't use", () => {
+    const workspaceLayout = { columns: { sidebar: 30, viewport: 70 } };
+    expect(parseSettings({ workspaceLayout }).workspaceLayout).toEqual(workspaceLayout);
+    expect(parseSettings({ workspaceLayout: "wide" }).workspaceLayout).toEqual({});
   });
 });

@@ -76,7 +76,8 @@ export function ProjectView({
   /** The library as last rendered, for saves that finish after another render. */
   const latest = useRef(library);
   latest.current = library;
-  const { tools, machines, settings } = library;
+  const { tools, machines } = library;
+  const { workspaceTourDone } = library.settings;
 
   const host = useMemo<WorkspaceHost>(
     () => ({
@@ -106,16 +107,29 @@ export function ProjectView({
       },
       settings: {
         account: "desktop",
-        tourDone: settings.workspaceTourDone,
+        tourDone: workspaceTourDone,
         finishTour: async () => {
-          await updateLibrary((state) => ({ ...state, settings: { workspaceTourDone: true } }));
+          await updateLibrary((state) => ({
+            ...state,
+            settings: { ...state.settings, workspaceTourDone: true },
+          }));
+        },
+        // Read when the workspace opens, so a saved layout doesn't build a new host.
+        get layout() {
+          return latest.current.settings.workspaceLayout;
+        },
+        saveLayout: (workspaceLayout) => {
+          updateLibrary((state) => ({
+            ...state,
+            settings: { ...state.settings, workspaceLayout },
+          })).catch((error: unknown) => console.error(error));
         },
       },
       navigation: { Link: DesktopLink },
       limits: { meshes: DEFAULT_STL_LIMITS },
     }),
     // `name` changes on Save As; the stores are keyed by `id`, so they stay.
-    [session, session.name, tools, machines, settings, updateLibrary],
+    [session, session.name, tools, machines, workspaceTourDone, updateLibrary],
   );
 
   const onWorkspace = page.name === "workspace" || page.name === "simulator";
@@ -129,7 +143,7 @@ export function ProjectView({
           ) : (
             // Hidden rather than unmounted on the library pages, keeping the viewport's state.
             <div className={onWorkspace ? "contents" : "hidden"}>
-              <WorkspaceShell layout={{}} />
+              <WorkspaceShell />
             </div>
           )}
           {!onWorkspace && (
