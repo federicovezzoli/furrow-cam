@@ -63,3 +63,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
 | [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Proposed |
 | [0048](0048-desktop-update-check.md) | The desktop app checks GitHub for newer versions and links to them | Proposed |
+| [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Proposed |

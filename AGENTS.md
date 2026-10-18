@@ -25,6 +25,7 @@ All four checks (`check`, `typecheck`, `test`, `build`) must pass before work is
 ```
 apps/web/             Next.js 16: routes, server actions, Prisma, Better Auth, the web WorkspaceHost
 apps/desktop/         Electron + Vite: start screen, .furrow files, the desktop WorkspaceHost (ADR-0044)
+apps/download/        Cloudflare Worker: download.furrow.cam/<platform> → newest desktop installer (ADR-0049)
 packages/document/    project document Zod schema + version migrations, project archives
 packages/cam-core/    geometry (Clipper2 adapter) and toolpaths
 packages/post/        post-processors, toolpaths → G-code
