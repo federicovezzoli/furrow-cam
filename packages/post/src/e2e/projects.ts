@@ -3,8 +3,6 @@
 // stock, operations) to a program checked into `programs/`.
 import {
   alignShapes,
-  defaultTouchOff,
-  designBounds,
   importSvg,
   initialPlacement,
   parseStl,
@@ -775,10 +773,10 @@ export function corpus(): CorpusProject[] {
   };
   const pyramid = relief();
   const padded = relief();
-  // A 6 mm pad in the corner the model's border leaves free (ADR-0041).
+  // A 6 mm pad in the bottom-left corner the model's border leaves free (ADR-0041).
   padded.document.stock = {
     ...padded.document.stock,
-    touchOff: defaultTouchOff(padded.document.stock, designBounds([], padded.document.models), 6),
+    touchOff: { x: 3, y: 3, diameter: 6, toolChange: null },
   };
   return [
     {

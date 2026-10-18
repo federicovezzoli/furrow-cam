@@ -2,8 +2,12 @@ import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
   ARCHIVE_DOCUMENT_PATH,
+  type ArchiveVersion,
   archiveMeshPath,
+  archiveVersionPath,
+  MAX_ARCHIVE_DOCUMENT_BYTES,
   MAX_ARCHIVE_MESHES,
+  MAX_ARCHIVE_VERSIONS,
   maxArchiveBytes,
   missingArchiveMeshes,
   ProjectArchiveError,
@@ -29,6 +33,30 @@ async function projectWithModel() {
     models: [{ ...model, sha256, size: bytes.byteLength }],
   };
   return { document, meshes: new Map([[sha256, bytes]]), sha256 };
+}
+
+function version(id: string, document: ProjectDocument, at = 0): ArchiveVersion {
+  return {
+    id,
+    label: `v${id}`,
+    createdAt: new Date(Date.UTC(2026, 9, 1) + at),
+    automatic: false,
+    document,
+  };
+}
+
+/** A version file as `packProjectArchive` writes it, with `fields` changed. */
+function versionFile(fields: Record<string, unknown>) {
+  return strToU8(
+    JSON.stringify({
+      id: "a",
+      label: null,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      automatic: false,
+      document: createProjectDocument(),
+      ...fields,
+    }),
+  );
 }
 
 async function readError(bytes: Uint8Array) {
@@ -69,6 +97,121 @@ describe("packProjectArchive and readProjectArchive", () => {
       document.models.push({ ...(first as (typeof document.models)[number]), sha256 });
     }
     expect(() => packProjectArchive(document, meshes)).toThrow(ProjectArchiveError);
+  });
+});
+
+describe("archive versions", () => {
+  it("round-trip with the document, newest first, including meshes only a version uses", async () => {
+    const { document: withModel, meshes, sha256 } = await projectWithModel();
+    const document = createProjectDocument();
+    const versions = [version("older", withModel, 0), version("newer", document, 1000)];
+    const archive = await readProjectArchive(
+      packProjectArchive(document, meshes, versions),
+      MAX_MESH_BYTES,
+    );
+    expect(JSON.parse(archive.contents)).toEqual(document);
+    expect(archive.versions).toEqual([versions[1], versions[0]]);
+    expect([...archive.meshes.keys()]).toEqual([sha256]);
+  });
+
+  it("read archives without versions as before", async () => {
+    const { document, meshes } = await projectWithModel();
+    const archive = await readProjectArchive(packProjectArchive(document, meshes), MAX_MESH_BYTES);
+    expect(archive.versions).toEqual([]);
+  });
+
+  it("upgrade a version's document to the current schema version", async () => {
+    const current = createProjectDocument();
+    // Before schema version 13, stock had no touch-off pad.
+    const { touchOff: _, ...stock } = current.stock;
+    const zip = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(current)),
+      [archiveVersionPath("a")]: versionFile({
+        document: { ...current, schemaVersion: 12, stock },
+      }),
+    });
+    const [read] = (await readProjectArchive(zip, MAX_MESH_BYTES)).versions;
+    expect(read?.document).toEqual(current);
+  });
+
+  it("refuse a version that isn't a valid document", async () => {
+    const zip = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
+      [archiveVersionPath("a")]: versionFile({ document: { schemaVersion: 1 } }),
+    });
+    expect(await readError(zip)).toBe("A version in this file isn't a valid project.");
+  });
+
+  it("refuse to pack a version whose mesh is missing, or whose id can't name a file", async () => {
+    const { document: withModel } = await projectWithModel();
+    const document = createProjectDocument();
+    expect(() => packProjectArchive(document, new Map(), [version("a", withModel)])).toThrow(
+      /missing/,
+    );
+    expect(() => packProjectArchive(document, new Map(), [version("../a", document)])).toThrow(
+      /can't name a file/,
+    );
+  });
+
+  it("refuse to pack more versions than an archive may hold", () => {
+    const document = createProjectDocument();
+    const versions = Array.from({ length: MAX_ARCHIVE_VERSIONS + 1 }, (_, i) =>
+      version(String(i), document),
+    );
+    expect(() => packProjectArchive(document, new Map(), versions)).toThrow(ProjectArchiveError);
+  });
+
+  it("count the meshes of every version against the limit", async () => {
+    const document = createProjectDocument();
+    const meshes = new Map<string, Uint8Array>();
+    const versions: ArchiveVersion[] = [];
+    for (let i = 0; i <= MAX_ARCHIVE_MESHES; i++) {
+      const { bytes, sha256 } = await mesh(`solid ${i}\n`);
+      meshes.set(sha256, bytes);
+      versions.push(version(String(i), { ...document, models: [{ ...model, sha256 }] }));
+    }
+    expect(() => packProjectArchive(document, meshes, versions)).toThrow(ProjectArchiveError);
+  });
+
+  it("refuse too many versions when reading", async () => {
+    const files: Record<string, Uint8Array> = {
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
+    };
+    for (let i = 0; i <= MAX_ARCHIVE_VERSIONS; i++) {
+      files[archiveVersionPath(String(i))] = versionFile({ id: String(i) });
+    }
+    expect(await readError(zipSync(files))).toBe(
+      `A project file holds at most ${MAX_ARCHIVE_VERSIONS} versions.`,
+    );
+  });
+
+  it("refuse an oversized version before inflating it", async () => {
+    const zip = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
+      [archiveVersionPath("a")]: new Uint8Array(MAX_ARCHIVE_DOCUMENT_BYTES + 1),
+    });
+    expect(await readError(zip)).toMatch(/too large to import/);
+  });
+
+  it("refuse a damaged version, or one that lacks its mesh", async () => {
+    const document = createProjectDocument();
+    const damaged = async (file: Uint8Array) =>
+      readError(
+        zipSync({ [ARCHIVE_DOCUMENT_PATH]: strToU8("{}"), [archiveVersionPath("a")]: file }),
+      );
+    expect(await damaged(strToU8("not json"))).toBe("A version in this file is damaged.");
+    expect(await damaged(versionFile({ id: "b" }))).toBe("A version in this file is damaged.");
+    expect(await damaged(versionFile({ createdAt: "yesterday" }))).toBe(
+      "A version in this file is damaged.",
+    );
+    expect(
+      await damaged(
+        versionFile({ label: "first cut", document: { ...document, models: [model] } }),
+      ),
+    ).toBe("The version “first cut” is missing one of its 3D models.");
+    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 999 } }))).toBe(
+      "A version in this file was saved by a newer version of Furrow CAM.",
+    );
   });
 });
 

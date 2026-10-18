@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@furrow/ui/styles/theme.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* The UI packages are outside this app, so Tailwind doesn't find their classes on its own (ADR-0046). */
+@source "../../../../../packages/ui/src";
+@source "../../../../../packages/workspace/src";
+
+:root {
+  /* Bundled with the app: it loads nothing from the network (PRD-0007 D2). */
+  --font-jetbrains-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}

@@ -1,15 +1,14 @@
 "use client";
 
+import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import {
   PROJECT_ARCHIVE_EXTENSION,
+  PROJECT_DESKTOP_EXTENSION,
   PROJECT_FILE_EXTENSION,
   type ProjectArchive,
 } from "@furrow/document";
-import { UploadIcon } from "lucide-react";
-import { unstable_rethrow, useRouter } from "next/navigation";
-import { type ChangeEvent, type FormEvent, useRef, useState, useTransition } from "react";
-import { FormError } from "@/components/form-error";
-import { Button } from "@/components/ui/button";
+import { FormError } from "@furrow/ui/components/form-error";
+import { Button } from "@furrow/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +16,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+} from "@furrow/ui/components/ui/dialog";
+import { Label } from "@furrow/ui/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { UploadIcon } from "lucide-react";
+import { unstable_rethrow, useRouter } from "next/navigation";
+import { type ChangeEvent, type FormEvent, useRef, useState, useTransition } from "react";
 import type { MeshLimits } from "@/features/assets/server";
 import type { MachineOption } from "@/features/machines/server";
 import { importProject } from "@/features/projects/actions";
@@ -29,11 +31,33 @@ import { importArchive, readArchive } from "@/features/projects/lib/archive-impo
 // so this leaves room for the rest of the request.
 const MAX_FILE_SIZE = 4_000_000;
 
-/** A picked file: a `.furrow.json` file, or a `.furrow.zip` export read in the browser. */
+/**
+ * A picked file: a `.furrow.json` file, or a `.furrow.zip` export or desktop
+ * `.furrow` project read in the browser. Versions in a `.furrow` file are
+ * left out (ADR-0047).
+ */
 type Picked = { file: File; archive: ProjectArchive | null };
 
+const NO_MODEL_STORAGE = "This project has 3D models, which this server can't store.";
+
 function isArchive(file: File) {
-  return /\.zip$/i.test(file.name) || file.type === "application/zip";
+  return /\.(zip|furrow)$/i.test(file.name) || file.type === "application/zip";
+}
+
+/** Whether the document `contents` has 3D models; anything it can't read is left to the server. */
+function hasModels(contents: string): boolean {
+  try {
+    const json: unknown = JSON.parse(contents);
+    return (
+      typeof json === "object" &&
+      json !== null &&
+      "models" in json &&
+      Array.isArray(json.models) &&
+      json.models.length > 0
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -53,7 +77,8 @@ function needsMachine(contents: string): boolean {
 
 /**
  * Picks an exported project file (`.furrow.json`, or `.furrow.zip` for a
- * project with 3D models) and creates a project from it. A file without a
+ * project with 3D models) or a desktop `.furrow` project and creates a
+ * project from it. A file without a
  * machine gets the user's only machine, or asks which of `machines` (at
  * least one) to use. `meshLimits` are those of STL import, `null` when this
  * server can't store models.
@@ -78,10 +103,14 @@ export function ImportProjectButton({
     startTransition(async () => {
       try {
         // A `.furrow.json` file opens the new project on success, so only errors come back.
+        // An archive without models imports as its document where models can't be stored.
         const result =
           archive && meshLimits
             ? await importArchive(archive, file.name, machineId, meshLimits)
-            : await importProject(file, machineId);
+            : await importProject(
+                archive ? new File([archive.contents], file.name) : file,
+                machineId,
+              );
         if (result && "chooseMachine" in result) {
           setError(null);
           setChoosing(picked);
@@ -114,14 +143,14 @@ export function ImportProjectButton({
     startTransition(async () => {
       let picked: Picked = { file, archive: null };
       if (isArchive(file)) {
-        if (!meshLimits) {
-          setError("This project has 3D models, which this server can't store.");
-          return;
-        }
         try {
-          picked = { file, archive: await readArchive(file, meshLimits) };
+          picked = { file, archive: await readArchive(file, meshLimits ?? DEFAULT_STL_LIMITS) };
         } catch (error) {
           setError(error instanceof Error ? error.message : "This file couldn't be read.");
+          return;
+        }
+        if (!meshLimits && hasModels(picked.archive?.contents ?? "")) {
+          setError(NO_MODEL_STORAGE);
           return;
         }
       }
@@ -150,7 +179,7 @@ export function ImportProjectButton({
         <input
           ref={input}
           type="file"
-          accept={`${PROJECT_FILE_EXTENSION},${PROJECT_ARCHIVE_EXTENSION},.json,.zip,application/json,application/zip`}
+          accept={`${PROJECT_FILE_EXTENSION},${PROJECT_ARCHIVE_EXTENSION},${PROJECT_DESKTOP_EXTENSION},.json,.zip,application/json,application/zip`}
           onChange={onChange}
           className="sr-only"
           tabIndex={-1}

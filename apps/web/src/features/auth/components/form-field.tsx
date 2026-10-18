@@ -1,6 +1,6 @@
+import { Input } from "@furrow/ui/components/ui/input";
+import { Label } from "@furrow/ui/components/ui/label";
 import type { ComponentProps, ReactNode } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 /** A labelled auth input; `children` are overlaid inside it (e.g. a trailing button). */
 export function FormField({

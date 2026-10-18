@@ -1,10 +1,10 @@
+import { Button } from "@furrow/ui/components/ui/button";
+import { nextToolColor } from "@furrow/workspace/tools/lib/colors";
 import type * as React from "react";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
 import { requireUserId } from "@/features/auth/server";
 import { OpenToolButton, ToolDialogProvider } from "@/features/tools/components/library-dialog";
 import { ToolList } from "@/features/tools/components/tool-list";
-import { nextToolColor } from "@/features/tools/lib/colors";
 import { listTools } from "@/features/tools/server";
 
 export default function ToolsPage() {

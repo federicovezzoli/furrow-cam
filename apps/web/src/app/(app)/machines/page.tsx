@@ -1,6 +1,6 @@
+import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
 import { requireUserId } from "@/features/auth/server";
 import { MachineList } from "@/features/machines/components/machine-list";
 import { listMachines } from "@/features/machines/server";

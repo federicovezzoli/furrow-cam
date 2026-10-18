@@ -1,6 +1,6 @@
 import type { Stock, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { activeTouchOff, defaultTouchOff, touchOffOutsideStock } from "./touch-off";
+import { activeTouchOff, clampTouchOff, defaultTouchOff, touchOffOutsideStock } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -13,59 +13,36 @@ const stock: Stock = {
 const zeroed = (anchor: StockAnchor): Stock => ({ ...stock, xyOrigin: { anchor } });
 
 describe("defaultTouchOff", () => {
-  it("goes in the corner nearest each anchor, inset by its radius", () => {
+  it("is centred on the XY zero at each anchor", () => {
     const expected: Record<StockAnchor, [number, number]> = {
-      bottom_left: [7.5, 7.5],
-      bottom_center: [7.5, 7.5],
-      bottom_right: [292.5, 7.5],
-      middle_left: [7.5, 7.5],
-      center: [7.5, 7.5],
-      middle_right: [292.5, 7.5],
-      top_left: [7.5, 192.5],
-      top_center: [7.5, 192.5],
-      top_right: [292.5, 192.5],
+      bottom_left: [0, 0],
+      bottom_center: [150, 0],
+      bottom_right: [300, 0],
+      middle_left: [0, 100],
+      center: [150, 100],
+      middle_right: [300, 100],
+      top_left: [0, 200],
+      top_center: [150, 200],
+      top_right: [300, 200],
     };
     for (const [anchor, [x, y]] of Object.entries(expected) as [StockAnchor, [number, number]][]) {
-      expect(defaultTouchOff(zeroed(anchor), null)).toEqual({ x, y, diameter: 15 });
+      expect(defaultTouchOff(zeroed(anchor))).toEqual({ x, y, diameter: 15, toolChange: null });
     }
   });
 
-  it("goes in the corner nearest a custom zero, even off the stock", () => {
+  it("is centred on a custom zero, even off the stock", () => {
     const custom: Stock = { ...stock, xyOrigin: { anchor: "custom", x: 280, y: 250 } };
-    expect(defaultTouchOff(custom, null)).toEqual({ x: 292.5, y: 192.5, diameter: 15 });
-  });
-
-  it("skips corners the design covers", () => {
-    // The design fills the bottom of the stock, edge to edge.
-    const design = { min: [0, 0] as [number, number], max: [300, 120] as [number, number] };
-    expect(defaultTouchOff(stock, design)).toEqual({ x: 7.5, y: 192.5, diameter: 15 });
-  });
-
-  it("prefers a corner the whole pad is clear of, then one whose corner point is", () => {
-    // A 10 mm border all round: no corner fits the 15 mm pad, every corner point is clear.
-    const design = { min: [10, 10] as [number, number], max: [290, 190] as [number, number] };
-    expect(defaultTouchOff(zeroed("top_right"), design)).toEqual({
-      x: 292.5,
-      y: 192.5,
-      diameter: 15,
-    });
-    // The bottom-left corner fits it whole, so it wins over the nearer top-right one.
-    const offset = { min: [20, 0] as [number, number], max: [300, 200] as [number, number] };
-    expect(defaultTouchOff(zeroed("bottom_right"), offset)).toEqual({
-      x: 7.5,
-      y: 7.5,
-      diameter: 15,
-    });
+    expect(defaultTouchOff(custom)).toEqual({ x: 280, y: 250, diameter: 15, toolChange: null });
   });
 
   it("is never wider than the stock's smaller side", () => {
-    const strip: Stock = { ...stock, height: 10 };
-    expect(defaultTouchOff(strip, null)).toEqual({ x: 5, y: 5, diameter: 10 });
+    const strip: Stock = { ...stock, height: 10, xyOrigin: { anchor: "center" } };
+    expect(defaultTouchOff(strip)).toEqual({ x: 150, y: 5, diameter: 10, toolChange: null });
   });
 });
 
 describe("activeTouchOff", () => {
-  const pad = { x: 10, y: 10, diameter: 15 };
+  const pad = { x: 10, y: 10, diameter: 15, toolChange: null };
 
   it("is the pad with the Z zero on the stock top, and none on the machine bed", () => {
     expect(activeTouchOff({ zOrigin: "stock_top", touchOff: pad })).toEqual(pad);
@@ -79,5 +56,28 @@ describe("touchOffOutsideStock", () => {
     expect(touchOffOutsideStock(stock, { x: 7.5, y: 7.5, diameter: 15 })).toBe(false);
     expect(touchOffOutsideStock(stock, { x: 5, y: 100, diameter: 15 })).toBe(true);
     expect(touchOffOutsideStock(stock, { x: 296, y: 100, diameter: 15 })).toBe(true);
+  });
+});
+
+describe("clampTouchOff", () => {
+  it("moves a pad past the stock's edges back onto it, keeping its diameter", () => {
+    const toolChange = "G0 X{padX} Y{padY}\nM0";
+    expect(clampTouchOff(stock, { x: 5, y: 210, diameter: 15, toolChange })).toEqual({
+      x: 7.5,
+      y: 192.5,
+      diameter: 15,
+      toolChange,
+    });
+    expect(clampTouchOff(stock, { x: 310, y: -4, diameter: 20, toolChange: null })).toEqual({
+      x: 290,
+      y: 10,
+      diameter: 20,
+      toolChange: null,
+    });
+  });
+
+  it("leaves a pad on the stock where it is", () => {
+    const pad = { x: 100, y: 50, diameter: 15, toolChange: null };
+    expect(clampTouchOff(stock, pad)).toEqual(pad);
   });
 });

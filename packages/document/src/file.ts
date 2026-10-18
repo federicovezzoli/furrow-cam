@@ -21,10 +21,10 @@ export function projectFileName(name: string, extension = PROJECT_FILE_EXTENSION
 }
 
 /**
- * The project name to give an imported file (`.furrow.json` or
- * `.furrow.zip`): its name without the extension, or `null` if nothing is left.
+ * The project name to give an imported file (`.furrow.json`, `.furrow.zip`
+ * or `.furrow`): its name without the extension, or `null` if nothing is left.
  */
 export function projectNameFromFileName(fileName: string): string | null {
-  const name = fileName.replace(/(\.furrow)?\.(json|zip)$/i, "").trim();
+  const name = fileName.replace(/(\.furrow)?\.(json|zip)$|\.furrow$/i, "").trim();
   return name === "" ? null : name;
 }

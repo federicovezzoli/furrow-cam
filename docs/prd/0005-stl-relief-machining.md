@@ -43,13 +43,13 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | S9 | Corner clean-up of the model's concave edges with a small tool | Could |
 | S10 | Other finishing patterns: waterline (constant Z) and spiral | Should |
 | S11 | Rest machining for 2D pockets, reusing S8 | Could |
-| S12 | 3D operations leave the touch-off pad at the stock top (PRD-0002 Z11), so Z can be zeroed on it after the tool change between roughing and finishing | Should |
+| S12 | 3D operations leave the touch-off pad, once the user turns it on, at the stock top (PRD-0002 Z11), so Z can be zeroed on it after the tool change between roughing and finishing | Should |
 
 ## User flow
 
 1. In a project, the user imports `emblem.stl`. It appears on the stock, scaled to fit inside a 10 mm border, its top at the stock top.
 2. They rotate it so the right face is up, set its width to 200 mm and its depth to 12 mm, and move the zero point.
-3. They add a 3D roughing operation with a 6 mm flat end mill, leaving 0.5 mm of stock, then a 3D finishing operation with a 3 mm ball end mill at a 10% stepover. A touch-off pad in a corner of the stock stays uncut, and at the tool change the machine stops over it to zero Z.
+3. They tick **Touch-off pad** in the zero section, which puts a pad on the XY zero, move it where the relief leaves stock top, then add a 3D roughing operation with a 6 mm flat end mill, leaving 0.5 mm of stock, and a 3D finishing operation with a 3 mm ball end mill at a 10% stepover. The pad stays uncut, and at the tool change the machine stops over it to zero Z.
 4. They check the toolpaths and the simulation, then export the G-code.
 
 ## Success criteria
@@ -67,3 +67,4 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-10-17: S2 fits models inside a border, S5 clears a margin around the model (#146, ADR-0038)
 - 2026-10-17: S10 (waterline and spiral finishing) moves up to Should and is built (#130, ADR-0039)
 - 2026-10-17: S12, the touch-off pad (#147, ADR-0041)
+- 2026-10-17: S12 and the user flow: the touch-off pad is turned on by the user, not added on import (#178, ADR-0043)

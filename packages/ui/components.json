@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "../../apps/web/src/app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@furrow/ui/components",
+    "utils": "@furrow/ui/lib/utils",
+    "ui": "@furrow/ui/components/ui",
+    "lib": "@furrow/ui/lib",
+    "hooks": "@furrow/ui/hooks"
+  },
+  "registries": {}
+}

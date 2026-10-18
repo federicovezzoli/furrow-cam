@@ -21,3 +21,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0004](0004-machine-presets.md) | Machine presets | Draft |
 | [0005](0005-stl-relief-machining.md) | STL relief machining | Draft |
 | [0006](0006-gcode-simulation.md) | G-code simulation | Abandoned |
+| [0007](0007-desktop-app.md) | Desktop app | Draft |

@@ -6,10 +6,10 @@ import {
   type ProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
+import { parseMesh } from "@furrow/workspace/lib/model-import";
+import { cacheMesh } from "@/features/assets/lib/mesh-cache";
 import { uploadMesh } from "@/features/assets/lib/meshes";
 import { deleteProject, saveProject, startArchiveImport } from "@/features/projects/actions";
-import { cacheMesh } from "@/features/workspace/lib/mesh-cache";
-import { parseMesh } from "@/features/workspace/lib/model-import";
 
 const IMPORT_FAILED = "This file couldn't be imported. Check your connection and try again.";
 
@@ -24,6 +24,27 @@ export async function readArchive(file: File, limits: StlLimits): Promise<Projec
   }
 }
 
+/**
+ * The meshes of `archive` its document's models use: those only its versions
+ * use are left out, as the versions are (ADR-0047). A document that can't be
+ * read keeps them all, for the server to explain.
+ */
+export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array> {
+  let models: unknown;
+  try {
+    models = (JSON.parse(archive.contents) as { models?: unknown } | null)?.models;
+  } catch {
+    return archive.meshes;
+  }
+  if (!Array.isArray(models)) return archive.meshes;
+  const used = new Set(
+    models.map((model: unknown) =>
+      typeof model === "object" && model !== null && "sha256" in model ? model.sha256 : null,
+    ),
+  );
+  return new Map([...archive.meshes].filter(([sha256]) => used.has(sha256)));
+}
+
 /** What `importArchive` returns: the new project, an error, or that a machine must be chosen. */
 export type ArchiveImport =
   | { projectId: string; error?: never }
@@ -32,7 +53,8 @@ export type ArchiveImport =
 
 /**
  * Creates a project from a `.furrow.zip` export read by `readArchive`
- * (ADR-0029). Each mesh is checked as an STL import is (PRD-0005 S1), then
+ * (ADR-0029), leaving out its versions. Each mesh the document uses is
+ * checked as an STL import is (PRD-0005 S1), then
  * the server creates the project with an empty document, the meshes are
  * uploaded to it, and the imported document is saved. If any step after the
  * project is created fails, it is deleted again. `machineId` is as for
@@ -44,7 +66,8 @@ export async function importArchive(
   machineId: string | null,
   limits: StlLimits,
 ): Promise<ArchiveImport> {
-  for (const [sha256, bytes] of archive.meshes) {
+  const meshes = documentMeshes(archive);
+  for (const [sha256, bytes] of meshes) {
     try {
       // A copy: the worker takes the buffer it is sent.
       const mesh = await parseMesh(bytes.slice().buffer, limits);
@@ -62,7 +85,7 @@ export async function importArchive(
       // Sent as a file: a string argument would be escaped into JSON, outgrowing the body limit.
       new File([archive.contents], ARCHIVE_DOCUMENT_PATH, { type: "application/json" }),
       fileName,
-      [...archive.meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
+      [...meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
       machineId,
     );
   } catch {

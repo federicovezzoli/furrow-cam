@@ -7,7 +7,7 @@ import {
   operationModelId,
   type ProjectDocument,
   type Shape,
-  type TouchOff,
+  type TouchOffDisc,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
 import { activeTouchOff } from "../scene/touch-off";
@@ -58,7 +58,7 @@ export type ToolpathInput = {
    * The touch-off pad (#147, `activeTouchOff`): 3D operations leave it
    * uncut, 2D ones warn when they reach it. `null` for none.
    */
-  touchOff: TouchOff | null;
+  touchOff: TouchOffDisc | null;
 };
 
 /** Whether `operation` only cuts the material the operations before it left (PRD-0005 S8). */
@@ -86,7 +86,9 @@ export function toolpathInputs(
   const safeZ = doc.machine?.safeZ ?? DEFAULT_SAFE_Z;
   const entryClearance = doc.machine?.entryClearance ?? DEFAULT_ENTRY_CLEARANCE;
   const stock: Rect = { min: [0, 0], max: [doc.stock.width, doc.stock.height] };
-  const touchOff = activeTouchOff(doc.stock);
+  const pad = activeTouchOff(doc.stock);
+  // The disc alone, so editing the pad's tool change recomputes nothing.
+  const touchOff: TouchOffDisc | null = pad && { x: pad.x, y: pad.y, diameter: pad.diameter };
   const enabled = doc.operations.filter((operation) => operation.enabled);
   const inputs = new Map<Operation, ToolpathInput>();
   function inputOf(operation: Operation): ToolpathInput {
@@ -291,7 +293,7 @@ export const TOUCH_OFF_WARNING =
  * Whether any cut of `operation`'s toolpath, below the stock top, reaches
  * into `pad`: the tool's reach at the cut's depth comes within the pad.
  */
-export function cutsTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOff): boolean {
+export function cutsTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOffDisc): boolean {
   const r = pad.diameter / 2;
   return toolpathCuts(operation, toolpath).some(({ tool, segments }) => {
     const profile = cutterProfile(tool);
@@ -321,7 +323,11 @@ function segmentDistance(px: number, py: number, ax: number, ay: number, bx: num
 }
 
 /** A 2D toolpath, warning when it cuts into the touch-off pad rather than avoiding it (ADR-0041). */
-function checkTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOff | null): Toolpath {
+function checkTouchOff(
+  operation: Operation,
+  toolpath: Toolpath,
+  pad: TouchOffDisc | null,
+): Toolpath {
   if (!pad || !cutsTouchOff(operation, toolpath, pad)) return toolpath;
   return { ...toolpath, warnings: [...toolpath.warnings, TOUCH_OFF_WARNING] };
 }

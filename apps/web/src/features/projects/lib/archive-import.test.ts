@@ -17,8 +17,8 @@ const parseMesh = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/projects/actions", () => actions);
 vi.mock("@/features/assets/lib/meshes", () => ({ uploadMesh }));
-vi.mock("@/features/workspace/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
-vi.mock("@/features/workspace/lib/model-import", () => ({ parseMesh }));
+vi.mock("@/features/assets/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
+vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
 
 const { importArchive } = await import("./archive-import");
 
@@ -26,6 +26,7 @@ const bytes = new Uint8Array(model.size);
 const archive: ProjectArchive = {
   contents: JSON.stringify(document),
   meshes: new Map([[model.sha256, bytes]]),
+  versions: [],
 };
 
 beforeEach(() => {
@@ -68,6 +69,29 @@ describe("importArchive", () => {
       error: "A model in this file can't be imported: This file has too many triangles.",
     });
     expect(actions.startArchiveImport).not.toHaveBeenCalled();
+  });
+
+  it("checks and sends only the meshes the document uses, not those of its versions", async () => {
+    const versionOnly = "f".repeat(64);
+    // A version's model this server would refuse, e.g. with too many triangles.
+    parseMesh.mockImplementation(async (bytes: ArrayBuffer) => {
+      if (bytes.byteLength === 7) throw new Error("This file has too many triangles.");
+      return { sha256: model.sha256, triangles: 12, bounds: model.bounds };
+    });
+    const withVersion: ProjectArchive = {
+      ...archive,
+      meshes: new Map([...archive.meshes, [versionOnly, new Uint8Array(7)]]),
+    };
+    expect(await importArchive(withVersion, "Relief.furrow", null, LIMITS)).toEqual({
+      projectId: PROJECT,
+    });
+    expect(parseMesh).toHaveBeenCalledTimes(1);
+    expect(actions.startArchiveImport).toHaveBeenCalledWith(
+      expect.any(File),
+      "Relief.furrow",
+      [{ sha256: model.sha256, size: model.size }],
+      null,
+    );
   });
 
   it("passes on the server's refusal, or its request for a machine", async () => {

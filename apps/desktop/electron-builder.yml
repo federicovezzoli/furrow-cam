@@ -1,0 +1,40 @@
+# Unsigned installers for the GitHub Release (ADR-0044, PRD-0007 D1).
+appId: com.furrowcam.desktop
+productName: Furrow CAM
+# One name per platform and architecture, without spaces, for the release page.
+artifactName: furrow-cam-${version}-${os}-${arch}.${ext}
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+# Everything is bundled into out/, so the app ships no node_modules.
+npmRebuild: false
+fileAssociations:
+  - ext: furrow
+    name: Furrow CAM project
+    description: Furrow CAM project
+    mimeType: application/x-furrow-project
+    role: Editor
+mac:
+  category: public.app-category.graphics-design
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  identity: null
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  # The package name (`@furrow/desktop`) can't name a file.
+  executableName: furrow-cam
+  # Lets desktop environments link the running window to its launcher.
+  syncDesktopName: true
+  category: Graphics
+  target: [AppImage, deb]
+  maintainer: Federico Vezzoli <fv@furrow.cam>
+publish: null

@@ -20,26 +20,33 @@ pnpm changeset                # add a changeset for behaviour changes
 
 All four checks (`check`, `typecheck`, `test`, `build`) must pass before work is done; CI runs the same.
 
-## Layout and dependency rules (ADR-0011)
+## Layout and dependency rules (ADR-0011, ADR-0046)
 
 ```
-apps/web/            Next.js 16: UI, viewport, server actions, Prisma, Better Auth
-packages/document/   project document Zod schema + version migrations
-packages/cam-core/   geometry (Clipper2 adapter) and toolpaths
-packages/post/       post-processors, toolpaths → G-code
+apps/web/             Next.js 16: routes, server actions, Prisma, Better Auth, the web WorkspaceHost
+apps/desktop/         Electron + Vite: start screen, .furrow files, the desktop WorkspaceHost (ADR-0044)
+packages/document/    project document Zod schema + version migrations, project archives
+packages/cam-core/    geometry (Clipper2 adapter) and toolpaths
+packages/post/        post-processors, toolpaths → G-code
+packages/ui/          shadcn/ui (components/ui/, components.json), cn, shared components and hooks
+packages/workspace/   the CAM workspace: components, stores, hooks, providers, workers, tool form, tour
 ```
 
-- Dependency direction: `web → post → cam-core → document`.
-- `packages/*` must not import React, Next.js or three.js (Biome enforces it). They are consumed as TypeScript source; keep them worker-safe (no DOM).
+- Dependency direction: `web → workspace → ui`, `desktop → workspace → ui`, `workspace → post → cam-core → document`.
+- **Core packages** (`document`, `cam-core`, `post`) must not import React, Next.js or three.js (Biome enforces it). Keep them worker-safe (no DOM).
+- **UI packages** (`ui`, `workspace`) may use React, three.js, Radix, Zustand and Immer, but never `next`, so the desktop app can use them (Biome enforces it). Inside them, import with relative paths; across packages, by subpath (`@furrow/ui/components/ui/button`, `@furrow/workspace/lib/workspace-host`). Workers in `workspace/src/workers/` import only core packages and plain modules.
+- The workspace saves, loads and navigates only through its `WorkspaceHost` (ADR-0045); the web app's host is `apps/web/src/features/workspace/host/`, the desktop app's `apps/desktop/src/renderer/src/desktop-host.tsx`.
+- **Desktop app (ADR-0044, ADR-0047):** the main process (`src/main/`) owns windows, menus, dialogs and every file; the renderer reaches it only through the typed preload API (`src/shared/api.ts`). The renderer has no network: a CSP and a request filter block it. `pnpm --filter @furrow/desktop dev` runs it; `dist` builds installers. Launching Electron from a VS Code terminal needs `ELECTRON_RUN_AS_NODE` unset.
+- All packages are consumed as TypeScript source (`transpilePackages` in `next.config.ts`); Tailwind scans the UI packages through `@source` in `globals.css`. Run `shadcn add` in `packages/ui`.
 - `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/` and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
 
 Inside `apps/web/src` (ADR-0021):
 
 ```
 app/              routes only (page, layout, error, route files) rendering feature components
-features/<name>/  auth, tools, machines, projects, assets, workspace: actions.ts (server actions only),
-                  server.ts ("server-only" logic), components/ hooks/ providers/ stores/ lib/ workers/
-components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnostic code
+features/<name>/  auth, tools, machines, projects, assets, onboarding, workspace (its host only):
+                  actions.ts (server actions only), server.ts ("server-only" logic), components/ lib/
+components/       shared web-only UI; lib/, hooks/: shared, feature-agnostic code
 ```
 
 - Nothing outside `app/` imports `@/app/*`; `components/`, `lib/`, `hooks/` never import `@/features/*` (Biome enforces both). Features import each other's files directly, no barrel `index.ts`.
@@ -49,7 +56,7 @@ components/       shared UI (ui/ is shadcn); lib/, hooks/: shared, feature-agnos
 - **CAM runs in the browser**, in Web Workers (ADR-0004). The server never computes toolpaths or G-code; it only authenticates, stores and validates.
 - **Persistence (ADR-0003):** relational tables for users, tools, machines and project metadata; each project's contents are one versioned JSON document (`Project.document`, `jsonb`) validated by the Zod schema in `@furrow/document`. Tools and machines are *snapshotted* into the document when used. Toolpaths are derived data and never stored.
 - **Units:** millimetres internally (`float64`); convert only at the UI edge.
-- **UI:** shadcn/ui on Radix + Tailwind (ADR-0009), Zustand + Immer with patch-based undo (ADR-0010), three.js via React Three Fiber (ADR-0008).
+- **UI:** shadcn/ui on Radix + Tailwind (ADR-0009, in `packages/ui`), Zustand + Immer with patch-based undo (ADR-0010), three.js via React Three Fiber (ADR-0008).
 - **Privacy (ADR-0013):** the only personal data we collect is the email address. `user.name` always mirrors the email, `user.image` is always `NULL` (enforced by hooks in `apps/web/src/features/auth/auth.ts`). Any new personal data needs a new ADR.
 
 ## Database and environment

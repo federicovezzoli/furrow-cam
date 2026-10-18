@@ -1,8 +1,9 @@
 "use client";
 
+import { Tour, useTour } from "@furrow/workspace/onboarding/components/tour";
 import { usePathname } from "next/navigation";
 import { AccountMenu } from "@/features/auth/components/account-menu";
-import { Tour, useTour } from "./tour";
+import { finishTour } from "@/features/onboarding/actions";
 
 /**
  * The header's account menu with the app tour (PRD-0001 R22): it starts on
@@ -10,7 +11,12 @@ import { Tour, useTour } from "./tour";
  * (`done`), and the menu replays it on any page.
  */
 export function AppTour({ userId, email, done }: { userId: string; email: string; done: boolean }) {
-  const tour = useTour("app", { userId, done, autoStart: usePathname() === "/projects" });
+  const tour = useTour("app", {
+    userId,
+    done,
+    autoStart: usePathname() === "/projects",
+    finish: finishTour,
+  });
   return (
     <>
       <AccountMenu email={email} onTakeTour={tour.start} />

@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
 import { ErrorFallback } from "@/components/error-fallback";
-import { Button } from "@/components/ui/button";
 
 export default function WorkspaceError(props: {
   error: Error & { digest?: string };

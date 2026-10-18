@@ -3,7 +3,7 @@ import type {
   Model,
   ReliefFinishOperation,
   Tool,
-  TouchOff,
+  TouchOffDisc,
 } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { modelTransform, type PlacedModel, placedModelBox } from "../../scene/model";
@@ -381,7 +381,7 @@ export type FlatDisc = { x: number; y: number; radius: number; top: number };
  * The touch-off pad as a disc in `grid`'s coordinates, its top at the stock
  * top, for dropping tools onto (ADR-0041); none without a pad.
  */
-export function padDiscs(touchOff: TouchOff | null, grid: ReliefGrid): FlatDisc[] {
+export function padDiscs(touchOff: TouchOffDisc | null, grid: ReliefGrid): FlatDisc[] {
   if (!touchOff) return [];
   const [u, v] = toPassFrame(grid.angle, [touchOff.x, touchOff.y]);
   return [{ x: u - grid.origin[0], y: v - grid.origin[1], radius: touchOff.diameter / 2, top: 0 }];
@@ -885,7 +885,7 @@ export type ReliefFinishOptions = {
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
   rest?: RestOptions | null;
   /** The touch-off pad, which no pass cuts (#147); `null` for none. */
-  touchOff?: TouchOff | null;
+  touchOff?: TouchOffDisc | null;
 };
 
 /** Share of the progress the model heightmap takes; the passes take the rest. */

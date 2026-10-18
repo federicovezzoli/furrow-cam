@@ -1,6 +1,7 @@
 "use server";
 
 import { createProjectDocument, ProjectDocument, projectNameFromFileName } from "@furrow/document";
+import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -16,7 +17,6 @@ import { listMachineChoices } from "@/features/machines/server";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
-import { MAX_VERSIONS, VERSION_LABEL_MAX } from "./lib/versions";
 import {
   documentColumns,
   getProject,

@@ -1,7 +1,4 @@
 import { Tool } from "@furrow/document";
-import { PencilIcon } from "lucide-react";
-import { DeleteButton } from "@/components/delete-button";
-import { formatNumber, Unit } from "@/components/table-format";
 import {
   Table,
   TableBody,
@@ -9,11 +6,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@furrow/ui/components/ui/table";
+import { BitTypeIcon } from "@furrow/workspace/tools/components/bit-type-icon";
+import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@furrow/workspace/tools/lib/labels";
+import { PencilIcon } from "lucide-react";
+import { DeleteButton } from "@/components/delete-button";
+import { formatNumber, Unit } from "@/components/table-format";
 import { deleteTool } from "@/features/tools/actions";
-import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@/features/tools/labels";
 import type { Tool as ToolRow } from "@/generated/prisma/client";
-import { BitTypeIcon } from "./bit-type-icon";
 import { OpenToolButton } from "./library-dialog";
 import { SetDefaultButton } from "./set-default-button";
 

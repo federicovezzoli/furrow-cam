@@ -4,7 +4,6 @@ import packageJson from "../../package.json";
 const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/web@${packageJson.version}`)}`;
-const LICENSE_URL = `${REPOSITORY_URL}/blob/main/LICENSE`;
 const AUTHOR_URL = "https://federicovezzoli.com";
 
 // Lucide has no brand icons; this is GitHub's mark (Octicons `mark-github`).
@@ -44,8 +43,7 @@ export function SiteFooter() {
         </Link>
         {/* The project's start year, deliberately not computed at runtime. */}
         <span>
-          © 2026 <ExternalLink href={AUTHOR_URL}>Federico Vezzoli</ExternalLink> ·{" "}
-          <ExternalLink href={LICENSE_URL}>MIT License</ExternalLink>
+          © 2026 <ExternalLink href={AUTHOR_URL}>Federico Vezzoli</ExternalLink>
         </span>
       </div>
     </footer>

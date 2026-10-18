@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@furrow/ui/components/ui/button";
 import { PencilIcon } from "lucide-react";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
 import { renameProject } from "@/features/projects/actions";
 
 /** Asks for a new name, then renames the project `id`. */

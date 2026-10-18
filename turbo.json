@@ -21,7 +21,7 @@
         "STL_MAX_FILE_MB",
         "STL_MAX_TRIANGLES"
       ],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**", "out/**"]
     },
     "dev": {
       "cache": false,

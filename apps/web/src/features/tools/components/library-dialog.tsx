@@ -1,11 +1,12 @@
 "use client";
 
 import type { Tool } from "@furrow/document";
+import { Button } from "@furrow/ui/components/ui/button";
+import { ToolDialog } from "@furrow/workspace/tools/components/tool-dialog";
+import { ToolForm } from "@furrow/workspace/tools/components/tool-form";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ToolDialog } from "./tool-dialog";
-import { ToolForm } from "./tool-form";
+import { saveTool } from "@/features/tools/lib/save-tool";
 
 /** The bit the library dialog edits; `id` is `null` for a new bit. */
 type Editing = { id: string | null; values: Partial<Tool> };
@@ -49,6 +50,7 @@ export function ToolDialogProvider({ children }: { children: React.ReactNode }) 
             key={session}
             id={editing.id}
             values={editing.values}
+            save={saveTool}
             onSaved={close}
             onCancel={close}
           />

@@ -1,9 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@furrow/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +8,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@furrow/ui/components/ui/dropdown-menu";
+import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 

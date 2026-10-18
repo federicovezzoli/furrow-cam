@@ -4,7 +4,7 @@ import type {
   ReliefRoughOperation,
   RoughingBoundary,
   Tool,
-  TouchOff,
+  TouchOffDisc,
 } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
@@ -65,7 +65,7 @@ export type ReliefRoughOptions = {
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
   rest?: RestOptions | null;
   /** The touch-off pad, an island at every level (#147); `null` for none. */
-  touchOff?: TouchOff | null;
+  touchOff?: TouchOffDisc | null;
 };
 
 /** Share of the progress the model heightmap takes; the levels take the rest. */
@@ -279,7 +279,7 @@ export function roughingArea(
  * within `tolerance` of the circle and outside it, so a tool kept a radius
  * from the polygon never reaches the pad.
  */
-export function padPolygon({ x, y, diameter }: TouchOff, tolerance: number): Polygon {
+export function padPolygon({ x, y, diameter }: TouchOffDisc, tolerance: number): Polygon {
   const r = diameter / 2;
   const sides = Math.max(16, Math.ceil(Math.PI / Math.acos(Math.max(-1, 1 - tolerance / r))));
   const corner = r / Math.cos(Math.PI / sides);

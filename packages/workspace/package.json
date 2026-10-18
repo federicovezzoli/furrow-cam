@@ -1,0 +1,52 @@
+{
+  "name": "@furrow/workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The CAM workspace: viewport, panes, stores and workers, saving through a WorkspaceHost",
+  "type": "module",
+  "exports": {
+    "./components/*": "./src/components/*.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./lib/*": "./src/lib/*.ts",
+    "./machines/components/*": "./src/machines/components/*.tsx",
+    "./machines/lib/*": "./src/machines/lib/*.ts",
+    "./onboarding/components/*": "./src/onboarding/components/*.tsx",
+    "./onboarding/lib/*": "./src/onboarding/lib/*.ts",
+    "./providers/*": "./src/providers/*.tsx",
+    "./stores/*": "./src/stores/*.ts",
+    "./tools/components/*": "./src/tools/components/*.tsx",
+    "./tools/lib/*": "./src/tools/lib/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@furrow/cam-core": "workspace:*",
+    "@furrow/document": "workspace:*",
+    "@furrow/post": "workspace:*",
+    "@furrow/ui": "workspace:*",
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.1",
+    "immer": "^11.1.21",
+    "lucide-react": "^1.52.0",
+    "next-themes": "^0.4.6",
+    "react-resizable-panels": "^4.14.3",
+    "three": "0.182.0",
+    "zod": "catalog:",
+    "zustand": "^5.0.15"
+  },
+  "peerDependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "0.182.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

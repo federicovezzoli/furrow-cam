@@ -1,6 +1,6 @@
+import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
-import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (

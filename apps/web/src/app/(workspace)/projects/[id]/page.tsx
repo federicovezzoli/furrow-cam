@@ -1,10 +1,10 @@
-import { cookies } from "next/headers";
-import { Suspense } from "react";
-import { WorkspaceShell } from "@/features/workspace/components/workspace-shell";
+import { WorkspaceShell } from "@furrow/workspace/components/workspace-shell";
 import {
   parseWorkspaceLayout,
   WORKSPACE_LAYOUT_COOKIE,
-} from "@/features/workspace/lib/workspace-layout";
+} from "@furrow/workspace/lib/workspace-layout";
+import { cookies } from "next/headers";
+import { Suspense } from "react";
 
 /** The project's workspace; the layout loads the project and holds its stores. */
 export default function WorkspacePage() {

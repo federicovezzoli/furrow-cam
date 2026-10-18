@@ -1,10 +1,13 @@
 import "server-only";
 import { Tool } from "@furrow/document";
+import type { SavedTool, ToolChoice, ToolFormErrors } from "@furrow/workspace/lib/workspace-host";
+import { DEFAULT_TOOL, parseToolForm } from "@furrow/workspace/tools/lib/tool-form-data";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { type FormErrors, issuesToFormErrors, numberField } from "@/lib/form-data";
-import { TOOL_COLORS } from "./lib/colors";
+
+export type { SavedTool, ToolChoice, ToolFormErrors };
+export { DEFAULT_TOOL, parseToolForm };
 
 /** The signed-in user's tool library, by name. */
 export function listTools(userId: string) {
@@ -32,7 +35,6 @@ export function safeSnapshotTool(row: Tool): Tool | null {
 }
 
 /** A library tool offered when picking an operation's tool, as the snapshot to store. */
-export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
 
 /**
  * The user's tools as snapshots for operations, by name. Rows that fail
@@ -46,26 +48,6 @@ export async function listToolChoices(userId: string): Promise<ToolChoice[]> {
   });
 }
 
-/** Seeded into every new account, so a first project can be cut without setting up a library. */
-export const DEFAULT_TOOL: Tool = Tool.parse({
-  name: "6 mm 2-flute upcut",
-  type: "flat_end_mill",
-  diameter: 6,
-  fluteCount: 2,
-  fluteLength: 22,
-  cutDirection: "upcut",
-  vAngle: null,
-  tipDiameter: null,
-  spindleRpm: 24000,
-  feedRate: 600,
-  plungeRate: 300,
-  plungeAngle: 3,
-  stepDown: 1,
-  stepOver: 40,
-  notes: null,
-  color: TOOL_COLORS[0],
-});
-
 /** Seeds the account's library with `DEFAULT_TOOL`, selected as the default tool. */
 export async function createDefaultTool(userId: string): Promise<void> {
   await db.tool.create({ data: { ...DEFAULT_TOOL, userId, isDefault: true } });
@@ -78,44 +60,6 @@ export async function createDefaultTool(userId: string): Promise<void> {
 export async function lockLibrary(tx: Prisma.TransactionClient, userId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
 }
-
-/**
- * Reads the tool form. Fields that don't apply to the chosen type are ignored,
- * so switching type in the form never leaves stale values behind.
- */
-export function parseToolForm(form: FormData) {
-  const type = form.get("type");
-  const isEndMill = type === "flat_end_mill" || type === "ball_end_mill";
-  const isVBit = type === "v_bit";
-  const notes = String(form.get("notes") ?? "").trim();
-  const input = {
-    name: String(form.get("name") ?? ""),
-    type,
-    diameter: numberField(form, "diameter"),
-    fluteCount: numberField(form, "fluteCount"),
-    fluteLength: numberField(form, "fluteLength"),
-    cutDirection: isEndMill ? (form.get("cutDirection") ?? null) : null,
-    vAngle: isVBit ? numberField(form, "vAngle") : null,
-    tipDiameter: isVBit ? numberField(form, "tipDiameter") : null,
-    spindleRpm: numberField(form, "spindleRpm"),
-    feedRate: numberField(form, "feedRate"),
-    plungeRate: numberField(form, "plungeRate"),
-    plungeAngle: type === "drill" ? 90 : numberField(form, "plungeAngle"),
-    stepDown: numberField(form, "stepDown"),
-    stepOver: numberField(form, "stepOver"),
-    notes: notes === "" ? null : notes,
-    color: String(form.get("color") ?? "").toLowerCase(),
-  };
-  const result = Tool.safeParse(input);
-  if (result.success) return { tool: result.data };
-
-  return { errors: issuesToFormErrors<keyof Tool>(result.error.issues, input) };
-}
-
-export type ToolFormErrors = FormErrors<keyof Tool>;
-
-/** A tool the form saved: its library id, and the tool as an operation snapshot. */
-export type SavedTool = { id: string; tool: Tool };
 
 export const TOOL_NOT_FOUND = "This bit no longer exists.";
 
