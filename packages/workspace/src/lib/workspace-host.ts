@@ -1,6 +1,7 @@
 import type { Machine, ProjectDocument, Tool } from "@furrow/document";
 import type * as React from "react";
 import type { TourId } from "../onboarding/lib/tour";
+import type { WorkspaceLayout } from "./workspace-layout";
 
 /** Nothing when an action succeeded, else why it failed, for the user. */
 export type ActionResult = { error: string } | undefined;
@@ -111,6 +112,10 @@ export type WorkspaceHost = {
     tourDone: boolean;
     /** Remembers that `tour` was seen. */
     finishTour(tour: TourId): Promise<void>;
+    /** The workspace's panel sizes as last saved, read each time the workspace opens. */
+    readonly layout: WorkspaceLayout;
+    /** Remembers the panel sizes the user set, for the next time the workspace opens. */
+    saveLayout(layout: WorkspaceLayout): void;
   };
   navigation: {
     /** A link to `to`, rendered as an anchor. */

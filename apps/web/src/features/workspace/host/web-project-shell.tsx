@@ -9,12 +9,13 @@ import type {
   WorkspaceHost,
   WorkspaceLinkProps,
 } from "@furrow/workspace/lib/workspace-host";
+import type { WorkspaceLayout } from "@furrow/workspace/lib/workspace-layout";
 import { useWorkspaceHost } from "@furrow/workspace/providers/workspace-host";
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type * as React from "react";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { cacheMesh, loadMesh } from "@/features/assets/lib/mesh-cache";
 import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
 import type { MeshLimits } from "@/features/assets/server";
@@ -32,6 +33,7 @@ import {
 import type { getProject } from "@/features/projects/server";
 import { saveTool } from "@/features/tools/lib/save-tool";
 import type { ToolChoice } from "@/features/tools/server";
+import { writeLayoutCookie } from "./layout-cookie";
 import { latestVersion, rememberSavedVersion } from "./saved-versions";
 
 type WebProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
@@ -40,8 +42,9 @@ type WebProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
  * The open project in the web app (ADR-0045): the workspace, with a host that
  * saves through the server actions and links to the app's routes. `tools` and
  * `machines` are the user's library, `meshLimits` the STL files the server
- * stores (`null` when STL import is off), and `tourDone` says the account
- * `userId` finished the workspace tour (PRD-0001 R22).
+ * stores (`null` when STL import is off), `tourDone` says the account
+ * `userId` finished the workspace tour (PRD-0001 R22), and `layout` is the
+ * workspace's panel sizes from its cookie.
  */
 export function WebProjectShell({
   project,
@@ -54,6 +57,7 @@ export function WebProjectShell({
   meshLimits: MeshLimits | null;
   userId: string;
   tourDone: boolean;
+  layout: WorkspaceLayout;
   children: React.ReactNode;
 }) {
   if (project.error !== undefined) {
@@ -74,6 +78,7 @@ function WebHost({
   meshLimits,
   userId,
   tourDone,
+  layout,
   children,
 }: {
   project: Extract<WebProject, { error?: never }>;
@@ -82,10 +87,16 @@ function WebHost({
   meshLimits: MeshLimits | null;
   userId: string;
   tourDone: boolean;
+  layout: WorkspaceLayout;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const { id, name, document, updatedAt } = project;
+  /**
+   * The panel sizes as last saved: the project's route layout outlives the
+   * workspace page, which reads them again when the user comes back from the simulator.
+   */
+  const savedLayout = useRef(layout);
   // Kept per project, so a refresh that brings the library again restarts nothing.
   const services = useMemo(
     () => ({
@@ -144,7 +155,18 @@ function WebHost({
           return result;
         },
       },
-      settings: { account: userId, tourDone, finishTour },
+      settings: {
+        account: userId,
+        tourDone,
+        finishTour,
+        get layout() {
+          return savedLayout.current;
+        },
+        saveLayout(next) {
+          savedLayout.current = next;
+          writeLayoutCookie(next);
+        },
+      },
       navigation: { Link: WebLink },
       limits: { meshes: meshLimits },
     };

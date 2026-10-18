@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { meshLimits } from "@/features/assets/server";
@@ -5,6 +6,10 @@ import { requireSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { getProject } from "@/features/projects/server";
 import { listToolChoices } from "@/features/tools/server";
+import {
+  parseLayoutCookie,
+  WORKSPACE_LAYOUT_COOKIE,
+} from "@/features/workspace/host/layout-cookie";
 import { WebProjectShell } from "@/features/workspace/host/web-project-shell";
 
 /**
@@ -26,10 +31,11 @@ async function Project({
   const { id } = await params;
   const { user } = await requireSession();
   const userId = user.id;
-  const [project, tools, machines] = await Promise.all([
+  const [project, tools, machines, cookieStore] = await Promise.all([
     getProject(userId, id),
     listToolChoices(userId),
     listMachineChoices(userId),
+    cookies(),
   ]);
   if (!project) notFound();
 
@@ -41,6 +47,7 @@ async function Project({
       meshLimits={meshLimits()}
       userId={userId}
       tourDone={user.workspaceTourDoneAt != null}
+      layout={parseLayoutCookie(cookieStore.get(WORKSPACE_LAYOUT_COOKIE)?.value)}
     >
       {children}
     </WebProjectShell>
