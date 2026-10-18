@@ -33,7 +33,6 @@ import {
   useDocumentStoreApi,
 } from "@/features/workspace/providers/workspace-stores";
 import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
-import { rememberSavedVersion } from "@/features/workspace/stores/saved-versions";
 
 const UNSAVED = "The project has changes that couldn't be saved. Save them first.";
 const EDITING = "Finish the change you're making first.";
@@ -45,20 +44,14 @@ const EDITING = "Finish the change you're making first.";
  * workspace host keeps no versions.
  */
 export function VersionsPane() {
-  const { project, versions } = useWorkspaceHost();
+  const { versions } = useWorkspaceHost();
   if (!versions) {
     return <p className="p-2 text-ui text-muted-foreground">Versions aren't available here.</p>;
   }
-  return <Versions projectId={project.id} host={versions} />;
+  return <Versions host={versions} />;
 }
 
-function Versions({
-  projectId,
-  host,
-}: {
-  projectId: string;
-  host: NonNullable<WorkspaceHost["versions"]>;
-}) {
+function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const autosave = useAutosaveApi();
   const documentStore = useDocumentStoreApi();
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
@@ -125,7 +118,6 @@ function Versions({
       // document, replacing any change made while it ran.
       autosave.release({ document: result.document, savedAt: result.updatedAt });
       documentStore.getState().load(result.document);
-      rememberSavedVersion(projectId, { document: result.document, updatedAt: result.updatedAt });
       return result;
     });
   }

@@ -32,6 +32,7 @@ import type {
   WorkspaceLinkProps,
 } from "@/features/workspace/lib/workspace-host";
 import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
+import { latestVersion, rememberSavedVersion } from "./saved-versions";
 
 type WebProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
@@ -102,20 +103,34 @@ function WebHost({
         create: (label: string, savedAt: Date) => createVersion(id, label, savedAt),
         rename: renameVersion,
         delete: deleteVersion,
-        restore: restoreVersion,
+        restore: async (versionId: string, savedAt: Date) => {
+          const result = await restoreVersion(versionId, savedAt);
+          if (result.error === undefined) {
+            rememberSavedVersion(id, { document: result.document, updatedAt: result.updatedAt });
+          }
+          return result;
+        },
         openAsProject: openVersionAsProject,
       },
     }),
     [id],
   );
-  const host = useMemo<WorkspaceHost>(
-    () => ({
+  const host = useMemo<WorkspaceHost>(() => {
+    // A newer copy saved from this tab wins over a payload the router cached before it.
+    const saved = latestVersion(id, { document, updatedAt });
+    return {
       project: {
         id,
         name,
-        document,
-        savedAt: updatedAt,
-        save: (document, savedAt) => saveProject(id, document, savedAt),
+        document: saved.document,
+        savedAt: saved.updatedAt,
+        async save(next, savedAt) {
+          const result = await saveProject(id, next, savedAt);
+          if (result.error === undefined) {
+            rememberSavedVersion(id, { document: next, updatedAt: result.updatedAt });
+          }
+          return result;
+        },
       },
       ...services,
       library: {
@@ -131,21 +146,20 @@ function WebHost({
       settings: { account: userId, tourDone, finishTour },
       navigation: { Link: WebLink },
       limits: { meshes: meshLimits },
-    }),
-    [
-      id,
-      name,
-      document,
-      updatedAt,
-      services,
-      tools,
-      machines,
-      router,
-      userId,
-      tourDone,
-      meshLimits,
-    ],
-  );
+    };
+  }, [
+    id,
+    name,
+    document,
+    updatedAt,
+    services,
+    tools,
+    machines,
+    router,
+    userId,
+    tourDone,
+    meshLimits,
+  ]);
   return <ProjectShell host={host}>{children}</ProjectShell>;
 }
 

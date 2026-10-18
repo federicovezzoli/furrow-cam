@@ -10,7 +10,6 @@ import {
   type DocumentState,
   type DocumentStore,
 } from "@/features/workspace/stores/document-store";
-import { latestVersion, rememberSavedVersion } from "@/features/workspace/stores/saved-versions";
 import {
   createToolpathStore,
   type ToolpathState,
@@ -42,11 +41,7 @@ const StoresContext = createContext<WorkspaceStores | null>(null);
 export function createWorkspaceStores({
   project,
 }: Pick<WorkspaceHost, "project">): WorkspaceStores {
-  const { document, updatedAt } = latestVersion(project.id, {
-    document: project.document,
-    updatedAt: project.savedAt,
-  });
-  const documentStore = createDocumentStore(document);
+  const documentStore = createDocumentStore(project.document);
   const workspaceStore = createWorkspaceStore();
   // Both live as long as the stores, so the subscription needs no cleanup.
   documentStore.subscribe((state, previous) => {
@@ -57,15 +52,9 @@ export function createWorkspaceStores({
     workspace: workspaceStore,
     toolpaths: createToolpathStore(),
     autosave: createAutosave(documentStore, {
-      savedAt: updatedAt,
+      savedAt: project.savedAt,
       delay: AUTOSAVE_DELAY,
-      async save(document, savedAt) {
-        const result = await project.save(document, savedAt);
-        if (result.error === undefined) {
-          rememberSavedVersion(project.id, { document, updatedAt: result.updatedAt });
-        }
-        return result;
-      },
+      save: project.save,
     }),
   };
 }

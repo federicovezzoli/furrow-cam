@@ -25,6 +25,19 @@ describe("createWorkspaceStores", () => {
     expect(host.stored.document().stock.width).toBe(123);
   });
 
+  it("keeps hosts with the same project id apart", async () => {
+    const first = createMemoryHost({ document: createProjectDocument() });
+    const firstStores = createWorkspaceStores(first);
+    setWidth(firstStores, 321);
+    await firstStores.autosave.settle();
+
+    const second = createMemoryHost({ document: createProjectDocument() });
+    const stores = createWorkspaceStores(second);
+    expect(stores.document.getState().document).toBe(second.project.document);
+    setWidth(stores, 123);
+    expect(await stores.autosave.settle()).toMatchObject({ state: "saved" });
+  });
+
   it("stops saving when the host refuses a save", async () => {
     const host = createMemoryHost({ id: "refuses", document: createProjectDocument() });
     const stores = createWorkspaceStores(host);
