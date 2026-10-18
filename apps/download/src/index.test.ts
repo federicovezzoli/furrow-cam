@@ -2,11 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import { createWorker, DESKTOP_RELEASES_URL, type Deps } from "./index";
 import { desktopRelease } from "./test-releases";
 
-function setup(pages: unknown[][] | Error) {
+function setup(pages: unknown[][] | Error, { cacheFails = false } = {}) {
   const store = new Map<string, Response>();
   const cache = {
-    match: async (key: string) => store.get(key)?.clone(),
-    put: async (key: string, response: Response) => void store.set(key, response),
+    match: async (key: string) => {
+      if (cacheFails) throw new Error("cache down");
+      return store.get(key)?.clone();
+    },
+    put: async (key: string, response: Response) => {
+      if (cacheFails) throw new Error("cache down");
+      store.set(key, response);
+    },
   } as unknown as Cache;
   const fetch = vi.fn<Deps["fetch"]>(async (url) => {
     if (pages instanceof Error) throw pages;
@@ -39,6 +45,20 @@ describe("download worker", () => {
     await get("/win");
     await get("/linux-deb");
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares one GitHub load between requests that arrive together", async () => {
+    const { get, fetch } = setup([[desktopRelease("0.3.0")]]);
+    const responses = await Promise.all([get("/win"), get("/mac-x64"), get("/linux-deb")]);
+    expect(responses.map((response) => response.status)).toEqual([302, 302, 302]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("still redirects to the installer when the cache fails", async () => {
+    const { get } = setup([[desktopRelease("0.3.0")]], { cacheFails: true });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await get("/win");
+    expect(response.headers.get("Location")).toBe("https://example.com/0.3.0/win-x64.exe");
   });
 
   it("reads further pages until every platform has a file", async () => {

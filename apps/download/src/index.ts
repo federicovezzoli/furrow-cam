@@ -56,14 +56,17 @@ async function fetchReleases(deps: Deps, token: string | undefined): Promise<Rel
 
 async function loadInstallers(deps: Deps, env: Env): Promise<Installers> {
   const cache = deps.cache();
-  const cached = await cache?.match(CACHE_KEY);
+  // The cache only saves GitHub requests: if it fails, ask GitHub instead of failing the download.
+  const cached = await cache?.match(CACHE_KEY).catch(() => undefined);
   if (cached) return cached.json();
 
   const installers = findInstallers(await fetchReleases(deps, env.GITHUB_TOKEN));
-  await cache?.put(
-    CACHE_KEY,
-    Response.json(installers, { headers: { "Cache-Control": `max-age=${CACHE_SECONDS}` } }),
-  );
+  await cache
+    ?.put(
+      CACHE_KEY,
+      Response.json(installers, { headers: { "Cache-Control": `max-age=${CACHE_SECONDS}` } }),
+    )
+    .catch((error: unknown) => console.error(error));
   return installers;
 }
 
@@ -76,6 +79,15 @@ const NOT_FOUND = `Unknown download. Try one of: ${Object.keys(PLATFORMS)
   .join(", ")}\n`;
 
 export function createWorker(deps: Deps) {
+  // Requests that arrive together, e.g. after the cached answer expires, share one load.
+  let pending: Promise<Installers> | undefined;
+  const sharedLoad = (env: Env) => {
+    pending ??= loadInstallers(deps, env).finally(() => {
+      pending = undefined;
+    });
+    return pending;
+  };
+
   return {
     async fetch(request: Request, env: Env): Promise<Response> {
       if (request.method !== "GET" && request.method !== "HEAD") {
@@ -91,7 +103,7 @@ export function createWorker(deps: Deps) {
 
       let installers: Installers = {};
       try {
-        installers = await loadInstallers(deps, env);
+        installers = await sharedLoad(env);
       } catch (error) {
         console.error(error);
       }
