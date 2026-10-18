@@ -11,9 +11,12 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { MeshLimits } from "@furrow/workspace/lib/workspace-host";
 import { env } from "@/env";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+
+export type { MeshLimits };
 
 /** How long a presigned upload or download URL works, in seconds. */
 export const URL_LIFETIME = 15 * 60;
@@ -22,7 +25,6 @@ export const URL_LIFETIME = 15 * 60;
 export const MAX_MESH_BYTES = env.STL_MAX_FILE_MB * 1_000_000;
 
 /** The most an STL file may hold, as the browser checks it before uploading (PRD-0005 S1). */
-export type MeshLimits = { maxBytes: number; maxTriangles: number };
 
 const bucket = env.S3_BUCKET;
 

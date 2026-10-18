@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@furrow/cam-core", "@furrow/document", "@furrow/post"],
+  transpilePackages: [
+    "@furrow/cam-core",
+    "@furrow/document",
+    "@furrow/post",
+    "@furrow/ui",
+    "@furrow/workspace",
+  ],
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {

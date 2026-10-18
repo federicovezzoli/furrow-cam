@@ -1,7 +1,10 @@
 import "server-only";
 import { Machine, machineFields } from "@furrow/document";
+import type { MachineChoice } from "@furrow/workspace/lib/workspace-host";
 import { db } from "@/lib/db";
 import { issuesToFormErrors, numberField } from "@/lib/form-data";
+
+export type { MachineChoice };
 
 /** The signed-in user's machine profiles, by name. */
 export function listMachines(userId: string) {
@@ -25,7 +28,6 @@ export function snapshotMachine(row: Machine): Machine | null {
 }
 
 /** A machine profile offered when setting up a project, as the snapshot to store. */
-export type MachineChoice = { id: string; machine: Machine };
 
 /**
  * The user's machines as snapshots for projects, by name. Rows that fail

@@ -1,9 +1,9 @@
 "use server";
 
+import type { TourId } from "@furrow/workspace/onboarding/lib/tour";
 import { z } from "zod";
 import { getUserId } from "@/features/auth/server";
 import { db } from "@/lib/db";
-import type { TourId } from "./lib/tour";
 
 /** The `User` column remembering each tour. */
 const TOUR_COLUMNS = {

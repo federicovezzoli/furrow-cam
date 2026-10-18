@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { FormError } from "@/components/form-error";
-import { Button } from "@/components/ui/button";
+import { FormError } from "@furrow/ui/components/form-error";
+import { Button } from "@furrow/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +9,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@furrow/ui/components/ui/card";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { FormField } from "./form-field";

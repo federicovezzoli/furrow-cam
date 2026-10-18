@@ -1,7 +1,7 @@
+import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { requireSession } from "@/features/auth/server";
 import { AppTour } from "@/features/onboarding/components/app-tour";
 

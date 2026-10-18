@@ -1,9 +1,9 @@
 "use client";
 
+import { Tour, useTour } from "@furrow/workspace/onboarding/components/tour";
 import { usePathname } from "next/navigation";
 import { AccountMenu } from "@/features/auth/components/account-menu";
 import { finishTour } from "@/features/onboarding/actions";
-import { Tour, useTour } from "./tour";
 
 /**
  * The header's account menu with the app tour (PRD-0001 R22): it starts on

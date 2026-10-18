@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* The UI packages are outside this app, so Tailwind doesn't find their classes on its own (ADR-0046). */
+@source "../../../../packages/ui/src";
+@source "../../../../packages/workspace/src";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

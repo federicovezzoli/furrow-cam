@@ -7,9 +7,9 @@ import {
   presetMachine,
   presetName,
 } from "@furrow/document";
+import { Input } from "@furrow/ui/components/ui/input";
 import { ExternalLinkIcon } from "lucide-react";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { MachineForm } from "./machine-form";
 
 type Start = "preset" | "scratch";

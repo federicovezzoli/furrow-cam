@@ -1,9 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { FormError } from "@/components/form-error";
-import { Button } from "@/components/ui/button";
+import { FormError } from "@furrow/ui/components/form-error";
+import { Button } from "@furrow/ui/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -12,7 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@furrow/ui/components/ui/dialog";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { PasswordField } from "./password-field";
 
