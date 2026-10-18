@@ -64,6 +64,12 @@ export type WorkspaceHost = {
     document: ProjectDocument;
     /** When `document` was saved; passed back to `save` for its conflict check. */
     savedAt: Date;
+    /**
+     * Whether `save` stores the project for good, so the top bar shows the
+     * save status: true on the web; false where the user saves explicitly
+     * (the desktop app, whose window shows unsaved changes instead).
+     */
+    autosaves: boolean;
     /** Saves `document` over the copy saved at `savedAt`. */
     save(document: ProjectDocument, savedAt: Date): Promise<SaveResult>;
   };

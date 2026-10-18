@@ -42,7 +42,7 @@ export function TopBar({
       >
         {machineName ?? "No machine set"}
       </span>
-      <SaveStatus status={saveStatus} />
+      {project.autosaves && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
         {onTakeTour && (
           <Button

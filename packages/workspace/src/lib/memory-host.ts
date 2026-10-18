@@ -40,6 +40,7 @@ export function createMemoryHost(
     project: {
       id: "memory",
       name: "Untitled",
+      autosaves: true,
       savedAt,
       save: async (next, at) => {
         if (at.getTime() !== savedAt.getTime()) return { error: CONFLICT };
