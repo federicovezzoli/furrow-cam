@@ -19,8 +19,8 @@ const UpdateToolContext = createContext<(id: string, tool: Tool) => void>(() => 
 const AddToolContext = createContext<(choice: ToolChoice) => void>(() => {});
 
 /**
- * The signed-in user's tool library, as loaded with the workspace, with the
- * bits added or edited from it applied until the server sends the library again.
+ * The user's tool library, as the workspace host has it, with the bits added
+ * or edited from it applied until the host has the library again.
  */
 export function ToolLibraryProvider({
   tools: initial,
@@ -32,7 +32,7 @@ export function ToolLibraryProvider({
   const [tools, setTools] = useState(initial);
   const [loaded, setLoaded] = useState(initial);
   if (loaded !== initial) {
-    // The server sent the library again (e.g. after a refresh): it wins.
+    // The host has the library again (e.g. after a refresh): it wins.
     setLoaded(initial);
     setTools(initial);
   }

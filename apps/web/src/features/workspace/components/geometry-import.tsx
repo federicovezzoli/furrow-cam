@@ -26,10 +26,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
-  useMeshLimits,
   useWorkspaceStore,
 } from "@/features/workspace/providers/workspace-stores";
 import {
@@ -80,7 +80,7 @@ function isImportError(error: unknown): error is SvgImportError | DxfImportError
 export function GeometryImport() {
   const store = useDocumentStoreApi();
   const empty = useDocumentStore((s) => !hasImportedFile(s.document));
-  const meshLimits = useMeshLimits();
+  const meshLimits = useWorkspaceHost().limits.meshes;
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
   const input = useRef<HTMLInputElement>(null);

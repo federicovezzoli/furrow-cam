@@ -1,52 +1,48 @@
 "use client";
 
 import { ChevronLeftIcon, CircleHelpIcon } from "lucide-react";
-import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import type { ProjectRow } from "@/features/projects/server";
+import type { WorkspaceDestination } from "@/features/workspace/lib/workspace-host";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import type { AutosaveStatus } from "@/features/workspace/stores/autosave";
 import { SaveStatus } from "./save-status";
 
 /**
  * The top bar of an open project's pages, with a way `back` (to all
- * projects unless given). `saveStatus`, `machineName` and `onTakeTour` are
- * left out when the project couldn't be opened.
- * `machineName` is `null` for a project without a machine; `onTakeTour`
- * replays the workspace tour.
+ * projects unless given). `machineName` is `null` for a project without a
+ * machine; `onTakeTour` replays the workspace tour.
  */
 export function TopBar({
-  project,
   saveStatus,
   machineName,
   onTakeTour,
-  back = { href: "/projects", label: "All projects" },
+  back = { to: "projects", label: "All projects" },
 }: {
-  project: ProjectRow;
-  back?: { href: string; label: string };
-  saveStatus?: AutosaveStatus;
-  machineName?: string | null;
+  back?: { to: WorkspaceDestination; label: string };
+  saveStatus: AutosaveStatus;
+  machineName: string | null;
   onTakeTour?: (from: HTMLElement) => void;
 }) {
+  const { project, navigation } = useWorkspaceHost();
+  const { Link } = navigation;
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
-        <Link href={back.href} aria-label={back.label} title={back.label}>
+        <Link to={back.to} aria-label={back.label} title={back.label}>
           <ChevronLeftIcon />
         </Link>
       </Button>
       <h1 className="min-w-0 truncate text-sm font-semibold" title={project.name}>
         {project.name}
       </h1>
-      {machineName !== undefined && (
-        <span
-          className="min-w-0 truncate text-ui text-muted-foreground"
-          title={machineName ?? undefined}
-        >
-          {machineName ?? "No machine set"}
-        </span>
-      )}
-      {saveStatus && <SaveStatus status={saveStatus} />}
+      <span
+        className="min-w-0 truncate text-ui text-muted-foreground"
+        title={machineName ?? undefined}
+      >
+        {machineName ?? "No machine set"}
+      </span>
+      <SaveStatus status={saveStatus} />
       <div className="ml-auto flex items-center gap-1">
         {onTakeTour && (
           <Button

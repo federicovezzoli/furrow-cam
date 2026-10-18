@@ -1,5 +1,5 @@
-import { downloadMesh } from "@/features/assets/lib/meshes";
-import { sha256Hex } from "./mesh-worker-protocol";
+import { sha256Hex } from "@/features/workspace/lib/mesh-worker-protocol";
+import { downloadMesh } from "./meshes";
 
 /**
  * STL files kept in the browser's Cache Storage by hash, so a model is

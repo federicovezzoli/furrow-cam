@@ -4,6 +4,7 @@ import type { Tool } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { saveTool } from "@/features/tools/lib/save-tool";
 import { ToolDialog } from "./tool-dialog";
 import { ToolForm } from "./tool-form";
 
@@ -49,6 +50,7 @@ export function ToolDialogProvider({ children }: { children: React.ReactNode }) 
             key={session}
             id={editing.id}
             values={editing.values}
+            save={saveTool}
             onSaved={close}
             onCancel={close}
           />

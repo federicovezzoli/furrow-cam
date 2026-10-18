@@ -4,7 +4,6 @@ import { DEFAULT_SAFE_Z, formatQuantity, touchOffOutsideStock, unitLabel } from 
 import { Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
-import Link from "next/link";
 import type * as React from "react";
 import { useRef, useState } from "react";
 import { NumberField } from "@/components/number-field";
@@ -19,6 +18,7 @@ import {
   type ZeroChoice,
   zeroChoiceInDirection,
 } from "@/features/workspace/lib/anchor-grid";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -126,6 +126,7 @@ const SNAPSHOT = "";
  * again picks up changes made to it since.
  */
 function MachineField({ machines }: { machines: MachineChoice[] }) {
+  const { Link } = useWorkspaceHost().navigation;
   const store = useDocumentStoreApi();
   const machine = useDocumentStore((s) => s.document.machine);
   // Tells apart machines with identical settings, which the snapshot alone can't.
@@ -178,7 +179,7 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
             {machines.length === 0 && (
               <>
                 {" "}
-                <Link href="/machines/new" className="underline">
+                <Link to="new-machine" className="underline">
                   Add a machine
                 </Link>
                 .

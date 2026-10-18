@@ -8,11 +8,8 @@ import { addModel, removeModel } from "../stores/model-actions";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import { importModel } from "./model-import";
 
-const PROJECT = "00000000-0000-4000-8000-000000000001";
-
-const meshes = vi.hoisted(() => ({ uploadMesh: vi.fn(), discardUpload: vi.fn() }));
-vi.mock("@/features/assets/lib/meshes", () => meshes);
-vi.mock("./mesh-cache", () => ({ cacheMesh: async () => {} }));
+/** The workspace host's meshes. */
+const meshes = { put: vi.fn(), get: vi.fn(), discard: vi.fn() };
 
 /** The mesh worker: reads every file as the fixture model. */
 class MeshWorker {
@@ -32,12 +29,12 @@ let workspace: WorkspaceStore;
 const file = new File(["solid relief"], "relief.stl");
 
 function importFile() {
-  return importModel(file, { projectId: PROJECT, limits: DEFAULT_STL_LIMITS, document, workspace });
+  return importModel(file, { meshes, limits: DEFAULT_STL_LIMITS, document, workspace });
 }
 
 /** Has `race` happen while the file uploads, which uploads it unless the project had it. */
 function uploadWhile(race: () => void, uploaded = true) {
-  meshes.uploadMesh.mockImplementation(async () => {
+  meshes.put.mockImplementation(async () => {
     race();
     return { uploaded };
   });
@@ -49,7 +46,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   document = createDocumentStore(createProjectDocument());
   workspace = createWorkspaceStore();
-  meshes.uploadMesh.mockResolvedValue({ uploaded: true });
+  meshes.put.mockResolvedValue({ uploaded: true });
 });
 
 describe("importModel", () => {
@@ -57,13 +54,13 @@ describe("importModel", () => {
     await importFile();
     expect(document.getState().document.models).toMatchObject([{ sha256: model.sha256 }]);
     expect(workspace.getState().modelImport).toBeNull();
-    expect(meshes.discardUpload).not.toHaveBeenCalled();
+    expect(meshes.discard).not.toHaveBeenCalled();
   });
 
   it("discards the upload when a drawing was imported meanwhile", async () => {
     uploadWhile(() => addImportedShapes(document, "importSvg", fullDocument().geometry));
     await importFile();
-    expect(meshes.discardUpload).toHaveBeenCalledWith(PROJECT, model.sha256);
+    expect(meshes.discard).toHaveBeenCalledWith(model.sha256);
     expect(document.getState().document.models).toEqual([]);
     expect(workspace.getState().modelImport).toEqual({ fileName: "relief.stl", error: ONE_FILE });
   });
@@ -71,13 +68,13 @@ describe("importModel", () => {
   it("discards the upload when another model was added meanwhile", async () => {
     uploadWhile(() => addModel(document, otherMesh));
     await importFile();
-    expect(meshes.discardUpload).toHaveBeenCalledWith(PROJECT, model.sha256);
+    expect(meshes.discard).toHaveBeenCalledWith(model.sha256);
   });
 
   it("keeps a mesh the project already had", async () => {
     uploadWhile(() => addModel(document, otherMesh), false);
     await importFile();
-    expect(meshes.discardUpload).not.toHaveBeenCalled();
+    expect(meshes.discard).not.toHaveBeenCalled();
   });
 
   it("keeps a mesh the document uses: the same file imported twice at once", async () => {
@@ -86,7 +83,7 @@ describe("importModel", () => {
       addModel(document, { sha256, triangles, bounds, size, fileName: "copy.stl" }),
     );
     await importFile();
-    expect(meshes.discardUpload).not.toHaveBeenCalled();
+    expect(meshes.discard).not.toHaveBeenCalled();
     expect(workspace.getState().modelImport?.error).toBe(ONE_FILE);
   });
 
@@ -98,14 +95,14 @@ describe("importModel", () => {
       addImportedShapes(document, "importSvg", fullDocument().geometry);
     });
     await importFile();
-    expect(meshes.discardUpload).not.toHaveBeenCalled();
+    expect(meshes.discard).not.toHaveBeenCalled();
     expect(document.getState().document.models).toEqual([]);
   });
 
   it("uploads nothing into a project that has a file", async () => {
     addModel(document, otherMesh);
     await importFile();
-    expect(meshes.uploadMesh).not.toHaveBeenCalled();
+    expect(meshes.put).not.toHaveBeenCalled();
     expect(workspace.getState().modelImport?.error).toBe(ONE_FILE);
   });
 });

@@ -1,11 +1,9 @@
 "use client";
 
-import type { ProjectDocument } from "@furrow/document";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
-import type { MeshLimits } from "@/features/assets/server";
-import { saveProject } from "@/features/projects/actions";
+import type { WorkspaceHost } from "@/features/workspace/lib/workspace-host";
 import { type Autosave, createAutosave } from "@/features/workspace/stores/autosave";
 import {
   createDocumentStore,
@@ -23,65 +21,64 @@ import {
   type WorkspaceState,
   type WorkspaceStore,
 } from "@/features/workspace/stores/workspace-store";
+import { useWorkspaceHost } from "./workspace-host";
 
 /** Quiet time after the last change before the document is saved. */
 export const AUTOSAVE_DELAY = 1000;
 
-type Stores = {
-  projectId: string;
-  /** The STL files the server stores, or `null` when STL import is off (ADR-0029). */
-  meshLimits: MeshLimits | null;
+export type WorkspaceStores = {
   document: DocumentStore;
   workspace: WorkspaceStore;
   toolpaths: ToolpathStore;
   autosave: Autosave;
 };
 
-const StoresContext = createContext<Stores | null>(null);
+const StoresContext = createContext<WorkspaceStores | null>(null);
 
 /**
- * Creates the stores of one open project (ADR-0010) and its autosave, which
- * the workspace starts. They live as long as this provider rather than in
- * module scope, so server renders never share them; key it by project id so
- * another project starts fresh.
+ * The stores of the project `host` opens (ADR-0010), and its autosave, which
+ * saves through the host.
  */
-export function WorkspaceStoresProvider({
+export function createWorkspaceStores({
   project,
-  meshLimits = null,
-  children,
-}: {
-  /** As rendered by the server. */
-  project: { id: string; document: ProjectDocument; updatedAt: Date };
-  meshLimits?: MeshLimits | null;
-  children: React.ReactNode;
-}) {
-  const [stores] = useState<Stores>(() => {
-    const { document, updatedAt } = latestVersion(project.id, project);
-    const documentStore = createDocumentStore(document);
-    const workspaceStore = createWorkspaceStore();
-    // Both live as long as this provider, so the subscription needs no cleanup.
-    documentStore.subscribe((state, previous) => {
-      if (state.document !== previous.document) workspaceStore.getState().prune(state.document);
-    });
-    return {
-      projectId: project.id,
-      meshLimits,
-      document: documentStore,
-      workspace: workspaceStore,
-      toolpaths: createToolpathStore(),
-      autosave: createAutosave(documentStore, {
-        savedAt: updatedAt,
-        delay: AUTOSAVE_DELAY,
-        async save(document, savedAt) {
-          const result = await saveProject(project.id, document, savedAt);
-          if (result.error === undefined) {
-            rememberSavedVersion(project.id, { document, updatedAt: result.updatedAt });
-          }
-          return result;
-        },
-      }),
-    };
+}: Pick<WorkspaceHost, "project">): WorkspaceStores {
+  const { document, updatedAt } = latestVersion(project.id, {
+    document: project.document,
+    updatedAt: project.savedAt,
   });
+  const documentStore = createDocumentStore(document);
+  const workspaceStore = createWorkspaceStore();
+  // Both live as long as the stores, so the subscription needs no cleanup.
+  documentStore.subscribe((state, previous) => {
+    if (state.document !== previous.document) workspaceStore.getState().prune(state.document);
+  });
+  return {
+    document: documentStore,
+    workspace: workspaceStore,
+    toolpaths: createToolpathStore(),
+    autosave: createAutosave(documentStore, {
+      savedAt: updatedAt,
+      delay: AUTOSAVE_DELAY,
+      async save(document, savedAt) {
+        const result = await project.save(document, savedAt);
+        if (result.error === undefined) {
+          rememberSavedVersion(project.id, { document, updatedAt: result.updatedAt });
+        }
+        return result;
+      },
+    }),
+  };
+}
+
+/**
+ * Creates the stores of the project the workspace host opens and its
+ * autosave, which the workspace starts. They live as long as this provider
+ * rather than in module scope, so server renders never share them; key it by
+ * project id so another project starts fresh.
+ */
+export function WorkspaceStoresProvider({ children }: { children: React.ReactNode }) {
+  const host = useWorkspaceHost();
+  const [stores] = useState(() => createWorkspaceStores(host));
   return <StoresContext value={stores}>{children}</StoresContext>;
 }
 
@@ -118,15 +115,6 @@ export function useWorkspaceStoreApi() {
 
 export function useToolpathStoreApi() {
   return useStores().toolpaths;
-}
-
-export function useProjectId() {
-  return useStores().projectId;
-}
-
-/** What STL files may be imported, or `null` when STL import is off. */
-export function useMeshLimits() {
-  return useStores().meshLimits;
 }
 
 /** The open project's autosave; `useAutosave` starts it. */

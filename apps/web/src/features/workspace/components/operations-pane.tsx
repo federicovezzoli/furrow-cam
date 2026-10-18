@@ -14,10 +14,10 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { selectionTargets, targetsLabel } from "@/features/workspace/lib/path-selection";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -67,6 +67,7 @@ export function OperationsPane() {
     [geometry, selectedPaths],
   );
   const tools = useToolLibrary();
+  const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
   const drillTool = drillToolChoice(tools);
   const engraveTool = engraveToolChoice(tools);
@@ -255,7 +256,7 @@ export function OperationsPane() {
       {!tool && (
         <p className="text-muted-foreground">
           Add a tool to your{" "}
-          <Link href="/tools" className="underline underline-offset-2">
+          <Link to="tools" className="underline underline-offset-2">
             tool library
           </Link>{" "}
           to create operations.

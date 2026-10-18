@@ -1,17 +1,17 @@
 "use client";
 
 import type { Operation } from "@furrow/document";
-import { useRouter } from "next/navigation";
-import type { SavedTool } from "@/features/tools/actions";
 import { ToolDialog } from "@/features/tools/components/tool-dialog";
 import { ToolForm } from "@/features/tools/components/tool-form";
 import { nextToolColor } from "@/features/tools/lib/colors";
+import type { SavedTool } from "@/features/tools/server";
+import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import { newBitType, useAddTool, useToolLibrary } from "./tool-library";
 
 /**
  * Creates a library bit in a modal, without leaving the workspace, starting
  * as the bit type that suits `operation`. Saving adds it to the library at
- * once, then refreshes it from the server, and hands it to `onSaved`.
+ * once, until the workspace host has the library again, and hands it to `onSaved`.
  */
 export function NewBitDialog({
   operation,
@@ -24,15 +24,14 @@ export function NewBitDialog({
   onClose: () => void;
   onSaved: (saved: SavedTool) => void;
 }) {
-  const router = useRouter();
+  const { library } = useWorkspaceHost();
   const tools = useToolLibrary();
   const addTool = useAddTool();
 
   function save(saved: SavedTool) {
-    // Applied at once so the select shows the bit before the refresh brings
-    // the library as the server has it (e.g. whether it became the default).
+    // Applied at once so the select shows the bit before the host has the
+    // library again (e.g. whether it became the default).
     addTool({ id: saved.id, isDefault: false, tool: saved.tool });
-    router.refresh();
     onSaved(saved);
   }
 
@@ -50,6 +49,7 @@ export function NewBitDialog({
             type: newBitType(operation.type),
             color: nextToolColor(tools.map((choice) => choice.tool)),
           }}
+          save={library.saveTool}
           onSaved={save}
           onCancel={onClose}
         />

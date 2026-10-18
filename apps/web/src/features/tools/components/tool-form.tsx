@@ -8,13 +8,8 @@ import { NumberField } from "@/components/number-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  createTool,
-  type SavedTool,
-  type ToolFormErrors,
-  updateTool,
-} from "@/features/tools/actions";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@/features/tools/labels";
+import type { SavedTool, ToolFormErrors } from "@/features/tools/server";
 import { BitTypeIcon } from "./bit-type-icon";
 import { useToolDialogBusy } from "./tool-dialog";
 
@@ -31,10 +26,17 @@ const NEW_TOOL: Partial<Tool> = {
   stepOver: 40,
 };
 
+/** Saves the form's fields as tool `id`, or a new tool when `null`. */
+export type SaveTool = (
+  id: string | null,
+  form: FormData,
+) => Promise<{ errors: ToolFormErrors } | SavedTool>;
+
 type ToolFormProps = {
   /** The tool to edit, or `null` to create one. */
   id: string | null;
   values: Partial<Tool>;
+  save: SaveTool;
   /** Called with the saved tool's id and the tool, as an operation snapshot. */
   onSaved: (saved: SavedTool) => void;
   onCancel: () => void;
@@ -42,9 +44,10 @@ type ToolFormProps = {
 
 /**
  * Edits the tool `id`, or creates one when `id` is `null`, starting from
- * `NEW_TOOL` plus `values`. Shown in a dialog, so saving never leaves the page.
+ * `NEW_TOOL` plus `values`, through `save`. Shown in a dialog, so saving never
+ * leaves the page.
  */
-export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
+export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps) {
   const tool = id === null ? { ...NEW_TOOL, ...values } : values;
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
   const [errors, setErrors] = useState<ToolFormErrors>({});
@@ -57,7 +60,7 @@ export function ToolForm({ id, values, onSaved, onCancel }: ToolFormProps) {
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
       // Staying on the page, so a failure must not fall into the error boundary.
-      const result = await (id === null ? createTool(form) : updateTool(id, form)).catch(() => ({
+      const result = await save(id, form).catch(() => ({
         errors: { form: "The bit couldn't be saved. Check your connection and try again." },
       }));
       if ("errors" in result) setErrors(result.errors);

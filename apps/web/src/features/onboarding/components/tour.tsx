@@ -4,7 +4,6 @@ import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useStat
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { finishTour } from "@/features/onboarding/actions";
 import {
   dropStep,
   isOnScreen,
@@ -29,12 +28,22 @@ const finished = new Set<string>();
  * Whether tour `id` is running, starting it on mount when `autoStart` holds
  * and the account `userId` hasn't finished it (`done`). `start` takes the
  * element to give focus back to when the tour ends. `end` stops it and, the
- * first time a step was `seen`, stores on the account that the tour was
- * seen, without waiting for the save.
+ * first time a step was `seen`, calls `finish` to store on the account that
+ * the tour was seen, without waiting for the save.
  */
 export function useTour(
   id: TourId,
-  { userId, done, autoStart }: { userId: string; done: boolean; autoStart: boolean },
+  {
+    userId,
+    done,
+    autoStart,
+    finish,
+  }: {
+    userId: string;
+    done: boolean;
+    autoStart: boolean;
+    finish: (tour: TourId) => Promise<void>;
+  },
 ) {
   const [running, setRunning] = useState(false);
   const [origin, setOrigin] = useState<HTMLElement | null>(null);
@@ -53,11 +62,11 @@ export function useTour(
       setRunning(false);
       if (!seen || done || finished.has(key)) return;
       finished.add(key);
-      finishTour(id).catch((error: unknown) => {
+      finish(id).catch((error: unknown) => {
         console.error(`Failed to remember that the ${id} tour was seen`, error);
       });
     },
-    [id, key, done],
+    [id, key, done, finish],
   );
 
   return { running, origin, start, end };

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { AccountMenu } from "@/features/auth/components/account-menu";
+import { finishTour } from "@/features/onboarding/actions";
 import { Tour, useTour } from "./tour";
 
 /**
@@ -10,7 +11,12 @@ import { Tour, useTour } from "./tour";
  * (`done`), and the menu replays it on any page.
  */
 export function AppTour({ userId, email, done }: { userId: string; email: string; done: boolean }) {
-  const tour = useTour("app", { userId, done, autoStart: usePathname() === "/projects" });
+  const tour = useTour("app", {
+    userId,
+    done,
+    autoStart: usePathname() === "/projects",
+    finish: finishTour,
+  });
   return (
     <>
       <AccountMenu email={email} onTakeTour={tour.start} />
