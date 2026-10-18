@@ -1,5 +1,15 @@
 # @furrow/workspace
 
+## 0.3.0
+
+### Minor Changes
+
+- The desktop app now remembers the workspace's panel sizes and collapsed panes between projects and launches, as the web app does. ([#207](https://github.com/federicovezzoli/furrow-cam/pull/207))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.7.1, @furrow/cam-core@0.8.1, @furrow/post@0.7.1, @furrow/ui@0.1.2
+
 ## 0.2.0
 
 ### Minor Changes

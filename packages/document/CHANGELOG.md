@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.7.1
+
+### Patch Changes
+
+- Importing a `.furrow` file no longer fails when only one of its saved versions uses a model larger than the server's STL size limit; models the project itself uses are still held to that limit. ([#203](https://github.com/federicovezzoli/furrow-cam/pull/203))
+
 ## 0.7.0
 
 ### Minor Changes
