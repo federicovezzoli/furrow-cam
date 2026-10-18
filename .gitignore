@@ -5,6 +5,8 @@ node_modules/
 .next/
 out/
 build/
+# electron-builder's resources (the app icons), not build output
+!apps/desktop/build/
 dist/
 .turbo/
 *.tsbuildinfo

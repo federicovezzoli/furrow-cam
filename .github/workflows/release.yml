@@ -47,14 +47,13 @@ jobs:
 
       # Releases made with this workflow's token don't trigger other workflows,
       # so the desktop installers are built from here (desktop.yml).
+      # `changeset publish` tags the released commit. Its tags are read from git:
+      # the action's `publishedPackages` output is empty with Changesets CLI v3.
       - name: Desktop version released
         id: desktop
-        if: steps.changesets.outputs.published == 'true'
         run: |
-          version=$(jq -r '.[] | select(.name == "@furrow/desktop") | .version' <<< "$PUBLISHED")
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-        env:
-          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+          tag=$(git tag --points-at HEAD --list '@furrow/desktop@*' | head -n 1)
+          echo "version=${tag#@furrow/desktop@}" >> "$GITHUB_OUTPUT"
 
   desktop:
     name: Desktop installers

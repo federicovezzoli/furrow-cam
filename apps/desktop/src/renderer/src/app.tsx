@@ -60,25 +60,33 @@ export function App() {
   /** The library as last stored, for changes that build on the one before. */
   const stored = useRef(library);
 
+  /** The library change being stored, which the next one waits for. */
+  const storing = useRef<Promise<unknown>>(Promise.resolve());
+
   /**
    * Applies `change` to the library and stores it, showing it once it's on
-   * disk. Rejects with an `Error` for the user if it couldn't be stored, and
-   * the library stays as it was.
+   * disk. Changes are stored one at a time, each building on the one before
+   * (resizing the workspace's panes saves the layout often). Rejects with an
+   * `Error` for the user if it couldn't be stored, and the library stays as it was.
    */
-  const updateLibrary = useCallback(async (change: (state: LibraryState) => LibraryState) => {
-    const before = stored.current;
-    if (!before) return;
-    const next = change(before);
-    try {
-      if (next.tools !== before.tools) await api.writeData("tools", next.tools);
-      if (next.machines !== before.machines) await api.writeData("machines", next.machines);
-      if (next.settings !== before.settings) await api.writeData("settings", next.settings);
-    } catch (error) {
-      console.error(error);
-      throw new Error("The change couldn't be saved to this computer's library.");
-    }
-    stored.current = next;
-    setLibrary(next);
+  const updateLibrary = useCallback((change: (state: LibraryState) => LibraryState) => {
+    const update = storing.current.then(async () => {
+      const before = stored.current;
+      if (!before) return;
+      const next = change(before);
+      try {
+        if (next.tools !== before.tools) await api.writeData("tools", next.tools);
+        if (next.machines !== before.machines) await api.writeData("machines", next.machines);
+        if (next.settings !== before.settings) await api.writeData("settings", next.settings);
+      } catch (error) {
+        console.error(error);
+        throw new Error("The change couldn't be saved to this computer's library.");
+      }
+      stored.current = next;
+      setLibrary(next);
+    });
+    storing.current = update.catch(() => {});
+    return update;
   }, []);
 
   function open(
