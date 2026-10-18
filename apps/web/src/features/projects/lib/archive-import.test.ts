@@ -26,6 +26,7 @@ const bytes = new Uint8Array(model.size);
 const archive: ProjectArchive = {
   contents: JSON.stringify(document),
   meshes: new Map([[model.sha256, bytes]]),
+  versions: [],
 };
 
 beforeEach(() => {
