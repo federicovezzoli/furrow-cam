@@ -16,6 +16,8 @@ jobs:
   release:
     name: Version PR or release
     runs-on: ubuntu-latest
+    outputs:
+      desktop-version: ${{ steps.desktop.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -35,9 +37,31 @@ jobs:
       # All packages are private, so nothing is published to npm.
       # v2 is required for Changesets CLI v3.
       - uses: changesets/action@v2
+        id: changesets
         with:
           version-script: pnpm version-packages
           publish-script: pnpm release
           commit-message: "chore: version packages"
           pr-title: "chore: version packages"
           create-github-releases: true
+
+      # Releases made with this workflow's token don't trigger other workflows,
+      # so the desktop installers are built from here (desktop.yml).
+      - name: Desktop version released
+        id: desktop
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          version=$(jq -r '.[] | select(.name == "@furrow/desktop") | .version' <<< "$PUBLISHED")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+
+  desktop:
+    name: Desktop installers
+    needs: release
+    if: needs.release.outputs.desktop-version != ''
+    uses: ./.github/workflows/desktop.yml
+    with:
+      tag: "@furrow/desktop@${{ needs.release.outputs.desktop-version }}"
+    permissions:
+      contents: write

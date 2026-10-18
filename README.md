@@ -6,6 +6,27 @@
 
 > **Status: alpha.** The MVP features are live and usable, but expect rough edges, and check your G-code in a simulator before the first cut on a new setup. See the [releases](https://github.com/federicovezzoli/furrow-cam/releases) for what changed.
 
+## Desktop app
+
+Furrow CAM also runs as a desktop app for macOS, Windows and Linux. It works offline with no account, and saves projects as `.furrow` files on your computer, versions included. A `.furrow` file also opens in the web app (Import), and a web export opens in the desktop app.
+
+**Download it from the [desktop releases](https://github.com/federicovezzoli/furrow-cam/releases?q=%40furrow%2Fdesktop&expanded=true)** (the newest `@furrow/desktop@…` release):
+
+| System | File |
+| --- | --- |
+| macOS, Apple Silicon (M1 and later) | `furrow-cam-<version>-mac-arm64.dmg` |
+| macOS, Intel | `furrow-cam-<version>-mac-x64.dmg` |
+| Windows | `furrow-cam-<version>-win-x64.exe` |
+| Linux | `furrow-cam-<version>-linux-x86_64.AppImage`, or `furrow-cam-<version>-linux-amd64.deb` for Debian and Ubuntu |
+
+The installers aren't code-signed, so your system warns you the first time you open the app:
+
+- **macOS**: "Furrow CAM can't be opened because Apple cannot check it for malicious software." Open **System Settings → Privacy & Security**, scroll down to the message about Furrow CAM and click **Open Anyway**, then confirm. Alternatively, run `xattr -dr com.apple.quarantine "/Applications/Furrow CAM.app"` in Terminal.
+- **Windows**: SmartScreen shows "Windows protected your PC". Click **More info**, then **Run anyway**.
+- **Linux**: make the AppImage executable (`chmod +x furrow-cam-*.AppImage`) and run it, or install the `.deb` with `sudo apt install ./furrow-cam-*.deb`.
+
+There's no automatic update: download new versions from the releases page. Projects saved by a newer version may not open in an older one.
+
 ## What is it?
 
 Furrow CAM is a Computer-Aided Manufacturing tool for **2.5D machining**: operations where the tool moves in X/Y at a series of fixed Z depths. That covers most hobby and small-shop CNC router work:

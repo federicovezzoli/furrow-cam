@@ -1,0 +1,82 @@
+name: Desktop installers
+
+# Unsigned installers for macOS, Windows and Linux (ADR-0044, PRD-0007 D1).
+# Called by release.yml when Changesets releases @furrow/desktop, which attaches
+# them to that release. Pull requests that touch the desktop app, and manual
+# runs on any branch, get them as workflow artifacts to try instead.
+on:
+  pull_request:
+    paths:
+      - apps/desktop/**
+      - packages/**
+      - .github/workflows/desktop.yml
+      - pnpm-lock.yaml
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: The release to attach the installers to, e.g. @furrow/desktop@0.2.0
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}-${{ inputs.tag || 'build' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            target: --mac
+          - name: Windows
+            os: windows-latest
+            target: --win
+          - name: Linux
+            os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build installers
+        run: pnpm --filter @furrow/desktop run dist ${{ matrix.target }} --publish never
+        env:
+          # Unsigned on purpose: don't pick up a certificate that happens to be on the runner.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: furrow-cam-${{ matrix.name }}
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.deb
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: inputs.tag != ''
+        shell: bash
+        run: |
+          shopt -s nullglob
+          gh release upload "$TAG" apps/desktop/dist/*.{dmg,exe,AppImage,deb} --clobber
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}

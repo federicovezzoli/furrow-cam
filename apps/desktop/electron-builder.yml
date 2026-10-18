@@ -1,6 +1,8 @@
 # Unsigned installers for the GitHub Release (ADR-0044, PRD-0007 D1).
 appId: com.furrowcam.desktop
 productName: Furrow CAM
+# One name per platform and architecture, without spaces, for the release page.
+artifactName: furrow-cam-${version}-${os}-${arch}.${ext}
 directories:
   output: dist
   buildResources: build
@@ -30,5 +32,5 @@ nsis:
 linux:
   category: Graphics
   target: [AppImage, deb]
-  maintainer: Furrow CAM <noreply@furrowcam.com>
+  maintainer: Federico Vezzoli <fv@furrow.cam>
 publish: null
