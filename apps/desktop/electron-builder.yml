@@ -30,6 +30,10 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 linux:
+  # The package name (`@furrow/desktop`) can't name a file.
+  executableName: furrow-cam
+  # Lets desktop environments link the running window to its launcher.
+  syncDesktopName: true
   category: Graphics
   target: [AppImage, deb]
   maintainer: Federico Vezzoli <fv@furrow.cam>
