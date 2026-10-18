@@ -10,14 +10,16 @@
 
 Furrow CAM also runs as a desktop app for macOS, Windows and Linux. It works offline with no account, and saves projects as `.furrow` files on your computer, versions included. A `.furrow` file also opens in the web app (Import), and a web export opens in the desktop app.
 
-**Download it from the [desktop releases](https://github.com/federicovezzoli/furrow-cam/releases?q=%40furrow%2Fdesktop&expanded=true)** (the newest `@furrow/desktop@…` release):
+**Download the newest version:**
 
-| System | File |
+| System | Download |
 | --- | --- |
-| macOS, Apple Silicon (M1 and later) | `furrow-cam-<version>-mac-arm64.dmg` |
-| macOS, Intel | `furrow-cam-<version>-mac-x64.dmg` |
-| Windows | `furrow-cam-<version>-win-x64.exe` |
-| Linux | `furrow-cam-<version>-linux-x86_64.AppImage`, or `furrow-cam-<version>-linux-amd64.deb` for Debian and Ubuntu |
+| macOS, Apple Silicon (M1 and later) | [download.furrow.cam/mac-arm64](https://download.furrow.cam/mac-arm64) (`.dmg`) |
+| macOS, Intel | [download.furrow.cam/mac-x64](https://download.furrow.cam/mac-x64) (`.dmg`) |
+| Windows | [download.furrow.cam/win](https://download.furrow.cam/win) (`.exe`) |
+| Linux | [download.furrow.cam/linux-appimage](https://download.furrow.cam/linux-appimage) (`.AppImage`), or [download.furrow.cam/linux-deb](https://download.furrow.cam/linux-deb) (`.deb`) for Debian and Ubuntu |
+
+Older versions are on the [desktop releases](https://github.com/federicovezzoli/furrow-cam/releases?q=%40furrow%2Fdesktop&expanded=true) page.
 
 The installers aren't code-signed, so your system warns you the first time you open the app:
 
@@ -25,7 +27,7 @@ The installers aren't code-signed, so your system warns you the first time you o
 - **Windows**: SmartScreen shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 - **Linux**: make the AppImage executable (`chmod +x furrow-cam-*.AppImage`) and run it, or install the `.deb` with `sudo apt install ./furrow-cam-*.deb`.
 
-There's no automatic update: download new versions from the releases page. Projects saved by a newer version may not open in an older one.
+There's no automatic update: download new versions from the links above. Projects saved by a newer version may not open in an older one.
 
 ## What is it?
 
