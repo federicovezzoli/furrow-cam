@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036).
-const LAST_UPDATED = "16 October 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049).
+const LAST_UPDATED = "18 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -69,8 +69,8 @@ export default function PrivacyPage() {
               (performance of a contract).
             </li>
             <li>
-              Request logs and page-view counts: to keep the service secure and working and to
-              understand how it is used (legitimate interest).
+              Request logs, page-view and download counts: to keep the service secure and working
+              and to understand how it is used (legitimate interest).
             </li>
           </List>
         </Section>
@@ -90,6 +90,9 @@ export default function PrivacyPage() {
               <External href="https://www.cloudflare.com/privacypolicy/">Cloudflare</External>{" "}
               stores the 3D model files you import (Cloudflare R2), in a bucket restricted to the
               European Union. They are only reachable through short-lived links the app gives you.
+              It also runs the desktop app&apos;s download links (download.furrow.cam): it receives
+              your IP address and user agent with the request, and we keep only a count per system
+              and version, for three months. The installer itself is downloaded from GitHub.
             </li>
             <li>
               <External href="https://resend.com/legal/privacy-policy">Resend</External> sends our
