@@ -1,5 +1,11 @@
 # @furrow/web
 
+## 0.10.3
+
+### Patch Changes
+
+- The privacy policy now covers the desktop app's download links. ([#217](https://github.com/federicovezzoli/furrow-cam/pull/217))
+
 ## 0.10.2
 
 ### Patch Changes
