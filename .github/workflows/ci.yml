@@ -22,6 +22,8 @@ jobs:
       BETTER_AUTH_SECRET: ci-placeholder-secret-at-least-32-chars
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_FROM: Furrow CAM <noreply@example.com>
+      # The desktop app's build and tests don't run Electron; the release workflow downloads it.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v5
 

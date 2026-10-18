@@ -4,6 +4,10 @@ packages:
 
 allowBuilds:
   "@prisma/engines": true
+  # Downloads the Electron binary for apps/desktop.
+  electron: true
+  # Squirrel installers; electron-builder builds NSIS instead.
+  electron-winstaller: false
   esbuild: false
   prisma: true
   sharp: false
