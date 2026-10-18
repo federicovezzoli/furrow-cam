@@ -2,16 +2,16 @@ name: Desktop installers
 
 # Unsigned installers for macOS, Windows and Linux (ADR-0044, PRD-0007 D1).
 # Called by release.yml when Changesets releases @furrow/desktop, which attaches
-# them to that release. Pull requests that touch the desktop app, and manual
-# runs on any branch, get them as workflow artifacts to try instead.
+# them to that release. Manual runs on any branch get them as workflow
+# artifacts to try. Pull requests build them only when they change the
+# packaging itself: CI already builds, typechecks and tests the app on every PR.
 on:
   pull_request:
     paths:
-      - apps/desktop/**
-      - packages/**
+      - apps/desktop/electron-builder.yml
+      - apps/desktop/package.json
+      - apps/desktop/build/**
       - .github/workflows/desktop.yml
-      - pnpm-lock.yaml
-      - .nvmrc
   workflow_dispatch:
   workflow_call:
     inputs:
