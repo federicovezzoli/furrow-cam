@@ -58,7 +58,8 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
 | [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed |
-| [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed |
+| [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed; superseded in part by ADR-0048 |
 | [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Proposed |
 | [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
 | [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Proposed |
+| [0048](0048-desktop-update-check.md) | The desktop app checks GitHub for newer versions and links to them | Proposed |
