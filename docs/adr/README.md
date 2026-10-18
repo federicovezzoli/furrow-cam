@@ -25,7 +25,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0008](0008-rendering-threejs-r3f.md) | Rendering with three.js via React Three Fiber | Accepted |
 | [0009](0009-ui-shadcn-tailwind.md) | UI components with shadcn/ui and Tailwind CSS | Accepted |
 | [0010](0010-state-management-zustand.md) | Client state management with Zustand and Immer | Accepted |
-| [0011](0011-monorepo-structure-and-tooling.md) | Monorepo structure and tooling | Accepted |
+| [0011](0011-monorepo-structure-and-tooling.md) | Monorepo structure and tooling | Accepted; superseded in part by ADR-0046 |
 | [0012](0012-ci-and-releases.md) | CI with GitHub Actions and releases with Changesets | Accepted |
 | [0013](0013-data-minimisation.md) | Data minimisation for user accounts | Accepted |
 | [0014](0014-stock-coordinates.md) | Geometry is stored in stock coordinates | Accepted |
@@ -58,3 +58,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
 | [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed |
+| [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed |
+| [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Proposed |
+| [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
+| [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Proposed |
