@@ -29,3 +29,6 @@ coverage/
 # misc
 *.pem
 .DS_Store
+
+# wrangler
+.wrangler/

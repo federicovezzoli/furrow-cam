@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Stable download links for the desktop installers (ADR-0049).
+  "name": "furrow-download",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "download.furrow.cam", "custom_domain": true }],
+  "workers_dev": false,
+  // One data point per download: platform and version, nothing about the visitor.
+  "analytics_engine_datasets": [{ "binding": "DOWNLOADS", "dataset": "furrow_downloads" }],
+  // Workers Logs would store request details, the IP address among them (ADR-0013).
+  "observability": { "enabled": false }
+  // Secret, set with `wrangler secret put GITHUB_TOKEN`: a fine-grained token with no
+  // permissions, so GitHub API calls count against our rate limit, not Cloudflare's shared IPs.
+}

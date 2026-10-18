@@ -12,6 +12,8 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+  # The Workers runtime that wrangler runs apps/download with; its script only checks the binary.
+  workerd: true
 
 catalog:
   typescript: ^5
