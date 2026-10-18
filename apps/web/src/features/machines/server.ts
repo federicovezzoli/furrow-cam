@@ -1,10 +1,11 @@
 import "server-only";
 import { Machine, machineFields } from "@furrow/document";
 import type { MachineChoice } from "@furrow/workspace/lib/workspace-host";
+import { parseMachineForm } from "@furrow/workspace/machines/lib/machine-form-data";
 import { db } from "@/lib/db";
-import { issuesToFormErrors, numberField } from "@/lib/form-data";
 
 export type { MachineChoice };
+export { parseMachineForm };
 
 /** The signed-in user's machine profiles, by name. */
 export function listMachines(userId: string) {
@@ -43,41 +44,3 @@ export async function listMachineChoices(userId: string): Promise<MachineChoice[
 
 /** A machine as offered in pickers that only need to tell machines apart. */
 export type MachineOption = { id: string; name: string };
-
-/** Blank text keeps the post-processor's default. */
-function gcodeField(form: FormData, key: string): string | null {
-  const value = form.get(key);
-  // Browsers submit textarea line breaks as CRLF; G-code files use LF.
-  const text = typeof value === "string" ? value.replace(/\r\n?/g, "\n").trimEnd() : "";
-  return text.trim() === "" ? null : text;
-}
-
-/**
- * Reads the machine form. A manual spindle ignores the speed fields, so
- * ticking it never leaves stale values behind.
- */
-export function parseMachineForm(form: FormData) {
-  const manualSpindle = form.get("manualSpindle") === "on";
-  const input = {
-    name: String(form.get("name") ?? ""),
-    workAreaX: numberField(form, "workAreaX"),
-    workAreaY: numberField(form, "workAreaY"),
-    workAreaZ: numberField(form, "workAreaZ"),
-    maxFeedXY: numberField(form, "maxFeedXY"),
-    maxFeedZ: numberField(form, "maxFeedZ"),
-    spindleRpmMin: manualSpindle ? null : numberField(form, "spindleRpmMin"),
-    spindleRpmMax: manualSpindle ? null : numberField(form, "spindleRpmMax"),
-    safeZ: numberField(form, "safeZ"),
-    entryClearance: numberField(form, "entryClearance"),
-    postProcessor: form.get("postProcessor"),
-    programStart: gcodeField(form, "programStart"),
-    programEnd: gcodeField(form, "programEnd"),
-    operationStart: gcodeField(form, "operationStart"),
-    toolChange: gcodeField(form, "toolChange"),
-  };
-  const result = Machine.safeParse(input);
-  if (result.success) return { machine: result.data };
-
-  // A blank spindle speed reads "Required" unless the spindle is manual.
-  return { errors: issuesToFormErrors<keyof Machine>(result.error.issues, input) };
-}

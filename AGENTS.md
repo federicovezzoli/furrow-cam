@@ -24,6 +24,7 @@ All four checks (`check`, `typecheck`, `test`, `build`) must pass before work is
 
 ```
 apps/web/             Next.js 16: routes, server actions, Prisma, Better Auth, the web WorkspaceHost
+apps/desktop/         Electron + Vite: start screen, .furrow files, the desktop WorkspaceHost (ADR-0044)
 packages/document/    project document Zod schema + version migrations, project archives
 packages/cam-core/    geometry (Clipper2 adapter) and toolpaths
 packages/post/        post-processors, toolpaths → G-code
@@ -31,10 +32,11 @@ packages/ui/          shadcn/ui (components/ui/, components.json), cn, shared co
 packages/workspace/   the CAM workspace: components, stores, hooks, providers, workers, tool form, tour
 ```
 
-- Dependency direction: `web → workspace → ui`, `workspace → post → cam-core → document`.
+- Dependency direction: `web → workspace → ui`, `desktop → workspace → ui`, `workspace → post → cam-core → document`.
 - **Core packages** (`document`, `cam-core`, `post`) must not import React, Next.js or three.js (Biome enforces it). Keep them worker-safe (no DOM).
 - **UI packages** (`ui`, `workspace`) may use React, three.js, Radix, Zustand and Immer, but never `next`, so the desktop app can use them (Biome enforces it). Inside them, import with relative paths; across packages, by subpath (`@furrow/ui/components/ui/button`, `@furrow/workspace/lib/workspace-host`). Workers in `workspace/src/workers/` import only core packages and plain modules.
-- The workspace saves, loads and navigates only through its `WorkspaceHost` (ADR-0045); the web app's host is `apps/web/src/features/workspace/host/`.
+- The workspace saves, loads and navigates only through its `WorkspaceHost` (ADR-0045); the web app's host is `apps/web/src/features/workspace/host/`, the desktop app's `apps/desktop/src/renderer/src/desktop-host.tsx`.
+- **Desktop app (ADR-0044, ADR-0047):** the main process (`src/main/`) owns windows, menus, dialogs and every file; the renderer reaches it only through the typed preload API (`src/shared/api.ts`). The renderer has no network: a CSP and a request filter block it. `pnpm --filter @furrow/desktop dev` runs it; `dist` builds installers. Launching Electron from a VS Code terminal needs `ELECTRON_RUN_AS_NODE` unset.
 - All packages are consumed as TypeScript source (`transpilePackages` in `next.config.ts`); Tailwind scans the UI packages through `@source` in `globals.css`. Run `shadcn add` in `packages/ui`.
 - `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/` and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
 

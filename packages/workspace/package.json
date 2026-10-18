@@ -8,6 +8,8 @@
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
+    "./machines/components/*": "./src/machines/components/*.tsx",
+    "./machines/lib/*": "./src/machines/lib/*.ts",
     "./onboarding/components/*": "./src/onboarding/components/*.tsx",
     "./onboarding/lib/*": "./src/onboarding/lib/*.ts",
     "./providers/*": "./src/providers/*.tsx",

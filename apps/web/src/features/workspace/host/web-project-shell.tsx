@@ -124,6 +124,7 @@ function WebHost({
         name,
         document: saved.document,
         savedAt: saved.updatedAt,
+        autosaves: true,
         async save(next, savedAt) {
           const result = await saveProject(id, next, savedAt);
           if (result.error === undefined) {

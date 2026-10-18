@@ -1,9 +1,11 @@
 import { machineFields } from "@furrow/document";
+import { MachineForm } from "@furrow/workspace/machines/components/machine-form";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { requireUserId } from "@/features/auth/server";
-import { MachineForm } from "@/features/machines/components/machine-form";
+import { saveMachine } from "@/features/machines/actions";
 import { getMachine } from "@/features/machines/server";
 
 export default function EditMachinePage({ params }: PageProps<"/machines/[id]">) {
@@ -26,5 +28,12 @@ async function EditMachine({ params }: Pick<PageProps<"/machines/[id]">, "params
   // Copies the values without validating them. If a rule got stricter after this machine was
   // saved (e.g. a new RPM cap), validating here would crash the page and the user couldn't fix
   // the value. Instead the form shows it, and saving reports the error on the field.
-  return <MachineForm id={machine.id} values={machineFields(machine)} />;
+  return (
+    <MachineForm
+      id={machine.id}
+      values={machineFields(machine)}
+      save={saveMachine}
+      cancel={<Link href="/machines">Cancel</Link>}
+    />
+  );
 }

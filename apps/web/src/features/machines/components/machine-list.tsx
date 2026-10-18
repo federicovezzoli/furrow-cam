@@ -7,12 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from "@furrow/ui/components/ui/table";
+import { POST_PROCESSOR_LABELS } from "@furrow/workspace/machines/lib/labels";
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { DeleteButton } from "@/components/delete-button";
 import { formatNumber, Unit } from "@/components/table-format";
 import { deleteMachine } from "@/features/machines/actions";
-import { POST_PROCESSOR_LABELS } from "@/features/machines/labels";
 import type { Machine as MachineRow } from "@/generated/prisma/client";
 
 export function MachineList({ machines }: { machines: MachineRow[] }) {

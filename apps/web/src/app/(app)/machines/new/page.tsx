@@ -1,10 +1,12 @@
-import { NewMachine } from "@/features/machines/components/new-machine";
+import { NewMachine } from "@furrow/workspace/machines/components/new-machine";
+import Link from "next/link";
+import { saveMachine } from "@/features/machines/actions";
 
 export default function NewMachinePage() {
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
       <h1 className="text-2xl font-semibold tracking-tight">New machine</h1>
-      <NewMachine />
+      <NewMachine save={saveMachine} cancel={<Link href="/machines">Cancel</Link>} />
     </main>
   );
 }

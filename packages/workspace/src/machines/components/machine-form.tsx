@@ -7,10 +7,10 @@ import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
-import Link from "next/link";
+import type * as React from "react";
 import { type FormEvent, useState, useTransition } from "react";
-import { type MachineFormErrors, saveMachine } from "@/features/machines/actions";
-import { POST_PROCESSOR_LABELS } from "@/features/machines/labels";
+import { POST_PROCESSOR_LABELS } from "../lib/labels";
+import type { MachineFormErrors } from "../lib/machine-form-data";
 
 const GCODE_BLOCKS = [
   { name: "programStart", label: "Program start", placeholder: "G21\nG90\nG94" },
@@ -20,17 +20,29 @@ const GCODE_BLOCKS = [
 ] as const satisfies { name: keyof Machine; label: string; placeholder: string }[];
 
 /**
+ * Saves the form's fields as machine `id`, or a new machine when `null`.
+ * Resolves with why it couldn't (nothing on success), or leaves the page.
+ */
+export type SaveMachine = (id: string | null, form: FormData) => Promise<MachineFormErrors>;
+
+/**
  * Edits the machine `id`, or creates one when `id` is `null`, starting from
- * `values` (e.g. a preset's). `asked` fields are marked for the user to fill in.
+ * `values` (e.g. a preset's), through `save`. `asked` fields are marked for
+ * the user to fill in. `cancel` is the way back, a link or a button inside
+ * the outline Cancel button.
  */
 export function MachineForm({
   id = null,
   values = {},
   asked = [],
+  save,
+  cancel,
 }: {
   id?: string | null;
   values?: Partial<Machine>;
   asked?: RequiredPresetField[];
+  save: SaveMachine;
+  cancel: React.ReactElement;
 }) {
   const machine = id === null ? { ...NEW_MACHINE_DEFAULTS, ...values } : values;
   // A new machine leaves the speeds out (unset) unless a preset says the spindle is manual (`null`).
@@ -42,8 +54,7 @@ export function MachineForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
-      // Redirects to the list on success, so only errors come back.
-      setErrors(await saveMachine(id, form));
+      setErrors(await save(id, form));
     });
   }
 
@@ -176,7 +187,7 @@ export function MachineForm({
           {pending ? "Saving…" : id ? "Save changes" : "Add machine"}
         </Button>
         <Button asChild variant="outline">
-          <Link href="/machines">Cancel</Link>
+          {cancel}
         </Button>
       </div>
     </form>
