@@ -1,5 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
+import { z } from "zod";
 import type { ProjectDocument } from "./document";
+import { ProjectDocumentTooNewError, parseProjectDocument } from "./migrations";
 
 /**
  * Extension of exported projects with 3D models: a zip of the document and
@@ -7,26 +9,68 @@ import type { ProjectDocument } from "./document";
  */
 export const PROJECT_ARCHIVE_EXTENSION = ".furrow.zip";
 
+/**
+ * Extension of desktop app projects (ADR-0047): the `.furrow.zip` layout,
+ * plus the project's saved versions.
+ */
+export const PROJECT_DESKTOP_EXTENSION = ".furrow";
+
 /** Where the document is in an archive. */
 export const ARCHIVE_DOCUMENT_PATH = "project.furrow.json";
 
-/** The most meshes an archive may hold. */
+/** The most meshes an archive may hold, counting those only its versions use. */
 export const MAX_ARCHIVE_MESHES = 4;
+
+/** The most versions an archive may hold, as a project keeps (ADR-0028). */
+export const MAX_ARCHIVE_VERSIONS = 50;
 
 /** Largest document an archive may hold, in bytes: what the server accepts for one (4 MB). */
 export const MAX_ARCHIVE_DOCUMENT_BYTES = 4_000_000;
 
 const MESH_PATH = /^meshes\/([0-9a-f]{64})\.stl$/;
+const VERSION_PATH = /^versions\/([A-Za-z0-9_-]{1,64})\.json$/;
 
 /** Where the mesh hashing to `sha256` is in an archive. */
 export function archiveMeshPath(sha256: string) {
   return `meshes/${sha256}.stl`;
 }
 
-/** Largest archive file accepted, in bytes, when each mesh may be `maxMeshBytes`. */
-export function maxArchiveBytes(maxMeshBytes: number) {
-  return MAX_ARCHIVE_DOCUMENT_BYTES + MAX_ARCHIVE_MESHES * maxMeshBytes;
+/** Where the version `id` is in an archive. */
+export function archiveVersionPath(id: string) {
+  return `versions/${id}.json`;
 }
+
+/**
+ * Largest archive file accepted, in bytes, when each mesh may be
+ * `maxMeshBytes`: the document and each version may take what one document may.
+ */
+export function maxArchiveBytes(maxMeshBytes: number) {
+  return (
+    (1 + MAX_ARCHIVE_VERSIONS) * MAX_ARCHIVE_DOCUMENT_BYTES + MAX_ARCHIVE_MESHES * maxMeshBytes
+  );
+}
+
+/**
+ * A saved version of the project (ADR-0028), as an archive carries it: a full
+ * document, upgraded to the current schema version when read. `automatic`
+ * versions were kept by the app, e.g. before a restore.
+ */
+export type ArchiveVersion = {
+  id: string;
+  label: string | null;
+  createdAt: Date;
+  automatic: boolean;
+  document: ProjectDocument;
+};
+
+/** A version file's fields; its document is checked on its own. */
+const VersionFile = z.object({
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  label: z.string().nullable(),
+  createdAt: z.iso.datetime({ offset: true }).transform((date) => new Date(date)),
+  automatic: z.boolean(),
+  document: z.unknown(),
+});
 
 /** Why an archive can't be imported, for the user. */
 export class ProjectArchiveError extends Error {
@@ -36,18 +80,39 @@ export class ProjectArchiveError extends Error {
 const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
 
 /**
- * Packs `document` with the mesh files its models reference, from `meshes`
- * by hash. Throws if one is missing, and a `ProjectArchiveError` if there are
- * more than `readProjectArchive` accepts.
+ * Packs `document` and its `versions` with the mesh files their models
+ * reference, from `meshes` by hash. Throws if one is missing or a version's
+ * id can't name a file, and a `ProjectArchiveError` if there are more
+ * meshes or versions than `readProjectArchive` accepts, or a document is
+ * larger than it accepts.
  */
 export function packProjectArchive(
   document: ProjectDocument,
   meshes: ReadonlyMap<string, Uint8Array>,
+  versions: readonly ArchiveVersion[] = [],
 ): Uint8Array {
+  if (versions.length > MAX_ARCHIVE_VERSIONS) throw tooManyVersions();
   const files: Record<string, Uint8Array> = {
-    [ARCHIVE_DOCUMENT_PATH]: strToU8(`${JSON.stringify(document, null, 2)}\n`),
+    [ARCHIVE_DOCUMENT_PATH]: documentFile(document),
   };
-  const sha256s = new Set(document.models.map(({ sha256 }) => sha256));
+  for (const version of versions) {
+    if (!VERSION_PATH.test(archiveVersionPath(version.id))) {
+      throw new Error(`The version id ${JSON.stringify(version.id)} can't name a file`);
+    }
+    const { id, label, createdAt, automatic } = version;
+    files[archiveVersionPath(id)] = documentFile({
+      id,
+      label,
+      createdAt: createdAt.toISOString(),
+      automatic,
+      document: version.document,
+    });
+  }
+  const sha256s = new Set(
+    [document, ...versions.map((version) => version.document)].flatMap((doc) =>
+      doc.models.map(({ sha256 }) => sha256),
+    ),
+  );
   if (sha256s.size > MAX_ARCHIVE_MESHES) throw tooManyMeshes();
   for (const sha256 of sha256s) {
     const mesh = meshes.get(sha256);
@@ -57,15 +122,31 @@ export function packProjectArchive(
   return zipSync(files);
 }
 
-/** What an archive holds: the document's text, still to be parsed, and the meshes by hash. */
-export type ProjectArchive = { contents: string; meshes: Map<string, Uint8Array> };
+/** `value` as an archive's JSON file; throws if it is larger than an archive accepts. */
+function documentFile(value: unknown): Uint8Array {
+  const bytes = strToU8(`${JSON.stringify(value, null, 2)}\n`);
+  if (bytes.byteLength > MAX_ARCHIVE_DOCUMENT_BYTES) throw documentTooLarge();
+  return bytes;
+}
+
+/**
+ * What an archive holds: the document's text, still to be parsed, the meshes
+ * by hash, and the versions, newest first.
+ */
+export type ProjectArchive = {
+  contents: string;
+  meshes: Map<string, Uint8Array>;
+  versions: ArchiveVersion[];
+};
 
 /**
  * Reads an archive made by `packProjectArchive`. Each mesh may hold at most
- * `maxMeshBytes`, and must hash to the name it is stored under. Other files
- * (such as those a zip tool adds) are ignored. Throws a `ProjectArchiveError`
- * if the archive can't be imported; the document is checked by whoever
- * parses `contents`, and against `meshes` with `missingArchiveMeshes`.
+ * `maxMeshBytes`, and must hash to the name it is stored under. Each version
+ * is upgraded and validated, and must have the meshes its models reference.
+ * Other files (such as those a zip tool adds) are ignored. Throws a
+ * `ProjectArchiveError` if the archive can't be imported; the document is
+ * checked by whoever parses `contents`, and against `meshes` with
+ * `missingArchiveMeshes`.
  */
 export async function readProjectArchive(
   bytes: Uint8Array,
@@ -74,14 +155,15 @@ export async function readProjectArchive(
   if (bytes.byteLength > maxArchiveBytes(maxMeshBytes)) throw tooLarge(maxMeshBytes);
   let entries: Record<string, Uint8Array>;
   let meshCount = 0;
+  let versionCount = 0;
   try {
     entries = unzipSync(bytes, {
       filter: ({ name, originalSize }) => {
         // Checked before inflating, so a small archive can't expand into a huge one.
-        if (name === ARCHIVE_DOCUMENT_PATH) {
-          if (originalSize > MAX_ARCHIVE_DOCUMENT_BYTES) {
-            throw new ProjectArchiveError("This project's document is too large to import.");
-          }
+        const isVersion = VERSION_PATH.test(name);
+        if (name === ARCHIVE_DOCUMENT_PATH || isVersion) {
+          if (originalSize > MAX_ARCHIVE_DOCUMENT_BYTES) throw documentTooLarge();
+          if (isVersion && ++versionCount > MAX_ARCHIVE_VERSIONS) throw tooManyVersions();
           return true;
         }
         if (!MESH_PATH.test(name)) return false;
@@ -108,7 +190,46 @@ export async function readProjectArchive(
     }
     meshes.set(sha256, mesh);
   }
-  return { contents: strFromU8(document), meshes };
+  const versions: ArchiveVersion[] = [];
+  for (const [name, file] of Object.entries(entries)) {
+    const id = VERSION_PATH.exec(name)?.[1];
+    if (id === undefined) continue;
+    // The size in the header may not be the real one.
+    if (file.byteLength > MAX_ARCHIVE_DOCUMENT_BYTES) throw documentTooLarge();
+    versions.push(readVersion(id, file, meshes));
+  }
+  versions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return { contents: strFromU8(document), meshes, versions };
+}
+
+/** The version `id` from its file, checked as a document is; throws a `ProjectArchiveError`. */
+function readVersion(
+  id: string,
+  file: Uint8Array,
+  meshes: ReadonlyMap<string, unknown>,
+): ArchiveVersion {
+  let fields: z.infer<typeof VersionFile>;
+  try {
+    fields = VersionFile.parse(JSON.parse(strFromU8(file)));
+  } catch {
+    throw new ProjectArchiveError("A version in this file is damaged.");
+  }
+  if (fields.id !== id) throw new ProjectArchiveError("A version in this file is damaged.");
+  const name = fields.label === null ? "A version in this file" : `The version “${fields.label}”`;
+  let document: ProjectDocument;
+  try {
+    document = parseProjectDocument(fields.document);
+  } catch (error) {
+    throw new ProjectArchiveError(
+      error instanceof ProjectDocumentTooNewError
+        ? `${name} was saved by a newer version of Furrow CAM.`
+        : `${name} isn't a valid project.`,
+    );
+  }
+  if (missingArchiveMeshes(document, meshes).length > 0) {
+    throw new ProjectArchiveError(`${name} is missing one of its 3D models.`);
+  }
+  return { ...fields, document };
 }
 
 /** The hashes of `document`'s models that `meshes` has no file for, each once. */
@@ -125,6 +246,14 @@ function tooManyMeshes() {
   return new ProjectArchiveError(
     `A project file holds at most ${MAX_ARCHIVE_MESHES} different 3D models.`,
   );
+}
+
+function tooManyVersions() {
+  return new ProjectArchiveError(`A project file holds at most ${MAX_ARCHIVE_VERSIONS} versions.`);
+}
+
+function documentTooLarge() {
+  return new ProjectArchiveError("This project's document is too large to import.");
 }
 
 function tooLarge(maxMeshBytes: number) {
