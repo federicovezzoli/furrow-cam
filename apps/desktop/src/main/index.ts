@@ -32,6 +32,14 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
+import {
+  latestDesktopRelease,
+  newerRelease,
+  parseUpdatePrefs,
+  RELEASES_URL,
+  type Release,
+  type UpdatePrefs,
+} from "./updates";
 
 /** In development the renderer comes from electron-vite's dev server. */
 const DEV_URL = process.env.ELECTRON_RENDERER_URL;
@@ -66,6 +74,10 @@ protocol.registerSchemesAsPrivileged([
 const dataDir = () => app.getPath("userData");
 const recoveries = () => recoveryStore(join(dataDir(), "recovery"));
 const recentPath = () => join(dataDir(), "recent.json");
+/** Kept apart from `settings.json`, which the renderer rewrites as a whole. */
+const updatesPath = () => join(dataDir(), "updates.json");
+/** An in-memory session for the update check alone (ADR-0048). */
+const UPDATE_PARTITION = "updates";
 
 let window: BrowserWindow | null = null;
 /** Set by the window's own state: whether the open project has unsaved changes. */
@@ -77,6 +89,7 @@ let quitting = false;
 let quitAfterClose = false;
 /** Files to open that arrived before the renderer asked for them. */
 let pendingPaths: string[] = projectPathsIn(process.argv.slice(1));
+let updatePrefs: UpdatePrefs = {};
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -100,12 +113,14 @@ if (!app.requestSingleInstanceLock()) {
   app.on("activate", () => {
     if (!window && app.isReady()) createWindow();
   });
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     if (!DEV_URL) serveRenderer();
     blockNetwork();
     registerIpc();
+    updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
     Menu.setApplicationMenu(buildMenu());
     createWindow();
+    window?.once("ready-to-show", () => void startupUpdateCheck());
   });
 }
 
@@ -133,7 +148,11 @@ function serveRenderer() {
   });
 }
 
-/** Cancels every request to the network: the app works offline (PRD-0007 D2). */
+/**
+ * Cancels every request to the network: the app works offline (PRD-0007 D2).
+ * The only exception is the update check's own session, which reaches the
+ * releases list and nothing else (ADR-0048).
+ */
 function blockNetwork() {
   if (DEV_URL) return;
   const filter = { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] };
@@ -141,6 +160,92 @@ function blockNetwork() {
   session.defaultSession.webRequest.onBeforeRequest(filter, (_details, callback) =>
     callback({ cancel: true }),
   );
+  session
+    .fromPartition(UPDATE_PARTITION)
+    .webRequest.onBeforeRequest(filter, (details, callback) =>
+      callback({ cancel: details.url !== RELEASES_URL }),
+    );
+}
+
+/** The newest desktop release on GitHub; throws when it can't be reached. */
+async function fetchLatestRelease() {
+  const response = await session.fromPartition(UPDATE_PARTITION).fetch(RELEASES_URL, {
+    headers: { Accept: "application/vnd.github+json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
+  return latestDesktopRelease(await response.json());
+}
+
+async function saveUpdatePrefs(change: UpdatePrefs) {
+  updatePrefs = { ...updatePrefs, ...change };
+  await writeJson(updatesPath(), updatePrefs);
+}
+
+/** Asks once whether to check at start-up, then checks quietly if allowed. */
+async function startupUpdateCheck() {
+  if (updatePrefs.checkAtStartup === undefined) {
+    const { response } = await dialog.showMessageBox({
+      type: "question",
+      message: "Check for new versions when Furrow CAM starts?",
+      detail:
+        "Furrow CAM will ask GitHub for its list of releases. Nothing about you or your projects is sent. You can change this in the Help menu.",
+      buttons: ["Check at Start-up", "Don't Check"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    await saveUpdatePrefs({ checkAtStartup: response === 0 });
+    Menu.setApplicationMenu(buildMenu());
+  }
+  if (!updatePrefs.checkAtStartup) return;
+  let release: Release | null;
+  try {
+    release = newerRelease(app.getVersion(), await fetchLatestRelease());
+  } catch {
+    // Offline, or GitHub is unavailable: the next start tries again.
+    return;
+  }
+  if (release && release.version !== updatePrefs.skippedVersion) await offerRelease(release);
+}
+
+/** Help → Check for Updates…: always reports what it found. */
+async function checkForUpdatesNow() {
+  let release: Release | null;
+  try {
+    release = newerRelease(app.getVersion(), await fetchLatestRelease());
+  } catch {
+    await dialog.showMessageBox({
+      type: "warning",
+      message: "Couldn't check for updates",
+      detail: "Furrow CAM couldn't reach GitHub. Check your connection and try again.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+  if (release) await offerRelease(release);
+  else {
+    await dialog.showMessageBox({
+      type: "info",
+      message: "Furrow CAM is up to date",
+      detail: `Version ${app.getVersion()} is the newest.`,
+      buttons: ["OK"],
+    });
+  }
+}
+
+/** Offers to open the release page; the user downloads and installs it themselves. */
+async function offerRelease(release: Release) {
+  const { response } = await dialog.showMessageBox({
+    type: "info",
+    message: `Furrow CAM ${release.version} is available`,
+    detail: `You have ${app.getVersion()}. Download the new version from its release page and install it over this one.`,
+    buttons: ["Download", "Skip This Version", "Later"],
+    defaultId: 0,
+    cancelId: 2,
+  });
+  if (response === 0) void shell.openExternal(release.url);
+  else if (response === 1) await saveUpdatePrefs({ skippedVersion: release.version });
 }
 
 function createWindow() {
@@ -232,6 +337,18 @@ function buildMenu() {
       ],
     },
     { role: "windowMenu" },
+    {
+      role: "help",
+      submenu: [
+        { label: "Check for Updates…", click: () => void checkForUpdatesNow() },
+        {
+          label: "Check for Updates at Start-up",
+          type: "checkbox",
+          checked: updatePrefs.checkAtStartup === true,
+          click: (item) => void saveUpdatePrefs({ checkAtStartup: item.checked }),
+        },
+      ],
+    },
   ];
   return Menu.buildFromTemplate(template);
 }
