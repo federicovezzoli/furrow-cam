@@ -1,6 +1,6 @@
 # ADR-0011: Monorepo structure and tooling
 
-- **Status:** Accepted
+- **Status:** Accepted; superseded in part by [ADR-0046](0046-ui-packages.md) (UI packages may use React)
 - **Date:** 2026-10-08
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0002, ADR-0003, ADR-0004, ADR-0007
