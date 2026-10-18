@@ -1,4 +1,4 @@
-import { sha256Hex } from "@/features/workspace/lib/mesh-worker-protocol";
+import { sha256Hex } from "@furrow/workspace/lib/mesh-worker-protocol";
 import { downloadMesh } from "./meshes";
 
 /**

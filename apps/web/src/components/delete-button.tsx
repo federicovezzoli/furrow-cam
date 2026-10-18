@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@furrow/ui/components/ui/button";
 import { Trash2Icon } from "lucide-react";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/form-data";
 
 /** Asks `confirmText` before calling `action`, a server action bound to the item to delete. */

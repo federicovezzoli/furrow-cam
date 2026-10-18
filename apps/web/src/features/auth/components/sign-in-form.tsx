@@ -1,11 +1,17 @@
 "use client";
 
+import { FormError } from "@furrow/ui/components/form-error";
+import { Button } from "@furrow/ui/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@furrow/ui/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
-import { FormError } from "@/components/form-error";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { FormField } from "./form-field";
 import { PasswordField } from "./password-field";

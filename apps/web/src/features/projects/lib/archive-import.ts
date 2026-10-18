@@ -6,10 +6,10 @@ import {
   type ProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
+import { parseMesh } from "@furrow/workspace/lib/model-import";
 import { cacheMesh } from "@/features/assets/lib/mesh-cache";
 import { uploadMesh } from "@/features/assets/lib/meshes";
 import { deleteProject, saveProject, startArchiveImport } from "@/features/projects/actions";
-import { parseMesh } from "@/features/workspace/lib/model-import";
 
 const IMPORT_FAILED = "This file couldn't be imported. Check your connection and try again.";
 

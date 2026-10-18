@@ -1,8 +1,8 @@
 "use client";
 
+import { Button } from "@furrow/ui/components/ui/button";
 import { StarIcon } from "lucide-react";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
 import { setDefaultTool } from "@/features/tools/actions";
 
 /** A filled star marks the default tool; an outlined one makes this tool the default. */

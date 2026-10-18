@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { DeleteButton } from "@/components/delete-button";
-import { LocalDate } from "@/components/local-date";
+import { LocalDate } from "@furrow/ui/components/local-date";
 import {
   Table,
   TableBody,
@@ -8,7 +6,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@furrow/ui/components/ui/table";
+import Link from "next/link";
+import { DeleteButton } from "@/components/delete-button";
 import { deleteProject } from "@/features/projects/actions";
 import type { ProjectListRow } from "@/features/projects/server";
 import { ExportButton } from "./export-button";

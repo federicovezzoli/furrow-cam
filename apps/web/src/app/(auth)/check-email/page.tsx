@@ -1,5 +1,11 @@
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@furrow/ui/components/ui/card";
 import Link from "next/link";
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function CheckEmailPage() {
   return (

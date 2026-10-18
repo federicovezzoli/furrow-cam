@@ -1,12 +1,12 @@
 "use client";
 
+import { FormError } from "@furrow/ui/components/form-error";
+import { FieldError } from "@furrow/ui/components/form-fields";
+import { Button } from "@furrow/ui/components/ui/button";
+import { Input } from "@furrow/ui/components/ui/input";
+import { Label } from "@furrow/ui/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { type FormEvent, useState, useTransition } from "react";
-import { FormError } from "@/components/form-error";
-import { FieldError } from "@/components/form-fields";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { MachineOption } from "@/features/machines/server";
 import { createProject, type ProjectFormErrors } from "@/features/projects/actions";
 

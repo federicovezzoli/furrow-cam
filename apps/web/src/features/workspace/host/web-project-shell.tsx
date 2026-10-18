@@ -1,13 +1,20 @@
 "use client";
 
+import { FormError } from "@furrow/ui/components/form-error";
+import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
+import { Button } from "@furrow/ui/components/ui/button";
+import { ProjectShell } from "@furrow/workspace/components/project-shell";
+import type {
+  WorkspaceDestination,
+  WorkspaceHost,
+  WorkspaceLinkProps,
+} from "@furrow/workspace/lib/workspace-host";
+import { useWorkspaceHost } from "@furrow/workspace/providers/workspace-host";
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { useMemo } from "react";
-import { FormError } from "@/components/form-error";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { cacheMesh, loadMesh } from "@/features/assets/lib/mesh-cache";
 import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
 import type { MeshLimits } from "@/features/assets/server";
@@ -25,13 +32,6 @@ import {
 import type { getProject } from "@/features/projects/server";
 import { saveTool } from "@/features/tools/lib/save-tool";
 import type { ToolChoice } from "@/features/tools/server";
-import { ProjectShell } from "@/features/workspace/components/project-shell";
-import type {
-  WorkspaceDestination,
-  WorkspaceHost,
-  WorkspaceLinkProps,
-} from "@/features/workspace/lib/workspace-host";
-import { useWorkspaceHost } from "@/features/workspace/providers/workspace-host";
 import { latestVersion, rememberSavedVersion } from "./saved-versions";
 
 type WebProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;

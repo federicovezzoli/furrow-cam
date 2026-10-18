@@ -102,7 +102,7 @@
       }
     },
     {
-      "includes": ["packages/**"],
+      "includes": ["packages/document/**", "packages/cam-core/**", "packages/post/**"],
       "linter": {
         "rules": {
           "style": {
@@ -121,6 +121,73 @@
                   {
                     "group": ["react/*", "react-dom/*", "next/*", "three/*", "@react-three/*"],
                     "message": "Packages must be framework- and renderer-agnostic (ADR-0011)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/ui/**", "packages/workspace/**"],
+      "linter": {
+        "domains": {
+          "react": "recommended"
+        },
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "next": "UI packages must not depend on Next.js, so the desktop app can use them (ADR-0046)."
+                },
+                "patterns": [
+                  {
+                    "group": ["next/*", "@next/*"],
+                    "message": "UI packages must not depend on Next.js, so the desktop app can use them (ADR-0046)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/workspace/src/workers/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Workers import only core packages and plain modules (ADR-0004, ADR-0046).",
+                  "react-dom": "Workers import only core packages and plain modules (ADR-0004, ADR-0046).",
+                  "next": "Workers import only core packages and plain modules (ADR-0004, ADR-0046).",
+                  "three": "Workers import only core packages and plain modules (ADR-0004, ADR-0046).",
+                  "zustand": "Workers import only core packages and plain modules (ADR-0004, ADR-0046).",
+                  "immer": "Workers import only core packages and plain modules (ADR-0004, ADR-0046)."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "react/*",
+                      "react-dom/*",
+                      "next/*",
+                      "three/*",
+                      "@react-three/*",
+                      "@furrow/ui",
+                      "@furrow/ui/**",
+                      "../components/**",
+                      "../providers/**",
+                      "../hooks/**",
+                      "../tools/**",
+                      "../onboarding/**"
+                    ],
+                    "message": "Workers import only core packages and plain modules (ADR-0004, ADR-0046)."
                   }
                 ]
               }

@@ -18,7 +18,7 @@ const parseMesh = vi.hoisted(() => vi.fn());
 vi.mock("@/features/projects/actions", () => actions);
 vi.mock("@/features/assets/lib/meshes", () => ({ uploadMesh }));
 vi.mock("@/features/assets/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
-vi.mock("@/features/workspace/lib/model-import", () => ({ parseMesh }));
+vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
 
 const { importArchive } = await import("./archive-import");
 

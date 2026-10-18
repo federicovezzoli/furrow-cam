@@ -1,14 +1,14 @@
 "use client";
 
 import { type Machine, NEW_MACHINE_DEFAULTS, type RequiredPresetField } from "@furrow/document";
+import { FormError } from "@furrow/ui/components/form-error";
+import { Field, FieldError, fieldProps, SelectField } from "@furrow/ui/components/form-fields";
+import { NumberField } from "@furrow/ui/components/number-field";
+import { Button } from "@furrow/ui/components/ui/button";
+import { Label } from "@furrow/ui/components/ui/label";
+import { Textarea } from "@furrow/ui/components/ui/textarea";
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
-import { FormError } from "@/components/form-error";
-import { Field, FieldError, fieldProps, SelectField } from "@/components/form-fields";
-import { NumberField } from "@/components/number-field";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { type MachineFormErrors, saveMachine } from "@/features/machines/actions";
 import { POST_PROCESSOR_LABELS } from "@/features/machines/labels";
 

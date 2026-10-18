@@ -1,10 +1,13 @@
 import "server-only";
 import { Tool } from "@furrow/document";
+import type { SavedTool, ToolChoice, ToolFormErrors } from "@furrow/workspace/lib/workspace-host";
+import { TOOL_COLORS } from "@furrow/workspace/tools/lib/colors";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { type FormErrors, issuesToFormErrors, numberField } from "@/lib/form-data";
-import { TOOL_COLORS } from "./lib/colors";
+import { issuesToFormErrors, numberField } from "@/lib/form-data";
+
+export type { SavedTool, ToolChoice, ToolFormErrors };
 
 /** The signed-in user's tool library, by name. */
 export function listTools(userId: string) {
@@ -32,7 +35,6 @@ export function safeSnapshotTool(row: Tool): Tool | null {
 }
 
 /** A library tool offered when picking an operation's tool, as the snapshot to store. */
-export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
 
 /**
  * The user's tools as snapshots for operations, by name. Rows that fail
@@ -111,11 +113,6 @@ export function parseToolForm(form: FormData) {
 
   return { errors: issuesToFormErrors<keyof Tool>(result.error.issues, input) };
 }
-
-export type ToolFormErrors = FormErrors<keyof Tool>;
-
-/** A tool the form saved: its library id, and the tool as an operation snapshot. */
-export type SavedTool = { id: string; tool: Tool };
 
 export const TOOL_NOT_FOUND = "This bit no longer exists.";
 

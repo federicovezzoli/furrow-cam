@@ -8,11 +8,14 @@ import {
   ProjectDocumentVersionError,
   parseProjectDocument,
 } from "@furrow/document";
+import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
+import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
 import { z } from "zod";
 import { getMachine, snapshotMachine } from "@/features/machines/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { VERSION_LABEL_MAX } from "./lib/versions";
+
+export type { VersionRow };
 
 /**
  * Locks the project's row until the transaction ends, so writes that check
@@ -136,8 +139,6 @@ export async function listVersions(userId: string, projectId: string): Promise<V
       : version,
   );
 }
-
-export type VersionRow = { id: string; label: string | null; createdAt: Date; error?: string };
 
 function savedByNewerRelease(error: ProjectDocumentTooNewError) {
   return `it was saved by a newer version of Furrow CAM (document version ${error.version}; this version reads up to ${error.supportedVersion}).`;

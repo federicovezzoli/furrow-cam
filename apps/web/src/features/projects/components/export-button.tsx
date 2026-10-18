@@ -1,11 +1,11 @@
 "use client";
 
+import { Button } from "@furrow/ui/components/ui/button";
+import { EXPORT_FAILED, exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
 import { loadMesh } from "@/features/assets/lib/mesh-cache";
 import { loadProject } from "@/features/projects/actions";
-import { EXPORT_FAILED, exportProjectFile } from "@/features/projects/lib/export";
 
 /**
  * Downloads the project `id` as a `.furrow.json` file, upgraded to the current schema version,

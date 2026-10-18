@@ -7,11 +7,8 @@ import {
   PROJECT_FILE_EXTENSION,
   type ProjectArchive,
 } from "@furrow/document";
-import { UploadIcon } from "lucide-react";
-import { unstable_rethrow, useRouter } from "next/navigation";
-import { type ChangeEvent, type FormEvent, useRef, useState, useTransition } from "react";
-import { FormError } from "@/components/form-error";
-import { Button } from "@/components/ui/button";
+import { FormError } from "@furrow/ui/components/form-error";
+import { Button } from "@furrow/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +16,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+} from "@furrow/ui/components/ui/dialog";
+import { Label } from "@furrow/ui/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { UploadIcon } from "lucide-react";
+import { unstable_rethrow, useRouter } from "next/navigation";
+import { type ChangeEvent, type FormEvent, useRef, useState, useTransition } from "react";
 import type { MeshLimits } from "@/features/assets/server";
 import type { MachineOption } from "@/features/machines/server";
 import { importProject } from "@/features/projects/actions";
