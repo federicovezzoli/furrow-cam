@@ -28,6 +28,7 @@ describe("projectNameFromFileName", () => {
     expect(projectNameFromFileName("sign.json")).toBe("sign");
     expect(projectNameFromFileName("Relief.furrow.zip")).toBe("Relief");
     expect(projectNameFromFileName("relief.zip")).toBe("relief");
+    expect(projectNameFromFileName("Coasters.furrow")).toBe("Coasters");
   });
 
   it("keeps other extensions", () => {
