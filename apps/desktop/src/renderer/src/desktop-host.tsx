@@ -78,6 +78,8 @@ export function ProjectView({
   latest.current = library;
   const { tools, machines } = library;
   const { workspaceTourDone } = library.settings;
+  /** The panel sizes the user last chose, before they reach the disk. */
+  const layout = useRef(library.settings.workspaceLayout);
 
   const host = useMemo<WorkspaceHost>(
     () => ({
@@ -116,9 +118,10 @@ export function ProjectView({
         },
         // Read when the workspace opens, so a saved layout doesn't build a new host.
         get layout() {
-          return latest.current.settings.workspaceLayout;
+          return layout.current;
         },
         saveLayout: (workspaceLayout) => {
+          layout.current = workspaceLayout;
           updateLibrary((state) => ({
             ...state,
             settings: { ...state.settings, workspaceLayout },
