@@ -27,25 +27,25 @@
     "@furrow/post": "workspace:*",
     "@furrow/ui": "workspace:*",
     "@react-three/drei": "10.7.9",
-    "@react-three/fiber": "9.8.1",
+    "@react-three/fiber": "9.8.2",
     "immer": "^11.1.21",
-    "lucide-react": "^1.52.0",
+    "lucide-react": "^1.57.0",
     "next-themes": "^0.4.6",
-    "react-resizable-panels": "^4.14.3",
-    "three": "0.182.0",
+    "react-resizable-panels": "^4.14.5",
+    "three": "0.186.1",
     "zod": "catalog:",
     "zustand": "^5.0.15"
   },
   "peerDependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/three": "0.182.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

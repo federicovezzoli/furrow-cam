@@ -19,20 +19,20 @@
     "@furrow/document": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
-    "lucide-react": "^1.52.0",
+    "lucide-react": "^1.57.0",
     "next-themes": "^0.4.6",
-    "radix-ui": "^1.7.0",
-    "react-resizable-panels": "^4.14.3"
+    "radix-ui": "^1.8.1",
+    "react-resizable-panels": "^4.14.5"
   },
   "peerDependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
