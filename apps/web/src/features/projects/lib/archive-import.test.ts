@@ -1,4 +1,9 @@
-import { createProjectDocument, type ProjectArchive } from "@furrow/document";
+import {
+  createProjectDocument,
+  type ProjectArchive,
+  packProjectArchive,
+  sha256Hex,
+} from "@furrow/document";
 import { lowRider, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,7 +25,7 @@ vi.mock("@/features/assets/lib/meshes", () => ({ uploadMesh }));
 vi.mock("@/features/assets/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
 vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
 
-const { importArchive } = await import("./archive-import");
+const { importArchive, readArchive } = await import("./archive-import");
 
 const bytes = new Uint8Array(model.size);
 const archive: ProjectArchive = {
@@ -94,6 +99,16 @@ describe("importArchive", () => {
     );
   });
 
+  it("refuses a mesh the document uses that is larger than this server allows", async () => {
+    const small = { ...LIMITS, maxBytes: 1_000_000 };
+    const large = { ...archive, meshes: new Map([[model.sha256, new Uint8Array(1_000_001)]]) };
+    expect(await importArchive(large, "a.zip", null, small)).toEqual({
+      error: "A model in this file is larger than 1 MB, the most allowed.",
+    });
+    expect(parseMesh).not.toHaveBeenCalled();
+    expect(actions.startArchiveImport).not.toHaveBeenCalled();
+  });
+
   it("passes on the server's refusal, or its request for a machine", async () => {
     actions.startArchiveImport.mockResolvedValue({ chooseMachine: true });
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({ chooseMachine: true });
@@ -123,5 +138,41 @@ describe("importArchive", () => {
     actions.saveProject.mockRejectedValue(new TypeError("Failed to fetch"));
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toHaveProperty("error");
     expect(actions.deleteProject).toHaveBeenCalledWith(PROJECT);
+  });
+});
+
+describe("readArchive", () => {
+  it("reads a file whose version uses a mesh larger than this server allows", async () => {
+    const small = new Uint8Array(10);
+    const large = new Uint8Array(1_000_001);
+    const [smallSha, largeSha] = await Promise.all([sha256Hex(small), sha256Hex(large)]);
+    const current = { ...document, models: [{ ...model, sha256: smallSha, size: 10 }] };
+    const old = { ...document, models: [{ ...model, sha256: largeSha, size: large.byteLength }] };
+    const bytes = packProjectArchive(
+      current,
+      new Map([
+        [smallSha, small],
+        [largeSha, large],
+      ]),
+      [{ id: "v1", label: null, createdAt: UPDATED_AT, automatic: false, document: old }],
+    );
+    const read = await readArchive(new File([bytes as Uint8Array<ArrayBuffer>], "Relief.furrow"), {
+      ...LIMITS,
+      maxBytes: 1_000_000,
+    });
+    expect([...read.meshes.keys()].sort()).toEqual([smallSha, largeSha].sort());
+    parseMesh.mockResolvedValue({ sha256: smallSha, triangles: 12, bounds: model.bounds });
+    actions.startArchiveImport.mockResolvedValue({
+      projectId: PROJECT,
+      document: current,
+      updatedAt: UPDATED_AT,
+    });
+    expect(
+      await importArchive(read, "Relief.furrow", null, { ...LIMITS, maxBytes: 1_000_000 }),
+    ).toEqual({
+      projectId: PROJECT,
+    });
+    expect(uploadMesh).toHaveBeenCalledTimes(1);
+    expect(uploadMesh).toHaveBeenCalledWith(PROJECT, smallSha, expect.any(Blob));
   });
 });

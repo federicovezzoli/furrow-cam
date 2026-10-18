@@ -1,6 +1,7 @@
-import type { StlLimits } from "@furrow/cam-core";
+import { DEFAULT_STL_LIMITS, type StlLimits } from "@furrow/cam-core";
 import {
   ARCHIVE_DOCUMENT_PATH,
+  archiveMeshTooLarge,
   type ProjectArchive,
   ProjectArchiveError,
   type ProjectDocument,
@@ -13,10 +14,16 @@ import { deleteProject, saveProject, startArchiveImport } from "@/features/proje
 
 const IMPORT_FAILED = "This file couldn't be imported. Check your connection and try again.";
 
-/** Reads a `.furrow.zip` export; throws an `Error` for the user if it can't be imported. */
+/**
+ * Reads a `.furrow.zip` export; throws an `Error` for the user if it can't be
+ * imported. Its meshes are only held to the default STL size limit, or
+ * `limits` if higher: those only its versions use aren't imported, and
+ * `importArchive` checks the others against `limits`.
+ */
 export async function readArchive(file: File, limits: StlLimits): Promise<ProjectArchive> {
+  const ceiling = Math.max(limits.maxBytes, DEFAULT_STL_LIMITS.maxBytes);
   try {
-    return await readProjectArchive(new Uint8Array(await file.arrayBuffer()), limits.maxBytes);
+    return await readProjectArchive(new Uint8Array(await file.arrayBuffer()), ceiling);
   } catch (error) {
     if (error instanceof ProjectArchiveError) throw error;
     console.error(error);
@@ -68,6 +75,9 @@ export async function importArchive(
 ): Promise<ArchiveImport> {
   const meshes = documentMeshes(archive);
   for (const [sha256, bytes] of meshes) {
+    if (bytes.byteLength > limits.maxBytes) {
+      return { error: archiveMeshTooLarge(limits.maxBytes).message };
+    }
     try {
       // A copy: the worker takes the buffer it is sent.
       const mesh = await parseMesh(bytes.slice().buffer, limits);

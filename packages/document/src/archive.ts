@@ -141,7 +141,10 @@ export type ProjectArchive = {
 
 /**
  * Reads an archive made by `packProjectArchive`. Each mesh may hold at most
- * `maxMeshBytes`, and must hash to the name it is stored under. Each version
+ * `maxMeshBytes`, and must hash to the name it is stored under: a ceiling
+ * for every mesh, including those only versions use, checked before
+ * inflating. A lower limit for the meshes the document uses is checked by
+ * the caller, with `archiveMeshTooLarge` for the error. Each version
  * is upgraded and validated, and must have the meshes its models reference.
  * Other files (such as those a zip tool adds) are ignored. Throws a
  * `ProjectArchiveError` if the archive can't be imported; the document is
@@ -168,7 +171,7 @@ export async function readProjectArchive(
         }
         if (!MESH_PATH.test(name)) return false;
         if (++meshCount > MAX_ARCHIVE_MESHES) throw tooManyMeshes();
-        if (originalSize > maxMeshBytes) throw meshTooLarge(maxMeshBytes);
+        if (originalSize > maxMeshBytes) throw archiveMeshTooLarge(maxMeshBytes);
         return true;
       },
     });
@@ -184,7 +187,7 @@ export async function readProjectArchive(
     const sha256 = MESH_PATH.exec(name)?.[1];
     if (sha256 === undefined) continue;
     // The size in the header may not be the real one.
-    if (mesh.byteLength > maxMeshBytes) throw meshTooLarge(maxMeshBytes);
+    if (mesh.byteLength > maxMeshBytes) throw archiveMeshTooLarge(maxMeshBytes);
     if ((await sha256Hex(mesh)) !== sha256) {
       throw new ProjectArchiveError("A model in this file is damaged: it doesn't match its hash.");
     }
@@ -261,7 +264,8 @@ function tooLarge(maxMeshBytes: number) {
   return new ProjectArchiveError(`This file is too large to import (the limit is ${mb} MB).`);
 }
 
-function meshTooLarge(maxMeshBytes: number) {
+/** The error for an archive with a mesh larger than `maxMeshBytes`. */
+export function archiveMeshTooLarge(maxMeshBytes: number) {
   return new ProjectArchiveError(
     `A model in this file is larger than ${maxMeshBytes / 1_000_000} MB, the most allowed.`,
   );
