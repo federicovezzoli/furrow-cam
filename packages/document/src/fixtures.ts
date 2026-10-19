@@ -147,6 +147,7 @@ export const model: Model = {
   triangles: 12,
   bounds: { min: [-50, -40, 0], max: [50, 40, 12] },
   placement: { rotation: [0, 0, 0], scale: 1, depth: 12, position: [0, 0] },
+  border: 10,
 };
 
 export const RELIEF_FINISH_ID = "7c1e4b2a-9d3f-4a6e-8b5c-2f0e1d9a8b7c";
@@ -192,7 +193,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 14,
+    schemaVersion: 15,
     units: "in",
     stock: {
       width: 300,

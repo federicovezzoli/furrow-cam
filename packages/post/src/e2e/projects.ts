@@ -5,6 +5,7 @@ import {
   alignShapes,
   importSvg,
   initialPlacement,
+  MODEL_BORDER,
   parseStl,
   type ToolpathContext,
 } from "@furrow/cam-core";
@@ -434,6 +435,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
     bounds: mesh.bounds,
     // Fitted inside the stock's 7.5 mm border (ADR-0038): 20 × 15 × 4 mm.
     placement: initialPlacement(mesh.bounds, base.stock, "bottom_left"),
+    border: MODEL_BORDER,
   };
   const finish = (name: string, tool: Tool, rest: boolean): Operation => ({
     id: id(),

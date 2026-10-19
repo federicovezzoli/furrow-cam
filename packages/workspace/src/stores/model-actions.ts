@@ -1,6 +1,7 @@
 import {
   anchorPoint,
   initialPlacement,
+  MODEL_BORDER,
   modelRect,
   proportionalDepth,
   replacePlacement,
@@ -81,7 +82,7 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
  */
 export function addModel(
   store: DocumentStore,
-  mesh: Omit<Model, "id" | "placement">,
+  mesh: Omit<Model, "id" | "placement" | "border">,
 ): string | null {
   const { document } = store.getState();
   if (hasImportedFile(document)) return null;
@@ -89,7 +90,7 @@ export function addModel(
   const id = crypto.randomUUID();
   const placement = initialPlacement(mesh.bounds, stock, modelAnchor(stock));
   store.getState().change("addModel", (draft) => {
-    draft.models.push({ ...mesh, id, placement });
+    draft.models.push({ ...mesh, id, placement, border: MODEL_BORDER });
   });
   return id;
 }
@@ -129,20 +130,31 @@ export function setModelScale(store: DocumentStore, id: string, scale: number) {
 }
 
 /**
- * Scales a model to fit inside the stock less a border, aligned to it at the
- * anchor (`stockFit`).
+ * Scales a model to fit inside the stock less its border, aligned to it at
+ * the anchor (`stockFit`).
  */
 export function fitModelToStock(store: DocumentStore, id: string) {
   const { stock } = store.getState().document;
   changeModel(store, "fitModel", id, (model, current) => {
     const { rotation } = current.placement;
-    const { scale, position } = stockFit(current.bounds, rotation, stock, modelAnchor(stock));
+    const anchor = modelAnchor(stock);
+    const { scale, position } = stockFit(current.bounds, rotation, stock, anchor, current.border);
     assignPlacement(model, {
       ...current.placement,
       scale,
       depth: proportionalDepth(current.bounds, rotation, scale) ?? current.placement.depth,
       position,
     });
+  });
+}
+
+/**
+ * Sets the border *Fit to stock* leaves around a model (ADR-0038), without
+ * fitting it: the next fit applies it.
+ */
+export function setModelBorder(store: DocumentStore, id: string, border: number) {
+  changeModel(store, "setModel.border", id, (model) => {
+    if (model.border !== border) model.border = border;
   });
 }
 

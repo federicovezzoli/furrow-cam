@@ -118,6 +118,16 @@ export const migrations: Readonly<Record<number, Migration>> = {
     if (isObject(pad) && !("toolChange" in pad)) pad.toolChange = null;
     return doc;
   },
+  // #183: the border Fit to stock leaves is the model's. Existing models
+  // keep the 10 mm it always was.
+  14: (doc) => {
+    if (Array.isArray(doc.models)) {
+      for (const model of doc.models) {
+        if (isObject(model) && !("border" in model)) model.border = 10;
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

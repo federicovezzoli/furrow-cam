@@ -25,6 +25,7 @@ import {
   modelOffset,
   modelOperations,
   removeModel,
+  setModelBorder,
   setModelDepth,
   setModelOffset,
   setModelScale,
@@ -38,8 +39,8 @@ const AXES = ["X", "Y", "Z"] as const;
 
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
- * quarter turns, size (with the size in the file), depth and position from
- * the zero, each an undoable edit. Says that it is cut from the top only (S3).
+ * quarter turns, size (with the size in the file), depth, the border *Fit to
+ * stock* leaves and position from the zero, each an undoable edit. Says that it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -143,6 +144,17 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           </p>
         )}
         <p className="text-muted-foreground">{originalSizeLabel(model, units)}</p>
+        <NumberField
+          id="model-border"
+          label="Border"
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={0}
+          value={model.border}
+          onValueChange={(value) => setModelBorder(store, model.id, value)}
+          {...gestures}
+        />
         <div className="flex justify-end gap-1">
           <Button
             variant="outline"
@@ -154,7 +166,12 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             <Undo2Icon />
             Original size
           </Button>
-          <Button variant="outline" size="compact" onClick={() => fitModelToStock(store, model.id)}>
+          <Button
+            variant="outline"
+            size="compact"
+            onClick={() => fitModelToStock(store, model.id)}
+            title="Scale the model to fit inside the stock, leaving the border on every side"
+          >
             <Maximize2Icon />
             Fit to stock
           </Button>
@@ -166,7 +183,8 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           Position
         </h3>
         <p className="text-muted-foreground">
-          The model's {ANCHOR_LABELS[modelAnchor(stock)].toLowerCase()} point, from the zero.
+          Where the model's {ANCHOR_LABELS[modelAnchor(stock)].toLowerCase()} point is, measured
+          from the zero. Moving it doesn't change the border that <em>Fit to stock</em> leaves.
         </p>
         {(["x", "y"] as const).map((axis, i) => (
           <NumberField

@@ -213,30 +213,34 @@ export function positionAt(
   return [roundCoordinate(x - ax), roundCoordinate(y - ay)];
 }
 
-/** The border left around a model fitted to the stock (ADR-0038), in millimetres. */
+/** The border a new model leaves around it when fitted to the stock (ADR-0038), in millimetres. */
 export const MODEL_BORDER = 10;
 
 /**
- * The border left on every side of a model fitted to `stock`: `MODEL_BORDER`,
- * but never more than a quarter of the stock's smaller side.
+ * The border left on every side of a model fitted to `stock`: `border`, but
+ * never more than a quarter of the stock's smaller side.
  */
-export function modelBorder({ width, height }: Pick<Stock, "width" | "height">): number {
-  return Math.min(MODEL_BORDER, Math.min(width, height) / 4);
+export function modelBorder(
+  { width, height }: Pick<Stock, "width" | "height">,
+  border = MODEL_BORDER,
+): number {
+  return Math.min(border, Math.min(width, height) / 4);
 }
 
 /**
  * The scale and position that fit a mesh rotated by `rotation` inside the
- * stock less its `modelBorder`, aligned to that inset rectangle at `anchor`
- * (ADR-0031, ADR-0038).
+ * stock less its `modelBorder` for `border`, aligned to that inset rectangle
+ * at `anchor` (ADR-0031, ADR-0038).
  */
 export function stockFit(
   bounds: Box3,
   rotation: Rotation,
   stock: Pick<Stock, "width" | "height">,
   anchor: StockAnchor,
+  border = MODEL_BORDER,
 ): Pick<ModelPlacement, "scale" | "position"> {
-  const border = modelBorder(stock);
-  const inset: Rect = { min: [border, border], max: [stock.width - border, stock.height - border] };
+  const gap = modelBorder(stock, border);
+  const inset: Rect = { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
   const scale = fitScale(bounds, rotation, {
     width: inset.max[0] - inset.min[0],
     height: inset.max[1] - inset.min[1],

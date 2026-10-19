@@ -122,6 +122,12 @@ describe("modelBorder", () => {
     expect(modelBorder(stock)).toBe(10);
     expect(modelBorder({ width: 30, height: 100 })).toBe(7.5);
   });
+
+  it("takes the model's own border, within the same cap", () => {
+    expect(modelBorder(stock, 0)).toBe(0);
+    expect(modelBorder(stock, 25)).toBe(25);
+    expect(modelBorder({ width: 30, height: 100 }, 25)).toBe(7.5);
+  });
 });
 
 describe("stockFit", () => {
@@ -134,6 +140,19 @@ describe("stockFit", () => {
     expect(stockFit(BOUNDS, [0, 0, 90], { width: 40, height: 40 }, "top_right")).toEqual({
       scale: 0.2,
       position: [14, 10],
+    });
+  });
+
+  it("fits edge to edge with no border, or leaves the border given", () => {
+    // 80 × 100 into 40 × 40 whole: 0.4, so 32 × 40, aligned top right.
+    expect(stockFit(BOUNDS, [0, 0, 90], { width: 40, height: 40 }, "top_right", 0)).toEqual({
+      scale: 0.4,
+      position: [8, 0],
+    });
+    // Into 40 × 40 less 5 mm a side: 30 × 30, so 0.3.
+    expect(stockFit(BOUNDS, [0, 0, 90], { width: 40, height: 40 }, "bottom_left", 5)).toEqual({
+      scale: 0.3,
+      position: [5, 5],
     });
   });
 });

@@ -232,6 +232,17 @@ describe("migrations", () => {
     expect(parseProjectDocument(v13)).toEqual(doc);
   });
 
+  it("gives v14 models the 10 mm border they were fitted with", () => {
+    const doc = { ...fullDocument(), models: [model] };
+    const v14 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      models: Record<string, unknown>[];
+    };
+    v14.schemaVersion = 14;
+    for (const stored of v14.models) delete stored.border;
+    expect(parseProjectDocument(v14)).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

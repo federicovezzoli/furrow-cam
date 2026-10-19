@@ -58,5 +58,11 @@ export const Model = z.strictObject({
       message: "The minimum corner must not exceed the maximum",
     }),
   placement: ModelPlacement,
+  /**
+   * The border, in millimetres, that *Fit to stock* leaves between the model
+   * and the stock on every side (ADR-0038): 10 for a new model, never more
+   * than a quarter of the stock's smaller side when applied.
+   */
+  border: z.number().nonnegative(),
 });
 export type Model = z.infer<typeof Model>;

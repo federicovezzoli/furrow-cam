@@ -10,6 +10,7 @@ import {
   modelOffset,
   modelOperations,
   removeModel,
+  setModelBorder,
   setModelDepth,
   setModelOffset,
   setModelScale,
@@ -18,8 +19,8 @@ import {
 import { addReliefFinishOperation } from "./operation-actions";
 import { setCustomXYOrigin, setStockDimension, setXYAnchor } from "./stock-actions";
 
-/** The fixture's 100 × 80 × 12 mesh, without an id or placement. */
-const { id: _, placement: __, ...mesh } = model;
+/** The fixture's 100 × 80 × 12 mesh, without an id, placement or border. */
+const { id: _, placement: __, border: ___, ...mesh } = model;
 
 /** 600 × 400 × 18 mm stock zeroed at `anchor`, with the mesh imported. */
 function storeWithModel(anchor: "bottom_left" | "center" = "bottom_left") {
@@ -102,6 +103,29 @@ describe("placement edits", () => {
     // 80 × 100 into 580 × 380: 3.8 times.
     expect(get().placement).toMatchObject({ scale: 3.8, position: [10, 10] });
     expect(get().placement.depth).toBeCloseTo(45.6);
+  });
+
+  it("fits inside the model's own border, set as one undo step", () => {
+    const { store, id, get } = storeWithModel();
+    expect(get().border).toBe(10);
+    const steps = store.getState().past.length;
+    setModelBorder(store, id, 0);
+    expect(get().border).toBe(0);
+    expect(store.getState().past).toHaveLength(steps + 1);
+    // Setting the border doesn't move the model; fitting does.
+    expect(get().placement).toMatchObject({ scale: 4.75, position: [10, 10] });
+    fitModelToStock(store, id);
+    // 100 × 80 into 600 × 400 whole: 5 times, edge to edge in Y.
+    expect(get().placement).toMatchObject({ scale: 5, position: [0, 0] });
+    setModelBorder(store, id, 20);
+    fitModelToStock(store, id);
+    // Into 560 × 360: 4.5 times.
+    expect(get().placement).toMatchObject({ scale: 4.5, position: [20, 20] });
+    setModelBorder(store, id, 20);
+    expect(store.getState().past).toHaveLength(steps + 4);
+    store.getState().undo();
+    store.getState().undo();
+    expect(get().border).toBe(0);
   });
 
   it("moves the model's anchor point to a distance from the zero", () => {
