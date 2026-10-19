@@ -3,12 +3,15 @@ import { type NextRequest, NextResponse } from "next/server";
 
 /**
  * Optimistic check: only looks for the session cookie. Pages still validate
- * the session server-side. `/` is the guest workspace (PRD-0008 G1), so
- * signed-in users go to their projects instead; the rest needs a session.
+ * the session server-side. Without an account, `/` opens the guest's last
+ * project, `/new` a new one (linked from the website), and `/projects` shows
+ * the projects kept in the browser (PRD-0008 G1, ADR-0050); signed-in users
+ * go from `/` and `/new` to their projects. Bits and machines need a session.
  */
 export function proxy(request: NextRequest) {
   const signedIn = Boolean(getSessionCookie(request));
-  if (request.nextUrl.pathname === "/") {
+  const { pathname } = request.nextUrl;
+  if (pathname === "/" || pathname === "/new") {
     return signedIn
       ? NextResponse.redirect(new URL("/projects", request.url))
       : NextResponse.next();
@@ -18,5 +21,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/projects/:path*", "/tools/:path*", "/machines/:path*"],
+  matcher: ["/", "/new", "/tools/:path*", "/machines/:path*"],
 };
