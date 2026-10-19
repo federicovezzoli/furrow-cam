@@ -21,7 +21,7 @@ beforeEach(async () => {
 async function openHost() {
   const project = await storage.createGuestProject("Coasters", createProjectDocument());
   const settings = { current: parseSettings(undefined) };
-  return { project, settings, host: guestHost(project, settings, navigation) };
+  return { project, settings, host: guestHost(project, settings, navigation, { prompt() {} }) };
 }
 
 describe("guestHost", () => {
@@ -71,6 +71,14 @@ describe("guestHost", () => {
     expect(await host.library.saveTool(null, new FormData())).toEqual({
       errors: { form: GUEST_BITS },
     });
+  });
+
+  it("asks for an account through the guest app's prompt", async () => {
+    const project = await storage.createGuestProject("Coasters", createProjectDocument());
+    const prompt = vi.fn();
+    const host = guestHost(project, { current: parseSettings(undefined) }, navigation, { prompt });
+    host.account?.prompt("export-gcode");
+    expect(prompt).toHaveBeenCalledWith("export-gcode");
   });
 
   it("remembers the finished tour and panel sizes in the browser", async () => {

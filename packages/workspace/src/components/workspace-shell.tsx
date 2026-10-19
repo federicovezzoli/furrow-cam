@@ -55,7 +55,7 @@ const Viewport = lazy(() =>
  * stores come from `ProjectShell`, so they outlive this page.
  */
 export function WorkspaceShell() {
-  const { project, library, settings } = useWorkspaceHost();
+  const { project, library, settings, account } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   const hasEnabledOperations = useDocumentStore((s) =>
@@ -182,7 +182,8 @@ export function WorkspaceShell() {
                       <GcodeExportButton
                         name={project.name}
                         disabledReason={
-                          machineName === null
+                          // Without an account, the button explains what it needs instead.
+                          machineName === null && !account
                             ? "Choose a machine in the project properties first"
                             : !hasEnabledOperations
                               ? "Add or enable an operation first"

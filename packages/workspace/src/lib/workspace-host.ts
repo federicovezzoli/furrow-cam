@@ -38,6 +38,9 @@ export type RestoreResult =
   | { document: ProjectDocument; updatedAt: Date; versions: VersionRow[]; error?: never }
   | { error: string };
 
+/** What a user without an account tried to do that needs one (PRD-0008 G6). */
+export type AccountReason = "export-gcode" | "machine" | "save-bit";
+
 /** A place outside the open workspace page that it links to. */
 export type WorkspaceDestination =
   /** All projects. */
@@ -130,6 +133,12 @@ export type WorkspaceHost = {
     /** Controls the host adds at the end of the top bar, e.g. Sign in for guests (PRD-0008 G9). */
     TopBarActions?: React.ComponentType;
   };
+  /**
+   * Present where the user has no account (the web app's guest workspace,
+   * ADR-0050): what needs one calls `prompt` instead of running, which
+   * explains how to get an account or the desktop app.
+   */
+  account?: { prompt(reason: AccountReason): void };
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
     meshes: MeshLimits | null;

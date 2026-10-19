@@ -10,7 +10,7 @@ import {
   saveGuestSettings,
 } from "./storage";
 
-/** Why a guest can't save a bit of their own, until the account dialog asks instead (#223). */
+/** Why a guest can't save a bit of their own; the workspace asks for an account before getting here. */
 export const GUEST_BITS =
   "Your own bits are saved in a free account or the desktop app. Create an account to add or change bits; the catalog's bits work without one.";
 
@@ -23,12 +23,14 @@ export type GuestSettings = { current: Settings };
 /**
  * The workspace host of a guest's `project` (ADR-0050): it saves to the
  * browser's storage, has no versions and no machines, and offers only the
- * bit catalog, which the workspace adds. `navigation` is the guest app's.
+ * bit catalog, which the workspace adds. `navigation` is the guest app's,
+ * and `account` explains what needs an account (PRD-0008 G6).
  */
 export function guestHost(
   project: GuestProject,
   settings: GuestSettings,
   navigation: WorkspaceHost["navigation"],
+  account: NonNullable<WorkspaceHost["account"]>,
 ): WorkspaceHost {
   const { id } = project;
   return {
@@ -74,6 +76,7 @@ export function guestHost(
       },
     },
     navigation,
+    account,
     limits: { meshes: DEFAULT_STL_LIMITS },
   };
 }

@@ -5,6 +5,7 @@ import { downloadFile } from "@furrow/ui/lib/download";
 import { cn } from "@furrow/ui/lib/utils";
 import { FileCodeIcon } from "lucide-react";
 import { useState } from "react";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import { useToolpathStoreApi } from "../providers/workspace-stores";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 
@@ -13,7 +14,7 @@ import type { GcodeExportResult } from "../stores/toolpath-scheduler";
  * (PRD-0001 R11). The toolpath worker posts the program from the toolpaths
  * it already computed for the document on screen (#133, ADR-0004), computing
  * only those it lacks or that changed since. Disabled while `disabledReason`
- * says why.
+ * says why. Without an account, it explains how to get one instead (PRD-0008 G6).
  */
 export function GcodeExportButton({
   name,
@@ -26,8 +27,13 @@ export function GcodeExportButton({
 }) {
   const [pending, setPending] = useState(false);
   const toolpaths = useToolpathStoreApi();
+  const { account } = useWorkspaceHost();
 
   async function onClick() {
+    if (account) {
+      account.prompt("export-gcode");
+      return;
+    }
     setPending(true);
     let result: GcodeExportResult;
     try {
