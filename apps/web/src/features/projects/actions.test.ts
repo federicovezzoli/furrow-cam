@@ -51,7 +51,9 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const { createProject, importProject, startArchiveImport } = await import("./actions");
+const { createProject, importGuestDocument, importProject, startArchiveImport } = await import(
+  "./actions"
+);
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
@@ -165,6 +167,36 @@ describe("importProject", () => {
       error: "This project has 3D models: import its .zip export instead.",
     });
     expect(mocks.created).toHaveLength(0);
+  });
+});
+
+describe("importGuestDocument", () => {
+  it("creates the project and returns its id without opening it", async () => {
+    const document = { ...createProjectDocument(), units: "in" as const };
+    expect(await importGuestDocument(projectFile(document), "Report: Final")).toEqual({
+      projectId: "project-1",
+    });
+    // As the guest named it, not as a file name would have it.
+    expect(mocks.created[0]?.name).toBe("Report: Final");
+    expect(mocks.created[0]?.document).toEqual(document);
+  });
+
+  it("refuses an invalid document or one with models", async () => {
+    expect(await importGuestDocument(new File(["[]"], "a.json"), "a.furrow.json")).toHaveProperty(
+      "error",
+    );
+    const withModels = { ...createProjectDocument(), models: [model] };
+    expect(await importGuestDocument(projectFile(withModels), "a.furrow.json")).toEqual({
+      error: "This project has 3D models: import its .zip export instead.",
+    });
+    expect(mocks.created).toHaveLength(0);
+  });
+
+  it("refuses when signed out", async () => {
+    mocks.userId = null;
+    expect(
+      await importGuestDocument(projectFile(createProjectDocument()), "a.furrow.json"),
+    ).toHaveProperty("error");
   });
 });
 

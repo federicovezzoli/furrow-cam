@@ -77,6 +77,20 @@ describe("guest projects", () => {
     expect((await storage.getGuestProject(created.id))?.document).toEqual(changed);
   });
 
+  it("deletes a project only while it is as saved at the time given", async () => {
+    const created = await storage.createGuestProject("Coasters", createProjectDocument());
+    const saved = await storage.saveGuestProject(
+      created.id,
+      createProjectDocument(),
+      created.savedAt,
+    );
+    if ("error" in saved) throw new Error(saved.error);
+    expect(await storage.deleteGuestProjectIfSaved(created.id, created.savedAt)).toBe(false);
+    expect(await storage.listGuestProjects()).toHaveLength(1);
+    expect(await storage.deleteGuestProjectIfSaved(created.id, saved.updatedAt)).toBe(true);
+    expect(await storage.listGuestProjects()).toEqual([]);
+  });
+
   it("refuses to save a deleted project or an invalid document", async () => {
     const created = await storage.createGuestProject("Coasters", createProjectDocument());
     const invalid = { ...createProjectDocument(), units: "cubits" } as never;

@@ -79,14 +79,15 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
  * project. A file's machine snapshot is kept; a file without one gets the
  * user's machine `machineId`, or stays without a machine when it is `null`
  * (PRD-0008 G13). Models are refused unless the file is a zip export, which
- * carries their meshes (ADR-0029).
+ * carries their meshes (ADR-0029). `projectName`, when given, names the
+ * project instead of the file name, e.g. a guest project's own name.
  */
 async function prepareImport(
   userId: string,
   contents: string,
   fileName: string,
   machineId: string | null,
-  { archive }: { archive: boolean },
+  { archive, projectName }: { archive: boolean; projectName?: string },
 ): Promise<{ document: ProjectDocument; name: string; error?: never } | { error: string }> {
   const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
@@ -99,7 +100,9 @@ async function prepareImport(
     if (snapshot.error !== undefined) return { error: snapshot.error };
     document = { ...document, machine: snapshot.machine };
   }
-  const name = parseName(truncate(projectNameFromFileName(fileName) ?? "", PROJECT_NAME_MAX));
+  const name = parseName(
+    truncate(projectName ?? projectNameFromFileName(fileName) ?? "", PROJECT_NAME_MAX),
+  );
   return { document, name: name.success ? name.data : "Imported project" };
 }
 
@@ -126,6 +129,34 @@ export async function importProject(file: File, machineId: string | null): Promi
   redirect(`/projects/${id}`);
 }
 
+/**
+ * Creates a project called `projectName` from a guest project's document (PRD-0008
+ * G7), checked as `importProject` checks a file, and returns its id instead
+ * of opening it, so several can be imported in turn. Documents with models
+ * go through `startArchiveImport`.
+ */
+export async function importGuestDocument(
+  documentFile: File,
+  projectName: string,
+): Promise<{ projectId: string; error?: never } | { error: string }> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  if (!(documentFile instanceof File)) return { error: "Pick a file to import." };
+  const prepared = await prepareImport(userId, await documentFile.text(), "", null, {
+    archive: false,
+    projectName: String(projectName),
+  });
+  if (!("document" in prepared)) return prepared;
+  const { document, name } = prepared;
+
+  const { id } = await db.project.create({
+    data: { userId, name, ...documentColumns(document) },
+    select: { id: true },
+  });
+  revalidatePath("/projects");
+  return { projectId: id };
+}
+
 /** What `startArchiveImport` returns: the new project to finish, or an error. */
 export type ArchiveImportResult =
   | { projectId: string; document: ProjectDocument; updatedAt: Date; error?: never }
@@ -146,6 +177,7 @@ export async function startArchiveImport(
   fileName: string,
   meshes: { sha256: string; size: number }[],
   machineId: string | null,
+  projectName?: string,
 ): Promise<ArchiveImportResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
@@ -158,7 +190,7 @@ export async function startArchiveImport(
     await documentFile.text(),
     String(fileName),
     machineId,
-    { archive: true },
+    { archive: true, projectName: projectName === undefined ? undefined : String(projectName) },
   );
   if (!("document" in prepared)) return prepared;
   const { document, name } = prepared;

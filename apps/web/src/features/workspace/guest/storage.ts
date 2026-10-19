@@ -230,6 +230,22 @@ export function deleteGuestProject(id: string): Promise<void> {
   });
 }
 
+/**
+ * Deletes guest project `id` and its STL files only if it is still as saved
+ * at `savedAt`, e.g. the copy just imported into an account; `false` when
+ * another tab saved it since, which keeps it.
+ */
+export function deleteGuestProjectIfSaved(id: string, savedAt: Date): Promise<boolean> {
+  return transaction([PROJECTS, MESHES], "readwrite", async (tx) => {
+    const record = await result<ProjectRecord | undefined>(tx.objectStore(PROJECTS).get(id));
+    if (!record) return true;
+    if (record.savedAt.getTime() !== savedAt.getTime()) return false;
+    await result(tx.objectStore(PROJECTS).delete(id));
+    await result(tx.objectStore(MESHES).delete(projectMeshes(id)));
+    return true;
+  });
+}
+
 /** Every mesh key of project `id`: `[id, sha256]` for any `sha256`. */
 function projectMeshes(id: string): IDBKeyRange {
   return IDBKeyRange.bound([id], [id, []]);
