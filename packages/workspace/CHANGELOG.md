@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.5.0
+
+### Minor Changes
+
+- Without an account, projects now have their own addresses (`/projects/…`) like an account's, you can add and edit your own bits, and `/new` opens a new project straight in the workspace. The project list mentions the desktop app as a way to keep your work. ([#237](https://github.com/federicovezzoli/furrow-cam/pull/237))
+
 ## 0.4.0
 
 ### Minor Changes
