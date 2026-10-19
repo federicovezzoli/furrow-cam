@@ -1,5 +1,6 @@
 import { createProjectDocument } from "@furrow/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mayLeave } from "../hooks/use-autosave";
 import { createAutosave, OFFLINE, type SaveDocument } from "./autosave";
 import { createDocumentStore } from "./document-store";
 
@@ -260,5 +261,24 @@ describe("createAutosave", () => {
     await vi.advanceTimersByTimeAsync(DELAY);
     expect(save).toHaveBeenCalledOnce();
     expect(save.mock.calls[0]?.[1]).toEqual(SAVED_AT);
+  });
+});
+
+describe("mayLeave", () => {
+  it("asks only while changes can't be saved, with why", () => {
+    const asked: string[] = [];
+    const confirm = (message: string) => {
+      asked.push(message);
+      return false;
+    };
+    for (const state of ["saved", "unsaved", "saving"] as const) {
+      expect(mayLeave({ state, savedAt: LOADED_AT }, confirm)).toBe(true);
+    }
+    expect(asked).toEqual([]);
+    expect(mayLeave({ state: "failed", savedAt: LOADED_AT, error: "Conflict." }, confirm)).toBe(
+      false,
+    );
+    expect(mayLeave({ state: "error", savedAt: LOADED_AT, error: OFFLINE }, () => true)).toBe(true);
+    expect(asked).toEqual([expect.stringMatching(/^Conflict\. Leave it anyway\?/)]);
   });
 });

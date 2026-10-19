@@ -54,6 +54,11 @@ export type WorkspaceDestination =
   /** The open project's simulator. */
   | "simulator";
 
+/** Whether `to` is outside the open project, so following the link closes it. */
+export function leavesProject(to: WorkspaceDestination): boolean {
+  return to !== "workspace" && to !== "simulator";
+}
+
 export type WorkspaceLinkProps = Omit<React.ComponentProps<"a">, "href"> & {
   to: WorkspaceDestination;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useAutosaveApi } from "../providers/workspace-stores";
 import type { AutosaveStatus } from "../stores/autosave";
 
@@ -24,6 +24,30 @@ export function useAutosave() {
       stop();
     };
   }, [autosave]);
+}
+
+/**
+ * Asks whether to leave the open project while its changes can't be saved
+ * (#254): autosave failed for good, or its last save failed and the one made
+ * on leaving may too. Resolves to whether to go; nothing is asked while
+ * saves go through. Hosts call it from their navigation away from the
+ * project (ADR-0045), where `beforeunload` doesn't fire.
+ */
+export function useConfirmLeave(): () => boolean {
+  const autosave = useAutosaveApi();
+  return useCallback(
+    () => mayLeave(autosave.status, (message) => window.confirm(message)),
+    [autosave],
+  );
+}
+
+/** Whether to leave the project with `status`, asking `confirm` only while changes can't be saved. */
+export function mayLeave(status: AutosaveStatus, confirm: (message: string) => boolean): boolean {
+  const { state, error } = status;
+  if (state !== "error" && state !== "failed") return true;
+  return confirm(
+    `${error ?? "The project couldn't be saved."} Leave it anyway? Changes not saved will be lost; export the project first to keep them.`,
+  );
 }
 
 /** The open project's save status. */
