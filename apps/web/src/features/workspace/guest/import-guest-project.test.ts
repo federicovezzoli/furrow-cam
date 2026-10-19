@@ -1,5 +1,9 @@
 import "fake-indexeddb/auto";
-import { CURRENT_SCHEMA_VERSION, createProjectDocument } from "@furrow/document";
+import {
+  CURRENT_SCHEMA_VERSION,
+  createProjectDocument,
+  packProjectArchive,
+} from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +12,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/features/projects/actions", () => ({}));
 vi.mock("@/features/assets/lib/mesh-cache", () => ({}));
 vi.mock("@/features/assets/lib/meshes", () => ({}));
+// Parsing runs in a Web Worker in the browser.
+const parseMesh = vi.hoisted(() => vi.fn());
+vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
 
 let storage: typeof import("./storage");
 let guest: typeof import("./import-guest-project");
@@ -58,5 +65,36 @@ describe("guestProjectName", () => {
     expect(guest.guestProjectName("Coasters.furrow.zip")).toBe("Coasters");
     expect(guest.guestProjectName(".furrow.json")).toBe("Imported project");
     expect(guest.guestProjectName(`${"a".repeat(150)}.furrow.json`)).toHaveLength(100);
+  });
+});
+
+describe("importGuestProject with 3D models", () => {
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+
+  async function archiveFile() {
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+    const sha256 = [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const document = { ...createProjectDocument(), models: [{ ...model, sha256, size: 4 }] };
+    const zip = packProjectArchive(document, new Map([[sha256, bytes]]));
+    return {
+      sha256,
+      file: new File([zip.slice()], "Relief.furrow.zip", { type: "application/zip" }),
+    };
+  }
+
+  it("stores the models' STL files with the project", async () => {
+    const { sha256, file } = await archiveFile();
+    parseMesh.mockResolvedValue({ sha256, triangles: 1, bounds: model.bounds });
+    const project = await guest.importGuestProject(file);
+    expect(new Uint8Array(await storage.getGuestMesh(project.id, sha256))).toEqual(bytes);
+  });
+
+  it("refuses a damaged STL file, leaving nothing behind", async () => {
+    const { file } = await archiveFile();
+    parseMesh.mockRejectedValue(new Error("This file isn't an STL model."));
+    await expect(guest.importGuestProject(file)).rejects.toThrow(
+      "A model in this file can't be imported: This file isn't an STL model.",
+    );
+    expect(await storage.listGuestProjects()).toEqual([]);
   });
 });

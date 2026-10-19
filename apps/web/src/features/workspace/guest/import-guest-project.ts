@@ -7,6 +7,7 @@ import {
   parseProjectDocument,
   projectNameFromFileName,
 } from "@furrow/document";
+import { parseMesh } from "@furrow/workspace/lib/model-import";
 import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
 import { createGuestProject, deleteGuestProject, type GuestProject, putGuestMesh } from "./storage";
 
@@ -71,6 +72,18 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
     if (bytes.byteLength > DEFAULT_STL_LIMITS.maxBytes) {
       throw new Error(archiveMeshTooLarge(DEFAULT_STL_LIMITS.maxBytes).message);
     }
+  }
+  // Checked as an STL import is (PRD-0005 S1), so a damaged file can't leave a model that won't load.
+  for (const [sha256, bytes] of meshes) {
+    let mesh: Awaited<ReturnType<typeof parseMesh>>;
+    try {
+      // A copy: the worker takes the buffer it is sent.
+      mesh = await parseMesh(bytes.slice().buffer, DEFAULT_STL_LIMITS);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "it couldn't be read.";
+      throw new Error(`A model in this file can't be imported: ${reason}`);
+    }
+    if (mesh.sha256 !== sha256) throw new Error("A model in this file is damaged.");
   }
 
   const project = await createGuestProject(guestProjectName(file.name), document);
