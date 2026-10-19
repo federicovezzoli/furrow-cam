@@ -26,6 +26,17 @@ describe("parseXml", () => {
     expect(root.children.map((child) => child.name)).toEqual(["g"]);
   });
 
+  it("keeps a style element's stylesheet, CDATA included", () => {
+    const root = parseXml(
+      `<svg><style>.a{display:none}</style><svg:style><![CDATA[ g > .b{x:1} ]]>&amp;</svg:style><g/></svg>`,
+    );
+    expect(root.children.map((child) => [child.name, child.text])).toEqual([
+      ["style", ".a{display:none}"],
+      ["svg:style", " g > .b{x:1} &"],
+      ["g", undefined],
+    ]);
+  });
+
   it("decodes entities in attribute values", () => {
     const root = parseXml(`<a v="&lt;&amp;&gt; &quot;&apos; &#65;&#x42;"/>`);
     expect(root.attributes.v).toBe(`<&> "' AB`);
