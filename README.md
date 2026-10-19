@@ -17,7 +17,7 @@ Furrow CAM also runs as a desktop app for macOS, Windows and Linux. It works off
 | macOS, Apple Silicon (M1 and later) | [download.furrow.cam/mac-arm64](https://download.furrow.cam/mac-arm64) (`.dmg`) |
 | macOS, Intel | [download.furrow.cam/mac-x64](https://download.furrow.cam/mac-x64) (`.dmg`) |
 | Windows | [download.furrow.cam/win](https://download.furrow.cam/win) (`.exe`) |
-| Linux | [download.furrow.cam/linux-appimage](https://download.furrow.cam/linux-appimage) (`.AppImage`), or [download.furrow.cam/linux-deb](https://download.furrow.cam/linux-deb) (`.deb`) for Debian and Ubuntu |
+| Linux | [download.furrow.cam/linux-appimage](https://download.furrow.cam/linux-appimage) (`.AppImage`), [download.furrow.cam/linux-deb](https://download.furrow.cam/linux-deb) (`.deb`) for Debian and Ubuntu, or [download.furrow.cam/linux-pacman](https://download.furrow.cam/linux-pacman) (`.pacman`) for Arch |
 
 Older versions are on the [desktop releases](https://github.com/federicovezzoli/furrow-cam/releases?q=%40furrow%2Fdesktop&expanded=true) page.
 
@@ -25,7 +25,7 @@ The installers aren't code-signed, so your system warns you the first time you o
 
 - **macOS**: "Furrow CAM can't be opened because Apple cannot check it for malicious software." Open **System Settings → Privacy & Security**, scroll down to the message about Furrow CAM and click **Open Anyway**, then confirm. Alternatively, run `xattr -dr com.apple.quarantine "/Applications/Furrow CAM.app"` in Terminal.
 - **Windows**: SmartScreen shows "Windows protected your PC". Click **More info**, then **Run anyway**.
-- **Linux**: make the AppImage executable (`chmod +x furrow-cam-*.AppImage`) and run it, or install the `.deb` with `sudo apt install ./furrow-cam-*.deb`.
+- **Linux**: make the AppImage executable (`chmod +x furrow-cam-*.AppImage`) and run it, or install the `.deb` with `sudo apt install ./furrow-cam-*.deb`, or the `.pacman` package on Arch with `sudo pacman -U furrow-cam-*.pacman`. On Arch, the AppImage needs `fuse2`.
 
 There's no automatic update: download new versions from the links above. Projects saved by a newer version may not open in an older one.
 

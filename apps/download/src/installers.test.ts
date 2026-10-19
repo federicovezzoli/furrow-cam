@@ -14,6 +14,7 @@ describe("findInstallers", () => {
       version: "0.10.0",
       url: "https://example.com/0.10.0/win-x64.exe",
     });
+    expect(installers["linux-pacman"]?.url).toBe("https://example.com/0.10.0/linux-x64.pacman");
     expect(hasEveryPlatform(installers)).toBe(true);
   });
 
