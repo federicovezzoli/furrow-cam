@@ -52,11 +52,8 @@ export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array>
   return new Map([...archive.meshes].filter(([sha256]) => used.has(sha256)));
 }
 
-/** What `importArchive` returns: the new project, an error, or that a machine must be chosen. */
-export type ArchiveImport =
-  | { projectId: string; error?: never }
-  | { error: string }
-  | { chooseMachine: true; error?: never };
+/** What `importArchive` returns: the new project, or an error. */
+export type ArchiveImport = { projectId: string; error?: never } | { error: string };
 
 /**
  * Creates a project from a `.furrow.zip` export read by `readArchive`

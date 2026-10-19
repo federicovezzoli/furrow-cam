@@ -1,6 +1,11 @@
 "use server";
 
-import { createProjectDocument, ProjectDocument, projectNameFromFileName } from "@furrow/document";
+import {
+  createProjectDocument,
+  type Machine,
+  ProjectDocument,
+  projectNameFromFileName,
+} from "@furrow/document";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,7 +18,6 @@ import {
   missingAssets,
 } from "@/features/assets/server";
 import { getUserId } from "@/features/auth/server";
-import { listMachineChoices } from "@/features/machines/server";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, SIGNED_OUT } from "@/lib/form-data";
@@ -35,9 +39,6 @@ import {
 
 export type ProjectFormErrors = FormErrors<"name" | "machine">;
 
-/** What `importProject` returns: an error, or that the file needs a machine chosen first. */
-export type ImportResult = ActionResult | { chooseMachine: true; error?: never };
-
 const NOT_FOUND = "This project no longer exists.";
 const VERSION_NOT_FOUND = "This version no longer exists.";
 const TOO_MANY_VERSIONS = `This project already has ${MAX_VERSIONS} versions, the most it can keep. Delete one first.`;
@@ -45,16 +46,25 @@ const MESH_MISSING = "a model's mesh hasn't been uploaded.";
 const CONFLICT =
   "This project was changed somewhere else since you opened it. Reload it to see the latest version.";
 
-/** Creates an empty project for one of the user's machines and opens it. */
+/**
+ * Creates an empty project and opens it, for one of the user's machines or,
+ * when the form names none, without one: it is chosen in the project before
+ * exporting G-code (PRD-0008 G13).
+ */
 export async function createProject(form: FormData): Promise<ProjectFormErrors> {
   const userId = await getUserId();
   if (!userId) return { form: SIGNED_OUT };
   const name = parseName(form.get("name"));
   if (!name.success) return { name: name.error.issues[0]?.message };
-  const snapshot = await snapshotUserMachine(userId, form.get("machine"));
-  if (snapshot.error !== undefined) return { machine: snapshot.error };
+  const machineId = form.get("machine");
+  let machine: Machine | null = null;
+  if (machineId !== null && machineId !== "") {
+    const snapshot = await snapshotUserMachine(userId, machineId);
+    if (snapshot.error !== undefined) return { machine: snapshot.error };
+    machine = snapshot.machine;
+  }
 
-  const document = { ...createProjectDocument(), machine: snapshot.machine };
+  const document = { ...createProjectDocument(), machine };
   const { id } = await db.project.create({
     data: { userId, name: name.data, ...documentColumns(document) },
     select: { id: true },
@@ -65,10 +75,10 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
 
 /**
  * The document of an exported file `contents` called `fileName`, upgraded to
- * the current schema version and validated, with a machine and the name to
- * give its project. A file's machine snapshot is kept; a file without one
- * gets the user's machine `machineId`, and `chooseMachine` comes back when it
- * is missing. Models are refused unless the file is a zip export, which
+ * the current schema version and validated, and the name to give its
+ * project. A file's machine snapshot is kept; a file without one gets the
+ * user's machine `machineId`, or stays without a machine when it is `null`
+ * (PRD-0008 G13). Models are refused unless the file is a zip export, which
  * carries their meshes (ADR-0029).
  */
 async function prepareImport(
@@ -77,25 +87,14 @@ async function prepareImport(
   fileName: string,
   machineId: string | null,
   { archive }: { archive: boolean },
-): Promise<
-  | { document: ProjectDocument; name: string; error?: never }
-  | { error: string }
-  | { chooseMachine: true; error?: never }
-> {
+): Promise<{ document: ProjectDocument; name: string; error?: never } | { error: string }> {
   const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
-  // Checked before asking for a machine, which wouldn't help.
   if (!archive && document.models.length > 0) {
     return { error: "This project has 3D models: import its .zip export instead." };
   }
-  if (document.machine === null) {
-    if (machineId === null) {
-      // The machines the import dialog offers: rows that fail today's rules aren't.
-      const machines = await listMachineChoices(userId);
-      if (machines.length === 0) return { error: "Add a machine before importing a project." };
-      return { chooseMachine: true };
-    }
+  if (document.machine === null && machineId !== null) {
     const snapshot = await snapshotUserMachine(userId, machineId);
     if (snapshot.error !== undefined) return { error: snapshot.error };
     document = { ...document, machine: snapshot.machine };
@@ -107,10 +106,9 @@ async function prepareImport(
 /**
  * Creates a project from an exported `.furrow.json` file and opens it; the
  * name comes from the file name. A file without a machine snapshot gets the
- * user's machine `machineId`, and `chooseMachine` comes back when it is
- * missing. Only errors come back otherwise.
+ * user's machine `machineId`, if any. Only errors come back.
  */
-export async function importProject(file: File, machineId: string | null): Promise<ImportResult> {
+export async function importProject(file: File, machineId: string | null): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT };
   if (!(file instanceof File)) return { error: "Pick a file to import." };
@@ -128,10 +126,10 @@ export async function importProject(file: File, machineId: string | null): Promi
   redirect(`/projects/${id}`);
 }
 
-/** What `startArchiveImport` returns: the new project to finish, or as `ImportResult`. */
+/** What `startArchiveImport` returns: the new project to finish, or an error. */
 export type ArchiveImportResult =
   | { projectId: string; document: ProjectDocument; updatedAt: Date; error?: never }
-  | ImportResult;
+  | { error: string };
 
 /**
  * Starts importing a `.furrow.zip` export (ADR-0029): `documentFile` is its

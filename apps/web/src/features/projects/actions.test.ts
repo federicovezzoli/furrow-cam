@@ -71,9 +71,18 @@ beforeEach(() => {
 });
 
 describe("createProject", () => {
-  it("rejects a missing machine, e.g. when the user has none", async () => {
-    expect(await createProject(form({ name: "Board" }))).toEqual({ machine: "Choose a machine." });
-    expect(mocks.created).toHaveLength(0);
+  it("creates a project without a machine when the form names none", async () => {
+    await expect(createProject(form({ name: "Board" }))).rejects.toThrow(
+      "redirect /projects/project-1",
+    );
+    expect(mocks.created[0]?.document.machine).toBeNull();
+    expect(mocks.created[0]?.machineName).toBeNull();
+  });
+
+  it("creates a project without a machine when 'No machine yet' is chosen", async () => {
+    mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
+    await expect(createProject(form({ name: "Board", machine: "" }))).rejects.toThrow("redirect");
+    expect(mocks.created[0]?.document.machine).toBeNull();
   });
 
   it("snapshots the chosen machine into the new document", async () => {
@@ -103,26 +112,20 @@ describe("createProject", () => {
 });
 
 describe("importProject", () => {
-  it("rejects a machine-less file when the user has no machine", async () => {
-    expect(await importProject(projectFile(createProjectDocument()), null)).toEqual({
-      error: "Add a machine before importing a project.",
-    });
-    expect(mocks.created).toHaveLength(0);
+  it("imports a machine-less file without a machine when the user has none", async () => {
+    await expect(importProject(projectFile(createProjectDocument()), null)).rejects.toThrow(
+      "redirect /projects/project-1",
+    );
+    expect(mocks.created[0]?.document.machine).toBeNull();
+    expect(mocks.created[0]?.machineName).toBeNull();
   });
 
-  it("rejects a machine-less file when none of the user's machines is valid", async () => {
-    mocks.machines.set(MACHINE_ID, { ...machine, safeZ: 500, userId: USER });
-    expect(await importProject(projectFile(createProjectDocument()), null)).toEqual({
-      error: "Add a machine before importing a project.",
-    });
-  });
-
-  it("asks for a machine for a machine-less file", async () => {
+  it("imports a machine-less file without a machine when none is given", async () => {
     mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
-    expect(await importProject(projectFile(createProjectDocument()), null)).toEqual({
-      chooseMachine: true,
-    });
-    expect(mocks.created).toHaveLength(0);
+    await expect(importProject(projectFile(createProjectDocument()), null)).rejects.toThrow(
+      "redirect",
+    );
+    expect(mocks.created[0]?.document.machine).toBeNull();
   });
 
   it("gives a machine-less file the chosen machine", async () => {
@@ -149,8 +152,7 @@ describe("importProject", () => {
     expect(mocks.created[0]?.machineName).toBe(lowRider.name);
   });
 
-  it("refuses a machine-less .furrow.json file with models before asking for a machine", async () => {
-    mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
+  it("refuses a machine-less .furrow.json file with models", async () => {
     const document = { ...createProjectDocument(), models: [model] };
     expect(await importProject(projectFile(document), null)).toEqual({
       error: "This project has 3D models: import its .zip export instead.",
@@ -183,13 +185,23 @@ describe("startArchiveImport", () => {
     expect(mocks.created[0]?.document).toEqual({ ...createProjectDocument(), machine: lowRider });
   });
 
-  it("asks for a machine for a machine-less document", async () => {
-    mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
+  it("imports a machine-less document without a machine", async () => {
     const machineless = { ...document, machine: null };
     expect(await startArchiveImport(documentFile(machineless), "a.zip", meshes, null)).toEqual({
-      chooseMachine: true,
+      projectId: "project-1",
+      document: machineless,
+      updatedAt: UPDATED_AT,
     });
-    expect(mocks.created).toHaveLength(0);
+    expect(mocks.created[0]?.document.machine).toBeNull();
+  });
+
+  it("gives a machine-less document the user's machine", async () => {
+    mocks.machines.set(MACHINE_ID, { ...machine, userId: USER });
+    const machineless = { ...document, machine: null };
+    expect(
+      await startArchiveImport(documentFile(machineless), "a.zip", meshes, MACHINE_ID),
+    ).toMatchObject({ document: { machine } });
+    expect(mocks.created[0]?.document.machine).toEqual(machine);
   });
 
   it("refuses a model whose mesh isn't in the file", async () => {
