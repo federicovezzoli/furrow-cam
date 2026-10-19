@@ -1,11 +1,16 @@
 import { createProjectDocument, type Machine } from "@furrow/document";
+import {
+  parseMachines,
+  parseSettings,
+  parseTools,
+  type Settings,
+} from "@furrow/workspace/lib/local-library";
 import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-host";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Recovery } from "../../shared/api";
 import { api } from "./api";
 import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
-import { parseMachines, parseSettings, parseTools, type Settings } from "./library";
 import { LibraryPage } from "./library-pages";
 import { type ProjectFile, readProjectFile } from "./project-file";
 import { createProjectSession, type ProjectSession } from "./session";
