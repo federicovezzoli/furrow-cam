@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Border)
 G0 Z5
 M3
+G4 P2
 G0 X90 Y80
 G0 Z1
 G1 Z0 F500
@@ -82,6 +83,7 @@ G21 G90 G94 G17
 (Operation: Square, clearing)
 G0 Z5
 M3
+G4 P2
 G0 X160.013 Y45.013
 G0 Z1
 G1 Z0 F500
@@ -129,6 +131,7 @@ G21 G90 G94 G17
 (Operation: Square)
 G0 Z5
 M3
+G4 P2
 G0 X168.268 Y36.732
 G0 Z1
 G1 Z-1.5 F500
@@ -183,6 +186,7 @@ G21 G90 G94 G17
 (Operation: Hanging hole)
 G0 Z5
 M3
+G4 P2
 G0 X40.825 Y40
 G0 Z1
 G1 X40.788 Y40.243 Z0.987 F500
