@@ -8,7 +8,6 @@ G21 G90 G94 G17
 (Operation: Holes)
 G0 Z11
 M3
-G4 P2
 G0 X-40 Y-20
 G0 Z7
 G1 Z3 F300
@@ -38,7 +37,6 @@ G21 G90 G94 G17
 (Operation: Recess)
 G0 Z11
 M3
-G4 P2
 G0 X11.745 Y1.745
 G0 Z7
 G1 Z6 F500
