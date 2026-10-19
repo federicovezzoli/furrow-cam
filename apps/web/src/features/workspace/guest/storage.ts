@@ -43,7 +43,8 @@ const CONFLICT =
 let opening: Promise<IDBDatabase> | null = null;
 
 function open(): Promise<IDBDatabase> {
-  opening ??= new Promise<IDBDatabase>((resolve, reject) => {
+  if (opening) return opening;
+  const current = new Promise<IDBDatabase>((resolve, reject) => {
     let request: IDBOpenDBRequest;
     try {
       request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -62,18 +63,23 @@ function open(): Promise<IDBDatabase> {
       // Another tab upgrading to a newer release: let it, and reopen next time.
       db.onversionchange = () => {
         db.close();
-        opening = null;
+        if (opening === current) opening = null;
+      };
+      // Closed by the browser, e.g. when site data is cleared: reopen next time.
+      db.onclose = () => {
+        if (opening === current) opening = null;
       };
       resolve(db);
     };
     request.onerror = () => reject(new Error(STORAGE_UNAVAILABLE));
     request.onblocked = () => reject(new Error(STORAGE_UNAVAILABLE));
   });
+  opening = current;
   // A failed open is retried next time rather than remembered.
-  opening.catch(() => {
-    opening = null;
+  current.catch(() => {
+    if (opening === current) opening = null;
   });
-  return opening;
+  return current;
 }
 
 function result<T>(request: IDBRequest<T>): Promise<T> {
@@ -229,13 +235,19 @@ function projectMeshes(id: string): IDBKeyRange {
   return IDBKeyRange.bound([id], [id, []]);
 }
 
-/** Stores `file` for project `projectId`; `uploaded` is `false` when it already had it. */
+/**
+ * Stores `file` for project `projectId`; `uploaded` is `false` when it
+ * already had it. Refused once the project is deleted, so no file outlives it.
+ */
 export function putGuestMesh(
   projectId: string,
   sha256: string,
   file: Blob,
 ): Promise<{ uploaded: boolean }> {
-  return transaction([MESHES], "readwrite", async (tx) => {
+  return transaction([PROJECTS, MESHES], "readwrite", async (tx) => {
+    if ((await result(tx.objectStore(PROJECTS).count(projectId))) === 0) {
+      fail(tx, PROJECT_NOT_FOUND);
+    }
     const store = tx.objectStore(MESHES);
     if ((await result(store.count([projectId, sha256]))) > 0) return { uploaded: false };
     await result(store.add({ projectId, sha256, file } satisfies MeshRecord));

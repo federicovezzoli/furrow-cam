@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { CURRENT_SCHEMA_VERSION, createProjectDocument } from "@furrow/document";
-import { IDBFactory } from "fake-indexeddb";
+import { forceCloseDatabase, IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let storage: typeof import("./storage");
@@ -131,11 +131,22 @@ describe("guest meshes", () => {
 
   it("keeps each project's files apart", async () => {
     const file = new Blob([new Uint8Array([1])]);
-    await storage.putGuestMesh("a", "abc", file);
-    await storage.putGuestMesh("b", "abc", file);
-    await storage.deleteGuestMesh("a", "abc");
-    await expect(storage.getGuestMesh("a", "abc")).rejects.toThrow("missing");
-    expect((await storage.getGuestMesh("b", "abc")).byteLength).toBe(1);
+    const a = await storage.createGuestProject("A", createProjectDocument());
+    const b = await storage.createGuestProject("B", createProjectDocument());
+    await storage.putGuestMesh(a.id, "abc", file);
+    await storage.putGuestMesh(b.id, "abc", file);
+    await storage.deleteGuestMesh(a.id, "abc");
+    await expect(storage.getGuestMesh(a.id, "abc")).rejects.toThrow("missing");
+    expect((await storage.getGuestMesh(b.id, "abc")).byteLength).toBe(1);
+  });
+
+  it("refuses a file for a project deleted meanwhile", async () => {
+    const project = await storage.createGuestProject("Relief", createProjectDocument());
+    await storage.deleteGuestProject(project.id);
+    await expect(
+      storage.putGuestMesh(project.id, "abc", new Blob([new Uint8Array([1])])),
+    ).rejects.toThrow("no longer exists");
+    await expect(storage.getGuestMesh(project.id, "abc")).rejects.toThrow("missing");
   });
 });
 
@@ -151,6 +162,26 @@ describe("guest settings", () => {
     expect(await storage.readLastGuestProjectId()).toBeNull();
     await storage.saveLastGuestProjectId("p1");
     expect(await storage.readLastGuestProjectId()).toBe("p1");
+  });
+});
+
+describe("a connection the browser closes", () => {
+  it("is reopened by the next call", async () => {
+    const requests: IDBOpenDBRequest[] = [];
+    const open = indexedDB.open.bind(indexedDB);
+    vi.spyOn(indexedDB, "open").mockImplementation((...args) => {
+      const request = open(...args);
+      requests.push(request);
+      return request;
+    });
+    const created = await storage.createGuestProject("Coasters", createProjectDocument());
+    // As when site data is cleared while the page stays open.
+    // fake-indexeddb types the connection as the `IDBDatabase` class rather than an instance.
+    forceCloseDatabase(requests[0]?.result as unknown as typeof IDBDatabase);
+    expect(await storage.listGuestProjects()).toEqual([
+      { id: created.id, name: "Coasters", savedAt: created.savedAt },
+    ]);
+    expect(requests).toHaveLength(2);
   });
 });
 
