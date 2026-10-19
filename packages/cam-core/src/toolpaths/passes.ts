@@ -103,9 +103,12 @@ export class Track {
     this.length = this.cumulative.at(-1) ?? 0;
   }
 
-  /** The point `at` millimetres from the start, wrapping around a closed track. */
+  /**
+   * The point `at` millimetres from the start, wrapping around a closed track.
+   * `length` along is the last point, which on an open track is not the first.
+   */
   pointAt(at: number): Point {
-    const d = ((at % this.length) + this.length) % this.length;
+    const d = at >= 0 && at <= this.length ? at : ((at % this.length) + this.length) % this.length;
     let i = 1;
     while (i < this.points.length - 1 && (this.cumulative[i] as number) < d) i++;
     const a = this.points[i - 1] as Point;
