@@ -26,6 +26,7 @@ import {
   useTransition,
 } from "react";
 import { DeleteButton } from "@/components/delete-button";
+import { DESKTOP_DOWNLOADS_PAGE } from "./desktop-download";
 import { importGuestProject } from "./import-guest-project";
 import {
   deleteGuestProject,
@@ -43,21 +44,18 @@ function messageOf(error: unknown) {
 }
 
 /**
- * The guest's projects, kept in this browser (PRD-0008 G3): create, open,
- * rename, delete, import and export. `error` is shown above, e.g. why the
- * last project couldn't be opened.
+ * The guest's projects, kept in this browser (PRD-0008 G3), on the projects
+ * page: create, open, rename, delete, import and export.
  */
 export function GuestProjectList({
-  error: initialError,
   onCreate,
   onOpen,
 }: {
-  error: string | null;
   onCreate: (name: string) => Promise<void>;
   onOpen: (id: string) => Promise<void>;
 }) {
   const [projects, setProjects] = useState<GuestProjectRow[] | null>(null);
-  const [error, setError] = useState(initialError);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
 
@@ -119,19 +117,18 @@ export function GuestProjectList({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-6 p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        <Button variant="outline" asChild>
-          <Link href="/sign-in">Sign in</Link>
-        </Button>
-      </div>
+    <>
       <p className="max-w-2xl text-muted-foreground">
-        Your projects are kept in this browser only, until you{" "}
+        Your projects are kept in this browser only, and clearing this site&apos;s data deletes
+        them. To keep your work,{" "}
         <Link href="/sign-up" className="underline underline-offset-4">
           create a free account
-        </Link>
-        . Clearing this site's data deletes them, so export the ones you want to keep.
+        </Link>{" "}
+        and import them into it, or{" "}
+        <a href={DESKTOP_DOWNLOADS_PAGE} className="underline underline-offset-4">
+          download the desktop app
+        </a>{" "}
+        and open their exported files there.
       </p>
       <FormError message={error} />
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -241,6 +238,6 @@ export function GuestProjectList({
           </Table>
         </div>
       )}
-    </main>
+    </>
   );
 }

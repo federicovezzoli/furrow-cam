@@ -2,10 +2,11 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { meshLimits } from "@/features/assets/server";
-import { requireSession } from "@/features/auth/server";
+import { getSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
 import { getProject } from "@/features/projects/server";
 import { listToolChoices } from "@/features/tools/server";
+import { GuestProjectShell } from "@/features/workspace/guest/guest-app";
 import {
   parseLayoutCookie,
   WORKSPACE_LAYOUT_COOKIE,
@@ -14,7 +15,8 @@ import { WebProjectShell } from "@/features/workspace/host/web-project-shell";
 
 /**
  * Loads the project once for all its pages and keeps its stores while the
- * user moves between them (ADR-0042).
+ * user moves between them (ADR-0042): from the account, or without one from
+ * this browser (PRD-0008, ADR-0050).
  */
 export default function ProjectLayout({ params, children }: LayoutProps<"/projects/[id]">) {
   return (
@@ -29,7 +31,9 @@ async function Project({
   children,
 }: Pick<LayoutProps<"/projects/[id]">, "params" | "children">) {
   const { id } = await params;
-  const { user } = await requireSession();
+  const session = await getSession();
+  if (!session) return <GuestProjectShell id={id}>{children}</GuestProjectShell>;
+  const { user } = session;
   const userId = user.id;
   const [project, tools, machines, cookieStore] = await Promise.all([
     getProject(userId, id),

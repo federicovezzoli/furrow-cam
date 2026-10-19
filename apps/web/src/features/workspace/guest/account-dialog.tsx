@@ -31,11 +31,6 @@ export const ACCOUNT_REASONS: Record<AccountReason, { title: string; description
     description:
       "Machine profiles, from a preset or your own values, are saved in a free account or the desktop app, and used for every project made for them.",
   },
-  "save-bit": {
-    title: "Your bits are saved in an account",
-    description:
-      "The catalog's bits work without an account. Bits of your own, or changes to a catalog bit, are saved in a free account or the desktop app.",
-  },
 };
 
 /**

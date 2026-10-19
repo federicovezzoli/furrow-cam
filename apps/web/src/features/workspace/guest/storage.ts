@@ -4,8 +4,18 @@ import {
   ProjectDocumentVersionError,
   parseProjectDocument,
 } from "@furrow/document";
-import { parseSettings, type Settings } from "@furrow/workspace/lib/local-library";
-import type { SaveResult } from "@furrow/workspace/lib/workspace-host";
+import {
+  parseSettings,
+  parseTools,
+  type Settings,
+  saveTool,
+} from "@furrow/workspace/lib/local-library";
+import type {
+  SavedTool,
+  SaveResult,
+  ToolChoice,
+  ToolFormErrors,
+} from "@furrow/workspace/lib/workspace-host";
 
 /**
  * Guest projects, their STL files and settings, kept in the browser's
@@ -19,7 +29,7 @@ const DB_VERSION = 1;
 const PROJECTS = "projects";
 /** Keyed by `[projectId, sha256]`, so deleting a project deletes its files. */
 const MESHES = "meshes";
-/** Single records by name: `settings` and `lastProjectId`. */
+/** Single records by name: `settings`, `tools` and `lastProjectId`. */
 const SETTINGS = "settings";
 
 /** A guest project without its document, for the project list. */
@@ -301,6 +311,34 @@ export function readGuestSettings(): Promise<Settings> {
 export function saveGuestSettings(settings: Settings): Promise<void> {
   return transaction([SETTINGS], "readwrite", async (tx) => {
     await result(tx.objectStore(SETTINGS).put(settings, "settings"));
+  });
+}
+
+/**
+ * The guest's own bits (PRD-0008 G4); the catalog's are offered beside them.
+ * Empty at first: the catalog already has the default bit.
+ */
+export function readGuestTools(): Promise<ToolChoice[]> {
+  return transaction([SETTINGS], "readonly", async (tx) =>
+    parseTools((await result(tx.objectStore(SETTINGS).get("tools"))) ?? []),
+  );
+}
+
+/**
+ * Saves the tool form as the guest's bit `id`, or a new one when `null`, over
+ * the bits as stored now, in one transaction, so a bit saved in another tab
+ * meanwhile is kept. Returns the bits after the save.
+ */
+export function saveGuestTool(
+  id: string | null,
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tools: ToolChoice[]; saved: SavedTool }> {
+  return transaction([SETTINGS], "readwrite", async (tx) => {
+    const store = tx.objectStore(SETTINGS);
+    const saved = saveTool(parseTools((await result(store.get("tools"))) ?? []), id, form);
+    if ("errors" in saved) return saved;
+    await result(store.put(saved.tools, "tools"));
+    return saved;
   });
 }
 

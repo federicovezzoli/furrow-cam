@@ -39,7 +39,7 @@ export type RestoreResult =
   | { error: string };
 
 /** What a user without an account tried to do that needs one (PRD-0008 G6). */
-export type AccountReason = "export-gcode" | "machine" | "save-bit";
+export type AccountReason = "export-gcode" | "machine";
 
 /** A place outside the open workspace page that it links to. */
 export type WorkspaceDestination =

@@ -2,26 +2,41 @@ import "fake-indexeddb/auto";
 import { createProjectDocument } from "@furrow/document";
 import { parseSettings } from "@furrow/workspace/lib/local-library";
 import type { WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import { DEFAULT_TOOL } from "@furrow/workspace/tools/lib/tool-form-data";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let storage: typeof import("./storage");
 let guestHost: typeof import("./guest-host").guestHost;
-let GUEST_BITS: string;
 
 const navigation: WorkspaceHost["navigation"] = { Link: () => null };
+
+/** The tool form's fields for `tool`, as the browser submits them. */
+function toolForm(tool: Record<string, unknown>) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(tool)) {
+    if (value !== null && value !== undefined) form.set(key, String(value));
+  }
+  return form;
+}
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();
   vi.resetModules();
   storage = await import("./storage");
-  ({ guestHost, GUEST_BITS } = await import("./guest-host"));
+  ({ guestHost } = await import("./guest-host"));
 });
 
 async function openHost() {
   const project = await storage.createGuestProject("Coasters", createProjectDocument());
   const settings = { current: parseSettings(undefined) };
-  return { project, settings, host: guestHost(project, settings, navigation, { prompt() {} }) };
+  const tools = { current: await storage.readGuestTools() };
+  return {
+    project,
+    settings,
+    tools,
+    host: guestHost(project, settings, tools, navigation, { prompt() {} }),
+  };
 }
 
 describe("guestHost", () => {
@@ -63,20 +78,57 @@ describe("guestHost", () => {
     });
   });
 
-  it("has no versions, machines or bits of its own, and can't save one", async () => {
+  it("has no versions or machines, and no bits of its own at first", async () => {
     const { host } = await openHost();
     expect(host.versions).toBeNull();
     expect(host.library.tools).toEqual([]);
     expect(host.library.machines).toEqual([]);
-    expect(await host.library.saveTool(null, new FormData())).toEqual({
-      errors: { form: GUEST_BITS },
-    });
+  });
+
+  it("saves the guest's own bits in the browser, and edits them", async () => {
+    const { tools, host } = await openHost();
+    const saved = await host.library.saveTool(null, toolForm({ ...DEFAULT_TOOL, name: "My bit" }));
+    if ("errors" in saved) throw new Error(JSON.stringify(saved.errors));
+    expect(saved.tool.name).toBe("My bit");
+    expect(tools.current.map((choice) => choice.tool.name)).toEqual(["My bit"]);
+    expect((await storage.readGuestTools()).map((choice) => choice.id)).toEqual([saved.id]);
+
+    const edited = await host.library.saveTool(
+      saved.id,
+      toolForm({ ...DEFAULT_TOOL, name: "Mine" }),
+    );
+    expect(edited).toMatchObject({ id: saved.id, tool: { name: "Mine" } });
+    expect((await storage.readGuestTools()).map((choice) => choice.tool.name)).toEqual(["Mine"]);
+  });
+
+  it("keeps a bit another tab saved meanwhile", async () => {
+    const first = await openHost();
+    // A second tab, opened before either saved a bit.
+    const second = await openHost();
+    await first.host.library.saveTool(null, toolForm({ ...DEFAULT_TOOL, name: "First" }));
+    await second.host.library.saveTool(null, toolForm({ ...DEFAULT_TOOL, name: "Second" }));
+    expect((await storage.readGuestTools()).map((choice) => choice.tool.name)).toEqual([
+      "First",
+      "Second",
+    ]);
+  });
+
+  it("reports a bit the form can't save", async () => {
+    const { host } = await openHost();
+    expect(await host.library.saveTool(null, new FormData())).toHaveProperty("errors");
+    expect(await storage.readGuestTools()).toEqual([]);
   });
 
   it("asks for an account through the guest app's prompt", async () => {
     const project = await storage.createGuestProject("Coasters", createProjectDocument());
     const prompt = vi.fn();
-    const host = guestHost(project, { current: parseSettings(undefined) }, navigation, { prompt });
+    const host = guestHost(
+      project,
+      { current: parseSettings(undefined) },
+      { current: [] },
+      navigation,
+      { prompt },
+    );
     host.account?.prompt("export-gcode");
     expect(prompt).toHaveBeenCalledWith("export-gcode");
   });

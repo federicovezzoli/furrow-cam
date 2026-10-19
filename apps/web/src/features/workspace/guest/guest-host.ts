@@ -1,6 +1,6 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import type { Settings } from "@furrow/workspace/lib/local-library";
-import type { WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import type { ToolChoice, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
 import {
   deleteGuestMesh,
   type GuestProject,
@@ -8,11 +8,8 @@ import {
   putGuestMesh,
   saveGuestProject,
   saveGuestSettings,
+  saveGuestTool,
 } from "./storage";
-
-/** Why a guest can't save a bit of their own; the workspace asks for an account before getting here. */
-export const GUEST_BITS =
-  "Your own bits are saved in a free account or the desktop app. Create an account to add or change bits; the catalog's bits work without one.";
 
 /**
  * The guest's settings as last saved, shared by the hosts of every project
@@ -20,15 +17,20 @@ export const GUEST_BITS =
  */
 export type GuestSettings = { current: Settings };
 
+/** The guest's own bits as last saved, shared the same way. */
+export type GuestTools = { current: ToolChoice[] };
+
 /**
- * The workspace host of a guest's `project` (ADR-0050): it saves to the
- * browser's storage, has no versions and no machines, and offers only the
- * bit catalog, which the workspace adds. `navigation` is the guest app's,
- * and `account` explains what needs an account (PRD-0008 G6).
+ * The workspace host of a guest's `project` (ADR-0050): it saves the
+ * project and the guest's own `tools` to the browser's storage, and has no
+ * versions and no machines; the workspace adds the bit catalog. `navigation`
+ * is the guest app's, and `account` explains what needs an account
+ * (PRD-0008 G6).
  */
 export function guestHost(
   project: GuestProject,
   settings: GuestSettings,
+  tools: GuestTools,
   navigation: WorkspaceHost["navigation"],
   account: NonNullable<WorkspaceHost["account"]>,
 ): WorkspaceHost {
@@ -55,9 +57,19 @@ export function guestHost(
     },
     versions: null,
     library: {
-      tools: [],
+      tools: tools.current,
       machines: [],
-      saveTool: async () => ({ errors: { form: GUEST_BITS } }),
+      async saveTool(toolId, form) {
+        let result: Awaited<ReturnType<typeof saveGuestTool>>;
+        try {
+          result = await saveGuestTool(toolId, form);
+        } catch (error) {
+          return { errors: { form: (error as Error).message } };
+        }
+        if ("errors" in result) return result;
+        tools.current = result.tools;
+        return result.saved;
+      },
     },
     settings: {
       account: "guest",
