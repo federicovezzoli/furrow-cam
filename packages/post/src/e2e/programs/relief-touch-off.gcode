@@ -412,6 +412,7 @@ M5
 G0 Z5
 G0 X3 Y3
 M0 (Change the bit to 3 mm ball end mill, 3 mm and zero Z on the touch-off pad)
+G21 G90 G94 G17
 (Furrow tool: type=ball_end_mill diameter=3)
 (Operation: Finish)
 G0 Z5
@@ -1400,6 +1401,7 @@ M5
 G0 Z5
 G0 X3 Y3
 M0 (Change the bit to 1.5 mm ball end mill, 1.5 mm and zero Z on the touch-off pad)
+G21 G90 G94 G17
 (Furrow tool: type=ball_end_mill diameter=1.5)
 (Operation: Rest finish)
 G0 Z5
