@@ -152,6 +152,9 @@ describe("checkGcode", () => {
     expect(broken(program(["M3 S12000", "G1 X60"]))).toEqual([]);
     const none = { ...project, machine: project.machine && { ...project.machine, spinUpDelay: 0 } };
     expect(broken(program().replace(" G4 P5", ""), none)).toEqual([]);
+    // Nor a manual spindle, switched on by hand.
+    const manual = { ...project, machine: lowRider };
+    expect(broken(program().replace(" S18000 G4 P5", ""), manual)).toEqual([]);
     // A P word belongs to G4 only.
     expect(broken(program(["G1 X60 P2"]))).toEqual(["10 words"]);
   });

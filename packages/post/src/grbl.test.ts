@@ -161,7 +161,8 @@ describe("grbl", () => {
   describe("spindle", () => {
     it("omits S for a manual spindle", () => {
       const { gcode } = post({ machine: { ...lowRider, toolChange: null } });
-      expect(gcode).toContain("\nM3\nG4 P2\n");
+      expect(gcode).toContain("\nM3\n");
+      expect(gcode).not.toContain("G4");
     });
 
     describe("spin-up delay", () => {
@@ -205,10 +206,13 @@ describe("grbl", () => {
         expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000 G4 P5"]);
       });
 
-      it("waits once for a manual spindle, and not at all with no delay", () => {
-        const operations = [at(18000, 0), at(24000, 10)];
+      it("doesn't wait for a manual spindle, switched on by hand, or with no delay", () => {
+        const operations = [
+          at(18000, 0),
+          { ...at(18000, 10), operation: operation("Holes", drillBit) },
+        ];
         const manual = { ...lowRider, toolChange: null };
-        expect(starts(post({ machine: manual, operations }).gcode)).toEqual(["M3 G4 P2", "M3"]);
+        expect(starts(post({ machine: manual, operations }).gcode)).toEqual(["M3", "M3"]);
         const none = post({ machine: { ...machine, spinUpDelay: 0 }, operations }).gcode;
         expect(none).not.toContain("G4");
       });

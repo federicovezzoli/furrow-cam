@@ -173,7 +173,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
   const tools = projectTools(project);
   const material = new Material(project, [...tools.values()]);
 
-  const spinUpDelay = machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY;
+  // Switched on by hand, a manual spindle is up to speed by the time the job runs.
+  const spinUpDelay = manualSpindle ? 0 : (machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY);
   const modes = new Set<string>();
   let spindle = false;
   /** The last speed set, `null` for none. */

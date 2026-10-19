@@ -54,6 +54,8 @@ export const Machine = z
     /**
      * Seconds the post-processor waits after starting the spindle or raising
      * its speed, before the next move: GRBL doesn't wait for it to spin up.
+     * Ignored for a manual spindle, which is switched on by hand and already
+     * up to speed when the job starts or resumes.
      */
     spinUpDelay: z.number().nonnegative().max(60, "Must be at most 60 seconds"),
     /** Default retract height above the stock. */

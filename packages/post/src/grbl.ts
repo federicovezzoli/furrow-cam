@@ -27,7 +27,8 @@ const MODES = "G21 G90 G94 G17";
  * - GRBL doesn't wait for the spindle to reach speed, so a dwell (`G4 P`, the
  *   machine's spin-up delay in seconds) follows each `M3` that starts it or
  *   raises its speed. The spindle counts as stopped after a tool change and
- *   after any custom block, which may have stopped it.
+ *   after any custom block, which may have stopped it. A manual spindle gets
+ *   none: it is switched on by hand, and up to speed when the job runs.
  * - An operation with clearing moves (ADR-0026) is written as two: the
  *   clearing moves with its clearing tool, named "<operation>, clearing",
  *   then its own.
@@ -82,7 +83,9 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   if (machine?.programStart) custom(machine.programStart);
   else out.line(MODES);
 
-  const spinUpDelay = machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY;
+  // A manual spindle is switched on by hand, and up to speed by the time the job runs.
+  const manualSpindle = machine !== null && machine.spindleRpmMin === null;
+  const spinUpDelay = manualSpindle ? 0 : (machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY);
   /** The spindle's speed (`null` for a manual one) while it is known to be on, else `undefined`. */
   let spinning: number | null | undefined;
 
