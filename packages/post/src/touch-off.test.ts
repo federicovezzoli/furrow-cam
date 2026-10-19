@@ -51,7 +51,8 @@ describe("suggestTouchOffToolChange", () => {
 
   it("keeps the tool over the pad until it zeroes Z, with moves one axis at a time", () => {
     expect(suggestTouchOffToolChange("G0 X10\nG0 Y10 Z5\nG0 Y12 F500\nM0\nG0 X20", 5)).toBe(
-      "G0 X{padX} Y{padY}\nG0 Z5\nM0\nG0 X20",
+      // The feed set on a dropped move still holds after it.
+      "G0 X{padX} Y{padY}\nG0 Z5\nF500\nM0\nG0 X20",
     );
     expect(suggestTouchOffToolChange("G1 Y10 F800 (to the probe)\nG38.2 Z-50 F100", 5)).toBe(
       "G1 X{padX} Y{padY} F800 (to the probe)\nG38.2 Z-50 F100",
@@ -106,9 +107,45 @@ describe("suggestTouchOffToolChange", () => {
     expect(suggestTouchOffToolChange("G0 X1 Y1\nG28 X0 Y0\nM0", 5)).toBe("G0 X{padX} Y{padY}\nM0");
   });
 
-  it("drops arcs that would leave the pad", () => {
+  it("drops arcs that would leave the pad, moving their other axes straight", () => {
     expect(suggestTouchOffToolChange("G0 X1 Y1\nG2 X5 Y5 I2 J2\nM0", 5)).toBe(
       "G0 X{padX} Y{padY}\nM0",
+    );
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG2 X5 Y5 Z-1 I2 J2\nM0", 5)).toBe(
+      "G0 X{padX} Y{padY}\nG1 Z-1\nM0",
+    );
+  });
+
+  it("counts moves before any motion word, in the mode the program left", () => {
+    expect(suggestTouchOffToolChange("X0 Y0\nM0", 5)).toBe("X{padX} Y{padY}\nM0");
+    expect(suggestTouchOffToolChange("G53 X-10 Y-10\nM0", 5)).toBe("G0 X{padX} Y{padY}\nM0");
+  });
+
+  it("keeps the other words and the comment of a line whose move goes", () => {
+    // The G91 still makes the move after the pause relative.
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG91 G28 X0 Y0\nM0\nG1 Z-1", 5)).toBe(
+      "G0 X{padX} Y{padY}\nG91\nM0\nG1 Z-1",
+    );
+    // The feed still holds for the move after it.
+    expect(suggestTouchOffToolChange("G2 X5 Y5 I2 J2 F500\nM0\nG1 Z-1", 5)).toBe(
+      "F500\nG0 X{padX} Y{padY}\nM0\nG1 Z-1",
+    );
+    // The spindle still stops before the bit change.
+    expect(suggestTouchOffToolChange("G28 M5 (home)\nM0", 5)).toBe(
+      "M5 (home)\nG0 Z5\nG0 X{padX} Y{padY}\nM0",
+    );
+    expect(suggestTouchOffToolChange("G28 (home)\nM0", 5)).toBe(
+      "G0 Z5 (home)\nG0 X{padX} Y{padY}\nM0",
+    );
+  });
+
+  it("writes the block's motion mode again before the zeroing where it changed", () => {
+    // The modal X20 Y20 after the pause is still a feed, not a rapid.
+    expect(suggestTouchOffToolChange("G53 G1 Z-5 X-10 Y-10 F300\nM0\nX20 Y20", 5)).toBe(
+      "G53 G1 Z-5 F300\nG0 X{padX} Y{padY}\nG1\nM0\nX20 Y20",
+    );
+    expect(suggestTouchOffToolChange("G0 Z20\nG53 X-10 Y-10\nM0\nX20 Y20", 5)).toBe(
+      "G0 Z20\nG0 X{padX} Y{padY}\nM0\nX20 Y20",
     );
   });
 });
