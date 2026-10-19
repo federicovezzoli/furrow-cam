@@ -1,7 +1,7 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
 import {
-  DEFAULT_SPIN_UP_DELAY,
   type Machine,
+  machineSpinUpDelay,
   type Stock,
   type StockAnchor,
   type Tool,
@@ -26,9 +26,10 @@ const MODES = "G21 G90 G94 G17";
  *   Every word is written in full: the user may have jogged during a pause.
  * - GRBL doesn't wait for the spindle to reach speed, so a dwell (`G4 P`, the
  *   machine's spin-up delay in seconds) follows each `M3` that starts it or
- *   raises its speed. The spindle counts as stopped after a tool change and
- *   after any custom block, which may have stopped it. A manual spindle gets
- *   none: it is switched on by hand, and up to speed when the job runs.
+ *   raises its speed. The spindle counts as stopped after a tool change, and
+ *   after a custom operation-start block that stops it or ends or pauses the
+ *   program. A manual spindle gets none: it is switched on by hand, and up to
+ *   speed when the job runs.
  * - An operation with clearing moves (ADR-0026) is written as two: the
  *   clearing moves with its clearing tool, named "<operation>, clearing",
  *   then its own.
@@ -83,11 +84,9 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   if (machine?.programStart) custom(machine.programStart);
   else out.line(MODES);
 
-  // A manual spindle is switched on by hand, and up to speed by the time the job runs.
-  const manualSpindle = machine !== null && machine.spindleRpmMin === null;
-  const spinUpDelay = manualSpindle ? 0 : (machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY);
-  /** The spindle's speed (`null` for a manual one) while it is known to be on, else `undefined`. */
-  let spinning: number | null | undefined;
+  const spinUpDelay = machineSpinUpDelay(machine);
+  /** The spindle's speed while it is known to be on, else `undefined`. */
+  let speed: number | undefined;
 
   let tool: Tool | null = null;
   for (const step of steps) {
@@ -95,7 +94,8 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       out.comment(`Tool: ${toolLabel(step.tool)}`);
       if (tool !== null) {
         out.forget();
-        spinning = undefined;
+        // Changing the bit stops the spindle, whatever the blocks write.
+        speed = undefined;
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
           custom(fillTouchOffBlock(pad.toolChange, stock, pad));
@@ -120,7 +120,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
 
     if (machine?.operationStart) {
       custom(machine.operationStart);
-      spinning = undefined;
+      if (stopsSpindle(machine.operationStart)) speed = undefined;
     } else out.comment(`Operation: ${step.name}`);
 
     // Getting to the first entry point safely is the post-processor's job.
@@ -136,10 +136,11 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       );
     }
     out.line(rpm.value === null ? "M3" : `M3 S${rpm.value}`);
-    const speedsUp =
-      spinning === undefined || (rpm.value !== null && (spinning === null || rpm.value > spinning));
-    if (speedsUp && spinUpDelay > 0) out.line(`G4 P${formatNumber(spinUpDelay)}`);
-    spinning = rpm.value;
+    // `null` only for a manual spindle, which never waits.
+    if (spinUpDelay > 0 && rpm.value !== null) {
+      if (speed === undefined || rpm.value > speed) out.line(`G4 P${formatNumber(spinUpDelay)}`);
+      speed = rpm.value;
+    }
 
     let previous: Vec3 | null = null;
     let clamped = 0;
@@ -170,6 +171,12 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     out.line("M30");
   }
   return { gcode: out.toString(), warnings };
+}
+
+/** Whether custom `block` stops the spindle (`M5`), or pauses or ends the program (`M0`, `M1`, `M2`, `M30`). */
+function stopsSpindle(block: string): boolean {
+  const code = block.replace(/\([^)]*\)/g, " ").replace(/;.*$/gm, " ");
+  return /(?:^|[^A-Z])M0*(?:0|1|2|5|30)(?![0-9.])/i.test(code);
 }
 
 type Axes = { x?: number; y?: number; z?: number };

@@ -13,7 +13,7 @@ import {
 } from "@furrow/cam-core";
 import {
   clearingTool,
-  DEFAULT_SPIN_UP_DELAY,
+  machineSpinUpDelay,
   type ProjectDocument,
   type Tool,
 } from "@furrow/document";
@@ -173,8 +173,7 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
   const tools = projectTools(project);
   const material = new Material(project, [...tools.values()]);
 
-  // Switched on by hand, a manual spindle is up to speed by the time the job runs.
-  const spinUpDelay = manualSpindle ? 0 : (machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY);
+  const spinUpDelay = machineSpinUpDelay(machine);
   const modes = new Set<string>();
   let spindle = false;
   /** The last speed set, `null` for none. */
@@ -203,6 +202,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       if (toolCount > 1) paused = false;
     }
     const commands = line.words.filter(({ letter }) => letter === "G" || letter === "M");
+    /** A dwell in this block, which GRBL runs after its spindle change whatever the word order. */
+    let dwell: number | undefined;
     for (const { letter, value } of commands) {
       const command = `${letter}${value}`;
       if (!ALLOWED.has(command))
@@ -217,9 +218,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
         spindle = false;
         speed = null;
       } else if (command === "G4") {
-        const p = line.words.find((word) => word.letter === "P")?.value;
-        if (p === undefined) fail(line.number, "words", "G4 without P");
-        else if (p >= spinUpDelay - EPSILON) spinningUp = null;
+        dwell = line.words.find((word) => word.letter === "P")?.value;
+        if (dwell === undefined) fail(line.number, "words", "G4 without P");
       } else if (command === "M0") {
         if (!(position[2] >= top - EPSILON)) {
           fail(line.number, "pause", "pauses with the tool in the stock");
@@ -232,6 +232,7 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
         ended = line.number;
       }
     }
+    if (dwell !== undefined && dwell >= spinUpDelay - EPSILON) spinningUp = null;
     const dwells = commands.some(({ letter, value }) => letter === "G" && value === 4);
     for (const { letter, value } of line.words) {
       if (!"GMXYZFS".includes(letter) && !(letter === "P" && dwells)) {

@@ -107,6 +107,30 @@ export type Machine = z.infer<typeof Machine>;
 const MACHINE_FIELDS = Object.keys(Machine.shape) as (keyof Machine)[];
 
 /**
+ * The dwell after the spindle starts or speeds up, in seconds as G-code
+ * writes them (to the millisecond): the machine's spin-up delay, the default
+ * without a machine, none for a manual spindle, which is switched on by hand
+ * and already up to speed when the job starts or resumes.
+ */
+export function machineSpinUpDelay(machine: Machine | null): number {
+  if (machine !== null && machine.spindleRpmMin === null) return 0;
+  return Math.round((machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY) * 1000) / 1000;
+}
+
+/**
+ * A machine as an earlier release stored it, with the fields added since
+ * filled in, for the stores that have no schema version: the desktop app's
+ * and the guest workspace's machine lists. Each new field's default goes
+ * here as well as in the document migration for its snapshots, which stays
+ * as it was written for its version.
+ */
+export function upgradeMachine(stored: unknown): unknown {
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return stored;
+  // #240.
+  return { spinUpDelay: DEFAULT_SPIN_UP_DELAY, ...stored };
+}
+
+/**
  * Copies the profile fields out of a database row, dropping columns such as
  * `id` and `userId`. Doesn't validate, so a row that fails rules added since
  * it was saved can still be shown in the form and fixed.

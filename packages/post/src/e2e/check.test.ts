@@ -155,6 +155,8 @@ describe("checkGcode", () => {
     // Nor a manual spindle, switched on by hand.
     const manual = { ...project, machine: lowRider };
     expect(broken(program().replace(" S18000 G4 P5", ""), manual)).toEqual([]);
+    // GRBL dwells after the spindle change in a block, whatever the word order.
+    expect(broken(program().replace("M3 S18000 G4 P5", "G4 P5 M3 S18000"))).toEqual([]);
     // A P word belongs to G4 only.
     expect(broken(program(["G1 X60 P2"]))).toEqual(["10 words"]);
   });

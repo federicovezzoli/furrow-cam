@@ -87,6 +87,23 @@ describe("machines", () => {
     expect(parseMachines([{ id: "x", machine: { name: "" } }])).toEqual([]);
   });
 
+  it("keeps a manual spindle's hidden spin-up delay from blocking the save", () => {
+    const manual = { ...machine, spindleRpmMin: null, spindleRpmMax: null, manualSpindle: "on" };
+    for (const [typed, kept] of [
+      [90, DEFAULT_SPIN_UP_DELAY],
+      ["", DEFAULT_SPIN_UP_DELAY],
+      [3, 3],
+    ] as const) {
+      const saved = saveMachine([], null, toolForm({ ...manual, spinUpDelay: typed }));
+      if ("errors" in saved) throw new Error(JSON.stringify(saved.errors));
+      expect(saved.machines[0]?.machine.spinUpDelay).toBe(kept);
+    }
+    const speeds = saveMachine([], null, toolForm({ ...machine, spinUpDelay: 90 }));
+    expect(speeds).toEqual({
+      errors: expect.objectContaining({ spinUpDelay: expect.any(String) }),
+    });
+  });
+
   it("saves the spin-up delay, and gives machines stored without one the default", () => {
     const saved = saveMachine([], null, toolForm({ ...machine, spinUpDelay: 8 }));
     if ("errors" in saved) throw new Error(JSON.stringify(saved.errors));

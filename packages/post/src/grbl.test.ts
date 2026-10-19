@@ -200,10 +200,20 @@ describe("grbl", () => {
         }
       });
 
-      it("waits after a custom operation start, which may stop the spindle", () => {
+      it("waits after a custom operation start only if it stops the spindle", () => {
         const operations = [at(18000, 0), at(18000, 10)];
-        const { gcode } = post({ machine: { ...machine, operationStart: "M5" }, operations });
-        expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000 G4 P5"]);
+        for (const operationStart of ["M5", "G0 Z20\nM0 (Check the clamps)", "M05"]) {
+          const { gcode } = post({ machine: { ...machine, operationStart }, operations });
+          expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000 G4 P5"]);
+        }
+        for (const operationStart of [
+          "(Pocket the recess)",
+          "M50 P1 ; M5 is in a comment",
+          "G4 P0.5",
+        ]) {
+          const { gcode } = post({ machine: { ...machine, operationStart }, operations });
+          expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000"]);
+        }
       });
 
       it("doesn't wait for a manual spindle, switched on by hand, or with no delay", () => {
@@ -215,6 +225,9 @@ describe("grbl", () => {
         expect(starts(post({ machine: manual, operations }).gcode)).toEqual(["M3", "M3"]);
         const none = post({ machine: { ...machine, spinUpDelay: 0 }, operations }).gcode;
         expect(none).not.toContain("G4");
+        // Less than the millisecond G-code writes: no `G4 P0`.
+        const tiny = post({ machine: { ...machine, spinUpDelay: 0.0004 }, operations }).gcode;
+        expect(tiny).not.toContain("G4");
       });
 
       it("waits the default delay without a machine, and fractions of a second", () => {

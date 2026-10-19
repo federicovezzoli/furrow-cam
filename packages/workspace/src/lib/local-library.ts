@@ -1,4 +1,4 @@
-import { DEFAULT_SPIN_UP_DELAY, Machine, Tool } from "@furrow/document";
+import { Machine, Tool, upgradeMachine } from "@furrow/document";
 import { type MachineFormErrors, parseMachineForm } from "../machines/lib/machine-form-data";
 import { DEFAULT_TOOL, parseToolForm } from "../tools/lib/tool-form-data";
 import type { MachineChoice, SavedTool, ToolChoice, ToolFormErrors } from "./workspace-host";
@@ -44,12 +44,7 @@ export function parseMachines(json: unknown): MachineChoice[] {
     .flatMap((entry: unknown) => {
       if (typeof entry !== "object" || entry === null) return [];
       const { id, machine } = entry as Record<string, unknown>;
-      // Machines saved before #240 have no spin-up delay.
-      const parsed = Machine.safeParse(
-        typeof machine === "object" && machine !== null && !("spinUpDelay" in machine)
-          ? { ...machine, spinUpDelay: DEFAULT_SPIN_UP_DELAY }
-          : machine,
-      );
+      const parsed = Machine.safeParse(upgradeMachine(machine));
       return typeof id === "string" && parsed.success ? [{ id, machine: parsed.data }] : [];
     })
     .sort(byMachineName);
