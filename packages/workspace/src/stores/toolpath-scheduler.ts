@@ -224,24 +224,43 @@ export function scheduleToolpaths(
     }
     const pending = exports.get(id);
     if (!pending) return;
+    if (documents.getState().document !== pending.request.document) {
+      // Edited while the worker exported: that program would differ from the
+      // screen, so it is made again from the document as it is now, keeping
+      // the meshes the worker was sent and the toolpaths it holds.
+      const meshes = pending.request.meshes;
+      pending.request = { ...exportRequest(pending.request.name), export: id };
+      if (meshes) pending.request.meshes = meshes;
+      post(pending.request);
+      return;
+    }
     exports.delete(id);
     const { export: _, ...result } = response;
     pending.resolve(result);
   }
 
+  /** An export of the document as it is now, with the inputs the toolpaths were requested with. */
+  function exportRequest(name: string): GcodeExportRequest {
+    const { document } = documents.getState();
+    const enabled = document.operations.filter((operation) => operation.enabled);
+    const inputs = toolpathInputs(document, enabled).map((input) => ({
+      operationId: input.operation.id,
+      inputHash: hashInput(input),
+      input,
+    }));
+    lastExport++;
+    return { export: lastExport, document, name, inputs };
+  }
+
   return {
     stop,
-    /** The G-code of the document as it is now, from the toolpaths the worker holds (#133). */
+    /**
+     * The G-code of the document as it is when the program is ready, from the
+     * toolpaths the worker holds (#133): an edit made while it is made starts
+     * it again (#252).
+     */
     exportGcode(name: string): Promise<GcodeExportResult> {
-      const { document } = documents.getState();
-      const enabled = document.operations.filter((operation) => operation.enabled);
-      const inputs = toolpathInputs(document, enabled).map((input) => ({
-        operationId: input.operation.id,
-        inputHash: hashInput(input),
-        input,
-      }));
-      lastExport++;
-      const request: GcodeExportRequest = { export: lastExport, document, name, inputs };
+      const request = exportRequest(name);
       return new Promise((resolve) => {
         exports.set(request.export, { request, resolve });
         post(request);

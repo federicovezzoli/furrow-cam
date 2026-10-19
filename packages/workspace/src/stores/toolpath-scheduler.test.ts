@@ -409,6 +409,35 @@ describe("scheduleToolpaths", () => {
     await expect(exported).resolves.toEqual({ gcode: "G0", warnings: [], fileName: "plate.gcode" });
   });
 
+  it("exports again when the document changed before the worker answered (#252)", async () => {
+    const { documents, exports, schedule } = setup();
+    const exported = schedule.exportGcode("Plate");
+    const [first] = exports as [GcodeExportRequest];
+    deepen(documents, 6);
+    // The program of the document as it was is never handed out.
+    schedule.receive({ export: first.export, gcode: "G1 Z-3", warnings: [], fileName: "p.gcode" });
+    expect(exports).toHaveLength(2);
+    const second = exports[1] as GcodeExportRequest;
+    expect(second.document).toBe(documents.getState().document);
+    expect(second.inputs[0]?.input.operation).toBe(documents.getState().document.operations[0]);
+    schedule.receive({ export: second.export, gcode: "G1 Z-6", warnings: [], fileName: "p.gcode" });
+    await expect(exported).resolves.toEqual({ gcode: "G1 Z-6", warnings: [], fileName: "p.gcode" });
+    expect(exports).toHaveLength(2);
+  });
+
+  it("keeps the meshes it sent when exporting again", async () => {
+    const { documents, exports, schedule } = setup();
+    const exported = schedule.exportGcode("Relief");
+    const [first] = exports as [GcodeExportRequest];
+    schedule.receive({ export: first.export, missingMesh: "abc" });
+    await vi.waitFor(() => expect(exports).toHaveLength(2));
+    deepen(documents, 6);
+    schedule.receive({ export: first.export, error: "Nothing to cut" });
+    expect(exports[2]?.meshes).toHaveLength(1);
+    schedule.receive({ export: first.export, error: "Nothing to cut" });
+    await expect(exported).resolves.toEqual({ error: "Nothing to cut" });
+  });
+
   it("sends an export again with the mesh the worker lacks", async () => {
     const { exports, meshes, schedule } = setup();
     const exported = schedule.exportGcode("Relief");
