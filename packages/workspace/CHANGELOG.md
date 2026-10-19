@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies: @furrow/cam-core@0.8.3, @furrow/post@0.7.3, @furrow/ui@0.1.4
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.12.1
+
+### Patch Changes
+
+- Uploaded STL files are now always stored and served as binary downloads, so the storage bucket can't be used to host web pages or other content. ([#268](https://github.com/federicovezzoli/furrow-cam/pull/268))
+- Updated dependencies: @furrow/cam-core@0.8.3, @furrow/post@0.7.3, @furrow/ui@0.1.4, @furrow/workspace@0.5.1
+
 ## 0.12.0
 
 ### Minor Changes
