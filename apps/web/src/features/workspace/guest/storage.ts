@@ -4,8 +4,18 @@ import {
   ProjectDocumentVersionError,
   parseProjectDocument,
 } from "@furrow/document";
-import { parseSettings, parseTools, type Settings } from "@furrow/workspace/lib/local-library";
-import type { SaveResult, ToolChoice } from "@furrow/workspace/lib/workspace-host";
+import {
+  parseSettings,
+  parseTools,
+  type Settings,
+  saveTool,
+} from "@furrow/workspace/lib/local-library";
+import type {
+  SavedTool,
+  SaveResult,
+  ToolChoice,
+  ToolFormErrors,
+} from "@furrow/workspace/lib/workspace-host";
 
 /**
  * Guest projects, their STL files and settings, kept in the browser's
@@ -314,9 +324,21 @@ export function readGuestTools(): Promise<ToolChoice[]> {
   );
 }
 
-export function saveGuestTools(tools: ToolChoice[]): Promise<void> {
+/**
+ * Saves the tool form as the guest's bit `id`, or a new one when `null`, over
+ * the bits as stored now, in one transaction, so a bit saved in another tab
+ * meanwhile is kept. Returns the bits after the save.
+ */
+export function saveGuestTool(
+  id: string | null,
+  form: FormData,
+): Promise<{ errors: ToolFormErrors } | { tools: ToolChoice[]; saved: SavedTool }> {
   return transaction([SETTINGS], "readwrite", async (tx) => {
-    await result(tx.objectStore(SETTINGS).put(tools, "tools"));
+    const store = tx.objectStore(SETTINGS);
+    const saved = saveTool(parseTools((await result(store.get("tools"))) ?? []), id, form);
+    if ("errors" in saved) return saved;
+    await result(store.put(saved.tools, "tools"));
+    return saved;
   });
 }
 

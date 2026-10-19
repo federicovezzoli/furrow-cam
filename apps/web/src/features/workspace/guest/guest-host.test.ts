@@ -101,6 +101,18 @@ describe("guestHost", () => {
     expect((await storage.readGuestTools()).map((choice) => choice.tool.name)).toEqual(["Mine"]);
   });
 
+  it("keeps a bit another tab saved meanwhile", async () => {
+    const first = await openHost();
+    // A second tab, opened before either saved a bit.
+    const second = await openHost();
+    await first.host.library.saveTool(null, toolForm({ ...DEFAULT_TOOL, name: "First" }));
+    await second.host.library.saveTool(null, toolForm({ ...DEFAULT_TOOL, name: "Second" }));
+    expect((await storage.readGuestTools()).map((choice) => choice.tool.name)).toEqual([
+      "First",
+      "Second",
+    ]);
+  });
+
   it("reports a bit the form can't save", async () => {
     const { host } = await openHost();
     expect(await host.library.saveTool(null, new FormData())).toHaveProperty("errors");

@@ -1,5 +1,5 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
-import { type Settings, saveTool } from "@furrow/workspace/lib/local-library";
+import type { Settings } from "@furrow/workspace/lib/local-library";
 import type { ToolChoice, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
 import {
   deleteGuestMesh,
@@ -8,7 +8,7 @@ import {
   putGuestMesh,
   saveGuestProject,
   saveGuestSettings,
-  saveGuestTools,
+  saveGuestTool,
 } from "./storage";
 
 /**
@@ -60,13 +60,13 @@ export function guestHost(
       tools: tools.current,
       machines: [],
       async saveTool(toolId, form) {
-        const result = saveTool(tools.current, toolId, form);
-        if ("errors" in result) return result;
+        let result: Awaited<ReturnType<typeof saveGuestTool>>;
         try {
-          await saveGuestTools(result.tools);
+          result = await saveGuestTool(toolId, form);
         } catch (error) {
           return { errors: { form: (error as Error).message } };
         }
+        if ("errors" in result) return result;
         tools.current = result.tools;
         return result.saved;
       },
