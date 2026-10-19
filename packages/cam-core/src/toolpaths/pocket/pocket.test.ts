@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../../scene/stock";
 import { generateToolpath } from "../generate";
 import type { Toolpath, ToolpathMove } from "../toolpath";
+import { crossesOnlyInside, pieces } from "./cut";
 import { pocketToolpath } from "./pocket";
 
 const tool: Tool = {
@@ -924,4 +925,103 @@ describe("pocketToolpath with peel clearing", () => {
     expect(toolpath.moves.length).toBeGreaterThan(0);
     for (const move of toolpath.moves) expect(move.to[0]).toBeLessThanOrEqual(100);
   });
+});
+
+/**
+ * The 100 mm square with 2 mm wide tabs of material sticking 10 mm in from
+ * each wall, off-centre, so a move along a wall's offset line passes a tab's
+ * junction vertices exactly and none of a few evenly spaced points lands in it.
+ */
+const tabs: [number, number, number, number][] = [
+  [59, 0, 61, 10],
+  [90, 37, 100, 39],
+  [37, 90, 39, 100],
+  [0, 63, 10, 65],
+];
+const tabbed: Shape = {
+  id: "7c6b5a4f-3e2d-4c1b-8a9f-0e1d2c3b4a5f",
+  name: "Tabbed square",
+  layer: "0",
+  paths: [
+    {
+      start: [0, 0],
+      segments: (
+        [
+          [59, 0],
+          [59, 10],
+          [61, 10],
+          [61, 0],
+          [100, 0],
+          [100, 37],
+          [90, 37],
+          [90, 39],
+          [100, 39],
+          [100, 100],
+          [39, 100],
+          [39, 90],
+          [37, 90],
+          [37, 100],
+          [0, 100],
+          [0, 65],
+          [10, 65],
+          [10, 63],
+          [0, 63],
+        ] as [number, number][]
+      ).map((to) => ({ kind: "line" as const, to })),
+      closed: true,
+    },
+  ],
+};
+
+describe("pocketToolpath with tabs sticking in from the walls", () => {
+  it("knows a move along a wall line through a tab's junction vertices leaves the area", () => {
+    // The tab at x 59 to 61 grown by the tool radius: junction vertices on y = 3.
+    const ring: [number, number][] = [
+      [3, 3],
+      [56, 3],
+      [56, 13],
+      [64, 13],
+      [64, 3],
+      [97, 3],
+      [97, 97],
+      [3, 97],
+    ];
+    const layout = { stepOver: 2.4, radius: 3, reverse: false, tolerance: 1e-3 };
+    const [piece] = pieces([ring], layout);
+    if (!piece) throw new Error("No piece");
+    expect(crossesOnlyInside(piece, [3, 3], [97, 3])).toBe(false);
+    expect(crossesOnlyInside(piece, [10, 3], [90, 3])).toBe(false);
+    // Along the wall up to the tab, and across the area: inside.
+    expect(crossesOnlyInside(piece, [3, 3], [56, 3])).toBe(true);
+    expect(crossesOnlyInside(piece, [10, 3], [10, 90])).toBe(true);
+    expect(crossesOnlyInside(piece, [56, 13], [90, 50])).toBe(true);
+  });
+
+  for (const strategy of [
+    { type: "offset" },
+    { type: "linear", angle: 0 },
+    { type: "linear", angle: 90 },
+    { type: "peel", start: "centre" },
+    { type: "peel", start: "outside" },
+  ] as PocketStrategy[]) {
+    it(`never cuts into a tab with ${JSON.stringify(strategy)} clearing`, () => {
+      const toolpath = pocket({ strategy }, [tabbed]);
+      expect(toolpath.moves.length).toBeGreaterThan(0);
+      let closest = Infinity;
+      for (const [a, b] of cutsBelowTop(toolpath)) {
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        for (let d = 0; d <= length; d += 0.05) {
+          const t = length > 0 ? d / length : 0;
+          const x = a[0] + (b[0] - a[0]) * t;
+          const y = a[1] + (b[1] - a[1]) * t;
+          for (const [x0, y0, x1, y1] of tabs) {
+            const gap = Math.hypot(Math.max(0, x0 - x, x - x1), Math.max(0, y0 - y, y - y1));
+            closest = Math.min(closest, gap);
+          }
+        }
+      }
+      // Within the arc tolerance of the radius around the tabs' corners.
+      expect(closest).toBeGreaterThan(3 - 2e-2);
+    });
+  }
 });

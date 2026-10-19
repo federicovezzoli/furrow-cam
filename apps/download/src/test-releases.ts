@@ -6,6 +6,7 @@ export const FILES = [
   "win-x64.exe",
   "linux-x86_64.AppImage",
   "linux-amd64.deb",
+  "linux-x64.pacman",
 ];
 
 export function desktopRelease(
