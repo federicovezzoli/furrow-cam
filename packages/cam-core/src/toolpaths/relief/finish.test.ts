@@ -8,10 +8,12 @@ import {
   createReliefCache,
   MAX_RELIEF_CELLS,
   offsetHeightsSteps,
+  RestDropper,
   rasterizeModelSteps,
   reliefCellSize,
   reliefGrid,
   restGrid,
+  restProfile,
   runSteps,
   sampleMoves,
   simplifyHeights,
@@ -149,6 +151,7 @@ describe("restGrid", () => {
       rows: 40,
       cellWidth: 0.25,
       cellHeight: 0.25,
+      coarsened: false,
     });
   });
 
@@ -164,6 +167,32 @@ describe("restGrid", () => {
     const rest = restGrid(grid, { min: [-1000, -1000], max: [1000, 1000] }, 10_000);
     expect(rest.columns * rest.rows).toBeLessThanOrEqual(10_000);
     expect(rest.columns * rest.cellWidth).toBeCloseTo(2000);
+    // Said, so rest roughing can warn that narrow material may be missed.
+    expect(rest.coarsened).toBe(true);
+    expect(restGrid(grid, { min: [-5, 2], max: [30, 4] }).coarsened).toBe(false);
+  });
+});
+
+describe("RestDropper", () => {
+  it("drops along a pass as each sample's own drop would, skipping the cleared stretches", () => {
+    const grid = reliefGrid(placed(20, 10, 5), 0, 0.1);
+    if (!grid) throw new Error("no grid");
+    const coarse = restGrid(grid, { min: [-5, -5], max: [30, 15] });
+    // Mostly cleared to -5, with a few spots of stock left at varying heights.
+    const heights = new Float32Array(coarse.columns * coarse.rows).fill(-5);
+    for (let k = 0; k < heights.length; k += 997) heights[k] = -5 + (k % 7);
+    const profile = cutterProfile({ ...endMill, diameter: 3 });
+    const dropper = new RestDropper({ grid: coarse, heights }, grid, profile);
+    const exact = new ToolDropper(heights, coarse, restProfile(profile));
+    const [du, dv] = [grid.origin[0] - coarse.origin[0], grid.origin[1] - coarse.origin[1]];
+    for (const v of [0.05, 2.35, 5, 9.95]) {
+      const out = new Float64Array(grid.columns).fill(-4.5);
+      dropper.dropLine(v, 0, grid.columns - 1, out);
+      for (let i = 0; i < grid.columns; i++) {
+        const u = (i + 0.5) * grid.cellWidth + du;
+        expect(out[i]).toBe(exact.dropPoint(u, v + dv, -4.5));
+      }
+    }
   });
 });
 

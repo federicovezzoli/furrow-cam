@@ -155,9 +155,6 @@ export function* reliefRoughSteps(
     warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
     return { moves: [], warnings };
   }
-  // Simulated wherever the tool reaches, which the area may take past the
-  // model's grid: past the simulation, the tool would meet stock it can't see.
-  const reach = radius + wanted;
   const restStock = rest
     ? yield* restStockSteps(
         grid,
@@ -165,12 +162,10 @@ export function* reliefRoughSteps(
         stockBottom ?? grid.base,
         HEIGHTMAP_SHARE - REST_SHARE,
         HEIGHTMAP_SHARE,
-        {
-          min: [area.min[0] - reach, area.min[1] - reach],
-          max: [area.max[0] + reach, area.max[1] + reach],
-        },
+        restCover(area, rest.stock, radius + wanted + 2 * restCellSize(grid)),
       )
     : null;
+  if (restStock?.grid.coarsened) warnings.push(restCoarsenedWarning(restStock.grid));
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -279,6 +274,37 @@ export function roughingArea(
   const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
   const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
   return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
+}
+
+/**
+ * Where a rest roughing's stock left is simulated, besides the model's grid:
+ * the `area` grown by `margin`, wherever the tool may reach from it (its
+ * radius, the rest dropper's reach of a cell's diagonal and more), on the
+ * stock, where earlier operations can have cut. Without a stock, nothing
+ * past the model's grid: the stock is the model's outline (`roughingArea`).
+ */
+function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
+  if (!stock) return null;
+  const min: Point = [
+    Math.max(area.min[0] - margin, stock.min[0]),
+    Math.max(area.min[1] - margin, stock.min[1]),
+  ];
+  const max: Point = [
+    Math.min(area.max[0] + margin, stock.max[0]),
+    Math.min(area.max[1] + margin, stock.max[1]),
+  ];
+  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
+}
+
+/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
+function restCellSize(grid: ReliefGrid): number {
+  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+}
+
+/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
+function restCoarsenedWarning(grid: ReliefGrid): string {
+  const size = Math.max(grid.cellWidth, grid.cellHeight);
+  return `The area is too large to simulate the stock left at full resolution: it is simulated with cells of ${size.toFixed(3)} mm, so material narrower than ${(2 * size).toFixed(3)} mm the operations before left may be cut at full depth.`;
 }
 
 /**
