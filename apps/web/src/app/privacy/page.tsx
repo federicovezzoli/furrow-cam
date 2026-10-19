@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049).
-const LAST_UPDATED = "18 October 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050).
+const LAST_UPDATED = "19 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -59,6 +59,20 @@ export default function PrivacyPage() {
             don't use tracking cookies. The app sets a cookie for your session and one that
             remembers the workspace panel sizes, and keeps your light or dark theme choice in your
             browser&apos;s local storage.
+          </p>
+        </Section>
+
+        <Section title="Using Furrow CAM without an account">
+          <p>
+            You can use Furrow CAM without signing up. Your projects, their 3D model files and your
+            workspace settings are then kept in your browser&apos;s storage (IndexedDB) on your
+            device, and are never sent to us. They reach our servers only if you create an account
+            and choose to import them into it.
+          </p>
+          <p>
+            You can delete them from the project list, or all at once by clearing this site&apos;s
+            data in your browser. Clearing it, or using a private window, also loses them, so export
+            the projects you want to keep.
           </p>
         </Section>
 
