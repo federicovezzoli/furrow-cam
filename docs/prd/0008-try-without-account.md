@@ -26,7 +26,7 @@ Before a visitor sees the workspace, the web app asks them to create an account,
 - **G-code export without an account** on the web. Visitors who don't want an account use the desktop app (PRD-0007).
 - **Machine choice for guests.** Machines, including presets (PRD-0004), belong to an account or the desktop app.
 - **Bit presets traced to maker charts** (the PRD-0004 non-goal stands). The catalog's values are generic starting points.
-- Changes to the account flow itself (PRD-0001 R17) or to freemium limits for accounts (PRD-0003).
+- Changes to sign-up and sign-in (PRD-0001 R17) or to freemium limits for accounts (PRD-0003).
 
 ## Requirements
 
@@ -36,14 +36,15 @@ Before a visitor sees the workspace, the web app asks them to create an account,
 | G2 | Guest projects, their STL files and settings (tours seen, panel sizes) are kept in the browser, survive reloads, and are never sent to the server | Must |
 | G3 | A guest can keep several projects: create, open, rename, delete, import a `.furrow` file and export one, from a project list reached from the workspace | Must |
 | G4 | A **bit catalog** in the repository offers common bits to everyone (guests, accounts, the desktop app): flat end mills in metric and imperial sizes (upcut, downcut, compression), ball nose, and 30°, 60° and 90° V-bits | Must |
-| G5 | Catalog values are conservative starting points for softwood and plywood on a hobby router, and the picker says so. Catalog bits are read-only and don't count towards the tool limit (PRD-0003) | Must |
+| G5 | Catalog values are conservative starting points for softwood and plywood on a hobby router, and the picker says so. Catalog bits are read-only and won't count towards the tool limit once limits exist (PRD-0003) | Must |
 | G6 | A guest who exports G-code, chooses a machine, or adds or edits a bit sees a dialog explaining what needs an account, with: **Create a free account**, **Sign in**, **Download the desktop app** (for their system) and **Save this project as a file** | Must |
-| G7 | After signing in, a browser that holds guest projects offers to import them: the user picks which ones, or dismisses the offer (asked again next time) or discards them. Imported projects count towards the project limit (PRD-0003); the offer says which didn't fit | Must |
+| G7 | After signing in, a browser that holds guest projects offers to import them: the user picks which ones, or dismisses the offer (asked again next time) or discards them. Imported projects need no machine (G13); the offer lists any project that failed to import, with the reason. Once project limits exist (PRD-0003), imports count towards them | Must |
 | G8 | Signing up from the dialog (G6) brings the user back to the project they were in once they sign in, with the import offer (G7) | Should |
 | G9 | The workspace top bar shows **Sign in** for guests, where accounts see their account menu | Must |
 | G10 | The privacy policy says that guest projects stay in the browser's storage and how to remove them | Must |
 | G11 | The website's main call to action opens the app (`app.furrow.cam`) instead of the sign-up page | Must |
 | G12 | The guided tour (PRD-0001 R22) runs for guests, remembered per browser | Should |
+| G13 | Accounts can create and import projects without a machine; the machine is chosen in the project before exporting G-code | Must |
 
 ## User flow
 
@@ -67,3 +68,4 @@ Before a visitor sees the workspace, the web app asks them to create an account,
 ## Changelog
 
 - 2026-10-18: initial draft
+- 2026-10-19: G13, projects without a machine, so imported guest projects need none; G5 and G7 no longer assume freemium limits are enforced (#226 review)
