@@ -53,4 +53,4 @@ PRD-0008 opens the web workspace to visitors without an account. Today `proxy.ts
 - The desktop app gains the bit catalog for free.
 - G-code export stays gated in an open source client, so a modified client can export as a guest. That is acceptable: the desktop app exports without an account anyway, and the gate exists to invite sign-up, not to protect anything.
 - Imports of guest projects are not limited until ADR-0017 is implemented. When it is, its project count check must cover the import actions too, and the import offer must report projects refused for the limit.
-- Follow-up: expiring old guest projects, if PRD-0008's open question decides so.
+- Guest projects never expire on our side (PRD-0008 open question, decided). The app doesn't call `navigator.storage.persist()` or warn about browser clearing: guest mode is for exploring, and both would add friction.
