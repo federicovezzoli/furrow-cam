@@ -5,6 +5,7 @@ import {
   vBitConeDepth,
 } from "@furrow/cam-core";
 import {
+  canCutSideways,
   canDrill,
   canEngrave,
   canVCarve,
@@ -24,6 +25,7 @@ import {
   ReliefRoughParams,
   type Shape,
   type Tool,
+  toolProblem,
   VCarveParams,
 } from "@furrow/document";
 import type { z } from "zod";
@@ -149,9 +151,11 @@ function nextName(document: ProjectDocument, base: string): string {
 /**
  * Appends a profile of `targets` (shapes and paths no longer in the document
  * are skipped) cut with a snapshot of `tool`. Returns the new operation's id,
- * or `null` if none of the targets exist.
+ * or `null` if none of the targets exist or `tool` is a drill bit, which
+ * can't cut sideways.
  */
 export function addProfileOperation(store: DocumentStore, options: NewOperation): string | null {
+  if (!canCutSideways(options.tool)) return null;
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "profile",
@@ -162,6 +166,7 @@ export function addProfileOperation(store: DocumentStore, options: NewOperation)
 
 /** Appends a pocket of `targets`, like `addProfileOperation`. */
 export function addPocketOperation(store: DocumentStore, options: NewOperation): string | null {
+  if (!canCutSideways(options.tool)) return null;
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "pocket",
@@ -215,9 +220,10 @@ export function addVCarveOperation(store: DocumentStore, options: NewOperation):
 /**
  * Appends a 3D finishing operation on the model `modelId` cut with a snapshot
  * of `tool`. Returns the new operation's id, or `null` if the model isn't in
- * the document.
+ * the document or `tool` is a drill bit.
  */
 export function addReliefFinishOperation(store: DocumentStore, options: NewModelOperation) {
+  if (!canCutSideways(options.tool)) return null;
   return appendModelOperation(store, options, (document, fields) => ({
     ...fields,
     type: "relief_finish",
@@ -228,6 +234,7 @@ export function addReliefFinishOperation(store: DocumentStore, options: NewModel
 
 /** Appends a 3D roughing operation on the model `modelId`, like `addReliefFinishOperation`. */
 export function addReliefRoughOperation(store: DocumentStore, options: NewModelOperation) {
+  if (!canCutSideways(options.tool)) return null;
   return appendModelOperation(store, options, (document, fields) => ({
     ...fields,
     type: "relief_rough",
@@ -322,13 +329,20 @@ export function deleteOperation(store: DocumentStore, id: string) {
   });
 }
 
+/** Why `operation` can't take `tool`, e.g. a V-bit to drill or a drill bit to profile, or `null`. */
+export function toolError(operation: Operation, tool: Tool): string | null {
+  const candidate = { ...operation, tool } as Operation;
+  const parsed = Operation.safeParse(candidate);
+  if (!parsed.success) return firstError(parsed.error);
+  return toolProblem(candidate);
+}
+
 /** Replaces the operation's tool with a snapshot of `tool` (ADR-0003). */
 export function setOperationTool(store: DocumentStore, id: string, tool: Tool): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
   if (!operation) return OK;
-  // E.g. a V-bit for a drill operation.
-  const parsed = Operation.safeParse({ ...operation, tool });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const error = toolError(operation, tool);
+  if (error) return { ok: false, error };
   changeOperation(store, "setOperationTool", id, (draft) => {
     draft.tool = tool;
   });
