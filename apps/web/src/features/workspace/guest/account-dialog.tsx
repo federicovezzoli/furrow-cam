@@ -56,6 +56,8 @@ export function AccountDialog({
   const [shown, setShown] = useState<AccountReason>("export-gcode");
   const [download, setDownload] = useState<ReturnType<typeof desktopDownload>>(null);
   const [error, setError] = useState<string | null>(null);
+  // One export at a time: a large project's meshes take a while to read and pack.
+  const [exporting, setExporting] = useState(false);
   if (reason !== null && reason !== shown) setShown(reason);
 
   useEffect(() => {
@@ -64,11 +66,14 @@ export function AccountDialog({
   }, []);
 
   async function saveFile() {
+    setExporting(true);
     try {
       await exportProjectFile(documentStore.getState().document, project.name, meshes.get);
       setError(null);
     } catch (error) {
       setError(error instanceof Error ? error.message : "This project couldn't be exported.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -108,7 +113,7 @@ export function AccountDialog({
                 {download ? `Download for ${download.system}` : "Download the desktop app"}
               </a>
             </Button>
-            <Button variant="outline" onClick={saveFile}>
+            <Button variant="outline" onClick={saveFile} disabled={exporting}>
               <DownloadIcon />
               Save this project as a file
             </Button>
