@@ -47,7 +47,8 @@ export type ToolpathEntry = { inputHash: string; previewKey?: string } & (
 export type ToolpathControls = {
   cancel: (operationId: string) => void;
   retry: (operationId: string) => void;
-  exportGcode: (name: string) => Promise<GcodeExportResult>;
+  /** `name` is the project's, read at each attempt. */
+  exportGcode: (name: () => string) => Promise<GcodeExportResult>;
 };
 
 /** What a cancelled toolpath says. */

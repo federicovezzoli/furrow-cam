@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Channel)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X-68.973 Y-160.601
 G0 Z1
 G1 Z0 F300
@@ -2602,6 +2603,7 @@ M0 (Change the bit to Tornado 35 mm, 35 mm and zero Z again)
 (Operation: Recess)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X85.171 Y-152.487
 G0 Z1
 G1 Z0 F300
@@ -3550,6 +3552,7 @@ M0 (Change the bit to 6 mm spiral, 6 mm and zero Z again)
 (Operation: Cut out)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X133 Y89
 G0 Z1
 G1 Z0 F300

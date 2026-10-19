@@ -116,7 +116,7 @@ describe("toolpath store", () => {
     const store = createToolpathStore();
     const cancelled: string[] = [];
     store.getState().controls.cancel("op");
-    await expect(store.getState().controls.exportGcode("Plate")).resolves.toEqual({
+    await expect(store.getState().controls.exportGcode(() => "Plate")).resolves.toEqual({
       error: "Toolpaths aren't being computed.",
     });
     store.getState().setControls({
@@ -125,7 +125,7 @@ describe("toolpath store", () => {
       exportGcode: async () => ({ gcode: "G0", warnings: [], fileName: "plate.gcode" }),
     });
     store.getState().controls.cancel("op");
-    await expect(store.getState().controls.exportGcode("Plate")).resolves.toMatchObject({
+    await expect(store.getState().controls.exportGcode(() => "Plate")).resolves.toMatchObject({
       gcode: "G0",
     });
     store.getState().setControls(null);

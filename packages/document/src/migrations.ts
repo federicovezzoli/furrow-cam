@@ -1,4 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
+import { DEFAULT_SPIN_UP_DELAY } from "./machine";
 
 type UnknownDocument = Record<string, unknown>;
 
@@ -118,13 +119,22 @@ export const migrations: Readonly<Record<number, Migration>> = {
     if (isObject(pad) && !("toolChange" in pad)) pad.toolChange = null;
     return doc;
   },
+  // #240: machine profiles gained a spin-up delay. Snapshots get the default,
+  // so the G-code they export waits for the spindle, which it didn't before.
+  14: (doc) => {
+    const machine = doc.machine;
+    if (isObject(machine) && !("spinUpDelay" in machine)) {
+      machine.spinUpDelay = DEFAULT_SPIN_UP_DELAY;
+    }
+    return doc;
+  },
   // #183: the border Fit to stock leaves is the model's. Existing models
   // keep the one they were fitted with, whatever new models get later.
-  14: (doc) => {
-    const V14_BORDER = 10;
+  15: (doc) => {
+    const V15_BORDER = 10;
     if (Array.isArray(doc.models)) {
       for (const model of doc.models) {
-        if (isObject(model) && !("border" in model)) model.border = V14_BORDER;
+        if (isObject(model) && !("border" in model)) model.border = V15_BORDER;
       }
     }
     return doc;

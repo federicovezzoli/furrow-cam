@@ -149,6 +149,8 @@ model Machine {
   /// Both `NULL` for a manual spindle: the post-processor omits the `S` word.
   spindleRpmMin  Int?
   spindleRpmMax  Int?
+  /// Seconds to wait after starting the spindle or raising its speed.
+  spinUpDelay    Float
   safeZ          Float
   /// Height above the stock where rapids down stop and feeding starts, at most `safeZ`.
   entryClearance Float

@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Holes)
 G0 Z5
 M3 S12000
+G4 P5
 G0 X40 Y40
 G0 Z1
 G1 Z-3 F300
@@ -37,6 +38,7 @@ M0 (Change the bit to 1/4" 2-flute upcut, 6.35 mm and zero Z again)
 (Operation: Recess)
 G0 Z5
 M3 S18000
+G4 P5
 G0 X91.745 Y61.745
 G0 Z1
 G1 Z0 F500

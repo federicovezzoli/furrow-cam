@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Rough)
 G0 Z5
 M3 S18000
+G4 P5
 G0 X34.92 Y24.92
 G0 Z1
 G1 Z0 F500
@@ -416,6 +417,7 @@ M0 (Change the bit to 3 mm ball end mill, 3 mm and zero Z on the touch-off pad)
 (Operation: Finish)
 G0 Z5
 M3 S18000
+G4 P5
 G0 X27.47 Y7.523
 G0 Z1
 G1 Z-3.915 F500
@@ -1404,6 +1406,7 @@ M0 (Change the bit to 1.5 mm ball end mill, 1.5 mm and zero Z on the touch-off p
 (Operation: Rest finish)
 G0 Z5
 M3 S18000
+G4 P5
 G0 X27.496 Y8.583
 G0 Z1
 G1 Z-3.941 F500
