@@ -2,6 +2,7 @@ import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { SimulatorShell } from "@furrow/workspace/components/simulator-shell";
 import { WorkspaceShell } from "@furrow/workspace/components/workspace-shell";
+import { messageOf, saveTool } from "@furrow/workspace/lib/local-library";
 import type {
   WorkspaceDestination,
   WorkspaceHost,
@@ -11,7 +12,6 @@ import { useAutosaveApi } from "@furrow/workspace/providers/workspace-stores";
 import type * as React from "react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
 import type { LibraryState } from "./app";
-import { messageOf, saveTool } from "./library";
 import type { ProjectSession } from "./session";
 
 /** What the window shows: navigation is view state, not routes (ADR-0045). */

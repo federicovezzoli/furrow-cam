@@ -36,11 +36,16 @@ import {
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import {
+  NativeSelect,
+  NativeSelectOptGroup,
+  NativeSelectOption,
+} from "@furrow/ui/components/ui/native-select";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { useMemo, useState } from "react";
 import { selectionTargets, targetsLabel } from "../lib/path-selection";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -213,16 +218,22 @@ function Row({ id, label, children }: { id: string; label: string; children: Rea
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
+/** The catalog's group in the tool select, which says its figures are only a start (PRD-0008 G5). */
+const CATALOG_LABEL = "Catalog (starting feeds for softwood and plywood)";
+
 /** The tool select's last option, which opens the form for a new bit instead of picking one. */
 const NEW_BIT = "__new";
 
 /**
- * Picks the operation's tool; library tools the operation can't take, such as
- * a V-bit to drill, are disabled. "New bit…" creates one in place and picks it.
+ * Picks the operation's tool from the library, then the catalog; tools the
+ * operation can't take, such as a V-bit to drill, are disabled. "New bit…"
+ * creates one in place and picks it, or without an account explains how to
+ * get one (PRD-0008 G6).
  */
 function ToolPicker({ operation }: { operation: Operation }) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
+  const { account } = useWorkspaceHost();
   const { id: operationId, tool } = operation;
   // The same check `setOperationTool` makes.
   const usable = useMemo(
@@ -235,6 +246,8 @@ function ToolPicker({ operation }: { operation: Operation }) {
     [tools, operation],
   );
   const current = matchingToolChoice(tools, tool);
+  const library = { label: "Your bits", choices: tools.filter((choice) => !choice.catalog) };
+  const catalog = { label: CATALOG_LABEL, choices: tools.filter((choice) => choice.catalog) };
   // Cleared once the operation's tool changes.
   const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
   const error = rejected?.tool === tool ? rejected.error : null;
@@ -256,7 +269,9 @@ function ToolPicker({ operation }: { operation: Operation }) {
             value={current?.id ?? ""}
             onChange={(event) => {
               // Controlled, so the select keeps showing the current tool meanwhile.
-              if (event.target.value === NEW_BIT) return setCreating(true);
+              if (event.target.value === NEW_BIT) {
+                return account ? account.prompt("save-bit") : setCreating(true);
+              }
               const choice = tools.find((candidate) => candidate.id === event.target.value);
               if (choice) pick(choice.tool);
             }}
@@ -266,15 +281,22 @@ function ToolPicker({ operation }: { operation: Operation }) {
               // The snapshot differs from every library tool (edited or deleted since it was picked).
               <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
             )}
-            {tools.map((choice) => (
-              <NativeSelectOption
-                key={choice.id}
-                value={choice.id}
-                disabled={!usable.has(choice.id)}
-              >
-                {choice.tool.name}
-              </NativeSelectOption>
-            ))}
+            {[library, catalog].map(
+              (group) =>
+                group.choices.length > 0 && (
+                  <NativeSelectOptGroup key={group.label} label={group.label}>
+                    {group.choices.map((choice) => (
+                      <NativeSelectOption
+                        key={choice.id}
+                        value={choice.id}
+                        disabled={!usable.has(choice.id)}
+                      >
+                        {choice.tool.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelectOptGroup>
+                ),
+            )}
             <hr />
             <NativeSelectOption value={NEW_BIT}>New bit…</NativeSelectOption>
           </NativeSelect>

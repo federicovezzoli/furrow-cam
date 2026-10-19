@@ -1,5 +1,3 @@
-import { Button } from "@furrow/ui/components/ui/button";
-import Link from "next/link";
 import { Suspense } from "react";
 import { meshLimits } from "@/features/assets/server";
 import { requireUserId } from "@/features/auth/server";
@@ -8,6 +6,7 @@ import { ImportProjectButton } from "@/features/projects/components/import-proje
 import { NewProjectForm } from "@/features/projects/components/new-project-form";
 import { ProjectList } from "@/features/projects/components/project-list";
 import { listProjects } from "@/features/projects/server";
+import { GuestImportOffer } from "@/features/workspace/guest/guest-import-offer";
 
 export default function ProjectsPage() {
   return (
@@ -21,8 +20,9 @@ export default function ProjectsPage() {
 }
 
 /**
- * Creating and importing projects, then the list. A project is set up for a
- * machine (PRD-0001 R19), so without one the user is sent to add it first.
+ * The offer to import projects made in this browser without an account
+ * (PRD-0008 G7), creating and importing projects, then the list. Neither
+ * needs a machine: it is chosen in the project before exporting G-code (G13).
  */
 async function Projects() {
   const userId = await requireUserId();
@@ -34,30 +34,11 @@ async function Projects() {
 
   return (
     <>
-      {options.length === 0 ? (
-        <div
-          data-tour="new-project"
-          className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
-        >
-          <p className="text-muted-foreground">
-            {machines.length === 0
-              ? "Projects are set up for a machine. Pick your router from the presets, or describe it once, then create or import projects for it."
-              : "Projects are set up for a machine, and your machines' settings need fixing before they can be used."}
-          </p>
-          <Button asChild>
-            {machines.length === 0 ? (
-              <Link href="/machines/new">Add your machine</Link>
-            ) : (
-              <Link href="/machines">Fix your machines</Link>
-            )}
-          </Button>
-        </div>
-      ) : (
-        <div data-tour="new-project" className="flex flex-wrap items-end justify-between gap-4">
-          <NewProjectForm machines={options} />
-          <ImportProjectButton machines={options} meshLimits={meshLimits()} />
-        </div>
-      )}
+      <GuestImportOffer meshLimits={meshLimits()} />
+      <div data-tour="new-project" className="flex flex-wrap items-end justify-between gap-4">
+        <NewProjectForm machines={options} />
+        <ImportProjectButton machines={options} meshLimits={meshLimits()} />
+      </div>
       <ProjectList projects={projects} />
     </>
   );

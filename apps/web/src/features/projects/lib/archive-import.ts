@@ -52,11 +52,8 @@ export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array>
   return new Map([...archive.meshes].filter(([sha256]) => used.has(sha256)));
 }
 
-/** What `importArchive` returns: the new project, an error, or that a machine must be chosen. */
-export type ArchiveImport =
-  | { projectId: string; error?: never }
-  | { error: string }
-  | { chooseMachine: true; error?: never };
+/** What `importArchive` returns: the new project, or an error. */
+export type ArchiveImport = { projectId: string; error?: never } | { error: string };
 
 /**
  * Creates a project from a `.furrow.zip` export read by `readArchive`
@@ -65,13 +62,14 @@ export type ArchiveImport =
  * the server creates the project with an empty document, the meshes are
  * uploaded to it, and the imported document is saved. If any step after the
  * project is created fails, it is deleted again. `machineId` is as for
- * `importProject`.
+ * `importProject`; `projectName`, when given, names the project instead of `fileName`.
  */
 export async function importArchive(
   archive: ProjectArchive,
   fileName: string,
   machineId: string | null,
   limits: StlLimits,
+  projectName?: string,
 ): Promise<ArchiveImport> {
   const meshes = documentMeshes(archive);
   for (const [sha256, bytes] of meshes) {
@@ -97,6 +95,7 @@ export async function importArchive(
       fileName,
       [...meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
       machineId,
+      projectName,
     );
   } catch {
     return { error: IMPORT_FAILED };

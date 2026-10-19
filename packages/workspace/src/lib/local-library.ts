@@ -1,23 +1,16 @@
 import { Machine, Tool } from "@furrow/document";
-import type {
-  MachineChoice,
-  SavedTool,
-  ToolChoice,
-  ToolFormErrors,
-} from "@furrow/workspace/lib/workspace-host";
-import { toWorkspaceLayout, type WorkspaceLayout } from "@furrow/workspace/lib/workspace-layout";
-import {
-  type MachineFormErrors,
-  parseMachineForm,
-} from "@furrow/workspace/machines/lib/machine-form-data";
-import { DEFAULT_TOOL, parseToolForm } from "@furrow/workspace/tools/lib/tool-form-data";
+import { type MachineFormErrors, parseMachineForm } from "../machines/lib/machine-form-data";
+import { DEFAULT_TOOL, parseToolForm } from "../tools/lib/tool-form-data";
+import type { MachineChoice, SavedTool, ToolChoice, ToolFormErrors } from "./workspace-host";
+import { toWorkspaceLayout, type WorkspaceLayout } from "./workspace-layout";
 
 /**
- * The tool library and machine list kept on this computer (PRD-0007 D9),
- * stored as `tools.json` and `machines.json` in the app's data folder
- * (ADR-0047). Entries are checked with the document's schemas when read;
- * ones that fail today's rules are left out, as in the web app. These
- * functions return new lists for the app to store.
+ * A tool library, machine list and settings kept on the user's device rather
+ * than in an account: the desktop app's (PRD-0007 D9, stored as JSON files,
+ * ADR-0047) and the web app's guest workspace's (PRD-0008, in the browser,
+ * ADR-0050). Entries are checked with the document's schemas when read; ones
+ * that fail today's rules are left out, as in the web app. These functions
+ * return new lists for the app to store.
  */
 
 const byToolName = (a: ToolChoice, b: ToolChoice) => a.tool.name.localeCompare(b.tool.name);

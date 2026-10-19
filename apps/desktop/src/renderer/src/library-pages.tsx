@@ -1,5 +1,13 @@
 import type { Tool } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import {
+  deleteMachine,
+  deleteTool,
+  messageOf,
+  saveMachine,
+  saveTool,
+  setDefaultTool,
+} from "@furrow/workspace/lib/local-library";
 import type { MachineChoice } from "@furrow/workspace/lib/workspace-host";
 import { MachineForm } from "@furrow/workspace/machines/components/machine-form";
 import { NewMachine } from "@furrow/workspace/machines/components/new-machine";
@@ -14,14 +22,6 @@ import type * as React from "react";
 import { useState } from "react";
 import type { LibraryState } from "./app";
 import type { Page } from "./desktop-host";
-import {
-  deleteMachine,
-  deleteTool,
-  messageOf,
-  saveMachine,
-  saveTool,
-  setDefaultTool,
-} from "./library";
 
 /** Says why a library change failed; the library stays as it was. */
 function alertFailure(error: unknown) {

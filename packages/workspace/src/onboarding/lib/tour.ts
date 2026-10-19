@@ -43,7 +43,7 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
       anchor: "new-project",
       side: "bottom",
       title: "Start a project",
-      body: "Projects are made for one of your machines. Create one here, or import a project file.",
+      body: "Create a project here, or import a project file. You can choose its machine now or later, before exporting G-code.",
     },
   ],
   workspace: [

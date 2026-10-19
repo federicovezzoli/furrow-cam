@@ -22,3 +22,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0005](0005-stl-relief-machining.md) | STL relief machining | Draft |
 | [0006](0006-gcode-simulation.md) | G-code simulation | Abandoned |
 | [0007](0007-desktop-app.md) | Desktop app | Draft |
+| [0008](0008-try-without-account.md) | Use the app without an account | Shipped |

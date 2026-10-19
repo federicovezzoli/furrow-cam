@@ -59,6 +59,7 @@ describe("importArchive", () => {
       "Relief.furrow.zip",
       [{ sha256: model.sha256, size: model.size }],
       null,
+      undefined,
     );
     expect(uploadMesh).toHaveBeenCalledWith(PROJECT, model.sha256, expect.any(Blob));
     expect(actions.saveProject).toHaveBeenCalledWith(PROJECT, document, UPDATED_AT);
@@ -96,6 +97,7 @@ describe("importArchive", () => {
       "Relief.furrow",
       [{ sha256: model.sha256, size: model.size }],
       null,
+      undefined,
     );
   });
 
@@ -109,9 +111,7 @@ describe("importArchive", () => {
     expect(actions.startArchiveImport).not.toHaveBeenCalled();
   });
 
-  it("passes on the server's refusal, or its request for a machine", async () => {
-    actions.startArchiveImport.mockResolvedValue({ chooseMachine: true });
-    expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({ chooseMachine: true });
+  it("passes on the server's refusal", async () => {
     actions.startArchiveImport.mockResolvedValue({ error: "Nope." });
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({ error: "Nope." });
     expect(actions.deleteProject).not.toHaveBeenCalled();

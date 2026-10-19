@@ -1,6 +1,6 @@
 import { NEW_MACHINE_DEFAULTS } from "@furrow/document";
-import { DEFAULT_TOOL } from "@furrow/workspace/tools/lib/tool-form-data";
 import { describe, expect, it } from "vitest";
+import { DEFAULT_TOOL } from "../tools/lib/tool-form-data";
 import {
   deleteMachine,
   deleteTool,
@@ -10,7 +10,7 @@ import {
   saveMachine,
   saveTool,
   setDefaultTool,
-} from "./library";
+} from "./local-library";
 
 /** The tool form's fields for `tool`, as the browser submits them. */
 function toolForm(tool: Record<string, unknown>) {

@@ -6,8 +6,12 @@ import type { WorkspaceLayout } from "./workspace-layout";
 /** Nothing when an action succeeded, else why it failed, for the user. */
 export type ActionResult = { error: string } | undefined;
 
-/** A tool in the user's library: its id, whether new operations start with it, and the tool. */
-export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
+/**
+ * A tool offered for operations: its id, whether new operations start with
+ * it, and the tool. `catalog` marks a read-only bit from the built-in catalog
+ * (PRD-0008 G4); the rest are the user's library.
+ */
+export type ToolChoice = { id: string; isDefault: boolean; tool: Tool; catalog?: true };
 
 /** A machine profile of the user's: its id and the machine, as a project snapshots it. */
 export type MachineChoice = { id: string; machine: Machine };
@@ -33,6 +37,9 @@ export type VersionsResult = { versions: VersionRow[]; error?: never } | { error
 export type RestoreResult =
   | { document: ProjectDocument; updatedAt: Date; versions: VersionRow[]; error?: never }
   | { error: string };
+
+/** What a user without an account tried to do that needs one (PRD-0008 G6). */
+export type AccountReason = "export-gcode" | "machine" | "save-bit";
 
 /** A place outside the open workspace page that it links to. */
 export type WorkspaceDestination =
@@ -98,7 +105,10 @@ export type WorkspaceHost = {
     /** Opens version `id` as a new project; `dateLabel` names an unlabelled one. */
     openAsProject(id: string, dateLabel: string): Promise<ActionResult>;
   } | null;
-  /** The user's tool library and machines, offered for the project's operations and stock. */
+  /**
+   * The user's tool library and machines, offered for the project's
+   * operations and stock. The workspace adds the bit catalog to `tools`.
+   */
   library: {
     tools: ToolChoice[];
     machines: MachineChoice[];
@@ -120,7 +130,15 @@ export type WorkspaceHost = {
   navigation: {
     /** A link to `to`, rendered as an anchor. */
     Link: React.ComponentType<WorkspaceLinkProps>;
+    /** Controls the host adds at the end of the top bar, e.g. Sign in for guests (PRD-0008 G9). */
+    TopBarActions?: React.ComponentType;
   };
+  /**
+   * Present where the user has no account (the web app's guest workspace,
+   * ADR-0050): what needs one calls `prompt` instead of running, which
+   * explains how to get an account or the desktop app.
+   */
+  account?: { prompt(reason: AccountReason): void };
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
     meshes: MeshLimits | null;
