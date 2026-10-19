@@ -390,8 +390,9 @@ export function replaceToolSnapshots(
     const candidate = structuredClone(operation);
     replace(candidate);
     const parsed = Operation.safeParse(candidate);
-    if (parsed.success) accepted.add(operation.id);
-    else rejected.push({ id: operation.id, name: operation.name, error: firstError(parsed.error) });
+    const error = parsed.success ? toolProblem(candidate) : firstError(parsed.error);
+    if (error === null) accepted.add(operation.id);
+    else rejected.push({ id: operation.id, name: operation.name, error });
   }
   if (accepted.size > 0) {
     store.getState().change("replaceToolSnapshots", (draft) => {

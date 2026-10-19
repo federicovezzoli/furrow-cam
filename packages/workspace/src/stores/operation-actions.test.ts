@@ -801,6 +801,23 @@ describe("replaceToolSnapshots", () => {
     expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
   });
 
+  it("keeps the old tool on profiles when the bit becomes a drill bit", () => {
+    const { store, operations, add } = setup();
+    const id = add();
+    const drill = addDrillOperation(store, { targets: [whole(circle)], tool: endMill });
+    const asDrill: Tool = { ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 };
+
+    expect(replaceToolSnapshots(store, endMill, asDrill)).toEqual([
+      {
+        id,
+        name: "Profile 1",
+        error: "Drill bits can't cut sideways: pick an end mill or a V-bit",
+      },
+    ]);
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
+    expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(asDrill);
+  });
+
   it("re-snapshots flat-bottom tools too", () => {
     const { store, operations } = setup();
     const id = addVCarveOperation(store, { targets: [whole(square)], tool: vBit });
