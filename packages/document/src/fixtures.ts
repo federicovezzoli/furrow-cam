@@ -74,6 +74,7 @@ export const machine: Machine = {
   maxFeedZ: 2500,
   spindleRpmMin: 10000,
   spindleRpmMax: 30000,
+  spinUpDelay: 5,
   safeZ: 5,
   entryClearance: 1,
   postProcessor: "grbl",
@@ -93,6 +94,7 @@ export const lowRider: Machine = {
   maxFeedZ: 900,
   spindleRpmMin: null,
   spindleRpmMax: null,
+  spinUpDelay: 2,
   safeZ: 5,
   entryClearance: 1,
   postProcessor: "grbl",
@@ -192,7 +194,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 14,
+    schemaVersion: 15,
     units: "in",
     stock: {
       width: 300,

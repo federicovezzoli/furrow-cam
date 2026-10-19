@@ -552,6 +552,7 @@ describe("generateToolpath", () => {
             maxFeedZ: 1000,
             spindleRpmMin: null,
             spindleRpmMax: null,
+            spinUpDelay: 5,
             safeZ: machineSafeZ,
             entryClearance,
             postProcessor: "grbl",

@@ -232,6 +232,19 @@ describe("migrations", () => {
     expect(parseProjectDocument(v13)).toEqual(doc);
   });
 
+  it("gives v14 machine snapshots the default spin-up delay", () => {
+    const doc = fullDocument();
+    const v14 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      machine: Record<string, unknown>;
+    };
+    v14.schemaVersion = 14;
+    delete v14.machine.spinUpDelay;
+    const machine = doc.machine && { ...doc.machine, spinUpDelay: 5 };
+    expect(parseProjectDocument(v14)).toEqual({ ...doc, machine });
+    expect(parseProjectDocument({ ...v14, machine: null }).machine).toBeNull();
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

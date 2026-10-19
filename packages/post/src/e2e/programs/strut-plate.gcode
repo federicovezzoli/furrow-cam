@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Holes)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X-524.35 Y16.85
 G0 Z1
 G1 X-524.389 Y17.148 Z0.938 F300
@@ -1752,6 +1753,7 @@ M0 (Change the bit to 6 mm spiral, 6 mm and zero Z again)
 (Operation: Plate)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X87.583 Y92.4
 G0 Z1
 G1 Z0 F300

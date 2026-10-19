@@ -1,4 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
+import { DEFAULT_SPIN_UP_DELAY } from "./machine";
 
 type UnknownDocument = Record<string, unknown>;
 
@@ -116,6 +117,15 @@ export const migrations: Readonly<Record<number, Migration>> = {
   13: (doc) => {
     const pad = isObject(doc.stock) ? doc.stock.touchOff : null;
     if (isObject(pad) && !("toolChange" in pad)) pad.toolChange = null;
+    return doc;
+  },
+  // #240: machine profiles gained a spin-up delay. Snapshots get the default,
+  // so the G-code they export waits for the spindle, which it didn't before.
+  14: (doc) => {
+    const machine = doc.machine;
+    if (isObject(machine) && !("spinUpDelay" in machine)) {
+      machine.spinUpDelay = DEFAULT_SPIN_UP_DELAY;
+    }
     return doc;
   },
 };

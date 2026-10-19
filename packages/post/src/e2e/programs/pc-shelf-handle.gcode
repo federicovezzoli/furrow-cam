@@ -7,6 +7,7 @@ G21 G90 G94 G17
 (Operation: Cut out)
 G0 Z5
 M3 S24000
+G4 P2
 G0 X0 Y31
 G0 Z1
 G1 Z0 F300
