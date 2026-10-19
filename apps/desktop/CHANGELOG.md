@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.4.0
+
+### Minor Changes
+
+- Operations can now use common bits from a built-in catalog (flat end mills in metric and imperial sizes, ball nose and V-bits), with cautious feeds for softwood and plywood. Editing a catalog bit saves your own copy to your library. ([#230](https://github.com/federicovezzoli/furrow-cam/pull/230))
+
 ## 0.3.0
 
 ### Minor Changes
