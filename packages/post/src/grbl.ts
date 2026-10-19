@@ -23,7 +23,8 @@ const MODES = "G21 G90 G94 G17";
  * - The first tool is assumed loaded. When the next operation's bit differs,
  *   GRBL has no `M6`, so the tool change turns the spindle off, rises and
  *   pauses with `M0`, asking for Z to be zeroed again: there are no tool
- *   length offsets. With a touch-off pad (ADR-0041), it rapids over the
+ *   length offsets. `MODES` follows the pause, since zeroing Z with a
+ *   sender's probe macro or jogging can leave `G91` or `G20` set. With a touch-off pad (ADR-0041), it rapids over the
  *   pad's centre before pausing, and before a custom tool-change block. A
  *   pad's own tool change (ADR-0043) replaces all of it, its placeholders
  *   filled in.
@@ -93,6 +94,8 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
           if (pad) out.rapid({ x: pad.x, y: pad.y });
           const zero = pad ? "zero Z on the touch-off pad" : "zero Z again";
           out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and ${zero}`)}`);
+          // A probe macro or a jog during the pause may leave G91 or G20 behind.
+          out.line(MODES);
         }
         out.line(toolShapeComment(step.tool));
       }

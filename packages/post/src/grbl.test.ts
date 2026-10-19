@@ -225,6 +225,8 @@ describe("grbl", () => {
     it("pauses only when the bit changes", () => {
       const { gcode } = post({ operations });
       expect(gcode.match(/^M0/gm)).toHaveLength(1);
+      // Zeroing Z during the pause may leave G91 or G20 set.
+      expect(gcode).toMatch(/^M0 .*\nG21 G90 G94 G17$/m);
       expect(gcode.match(/^\(Furrow tool:/gm)).toHaveLength(2);
       expect(gcode).toContain(
         [
@@ -232,6 +234,7 @@ describe("grbl", () => {
           "M5",
           "G0 Z5",
           "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z again)",
+          "G21 G90 G94 G17",
           "(Furrow tool: type=drill diameter=6.35)",
           "(Operation: Holes)",
           "G0 Z5",
@@ -265,6 +268,7 @@ describe("grbl", () => {
             "G0 Z5",
             `G0 ${at}`,
             "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z on the touch-off pad)",
+            "G21 G90 G94 G17",
             "(Furrow tool: type=drill diameter=6.35)",
           ].join("\n"),
         );
@@ -350,6 +354,7 @@ describe("grbl", () => {
           "M5",
           "G0 Z5",
           "M0 (Change the bit to 60° V-bit, 6.35 mm and zero Z again)",
+          "G21 G90 G94 G17",
           "(Furrow tool: type=v_bit diameter=6.35 vAngle=60 tipDiameter=0)",
           "(Operation: Sign)",
         ].join("\n"),
@@ -455,8 +460,9 @@ describe("grbl", () => {
       const [first, second] = shapes as [number, number];
       // In the header, before the first move.
       expect(first).toBeLessThan(lines.findIndex((line) => /^G[01] /.test(line)));
-      // After the pause, before the next operation.
-      expect(lines[second - 1]).toMatch(/^M0 /);
+      // After the pause and the modes, before the next operation.
+      expect(lines[second - 2]).toMatch(/^M0 /);
+      expect(lines[second - 1]).toBe("G21 G90 G94 G17");
       expect(lines[second + 1]).toBe("(Operation: Sign)");
     });
   });
