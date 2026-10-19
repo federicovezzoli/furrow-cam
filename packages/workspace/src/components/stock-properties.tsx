@@ -122,7 +122,8 @@ const SNAPSHOT = "";
  * again picks up changes made to it since.
  */
 function MachineField({ machines }: { machines: MachineChoice[] }) {
-  const { Link } = useWorkspaceHost().navigation;
+  const { navigation, account } = useWorkspaceHost();
+  const { Link } = navigation;
   const store = useDocumentStoreApi();
   const machine = useDocumentStore((s) => s.document.machine);
   // Tells apart machines with identical settings, which the snapshot alone can't.
@@ -167,7 +168,19 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
           ))}
         </NativeSelect>
       </div>
-      {machine === null && (
+      {machine === null && account && (
+        <p role="status" className="flex gap-1.5 text-muted-foreground">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            G-code is made for your machine, which is saved in a free account or the desktop app.{" "}
+            <button type="button" onClick={() => account.prompt("machine")} className="underline">
+              Set up your machine
+            </button>
+            .
+          </span>
+        </p>
+      )}
+      {machine === null && !account && (
         <p role="status" className="flex gap-1.5 text-destructive">
           <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>

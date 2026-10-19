@@ -8,12 +8,14 @@ import { SimulatorShell } from "@furrow/workspace/components/simulator-shell";
 import { WorkspaceShell } from "@furrow/workspace/components/workspace-shell";
 import { parseSettings } from "@furrow/workspace/lib/local-library";
 import type {
+  AccountReason,
   WorkspaceDestination,
   WorkspaceHost,
   WorkspaceLinkProps,
 } from "@furrow/workspace/lib/workspace-host";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AccountDialog } from "./account-dialog";
 import { type GuestSettings, guestHost } from "./guest-host";
 import { GuestProjectList } from "./guest-project-list";
 import {
@@ -36,17 +38,9 @@ type View =
 
 const NavigateContext = createContext<(to: WorkspaceDestination) => void>(() => {});
 
-/** Where a destination that needs an account goes, until the account dialog asks instead (#223). */
-const ACCOUNT_DESTINATIONS: Partial<Record<WorkspaceDestination, string>> = {
-  tools: "/sign-up",
-  "new-machine": "/sign-up",
-};
-
-/** The workspace's links: within the guest app, or to sign-up for what needs an account. */
+/** The workspace's links: within the guest app, which asks for an account where one is needed. */
 function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
   const navigate = useContext(NavigateContext);
-  const href = ACCOUNT_DESTINATIONS[to];
-  if (href) return <Link href={href} onClick={onClick} {...props} />;
   return (
     <a
       href={`#${to}`}
@@ -118,7 +112,13 @@ export function GuestApp() {
     })();
   }, []);
 
+  const [accountReason, setAccountReason] = useState<AccountReason | null>(null);
+  const account = useMemo(() => ({ prompt: setAccountReason }), []);
+
   const navigate = (to: WorkspaceDestination) => {
+    // The bit library and machine forms are an account's.
+    if (to === "tools") return setAccountReason("save-bit");
+    if (to === "new-machine") return setAccountReason("machine");
     setView((current) => {
       if (to === "projects") return { name: "projects", error: null };
       if (current.name !== "project") return current;
@@ -129,8 +129,8 @@ export function GuestApp() {
 
   const project = view.name === "project" ? view.project : null;
   const host = useMemo(
-    () => (project ? guestHost(project, settings, NAVIGATION) : null),
-    [project, settings],
+    () => (project ? guestHost(project, settings, NAVIGATION, account) : null),
+    [project, settings, account],
   );
 
   switch (view.name) {
@@ -163,6 +163,7 @@ export function GuestApp() {
           {host && (
             <ProjectShell host={host}>
               {view.page === "simulator" ? <SimulatorShell /> : <WorkspaceShell />}
+              <AccountDialog reason={accountReason} onClose={() => setAccountReason(null)} />
             </ProjectShell>
           )}
         </NavigateContext>
