@@ -27,6 +27,7 @@ export function parseMachineForm(form: FormData) {
     maxFeedZ: numberField(form, "maxFeedZ"),
     spindleRpmMin: manualSpindle ? null : numberField(form, "spindleRpmMin"),
     spindleRpmMax: manualSpindle ? null : numberField(form, "spindleRpmMax"),
+    spinUpDelay: numberField(form, "spinUpDelay"),
     safeZ: numberField(form, "safeZ"),
     entryClearance: numberField(form, "entryClearance"),
     postProcessor: form.get("postProcessor"),

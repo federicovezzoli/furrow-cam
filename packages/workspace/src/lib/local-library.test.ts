@@ -1,4 +1,4 @@
-import { NEW_MACHINE_DEFAULTS } from "@furrow/document";
+import { DEFAULT_SPIN_UP_DELAY, NEW_MACHINE_DEFAULTS } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TOOL } from "../tools/lib/tool-form-data";
 import {
@@ -85,6 +85,17 @@ describe("machines", () => {
     const [{ id } = { id: "" }] = saved.machines;
     expect(deleteMachine(saved.machines, id)).toEqual([]);
     expect(parseMachines([{ id: "x", machine: { name: "" } }])).toEqual([]);
+  });
+
+  it("saves the spin-up delay, and gives machines stored without one the default", () => {
+    const saved = saveMachine([], null, toolForm({ ...machine, spinUpDelay: 8 }));
+    if ("errors" in saved) throw new Error(JSON.stringify(saved.errors));
+    expect(saved.machines[0]?.machine.spinUpDelay).toBe(8);
+    const { spinUpDelay: _, ...before } = { ...machine, programStart: null, programEnd: null };
+    const stored = { ...before, operationStart: null, toolChange: null };
+    expect(parseMachines([{ id: "x", machine: stored }])).toEqual([
+      { id: "x", machine: { ...stored, spinUpDelay: DEFAULT_SPIN_UP_DELAY } },
+    ]);
   });
 });
 

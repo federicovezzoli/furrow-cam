@@ -19,12 +19,19 @@ export const GcodeBlock = z
 export const DEFAULT_ENTRY_CLEARANCE = 1;
 
 /**
+ * Spin-up delay of new machines, and of G-code without a machine profile, in
+ * seconds: long enough for a trim router and most VFD spindles to reach speed.
+ */
+export const DEFAULT_SPIN_UP_DELAY = 5;
+
+/**
  * Starting values of every new machine, from scratch or from a preset: Furrow
  * CAM's own defaults rather than facts about a machine.
  */
 export const NEW_MACHINE_DEFAULTS = {
   safeZ: 5,
   entryClearance: DEFAULT_ENTRY_CLEARANCE,
+  spinUpDelay: DEFAULT_SPIN_UP_DELAY,
   postProcessor: "grbl",
 } as const satisfies Partial<Machine>;
 
@@ -44,6 +51,11 @@ export const Machine = z
     /** Both `null` for a manual spindle: the post-processor omits the `S` word. */
     spindleRpmMin: SpindleRpm.nullable(),
     spindleRpmMax: SpindleRpm.nullable(),
+    /**
+     * Seconds the post-processor waits after starting the spindle or raising
+     * its speed, before the next move: GRBL doesn't wait for it to spin up.
+     */
+    spinUpDelay: z.number().nonnegative().max(60, "Must be at most 60 seconds"),
     /** Default retract height above the stock. */
     safeZ: PositiveLength,
     /** Height above the stock top where rapids down stop and feeding starts, at most `safeZ`. */

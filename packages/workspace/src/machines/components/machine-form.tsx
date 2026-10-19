@@ -153,6 +153,19 @@ export function MachineForm({
             min={0}
           />
         </div>
+        <div className="grid content-start gap-1">
+          <NumberField
+            label="Spin-up delay"
+            {...number("spinUpDelay")}
+            suffix="s"
+            step={1}
+            min={0}
+            max={60}
+          />
+          <p className="text-sm text-muted-foreground">
+            The wait after starting the spindle, before the bit enters the stock.
+          </p>
+        </div>
       </fieldset>
 
       <fieldset className="grid gap-4 lg:grid-cols-2">
