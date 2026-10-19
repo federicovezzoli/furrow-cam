@@ -1,6 +1,7 @@
-import type { Path, Shape } from "@furrow/document";
+import type { Path, Point, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { pathBounds, shapesBounds } from "./bounds";
+import { roundCoordinate } from "./round";
 
 describe("pathBounds", () => {
   it("is the points of a polyline", () => {
@@ -52,6 +53,71 @@ describe("pathBounds", () => {
         closed: false,
       }),
     ).toEqual({ min: [0, 0], max: [10, 7.5] });
+  });
+
+  /** A quadratic from `p0` through control `q` to `p2`, raised to a cubic the way SVG import does. */
+  function raised(p0: Point, q: Point, p2: Point, round = (value: number) => value): Path {
+    const control = (end: Point): Point => [
+      round(end[0] + (2 / 3) * (q[0] - end[0])),
+      round(end[1] + (2 / 3) * (q[1] - end[1])),
+    ];
+    return {
+      start: p0,
+      segments: [{ kind: "cubic", c1: control(p0), c2: control(p2), to: p2 }],
+      closed: false,
+    };
+  }
+
+  /** The quadratic's bounds, from its own extremes. */
+  function quadraticBounds(p0: Point, q: Point, p2: Point) {
+    const min: Point = [Math.min(p0[0], p2[0]), Math.min(p0[1], p2[1])];
+    const max: Point = [Math.max(p0[0], p2[0]), Math.max(p0[1], p2[1])];
+    for (const axis of [0, 1] as const) {
+      const t = (p0[axis] - q[axis]) / (p0[axis] - 2 * q[axis] + p2[axis]);
+      if (t > 0 && t < 1) {
+        const value = (1 - t) ** 2 * p0[axis] + 2 * t * (1 - t) * q[axis] + t ** 2 * p2[axis];
+        min[axis] = Math.min(min[axis], value);
+        max[axis] = Math.max(max[axis], value);
+      }
+    }
+    return { min, max };
+  }
+
+  function expectBox(actual: { min: Point; max: Point }, expected: { min: Point; max: Point }) {
+    for (const axis of [0, 1]) {
+      expect(actual.min[axis]).toBeCloseTo(expected.min[axis] as number, 9);
+      expect(actual.max[axis]).toBeCloseTo(expected.max[axis] as number, 9);
+    }
+  }
+
+  it("covers where a quadratic raised to a cubic bulges past its ends", () => {
+    const quadratics: [Point, Point, Point][] = [
+      [
+        [0.3, 0.7],
+        [5.1, 13.3],
+        [9.7, 2.9],
+      ],
+      [
+        [12.7, 3.1],
+        [-4.3, 8.9],
+        [10.1, 21.7],
+      ],
+      [
+        [0.1, 0.2],
+        [33.3, -17.7],
+        [66.6, 0.3],
+      ],
+    ];
+    for (const [p0, q, p2] of quadratics) {
+      const expected = quadraticBounds(p0, q, p2);
+      expectBox(pathBounds(raised(p0, q, p2)), expected);
+      // Rounded to a nanometre, as imported coordinates are: a cubic only nearly quadratic.
+      const rounded = pathBounds(raised(p0, q, p2, roundCoordinate));
+      for (const axis of [0, 1]) {
+        expect(rounded.min[axis]).toBeCloseTo(expected.min[axis] as number, 6);
+        expect(rounded.max[axis]).toBeCloseTo(expected.max[axis] as number, 6);
+      }
+    }
   });
 });
 

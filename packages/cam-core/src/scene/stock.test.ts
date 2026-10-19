@@ -1,5 +1,7 @@
 import type { Shape, Stock, StockAnchor } from "@furrow/document";
 import { describe, expect, it } from "vitest";
+import { flattenPath } from "../geometry/flatten";
+import { importSvg } from "../import/svg/import";
 import {
   alignShapes,
   anchorAlignment,
@@ -126,6 +128,29 @@ describe("anchorAlignment", () => {
     expect(alignShapes({ width: 20, height: 10 }, shapes, "center")).not.toBe(shapes);
     const centred = alignShapes({ width: 0, height: 0 }, shapes, "center");
     expect(centred).toBe(shapes);
+  });
+});
+
+describe("anchorAlignment of curves", () => {
+  it("puts an SVG drawn with quadratics exactly on its anchor", () => {
+    const { shapes } = importSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm" viewBox="0 0 100 50">' +
+        '<path d="M3.3 30.7 Q 15.1 2.3 29.7 27.1 T 61.3 19.9"/></svg>',
+    );
+    for (const anchor of ["bottom_left", "top_right"] as const) {
+      const points = alignShapes(stock, shapes, anchor).flatMap((shape) =>
+        shape.paths.flatMap((path) => flattenPath(path, 1e-4)),
+      );
+      const xs = points.map((point) => point[0]);
+      const ys = points.map((point) => point[1]);
+      const [x, y] = anchorPoint({ min: [0, 0], max: [stock.width, stock.height] }, anchor);
+      const [bx, by] =
+        anchor === "bottom_left"
+          ? [Math.min(...xs), Math.min(...ys)]
+          : [Math.max(...xs), Math.max(...ys)];
+      expect(bx).toBeCloseTo(x, 3);
+      expect(by).toBeCloseTo(y, 3);
+    }
   });
 });
 
