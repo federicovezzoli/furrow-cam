@@ -59,6 +59,7 @@ describe("importArchive", () => {
       "Relief.furrow.zip",
       [{ sha256: model.sha256, size: model.size }],
       null,
+      undefined,
     );
     expect(uploadMesh).toHaveBeenCalledWith(PROJECT, model.sha256, expect.any(Blob));
     expect(actions.saveProject).toHaveBeenCalledWith(PROJECT, document, UPDATED_AT);
@@ -96,6 +97,7 @@ describe("importArchive", () => {
       "Relief.furrow",
       [{ sha256: model.sha256, size: model.size }],
       null,
+      undefined,
     );
   });
 

@@ -4,9 +4,10 @@ import type { StlLimits } from "@furrow/cam-core";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { type FailedImport, importToAccount } from "./import-to-account";
+import { type ImportToAccountResult, importToAccount } from "./import-to-account";
 import {
   deleteGuestProject,
   type GuestProjectRow,
@@ -36,7 +37,9 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
   const router = useRouter();
   const [projects, setProjects] = useState<GuestProjectRow[]>([]);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
-  const [failed, setFailed] = useState<FailedImport[]>([]);
+  const [outcome, setOutcome] = useState<ImportToAccountResult | null>(null);
+  // The imported copy of the project the guest last had open, to open from here.
+  const [lastCopy, setLastCopy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -52,6 +55,7 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
   }, []);
 
   if (projects.length === 0) return null;
+  const notes = outcome ? outcome.failed.length + outcome.changed.length : 0;
 
   function toggle(id: string, checked: boolean) {
     setChosen((current) => {
@@ -68,13 +72,18 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
       const ids = projects.filter((project) => chosen.has(project.id)).map(({ id }) => id);
       const result = await importToAccount(ids, meshLimits);
       const left = await listGuestProjects().catch(() => []);
+      // Projects imported but changed meanwhile stay, unchecked: the account has a copy.
+      const changed = new Set(result.changed.map(({ id }) => id));
       setProjects(left);
-      setChosen(new Set(left.map((row) => row.id)));
-      setFailed(result.failed);
+      setChosen(new Set(left.filter((row) => !changed.has(row.id)).map((row) => row.id)));
+      setOutcome(result);
       setError(null);
-      const opened = result.imported.find(({ id }) => id === last);
-      if (opened) router.push(`/projects/${opened.projectId}`);
-      else router.refresh();
+      const opened = result.imported.find(({ id }) => id === last)?.projectId ?? null;
+      setLastCopy(opened);
+      // Opened at once only when there is nothing to read here first.
+      if (opened && result.failed.length === 0 && result.changed.length === 0) {
+        router.push(`/projects/${opened}`);
+      } else router.refresh();
     });
   }
 
@@ -106,7 +115,8 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
     });
   }
 
-  const failures = new Map(failed.map((failure) => [failure.id, failure.error]));
+  const failures = new Map(outcome?.failed.map((failure) => [failure.id, failure.error]));
+  const changed = new Set(outcome?.changed.map(({ id }) => id));
   return (
     <section
       aria-labelledby="guest-import-heading"
@@ -141,9 +151,22 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
                 Not imported: {failures.get(project.id)}
               </p>
             )}
+            {changed.has(project.id) && (
+              <p role="status" className="pl-6 text-muted-foreground">
+                Imported, but it was changed in another tab meanwhile: your account has the earlier
+                copy, and the newer one stays here.
+              </p>
+            )}
           </li>
         ))}
       </ul>
+      {lastCopy && notes > 0 && (
+        <p>
+          <Link href={`/projects/${lastCopy}`} className="underline underline-offset-4">
+            Open the project you were working on
+          </Link>
+        </p>
+      )}
       <FormError message={error} />
       <div className="flex flex-wrap gap-2">
         <Button onClick={onImport} disabled={pending || chosen.size === 0}>

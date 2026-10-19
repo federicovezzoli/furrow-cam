@@ -173,10 +173,11 @@ describe("importProject", () => {
 describe("importGuestDocument", () => {
   it("creates the project and returns its id without opening it", async () => {
     const document = { ...createProjectDocument(), units: "in" as const };
-    expect(await importGuestDocument(projectFile(document), "Coasters.furrow.json")).toEqual({
+    expect(await importGuestDocument(projectFile(document), "Report: Final")).toEqual({
       projectId: "project-1",
     });
-    expect(mocks.created[0]?.name).toBe("Coasters");
+    // As the guest named it, not as a file name would have it.
+    expect(mocks.created[0]?.name).toBe("Report: Final");
     expect(mocks.created[0]?.document).toEqual(document);
   });
 

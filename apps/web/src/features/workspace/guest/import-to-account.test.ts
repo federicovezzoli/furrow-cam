@@ -31,9 +31,10 @@ describe("importToAccount", () => {
     expect(await importToAccount([guest.id], DEFAULT_STL_LIMITS)).toEqual({
       imported: [{ id: guest.id, projectId: "p1" }],
       failed: [],
+      changed: [],
     });
-    const [file, fileName] = importGuestDocument.mock.calls[0] as [File, string];
-    expect(fileName).toBe("Coasters.furrow.json");
+    const [file, name] = importGuestDocument.mock.calls[0] as [File, string];
+    expect(name).toBe("Coasters");
     expect(JSON.parse(await file.text())).toEqual(document);
     expect(await storage.listGuestProjects()).toEqual([]);
   });
@@ -49,6 +50,7 @@ describe("importToAccount", () => {
     expect(result).toEqual({
       imported: [{ id: accepted.id, projectId: "p2" }],
       failed: [{ id: refused.id, name: "Refused", error: "You have too many projects." }],
+      changed: [],
     });
     expect((await storage.listGuestProjects()).map(({ id }) => id)).toEqual([refused.id]);
   });
@@ -72,16 +74,22 @@ describe("importToAccount", () => {
     expect((await importToAccount([guest.id], DEFAULT_STL_LIMITS)).imported).toEqual([
       { id: guest.id, projectId: "p3" },
     ]);
-    const [archive, fileName, machineId, limits] = importArchive.mock.calls[0] as [
+    const [archive, fileName, machineId, limits, name] = importArchive.mock.calls[0] as [
       { contents: string; meshes: Map<string, Uint8Array>; versions: unknown[] },
       string,
       null,
       unknown,
+      string,
     ];
     expect(JSON.parse(archive.contents)).toEqual(document);
     expect(archive.meshes.get(model.sha256)).toEqual(new Uint8Array([1, 2]));
     expect(archive.versions).toEqual([]);
-    expect([fileName, machineId, limits]).toEqual(["Relief.furrow.json", null, DEFAULT_STL_LIMITS]);
+    expect([fileName, machineId, limits, name]).toEqual([
+      "Relief.furrow.json",
+      null,
+      DEFAULT_STL_LIMITS,
+      "Relief",
+    ]);
     expect(importGuestDocument).not.toHaveBeenCalled();
   });
 
@@ -100,6 +108,28 @@ describe("importToAccount", () => {
     expect(await importToAccount(["gone"], DEFAULT_STL_LIMITS)).toEqual({
       imported: [],
       failed: [],
+      changed: [],
     });
+  });
+
+  it("keeps a project another tab saved while it was being imported", async () => {
+    const guest = await storage.createGuestProject("Coasters", createProjectDocument());
+    const newer = { ...createProjectDocument(), units: "in" as const };
+    importGuestDocument.mockImplementation(async () => {
+      // Another tab saves while the server imports the copy read before.
+      await storage.saveGuestProject(guest.id, newer, guest.savedAt);
+      return { projectId: "p1" };
+    });
+    const result = await importToAccount([guest.id], DEFAULT_STL_LIMITS);
+    expect(result.imported).toEqual([{ id: guest.id, projectId: "p1" }]);
+    expect(result.changed).toEqual([{ id: guest.id, name: "Coasters" }]);
+    expect((await storage.getGuestProject(guest.id))?.document).toEqual(newer);
+  });
+
+  it("keeps the project's name as it is", async () => {
+    const guest = await storage.createGuestProject("Report: Final", createProjectDocument());
+    importGuestDocument.mockResolvedValue({ projectId: "p1" });
+    await importToAccount([guest.id], DEFAULT_STL_LIMITS);
+    expect(importGuestDocument.mock.calls[0]?.[1]).toBe("Report: Final");
   });
 });

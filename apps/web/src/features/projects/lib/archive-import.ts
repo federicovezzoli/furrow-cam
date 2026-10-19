@@ -62,13 +62,14 @@ export type ArchiveImport = { projectId: string; error?: never } | { error: stri
  * the server creates the project with an empty document, the meshes are
  * uploaded to it, and the imported document is saved. If any step after the
  * project is created fails, it is deleted again. `machineId` is as for
- * `importProject`.
+ * `importProject`; `projectName`, when given, names the project instead of `fileName`.
  */
 export async function importArchive(
   archive: ProjectArchive,
   fileName: string,
   machineId: string | null,
   limits: StlLimits,
+  projectName?: string,
 ): Promise<ArchiveImport> {
   const meshes = documentMeshes(archive);
   for (const [sha256, bytes] of meshes) {
@@ -94,6 +95,7 @@ export async function importArchive(
       fileName,
       [...meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
       machineId,
+      projectName,
     );
   } catch {
     return { error: IMPORT_FAILED };

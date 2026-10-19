@@ -2,15 +2,19 @@ import type { StlLimits } from "@furrow/cam-core";
 import { projectFileName } from "@furrow/document";
 import { importGuestDocument } from "@/features/projects/actions";
 import { importArchive } from "@/features/projects/lib/archive-import";
-import { deleteGuestProject, getGuestMesh, getGuestProject } from "./storage";
+import { deleteGuestProjectIfSaved, getGuestMesh, getGuestProject } from "./storage";
 
 /** A guest project that couldn't be imported, and why; it stays in the browser. */
 export type FailedImport = { id: string; name: string; error: string };
 
-/** Which guest projects became which account projects, and which failed. */
+/**
+ * Which guest projects became which account projects, which failed, and
+ * which were imported but stay in the browser because they changed meanwhile.
+ */
 export type ImportToAccountResult = {
   imported: { id: string; projectId: string }[];
   failed: FailedImport[];
+  changed: { id: string; name: string }[];
 };
 
 const IMPORT_FAILED = "It couldn't be imported. Check your connection and try again.";
@@ -26,7 +30,7 @@ export async function importToAccount(
   ids: string[],
   meshLimits: StlLimits | null,
 ): Promise<ImportToAccountResult> {
-  const result: ImportToAccountResult = { imported: [], failed: [] };
+  const result: ImportToAccountResult = { imported: [], failed: [], changed: [] };
   for (const id of ids) {
     let name = "A project";
     try {
@@ -39,7 +43,7 @@ export async function importToAccount(
       if (project.document.models.length === 0) {
         imported = await importGuestDocument(
           new File([contents], fileName, { type: "application/json" }),
-          fileName,
+          project.name,
         );
       } else if (!meshLimits) {
         imported = { error: "It has 3D models, which this server can't store." };
@@ -54,6 +58,7 @@ export async function importToAccount(
           fileName,
           null,
           meshLimits,
+          project.name,
         );
       }
       if (imported.error !== undefined) {
@@ -61,8 +66,10 @@ export async function importToAccount(
         continue;
       }
       result.imported.push({ id, projectId: imported.projectId });
-      // Imported: a failure to delete leaves a copy to import or discard later.
-      await deleteGuestProject(id).catch(() => {});
+      // Saved in another tab meanwhile: the account has the copy read above, and the
+      // newer one stays here to import or discard. A failure to delete also leaves it.
+      const deleted = await deleteGuestProjectIfSaved(id, project.savedAt).catch(() => false);
+      if (!deleted) result.changed.push({ id, name });
     } catch (error) {
       result.failed.push({
         id,
