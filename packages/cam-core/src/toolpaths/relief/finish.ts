@@ -663,18 +663,50 @@ const MOVES_PER_STEP = 4096;
 
 /**
  * The grid the stock left before a rest operation is simulated on: over the
- * same area as the operation's `grid`, in the same frame, with cells no
- * smaller than half of `REST_MIN_WIDTH`. Narrower material doesn't count,
- * and sweeping a finishing toolpath's many short moves on the operation's
- * own cells would take minutes.
+ * same area as the operation's `grid`, grown to hold `cover` (in stock
+ * coordinates) too if given, in the same frame, with cells no smaller than
+ * half of `REST_MIN_WIDTH`, larger if it would take more than `maxCells`.
+ * Narrower material doesn't count, and sweeping a finishing toolpath's many
+ * short moves on the operation's own cells would take minutes.
  */
-export function restGrid(grid: ReliefGrid): ReliefGrid {
-  const size = Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
-  const width = grid.columns * grid.cellWidth;
-  const length = grid.rows * grid.cellHeight;
-  const columns = Math.max(2, Math.ceil(width / size - 1e-9));
-  const rows = Math.max(2, Math.ceil(length / size - 1e-9));
-  return { ...grid, columns, rows, cellWidth: width / columns, cellHeight: length / rows };
+export function restGrid(
+  grid: ReliefGrid,
+  cover: Rect | null = null,
+  maxCells = MAX_RELIEF_CELLS,
+): ReliefGrid {
+  let [u0, v0] = grid.origin;
+  let u1 = u0 + grid.columns * grid.cellWidth;
+  let v1 = v0 + grid.rows * grid.cellHeight;
+  if (cover) {
+    const { min, max } = cover;
+    for (const corner of [min, [max[0], min[1]], max, [min[0], max[1]]] as [number, number][]) {
+      const [u, v] = toPassFrame(grid.angle, corner);
+      [u0, v0, u1, v1] = [Math.min(u0, u), Math.min(v0, v), Math.max(u1, u), Math.max(v1, v)];
+    }
+  }
+  const width = u1 - u0;
+  const length = v1 - v0;
+  let size = Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+  const cells = (extent: number) => Math.ceil(extent / size - 1e-9);
+  if (cells(width) * cells(length) > maxCells) {
+    size *= Math.sqrt((cells(width) * cells(length)) / maxCells);
+  }
+  let columns = Math.max(2, cells(width));
+  let rows = Math.max(2, cells(length));
+  while (columns * rows > maxCells) {
+    if (width / columns > length / rows) rows--;
+    else columns--;
+  }
+  const [du, dv] = [grid.origin[0] - u0, grid.origin[1] - v0];
+  return {
+    ...grid,
+    columns,
+    rows,
+    cellWidth: width / columns,
+    cellHeight: length / rows,
+    origin: [u0, v0],
+    outline: grid.outline.map(([u, v]) => [u + du, v + dv]),
+  };
 }
 
 /**
@@ -785,8 +817,8 @@ export type RestOptions = {
 export type RestStock = { grid: ReliefGrid; heights: Float32Array };
 
 /**
- * The stock left by `rest` on the `restGrid` of `grid`, with the progress
- * scaled into `[from, to]`.
+ * The stock left by `rest` on the `restGrid` of `grid`, grown to hold
+ * `cover` if given, with the progress scaled into `[from, to]`.
  */
 export function* restStockSteps(
   grid: ReliefGrid,
@@ -794,8 +826,9 @@ export function* restStockSteps(
   bottom: number,
   from: number,
   to: number,
+  cover: Rect | null = null,
 ): Generator<number, RestStock> {
-  const coarse = restGrid(grid);
+  const coarse = restGrid(grid, cover);
   const steps = restHeightsSteps(coarse, rest.cuts, rest.stock, bottom);
   for (let step = steps.next(); ; step = steps.next()) {
     if (step.done) return { grid: coarse, heights: step.value };
@@ -809,19 +842,25 @@ export function* restStockSteps(
  * grid is coarser, but each sample drops the tool at its own position: the
  * stock an earlier pass of the same tool left there is never above it,
  * whatever the cells. Rapids go by `highestUnder` instead, the whole tool.
+ * Positions are in the operation's grid, which the rest grid may extend.
  */
 export class RestDropper {
   private readonly dropper: ToolDropper;
   /** How far from the tool's axis a cell may hold stock it meets: its radius and a cell's diagonal. */
   private readonly reach: number;
+  /** The operation's grid origin in the rest grid. */
+  private readonly du: number;
+  private readonly dv: number;
 
   constructor(
     private readonly stock: RestStock,
-    private readonly grid: HeightmapGrid,
+    private readonly grid: ReliefGrid,
     profile: CutterProfile,
   ) {
     this.dropper = new ToolDropper(stock.heights, stock.grid, restProfile(profile));
     this.reach = profile.radius + Math.hypot(stock.grid.cellWidth, stock.grid.cellHeight);
+    this.du = grid.origin[0] - stock.grid.origin[0];
+    this.dv = grid.origin[1] - stock.grid.origin[1];
   }
 
   /**
@@ -830,12 +869,13 @@ export class RestDropper {
    * shape and whatever lies between the cells: the highest cell within its
    * radius and a cell's diagonal. Past the grid, the stock's top.
    */
-  highestUnder(u0: number, u1: number, v: number): number {
+  highestUnder(u0: number, u1: number, along: number): number {
     const { columns, rows, cellWidth, cellHeight } = this.stock.grid;
     const { heights } = this.stock;
     const reach = this.reach;
-    const low = Math.min(u0, u1) - reach;
-    const high = Math.max(u0, u1) + reach;
+    const low = Math.min(u0, u1) + this.du - reach;
+    const high = Math.max(u0, u1) + this.du + reach;
+    const v = along + this.dv;
     let highest =
       low < 0 || high > columns * cellWidth || v - reach < 0 || v + reach > rows * cellHeight
         ? 0
@@ -857,7 +897,8 @@ export class RestDropper {
    * more than `REST_MATERIAL` of the stock left.
    */
   remaining(x: number, y: number, z: number): boolean {
-    return this.dropper.dropPoint(x, y, z + REST_MATERIAL) > z + REST_MATERIAL;
+    const tip = this.dropper.dropPoint(x + this.du, y + this.dv, z + REST_MATERIAL);
+    return tip > z + REST_MATERIAL;
   }
 
   /**
@@ -868,7 +909,8 @@ export class RestDropper {
   dropLine(y: number, first: number, last: number, out: Float64Array) {
     const { cellWidth } = this.grid;
     for (let i = first; i <= last; i++) {
-      out[i - first] = this.dropper.dropPoint((i + 0.5) * cellWidth, y, out[i - first] as number);
+      const u = (i + 0.5) * cellWidth + this.du;
+      out[i - first] = this.dropper.dropPoint(u, y + this.dv, out[i - first] as number);
     }
   }
 }

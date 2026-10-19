@@ -97,9 +97,10 @@ const REST_SHARE = 0.25;
  *
  * The step-over is the tool's unless the operation sets its own.
  *
- * With `rest` (S8), the stock the earlier operations left is simulated on
- * the same grid, and only material more than `REST_MATERIAL` above a level,
- * and wider than `REST_MIN_WIDTH`, is cut: linear passes skip the samples
+ * With `rest` (S8), the stock the earlier operations left is simulated over
+ * the grid and all the tool reaches from the area, and only material more
+ * than `REST_MATERIAL` above a level, and wider than `REST_MIN_WIDTH`, is
+ * cut: linear passes skip the samples
  * where the tool meets none, rapiding over the gaps, and pockets are cleared
  * only within reach of it.
  */
@@ -149,6 +150,14 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
+  const area = roughingArea(params.boundary, model, stock, radius);
+  if (!area) {
+    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
+    return { moves: [], warnings };
+  }
+  // Simulated wherever the tool reaches, which the area may take past the
+  // model's grid: past the simulation, the tool would meet stock it can't see.
+  const reach = radius + wanted;
   const restStock = rest
     ? yield* restStockSteps(
         grid,
@@ -156,14 +165,12 @@ export function* reliefRoughSteps(
         stockBottom ?? grid.base,
         HEIGHTMAP_SHARE - REST_SHARE,
         HEIGHTMAP_SHARE,
+        {
+          min: [area.min[0] - reach, area.min[1] - reach],
+          max: [area.max[0] + reach, area.max[1] + reach],
+        },
       )
     : null;
-
-  const area = roughingArea(params.boundary, model, stock, radius);
-  if (!area) {
-    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
-    return { moves: [], warnings };
-  }
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -219,7 +226,7 @@ export function* reliefRoughSteps(
         restStock.heights,
         restStock.grid,
         z + REST_MATERIAL,
-        grid.origin,
+        restStock.grid.origin,
       );
       const reachable = offset(offset(cleared, -radius, { arcTolerance: tolerance }), radius, {
         arcTolerance: tolerance,
@@ -387,12 +394,10 @@ function* rasterLevels(
     // The pad may be past the grid, where the pass still goes.
     dropper.dropDiscs(v, first, last, tips);
     // Only stock more than `REST_MATERIAL` above the pass counts, so the tool
-    // dropped onto it starts there, which spares scanning most cells. Past
-    // the grid, nothing is left that the model's margin would show.
+    // dropped onto it starts there, which spares scanning most cells. The
+    // stock left is simulated over the whole area, past the grid too.
     const stockTips = restDropper ? tips.map((tip) => tip + REST_MATERIAL) : null;
-    if (stockTips && row >= 0 && row < rows && from <= to) {
-      restDropper?.dropLine(v, from, to, stockTips.subarray(from - first, to - first + 1));
-    }
+    if (stockTips) restDropper?.dropLine(v, first, last, stockTips);
     passes.push({ v, first, tips, stockTips });
   }
 

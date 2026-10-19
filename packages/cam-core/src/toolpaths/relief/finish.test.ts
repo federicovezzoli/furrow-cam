@@ -11,6 +11,7 @@ import {
   rasterizeModelSteps,
   reliefCellSize,
   reliefGrid,
+  restGrid,
   runSteps,
   sampleMoves,
   simplifyHeights,
@@ -134,6 +135,35 @@ describe("reliefGrid", () => {
     expect(
       reliefGrid({ ...placed(20, 10, 5), bounds: { min: [0, 0, 0], max: [0, 10, 5] } }, 0, 0.1),
     ).toBeNull();
+  });
+});
+
+describe("restGrid", () => {
+  const grid = reliefGrid(placed(20, 10, 5), 0, 0.1);
+  if (!grid) throw new Error("no grid");
+
+  it("covers the operation's grid with cells of at least a quarter millimetre", () => {
+    expect(restGrid(grid)).toMatchObject({
+      origin: grid.origin,
+      columns: 80,
+      rows: 40,
+      cellWidth: 0.25,
+      cellHeight: 0.25,
+    });
+  });
+
+  it("grows to cover an area past the grid, in the grid's frame", () => {
+    const rest = restGrid(grid, { min: [-5, 2], max: [30, 4] });
+    expect(rest.origin).toEqual([-5, 0]);
+    expect([rest.columns, rest.rows]).toEqual([140, 40]);
+    // The outline stays on the model.
+    expect(rest.outline[0]).toEqual([5, 0]);
+  });
+
+  it("grows its cells to stay within the cap", () => {
+    const rest = restGrid(grid, { min: [-1000, -1000], max: [1000, 1000] }, 10_000);
+    expect(rest.columns * rest.rows).toBeLessThanOrEqual(10_000);
+    expect(rest.columns * rest.cellWidth).toBeCloseTo(2000);
   });
 });
 
