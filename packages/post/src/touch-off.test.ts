@@ -68,8 +68,47 @@ describe("suggestTouchOffToolChange", () => {
     );
   });
 
-  it("moves over the pad before a block with no XY move in work coordinates", () => {
-    const block = "G53 G0 X-10 Y-10\nM0 (Change the bit)";
+  it("moves over the pad before a block with no XY move before it zeroes Z", () => {
+    const block = "G0 Z20\nG92 X0 Y0\nM0 (Change the bit)\nG0 X10 Y10";
     expect(suggestTouchOffToolChange(block, 5)).toBe(`G0 Z5\nG0 X{padX} Y{padY}\n${block}`);
+  });
+
+  it("counts modal moves, after an earlier motion word, as XY moves", () => {
+    expect(suggestTouchOffToolChange("G0 Z20\nX10 Y10\nM0", 5)).toBe("G0 Z20\nX{padX} Y{padY}\nM0");
+    expect(suggestTouchOffToolChange("G1 X5 Y5 F800\nX10 Y10\nM0\nX20 Y20", 5)).toBe(
+      "G1 X{padX} Y{padY} F800\nM0\nX20 Y20",
+    );
+  });
+
+  it("replaces a move in machine coordinates with the move to the pad", () => {
+    expect(suggestTouchOffToolChange("G53 G0 X-10 Y-10\nM0 (Change the bit)", 5)).toBe(
+      "G0 X{padX} Y{padY}\nM0 (Change the bit)",
+    );
+    expect(suggestTouchOffToolChange("G53 G0 Z-5 X-10 Y-10\nM0", 5)).toBe(
+      "G53 G0 Z-5\nG0 X{padX} Y{padY}\nM0",
+    );
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG53 G0 X-10 Y-10\nM0", 5)).toBe(
+      "G0 X{padX} Y{padY}\nM0",
+    );
+  });
+
+  it("replaces a move to a stored position with the move to the pad", () => {
+    // With no axis words, G28 moves every axis: a rise takes its place.
+    expect(suggestTouchOffToolChange("M5\nG28\nM0", 5)).toBe("M5\nG0 Z5\nG0 X{padX} Y{padY}\nM0");
+    expect(suggestTouchOffToolChange("G91 G28 Z0\nG30\nM0", 5)).toBe(
+      "G91 G28 Z0\nG90 G0 Z5\nG0 X{padX} Y{padY}\nG91\nM0",
+    );
+    expect(suggestTouchOffToolChange("G28 X0 Y0 Z0\nM0", 5)).toBe("G28 Z0\nG0 X{padX} Y{padY}\nM0");
+    // Left with no axis words, it would move every axis: it goes.
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG30 X0\nG28\nM0", 5)).toBe(
+      "G0 X{padX} Y{padY}\nG0 Z5\nM0",
+    );
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG28 X0 Y0\nM0", 5)).toBe("G0 X{padX} Y{padY}\nM0");
+  });
+
+  it("drops arcs that would leave the pad", () => {
+    expect(suggestTouchOffToolChange("G0 X1 Y1\nG2 X5 Y5 I2 J2\nM0", 5)).toBe(
+      "G0 X{padX} Y{padY}\nM0",
+    );
   });
 });
