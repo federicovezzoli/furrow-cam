@@ -59,11 +59,20 @@ export function ToolLibraryProvider({
  * The library `tools` followed by the catalog bits (PRD-0008 G4), leaving out
  * those the library already has as they are, such as the default bit seeded
  * into new libraries. The catalog's default bit is the default when the
- * library has none.
+ * library has none, or the library's copy of it when it has one.
  */
 export function withCatalog(tools: ToolChoice[]): ToolChoice[] {
   const owned = new Set(tools.map((choice) => toolKey(choice.tool)));
   const hasDefault = tools.some((choice) => choice.isDefault);
+  // The library's copy of the catalog default, which stands in for it when
+  // the library has no default (e.g. one the host left out for failing today's rules).
+  const copy = hasDefault
+    ? -1
+    : tools.findIndex((choice) => toolKey(choice.tool) === toolKey(DEFAULT_TOOL_PRESET.tool));
+  const library =
+    copy === -1
+      ? tools
+      : tools.map((choice, index) => (index === copy ? { ...choice, isDefault: true } : choice));
   const catalog = TOOL_PRESETS.filter((preset) => !owned.has(toolKey(preset.tool))).map(
     ({ id, tool }): ToolChoice => ({
       id,
@@ -72,7 +81,7 @@ export function withCatalog(tools: ToolChoice[]): ToolChoice[] {
       catalog: true,
     }),
   );
-  return [...tools, ...catalog];
+  return [...library, ...catalog];
 }
 
 /** `tools` with the tool `id` replaced by its saved version. */

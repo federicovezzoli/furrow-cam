@@ -101,6 +101,13 @@ describe("withCatalog", () => {
     expect(defaultToolChoice(withCatalog(library))?.id).toBe(DEFAULT_TOOL_PRESET.id);
   });
 
+  it("makes the library's copy of the catalog default the default when it has none", () => {
+    const copy = { id: "s", isDefault: false, tool: DEFAULT_TOOL_PRESET.tool };
+    const offered = withCatalog([choice("a", "3 mm upcut"), copy]);
+    expect(defaultToolChoice(offered)?.id).toBe("s");
+    expect(offered.filter((tool) => tool.isDefault)).toHaveLength(1);
+  });
+
   it("keeps the library's default", () => {
     const own = [{ ...choice("a", "3 mm upcut"), isDefault: true }];
     const offered = withCatalog(own);
