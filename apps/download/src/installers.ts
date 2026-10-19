@@ -7,6 +7,7 @@ export const PLATFORMS = {
   win: "win-x64.exe",
   "linux-appimage": "linux-x86_64.AppImage",
   "linux-deb": "linux-amd64.deb",
+  "linux-pacman": "linux-x64.pacman",
 } as const;
 
 export type Platform = keyof typeof PLATFORMS;
