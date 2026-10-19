@@ -17,12 +17,11 @@ import { useAddTool, useUpdateTool } from "./tool-library";
  * Saving also re-snapshots it into every operation of this project that used
  * it (ADR-0003); disabled when the operation's tool matches no library bit.
  * A catalog bit can't change (PRD-0008 G5): editing it saves a copy to the
- * library, which those operations then use. Without an account, it explains
- * how to get one instead (G6).
+ * library, which those operations then use.
  */
 export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
   const store = useDocumentStoreApi();
-  const { library, account } = useWorkspaceHost();
+  const { library } = useWorkspaceHost();
   const updateTool = useUpdateTool();
   const addTool = useAddTool();
   // Kept while open: once saved, the operation may no longer match a library bit.
@@ -51,10 +50,7 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
         variant="outline"
         size="icon-compact"
         disabled={!choice}
-        onClick={() => {
-          if (account) account.prompt("save-bit");
-          else if (choice) setEditing(choice);
-        }}
+        onClick={() => choice && setEditing(choice)}
         aria-label="Edit bit"
         title="Edit bit"
       >

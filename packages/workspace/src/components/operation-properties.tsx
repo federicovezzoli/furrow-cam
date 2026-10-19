@@ -45,7 +45,6 @@ import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { useMemo, useState } from "react";
 import { selectionTargets, targetsLabel } from "../lib/path-selection";
-import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -227,13 +226,11 @@ const NEW_BIT = "__new";
 /**
  * Picks the operation's tool from the library, then the catalog; tools the
  * operation can't take, such as a V-bit to drill, are disabled. "New bit…"
- * creates one in place and picks it, or without an account explains how to
- * get one (PRD-0008 G6).
+ * creates one in place and picks it.
  */
 function ToolPicker({ operation }: { operation: Operation }) {
   const store = useDocumentStoreApi();
   const tools = useToolLibrary();
-  const { account } = useWorkspaceHost();
   const { id: operationId, tool } = operation;
   // The same check `setOperationTool` makes.
   const usable = useMemo(
@@ -269,9 +266,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
             value={current?.id ?? ""}
             onChange={(event) => {
               // Controlled, so the select keeps showing the current tool meanwhile.
-              if (event.target.value === NEW_BIT) {
-                return account ? account.prompt("save-bit") : setCreating(true);
-              }
+              if (event.target.value === NEW_BIT) return setCreating(true);
               const choice = tools.find((candidate) => candidate.id === event.target.value);
               if (choice) pick(choice.tool);
             }}
