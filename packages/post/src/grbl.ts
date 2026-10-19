@@ -79,7 +79,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
         out.forget();
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
-          custom(fillTouchOffBlock(pad.toolChange, stock, pad));
+          custom(fillTouchOffBlock(pad.toolChange, stock, pad, safeZ));
         } else if (machine?.toolChange) {
           // Over the pad first, where Z is zeroed; the block may stop the spindle.
           if (pad) {

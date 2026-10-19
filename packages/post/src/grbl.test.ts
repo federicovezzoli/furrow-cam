@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { formatNumber } from "./format";
 import { grbl, toolShapeComment } from "./grbl";
 import { type PostInput, postSteps } from "./post";
+import { suggestTouchOffToolChange } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -314,6 +315,15 @@ describe("grbl", () => {
         ].join("\n"),
       );
       expect(gcode).not.toContain("Change the bit");
+    });
+
+    it("rise to the safe Z the program is exported with, after Suggest", () => {
+      const toolChange = suggestTouchOffToolChange(null);
+      const exported = (safeZ: number) =>
+        post({ operations, safeZ, stock: { ...stock, touchOff: { ...pad, toolChange } } }).gcode;
+      expect(exported(5)).toContain("M5\nG0 Z5\nG0 X7.5 Y192.5\nM0");
+      expect(exported(20)).toContain("M5\nG0 Z20\nG0 X7.5 Y192.5\nM0");
+      expect(exported(20)).not.toContain("{safeZ}");
     });
 
     it("ignore the pad with the Z zero on the machine bed", () => {

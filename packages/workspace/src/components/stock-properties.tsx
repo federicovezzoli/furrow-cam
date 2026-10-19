@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_SAFE_Z, formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
+import { formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
 import { Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -478,7 +478,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
       <p id="touch-off-tool-change-hint" className="text-muted-foreground">
         Empty, the program moves over the pad, then runs the machine's tool change. Filled in, this
         replaces both; <code>{"{padX}"}</code> and <code>{"{padY}"}</code> stand for the pad's
-        centre, measured from the zero.
+        centre, measured from the zero, and <code>{"{safeZ}"}</code> for the machine's safe Z.
       </p>
       <div className="flex gap-2">
         <Button
@@ -487,10 +487,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
           size="compact"
           onClick={() => {
             setDraft(null);
-            setTouchOffToolChange(
-              store,
-              suggestTouchOffToolChange(machineBlock, machine?.safeZ ?? DEFAULT_SAFE_Z),
-            );
+            setTouchOffToolChange(store, suggestTouchOffToolChange(machineBlock));
           }}
         >
           Suggest

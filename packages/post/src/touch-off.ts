@@ -5,18 +5,28 @@ import { formatNumber } from "./format";
 /**
  * A project's tool change on its touch-off pad (ADR-0043): G-code that
  * replaces the machine's tool change, where `{padX}` and `{padY}` stand for
- * the pad's centre in work coordinates, so the block follows the pad.
+ * the pad's centre in work coordinates and `{safeZ}` for the machine's safe
+ * Z, so the block follows the pad and the machine.
  */
 
 /** The placeholders a pad's tool change may use. */
-export const TOUCH_OFF_PLACEHOLDERS = ["{padX}", "{padY}"] as const;
+export const TOUCH_OFF_PLACEHOLDERS = ["{padX}", "{padY}", "{safeZ}"] as const;
 
-/** `block` with the placeholders replaced by `pad`'s centre, in work coordinates. */
-export function fillTouchOffBlock(block: string, stock: Stock, { x, y }: TouchOffDisc): string {
+/**
+ * `block` with the placeholders replaced by `pad`'s centre, in work
+ * coordinates, and by `safeZ`.
+ */
+export function fillTouchOffBlock(
+  block: string,
+  stock: Stock,
+  { x, y }: TouchOffDisc,
+  safeZ: number,
+): string {
   const [ox, oy] = stockOffset(stock);
   return block
     .replaceAll("{padX}", formatNumber(x + ox))
-    .replaceAll("{padY}", formatNumber(y + oy));
+    .replaceAll("{padY}", formatNumber(y + oy))
+    .replaceAll("{safeZ}", formatNumber(safeZ));
 }
 
 const MOVE = /G0?[01](?!\d)/i;
@@ -37,11 +47,13 @@ const EMPTY_MOVE = /^\s*((G0?[01](?!\d)|F\s*[\d.]+)\s*)*$/i;
  * coordinates, absolute, goes to the pad; the other XY moves before the
  * zeroing lose their X and Y, so the tool stays there. A relative first move
  * is replaced by an absolute one to the pad, `G91` restored after it. A
- * block with no such move gets a rise to `safeZ` and a move over the pad
+ * block with no such move gets a rise to `{safeZ}` and a move over the pad
  * before it; without a block, it is the default tool change with the move.
+ * The post fills the placeholders in, so the block follows the machine's
+ * safe Z as it is when the program is exported.
  */
-export function suggestTouchOffToolChange(toolChange: string | null, safeZ: number): string {
-  const rise = `G0 Z${formatNumber(safeZ)}`;
+export function suggestTouchOffToolChange(toolChange: string | null): string {
+  const rise = "G0 Z{safeZ}";
   const move = "G0 X{padX} Y{padY}";
   if (toolChange === null) {
     return ["M5", rise, move, "M0 (Change the bit and zero Z on the touch-off pad)"].join("\n");
