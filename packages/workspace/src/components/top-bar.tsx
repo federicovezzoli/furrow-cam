@@ -25,7 +25,7 @@ export function TopBar({
   onTakeTour?: (from: HTMLElement) => void;
 }) {
   const { project, navigation } = useWorkspaceHost();
-  const { Link } = navigation;
+  const { Link, TopBarActions } = navigation;
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
@@ -56,6 +56,7 @@ export function TopBar({
           </Button>
         )}
         <ThemeToggle size="icon-compact" />
+        {TopBarActions && <TopBarActions />}
       </div>
     </header>
   );

@@ -127,6 +127,8 @@ export type WorkspaceHost = {
   navigation: {
     /** A link to `to`, rendered as an anchor. */
     Link: React.ComponentType<WorkspaceLinkProps>;
+    /** Controls the host adds at the end of the top bar, e.g. Sign in for guests (PRD-0008 G9). */
+    TopBarActions?: React.ComponentType;
   };
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
