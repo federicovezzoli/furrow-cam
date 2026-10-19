@@ -75,6 +75,7 @@ describe("grbl", () => {
         "(Operation: Holes)",
         "G0 Z5",
         "M3 S18000",
+        "G4 P5",
         "G0 X100 Y50",
         "G1 Z-5 F500",
         "G0 Z5",
@@ -160,7 +161,63 @@ describe("grbl", () => {
   describe("spindle", () => {
     it("omits S for a manual spindle", () => {
       const { gcode } = post({ machine: { ...lowRider, toolChange: null } });
-      expect(gcode).toContain("\nM3\n");
+      expect(gcode).toContain("\nM3\nG4 P2\n");
+    });
+
+    describe("spin-up delay", () => {
+      const at = (rpm: number, x: number) => ({
+        operation: operation(`At ${rpm}`, { ...endMill, spindleRpm: rpm }),
+        toolpath: plunge([x, 0]),
+      });
+      /** Each `M3` with the dwell after it, if any. */
+      const starts = (gcode: string) =>
+        gcode.match(/^M3( S\d+)?(\nG4 P.*)?$/gm)?.map((line) => line.replace("\n", " ")) ?? [];
+
+      it("waits after starting the spindle and raising its speed, not at the same or a lower one", () => {
+        const operations = [at(18000, 0), at(18000, 10), at(24000, 20), at(12000, 30)];
+        expect(starts(post({ machine, operations }).gcode)).toEqual([
+          "M3 S18000 G4 P5",
+          "M3 S18000",
+          "M3 S24000 G4 P5",
+          "M3 S12000",
+        ]);
+      });
+
+      it("waits after every tool change, which stops the spindle", () => {
+        const operations = [
+          at(18000, 0),
+          {
+            operation: operation("Holes", { ...drillBit, spindleRpm: 18000 }),
+            toolpath: plunge([10, 0]),
+          },
+        ];
+        for (const toolChange of [null, "M0 (Change the bit)"]) {
+          expect(starts(post({ machine: { ...machine, toolChange }, operations }).gcode)).toEqual([
+            "M3 S18000 G4 P5",
+            "M3 S18000 G4 P5",
+          ]);
+        }
+      });
+
+      it("waits after a custom operation start, which may stop the spindle", () => {
+        const operations = [at(18000, 0), at(18000, 10)];
+        const { gcode } = post({ machine: { ...machine, operationStart: "M5" }, operations });
+        expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000 G4 P5"]);
+      });
+
+      it("waits once for a manual spindle, and not at all with no delay", () => {
+        const operations = [at(18000, 0), at(24000, 10)];
+        const manual = { ...lowRider, toolChange: null };
+        expect(starts(post({ machine: manual, operations }).gcode)).toEqual(["M3 G4 P2", "M3"]);
+        const none = post({ machine: { ...machine, spinUpDelay: 0 }, operations }).gcode;
+        expect(none).not.toContain("G4");
+      });
+
+      it("waits the default delay without a machine, and fractions of a second", () => {
+        expect(starts(post({}).gcode)).toEqual(["M3 S18000 G4 P5"]);
+        const { gcode } = post({ machine: { ...machine, spinUpDelay: 1.5 } });
+        expect(starts(gcode)).toEqual(["M3 S18000 G4 P1.5"]);
+      });
     });
 
     it("keeps the speed in the machine's range and warns", () => {
@@ -236,6 +293,7 @@ describe("grbl", () => {
           "(Operation: Holes)",
           "G0 Z5",
           "M3 S12000",
+          "G4 P5",
           "G0 X20 Y0",
         ].join("\n"),
       );
@@ -343,6 +401,7 @@ describe("grbl", () => {
           "(Operation: Sign, clearing)",
           "G0 Z5",
           "M3 S18000",
+          "G4 P5",
           "G0 X40 Y0",
           "G1 Z-5 F500",
           "G0 Z5",
@@ -418,6 +477,7 @@ describe("grbl", () => {
           "G21 G90 G94 G17",
           "G0 Z5",
           "M3 S18000",
+          "G4 P5",
           "G0 X20 Y0",
         ].join("\n"),
       );

@@ -1,5 +1,12 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
-import type { Machine, Stock, StockAnchor, Tool, TouchOff } from "@furrow/document";
+import {
+  DEFAULT_SPIN_UP_DELAY,
+  type Machine,
+  type Stock,
+  type StockAnchor,
+  type Tool,
+  type TouchOff,
+} from "@furrow/document";
 import { formatNumber } from "./format";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
 import { fillTouchOffBlock } from "./touch-off";
@@ -17,6 +24,10 @@ const MODES = "G21 G90 G94 G17";
  *   height and only then starts the spindle (`M3`, with `S` unless the
  *   machine has a manual spindle), so it never spins up touching the work.
  *   Every word is written in full: the user may have jogged during a pause.
+ * - GRBL doesn't wait for the spindle to reach speed, so a dwell (`G4 P`, the
+ *   machine's spin-up delay in seconds) follows each `M3` that starts it or
+ *   raises its speed. The spindle counts as stopped after a tool change and
+ *   after any custom block, which may have stopped it.
  * - An operation with clearing moves (ADR-0026) is written as two: the
  *   clearing moves with its clearing tool, named "<operation>, clearing",
  *   then its own.
@@ -71,12 +82,17 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   if (machine?.programStart) custom(machine.programStart);
   else out.line(MODES);
 
+  const spinUpDelay = machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY;
+  /** The spindle's speed (`null` for a manual one) while it is known to be on, else `undefined`. */
+  let spinning: number | null | undefined;
+
   let tool: Tool | null = null;
   for (const step of steps) {
     if (tool === null || !sameBit(tool, step.tool)) {
       out.comment(`Tool: ${toolLabel(step.tool)}`);
       if (tool !== null) {
         out.forget();
+        spinning = undefined;
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
           custom(fillTouchOffBlock(pad.toolChange, stock, pad));
@@ -99,8 +115,10 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     }
     tool = step.tool;
 
-    if (machine?.operationStart) custom(machine.operationStart);
-    else out.comment(`Operation: ${step.name}`);
+    if (machine?.operationStart) {
+      custom(machine.operationStart);
+      spinning = undefined;
+    } else out.comment(`Operation: ${step.name}`);
 
     // Getting to the first entry point safely is the post-processor's job.
     // The user may have jogged during a pause, so nothing is taken as known.
@@ -115,6 +133,10 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       );
     }
     out.line(rpm.value === null ? "M3" : `M3 S${rpm.value}`);
+    const speedsUp =
+      spinning === undefined || (rpm.value !== null && (spinning === null || rpm.value > spinning));
+    if (speedsUp && spinUpDelay > 0) out.line(`G4 P${formatNumber(spinUpDelay)}`);
+    spinning = rpm.value;
 
     let previous: Vec3 | null = null;
     let clamped = 0;

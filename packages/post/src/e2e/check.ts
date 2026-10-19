@@ -11,7 +11,12 @@ import {
   sweepMoves,
   type Vec3,
 } from "@furrow/cam-core";
-import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
+import {
+  clearingTool,
+  DEFAULT_SPIN_UP_DELAY,
+  type ProjectDocument,
+  type Tool,
+} from "@furrow/document";
 import { formatNumber } from "../format";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
@@ -49,8 +54,21 @@ export type Violation = { line: number; rule: string; message: string };
 /** What a program is checked against: the project it was posted from. */
 export type CheckedProject = Pick<ProjectDocument, "stock" | "machine" | "operations">;
 
-/** The commands `grbl` writes: the modes, moves, spindle, pause and end. */
-const ALLOWED = new Set(["G0", "G1", "G17", "G21", "G90", "G91", "G94", "M0", "M3", "M5", "M30"]);
+/** The commands `grbl` writes: the modes, moves, dwell, spindle, pause and end. */
+const ALLOWED = new Set([
+  "G0",
+  "G1",
+  "G4",
+  "G17",
+  "G21",
+  "G90",
+  "G91",
+  "G94",
+  "M0",
+  "M3",
+  "M5",
+  "M30",
+]);
 const MODES = ["G21", "G90", "G94", "G17"] as const;
 
 /** Splits `gcode` into blocks, throwing on text that isn't G-code. */
@@ -155,8 +173,13 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
   const tools = projectTools(project);
   const material = new Material(project, [...tools.values()]);
 
+  const spinUpDelay = machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY;
   const modes = new Set<string>();
   let spindle = false;
+  /** The last speed set, `null` for none. */
+  let speed: number | null = null;
+  /** The line of an `M3` that started the spindle or raised its speed, until a long enough dwell. */
+  let spinningUp: number | null = null;
   let tool: CutterProfile | null = null;
   let toolCount = 0;
   let paused = true;
@@ -184,9 +207,19 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       if (!ALLOWED.has(command))
         fail(line.number, "words", `${command} isn't a command grbl writes`);
       modes.add(command);
-      if (command === "M3") spindle = true;
-      else if (command === "M5") spindle = false;
-      else if (command === "M0") {
+      if (command === "M3") {
+        const s = line.words.find((word) => word.letter === "S")?.value ?? null;
+        if (!spindle || (s !== null && (speed === null || s > speed))) spinningUp = line.number;
+        spindle = true;
+        if (s !== null) speed = s;
+      } else if (command === "M5") {
+        spindle = false;
+        speed = null;
+      } else if (command === "G4") {
+        const p = line.words.find((word) => word.letter === "P")?.value;
+        if (p === undefined) fail(line.number, "words", "G4 without P");
+        else if (p >= spinUpDelay - EPSILON) spinningUp = null;
+      } else if (command === "M0") {
         if (!(position[2] >= top - EPSILON)) {
           fail(line.number, "pause", "pauses with the tool in the stock");
         }
@@ -198,8 +231,11 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
         ended = line.number;
       }
     }
+    const dwells = commands.some(({ letter, value }) => letter === "G" && value === 4);
     for (const { letter, value } of line.words) {
-      if (!"GMXYZFS".includes(letter)) fail(line.number, "words", `unexpected word ${letter}`);
+      if (!"GMXYZFS".includes(letter) && !(letter === "P" && dwells)) {
+        fail(line.number, "words", `unexpected word ${letter}`);
+      }
       if (letter !== "S" || machine === null) continue;
       const { spindleRpmMin: min, spindleRpmMax: max } = machine;
       if (min === null || max === null) {
@@ -219,6 +255,14 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
 
     const move = moves.get(line.number);
     if (!move) continue;
+    if (spinningUp !== null && spinUpDelay > 0) {
+      fail(
+        line.number,
+        "spin-up",
+        `moves before the spindle started on line ${spinningUp} is up to speed`,
+      );
+      spinningUp = null;
+    }
     const missing = MODES.filter((mode) => !modes.has(mode));
     if (missing.length > 0) fail(line.number, "modes", `moves before ${missing.join(" ")}`);
     const { from, to } = move;
