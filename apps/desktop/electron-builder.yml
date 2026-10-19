@@ -38,6 +38,40 @@ linux:
   # Lets desktop environments link the running window to its launcher.
   syncDesktopName: true
   category: Graphics
-  target: [AppImage, deb]
+  target: [AppImage, deb, pacman]
   maintainer: Federico Vezzoli <fv@furrow.cam>
+pacman:
+  # The default would be the product name, and a package name can't have a space.
+  packageName: furrow-cam
+  # electron-builder writes the description after an empty line, which pacman reads as empty;
+  # a later --description wins.
+  fpm: ["--description", "Open source 2.5D CAM for CNC routers"]
+  # electron-builder's defaults name packages Arch no longer ships (http-parser,
+  # libappindicator-gtk3), so `pacman -U` can't resolve them. These are the libraries the
+  # Electron binary links against, plus xdg-utils for opening links and folders.
+  depends:
+    - alsa-lib
+    - at-spi2-core
+    - cairo
+    - dbus
+    - expat
+    - gcc-libs
+    - glib2
+    - glibc
+    - gtk3
+    - libcups
+    - libx11
+    - libxcb
+    - libxcomposite
+    - libxdamage
+    - libxext
+    - libxfixes
+    - libxkbcommon
+    - libxrandr
+    - mesa
+    - nspr
+    - nss
+    - pango
+    - systemd-libs
+    - xdg-utils
 publish: null
