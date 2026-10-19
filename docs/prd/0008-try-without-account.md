@@ -1,6 +1,6 @@
 # PRD-0008: Use the app without an account
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-18
 - **Related:** PRD-0001 (R13, R17, R18, R19, R22), PRD-0003, PRD-0004, PRD-0007, ADR-0013, ADR-0045, ADR-0050
@@ -69,3 +69,4 @@ Before a visitor sees the workspace, the web app asks them to create an account,
 
 - 2026-10-18: initial draft
 - 2026-10-19: G13, projects without a machine, so imported guest projects need none; G5 and G7 no longer assume freemium limits are enforced (#226 review)
+- 2026-10-19: shipped (#220–#225, #227; milestone "Guest mode")
