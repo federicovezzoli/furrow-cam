@@ -6,6 +6,7 @@ import { ImportProjectButton } from "@/features/projects/components/import-proje
 import { NewProjectForm } from "@/features/projects/components/new-project-form";
 import { ProjectList } from "@/features/projects/components/project-list";
 import { listProjects } from "@/features/projects/server";
+import { GuestImportOffer } from "@/features/workspace/guest/guest-import-offer";
 
 export default function ProjectsPage() {
   return (
@@ -19,8 +20,9 @@ export default function ProjectsPage() {
 }
 
 /**
- * Creating and importing projects, then the list. Neither needs a machine:
- * it is chosen in the project before exporting G-code (PRD-0008 G13).
+ * The offer to import projects made in this browser without an account
+ * (PRD-0008 G7), creating and importing projects, then the list. Neither
+ * needs a machine: it is chosen in the project before exporting G-code (G13).
  */
 async function Projects() {
   const userId = await requireUserId();
@@ -32,6 +34,7 @@ async function Projects() {
 
   return (
     <>
+      <GuestImportOffer meshLimits={meshLimits()} />
       <div data-tour="new-project" className="flex flex-wrap items-end justify-between gap-4">
         <NewProjectForm machines={options} />
         <ImportProjectButton machines={options} meshLimits={meshLimits()} />

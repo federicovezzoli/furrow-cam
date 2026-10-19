@@ -126,6 +126,33 @@ export async function importProject(file: File, machineId: string | null): Promi
   redirect(`/projects/${id}`);
 }
 
+/**
+ * Creates a project from a guest project's document (PRD-0008 G7), checked
+ * as `importProject` checks a file, and returns its id instead of opening
+ * it, so several can be imported in turn. `fileName` gives the name, as a
+ * file's does. Documents with models go through `startArchiveImport`.
+ */
+export async function importGuestDocument(
+  documentFile: File,
+  fileName: string,
+): Promise<{ projectId: string; error?: never } | { error: string }> {
+  const userId = await getUserId();
+  if (!userId) return { error: SIGNED_OUT };
+  if (!(documentFile instanceof File)) return { error: "Pick a file to import." };
+  const prepared = await prepareImport(userId, await documentFile.text(), String(fileName), null, {
+    archive: false,
+  });
+  if (!("document" in prepared)) return prepared;
+  const { document, name } = prepared;
+
+  const { id } = await db.project.create({
+    data: { userId, name, ...documentColumns(document) },
+    select: { id: true },
+  });
+  revalidatePath("/projects");
+  return { projectId: id };
+}
+
 /** What `startArchiveImport` returns: the new project to finish, or an error. */
 export type ArchiveImportResult =
   | { projectId: string; document: ProjectDocument; updatedAt: Date; error?: never }
