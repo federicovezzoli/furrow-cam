@@ -224,6 +224,57 @@ describe("profileToolpath", () => {
     expect(ramp.at(-1)?.[1].to).toEqual([10, 10, -2]);
   });
 
+  it("ramps along a short line and back, never plunging at the feed rate", () => {
+    // 2 mm at 3° is about 38 mm of travel: more than twice the 8 mm line.
+    const short: Shape = {
+      ...line,
+      paths: [{ start: [10, 10], segments: [{ kind: "line", to: [18, 10] }], closed: false }],
+    };
+    const toolpath = profile({ side: "on", ramp: true }, [short]);
+    let ramps = 0;
+    for (const [from, move] of steps(toolpath)) {
+      if (move.kind !== "feed" || move.to[2] >= from[2] || from[2] > 0) continue;
+      ramps++;
+      expect(descentAngle(from, move.to)).toBeLessThanOrEqual(3 + 1e-6);
+      expect(move.feedRate).toBe(tool.plungeRate);
+      expect(move.to[1]).toBe(10);
+      expect(move.to[0]).toBeGreaterThanOrEqual(10);
+      expect(move.to[0]).toBeLessThanOrEqual(18);
+    }
+    expect(ramps).toBeGreaterThan(3);
+  });
+
+  it("ramps along a short open polyline without leaving it", () => {
+    const bend: Shape = {
+      ...line,
+      paths: [
+        {
+          start: [10, 10],
+          segments: [
+            { kind: "line", to: [15, 10] },
+            { kind: "line", to: [15, 15] },
+            { kind: "line", to: [20, 15] },
+          ],
+          closed: false,
+        },
+      ],
+    };
+    const onBend = ([x, y]: Vec3) =>
+      (Math.abs(y - 10) < 1e-9 && x >= 10 - 1e-9 && x <= 15 + 1e-9) ||
+      (Math.abs(x - 15) < 1e-9 && y >= 10 - 1e-9 && y <= 15 + 1e-9) ||
+      (Math.abs(y - 15) < 1e-9 && x >= 15 - 1e-9 && x <= 20 + 1e-9);
+    const toolpath = profile({ side: "on", ramp: true }, [bend]);
+    let ramps = 0;
+    for (const [from, move] of steps(toolpath)) {
+      if (move.kind !== "feed" || from[2] > 0) continue;
+      if (move.to[2] < from[2]) ramps++;
+      // Every move below the top is along the path: no chord across the bend.
+      expect(onBend(move.to)).toBe(true);
+      expect(onBend([(from[0] + move.to[0]) / 2, (from[1] + move.to[1]) / 2, 0])).toBe(true);
+    }
+    expect(ramps).toBeGreaterThan(3);
+  });
+
   it("plunges when the tool's plunge angle is 90°", () => {
     for (const [from, move] of steps(profile({ ramp: true }, [square], { plungeAngle: 90 }))) {
       if (move.to[2] < from[2]) expect(move.to.slice(0, 2)).toEqual(from.slice(0, 2));
