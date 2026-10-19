@@ -60,9 +60,12 @@ export const Model = z.strictObject({
   placement: ModelPlacement,
   /**
    * The border, in millimetres, that *Fit to stock* leaves between the model
-   * and the stock on every side (ADR-0038): 10 for a new model, never more
-   * than a quarter of the stock's smaller side when applied.
+   * and the stock on every side (ADR-0038): `MODEL_BORDER` for a new model,
+   * never more than a quarter of the stock's smaller side when applied.
    */
   border: z.number().nonnegative(),
 });
 export type Model = z.infer<typeof Model>;
+
+/** The border a new model leaves around it when fitted to the stock (ADR-0038), in millimetres. */
+export const MODEL_BORDER = 10;

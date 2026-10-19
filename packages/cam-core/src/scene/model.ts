@@ -1,11 +1,12 @@
-import type {
-  Model,
-  ModelPlacement,
-  Point,
-  QuarterTurn,
-  Shape,
-  Stock,
-  StockAnchor,
+import {
+  MODEL_BORDER,
+  type Model,
+  type ModelPlacement,
+  type Point,
+  type QuarterTurn,
+  type Shape,
+  type Stock,
+  type StockAnchor,
 } from "@furrow/document";
 import { type Rect, shapesBounds } from "../geometry/bounds";
 import { roundCoordinate } from "../geometry/round";
@@ -213,9 +214,6 @@ export function positionAt(
   return [roundCoordinate(x - ax), roundCoordinate(y - ay)];
 }
 
-/** The border a new model leaves around it when fitted to the stock (ADR-0038), in millimetres. */
-export const MODEL_BORDER = 10;
-
 /**
  * The border left on every side of a model fitted to `stock`: `border`, but
  * never more than a quarter of the stock's smaller side.
@@ -253,17 +251,18 @@ export function stockFit(
 
 /**
  * The placement of a newly imported mesh: unrotated, fitted inside the stock
- * less a border and aligned at `anchor` (`stockFit`), its depth what that
+ * less `border` and aligned at `anchor` (`stockFit`), its depth what that
  * scale gives it, even deeper than the stock: a mesh is never stretched
- * (ADR-0034).
+ * (ADR-0034). Store `border` on the model, so a later fit leaves the same.
  */
 export function initialPlacement(
   bounds: Box3,
   stock: Pick<Stock, "width" | "height" | "thickness">,
   anchor: StockAnchor,
+  border: number,
 ): ModelPlacement {
   const rotation: Rotation = [0, 0, 0];
-  const { scale, position } = stockFit(bounds, rotation, stock, anchor);
+  const { scale, position } = stockFit(bounds, rotation, stock, anchor, border);
   const depth = proportionalDepth(bounds, rotation, scale) ?? stock.thickness;
   return { rotation, scale, depth, position };
 }

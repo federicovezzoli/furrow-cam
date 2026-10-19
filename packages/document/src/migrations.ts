@@ -119,11 +119,12 @@ export const migrations: Readonly<Record<number, Migration>> = {
     return doc;
   },
   // #183: the border Fit to stock leaves is the model's. Existing models
-  // keep the 10 mm it always was.
+  // keep the one they were fitted with, whatever new models get later.
   14: (doc) => {
+    const V14_BORDER = 10;
     if (Array.isArray(doc.models)) {
       for (const model of doc.models) {
-        if (isObject(model) && !("border" in model)) model.border = 10;
+        if (isObject(model) && !("border" in model)) model.border = V14_BORDER;
       }
     }
     return doc;

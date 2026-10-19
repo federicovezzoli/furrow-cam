@@ -1,4 +1,4 @@
-import type { ModelPlacement } from "@furrow/document";
+import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
@@ -103,7 +103,7 @@ describe("initialPlacement", () => {
   it("fits inside the stock less a border and aligns to it at the anchor", () => {
     // 100 × 80 into 400 × 200 with a 10 mm border, so 380 × 180: the length limits it, to 2.25.
     expect(fitScale(BOUNDS, [0, 0, 0], stock)).toBe(2.5);
-    expect(initialPlacement(BOUNDS, stock, "bottom_left")).toEqual({
+    expect(initialPlacement(BOUNDS, stock, "bottom_left", MODEL_BORDER)).toEqual({
       rotation: [0, 0, 0],
       scale: 2.25,
       // 12 mm scaled by 2.25, deeper than the 18 mm stock: never squashed to fit.
@@ -111,9 +111,9 @@ describe("initialPlacement", () => {
       position: [10, 10],
     });
     // 225 × 180 placed.
-    expect(initialPlacement(BOUNDS, stock, "center").position).toEqual([87.5, 10]);
-    expect(initialPlacement(BOUNDS, stock, "top_right").position).toEqual([165, 10]);
-    expect(initialPlacement(BOUNDS, stock, "middle_left").position).toEqual([10, 10]);
+    expect(initialPlacement(BOUNDS, stock, "center", MODEL_BORDER).position).toEqual([87.5, 10]);
+    expect(initialPlacement(BOUNDS, stock, "top_right", MODEL_BORDER).position).toEqual([165, 10]);
+    expect(initialPlacement(BOUNDS, stock, "middle_left", MODEL_BORDER).position).toEqual([10, 10]);
   });
 });
 

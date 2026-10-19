@@ -1,7 +1,6 @@
 import {
   anchorPoint,
   initialPlacement,
-  MODEL_BORDER,
   modelRect,
   proportionalDepth,
   replacePlacement,
@@ -11,6 +10,7 @@ import {
   xyOriginPosition,
 } from "@furrow/cam-core";
 import {
+  MODEL_BORDER,
   type Model,
   type ModelPlacement,
   type Operation,
@@ -88,9 +88,11 @@ export function addModel(
   if (hasImportedFile(document)) return null;
   const { stock } = document;
   const id = crypto.randomUUID();
-  const placement = initialPlacement(mesh.bounds, stock, modelAnchor(stock));
+  // The border it is fitted with is the one it keeps.
+  const border = MODEL_BORDER;
+  const placement = initialPlacement(mesh.bounds, stock, modelAnchor(stock), border);
   store.getState().change("addModel", (draft) => {
-    draft.models.push({ ...mesh, id, placement, border: MODEL_BORDER });
+    draft.models.push({ ...mesh, id, placement, border });
   });
   return id;
 }

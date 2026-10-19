@@ -12,7 +12,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { ANCHOR_LABELS } from "../lib/anchor-grid";
-import { originalSizeLabel } from "../lib/model-size";
+import { borderNote, originalSizeLabel } from "../lib/model-size";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -40,7 +40,8 @@ const AXES = ["X", "Y", "Z"] as const;
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
  * quarter turns, size (with the size in the file), depth, the border *Fit to
- * stock* leaves and position from the zero, each an undoable edit. Says that it is cut from the top only (S3).
+ * stock* leaves and position from the zero, each an undoable edit. Says that
+ * it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -155,6 +156,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelBorder(store, model.id, value)}
           {...gestures}
         />
+        <p className="text-muted-foreground">{borderNote(model.border, stock, units)}</p>
         <div className="flex justify-end gap-1">
           <Button
             variant="outline"

@@ -1,6 +1,6 @@
 import type { Model } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { originalSizeLabel } from "./model-size";
+import { borderNote, originalSizeLabel } from "./model-size";
 
 function model(placement: Partial<Model["placement"]>): Pick<Model, "bounds" | "placement"> {
   return {
@@ -32,5 +32,18 @@ describe("originalSizeLabel", () => {
       bounds: { min: [0, 0, 0], max: [50.8, 25.4, 0] },
     };
     expect(originalSizeLabel(flat, "in")).toBe("Original: 2 × 1 × 0 in (scale 100%)");
+  });
+});
+
+describe("borderNote", () => {
+  it("says the border applies on the next fit, and what the cap leaves", () => {
+    const stock = { width: 200, height: 300 };
+    expect(borderNote(10, stock, "mm")).toBe(
+      "Left on every side by the next Fit to stock; editing it doesn't move the model.",
+    );
+    expect(borderNote(60, stock, "mm")).toMatch(
+      /doesn't move the model\. On this stock it leaves 50 mm, a quarter of its smaller side\.$/,
+    );
+    expect(borderNote(60, stock, "in")).toMatch(/leaves 1\.9685 in,/);
   });
 });
