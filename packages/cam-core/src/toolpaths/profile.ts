@@ -8,7 +8,7 @@ import {
   type Shape,
   type Tool,
 } from "@furrow/document";
-import { containment, offset, type Polygon, signedArea } from "../geometry/clipper";
+import { containment, difference, offset, type Polygon, signedArea } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { projectOnLoop } from "../geometry/loop";
 import {
@@ -72,7 +72,9 @@ type Cut = Descent & {
  * - Climb milling keeps the material on the tool's right (clockwise spindle).
  * - The depth passes stay `allowance` away from the contour; a finish pass then
  *   cuts the exact contour at full depth, entering from the cleared slot,
- *   right after the depth passes of that contour.
+ *   right after the depth passes of that contour. Where the exact contour
+ *   strays further than `allowance` from them, into a gap the depth passes
+ *   bridge, it is cut in depth passes of its own instead.
  * - Each pass enters by ramping at the tool's plunge angle (along the contour,
  *   or back and forth on the lead-in arc or an open path) or plunges straight
  *   down when ramping is off, the angle is 90° or the path is too short. A
@@ -206,9 +208,14 @@ export function contourToolpath(
       const job = entry && jobs[entry.index];
       if (entry && job) {
         const roughingRun = job.run;
+        const roughed = roughing.contours[entry.index] as Contour;
+        // A narrower offset can run where the roughing one never went, like
+        // into a notch the roughing contour bridges: that takes depth passes.
+        const lap = follows(contour.ring, roughed.ring, radius, within);
         job.run = () => {
           roughingRun();
-          finishContour(cut, contour, entry.point, -params.depth);
+          if (lap) finishContour(cut, contour, entry.point, -params.depth);
+          else cutContour(cut, contour, levels, finishing.isFree);
         };
       } else {
         jobs.push({
@@ -391,6 +398,18 @@ function slotFor(
     });
   });
   return best;
+}
+
+/**
+ * Whether a tool of `radius` following closed `ring` takes off no more than a
+ * strip `within` wide beyond what it took following closed `along`: the
+ * allowance along the walls, not a slot `along` bridged.
+ */
+function follows(ring: Point[], along: Point[], radius: number, within: number): boolean {
+  const sweep = (path: Point[]) => difference(offset([path], radius), offset([path], -radius));
+  const beyond = difference(sweep(ring), sweep(along));
+  // A strip `within` wide holds no circle of radius `within`.
+  return offset(beyond, -within).length === 0;
 }
 
 function nearestOnSegment(point: Point, a: Point, b: Point): Point {

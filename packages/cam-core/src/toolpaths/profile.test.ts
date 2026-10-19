@@ -261,6 +261,95 @@ describe("profileToolpath", () => {
     expect(toolpath.moves.slice(finish + 2, -1).every((move) => move.to[2] === -6)).toBe(true);
   });
 
+  /** A closed polygon through `corners` as a shape. */
+  function polygon(corners: [number, number][]): Shape {
+    const [start, ...rest] = corners as [[number, number], ...[number, number][]];
+    return {
+      ...square,
+      paths: [{ start, segments: rest.map((to) => ({ kind: "line" as const, to })), closed: true }],
+    };
+  }
+
+  /** Every move into `region`, checked to go no more than a step-down below the deepest cut there so far. */
+  function expectStepsDown(
+    toolpath: Toolpath,
+    region: (x: number, y: number) => boolean,
+    stepDown: number,
+  ) {
+    let deepest = 0;
+    let entered = 0;
+    for (const [from, move] of steps(toolpath)) {
+      if (move.kind !== "feed") continue;
+      for (let t = 0.1; t <= 1; t += 0.1) {
+        const x = from[0] + (move.to[0] - from[0]) * t;
+        const y = from[1] + (move.to[1] - from[1]) * t;
+        const z = from[2] + (move.to[2] - from[2]) * t;
+        if (!region(x, y) || z >= 0) continue;
+        entered++;
+        expect(z).toBeGreaterThanOrEqual(deepest - stepDown - 1e-6);
+        deepest = Math.min(deepest, z);
+      }
+    }
+    expect(entered).toBeGreaterThan(0);
+    expect(deepest).toBeCloseTo(-18, 6);
+  }
+
+  // A 6.35 mm bit and 0.2 mm allowance: a 6.5 mm gap fits the finishing
+  // offset but not the roughing one.
+  const bit = { diameter: 6.35, fluteLength: 25 };
+  const finished = { allowance: 0.2, finishPass: true, depth: 18 };
+
+  it("cuts a notch the depth passes bridge in depth passes too", () => {
+    const notched = polygon([
+      [0, 0],
+      [100, 0],
+      [100, 50],
+      [46.5, 50],
+      [46.5, 30],
+      [40, 30],
+      [40, 50],
+      [0, 50],
+    ]);
+    const toolpath = profile(finished, [notched], bit);
+    expectStepsDown(toolpath, (x, y) => x > 40 && x < 46.5 && y > 30 && y < 48, 2);
+  });
+
+  it("cuts a neck the depth passes can't pass in depth passes too", () => {
+    const dumbbell = polygon([
+      [0, 0],
+      [40, 0],
+      [40, 16.75],
+      [60, 16.75],
+      [60, 0],
+      [100, 0],
+      [100, 40],
+      [60, 40],
+      [60, 23.25],
+      [40, 23.25],
+      [40, 40],
+      [0, 40],
+    ]);
+    const toolpath = profile({ ...finished, side: "inside" }, [dumbbell], bit);
+    expectStepsDown(toolpath, (x, y) => x > 42 && x < 58 && y > 16.75 && y < 23.25, 2);
+  });
+
+  it("keeps the single finish lap around inside corners", () => {
+    const ell = polygon([
+      [0, 0],
+      [100, 0],
+      [100, 40],
+      [40, 40],
+      [40, 100],
+      [0, 100],
+    ]);
+    const toolpath = profile({ allowance: 0.5, finishPass: true }, [ell]);
+    // Two full laps at -6: the last depth pass and the finish lap, which goes straight down.
+    const plunges = steps(toolpath).filter(
+      ([from, move]) => from[2] === 0 && move.to[2] === -6 && move.to[0] === from[0],
+    );
+    expect(plunges).toHaveLength(1);
+  });
+
   it("cuts holes before the outline that frees the part", () => {
     const laps = cutsAt(profile({}, [square, hole]), -2);
     const inHole = laps.map(([x, y]) => Math.hypot(x - 50, y - 50) < 7 + 0.01);
