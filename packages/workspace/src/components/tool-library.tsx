@@ -5,12 +5,14 @@ import {
   canDrill,
   canEngrave,
   canVCarve,
+  DEFAULT_TOOL_PRESET,
   type Operation,
+  TOOL_PRESETS,
   type Tool,
   type ToolType,
 } from "@furrow/document";
 import type * as React from "react";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ToolChoice } from "../lib/workspace-host";
 import { toolKey } from "../stores/operation-actions";
 
@@ -20,7 +22,8 @@ const AddToolContext = createContext<(choice: ToolChoice) => void>(() => {});
 
 /**
  * The user's tool library, as the workspace host has it, with the bits added
- * or edited from it applied until the host has the library again.
+ * or edited from it applied until the host has the library again, followed by
+ * the bit catalog.
  */
 export function ToolLibraryProvider({
   tools: initial,
@@ -42,13 +45,43 @@ export function ToolLibraryProvider({
   const addTool = useCallback((choice: ToolChoice) => {
     setTools((current) => withAddedTool(current, choice));
   }, []);
+  const offered = useMemo(() => withCatalog(tools), [tools]);
   return (
-    <ToolLibraryContext value={tools}>
+    <ToolLibraryContext value={offered}>
       <UpdateToolContext value={updateTool}>
         <AddToolContext value={addTool}>{children}</AddToolContext>
       </UpdateToolContext>
     </ToolLibraryContext>
   );
+}
+
+/**
+ * The library `tools` followed by the catalog bits (PRD-0008 G4), leaving out
+ * those the library already has as they are, such as the default bit seeded
+ * into new libraries. The catalog's default bit is the default when the
+ * library has none, or the library's copy of it when it has one.
+ */
+export function withCatalog(tools: ToolChoice[]): ToolChoice[] {
+  const owned = new Set(tools.map((choice) => toolKey(choice.tool)));
+  const hasDefault = tools.some((choice) => choice.isDefault);
+  // The library's copy of the catalog default, which stands in for it when
+  // the library has no default (e.g. one the host left out for failing today's rules).
+  const copy = hasDefault
+    ? -1
+    : tools.findIndex((choice) => toolKey(choice.tool) === toolKey(DEFAULT_TOOL_PRESET.tool));
+  const library =
+    copy === -1
+      ? tools
+      : tools.map((choice, index) => (index === copy ? { ...choice, isDefault: true } : choice));
+  const catalog = TOOL_PRESETS.filter((preset) => !owned.has(toolKey(preset.tool))).map(
+    ({ id, tool }): ToolChoice => ({
+      id,
+      isDefault: !hasDefault && id === DEFAULT_TOOL_PRESET.id,
+      tool,
+      catalog: true,
+    }),
+  );
+  return [...library, ...catalog];
 }
 
 /** `tools` with the tool `id` replaced by its saved version. */

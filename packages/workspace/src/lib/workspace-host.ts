@@ -6,8 +6,12 @@ import type { WorkspaceLayout } from "./workspace-layout";
 /** Nothing when an action succeeded, else why it failed, for the user. */
 export type ActionResult = { error: string } | undefined;
 
-/** A tool in the user's library: its id, whether new operations start with it, and the tool. */
-export type ToolChoice = { id: string; isDefault: boolean; tool: Tool };
+/**
+ * A tool offered for operations: its id, whether new operations start with
+ * it, and the tool. `catalog` marks a read-only bit from the built-in catalog
+ * (PRD-0008 G4); the rest are the user's library.
+ */
+export type ToolChoice = { id: string; isDefault: boolean; tool: Tool; catalog?: true };
 
 /** A machine profile of the user's: its id and the machine, as a project snapshots it. */
 export type MachineChoice = { id: string; machine: Machine };
@@ -98,7 +102,10 @@ export type WorkspaceHost = {
     /** Opens version `id` as a new project; `dateLabel` names an unlabelled one. */
     openAsProject(id: string, dateLabel: string): Promise<ActionResult>;
   } | null;
-  /** The user's tool library and machines, offered for the project's operations and stock. */
+  /**
+   * The user's tool library and machines, offered for the project's
+   * operations and stock. The workspace adds the bit catalog to `tools`.
+   */
   library: {
     tools: ToolChoice[];
     machines: MachineChoice[];

@@ -1,26 +1,11 @@
-import { Tool } from "@furrow/document";
+import { DEFAULT_TOOL_PRESET, Tool } from "@furrow/document";
 import { issuesToFormErrors, numberField } from "../../lib/form-data";
-import { TOOL_COLORS } from "./colors";
 
-/** Seeded into every new account, so a first project can be cut without setting up a library. */
-export const DEFAULT_TOOL: Tool = Tool.parse({
-  name: "6 mm 2-flute upcut",
-  type: "flat_end_mill",
-  diameter: 6,
-  fluteCount: 2,
-  fluteLength: 22,
-  cutDirection: "upcut",
-  vAngle: null,
-  tipDiameter: null,
-  spindleRpm: 24000,
-  feedRate: 600,
-  plungeRate: 300,
-  plungeAngle: 3,
-  stepDown: 1,
-  stepOver: 40,
-  notes: null,
-  color: TOOL_COLORS[0],
-});
+/**
+ * Seeded into every new library, so a first project can be cut without
+ * setting up a library: the catalog's default bit (PRD-0008 G4).
+ */
+export const DEFAULT_TOOL: Tool = DEFAULT_TOOL_PRESET.tool;
 
 /**
  * Reads the tool form. Fields that don't apply to the chosen type are ignored,

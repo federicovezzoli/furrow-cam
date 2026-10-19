@@ -10,17 +10,20 @@ import { useDocumentStoreApi } from "../providers/workspace-stores";
 import { type RejectedOperation, replaceToolSnapshots } from "../stores/operation-actions";
 import { ToolDialog } from "../tools/components/tool-dialog";
 import { ToolForm } from "../tools/components/tool-form";
-import { useUpdateTool } from "./tool-library";
+import { useAddTool, useUpdateTool } from "./tool-library";
 
 /**
  * Edits the library bit `choice` in a modal, without leaving the workspace.
  * Saving also re-snapshots it into every operation of this project that used
  * it (ADR-0003); disabled when the operation's tool matches no library bit.
+ * A catalog bit can't change (PRD-0008 G5): editing it saves a copy to the
+ * library, which those operations then use.
  */
 export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
   const store = useDocumentStoreApi();
   const { library } = useWorkspaceHost();
   const updateTool = useUpdateTool();
+  const addTool = useAddTool();
   // Kept while open: once saved, the operation may no longer match a library bit.
   const [editing, setEditing] = useState<ToolChoice | null>(null);
   const [rejected, setRejected] = useState<RejectedOperation[] | null>(null);
@@ -30,11 +33,12 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
     setRejected(null);
   }
 
-  function onSaved({ tool }: SavedTool) {
+  function onSaved({ id, tool }: SavedTool) {
     if (!editing) return;
     // Applied at once so the re-snapshotted operations keep matching it until
     // the host has the library again (e.g. sorted by name).
-    updateTool(editing.id, tool);
+    if (editing.catalog) addTool({ id, isDefault: false, tool });
+    else updateTool(editing.id, tool);
     const left = replaceToolSnapshots(store, editing.tool, tool);
     if (left.length > 0) setRejected(left);
     else close();
@@ -55,15 +59,19 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
       <ToolDialog
         open={editing !== null}
         onClose={close}
-        title="Edit bit"
-        description="Changes the bit in your library and in every operation of this project that uses it."
+        title={editing?.catalog ? "Save a copy of this bit" : "Edit bit"}
+        description={
+          editing?.catalog
+            ? "Catalog bits stay as they are. This saves your copy to your library and uses it in every operation of this project that uses the catalog bit."
+            : "Changes the bit in your library and in every operation of this project that uses it."
+        }
       >
         {rejected ? (
           <NotUpdated operations={rejected} onClose={close} />
         ) : (
           editing && (
             <ToolForm
-              id={editing.id}
+              id={editing.catalog ? null : editing.id}
               values={editing.tool}
               save={library.saveTool}
               onSaved={onSaved}
