@@ -1,5 +1,14 @@
 # @furrow/cam-core
 
+## 0.8.3
+
+### Patch Changes
+
+- Pocket clearing no longer feeds through a tab or island at depth when a linking move runs along a wall line and passes the tab's corners exactly; it retracts instead. ([#257](https://github.com/federicovezzoli/furrow-cam/pull/257))
+- Drawings with quadratic curves (SVG `Q`/`T` commands, degree-2 DXF splines) now have correct bounds, so they line up exactly with their stock anchor instead of overhanging it. ([#258](https://github.com/federicovezzoli/furrow-cam/pull/258))
+- Ramping into a short open path (a profile or engrave on a short line or polyline) now ramps back and forth along the path, instead of plunging at the cutting feed rate or cutting straight back across it. ([#259](https://github.com/federicovezzoli/furrow-cam/pull/259))
+- SVG import now skips elements hidden through a stylesheet, such as a hidden layer in Illustrator's default export (`.st0{display:none}`), and shapes with `visibility: hidden`. It warns when a stylesheet hides elements with rules it can't apply. ([#261](https://github.com/federicovezzoli/furrow-cam/pull/261))
+
 ## 0.8.2
 
 ### Patch Changes
