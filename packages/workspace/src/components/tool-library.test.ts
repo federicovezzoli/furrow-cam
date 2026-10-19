@@ -1,7 +1,14 @@
-import type { Tool } from "@furrow/document";
+import { DEFAULT_TOOL_PRESET, TOOL_PRESETS, type Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import type { ToolChoice } from "../lib/workspace-host";
-import { matchingToolChoice, newBitType, withAddedTool, withUpdatedTool } from "./tool-library";
+import {
+  defaultToolChoice,
+  matchingToolChoice,
+  newBitType,
+  withAddedTool,
+  withCatalog,
+  withUpdatedTool,
+} from "./tool-library";
 
 const endMill: Tool = {
   name: "6 mm upcut",
@@ -69,5 +76,35 @@ describe("newBitType", () => {
     expect(newBitType("relief_rough")).toBe("flat_end_mill");
     expect(newBitType("profile")).toBe("flat_end_mill");
     expect(newBitType("pocket")).toBe("flat_end_mill");
+  });
+});
+
+describe("withCatalog", () => {
+  it("follows the library with every catalog bit, marked as such", () => {
+    const offered = withCatalog(library);
+    expect(offered.slice(0, 2)).toEqual(library);
+    expect(offered.slice(2).map((tool) => tool.id)).toEqual(TOOL_PRESETS.map(({ id }) => id));
+    expect(offered.slice(2).every((tool) => tool.catalog)).toBe(true);
+  });
+
+  it("leaves out catalog bits the library already has as they are", () => {
+    const seeded = { id: "s", isDefault: true, tool: DEFAULT_TOOL_PRESET.tool };
+    const offered = withCatalog([seeded]);
+    expect(offered.filter((tool) => tool.tool.name === DEFAULT_TOOL_PRESET.tool.name)).toEqual([
+      seeded,
+    ]);
+    expect(offered).toHaveLength(TOOL_PRESETS.length);
+  });
+
+  it("starts new operations with the catalog's default bit when the library has no default", () => {
+    expect(defaultToolChoice(withCatalog([]))?.id).toBe(DEFAULT_TOOL_PRESET.id);
+    expect(defaultToolChoice(withCatalog(library))?.id).toBe(DEFAULT_TOOL_PRESET.id);
+  });
+
+  it("keeps the library's default", () => {
+    const own = [{ ...choice("a", "3 mm upcut"), isDefault: true }];
+    const offered = withCatalog(own);
+    expect(defaultToolChoice(offered)?.id).toBe("a");
+    expect(offered.filter((tool) => tool.isDefault)).toHaveLength(1);
   });
 });
