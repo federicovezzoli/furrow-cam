@@ -394,7 +394,7 @@ describe("scheduleToolpaths", () => {
     const { requests, exports, schedule } = setup();
     const [request] = requests as [ToolpathRequest];
     schedule.receive({ ...request, ...compute(request.input) });
-    const exported = schedule.exportGcode("Plate");
+    const exported = schedule.exportGcode(() => "Plate");
     const [message] = exports as [GcodeExportRequest];
     expect(message.name).toBe("Plate");
     expect(message.inputs).toEqual([
@@ -411,7 +411,7 @@ describe("scheduleToolpaths", () => {
 
   it("exports again when the document changed before the worker answered (#252)", async () => {
     const { documents, exports, schedule } = setup();
-    const exported = schedule.exportGcode("Plate");
+    const exported = schedule.exportGcode(() => "Plate");
     const [first] = exports as [GcodeExportRequest];
     deepen(documents, 6);
     // The program of the document as it was is never handed out.
@@ -425,11 +425,17 @@ describe("scheduleToolpaths", () => {
     expect(exports).toHaveLength(2);
   });
 
-  it("keeps the meshes it sent when exporting again", async () => {
-    const { documents, exports, schedule } = setup();
-    const exported = schedule.exportGcode("Relief");
+  /** The profile and a 3D finish of `model`, whose mesh the worker asks for. */
+  function withRelief(): ProjectDocument {
+    const document = documentWithProfile();
+    return { ...document, models: [model], operations: [...document.operations, reliefFinish] };
+  }
+
+  it("keeps the meshes it sent that the edited document still uses", async () => {
+    const { documents, exports, schedule } = setup(withRelief());
+    const exported = schedule.exportGcode(() => "Relief");
     const [first] = exports as [GcodeExportRequest];
-    schedule.receive({ export: first.export, missingMesh: "abc" });
+    schedule.receive({ export: first.export, missingMesh: model.sha256 });
     await vi.waitFor(() => expect(exports).toHaveLength(2));
     deepen(documents, 6);
     schedule.receive({ export: first.export, error: "Nothing to cut" });
@@ -438,9 +444,69 @@ describe("scheduleToolpaths", () => {
     await expect(exported).resolves.toEqual({ error: "Nothing to cut" });
   });
 
+  it("drops the meshes the edited document no longer uses", async () => {
+    const { documents, exports, schedule } = setup(withRelief());
+    void schedule.exportGcode(() => "Relief");
+    const [first] = exports as [GcodeExportRequest];
+    schedule.receive({ export: first.export, missingMesh: model.sha256 });
+    await vi.waitFor(() => expect(exports).toHaveLength(2));
+    documents.getState().change("Disable", (draft) => {
+      const relief = draft.operations[1];
+      if (relief) relief.enabled = false;
+    });
+    schedule.receive({ export: first.export, error: "Nothing to cut" });
+    // The worker would refuse a file none of the inputs uses.
+    expect(exports[2]?.meshes).toBeUndefined();
+  });
+
+  it("makes the export again of a document edited while its mesh loaded", async () => {
+    const { documents, exports, schedule } = setup(withRelief());
+    void schedule.exportGcode(() => "Relief");
+    const [first] = exports as [GcodeExportRequest];
+    schedule.receive({ export: first.export, missingMesh: model.sha256 });
+    deepen(documents, 6);
+    await vi.waitFor(() => expect(exports).toHaveLength(2));
+    expect(exports[1]?.document).toBe(documents.getState().document);
+    expect(exports[1]?.meshes).toHaveLength(1);
+  });
+
+  it("waits for a gesture to commit before exporting again, and takes the name then", async () => {
+    const { documents, exports, schedule } = setup();
+    let name = "Plate";
+    const exported = schedule.exportGcode(() => name);
+    const [first] = exports as [GcodeExportRequest];
+    documents.getState().beginTransaction();
+    deepen(documents, 5);
+    // Mid-drag, neither the old program nor one of the dragged value is taken.
+    schedule.receive({ export: first.export, gcode: "G1 Z-3", warnings: [], fileName: "p.gcode" });
+    expect(exports).toHaveLength(1);
+    name = "Plate v2";
+    deepen(documents, 6);
+    documents.getState().commitTransaction();
+    expect(exports).toHaveLength(2);
+    expect(exports[1]?.name).toBe("Plate v2");
+    expect(exports[1]?.document).toBe(documents.getState().document);
+    schedule.receive({ export: first.export, gcode: "G1 Z-6", warnings: [], fileName: "p.gcode" });
+    await expect(exported).resolves.toMatchObject({ gcode: "G1 Z-6" });
+  });
+
+  it("gives up on an export after the project changed every time it was made", async () => {
+    const { documents, exports, schedule } = setup();
+    const exported = schedule.exportGcode(() => "Plate");
+    for (let attempt = 0; attempt <= 5; attempt++) {
+      deepen(documents, 6 + attempt);
+      const request = exports.at(-1) as GcodeExportRequest;
+      schedule.receive({ export: request.export, gcode: "G0", warnings: [], fileName: "p.gcode" });
+    }
+    expect(exports).toHaveLength(6);
+    await expect(exported).resolves.toEqual({
+      error: expect.stringContaining("kept changing"),
+    });
+  });
+
   it("sends an export again with the mesh the worker lacks", async () => {
     const { exports, meshes, schedule } = setup();
-    const exported = schedule.exportGcode("Relief");
+    const exported = schedule.exportGcode(() => "Relief");
     const [first] = exports as [GcodeExportRequest];
     schedule.receive({ export: first.export, missingMesh: "abc" });
     await vi.waitFor(() => expect(exports).toHaveLength(2));
@@ -456,7 +522,7 @@ describe("scheduleToolpaths", () => {
 
   it("fails pending exports when the worker fails, and tells a fresh one what to keep", async () => {
     const { documents, retains, schedule } = setup();
-    const exported = schedule.exportGcode("Plate");
+    const exported = schedule.exportGcode(() => "Plate");
     schedule.fail("The toolpath worker stopped");
     await expect(exported).resolves.toEqual({ error: "The toolpath worker stopped" });
     deepen(documents, 6);

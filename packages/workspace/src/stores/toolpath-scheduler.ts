@@ -1,4 +1,4 @@
-import { type ToolpathInput, toolpathInputs, toolpathKey } from "@furrow/cam-core";
+import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
 import type { ExportInput } from "../lib/toolpath-export";
@@ -41,6 +41,21 @@ export type ToolpathMessage =
   | ToolpathCancel
   | ToolpathRetain
   | GcodeExportRequest;
+
+/** How many times an export is made again for edits before it gives up (#252). */
+const MAX_EXPORT_RESTARTS = 5;
+const KEPT_CHANGING =
+  "The project kept changing while its G-code was being made. Export again once you're done editing.";
+
+/** An export waiting for the worker: its latest request, and the meshes sent so far by hash. */
+type PendingExport = {
+  request: GcodeExportRequest;
+  /** The project's name now, for the file and the program's header. */
+  name: () => string;
+  meshes: Map<string, ArrayBuffer>;
+  restarts: number;
+  resolve: (result: GcodeExportResult) => void;
+};
 
 /** The program, why it couldn't be exported, or the mesh the worker needs for it. */
 export type GcodeExportResult = GcodeExport | { error: string };
@@ -106,10 +121,7 @@ export function scheduleToolpaths(
   /** The enabled operations the worker was last told to keep toolpaths of, sorted. */
   let retained: string | null = null;
   /** Exports waiting for the worker, by id. */
-  const exports = new Map<
-    number,
-    { request: GcodeExportRequest; resolve: (result: GcodeExportResult) => void }
-  >();
+  const exports = new Map<number, PendingExport>();
   let lastExport = 0;
 
   function send(request: ToolpathRequest) {
@@ -207,7 +219,10 @@ export function scheduleToolpaths(
     try {
       const mesh = await loadMesh(sha256);
       if (exports.get(id) !== pending) return;
-      pending.request = { ...pending.request, meshes: [...(pending.request.meshes ?? []), mesh] };
+      pending.meshes.set(sha256, mesh);
+      // Edited meanwhile: no point computing the old document's program.
+      if (restartIfStale(pending)) return;
+      pending.request = { ...pending.request, meshes: [...pending.meshes.values()] };
       post(pending.request);
     } catch (error) {
       if (exports.get(id) !== pending) return;
@@ -223,24 +238,46 @@ export function scheduleToolpaths(
       return;
     }
     const pending = exports.get(id);
-    if (!pending) return;
-    if (documents.getState().document !== pending.request.document) {
-      // Edited while the worker exported: that program would differ from the
-      // screen, so it is made again from the document as it is now, keeping
-      // the meshes the worker was sent and the toolpaths it holds.
-      const meshes = pending.request.meshes;
-      pending.request = { ...exportRequest(pending.request.name), export: id };
-      if (meshes) pending.request.meshes = meshes;
-      post(pending.request);
-      return;
-    }
+    if (!pending || restartIfStale(pending)) return;
     exports.delete(id);
     const { export: _, ...result } = response;
     pending.resolve(result);
   }
 
-  /** An export of the document as it is now, with the inputs the toolpaths were requested with. */
-  function exportRequest(name: string): GcodeExportRequest {
+  /**
+   * Whether `pending` was built from a document other than the one on screen,
+   * or one mid-gesture: its program would differ from the screen (#252), so it
+   * is made again from the document once the gesture commits, keeping the
+   * toolpaths the worker holds. After `MAX_EXPORT_RESTARTS`, it gives up.
+   */
+  function restartIfStale(pending: PendingExport): boolean {
+    const { document, inTransaction } = documents.getState();
+    if (document === pending.request.document && !inTransaction) return false;
+    if (pending.restarts >= MAX_EXPORT_RESTARTS) {
+      exports.delete(pending.request.export);
+      pending.resolve({ error: KEPT_CHANGING });
+      return true;
+    }
+    pending.restarts++;
+    const restart = () => {
+      if (exports.get(pending.request.export) === pending) post(exportRequest(pending));
+    };
+    if (!inTransaction) restart();
+    else {
+      const unsubscribe = documents.subscribe((state) => {
+        if (state.inTransaction) return;
+        unsubscribe();
+        restart();
+      });
+    }
+    return true;
+  }
+
+  /**
+   * The export `pending` of the document as it is now, with the inputs the
+   * toolpaths were requested with and the meshes they use of those sent.
+   */
+  function exportRequest(pending: PendingExport): GcodeExportRequest {
     const { document } = documents.getState();
     const enabled = document.operations.filter((operation) => operation.enabled);
     const inputs = toolpathInputs(document, enabled).map((input) => ({
@@ -248,8 +285,18 @@ export function scheduleToolpaths(
       inputHash: hashInput(input),
       input,
     }));
-    lastExport++;
-    return { export: lastExport, document, name, inputs };
+    const used = new Set(inputs.flatMap(({ input }) => [...toolpathMeshes(input)]));
+    const meshes = [...pending.meshes].flatMap(([sha256, mesh]) =>
+      used.has(sha256) ? [mesh] : [],
+    );
+    pending.request = {
+      export: pending.request.export,
+      document,
+      name: pending.name(),
+      inputs,
+      ...(meshes.length > 0 && { meshes }),
+    };
+    return pending.request;
   }
 
   return {
@@ -257,13 +304,25 @@ export function scheduleToolpaths(
     /**
      * The G-code of the document as it is when the program is ready, from the
      * toolpaths the worker holds (#133): an edit made while it is made starts
-     * it again (#252).
+     * it again (#252). `name` is read at each attempt, so a rename counts too.
      */
-    exportGcode(name: string): Promise<GcodeExportResult> {
-      const request = exportRequest(name);
+    exportGcode(name: () => string): Promise<GcodeExportResult> {
       return new Promise((resolve) => {
-        exports.set(request.export, { request, resolve });
-        post(request);
+        const pending: PendingExport = {
+          // Filled in by `exportRequest`.
+          request: {
+            export: ++lastExport,
+            document: documents.getState().document,
+            name: "",
+            inputs: [],
+          },
+          name,
+          meshes: new Map(),
+          restarts: 0,
+          resolve,
+        };
+        exports.set(pending.request.export, pending);
+        post(exportRequest(pending));
       });
     },
     receive(message: ToolpathWorkerResponse) {
