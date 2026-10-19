@@ -4,7 +4,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { downloadFile } from "@furrow/ui/lib/download";
 import { cn } from "@furrow/ui/lib/utils";
 import { FileCodeIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { useToolpathStoreApi } from "../providers/workspace-stores";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
@@ -26,6 +26,9 @@ export function GcodeExportButton({
   className?: string;
 }) {
   const [pending, setPending] = useState(false);
+  // Read when the program is made, so a rename while it is made counts.
+  const latestName = useRef(name);
+  latestName.current = name;
   const toolpaths = useToolpathStoreApi();
   const { account } = useWorkspaceHost();
 
@@ -37,7 +40,7 @@ export function GcodeExportButton({
     setPending(true);
     let result: GcodeExportResult;
     try {
-      result = await toolpaths.getState().controls.exportGcode(name);
+      result = await toolpaths.getState().controls.exportGcode(() => latestName.current);
     } catch (error) {
       result = { error: error instanceof Error ? error.message : String(error) };
     } finally {
