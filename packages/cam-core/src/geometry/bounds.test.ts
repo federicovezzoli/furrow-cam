@@ -55,6 +55,19 @@ describe("pathBounds", () => {
     ).toEqual({ min: [0, 0], max: [10, 7.5] });
   });
 
+  it("covers both turning points of an S-shaped cubic", () => {
+    // y = 3t(1 − t)(1 − 2t) turns at t = 1/2 ∓ √3/6, reaching ±√3/6.
+    const box = pathBounds({
+      start: [0, 0],
+      segments: [{ kind: "cubic", c1: [0, 1], c2: [1, -1], to: [1, 0] }],
+      closed: false,
+    });
+    expect(box.min[0]).toBe(0);
+    expect(box.max[0]).toBe(1);
+    expect(box.min[1]).toBeCloseTo(-Math.sqrt(3) / 6, 12);
+    expect(box.max[1]).toBeCloseTo(Math.sqrt(3) / 6, 12);
+  });
+
   /** A quadratic from `p0` through control `q` to `p2`, raised to a cubic the way SVG import does. */
   function raised(p0: Point, q: Point, p2: Point, round = (value: number) => value): Path {
     const control = (end: Point): Point => [
