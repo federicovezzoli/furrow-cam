@@ -79,12 +79,20 @@ export function checksumOf(sha256: string) {
   return Buffer.from(sha256, "hex").toString("base64");
 }
 
+/**
+ * The only type meshes are stored and served as: signed into uploads and
+ * forced on downloads, so the bucket never serves uploaded bytes as a page or
+ * script, whatever they hold (#255).
+ */
+export const MESH_CONTENT_TYPE = "application/octet-stream";
+
 /** What the browser sends to upload a file: the URL and the headers signed into it. */
 export type PresignedUpload = { url: string; headers: Record<string, string> };
 
 /**
- * A URL to upload exactly `size` bytes hashing to `sha256` to `key`, once:
- * the storage rejects other bytes and never overwrites an object.
+ * A URL to upload exactly `size` bytes hashing to `sha256` to `key`, once, as
+ * `MESH_CONTENT_TYPE`: the storage rejects other bytes or another type, and
+ * never overwrites an object.
  */
 export async function presignUpload(
   key: string,
@@ -92,13 +100,18 @@ export async function presignUpload(
   sha256: string,
 ): Promise<PresignedUpload> {
   const { client, bucket } = storage();
-  const headers = { "x-amz-checksum-sha256": checksumOf(sha256), "if-none-match": "*" };
+  const headers = {
+    "content-type": MESH_CONTENT_TYPE,
+    "x-amz-checksum-sha256": checksumOf(sha256),
+    "if-none-match": "*",
+  };
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       ContentLength: size,
+      ContentType: MESH_CONTENT_TYPE,
       ChecksumSHA256: headers["x-amz-checksum-sha256"],
       IfNoneMatch: "*",
     }),
@@ -112,11 +125,23 @@ export async function presignUpload(
   return { url, headers };
 }
 
+/**
+ * A URL to download the object at `key`, served as `MESH_CONTENT_TYPE` and as
+ * an attachment whatever type it was stored with, so a browser never renders
+ * it. The workspace reads it with `fetch`, which ignores both.
+ */
 export async function presignDownload(key: string) {
   const { client, bucket } = storage();
-  return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
-    expiresIn: URL_LIFETIME,
-  });
+  return getSignedUrl(
+    client,
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ResponseContentType: MESH_CONTENT_TYPE,
+      ResponseContentDisposition: "attachment",
+    }),
+    { expiresIn: URL_LIFETIME },
+  );
 }
 
 /** Whether the object at `key` is missing, or holds `size` bytes hashing to `sha256`. */
