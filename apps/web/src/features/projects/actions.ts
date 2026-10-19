@@ -271,19 +271,24 @@ export async function loadProject(id: string) {
  * `updatedAt` is the version the client last loaded or saved. If the project
  * was saved elsewhere since (another tab or device), nothing is written, so
  * neither copy silently overwrites the other. Returns the new `updatedAt`.
+ * Refusals the user can clear in the same tab are `retryable` (signing in
+ * again, undoing an invalid edit, removing a model whose file is missing).
  */
 export async function saveProject(
   id: string,
   document: unknown,
   updatedAt: Date,
-): Promise<{ updatedAt: Date; error?: never } | { error: string }> {
+): Promise<{ updatedAt: Date; error?: never } | { error: string; retryable?: boolean }> {
   const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
+  if (!userId) return { error: SIGNED_OUT, retryable: true };
   const projectId = parseProjectId(id);
   if (!projectId) return { error: NOT_FOUND };
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
-    return { error: `The project couldn't be saved: ${z.prettifyError(parsed.error)}` };
+    return {
+      error: `The project couldn't be saved: ${z.prettifyError(parsed.error)}`,
+      retryable: true,
+    };
   }
   const meshes = parsed.data.models.map(({ sha256 }) => sha256);
 
@@ -292,7 +297,7 @@ export async function saveProject(
       // Locked so a mesh can't be discarded between the check and the write (`discardMesh`).
       await lockProject(tx, projectId);
       if ((await missingAssets(userId, projectId, meshes, tx)).length > 0) {
-        return { error: `The project couldn't be saved: ${MESH_MISSING}` };
+        return { error: `The project couldn't be saved: ${MESH_MISSING}`, retryable: true };
       }
       // No revalidation: the list is rendered per request, and autosave would invalidate it constantly.
       return await tx.project.update({

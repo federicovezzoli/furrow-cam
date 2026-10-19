@@ -123,7 +123,55 @@ describe("createAutosave", () => {
     expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
   });
 
-  it("stops after the server refuses a save", async () => {
+  it("tries again on the next change after a refusal the user can clear", async () => {
+    const save = vi
+      .fn<SaveDocument>()
+      .mockResolvedValueOnce({ error: "You're signed out.", retryable: true })
+      .mockResolvedValue({ updatedAt: SAVED_AT });
+    const { autosave, setWidth } = setup(save);
+
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(autosave.status).toEqual({
+      state: "error",
+      savedAt: LOADED_AT,
+      error: "You're signed out.",
+    });
+
+    setWidth(200);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+  });
+
+  it("tries again when flushed after a refusal the user can clear, e.g. signed in again", async () => {
+    const save = vi
+      .fn<SaveDocument>()
+      .mockResolvedValueOnce({ error: "You're signed out.", retryable: true })
+      .mockResolvedValue({ updatedAt: SAVED_AT });
+    const { autosave, setWidth } = setup(save);
+
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+  });
+
+  it("is saved again when an edit the server refused is undone", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({ error: "Invalid", retryable: true }));
+    const { store, autosave, setWidth } = setup(save);
+
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(autosave.status.state).toBe("error");
+    store.getState().undo();
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(save).toHaveBeenCalledOnce();
+    expect(autosave.status).toEqual({ state: "saved", savedAt: LOADED_AT });
+  });
+
+  it("stops after the server refuses a save for good, as for a conflict", async () => {
     const save = vi.fn<SaveDocument>(async () => ({ error: "Conflict" }));
     const { autosave, setWidth } = setup(save);
 

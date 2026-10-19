@@ -205,8 +205,9 @@ export async function saveGuestProject(
   savedAt: Date,
 ): Promise<SaveResult> {
   const parsed = ProjectDocument.safeParse(document);
-  if (!parsed.success)
-    return { error: "This project couldn't be saved: its contents are invalid." };
+  if (!parsed.success) {
+    return { error: "This project couldn't be saved: its contents are invalid.", retryable: true };
+  }
   try {
     return await transaction([PROJECTS], "readwrite", async (tx) => {
       const store = tx.objectStore(PROJECTS);
@@ -219,7 +220,11 @@ export async function saveGuestProject(
       return { updatedAt };
     });
   } catch (error) {
-    return { error: (error as Error).message };
+    const { message } = error as Error;
+    // Anything but a conflict or a deleted project, such as a full disk, may pass.
+    return message === CONFLICT || message === PROJECT_NOT_FOUND
+      ? { error: message }
+      : { error: message, retryable: true };
   }
 }
 

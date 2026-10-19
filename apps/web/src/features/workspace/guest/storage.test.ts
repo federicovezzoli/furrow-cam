@@ -94,9 +94,11 @@ describe("guest projects", () => {
   it("refuses to save a deleted project or an invalid document", async () => {
     const created = await storage.createGuestProject("Coasters", createProjectDocument());
     const invalid = { ...createProjectDocument(), units: "cubits" } as never;
-    expect(await storage.saveGuestProject(created.id, invalid, created.savedAt)).toHaveProperty(
-      "error",
-    );
+    // Undoing the edit makes it valid again, so autosave tries again.
+    expect(await storage.saveGuestProject(created.id, invalid, created.savedAt)).toEqual({
+      error: expect.stringContaining("invalid"),
+      retryable: true,
+    });
     await storage.deleteGuestProject(created.id);
     expect(
       await storage.saveGuestProject(created.id, createProjectDocument(), created.savedAt),

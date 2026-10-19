@@ -3,9 +3,10 @@ import type { DocumentStore } from "./document-store";
 
 /**
  * Whether the document on screen matches the one stored on the server.
- * `error`: the server couldn't be reached; the next change retries.
- * `failed`: the server refused the save (e.g. the project was changed
- * elsewhere); retrying can't help, so autosave stops.
+ * `error`: the server couldn't be reached, or refused a save the user can
+ * fix (`retryable`, e.g. signed out); the next change, or a flush, retries.
+ * `failed`: the server refused the save for good (e.g. the project was
+ * changed elsewhere); retrying can't help, so autosave stops.
  */
 export type SaveState = "saved" | "unsaved" | "saving" | "error" | "failed";
 
@@ -16,7 +17,7 @@ export type SaveDocument = (
   document: ProjectDocument,
   /** The version being replaced, for the server's conflict check. */
   savedAt: Date,
-) => Promise<{ updatedAt: Date; error?: never } | { error: string }>;
+) => Promise<{ updatedAt: Date; error?: never } | { error: string; retryable?: boolean }>;
 
 export type Autosave = ReturnType<typeof createAutosave>;
 
@@ -113,7 +114,7 @@ export function createAutosave(
     saving = false;
 
     if (result.error !== undefined) {
-      update("failed", result.error);
+      update(result.retryable ? "error" : "failed", result.error);
       return;
     }
     savedDocument = document;
