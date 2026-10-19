@@ -11,13 +11,13 @@ import type { MachineOption } from "@/features/machines/server";
 import { createProject, type ProjectFormErrors } from "@/features/projects/actions";
 
 /**
- * Creates a project for one of the user's `machines` (at least one). With a
- * single machine it is used without asking; with several, one must be chosen.
+ * Creates a project, for one of the user's `machines` or without one: the
+ * machine can be chosen in the project later (PRD-0008 G13). A single machine
+ * is picked by default; with none, the form doesn't ask.
  */
 export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
   const [errors, setErrors] = useState<ProjectFormErrors>({});
   const [pending, startTransition] = useTransition();
-  const only = machines.length === 1 ? machines[0] : undefined;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,20 +41,16 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
           aria-invalid={errors.name ? true : undefined}
           aria-describedby={errors.name ? "name-error" : undefined}
         />
-        {only ? (
-          <input type="hidden" name="machine" value={only.id} />
-        ) : (
+        {machines.length > 0 && (
           <NativeSelect
             id="machine"
             name="machine"
-            defaultValue=""
+            defaultValue={machines.length === 1 ? machines[0]?.id : ""}
             aria-label="Machine"
             aria-invalid={errors.machine ? true : undefined}
             aria-describedby={errors.machine ? "machine-error" : undefined}
           >
-            <NativeSelectOption value="" disabled>
-              Choose a machine…
-            </NativeSelectOption>
+            <NativeSelectOption value="">No machine yet</NativeSelectOption>
             {machines.map((machine) => (
               <NativeSelectOption key={machine.id} value={machine.id}>
                 {machine.name}

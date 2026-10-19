@@ -109,9 +109,7 @@ describe("importArchive", () => {
     expect(actions.startArchiveImport).not.toHaveBeenCalled();
   });
 
-  it("passes on the server's refusal, or its request for a machine", async () => {
-    actions.startArchiveImport.mockResolvedValue({ chooseMachine: true });
-    expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({ chooseMachine: true });
+  it("passes on the server's refusal", async () => {
     actions.startArchiveImport.mockResolvedValue({ error: "Nope." });
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({ error: "Nope." });
     expect(actions.deleteProject).not.toHaveBeenCalled();
