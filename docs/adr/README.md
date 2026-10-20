@@ -34,7 +34,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0017](0017-freemium-limit-enforcement.md) | Enforcing freemium usage limits | Proposed |
 | [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed |
 | [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
-| [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed |
+| [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed; superseded by ADR-0052 |
 | [0021](0021-web-app-feature-folders.md) | Feature folders in the web app | Proposed |
 | [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed |
 | [0023](0023-password-policy-breached-passwords.md) | Password length limits and breached-password check | Proposed |
@@ -58,7 +58,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
 | [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed |
-| [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed; superseded in part by ADR-0048 |
+| [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed; superseded in part by ADR-0048 and ADR-0052 |
 | [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Proposed |
 | [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
 | [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Proposed |
@@ -66,3 +66,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Proposed |
 | [0050](0050-guest-workspace-in-the-browser.md) | Guests use the workspace with projects kept in the browser | Proposed |
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Proposed |
+| [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Proposed |

@@ -1,6 +1,6 @@
 # ADR-0044: The desktop app is an Electron shell around the shared workspace
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0048](0048-desktop-update-check.md) and [ADR-0052](0052-usage-and-error-tracking-posthog.md) (no network requests)
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007, ADR-0002, ADR-0004, ADR-0008, ADR-0012, ADR-0013, ADR-0045, ADR-0046, ADR-0047; #184
