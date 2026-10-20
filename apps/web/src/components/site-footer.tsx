@@ -1,8 +1,7 @@
-import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
+import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import Link from "next/link";
 import packageJson from "../../package.json";
 
-const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/web@${packageJson.version}`)}`;
 const AUTHOR_URL = "https://federicovezzoli.com";

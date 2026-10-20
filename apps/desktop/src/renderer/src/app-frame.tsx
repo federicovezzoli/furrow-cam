@@ -1,10 +1,9 @@
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
-import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
+import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import type * as React from "react";
 import packageJson from "../../../package.json";
 import type { Page } from "./desktop-host";
 
-const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/desktop@${packageJson.version}`)}`;
 const AUTHOR_URL = "https://federicovezzoli.com";

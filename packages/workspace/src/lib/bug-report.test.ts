@@ -1,8 +1,9 @@
-import { fullDocument, machine, OPERATION_ID } from "@furrow/document/fixtures";
+import { endMill, fullDocument, machine, OPERATION_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   blankReportUrl,
   MAX_REPORT_URL_LENGTH,
+  MAX_TITLE_LENGTH,
   NEW_ISSUE_URL,
   PASTE_PROMPT,
   projectDiagnostics,
@@ -69,6 +70,15 @@ describe("reportUrl", () => {
     expect(new URL(url).searchParams.get("title")).toBe("Title");
   });
 
+  it("cuts the title to GitHub's limit, also when the body is pasted", () => {
+    const title = "x".repeat(MAX_TITLE_LENGTH * 30);
+    for (const body of ["short", "x".repeat(MAX_REPORT_URL_LENGTH)]) {
+      const { url } = reportUrl(title, body);
+      expect(new URL(url).searchParams.get("title")).toHaveLength(MAX_TITLE_LENGTH);
+      expect(url.length).toBeLessThanOrEqual(MAX_REPORT_URL_LENGTH);
+    }
+  });
+
   it("measures the encoded length, not the text's", () => {
     // Each "é" takes 6 characters once percent-encoded.
     expect(reportUrl("", "é".repeat(MAX_REPORT_URL_LENGTH / 4)).fits).toBe(false);
@@ -84,7 +94,10 @@ describe("blankReportUrl", () => {
 
 describe("projectDiagnostics", () => {
   it("describes the document, the machine and the selected operation without names or geometry", () => {
-    const diagnostics = projectDiagnostics(fullDocument(), OPERATION_ID);
+    const document = fullDocument();
+    const [profile] = document.operations;
+    if (profile) profile.tool = { ...endMill, notes: "Bought at Ann's shop" };
+    const diagnostics = projectDiagnostics(document, OPERATION_ID);
     expect(diagnostics.slice(0, 3)).toEqual([
       ["Document schema", "15"],
       ["Units", "in"],
@@ -96,6 +109,9 @@ describe("projectDiagnostics", () => {
     expect(operation).toMatchObject({ type: "profile", targets: 2, params: { side: "outside" } });
     expect(operation).not.toHaveProperty("name");
     expect(operation).not.toHaveProperty("id");
+    expect(operation.tool).toMatchObject({ type: "flat_end_mill", diameter: 6.35 });
+    expect(value).not.toContain(endMill.name);
+    expect(value).not.toContain("Ann's shop");
   });
 
   it("leaves the operation out when none is selected", () => {

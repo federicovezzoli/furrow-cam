@@ -1,15 +1,19 @@
 /**
  * Bug reports as prefilled GitHub issue drafts: the app sends nothing itself,
- * the user reviews the draft and submits it on GitHub (ADR-0013). Plain
+ * the user reviews the draft and submits it on GitHub (ADR-0051). Plain
  * module, so the desktop app's main process can use it too.
  */
 
 import type { ProjectDocument } from "@furrow/document";
 
-export const NEW_ISSUE_URL = "https://github.com/federicovezzoli/furrow-cam/issues/new";
+export const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
+export const NEW_ISSUE_URL = `${REPOSITORY_URL}/issues/new`;
 
 /** GitHub refuses much longer draft URLs; past this the body goes by clipboard instead. */
 export const MAX_REPORT_URL_LENGTH = 6000;
+
+/** GitHub's own limit on an issue title. */
+export const MAX_TITLE_LENGTH = 256;
 
 export const PASTE_PROMPT =
   "<!-- Furrow CAM copied the report to your clipboard: paste it here, replacing this line. -->";
@@ -50,8 +54,9 @@ export function reportBody(
  * draft then only asks to paste the report, which the caller copies.
  */
 export function reportUrl(title: string, body: string): { url: string; fits: boolean } {
+  const params = { labels: "bug", title: title.slice(0, MAX_TITLE_LENGTH) };
   const url = (text: string) =>
-    `${NEW_ISSUE_URL}?${new URLSearchParams({ labels: "bug", title, body: text })}`;
+    `${NEW_ISSUE_URL}?${new URLSearchParams({ ...params, body: text })}`;
   const full = url(body);
   return full.length <= MAX_REPORT_URL_LENGTH
     ? { url: full, fits: true }
@@ -65,8 +70,9 @@ export function blankReportUrl(diagnostics: Diagnostics): string {
 
 /**
  * What the report says about the project: the document's version and units,
- * the machine, and the operation `operationId` without its name and targets.
- * No project name and no geometry.
+ * the machine, and the operation `operationId` without its targets. No
+ * geometry and no text the user typed: every `name` and `notes` is left out,
+ * the operation's and its tools' (also a V-carve's flat-bottom tool).
  */
 export function projectDiagnostics(
   document: ProjectDocument,
@@ -80,9 +86,11 @@ export function projectDiagnostics(
   ];
   const operation = document.operations.find(({ id }) => id === operationId);
   if (operation) {
-    const { id: _, name: __, targets, ...settings } = operation;
+    const { id: _, targets, ...settings } = operation;
     const summary = { ...settings, targets: targets.length };
-    diagnostics.push(["Selected operation", JSON.stringify(summary, null, 2)]);
+    const typed = (key: string, value: unknown) =>
+      key === "name" || key === "notes" ? undefined : value;
+    diagnostics.push(["Selected operation", JSON.stringify(summary, typed, 2)]);
   }
   return diagnostics;
 }
