@@ -1,11 +1,13 @@
 import type { ProjectDocument } from "@furrow/document";
+import type { SaveResult } from "../lib/workspace-host";
 import type { DocumentStore } from "./document-store";
 
 /**
  * Whether the document on screen matches the one stored on the server.
- * `error`: the server couldn't be reached; the next change retries.
- * `failed`: the server refused the save (e.g. the project was changed
- * elsewhere); retrying can't help, so autosave stops.
+ * `error`: the server couldn't be reached, or refused a save the user can
+ * fix (`retryable`, e.g. signed out); the next change, or a flush, retries.
+ * `failed`: the server refused the save for good (e.g. the project was
+ * changed elsewhere); retrying can't help, so autosave stops.
  */
 export type SaveState = "saved" | "unsaved" | "saving" | "error" | "failed";
 
@@ -16,11 +18,14 @@ export type SaveDocument = (
   document: ProjectDocument,
   /** The version being replaced, for the server's conflict check. */
   savedAt: Date,
-) => Promise<{ updatedAt: Date; error?: never } | { error: string }>;
+) => Promise<SaveResult>;
 
 export type Autosave = ReturnType<typeof createAutosave>;
 
 export const OFFLINE = "The project couldn't be saved. Check your connection.";
+
+/** The least time between two `retry` calls that save, so focus and online events don't each send the document. */
+export const RETRY_INTERVAL = 10_000;
 
 /**
  * Saves the store's document `delay` ms after the last change (ADR-0010), while
@@ -53,6 +58,7 @@ export function createAutosave(
   /** While held, no save starts: the server's document is being replaced (a restore). */
   let held = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastRetry = Number.NEGATIVE_INFINITY;
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
 
@@ -113,7 +119,7 @@ export function createAutosave(
     saving = false;
 
     if (result.error !== undefined) {
-      update("failed", result.error);
+      update(result.retryable ? "error" : "failed", result.error);
       return;
     }
     savedDocument = document;
@@ -187,6 +193,15 @@ export function createAutosave(
     },
     /** Saves pending changes now instead of waiting for the delay. */
     flush,
+    /**
+     * After a save that can be retried failed, tries again now, e.g. when the
+     * user comes back to the window. Not again within `RETRY_INTERVAL`.
+     */
+    retry() {
+      if (status.state !== "error" || Date.now() - lastRetry < RETRY_INTERVAL) return;
+      lastRetry = Date.now();
+      flush();
+    },
     settle,
     /**
      * Settles, then holds: no save starts until `release`, while the server's

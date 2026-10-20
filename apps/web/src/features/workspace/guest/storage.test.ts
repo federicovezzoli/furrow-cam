@@ -94,9 +94,11 @@ describe("guest projects", () => {
   it("refuses to save a deleted project or an invalid document", async () => {
     const created = await storage.createGuestProject("Coasters", createProjectDocument());
     const invalid = { ...createProjectDocument(), units: "cubits" } as never;
-    expect(await storage.saveGuestProject(created.id, invalid, created.savedAt)).toHaveProperty(
-      "error",
-    );
+    // Undoing the edit makes it valid again, so autosave tries again.
+    expect(await storage.saveGuestProject(created.id, invalid, created.savedAt)).toEqual({
+      error: expect.stringContaining("invalid"),
+      retryable: true,
+    });
     await storage.deleteGuestProject(created.id);
     expect(
       await storage.saveGuestProject(created.id, createProjectDocument(), created.savedAt),
@@ -210,6 +212,17 @@ describe("unavailable storage", () => {
     await expect(storage.saveGuestSettings(await settingsFallback())).rejects.toThrow(
       storage.STORAGE_UNAVAILABLE,
     );
+  });
+
+  it("refuses a save for good: retrying in this tab can't help", async () => {
+    globalThis.indexedDB = {
+      open: () => {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    } as unknown as IDBFactory;
+    expect(await storage.saveGuestProject("id", createProjectDocument(), new Date())).toEqual({
+      error: storage.STORAGE_UNAVAILABLE,
+    });
   });
 });
 
