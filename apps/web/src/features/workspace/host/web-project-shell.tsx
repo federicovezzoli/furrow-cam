@@ -35,6 +35,7 @@ import {
 import type { getProject } from "@/features/projects/server";
 import { saveTool } from "@/features/tools/lib/save-tool";
 import type { ToolChoice } from "@/features/tools/server";
+import packageJson from "../../../../package.json";
 import { writeLayoutCookie } from "./layout-cookie";
 import { LeaveGuard } from "./leave-guard";
 import { latestVersion, rememberSavedVersion } from "./saved-versions";
@@ -133,6 +134,7 @@ function WebHost({
     // A newer copy saved from this tab wins over a payload the router cached before it.
     const saved = latestVersion(id, { document, updatedAt });
     return {
+      app: { name: "web", version: packageJson.version },
       project: {
         id,
         name,
