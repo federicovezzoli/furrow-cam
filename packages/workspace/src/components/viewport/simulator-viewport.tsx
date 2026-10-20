@@ -69,7 +69,14 @@ export function SimulatorViewport() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <section aria-label="Simulation" className="relative min-h-0 flex-1 bg-muted/40">
-        <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock cut by the toolpaths">
+        {/* `data-viewport` and the kept drawing buffer let a bug report capture it. */}
+        <Canvas
+          frameloop="demand"
+          dpr={[1, 2]}
+          gl={{ preserveDrawingBuffer: true }}
+          data-viewport
+          aria-label="Stock cut by the toolpaths"
+        >
           {view === "top" ? (
             <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
           ) : (

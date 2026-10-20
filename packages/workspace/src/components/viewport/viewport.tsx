@@ -75,7 +75,14 @@ export function Viewport() {
       )}
       {...cancelPick}
     >
-      <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
+      {/* `data-viewport` and the kept drawing buffer let a bug report capture it. */}
+      <Canvas
+        frameloop="demand"
+        dpr={[1, 2]}
+        gl={{ preserveDrawingBuffer: true }}
+        data-viewport
+        aria-label="Stock, geometry and toolpaths"
+      >
         {view === "top" ? (
           <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         ) : (
