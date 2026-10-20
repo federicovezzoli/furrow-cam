@@ -5,8 +5,7 @@ import {
   Name,
   type ProjectDocument,
   ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
+  readProjectJson,
 } from "@furrow/document";
 import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
@@ -80,20 +79,17 @@ export function parseStoredDocument(
   json: unknown,
   failure: string,
 ): { document: ProjectDocument; error?: never } | { document?: never; error: string } {
-  try {
-    return { document: parseProjectDocument(json) };
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      return { error: `${failure}: ${savedByNewerRelease(error)}` };
-    }
+  const read = readProjectJson(json);
+  switch (read.reason) {
+    case undefined:
+      return { document: read.document };
+    case "too_new":
+      return { error: `${failure}: ${savedByNewerRelease(read.error)}` };
     // e.g. a missing migration.
-    if (error instanceof ProjectDocumentVersionError) {
-      return { error: `${failure}: ${error.message}.` };
-    }
-    if (error instanceof z.ZodError) {
+    case "version":
+      return { error: `${failure}: ${read.error.message}.` };
+    default:
       return { error: `${failure}: its contents are invalid.` };
-    }
-    throw error;
   }
 }
 
@@ -154,36 +150,24 @@ const MAX_LISTED_ISSUES = 5;
 export function parseProjectFile(
   contents: string,
 ): { document: ProjectDocument; error?: never } | { error: string } {
-  const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    return { error: NOT_A_PROJECT };
-  }
-  // Any other JSON file (`package.json`, `[]`, …) would otherwise fail on its missing `schemaVersion`.
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    return { error: NOT_A_PROJECT };
-  }
-
-  try {
-    return { document: parseProjectDocument(json) };
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      return { error: `This file can't be imported: ${savedByNewerRelease(error)}` };
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      return { error: `This file can't be imported: ${error.message}.` };
-    }
-    if (error instanceof z.ZodError) {
-      const { issues } = error;
+  const read = readProjectJson(contents);
+  switch (read.reason) {
+    case undefined:
+      return { document: read.document };
+    case "not_a_project":
+      return { error: "This file isn't a Furrow CAM project." };
+    case "too_new":
+      return { error: `This file can't be imported: ${savedByNewerRelease(read.error)}` };
+    case "version":
+      return { error: `This file can't be imported: ${read.error.message}.` };
+    case "invalid": {
+      const { issues } = read.error;
       const listed = z.prettifyError(new z.ZodError(issues.slice(0, MAX_LISTED_ISSUES)));
       const more = issues.length - MAX_LISTED_ISSUES;
       return {
         error: `This file isn't a valid Furrow CAM project: ${listed}${more > 0 ? `\n…and ${more} more problems.` : ""}`,
       };
     }
-    throw error;
   }
 }
 

@@ -212,6 +212,9 @@ describe("archive versions", () => {
     expect(await damaged(versionFile({ document: { ...document, schemaVersion: 999 } }))).toBe(
       "A version in this file was saved by a newer version of Furrow CAM.",
     );
+    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 0 } }))).toBe(
+      "A version in this file can't be opened: Invalid schemaVersion: 0.",
+    );
   });
 });
 

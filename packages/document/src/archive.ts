@@ -1,7 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { ProjectDocument } from "./document";
-import { ProjectDocumentTooNewError, parseProjectDocument } from "./migrations";
+import { readProjectJson } from "./migrations";
 
 /**
  * Extension of exported projects with 3D models: a zip of the document and
@@ -219,16 +219,17 @@ function readVersion(
   }
   if (fields.id !== id) throw new ProjectArchiveError("A version in this file is damaged.");
   const name = fields.label === null ? "A version in this file" : `The version “${fields.label}”`;
-  let document: ProjectDocument;
-  try {
-    document = parseProjectDocument(fields.document);
-  } catch (error) {
+  const read = readProjectJson(fields.document);
+  if (read.reason !== undefined) {
     throw new ProjectArchiveError(
-      error instanceof ProjectDocumentTooNewError
+      read.reason === "too_new"
         ? `${name} was saved by a newer version of Furrow CAM.`
-        : `${name} isn't a valid project.`,
+        : read.reason === "version"
+          ? `${name} can't be opened: ${read.error.message}.`
+          : `${name} isn't a valid project.`,
     );
   }
+  const { document } = read;
   if (missingArchiveMeshes(document, meshes).length > 0) {
     throw new ProjectArchiveError(`${name} is missing one of its 3D models.`);
   }

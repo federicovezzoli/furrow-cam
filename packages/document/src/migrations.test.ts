@@ -6,6 +6,7 @@ import {
   migrateProjectDocument,
   ProjectDocumentVersionError,
   parseProjectDocument,
+  readProjectJson,
 } from "./migrations";
 
 describe("migrateProjectDocument", () => {
@@ -271,5 +272,24 @@ describe("parseProjectDocument", () => {
     expect(() => parseProjectDocument({ ...fullDocument(), units: "cm" })).toThrow(
       expect.objectContaining({ name: "ZodError" }),
     );
+  });
+});
+
+describe("readProjectJson", () => {
+  const reason = (input: unknown) => readProjectJson(input).reason;
+
+  it("reads documents and their JSON text", () => {
+    const doc = fullDocument();
+    expect(readProjectJson(doc)).toEqual({ document: doc });
+    expect(readProjectJson(JSON.stringify(doc))).toEqual({ document: doc });
+  });
+
+  it("classifies why a project can't be read", () => {
+    for (const input of ["{", "[]", "null", '{"name":"x"}', [], 3]) {
+      expect(reason(input)).toBe("not_a_project");
+    }
+    expect(reason({ ...fullDocument(), schemaVersion: 99 })).toBe("too_new");
+    expect(reason({ ...fullDocument(), schemaVersion: 0 })).toBe("version");
+    expect(reason({ ...fullDocument(), units: "cm" })).toBe("invalid");
   });
 });

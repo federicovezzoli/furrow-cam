@@ -4,10 +4,9 @@ import {
   missingArchiveMeshes,
   ProjectArchiveError,
   ProjectDocument,
-  ProjectDocumentTooNewError,
   packProjectArchive,
-  parseProjectDocument,
   readProjectArchive,
+  readProjectJson,
 } from "@furrow/document";
 
 /** A project as a file holds it: the document, its meshes by hash and its versions (ADR-0047). */
@@ -55,24 +54,20 @@ export async function readProjectFile(
 }
 
 function parseDocument(contents: string): ProjectDocument {
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    throw new Error(NOT_A_PROJECT);
-  }
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(NOT_A_PROJECT);
-  }
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
+  const read = readProjectJson(contents);
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "not_a_project":
+      throw new Error(NOT_A_PROJECT);
+    case "too_new":
       throw new Error(
         "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
       );
-    }
-    throw new Error("This file isn't a valid Furrow CAM project.");
+    case "version":
+      throw new Error(`This project can't be opened: ${read.error.message}.`);
+    case "invalid":
+      throw new Error("This file isn't a valid Furrow CAM project.");
   }
 }
 

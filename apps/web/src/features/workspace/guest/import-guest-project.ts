@@ -2,10 +2,8 @@ import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import {
   archiveMeshTooLarge,
   type ProjectDocument,
-  ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
   projectNameFromFileName,
+  readProjectJson,
 } from "@furrow/document";
 import { parseMesh } from "@furrow/workspace/lib/model-import";
 import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
@@ -20,27 +18,20 @@ function isArchive(file: File) {
 
 /** The project document in `contents`, upgraded to the current schema version. */
 export function parseGuestProjectFile(contents: string): ProjectDocument {
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    throw new Error(NOT_A_PROJECT);
-  }
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(NOT_A_PROJECT);
-  }
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
+  const read = readProjectJson(contents);
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "not_a_project":
+      throw new Error(NOT_A_PROJECT);
+    case "too_new":
       throw new Error(
         "This file was saved by a newer release of Furrow CAM. Reload the page to update.",
       );
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      throw new Error(`This file can't be imported: ${error.message}.`);
-    }
-    throw new Error("This file can't be imported: its contents are invalid.");
+    case "version":
+      throw new Error(`This file can't be imported: ${read.error.message}.`);
+    case "invalid":
+      throw new Error("This file can't be imported: its contents are invalid.");
   }
 }
 

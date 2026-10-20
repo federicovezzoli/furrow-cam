@@ -1,9 +1,4 @@
-import {
-  ProjectDocument,
-  ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
-} from "@furrow/document";
+import { ProjectDocument, readProjectJson } from "@furrow/document";
 import {
   parseSettings,
   parseTools,
@@ -144,18 +139,18 @@ function fail(tx: IDBTransaction, message: string): never {
 
 /** The record's document upgraded to the current schema version, or why it can't be. */
 function parseDocument(json: unknown): ProjectDocument {
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
+  const read = readProjectJson(json);
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "too_new":
       throw new UserError(
         "This project was saved by a newer release of Furrow CAM. Reload the page to update.",
       );
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      throw new UserError(`This project can't be opened: ${error.message}.`);
-    }
-    throw new UserError("This project can't be opened: its contents are invalid.");
+    case "version":
+      throw new UserError(`This project can't be opened: ${read.error.message}.`);
+    default:
+      throw new UserError("This project can't be opened: its contents are invalid.");
   }
 }
 
