@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050).
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051).
 const LAST_UPDATED = "20 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
