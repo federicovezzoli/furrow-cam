@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050).
-const LAST_UPDATED = "19 October 2026";
+const LAST_UPDATED = "20 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
 export default function PrivacyPage() {
@@ -132,6 +132,21 @@ export default function PrivacyPage() {
             These providers may process data outside the European Union; their privacy policies
             describe the safeguards they use. We don&apos;t sell your data or share it with anyone
             else.
+          </p>
+        </Section>
+
+        <Section title="Bug reports">
+          <p>
+            &quot;Report a bug&quot; opens a new issue on{" "}
+            <External href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">
+              GitHub
+            </External>{" "}
+            in your browser, filled in with your description and some diagnostics: the app and its
+            version, your browser&apos;s user agent, your graphics card, and, from the open project,
+            its units, the machine&apos;s name and post-processor and the selected operation&apos;s
+            settings (not the project&apos;s name or drawings). The app shows all of it first and
+            sends nothing itself: the report is published only if you submit the issue, from your
+            own GitHub account, and it is public.
           </p>
         </Section>
 
