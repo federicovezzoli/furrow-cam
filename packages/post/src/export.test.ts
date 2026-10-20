@@ -260,6 +260,16 @@ describe("exportGcode", () => {
     ]);
   });
 
+  it("refuses an operation that can't cut with its tool rather than leaving it out", () => {
+    const doc = referenceProject();
+    doc.operations = doc.operations.map((operation) =>
+      operation.type === "profile" ? { ...operation, tool: drill } : operation,
+    );
+    expect(() => exportGcode(doc, "Plate")).toThrow(
+      "Cut out: Drill bits can't cut sideways: pick an end mill or a V-bit.",
+    );
+  });
+
   it("refuses a project with nothing to cut", () => {
     const doc = referenceProject();
     expect(() =>
