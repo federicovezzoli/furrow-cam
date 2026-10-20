@@ -6,6 +6,9 @@
 
 > **Status: alpha.** The MVP features are live and usable, but expect rough edges, and check your G-code in a simulator before the first cut on a new setup. See the [releases](https://github.com/federicovezzoli/furrow-cam/releases) for what changed.
 
+[![CI](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml)
+[![Release](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml)
+
 ## Desktop app
 
 Furrow CAM also runs as a desktop app for macOS, Windows and Linux. It works offline with no account, and saves projects as `.furrow` files on your computer, versions included. A `.furrow` file also opens in the web app (Import), and a web export opens in the desktop app.
