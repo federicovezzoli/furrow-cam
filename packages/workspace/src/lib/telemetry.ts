@@ -1,4 +1,5 @@
-import type { Operation, PostProcessorId } from "@furrow/document";
+import { Operation, PostProcessorId } from "@furrow/document";
+import { z } from "zod";
 
 /**
  * Anonymous usage events and error reports (ADR-0052). The workspace and the
@@ -15,14 +16,24 @@ export function posthogHost(configured: string | undefined): string {
   return configured?.trim().replace(/\/+$/, "") || POSTHOG_HOST;
 }
 
+const OPERATION_TYPES = Operation.options.map((option) => option.shape.type.value) as [
+  Operation["type"],
+  ...Operation["type"][],
+];
+
 /** What happened, never names, sizes or contents of the user's work. */
-export type TelemetryEvent =
-  | { event: "project_created" }
-  | { event: "file_imported"; format: "svg" | "dxf" | "stl" }
-  | { event: "operation_added"; type: Operation["type"] }
-  | { event: "gcode_exported"; postProcessor: PostProcessorId }
-  | { event: "signed_up" }
-  | { event: "guest_imported"; projects: number };
+const TelemetryEvent = z.discriminatedUnion("event", [
+  z.strictObject({ event: z.literal("project_created") }),
+  z.strictObject({ event: z.literal("file_imported"), format: z.enum(["svg", "dxf", "stl"]) }),
+  z.strictObject({
+    event: z.literal("operation_added"),
+    type: z.enum(OPERATION_TYPES),
+  }),
+  z.strictObject({ event: z.literal("gcode_exported"), postProcessor: PostProcessorId }),
+  z.strictObject({ event: z.literal("signed_up") }),
+  z.strictObject({ event: z.literal("guest_imported"), projects: z.number().int().positive() }),
+]);
+export type TelemetryEvent = z.infer<typeof TelemetryEvent>;
 
 export type TelemetrySink = {
   track(event: TelemetryEvent): void;
@@ -92,35 +103,20 @@ export function captureUncaughtErrors(target: EventTarget) {
 }
 
 const MESSAGE_LENGTH = 200;
-const FIELDS: Record<string, readonly string[]> = {
-  project_created: [],
-  file_imported: ["format"],
-  operation_added: ["type"],
-  gcode_exported: ["postProcessor"],
-  signed_up: [],
-  guest_imported: ["projects"],
-};
-
 /**
- * `data` if it is a known event with only its own short fields, else `null`:
- * the desktop main process checks what the renderer hands it.
+ * `data` if it is a known event with exactly its own fields and values, else
+ * `null`: the desktop main process checks what the renderer hands it.
  */
 export function parseTelemetryEvent(data: unknown): TelemetryEvent | null {
-  if (typeof data !== "object" || data === null) return null;
-  const { event, ...fields } = data as Record<string, unknown>;
-  const allowed = typeof event === "string" && Object.hasOwn(FIELDS, event) ? FIELDS[event] : null;
-  if (!allowed) return null;
-  for (const [key, value] of Object.entries(fields)) {
-    if (!allowed.includes(key)) return null;
-    if (typeof value === "string" ? value.length > 40 : typeof value !== "number") return null;
-  }
-  return data as TelemetryEvent;
+  const parsed = TelemetryEvent.safeParse(data);
+  return parsed.success ? parsed.data : null;
 }
 
 /**
  * `error` as it may be reported: its type, its message cut short with file
  * paths replaced, and its stack with paths reduced to the app's own files
- * (no user folder) and URLs without query strings or hashes.
+ * (no user folder). URLs keep only their origin, or their path for the
+ * site's own bundles, so no page path with a record ID is reported.
  */
 export function reportableError(error: unknown): Error {
   const source =
@@ -135,13 +131,26 @@ export function reportableError(error: unknown): Error {
   return report;
 }
 
-/** Absolute file paths: a drive or `/` followed by a user, temp or volume folder. */
+/**
+ * Absolute file paths: a drive (not the `s:/` of `https://`) or `/` followed
+ * by a user, temp or volume folder.
+ */
 const PATH =
-  /(?:file:\/\/)?(?:[A-Za-z]:[\\/]|\/(?:Users|home|root|private|var|tmp|Volumes|mnt|media|opt)\/)[^'"`\n)]*/g;
-const QUERY = /(https?:\/\/[^\s?#'"`)]*)[?#][^\s'"`)]*/g;
+  /(?:file:\/\/)?(?:(?<![A-Za-z])[A-Za-z]:[\\/]|(?<!\w)\/(?:Users|home|root|private|var|tmp|Volumes|mnt|media|opt)\/)[^'"`\n)]*/g;
+const URL_IN_TEXT = /https?:\/\/[^\s'"`)]+/g;
+
+/** A URL's origin, or origin and path for the site's bundles (`/_next/…`), which hold no IDs. */
+function scrubUrl(url: string) {
+  try {
+    const { origin, pathname } = new URL(url);
+    return pathname.startsWith("/_next/") ? `${origin}${pathname}` : origin;
+  } catch {
+    return "<url>";
+  }
+}
 
 function scrubMessage(message: string) {
-  const scrubbed = message.replace(PATH, "<path>").replace(QUERY, "$1");
+  const scrubbed = message.replace(URL_IN_TEXT, scrubUrl).replace(PATH, "<path>");
   return scrubbed.length > MESSAGE_LENGTH ? `${scrubbed.slice(0, MESSAGE_LENGTH)}…` : scrubbed;
 }
 
@@ -161,9 +170,11 @@ function scrubStack(stack: string) {
     .join("\n");
 }
 
-/** A frame's file: URLs lose their query, paths keep only what's inside the app. */
+/** A frame's file: web URLs as `scrubUrl`, paths keep only what's inside the app. */
 function scrubLocation(location: string) {
-  if (/^(https?|app|blob):/.test(location)) return location.replace(/[?#].*$/, "");
+  if (/^https?:/.test(location)) return scrubUrl(location);
+  // The desktop app's own files, and blobs of random IDs.
+  if (/^(app|blob):/.test(location)) return location.replace(/[?#].*$/, "");
   if (/^node:|^native$|^<anonymous>$/.test(location)) return location;
   const path = location.replace(/^file:\/\//, "").replaceAll("\\", "/");
   const inside = /\/((?:out|node_modules|src)\/.*)$/.exec(path);

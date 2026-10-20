@@ -37,12 +37,20 @@ describe("reportableError", () => {
         "Error: boom",
         "    at open (out/main/index.cjs:12:3)",
         "    at out/main/index.cjs:4:5",
-        "    at render (https://furrow.cam/reset-password:1:2)",
+        "    at render (https://furrow.cam:1:2)",
         "    at app://furrow/assets/index-abc.js:7:8",
         "    at node:internal/process/task_queues:105:5",
         "submit@https://furrow.cam/_next/static/chunks/page.js:3:4",
       ].join("\n"),
     );
+  });
+
+  it("keeps a URL's origin, never its page path, and doesn't take it for a drive", () => {
+    const error = new Error(
+      "Failed to fetch https://furrow.cam/projects/abc123?x=1 from C:\\Users\\ada",
+    );
+    expect(reportableError(error).message).toBe("Failed to fetch https://furrow.cam from <path>");
+    expect(reportableError(new Error("at file:///Users/ada/x.svg")).message).toBe("at <path>");
   });
 
   it("reports thrown values that aren't errors", () => {
@@ -60,10 +68,14 @@ describe("parseTelemetryEvent", () => {
     expect(parseTelemetryEvent({ event: "project_created" })).toEqual({ event: "project_created" });
   });
 
-  it("refuses unknown events, extra fields and long values", () => {
+  it("refuses unknown events, extra or missing fields and unknown values", () => {
     expect(parseTelemetryEvent({ event: "toString" })).toBeNull();
     expect(parseTelemetryEvent({ event: "project_created", name: "Coasters" })).toBeNull();
-    expect(parseTelemetryEvent({ event: "file_imported", format: "x".repeat(41) })).toBeNull();
+    expect(parseTelemetryEvent({ event: "file_imported" })).toBeNull();
+    expect(parseTelemetryEvent({ event: "file_imported", format: "Coasters.svg" })).toBeNull();
+    expect(parseTelemetryEvent({ event: "operation_added", type: "pocket" })).not.toBeNull();
+    expect(parseTelemetryEvent({ event: "operation_added", type: "teleport" })).toBeNull();
+    expect(parseTelemetryEvent({ event: "guest_imported", projects: Number.NaN })).toBeNull();
     expect(parseTelemetryEvent(null)).toBeNull();
   });
 });
