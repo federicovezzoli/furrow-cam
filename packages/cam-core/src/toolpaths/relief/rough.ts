@@ -97,9 +97,10 @@ const REST_SHARE = 0.25;
  *
  * The step-over is the tool's unless the operation sets its own.
  *
- * With `rest` (S8), the stock the earlier operations left is simulated on
- * the same grid, and only material more than `REST_MATERIAL` above a level,
- * and wider than `REST_MIN_WIDTH`, is cut: linear passes skip the samples
+ * With `rest` (S8), the stock the earlier operations left is simulated over
+ * the grid and all the tool reaches from the area, and only material more
+ * than `REST_MATERIAL` above a level, and wider than `REST_MIN_WIDTH`, is
+ * cut: linear passes skip the samples
  * where the tool meets none, rapiding over the gaps, and pockets are cleared
  * only within reach of it.
  */
@@ -149,6 +150,11 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
+  const area = roughingArea(params.boundary, model, stock, radius);
+  if (!area) {
+    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
+    return { moves: [], warnings };
+  }
   const restStock = rest
     ? yield* restStockSteps(
         grid,
@@ -156,14 +162,10 @@ export function* reliefRoughSteps(
         stockBottom ?? grid.base,
         HEIGHTMAP_SHARE - REST_SHARE,
         HEIGHTMAP_SHARE,
+        restCover(area, rest.stock, radius + wanted + 2 * restCellSize(grid)),
       )
     : null;
-
-  const area = roughingArea(params.boundary, model, stock, radius);
-  if (!area) {
-    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
-    return { moves: [], warnings };
-  }
+  if (restStock?.grid.coarsened) warnings.push(restCoarsenedWarning(restStock.grid));
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -219,7 +221,7 @@ export function* reliefRoughSteps(
         restStock.heights,
         restStock.grid,
         z + REST_MATERIAL,
-        grid.origin,
+        restStock.grid.origin,
       );
       const reachable = offset(offset(cleared, -radius, { arcTolerance: tolerance }), radius, {
         arcTolerance: tolerance,
@@ -272,6 +274,37 @@ export function roughingArea(
   const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
   const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
   return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
+}
+
+/**
+ * Where a rest roughing's stock left is simulated, besides the model's grid:
+ * the `area` grown by `margin`, wherever the tool may reach from it (its
+ * radius, the rest dropper's reach of a cell's diagonal and more), on the
+ * stock, where earlier operations can have cut. Without a stock, nothing
+ * past the model's grid: the stock is the model's outline (`roughingArea`).
+ */
+function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
+  if (!stock) return null;
+  const min: Point = [
+    Math.max(area.min[0] - margin, stock.min[0]),
+    Math.max(area.min[1] - margin, stock.min[1]),
+  ];
+  const max: Point = [
+    Math.min(area.max[0] + margin, stock.max[0]),
+    Math.min(area.max[1] + margin, stock.max[1]),
+  ];
+  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
+}
+
+/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
+function restCellSize(grid: ReliefGrid): number {
+  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+}
+
+/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
+function restCoarsenedWarning(grid: ReliefGrid): string {
+  const size = Math.max(grid.cellWidth, grid.cellHeight);
+  return `The area is too large to simulate the stock left at full resolution: it is simulated with cells of ${size.toFixed(3)} mm, so material narrower than ${(2 * size).toFixed(3)} mm the operations before left may be cut at full depth.`;
 }
 
 /**
@@ -387,12 +420,10 @@ function* rasterLevels(
     // The pad may be past the grid, where the pass still goes.
     dropper.dropDiscs(v, first, last, tips);
     // Only stock more than `REST_MATERIAL` above the pass counts, so the tool
-    // dropped onto it starts there, which spares scanning most cells. Past
-    // the grid, nothing is left that the model's margin would show.
+    // dropped onto it starts there, which spares scanning most cells. The
+    // stock left is simulated over the whole area, past the grid too.
     const stockTips = restDropper ? tips.map((tip) => tip + REST_MATERIAL) : null;
-    if (stockTips && row >= 0 && row < rows && from <= to) {
-      restDropper?.dropLine(v, from, to, stockTips.subarray(from - first, to - first + 1));
-    }
+    if (stockTips) restDropper?.dropLine(v, first, last, stockTips);
     passes.push({ v, first, tips, stockTips });
   }
 

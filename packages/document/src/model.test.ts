@@ -42,6 +42,13 @@ describe("Model", () => {
     expect(Model.safeParse(placed({ depth: -1 })).success).toBe(false);
   });
 
+  it("needs a border of zero or more", () => {
+    expect(Model.safeParse({ ...model, border: 0 }).success).toBe(true);
+    expect(Model.safeParse({ ...model, border: -1 }).success).toBe(false);
+    const { border: _, ...withoutBorder } = model;
+    expect(Model.safeParse(withoutBorder).success).toBe(false);
+  });
+
   it("rejects empty files, fractional counts and unknown keys", () => {
     expect(Model.safeParse({ ...model, size: 0 }).success).toBe(false);
     expect(Model.safeParse({ ...model, triangles: 1.5 }).success).toBe(false);
