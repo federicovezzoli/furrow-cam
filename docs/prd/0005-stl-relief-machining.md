@@ -33,7 +33,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | S1 | Import STL files, binary and ASCII, into a project. Files above **50 MB** or **2,000,000 triangles** are refused with a clear message; the operator can change both limits | Must |
-| S2 | Place the model on the stock: rotate it in 90° steps about each axis, scale it uniformly or fit it inside the stock less a border, and set its depth into the stock (its top at the stock top). It is positioned relative to the zero point (ADR-0016) like the 2D drawing | Must |
+| S2 | Place the model on the stock: rotate it in 90° steps about each axis, scale it uniformly or fit it inside the stock less a border the user sets (10 mm by default, 0 for edge to edge), and set its depth into the stock (its top at the stock top). It is positioned relative to the zero point (ADR-0016) like the 2D drawing | Must |
 | S3 | The model is machined from the top only. The UI says that undercuts and overhangs are filled in, and shows the model as it will be cut | Must |
 | S4 | **3D finishing:** parallel (raster) passes over the model with angle, stepover, cut direction (one-way or zig-zag) and stock to leave. Works with every tool shape; ball end mills are the usual choice | Must |
 | S5 | **3D roughing:** clears the material above the model in Z levels with the existing pocket clearing (PRD-0001 R20), leaving a set amount of stock for finishing. It clears the model's outline, the outline and a margin around it (leaving the stock top beyond it uncut, to zero Z on after a tool change), or the whole stock | Must |
@@ -68,3 +68,4 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-10-17: S10 (waterline and spiral finishing) moves up to Should and is built (#130, ADR-0039)
 - 2026-10-17: S12, the touch-off pad (#147, ADR-0041)
 - 2026-10-17: S12 and the user flow: the touch-off pad is turned on by the user, not added on import (#178, ADR-0043)
+- 2026-10-19: S2's border is set by the user per model (#183, ADR-0038)
