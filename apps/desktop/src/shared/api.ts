@@ -1,3 +1,5 @@
+import type { TelemetryEvent } from "@furrow/workspace/lib/telemetry";
+
 /**
  * What the preload script exposes to the renderer as `window.furrow`
  * (ADR-0044): the only way the app reaches the disk. Paths are absolute.
@@ -63,6 +65,10 @@ export interface DesktopApi {
   takePendingPaths(): Promise<string[]>;
   onMenu(listener: (command: MenuCommand) => void): () => void;
   onOpenPath(listener: (path: string) => void): () => void;
+  /** Hands a usage event to the main process, which sends it if the user agreed (ADR-0052). */
+  trackEvent(event: TelemetryEvent): void;
+  /** Hands an error report (from `reportableError`) to the main process, as `trackEvent`. */
+  reportError(error: { name: string; message: string; stack?: string }): void;
   /** The window is closing with unsaved changes; call `closeWindow` once they're handled. */
   onCloseRequest(listener: () => void): () => void;
 }
@@ -83,6 +89,8 @@ export const CHANNELS = {
   setWindowState: "window:state",
   closeWindow: "window:close",
   takePendingPaths: "app:pending-paths",
+  trackEvent: "telemetry:event",
+  reportError: "telemetry:error",
   menu: "menu",
   openPath: "app:open-path",
   closeRequest: "window:close-request",
