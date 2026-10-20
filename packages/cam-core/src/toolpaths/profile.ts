@@ -202,6 +202,11 @@ export function contourToolpath(
   }));
   if (finishing) {
     const within = params.allowance + 2 * tolerance + 1e-3;
+    // The widest stock one full-depth lap takes, as a circle's radius: the
+    // allowance along walls, and at least half the tool so inside corners
+    // pass, but never a whole tool width, which is a slot.
+    const margin = 2 * tolerance + 1e-3;
+    const lapStock = Math.min(Math.max(params.allowance, radius) / 2 + margin, radius - margin);
     const boxes = roughing.contours.map((contour) => bounds(contour.ring));
     for (const contour of finishing.contours) {
       const entry = slotFor(contour.ring[0] as Point, roughing.contours, boxes, within);
@@ -211,7 +216,7 @@ export function contourToolpath(
         const roughed = roughing.contours[entry.index] as Contour;
         // A narrower offset can run where the roughing one never went, like
         // into a notch the roughing contour bridges: that takes depth passes.
-        const lap = follows(contour.ring, roughed.ring, radius, within);
+        const lap = follows(contour.ring, roughed.ring, radius, lapStock);
         job.run = () => {
           roughingRun();
           if (lap) finishContour(cut, contour, entry.point, -params.depth);
@@ -401,15 +406,15 @@ function slotFor(
 }
 
 /**
- * Whether a tool of `radius` following closed `ring` takes off no more than a
- * strip `within` wide beyond what it took following closed `along`: the
- * allowance along the walls, not a slot `along` bridged.
+ * Whether a tool of `radius` following closed `ring` takes off nothing that
+ * holds a circle of radius `stock` beyond what it took following closed
+ * `along`: the allowance along the walls and into corners, not a slot `along`
+ * bridged.
  */
-function follows(ring: Point[], along: Point[], radius: number, within: number): boolean {
+function follows(ring: Point[], along: Point[], radius: number, stock: number): boolean {
   const sweep = (path: Point[]) => difference(offset([path], radius), offset([path], -radius));
   const beyond = difference(sweep(ring), sweep(along));
-  // A strip `within` wide holds no circle of radius `within`.
-  return offset(beyond, -within).length === 0;
+  return offset(beyond, -stock).length === 0;
 }
 
 function nearestOnSegment(point: Point, a: Point, b: Point): Point {

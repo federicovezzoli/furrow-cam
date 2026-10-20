@@ -270,6 +270,13 @@ describe("profileToolpath", () => {
     };
   }
 
+  /** The finish lap's entry: straight down from the top to `depth`. */
+  function straightPlunges(toolpath: Toolpath, depth: number) {
+    return steps(toolpath).filter(
+      ([from, move]) => from[2] === 0 && move.to[2] === depth && move.to[0] === from[0],
+    );
+  }
+
   /** Every move into `region`, checked to go no more than a step-down below the deepest cut there so far. */
   function expectStepsDown(
     toolpath: Toolpath,
@@ -299,20 +306,26 @@ describe("profileToolpath", () => {
   const bit = { diameter: 6.35, fluteLength: 25 };
   const finished = { allowance: 0.2, finishPass: true, depth: 18 };
 
-  it("cuts a notch the depth passes bridge in depth passes too", () => {
-    const notched = polygon([
-      [0, 0],
-      [100, 0],
-      [100, 50],
-      [46.5, 50],
-      [46.5, 30],
-      [40, 30],
-      [40, 50],
-      [0, 50],
-    ]);
-    const toolpath = profile(finished, [notched], bit);
-    expectStepsDown(toolpath, (x, y) => x > 40 && x < 46.5 && y > 30 && y < 48, 2);
-  });
+  const notched = polygon([
+    [0, 0],
+    [100, 0],
+    [100, 50],
+    [46.5, 50],
+    [46.5, 30],
+    [40, 30],
+    [40, 50],
+    [0, 50],
+  ]);
+
+  // Up to an allowance just over the tool radius, where the bridged notch is
+  // narrower than the finishing stock along the walls.
+  it.each([0.2, 3.3, 3.5])(
+    "cuts a notch the depth passes bridge in depth passes too (allowance %s)",
+    (allowance) => {
+      const toolpath = profile({ ...finished, allowance }, [notched], bit);
+      expectStepsDown(toolpath, (x, y) => x > 40 && x < 46.5 && y > 30 && y < 48, 2);
+    },
+  );
 
   it("cuts a neck the depth passes can't pass in depth passes too", () => {
     const dumbbell = polygon([
@@ -343,11 +356,34 @@ describe("profileToolpath", () => {
       [0, 100],
     ]);
     const toolpath = profile({ allowance: 0.5, finishPass: true }, [ell]);
-    // Two full laps at -6: the last depth pass and the finish lap, which goes straight down.
-    const plunges = steps(toolpath).filter(
-      ([from, move]) => from[2] === 0 && move.to[2] === -6 && move.to[0] === from[0],
-    );
-    expect(plunges).toHaveLength(1);
+    expect(straightPlunges(toolpath, -6)).toHaveLength(1);
+  });
+
+  // A 50° V-notch in an outline, and a star hole with 36° points: the
+  // finishing tool reaches further into these corners than the roughing one.
+  const vNotched = polygon([
+    [0, 0],
+    [100, 0],
+    [100, 50],
+    [60, 50],
+    [50, 50 - 10 / Math.tan((25 * Math.PI) / 180)],
+    [40, 50],
+    [0, 50],
+  ]);
+  const star = polygon(
+    Array.from({ length: 10 }, (_, i): [number, number] => {
+      const r = i % 2 === 0 ? 40 : (40 * Math.sin(Math.PI / 10)) / Math.sin((3 * Math.PI) / 10);
+      const angle = (i * Math.PI) / 5;
+      return [50 + r * Math.cos(angle), 50 + r * Math.sin(angle)];
+    }),
+  );
+
+  it.each([
+    ["outside", vNotched],
+    ["inside", star],
+  ] as const)("keeps the single finish lap around acute corners (%s)", (side, shape) => {
+    const toolpath = profile({ ...finished, side }, [shape], bit);
+    expect(straightPlunges(toolpath, -18)).toHaveLength(1);
   });
 
   it("cuts holes before the outline that frees the part", () => {
