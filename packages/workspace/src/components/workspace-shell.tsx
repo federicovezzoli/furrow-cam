@@ -148,6 +148,7 @@ export function WorkspaceShell() {
         revealPane={reveal}
       />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
+      {saveStatus.state === "error" && <SaveError message={saveStatus.error} />}
       {/* Below the panels' minimum widths (200 + 200px), scroll sideways instead of clipping them. */}
       <div className="min-h-0 flex-1 overflow-x-auto">
         <ResizablePanelGroup
@@ -291,6 +292,19 @@ function SaveFailed({ message }: { message: string | undefined }) {
       <Button variant="outline" size="compact" onClick={() => window.location.reload()}>
         Reload
       </Button>
+    </div>
+  );
+}
+
+/** A save failed but autosave tries again (e.g. signed out): say why, so the user can fix it. */
+function SaveError({ message }: { message: string | undefined }) {
+  return (
+    <div
+      role="alert"
+      className="flex shrink-0 items-center gap-2 border-b bg-destructive/10 px-3 py-1.5 text-ui text-destructive"
+    >
+      <CircleAlertIcon className="size-3.5 shrink-0" aria-hidden />
+      <p className="min-w-0 flex-1">{message} Changes are saved again once this is fixed.</p>
     </div>
   );
 }

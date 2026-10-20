@@ -1,6 +1,6 @@
 import { createProjectDocument } from "@furrow/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAutosave, OFFLINE, type SaveDocument } from "./autosave";
+import { createAutosave, OFFLINE, RETRY_INTERVAL, type SaveDocument } from "./autosave";
 import { createDocumentStore } from "./document-store";
 
 const DELAY = 1000;
@@ -158,6 +158,33 @@ describe("createAutosave", () => {
     expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
   });
 
+  it("retries a refusal the user can clear, but not more than once per interval", async () => {
+    const save = vi.fn<SaveDocument>(async () => ({
+      error: "You're signed out.",
+      retryable: true,
+    }));
+    const { autosave, setWidth } = setup(save);
+
+    autosave.retry();
+    setWidth(100);
+    await vi.advanceTimersByTimeAsync(DELAY);
+    expect(save).toHaveBeenCalledOnce();
+    autosave.retry();
+    autosave.retry();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(RETRY_INTERVAL);
+    save.mockResolvedValue({ updatedAt: SAVED_AT });
+    autosave.retry();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(autosave.status).toEqual({ state: "saved", savedAt: SAVED_AT });
+    autosave.retry();
+    await vi.advanceTimersByTimeAsync(RETRY_INTERVAL);
+    expect(save).toHaveBeenCalledTimes(3);
+  });
+
   it("is saved again when an edit the server refused is undone", async () => {
     const save = vi.fn<SaveDocument>(async () => ({ error: "Invalid", retryable: true }));
     const { store, autosave, setWidth } = setup(save);
@@ -181,6 +208,7 @@ describe("createAutosave", () => {
 
     setWidth(200);
     autosave.flush();
+    autosave.retry();
     await vi.advanceTimersByTimeAsync(DELAY * 5);
     expect(save).toHaveBeenCalledOnce();
     expect(autosave.status.state).toBe("failed");

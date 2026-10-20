@@ -213,6 +213,17 @@ describe("unavailable storage", () => {
       storage.STORAGE_UNAVAILABLE,
     );
   });
+
+  it("refuses a save for good: retrying in this tab can't help", async () => {
+    globalThis.indexedDB = {
+      open: () => {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    } as unknown as IDBFactory;
+    expect(await storage.saveGuestProject("id", createProjectDocument(), new Date())).toEqual({
+      error: storage.STORAGE_UNAVAILABLE,
+    });
+  });
 });
 
 async function settingsFallback() {

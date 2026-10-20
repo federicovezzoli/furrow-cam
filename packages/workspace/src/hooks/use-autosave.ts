@@ -20,9 +20,7 @@ export function useAutosave() {
       autosave.flush();
       if (autosave.status.state !== "saved") event.preventDefault();
     }
-    function retry() {
-      if (autosave.status.state === "error") autosave.flush();
-    }
+    const retry = () => autosave.retry();
     window.addEventListener("beforeunload", onBeforeUnload);
     window.addEventListener("focus", retry);
     window.addEventListener("online", retry);

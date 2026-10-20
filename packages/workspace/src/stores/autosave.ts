@@ -1,4 +1,5 @@
 import type { ProjectDocument } from "@furrow/document";
+import type { SaveResult } from "../lib/workspace-host";
 import type { DocumentStore } from "./document-store";
 
 /**
@@ -17,11 +18,14 @@ export type SaveDocument = (
   document: ProjectDocument,
   /** The version being replaced, for the server's conflict check. */
   savedAt: Date,
-) => Promise<{ updatedAt: Date; error?: never } | { error: string; retryable?: boolean }>;
+) => Promise<SaveResult>;
 
 export type Autosave = ReturnType<typeof createAutosave>;
 
 export const OFFLINE = "The project couldn't be saved. Check your connection.";
+
+/** The least time between two `retry` calls that save, so focus and online events don't each send the document. */
+export const RETRY_INTERVAL = 10_000;
 
 /**
  * Saves the store's document `delay` ms after the last change (ADR-0010), while
@@ -54,6 +58,7 @@ export function createAutosave(
   /** While held, no save starts: the server's document is being replaced (a restore). */
   let held = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastRetry = Number.NEGATIVE_INFINITY;
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
 
@@ -188,6 +193,15 @@ export function createAutosave(
     },
     /** Saves pending changes now instead of waiting for the delay. */
     flush,
+    /**
+     * After a save that can be retried failed, tries again now, e.g. when the
+     * user comes back to the window. Not again within `RETRY_INTERVAL`.
+     */
+    retry() {
+      if (status.state !== "error" || Date.now() - lastRetry < RETRY_INTERVAL) return;
+      lastRetry = Date.now();
+      flush();
+    },
     settle,
     /**
      * Settles, then holds: no save starts until `release`, while the server's

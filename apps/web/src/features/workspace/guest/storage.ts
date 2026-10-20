@@ -59,7 +59,7 @@ function open(): Promise<IDBDatabase> {
     try {
       request = indexedDB.open(DB_NAME, DB_VERSION);
     } catch {
-      reject(new Error(STORAGE_UNAVAILABLE));
+      reject(new UserError(STORAGE_UNAVAILABLE));
       return;
     }
     request.onupgradeneeded = () => {
@@ -81,8 +81,8 @@ function open(): Promise<IDBDatabase> {
       };
       resolve(db);
     };
-    request.onerror = () => reject(new Error(STORAGE_UNAVAILABLE));
-    request.onblocked = () => reject(new Error(STORAGE_UNAVAILABLE));
+    request.onerror = () => reject(new UserError(STORAGE_UNAVAILABLE));
+    request.onblocked = () => reject(new UserError(STORAGE_UNAVAILABLE));
   });
   opening = current;
   // A failed open is retried next time rather than remembered.
@@ -113,7 +113,7 @@ async function transaction<T>(
   try {
     tx = db.transaction(stores, mode);
   } catch {
-    throw new Error(STORAGE_UNAVAILABLE);
+    throw new UserError(STORAGE_UNAVAILABLE);
   }
   const done = new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -128,11 +128,13 @@ async function transaction<T>(
     return value;
   } catch (error) {
     if (error instanceof UserError) throw error;
-    throw new Error(mode === "readonly" ? STORAGE_UNAVAILABLE : STORAGE_FAILED);
+    // A failed read means storage is unavailable; a failed write may pass, e.g. once there is space.
+    if (mode === "readonly") throw new UserError(STORAGE_UNAVAILABLE);
+    throw new Error(STORAGE_FAILED);
   }
 }
 
-/** A failure whose message is already for the user; aborts the transaction it is thrown in. */
+/** A failure retrying can't clear, its message for the user; aborts the transaction it is thrown in. */
 class UserError extends Error {}
 
 function fail(tx: IDBTransaction, message: string): never {
@@ -221,10 +223,8 @@ export async function saveGuestProject(
     });
   } catch (error) {
     const { message } = error as Error;
-    // Anything but a conflict or a deleted project, such as a full disk, may pass.
-    return message === CONFLICT || message === PROJECT_NOT_FOUND
-      ? { error: message }
-      : { error: message, retryable: true };
+    // Only a failed write, such as a full disk, may pass on the next try.
+    return error instanceof UserError ? { error: message } : { error: message, retryable: true };
   }
 }
 

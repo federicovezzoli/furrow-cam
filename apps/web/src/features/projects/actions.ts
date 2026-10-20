@@ -7,6 +7,7 @@ import {
   projectNameFromFileName,
 } from "@furrow/document";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
+import type { SaveResult } from "@furrow/workspace/lib/workspace-host";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -278,7 +279,7 @@ export async function saveProject(
   id: string,
   document: unknown,
   updatedAt: Date,
-): Promise<{ updatedAt: Date; error?: never } | { error: string; retryable?: boolean }> {
+): Promise<SaveResult> {
   const userId = await getUserId();
   if (!userId) return { error: SIGNED_OUT, retryable: true };
   const projectId = parseProjectId(id);
