@@ -9,6 +9,7 @@ import {
 } from "@furrow/document";
 import { formatNumber } from "./format";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
+import { type CustomBlock, customBlockWarnings } from "./read-back";
 import { fillPlaceholders, unfilledPlaceholders } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
@@ -54,7 +55,8 @@ const MODES = "G21 G90 G94 G17";
  *   the operation comment and the tool change, copied verbatim apart from
  *   their placeholders (`PLACEHOLDERS`); one left unfilled warns. They may move
  *   the tool or change modes (a `G91` retract), so `MODES` and every word are
- *   written again after one, except at the end.
+ *   written again after one, except at the end. The program is read back, and
+ *   a move in or after one into the stock warns (`customBlockWarnings`).
  */
 export const grbl: PostProcessor = { id: "grbl", extension: ".gcode", post: postGrbl };
 
@@ -73,7 +75,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   }
   /** A custom block, then the modes the program's coordinates need. */
   function custom(label: string, block: string) {
-    out.custom(fill(label, block));
+    out.custom(label, fill(label, block));
     out.line(MODES);
   }
 
@@ -177,14 +179,17 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     }
   }
 
-  if (machine?.programEnd) out.custom(fill("Program end", machine.programEnd));
+  if (machine?.programEnd) out.custom("Program end", fill("Program end", machine.programEnd));
   else {
     out.line("M5");
     out.rapid({ z: safeZ });
     out.rapidWork({ x: 0, y: 0 });
     out.line("M30");
   }
-  return { gcode: out.toString(), warnings };
+  const gcode = out.toString();
+  const project = { stock, machine, operations: operations.map(({ operation }) => operation) };
+  warnings.push(...customBlockWarnings(gcode, project, out.customBlocks));
+  return { gcode, warnings };
 }
 
 /** Whether custom `block` stops the spindle (`M5`), or pauses or ends the program (`M0`, `M1`, `M2`, `M30`). */
@@ -202,6 +207,8 @@ const AXES = ["x", "y", "z"] as const;
  */
 class GcodeWriter {
   private readonly lines: string[] = [];
+  /** Where each custom block went, for reading it back. */
+  readonly customBlocks: CustomBlock[] = [];
   /** Last written value of each word, as formatted, or absent when unknown. */
   private written: Partial<Record<"x" | "y" | "z" | "f", string>> = {};
 
@@ -216,8 +223,10 @@ class GcodeWriter {
   }
 
   /** A custom block, verbatim; it may have moved the tool or changed modes. */
-  custom(block: string) {
+  custom(label: string, block: string) {
+    const first = this.lines.length + 1;
     this.lines.push(...block.replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n"));
+    this.customBlocks.push({ label, first, last: this.lines.length });
     this.forget();
   }
 
