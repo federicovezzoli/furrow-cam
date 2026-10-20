@@ -4,10 +4,12 @@ import { extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import {
+  captureError,
   parseTelemetryEvent,
   posthogHost,
-  reportableError,
+  setTelemetrySink,
   type TelemetryEvent,
+  track,
 } from "@furrow/workspace/lib/telemetry";
 import {
   app,
@@ -121,8 +123,15 @@ let telemetryWrite = Promise.resolve();
 /** Running only while the user agrees. */
 let posthog: PostHog | null = null;
 
-// Observes the main process's uncaught errors without changing how they're handled.
-process.on("uncaughtExceptionMonitor", (error) => reportError(error));
+// The main process's events and errors, the renderer's included, go through the shared
+// module, so each error is sent once and a session sends a limited number (ADR-0052).
+setTelemetrySink({
+  track: trackEvent,
+  error: (error) => posthog?.captureException(error, LAUNCH_ID, appProperties()),
+});
+// Observes uncaught errors without changing how they're handled. In Node's default mode an
+// unhandled rejection is raised as one, so it's seen here too.
+process.on("uncaughtExceptionMonitor", (error) => captureError(error));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -164,7 +173,8 @@ if (!app.requestSingleInstanceLock()) {
     Menu.setApplicationMenu(buildMenu());
     createWindow();
     window?.once("ready-to-show", async () => {
-      await askAboutTelemetry();
+      // The update check runs whatever happens to the telemetry question.
+      await askAboutTelemetry().catch(() => {});
       await startupUpdateCheck();
     });
   });
@@ -215,7 +225,8 @@ function blockNetwork() {
   session
     .fromPartition(TELEMETRY_PARTITION)
     .webRequest.onBeforeRequest(filter, (details, callback) =>
-      callback({ cancel: !details.url.startsWith(`${POSTHOG_URL}/`) }),
+      // Also refuses what was queued before the user turned telemetry off.
+      callback({ cancel: !telemetryPrefs.enabled || !details.url.startsWith(`${POSTHOG_URL}/`) }),
     );
 }
 
@@ -234,11 +245,9 @@ function applyTelemetry() {
 }
 
 /** Properties of every event: none of them about the user. */
-const appProperties = () => ({
-  $process_person_profile: false,
-  $os: process.platform,
-  $app_version: app.getVersion(),
-});
+function appProperties() {
+  return { $process_person_profile: false, $os: process.platform, $app_version: app.getVersion() };
+}
 
 function trackEvent({ event, ...properties }: TelemetryEvent) {
   posthog?.capture({
@@ -246,10 +255,6 @@ function trackEvent({ event, ...properties }: TelemetryEvent) {
     event,
     properties: { ...properties, ...appProperties() },
   });
-}
-
-function reportError(error: unknown) {
-  posthog?.captureException(reportableError(error), LAUNCH_ID, appProperties());
 }
 
 /** Asks once whether to send usage statistics and error reports. */
@@ -641,9 +646,9 @@ function registerIpc() {
 
   ipcMain.on(CHANNELS.trackEvent, (_event, data: unknown) => {
     const event = parseTelemetryEvent(data);
-    if (event) trackEvent(event);
+    if (event) track(event);
   });
-  ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => reportError(error));
+  ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
 
   ipcMain.handle(CHANNELS.takePendingPaths, () => {
     const paths = pendingPaths;
