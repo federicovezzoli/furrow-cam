@@ -1749,6 +1749,7 @@ G0 Z5
 M5
 G0 Z5
 M0 (Change the bit to 6 mm spiral, 6 mm and zero Z again)
+G21 G90 G94 G17
 (Furrow tool: type=flat_end_mill diameter=6)
 (Operation: Plate)
 G0 Z5

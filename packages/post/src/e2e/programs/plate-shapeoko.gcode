@@ -34,6 +34,7 @@ G0 Z5
 M5
 G0 Z5
 M0 (Change the bit to 1/4" 2-flute upcut, 6.35 mm and zero Z again)
+G21 G90 G94 G17
 (Furrow tool: type=flat_end_mill diameter=6.35)
 (Operation: Recess)
 G0 Z5
