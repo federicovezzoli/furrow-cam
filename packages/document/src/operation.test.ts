@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ProjectDocument } from "./document";
 import {
   CIRCLE_ID,
   circle,
@@ -27,6 +28,7 @@ import {
   ReliefFinishParams,
   ReliefRoughOperation,
   ReliefRoughParams,
+  toolProblem,
   VCarveOperation,
   VCarveParams,
 } from "./operation";
@@ -394,5 +396,31 @@ describe("ReliefRoughOperation", () => {
     expect(ReliefRoughOperation.safeParse({ ...reliefRough, targets }).error?.issues).toEqual([
       expect.objectContaining({ path: ["targets"] }),
     ]);
+  });
+});
+
+describe("toolProblem", () => {
+  const document = fullDocument();
+  const profile = document.operations[0] as Operation;
+  const pocket = { ...profile, type: "pocket" } as Operation;
+
+  it("refuses drill bits on operations that cut sideways", () => {
+    for (const operation of [profile, pocket, reliefRough, reliefFinish]) {
+      expect(toolProblem({ ...operation, tool: drill } as Operation)).toBe(
+        "Drill bits can't cut sideways: pick an end mill or a V-bit",
+      );
+      expect(toolProblem({ ...operation, tool: endMill } as Operation)).toBeNull();
+      expect(toolProblem({ ...operation, tool: vBit } as Operation)).toBeNull();
+    }
+  });
+
+  it("leaves drilling to drill bits", () => {
+    const drilling = { ...profile, type: "drill", tool: drill, params: { depth: 5, peck: false } };
+    expect(toolProblem(drilling as Operation)).toBeNull();
+  });
+
+  it("still lets a project saved with a drill bit on a profile open", () => {
+    const saved = { ...document, operations: [{ ...profile, tool: drill }] };
+    expect(ProjectDocument.safeParse(saved).success).toBe(true);
   });
 });

@@ -42,6 +42,7 @@ import {
 import { OperationNameInput } from "./operation-name-input";
 import { OperationTypeIcon } from "./operation-type-icon";
 import {
+  cuttingToolChoice,
   defaultToolChoice,
   drillToolChoice,
   engraveToolChoice,
@@ -56,6 +57,9 @@ import {
  * drill, engrave and V-carve operations from the selected paths and 3D
  * operations on the project's model, and lists operations in cutting order.
  */
+/** Why profiles, pockets and 3D operations can't be added with only drill bits in the library. */
+const SIDEWAYS = "Add an end mill or a V-bit to your tool library: drill bits can't cut sideways";
+
 export function OperationsPane() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
@@ -69,6 +73,7 @@ export function OperationsPane() {
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
+  const cuttingTool = cuttingToolChoice(tools);
   const drillTool = drillToolChoice(tools);
   const engraveTool = engraveToolChoice(tools);
   const vcarveTool = vcarveToolChoice(tools);
@@ -93,21 +98,23 @@ export function OperationsPane() {
     choice: typeof tool;
     hint: string;
     /** Why there is no fitting tool when the library has others. */
-    missingTool?: string;
+    missingTool: string;
   }[] = [
     {
       type: "profile",
       label: "Profile",
       addOperation: addProfileOperation,
-      choice: tool,
+      choice: cuttingTool,
       hint: `Cut around the ${target}`,
+      missingTool: SIDEWAYS,
     },
     {
       type: "pocket",
       label: "Pocket",
       addOperation: addPocketOperation,
-      choice: tool,
+      choice: cuttingTool,
       hint: `Clear the area inside the ${target}`,
+      missingTool: SIDEWAYS,
     },
     {
       type: "drill",
@@ -115,9 +122,7 @@ export function OperationsPane() {
       addOperation: addDrillOperation,
       choice: drillTool,
       hint: `Drill the points and circles of the ${target}`,
-      missingTool: tool
-        ? "Add a drill or an end mill to your tool library: V-bits can't drill"
-        : undefined,
+      missingTool: "Add a drill or an end mill to your tool library: V-bits can't drill",
     },
     {
       type: "engrave",
@@ -125,9 +130,7 @@ export function OperationsPane() {
       addOperation: addEngraveOperation,
       choice: engraveTool,
       hint: `Engrave along the lines of the ${target}`,
-      missingTool: tool
-        ? "Add a V-bit or an end mill to your tool library: drill bits can't engrave"
-        : undefined,
+      missingTool: "Add a V-bit or an end mill to your tool library: drill bits can't engrave",
     },
     {
       type: "vcarve",
@@ -135,7 +138,7 @@ export function OperationsPane() {
       addOperation: addVCarveOperation,
       choice: vcarveTool,
       hint: `Carve inside the ${target} with a V-bit, deeper where they are wider`,
-      missingTool: tool ? "Add a V-bit to your tool library to V-carve" : undefined,
+      missingTool: "Add a V-bit to your tool library to V-carve",
     },
   ];
 
@@ -145,12 +148,14 @@ export function OperationsPane() {
     addOperation: typeof addReliefFinishOperation;
     choice: typeof tool;
     hint: string;
+    missingTool: string;
   }[] = [
     {
       type: "relief_rough",
       label: "3D rough",
       addOperation: addReliefRoughOperation,
       choice: reliefRoughToolChoice(tools),
+      missingTool: SIDEWAYS,
       hint: `Clear the material above ${model?.fileName} in levels, a flat end mill being the usual choice`,
     },
     {
@@ -158,6 +163,7 @@ export function OperationsPane() {
       label: "3D finish",
       addOperation: addReliefFinishOperation,
       choice: reliefFinishToolChoice(tools),
+      missingTool: SIDEWAYS,
       hint: `Finish ${model?.fileName} with parallel passes, a ball end mill being the usual choice`,
     },
   ];
@@ -167,9 +173,11 @@ export function OperationsPane() {
       {models.length > 0 && (
         <div className="@container">
           <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
-            {modelKinds.map(({ type, label, addOperation, choice, hint }) => {
+            {modelKinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
               const disabledReason = !choice
-                ? "Add a tool to your tool library first"
+                ? tool
+                  ? missingTool
+                  : "Add a tool to your tool library first"
                 : !model
                   ? "Select a model in the viewport first"
                   : undefined;
@@ -219,7 +227,9 @@ export function OperationsPane() {
           <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
             {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
               const disabledReason = !choice
-                ? (missingTool ?? "Add a tool to your tool library first")
+                ? tool
+                  ? missingTool
+                  : "Add a tool to your tool library first"
                 : !target
                   ? "Select paths in the viewport first"
                   : undefined;

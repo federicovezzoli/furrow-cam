@@ -8,6 +8,7 @@ import {
   type ProjectDocument,
   type Shape,
   type TouchOffDisc,
+  toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
 import { activeTouchOff } from "../scene/touch-off";
@@ -337,6 +338,9 @@ function* operationSteps(
   context: ToolpathContext,
 ): Generator<number, Toolpath> {
   const { mesh, cache } = context;
+  // E.g. a drill bit on a profile saved before the tool picker refused it.
+  const problem = toolProblem(operation);
+  if (problem) return { moves: [], warnings: [`${problem}.`] };
   switch (operation.type) {
     case "profile":
       return checkTouchOff(operation, profileToolpath(operation, shapes, options), touchOff);
