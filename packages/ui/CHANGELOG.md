@@ -1,5 +1,11 @@
 # @furrow/ui
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.9.0, @furrow/cam-core@0.8.4
+
 ## 0.1.4
 
 ### Patch Changes
