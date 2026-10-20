@@ -1,6 +1,6 @@
 import type { Stock } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { fillTouchOffBlock, suggestTouchOffToolChange } from "./touch-off";
+import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -11,12 +11,25 @@ const stock: Stock = {
   touchOff: null,
 };
 
-describe("fillTouchOffBlock", () => {
-  it("puts the pad's centre, in work coordinates, and the safe Z in place of the placeholders", () => {
-    const pad = { x: 7.5, y: 192.5, diameter: 15, toolChange: null };
-    expect(fillTouchOffBlock("G0 Z{safeZ}\nG0 X{padX} Y{padY}\nG0 X{padX}", stock, pad, 12.5)).toBe(
+describe("fillPlaceholders", () => {
+  const block = "G0 Z{safeZ}\nG0 X{padX} Y{padY}\nG0 X{padX}";
+  const pad = { x: 7.5, y: 192.5, diameter: 15, toolChange: null };
+
+  it("puts the pad's centre and the safe Z, in work coordinates, in place of the placeholders", () => {
+    expect(fillPlaceholders(block, stock, pad, 12.5)).toBe(
       "G0 Z12.5\nG0 X-142.5 Y92.5\nG0 X-142.5",
     );
+  });
+
+  it("measures the safe Z from the zero, as the post's own rises do", () => {
+    const onBed = { ...stock, zOrigin: "machine_bed" as const };
+    expect(fillPlaceholders("G0 Z{safeZ}", onBed, null, 5)).toBe(`G0 Z${5 + stock.thickness}`);
+  });
+
+  it("leaves the pad's placeholders without a pad, and unknown ones, for a warning", () => {
+    const filled = fillPlaceholders(`${block}\nG0 Z{safez}`, stock, null, 5);
+    expect(filled).toBe("G0 Z5\nG0 X{padX} Y{padY}\nG0 X{padX}\nG0 Z{safez}");
+    expect(unfilledPlaceholders(filled)).toEqual(["{padX}", "{padY}", "{safez}"]);
   });
 });
 

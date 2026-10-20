@@ -326,6 +326,24 @@ describe("grbl", () => {
       expect(exported(20)).not.toContain("{safeZ}");
     });
 
+    it("fill the placeholders in the machine's blocks too, warning once about the rest", () => {
+      const { gcode, warnings } = post({
+        operations,
+        safeZ: 20,
+        stock: { ...stock, touchOff: pad },
+        machine: {
+          ...machine,
+          toolChange: "M5\nG0 Z{safeZ}\nM0 (Change the bit)",
+          operationStart: "(At {padX} {safez})",
+        },
+      });
+      expect(gcode).toContain("M5\nG0 Z20\nM0 (Change the bit)");
+      expect(gcode).toContain("(At 7.5 {safez})");
+      expect(warnings).toEqual([
+        "Operation start: {safez} can't be filled in, so it's written as is.",
+      ]);
+    });
+
     it("ignore the pad with the Z zero on the machine bed", () => {
       const onBed = post({
         operations,

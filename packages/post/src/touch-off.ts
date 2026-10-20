@@ -3,30 +3,37 @@ import type { Stock, TouchOffDisc } from "@furrow/document";
 import { formatNumber } from "./format";
 
 /**
- * A project's tool change on its touch-off pad (ADR-0043): G-code that
- * replaces the machine's tool change, where `{padX}` and `{padY}` stand for
- * the pad's centre in work coordinates and `{safeZ}` for the machine's safe
- * Z, so the block follows the pad and the machine.
+ * The placeholders the post fills in a custom block, the machine's or a
+ * pad's tool change (ADR-0043), so the block follows the pad and the
+ * machine's safe Z, with what each stands for, measured from the zero.
  */
-
-/** The placeholders a pad's tool change may use. */
-export const TOUCH_OFF_PLACEHOLDERS = ["{padX}", "{padY}", "{safeZ}"] as const;
+export const PLACEHOLDERS = {
+  "{padX}": "the touch-off pad's centre X",
+  "{padY}": "the touch-off pad's centre Y",
+  "{safeZ}": "the machine's safe Z",
+} as const;
 
 /**
- * `block` with the placeholders replaced by `pad`'s centre, in work
- * coordinates, and by `safeZ`.
+ * `block` with the placeholders filled in, in work coordinates: `{safeZ}`
+ * always, `{padX}` and `{padY}` when there is a `pad`.
  */
-export function fillTouchOffBlock(
+export function fillPlaceholders(
   block: string,
   stock: Stock,
-  { x, y }: TouchOffDisc,
+  pad: TouchOffDisc | null,
   safeZ: number,
 ): string {
-  const [ox, oy] = stockOffset(stock);
-  return block
-    .replaceAll("{padX}", formatNumber(x + ox))
-    .replaceAll("{padY}", formatNumber(y + oy))
-    .replaceAll("{safeZ}", formatNumber(safeZ));
+  const [ox, oy, oz] = stockOffset(stock);
+  const filled = block.replaceAll("{safeZ}", formatNumber(safeZ + oz));
+  if (!pad) return filled;
+  return filled
+    .replaceAll("{padX}", formatNumber(pad.x + ox))
+    .replaceAll("{padY}", formatNumber(pad.y + oy));
+}
+
+/** What looks like a placeholder in a filled-in block: one it doesn't know, or a pad's without one. */
+export function unfilledPlaceholders(block: string): string[] {
+  return [...new Set(block.match(/\{[^{}\s]*\}/g))];
 }
 
 const MOVE = /G0?[01](?!\d)/i;
