@@ -1,5 +1,12 @@
 # @furrow/post
 
+## 0.8.2
+
+### Patch Changes
+
+- The touch-off tool change's **Suggest** now keeps the tool over the pad through modal moves, moves in machine coordinates (`G53`) and moves to a stored position (`G28`, `G30`), so Z is always zeroed on the pad. ([#270](https://github.com/federicovezzoli/furrow-cam/pull/270))
+- Updated dependencies: @furrow/document@0.10.0, @furrow/cam-core@0.9.0
+
 ## 0.8.1
 
 ### Patch Changes
