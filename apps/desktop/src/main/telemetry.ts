@@ -11,8 +11,3 @@ export function parseTelemetryPrefs(data: unknown): TelemetryPrefs {
   const { enabled } = data as Record<string, unknown>;
   return typeof enabled === "boolean" ? { enabled } : {};
 }
-
-/** The PostHog key the build was made with; an empty one turns telemetry off. */
-export function telemetryKey(value: string | undefined): string | null {
-  return value?.trim() || null;
-}

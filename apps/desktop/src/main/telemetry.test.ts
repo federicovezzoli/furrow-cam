@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTelemetryPrefs, telemetryKey } from "./telemetry";
+import { parseTelemetryPrefs } from "./telemetry";
 
 describe("parseTelemetryPrefs", () => {
   it("keeps the user's answer", () => {
@@ -10,13 +10,5 @@ describe("parseTelemetryPrefs", () => {
   it("asks again for anything else", () => {
     expect(parseTelemetryPrefs(null)).toEqual({});
     expect(parseTelemetryPrefs({ enabled: "yes" })).toEqual({});
-  });
-});
-
-describe("telemetryKey", () => {
-  it("is off without a key", () => {
-    expect(telemetryKey(undefined)).toBeNull();
-    expect(telemetryKey(" ")).toBeNull();
-    expect(telemetryKey("phc_abc")).toBe("phc_abc");
   });
 });

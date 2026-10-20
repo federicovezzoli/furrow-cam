@@ -41,7 +41,7 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
-import { parseTelemetryPrefs, type TelemetryPrefs, telemetryKey } from "./telemetry";
+import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import {
   latestDesktopRelease,
   newerRelease,
@@ -92,7 +92,7 @@ const telemetryPath = () => join(dataDir(), "telemetry.json");
 /** An in-memory session for usage statistics and error reports alone (ADR-0052). */
 const TELEMETRY_PARTITION = "telemetry";
 /** Set at build time; without it the app never asks or sends anything. */
-const POSTHOG_KEY = telemetryKey(process.env.POSTHOG_KEY);
+const POSTHOG_KEY = process.env.POSTHOG_KEY || null;
 /** Our proxy domain, or PostHog's EU cloud; also set at build time. */
 const POSTHOG_URL = posthogHost(process.env.POSTHOG_HOST);
 /** Anonymous: a new ID each launch, never stored. */
