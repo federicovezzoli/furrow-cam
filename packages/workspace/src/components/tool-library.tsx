@@ -2,6 +2,7 @@
 
 import {
   canClearFlatBottom,
+  canCutSideways,
   canDrill,
   canEngrave,
   canVCarve,
@@ -123,6 +124,11 @@ function toolChoiceFor(tools: ToolChoice[], test: (tool: Tool) => boolean): Tool
   return fallback && test(fallback.tool) ? fallback : tools.find((choice) => test(choice.tool));
 }
 
+/** The tool new profiles and pockets start with: the default one if it can cut sideways, else the first that can. */
+export function cuttingToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
+  return toolChoiceFor(tools, canCutSideways);
+}
+
 /** The tool new drill operations start with: the default one if it can drill, else the first that can. */
 export function drillToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return toolChoiceFor(tools, canDrill);
@@ -144,18 +150,18 @@ export function vcarveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
 
 /**
  * The tool new 3D finishing operations start with: the default one if it is
- * a ball end mill, else the first ball end mill, else the default one.
+ * a ball end mill, else the first ball end mill, else as `cuttingToolChoice`.
  */
 export function reliefFinishToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  return toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ?? defaultToolChoice(tools);
+  return toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ?? cuttingToolChoice(tools);
 }
 
 /**
  * The tool new 3D roughing operations start with: the default one if it is
- * a flat end mill, else the first flat end mill, else the default one.
+ * a flat end mill, else the first flat end mill, else as `cuttingToolChoice`.
  */
 export function reliefRoughToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  return toolChoiceFor(tools, (tool) => tool.type === "flat_end_mill") ?? defaultToolChoice(tools);
+  return toolChoiceFor(tools, (tool) => tool.type === "flat_end_mill") ?? cuttingToolChoice(tools);
 }
 
 /** The tool a V-carve's flat bottom starts with: the default one if it is a flat end mill, else the first. */

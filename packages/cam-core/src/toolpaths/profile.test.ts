@@ -586,6 +586,17 @@ describe("generateToolpath", () => {
     expect(generateToolpath(input).moves[0]?.to[2]).toBe(12);
   });
 
+  it("refuses a drill bit, which can't cut sideways", () => {
+    const saved = doc(12);
+    const [profile] = saved.operations;
+    if (!profile) throw new Error("No profile");
+    profile.tool = { ...tool, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(generateToolpath(toolpathInput(saved, profile.id))).toEqual({
+      moves: [],
+      warnings: ["Drill bits can't cut sideways: pick an end mill or a V-bit."],
+    });
+  });
+
   it("collects the machine's entry clearance, or the default without a machine", () => {
     const input = toolpathInput(doc(12, 3), "11111111-2222-4333-8444-555555555555");
     expect(input.entryClearance).toBe(3);

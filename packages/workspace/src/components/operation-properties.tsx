@@ -16,7 +16,7 @@ import {
   type FinishingStrategy,
   LinearAngle,
   MillingDirection,
-  Operation,
+  type Operation,
   type OperationTarget,
   PeelStart,
   type PocketOperation,
@@ -31,6 +31,7 @@ import {
   type RoughingBoundaryType,
   SpiralStart,
   type Tool,
+  toolProblem,
   type VCarveOperation,
 } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -61,6 +62,7 @@ import {
   renameOperation,
   setOperationTargets,
   setOperationTool,
+  toolError,
   updateDrillParams,
   updateEngraveParams,
   updatePocketParams,
@@ -237,7 +239,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
     () =>
       new Set(
         tools
-          .filter((choice) => Operation.safeParse({ ...operation, tool: choice.tool }).success)
+          .filter((choice) => toolError(operation, choice.tool) === null)
           .map((choice) => choice.id),
       ),
     [tools, operation],
@@ -247,7 +249,8 @@ function ToolPicker({ operation }: { operation: Operation }) {
   const catalog = { label: CATALOG_LABEL, choices: tools.filter((choice) => choice.catalog) };
   // Cleared once the operation's tool changes.
   const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
-  const error = rejected?.tool === tool ? rejected.error : null;
+  // A tool saved before it was refused, e.g. a drill bit on a profile, until another is picked.
+  const error = (rejected?.tool === tool ? rejected.error : null) ?? toolProblem(operation);
   const [creating, setCreating] = useState(false);
 
   function pick(picked: Tool) {
