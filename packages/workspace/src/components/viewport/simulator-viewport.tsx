@@ -17,6 +17,7 @@ import {
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
+import { ReportCapture } from "./report-capture";
 import { Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
 import { SimulatedStock } from "./simulated-stock";
@@ -69,14 +70,8 @@ export function SimulatorViewport() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <section aria-label="Simulation" className="relative min-h-0 flex-1 bg-muted/40">
-        {/* `data-viewport` and the kept drawing buffer let a bug report capture it. */}
-        <Canvas
-          frameloop="demand"
-          dpr={[1, 2]}
-          gl={{ preserveDrawingBuffer: true }}
-          data-viewport
-          aria-label="Stock cut by the toolpaths"
-        >
+        <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock cut by the toolpaths">
+          <ReportCapture />
           {view === "top" ? (
             <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
           ) : (

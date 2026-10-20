@@ -14,8 +14,9 @@ import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { downloadFile } from "@furrow/ui/lib/download";
 import { BugIcon, CopyIcon, DownloadIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { type Diagnostics, projectDiagnostics, reportBody, reportUrl } from "../lib/bug-report";
+import { captureViewport } from "../lib/viewport-capture";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 
@@ -35,20 +36,26 @@ export function ReportBugButton() {
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [copied, setCopied] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<"opened" | "copied" | "not-copied" | null>(null);
   const [screenshot, setScreenshot] = useState<{ blob: Blob; url: string } | null>(null);
   const [screenshotCopied, setScreenshotCopied] = useState<boolean | null>(null);
+  // Counts openings, so a screenshot finished after its dialog closed is dropped.
+  const opening = useRef(0);
 
   function open() {
-    setCopied(null);
+    const current = ++opening.current;
+    setStatus(null);
     setScreenshotCopied(null);
-    document
-      .querySelector<HTMLCanvasElement>("[data-viewport] canvas")
-      ?.toBlob((blob) => blob && setScreenshot({ blob, url: URL.createObjectURL(blob) }));
+    const viewport = captureViewport();
+    viewport?.screenshot.then((blob) => {
+      if (blob && opening.current === current) {
+        setScreenshot({ blob, url: URL.createObjectURL(blob) });
+      }
+    });
     setDiagnostics([
       ["App", `${app.name} ${app.version}`],
       ["Browser", navigator.userAgent],
-      ["Graphics", graphicsRenderer()],
+      ["Graphics", viewport?.renderer ?? "unknown"],
       ...projectDiagnostics(
         documentStore.getState().document,
         workspaceStore.getState().selectedOperationId,
@@ -59,31 +66,27 @@ export function ReportBugButton() {
   async function send(diagnostics: Diagnostics) {
     const body = reportBody(description, diagnostics, screenshot !== null);
     const { url, fits } = reportUrl(title.trim(), body);
-    if (!fits) {
-      const done = await navigator.clipboard.writeText(body).then(
-        () => true,
-        () => false,
-      );
-      setCopied(done);
-      if (!done) return;
-    }
+    // Both start in the click: Safari blocks a window opened after an `await`.
+    const copying = fits ? null : copyText(body);
     window.open(url, "_blank", "noopener,noreferrer");
+    setStatus(copying === null ? "opened" : (await copying) ? "copied" : "not-copied");
   }
 
   function close() {
+    opening.current++;
     setDiagnostics(null);
     if (screenshot) URL.revokeObjectURL(screenshot.url);
     setScreenshot(null);
   }
 
   async function copyScreenshot(blob: Blob) {
-    const item = new ClipboardItem({ [blob.type]: blob });
-    setScreenshotCopied(
-      await navigator.clipboard.write([item]).then(
-        () => true,
-        () => false,
-      ),
-    );
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      setScreenshotCopied(true);
+    } catch {
+      // No `ClipboardItem` (Firefox before 127), or the copy was refused.
+      setScreenshotCopied(false);
+    }
   }
 
   async function saveScreenshot(blob: Blob) {
@@ -178,16 +181,22 @@ export function ReportBugButton() {
                 The project, if it helps: export it from the operations pane and drop the file in.
               </p>
             </section>
-            {copied === true && (
+            {status === "opened" && (
               <p className="text-sm" role="status">
-                The report was too long for the link, so it was copied: paste it into the GitHub
-                issue.
+                The issue opened in your browser. Add what you want from above, then submit it
+                there.
               </p>
             )}
-            {copied === false && (
+            {status === "copied" && (
+              <p className="text-sm" role="status">
+                The report was too long for the link, so it was copied: paste it into the GitHub
+                issue that opened.
+              </p>
+            )}
+            {status === "not-copied" && (
               <p className="text-sm text-destructive" role="alert">
-                The report is too long for the link and couldn&apos;t be copied. Shorten the
-                description and try again.
+                The report is too long for the link and couldn&apos;t be copied. Shorten it and try
+                again.
               </p>
             )}
             <DialogFooter>
@@ -200,12 +209,14 @@ export function ReportBugButton() {
   );
 }
 
-/** The GPU WebGL renders with, as the browser names it. */
-function graphicsRenderer(): string {
-  const gl = document.createElement("canvas").getContext("webgl2");
-  if (!gl) return "WebGL2 unavailable";
-  const info = gl.getExtension("WEBGL_debug_renderer_info");
-  const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
-  gl.getExtension("WEBGL_lose_context")?.loseContext();
-  return renderer;
+/** Copies `text`; `false` when the browser refused or has no clipboard. */
+function copyText(text: string): Promise<boolean> {
+  try {
+    return navigator.clipboard.writeText(text).then(
+      () => true,
+      () => false,
+    );
+  } catch {
+    return Promise.resolve(false);
+  }
 }
