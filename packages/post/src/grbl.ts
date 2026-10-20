@@ -9,7 +9,7 @@ import {
 } from "@furrow/document";
 import { formatNumber } from "./format";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
-import { fillTouchOffBlock } from "./touch-off";
+import { fillPlaceholders, unfilledPlaceholders } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
@@ -51,7 +51,8 @@ const MODES = "G21 G90 G94 G17";
  *   the machine's maximum, and spindle speeds are kept in its range; either
  *   warns.
  * - The machine's custom blocks replace the program start, the program end,
- *   the operation comment and the tool change, copied verbatim. They may move
+ *   the operation comment and the tool change, copied verbatim apart from
+ *   their placeholders (`PLACEHOLDERS`); one left unfilled warns. They may move
  *   the tool or change modes (a `G91` retract), so `MODES` and every word are
  *   written again after one, except at the end.
  */
@@ -60,9 +61,19 @@ export const grbl: PostProcessor = { id: "grbl", extension: ".gcode", post: post
 function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostOutput {
   const out = new GcodeWriter(stockOffset(stock));
   const warnings: string[] = [];
+  const pad = activeTouchOff(stock);
+  /** `block` with its placeholders filled in, warning once about any left. */
+  function fill(label: string, block: string): string {
+    const filled = fillPlaceholders(block, stock, pad, safeZ);
+    for (const placeholder of unfilledPlaceholders(filled)) {
+      const warning = `${label}: ${placeholder} can't be filled in, so it's written as is.`;
+      if (!warnings.includes(warning)) warnings.push(warning);
+    }
+    return filled;
+  }
   /** A custom block, then the modes the program's coordinates need. */
-  function custom(block: string) {
-    out.custom(block);
+  function custom(label: string, block: string) {
+    out.custom(fill(label, block));
     out.line(MODES);
   }
 
@@ -74,7 +85,6 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     const before = steps[i - 1];
     return before !== undefined && !sameBit(before.tool, step.tool);
   });
-  const pad = activeTouchOff(stock);
   if (changesBit) {
     out.comment(
       pad
@@ -84,7 +94,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   }
   const first = steps[0];
   if (first) out.line(toolShapeComment(first.tool));
-  if (machine?.programStart) custom(machine.programStart);
+  if (machine?.programStart) custom("Program start", machine.programStart);
   else out.line(MODES);
 
   const spinUpDelay = machineSpinUpDelay(machine);
@@ -101,14 +111,14 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
         speed = undefined;
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
-          custom(fillTouchOffBlock(pad.toolChange, stock, pad));
+          custom("Tool change on the pad", pad.toolChange);
         } else if (machine?.toolChange) {
           // Over the pad first, where Z is zeroed; the block may stop the spindle.
           if (pad) {
             out.rapid({ z: safeZ });
             out.rapid({ x: pad.x, y: pad.y });
           }
-          custom(machine.toolChange);
+          custom("Tool change", machine.toolChange);
         } else {
           out.line("M5");
           out.rapid({ z: safeZ });
@@ -123,7 +133,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     tool = step.tool;
 
     if (machine?.operationStart) {
-      custom(machine.operationStart);
+      custom("Operation start", machine.operationStart);
       if (stopsSpindle(machine.operationStart)) speed = undefined;
     } else out.comment(`Operation: ${step.name}`);
 
@@ -167,7 +177,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     }
   }
 
-  if (machine?.programEnd) out.custom(machine.programEnd);
+  if (machine?.programEnd) out.custom(fill("Program end", machine.programEnd));
   else {
     out.line("M5");
     out.rapid({ z: safeZ });

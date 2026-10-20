@@ -58,7 +58,7 @@ export const TouchOff = z.strictObject({
    * This project's tool change on the pad (ADR-0043), in place of the
    * machine's `toolChange` block and the move over the pad; `null` keeps
    * them. `{padX}` and `{padY}` stand for the pad's centre in work
-   * coordinates.
+   * coordinates, `{safeZ}` for the machine's safe Z.
    */
   toolChange: GcodeBlock,
 });
