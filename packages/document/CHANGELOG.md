@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.10.0
+
+### Minor Changes
+
+- A model's border is now editable next to **Fit to stock** (10 mm by default, 0 to fit edge to edge), and the Position fields say more clearly that they move the model rather than set the border. ([#272](https://github.com/federicovezzoli/furrow-cam/pull/272))
+
 ## 0.9.0
 
 ### Minor Changes

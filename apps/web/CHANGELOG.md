@@ -1,5 +1,16 @@
 # @furrow/web
 
+## 0.15.0
+
+### Minor Changes
+
+- A model's border is now editable next to **Fit to stock** (10 mm by default, 0 to fit edge to edge), and the Position fields say more clearly that they move the model rather than set the border. ([#272](https://github.com/federicovezzoli/furrow-cam/pull/272))
+
+### Patch Changes
+
+- Sign-in, password reset and account deletion limits now hold across all servers, so spreading password guesses over several requests no longer gets around them. ([#288](https://github.com/federicovezzoli/furrow-cam/pull/288))
+- Updated dependencies: @furrow/document@0.10.0, @furrow/cam-core@0.9.0, @furrow/workspace@0.8.0, @furrow/post@0.8.2, @furrow/ui@0.1.6
+
 ## 0.14.0
 
 ### Minor Changes
