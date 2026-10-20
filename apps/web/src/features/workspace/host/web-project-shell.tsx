@@ -4,7 +4,7 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
-import { useConfirmLeave } from "@furrow/workspace/hooks/use-autosave";
+import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import {
   leavesProject,
   type WorkspaceDestination,
@@ -212,16 +212,8 @@ export function webRoute(to: WorkspaceDestination, projectId: string): string {
 
 function WebLink({ to, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
-  const confirmLeave = useConfirmLeave();
-  return (
-    <Link
-      href={webRoute(to, project.id)}
-      {...props}
-      onNavigate={(event) => {
-        if (leavesProject(to) && !confirmLeave()) event.preventDefault();
-      }}
-    />
-  );
+  const onNavigate = useLeaveNavigate(leavesProject(to));
+  return <Link href={webRoute(to, project.id)} {...props} onNavigate={onNavigate} />;
 }
 
 /** A project this release can't read, with a way back to all projects. */

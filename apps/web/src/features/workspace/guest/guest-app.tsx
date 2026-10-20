@@ -4,7 +4,7 @@ import { createProjectDocument } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
-import { useConfirmLeave } from "@furrow/workspace/hooks/use-autosave";
+import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import {
   type AccountReason,
   leavesProject,
@@ -113,7 +113,7 @@ const PromptContext = createContext<(reason: AccountReason) => void>(() => {});
 function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
   const prompt = useContext(PromptContext);
-  const confirmLeave = useConfirmLeave();
+  const onNavigate = useLeaveNavigate(leavesProject(to));
   if (to === "new-machine") {
     return (
       <a
@@ -128,28 +128,16 @@ function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
     );
   }
   return (
-    <Link
-      href={webRoute(to, project.id)}
-      onClick={onClick}
-      {...props}
-      onNavigate={(event) => {
-        if (leavesProject(to) && !confirmLeave()) event.preventDefault();
-      }}
-    />
+    <Link href={webRoute(to, project.id)} onClick={onClick} {...props} onNavigate={onNavigate} />
   );
 }
 
 /** Sign in, at the end of the workspace's top bar (PRD-0008 G9). */
 function SignInButton() {
-  const confirmLeave = useConfirmLeave();
+  const onNavigate = useLeaveNavigate();
   return (
     <Button size="compact" variant="outline" asChild>
-      <Link
-        href="/sign-in"
-        onNavigate={(event) => {
-          if (!confirmLeave()) event.preventDefault();
-        }}
-      >
+      <Link href="/sign-in" onNavigate={onNavigate}>
         Sign in
       </Link>
     </Button>

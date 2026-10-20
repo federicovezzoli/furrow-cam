@@ -41,6 +41,17 @@ export function useConfirmLeave(): () => boolean {
   );
 }
 
+/** A link's `onNavigate`: when the link `leaves` the project, asks through `useConfirmLeave` and stops it if told to stay. */
+export function useLeaveNavigate(leaves = true): (event: { preventDefault(): void }) => void {
+  const confirmLeave = useConfirmLeave();
+  return useCallback(
+    (event) => {
+      if (leaves && !confirmLeave()) event.preventDefault();
+    },
+    [leaves, confirmLeave],
+  );
+}
+
 /** Whether to leave the project with `status`, asking `confirm` only while changes can't be saved. */
 export function mayLeave(status: AutosaveStatus, confirm: (message: string) => boolean): boolean {
   const { state, error } = status;
