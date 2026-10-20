@@ -6,6 +6,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { Input } from "@furrow/ui/components/ui/input";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { track } from "@furrow/workspace/lib/telemetry";
 import { type FormEvent, useState, useTransition } from "react";
 import type { MachineOption } from "@/features/machines/server";
 import { createProject, type ProjectFormErrors } from "@/features/projects/actions";
@@ -23,8 +24,13 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
-      // Opens the new project on success, so only errors come back.
-      setErrors(await createProject(form));
+      // On success the action redirects to the new project, which Next 16 delivers by
+      // rejecting this call with its redirect error; only errors resolve.
+      const errors = await createProject(form).catch((error: unknown) => {
+        if (isRedirect(error)) track({ event: "project_created" });
+        throw error;
+      });
+      setErrors(errors);
     });
   }
 
@@ -65,5 +71,15 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
       <FieldError id="name" error={errors.name} />
       <FieldError id="machine" error={errors.machine} />
     </form>
+  );
+}
+
+/** Next's redirect errors carry a `NEXT_REDIRECT…` digest; it exports no check for them. */
+function isRedirect(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String(error.digest).startsWith("NEXT_REDIRECT")
   );
 }

@@ -5,6 +5,7 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
+import { track } from "@furrow/workspace/lib/telemetry";
 import {
   type AccountReason,
   leavesProject,
@@ -81,7 +82,10 @@ export function GuestEntry({ fresh = false }: { fresh?: boolean }) {
             ? (last ?? undefined)
             : projects[0]?.id;
         }
-        id ??= (await createGuestProject(NEW_PROJECT, createProjectDocument())).id;
+        if (!id) {
+          id = (await createGuestProject(NEW_PROJECT, createProjectDocument())).id;
+          track({ event: "project_created" });
+        }
         router.replace(webRoute("workspace", id));
       } catch (error) {
         setError(messageOf(error));
@@ -100,6 +104,7 @@ export function GuestProjects() {
     <GuestProjectList
       onCreate={async (name) => {
         const project = await createGuestProject(name, createProjectDocument());
+        track({ event: "project_created" });
         router.push(webRoute("workspace", project.id));
       }}
       onOpen={async (id) => router.push(webRoute("workspace", id))}

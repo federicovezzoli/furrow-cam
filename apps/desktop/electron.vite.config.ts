@@ -17,7 +17,15 @@ const commonJs = {
 } as const;
 
 export default defineConfig(({ mode }) => ({
-  main: { build: commonJs },
+  main: {
+    build: commonJs,
+    // PostHog's key and our proxy domain for usage statistics and error reports (ADR-0052);
+    // without a key, the app sends nothing.
+    define: {
+      "process.env.POSTHOG_KEY": JSON.stringify(process.env.POSTHOG_KEY ?? ""),
+      "process.env.POSTHOG_HOST": JSON.stringify(process.env.POSTHOG_HOST ?? ""),
+    },
+  },
   preload: { build: commonJs },
   renderer: {
     plugins: [react(), tailwindcss()],

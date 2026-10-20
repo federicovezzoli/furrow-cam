@@ -5,6 +5,7 @@ import {
   parseTools,
   type Settings,
 } from "@furrow/workspace/lib/local-library";
+import { track } from "@furrow/workspace/lib/telemetry";
 import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-host";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Recovery } from "../../shared/api";
@@ -218,6 +219,7 @@ export function App() {
 
   function createProject(machine: Machine) {
     setNewProject(false);
+    track({ event: "project_created" });
     open(
       { document: { ...createProjectDocument(), machine }, meshes: new Map(), versions: [] },
       { path: null, name: "Untitled" },

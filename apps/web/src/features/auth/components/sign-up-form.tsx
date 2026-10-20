@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@furrow/ui/components/ui/card";
+import { track } from "@furrow/workspace/lib/telemetry";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
@@ -37,6 +38,7 @@ export function SignUpForm() {
     });
     setPending(false);
     if (error) return setError(error.message ?? "Sign-up failed.");
+    track({ event: "signed_up" });
     router.push(`/check-email?email=${encodeURIComponent(email)}`);
   }
 

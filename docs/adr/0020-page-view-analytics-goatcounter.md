@@ -1,6 +1,6 @@
 # ADR-0020: Page-view analytics with GoatCounter
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded by [ADR-0052](0052-usage-and-error-tracking-posthog.md)
 - **Date:** 2026-10-13
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0005, ADR-0013

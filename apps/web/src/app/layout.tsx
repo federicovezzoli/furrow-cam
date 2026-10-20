@@ -1,7 +1,8 @@
+import { posthogHost } from "@furrow/workspace/lib/telemetry";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
-import { PageViewAnalytics } from "@/components/page-view-analytics";
+import { Telemetry } from "@/components/telemetry";
 import { ThemeProvider } from "@/components/theme-provider";
 import { env } from "@/env";
 import { themeColors } from "@/lib/theme-colors";
@@ -34,10 +35,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
-        {env.NEXT_PUBLIC_GOATCOUNTER_URL && (
+        {env.NEXT_PUBLIC_POSTHOG_KEY && (
           // Reads the current route, which is request data on dynamic pages.
           <Suspense>
-            <PageViewAnalytics endpoint={env.NEXT_PUBLIC_GOATCOUNTER_URL} />
+            <Telemetry
+              apiKey={env.NEXT_PUBLIC_POSTHOG_KEY}
+              host={posthogHost(env.NEXT_PUBLIC_POSTHOG_HOST)}
+            />
           </Suspense>
         )}
       </body>

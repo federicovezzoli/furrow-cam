@@ -7,8 +7,10 @@ const Env = z
     BETTER_AUTH_URL: z.url(),
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().min(1),
-    // GoatCounter endpoint, e.g. https://<code>.goatcounter.com/count (ADR-0020). Unset: no analytics.
-    NEXT_PUBLIC_GOATCOUNTER_URL: z.url().optional(),
+    // PostHog project API key (ADR-0052). Unset: no usage or error tracking.
+    NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1).optional(),
+    // Our PostHog proxy domain, e.g. https://e.furrow.cam. Unset: PostHog's EU cloud.
+    NEXT_PUBLIC_POSTHOG_HOST: z.url().optional(),
     // S3-compatible storage for meshes (ADR-0029). Unset: STL import is off.
     // The endpoint is unset for AWS S3 itself.
     S3_ENDPOINT: z.url().optional(),
@@ -43,7 +45,8 @@ export const env = Env.parse({
   ...process.env,
   ...unsetIfEmpty(
     "RESEND_API_KEY",
-    "NEXT_PUBLIC_GOATCOUNTER_URL",
+    "NEXT_PUBLIC_POSTHOG_KEY",
+    "NEXT_PUBLIC_POSTHOG_HOST",
     "S3_ENDPOINT",
     "S3_REGION",
     "S3_BUCKET",

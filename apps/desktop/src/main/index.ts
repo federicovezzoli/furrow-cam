@@ -4,6 +4,14 @@ import { extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import {
+  captureError,
+  parseTelemetryEvent,
+  posthogHost,
+  setTelemetrySink,
+  type TelemetryEvent,
+  track,
+} from "@furrow/workspace/lib/telemetry";
+import {
   app,
   BrowserWindow,
   dialog,
@@ -15,6 +23,7 @@ import {
   session,
   shell,
 } from "electron";
+import { PostHog } from "posthog-node";
 import {
   CHANNELS,
   type DataFile,
@@ -34,6 +43,7 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
+import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import {
   latestDesktopRelease,
   newerRelease,
@@ -80,6 +90,15 @@ const recentPath = () => join(dataDir(), "recent.json");
 const updatesPath = () => join(dataDir(), "updates.json");
 /** An in-memory session for the update check alone (ADR-0048). */
 const UPDATE_PARTITION = "updates";
+const telemetryPath = () => join(dataDir(), "telemetry.json");
+/** An in-memory session for usage statistics and error reports alone (ADR-0052). */
+const TELEMETRY_PARTITION = "telemetry";
+/** Set at build time; without it the app never asks or sends anything. */
+const POSTHOG_KEY = process.env.POSTHOG_KEY || null;
+/** Our proxy domain, or PostHog's EU cloud; also set at build time. */
+const POSTHOG_URL = posthogHost(process.env.POSTHOG_HOST);
+/** Anonymous: a new ID each launch, never stored. */
+const LAUNCH_ID = crypto.randomUUID();
 
 let window: BrowserWindow | null = null;
 /** Set by the window's own state: whether the open project has unsaved changes. */
@@ -98,6 +117,21 @@ let prefsWrite = Promise.resolve();
 let releaseCheck: Promise<Release | null> | null = null;
 /** An update dialog is open: another would repeat it. */
 let updateDialogOpen = false;
+let telemetryPrefs: TelemetryPrefs = {};
+/** Writes of `telemetry.json`, in order, as `prefsWrite`. */
+let telemetryWrite = Promise.resolve();
+/** Running only while the user agrees. */
+let posthog: PostHog | null = null;
+
+// The main process's events and errors, the renderer's included, go through the shared
+// module, so each error is sent once and a session sends a limited number (ADR-0052).
+setTelemetrySink({
+  track: trackEvent,
+  error: (error) => posthog?.captureException(error, LAUNCH_ID, appProperties()),
+});
+// Observes uncaught errors without changing how they're handled. In Node's default mode an
+// unhandled rejection is raised as one, so it's seen here too.
+process.on("uncaughtExceptionMonitor", (error) => captureError(error));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -115,6 +149,14 @@ if (!app.requestSingleInstanceLock()) {
   app.on("before-quit", () => {
     quitting = true;
   });
+  // Sends what's queued, for at most two seconds, before the app quits.
+  app.on("will-quit", (event) => {
+    const client = posthog;
+    if (!client) return;
+    posthog = null;
+    event.preventDefault();
+    void client.shutdown(2_000).finally(() => app.quit());
+  });
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin" || quitting) app.quit();
   });
@@ -126,9 +168,15 @@ if (!app.requestSingleInstanceLock()) {
     blockNetwork();
     registerIpc();
     updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
+    telemetryPrefs = parseTelemetryPrefs(await readJson(telemetryPath()));
+    applyTelemetry();
     Menu.setApplicationMenu(buildMenu());
     createWindow();
-    window?.once("ready-to-show", () => void startupUpdateCheck());
+    window?.once("ready-to-show", async () => {
+      // The update check runs whatever happens to the telemetry question.
+      await askAboutTelemetry().catch(() => {});
+      await startupUpdateCheck();
+    });
   });
 }
 
@@ -158,8 +206,9 @@ function serveRenderer() {
 
 /**
  * Cancels every request to the network: the app works offline (PRD-0007 D2).
- * The only exception is the update check's own session, which reaches the
- * releases list and nothing else (ADR-0048).
+ * The only exceptions are the update check's own session, which reaches the
+ * releases list and nothing else (ADR-0048), and telemetry's, which reaches
+ * only PostHog (ADR-0052).
  */
 function blockNetwork() {
   if (DEV_URL) return;
@@ -173,6 +222,77 @@ function blockNetwork() {
     .webRequest.onBeforeRequest(filter, (details, callback) =>
       callback({ cancel: details.url !== RELEASES_URL }),
     );
+  session
+    .fromPartition(TELEMETRY_PARTITION)
+    .webRequest.onBeforeRequest(filter, (details, callback) =>
+      // Also refuses what was queued before the user turned telemetry off.
+      callback({ cancel: !telemetryPrefs.enabled || !details.url.startsWith(`${POSTHOG_URL}/`) }),
+    );
+}
+
+/** Starts or stops sending to match the user's choice. */
+function applyTelemetry() {
+  if (POSTHOG_KEY && telemetryPrefs.enabled) {
+    posthog ??= new PostHog(POSTHOG_KEY, {
+      host: POSTHOG_URL,
+      // Through telemetry's own session, never Node's network stack.
+      fetch: (url, options) => session.fromPartition(TELEMETRY_PARTITION).fetch(url, options),
+    });
+  } else if (posthog) {
+    void posthog.shutdown();
+    posthog = null;
+  }
+}
+
+/** Properties of every event: none of them about the user. */
+function appProperties() {
+  return { $process_person_profile: false, $os: process.platform, $app_version: app.getVersion() };
+}
+
+function trackEvent({ event, ...properties }: TelemetryEvent) {
+  posthog?.capture({
+    distinctId: LAUNCH_ID,
+    event,
+    properties: { ...properties, ...appProperties() },
+  });
+}
+
+/** Asks once whether to send usage statistics and error reports. */
+async function askAboutTelemetry() {
+  if (!POSTHOG_KEY || telemetryPrefs.enabled !== undefined) return;
+  const { response } = await dialog.showMessageBox({
+    type: "question",
+    message: "Send anonymous usage statistics and error reports?",
+    detail:
+      'They help fix crashes and show which features are used: events such as "G-code exported" and error messages, never your files, projects or anything that identifies you. You can change this in the Help menu.',
+    buttons: ["Send", "Don't Send"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  await saveTelemetryPrefs({ enabled: response === 0 });
+  Menu.setApplicationMenu(buildMenu());
+}
+
+/** Applies the choice at once and saves it; a failed save keeps it until the app quits. */
+function saveTelemetryPrefs(change: TelemetryPrefs) {
+  telemetryPrefs = { ...telemetryPrefs, ...change };
+  applyTelemetry();
+  const prefs = telemetryPrefs;
+  telemetryWrite = telemetryWrite
+    .then(() => writeJson(telemetryPath(), prefs))
+    .catch((error: unknown) => warnUnsaved("Your choice about usage statistics", error));
+  return telemetryWrite;
+}
+
+/** Says that a choice couldn't be saved and only lasts until the app quits. */
+async function warnUnsaved(what: string, error: unknown) {
+  const reason = error instanceof Error ? ` (${error.message})` : "";
+  await dialog.showMessageBox({
+    type: "warning",
+    message: `${what} couldn't be saved`,
+    detail: `It applies until Furrow CAM quits${reason}.`,
+    buttons: ["OK"],
+  });
 }
 
 /** The newest desktop release on GitHub; throws when it can't be reached. */
@@ -202,15 +322,7 @@ function saveUpdatePrefs(change: UpdatePrefs) {
   const prefs = updatePrefs;
   prefsWrite = prefsWrite
     .then(() => writeJson(updatesPath(), prefs))
-    .catch(async (error: unknown) => {
-      const reason = error instanceof Error ? ` (${error.message})` : "";
-      await dialog.showMessageBox({
-        type: "warning",
-        message: "Your update choice couldn't be saved",
-        detail: `It applies until Furrow CAM quits${reason}.`,
-        buttons: ["OK"],
-      });
-    });
+    .catch((error: unknown) => warnUnsaved("Your update choice", error));
   return prefsWrite;
 }
 
@@ -405,6 +517,17 @@ function buildMenu() {
           checked: updatePrefs.checkAtStartup === true,
           click: (item) => void saveUpdatePrefs({ checkAtStartup: item.checked }),
         },
+        ...(POSTHOG_KEY
+          ? [
+              {
+                label: "Send Usage Statistics and Error Reports",
+                type: "checkbox" as const,
+                checked: telemetryPrefs.enabled === true,
+                click: (item: { checked: boolean }) =>
+                  void saveTelemetryPrefs({ enabled: item.checked }),
+              },
+            ]
+          : []),
       ],
     },
   ];
@@ -520,6 +643,12 @@ function registerIpc() {
     if (quitAfterClose) app.quit();
     else window?.close();
   });
+
+  ipcMain.on(CHANNELS.trackEvent, (_event, data: unknown) => {
+    const event = parseTelemetryEvent(data);
+    if (event) track(event);
+  });
+  ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
 
   ipcMain.handle(CHANNELS.takePendingPaths, () => {
     const paths = pendingPaths;

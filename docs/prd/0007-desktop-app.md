@@ -31,7 +31,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | D1 | Installers for macOS (Apple Silicon and Intel), Windows and Linux are published with every release on the GitHub releases page | Must |
-| D2 | The app works fully offline and makes no network requests other than the update check the user agreed to (D12); there is no account and no sign-in | Must |
+| D2 | The app works fully offline and makes no network requests other than the update check (D12) and the usage statistics and error reports (D13) the user agreed to; there is no account and no sign-in | Must |
 | D3 | The workspace is the web app's: import, operations, toolpaths, simulation, G-code export, 3D models (PRD-0005) | Must |
 | D4 | A start screen offers New project, Open and the recently opened files | Must |
 | D5 | Projects are saved as `.furrow` files with New, Open, Save, Save As and Close; the window shows unsaved changes and the app asks before closing or quitting with them | Must |
@@ -42,6 +42,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 | D10 | The web app imports `.furrow` files | Must |
 | D11 | The download page explains how to open the app the first time despite the operating system's warning for unsigned apps | Should |
 | D12 | If the user agrees on first start, the app checks for a newer version at start-up and offers to open its release page; the user can check by hand from the Help menu and turn the start-up check off | Should |
+| D13 | If the user agrees on first start, the app sends anonymous usage statistics and error reports (ADR-0052); the user can turn them on or off from the Help menu | Should |
 
 ## User flow
 
@@ -64,3 +65,4 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 
 - 2026-10-18: created (#184, ADR-0044, ADR-0045, ADR-0046, ADR-0047)
 - 2026-10-18: D12, an opt-in update check; D2 allows it (#212, ADR-0048)
+- 2026-10-20: D13, opt-in usage statistics and error reports; D2 allows them (#283, ADR-0052)

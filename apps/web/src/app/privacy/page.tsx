@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051).
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052).
 const LAST_UPDATED = "20 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
@@ -76,6 +76,17 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="The desktop app">
+          <p>
+            The desktop app keeps your projects, bits and machines in files on your computer and
+            never sends them to us. It makes no network requests except two you are asked about on
+            first start and can turn off in its Help menu: checking GitHub for a newer version,
+            which sends GitHub only your IP address and the app&apos;s user agent, and sending
+            PostHog the anonymous usage statistics and error reports described below, with a new
+            random ID each time the app starts.
+          </p>
+        </Section>
+
         <Section title="Why we process it">
           <List>
             <li>
@@ -83,8 +94,11 @@ export default function PrivacyPage() {
               (performance of a contract).
             </li>
             <li>
-              Request logs, page-view and download counts: to keep the service secure and working
-              and to understand how it is used (legitimate interest).
+              Request logs, usage statistics, error reports and download counts: to keep the service
+              secure and working and to understand how it is used (legitimate interest).
+            </li>
+            <li>
+              Usage statistics and error reports from the desktop app: only if you agree (consent).
             </li>
           </List>
         </Section>
@@ -113,12 +127,17 @@ export default function PrivacyPage() {
               emails, so it sees your email address and the content of those emails.
             </li>
             <li>
-              <External href="https://www.goatcounter.com/help/privacy">GoatCounter</External>{" "}
-              (goatcounter.com) counts page views, without cookies. It receives the page&apos;s
-              route without any IDs (e.g. <code>/projects/[id]</code>), the website you came from
-              (domain only, on your first page view), your screen size, and, with the request, your
-              IP address and user agent. It uses these for country and browser statistics and
-              doesn&apos;t store your IP address. Page views are not linked to your account.
+              <External href="https://posthog.com/privacy">PostHog</External> (EU cloud, Frankfurt)
+              receives anonymous usage statistics and error reports, without cookies or anything
+              stored in your browser. It receives the page&apos;s route without any IDs (e.g.{" "}
+              <code>/projects/[id]</code>), the website you came from (domain only, on your first
+              page view), your browser, system and screen size, a few events (a project created, a
+              file imported with its format, an operation added with its type, G-code exported, an
+              account created, guest projects imported) and, when something breaks, the error&apos;s
+              type, a shortened message and where in our code it happened. It never receives your
+              projects, file names, drawings or email address, and nothing is linked to your
+              account. With the request it receives your IP address and user agent, which it uses to
+              tell visits apart for a day and doesn&apos;t store.
             </li>
             <li>
               <External href="https://haveibeenpwned.com/Privacy">Have I Been Pwned</External>{" "}

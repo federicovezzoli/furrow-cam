@@ -28,6 +28,7 @@ import {
   VCarveParams,
 } from "@furrow/document";
 import type { z } from "zod";
+import { track } from "../lib/telemetry";
 import type { DocumentStore } from "./document-store";
 
 /**
@@ -252,6 +253,7 @@ function appendModelOperation(
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
+  track({ event: "operation_added", type: operation.type });
   return id;
 }
 
@@ -273,6 +275,7 @@ function appendOperation(
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
+  track({ event: "operation_added", type: operation.type });
   return id;
 }
 
