@@ -9,6 +9,7 @@ import {
 } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../geometry/clipper";
+import { translatePath } from "../geometry/translate";
 import type { Vec3 } from "../scene/stock";
 import { DEFAULT_SAFE_Z, generateToolpath, toolpathInput } from "./generate";
 import { depthLevels } from "./passes";
@@ -377,6 +378,28 @@ describe("profileToolpath", () => {
       expectStepsDown(toolpath, (x, y) => x > 40 && x < 46.5 && y > 30 && y < 48, 2);
     },
   );
+
+  it("cuts only around a bridged notch in depth passes, then one finish lap", () => {
+    const toolpath = profile(finished, [notched], bit);
+    expect(straightPlunges(toolpath, -18)).toHaveLength(1);
+    const finishing = (x: number, y: number) =>
+      Math.abs(y + bit.diameter / 2) < 1e-6 || Math.abs(x - 100 - bit.diameter / 2) < 1e-6;
+    // The finishing offset of the walls away from the notch is only cut at full depth.
+    const walls = steps(toolpath).filter(
+      ([from, move]) => finishing(from[0], from[1]) && finishing(move.to[0], move.to[1]),
+    );
+    expect(walls.length).toBeGreaterThan(0);
+    expect(walls.every(([from, move]) => from[2] === -18 && move.to[2] === -18)).toBe(true);
+  });
+
+  it("finishes each hole of a part with a single lap", () => {
+    const holes = [20, 50, 80].map((x) => ({
+      ...hole,
+      paths: hole.paths.map((path) => translatePath(path, [x - 50, 0])),
+    }));
+    const toolpath = profile({ allowance: 0.5, finishPass: true }, [square, ...holes]);
+    expect(straightPlunges(toolpath, -6)).toHaveLength(4);
+  });
 
   it("cuts a neck the depth passes can't pass in depth passes too", () => {
     const dumbbell = polygon([
