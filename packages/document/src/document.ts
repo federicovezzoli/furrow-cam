@@ -5,7 +5,7 @@ import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 16;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -58,7 +58,7 @@ export const TouchOff = z.strictObject({
    * This project's tool change on the pad (ADR-0043), in place of the
    * machine's `toolChange` block and the move over the pad; `null` keeps
    * them. `{padX}` and `{padY}` stand for the pad's centre in work
-   * coordinates.
+   * coordinates, `{safeZ}` for the machine's safe Z.
    */
   toolChange: GcodeBlock,
 });

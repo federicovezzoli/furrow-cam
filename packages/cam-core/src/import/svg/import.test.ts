@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { flattenPath } from "../../geometry/flatten";
 import affinity from "./fixtures/affinity.svg?raw";
 import illustrator from "./fixtures/illustrator.svg?raw";
+import illustratorHiddenLayer from "./fixtures/illustrator-hidden-layer.svg?raw";
 import illustratorLegacy from "./fixtures/illustrator-legacy.svg?raw";
 import inkscape from "./fixtures/inkscape.svg?raw";
 import { importSvg, MAX_SVG_ELEMENTS, parseSvg, SvgImportError, svgNeedsDpi } from "./import";
@@ -367,6 +368,69 @@ describe("importSvg", () => {
       "Skipped text (convert it to paths before exporting) (2).",
       "Skipped images (1).",
     ]);
+  });
+
+  it("skips a layer Illustrator hides through a style class, children shown inline included", () => {
+    const { shapes, warnings } = importSvg(illustratorHiddenLayer);
+    expect(shapes.map((shape) => shape.layer)).toEqual(["Cut", "Cut"]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("skips elements a stylesheet hides by class, id or type", () => {
+    const names = (body: string) => importSvg(svg(body)).shapes.map((shape) => shape.name);
+    const shapes =
+      '<path id="a" d="M0 0 H1"/><path id="b" class="x y" d="M0 0 H1"/><rect id="c" width="1" height="1"/>';
+    expect(names(`<style>.y{display:none}</style>${shapes}`)).toEqual(["a", "c"]);
+    expect(names(`<style>#a, rect { display : none }</style>${shapes}`)).toEqual(["b"]);
+    expect(names(`<style>path.x.y{display:none}</style>${shapes}`)).toEqual(["a", "c"]);
+    expect(names(`<style>.z{display:none}</style>${shapes}`)).toEqual(["a", "b", "c"]);
+    expect(names(`<style><![CDATA[ /* hidden */ *{display:none} ]]></style>${shapes}`)).toEqual([]);
+    // Rules in at-rules such as `@media print` don't apply on screen.
+    expect(names(`<style>@media print { .y{display:none} }</style>${shapes}`)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("applies style rules in cascade order", () => {
+    const names = (body: string) => importSvg(svg(body)).shapes.map((shape) => shape.name);
+    // The style attribute beats a rule, which beats the presentation attribute.
+    expect(
+      names(
+        '<style>.x{display:none}</style><path id="a" class="x" style="display:inline" d="M0 0 H1"/>' +
+          '<path id="b" class="x" display="inline" d="M0 0 H1"/>',
+      ),
+    ).toEqual(["a"]);
+    // `!important` beats the style attribute; an id beats a class; a later rule an earlier one.
+    expect(
+      names(
+        "<style>.x{display:none!important} #b{display:inline} .y{display:none} .z{display:none} .z{display:inline}</style>" +
+          '<path id="a" class="x" style="display:inline" d="M0 0 H1"/><path id="b" class="y" d="M0 0 H1"/>' +
+          '<path id="c" class="z" d="M0 0 H1"/>',
+      ),
+    ).toEqual(["b", "c"]);
+  });
+
+  it("skips shapes hidden by visibility, unless a child is shown again", () => {
+    const names = (body: string) => importSvg(svg(body)).shapes.map((shape) => shape.name);
+    expect(
+      names(
+        '<style>.shown{visibility:visible}</style><g visibility="hidden"><path id="a" d="M0 0 H1"/>' +
+          '<path id="b" class="shown" d="M0 0 H1"/><g style="visibility: collapse"><path id="c" visibility="visible" d="M0 0 H1"/></g></g>' +
+          '<path id="d" style="visibility:hidden" d="M0 0 H1"/><use href="#e" visibility="hidden"/><path id="e" d="M0 0 H1"/>',
+      ),
+    ).toEqual(["b", "c", "e"]);
+  });
+
+  it("warns when a stylesheet hides elements with rules it can't apply", () => {
+    const warnings = (sheet: string) =>
+      importSvg(svg(`<style>${sheet}</style><path d="M0 0 H1"/>`)).warnings;
+    expect(warnings("g > .x { display: none } .y{display:none}")).toEqual([
+      expect.stringContaining("stylesheet hides elements"),
+    ]);
+    expect(warnings("g path:hover, [data-a] { visibility: hidden }")).toHaveLength(1);
+    expect(warnings("g > .x { fill: red } .y{display:none}")).toEqual([]);
   });
 
   it("warns about shapes with relative sizes and keeps the rest", () => {

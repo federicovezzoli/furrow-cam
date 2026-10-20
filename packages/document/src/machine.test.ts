@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { lowRider, machine } from "./fixtures";
-import { Machine, machineFields } from "./machine";
+import {
+  DEFAULT_SPIN_UP_DELAY,
+  Machine,
+  machineFields,
+  machineSpinUpDelay,
+  upgradeMachine,
+} from "./machine";
 
 describe("Machine", () => {
   it("accepts a machine with a controlled spindle", () => {
@@ -57,5 +63,27 @@ describe("Machine", () => {
     expect(Machine.safeParse({ ...machine, entryClearance: -0.1 }).success).toBe(false);
     const above = Machine.safeParse({ ...machine, entryClearance: machine.safeZ + 0.1 });
     expect(above.error?.issues).toMatchObject([{ path: ["entryClearance"] }]);
+  });
+});
+
+describe("machineSpinUpDelay", () => {
+  it("is the machine's delay to the millisecond, the default without one, none when manual", () => {
+    expect(machineSpinUpDelay(machine)).toBe(machine.spinUpDelay);
+    expect(machineSpinUpDelay({ ...machine, spinUpDelay: 1.23456 })).toBe(1.235);
+    expect(machineSpinUpDelay({ ...machine, spinUpDelay: 0.0004 })).toBe(0);
+    expect(machineSpinUpDelay(null)).toBe(DEFAULT_SPIN_UP_DELAY);
+    expect(machineSpinUpDelay(lowRider)).toBe(0);
+  });
+});
+
+describe("upgradeMachine", () => {
+  it("fills in the fields machines stored by earlier releases lack, keeping the rest", () => {
+    const { spinUpDelay: _, ...stored } = machine;
+    expect(Machine.parse(upgradeMachine(stored))).toEqual({
+      ...machine,
+      spinUpDelay: DEFAULT_SPIN_UP_DELAY,
+    });
+    expect(upgradeMachine({ ...machine, spinUpDelay: 8 })).toEqual({ ...machine, spinUpDelay: 8 });
+    expect(upgradeMachine(null)).toBeNull();
   });
 });

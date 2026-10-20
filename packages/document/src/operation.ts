@@ -241,9 +241,14 @@ export const EngraveParams = z.strictObject({
 });
 export type EngraveParams = z.infer<typeof EngraveParams>;
 
+/** V-bits, ball and flat end mills cut sideways; a drill bit snaps under a side load. */
+export function canCutSideways(tool: Tool): boolean {
+  return tool.type !== "drill";
+}
+
 /** V-bits, ball and flat end mills engrave: a drill bit can't cut sideways. */
 export function canEngrave(tool: Tool): boolean {
-  return tool.type !== "drill";
+  return canCutSideways(tool);
 }
 
 export const EngraveOperation = z
@@ -452,6 +457,27 @@ export const Operation = z.discriminatedUnion("type", [
   ReliefRoughOperation,
 ]);
 export type Operation = z.infer<typeof Operation>;
+
+/**
+ * Why `operation` can't cut with its tool, or `null`: a drill bit on a
+ * profile, pocket or 3D operation, which all move the bit sideways through
+ * the stock (#242). Projects saved before this check can hold one, so the
+ * document schema still accepts it, to keep them opening; picking a tool,
+ * adding operations and computing toolpaths reject it instead.
+ */
+export function toolProblem(operation: Operation): string | null {
+  switch (operation.type) {
+    case "profile":
+    case "pocket":
+    case "relief_rough":
+    case "relief_finish":
+      return canCutSideways(operation.tool)
+        ? null
+        : "Drill bits can't cut sideways: pick an end mill or a V-bit";
+    default:
+      return null;
+  }
+}
 
 /**
  * The second tool an operation cuts with, before its own (ADR-0026): a

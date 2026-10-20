@@ -1,8 +1,15 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
-import type { Machine, Stock, StockAnchor, Tool, TouchOff } from "@furrow/document";
+import {
+  type Machine,
+  machineSpinUpDelay,
+  type Stock,
+  type StockAnchor,
+  type Tool,
+  type TouchOff,
+} from "@furrow/document";
 import { formatNumber } from "./format";
 import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
-import { fillTouchOffBlock } from "./touch-off";
+import { fillPlaceholders, unfilledPlaceholders } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
@@ -17,16 +24,25 @@ const MODES = "G21 G90 G94 G17";
  *   height and only then starts the spindle (`M3`, with `S` unless the
  *   machine has a manual spindle), so it never spins up touching the work.
  *   Every word is written in full: the user may have jogged during a pause.
+ * - GRBL doesn't wait for the spindle to reach speed, so a dwell (`G4 P`, the
+ *   machine's spin-up delay in seconds) follows each `M3` that starts it or
+ *   raises its speed. The spindle counts as stopped after a tool change, and
+ *   after a custom operation-start block that stops it or ends or pauses the
+ *   program. A manual spindle gets none: it is switched on by hand, and up to
+ *   speed when the job runs.
  * - An operation with clearing moves (ADR-0026) is written as two: the
  *   clearing moves with its clearing tool, named "<operation>, clearing",
  *   then its own.
  * - The first tool is assumed loaded. When the next operation's bit differs,
  *   GRBL has no `M6`, so the tool change turns the spindle off, rises and
  *   pauses with `M0`, asking for Z to be zeroed again: there are no tool
- *   length offsets. With a touch-off pad (ADR-0041), it rapids over the
- *   pad's centre before pausing, and before a custom tool-change block. A
- *   pad's own tool change (ADR-0043) replaces all of it, its placeholders
- *   filled in.
+ *   length offsets. `MODES` follows the pause, since zeroing Z with a
+ *   sender's probe macro or jogging can leave `G91` or `G20` set. It leaves
+ *   the work offset (`G54`…) and any `G43.1` alone: the program never sets
+ *   them, and a macro's `G43.1` may be how the new bit was zeroed. With a
+ *   touch-off pad (ADR-0041), it rapids over the pad's centre before
+ *   pausing, and before a custom tool-change block. A pad's own tool change
+ *   (ADR-0043) replaces all of it, its placeholders filled in.
  * - Each tool's cutter shape is written in a machine-readable comment
  *   (`toolShapeComment`, ADR-0042) when the cutter is in the spindle: for the
  *   first tool in the header, before the program-start block; at a tool
@@ -35,7 +51,8 @@ const MODES = "G21 G90 G94 G17";
  *   the machine's maximum, and spindle speeds are kept in its range; either
  *   warns.
  * - The machine's custom blocks replace the program start, the program end,
- *   the operation comment and the tool change, copied verbatim. They may move
+ *   the operation comment and the tool change, copied verbatim apart from
+ *   their placeholders (`PLACEHOLDERS`); one left unfilled warns. They may move
  *   the tool or change modes (a `G91` retract), so `MODES` and every word are
  *   written again after one, except at the end.
  */
@@ -44,9 +61,19 @@ export const grbl: PostProcessor = { id: "grbl", extension: ".gcode", post: post
 function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostOutput {
   const out = new GcodeWriter(stockOffset(stock));
   const warnings: string[] = [];
+  const pad = activeTouchOff(stock);
+  /** `block` with its placeholders filled in, warning once about any left. */
+  function fill(label: string, block: string): string {
+    const filled = fillPlaceholders(block, stock, pad, safeZ);
+    for (const placeholder of unfilledPlaceholders(filled)) {
+      const warning = `${label}: ${placeholder} can't be filled in, so it's written as is.`;
+      if (!warnings.includes(warning)) warnings.push(warning);
+    }
+    return filled;
+  }
   /** A custom block, then the modes the program's coordinates need. */
-  function custom(block: string) {
-    out.custom(block);
+  function custom(label: string, block: string) {
+    out.custom(fill(label, block));
     out.line(MODES);
   }
 
@@ -58,7 +85,6 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     const before = steps[i - 1];
     return before !== undefined && !sameBit(before.tool, step.tool);
   });
-  const pad = activeTouchOff(stock);
   if (changesBit) {
     out.comment(
       pad
@@ -68,8 +94,12 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   }
   const first = steps[0];
   if (first) out.line(toolShapeComment(first.tool));
-  if (machine?.programStart) custom(machine.programStart);
+  if (machine?.programStart) custom("Program start", machine.programStart);
   else out.line(MODES);
+
+  const spinUpDelay = machineSpinUpDelay(machine);
+  /** The spindle's speed while it is known to be on, else `undefined`. */
+  let speed: number | undefined;
 
   let tool: Tool | null = null;
   for (const step of steps) {
@@ -77,30 +107,35 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       out.comment(`Tool: ${toolLabel(step.tool)}`);
       if (tool !== null) {
         out.forget();
+        // Changing the bit stops the spindle, whatever the blocks write.
+        speed = undefined;
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
-          custom(fillTouchOffBlock(pad.toolChange, stock, pad));
+          custom("Tool change on the pad", pad.toolChange);
         } else if (machine?.toolChange) {
           // Over the pad first, where Z is zeroed; the block may stop the spindle.
           if (pad) {
             out.rapid({ z: safeZ });
             out.rapid({ x: pad.x, y: pad.y });
           }
-          custom(machine.toolChange);
+          custom("Tool change", machine.toolChange);
         } else {
           out.line("M5");
           out.rapid({ z: safeZ });
           if (pad) out.rapid({ x: pad.x, y: pad.y });
           const zero = pad ? "zero Z on the touch-off pad" : "zero Z again";
           out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and ${zero}`)}`);
+          out.line(MODES);
         }
         out.line(toolShapeComment(step.tool));
       }
     }
     tool = step.tool;
 
-    if (machine?.operationStart) custom(machine.operationStart);
-    else out.comment(`Operation: ${step.name}`);
+    if (machine?.operationStart) {
+      custom("Operation start", machine.operationStart);
+      if (stopsSpindle(machine.operationStart)) speed = undefined;
+    } else out.comment(`Operation: ${step.name}`);
 
     // Getting to the first entry point safely is the post-processor's job.
     // The user may have jogged during a pause, so nothing is taken as known.
@@ -115,6 +150,11 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       );
     }
     out.line(rpm.value === null ? "M3" : `M3 S${rpm.value}`);
+    // `null` only for a manual spindle, which never waits.
+    if (spinUpDelay > 0 && rpm.value !== null) {
+      if (speed === undefined || rpm.value > speed) out.line(`G4 P${formatNumber(spinUpDelay)}`);
+      speed = rpm.value;
+    }
 
     let previous: Vec3 | null = null;
     let clamped = 0;
@@ -137,7 +177,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     }
   }
 
-  if (machine?.programEnd) out.custom(machine.programEnd);
+  if (machine?.programEnd) out.custom(fill("Program end", machine.programEnd));
   else {
     out.line("M5");
     out.rapid({ z: safeZ });
@@ -145,6 +185,12 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     out.line("M30");
   }
   return { gcode: out.toString(), warnings };
+}
+
+/** Whether custom `block` stops the spindle (`M5`), or pauses or ends the program (`M0`, `M1`, `M2`, `M30`). */
+function stopsSpindle(block: string): boolean {
+  const code = block.replace(/\([^)]*\)/g, " ").replace(/;.*$/gm, " ");
+  return /(?:^|[^A-Z])M0*(?:0|1|2|5|30)(?![0-9.])/i.test(code);
 }
 
 type Axes = { x?: number; y?: number; z?: number };

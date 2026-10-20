@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { formatNumber } from "./format";
 import { grbl, toolShapeComment } from "./grbl";
 import { type PostInput, postSteps } from "./post";
+import { suggestTouchOffToolChange } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -75,6 +76,7 @@ describe("grbl", () => {
         "(Operation: Holes)",
         "G0 Z5",
         "M3 S18000",
+        "G4 P5",
         "G0 X100 Y50",
         "G1 Z-5 F500",
         "G0 Z5",
@@ -161,6 +163,79 @@ describe("grbl", () => {
     it("omits S for a manual spindle", () => {
       const { gcode } = post({ machine: { ...lowRider, toolChange: null } });
       expect(gcode).toContain("\nM3\n");
+      expect(gcode).not.toContain("G4");
+    });
+
+    describe("spin-up delay", () => {
+      const at = (rpm: number, x: number) => ({
+        operation: operation(`At ${rpm}`, { ...endMill, spindleRpm: rpm }),
+        toolpath: plunge([x, 0]),
+      });
+      /** Each `M3` with the dwell after it, if any. */
+      const starts = (gcode: string) =>
+        gcode.match(/^M3( S\d+)?(\nG4 P.*)?$/gm)?.map((line) => line.replace("\n", " ")) ?? [];
+
+      it("waits after starting the spindle and raising its speed, not at the same or a lower one", () => {
+        const operations = [at(18000, 0), at(18000, 10), at(24000, 20), at(12000, 30)];
+        expect(starts(post({ machine, operations }).gcode)).toEqual([
+          "M3 S18000 G4 P5",
+          "M3 S18000",
+          "M3 S24000 G4 P5",
+          "M3 S12000",
+        ]);
+      });
+
+      it("waits after every tool change, which stops the spindle", () => {
+        const operations = [
+          at(18000, 0),
+          {
+            operation: operation("Holes", { ...drillBit, spindleRpm: 18000 }),
+            toolpath: plunge([10, 0]),
+          },
+        ];
+        for (const toolChange of [null, "M0 (Change the bit)"]) {
+          expect(starts(post({ machine: { ...machine, toolChange }, operations }).gcode)).toEqual([
+            "M3 S18000 G4 P5",
+            "M3 S18000 G4 P5",
+          ]);
+        }
+      });
+
+      it("waits after a custom operation start only if it stops the spindle", () => {
+        const operations = [at(18000, 0), at(18000, 10)];
+        for (const operationStart of ["M5", "G0 Z20\nM0 (Check the clamps)", "M05"]) {
+          const { gcode } = post({ machine: { ...machine, operationStart }, operations });
+          expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000 G4 P5"]);
+        }
+        for (const operationStart of [
+          "(Pocket the recess)",
+          "M50 P1 ; M5 is in a comment",
+          "G4 P0.5",
+        ]) {
+          const { gcode } = post({ machine: { ...machine, operationStart }, operations });
+          expect(starts(gcode)).toEqual(["M3 S18000 G4 P5", "M3 S18000"]);
+        }
+      });
+
+      it("doesn't wait for a manual spindle, switched on by hand, or with no delay", () => {
+        const operations = [
+          at(18000, 0),
+          { ...at(18000, 10), operation: operation("Holes", drillBit) },
+        ];
+        const manual = { ...lowRider, toolChange: null };
+        expect(starts(post({ machine: manual, operations }).gcode)).toEqual(["M3", "M3"]);
+        const none = post({ machine: { ...machine, spinUpDelay: 0 }, operations }).gcode;
+        expect(none).not.toContain("G4");
+        // Less than the millisecond G-code writes: no `G4 P0`.
+        const tiny = post({ machine: { ...machine, spinUpDelay: 0.0004 }, operations }).gcode;
+        expect(tiny).not.toContain("G4");
+      });
+
+      it("waits the default delay without a machine, and fractions of a second", () => {
+        expect(starts(post({}).gcode)).toEqual(["M3 S18000 G4 P5"]);
+        const { gcode } = post({ machine: { ...machine, spinUpDelay: 1.5 } });
+        expect(starts(gcode)).toEqual(["M3 S18000 G4 P1.5"]);
+      });
     });
 
     it("keeps the speed in the machine's range and warns", () => {
@@ -225,6 +300,8 @@ describe("grbl", () => {
     it("pauses only when the bit changes", () => {
       const { gcode } = post({ operations });
       expect(gcode.match(/^M0/gm)).toHaveLength(1);
+      // Zeroing Z during the pause may leave G91 or G20 set.
+      expect(gcode).toMatch(/^M0 .*\nG21 G90 G94 G17$/m);
       expect(gcode.match(/^\(Furrow tool:/gm)).toHaveLength(2);
       expect(gcode).toContain(
         [
@@ -232,10 +309,12 @@ describe("grbl", () => {
           "M5",
           "G0 Z5",
           "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z again)",
+          "G21 G90 G94 G17",
           "(Furrow tool: type=drill diameter=6.35)",
           "(Operation: Holes)",
           "G0 Z5",
           "M3 S12000",
+          "G4 P5",
           "G0 X20 Y0",
         ].join("\n"),
       );
@@ -265,6 +344,7 @@ describe("grbl", () => {
             "G0 Z5",
             `G0 ${at}`,
             "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z on the touch-off pad)",
+            "G21 G90 G94 G17",
             "(Furrow tool: type=drill diameter=6.35)",
           ].join("\n"),
         );
@@ -316,6 +396,33 @@ describe("grbl", () => {
       expect(gcode).not.toContain("Change the bit");
     });
 
+    it("rise to the safe Z the program is exported with, after Suggest", () => {
+      const toolChange = suggestTouchOffToolChange(null);
+      const exported = (safeZ: number) =>
+        post({ operations, safeZ, stock: { ...stock, touchOff: { ...pad, toolChange } } }).gcode;
+      expect(exported(5)).toContain("M5\nG0 Z5\nG0 X7.5 Y192.5\nM0");
+      expect(exported(20)).toContain("M5\nG0 Z20\nG0 X7.5 Y192.5\nM0");
+      expect(exported(20)).not.toContain("{safeZ}");
+    });
+
+    it("fill the placeholders in the machine's blocks too, warning once about the rest", () => {
+      const { gcode, warnings } = post({
+        operations,
+        safeZ: 20,
+        stock: { ...stock, touchOff: pad },
+        machine: {
+          ...machine,
+          toolChange: "M5\nG0 Z{safeZ}\nM0 (Change the bit)",
+          operationStart: "(At {padX} {safez})",
+        },
+      });
+      expect(gcode).toContain("M5\nG0 Z20\nM0 (Change the bit)");
+      expect(gcode).toContain("(At 7.5 {safez})");
+      expect(warnings).toEqual([
+        "Operation start: {safez} can't be filled in, so it's written as is.",
+      ]);
+    });
+
     it("ignore the pad with the Z zero on the machine bed", () => {
       const onBed = post({
         operations,
@@ -343,6 +450,7 @@ describe("grbl", () => {
           "(Operation: Sign, clearing)",
           "G0 Z5",
           "M3 S18000",
+          "G4 P5",
           "G0 X40 Y0",
           "G1 Z-5 F500",
           "G0 Z5",
@@ -350,6 +458,7 @@ describe("grbl", () => {
           "M5",
           "G0 Z5",
           "M0 (Change the bit to 60° V-bit, 6.35 mm and zero Z again)",
+          "G21 G90 G94 G17",
           "(Furrow tool: type=v_bit diameter=6.35 vAngle=60 tipDiameter=0)",
           "(Operation: Sign)",
         ].join("\n"),
@@ -418,6 +527,7 @@ describe("grbl", () => {
           "G21 G90 G94 G17",
           "G0 Z5",
           "M3 S18000",
+          "G4 P5",
           "G0 X20 Y0",
         ].join("\n"),
       );
@@ -455,8 +565,9 @@ describe("grbl", () => {
       const [first, second] = shapes as [number, number];
       // In the header, before the first move.
       expect(first).toBeLessThan(lines.findIndex((line) => /^G[01] /.test(line)));
-      // After the pause, before the next operation.
-      expect(lines[second - 1]).toMatch(/^M0 /);
+      // After the pause and the modes, before the next operation.
+      expect(lines[second - 2]).toMatch(/^M0 /);
+      expect(lines[second - 1]).toBe("G21 G90 G94 G17");
       expect(lines[second + 1]).toBe("(Operation: Sign)");
     });
   });

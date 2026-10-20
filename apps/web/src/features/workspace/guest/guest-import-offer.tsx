@@ -4,6 +4,7 @@ import type { StlLimits } from "@furrow/cam-core";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
+import { track } from "@furrow/workspace/lib/telemetry";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -71,6 +72,9 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
       const last = await readLastGuestProjectId().catch(() => null);
       const ids = projects.filter((project) => chosen.has(project.id)).map(({ id }) => id);
       const result = await importToAccount(ids, meshLimits);
+      if (result.imported.length > 0) {
+        track({ event: "guest_imported", projects: result.imported.length });
+      }
       const left = await listGuestProjects().catch(() => []);
       // Projects imported but changed meanwhile stay, unchecked: the account has a copy.
       const changed = new Set(result.changed.map(({ id }) => id));

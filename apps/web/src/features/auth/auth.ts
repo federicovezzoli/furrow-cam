@@ -69,7 +69,9 @@ export const auth = betterAuth({
   // `/delete-user` checks the password, so it gets the same strict limit Better Auth gives sign-in.
   // `/reset-password` too: the breached-password check below runs before Better Auth validates the
   // token, so each request can hold an outbound HIBP call open (ADR-0023).
+  // Counters live in Postgres so every serverless instance shares them (#274).
   rateLimit: {
+    storage: "database",
     customRules: {
       "/delete-user": { window: 10, max: 3 },
       "/reset-password": { window: 10, max: 3 },

@@ -4,16 +4,20 @@ import { createProjectDocument } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
-import type {
-  AccountReason,
-  WorkspaceHost,
-  WorkspaceLinkProps,
+import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
+import { track } from "@furrow/workspace/lib/telemetry";
+import {
+  type AccountReason,
+  leavesProject,
+  type WorkspaceHost,
+  type WorkspaceLinkProps,
 } from "@furrow/workspace/lib/workspace-host";
 import { useWorkspaceHost } from "@furrow/workspace/providers/workspace-host";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { LeaveGuard } from "../host/leave-guard";
 import { webRoute } from "../host/web-project-shell";
 import { AccountDialog } from "./account-dialog";
 import { type GuestSettings, type GuestTools, guestHost } from "./guest-host";
@@ -78,7 +82,10 @@ export function GuestEntry({ fresh = false }: { fresh?: boolean }) {
             ? (last ?? undefined)
             : projects[0]?.id;
         }
-        id ??= (await createGuestProject(NEW_PROJECT, createProjectDocument())).id;
+        if (!id) {
+          id = (await createGuestProject(NEW_PROJECT, createProjectDocument())).id;
+          track({ event: "project_created" });
+        }
         router.replace(webRoute("workspace", id));
       } catch (error) {
         setError(messageOf(error));
@@ -97,6 +104,7 @@ export function GuestProjects() {
     <GuestProjectList
       onCreate={async (name) => {
         const project = await createGuestProject(name, createProjectDocument());
+        track({ event: "project_created" });
         router.push(webRoute("workspace", project.id));
       }}
       onOpen={async (id) => router.push(webRoute("workspace", id))}
@@ -110,6 +118,7 @@ const PromptContext = createContext<(reason: AccountReason) => void>(() => {});
 function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
   const prompt = useContext(PromptContext);
+  const onNavigate = useLeaveNavigate(leavesProject(to));
   if (to === "new-machine") {
     return (
       <a
@@ -123,14 +132,19 @@ function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
       />
     );
   }
-  return <Link href={webRoute(to, project.id)} onClick={onClick} {...props} />;
+  return (
+    <Link href={webRoute(to, project.id)} onClick={onClick} {...props} onNavigate={onNavigate} />
+  );
 }
 
 /** Sign in, at the end of the workspace's top bar (PRD-0008 G9). */
 function SignInButton() {
+  const onNavigate = useLeaveNavigate();
   return (
     <Button size="compact" variant="outline" asChild>
-      <Link href="/sign-in">Sign in</Link>
+      <Link href="/sign-in" onNavigate={onNavigate}>
+        Sign in
+      </Link>
     </Button>
   );
 }
@@ -213,6 +227,7 @@ export function GuestProjectShell({ id, children }: { id: string; children: Reac
     <PromptContext value={setAccountReason}>
       {host && (
         <ProjectShell host={host}>
+          <LeaveGuard path={webRoute("workspace", id)} />
           {children}
           <AccountDialog reason={accountReason} onClose={() => setAccountReason(null)} />
         </ProjectShell>

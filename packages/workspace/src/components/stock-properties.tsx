@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_SAFE_Z, formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
+import { formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
 import { Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -40,6 +40,7 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "../stores/stock-actions";
+import { PlaceholderList } from "./placeholder-list";
 
 const UNIT_LABELS: Record<Units, string> = { mm: "Millimetres", in: "Inches" };
 
@@ -476,9 +477,9 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
         }}
       />
       <p id="touch-off-tool-change-hint" className="text-muted-foreground">
-        Empty, the program moves over the pad, then runs the machine's tool change. Filled in, this
-        replaces both; <code>{"{padX}"}</code> and <code>{"{padY}"}</code> stand for the pad's
-        centre, measured from the zero.
+        Runs at each tool change in place of the machine's. <strong>Suggest</strong> writes one from
+        the machine's tool change, moving over the pad; <strong>Use the machine's</strong> goes back
+        to the machine's own, after a move over the pad. <PlaceholderList />
       </p>
       <div className="flex gap-2">
         <Button
@@ -487,10 +488,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
           size="compact"
           onClick={() => {
             setDraft(null);
-            setTouchOffToolChange(
-              store,
-              suggestTouchOffToolChange(machineBlock, machine?.safeZ ?? DEFAULT_SAFE_Z),
-            );
+            setTouchOffToolChange(store, suggestTouchOffToolChange(machineBlock));
           }}
         >
           Suggest

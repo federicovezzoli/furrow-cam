@@ -3,20 +3,37 @@ import type { Stock, TouchOffDisc } from "@furrow/document";
 import { formatNumber } from "./format";
 
 /**
- * A project's tool change on its touch-off pad (ADR-0043): G-code that
- * replaces the machine's tool change, where `{padX}` and `{padY}` stand for
- * the pad's centre in work coordinates, so the block follows the pad.
+ * The placeholders the post fills in a custom block, the machine's or a
+ * pad's tool change (ADR-0043), so the block follows the pad and the
+ * machine's safe Z, with what each stands for, measured from the zero.
  */
+export const PLACEHOLDERS = {
+  "{padX}": "the touch-off pad's centre X",
+  "{padY}": "the touch-off pad's centre Y",
+  "{safeZ}": "the machine's safe Z",
+} as const;
 
-/** The placeholders a pad's tool change may use. */
-export const TOUCH_OFF_PLACEHOLDERS = ["{padX}", "{padY}"] as const;
+/**
+ * `block` with the placeholders filled in, in work coordinates: `{safeZ}`
+ * always, `{padX}` and `{padY}` when there is a `pad`.
+ */
+export function fillPlaceholders(
+  block: string,
+  stock: Stock,
+  pad: TouchOffDisc | null,
+  safeZ: number,
+): string {
+  const [ox, oy, oz] = stockOffset(stock);
+  const filled = block.replaceAll("{safeZ}", formatNumber(safeZ + oz));
+  if (!pad) return filled;
+  return filled
+    .replaceAll("{padX}", formatNumber(pad.x + ox))
+    .replaceAll("{padY}", formatNumber(pad.y + oy));
+}
 
-/** `block` with the placeholders replaced by `pad`'s centre, in work coordinates. */
-export function fillTouchOffBlock(block: string, stock: Stock, { x, y }: TouchOffDisc): string {
-  const [ox, oy] = stockOffset(stock);
-  return block
-    .replaceAll("{padX}", formatNumber(x + ox))
-    .replaceAll("{padY}", formatNumber(y + oy));
+/** What looks like a placeholder in a filled-in block: one it doesn't know, or a pad's without one. */
+export function unfilledPlaceholders(block: string): string[] {
+  return [...new Set(block.match(/\{[^{}\s]*\}/g))];
 }
 
 /** A motion mode word, `G0` to `G3` (or `G00` to `G03`), and its number. */
@@ -41,25 +58,26 @@ const ARC_WORDS = /[IJKR]\s*[-+]?(\d+\.?\d*|\.\d+)/gi;
 /**
  * A pad's tool change to start from: the machine's `toolChange` block with
  * the tool put over the pad before it zeroes Z (its first pause or probe),
- * every other command as it was (ADR-0043, ADR-0051). XY moves are explicit
+ * every other command as it was (ADR-0043, ADR-0053). XY moves are explicit
  * or modal straight moves and arcs, in work or machine coordinates (`G53`),
  * and moves to a stored position (`G28`, `G30`). The block starts in a
  * straight-move mode, as the program leaves it. The first absolute straight
  * move in work coordinates to an X or Y before the zeroing goes to the pad.
  * Any other first XY move is replaced by a move to the pad, absolute (`G91`
  * restored after it), after the move's other axes; a `G28` or `G30` with no
- * axis words, which moves every axis, by a rise to `safeZ` and the move. The
+ * axis words, which moves every axis, by a rise to `{safeZ}` and the move. The
  * other XY moves before the zeroing lose their X and Y, so the tool stays
  * there: an arc becomes a straight move of its other axes, and a `G28` or
  * `G30` with no axis words a rise. A line whose move goes keeps its other
  * words (`G90`, `G91`, `F`, `S`, `M`) and its comment, and the block's motion
  * mode is written again before the zeroing where the changes left another.
- * A block with no XY move before the zeroing gets a rise to `safeZ` and a
+ * A block with no XY move before the zeroing gets a rise to `{safeZ}` and a
  * move over the pad before it; without a block, it is the default tool
- * change with the move.
+ * change with the move. The post fills the placeholders in, so the block
+ * follows the machine's safe Z as it is when the program is exported.
  */
-export function suggestTouchOffToolChange(toolChange: string | null, safeZ: number): string {
-  const rise = `G0 Z${formatNumber(safeZ)}`;
+export function suggestTouchOffToolChange(toolChange: string | null): string {
+  const rise = "G0 Z{safeZ}";
   const move = "G0 X{padX} Y{padY}";
   if (toolChange === null) {
     return ["M5", rise, move, "M0 (Change the bit and zero Z on the touch-off pad)"].join("\n");

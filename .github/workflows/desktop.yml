@@ -75,6 +75,9 @@ jobs:
         env:
           # Unsigned on purpose: don't pick up a certificate that happens to be on the runner.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # PostHog project key for opt-in usage statistics and error reports (ADR-0052); unset, the app never asks.
+          POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
+          POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
 
       - uses: actions/upload-artifact@v4
         with:

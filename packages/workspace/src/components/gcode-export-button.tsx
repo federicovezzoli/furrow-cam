@@ -4,9 +4,10 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { downloadFile } from "@furrow/ui/lib/download";
 import { cn } from "@furrow/ui/lib/utils";
 import { FileCodeIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
-import { useToolpathStoreApi } from "../providers/workspace-stores";
+import { useDocumentStoreApi, useToolpathStoreApi } from "../providers/workspace-stores";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 
 /**
@@ -26,7 +27,11 @@ export function GcodeExportButton({
   className?: string;
 }) {
   const [pending, setPending] = useState(false);
+  // Read when the program is made, so a rename while it is made counts.
+  const latestName = useRef(name);
+  latestName.current = name;
   const toolpaths = useToolpathStoreApi();
+  const documents = useDocumentStoreApi();
   const { account } = useWorkspaceHost();
 
   async function onClick() {
@@ -37,7 +42,7 @@ export function GcodeExportButton({
     setPending(true);
     let result: GcodeExportResult;
     try {
-      result = await toolpaths.getState().controls.exportGcode(name);
+      result = await toolpaths.getState().controls.exportGcode(() => latestName.current);
     } catch (error) {
       result = { error: error instanceof Error ? error.message : String(error) };
     } finally {
@@ -48,6 +53,8 @@ export function GcodeExportButton({
       return;
     }
     downloadFile(result.gcode, result.fileName, "text/plain");
+    const machine = documents.getState().document.machine;
+    if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
     if (result.warnings.length > 0) {
       window.alert(`The G-code was exported with warnings:\n\n${result.warnings.join("\n")}`);
     }

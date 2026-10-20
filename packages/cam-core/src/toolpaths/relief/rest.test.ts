@@ -209,6 +209,83 @@ describe("rest machining", () => {
     expect(again.moves.filter(({ kind }) => kind === "feed")).toEqual([]);
   });
 
+  for (const strategy of [{ type: "offset" }, { type: "linear", angle: 0 }] as const) {
+    it(`cuts no more than a step down past the model's grid, with ${strategy.type} clearing`, () => {
+      // A 10 × 10 boss in the middle of the model, at (20, 20) on the stock.
+      // A 6 mm rough within the model reaches 3 mm past it, to the model's
+      // bottom plus 0.5; a rest rough leaving 0.2 within a 5 mm margin cuts
+      // the 0.3 left there, its grid ending 1.8 mm past the model, and its
+      // tool reaching the full-height stock beyond the rough's (#246).
+      const boss = new Float32Array([
+        ...rect(10, 10, 20, 20, 0),
+        ...rect(0, 0, 30, 10, -6),
+        ...rect(0, 20, 30, 30, -6),
+        ...rect(0, 10, 10, 20, -6),
+        ...rect(20, 10, 30, 20, -6),
+      ]);
+      const inset: Model = { ...POCKET, placement: { ...POCKET.placement, position: [20, 20] } };
+      const midMill: Tool = { ...endMill, name: "6 mm end mill", diameter: 6, stepDown: 3 };
+      const operations = [
+        roughing(midMill, { boundary: { type: "model" }, stockToLeave: 0.5 }),
+        roughing(smallMill, {
+          strategy,
+          boundary: { type: "margin", distance: 5 },
+          stockToLeave: 0.2,
+          rest: true,
+        }),
+      ];
+      const toolpathContext = { ...context(), mesh: () => boss };
+      const [roughInput, restInput] = toolpathInputs({ ...project(operations), models: [inset] });
+      if (!roughInput || !restInput) throw new Error("no inputs");
+      const earlier = toolpathCuts(
+        roughInput.operation,
+        generateToolpath(roughInput, toolpathContext),
+      );
+      const { moves } = generateToolpath(restInput, toolpathContext);
+      // Each move in order, on the stock as it is then, at the cells within
+      // the tool's reach of it and outside the model. Within it, the boss's
+      // walls keep slivers narrower than `REST_MIN_WIDTH`, which the floor
+      // takes in one go by design.
+      const size = 85;
+      const grid = { columns: 10 * size, rows: 10 * size, cellWidth: 0.1, cellHeight: 0.1 };
+      const { heights } = simulateCuts({ width: size, height: size, thickness: 18 }, earlier, grid);
+      const profile = cutterProfile(smallMill);
+      const cell = (value: number) =>
+        Math.min(grid.columns - 1, Math.max(0, Math.floor(value * 10)));
+      let deepest = 0;
+      let outside = 0;
+      for (let i = 1; i < moves.length; i++) {
+        const from = (moves[i - 1] as ToolpathMove).to;
+        const { to } = moves[i] as ToolpathMove;
+        const before = new Map<number, number>();
+        for (
+          let r = cell(Math.min(from[1], to[1]) - 2);
+          r <= cell(Math.max(from[1], to[1]) + 2);
+          r++
+        ) {
+          for (
+            let c = cell(Math.min(from[0], to[0]) - 2);
+            c <= cell(Math.max(from[0], to[0]) + 2);
+            c++
+          ) {
+            const [x, y] = [(c + 0.5) / 10, (r + 0.5) / 10];
+            if (Math.max(20 - x, x - 50, 20 - y, y - 50) > 0) {
+              before.set(r * grid.columns + c, heights[r * grid.columns + c] as number);
+            }
+          }
+        }
+        sweepMoves(grid, heights, profile, new Float32Array([...from, ...to]), 0, 1);
+        for (const [k, height] of before) {
+          const cut = height - (heights[k] as number);
+          deepest = Math.max(deepest, cut);
+          if (cut > 0.1) outside++;
+        }
+      }
+      expect(outside).toBeGreaterThan(0);
+      expect(deepest).toBeLessThanOrEqual(smallMill.stepDown + 0.01);
+    });
+  }
+
   const sequences: [string, () => Operation[]][] = [
     ["offset roughing", () => [roughing(bigMill), roughing(smallMill, { rest: true })]],
     [

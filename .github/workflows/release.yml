@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       desktop-version: ${{ steps.desktop.outputs.version }}
+      web-version: ${{ steps.web.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,6 +56,12 @@ jobs:
           tag=$(git tag --points-at HEAD --list '@furrow/desktop@*' | head -n 1)
           echo "version=${tag#@furrow/desktop@}" >> "$GITHUB_OUTPUT"
 
+      - name: Web version released
+        id: web
+        run: |
+          tag=$(git tag --points-at HEAD --list '@furrow/web@*' | head -n 1)
+          echo "version=${tag#@furrow/web@}" >> "$GITHUB_OUTPUT"
+
   desktop:
     name: Desktop installers
     needs: release
@@ -64,3 +71,17 @@ jobs:
       tag: "@furrow/desktop@${{ needs.release.outputs.desktop-version }}"
     permissions:
       contents: write
+
+  # furrow.cam shows the newest web app version, read from the releases when it's built.
+  site:
+    name: Rebuild furrow.cam
+    needs: release
+    if: needs.release.outputs.web-version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Vercel deploy hook
+        env:
+          HOOK: ${{ secrets.SITE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "::warning::SITE_DEPLOY_HOOK is not set, furrow.cam was not rebuilt"; exit 0; fi
+          curl -fsS -X POST "$HOOK"

@@ -5,6 +5,7 @@ import { MM_PER_INCH } from "../../units/units";
 import { defaultCreateId, isFinitePath, toStock } from "../common";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
 import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
+import { Stylesheet } from "./style";
 import {
   determinant,
   IDENTITY,
@@ -83,6 +84,8 @@ type Context = {
   name: string;
   /** Whether groups here are layers: children of the root, or of wrappers around them. */
   topLevel: boolean;
+  /** The inherited `visibility`: hidden shapes aren't imported, though a child can be shown again. */
+  visible: boolean;
 };
 
 /** Parses an SVG file. Throws `SvgImportError` if it isn't one. */
@@ -139,6 +142,7 @@ export function importSvg(
 
   const ids = new Map<string, XmlElement>();
   collectIds(root, ids);
+  const styles = new Stylesheet(root);
 
   const skipped = new Map<string, number>();
   const skip = (what: string) => skipped.set(what, (skipped.get(what) ?? 0) + 1);
@@ -165,7 +169,12 @@ export function importSvg(
   function draw(element: XmlElement, parent: Context, name = label(element), sizedBy?: XmlElement) {
     if (drawn >= MAX_SVG_ELEMENTS) return;
     drawn++;
-    if (isHidden(element)) return;
+    if (styles.value(element, "display") === "none") return;
+    const visibility = styles.value(element, "visibility");
+    const visible =
+      visibility === "visible" || visibility === "hidden" || visibility === "collapse"
+        ? visibility === "visible"
+        : parent.visible;
     if (drawing.has(element)) {
       // SVG draws nothing for a reference to an element that contains it.
       skip("circular references");
@@ -202,6 +211,7 @@ export function importSvg(
         layer: isLayer ? label(element) : parent.layer,
         name: isLayer ? "" : wrapper ? parent.name : label(element) || parent.name,
         topLevel: wrapper && parent.topLevel,
+        visible,
       };
       if (tag === "switch") {
         // Only the first child the renderer supports is drawn; Illustrator puts its private data first.
@@ -234,6 +244,7 @@ export function importSvg(
         layer: parent.layer,
         name: name || label(target) || parent.name,
         topLevel: false,
+        visible,
       };
       const targetTag = localName(target);
       within(element, () => {
@@ -260,6 +271,7 @@ export function importSvg(
       return;
     }
 
+    if (!visible) return;
     const subpaths = shapeSubpaths(element, tag, matrix);
     if (subpaths === undefined) return; // Not drawable, e.g. defs, metadata or a gradient.
     if (subpaths === null) {
@@ -286,9 +298,14 @@ export function importSvg(
     }
   }
 
-  drawChildren(root, { matrix: page, layer: "", name: "", topLevel: true });
+  drawChildren(root, { matrix: page, layer: "", name: "", topLevel: true, visible: true });
 
   const warnings = Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`);
+  if (styles.unresolvedHiding) {
+    warnings.push(
+      "The drawing's stylesheet hides elements with rules the importer can't apply, so some imported shapes may be hidden in the drawing: check them.",
+    );
+  }
   if (drawn >= MAX_SVG_ELEMENTS) {
     warnings.push(
       `The drawing has more than ${MAX_SVG_ELEMENTS.toLocaleString("en")} elements, counting repeated copies, so the rest was skipped.`,
@@ -598,11 +615,6 @@ function optionalLength(element: XmlElement, name: string): number | undefined {
   if (text === undefined || text.trim() === "auto") return undefined;
   const length = parseLength(text);
   return length ? length.value * (CSS_PX_PER_UNIT[length.unit] as number) : Number.NaN;
-}
-
-function isHidden(element: XmlElement): boolean {
-  if (element.attributes.display?.trim() === "none") return true;
-  return /(?:^|;)\s*display\s*:\s*none\s*(?:;|$|!)/.test(element.attributes.style ?? "");
 }
 
 /** The element's name without an `svg:` prefix; other namespaces keep theirs and are never drawn. */

@@ -149,6 +149,8 @@ model Machine {
   /// Both `NULL` for a manual spindle: the post-processor omits the `S` word.
   spindleRpmMin  Int?
   spindleRpmMax  Int?
+  /// Seconds to wait after starting the spindle or raising its speed.
+  spinUpDelay    Float
   safeZ          Float
   /// Height above the stock where rapids down stop and feeding starts, at most `safeZ`.
   entryClearance Float
@@ -221,4 +223,15 @@ model ProjectAsset {
 
   @@unique([projectId, sha256])
   @@map("project_asset")
+}
+
+// Better Auth's rate-limit counters (#274), shared by every server instance. `key` is the
+// client IP plus the endpoint path; no other personal data (ADR-0013).
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit") // Better Auth checks for this table name
 }

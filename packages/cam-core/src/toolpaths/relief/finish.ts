@@ -85,31 +85,16 @@ export function reliefGrid(
 ): ReliefGrid | null {
   const { min, max } = placedModelBox(model);
   if (!(max[0] > min[0] && max[1] > min[1])) return null;
-  const [x0, y0, x1, y1] = [min[0] - margin, min[1] - margin, max[0] + margin, max[1] + margin];
-  const corners: [number, number][] = [
-    toPassFrame(angle, [x0, y0]),
-    toPassFrame(angle, [x1, y0]),
-    toPassFrame(angle, [x1, y1]),
-    toPassFrame(angle, [x0, y1]),
-  ];
-  const us = corners.map(([u]) => u);
-  const vs = corners.map(([, v]) => v);
-  const origin: [number, number] = [Math.min(...us), Math.min(...vs)];
-  const width = Math.max(...us) - origin[0];
-  const length = Math.max(...vs) - origin[1];
-
-  let size = cellSize;
-  // Turning the outline leaves rounding errors that mustn't add a cell.
-  const cells = (extent: number) => Math.ceil(extent / size - 1e-9);
-  const wanted = cells(width) * cells(length);
-  const coarsened = wanted > maxCells;
-  if (coarsened) size *= Math.sqrt(wanted / maxCells);
-  let columns = Math.max(2, cells(width));
-  let rows = Math.max(2, cells(length));
-  while (columns * rows > maxCells) {
-    if (width / columns > length / rows) rows--;
-    else columns--;
-  }
+  const grown: Rect = {
+    min: [min[0] - margin, min[1] - margin],
+    max: [max[0] + margin, max[1] + margin],
+  };
+  const corners = rectCorners(grown).map((corner) => toPassFrame(angle, corner));
+  const box = boxAround(corners);
+  const origin: [number, number] = [box.min[0], box.min[1]];
+  const width = box.max[0] - origin[0];
+  const length = box.max[1] - origin[1];
+  const { columns, rows, coarsened } = gridCells(width, length, cellSize, maxCells);
   return {
     columns,
     rows,
@@ -121,6 +106,47 @@ export function reliefGrid(
     base: min[2],
     coarsened,
   };
+}
+
+/**
+ * How many square-ish cells of `size` cover `width` × `length`: larger ones
+ * (`coarsened`) if there would be more than `maxCells`, at least two each way.
+ */
+function gridCells(
+  width: number,
+  length: number,
+  size: number,
+  maxCells: number,
+): { columns: number; rows: number; coarsened: boolean } {
+  // Turning a rectangle leaves rounding errors that mustn't add a cell.
+  const cells = (extent: number, cell: number) => Math.ceil(extent / cell - 1e-9);
+  const wanted = cells(width, size) * cells(length, size);
+  const coarsened = wanted > maxCells;
+  const cell = coarsened ? size * Math.sqrt(wanted / maxCells) : size;
+  let columns = Math.max(2, cells(width, cell));
+  let rows = Math.max(2, cells(length, cell));
+  while (columns * rows > maxCells) {
+    if (width / columns > length / rows) rows--;
+    else columns--;
+  }
+  return { columns, rows, coarsened };
+}
+
+/** The four corners of `rect`, counter-clockwise from its minimum. */
+function rectCorners({ min, max }: Rect): [number, number][] {
+  return [
+    [min[0], min[1]],
+    [max[0], min[1]],
+    [max[0], max[1]],
+    [min[0], max[1]],
+  ];
+}
+
+/** The axis-aligned box around `points`. */
+function boxAround(points: [number, number][]): Rect {
+  const us = points.map(([u]) => u);
+  const vs = points.map(([, v]) => v);
+  return { min: [Math.min(...us), Math.min(...vs)], max: [Math.max(...us), Math.max(...vs)] };
 }
 
 /** The cosine and sine of `angle` in degrees, exact at quarter turns. */
@@ -663,18 +689,40 @@ const MOVES_PER_STEP = 4096;
 
 /**
  * The grid the stock left before a rest operation is simulated on: over the
- * same area as the operation's `grid`, in the same frame, with cells no
- * smaller than half of `REST_MIN_WIDTH`. Narrower material doesn't count,
- * and sweeping a finishing toolpath's many short moves on the operation's
- * own cells would take minutes.
+ * same area as the operation's `grid`, grown to hold `cover` (in stock
+ * coordinates) too if given, in the same frame, with cells no smaller than
+ * half of `REST_MIN_WIDTH`, larger (`coarsened`) if it would take more than
+ * `maxCells`. Narrower material doesn't count, and sweeping a finishing
+ * toolpath's many short moves on the operation's own cells would take
+ * minutes.
  */
-export function restGrid(grid: ReliefGrid): ReliefGrid {
+export function restGrid(
+  grid: ReliefGrid,
+  cover: Rect | null = null,
+  maxCells = MAX_RELIEF_CELLS,
+): ReliefGrid {
+  const [u0, v0] = grid.origin;
+  const own: [number, number][] = [
+    [u0, v0],
+    [u0 + grid.columns * grid.cellWidth, v0 + grid.rows * grid.cellHeight],
+  ];
+  const corners = cover ? rectCorners(cover).map((corner) => toPassFrame(grid.angle, corner)) : [];
+  const box = boxAround([...own, ...corners]);
+  const width = box.max[0] - box.min[0];
+  const length = box.max[1] - box.min[1];
   const size = Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
-  const width = grid.columns * grid.cellWidth;
-  const length = grid.rows * grid.cellHeight;
-  const columns = Math.max(2, Math.ceil(width / size - 1e-9));
-  const rows = Math.max(2, Math.ceil(length / size - 1e-9));
-  return { ...grid, columns, rows, cellWidth: width / columns, cellHeight: length / rows };
+  const { columns, rows, coarsened } = gridCells(width, length, size, maxCells);
+  const [du, dv] = [u0 - box.min[0], v0 - box.min[1]];
+  return {
+    ...grid,
+    columns,
+    rows,
+    cellWidth: width / columns,
+    cellHeight: length / rows,
+    origin: [box.min[0], box.min[1]],
+    outline: grid.outline.map(([u, v]) => [u + du, v + dv]),
+    coarsened,
+  };
 }
 
 /**
@@ -785,8 +833,8 @@ export type RestOptions = {
 export type RestStock = { grid: ReliefGrid; heights: Float32Array };
 
 /**
- * The stock left by `rest` on the `restGrid` of `grid`, with the progress
- * scaled into `[from, to]`.
+ * The stock left by `rest` on the `restGrid` of `grid`, grown to hold
+ * `cover` if given, with the progress scaled into `[from, to]`.
  */
 export function* restStockSteps(
   grid: ReliefGrid,
@@ -794,8 +842,9 @@ export function* restStockSteps(
   bottom: number,
   from: number,
   to: number,
+  cover: Rect | null = null,
 ): Generator<number, RestStock> {
-  const coarse = restGrid(grid);
+  const coarse = restGrid(grid, cover);
   const steps = restHeightsSteps(coarse, rest.cuts, rest.stock, bottom);
   for (let step = steps.next(); ; step = steps.next()) {
     if (step.done) return { grid: coarse, heights: step.value };
@@ -809,19 +858,37 @@ export function* restStockSteps(
  * grid is coarser, but each sample drops the tool at its own position: the
  * stock an earlier pass of the same tool left there is never above it,
  * whatever the cells. Rapids go by `highestUnder` instead, the whole tool.
+ * Positions are in the operation's grid, which the rest grid may extend.
  */
 export class RestDropper {
   private readonly dropper: ToolDropper;
   /** How far from the tool's axis a cell may hold stock it meets: its radius and a cell's diagonal. */
   private readonly reach: number;
+  /** The operation's grid origin in the rest grid. */
+  private readonly du: number;
+  private readonly dv: number;
+  /** The rest tool's radius. */
+  private readonly radius: number;
+  /** For each rest column, the highest cell along a pass a tool there may meet (`dropLine`). */
+  private readonly rowMaxima: Float32Array;
+  private readonly bound: Float64Array;
+  private readonly deque: Int32Array;
 
   constructor(
     private readonly stock: RestStock,
-    private readonly grid: HeightmapGrid,
+    private readonly grid: ReliefGrid,
     profile: CutterProfile,
   ) {
-    this.dropper = new ToolDropper(stock.heights, stock.grid, restProfile(profile));
+    const rest = restProfile(profile);
+    this.dropper = new ToolDropper(stock.heights, stock.grid, rest);
     this.reach = profile.radius + Math.hypot(stock.grid.cellWidth, stock.grid.cellHeight);
+    this.du = grid.origin[0] - stock.grid.origin[0];
+    this.dv = grid.origin[1] - stock.grid.origin[1];
+    this.radius = rest.radius;
+    const { columns } = stock.grid;
+    this.rowMaxima = new Float32Array(columns);
+    this.bound = new Float64Array(columns);
+    this.deque = new Int32Array(columns);
   }
 
   /**
@@ -830,12 +897,13 @@ export class RestDropper {
    * shape and whatever lies between the cells: the highest cell within its
    * radius and a cell's diagonal. Past the grid, the stock's top.
    */
-  highestUnder(u0: number, u1: number, v: number): number {
+  highestUnder(u0: number, u1: number, along: number): number {
     const { columns, rows, cellWidth, cellHeight } = this.stock.grid;
     const { heights } = this.stock;
     const reach = this.reach;
-    const low = Math.min(u0, u1) - reach;
-    const high = Math.max(u0, u1) + reach;
+    const low = Math.min(u0, u1) + this.du - reach;
+    const high = Math.max(u0, u1) + this.du + reach;
+    const v = along + this.dv;
     let highest =
       low < 0 || high > columns * cellWidth || v - reach < 0 || v + reach > rows * cellHeight
         ? 0
@@ -857,7 +925,8 @@ export class RestDropper {
    * more than `REST_MATERIAL` of the stock left.
    */
   remaining(x: number, y: number, z: number): boolean {
-    return this.dropper.dropPoint(x, y, z + REST_MATERIAL) > z + REST_MATERIAL;
+    const tip = this.dropper.dropPoint(x + this.du, y + this.dv, z + REST_MATERIAL);
+    return tip > z + REST_MATERIAL;
   }
 
   /**
@@ -867,9 +936,43 @@ export class RestDropper {
    */
   dropLine(y: number, first: number, last: number, out: Float64Array) {
     const { cellWidth } = this.grid;
+    const { columns, cellWidth: restWidth } = this.stock.grid;
+    const v = y + this.dv;
+    // A drop never ends above the highest cell under the tool: where that is
+    // no higher than the tip already is, the disc scan is skipped. Most of a
+    // pass runs over stock cleared long before.
+    this.passBounds(v);
     for (let i = first; i <= last; i++) {
-      out[i - first] = this.dropper.dropPoint((i + 0.5) * cellWidth, y, out[i - first] as number);
+      const u = (i + 0.5) * cellWidth + this.du;
+      const tip = out[i - first] as number;
+      const column = Math.min(columns - 1, Math.max(0, Math.floor(u / restWidth)));
+      if ((this.bound[column] as number) <= tip) continue;
+      out[i - first] = this.dropper.dropPoint(u, v, tip);
     }
+  }
+
+  /**
+   * Fills `bound[c]` with the highest cell a tool centred in column `c` on
+   * the line `v` may cover: the rows within its radius, the columns within
+   * its radius and a cell. A centre past the grid's ends covers no more than
+   * one in its last column does.
+   */
+  private passBounds(v: number) {
+    const { columns, rows, cellWidth, cellHeight } = this.stock.grid;
+    const { heights } = this.stock;
+    const radius = this.radius;
+    const firstRow = Math.max(0, Math.ceil((v - radius) / cellHeight - 0.5));
+    const lastRow = Math.min(rows - 1, Math.floor((v + radius) / cellHeight - 0.5));
+    this.rowMaxima.fill(-Infinity);
+    for (let row = firstRow; row <= lastRow; row++) {
+      const start = row * columns;
+      for (let column = 0; column < columns; column++) {
+        const cell = heights[start + column] as number;
+        if (cell > (this.rowMaxima[column] as number)) this.rowMaxima[column] = cell;
+      }
+    }
+    const reach = Math.ceil(radius / cellWidth) + 1;
+    slidingMaximum(this.rowMaxima, 0, columns, 0, columns - 1, reach, this.bound, this.deque);
   }
 }
 

@@ -2,6 +2,7 @@ import { DEFAULT_TOOL_PRESET, TOOL_PRESETS, type Tool } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import type { ToolChoice } from "../lib/workspace-host";
 import {
+  cuttingToolChoice,
   defaultToolChoice,
   matchingToolChoice,
   newBitType,
@@ -113,5 +114,19 @@ describe("withCatalog", () => {
     const offered = withCatalog(own);
     expect(defaultToolChoice(offered)?.id).toBe("a");
     expect(offered.filter((tool) => tool.isDefault)).toHaveLength(1);
+  });
+});
+
+describe("cuttingToolChoice", () => {
+  const drillBit: ToolChoice = {
+    id: "d",
+    isDefault: true,
+    tool: { ...endMill, name: "6 mm drill", type: "drill", cutDirection: null, plungeAngle: 90 },
+  };
+
+  it("passes over a default drill bit for the first bit that cuts sideways", () => {
+    expect(defaultToolChoice([drillBit, ...library])?.id).toBe("d");
+    expect(cuttingToolChoice([drillBit, ...library])?.id).toBe("a");
+    expect(cuttingToolChoice([drillBit])).toBeUndefined();
   });
 });
