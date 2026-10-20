@@ -40,6 +40,7 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "../stores/stock-actions";
+import { PlaceholderList } from "./placeholder-list";
 
 const UNIT_LABELS: Record<Units, string> = { mm: "Millimetres", in: "Inches" };
 
@@ -476,9 +477,9 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
         }}
       />
       <p id="touch-off-tool-change-hint" className="text-muted-foreground">
-        Empty, the program moves over the pad, then runs the machine's tool change. Filled in, this
-        replaces both; <code>{"{padX}"}</code> and <code>{"{padY}"}</code> stand for the pad's
-        centre, measured from the zero, and <code>{"{safeZ}"}</code> for the machine's safe Z.
+        Runs at each tool change in place of the machine's. <strong>Suggest</strong> writes one from
+        the machine's tool change, moving over the pad; <strong>Use the machine's</strong> goes back
+        to the machine's own, after a move over the pad. <PlaceholderList />
       </p>
       <div className="flex gap-2">
         <Button

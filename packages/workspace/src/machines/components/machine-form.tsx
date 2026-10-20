@@ -9,6 +9,7 @@ import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import type * as React from "react";
 import { type FormEvent, useState, useTransition } from "react";
+import { PlaceholderList } from "../../components/placeholder-list";
 import { POST_PROCESSOR_LABELS } from "../lib/labels";
 import type { MachineFormErrors } from "../lib/machine-form-data";
 
@@ -160,7 +161,8 @@ export function MachineForm({
         <p className="text-sm text-muted-foreground lg:col-span-full">
           A filled-in block replaces what the post-processor writes at that point, so include
           everything your machine needs there (e.g. <code>G21</code> and <code>G90</code> in the
-          program start). Leave a block empty to keep the default. Text is copied as is.
+          program start). Leave a block empty to keep the default. Text is copied as is, apart from
+          placeholders. <PlaceholderList />
         </p>
         {GCODE_BLOCKS.map(({ name, label, placeholder }) => (
           <div key={name} className="grid content-start gap-2">
