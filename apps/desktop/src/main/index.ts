@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
+import { release as osRelease } from "node:os";
 import { extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import {
   app,
   BrowserWindow,
@@ -386,6 +388,17 @@ function buildMenu() {
       role: "help",
       submenu: [
         { label: "Check for Updates…", click: () => void checkForUpdatesNow() },
+        {
+          label: "Report a Bug…",
+          click: () =>
+            void shell.openExternal(
+              blankReportUrl([
+                ["App", `desktop ${app.getVersion()}`],
+                ["System", `${process.platform} ${osRelease()} (${process.arch})`],
+              ]),
+            ),
+        },
+        { type: "separator" },
         {
           label: "Check for Updates at Start-up",
           type: "checkbox",

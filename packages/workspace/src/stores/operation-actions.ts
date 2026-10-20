@@ -24,6 +24,7 @@ import {
   ReliefRoughParams,
   type Shape,
   type Tool,
+  toolProblem,
   VCarveParams,
 } from "@furrow/document";
 import type { z } from "zod";
@@ -149,7 +150,8 @@ function nextName(document: ProjectDocument, base: string): string {
 /**
  * Appends a profile of `targets` (shapes and paths no longer in the document
  * are skipped) cut with a snapshot of `tool`. Returns the new operation's id,
- * or `null` if none of the targets exist.
+ * or `null` if none of the targets exist or `tool` is a drill bit, which
+ * can't cut sideways.
  */
 export function addProfileOperation(store: DocumentStore, options: NewOperation): string | null {
   return appendOperation(store, options, (document, fields) => ({
@@ -215,7 +217,7 @@ export function addVCarveOperation(store: DocumentStore, options: NewOperation):
 /**
  * Appends a 3D finishing operation on the model `modelId` cut with a snapshot
  * of `tool`. Returns the new operation's id, or `null` if the model isn't in
- * the document.
+ * the document or `tool` is a drill bit.
  */
 export function addReliefFinishOperation(store: DocumentStore, options: NewModelOperation) {
   return appendModelOperation(store, options, (document, fields) => ({
@@ -246,6 +248,7 @@ function appendModelOperation(
   const { document } = store.getState();
   if (!document.models.some((model) => model.id === modelId)) return null;
   const operation = create(document, { id, enabled: true, targets: [], tool });
+  if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
@@ -265,6 +268,8 @@ function appendOperation(
   const existing = normalizeTargets(document.geometry, targets);
   if (existing.length === 0) return null;
   const operation = create(document, { id, enabled: true, targets: existing, tool });
+  // E.g. a drill bit on a profile.
+  if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
   });
@@ -322,13 +327,23 @@ export function deleteOperation(store: DocumentStore, id: string) {
   });
 }
 
+/** Why `operation` can't take `tool`, e.g. a V-bit to drill or a drill bit to profile, or `null`. */
+export function toolError(operation: Operation, tool: Tool): string | null {
+  return operationError({ ...operation, tool } as Operation);
+}
+
+/** Why `candidate` is invalid or can't cut with its tool, or `null`. */
+function operationError(candidate: Operation): string | null {
+  const parsed = Operation.safeParse(candidate);
+  return parsed.success ? toolProblem(candidate) : firstError(parsed.error);
+}
+
 /** Replaces the operation's tool with a snapshot of `tool` (ADR-0003). */
 export function setOperationTool(store: DocumentStore, id: string, tool: Tool): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
   if (!operation) return OK;
-  // E.g. a V-bit for a drill operation.
-  const parsed = Operation.safeParse({ ...operation, tool });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const error = toolError(operation, tool);
+  if (error) return { ok: false, error };
   changeOperation(store, "setOperationTool", id, (draft) => {
     draft.tool = tool;
   });
@@ -375,9 +390,9 @@ export function replaceToolSnapshots(
     if (!uses) continue;
     const candidate = structuredClone(operation);
     replace(candidate);
-    const parsed = Operation.safeParse(candidate);
-    if (parsed.success) accepted.add(operation.id);
-    else rejected.push({ id: operation.id, name: operation.name, error: firstError(parsed.error) });
+    const error = operationError(candidate);
+    if (error === null) accepted.add(operation.id);
+    else rejected.push({ id: operation.id, name: operation.name, error });
   }
   if (accepted.size > 0) {
     store.getState().change("replaceToolSnapshots", (draft) => {

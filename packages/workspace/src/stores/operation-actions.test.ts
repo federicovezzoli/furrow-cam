@@ -1,5 +1,6 @@
 import {
   createProjectDocument,
+  type Operation,
   type OperationTarget,
   type PocketParams,
   ProjectDocument,
@@ -29,6 +30,7 @@ import {
   setOperationEnabled,
   setOperationTargets,
   setOperationTool,
+  toolError,
   updateDrillParams,
   updateEngraveParams,
   updatePocketParams,
@@ -274,6 +276,49 @@ describe("operation edits", () => {
     moveOperation(store, MISSING_ID, 0);
     deleteOperation(store, MISSING_ID);
     expect(store.getState().document).toBe(before);
+  });
+});
+
+describe("drill bits on operations that cut sideways", () => {
+  const drillBit: Tool = { ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 };
+  const sideways = "Drill bits can't cut sideways: pick an end mill or a V-bit";
+
+  it("aren't added to profiles, pockets or 3D operations", () => {
+    const { store, operations } = setup();
+    const options = { targets: [whole(square)], tool: drillBit };
+    expect(addProfileOperation(store, options)).toBeNull();
+    expect(addPocketOperation(store, options)).toBeNull();
+    const withModel = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    const modelOptions = { modelId: model.id, tool: drillBit };
+    expect(addReliefRoughOperation(withModel, modelOptions)).toBeNull();
+    expect(addReliefFinishOperation(withModel, modelOptions)).toBeNull();
+    expect(operations()).toEqual([]);
+    expect(withModel.getState().document.operations).toEqual([]);
+  });
+
+  it("are refused when switching tools, with the reason", () => {
+    const { store, operations, add } = setup();
+    const id = add();
+    expect(setOperationTool(store, id, drillBit)).toEqual({ ok: false, error: sideways });
+    expect(toolError(operations()[0] as Operation, drillBit)).toBe(sideways);
+    expect(operations()[0]?.tool).toEqual(endMill);
+  });
+
+  it("can be swapped for a bit that cuts sideways in a project saved with one", () => {
+    const { store, operations, add } = setup();
+    const id = add();
+    // As a project saved before the check holds it.
+    store.setState((state) => ({
+      document: {
+        ...state.document,
+        operations: state.document.operations.map((operation) => ({
+          ...operation,
+          tool: drillBit,
+        })),
+      },
+    }));
+    expect(setOperationTool(store, id, vBit)).toEqual({ ok: true });
+    expect(operations()[0]?.tool).toEqual(vBit);
   });
 });
 
@@ -754,6 +799,23 @@ describe("replaceToolSnapshots", () => {
     ]);
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(asVBit);
     expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
+  });
+
+  it("keeps the old tool on profiles when the bit becomes a drill bit", () => {
+    const { store, operations, add } = setup();
+    const id = add();
+    const drill = addDrillOperation(store, { targets: [whole(circle)], tool: endMill });
+    const asDrill: Tool = { ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 };
+
+    expect(replaceToolSnapshots(store, endMill, asDrill)).toEqual([
+      {
+        id,
+        name: "Profile 1",
+        error: "Drill bits can't cut sideways: pick an end mill or a V-bit",
+      },
+    ]);
+    expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
+    expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(asDrill);
   });
 
   it("re-snapshots flat-bottom tools too", () => {

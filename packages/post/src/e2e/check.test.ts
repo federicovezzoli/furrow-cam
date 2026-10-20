@@ -42,7 +42,8 @@ function program(
     ...start,
     "(Operation: Slot)",
     "G0 Z5",
-    "M3 S18000",
+    // The dwell on the same line keeps the line numbers below.
+    "M3 S18000 G4 P5",
     "G0 X10 Y10",
     "G0 Z1",
     "G1 Z-2 F500",
@@ -105,7 +106,7 @@ describe("checkGcode", () => {
           "G0 Z5",
           DRILL,
           "M0",
-          "M3 S12000",
+          "M3 S12000 G4 P5",
           "G0 X100 Y60",
           "G0 Z1",
           "G1 Z-3 F300",
@@ -132,7 +133,7 @@ describe("checkGcode", () => {
 
   it("refuses cuts with the spindle off and speeds outside its range", () => {
     expect(broken(program(["M5", "G1 X60"]))).toEqual(["11 spindle"]);
-    expect(broken(program(["M3 S40000"]))).toEqual(["10 spindle"]);
+    expect(broken(program(["M3 S40000 G4 P5"]))).toEqual(["10 spindle"]);
     expect(broken(program(["M3"]))).toEqual(["10 spindle"]);
   });
 
@@ -140,6 +141,24 @@ describe("checkGcode", () => {
     const manual = { ...project, machine: lowRider };
     expect(broken(program(), manual)).toEqual(["5 spindle"]);
     expect(broken(program().replace("M3 S18000", "M3"), manual)).toEqual([]);
+  });
+
+  it("waits for the spindle to spin up before moving", () => {
+    // Started, then raised to a higher speed, each with no dwell or a short one.
+    expect(broken(program().replace(" G4 P5", ""))).toEqual(["6 spin-up"]);
+    expect(broken(program(["M3 S24000", "G1 X60"]))).toEqual(["11 spin-up"]);
+    expect(broken(program(["M3 S24000 G4 P1", "G1 X60"]))).toEqual(["11 spin-up"]);
+    // The same or a lower speed needs none; nor does a machine with no delay.
+    expect(broken(program(["M3 S12000", "G1 X60"]))).toEqual([]);
+    const none = { ...project, machine: project.machine && { ...project.machine, spinUpDelay: 0 } };
+    expect(broken(program().replace(" G4 P5", ""), none)).toEqual([]);
+    // Nor a manual spindle, switched on by hand.
+    const manual = { ...project, machine: lowRider };
+    expect(broken(program().replace(" S18000 G4 P5", ""), manual)).toEqual([]);
+    // GRBL dwells after the spindle change in a block, whatever the word order.
+    expect(broken(program().replace("M3 S18000 G4 P5", "G4 P5 M3 S18000"))).toEqual([]);
+    // A P word belongs to G4 only.
+    expect(broken(program(["G1 X60 P2"]))).toEqual(["10 words"]);
   });
 
   it("pauses only with the tool up and, unless it's manual, the spindle off", () => {
@@ -150,7 +169,7 @@ describe("checkGcode", () => {
   });
 
   it("refuses a new tool that cuts before a pause, and tools not in the project", () => {
-    expect(broken(program(["M5", "G0 Z5", DRILL, "M3 S12000", "G1 Z-3"]))).toEqual([
+    expect(broken(program(["M5", "G0 Z5", DRILL, "M3 S12000 G4 P5", "G1 Z-3"]))).toEqual([
       "14 tool-change",
     ]);
     expect(broken(program(['(Tool: 1/8" end mill, 3.175 mm)']))).toEqual(["10 tool-change"]);

@@ -134,8 +134,9 @@ export function MachineForm({
             <AskedHint />
           </div>
         )}
-        {/* Hidden rather than unmounted, so unticking brings back the speeds typed earlier.
-            The server ignores them while the spindle is manual. */}
+        {/* Hidden rather than unmounted, so unticking brings back the values typed earlier.
+            The server ignores the speeds and the post-processor the delay while the spindle is
+            manual: it is switched on by hand and already up to speed. */}
         <div className="contents" hidden={manualSpindle}>
           <NumberField
             label="Min speed"
@@ -153,6 +154,19 @@ export function MachineForm({
             step={1000}
             min={0}
           />
+          <div className="grid content-start gap-1">
+            <NumberField
+              label="Spin-up delay"
+              {...number("spinUpDelay")}
+              suffix="s"
+              step={1}
+              min={0}
+              max={60}
+            />
+            <p className="text-sm text-muted-foreground">
+              The wait after starting the spindle, before the bit enters the stock.
+            </p>
+          </div>
         </div>
       </fieldset>
 

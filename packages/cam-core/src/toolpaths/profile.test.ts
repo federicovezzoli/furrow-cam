@@ -312,6 +312,131 @@ describe("profileToolpath", () => {
     expect(toolpath.moves.slice(finish + 2, -1).every((move) => move.to[2] === -6)).toBe(true);
   });
 
+  /** A closed polygon through `corners` as a shape. */
+  function polygon(corners: [number, number][]): Shape {
+    const [start, ...rest] = corners as [[number, number], ...[number, number][]];
+    return {
+      ...square,
+      paths: [{ start, segments: rest.map((to) => ({ kind: "line" as const, to })), closed: true }],
+    };
+  }
+
+  /** The finish lap's entry: straight down from the top to `depth`. */
+  function straightPlunges(toolpath: Toolpath, depth: number) {
+    return steps(toolpath).filter(
+      ([from, move]) => from[2] === 0 && move.to[2] === depth && move.to[0] === from[0],
+    );
+  }
+
+  /** Every move into `region`, checked to go no more than a step-down below the deepest cut there so far. */
+  function expectStepsDown(
+    toolpath: Toolpath,
+    region: (x: number, y: number) => boolean,
+    stepDown: number,
+  ) {
+    let deepest = 0;
+    let entered = 0;
+    for (const [from, move] of steps(toolpath)) {
+      if (move.kind !== "feed") continue;
+      for (let t = 0.1; t <= 1; t += 0.1) {
+        const x = from[0] + (move.to[0] - from[0]) * t;
+        const y = from[1] + (move.to[1] - from[1]) * t;
+        const z = from[2] + (move.to[2] - from[2]) * t;
+        if (!region(x, y) || z >= 0) continue;
+        entered++;
+        expect(z).toBeGreaterThanOrEqual(deepest - stepDown - 1e-6);
+        deepest = Math.min(deepest, z);
+      }
+    }
+    expect(entered).toBeGreaterThan(0);
+    expect(deepest).toBeCloseTo(-18, 6);
+  }
+
+  // A 6.35 mm bit and 0.2 mm allowance: a 6.5 mm gap fits the finishing
+  // offset but not the roughing one.
+  const bit = { diameter: 6.35, fluteLength: 25 };
+  const finished = { allowance: 0.2, finishPass: true, depth: 18 };
+
+  const notched = polygon([
+    [0, 0],
+    [100, 0],
+    [100, 50],
+    [46.5, 50],
+    [46.5, 30],
+    [40, 30],
+    [40, 50],
+    [0, 50],
+  ]);
+
+  // Up to an allowance just over the tool radius, where the bridged notch is
+  // narrower than the finishing stock along the walls.
+  it.each([0.2, 3.3, 3.5])(
+    "cuts a notch the depth passes bridge in depth passes too (allowance %s)",
+    (allowance) => {
+      const toolpath = profile({ ...finished, allowance }, [notched], bit);
+      expectStepsDown(toolpath, (x, y) => x > 40 && x < 46.5 && y > 30 && y < 48, 2);
+    },
+  );
+
+  it("cuts a neck the depth passes can't pass in depth passes too", () => {
+    const dumbbell = polygon([
+      [0, 0],
+      [40, 0],
+      [40, 16.75],
+      [60, 16.75],
+      [60, 0],
+      [100, 0],
+      [100, 40],
+      [60, 40],
+      [60, 23.25],
+      [40, 23.25],
+      [40, 40],
+      [0, 40],
+    ]);
+    const toolpath = profile({ ...finished, side: "inside" }, [dumbbell], bit);
+    expectStepsDown(toolpath, (x, y) => x > 42 && x < 58 && y > 16.75 && y < 23.25, 2);
+  });
+
+  it("keeps the single finish lap around inside corners", () => {
+    const ell = polygon([
+      [0, 0],
+      [100, 0],
+      [100, 40],
+      [40, 40],
+      [40, 100],
+      [0, 100],
+    ]);
+    const toolpath = profile({ allowance: 0.5, finishPass: true }, [ell]);
+    expect(straightPlunges(toolpath, -6)).toHaveLength(1);
+  });
+
+  // A 50° V-notch in an outline, and a star hole with 36° points: the
+  // finishing tool reaches further into these corners than the roughing one.
+  const vNotched = polygon([
+    [0, 0],
+    [100, 0],
+    [100, 50],
+    [60, 50],
+    [50, 50 - 10 / Math.tan((25 * Math.PI) / 180)],
+    [40, 50],
+    [0, 50],
+  ]);
+  const star = polygon(
+    Array.from({ length: 10 }, (_, i): [number, number] => {
+      const r = i % 2 === 0 ? 40 : (40 * Math.sin(Math.PI / 10)) / Math.sin((3 * Math.PI) / 10);
+      const angle = (i * Math.PI) / 5;
+      return [50 + r * Math.cos(angle), 50 + r * Math.sin(angle)];
+    }),
+  );
+
+  it.each([
+    ["outside", vNotched],
+    ["inside", star],
+  ] as const)("keeps the single finish lap around acute corners (%s)", (side, shape) => {
+    const toolpath = profile({ ...finished, side }, [shape], bit);
+    expect(straightPlunges(toolpath, -18)).toHaveLength(1);
+  });
+
   it("cuts holes before the outline that frees the part", () => {
     const laps = cutsAt(profile({}, [square, hole]), -2);
     const inHole = laps.map(([x, y]) => Math.hypot(x - 50, y - 50) < 7 + 0.01);
@@ -552,6 +677,7 @@ describe("generateToolpath", () => {
             maxFeedZ: 1000,
             spindleRpmMin: null,
             spindleRpmMax: null,
+            spinUpDelay: 5,
             safeZ: machineSafeZ,
             entryClearance,
             postProcessor: "grbl",
@@ -583,6 +709,17 @@ describe("generateToolpath", () => {
       DEFAULT_SAFE_Z,
     );
     expect(generateToolpath(input).moves[0]?.to[2]).toBe(12);
+  });
+
+  it("refuses a drill bit, which can't cut sideways", () => {
+    const saved = doc(12);
+    const [profile] = saved.operations;
+    if (!profile) throw new Error("No profile");
+    profile.tool = { ...tool, type: "drill", cutDirection: null, plungeAngle: 90 };
+    expect(generateToolpath(toolpathInput(saved, profile.id))).toEqual({
+      moves: [],
+      warnings: ["Drill bits can't cut sideways: pick an end mill or a V-bit."],
+    });
   });
 
   it("collects the machine's entry clearance, or the default without a machine", () => {

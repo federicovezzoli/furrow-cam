@@ -4,10 +4,12 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
-import type {
-  WorkspaceDestination,
-  WorkspaceHost,
-  WorkspaceLinkProps,
+import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
+import {
+  leavesProject,
+  type WorkspaceDestination,
+  type WorkspaceHost,
+  type WorkspaceLinkProps,
 } from "@furrow/workspace/lib/workspace-host";
 import type { WorkspaceLayout } from "@furrow/workspace/lib/workspace-layout";
 import { useWorkspaceHost } from "@furrow/workspace/providers/workspace-host";
@@ -33,7 +35,9 @@ import {
 import type { getProject } from "@/features/projects/server";
 import { saveTool } from "@/features/tools/lib/save-tool";
 import type { ToolChoice } from "@/features/tools/server";
+import packageJson from "../../../../package.json";
 import { writeLayoutCookie } from "./layout-cookie";
+import { LeaveGuard } from "./leave-guard";
 import { latestVersion, rememberSavedVersion } from "./saved-versions";
 
 type WebProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
@@ -130,6 +134,7 @@ function WebHost({
     // A newer copy saved from this tab wins over a payload the router cached before it.
     const saved = latestVersion(id, { document, updatedAt });
     return {
+      app: { name: "web", version: packageJson.version },
       project: {
         id,
         name,
@@ -183,7 +188,12 @@ function WebHost({
     tourDone,
     meshLimits,
   ]);
-  return <ProjectShell host={host}>{children}</ProjectShell>;
+  return (
+    <ProjectShell host={host}>
+      <LeaveGuard path={webRoute("workspace", id)} />
+      {children}
+    </ProjectShell>
+  );
 }
 
 /** The web app's route for `to`, from the open project `projectId`. */
@@ -204,7 +214,8 @@ export function webRoute(to: WorkspaceDestination, projectId: string): string {
 
 function WebLink({ to, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
-  return <Link href={webRoute(to, project.id)} {...props} />;
+  const onNavigate = useLeaveNavigate(leavesProject(to));
+  return <Link href={webRoute(to, project.id)} {...props} onNavigate={onNavigate} />;
 }
 
 /** A project this release can't read, with a way back to all projects. */

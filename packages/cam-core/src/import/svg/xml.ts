@@ -1,8 +1,13 @@
-/** An XML element; text content is dropped since importing geometry never needs it. */
+/**
+ * An XML element. Text content is dropped since importing geometry never
+ * needs it, except a `style` element's stylesheet, which can hide elements.
+ */
 export type XmlElement = {
   name: string;
   attributes: Record<string, string>;
   children: XmlElement[];
+  /** A `style` element's text, CDATA sections included. */
+  text?: string;
 };
 
 export class XmlError extends Error {}
@@ -35,8 +40,8 @@ function decodeEntities(value: string): string {
 /**
  * Parses an XML document into its root element. A small non-validating
  * parser: workers have no `DOMParser` (ADR-0004), and SVG files only need
- * elements and attributes. Comments, processing instructions, CDATA and the
- * DOCTYPE are skipped.
+ * elements, attributes and the text of `style` elements. Comments,
+ * processing instructions, CDATA elsewhere and the DOCTYPE are skipped.
  */
 export function parseXml(text: string): XmlElement {
   let index = 0;
@@ -104,6 +109,15 @@ export function parseXml(text: string): XmlElement {
         if (text[index] === ">") {
           index++;
           stack.push(element);
+          if (element.name === "style" || element.name.endsWith(":style")) {
+            // A stylesheet is text up to its closing tag, which the loop then reads.
+            const close = text.indexOf(`</${element.name}`, index);
+            if (close === -1) fail(`Unclosed tag <${element.name}>`);
+            element.text = decodeEntities(
+              text.slice(index, close).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"),
+            );
+            index = close;
+          }
           break;
         }
         if (index >= text.length) fail(`Unclosed tag <${element.name}>`);

@@ -7,7 +7,12 @@ import {
   type ToolpathInput,
   toolpathInputs,
 } from "@furrow/cam-core";
-import { type PostProcessorId, type ProjectDocument, projectFileName } from "@furrow/document";
+import {
+  type PostProcessorId,
+  type ProjectDocument,
+  projectFileName,
+  toolProblem,
+} from "@furrow/document";
 import { grbl } from "./grbl";
 import type { PostOutput, PostProcessor } from "./post";
 
@@ -58,7 +63,8 @@ export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
  * The G-code of the project `name` from toolpaths already computed (#133),
  * one for each of the document's enabled operations in order
  * (`enabledInputs`), as `exportGcode` posts them: the same program for the
- * same toolpaths. Throws when there is nothing to cut.
+ * same toolpaths. Throws when there is nothing to cut or an operation can't
+ * cut with its tool, e.g. a drill bit on a profile.
  */
 export function postToolpaths(
   doc: ProjectDocument,
@@ -67,6 +73,11 @@ export function postToolpaths(
 ): GcodeExport {
   const first = computed[0];
   if (first === undefined) throw new Error("There are no enabled operations to export.");
+  // Leaving such an operation out could run the next bit into stock it was meant to clear.
+  for (const { input } of computed) {
+    const problem = toolProblem(input.operation);
+    if (problem) throw new Error(`${input.operation.name}: ${problem}.`);
+  }
 
   const warnings: string[] = [];
   const operations = computed.flatMap(({ input, toolpath }) => {
