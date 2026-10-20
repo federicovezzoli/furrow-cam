@@ -45,6 +45,11 @@ export default function PrivacyPage() {
               you sign out and expires after 7 days without use.
             </li>
             <li>
+              <strong>Request counters</strong>: to slow down password guessing, how many sign-in
+              and account requests came from each IP address in the last minute, with nothing else
+              about you. Expired counters are deleted as new requests come in.
+            </li>
+            <li>
               <strong>Your projects, bits and machines</strong>: imported drawings and 3D models,
               operations and settings. Toolpaths and G-code are computed in your browser and never
               sent to us.
