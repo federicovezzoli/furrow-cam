@@ -19,6 +19,9 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
   const pathname = usePathname();
   const params = useParams();
 
+  // Runs after the page's own effects, so errors it hit while loading wait in the shared queue:
+  // the first page view sets `page` before the sink sends them, or `before_send` would drop them.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: later navigations are the effect below
   useEffect(() => {
     posthog.init(apiKey, {
       api_host: host,
@@ -45,6 +48,7 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
             }
           : null,
     });
+    visit(pathname, params);
     setTelemetrySink({
       track: ({ event, ...properties }) => posthog.capture(event, properties),
       error: (error) => posthog.captureException(error),
@@ -58,15 +62,19 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
 
   // Keyed on the concrete pathname: moving between two projects is a navigation too.
   // biome-ignore lint/correctness/useExhaustiveDependencies: params change together with pathname
-  useEffect(() => {
-    page = {
-      origin: location.origin,
-      pathname,
-      pattern: routePattern(pathname, params),
-      referrer: page ? null : externalOrigin(document.referrer, location.origin),
-    };
-    posthog.capture("$pageview");
-  }, [pathname]);
+  useEffect(() => visit(pathname, params), [pathname]);
 
   return null;
+}
+
+/** Counts a page view, once per pathname: the first one is counted when PostHog starts. */
+function visit(pathname: string, params: Record<string, string | string[] | undefined>) {
+  if (page?.pathname === pathname) return;
+  page = {
+    origin: location.origin,
+    pathname,
+    pattern: routePattern(pathname, params),
+    referrer: page ? null : externalOrigin(document.referrer, location.origin),
+  };
+  posthog.capture("$pageview");
 }

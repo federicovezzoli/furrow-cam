@@ -31,25 +31,47 @@ export type TelemetrySink = {
 };
 
 let sink: TelemetrySink | null = null;
+/** Calls made before an app set its sink, e.g. by a page that failed while loading. */
+let pending: ((sink: TelemetrySink) => void)[] = [];
+const MAX_PENDING = 20;
+/** Errors sent this session: a render loop that keeps failing sends its error once. */
+const reported = new Set<string>();
+const MAX_ERRORS = 20;
 
+/** Sets where events and errors go, and sends those made before. */
 export function setTelemetrySink(next: TelemetrySink | null) {
   sink = next;
+  if (!next) return;
+  const queued = pending;
+  pending = [];
+  for (const call of queued) send(call);
 }
 
-export function track(event: TelemetryEvent) {
+function send(call: (sink: TelemetrySink) => void) {
   try {
-    sink?.track(event);
+    if (sink) call(sink);
+    else if (pending.length < MAX_PENDING) pending.push(call);
   } catch {
     // Telemetry never breaks what the user is doing.
   }
 }
 
+export function track(event: TelemetryEvent) {
+  send((to) => to.track(event));
+}
+
+/** Reports `error` unless the same one was sent already or this session sent enough. */
 export function captureError(error: unknown) {
+  let report: Error;
   try {
-    sink?.error(reportableError(error));
+    report = reportableError(error);
   } catch {
-    // As above.
+    return; // A thrown value that can't even be turned into a string.
   }
+  const key = `${report.name}: ${report.message}\n${report.stack?.split("\n")[1] ?? ""}`;
+  if (reported.has(key) || reported.size >= MAX_ERRORS) return;
+  reported.add(key);
+  send((to) => to.error(report));
 }
 
 /** Reports the window's uncaught errors and unhandled rejections; returns the cleanup. */

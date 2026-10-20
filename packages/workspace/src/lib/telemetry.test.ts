@@ -90,6 +90,17 @@ describe("the sink", () => {
     expect(() => track({ event: "signed_up" })).not.toThrow();
   });
 
+  it("sends what came before the sink, and each error once", () => {
+    captureError(new Error("failed while loading"));
+    track({ event: "project_created" });
+    const sink = { track: vi.fn(), error: vi.fn() };
+    setTelemetrySink(sink);
+    expect(sink.track).toHaveBeenCalledWith({ event: "project_created" });
+    expect(sink.error).toHaveBeenCalledTimes(1);
+    for (let frame = 0; frame < 60; frame++) captureError(new Error("useFrame failed"));
+    expect(sink.error).toHaveBeenCalledTimes(2);
+  });
+
   it("hands errors on already scrubbed", () => {
     const error = vi.fn();
     setTelemetrySink({ track: () => {}, error });
