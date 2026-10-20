@@ -11,6 +11,7 @@ import type {
 import { useAutosaveApi } from "@furrow/workspace/providers/workspace-stores";
 import type * as React from "react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
+import packageJson from "../../../package.json";
 import type { LibraryState } from "./app";
 import type { ProjectSession } from "./session";
 
@@ -83,6 +84,7 @@ export function ProjectView({
 
   const host = useMemo<WorkspaceHost>(
     () => ({
+      app: { name: "desktop", version: packageJson.version },
       project: {
         id: session.id,
         name: session.name,

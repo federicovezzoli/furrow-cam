@@ -1,6 +1,7 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import type { Settings } from "@furrow/workspace/lib/local-library";
 import type { ToolChoice, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import packageJson from "../../../../package.json";
 import {
   deleteGuestMesh,
   type GuestProject,
@@ -36,6 +37,7 @@ export function guestHost(
 ): WorkspaceHost {
   const { id } = project;
   return {
+    app: { name: "web (guest)", version: packageJson.version },
     project: {
       id,
       name: project.name,

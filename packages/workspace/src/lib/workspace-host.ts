@@ -78,6 +78,8 @@ export type WorkspaceLinkProps = Omit<React.ComponentProps<"a">, "href"> & {
  * do, with an `error` for the user.
  */
 export type WorkspaceHost = {
+  /** Which app runs the workspace (e.g. `web`, `desktop`) and its version, for bug reports. */
+  app: { name: string; version: string };
   project: {
     id: string;
     name: string;

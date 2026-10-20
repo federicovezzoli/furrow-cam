@@ -106,6 +106,7 @@ export function createMemoryHost(
       layout: {},
       saveLayout: () => {},
     },
+    app: { name: "memory", version: "0.0.0" },
     navigation: { Link: ({ to: _, ...props }) => createElement("a", props) },
     limits: { meshes: null },
     ...overrides,

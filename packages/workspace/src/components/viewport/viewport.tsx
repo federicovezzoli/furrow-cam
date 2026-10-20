@@ -19,6 +19,7 @@ import {
 } from "../../providers/workspace-stores";
 import type { ViewMode } from "../../stores/workspace-store";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
+import { ReportCapture } from "./report-capture";
 import { Scene } from "./scene";
 import { PALETTES } from "./scene-style";
 
@@ -76,6 +77,7 @@ export function Viewport() {
       {...cancelPick}
     >
       <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
+        <ReportCapture />
         {view === "top" ? (
           <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
         ) : (

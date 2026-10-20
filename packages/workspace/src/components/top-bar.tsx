@@ -6,6 +6,7 @@ import { ChevronLeftIcon, CircleHelpIcon } from "lucide-react";
 import type { WorkspaceDestination } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import type { AutosaveStatus } from "../stores/autosave";
+import { ReportBugButton } from "./report-bug-button";
 import { SaveStatus } from "./save-status";
 
 /**
@@ -55,6 +56,7 @@ export function TopBar({
             <CircleHelpIcon />
           </Button>
         )}
+        <ReportBugButton />
         <ThemeToggle size="icon-compact" />
         {TopBarActions && <TopBarActions />}
       </div>
