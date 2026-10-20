@@ -24,10 +24,13 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
-      // Opens the new project on success, which resolves with nothing.
-      const result: ProjectFormErrors | undefined = await createProject(form);
-      if (result) setErrors(result);
-      else track({ event: "project_created" });
+      // On success the action redirects to the new project, which Next 16 delivers by
+      // rejecting this call with its redirect error; only errors resolve.
+      const errors = await createProject(form).catch((error: unknown) => {
+        if (isRedirect(error)) track({ event: "project_created" });
+        throw error;
+      });
+      setErrors(errors);
     });
   }
 
@@ -68,5 +71,15 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
       <FieldError id="name" error={errors.name} />
       <FieldError id="machine" error={errors.machine} />
     </form>
+  );
+}
+
+/** Next's redirect errors carry a `NEXT_REDIRECT…` digest; it exports no check for them. */
+function isRedirect(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String(error.digest).startsWith("NEXT_REDIRECT")
   );
 }
