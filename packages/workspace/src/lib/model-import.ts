@@ -4,6 +4,7 @@ import { hasImportedFile, ONE_FILE } from "../stores/geometry-actions";
 import { addModel } from "../stores/model-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
+import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
 /**
@@ -104,4 +105,5 @@ export async function importModel(
   }
   workspace.getState().selectModel(id);
   setModelImport(null);
+  track({ event: "file_imported", format: "stl" });
 }

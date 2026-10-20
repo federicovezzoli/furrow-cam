@@ -27,6 +27,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
@@ -120,6 +121,7 @@ export function GeometryImport() {
         return;
       }
       imported.current = true;
+      track({ event: "file_imported", format: request.kind });
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
       fail(error);
