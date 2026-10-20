@@ -6,8 +6,10 @@ import type { AutosaveStatus } from "../stores/autosave";
 
 /**
  * Autosaves the open project's document (ADR-0010) while mounted. Leaving the
- * page with unsaved changes asks for confirmation. `useSaveStatus` reads how
- * it's going.
+ * page with unsaved changes asks for confirmation. After a save that can be
+ * retried failed, coming back to the window or online tries again, e.g. once
+ * the user signed in again in another tab. `useSaveStatus` reads how it's
+ * going.
  */
 export function useAutosave() {
   const autosave = useAutosaveApi();
@@ -18,9 +20,14 @@ export function useAutosave() {
       autosave.flush();
       if (autosave.status.state !== "saved") event.preventDefault();
     }
+    const retry = () => autosave.retry();
     window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("focus", retry);
+    window.addEventListener("online", retry);
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("focus", retry);
+      window.removeEventListener("online", retry);
       stop();
     };
   }, [autosave]);

@@ -94,14 +94,18 @@ function cubicExtremes(p0: Point, p1: Point, p2: Point, p3: Point): Point[] {
     const qa = a - 2 * b + c;
     const qb = 2 * (b - a);
     const qc = a;
+    const scale = Math.abs(a) + Math.abs(b) + Math.abs(c);
     const roots: number[] = [];
-    if (qa === 0) {
-      if (qb !== 0) roots.push(-qc / qb);
+    // A quadratic raised to a cubic leaves qa at float noise, not 0.
+    if (Math.abs(qa) <= 1e-12 * scale) {
+      if (Math.abs(qb) > 1e-12 * scale) roots.push(-qc / qb);
     } else {
       const discriminant = qb * qb - 4 * qa * qc;
       if (discriminant >= 0) {
-        const root = Math.sqrt(discriminant);
-        roots.push((-qb + root) / (2 * qa), (-qb - root) / (2 * qa));
+        // The textbook formula cancels when qa is small; this form doesn't.
+        const q = -(qb + (qb < 0 ? -1 : 1) * Math.sqrt(discriminant)) / 2;
+        roots.push(q / qa);
+        if (q !== 0) roots.push(qc / q);
       }
     }
     for (const t of roots) if (t > 0 && t < 1) extremes.push(at(t));

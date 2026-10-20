@@ -84,17 +84,31 @@ export function covers(piece: Piece, point: Point): boolean {
 
 /**
  * Whether the straight move from `a` to `b` stays in the piece's area: it
- * crosses none of its rings and the points along it are inside.
+ * crosses none of its rings and, between the ring vertices it passes through,
+ * it is inside. A ring can meet the move only where it crosses it or at such
+ * a vertex, so each stretch between them is inside or outside as a whole.
  */
 export function crossesOnlyInside(piece: Piece, a: Point, b: Point): boolean {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  const touches = [0, 1];
   for (const ring of polygons(piece)) {
     for (let i = 0; i < ring.length; i++) {
-      if (crosses(a, b, ring[i] as Point, ring[(i + 1) % ring.length] as Point)) return false;
+      const c = ring[i] as Point;
+      if (crosses(a, b, c, ring[(i + 1) % ring.length] as Point)) return false;
+      if (lengthSquared > 0 && side(a, b, c) === 0) {
+        const t = ((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / lengthSquared;
+        if (t > 0 && t < 1) touches.push(t);
+      }
     }
   }
-  return [0.25, 0.5, 0.75].every((t) =>
-    covers(piece, [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]),
-  );
+  touches.sort((s, t) => s - t);
+  for (let i = 1; i < touches.length; i++) {
+    const t = ((touches[i - 1] as number) + (touches[i] as number)) / 2;
+    if (!covers(piece, [a[0] + dx * t, a[1] + dy * t])) return false;
+  }
+  return true;
 }
 
 /**

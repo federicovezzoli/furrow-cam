@@ -28,8 +28,16 @@ export type MeshLimits = { maxBytes: number; maxTriangles: number };
 /** A saved version of the project, without its document; `error` says why it can't be restored. */
 export type VersionRow = { id: string; label: string | null; createdAt: Date; error?: string };
 
-/** A save's new saved time, or why it failed, for the user. */
-export type SaveResult = { updatedAt: Date; error?: never } | { error: string };
+/**
+ * A save's new saved time, or why it failed, for the user. `retryable` marks
+ * a refusal the user can clear in this tab (signed out, contents the schema
+ * rejects, a model's file not uploaded): autosave tries again on the next
+ * change. Without it the refusal is final (a conflict, a deleted project) and
+ * autosave stops.
+ */
+export type SaveResult =
+  | { updatedAt: Date; error?: never }
+  | { error: string; retryable?: boolean };
 
 /** The project's versions after an action on them, newest first, or why the action failed. */
 export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: string };

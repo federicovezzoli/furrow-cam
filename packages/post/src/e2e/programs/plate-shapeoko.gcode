@@ -8,6 +8,7 @@ G21 G90 G94 G17
 (Operation: Holes)
 G0 Z5
 M3 S12000
+G4 P5
 G0 X40 Y40
 G0 Z1
 G1 Z-3 F300
@@ -33,10 +34,12 @@ G0 Z5
 M5
 G0 Z5
 M0 (Change the bit to 1/4" 2-flute upcut, 6.35 mm and zero Z again)
+G21 G90 G94 G17
 (Furrow tool: type=flat_end_mill diameter=6.35)
 (Operation: Recess)
 G0 Z5
 M3 S18000
+G4 P5
 G0 X91.745 Y61.745
 G0 Z1
 G1 Z0 F500

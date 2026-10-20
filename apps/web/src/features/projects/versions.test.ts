@@ -421,6 +421,8 @@ describe("meshes", () => {
   it("saves a document only once its meshes are verified assets of the project", async () => {
     const unsaved = {
       error: "The project couldn't be saved: a model's mesh hasn't been uploaded.",
+      // Removing the model, or uploading its file, lets the next save through.
+      retryable: true,
     };
     expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toEqual(unsaved);
     mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: false });
@@ -432,6 +434,20 @@ describe("meshes", () => {
     expect(project().document).toEqual(withModel());
     // As `discardMesh` does, so a mesh can't go between the check and the write.
     expect(mocks.locked).toContain(PROJECT);
+  });
+
+  it("marks the refusals the user can clear as retryable, and not a conflict", async () => {
+    mocks.userId = null;
+    expect(await saveProject(PROJECT, documentWithWidth(1), LOADED_AT)).toMatchObject({
+      retryable: true,
+    });
+    mocks.userId = USER;
+    const invalid = { ...documentWithWidth(1), units: "cubits" };
+    expect(await saveProject(PROJECT, invalid, LOADED_AT)).toMatchObject({ retryable: true });
+    mocks.raceNextUpdate = "saved";
+    const conflict = await saveProject(PROJECT, documentWithWidth(1), LOADED_AT);
+    expect(conflict.error).toMatch(/changed somewhere else/);
+    expect(conflict).not.toHaveProperty("retryable");
   });
 
   it("doesn't accept another project's mesh", async () => {
