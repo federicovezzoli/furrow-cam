@@ -4,6 +4,8 @@ packages:
 
 allowBuilds:
   "@prisma/engines": true
+  # posthog-js dependency; its script only prints a funding message.
+  core-js: false
   # Downloads the Electron binary for apps/desktop.
   electron: true
   # Squirrel installers; electron-builder builds NSIS instead.

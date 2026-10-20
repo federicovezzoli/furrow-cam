@@ -6,6 +6,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { Input } from "@furrow/ui/components/ui/input";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { track } from "@furrow/workspace/lib/telemetry";
 import { type FormEvent, useState, useTransition } from "react";
 import type { MachineOption } from "@/features/machines/server";
 import { createProject, type ProjectFormErrors } from "@/features/projects/actions";
@@ -23,8 +24,10 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     startTransition(async () => {
-      // Opens the new project on success, so only errors come back.
-      setErrors(await createProject(form));
+      // Opens the new project on success, which resolves with nothing.
+      const result: ProjectFormErrors | undefined = await createProject(form);
+      if (result) setErrors(result);
+      else track({ event: "project_created" });
     });
   }
 
