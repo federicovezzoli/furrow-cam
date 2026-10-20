@@ -1,3 +1,4 @@
+import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import Link from "next/link";
 import packageJson from "../../package.json";
 
@@ -5,6 +6,7 @@ const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/web@${packageJson.version}`)}`;
 const AUTHOR_URL = "https://federicovezzoli.com";
+const REPORT_URL = blankReportUrl([["App", `web ${packageJson.version}`]]);
 
 // Lucide has no brand icons; this is GitHub's mark (Octicons `mark-github`).
 function GitHubIcon() {
@@ -38,6 +40,7 @@ export function SiteFooter() {
           <GitHubIcon />
           GitHub
         </ExternalLink>
+        <ExternalLink href={REPORT_URL}>Report a bug</ExternalLink>
         <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
           Privacy
         </Link>

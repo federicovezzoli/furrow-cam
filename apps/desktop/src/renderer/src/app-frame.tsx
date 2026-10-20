@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
+import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import type * as React from "react";
 import packageJson from "../../../package.json";
 import type { Page } from "./desktop-host";
@@ -7,6 +8,10 @@ const REPOSITORY_URL = "https://github.com/federicovezzoli/furrow-cam";
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/desktop@${packageJson.version}`)}`;
 const AUTHOR_URL = "https://federicovezzoli.com";
+const REPORT_URL = blankReportUrl([
+  ["App", `desktop ${packageJson.version}`],
+  ["Browser", navigator.userAgent],
+]);
 
 /**
  * The navbar and footer around every page outside the workspace, as in the
@@ -95,6 +100,7 @@ function SiteFooter() {
           <GitHubIcon />
           GitHub
         </ExternalLink>
+        <ExternalLink href={REPORT_URL}>Report a bug</ExternalLink>
         {/* The project's start year, deliberately not computed at runtime. */}
         <span>
           © 2026 <ExternalLink href={AUTHOR_URL}>Federico Vezzoli</ExternalLink>
