@@ -90,3 +90,10 @@ describe("parseAcceptLanguage", () => {
     expect(parseAcceptLanguage(null)).toEqual([]);
   });
 });
+
+describe("translator", () => {
+  it("is built once per language", () => {
+    expect(translator("it")).toBe(translator("it"));
+    expect(translator("it")).not.toBe(translator("de"));
+  });
+});

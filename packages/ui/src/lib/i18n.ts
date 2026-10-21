@@ -14,9 +14,16 @@ export type Catalog = { [key: string]: string | Catalog };
 /** The message catalogs (ADR-0054). */
 export const CATALOGS: Record<Locale, Catalog> = { en, it, fr, de };
 
+const merged = new Map<Locale, Messages>();
+
 /** `locale`'s messages, with English for any key its catalog lacks. */
 export function messagesFor(locale: Locale): Messages {
-  return withFallback(CATALOGS[locale], en) as Messages;
+  let messages = merged.get(locale);
+  if (!messages) {
+    messages = withFallback(CATALOGS[locale], en) as Messages;
+    merged.set(locale, messages);
+  }
+  return messages;
 }
 
 function withFallback(messages: Catalog, fallback: Catalog): Catalog {
@@ -37,9 +44,20 @@ export function onIntlError(error: IntlError) {
 
 export type Translator = ReturnType<typeof translator>;
 
-/** A translator outside React, e.g. in a server component. */
-export function translator(locale: Locale) {
+const translators = new Map<Locale, ReturnType<typeof createTranslatorFor>>();
+
+function createTranslatorFor(locale: Locale) {
   return createTranslator({ locale, messages: messagesFor(locale), onError: onIntlError });
+}
+
+/** A translator outside React, e.g. in a server component; one per language, built once. */
+export function translator(locale: Locale) {
+  let t = translators.get(locale);
+  if (!t) {
+    t = createTranslatorFor(locale);
+    translators.set(locale, t);
+  }
+  return t;
 }
 
 /** Any translator, from `translator` or `useTranslations`, without a namespace. */

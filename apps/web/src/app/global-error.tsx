@@ -1,6 +1,7 @@
 "use client";
 
 import { LocaleProvider } from "@furrow/ui/components/locale-provider";
+import { useIsClient } from "@furrow/ui/hooks/use-is-client";
 import { translator } from "@furrow/ui/lib/i18n";
 import { posthogHost } from "@furrow/workspace/lib/telemetry";
 import { ErrorFallback } from "@/components/error-fallback";
@@ -13,8 +14,9 @@ export default function GlobalError(props: {
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  // The root layout and its language are gone: read it again from the browser.
-  const locale = browserLocale();
+  // The root layout and its language are gone: read it again from the browser,
+  // once hydrated, since the server rendered this in English.
+  const locale = useIsClient() ? browserLocale() : "en";
   const t = translator(locale);
   return (
     <html lang={locale} className="h-full antialiased">
