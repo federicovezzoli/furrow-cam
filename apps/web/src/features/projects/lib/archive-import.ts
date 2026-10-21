@@ -7,7 +7,8 @@ import {
   type ProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
-import { parseMesh } from "@furrow/workspace/lib/model-import";
+import { formatMessage } from "@furrow/ui/lib/i18n";
+import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
 import { cacheMesh } from "@/features/assets/lib/mesh-cache";
 import { uploadMesh } from "@/features/assets/lib/meshes";
 import { deleteProject, saveProject, startArchiveImport } from "@/features/projects/actions";
@@ -26,7 +27,10 @@ export async function readArchive(file: File, limits: StlLimits): Promise<Projec
   try {
     return await readProjectArchive(new Uint8Array(await file.arrayBuffer()), ceiling);
   } catch (error) {
-    if (error instanceof ProjectArchiveError) throw error;
+    // Its message is a code; the importers show what it means.
+    if (error instanceof ProjectArchiveError) {
+      throw new Error(formatMessage(clientTranslator(), error.detail));
+    }
     console.error(error);
     throw new Error(clientTranslator()("Projects.fileUnreadable"));
   }
@@ -75,7 +79,9 @@ export async function importArchive(
   const meshes = documentMeshes(archive);
   for (const [sha256, bytes] of meshes) {
     if (bytes.byteLength > limits.maxBytes) {
-      return { error: archiveMeshTooLarge(limits.maxBytes).message };
+      return {
+        error: formatMessage(clientTranslator(), archiveMeshTooLarge(limits.maxBytes).detail),
+      };
     }
     try {
       // A copy: the worker takes the buffer it is sent.
@@ -84,7 +90,10 @@ export async function importArchive(
       if (mesh.sha256 !== sha256) return { error: clientTranslator()("Projects.modelDamaged") };
     } catch (error) {
       const t = clientTranslator();
-      const reason = error instanceof Error ? error.message : t("Projects.unreadableReason");
+      const reason =
+        error instanceof MeshImportError
+          ? formatMessage(t, error.detail)
+          : t("Projects.unreadableReason");
       return { error: t("Projects.modelCantImport", { reason }) };
     }
   }

@@ -15,6 +15,7 @@ import {
   type SimulationCut,
   sweepMoves,
 } from "../../simulation/simulation";
+import type { ToolpathMessage } from "../messages";
 import { type Toolpath, ToolpathBuilder } from "../toolpath";
 import { rasterizeTriangles } from "./mesh-raster";
 
@@ -998,7 +999,7 @@ export const FINISH_SETUP_SHARE = 0.4;
 const REST_SHARE = 0.25;
 
 /** Said when a model has nothing to machine. */
-export const NO_AREA_WARNING = "The model has no area seen from above to machine.";
+export const NO_AREA_WARNING: ToolpathMessage = { code: "toolpath.noArea" };
 
 /**
  * What every 3D finishing strategy starts from (ADR-0030): the model offset
@@ -1015,7 +1016,7 @@ export type FinishSetup = {
   /** The model's bottom plus the stock to leave, or the stock's bottom if higher. */
   floor: number;
   restDropper: RestDropper | null;
-  warnings: string[];
+  warnings: ToolpathMessage[];
 };
 
 /**
@@ -1031,7 +1032,7 @@ export function* finishSetupSteps(
   { stockBottom = null, cache, rest = null, touchOff = null }: ReliefFinishOptions,
 ): Generator<number, FinishSetup | null> {
   const { tool, params } = operation;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
   const grid = reliefGrid(model, angle, wanted);
   if (!grid) return null;
@@ -1230,17 +1231,20 @@ export function* parallelPassesSteps(
 export function reliefFloor(
   lowest: number,
   stockBottom: number | null,
-  warnings: string[],
+  warnings: ToolpathMessage[],
 ): number {
   if (stockBottom === null || lowest >= stockBottom) return lowest;
-  warnings.push("The model reaches below the stock: it is cut no deeper than the stock's bottom.");
+  warnings.push({ code: "toolpath.belowStock" });
   return stockBottom;
 }
 
+/** Millimetres to three decimals, as warnings show sizes. */
+export const round3 = (mm: number) => Math.round(mm * 1000) / 1000;
+
 /** Says that `grid` has larger cells than the `wanted` size. */
-export function coarsenedWarning(grid: ReliefGrid, wanted: number): string {
+export function coarsenedWarning(grid: ReliefGrid, wanted: number): ToolpathMessage {
   const size = Math.max(grid.cellWidth, grid.cellHeight);
-  return `The model is too large to machine at full resolution with this tool: it is cut with cells of ${size.toFixed(3)} mm instead of ${wanted.toFixed(3)} mm.`;
+  return { code: "toolpath.coarsened", values: { size: round3(size), wanted: round3(wanted) } };
 }
 
 /** Runs `steps` to the end, ignoring the progress it reports. */

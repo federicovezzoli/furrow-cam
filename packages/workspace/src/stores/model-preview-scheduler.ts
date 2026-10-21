@@ -1,11 +1,12 @@
 import type { Heightmap } from "@furrow/cam-core";
 import type { Model } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { MeshRequest, MeshResponse } from "../lib/mesh-worker-protocol";
 
 /** A model as seen from above, to draw it as it will be cut, or why it can't be shown. */
 export type ModelPreview =
   | { heightmap: Heightmap | null; error?: never }
-  | { error: string; heightmap?: never };
+  | { error: Translatable; heightmap?: never };
 
 type PreviewRequest = Omit<Extract<MeshRequest, { kind: "preview" }>, "id">;
 

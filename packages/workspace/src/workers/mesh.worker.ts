@@ -1,4 +1,5 @@
 import { modelHeightmap, parseStl, StlImportError, type StlMesh } from "@furrow/cam-core";
+import type { Message } from "@furrow/document";
 import { type MeshRequest, type MeshResponse, sha256Hex } from "../lib/mesh-worker-protocol";
 
 /** The worker's global scope; the app's TypeScript lib describes a window instead. */
@@ -39,7 +40,7 @@ async function handle(request: MeshRequest): Promise<MeshResponse> {
   if (!mesh) {
     if (!request.bytes) return { kind: "missing", id };
     if ((await sha256Hex(request.bytes)) !== request.sha256) {
-      return { kind: "failed", id, error: "The stored model doesn't match its file." };
+      return { kind: "failed", id, error: { code: "workspace.storedModelMismatch" } };
     }
     mesh = parseStl(new Uint8Array(request.bytes), NO_LIMITS);
   }
@@ -62,8 +63,8 @@ scope.onmessage = ({ data }) => {
       scope.postMessage(response, transfer);
     } catch (error) {
       if (!(error instanceof StlImportError)) console.error(error);
-      const message =
-        error instanceof StlImportError ? error.message : "This file couldn't be read.";
+      const message: Message =
+        error instanceof StlImportError ? error.detail : { code: "workspace.unreadableFile" };
       scope.postMessage({ kind: "failed", id: data.id, error: message });
     }
   });

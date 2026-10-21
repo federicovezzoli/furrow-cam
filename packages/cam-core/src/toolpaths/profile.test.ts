@@ -474,9 +474,7 @@ describe("profileToolpath", () => {
     for (const move of toolpath.moves) {
       expect(Math.hypot(move.to[0] - 50, move.to[1] - 50)).toBeLessThanOrEqual(7 + 0.01);
     }
-    expect(toolpath.warnings).toEqual([
-      "The lead-in didn't fit 1 contour and was shortened or left out.",
-    ]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.leadInMisfits", values: { count: 1 } }]);
     // Outside a lone square there is room for any lead-in.
     expect(profile({ leadIn: { radius: 10 } }).warnings).toEqual([]);
   });
@@ -497,13 +495,13 @@ describe("profileToolpath", () => {
   it("warns about what it can't cut", () => {
     const point: Shape = { ...line, paths: [{ start: [5, 5], segments: [], closed: false }] };
     expect(profile({}, [line, point]).warnings).toEqual([
-      "Skipped 1 point: drill them instead.",
-      "Skipped 1 open path: inside and outside cuts need closed paths.",
+      { code: "toolpath.skippedPoints", values: { count: 1 } },
+      { code: "toolpath.skippedOpenProfile", values: { count: 1 } },
     ]);
     expect(profile({ side: "inside" }, [square], { diameter: 120 }).warnings).toEqual([
-      "The closed paths are too small for the tool.",
+      { code: "toolpath.pathsTooSmall" },
     ]);
-    expect(profile({ depth: 30 }).warnings).toEqual(["The depth exceeds the tool's flute length."]);
+    expect(profile({ depth: 30 }).warnings).toEqual([{ code: "toolpath.depthExceedsFlutes" }]);
   });
 });
 
@@ -637,14 +635,12 @@ describe("profileToolpath with tabs", () => {
           [500, 500],
         ]),
       }).warnings,
-    ).toEqual(["Left out 1 tab too far from every closed contour."]);
+    ).toEqual([{ code: "toolpath.tabsLeftOut", values: { count: 1 } }]);
     // Near enough to the depth passes (3.5 mm out) but not to the finish lap (3 mm out).
     const finishing = profile({ allowance: 0.5, finishPass: true, tabs: tabs([[50, -10.5]]) });
-    expect(finishing.warnings).toEqual(["Left out 1 tab too far from every closed contour."]);
+    expect(finishing.warnings).toEqual([{ code: "toolpath.tabsLeftOut", values: { count: 1 } }]);
     const tall = profile({ tabs: { width: 4, height: 6, positions: [[50, 0]] } });
-    expect(tall.warnings).toEqual([
-      "The tabs are as tall as the cut is deep, so nothing is cut under them.",
-    ]);
+    expect(tall.warnings).toEqual([{ code: "toolpath.tabsTooTall" }]);
     expect(Math.max(...tall.moves.filter((m) => m.kind === "feed").map((m) => m.to[2]))).toBe(0);
   });
 
@@ -718,7 +714,7 @@ describe("generateToolpath", () => {
     profile.tool = { ...tool, type: "drill", cutDirection: null, plungeAngle: 90 };
     expect(generateToolpath(toolpathInput(saved, profile.id))).toEqual({
       moves: [],
-      warnings: ["Drill bits can't cut sideways: pick an end mill or a V-bit."],
+      warnings: [{ code: "operation.drillsCantCutSideways" }],
     });
   });
 

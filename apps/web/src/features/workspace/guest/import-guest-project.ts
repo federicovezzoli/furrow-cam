@@ -7,7 +7,8 @@ import {
   parseProjectDocument,
   projectNameFromFileName,
 } from "@furrow/document";
-import { parseMesh } from "@furrow/workspace/lib/model-import";
+import { formatMessage } from "@furrow/ui/lib/i18n";
+import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
 import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
 import { clientTranslator } from "@/lib/client-translator";
 import { createGuestProject, deleteGuestProject, type GuestProject, putGuestMesh } from "./storage";
@@ -38,7 +39,7 @@ export function parseGuestProjectFile(contents: string): ProjectDocument {
       throw new Error(t("Guest.fileNewer"));
     }
     if (error instanceof ProjectDocumentVersionError) {
-      throw new Error(t("Guest.fileCantImport", { reason: `${error.message}.` }));
+      throw new Error(t("Guest.fileCantImport", { reason: formatMessage(t, error.detail) }));
     }
     throw new Error(t("Guest.fileCantImport", { reason: t("Guest.contentsInvalid") }));
   }
@@ -71,7 +72,8 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
       );
     }
     if (bytes.byteLength > DEFAULT_STL_LIMITS.maxBytes) {
-      throw new Error(archiveMeshTooLarge(DEFAULT_STL_LIMITS.maxBytes).message);
+      const t = clientTranslator();
+      throw new Error(formatMessage(t, archiveMeshTooLarge(DEFAULT_STL_LIMITS.maxBytes).detail));
     }
   }
   // Checked as an STL import is (PRD-0005 S1), so a damaged file can't leave a model that won't load.
@@ -81,10 +83,14 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
       // A copy: the worker takes the buffer it is sent.
       mesh = await parseMesh(bytes.slice().buffer, DEFAULT_STL_LIMITS);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "it couldn't be read.";
-      throw new Error(`A model in this file can't be imported: ${reason}`);
+      const t = clientTranslator();
+      const reason =
+        error instanceof MeshImportError
+          ? formatMessage(t, error.detail)
+          : t("Projects.unreadableReason");
+      throw new Error(t("Projects.modelCantImport", { reason }));
     }
-    if (mesh.sha256 !== sha256) throw new Error("A model in this file is damaged.");
+    if (mesh.sha256 !== sha256) throw new Error(clientTranslator()("Projects.modelDamaged"));
   }
 
   const project = await createGuestProject(guestProjectName(file.name), document);

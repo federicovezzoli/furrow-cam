@@ -61,7 +61,9 @@ describe("tools", () => {
 
   it("returns the form's errors", () => {
     const result = saveTool([], null, toolForm({ ...DEFAULT_TOOL, diameter: "" }));
-    expect(result).toEqual({ errors: expect.objectContaining({ diameter: "Required" }) });
+    expect(result).toEqual({
+      errors: expect.objectContaining({ diameter: { code: "validation.required" } }),
+    });
   });
 });
 
@@ -100,7 +102,9 @@ describe("machines", () => {
     }
     const speeds = saveMachine([], null, toolForm({ ...machine, spinUpDelay: 90 }));
     expect(speeds).toEqual({
-      errors: expect.objectContaining({ spinUpDelay: expect.any(String) }),
+      errors: expect.objectContaining({
+        spinUpDelay: expect.objectContaining({ code: "validation.maxSeconds" }),
+      }),
     });
   });
 

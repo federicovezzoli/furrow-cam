@@ -11,6 +11,7 @@ import {
 } from "../../geometry/clipper";
 import { flattenPath } from "../../geometry/flatten";
 import { projectOnLoop } from "../../geometry/loop";
+import type { ToolpathMessage } from "../messages";
 import { descend, distanceToSegment, Track } from "../passes";
 import {
   type Cut,
@@ -36,7 +37,7 @@ import {
 // starting cut, and only what each step adds to its boundary is cut, so the
 // tool never cuts wider than the step-over after the starting cut.
 
-export const PEEL_ISLAND_WARNING = "Peel from the island needs exactly one island.";
+export const PEEL_ISLAND_WARNING: ToolpathMessage = { code: "toolpath.peelIsland" };
 
 /**
  * Something to cut along the boundary of the cleared area: a whole ring, or
@@ -78,7 +79,7 @@ export type PeelPlan = {
 export function peelArea(
   area: Polygon[],
   start: PeelStart,
-): { area: Polygon[]; warnings: string[] } {
+): { area: Polygon[]; warnings: ToolpathMessage[] } {
   if (start !== "inside") return { area, warnings: [] };
   const pockets = nest(area);
   const kept = pockets.filter((pocket) => pocket.holes.length === 1);

@@ -3,6 +3,7 @@
 import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
 import type { Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
 import {
   ArrowDownIcon,
@@ -462,6 +463,7 @@ function ToolpathVisibility({ operation }: { operation: Operation }) {
 /** An icon for an enabled operation's toolpath: computing, failed, or computed with warnings. */
 export function ToolpathStatus({ operationId }: { operationId: string }) {
   const entry = useToolpathStore((s) => s.entries[operationId]);
+  const format = useFormatMessage();
   if (!entry) return null;
   if (entry.status === "computing") {
     const label =
@@ -485,7 +487,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         aria-label="Toolpath cancelled"
         className="size-3.5 shrink-0 text-muted-foreground"
       >
-        <title>{entry.error}</title>
+        <title>{format(entry.error)}</title>
       </CircleSlashIcon>
     );
   }
@@ -493,14 +495,15 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
     return (
       <CircleAlertIcon
         role="img"
-        aria-label={`Toolpath failed: ${entry.error}`}
+        aria-label={`Toolpath failed: ${format(entry.error)}`}
         className="size-3.5 shrink-0 text-destructive"
       >
-        <title>{entry.error}</title>
+        <title>{format(entry.error)}</title>
       </CircleAlertIcon>
     );
   }
-  const { warnings } = entry;
+  // Messages from cam-core, translated for the label and tooltip (ADR-0054).
+  const warnings = entry.warnings.map(format);
   if (warnings.length === 0) return null;
   return (
     <TriangleAlertIcon

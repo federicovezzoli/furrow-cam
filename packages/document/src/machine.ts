@@ -11,8 +11,8 @@ export type PostProcessorId = z.infer<typeof PostProcessorId>;
  */
 export const GcodeBlock = z
   .string()
-  .regex(/\S/, "Must not be blank")
-  .max(10_000, "Must be at most 10,000 characters")
+  .regex(/\S/, "validation.blank")
+  .max(10_000, "validation.maxCharacters")
   .nullable();
 
 /** Entry clearance of new machines, and of toolpaths without a machine profile. */
@@ -57,7 +57,7 @@ export const Machine = z
      * Ignored for a manual spindle, which is switched on by hand and already
      * up to speed when the job starts or resumes.
      */
-    spinUpDelay: z.number().nonnegative().max(60, "Must be at most 60 seconds"),
+    spinUpDelay: z.number().nonnegative().max(60, "validation.maxSeconds"),
     /** Default retract height above the stock. */
     safeZ: PositiveLength,
     /** Height above the stock top where rapids down stop and feeding starts, at most `safeZ`. */
@@ -77,14 +77,14 @@ export const Machine = z
       ctx.addIssue({
         code: "custom",
         path: ["safeZ"],
-        message: "Must be less than the Z travel",
+        message: "machine.belowZTravel",
       });
     }
     if (machine.entryClearance > machine.safeZ) {
       ctx.addIssue({
         code: "custom",
         path: ["entryClearance"],
-        message: "Must be at most the safe Z",
+        message: "machine.atMostSafeZ",
       });
     }
     const { spindleRpmMin: min, spindleRpmMax: max } = machine;
@@ -92,13 +92,13 @@ export const Machine = z
       ctx.addIssue({
         code: "custom",
         path: [min === null ? "spindleRpmMin" : "spindleRpmMax"],
-        message: "Set both spindle speeds, or neither for a manual spindle",
+        message: "machine.spindleBoth",
       });
     } else if (min !== null && max !== null && min > max) {
       ctx.addIssue({
         code: "custom",
         path: ["spindleRpmMax"],
-        message: "Must be at least the minimum spindle speed",
+        message: "machine.spindleMinMax",
       });
     }
   });

@@ -97,3 +97,11 @@ describe("translator", () => {
     expect(translator("it")).not.toBe(translator("de"));
   });
 });
+
+describe("core message numbers", () => {
+  it("are written as the language writes them", () => {
+    expect(translator("de")("Core.stl.tooManyTriangles", { max: 2_000_000 })).toContain(
+      "2.000.000",
+    );
+  });
+});

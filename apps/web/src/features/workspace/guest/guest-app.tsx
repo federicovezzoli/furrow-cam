@@ -30,15 +30,12 @@ import {
   type GuestProject,
   getGuestProject,
   listGuestProjects,
+  messageOf,
   readGuestSettings,
   readGuestTools,
   readLastGuestProjectId,
   saveLastGuestProjectId,
 } from "./storage";
-
-function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : clientTranslator()("Guest.somethingWrong");
-}
 
 /** Shown where the browser won't let the app keep projects at all. */
 function StorageUnavailable({ error }: { error: string }) {

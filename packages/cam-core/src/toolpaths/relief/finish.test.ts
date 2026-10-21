@@ -413,7 +413,7 @@ describe("reliefFinishSteps", () => {
     const zs = feeds(toolpath).map(({ to }) => to[2]);
     expect(Math.min(...zs)).toBeCloseTo(-6);
     expect(Math.max(...zs)).toBeCloseTo(-4);
-    expect(toolpath.warnings).toEqual([expect.stringContaining("no deeper than the stock")]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.belowStock" }]);
   });
 
   it("spaces passes by the step-over and covers the outline", () => {
@@ -474,7 +474,7 @@ describe("reliefFinishSteps", () => {
     const mesh = new Float32Array(rect(0, 0, 1000, 1000, 0));
     const steps = reliefFinishSteps(finishing(endMill, { stepOver: 100 }), large, mesh, options);
     const { warnings } = runSteps(steps);
-    expect(warnings).toEqual([expect.stringContaining("full resolution")]);
+    expect(warnings).toEqual([expect.objectContaining({ code: "toolpath.coarsened" })]);
   });
 
   it("reports progress up to 1 and reuses cached heightmaps", () => {

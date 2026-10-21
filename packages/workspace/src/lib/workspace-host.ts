@@ -1,4 +1,5 @@
 import type { Machine, ProjectDocument, Tool } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type * as React from "react";
 import type { TourId } from "../onboarding/lib/tour";
 import type { WorkspaceLayout } from "./workspace-layout";
@@ -20,7 +21,7 @@ export type MachineChoice = { id: string; machine: Machine };
 export type SavedTool = { id: string; tool: Tool };
 
 /** Why the tool form's fields, or the form as a whole, couldn't be saved, for the user. */
-export type ToolFormErrors = Partial<Record<keyof Tool | "form", string>>;
+export type ToolFormErrors = Partial<Record<keyof Tool | "form", Translatable>>;
 
 /** The STL files a project may hold (PRD-0005 S1). */
 export type MeshLimits = { maxBytes: number; maxTriangles: number };

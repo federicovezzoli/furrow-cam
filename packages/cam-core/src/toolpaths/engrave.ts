@@ -36,9 +36,7 @@ export function engraveToolpath(
     options,
   );
   if (exceedsVBitCone(tool, params.depth)) {
-    toolpath.warnings.push(
-      "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
-    );
+    toolpath.warnings.push({ code: "toolpath.engraveConeWide" });
   }
   return toolpath;
 }

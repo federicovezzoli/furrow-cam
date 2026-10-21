@@ -1,4 +1,5 @@
-import type { ToolpathLines } from "@furrow/cam-core";
+import type { ToolpathLines, ToolpathMessage } from "@furrow/cam-core";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -10,7 +11,7 @@ import type { GcodeExportResult } from "./toolpath-scheduler";
  * moves stay in the worker (ADR-0004).
  */
 export type ToolpathPreview = {
-  warnings: string[];
+  warnings: ToolpathMessage[];
   lines: ToolpathLines;
   clearing?: ToolpathLines;
 };
@@ -36,7 +37,7 @@ export type ToolpathEntry = { inputHash: string; previewKey?: string } & (
     }
   | ({ status: "ready" } & ToolpathPreview)
   /** `cancelled` when it was stopped before it finished, rather than failing. */
-  | { status: "error"; error: string; cancelled?: boolean }
+  | { status: "error"; error: Translatable; cancelled?: boolean }
 );
 
 /**
@@ -63,7 +64,7 @@ export type ToolpathState = {
   startComputing: (operationId: string, inputHash: string, previewKey?: string) => void;
   /** Results for inputs other than the latest `startComputing` are stale and dropped. */
   setResult: (operationId: string, inputHash: string, preview: ToolpathPreview) => void;
-  setError: (operationId: string, inputHash: string, error: string) => void;
+  setError: (operationId: string, inputHash: string, error: Translatable) => void;
   setProgress: (operationId: string, inputHash: string, progress: number) => void;
   setCancelled: (operationId: string, inputHash: string) => void;
   /** Drops entries of operations that are no longer in the document. */

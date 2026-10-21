@@ -28,7 +28,6 @@ import {
 import { useTranslations } from "use-intl";
 import { DeleteButton } from "@/components/delete-button";
 import { Loading } from "@/components/loading";
-import { clientTranslator } from "@/lib/client-translator";
 import { DESKTOP_DOWNLOADS_PAGE } from "./desktop-download";
 import { importGuestProject } from "./import-guest-project";
 import {
@@ -37,14 +36,11 @@ import {
   getGuestMesh,
   getGuestProject,
   listGuestProjects,
+  messageOf,
   renameGuestProject,
 } from "./storage";
 
 const ACCEPT = ".furrow,.furrow.json,.furrow.zip,.json,.zip,application/json,application/zip";
-
-function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : clientTranslator()("Guest.somethingWrong");
-}
 
 /**
  * The guest's projects, kept in this browser (PRD-0008 G3), on the projects

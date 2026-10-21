@@ -1,3 +1,4 @@
+import { type Message, MessageError } from "@furrow/document";
 import { createTranslator, type IntlError, IntlErrorCode } from "use-intl/core";
 import de from "../messages/de.json";
 import en from "../messages/en.json";
@@ -57,4 +58,38 @@ export function translator(locale: Locale) {
     translators.set(locale, t);
   }
   return t;
+}
+
+/** Any translator, from `translator` or `useTranslations`, without a namespace. */
+// biome-ignore lint/suspicious/noExplicitAny: translators are typed by their catalog keys; these helpers build keys at runtime.
+type AnyTranslator = (key: any, values?: any) => string;
+
+/** Text to show: already translated, or a core package's message (ADR-0054). */
+export type Translatable = string | Message;
+
+/** `message` in `t`'s language: a core package's code under `Core`, or text as it is. */
+export function formatMessage(t: AnyTranslator, message: Translatable): string {
+  return typeof message === "string" ? message : t(`Core.${message.code}`, message.values);
+}
+
+/** A warning about the program, after the operation it is about, if any. */
+export function formatWarning(
+  t: AnyTranslator,
+  warning: { operation?: string; message: Translatable },
+): string {
+  const message = formatMessage(t, warning.message);
+  return warning.operation === undefined
+    ? message
+    : t("Core.withOperation", { operation: warning.operation, message });
+}
+
+/**
+ * What `error` says for the user: a core package's error translated, else
+ * its own text, else `fallback` for anything thrown that isn't an `Error`.
+ */
+export function errorText(t: AnyTranslator, error: unknown, fallback: string): string {
+  if (error instanceof MessageError) {
+    return formatWarning(t, { operation: error.operation, message: error.detail });
+  }
+  return error instanceof Error ? error.message : fallback;
 }

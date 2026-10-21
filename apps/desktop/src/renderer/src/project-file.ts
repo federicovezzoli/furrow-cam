@@ -9,6 +9,7 @@ import {
   parseProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import { t } from "./i18n";
 
 /** A project as a file holds it: the document, its meshes by hash and its versions (ADR-0047). */
@@ -43,7 +44,7 @@ export async function readProjectFile(
   try {
     archive = await readProjectArchive(bytes, maxMeshBytes);
   } catch (error) {
-    if (error instanceof ProjectArchiveError) throw new Error(error.message);
+    if (error instanceof ProjectArchiveError) throw new Error(formatMessage(t, error.detail));
     throw new Error(t("Desktop.ProjectFile.notAProject"));
   }
   const document = parseDocument(archive.contents);

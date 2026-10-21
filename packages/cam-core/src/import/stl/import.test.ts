@@ -108,42 +108,67 @@ describe("parseStl", () => {
 
   it("refuses files with more triangles than allowed", () => {
     const limits = { maxBytes: 1_000_000, maxTriangles: 3 };
-    expect(() => parseStl(binaryStl(PYRAMID), limits)).toThrow(/more than 3 triangles/);
-    expect(() => parseStl(encode(asciiStl(PYRAMID)), limits)).toThrow(/more than 3 triangles/);
+    expect(() => parseStl(binaryStl(PYRAMID), limits)).toThrow("stl.tooManyTriangles");
+    expect(() => parseStl(encode(asciiStl(PYRAMID)), limits)).toThrow("stl.tooManyTriangles");
     expect(() => parseStl(binaryStl(PYRAMID), { ...limits, maxTriangles: 4 })).not.toThrow();
   });
 
   it("refuses empty files and files without triangles", () => {
-    expect(() => parseStl(new Uint8Array())).toThrow("This file is empty.");
-    expect(() => parseStl(binaryStl([]))).toThrow("This file has no triangles.");
-    expect(() => parseStl(encode("solid empty\nendsolid empty\n"))).toThrow(
-      "This file has no triangles.",
-    );
+    expect(() => parseStl(new Uint8Array())).toThrow("stl.empty");
+    expect(() => parseStl(binaryStl([]))).toThrow("stl.noTriangles");
+    expect(() => parseStl(encode("solid empty\nendsolid empty\n"))).toThrow("stl.noTriangles");
   });
 
   it("refuses binary files whose size doesn't match their triangle count", () => {
     const bytes = binaryStl(PYRAMID);
     expect(() => parseStl(bytes.subarray(0, bytes.length - 10))).toThrow(StlImportError);
-    expect(() => parseStl(encode("not a mesh"))).toThrow(/isn't an STL file/);
+    expect(() => parseStl(encode("not a mesh"))).toThrow("stl.sizeMismatch");
   });
 
   it("refuses coordinates that aren't finite numbers", () => {
     const binary = binaryStl([[[Number.NaN, 0, 0], ...(PYRAMID[0] as Triangle).slice(1)]]);
-    expect(() => parseStl(binary)).toThrow(/isn't a number/);
+    expect(() => parseStl(binary)).toThrow("stl.vertexNaN");
     const ascii = asciiStl(PYRAMID).replace("vertex 1 0 0", "vertex 1 zero 0");
-    expect(() => parseStl(encode(ascii))).toThrow(/isn't a number/);
+    expect(() => parseStl(encode(ascii))).toThrow("stl.vertexNaN");
   });
 
   it.each([
-    ["a facet with two vertices", (text: string) => text.replace(/ {6}vertex 0\.5 0\.5 1\n/, "")],
+    [
+      "a facet with two vertices",
+      "stl.facetVertices",
+      (text: string) => text.replace(/ {6}vertex 0\.5 0\.5 1\n/, ""),
+    ],
     [
       "a vertex outside a facet",
+      "stl.vertexOutside",
       (text: string) => text.replace("solid pyramid\n", "solid\nvertex 0 0 0\n"),
     ],
-    ["a vertex with two coordinates", (text: string) => text.replace("vertex 1 0 0", "vertex 1 0")],
-    ["an unfinished facet", (text: string) => text.slice(0, text.lastIndexOf("endloop"))],
-    ["an unknown keyword", (text: string) => text.replace("outer loop", "inner loop")],
-  ])("refuses an ASCII file with %s, saying on which line", (_, damage) => {
-    expect(() => parseStl(encode(damage(asciiStl(PYRAMID))))).toThrow(/damaged: .* on line \d+/);
+    [
+      "a vertex with two coordinates",
+      "stl.vertexCoordinates",
+      (text: string) => text.replace("vertex 1 0 0", "vertex 1 0"),
+    ],
+    [
+      "an unfinished facet",
+      "stl.unfinished",
+      (text: string) => text.slice(0, text.lastIndexOf("endloop")),
+    ],
+    [
+      "an unknown keyword",
+      "stl.notStl",
+      (text: string) => text.replace("outer loop", "inner loop"),
+    ],
+  ])("refuses an ASCII file with %s, saying on which line", (_, code, damage) => {
+    let error: unknown;
+    try {
+      parseStl(encode(damage(asciiStl(PYRAMID))));
+    } catch (thrown) {
+      error = thrown;
+    }
+    expect(error).toBeInstanceOf(StlImportError);
+    expect((error as StlImportError).detail).toMatchObject({
+      code,
+      values: { line: expect.any(Number) },
+    });
   });
 });

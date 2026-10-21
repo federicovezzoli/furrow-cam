@@ -1,4 +1,4 @@
-import type { Units } from "@furrow/document";
+import type { Message, Units } from "@furrow/document";
 import { fromMillimetres, MM_PER_INCH, toMillimetres } from "./units";
 
 /**
@@ -22,7 +22,16 @@ const SUFFIXES = Object.fromEntries(
   ]),
 ) as Record<Quantity, string[]>;
 
-export type ParseResult = { ok: true; value: number } | { ok: false; error: string };
+/** Why a typed quantity can't be read (ADR-0054). */
+export const QUANTITY_MESSAGES = [
+  "quantity.empty",
+  "quantity.notFinite",
+  "quantity.unknownUnit",
+  "quantity.invalid",
+] as const;
+export type QuantityMessage = Message<(typeof QUANTITY_MESSAGES)[number]>;
+
+export type ParseResult = { ok: true; value: number } | { ok: false; error: QuantityMessage };
 
 /**
  * Reads what was typed into a numeric field: a number or a simple expression
@@ -33,7 +42,7 @@ export type ParseResult = { ok: true; value: number } | { ok: false; error: stri
  */
 export function parseQuantity(text: string, quantity: Quantity, units: Units): ParseResult {
   let expression = text.trim().toLowerCase();
-  if (expression === "") return { ok: false, error: "Enter a number" };
+  if (expression === "") return { ok: false, error: { code: "quantity.empty" } };
 
   let factor = toInternal(1, quantity, units);
   const suffix = SUFFIXES[quantity].find((unit) => hasSuffix(expression, unit));
@@ -45,7 +54,7 @@ export function parseQuantity(text: string, quantity: Quantity, units: Units): P
   const result = evaluate(expression);
   if (!result.ok) return result;
   const value = result.value * factor;
-  if (!Number.isFinite(value)) return { ok: false, error: "The result isn't a finite number" };
+  if (!Number.isFinite(value)) return { ok: false, error: { code: "quantity.notFinite" } };
   return { ok: true, value };
 }
 
@@ -98,7 +107,7 @@ function hasSuffix(text: string, suffix: string): boolean {
 
 type Token = { kind: "number"; value: number } | { kind: "op"; value: string };
 
-function tokenize(expression: string): Token[] | { error: string } {
+function tokenize(expression: string): Token[] | { error: QuantityMessage } {
   const tokens: Token[] = [];
   const pattern = /\s*(?:(\d+(?:\.\d*)?|\.\d+)|([-+*/()])|(\S+))/y;
   let match = pattern.exec(expression);
@@ -108,7 +117,11 @@ function tokenize(expression: string): Token[] | { error: string } {
     else if (op !== undefined) tokens.push({ kind: "op", value: op });
     else {
       const word = (other as string).match(/^[a-z]+/)?.[0];
-      return { error: word ? `Unknown unit "${word}"` : "Not a number or expression" };
+      return {
+        error: word
+          ? { code: "quantity.unknownUnit", values: { unit: word } }
+          : { code: "quantity.invalid" },
+      };
     }
     match = pattern.exec(expression);
   }
@@ -120,7 +133,7 @@ function evaluate(expression: string): ParseResult {
   const tokenized = tokenize(expression);
   if (!Array.isArray(tokenized)) return { ok: false, error: tokenized.error };
   const tokens: Token[] = tokenized;
-  if (tokens.length === 0) return { ok: false, error: "Enter a number" };
+  if (tokens.length === 0) return { ok: false, error: { code: "quantity.empty" } };
 
   let position = 0;
   const peek = () => tokens[position];
@@ -169,6 +182,6 @@ function evaluate(expression: string): ParseResult {
     if (position !== tokens.length) throw new SyntaxError();
     return { ok: true, value };
   } catch {
-    return { ok: false, error: "Not a number or expression" };
+    return { ok: false, error: { code: "quantity.invalid" } };
   }
 }

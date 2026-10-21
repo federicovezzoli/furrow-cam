@@ -42,6 +42,8 @@ import {
   NativeSelectOptGroup,
   NativeSelectOption,
 } from "@furrow/ui/components/ui/native-select";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { useMemo, useState } from "react";
@@ -248,7 +250,8 @@ function ToolPicker({ operation }: { operation: Operation }) {
   const library = { label: "Your bits", choices: tools.filter((choice) => !choice.catalog) };
   const catalog = { label: CATALOG_LABEL, choices: tools.filter((choice) => choice.catalog) };
   // Cleared once the operation's tool changes.
-  const [rejected, setRejected] = useState<{ tool: Tool; error: string } | null>(null);
+  const format = useFormatMessage();
+  const [rejected, setRejected] = useState<{ tool: Tool; error: Translatable } | null>(null);
   // A tool saved before it was refused, e.g. a drill bit on a profile, until another is picked.
   const error = (rejected?.tool === tool ? rejected.error : null) ?? toolProblem(operation);
   const [creating, setCreating] = useState(false);
@@ -313,7 +316,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
       />
       {error && (
         <p role="alert" className="text-destructive">
-          {error}
+          {format(error)}
         </p>
       )}
     </>
@@ -416,16 +419,20 @@ function useParamsUpdate<P extends object>(
   params: P,
   apply: (changes: Partial<P>) => ActionResult,
 ) {
+  const format = useFormatMessage();
   const [rejected, setRejected] = useState<{
     params: P;
-    errors: Partial<Record<keyof P, string>>;
+    errors: Partial<Record<keyof P, Translatable>>;
   } | null>(null);
-  const errors: Partial<Record<keyof P, string>> =
-    rejected?.params === params ? rejected.errors : {};
+  const kept = rejected?.params === params ? rejected.errors : {};
+  // Translated as shown, so they follow a change of language.
+  const errors = Object.fromEntries(
+    Object.entries(kept).map(([field, error]) => [field, format(error as Translatable)]),
+  ) as Partial<Record<keyof P, string>>;
 
   function update(field: keyof P, changes: Partial<P>) {
     const result = apply(changes);
-    if (!result.ok) setRejected({ params, errors: { ...errors, [field]: result.error } });
+    if (!result.ok) setRejected({ params, errors: { ...kept, [field]: result.error } });
   }
 
   return { errors, update };
@@ -1575,6 +1582,7 @@ function Checkbox({
 function ToolpathDetails({ operationId }: { operationId: string }) {
   const entry = useToolpathStore((s) => s.entries[operationId]);
   const controls = useToolpathStore((s) => s.controls);
+  const format = useFormatMessage();
   if (!entry || entry.status === "computing") {
     const progress = entry?.status === "computing" ? entry.progress : undefined;
     if (progress === undefined) {
@@ -1603,7 +1611,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error" && entry.cancelled) {
     return (
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-muted-foreground">{entry.error}</p>
+        <p className="flex-1 text-muted-foreground">{format(entry.error)}</p>
         <Button variant="outline" size="compact" onClick={() => controls.retry(operationId)}>
           Compute again
         </Button>
@@ -1613,7 +1621,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error") {
     return (
       <p role="alert" className="text-destructive">
-        The toolpath couldn't be computed: {entry.error}
+        The toolpath couldn't be computed: {format(entry.error)}
       </p>
     );
   }
@@ -1625,7 +1633,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
       className="grid gap-1 text-amber-700 dark:text-amber-500"
     >
       {warnings.map((warning) => (
-        <p key={warning}>{warning}</p>
+        <p key={JSON.stringify(warning)}>{format(warning)}</p>
       ))}
     </section>
   );

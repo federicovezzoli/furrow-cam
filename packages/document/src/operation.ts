@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Point, type Shape } from "./geometry";
+import type { DocumentMessage } from "./message";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
 
@@ -25,7 +26,7 @@ export const OperationTarget = z.strictObject({
     .array(z.int().nonnegative())
     .min(1)
     .refine((paths) => paths.every((path, i) => i === 0 || path > (paths[i - 1] as number)), {
-      message: "Path indices must be ascending, each once",
+      message: "operation.pathIndices",
     })
     .nullable(),
 });
@@ -111,13 +112,17 @@ export const ProfileParams = z
   })
   .superRefine((params, ctx) => {
     if (params.side === "on" && params.allowance !== 0) {
-      ctx.addIssue({ code: "custom", path: ["allowance"], message: "Must be 0 on the line" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["allowance"],
+        message: "operation.allowanceZeroOnLine",
+      });
     }
     if (params.finishPass && params.allowance === 0) {
       ctx.addIssue({
         code: "custom",
         path: ["finishPass"],
-        message: "Needs an allowance to remove",
+        message: "operation.allowanceNeeded",
       });
     }
   });
@@ -181,7 +186,7 @@ export const PocketParams = z
       ctx.addIssue({
         code: "custom",
         path: ["finishPass"],
-        message: "Needs an allowance to remove",
+        message: "operation.allowanceNeeded",
       });
     }
   });
@@ -219,7 +224,7 @@ export const DrillOperation = z
   })
   .superRefine((operation, ctx) => {
     if (!canDrill(operation.tool)) {
-      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "V-bits can't drill" });
+      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "operation.vBitsCantDrill" });
     }
   });
 export type DrillOperation = z.infer<typeof DrillOperation>;
@@ -259,7 +264,11 @@ export const EngraveOperation = z
   })
   .superRefine((operation, ctx) => {
     if (!canEngrave(operation.tool)) {
-      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Drill bits can't engrave" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["tool", "type"],
+        message: "operation.drillsCantEngrave",
+      });
     }
   });
 export type EngraveOperation = z.infer<typeof EngraveOperation>;
@@ -288,7 +297,7 @@ export const VCarveParams = z
       ctx.addIssue({
         code: "custom",
         path: ["flatBottom", "tool", "type"],
-        message: "Only flat end mills clear a flat bottom",
+        message: "operation.flatBottomEndMill",
       });
     }
   });
@@ -312,7 +321,11 @@ export const VCarveOperation = z
   })
   .superRefine((operation, ctx) => {
     if (!canVCarve(operation.tool)) {
-      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "Only V-bits V-carve" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["tool", "type"],
+        message: "operation.onlyVBitsVCarve",
+      });
     }
   });
 export type VCarveOperation = z.infer<typeof VCarveOperation>;
@@ -368,7 +381,7 @@ export type ReliefFinishParams = z.infer<typeof ReliefFinishParams>;
 /** Operations on a model have no shapes to cut. */
 function refineModelTargets(operation: { targets: OperationTarget[] }, ctx: z.RefinementCtx) {
   if (operation.targets.length > 0) {
-    ctx.addIssue({ code: "custom", path: ["targets"], message: "Machines a model, not shapes" });
+    ctx.addIssue({ code: "custom", path: ["targets"], message: "operation.modelNotShapes" });
   }
 }
 
@@ -425,7 +438,7 @@ export const ReliefRoughParams = z
       ctx.addIssue({
         code: "custom",
         path: ["strategy", "start"],
-        message: "Peeling starts from the centre or the outer wall",
+        message: "operation.peelStart",
       });
     }
   });
@@ -465,15 +478,13 @@ export type Operation = z.infer<typeof Operation>;
  * document schema still accepts it, to keep them opening; picking a tool,
  * adding operations and computing toolpaths reject it instead.
  */
-export function toolProblem(operation: Operation): string | null {
+export function toolProblem(operation: Operation): DocumentMessage | null {
   switch (operation.type) {
     case "profile":
     case "pocket":
     case "relief_rough":
     case "relief_finish":
-      return canCutSideways(operation.tool)
-        ? null
-        : "Drill bits can't cut sideways: pick an end mill or a V-bit";
+      return canCutSideways(operation.tool) ? null : { code: "operation.drillsCantCutSideways" };
     default:
       return null;
   }

@@ -30,13 +30,19 @@ describe("issuesToFormErrors", () => {
   it("names blanks and values that aren't numbers", () => {
     const form = new FormData();
     form.set("diameter", "abc");
-    expect(errorsFor(form)).toEqual({ diameter: "Must be a number", stepDown: "Required" });
+    expect(errorsFor(form)).toEqual({
+      diameter: { code: "validation.notANumber" },
+      stepDown: { code: "validation.required" },
+    });
   });
 
-  it("keeps the schema's message otherwise", () => {
+  it("says what the schema refused otherwise", () => {
     const form = new FormData();
     form.set("diameter", "-1");
     form.set("stepDown", "1");
-    expect(errorsFor(form).diameter).toMatch(/>0/);
+    expect(errorsFor(form).diameter).toEqual({
+      code: "validation.greaterThan",
+      values: { min: 0 },
+    });
   });
 });

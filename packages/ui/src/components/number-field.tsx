@@ -11,6 +11,8 @@ import {
 import type { Units } from "@furrow/document";
 import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useFormatMessage } from "../hooks/use-format-message";
+import type { Translatable } from "../lib/i18n";
 import { cn } from "../lib/utils";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -79,7 +81,7 @@ export type NumberFieldProps = {
   /** Shown inside the input instead of the display unit, e.g. `RPM` or `%`. */
   suffix?: string;
   /** An error from elsewhere, e.g. the server; a parse error takes its place while shown. */
-  error?: string;
+  error?: Translatable;
   placeholder?: string;
   disabled?: boolean;
   /** `stacked` puts the label above the input (forms), `inline` beside it (workspace panels). */
@@ -119,7 +121,7 @@ export function NumberField({
   const current = value === undefined ? ownValue : value;
   /** What's typed while editing; `null` shows the current value. */
   const [draft, setDraft] = useState<string | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<Translatable | null>(null);
   const press = useRef<Press | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const justScrubbed = useRef(false);
@@ -129,6 +131,7 @@ export function NumberField({
   useEffect(() => () => cancelOpenGesture(), []);
 
   const text = draft ?? (current === null ? "" : formatQuantity(current, quantity, units));
+  const format = useFormatMessage();
   const shownError = parseError ?? error;
 
   function update(next: number) {
@@ -147,13 +150,17 @@ export function NumberField({
     return Math.min(max ?? Infinity, Math.max(min ?? -Infinity, next));
   }
 
-  function valueError(next: number): string | null {
-    if (integer && !Number.isInteger(next)) return "Must be a whole number";
+  function valueError(next: number): Translatable | null {
+    if (integer && !Number.isInteger(next)) return { code: "validation.wholeNumber" };
     // Rounded inwards, so typing the limit as shown is accepted.
     const limit = (bound: number, rounding: "up" | "down") =>
       `${formatQuantity(bound, quantity, units, rounding)}${suffix ? ` ${suffix}` : ""}`;
-    if (min !== undefined && next < min) return `Must be at least ${limit(min, "up")}`;
-    if (max !== undefined && next > max) return `Must be at most ${limit(max, "down")}`;
+    if (min !== undefined && next < min) {
+      return { code: "validation.atLeast", values: { min: limit(min, "up") } };
+    }
+    if (max !== undefined && next > max) {
+      return { code: "validation.atMost", values: { max: limit(max, "down") } };
+    }
     return null;
   }
 
@@ -351,7 +358,7 @@ export function NumberField({
             layout === "inline" ? "col-start-2 text-ui" : "text-sm",
           )}
         >
-          {shownError}
+          {format(shownError)}
         </p>
       )}
     </div>

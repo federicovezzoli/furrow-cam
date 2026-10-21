@@ -7,6 +7,7 @@ import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { type FormEvent, useState, useTransition } from "react";
 import type { SavedTool, ToolFormErrors } from "../../lib/workspace-host";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "../lib/labels";
@@ -165,7 +166,7 @@ function TypePicker({
 }: {
   value: ToolType;
   onChange: (type: ToolType) => void;
-  error?: string;
+  error?: Translatable;
 }) {
   return (
     <div

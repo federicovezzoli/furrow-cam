@@ -10,7 +10,7 @@ import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions"
 import type { SaveResult } from "@furrow/workspace/lib/workspace-host";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
+import type { z } from "zod";
 import {
   copyAssets,
   deleteProjectObjects,
@@ -26,6 +26,7 @@ import { getTranslator, translate } from "@/lib/locale";
 import {
   documentColumns,
   getProject,
+  listIssues,
   listVersions,
   lockProject,
   PROJECT_NAME_MAX,
@@ -306,7 +307,9 @@ export async function saveProject(
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
     return {
-      error: await translate("Projects.saveFailed", { reason: z.prettifyError(parsed.error) }),
+      error: await translate("Projects.saveFailed", {
+        reason: listIssues(parsed.error.issues, await getTranslator()),
+      }),
       retryable: true,
     };
   }
