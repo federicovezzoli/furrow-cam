@@ -68,3 +68,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Proposed |
 | [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Proposed |
 | [0053](0053-touch-off-suggest-every-xy-move.md) | Touch-off Suggest keeps the tool on the pad through every kind of XY move | Proposed |
+| [0054](0054-interface-languages.md) | Interface languages with use-intl, picked from the browser or the system | Proposed |
