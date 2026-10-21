@@ -3,6 +3,7 @@
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { FilmIcon } from "lucide-react";
+import { useTranslations } from "use-intl";
 import { useWorkspaceHost } from "../providers/workspace-host";
 
 /**
@@ -16,6 +17,7 @@ export function SimulateButton({
   disabledReason?: string;
   className?: string;
 }) {
+  const t = useTranslations("Shell");
   const { Link } = useWorkspaceHost().navigation;
   if (disabledReason !== undefined) {
     // A disabled button gets no pointer events, so its wrapper shows why.
@@ -23,16 +25,16 @@ export function SimulateButton({
       <span title={disabledReason} className={cn("inline-flex", className)}>
         <Button variant="outline" size="compact" disabled className="w-full">
           <FilmIcon />
-          Simulate
+          {t("simulate")}
         </Button>
       </span>
     );
   }
   return (
     <Button variant="outline" size="compact" asChild className={className}>
-      <Link to="simulator" title="Play back the cut move by move">
+      <Link to="simulator" title={t("simulateTitle")}>
         <FilmIcon />
-        Simulate
+        {t("simulate")}
       </Link>
     </Button>
   );

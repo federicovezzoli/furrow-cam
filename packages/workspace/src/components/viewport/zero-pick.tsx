@@ -6,7 +6,8 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import type { Group } from "three";
-import { pointLabel, snapLabel } from "../../lib/snap-label";
+import { useLocale, useTranslations } from "use-intl";
+import { pointLabel, snapKey } from "../../lib/snap-label";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -43,6 +44,8 @@ export function ZeroPick({ color }: { color: string }) {
 }
 
 function ZeroPicker({ color }: { color: string }) {
+  const t = useTranslations("Snap");
+  const locale = useLocale();
   const workspace = useWorkspaceStoreApi();
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
@@ -80,8 +83,8 @@ function ZeroPicker({ color }: { color: string }) {
           {hover.target && <SnapMarker color={color} />}
           <Html style={{ pointerEvents: "none" }}>
             <div className="ml-3 -translate-y-full rounded-md border bg-popover px-1.5 py-0.5 text-popover-foreground text-xs whitespace-nowrap shadow-xs">
-              <div className="font-medium">{snapLabel(hover.target)}</div>
-              <div className="tabular-nums">{pointLabel(hover.point, units)}</div>
+              <div className="font-medium">{t(snapKey(hover.target))}</div>
+              <div className="tabular-nums">{pointLabel(hover.point, units, locale)}</div>
             </div>
           </Html>
         </group>

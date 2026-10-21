@@ -6,9 +6,6 @@ import {
 } from "@furrow/document";
 import { downloadFile } from "@furrow/ui/lib/download";
 
-export const EXPORT_FAILED =
-  "This project couldn't be exported. Check your connection and try again.";
-
 /**
  * Downloads `projectDocument` as a `.furrow.json` file, or as a `.furrow.zip`
  * file with its meshes, read through `getMesh`, when it has 3D models

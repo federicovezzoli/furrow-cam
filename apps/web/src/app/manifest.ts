@@ -1,11 +1,14 @@
 import type { MetadataRoute } from "next";
+import { getTranslator } from "@/lib/locale";
 
 // Installable, not offline: no service worker (PRD-0001 non-goals).
-export default function manifest(): MetadataRoute.Manifest {
+// In the language of the browser that installs it (ADR-0054); the manifest is fetched without cookies.
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getTranslator();
   return {
     name: "Furrow CAM",
     short_name: "Furrow",
-    description: "Open source, web-based 2.5D CAM for CNC routers.",
+    description: t("Meta.description"),
     // The proxy sends signed-out users to /sign-in.
     start_url: "/projects",
     display: "standalone",

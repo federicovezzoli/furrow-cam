@@ -8,6 +8,7 @@ import { track } from "@furrow/workspace/lib/telemetry";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "use-intl";
 import { type ImportToAccountResult, importToAccount } from "./import-to-account";
 import {
   deleteGuestProject,
@@ -35,6 +36,7 @@ function dismissed(): boolean {
  * server can't store 3D models. Renders nothing without guest projects.
  */
 export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null }) {
+  const t = useTranslations("Guest");
   const router = useRouter();
   const [projects, setProjects] = useState<GuestProjectRow[]>([]);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
@@ -102,19 +104,13 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
 
   function onDiscard() {
     const count = projects.length;
-    if (
-      !window.confirm(
-        `Delete ${count === 1 ? "this project" : `these ${count} projects`} from this browser? This can't be undone.`,
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm(t("discardConfirm", { count }))) return;
     startTransition(async () => {
       try {
         for (const { id } of projects) await deleteGuestProject(id);
         setProjects([]);
       } catch (error) {
-        setError(error instanceof Error ? error.message : "They couldn't be deleted.");
+        setError(error instanceof Error ? error.message : t("cantDelete"));
       }
     });
   }
@@ -128,12 +124,9 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
     >
       <div className="grid gap-1">
         <h2 id="guest-import-heading" className="font-semibold">
-          Bring your projects into your account
+          {t("importHeading")}
         </h2>
-        <p className="text-muted-foreground">
-          This browser has projects you made without signing in. Import them to keep them in your
-          account, on any device.
-        </p>
+        <p className="text-muted-foreground">{t("importIntro")}</p>
       </div>
       <ul className="grid gap-1.5">
         {projects.map((project) => (
@@ -152,13 +145,12 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
             </label>
             {failures.has(project.id) && (
               <p role="alert" className="pl-6 text-destructive">
-                Not imported: {failures.get(project.id)}
+                {t("notImported", { error: failures.get(project.id) ?? "" })}
               </p>
             )}
             {changed.has(project.id) && (
               <p role="status" className="pl-6 text-muted-foreground">
-                Imported, but it was changed in another tab meanwhile: your account has the earlier
-                copy, and the newer one stays here.
+                {t("changedMeanwhile")}
               </p>
             )}
           </li>
@@ -167,20 +159,20 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
       {lastCopy && notes > 0 && (
         <p>
           <Link href={`/projects/${lastCopy}`} className="underline underline-offset-4">
-            Open the project you were working on
+            {t("openLast")}
           </Link>
         </p>
       )}
       <FormError message={error} />
       <div className="flex flex-wrap gap-2">
         <Button onClick={onImport} disabled={pending || chosen.size === 0}>
-          {pending ? "Importing…" : "Import"}
+          {pending ? t("importing") : t("import")}
         </Button>
         <Button variant="outline" onClick={onNotNow} disabled={pending}>
-          Not now
+          {t("notNow")}
         </Button>
         <Button variant="ghost" onClick={onDiscard} disabled={pending}>
-          Discard
+          {t("discard")}
         </Button>
       </div>
     </section>

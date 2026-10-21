@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@furrow/ui/components/ui/dropdown-menu";
 import { Input } from "@furrow/ui/components/ui/input";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import {
   CopyPlusIcon,
   EllipsisIcon,
@@ -20,6 +21,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "use-intl";
 import { VERSION_LABEL_MAX } from "../lib/versions";
 import type {
   RestoreResult,
@@ -31,9 +33,6 @@ import { useWorkspaceHost } from "../providers/workspace-host";
 import { useAutosaveApi, useDocumentStoreApi } from "../providers/workspace-stores";
 import type { AutosaveStatus } from "../stores/autosave";
 
-const UNSAVED = "The project has changes that couldn't be saved. Save them first.";
-const EDITING = "Finish the change you're making first.";
-
 /**
  * The Versions pane (ADR-0028): lists the project's versions, newest first,
  * to restore, rename, delete or open as a new project, over a form that saves
@@ -42,15 +41,30 @@ const EDITING = "Finish the change you're making first.";
  */
 export function VersionsPane() {
   const { versions } = useWorkspaceHost();
+  const t = useTranslations("Versions");
   if (!versions) {
-    return <p className="p-2 text-ui text-muted-foreground">Versions aren't available here.</p>;
+    return <p className="p-2 text-ui text-muted-foreground">{t("unavailable")}</p>;
   }
   return <Versions host={versions} />;
 }
 
 function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
+  const t = useTranslations("Versions");
+  const locale = useLocale();
   const autosave = useAutosaveApi();
   const documentStore = useDocumentStoreApi();
+  /** Why a version can't be saved or restored now: `status` isn't `saved`. */
+  const format = useFormatMessage();
+  const notSaved = (status: AutosaveStatus) =>
+    // Mid-gesture (a drag), autosave waits for it to end; nothing failed.
+    status.state === "unsaved"
+      ? t("editing")
+      : status.error === undefined
+        ? t("unsaved")
+        : format(status.error);
+  /** How a version is named in prompts: its label, or its date. */
+  const versionName = (version: VersionRow) =>
+    version.label ?? formatLocalDate(version.createdAt, locale);
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
   const [error, setError] = useState<string>();
   const [label, setLabel] = useState("");
@@ -87,11 +101,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   }
 
   function restore(version: VersionRow) {
-    if (
-      !window.confirm(
-        `Restore "${versionName(version)}"? It replaces the project's contents, which are kept as a version first. Undo history is cleared.`,
-      )
-    ) {
+    if (!window.confirm(t("restoreConfirm", { name: versionName(version) }))) {
       return;
     }
     run(async () => {
@@ -120,10 +130,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   }
 
   function rename(version: VersionRow) {
-    const newLabel = window.prompt(
-      "Rename version (leave blank to show its date)",
-      version.label ?? "",
-    );
+    const newLabel = window.prompt(t("renamePrompt"), version.label ?? "");
     if (newLabel === null || newLabel.trim() === (version.label ?? "")) return;
     startTransition(async () => {
       const result = await host.rename(version.id, newLabel);
@@ -137,8 +144,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   }
 
   function remove(version: VersionRow) {
-    if (!window.confirm(`Delete the version "${versionName(version)}"? This can't be undone.`))
-      return;
+    if (!window.confirm(t("deleteConfirm", { name: versionName(version) }))) return;
     startTransition(async () => {
       const result = await host.delete(version.id);
       setError(result?.error);
@@ -148,7 +154,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
 
   function openAsProject(version: VersionRow) {
     startTransition(async () => {
-      const result = await host.openAsProject(version.id, formatLocalDate(version.createdAt));
+      const result = await host.openAsProject(version.id, versionName(version));
       if (result) setError(result.error);
     });
   }
@@ -158,11 +164,9 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2">
         <FormError message={error ?? null} />
         {versions === null ? (
-          error === undefined && <p className="text-ui text-muted-foreground">Loading versions…</p>
+          error === undefined && <p className="text-ui text-muted-foreground">{t("loading")}</p>
         ) : versions.length === 0 ? (
-          <p className="text-ui text-muted-foreground">
-            No versions yet. Save one to go back to this state later.
-          </p>
+          <p className="text-ui text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul className="flex flex-col">
             {versions.map((version) => (
@@ -189,8 +193,8 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
                       variant="ghost"
                       size="icon-compact"
                       disabled={pending}
-                      aria-label={`Actions for ${versionName(version)}`}
-                      title="Actions"
+                      aria-label={t("actionsLabel", { name: versionName(version) })}
+                      title={t("actions")}
                     >
                       <EllipsisIcon />
                     </Button>
@@ -201,23 +205,23 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
                       onSelect={() => restore(version)}
                     >
                       <HistoryIcon />
-                      Restore…
+                      {t("restore")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={version.error !== undefined}
                       onSelect={() => openAsProject(version)}
                     >
                       <CopyPlusIcon />
-                      Open as new project
+                      {t("openAsProject")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => rename(version)}>
                       <PencilIcon />
-                      Rename…
+                      {t("rename")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onSelect={() => remove(version)}>
                       <Trash2Icon />
-                      Delete…
+                      {t("delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -236,28 +240,16 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
         <Input
           value={label}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="Label (optional)"
-          aria-label="Version label"
+          placeholder={t("labelPlaceholder")}
+          aria-label={t("labelLabel")}
           maxLength={VERSION_LABEL_MAX}
           className="h-control min-w-0 flex-1 px-2 text-ui md:text-ui"
         />
         <Button type="submit" variant="outline" size="compact" disabled={pending}>
           {pending && <LoaderCircleIcon className="animate-spin" aria-hidden />}
-          Save version
+          {t("save")}
         </Button>
       </form>
     </div>
   );
-}
-
-/** Why a version can't be saved or restored now: `status` isn't `saved`. */
-function notSaved(status: AutosaveStatus) {
-  // Mid-gesture (a drag), autosave waits for it to end; nothing failed.
-  if (status.state === "unsaved") return EDITING;
-  return status.error ?? UNSAVED;
-}
-
-/** How a version is named in prompts: its label, or its date. */
-function versionName(version: VersionRow) {
-  return version.label ?? formatLocalDate(version.createdAt);
 }

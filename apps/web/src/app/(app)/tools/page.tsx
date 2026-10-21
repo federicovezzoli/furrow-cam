@@ -2,20 +2,26 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { nextToolColor } from "@furrow/workspace/tools/lib/colors";
 import type * as React from "react";
 import { Suspense } from "react";
+import { Loading } from "@/components/loading";
 import { requireUserId } from "@/features/auth/server";
 import { OpenToolButton, ToolDialogProvider } from "@/features/tools/components/library-dialog";
 import { ToolList } from "@/features/tools/components/tool-list";
 import { listTools } from "@/features/tools/server";
+import { getTranslator } from "@/lib/locale";
 
-export default function ToolsPage() {
+export default async function ToolsPage() {
+  const t = await getTranslator();
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
       <ToolDialogProvider>
         <Suspense
           fallback={
             <>
-              <Header action={<Button disabled>New bit</Button>} />
-              <p className="text-muted-foreground">Loading…</p>
+              <Header
+                title={t("Tools.title")}
+                action={<Button disabled>{t("Tools.newBit")}</Button>}
+              />
+              <Loading />
             </>
           }
         >
@@ -26,23 +32,24 @@ export default function ToolsPage() {
   );
 }
 
-function Header({ action }: { action: React.ReactNode }) {
+function Header({ title, action }: { title: string; action: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-semibold tracking-tight">Bits library</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       {action}
     </div>
   );
 }
 
 async function ToolLibrary() {
-  const tools = await listTools(await requireUserId());
+  const [tools, t] = await Promise.all([requireUserId().then(listTools), getTranslator()]);
   return (
     <>
       <Header
+        title={t("Tools.title")}
         action={
           <OpenToolButton id={null} values={{ color: nextToolColor(tools) }}>
-            New bit
+            {t("Tools.newBit")}
           </OpenToolButton>
         }
       />

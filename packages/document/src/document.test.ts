@@ -56,7 +56,7 @@ describe("ProjectDocument", () => {
     expect(ProjectDocument.parse(doc)).toEqual(doc);
     const copy = { ...model, fileName: "copy.stl" };
     expect(ProjectDocument.safeParse({ ...doc, models: [model, copy] }).error?.issues).toEqual([
-      expect.objectContaining({ path: ["models", 1, "id"], message: "Duplicate model id" }),
+      expect.objectContaining({ path: ["models", 1, "id"], message: "document.duplicateModel" }),
     ]);
   });
 
@@ -66,11 +66,11 @@ describe("ProjectDocument", () => {
     expect(ProjectDocument.safeParse({ ...doc, models: [] }).error?.issues).toEqual([
       expect.objectContaining({
         path: ["operations", 0, "params", "modelId"],
-        message: "Unknown model id",
+        message: "document.unknownModel",
       }),
       expect.objectContaining({
         path: ["operations", 1, "params", "modelId"],
-        message: "Unknown model id",
+        message: "document.unknownModel",
       }),
     ]);
   });

@@ -55,9 +55,13 @@ describe("scheduleModelPreviews", () => {
     const { schedule, posted, previews } = setup();
     schedule.update([model, turned]);
     await schedule.receive({ kind: "preview", id: (posted[0] as MeshRequest).id, heightmap });
-    await schedule.receive({ kind: "failed", id: (posted[1] as MeshRequest).id, error: "Broken." });
+    await schedule.receive({
+      kind: "failed",
+      id: (posted[1] as MeshRequest).id,
+      error: { code: "stl.empty" },
+    });
     expect(previews().get(previewKey(model))).toEqual({ heightmap });
-    expect(previews().get(previewKey(turned))).toEqual({ error: "Broken." });
+    expect(previews().get(previewKey(turned))).toEqual({ error: { code: "stl.empty" } });
     schedule.update([turned]);
     expect([...previews().keys()]).toEqual([previewKey(turned)]);
     // Needed again: asked for again.
@@ -72,7 +76,9 @@ describe("scheduleModelPreviews", () => {
     expect(posted[1]).toMatchObject({ kind: "preview", sha256: model.sha256 });
     expect(posted[1]).toHaveProperty("bytes");
     await schedule.receive({ kind: "missing", id: (posted[1] as MeshRequest).id });
-    expect(previews().get(previewKey(model))).toEqual({ error: "The model couldn't be read." });
+    expect(previews().get(previewKey(model))).toEqual({
+      error: { code: "workspace.modelUnreadable" },
+    });
   });
 
   it("reports a file that can't be loaded", async () => {
@@ -148,7 +154,7 @@ describe("scheduleModelPreviews", () => {
       await schedule.receive({
         kind: "failed",
         id: (posted[0] as MeshRequest).id,
-        error: "Broken.",
+        error: { code: "stl.empty" },
       });
       vi.runAllTimers();
       schedule.update([model]);

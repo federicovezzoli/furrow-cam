@@ -62,7 +62,7 @@ function versionFile(fields: Record<string, unknown>) {
 async function readError(bytes: Uint8Array) {
   const error = await readProjectArchive(bytes, MAX_MESH_BYTES).catch((error: unknown) => error);
   expect(error).toBeInstanceOf(ProjectArchiveError);
-  return (error as Error).message;
+  return (error as ProjectArchiveError).detail;
 }
 
 describe("packProjectArchive and readProjectArchive", () => {
@@ -139,7 +139,10 @@ describe("archive versions", () => {
       [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
       [archiveVersionPath("a")]: versionFile({ document: { schemaVersion: 1 } }),
     });
-    expect(await readError(zip)).toBe("A version in this file isn't a valid project.");
+    expect(await readError(zip)).toEqual({
+      code: "archive.versionInvalid",
+      values: { labelled: "no", label: "" },
+    });
   });
 
   it("refuse to pack a version whose mesh is missing, or whose id can't name a file", async () => {
@@ -180,9 +183,10 @@ describe("archive versions", () => {
     for (let i = 0; i <= MAX_ARCHIVE_VERSIONS; i++) {
       files[archiveVersionPath(String(i))] = versionFile({ id: String(i) });
     }
-    expect(await readError(zipSync(files))).toBe(
-      `A project file holds at most ${MAX_ARCHIVE_VERSIONS} versions.`,
-    );
+    expect(await readError(zipSync(files))).toEqual({
+      code: "archive.tooManyVersions",
+      values: { max: MAX_ARCHIVE_VERSIONS },
+    });
   });
 
   it("refuse an oversized version before inflating it", async () => {
@@ -190,7 +194,7 @@ describe("archive versions", () => {
       [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
       [archiveVersionPath("a")]: new Uint8Array(MAX_ARCHIVE_DOCUMENT_BYTES + 1),
     });
-    expect(await readError(zip)).toMatch(/too large to import/);
+    expect(await readError(zip)).toEqual({ code: "archive.documentTooLarge" });
   });
 
   it("refuse a damaged version, or one that lacks its mesh", async () => {
@@ -199,31 +203,35 @@ describe("archive versions", () => {
       readError(
         zipSync({ [ARCHIVE_DOCUMENT_PATH]: strToU8("{}"), [archiveVersionPath("a")]: file }),
       );
-    expect(await damaged(strToU8("not json"))).toBe("A version in this file is damaged.");
-    expect(await damaged(versionFile({ id: "b" }))).toBe("A version in this file is damaged.");
-    expect(await damaged(versionFile({ createdAt: "yesterday" }))).toBe(
-      "A version in this file is damaged.",
-    );
+    const versionDamaged = { code: "archive.versionDamaged" };
+    expect(await damaged(strToU8("not json"))).toEqual(versionDamaged);
+    expect(await damaged(versionFile({ id: "b" }))).toEqual(versionDamaged);
+    expect(await damaged(versionFile({ createdAt: "yesterday" }))).toEqual(versionDamaged);
     expect(
       await damaged(
         versionFile({ label: "first cut", document: { ...document, models: [model] } }),
       ),
-    ).toBe("The version “first cut” is missing one of its 3D models.");
-    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 999 } }))).toBe(
-      "A version in this file was saved by a newer version of Furrow CAM.",
-    );
-    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 0 } }))).toBe(
-      "A version in this file can't be opened: Invalid schemaVersion: 0.",
-    );
+    ).toEqual({
+      code: "archive.versionMissingModel",
+      values: { labelled: "yes", label: "first cut" },
+    });
+    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 999 } }))).toEqual({
+      code: "archive.versionTooNew",
+      values: { labelled: "no", label: "" },
+    });
+    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 0 } }))).toEqual({
+      code: "archive.versionInvalid",
+      values: { labelled: "no", label: "" },
+    });
   });
 });
 
 describe("readProjectArchive", () => {
   it("refuses files that aren't zips, or zips without a document", async () => {
-    expect(await readError(strToU8("{}"))).toBe("This file isn't a Furrow CAM project.");
-    expect(await readError(zipSync({ "notes.txt": strToU8("hi") }))).toBe(
-      "This file isn't a Furrow CAM project.",
-    );
+    expect(await readError(strToU8("{}"))).toEqual({ code: "archive.notAProject" });
+    expect(await readError(zipSync({ "notes.txt": strToU8("hi") }))).toEqual({
+      code: "archive.notAProject",
+    });
   });
 
   it("refuses a mesh that doesn't match its hash", async () => {
@@ -232,7 +240,7 @@ describe("readProjectArchive", () => {
       [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(document)),
       [archiveMeshPath(sha256)]: strToU8("solid tampered\nendsolid tampered\n"),
     });
-    expect(await readError(zip)).toMatch(/damaged/);
+    expect(await readError(zip)).toEqual({ code: "archive.modelDamaged" });
   });
 
   it("refuses an oversized mesh before inflating it", async () => {
@@ -243,13 +251,13 @@ describe("readProjectArchive", () => {
       [archiveMeshPath(sha256)]: new Uint8Array(MAX_MESH_BYTES + 1),
     });
     expect(zip.byteLength).toBeLessThan(MAX_MESH_BYTES);
-    expect(await readError(zip)).toMatch(/larger than/);
+    expect(await readError(zip)).toMatchObject({ code: "archive.meshTooLarge" });
   });
 
   it("refuses an oversized file", async () => {
-    expect(await readError(new Uint8Array(maxArchiveBytes(MAX_MESH_BYTES) + 1))).toMatch(
-      /too large to import/,
-    );
+    expect(await readError(new Uint8Array(maxArchiveBytes(MAX_MESH_BYTES) + 1))).toMatchObject({
+      code: "archive.fileTooLarge",
+    });
   });
 
   it("refuses too many meshes", async () => {
@@ -258,7 +266,7 @@ describe("readProjectArchive", () => {
       const { bytes, sha256 } = await mesh(`solid ${i}\n`);
       files[archiveMeshPath(sha256)] = bytes;
     }
-    expect(await readError(zipSync(files))).toMatch(/at most/);
+    expect(await readError(zipSync(files))).toMatchObject({ code: "archive.tooManyMeshes" });
   });
 
   it("ignores files other than the document and meshes", async () => {

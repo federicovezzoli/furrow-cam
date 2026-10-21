@@ -1,5 +1,6 @@
 import type { Tool } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import {
   deleteMachine,
   deleteTool,
@@ -16,16 +17,17 @@ import { BitTypeIcon } from "@furrow/workspace/tools/components/bit-type-icon";
 import { ToolDialog } from "@furrow/workspace/tools/components/tool-dialog";
 import { ToolForm } from "@furrow/workspace/tools/components/tool-form";
 import { nextToolColor } from "@furrow/workspace/tools/lib/colors";
-import { TOOL_TYPE_LABELS } from "@furrow/workspace/tools/lib/labels";
 import { ChevronLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 import type * as React from "react";
 import { useState } from "react";
+import { useTranslations } from "use-intl";
 import type { LibraryState } from "./app";
 import type { Page } from "./desktop-host";
+import { t } from "./i18n";
 
 /** Says why a library change failed; the library stays as it was. */
 function alertFailure(error: unknown) {
-  window.alert(messageOf(error));
+  window.alert(formatMessage(t, messageOf(error)));
 }
 
 type LibraryProps = {
@@ -39,6 +41,7 @@ type LibraryProps = {
  * With a project open, `back` returns to it.
  */
 export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Page; back: Page }) {
+  const t = useTranslations("Desktop.Library");
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
       {back.name === "workspace" && (
@@ -49,7 +52,7 @@ export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Pag
           onClick={() => props.navigate(back)}
         >
           <ChevronLeftIcon />
-          Back to the project
+          {t("back")}
         </Button>
       )}
       {page.name === "tools" && <Tools {...props} />}
@@ -69,6 +72,8 @@ function Header({ title, action }: { title: string; action?: React.ReactNode }) 
 }
 
 function Tools({ library, updateLibrary }: LibraryProps) {
+  const t = useTranslations("Desktop.Library");
+  const bit = useTranslations("Bit");
   const { tools } = library;
   /** The bit in the dialog: `id` `null` for a new one. */
   const [editing, setEditing] = useState<{ id: string | null; values: Partial<Tool> } | null>(null);
@@ -76,19 +81,19 @@ function Tools({ library, updateLibrary }: LibraryProps) {
   return (
     <>
       <Header
-        title="Bits library"
+        title={t("bitsTitle")}
         action={
           <Button
             onClick={() =>
               setEditing({ id: null, values: { color: nextToolColor(tools.map((c) => c.tool)) } })
             }
           >
-            New bit
+            {t("newBit")}
           </Button>
         }
       />
       {tools.length === 0 ? (
-        <p className="text-muted-foreground">No bits yet. Add the bits you cut with.</p>
+        <p className="text-muted-foreground">{t("noBits")}</p>
       ) : (
         <ul className="grid divide-y rounded-md border">
           {tools.map(({ id, isDefault, tool }) => (
@@ -97,15 +102,17 @@ function Tools({ library, updateLibrary }: LibraryProps) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{tool.name}</span>
                 <span className="text-muted-foreground">
-                  {TOOL_TYPE_LABELS[tool.type]}, ⌀ {tool.diameter} mm
+                  {bit(`types.${tool.type}`)}, ⌀ {tool.diameter} mm
                 </span>
               </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
                 aria-pressed={isDefault}
-                aria-label={isDefault ? "Default bit" : `Make ${tool.name} the default bit`}
-                title={isDefault ? "Default bit for new operations" : "Make default"}
+                aria-label={
+                  isDefault ? t("defaultBit") : t("makeDefaultLabel", { name: tool.name })
+                }
+                title={isDefault ? t("defaultTitle") : t("makeDefault")}
                 onClick={() =>
                   updateLibrary((state) => ({
                     ...state,
@@ -118,8 +125,8 @@ function Tools({ library, updateLibrary }: LibraryProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Edit ${tool.name}`}
-                title="Edit"
+                aria-label={t("editLabel", { name: tool.name })}
+                title={t("edit")}
                 onClick={() => setEditing({ id, values: tool })}
               >
                 <PencilIcon />
@@ -127,11 +134,10 @@ function Tools({ library, updateLibrary }: LibraryProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Delete ${tool.name}`}
-                title="Delete"
+                aria-label={t("deleteLabel", { name: tool.name })}
+                title={t("delete")}
                 onClick={() => {
-                  if (!window.confirm(`Delete the bit "${tool.name}"? Projects keep their copy.`))
-                    return;
+                  if (!window.confirm(t("confirmDeleteBit", { name: tool.name }))) return;
                   updateLibrary((state) => ({
                     ...state,
                     tools: deleteTool(state.tools, id),
@@ -147,8 +153,8 @@ function Tools({ library, updateLibrary }: LibraryProps) {
       <ToolDialog
         open={editing !== null}
         onClose={() => setEditing(null)}
-        title={editing?.id ? "Edit bit" : "New bit"}
-        description="Projects keep their own copy of a bit; editing it here changes new operations."
+        title={editing?.id ? t("editBit") : t("newBit")}
+        description={t("bitDescription")}
       >
         {editing && (
           <ToolForm
@@ -174,17 +180,18 @@ function Tools({ library, updateLibrary }: LibraryProps) {
 }
 
 function Machines({ library, updateLibrary, navigate }: LibraryProps) {
+  const t = useTranslations("Desktop.Library");
   const { machines } = library;
   return (
     <>
       <Header
-        title="Machines"
+        title={t("machinesTitle")}
         action={
-          <Button onClick={() => navigate({ name: "machine", id: null })}>New machine</Button>
+          <Button onClick={() => navigate({ name: "machine", id: null })}>{t("newMachine")}</Button>
         }
       />
       {machines.length === 0 ? (
-        <p className="text-muted-foreground">No machines yet. Add the machine you cut on.</p>
+        <p className="text-muted-foreground">{t("noMachines")}</p>
       ) : (
         <ul className="grid divide-y rounded-md border">
           {machines.map(({ id, machine }) => (
@@ -199,8 +206,8 @@ function Machines({ library, updateLibrary, navigate }: LibraryProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Edit ${machine.name}`}
-                title="Edit"
+                aria-label={t("editLabel", { name: machine.name })}
+                title={t("edit")}
                 onClick={() => navigate({ name: "machine", id })}
               >
                 <PencilIcon />
@@ -208,15 +215,10 @@ function Machines({ library, updateLibrary, navigate }: LibraryProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Delete ${machine.name}`}
-                title="Delete"
+                aria-label={t("deleteLabel", { name: machine.name })}
+                title={t("delete")}
                 onClick={() => {
-                  if (
-                    !window.confirm(
-                      `Delete the machine "${machine.name}"? Projects keep their copy.`,
-                    )
-                  )
-                    return;
+                  if (!window.confirm(t("confirmDeleteMachine", { name: machine.name }))) return;
                   updateLibrary((state) => ({
                     ...state,
                     machines: deleteMachine(state.machines, id),
@@ -240,6 +242,7 @@ function MachinePage({
   updateLibrary,
   navigate,
 }: LibraryProps & { id: string | null }) {
+  const t = useTranslations("Desktop.Library");
   const toList = () => navigate({ name: "machines" });
   const save = async (machineId: string | null, form: FormData) => {
     const result = saveMachine(library.machines, machineId, form);
@@ -254,19 +257,19 @@ function MachinePage({
   };
   const cancel = (
     <button type="button" onClick={toList}>
-      Cancel
+      {t("cancel")}
     </button>
   );
   if (id === null) {
     return (
       <>
-        <Header title="New machine" />
+        <Header title={t("newMachine")} />
         <NewMachine save={save} cancel={cancel} />
       </>
     );
   }
   const choice: MachineChoice | undefined = library.machines.find((m) => m.id === id);
-  if (!choice) return <p className="text-muted-foreground">This machine no longer exists.</p>;
+  if (!choice) return <p className="text-muted-foreground">{t("machineGone")}</p>;
   return (
     <>
       <Header title={choice.machine.name} />

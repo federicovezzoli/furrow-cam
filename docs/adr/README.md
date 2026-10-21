@@ -57,7 +57,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Proposed |
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
-| [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed |
+| [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed; superseded in part by ADR-0053 |
 | [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Proposed; superseded in part by ADR-0048 and ADR-0052 |
 | [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Proposed |
 | [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
@@ -67,3 +67,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0050](0050-guest-workspace-in-the-browser.md) | Guests use the workspace with projects kept in the browser | Proposed |
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Proposed |
 | [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Proposed |
+| [0053](0053-touch-off-suggest-every-xy-move.md) | Touch-off Suggest keeps the tool on the pad through every kind of XY move | Proposed |
+| [0054](0054-interface-languages.md) | Interface languages with use-intl, picked from the browser or the system | Proposed |

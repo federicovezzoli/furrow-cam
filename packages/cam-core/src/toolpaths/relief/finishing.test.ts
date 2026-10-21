@@ -333,7 +333,8 @@ describe("waterline", () => {
     it(`never cuts below the model, with ${label}`, () => {
       const toolpath = finish(tool, waterline(0.5), {}, PYRAMID, pyramidMesh);
       expectNoGouge(toolpath, tool, PYRAMID, pyramidMesh, { tolerance });
-    });
+      // About 2 s alone with the ball end mill: over the default 5 s while the other packages' tests run too.
+    }, 20_000);
   }
 
   it("never cuts below the offset model, leaving the stock to leave", () => {

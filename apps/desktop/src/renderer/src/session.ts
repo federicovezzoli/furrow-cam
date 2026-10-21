@@ -1,10 +1,11 @@
 import type { ArchiveVersion, ProjectDocument } from "@furrow/document";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import { t } from "./i18n";
 import { type ProjectFile, writeProjectFile } from "./project-file";
 
-const TOO_MANY_VERSIONS = `This project already has ${MAX_VERSIONS} versions, the most it can keep. Delete one first.`;
-const VERSION_NOT_FOUND = "This version no longer exists.";
+const tooManyVersions = () => t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS });
+const versionNotFound = () => t("Desktop.Session.versionNotFound");
 
 export type ProjectSession = ReturnType<typeof createProjectSession>;
 
@@ -124,7 +125,7 @@ export function createProjectSession({
   function parseLabel(label: string): { label: string | null } | { error: string } {
     const trimmed = label.trim();
     if (trimmed.length > VERSION_LABEL_MAX) {
-      return { error: `Label: at most ${VERSION_LABEL_MAX} characters.` };
+      return { error: t("Desktop.Session.labelTooLong", { max: VERSION_LABEL_MAX }) };
     }
     return { label: trimmed === "" ? null : trimmed };
   }
@@ -145,7 +146,7 @@ export function createProjectSession({
       },
       get: async (sha256) => {
         const bytes = meshes.get(sha256);
-        if (!bytes) throw new Error("This model is missing from the project.");
+        if (!bytes) throw new Error(t("Desktop.Session.missingModel"));
         // A copy: workers take the buffers they're sent.
         return bytes.slice().buffer;
       },
@@ -158,7 +159,7 @@ export function createProjectSession({
       create: async (label) => {
         const parsed = parseLabel(label);
         if ("error" in parsed) return parsed;
-        if (versions.length >= MAX_VERSIONS) return { error: TOO_MANY_VERSIONS };
+        if (versions.length >= MAX_VERSIONS) return { error: tooManyVersions() };
         addVersion(parsed.label, false, document);
         changed();
         return { versions: rows() };
@@ -166,14 +167,14 @@ export function createProjectSession({
       rename: async (id, label) => {
         const parsed = parseLabel(label);
         if ("error" in parsed) return parsed;
-        if (!versions.some((v) => v.id === id)) return { error: VERSION_NOT_FOUND };
+        if (!versions.some((v) => v.id === id)) return { error: versionNotFound() };
         versions = versions.map((v) => (v.id === id ? { ...v, label: parsed.label } : v));
         versionsChanged = true;
         changed();
         return undefined;
       },
       delete: async (id) => {
-        if (!versions.some((v) => v.id === id)) return { error: VERSION_NOT_FOUND };
+        if (!versions.some((v) => v.id === id)) return { error: versionNotFound() };
         versions = versions.filter((v) => v.id !== id);
         versionsChanged = true;
         changed();
@@ -181,13 +182,13 @@ export function createProjectSession({
       },
       restore: async (id) => {
         const version = versions.find((v) => v.id === id);
-        if (!version) return { error: VERSION_NOT_FOUND };
-        if (versions.length >= MAX_VERSIONS) return { error: TOO_MANY_VERSIONS };
+        if (!version) return { error: versionNotFound() };
+        if (versions.length >= MAX_VERSIONS) return { error: tooManyVersions() };
         // Kept first, so a restore can be undone (ADR-0028).
         const keptLabel =
           version.label === null
-            ? "Before restoring an earlier version"
-            : `Before restoring “${version.label}”`;
+            ? t("Desktop.Session.beforeRestoringEarlier")
+            : t("Desktop.Session.beforeRestoring", { label: version.label });
         addVersion(keptLabel.slice(0, VERSION_LABEL_MAX), true, document);
         document = version.document;
         changed();
@@ -195,8 +196,8 @@ export function createProjectSession({
       },
       openAsProject: async (id, dateLabel) => {
         const version = versions.find((v) => v.id === id);
-        if (!version) return { error: VERSION_NOT_FOUND };
-        if (!openAsProject) return { error: "Versions can't be opened as projects here." };
+        if (!version) return { error: versionNotFound() };
+        if (!openAsProject) return { error: t("Desktop.Session.cantOpenVersions") };
         openAsProject(
           { document: version.document, meshes: new Map(meshes), versions: [] },
           `${currentName} (${version.label ?? dateLabel})`,

@@ -246,7 +246,10 @@ describe("grbl", () => {
       });
       expect(gcode).toContain("M3 S30000");
       expect(warnings).toEqual([
-        "Holes: the tool's 40000 RPM is outside the machine's spindle range, so 30000 RPM is used.",
+        {
+          operation: "Holes",
+          message: { code: "grbl.spindleClamped", values: { rpm: 40000, used: 30000 } },
+        },
       ]);
     });
   });
@@ -277,7 +280,9 @@ describe("grbl", () => {
         "G1 X30 Z-4 F1008.849",
         "G1 Y10 F900",
       ]);
-      expect(warnings).toEqual(["Ramp: 2 moves slowed to the machine's maximum feed."]);
+      expect(warnings).toEqual([
+        { operation: "Ramp", message: { code: "grbl.slowed", values: { count: 2 } } },
+      ]);
     });
 
     it("leaves feeds alone without a machine profile", () => {
@@ -419,7 +424,12 @@ describe("grbl", () => {
       expect(gcode).toContain("M5\nG0 Z20\nM0 (Change the bit)");
       expect(gcode).toContain("(At 7.5 {safez})");
       expect(warnings).toEqual([
-        "Operation start: {safez} can't be filled in, so it's written as is.",
+        {
+          message: {
+            code: "grbl.unfilledPlaceholder",
+            values: { block: "operationStart", placeholder: "{safez}" },
+          },
+        },
       ]);
     });
 

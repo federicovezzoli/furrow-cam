@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy } from "react";
+import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
 import { useDocumentStore } from "../providers/workspace-stores";
 import { BrowserOnly } from "./browser-only";
@@ -23,16 +24,19 @@ const SimulatorViewport = lazy(() =>
 export function SimulatorShell() {
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
+  const t = useTranslations("Shell");
   return (
     <>
       <TopBar
         saveStatus={saveStatus}
         machineName={machineName}
-        back={{ to: "workspace", label: "Back to the workspace" }}
+        back={{ to: "workspace", label: t("backToWorkspace") }}
       />
       <main className="flex min-h-0 flex-1 flex-col">
         <BrowserOnly
-          fallback={<p className="m-auto p-3 text-ui text-muted-foreground">Loading simulator…</p>}
+          fallback={
+            <p className="m-auto p-3 text-ui text-muted-foreground">{t("loadingSimulator")}</p>
+          }
         >
           <SimulatorViewport />
         </BrowserOnly>

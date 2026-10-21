@@ -1,6 +1,8 @@
+import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import type * as React from "react";
+import { useTranslations } from "use-intl";
 import packageJson from "../../../package.json";
 import type { Page } from "./desktop-host";
 
@@ -23,6 +25,7 @@ export function AppFrame({
   navigate: (page: Page) => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("Nav");
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b">
@@ -30,10 +33,11 @@ export function AppFrame({
           <NavButton onClick={() => navigate({ name: "start" })} brand>
             Furrow CAM
           </NavButton>
-          <NavButton onClick={() => navigate({ name: "start" })}>Projects</NavButton>
-          <NavButton onClick={() => navigate({ name: "tools" })}>Bits</NavButton>
-          <NavButton onClick={() => navigate({ name: "machines" })}>Machines</NavButton>
+          <NavButton onClick={() => navigate({ name: "start" })}>{t("projects")}</NavButton>
+          <NavButton onClick={() => navigate({ name: "tools" })}>{t("bits")}</NavButton>
+          <NavButton onClick={() => navigate({ name: "machines" })}>{t("machines")}</NavButton>
           <div className="ml-auto flex items-center gap-2">
+            <LanguagePicker />
             <ThemeToggle />
           </div>
         </nav>

@@ -1,6 +1,7 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
-import type { ProjectDocument } from "@furrow/document";
+import type { Message, ProjectDocument } from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
 import type { DocumentStore } from "./document-store";
 import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
@@ -44,8 +45,7 @@ export type ToolpathMessage =
 
 /** How many times an export is made again for edits before it gives up (#252). */
 const MAX_EXPORT_RESTARTS = 5;
-const KEPT_CHANGING =
-  "The project kept changing while its G-code was being made. Export again once you're done editing.";
+const KEPT_CHANGING: Message = { code: "workspace.keptChanging" };
 
 /** An export waiting for the worker: its latest request, and the meshes sent so far by hash. */
 type PendingExport = {
@@ -58,7 +58,8 @@ type PendingExport = {
 };
 
 /** The program, why it couldn't be exported, or the mesh the worker needs for it. */
-export type GcodeExportResult = GcodeExport | { error: string };
+/** An export's error is a core package's message, with the operation it is about, if any. */
+export type GcodeExportResult = GcodeExport | { error: string | Message; operation?: string };
 export type GcodeExportResponse = { export: number } & (
   | GcodeExportResult
   | { missingMesh: string }
@@ -71,7 +72,7 @@ export type GcodeExportResponse = { export: number } & (
  */
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | ToolpathPreview
-  | { error: string }
+  | { error: Translatable }
   | { progress: number }
   | { cancelled: true }
   | { missingMesh: string }

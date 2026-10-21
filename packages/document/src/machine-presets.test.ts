@@ -3,6 +3,7 @@ import { Machine, NEW_MACHINE_DEFAULTS } from "./machine";
 import {
   askedFields,
   MACHINE_PRESETS,
+  PRESET_MESSAGES,
   presetMachine,
   presetName,
   REQUIRED_PRESET_FIELDS,
@@ -69,7 +70,7 @@ describe("MACHINE_PRESETS", () => {
       });
 
       it("states its firmware", () => {
-        expect(preset.firmware.trim()).not.toBe("");
+        expect(PRESET_MESSAGES).toContain(preset.firmware);
       });
 
       it("makes a valid machine with sample answers (PRD-0004 M11)", () => {

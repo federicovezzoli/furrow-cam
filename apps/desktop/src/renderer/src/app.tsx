@@ -1,4 +1,5 @@
 import { createProjectDocument, type Machine } from "@furrow/document";
+import { errorText } from "@furrow/ui/lib/i18n";
 import {
   parseMachines,
   parseSettings,
@@ -12,6 +13,7 @@ import type { Recovery } from "../../shared/api";
 import { api } from "./api";
 import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
+import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
 import { type ProjectFile, readProjectFile } from "./project-file";
 import { createProjectSession, type ProjectSession } from "./session";
@@ -86,7 +88,7 @@ export function App() {
         if (next.settings !== before.settings) await api.writeData("settings", next.settings);
       } catch (error) {
         console.error(error);
-        throw new Error("The change couldn't be saved to this computer's library.");
+        throw new Error(t("Desktop.App.libraryNotSaved"));
       }
       stored.current = next;
       setLibrary(next);
@@ -128,7 +130,7 @@ export function App() {
     try {
       prepared = session.prepareSave();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "The project couldn't be saved.");
+      window.alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
       return false;
     }
     const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);
@@ -175,9 +177,8 @@ export function App() {
     try {
       file = await readProjectFile(bytes);
     } catch (error) {
-      report(
-        `${name} couldn't be opened: ${error instanceof Error ? error.message : "it couldn't be read."}`,
-      );
+      const reason = error instanceof Error ? error.message : t("Desktop.App.unreadable");
+      report(t("Desktop.App.openFailed", { name, reason }));
       return;
     }
     // Only `.furrow` files are saved over; others are saved as a new `.furrow` file.
@@ -201,14 +202,14 @@ export function App() {
   async function restore(recovery: Recovery) {
     const bytes = await api.readRecovery(recovery.id);
     if (!bytes) {
-      setError("The unsaved changes couldn't be read.");
+      setError(t("Desktop.App.recoveryUnreadable"));
       return;
     }
     try {
       const file = await readProjectFile(bytes);
       open(file, { path: recovery.path, name: recovery.name, id: recovery.id, modified: true });
     } catch (error) {
-      setError(error instanceof Error ? error.message : "The unsaved changes couldn't be read.");
+      setError(error instanceof Error ? error.message : t("Desktop.App.recoveryUnreadable"));
     }
   }
 
@@ -222,7 +223,7 @@ export function App() {
     track({ event: "project_created" });
     open(
       { document: { ...createProjectDocument(), machine }, meshes: new Map(), versions: [] },
-      { path: null, name: "Untitled" },
+      { path: null, name: t("Desktop.App.untitled") },
     );
   }
 
@@ -278,7 +279,7 @@ export function App() {
   });
 
   if (!library) {
-    return <p className="m-auto p-8 text-sm text-muted-foreground">Loading…</p>;
+    return <p className="m-auto p-8 text-sm text-muted-foreground">{t("Desktop.App.loading")}</p>;
   }
 
   /** Goes to `next`; leaving the project for the start screen closes it first. */

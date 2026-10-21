@@ -5,7 +5,7 @@ import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 15;
+export const CURRENT_SCHEMA_VERSION = 16;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -81,7 +81,7 @@ export const Stock = z
       ctx.addIssue({
         code: "custom",
         path: ["touchOff", "diameter"],
-        message: "The touch-off pad must fit on the stock",
+        message: "document.padOffStock",
       });
     }
   });
@@ -117,7 +117,7 @@ export const ProjectDocument = z
         ctx.addIssue({
           code: "custom",
           path: ["geometry", i, "id"],
-          message: "Duplicate shape id",
+          message: "document.duplicateShape",
         });
       }
       pathCounts.set(shape.id, shape.paths.length);
@@ -126,7 +126,11 @@ export const ProjectDocument = z
     const modelIds = new Set<string>();
     doc.models.forEach((model, i) => {
       if (modelIds.has(model.id)) {
-        ctx.addIssue({ code: "custom", path: ["models", i, "id"], message: "Duplicate model id" });
+        ctx.addIssue({
+          code: "custom",
+          path: ["models", i, "id"],
+          message: "document.duplicateModel",
+        });
       }
       modelIds.add(model.id);
     });
@@ -137,7 +141,7 @@ export const ProjectDocument = z
         ctx.addIssue({
           code: "custom",
           path: ["operations", i, "id"],
-          message: "Duplicate operation id",
+          message: "document.duplicateOperation",
         });
       }
       operationIds.add(operation.id);
@@ -146,7 +150,7 @@ export const ProjectDocument = z
         ctx.addIssue({
           code: "custom",
           path: ["operations", i, "params", "modelId"],
-          message: "Unknown model id",
+          message: "document.unknownModel",
         });
       }
       const seen = new Set<string>();
@@ -155,7 +159,7 @@ export const ProjectDocument = z
           ctx.addIssue({
             code: "custom",
             path: ["operations", i, "targets", j, "shapeId"],
-            message: "Duplicate shape id",
+            message: "document.duplicateShape",
           });
         }
         seen.add(shapeId);
@@ -164,7 +168,7 @@ export const ProjectDocument = z
           ctx.addIssue({
             code: "custom",
             path: ["operations", i, "targets", j, "shapeId"],
-            message: "Unknown shape id",
+            message: "document.unknownShape",
           });
           return;
         }
@@ -173,7 +177,7 @@ export const ProjectDocument = z
             ctx.addIssue({
               code: "custom",
               path: ["operations", i, "targets", j, "paths", k],
-              message: "Unknown path",
+              message: "document.unknownPath",
             });
           }
         });

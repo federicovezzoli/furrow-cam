@@ -1,7 +1,9 @@
+import { MessageError } from "@furrow/document";
 import type { Box3 } from "../../scene/stock";
+import type { ImportMessage, ImportMessageCode } from "../messages";
 
-/** Thrown for a file that isn't an STL mesh Furrow CAM can import; the message is for the user. */
-export class StlImportError extends Error {}
+/** Thrown for a file that isn't an STL mesh Furrow CAM can import. */
+export class StlImportError extends MessageError<ImportMessage> {}
 
 /** The most an STL file may hold (PRD-0005 S1); each instance may set its own. */
 export type StlLimits = { maxBytes: number; maxTriangles: number };
@@ -28,8 +30,6 @@ const Decoder = (
 const HEADER_BYTES = 84;
 const TRIANGLE_BYTES = 50;
 
-const formatCount = (count: number) => count.toLocaleString("en-US");
-
 /**
  * Reads a binary or ASCII STL file (PRD-0005 S1). Refuses files larger than
  * `limits` before reading their triangles, and malformed ones, with a
@@ -38,11 +38,9 @@ const formatCount = (count: number) => count.toLocaleString("en-US");
  */
 export function parseStl(bytes: Uint8Array, limits: StlLimits = DEFAULT_STL_LIMITS): StlMesh {
   if (bytes.length > limits.maxBytes) {
-    throw new StlImportError(
-      `This file is larger than ${formatCount(limits.maxBytes / 1_000_000)} MB, the most allowed.`,
-    );
+    throw new StlImportError({ code: "stl.tooLarge", values: { mb: limits.maxBytes / 1_000_000 } });
   }
-  if (bytes.length === 0) throw new StlImportError("This file is empty.");
+  if (bytes.length === 0) throw new StlImportError({ code: "stl.empty" });
   // ASCII files start with `solid`, but so do some binary ones: a binary
   // file's size matches the triangle count in its header.
   if (bytes.length >= HEADER_BYTES) {
@@ -52,7 +50,7 @@ export function parseStl(bytes: Uint8Array, limits: StlLimits = DEFAULT_STL_LIMI
     }
   }
   if (startsWithSolid(bytes)) return parseAscii(bytes, limits);
-  throw new StlImportError("This isn't an STL file, or it is damaged: its size doesn't match.");
+  throw new StlImportError({ code: "stl.sizeMismatch" });
 }
 
 function startsWithSolid(bytes: Uint8Array): boolean {
@@ -63,18 +61,19 @@ function startsWithSolid(bytes: Uint8Array): boolean {
 
 function checkTriangleCount(count: number, limits: StlLimits) {
   if (count > limits.maxTriangles) {
-    throw new StlImportError(
-      `This model has more than ${formatCount(limits.maxTriangles)} triangles, the most allowed. Simplify it and try again.`,
-    );
+    throw new StlImportError({
+      code: "stl.tooManyTriangles",
+      values: { max: limits.maxTriangles },
+    });
   }
 }
 
 function noTriangles(): never {
-  throw new StlImportError("This file has no triangles.");
+  throw new StlImportError({ code: "stl.noTriangles" });
 }
 
 function badCoordinate(): never {
-  throw new StlImportError("This file has a vertex that isn't a number.");
+  throw new StlImportError({ code: "stl.vertexNaN" });
 }
 
 function parseBinary(bytes: Uint8Array, count: number, limits: StlLimits): StlMesh {
@@ -107,8 +106,8 @@ function parseAscii(bytes: Uint8Array, limits: StlLimits): StlMesh {
   let vertices = -1;
   let line = 0;
 
-  const fail = (problem: string): never => {
-    throw new StlImportError(`This STL file is damaged: ${problem} on line ${line}.`);
+  const fail = (code: ImportMessageCode, values: Record<string, string> = {}): never => {
+    throw new StlImportError({ code, values: { ...values, line } });
   };
 
   let start = 0;
@@ -121,13 +120,13 @@ function parseAscii(bytes: Uint8Array, limits: StlLimits): StlMesh {
     const keyword = words[0]?.toLowerCase() ?? "";
 
     if (keyword === "facet") {
-      if (vertices !== -1) fail("a facet starts inside another");
+      if (vertices !== -1) fail("stl.facetInFacet");
       checkTriangleCount(triangles + 1, limits);
       vertices = 0;
     } else if (keyword === "vertex") {
-      if (vertices === -1) fail("a vertex is outside a facet");
-      if (vertices === 3) fail("a facet has more than three vertices");
-      if (words.length !== 4) fail("a vertex doesn't have three coordinates");
+      if (vertices === -1) fail("stl.vertexOutside");
+      if (vertices === 3) fail("stl.tooManyVertices");
+      if (words.length !== 4) fail("stl.vertexCoordinates");
       if (positions.length < (triangles + 1) * 9) {
         const grown = new Float32Array(positions.length * 2);
         grown.set(positions);
@@ -140,14 +139,14 @@ function parseAscii(bytes: Uint8Array, limits: StlLimits): StlMesh {
       }
       vertices++;
     } else if (keyword === "endfacet") {
-      if (vertices !== 3) fail("a facet doesn't have three vertices");
+      if (vertices !== 3) fail("stl.facetVertices");
       triangles++;
       vertices = -1;
     } else if (!["", "solid", "endsolid", "outer", "endloop"].includes(keyword)) {
-      fail(`"${words[0]}" isn't STL`);
+      fail("stl.notStl", { word: words[0] ?? "" });
     }
   }
-  if (vertices !== -1) fail("the last facet isn't finished");
+  if (vertices !== -1) fail("stl.unfinished");
   if (triangles === 0) noTriangles();
   const trimmed = positions.slice(0, triangles * 9);
   return { positions: trimmed, triangles, bounds: positionsBounds(trimmed) };

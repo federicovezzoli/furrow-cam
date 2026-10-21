@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { Loading } from "@/components/loading";
 import { meshLimits } from "@/features/assets/server";
 import { getSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
@@ -20,7 +21,7 @@ import { WebProjectShell } from "@/features/workspace/host/web-project-shell";
  */
 export default function ProjectLayout({ params, children }: LayoutProps<"/projects/[id]">) {
   return (
-    <Suspense fallback={<p className="m-auto text-ui text-muted-foreground">Loading project…</p>}>
+    <Suspense fallback={<Loading className="m-auto text-ui text-muted-foreground" project />}>
       <Project params={params}>{children}</Project>
     </Suspense>
   );

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Loading } from "@/components/loading";
 import { meshLimits } from "@/features/assets/server";
 import { getUserId } from "@/features/auth/server";
 import { listMachines, type MachineOption, snapshotMachine } from "@/features/machines/server";
@@ -8,12 +9,14 @@ import { ProjectList } from "@/features/projects/components/project-list";
 import { listProjects } from "@/features/projects/server";
 import { GuestProjects } from "@/features/workspace/guest/guest-app";
 import { GuestImportOffer } from "@/features/workspace/guest/guest-import-offer";
+import { getTranslator } from "@/lib/locale";
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const t = await getTranslator();
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("Nav.projects")}</h1>
+      <Suspense fallback={<Loading />}>
         <Projects />
       </Suspense>
     </main>

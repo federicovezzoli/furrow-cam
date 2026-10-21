@@ -11,6 +11,7 @@ import {
 import { containment, difference, offset, type Polygon, signedArea } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { projectOnLoop } from "../geometry/loop";
+import type { ToolpathMessage } from "./messages";
 import {
   type Box,
   bounds,
@@ -18,7 +19,6 @@ import {
   depthLevels,
   descend,
   inBox,
-  plural,
   rampZ,
   Track,
 } from "./passes";
@@ -129,7 +129,7 @@ export function contourToolpath(
   const { offset } = params;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const radius = tool.diameter / 2;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
 
   const closed: Polygon[] = [];
   const open: Point[][] = [];
@@ -141,13 +141,11 @@ export function contourToolpath(
       else open.push(flattenPath(path, tolerance));
     }
   }
-  if (points > 0) warnings.push(`Skipped ${plural(points, "point")}: drill them instead.`);
+  if (points > 0) warnings.push({ code: "toolpath.skippedPoints", values: { count: points } });
   if (open.length > 0 && params.side !== "on") {
-    warnings.push(
-      `Skipped ${plural(open.length, "open path")}: inside and outside cuts need closed paths.`,
-    );
+    warnings.push({ code: "toolpath.skippedOpenProfile", values: { count: open.length } });
   }
-  if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
   const cut: Cut = {
     builder: new ToolpathBuilder(options.safeZ, options.entryClearance),
@@ -168,13 +166,13 @@ export function contourToolpath(
   const roughing = contours(closed, params, offset + params.allowance);
   const finishing = params.finishPass ? contours(closed, params, offset) : null;
   if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
-    warnings.push("The closed paths are too small for the tool.");
+    warnings.push({ code: "toolpath.pathsTooSmall" });
   }
 
   const { tabs } = params;
   if (tabs && tabs.positions.length > 0) {
     if (tabs.height >= params.depth) {
-      warnings.push("The tabs are as tall as the cut is deep, so nothing is cut under them.");
+      warnings.push({ code: "toolpath.tabsTooTall" });
     }
     cut.tabTop = Math.min(0, tabs.height - params.depth);
     const span = tabs.width + tool.diameter;
@@ -187,7 +185,7 @@ export function contourToolpath(
     const left =
       roughing.contours.length === 0 ? missedFinishing : Math.max(missed, missedFinishing);
     if (left > 0) {
-      warnings.push(`Left out ${plural(left, "tab")} too far from every closed contour.`);
+      warnings.push({ code: "toolpath.tabsLeftOut", values: { count: left } });
     }
   }
 
@@ -235,9 +233,7 @@ export function contourToolpath(
   cut.builder.retract();
 
   if (cut.leadInMisfits > 0) {
-    warnings.push(
-      `The lead-in didn't fit ${plural(cut.leadInMisfits, "contour")} and was shortened or left out.`,
-    );
+    warnings.push({ code: "toolpath.leadInMisfits", values: { count: cut.leadInMisfits } });
   }
   return { moves: cut.builder.moves, warnings };
 }

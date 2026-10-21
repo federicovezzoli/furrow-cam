@@ -5,11 +5,13 @@ import {
   projectNameFromFileName,
   readProjectJson,
 } from "@furrow/document";
-import { parseMesh } from "@furrow/workspace/lib/model-import";
+import { formatMessage } from "@furrow/ui/lib/i18n";
+import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
 import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
+import { clientTranslator } from "@/lib/client-translator";
 import { createGuestProject, deleteGuestProject, type GuestProject, putGuestMesh } from "./storage";
 
-const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
+const notAProject = () => clientTranslator()("Projects.notAProject");
 const NAME_MAX = 100;
 
 function isArchive(file: File) {
@@ -19,26 +21,25 @@ function isArchive(file: File) {
 /** The project document in `contents`, upgraded to the current schema version. */
 export function parseGuestProjectFile(contents: string): ProjectDocument {
   const read = readProjectJson(contents);
+  const t = clientTranslator();
   switch (read.reason) {
     case undefined:
       return read.document;
     case "not_a_project":
-      throw new Error(NOT_A_PROJECT);
+      throw new Error(notAProject());
     case "too_new":
-      throw new Error(
-        "This file was saved by a newer release of Furrow CAM. Reload the page to update.",
-      );
+      throw new Error(t("Guest.fileNewer"));
     case "version":
-      throw new Error(`This file can't be imported: ${read.error.message}.`);
+      throw new Error(t("Guest.fileCantImport", { reason: formatMessage(t, read.error.detail) }));
     case "invalid":
-      throw new Error("This file can't be imported: its contents are invalid.");
+      throw new Error(t("Guest.fileCantImport", { reason: t("Guest.contentsInvalid") }));
   }
 }
 
 /** The project name a file called `fileName` gives, at most `NAME_MAX` characters. */
 export function guestProjectName(fileName: string): string {
   const name = [...(projectNameFromFileName(fileName) ?? "").trim()].slice(0, NAME_MAX).join("");
-  return name || "Imported project";
+  return name || clientTranslator()("Projects.importedProject");
 }
 
 /**
@@ -54,14 +55,16 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
   for (const model of document.models) {
     const bytes = meshes.get(model.sha256);
     if (!bytes) {
+      const t = clientTranslator();
       throw new Error(
         archive
-          ? `This file can't be imported: the mesh of ${model.fileName} is missing.`
-          : "This project has 3D models: import its .zip export instead.",
+          ? t("Projects.meshOfMissing", { file: model.fileName })
+          : t("Projects.modelsNeedZip"),
       );
     }
     if (bytes.byteLength > DEFAULT_STL_LIMITS.maxBytes) {
-      throw new Error(archiveMeshTooLarge(DEFAULT_STL_LIMITS.maxBytes).message);
+      const t = clientTranslator();
+      throw new Error(formatMessage(t, archiveMeshTooLarge(DEFAULT_STL_LIMITS.maxBytes).detail));
     }
   }
   // Checked as an STL import is (PRD-0005 S1), so a damaged file can't leave a model that won't load.
@@ -71,10 +74,14 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
       // A copy: the worker takes the buffer it is sent.
       mesh = await parseMesh(bytes.slice().buffer, DEFAULT_STL_LIMITS);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "it couldn't be read.";
-      throw new Error(`A model in this file can't be imported: ${reason}`);
+      const t = clientTranslator();
+      const reason =
+        error instanceof MeshImportError
+          ? formatMessage(t, error.detail)
+          : t("Projects.unreadableReason");
+      throw new Error(t("Projects.modelCantImport", { reason }));
     }
-    if (mesh.sha256 !== sha256) throw new Error("A model in this file is damaged.");
+    if (mesh.sha256 !== sha256) throw new Error(clientTranslator()("Projects.modelDamaged"));
   }
 
   const project = await createGuestProject(guestProjectName(file.name), document);

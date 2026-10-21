@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
 import { DEFAULT_SPIN_UP_DELAY } from "./machine";
+import { type DocumentMessage, MessageError } from "./message";
 
 type UnknownDocument = Record<string, unknown>;
 
@@ -129,10 +130,21 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #183: the border Fit to stock leaves is the model's. Existing models
+  // keep the one they were fitted with, whatever new models get later.
+  15: (doc) => {
+    const V15_BORDER = 10;
+    if (Array.isArray(doc.models)) {
+      for (const model of doc.models) {
+        if (isObject(model) && !("border" in model)) model.border = V15_BORDER;
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
-export class ProjectDocumentVersionError extends Error {
+export class ProjectDocumentVersionError extends MessageError<DocumentMessage> {
   override name = "ProjectDocumentVersionError";
 }
 
@@ -147,7 +159,7 @@ export class ProjectDocumentTooNewError extends ProjectDocumentVersionError {
     readonly version: number,
     readonly supportedVersion: number,
   ) {
-    super(`Document version ${version} is newer than the supported version ${supportedVersion}`);
+    super({ code: "migration.tooNew", values: { version, supported: supportedVersion } });
   }
 }
 
@@ -165,11 +177,14 @@ export function migrateProjectDocument(
   targetVersion: number = CURRENT_SCHEMA_VERSION,
 ): unknown {
   if (!isObject(json)) {
-    throw new ProjectDocumentVersionError("A project document must be a JSON object");
+    throw new ProjectDocumentVersionError({ code: "migration.notObject" });
   }
   const version = json.schemaVersion;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
-    throw new ProjectDocumentVersionError(`Invalid schemaVersion: ${JSON.stringify(version)}`);
+    throw new ProjectDocumentVersionError({
+      code: "migration.invalidVersion",
+      values: { version: JSON.stringify(version) ?? "undefined" },
+    });
   }
   if (version > targetVersion) {
     throw new ProjectDocumentTooNewError(version, targetVersion);
@@ -184,13 +199,17 @@ export function migrateProjectDocument(
   for (let from = version; from < targetVersion; from++) {
     const migrate = chain[from];
     if (!migrate) {
-      throw new ProjectDocumentVersionError(`No migration from version ${from} to ${from + 1}`);
+      throw new ProjectDocumentVersionError({
+        code: "migration.missing",
+        values: { from, to: from + 1 },
+      });
     }
     const migrated: unknown = migrate(doc);
     if (!isObject(migrated)) {
-      throw new ProjectDocumentVersionError(
-        `Migration from version ${from} to ${from + 1} did not return an object`,
-      );
+      throw new ProjectDocumentVersionError({
+        code: "migration.notObjectResult",
+        values: { from, to: from + 1 },
+      });
     }
     doc = { ...migrated, schemaVersion: from + 1 };
   }

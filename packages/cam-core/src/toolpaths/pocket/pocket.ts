@@ -2,7 +2,8 @@ import type { PocketOperation, PocketParams, Point, Shape, Tool } from "@furrow/
 import { difference, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../../geometry/flatten";
 import { projectOnLoop } from "../../geometry/loop";
-import { depthLevels, plural } from "../passes";
+import type { ToolpathMessage } from "../messages";
+import { depthLevels } from "../passes";
 import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "../toolpath";
 import {
   type Cut,
@@ -77,7 +78,7 @@ export function pocketToolpath(
 ): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
 
   const closed: Polygon[] = [];
   let open = 0;
@@ -89,11 +90,11 @@ export function pocketToolpath(
       else open++;
     }
   }
-  if (points > 0) warnings.push(`Skipped ${plural(points, "point")}: drill them instead.`);
+  if (points > 0) warnings.push({ code: "toolpath.skippedPoints", values: { count: points } });
   if (open > 0) {
-    warnings.push(`Skipped ${plural(open, "open path")}: pockets need closed paths.`);
+    warnings.push({ code: "toolpath.skippedOpenPocket", values: { count: open } });
   }
-  if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
   const toolpath = clearPocket(tool, params, closed, options);
   return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
 }
@@ -116,7 +117,7 @@ export function clearPocket(
     (area.length > 0 || drawn.length === 0) &&
     regions.every((region) => region.pieces.length === 0)
   ) {
-    warnings.push("The closed paths are too small for the tool.");
+    warnings.push({ code: "toolpath.pathsTooSmall" });
   }
 
   const cut = pocketCut(tool, params.ramp, options);
@@ -146,7 +147,7 @@ type PocketPlan = {
   drawn: Polygon[];
   /** The area the strategy clears. */
   area: Polygon[];
-  warnings: string[];
+  warnings: ToolpathMessage[];
 };
 
 function planPocket(
@@ -156,7 +157,7 @@ function planPocket(
   tolerance: number,
 ): PocketPlan {
   const radius = tool.diameter / 2;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
   const layout: Layout = {
     stepOver: (tool.diameter * tool.stepOver) / 100,
     radius,
@@ -259,7 +260,7 @@ export class LevelClearing {
    * last level. Returns the warnings of the strategy, such as a peel that
    * skips pockets.
    */
-  clear(closed: Polygon[], z: number): string[] {
+  clear(closed: Polygon[], z: number): ToolpathMessage[] {
     const { cut, clearedZ } = this;
     const params = { ...this.params, finishPass: false };
     const { regions, warnings } = planPocket(this.tool, params, closed, this.tolerance);

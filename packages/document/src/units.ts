@@ -14,7 +14,7 @@ export const FeedRate = z.number().positive();
  * A spindle speed in revolutions per minute. Capped well above any router
  * spindle, which also keeps it within a 32-bit `INTEGER` column.
  */
-export const SpindleRpm = z.number().int().positive().max(100_000, "Must be at most 100,000 RPM");
+export const SpindleRpm = z.number().int().positive().max(100_000, "validation.maxRpm");
 
 /** A display name that isn't blank. Not trimmed, so parsing never changes stored values. */
-export const Name = z.string().regex(/\S/, "Must not be blank");
+export const Name = z.string().regex(/\S/, "validation.blank");

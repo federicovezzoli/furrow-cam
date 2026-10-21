@@ -12,6 +12,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { UploadIcon } from "lucide-react";
 import { unstable_rethrow, useRouter } from "next/navigation";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
+import { useTranslations } from "use-intl";
 import type { MeshLimits } from "@/features/assets/server";
 import type { MachineOption } from "@/features/machines/server";
 import { importProject } from "@/features/projects/actions";
@@ -27,8 +28,6 @@ const MAX_FILE_SIZE = 4_000_000;
  * left out (ADR-0047).
  */
 type Picked = { file: File; archive: ProjectArchive | null };
-
-const NO_MODEL_STORAGE = "This project has 3D models, which this server can't store.";
 
 function isArchive(file: File) {
   return /\.(zip|furrow)$/i.test(file.name) || file.type === "application/zip";
@@ -65,6 +64,7 @@ export function ImportProjectButton({
   machines: MachineOption[];
   meshLimits: MeshLimits | null;
 }) {
+  const t = useTranslations("Projects");
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export function ImportProjectButton({
       } catch (error) {
         // The redirect to the new project rejects the call too; let Next.js handle it.
         unstable_rethrow(error);
-        setError("This file couldn't be imported. Check your connection and try again.");
+        setError(t("importFailedConnection"));
       }
     });
   }
@@ -102,7 +102,7 @@ export function ImportProjectButton({
     event.currentTarget.value = "";
     if (!file) return;
     if (!isArchive(file) && file.size > MAX_FILE_SIZE) {
-      setError("This file is too large to import (the limit is 4 MB).");
+      setError(t("fileTooLarge"));
       return;
     }
     startTransition(async () => {
@@ -111,11 +111,11 @@ export function ImportProjectButton({
         try {
           picked = { file, archive: await readArchive(file, meshLimits ?? DEFAULT_STL_LIMITS) };
         } catch (error) {
-          setError(error instanceof Error ? error.message : "This file couldn't be read.");
+          setError(error instanceof Error ? error.message : t("fileUnreadable"));
           return;
         }
         if (!meshLimits && hasModels(picked.archive?.contents ?? "")) {
-          setError(NO_MODEL_STORAGE);
+          setError(t("noModelStorage"));
           return;
         }
       }
@@ -138,7 +138,7 @@ export function ImportProjectButton({
         />
         <Button variant="outline" onClick={() => input.current?.click()} disabled={pending}>
           <UploadIcon />
-          Import file…
+          {t("importFile")}
         </Button>
       </div>
     </div>

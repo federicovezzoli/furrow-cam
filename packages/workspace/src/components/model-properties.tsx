@@ -3,6 +3,7 @@
 import { rotatedSize } from "@furrow/cam-core";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
+import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
   CircleAlertIcon,
   Maximize2Icon,
@@ -11,8 +12,8 @@ import {
   Undo2Icon,
   XIcon,
 } from "lucide-react";
-import { ANCHOR_LABELS } from "../lib/anchor-grid";
-import { originalSizeLabel } from "../lib/model-size";
+import { useLocale, useTranslations } from "use-intl";
+import { cappedBorder, originalSize } from "../lib/model-size";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -25,6 +26,7 @@ import {
   modelOffset,
   modelOperations,
   removeModel,
+  setModelBorder,
   setModelDepth,
   setModelOffset,
   setModelScale,
@@ -38,8 +40,9 @@ const AXES = ["X", "Y", "Z"] as const;
 
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
- * quarter turns, size (with the size in the file), depth and position from
- * the zero, each an undoable edit. Says that it is cut from the top only (S3).
+ * quarter turns, size (with the size in the file), depth, the border *Fit to
+ * stock* leaves and position from the zero, each an undoable edit. Says that
+ * it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -48,12 +51,16 @@ export function ModelProperties({ modelId }: { modelId: string }) {
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
   const operationCount = useDocumentStore((s) => modelOperations(s.document, modelId).length);
+  const t = useTranslations("Model");
+  const locale = useLocale();
   if (!model) return null;
 
   const { placement } = model;
   const [width, height, depth] = rotatedSize(model.bounds, placement.rotation);
   const offset = modelOffset(stock, model);
   const gestures = gestureHandlers(store);
+  const original = originalSize(model, units);
+  const capped = cappedBorder(model.border, stock, units);
 
   return (
     <div className="grid gap-4 p-3 text-ui">
@@ -65,20 +72,17 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           variant="ghost"
           size="icon-compact"
           onClick={() => workspace.getState().selectModel(null)}
-          aria-label="Close model properties"
-          title="Close"
+          aria-label={t("closeLabel")}
+          title={t("close")}
         >
           <XIcon />
         </Button>
       </div>
-      <p className="text-muted-foreground">
-        {model.triangles.toLocaleString("en-US")} triangles. Cut from the top only: undercuts and
-        overhangs are filled in, as the viewport shows.
-      </p>
+      <p className="text-muted-foreground">{t("triangles", { count: model.triangles })}</p>
 
       <section aria-labelledby="model-rotation-heading" className="grid gap-2">
         <h3 id="model-rotation-heading" className="font-medium">
-          Rotation
+          {t("rotation")}
         </h3>
         <div className="flex gap-1">
           {AXES.map((axis, i) => (
@@ -87,7 +91,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
               variant="outline"
               size="compact"
               onClick={() => turnModelAbout(store, model.id, i as 0 | 1 | 2)}
-              title={`Turn 90° about the ${axis} axis`}
+              title={t("turn", { axis })}
             >
               <RotateCwIcon />
               {axis}
@@ -98,12 +102,12 @@ export function ModelProperties({ modelId }: { modelId: string }) {
 
       <section aria-labelledby="model-size-heading" className="grid gap-2">
         <h3 id="model-size-heading" className="font-medium">
-          Size
+          {t("size")}
         </h3>
         {(
           [
-            ["width", "Width", width],
-            ["height", "Height", height],
+            ["width", t("width"), width],
+            ["height", t("height"), height],
           ] as const
         ).map(([key, label, extent]) => (
           <NumberField
@@ -123,7 +127,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         ))}
         <NumberField
           id="model-depth"
-          label="Depth"
+          label={t("depth")}
           layout="inline"
           quantity="length"
           units={units}
@@ -136,37 +140,63 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         {depth > 0 && placement.depth > stock.thickness && (
           <p role="status" className="flex gap-1.5 text-destructive">
             <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>
-              The model reaches deeper than the stock is thick: it is cut no deeper than the stock's
-              bottom.
-            </span>
+            <span>{t("tooDeep")}</span>
           </p>
         )}
-        <p className="text-muted-foreground">{originalSizeLabel(model, units)}</p>
+        <p className="text-muted-foreground">
+          {t("original", {
+            size: localizeDecimal(original.size, locale),
+            scale: original.scale,
+          })}
+        </p>
+        <NumberField
+          id="model-border"
+          label={t("border")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={0}
+          value={model.border}
+          onValueChange={(value) => setModelBorder(store, model.id, value)}
+          {...gestures}
+        />
+        <p className="text-muted-foreground">
+          {capped === null
+            ? t("borderNote")
+            : t("borderCapped", { size: localizeDecimal(capped, locale) })}
+        </p>
         <div className="flex justify-end gap-1">
           <Button
             variant="outline"
             size="compact"
             onClick={() => setModelScale(store, model.id, 1)}
             disabled={placement.scale === 1 && (depth === 0 || placement.depth === depth)}
-            title="Scale the model back to its size in the file"
+            title={t("originalTitle")}
           >
             <Undo2Icon />
-            Original size
+            {t("originalSize")}
           </Button>
-          <Button variant="outline" size="compact" onClick={() => fitModelToStock(store, model.id)}>
+          <Button
+            variant="outline"
+            size="compact"
+            onClick={() => fitModelToStock(store, model.id)}
+            title={t("fitTitle")}
+          >
             <Maximize2Icon />
-            Fit to stock
+            {t("fit")}
           </Button>
         </div>
       </section>
 
       <section aria-labelledby="model-position-heading" className="grid gap-2">
         <h3 id="model-position-heading" className="font-medium">
-          Position
+          {t("position")}
         </h3>
         <p className="text-muted-foreground">
-          The model's {ANCHOR_LABELS[modelAnchor(stock)].toLowerCase()} point, from the zero.
+          {t.rich("positionHint", {
+            anchor: modelAnchor(stock),
+            em: (chunks) => <em>{chunks}</em>,
+          })}
         </p>
         {(["x", "y"] as const).map((axis, i) => (
           <NumberField
@@ -188,14 +218,10 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           variant="outline"
           size="compact"
           onClick={() => removeModel(store, model.id)}
-          title={
-            operationCount > 0
-              ? `Also removes the ${operationCount === 1 ? "operation" : `${operationCount} operations`} that machine it`
-              : undefined
-          }
+          title={operationCount > 0 ? t("removeTitle", { count: operationCount }) : undefined}
         >
           <Trash2Icon />
-          Remove model
+          {t("remove")}
         </Button>
       </div>
     </div>

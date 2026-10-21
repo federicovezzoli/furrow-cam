@@ -1,6 +1,6 @@
 import type { Model } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { originalSizeLabel } from "./model-size";
+import { cappedBorder, originalSize } from "./model-size";
 
 function model(placement: Partial<Model["placement"]>): Pick<Model, "bounds" | "placement"> {
   return {
@@ -9,21 +9,24 @@ function model(placement: Partial<Model["placement"]>): Pick<Model, "bounds" | "
   };
 }
 
-describe("originalSizeLabel", () => {
-  it("shows the size in the file and the scale", () => {
-    expect(originalSizeLabel(model({ scale: 0.42 }), "mm")).toBe(
-      "Original: 120 × 80 × 15 mm (scale 42%)",
-    );
+describe("originalSize", () => {
+  it("gives the size in the file and the scale", () => {
+    expect(originalSize(model({ scale: 0.42 }), "mm")).toEqual({
+      size: "120 × 80 × 15 mm",
+      scale: 42,
+    });
   });
 
   it("turns the size with the model, unscaled", () => {
     // A quarter turn about X swaps the height and the depth.
-    expect(originalSizeLabel(model({ rotation: [90, 0, 0], scale: 2.5 }), "mm")).toBe(
-      "Original: 120 × 15 × 80 mm (scale 250%)",
-    );
-    expect(originalSizeLabel(model({ rotation: [0, 0, 90], scale: 0.3333 }), "mm")).toBe(
-      "Original: 80 × 120 × 15 mm (scale 33.3%)",
-    );
+    expect(originalSize(model({ rotation: [90, 0, 0], scale: 2.5 }), "mm")).toEqual({
+      size: "120 × 15 × 80 mm",
+      scale: 250,
+    });
+    expect(originalSize(model({ rotation: [0, 0, 90], scale: 0.3333 }), "mm")).toEqual({
+      size: "80 × 120 × 15 mm",
+      scale: 33.3,
+    });
   });
 
   it("shows a flat axis as 0", () => {
@@ -31,6 +34,15 @@ describe("originalSizeLabel", () => {
       ...model({}),
       bounds: { min: [0, 0, 0], max: [50.8, 25.4, 0] },
     };
-    expect(originalSizeLabel(flat, "in")).toBe("Original: 2 × 1 × 0 in (scale 100%)");
+    expect(originalSize(flat, "in").size).toBe("2 × 1 × 0 in");
+  });
+});
+
+describe("cappedBorder", () => {
+  it("is what the cap leaves, or null without one", () => {
+    const stock = { width: 200, height: 300 };
+    expect(cappedBorder(10, stock, "mm")).toBeNull();
+    expect(cappedBorder(60, stock, "mm")).toBe("50 mm");
+    expect(cappedBorder(60, stock, "in")).toBe("1.9685 in");
   });
 });
