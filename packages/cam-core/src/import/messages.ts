@@ -6,6 +6,9 @@ import type { Message } from "@furrow/document";
  */
 export const IMPORT_MESSAGES = [
   "svg.invalidXml",
+  "svg.unclosedElement",
+  "svg.unexpectedClosingTag",
+  "svg.invalidAttribute",
   "svg.notSvg",
   "svg.stylesheetHides",
   "svg.tooManyElements",

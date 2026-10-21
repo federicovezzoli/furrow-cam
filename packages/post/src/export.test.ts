@@ -302,7 +302,10 @@ function exportDetail(run: () => unknown) {
   try {
     run();
   } catch (error) {
-    if (error instanceof GcodeExportError) return error.detail;
+    if (error instanceof GcodeExportError) {
+      const { operation, detail } = error;
+      return { ...(operation !== undefined && { operation }), message: detail };
+    }
     throw error;
   }
   throw new Error("Nothing was thrown");

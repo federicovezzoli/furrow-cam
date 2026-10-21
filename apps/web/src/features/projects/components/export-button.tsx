@@ -37,8 +37,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
         await exportProjectFile(document, projectName, (sha256) => loadMesh(id, sha256));
       } catch (error) {
         // A mesh that couldn't be downloaded says why.
-        const text = error instanceof Error ? error.message : EXPORT_FAILED;
-        window.alert(errorText(t, error, text));
+        window.alert(errorText(t, error, EXPORT_FAILED));
       }
     });
   }

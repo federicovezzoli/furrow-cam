@@ -1,6 +1,6 @@
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
 import { DEFAULT_SPIN_UP_DELAY } from "./machine";
-import type { DocumentMessage } from "./message";
+import { type DocumentMessage, MessageError } from "./message";
 
 type UnknownDocument = Record<string, unknown>;
 
@@ -143,13 +143,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
-export class ProjectDocumentVersionError extends Error {
+export class ProjectDocumentVersionError extends MessageError<DocumentMessage> {
   override name = "ProjectDocumentVersionError";
-
-  /** What went wrong, for the UI to translate (ADR-0054); the `message` is its code. */
-  constructor(readonly detail: DocumentMessage) {
-    super(detail.code);
-  }
 }
 
 /**

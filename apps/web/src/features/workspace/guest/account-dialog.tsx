@@ -62,7 +62,7 @@ export function AccountDialog({
       await exportProjectFile(documentStore.getState().document, project.name, meshes.get);
       setError(null);
     } catch (error) {
-      setError(errorText(appT, error, error instanceof Error ? error.message : t("cantExport")));
+      setError(errorText(appT, error, t("cantExport")));
     } finally {
       setExporting(false);
     }

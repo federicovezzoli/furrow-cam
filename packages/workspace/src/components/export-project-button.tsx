@@ -32,8 +32,7 @@ export function ExportProjectButton({
         await exportProjectFile(document, project.name, meshes.get);
       } catch (error) {
         // A mesh that couldn't be read says why.
-        const text = error instanceof Error ? error.message : EXPORT_FAILED;
-        window.alert(errorText(t, error, text));
+        window.alert(errorText(t, error, EXPORT_FAILED));
       }
     });
   }

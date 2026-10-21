@@ -458,9 +458,9 @@
       "blank": "Darf nicht leer sein",
       "colour": "Muss eine Farbe im Format #rrggbb sein",
       "sha256": "Muss ein SHA-256-Hash in Hexadezimal mit Kleinbuchstaben sein",
-      "maxCharacters": "Höchstens {max} Zeichen",
+      "maxCharacters": "Höchstens {max, number} Zeichen",
       "maxSeconds": "Höchstens {max} Sekunden",
-      "maxRpm": "Höchstens {max} U/min"
+      "maxRpm": "Höchstens {max, number} U/min"
     },
     "tool": {
       "cutDirectionRequired": "Erforderlich für Schaftfräser",
@@ -518,8 +518,8 @@
       "tooManyMeshes": "Eine Projektdatei enthält höchstens {max} verschiedene 3D-Modelle.",
       "tooManyVersions": "Eine Projektdatei enthält höchstens {max} Versionen.",
       "documentTooLarge": "Das Dokument dieses Projekts ist zu groß zum Importieren.",
-      "fileTooLarge": "Diese Datei ist zu groß zum Importieren (das Limit ist {mb} MB).",
-      "meshTooLarge": "Ein Modell in dieser Datei ist größer als {mb} MB, das erlaubte Maximum."
+      "fileTooLarge": "Diese Datei ist zu groß zum Importieren (das Limit ist {mb, number} MB).",
+      "meshTooLarge": "Ein Modell in dieser Datei ist größer als {mb, number} MB, das erlaubte Maximum."
     },
     "migration": {
       "notObject": "Ein Projektdokument muss ein JSON-Objekt sein.",
@@ -538,7 +538,7 @@
       "invalidXml": "Diese Datei ist kein gültiges XML (Fehler bei Zeichen {position}).",
       "notSvg": "Diese Datei ist keine SVG-Zeichnung.",
       "stylesheetHides": "Das Stylesheet der Zeichnung blendet Elemente mit Regeln aus, die der Import nicht anwenden kann, daher könnten einige importierte Formen in der Zeichnung ausgeblendet sein: Prüfe sie.",
-      "tooManyElements": "Die Zeichnung hat mehr als {max} Elemente, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
+      "tooManyElements": "Die Zeichnung hat mehr als {max, number} Elemente, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
       "skip": {
         "circular": "Übersprungen: zirkuläre Verweise ({count}).",
         "invalidTransform": "Übersprungen: Elemente mit ungültiger Transformation (untransformiert gezeichnet) ({count}).",
@@ -550,14 +550,17 @@
         "text": "Übersprungen: Text (vor dem Export in Pfade umwandeln) ({count}).",
         "images": "Übersprungen: Bilder ({count}).",
         "foreignObject": "Übersprungen: eingebettete Nicht-SVG-Inhalte ({count})."
-      }
+      },
+      "unclosedElement": "Diese Datei ist kein gültiges XML: das Element {element} wird nie geschlossen (Fehler bei Zeichen {position}).",
+      "unexpectedClosingTag": "Diese Datei ist kein gültiges XML: ein schließendes Tag für {element} passt zu keinem offenen Element (Fehler bei Zeichen {position}).",
+      "invalidAttribute": "Diese Datei ist kein gültiges XML: das Attribut {attribute} ist fehlerhaft (Fehler bei Zeichen {position})."
     },
     "dxf": {
       "binary": "Dies ist eine binäre DXF-Datei, die nicht unterstützt wird. Exportiere sie als ASCII-DXF.",
       "invalid": "Diese Datei ist keine gültige DXF-Datei (Zeile {line}).",
       "notDxf": "Diese Datei ist keine DXF-Zeichnung.",
       "codepage": "Die Codepage der Datei ({codepage}) wird nicht unterstützt, daher können Layernamen falsche Zeichen zeigen.",
-      "tooManyEntities": "Die Zeichnung hat mehr als {max} Objekte, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
+      "tooManyEntities": "Die Zeichnung hat mehr als {max, number} Objekte, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
       "skip": {
         "paperSpace": "Übersprungen: Objekte im Papierbereich (Layouts) ({count}).",
         "layersOff": "Übersprungen: Objekte auf ausgeschalteten oder gefrorenen Layern ({count}).",
@@ -580,10 +583,10 @@
       }
     },
     "stl": {
-      "tooLarge": "Diese Datei ist größer als {mb} MB, das erlaubte Maximum.",
+      "tooLarge": "Diese Datei ist größer als {mb, number} MB, das erlaubte Maximum.",
       "empty": "Diese Datei ist leer.",
       "sizeMismatch": "Dies ist keine STL-Datei, oder sie ist beschädigt: Ihre Größe passt nicht.",
-      "tooManyTriangles": "Dieses Modell hat mehr als {max} Dreiecke, das erlaubte Maximum. Vereinfache es und versuche es erneut.",
+      "tooManyTriangles": "Dieses Modell hat mehr als {max, number} Dreiecke, das erlaubte Maximum. Vereinfache es und versuche es erneut.",
       "noTriangles": "Diese Datei enthält keine Dreiecke.",
       "vertexNaN": "Diese Datei hat einen Eckpunkt, der keine Zahl ist.",
       "facetInFacet": "Diese STL-Datei ist beschädigt: Eine Facette beginnt in einer anderen in Zeile {line}.",
@@ -617,8 +620,8 @@
       "modelMissing": "Das zu bearbeitende Modell fehlt.",
       "noArea": "Das Modell hat von oben gesehen keine Fläche zum Bearbeiten.",
       "belowStock": "Das Modell reicht unter das Rohteil: Es wird nicht tiefer als der Boden des Rohteils geschnitten.",
-      "coarsened": "Das Modell ist zu groß, um es mit diesem Werkzeug in voller Auflösung zu bearbeiten: Es wird mit Zellen von {size} mm statt {wanted} mm geschnitten.",
-      "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size} mm simuliert, daher kann Material, das schmaler als {width} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
+      "coarsened": "Das Modell ist zu groß, um es mit diesem Werkzeug in voller Auflösung zu bearbeiten: Es wird mit Zellen von {size, number} mm statt {wanted, number} mm geschnitten.",
+      "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size, number} mm simuliert, daher kann Material, das schmaler als {width, number} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
       "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
       "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
@@ -630,8 +633,13 @@
     },
     "grbl": {
       "slowed": "{count, plural, one {# Bewegung} other {# Bewegungen}} auf den maximalen Vorschub der Maschine verlangsamt.",
-      "spindleClamped": "Die {rpm} U/min des Werkzeugs liegen außerhalb des Spindelbereichs der Maschine, daher werden {used} U/min verwendet.",
+      "spindleClamped": "Die {rpm, number} U/min des Werkzeugs liegen außerhalb des Spindelbereichs der Maschine, daher werden {used, number} U/min verwendet.",
       "unfilledPlaceholder": "{block, select, programStart {Programmstart} toolChangePad {Werkzeugwechsel auf der Platte} toolChange {Werkzeugwechsel} operationStart {Operationsstart} other {Programmende}}: {placeholder} kann nicht ausgefüllt werden, daher wird es unverändert geschrieben."
+    },
+    "workspace": {
+      "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
+      "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei."
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { Message } from "@furrow/document";
+import { type Message, MessageError } from "@furrow/document";
 import { createTranslator, type IntlError, IntlErrorCode } from "use-intl/core";
 import de from "../messages/de.json";
 import en from "../messages/en.json";
@@ -84,20 +84,12 @@ export function formatWarning(
 }
 
 /**
- * What `error` says for the user: a core package's error translated from its
- * `detail`, else `fallback` (its text is English, for developers).
+ * What `error` says for the user: a core package's error translated, else
+ * its own text, else `fallback` for anything thrown that isn't an `Error`.
  */
 export function errorText(t: AnyTranslator, error: unknown, fallback: string): string {
-  const detail = (error as { detail?: unknown } | null)?.detail;
-  if (isMessage(detail)) return formatMessage(t, detail);
-  if (typeof detail === "object" && detail !== null && "message" in detail) {
-    const warning = detail as { operation?: string; message: unknown };
-    if (isMessage(warning.message))
-      return formatWarning(t, { ...warning, message: warning.message });
+  if (error instanceof MessageError) {
+    return formatWarning(t, { operation: error.operation, message: error.detail });
   }
-  return fallback;
-}
-
-function isMessage(value: unknown): value is Message {
-  return typeof value === "object" && value !== null && typeof (value as Message).code === "string";
+  return error instanceof Error ? error.message : fallback;
 }

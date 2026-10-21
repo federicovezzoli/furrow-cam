@@ -24,7 +24,7 @@ import type {
  * the browser blocks storage in a private window.
  */
 
-import { formatMessage } from "@furrow/ui/lib/i18n";
+import { errorText, formatMessage } from "@furrow/ui/lib/i18n";
 import { clientTranslator } from "@/lib/client-translator";
 
 const DB_NAME = "furrow-guest";
@@ -49,6 +49,12 @@ type MeshRecord = { projectId: string; sha256: string; file: Blob };
 const storageUnavailable = () => clientTranslator()("Guest.storageUnavailable");
 const projectNotFound = () => clientTranslator()("Guest.projectNotFound");
 const conflict = () => clientTranslator()("Guest.conflict");
+
+/** What a failed guest action says: why, translated, else that something went wrong. */
+export function messageOf(error: unknown): string {
+  const t = clientTranslator();
+  return errorText(t, error, t("Guest.somethingWrong"));
+}
 
 let opening: Promise<IDBDatabase> | null = null;
 

@@ -105,7 +105,7 @@ export function GeometryImport() {
 
   function fail(error: unknown) {
     if (!isImportError(error)) console.error(error);
-    const message = isImportError(error) ? error.detail : "This file couldn't be imported.";
+    const message = isImportError(error) ? error.detail : { code: "workspace.importFailed" };
     setNotice({ kind: "error", messages: [message] });
   }
 

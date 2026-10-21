@@ -487,7 +487,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         aria-label="Toolpath cancelled"
         className="size-3.5 shrink-0 text-muted-foreground"
       >
-        <title>{entry.error}</title>
+        <title>{format(entry.error)}</title>
       </CircleSlashIcon>
     );
   }
@@ -495,10 +495,10 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
     return (
       <CircleAlertIcon
         role="img"
-        aria-label={`Toolpath failed: ${entry.error}`}
+        aria-label={`Toolpath failed: ${format(entry.error)}`}
         className="size-3.5 shrink-0 text-destructive"
       >
-        <title>{entry.error}</title>
+        <title>{format(entry.error)}</title>
       </CircleAlertIcon>
     );
   }

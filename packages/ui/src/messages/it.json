@@ -458,9 +458,9 @@
       "blank": "Non può essere vuoto",
       "colour": "Deve essere un colore #rrggbb",
       "sha256": "Deve essere un hash SHA-256 in esadecimale minuscolo",
-      "maxCharacters": "Al massimo {max} caratteri",
+      "maxCharacters": "Al massimo {max, number} caratteri",
       "maxSeconds": "Al massimo {max} secondi",
-      "maxRpm": "Al massimo {max} giri/min"
+      "maxRpm": "Al massimo {max, number} giri/min"
     },
     "tool": {
       "cutDirectionRequired": "Obbligatorio per le frese a candela",
@@ -518,8 +518,8 @@
       "tooManyMeshes": "Un file di progetto contiene al massimo {max} modelli 3D diversi.",
       "tooManyVersions": "Un file di progetto contiene al massimo {max} versioni.",
       "documentTooLarge": "Il documento di questo progetto è troppo grande da importare.",
-      "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb} MB).",
-      "meshTooLarge": "Un modello in questo file supera {mb} MB, il massimo consentito."
+      "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
+      "meshTooLarge": "Un modello in questo file supera {mb, number} MB, il massimo consentito."
     },
     "migration": {
       "notObject": "Un documento di progetto deve essere un oggetto JSON.",
@@ -538,7 +538,7 @@
       "invalidXml": "Questo file non è un XML valido (errore al carattere {position}).",
       "notSvg": "Questo file non è un disegno SVG.",
       "stylesheetHides": "Il foglio di stile del disegno nasconde elementi con regole che l'importazione non sa applicare, quindi alcune forme importate potrebbero essere nascoste nel disegno: controllale.",
-      "tooManyElements": "Il disegno ha più di {max} elementi, contando le copie ripetute, quindi il resto è stato saltato.",
+      "tooManyElements": "Il disegno ha più di {max, number} elementi, contando le copie ripetute, quindi il resto è stato saltato.",
       "skip": {
         "circular": "Saltati: riferimenti circolari ({count}).",
         "invalidTransform": "Saltati: elementi con una trasformazione non valida (disegnati senza trasformazione) ({count}).",
@@ -550,14 +550,17 @@
         "text": "Saltati: testo (convertilo in tracciati prima di esportare) ({count}).",
         "images": "Saltati: immagini ({count}).",
         "foreignObject": "Saltati: contenuti incorporati non SVG ({count})."
-      }
+      },
+      "unclosedElement": "Questo file non è un XML valido: l’elemento {element} non viene mai chiuso (errore al carattere {position}).",
+      "unexpectedClosingTag": "Questo file non è un XML valido: un tag di chiusura per {element} non corrisponde a nessun elemento aperto (errore al carattere {position}).",
+      "invalidAttribute": "Questo file non è un XML valido: l’attributo {attribute} è malformato (errore al carattere {position})."
     },
     "dxf": {
       "binary": "Questo è un file DXF binario, che non è supportato. Esportalo come DXF ASCII.",
       "invalid": "Questo file non è un DXF valido (riga {line}).",
       "notDxf": "Questo file non è un disegno DXF.",
       "codepage": "La code page del file ({codepage}) non è supportata, quindi i nomi dei layer potrebbero mostrare caratteri sbagliati.",
-      "tooManyEntities": "Il disegno ha più di {max} entità, contando le copie ripetute, quindi il resto è stato saltato.",
+      "tooManyEntities": "Il disegno ha più di {max, number} entità, contando le copie ripetute, quindi il resto è stato saltato.",
       "skip": {
         "paperSpace": "Saltati: entità nello spazio carta (layout) ({count}).",
         "layersOff": "Saltati: entità su layer spenti o congelati ({count}).",
@@ -580,10 +583,10 @@
       }
     },
     "stl": {
-      "tooLarge": "Questo file supera {mb} MB, il massimo consentito.",
+      "tooLarge": "Questo file supera {mb, number} MB, il massimo consentito.",
       "empty": "Questo file è vuoto.",
       "sizeMismatch": "Questo non è un file STL, oppure è danneggiato: la sua dimensione non corrisponde.",
-      "tooManyTriangles": "Questo modello ha più di {max} triangoli, il massimo consentito. Semplificalo e riprova.",
+      "tooManyTriangles": "Questo modello ha più di {max, number} triangoli, il massimo consentito. Semplificalo e riprova.",
       "noTriangles": "Questo file non contiene triangoli.",
       "vertexNaN": "Questo file ha un vertice che non è un numero.",
       "facetInFacet": "Questo file STL è danneggiato: una faccia inizia dentro un'altra alla riga {line}.",
@@ -617,8 +620,8 @@
       "modelMissing": "Manca il modello da lavorare.",
       "noArea": "Il modello non ha un'area vista dall'alto da lavorare.",
       "belowStock": "Il modello scende sotto il grezzo: non si taglia più a fondo del fondo del grezzo.",
-      "coarsened": "Il modello è troppo grande da lavorare alla risoluzione piena con questo utensile: viene tagliato con celle di {size} mm invece di {wanted} mm.",
-      "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size} mm, quindi il materiale più stretto di {width} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
+      "coarsened": "Il modello è troppo grande da lavorare alla risoluzione piena con questo utensile: viene tagliato con celle di {size, number} mm invece di {wanted, number} mm.",
+      "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size, number} mm, quindi il materiale più stretto di {width, number} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
       "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
       "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
@@ -630,8 +633,13 @@
     },
     "grbl": {
       "slowed": "{count, plural, one {# movimento rallentato} other {# movimenti rallentati}} all'avanzamento massimo della macchina.",
-      "spindleClamped": "I {rpm} giri/min dell'utensile sono fuori dall'intervallo del mandrino della macchina, quindi si usano {used} giri/min.",
+      "spindleClamped": "I {rpm, number} giri/min dell'utensile sono fuori dall'intervallo del mandrino della macchina, quindi si usano {used, number} giri/min.",
       "unfilledPlaceholder": "{block, select, programStart {Inizio programma} toolChangePad {Cambio utensile sul tampone} toolChange {Cambio utensile} operationStart {Inizio operazione} other {Fine programma}}: {placeholder} non può essere compilato, quindi viene scritto così com'è."
+    },
+    "workspace": {
+      "unreadableFile": "Non è stato possibile leggere questo file.",
+      "importFailed": "Non è stato possibile importare questo file.",
+      "storedModelMismatch": "Il modello salvato non corrisponde al suo file."
     }
   }
 }

@@ -1611,7 +1611,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error" && entry.cancelled) {
     return (
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-muted-foreground">{entry.error}</p>
+        <p className="flex-1 text-muted-foreground">{format(entry.error)}</p>
         <Button variant="outline" size="compact" onClick={() => controls.retry(operationId)}>
           Compute again
         </Button>
@@ -1621,7 +1621,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error") {
     return (
       <p role="alert" className="text-destructive">
-        The toolpath couldn't be computed: {entry.error}
+        The toolpath couldn't be computed: {format(entry.error)}
       </p>
     );
   }

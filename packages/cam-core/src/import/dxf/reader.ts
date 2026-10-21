@@ -1,3 +1,4 @@
+import { MessageError } from "@furrow/document";
 import type { ImportMessage } from "../messages";
 
 /** One group of a DXF file: a group code and its value, as text. */
@@ -7,12 +8,7 @@ export type DxfPair = { code: number; value: string };
 export type DxfRecord = { type: string; pairs: DxfPair[] };
 
 /** The file isn't an ASCII DXF file at all; anything less is a warning instead. */
-export class DxfImportError extends Error {
-  /** Why, for the UI to translate (ADR-0054); the `message` is its code. */
-  constructor(readonly detail: ImportMessage) {
-    super(detail.code);
-  }
-}
+export class DxfImportError extends MessageError<ImportMessage> {}
 
 const BINARY_SENTINEL = "AutoCAD Binary DXF";
 

@@ -1,13 +1,9 @@
+import { MessageError } from "@furrow/document";
 import type { Box3 } from "../../scene/stock";
 import type { ImportMessage, ImportMessageCode } from "../messages";
 
 /** Thrown for a file that isn't an STL mesh Furrow CAM can import. */
-export class StlImportError extends Error {
-  /** Why, for the UI to translate (ADR-0054); the `message` is its code. */
-  constructor(readonly detail: ImportMessage) {
-    super(detail.code);
-  }
-}
+export class StlImportError extends MessageError<ImportMessage> {}
 
 /** The most an STL file may hold (PRD-0005 S1); each instance may set its own. */
 export type StlLimits = { maxBytes: number; maxTriangles: number };

@@ -1,6 +1,7 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
 import type { Message, ProjectDocument } from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
 import type { DocumentStore } from "./document-store";
 import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
@@ -72,7 +73,7 @@ export type GcodeExportResponse = { export: number } & (
  */
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | ToolpathPreview
-  | { error: string }
+  | { error: Translatable }
   | { progress: number }
   | { cancelled: true }
   | { missingMesh: string }
