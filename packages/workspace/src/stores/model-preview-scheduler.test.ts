@@ -76,7 +76,9 @@ describe("scheduleModelPreviews", () => {
     expect(posted[1]).toMatchObject({ kind: "preview", sha256: model.sha256 });
     expect(posted[1]).toHaveProperty("bytes");
     await schedule.receive({ kind: "missing", id: (posted[1] as MeshRequest).id });
-    expect(previews().get(previewKey(model))).toEqual({ error: "The model couldn't be read." });
+    expect(previews().get(previewKey(model))).toEqual({
+      error: { code: "workspace.modelUnreadable" },
+    });
   });
 
   it("reports a file that can't be loaded", async () => {

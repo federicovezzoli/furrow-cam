@@ -1,5 +1,6 @@
 import type { Tool } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import {
   deleteMachine,
   deleteTool,
@@ -16,17 +17,17 @@ import { BitTypeIcon } from "@furrow/workspace/tools/components/bit-type-icon";
 import { ToolDialog } from "@furrow/workspace/tools/components/tool-dialog";
 import { ToolForm } from "@furrow/workspace/tools/components/tool-form";
 import { nextToolColor } from "@furrow/workspace/tools/lib/colors";
-import { TOOL_TYPE_LABELS } from "@furrow/workspace/tools/lib/labels";
 import { ChevronLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 import type * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 import type { LibraryState } from "./app";
 import type { Page } from "./desktop-host";
+import { t } from "./i18n";
 
 /** Says why a library change failed; the library stays as it was. */
 function alertFailure(error: unknown) {
-  window.alert(messageOf(error));
+  window.alert(formatMessage(t, messageOf(error)));
 }
 
 type LibraryProps = {
@@ -72,6 +73,7 @@ function Header({ title, action }: { title: string; action?: React.ReactNode }) 
 
 function Tools({ library, updateLibrary }: LibraryProps) {
   const t = useTranslations("Desktop.Library");
+  const bit = useTranslations("Bit");
   const { tools } = library;
   /** The bit in the dialog: `id` `null` for a new one. */
   const [editing, setEditing] = useState<{ id: string | null; values: Partial<Tool> } | null>(null);
@@ -100,7 +102,7 @@ function Tools({ library, updateLibrary }: LibraryProps) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{tool.name}</span>
                 <span className="text-muted-foreground">
-                  {TOOL_TYPE_LABELS[tool.type]}, ⌀ {tool.diameter} mm
+                  {bit(`types.${tool.type}`)}, ⌀ {tool.diameter} mm
                 </span>
               </span>
               <Button

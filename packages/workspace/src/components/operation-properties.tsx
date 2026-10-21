@@ -3,8 +3,6 @@
 import {
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
-  formatQuantity,
-  unitLabel,
   vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
@@ -47,7 +45,10 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { useMemo, useState } from "react";
-import { selectionTargets, targetsLabel } from "../lib/path-selection";
+import { useTranslations } from "use-intl";
+import { useLength } from "../hooks/use-length";
+import { useTargetsLabel } from "../hooks/use-targets-label";
+import { selectionTargets } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -78,29 +79,8 @@ import { NewBitDialog } from "./new-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
 import { flatBottomToolChoice, matchingToolChoice, useToolLibrary } from "./tool-library";
 
-const SIDE_LABELS: Record<ProfileSide, string> = {
-  outside: "Outside",
-  inside: "Inside",
-  on: "On the line",
-};
-
-const DIRECTION_LABELS: Record<MillingDirection, string> = {
-  climb: "Climb",
-  conventional: "Conventional",
-};
-
-const STRATEGY_LABELS: Record<PocketStrategy["type"], string> = {
-  offset: "Offset",
-  linear: "Linear",
-  peel: "Peel",
-};
-
-/** What each strategy does with the tool's step-over and step-down. */
-const STRATEGY_HINTS: Record<PocketStrategy["type"], string> = {
-  offset: "Rings parallel to the walls, cleared from the centre out",
-  linear: "Zig-zag passes at an angle, after a lap around the walls",
-  peel: "Cuts no wider than the step-over, growing from the start",
-};
+/** The pocket strategies, in the order the select lists them. */
+const STRATEGY_TYPES = ["offset", "linear", "peel"] as const;
 
 /** The strategy each type starts as when picked. */
 const DEFAULT_STRATEGIES: Record<PocketStrategy["type"], PocketStrategy> = {
@@ -111,42 +91,11 @@ const DEFAULT_STRATEGIES: Record<PocketStrategy["type"], PocketStrategy> = {
 
 const LINEAR_ANGLES = LinearAngle.options.map((option) => option.value);
 
-const RASTER_DIRECTION_LABELS: Record<RasterDirection, string> = {
-  zigzag: "Zig-zag",
-  one_way: "One way",
-};
-
-const PEEL_START_LABELS: Record<PeelStart, string> = {
-  centre: "Centre",
-  inside: "Island",
-  outside: "Outer wall",
-};
-
-const BOUNDARY_LABELS: Record<RoughingBoundaryType, string> = {
-  model: "Model",
-  margin: "Model and margin",
-  stock: "Whole stock",
-};
-
 /** What picking each boundary sets: a margin starts at 5 mm, inside a fitted model's border. */
 const DEFAULT_BOUNDARIES: Record<RoughingBoundaryType, RoughingBoundary> = {
   model: { type: "model" },
   margin: { type: "margin", distance: 5 },
   stock: { type: "stock" },
-};
-
-const BOUNDARY_HINTS: Record<RoughingBoundaryType, string> = {
-  model: "The tool's centre reaches the edges of the model's outline.",
-  margin:
-    "Clears a frame this wide around the model's outline (at least the tool's radius), keeping the tool inside it: the stock top beyond is left for zeroing Z after a tool change.",
-  stock:
-    "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom.",
-};
-
-/** What each strategy does at each level of 3D roughing: linear clearing has no laps there. */
-const ROUGHING_STRATEGY_HINTS: Record<PocketStrategy["type"], string> = {
-  ...STRATEGY_HINTS,
-  linear: "Straight zig-zag passes at an angle, rising over the model where it is higher",
 };
 
 /** Where peeling may start in 3D roughing: its islands change from level to level. */
@@ -162,6 +111,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   );
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
+  const t = useTranslations("Operation");
   if (!operation) return null;
 
   return (
@@ -172,14 +122,14 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           variant="ghost"
           size="icon-compact"
           onClick={() => workspace.getState().selectOperation(null)}
-          aria-label="Close operation properties"
-          title="Close"
+          aria-label={t("closeLabel")}
+          title={t("close")}
         >
           <XIcon />
         </Button>
       </div>
 
-      <Row id="operation-name" label="Name">
+      <Row id="operation-name" label={t("name")}>
         <OperationNameInput
           id="operation-name"
           name={operation.name}
@@ -202,7 +152,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
-        <p className="text-muted-foreground">Disabled: no toolpath is computed.</p>
+        <p className="text-muted-foreground">{t("disabled")}</p>
       )}
     </div>
   );
@@ -221,9 +171,6 @@ function Row({ id, label, children }: { id: string; label: string; children: Rea
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
-/** The catalog's group in the tool select, which says its figures are only a start (PRD-0008 G5). */
-const CATALOG_LABEL = "Catalog (starting feeds for softwood and plywood)";
-
 /** The tool select's last option, which opens the form for a new bit instead of picking one. */
 const NEW_BIT = "__new";
 
@@ -234,6 +181,7 @@ const NEW_BIT = "__new";
  */
 function ToolPicker({ operation }: { operation: Operation }) {
   const store = useDocumentStoreApi();
+  const t = useTranslations("Operation");
   const tools = useToolLibrary();
   const { id: operationId, tool } = operation;
   // The same check `setOperationTool` makes.
@@ -247,8 +195,8 @@ function ToolPicker({ operation }: { operation: Operation }) {
     [tools, operation],
   );
   const current = matchingToolChoice(tools, tool);
-  const library = { label: "Your bits", choices: tools.filter((choice) => !choice.catalog) };
-  const catalog = { label: CATALOG_LABEL, choices: tools.filter((choice) => choice.catalog) };
+  const library = { label: t("yourBits"), choices: tools.filter((choice) => !choice.catalog) };
+  const catalog = { label: t("catalog"), choices: tools.filter((choice) => choice.catalog) };
   // Cleared once the operation's tool changes.
   const format = useFormatMessage();
   const [rejected, setRejected] = useState<{ tool: Tool; error: Translatable } | null>(null);
@@ -263,7 +211,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
 
   return (
     <>
-      <Row id="operation-tool" label="Tool">
+      <Row id="operation-tool" label={t("tool")}>
         {/* Lets a long tool name shrink the select instead of pushing the button out. */}
         <div className="flex min-w-0 items-center gap-1 *:data-[slot=native-select-wrapper]:min-w-0">
           <NativeSelect
@@ -280,7 +228,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
           >
             {!current && (
               // The snapshot differs from every library tool (edited or deleted since it was picked).
-              <NativeSelectOption value="">{tool.name} (as picked)</NativeSelectOption>
+              <NativeSelectOption value="">{t("asPicked", { name: tool.name })}</NativeSelectOption>
             )}
             {[library, catalog].map(
               (group) =>
@@ -299,7 +247,7 @@ function ToolPicker({ operation }: { operation: Operation }) {
                 ),
             )}
             <hr />
-            <NativeSelectOption value={NEW_BIT}>New bit…</NativeSelectOption>
+            <NativeSelectOption value={NEW_BIT}>{t("newBit")}</NativeSelectOption>
           </NativeSelect>
           <EditBitButton choice={current} />
         </div>
@@ -330,6 +278,8 @@ function TargetsField({
   operationId: string;
   targets: OperationTarget[];
 }) {
+  const t = useTranslations("Operation");
+  const targetsLabel = useTargetsLabel();
   const store = useDocumentStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
   const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
@@ -349,7 +299,7 @@ function TargetsField({
     <section aria-labelledby="operation-shapes-heading" className="grid gap-1">
       <div className="flex items-center gap-2">
         <h4 id="operation-shapes-heading" className="flex-1">
-          Shapes
+          {t("shapes")}
         </h4>
         <Button
           variant="outline"
@@ -358,20 +308,20 @@ function TargetsField({
           onClick={() => setOperationTargets(store, operationId, selected)}
           title={
             selected.length > 0
-              ? `Cut the ${targetsLabel(selected)} instead`
-              : "Select shapes or paths to cut them instead"
+              ? t("cutInstead", { targets: targetsLabel(selected) })
+              : t("selectToCut")
           }
         >
-          Use selected
+          {t("useSelected")}
         </Button>
       </div>
       <ul className="grid gap-0.5">
         {rows.map(({ shape, paths }) => (
           <li key={shape.id} className="flex min-w-0 items-center gap-1">
-            <span className="min-w-0 flex-1 truncate">{shape.name || "Unnamed shape"}</span>
+            <span className="min-w-0 flex-1 truncate">{shape.name || t("unnamedShape")}</span>
             {paths && (
               <span className="shrink-0 text-muted-foreground tabular-nums">
-                {paths.length} of {shape.paths.length} paths
+                {t("pathsOf", { count: paths.length, total: shape.paths.length })}
               </span>
             )}
             <Button
@@ -385,8 +335,8 @@ function TargetsField({
                   targets.filter((target) => target.shapeId !== shape.id),
                 )
               }
-              aria-label={`Remove ${shape.name || "unnamed shape"}`}
-              title={rows.length === 1 ? "An operation needs at least one shape" : "Remove"}
+              aria-label={t("removeLabel", { name: shape.name || t("unnamedShape") })}
+              title={rows.length === 1 ? t("needsShape") : t("remove")}
             >
               <XIcon />
             </Button>
@@ -399,12 +349,13 @@ function TargetsField({
 
 /** The model a 3D operation machines. */
 function ModelField({ modelId }: { modelId: string }) {
+  const t = useTranslations("Operation");
   const model = useDocumentStore((s) => s.document.models.find(({ id }) => id === modelId));
   return (
     <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
-      <span>Model</span>
+      <span>{t("model")}</span>
       <span className="truncate" title={model?.fileName}>
-        {model?.fileName ?? "Missing"}
+        {model?.fileName ?? t("missing")}
       </span>
     </div>
   );
@@ -450,16 +401,13 @@ function RampCheckbox({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const t = useTranslations("Operation");
   const straight = tool.plungeAngle === 90;
   return (
     <Checkbox
       id={id}
-      label="Ramp in"
-      hint={
-        straight
-          ? "The tool's plunge angle is 90°, so it plunges straight down."
-          : `At the tool's plunge angle (${tool.plungeAngle}°).`
-      }
+      label={t("rampIn")}
+      hint={straight ? t("rampStraight") : t("rampAngle", { angle: tool.plungeAngle })}
       checked={checked && !straight}
       disabled={straight}
       onChange={onChange}
@@ -474,6 +422,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateProfileParams(store, operation.id, changes),
   );
+  const t = useTranslations("Operation");
 
   const length = {
     layout: "inline",
@@ -485,9 +434,9 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
   return (
     <section aria-labelledby="profile-heading" className="grid gap-2">
       <h4 id="profile-heading" className="font-medium">
-        Profile
+        {t("profile")}
       </h4>
-      <Row id="profile-side" label="Side">
+      <Row id="profile-side" label={t("side")}>
         <NativeSelect
           id="profile-side"
           size="sm"
@@ -501,12 +450,12 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
         >
           {ProfileSide.options.map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {SIDE_LABELS[option]}
+              {t(`sides.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <Row id="profile-direction" label="Direction">
+      <Row id="profile-direction" label={t("direction")}>
         <NativeSelect
           id="profile-direction"
           size="sm"
@@ -518,14 +467,14 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
         >
           {MillingDirection.options.map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {DIRECTION_LABELS[option]}
+              {t(`directions.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
       <NumberField
         id="profile-depth"
-        label="Depth"
+        label={t("depth")}
         min={MIN_LENGTH}
         value={params.depth}
         onValueChange={(depth) => update("depth", { depth })}
@@ -534,7 +483,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       />
       <NumberField
         id="profile-allowance"
-        label="Allowance"
+        label={t("allowance")}
         min={0}
         value={params.allowance}
         disabled={params.side === "on"}
@@ -547,15 +496,15 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       />
       <Checkbox
         id="profile-finish-pass"
-        label="Finish pass"
-        hint={params.allowance === 0 ? "Needs an allowance to remove." : undefined}
+        label={t("finishPass")}
+        hint={params.allowance === 0 ? t("needsAllowance") : undefined}
         checked={params.finishPass}
         disabled={params.allowance === 0}
         onChange={(finishPass) => update("finishPass", { finishPass })}
       />
       <Checkbox
         id="profile-lead-in"
-        label="Lead-in arc"
+        label={t("leadIn")}
         checked={params.leadIn !== null}
         onChange={(checked) =>
           update("leadIn", { leadIn: checked ? { radius: tool.diameter } : null })
@@ -564,7 +513,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       {params.leadIn && (
         <NumberField
           id="profile-lead-in-radius"
-          label="Lead-in radius"
+          label={t("leadInRadius")}
           min={MIN_LENGTH}
           value={params.leadIn.radius}
           onValueChange={(radius) => update("leadIn", { leadIn: { radius } })}
@@ -580,7 +529,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       />
       <Checkbox
         id="profile-tabs"
-        label="Holding tabs"
+        label={t("holdingTabs")}
         checked={params.tabs !== null}
         onChange={(checked) =>
           update("tabs", {
@@ -613,6 +562,7 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updatePocketParams(store, operation.id, changes),
   );
+  const t = useTranslations("Operation");
 
   const length = {
     layout: "inline",
@@ -624,9 +574,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
   return (
     <section aria-labelledby="pocket-heading" className="grid gap-2">
       <h4 id="pocket-heading" className="font-medium">
-        Pocket
+        {t("pocket")}
       </h4>
-      <Row id="pocket-strategy" label="Strategy">
+      <Row id="pocket-strategy" label={t("strategy")}>
         <NativeSelect
           id="pocket-strategy"
           size="sm"
@@ -637,15 +587,15 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
           }}
           className={SELECT_CLASS}
         >
-          {Object.entries(STRATEGY_LABELS).map(([type, label]) => (
+          {STRATEGY_TYPES.map((type) => (
             <NativeSelectOption key={type} value={type}>
-              {label}
+              {t(`strategies.${type}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
       {strategy.type === "linear" && (
-        <Row id="pocket-angle" label="Angle">
+        <Row id="pocket-angle" label={t("angle")}>
           <NativeSelect
             id="pocket-angle"
             size="sm"
@@ -666,7 +616,7 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         </Row>
       )}
       {strategy.type === "peel" && (
-        <Row id="pocket-peel-start" label="Start from">
+        <Row id="pocket-peel-start" label={t("startFrom")}>
           <NativeSelect
             id="pocket-peel-start"
             size="sm"
@@ -680,16 +630,19 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
           >
             {PeelStart.options.map((start) => (
               <NativeSelectOption key={start} value={start}>
-                {PEEL_START_LABELS[start]}
+                {t(`peelStarts.${start}`)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
         </Row>
       )}
       <p className="text-muted-foreground">
-        {STRATEGY_HINTS[strategy.type]}, at the tool's step-over ({tool.stepOver}%) and step-down.
+        {t("pocketHint", {
+          hint: t(`strategyHints.${strategy.type}`),
+          stepOver: tool.stepOver,
+        })}
       </p>
-      <Row id="pocket-direction" label="Direction">
+      <Row id="pocket-direction" label={t("direction")}>
         <NativeSelect
           id="pocket-direction"
           size="sm"
@@ -701,19 +654,17 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         >
           {MillingDirection.options.map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {DIRECTION_LABELS[option]}
+              {t(`directions.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
       {strategy.type === "linear" && (
-        <p className="text-muted-foreground">
-          Linear passes alternate direction; this one applies to the laps and the finish pass.
-        </p>
+        <p className="text-muted-foreground">{t("linearDirection")}</p>
       )}
       <NumberField
         id="pocket-depth"
-        label="Depth"
+        label={t("depth")}
         min={MIN_LENGTH}
         value={params.depth}
         onValueChange={(depth) => update("depth", { depth })}
@@ -722,7 +673,7 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       />
       <NumberField
         id="pocket-allowance"
-        label="Allowance"
+        label={t("allowance")}
         min={0}
         value={params.allowance}
         onValueChange={(allowance) =>
@@ -734,12 +685,8 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       />
       <Checkbox
         id="pocket-finish-pass"
-        label="Finish pass"
-        hint={
-          params.allowance === 0
-            ? "Needs an allowance to remove."
-            : "One lap on the walls and islands at full depth."
-        }
+        label={t("finishPass")}
+        hint={params.allowance === 0 ? t("needsAllowance") : t("finishLap")}
         checked={params.finishPass}
         disabled={params.allowance === 0}
         onChange={(finishPass) => update("finishPass", { finishPass })}
@@ -766,23 +713,23 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateDrillParams(store, operation.id, changes),
   );
+  const t = useTranslations("Operation");
+  const length = useLength(units);
 
   return (
     <section aria-labelledby="drill-heading" className="grid gap-2">
       <h4 id="drill-heading" className="font-medium">
-        Drill
+        {t("drill")}
       </h4>
       <p className="text-muted-foreground">
-        Holes at the points and circles. The tool plunges into the points and the circles it fits
-        within {formatQuantity(DRILL_DIAMETER_TOLERANCE, "length", units)}{" "}
-        {unitLabel("length", units)}
-        {tool.type === "drill"
-          ? "; a drill bit can't bore larger circles."
-          : ", and bores larger circles with a helix at its plunge angle."}
+        {t("drillHint", {
+          tolerance: length(DRILL_DIAMETER_TOLERANCE),
+          bore: tool.type === "drill" ? "no" : "yes",
+        })}
       </p>
       <NumberField
         id="drill-depth"
-        label="Depth"
+        label={t("depth")}
         min={MIN_LENGTH}
         value={params.depth}
         onValueChange={(depth) => update("depth", { depth })}
@@ -794,8 +741,8 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
       />
       <Checkbox
         id="drill-peck"
-        label="Peck"
-        hint="Plunges in pecks no deeper than the tool's step-down, retracting after each to clear chips."
+        label={t("peck")}
+        hint={t("peckHint")}
         checked={params.peck}
         onChange={(peck) => update("peck", { peck })}
       />
@@ -815,6 +762,8 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateEngraveParams(store, operation.id, changes),
   );
+  const t = useTranslations("Operation");
+  const lengthText = useLength(units);
   const length = {
     layout: "inline",
     quantity: "length",
@@ -829,9 +778,9 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
   return (
     <section aria-labelledby="engrave-heading" className="grid gap-2">
       <h4 id="engrave-heading" className="font-medium">
-        Engrave
+        {t("engrave")}
       </h4>
-      <Row id="engrave-side" label="Position">
+      <Row id="engrave-side" label={t("position")}>
         <NativeSelect
           id="engrave-side"
           size="sm"
@@ -841,20 +790,15 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         >
           {(["on", "inside", "outside"] as const).map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {SIDE_LABELS[option]}
+              {t(`sides.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">
-        {params.side === "on"
-          ? "Follows every path, open and closed, on the line, "
-          : `Follows the closed paths ${params.side} the line, with an edge of the groove on it, `}
-        in passes no deeper than the tool's step-down.
-      </p>
+      <p className="text-muted-foreground">{t("engraveHint", { side: params.side })}</p>
       <NumberField
         id="engrave-depth"
-        label="Depth"
+        label={t("depth")}
         min={MIN_LENGTH}
         value={params.depth}
         onValueChange={(depth) => update("depth", { depth })}
@@ -865,7 +809,7 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         <>
           <NumberField
             id="engrave-width"
-            label="Line width"
+            label={t("lineWidth")}
             min={minWidth}
             max={tool.diameter}
             value={width}
@@ -877,12 +821,10 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
           />
           <p className="text-muted-foreground">
             {exceedsVBitCone(tool, params.depth)
-              ? "Deeper than the cone, so the line is as wide as the bit."
-              : `At the stock top, from the bit's ${tool.vAngle}° angle${
-                  tip > 0
-                    ? ` and ${formatQuantity(tip, "length", units)} ${unitLabel("length", units)} tip`
-                    : ""
-                }.`}
+              ? t("lineTooDeep")
+              : tip > 0
+                ? t("lineAtTopTip", { angle: tool.vAngle ?? 0, tip: lengthText(tip) })
+                : t("lineAtTop", { angle: tool.vAngle ?? 0 })}
           </p>
         </>
       )}
@@ -909,8 +851,8 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateVCarveParams(store, operation.id, changes),
   );
-  const length = (value: number) =>
-    `${formatQuantity(value, "length", units)} ${unitLabel("length", units)}`;
+  const t = useTranslations("Operation");
+  const length = useLength(units);
   const cone = vBitConeDepth(tool);
   const width = vBitLineWidth(tool, params.maxDepth);
   const flatTool = params.flatBottom?.tool ?? null;
@@ -920,15 +862,12 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
   return (
     <section aria-labelledby="vcarve-heading" className="grid gap-2">
       <h4 id="vcarve-heading" className="font-medium">
-        V-carve
+        {t("vcarve")}
       </h4>
-      <p className="text-muted-foreground">
-        Follows the middle of the closed paths, as deep as the bit's angle needs to reach their
-        edges, in passes no deeper than the tool's step-down. Islands stay standing.
-      </p>
+      <p className="text-muted-foreground">{t("vcarveHint")}</p>
       <NumberField
         id="vcarve-max-depth"
-        label="Max depth"
+        label={t("maxDepth")}
         min={MIN_LENGTH}
         value={params.maxDepth}
         onValueChange={(maxDepth) => update("maxDepth", { maxDepth })}
@@ -941,20 +880,14 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
       {cone !== null && width !== null && (
         <p className="text-muted-foreground">
           {exceedsVBitCone(tool, params.maxDepth)
-            ? `Deeper than the cone, so the bit carves no deeper than ${length(cone)}.`
-            : `Parts wider than ${length(width)} reach it.`}
+            ? t("vcarveTooDeep", { depth: length(cone) })
+            : t("vcarveReach", { width: length(width) })}
         </p>
       )}
       <Checkbox
         id="vcarve-flat-bottom"
-        label="Flat bottom"
-        hint={
-          flatTool
-            ? "The end mill clears those parts flat first; the V-bit then carves their walls."
-            : defaultFlatTool
-              ? "Clear the parts that reach the max depth flat with an end mill."
-              : "Add a flat end mill to your tool library to clear a flat bottom."
-        }
+        label={t("flatBottom")}
+        hint={flatTool ? t("flatOn") : defaultFlatTool ? t("flatOffer") : t("flatNeedTool")}
         checked={flatTool !== null}
         disabled={flatTool === null && !defaultFlatTool}
         onChange={(checked) =>
@@ -964,7 +897,7 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
         }
       />
       {flatTool && (
-        <Row id="vcarve-flat-tool" label="End mill">
+        <Row id="vcarve-flat-tool" label={t("endMill")}>
           <NativeSelect
             id="vcarve-flat-tool"
             size="sm"
@@ -976,7 +909,9 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
             className={SELECT_CLASS}
           >
             {!current && (
-              <NativeSelectOption value="">{flatTool.name} (as picked)</NativeSelectOption>
+              <NativeSelectOption value="">
+                {t("asPicked", { name: flatTool.name })}
+              </NativeSelectOption>
             )}
             {tools.map((choice) => (
               <NativeSelectOption
@@ -1010,18 +945,16 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateReliefRoughParams(store, operation.id, changes),
   );
-  const stepDown = `${formatQuantity(tool.stepDown, "length", units)} ${unitLabel("length", units)}`;
+  const t = useTranslations("Operation");
+  const stepDown = useLength(units)(tool.stepDown);
 
   return (
     <section aria-labelledby="relief-rough-heading" className="grid gap-2">
       <h4 id="relief-rough-heading" className="font-medium">
-        3D rough
+        {t("rough")}
       </h4>
-      <p className="text-muted-foreground">
-        Clears the material above the model in levels, from the top only, leaving the stock to leave
-        for finishing.
-      </p>
-      <Row id="relief-rough-strategy" label="Strategy">
+      <p className="text-muted-foreground">{t("roughHint")}</p>
+      <Row id="relief-rough-strategy" label={t("strategy")}>
         <NativeSelect
           id="relief-rough-strategy"
           size="sm"
@@ -1032,15 +965,15 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           }}
           className={SELECT_CLASS}
         >
-          {Object.entries(STRATEGY_LABELS).map(([type, label]) => (
+          {STRATEGY_TYPES.map((type) => (
             <NativeSelectOption key={type} value={type}>
-              {label}
+              {t(`strategies.${type}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
       {strategy.type === "linear" && (
-        <Row id="relief-rough-angle" label="Angle">
+        <Row id="relief-rough-angle" label={t("angle")}>
           <NativeSelect
             id="relief-rough-angle"
             size="sm"
@@ -1061,7 +994,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         </Row>
       )}
       {strategy.type === "peel" && (
-        <Row id="relief-rough-peel-start" label="Start from">
+        <Row id="relief-rough-peel-start" label={t("startFrom")}>
           <NativeSelect
             id="relief-rough-peel-start"
             size="sm"
@@ -1075,19 +1008,24 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           >
             {ROUGHING_PEEL_STARTS.map((start) => (
               <NativeSelectOption key={start} value={start}>
-                {PEEL_START_LABELS[start]}
+                {t(`peelStarts.${start}`)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
         </Row>
       )}
       <p className="text-muted-foreground">
-        {ROUGHING_STRATEGY_HINTS[strategy.type]}, in levels no more than the tool's step-down (
-        {stepDown}) apart.
+        {t("roughStrategyHint", {
+          hint:
+            strategy.type === "linear"
+              ? t("roughingLinearHint")
+              : t(`strategyHints.${strategy.type}`),
+          stepDown,
+        })}
       </p>
       <NumberField
         id="relief-rough-step-over"
-        label="Step-over"
+        label={t("stepOver")}
         layout="inline"
         suffix="%"
         min={1}
@@ -1100,8 +1038,8 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
       <div className="flex items-center gap-2 text-muted-foreground">
         <p className="flex-1">
           {params.stepOver === null
-            ? "The tool's step-over. Changing it here leaves the tool alone."
-            : `For this operation only; the tool's is ${tool.stepOver}%.`}
+            ? t("toolStepOver")
+            : t("ownStepOver", { stepOver: tool.stepOver })}
         </p>
         {params.stepOver !== null && (
           <Button
@@ -1109,12 +1047,12 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
             size="compact"
             onClick={() => update("stepOver", { stepOver: null })}
           >
-            Use the tool's
+            {t("useTools")}
           </Button>
         )}
       </div>
       {strategy.type !== "linear" && (
-        <Row id="relief-rough-direction" label="Direction">
+        <Row id="relief-rough-direction" label={t("direction")}>
           <NativeSelect
             id="relief-rough-direction"
             size="sm"
@@ -1126,7 +1064,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           >
             {MillingDirection.options.map((option) => (
               <NativeSelectOption key={option} value={option}>
-                {DIRECTION_LABELS[option]}
+                {t(`directions.${option}`)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -1134,7 +1072,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
       )}
       <NumberField
         id="relief-rough-stock-to-leave"
-        label="Stock to leave"
+        label={t("stockToLeave")}
         layout="inline"
         quantity="length"
         units={units}
@@ -1144,7 +1082,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         error={errors.stockToLeave}
         {...gestureHandlers(store)}
       />
-      <Row id="relief-rough-boundary" label="Clear">
+      <Row id="relief-rough-boundary" label={t("clear")}>
         <NativeSelect
           id="relief-rough-boundary"
           size="sm"
@@ -1157,9 +1095,9 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           }}
           className={SELECT_CLASS}
         >
-          {Object.entries(BOUNDARY_LABELS).map(([type, label]) => (
+          {(["model", "margin", "stock"] as const).map((type) => (
             <NativeSelectOption key={type} value={type}>
-              {label}
+              {t(`boundaries.${type}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -1167,7 +1105,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
       {params.boundary.type === "margin" && (
         <NumberField
           id="relief-rough-margin"
-          label="Margin"
+          label={t("margin")}
           layout="inline"
           quantity="length"
           units={units}
@@ -1180,7 +1118,7 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           {...gestureHandlers(store)}
         />
       )}
-      <p className="text-muted-foreground">{BOUNDARY_HINTS[params.boundary.type]}</p>
+      <p className="text-muted-foreground">{t(`boundaryHints.${params.boundary.type}`)}</p>
       <RampCheckbox
         id="relief-rough-ramp"
         tool={tool}
@@ -1211,41 +1149,23 @@ function RestCheckbox({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const t = useTranslations("Operation");
   return (
     <Checkbox
       id={id}
-      label="Only cut remaining material"
-      hint="Skips what the enabled operations above this one already cut, so a smaller tool only works where the last one couldn't reach."
+      label={t("rest")}
+      hint={t("restHint")}
       checked={checked}
       onChange={onChange}
     />
   );
 }
 
-const FINISHING_STRATEGY_LABELS: Record<FinishingStrategy["type"], string> = {
-  parallel: "Parallel",
-  waterline: "Waterline",
-  spiral: "Spiral",
-};
-
-const FINISHING_STRATEGY_HINTS: Record<FinishingStrategy["type"], string> = {
-  parallel:
-    "Straight passes at an angle. Best on gentle slopes; steep faces along the passes come out rough.",
-  waterline:
-    "Contours at constant height, a step-down apart, so steep faces get as many passes as flat ones get few. Flat areas between contours aren't cut.",
-  spiral: "One continuous cut spiralling over the model's outline, with no retracts.",
-};
-
 /** What picking each finishing strategy sets: contours start 0.5 mm apart, spirals at the outline. */
 const DEFAULT_FINISHING_STRATEGIES: Record<FinishingStrategy["type"], FinishingStrategy> = {
   parallel: { type: "parallel", angle: 0, direction: "zigzag" },
   waterline: { type: "waterline", stepDown: 0.5 },
   spiral: { type: "spiral", start: "outside" },
-};
-
-const SPIRAL_START_LABELS: Record<SpiralStart, string> = {
-  outside: "Outline",
-  centre: "Centre",
 };
 
 /** Steps the passes' angle by 15°. 180° is 0° again, so the field stops short of it. */
@@ -1258,6 +1178,8 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateReliefFinishParams(store, operation.id, changes),
   );
+  const t = useTranslations("Operation");
+  const length = useLength(units);
   const { strategy } = params;
   const gestures = gestureHandlers(store);
   const spacing = (tool.diameter * params.stepOver) / 100;
@@ -1265,13 +1187,10 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
   return (
     <section aria-labelledby="relief-finish-heading" className="grid gap-2">
       <h4 id="relief-finish-heading" className="font-medium">
-        3D finish
+        {t("finish")}
       </h4>
-      <p className="text-muted-foreground">
-        Passes over the model, the tool dropped onto it at every point, from the top only. A ball
-        end mill leaves the smoothest surface.
-      </p>
-      <Row id="relief-strategy" label="Strategy">
+      <p className="text-muted-foreground">{t("finishHint")}</p>
+      <Row id="relief-strategy" label={t("strategy")}>
         <NativeSelect
           id="relief-strategy"
           size="sm"
@@ -1284,18 +1203,18 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
           }}
           className={SELECT_CLASS}
         >
-          {Object.entries(FINISHING_STRATEGY_LABELS).map(([type, label]) => (
+          {(["parallel", "waterline", "spiral"] as const).map((type) => (
             <NativeSelectOption key={type} value={type}>
-              {label}
+              {t(`finishing.${type}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </Row>
-      <p className="text-muted-foreground">{FINISHING_STRATEGY_HINTS[strategy.type]}</p>
+      <p className="text-muted-foreground">{t(`finishingHints.${strategy.type}`)}</p>
       {strategy.type === "parallel" && (
         <NumberField
           id="relief-angle"
-          label="Angle"
+          label={t("angle")}
           layout="inline"
           suffix="°"
           min={0}
@@ -1310,7 +1229,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
       {strategy.type === "waterline" && (
         <NumberField
           id="relief-step-down"
-          label="Step-down"
+          label={t("stepDown")}
           layout="inline"
           quantity="length"
           units={units}
@@ -1324,7 +1243,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         />
       )}
       {strategy.type === "spiral" && (
-        <Row id="relief-spiral-start" label="Start from">
+        <Row id="relief-spiral-start" label={t("startFrom")}>
           <NativeSelect
             id="relief-spiral-start"
             size="sm"
@@ -1338,7 +1257,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
           >
             {SpiralStart.options.map((start) => (
               <NativeSelectOption key={start} value={start}>
-                {SPIRAL_START_LABELS[start]}
+                {t(`spiralStarts.${start}`)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -1348,7 +1267,7 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         <>
           <NumberField
             id="relief-step-over"
-            label="Step-over"
+            label={t("stepOver")}
             layout="inline"
             suffix="%"
             min={1}
@@ -1359,14 +1278,16 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
             {...gestures}
           />
           <p className="text-muted-foreground">
-            Of the tool's diameter: {strategy.type === "spiral" ? "laps" : "passes"}{" "}
-            {formatQuantity(spacing, "length", units)} {unitLabel("length", units)} apart at most.
+            {t("spacingHint", {
+              spiral: strategy.type === "spiral" ? "yes" : "no",
+              spacing: length(spacing),
+            })}
           </p>
         </>
       )}
       {strategy.type === "parallel" && (
         <>
-          <Row id="relief-direction" label="Direction">
+          <Row id="relief-direction" label={t("direction")}>
             <NativeSelect
               id="relief-direction"
               size="sm"
@@ -1380,21 +1301,19 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
             >
               {RasterDirection.options.map((option) => (
                 <NativeSelectOption key={option} value={option}>
-                  {RASTER_DIRECTION_LABELS[option]}
+                  {t(`raster.${option}`)}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
           </Row>
           <p className="text-muted-foreground">
-            {strategy.direction === "zigzag"
-              ? "Every other pass comes back, linked along the model."
-              : "Every pass cuts the same way, retracting in between."}
+            {strategy.direction === "zigzag" ? t("zigzagHint") : t("oneWayHint")}
           </p>
         </>
       )}
       <NumberField
         id="relief-stock-to-leave"
-        label="Stock to leave"
+        label={t("stockToLeave")}
         layout="inline"
         quantity="length"
         units={units}
@@ -1429,6 +1348,7 @@ function TabsFields({
   error?: string;
   onChange: (tabs: ProfileTabs) => void;
 }) {
+  const t = useTranslations("Operation");
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const editing = useWorkspaceStore((s) => s.editingTabs);
@@ -1448,7 +1368,7 @@ function TabsFields({
     <div className="grid gap-2 border-l-2 pl-2">
       <NumberField
         id="profile-tab-width"
-        label="Tab width"
+        label={t("tabWidth")}
         min={MIN_LENGTH}
         value={tabs.width}
         onValueChange={(width) => onChange({ ...tabs, width })}
@@ -1456,7 +1376,7 @@ function TabsFields({
       />
       <NumberField
         id="profile-tab-height"
-        label="Tab height"
+        label={t("tabHeight")}
         min={MIN_LENGTH}
         value={tabs.height}
         onValueChange={(height) => onChange({ ...tabs, height })}
@@ -1467,7 +1387,7 @@ function TabsFields({
           {error}
         </p>
       )}
-      <Row id="profile-tab-placement" label="Auto place">
+      <Row id="profile-tab-placement" label={t("autoPlace")}>
         <NativeSelect
           id="profile-tab-placement"
           size="sm"
@@ -1475,8 +1395,8 @@ function TabsFields({
           onChange={(event) => setMode(event.target.value as PlacementMode)}
           className={SELECT_CLASS}
         >
-          <NativeSelectOption value="count">Per contour</NativeSelectOption>
-          <NativeSelectOption value="spacing">By spacing</NativeSelectOption>
+          <NativeSelectOption value="count">{t("perContour")}</NativeSelectOption>
+          <NativeSelectOption value="spacing">{t("bySpacing")}</NativeSelectOption>
         </NativeSelect>
       </Row>
       <div className="flex items-end gap-2">
@@ -1484,7 +1404,7 @@ function TabsFields({
           {mode === "count" ? (
             <NumberField
               id="profile-tab-count"
-              label="Tabs"
+              label={t("tabs")}
               layout="inline"
               integer
               min={1}
@@ -1494,7 +1414,7 @@ function TabsFields({
           ) : (
             <NumberField
               id="profile-tab-spacing"
-              label="Every"
+              label={t("every")}
               layout="inline"
               quantity="length"
               units={units}
@@ -1510,29 +1430,23 @@ function TabsFields({
           onClick={() =>
             autoPlaceTabs(store, operation.id, mode === "count" ? { count } : { spacing })
           }
-          title="Replace the tabs with ones spread evenly along each contour"
+          title={t("placeTitle")}
         >
-          Place
+          {t("place")}
         </Button>
       </div>
       <div className="flex items-center gap-2">
-        <span className="flex-1 text-muted-foreground">
-          {tabCount === 1 ? "1 tab" : `${tabCount} tabs`}
-        </span>
+        <span className="flex-1 text-muted-foreground">{t("tabCount", { count: tabCount })}</span>
         <Button
           variant={editing ? "secondary" : "outline"}
           size="compact"
           aria-pressed={editing}
           onClick={() => setEditing(!editing)}
         >
-          {editing ? "Done" : "Edit in viewport"}
+          {editing ? t("done") : t("editInViewport")}
         </Button>
       </div>
-      {editing && (
-        <p className="text-muted-foreground">
-          Click a contour to add a tab, drag a tab to move it, click it to remove it.
-        </p>
-      )}
+      {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
     </div>
   );
 }
@@ -1583,16 +1497,17 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   const entry = useToolpathStore((s) => s.entries[operationId]);
   const controls = useToolpathStore((s) => s.controls);
   const format = useFormatMessage();
+  const t = useTranslations("Operation");
   if (!entry || entry.status === "computing") {
     const progress = entry?.status === "computing" ? entry.progress : undefined;
     if (progress === undefined) {
-      return <p className="text-muted-foreground">Computing toolpath…</p>;
+      return <p className="text-muted-foreground">{t("computing")}</p>;
     }
     const percent = Math.floor(progress * 100);
     return (
       <div className="flex items-center gap-2">
         <label htmlFor="toolpath-progress" className="shrink-0 text-muted-foreground">
-          Computing toolpath…
+          {t("computing")}
         </label>
         <progress
           id="toolpath-progress"
@@ -1603,7 +1518,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
           {percent}%
         </progress>
         <Button variant="outline" size="compact" onClick={() => controls.cancel(operationId)}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     );
@@ -1611,9 +1526,9 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error" && entry.cancelled) {
     return (
       <div className="flex items-center gap-2">
-        <p className="flex-1 text-muted-foreground">{format(entry.error)}</p>
+        <p className="flex-1 text-muted-foreground">{t("cancelled")}</p>
         <Button variant="outline" size="compact" onClick={() => controls.retry(operationId)}>
-          Compute again
+          {t("computeAgain")}
         </Button>
       </div>
     );
@@ -1621,17 +1536,14 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error") {
     return (
       <p role="alert" className="text-destructive">
-        The toolpath couldn't be computed: {format(entry.error)}
+        {t("failed", { error: format(entry.error) })}
       </p>
     );
   }
   const { warnings } = entry;
   if (warnings.length === 0) return null;
   return (
-    <section
-      aria-label="Toolpath warnings"
-      className="grid gap-1 text-amber-700 dark:text-amber-500"
-    >
+    <section aria-label={t("warnings")} className="grid gap-1 text-amber-700 dark:text-amber-500">
       {warnings.map((warning) => (
         <p key={JSON.stringify(warning)}>{format(warning)}</p>
       ))}

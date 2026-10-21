@@ -636,10 +636,661 @@
       "spindleClamped": "Die {rpm, number} U/min des Werkzeugs liegen außerhalb des Spindelbereichs der Maschine, daher werden {used, number} U/min verwendet.",
       "unfilledPlaceholder": "{block, select, programStart {Programmstart} toolChangePad {Werkzeugwechsel auf der Platte} toolChange {Werkzeugwechsel} operationStart {Operationsstart} other {Programmende}}: {placeholder} kann nicht ausgefüllt werden, daher wird es unverändert geschrieben."
     },
+    "preset": {
+      "v1e": {
+        "firmware": "Benötigt FluidNC auf dem Jackpot-Board von V1 Engineering: Programmstart, Werkzeugwechsel und Programmende verwenden FluidNC-Befehle. GRBL-, grblHAL- und Marlin-Aufbauten werden noch nicht unterstützt.",
+        "manualRouter": "Manuelle Oberfräse (z. B. eine Makita RT0701C): stelle ihre Drehzahl am Rad ein; der G-Code setzt keine.",
+        "jackpotGcode": "Programmstart, Werkzeugwechsel und Programmende sind der Jackpot-G-Code von V1 Engineering. Der Start setzt X, Y und Z dort auf null, wo der Fräser steht, und tastet Z mit einer 0,5-mm-Platte an: fahre die Maschine zuerst auf den Projektnullpunkt und verwende die Rohteiloberseite als Z-Null. M62 P1 und M63 P1 schalten ein optionales Fräsenrelais an Pin 27."
+      },
+      "longmill": {
+        "firmware": "Benötigt Siencis LongBoard (GRBL 1.1h, LongMill MK2) oder SuperLongBoard (grblHAL, LongMill MK2.5).",
+        "spindle": "Spindel: die LongMill wird ohne Oberfräse geliefert. Wähle Manuelle Spindel für eine Oberfräse mit Drehzahlrad (z. B. eine Makita RT0701) oder gib den Drehzahlbereich einer gesteuerten Spindel ein, z. B. 7.500–24.000 U/min für Siencis 1,5-kW-Spindel-Kit.",
+        "workArea": "Der Arbeitsbereich ist der kleinere aus dem maximalen Verfahrweg der Firmware ($130–$132) und Siencis angegebenem Bereich.",
+        "maxFeedZ": "Der max. Z-Vorschub ist der des LongBoard, 3000 mm/min; das SuperLongBoard erlaubt 4000 mm/min.",
+        "homing": "Referenzfahrt ist standardmäßig aus: nulle X, Y und Z am Rohteil, z. B. mit einer Antastplatte.",
+        "advertised12x30": "Sienci gibt 820 × 368 mm an, mit etwa 125 mm Z; die 810 × 355 × 120 mm der Firmware werden verwendet.",
+        "advertised30x30": "Sienci gibt 820 × 868 mm an, mit etwa 125 mm Z; die 810 × 855 × 120 mm der Firmware werden verwendet.",
+        "advertised48x30": "Sienci gibt 48 × 30 Zoll an (1219,2 × 762 mm), die diese Vorlage für X und Y verwendet; die Firmware erlaubt 1270 × 855 mm."
+      },
+      "genmitsu": {
+        "firmware": "Läuft mit GRBL 1.1h auf dem mitgelieferten Controller, der für die Maschine konfiguriert ausgeliefert wird.",
+        "maxFeedZ": "Max. Z-Vorschub: SainSmart nennt eine einzige Höchstgeschwindigkeit, nicht eine pro Achse. Sende $$ aus deinem G-Code-Sender und gib $112 ein, die Z-Höchstgeschwindigkeit in mm/min.",
+        "spindle": "Spindel: die mitgelieferte 775-Spindel ist für 9.000 U/min ausgelegt, und SainSmart nennt kein Minimum. Gib die langsamste und schnellste Drehzahl ein, mit der du sie betreibst, in U/min. S-Wörter im G-Code sind U/min, also muss GRBLs $30 (max. Spindeldrehzahl) dem Maximum entsprechen.",
+        "rexSwitches": "Hat X-, Y- und Z-Endschalter für die Referenzfahrt und eine Z-Sonde zum Setzen von Z-Null.",
+        "proverWorkArea": "Der Arbeitsbereich stammt aus dem Handbuch; die Produktseite nennt 290 mm X.",
+        "proverSwitches": "Hat Referenz- und Endschalter und eine Z-Sonde zum Setzen von Z-Null."
+      },
+      "lowrider": {
+        "workArea": "Arbeitsbereich: der nutzbare Schneidbereich, für den du sie gebaut hast, wie im LowRider-Rechner von V1 Engineering eingegeben (X ist der Träger, die kürzere Achse), z. B. 1220 × 2440 mm für eine ganze Platte. Um eine fertige Maschine zu prüfen, fahre den Fräser zwischen gegenüberliegenden Ecken des erreichbaren Bereichs und miss den Weg auf jeder Achse.",
+        "zTravel": "Der Z-Verfahrweg ist die 50 mm Schnitttiefe eines Standardaufbaus; mit abgesenktem Tisch sind bis zu 100 mm möglich.",
+        "endstops": "Endschalter wirken nur bei der Referenzfahrt, und Software-Endlagen sind aus: halte den Auftrag in deinem Arbeitsbereich."
+      },
+      "mpcnc": {
+        "workArea": "Arbeitsbereich: der im MPCNC-Rechner von V1 Engineering gewählte X- und Y-Bereich, den das Werkzeug erreicht (z. B. 450 × 330 mm mit dem Riemen aus dem Kit). Größere Werkzeuge wie eine DeWalt DW660 oder eine Spindel erreichen weniger. Um eine fertige Maschine zu prüfen, fahre den Fräser zwischen gegenüberliegenden Ecken des erreichbaren Bereichs und miss den Weg auf jeder Achse.",
+        "zTravel": "Z-Verfahrweg: die im Rechner gewählte Z-Höhe; 81 mm ist die kürzeste und die von V1 Engineering empfohlene.",
+        "limits": "Z hat keine Referenzfahrt, und Software-Endlagen sind aus: halte den Auftrag in deinem Arbeitsbereich."
+      },
+      "maslow": {
+        "firmware": "Läuft mit Maslows Version von FluidNC, die auf dem Maslow-4-Board mitgeliefert wird.",
+        "area": "Halte den Auftrag im Bereich, den du schneiden kannst. Die Firmware hat keine Endschalter: sie zieht Bewegungen außerhalb ihres Arbeitsbereichs (standardmäßig 2440 × 1220 mm, auf dem Rahmen zentriert) auf dessen Rand zurück, statt anzuhalten. Trace Boundary zeigt den Umriss vor dem Schneiden.",
+        "router": "Schalte die Oberfräse ein (eine DeWalt DWP611, oder D26200 bei 240 V) und stelle ihre Drehzahl von Hand ein; der G-Code setzt keine.",
+        "maxFeeds": "Die max. Vorschübe sind die niedrigsten offiziellen Werte: die 2000 mm/min der Riemen in der Firmware (das Datenblatt nennt 2500 mm/min für X/Y) und die 300 mm/min für Z aus dem Datenblatt (die Firmware erlaubt 400).",
+        "zTravel": "Der Z-Verfahrweg ist der des Datenblatts, 50 mm; der Arbeitsbereich wird mit 65 mm Tiefe angegeben.",
+        "zZero": "Setze Z-Null mit Define Z Home auf die Rohteiloberseite."
+      }
+    },
     "workspace": {
+      "needsShape": "Eine Operation braucht mindestens eine Form",
+      "notOperationType": "Keine {type}-Operation",
+      "noTabs": "Die Kontur hat keine Stege",
+      "bitNotFound": "Dieser Fräser existiert nicht mehr.",
+      "machineNotFound": "Diese Maschine existiert nicht mehr.",
+      "somethingWrong": "Etwas ist schiefgelaufen.",
+      "offline": "Das Projekt konnte nicht gespeichert werden. Prüfe deine Verbindung.",
+      "cancelled": "Vor dem Ende abgebrochen.",
+      "toolpathsOff": "Werkzeugbahnen werden nicht berechnet.",
+      "keptChanging": "Das Projekt hat sich beim Erstellen seines G-Codes ständig geändert. Exportiere erneut, wenn du mit dem Bearbeiten fertig bist.",
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
+      "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
+      "oneFile": "Ein Projekt enthält eine importierte Datei: eine SVG- oder DXF-Zeichnung oder ein STL-Modell.",
+      "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
+      "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
       "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei."
     }
+  },
+  "Operation": {
+    "sides": {
+      "outside": "Außen",
+      "inside": "Innen",
+      "on": "Auf der Linie"
+    },
+    "directions": {
+      "climb": "Gleichlauf",
+      "conventional": "Gegenlauf"
+    },
+    "strategies": {
+      "offset": "Versatz",
+      "linear": "Linear",
+      "peel": "Spirale"
+    },
+    "strategyHints": {
+      "offset": "Ringe parallel zu den Wänden, von der Mitte nach außen ausgeräumt",
+      "linear": "Geneigte Zickzack-Bahnen, nach einer Runde entlang der Wände",
+      "peel": "Schnitte nie breiter als der Bahnabstand, die sich vom Start aus ausweiten"
+    },
+    "roughingLinearHint": "Gerade, geneigte Zickzack-Bahnen, die dort über das Modell steigen, wo es höher ist",
+    "raster": {
+      "zigzag": "Zickzack",
+      "one_way": "Eine Richtung"
+    },
+    "peelStarts": {
+      "centre": "Mitte",
+      "inside": "Insel",
+      "outside": "Außenwand"
+    },
+    "boundaries": {
+      "model": "Modell",
+      "margin": "Modell und Rand",
+      "stock": "Ganzes Rohteil"
+    },
+    "boundaryHints": {
+      "model": "Die Werkzeugmitte erreicht die Kanten des Modellumrisses.",
+      "margin": "Räumt einen Rahmen dieser Breite um den Modellumriss aus (mindestens den Werkzeugradius) und hält das Werkzeug darin: die Rohteiloberseite außerhalb bleibt für das Nullen von Z nach einem Werkzeugwechsel.",
+      "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: alles um das Modell wird bis zum Boden ausgeräumt."
+    },
+    "finishing": {
+      "parallel": "Parallel",
+      "waterline": "Wasserlinie",
+      "spiral": "Spirale"
+    },
+    "finishingHints": {
+      "parallel": "Gerade, geneigte Bahnen. Am besten auf sanften Hängen; steile Flächen entlang der Bahnen bleiben rau.",
+      "waterline": "Konturen auf gleicher Höhe, eine Zustellung auseinander, sodass steile Flächen so viele Bahnen bekommen, wie flache wenige bekommen. Flache Bereiche zwischen den Konturen werden nicht geschnitten.",
+      "spiral": "Ein durchgehender Spiralschnitt über die Modellkontur, ohne Abheben."
+    },
+    "spiralStarts": {
+      "outside": "Umriss",
+      "centre": "Mitte"
+    },
+    "closeLabel": "Operationseigenschaften schließen",
+    "close": "Schließen",
+    "name": "Name",
+    "tool": "Werkzeug",
+    "disabled": "Deaktiviert: es wird keine Werkzeugbahn berechnet.",
+    "catalog": "Katalog (Startwerte für Weichholz und Sperrholz)",
+    "yourBits": "Deine Fräser",
+    "asPicked": "{name} (wie gewählt)",
+    "newBit": "Neuer Fräser…",
+    "shapes": "Formen",
+    "cutInstead": "Stattdessen schneiden: {targets}",
+    "selectToCut": "Wähle Formen oder Pfade aus, um stattdessen diese zu schneiden",
+    "useSelected": "Auswahl verwenden",
+    "unnamedShape": "Unbenannte Form",
+    "pathsOf": "{count} von {total} Pfaden",
+    "removeLabel": "{name} entfernen",
+    "needsShape": "Eine Operation braucht mindestens eine Form",
+    "remove": "Entfernen",
+    "model": "Modell",
+    "missing": "Fehlt",
+    "rampIn": "Rampeneintauchen",
+    "rampStraight": "Der Eintauchwinkel des Werkzeugs ist 90°, also taucht es senkrecht ein.",
+    "rampAngle": "Mit dem Eintauchwinkel des Werkzeugs ({angle}°).",
+    "profile": "Kontur",
+    "side": "Seite",
+    "direction": "Richtung",
+    "depth": "Tiefe",
+    "allowance": "Aufmaß",
+    "finishPass": "Schlichtdurchgang",
+    "needsAllowance": "Braucht ein Aufmaß zum Abtragen.",
+    "leadIn": "Bogenanfahrt",
+    "leadInRadius": "Anfahrradius",
+    "holdingTabs": "Haltestege",
+    "pocket": "Tasche",
+    "strategy": "Strategie",
+    "angle": "Winkel",
+    "startFrom": "Beginnen bei",
+    "pocketHint": "{hint}, mit Bahnabstand ({stepOver} %) und Zustellung des Werkzeugs.",
+    "linearDirection": "Lineare Bahnen wechseln die Richtung; diese gilt für die Runden und den Schlichtdurchgang.",
+    "finishLap": "Eine Runde um Wände und Inseln auf voller Tiefe.",
+    "drill": "Bohren",
+    "drillHint": "Löcher an Punkten und Kreisen. Das Werkzeug taucht in Punkte und in Kreise ein, in die es auf {tolerance} genau passt{bore, select, yes {, und bohrt größere Kreise helikal mit seinem Eintauchwinkel auf.} other {; ein Bohrer kann keine größeren Kreise aufbohren.}}",
+    "peck": "Spanbrechen",
+    "peckHint": "Taucht in Schritten ein, nicht tiefer als die Zustellung des Werkzeugs, und hebt nach jedem ab, um Späne zu entfernen.",
+    "engrave": "Gravur",
+    "position": "Position",
+    "engraveHint": "{side, select, inside {Folgt geschlossenen Pfaden innerhalb der Linie, mit einer Nutkante darauf,} outside {Folgt geschlossenen Pfaden außerhalb der Linie, mit einer Nutkante darauf,} other {Folgt allen Pfaden, offen und geschlossen, auf der Linie,}} in Durchgängen nicht tiefer als die Zustellung des Werkzeugs.",
+    "lineWidth": "Linienbreite",
+    "lineTooDeep": "Tiefer als der Kegel: die Linie ist so breit wie der Fräser.",
+    "lineAtTop": "An der Rohteiloberseite, aus dem {angle}°-Winkel des Fräsers.",
+    "lineAtTopTip": "An der Rohteiloberseite, aus dem {angle}°-Winkel des Fräsers und seiner {tip}-Spitze.",
+    "vcarve": "V-Schnitzen",
+    "vcarveHint": "Folgt der Mitte geschlossener Pfade, so tief, wie der Fräserwinkel es braucht, um ihre Kanten zu erreichen, in Durchgängen nicht tiefer als die Zustellung des Werkzeugs. Inseln bleiben stehen.",
+    "maxDepth": "Max. Tiefe",
+    "vcarveTooDeep": "Tiefer als der Kegel: der Fräser schnitzt nicht tiefer als {depth}.",
+    "vcarveReach": "Teile breiter als {width} erreichen sie.",
+    "flatBottom": "Flacher Boden",
+    "flatOn": "Der Schaftfräser räumt diese Teile zuerst flach aus; der V-Fräser schnitzt danach ihre Wände.",
+    "flatOffer": "Teile, die die max. Tiefe erreichen, mit einem Schaftfräser flach ausräumen.",
+    "flatNeedTool": "Füge deiner Bibliothek einen Schaftfräser hinzu, um einen flachen Boden auszuräumen.",
+    "endMill": "Schaftfräser",
+    "rough": "3D-Schruppen",
+    "roughHint": "Trägt Material über dem Modell in Ebenen ab, nur von oben, und lässt das Aufmaß zum Schlichten stehen.",
+    "roughStrategyHint": "{hint}, in Ebenen höchstens eine Zustellung des Werkzeugs ({stepDown}) auseinander.",
+    "stepOver": "Bahnabstand",
+    "toolStepOver": "Der Bahnabstand des Werkzeugs. Ihn hier zu ändern ändert das Werkzeug nicht.",
+    "ownStepOver": "Nur für diese Operation; der des Werkzeugs ist {stepOver} %.",
+    "useTools": "Den des Werkzeugs verwenden",
+    "stockToLeave": "Aufmaß stehen lassen",
+    "clear": "Ausräumen",
+    "margin": "Rand",
+    "rest": "Nur Restmaterial schneiden",
+    "restHint": "Überspringt, was die aktivierten Operationen darüber schon geschnitten haben, sodass ein kleineres Werkzeug nur dort arbeitet, wo das vorige nicht hinkam.",
+    "finish": "3D-Schlichten",
+    "finishHint": "Bahnen über das Modell, das Werkzeug an jedem Punkt darauf aufliegend, nur von oben. Ein Radiusfräser hinterlässt die glatteste Oberfläche.",
+    "stepDown": "Zustellung",
+    "spacingHint": "Des Werkzeugdurchmessers: {spiral, select, yes {Windungen} other {Bahnen}} höchstens {spacing} auseinander.",
+    "zigzagHint": "Jede zweite Bahn läuft zurück, entlang des Modells verbunden.",
+    "oneWayHint": "Jede Bahn schneidet in dieselbe Richtung und hebt dazwischen ab.",
+    "tabWidth": "Stegbreite",
+    "tabHeight": "Steghöhe",
+    "autoPlace": "Automatisch platzieren",
+    "perContour": "Pro Kontur",
+    "bySpacing": "Nach Abstand",
+    "tabs": "Stege",
+    "every": "Alle",
+    "placeTitle": "Stege durch gleichmäßig verteilte entlang jeder Kontur ersetzen",
+    "place": "Platzieren",
+    "tabCount": "{count, plural, one {# Steg} other {# Stege}}",
+    "done": "Fertig",
+    "editInViewport": "In der Ansicht bearbeiten",
+    "editHint": "Klicke auf eine Kontur, um einen Steg hinzuzufügen, ziehe ihn, um ihn zu verschieben, klicke darauf, um ihn zu entfernen.",
+    "computing": "Werkzeugbahn wird berechnet…",
+    "cancel": "Abbrechen",
+    "computeAgain": "Neu berechnen",
+    "cancelled": "Vor dem Ende abgebrochen.",
+    "failed": "Die Werkzeugbahn konnte nicht berechnet werden: {error}",
+    "warnings": "Warnungen zur Werkzeugbahn"
+  },
+  "Selection": {
+    "shapes": "{count, plural, one {# Form ausgewählt} other {# Formen ausgewählt}}",
+    "paths": "{count, plural, one {# Pfad ausgewählt} other {# Pfade ausgewählt}}",
+    "both": "{shapes, plural, one {# Form} other {# Formen}} und {paths, plural, one {# Pfad} other {# Pfade}} ausgewählt"
+  },
+  "Operations": {
+    "sideways": "Füge deiner Bibliothek einen Schaftfräser oder V-Fräser hinzu: Bohrer schneiden nicht seitlich",
+    "types": {
+      "profile": "Kontur",
+      "pocket": "Tasche",
+      "drill": "Bohren",
+      "engrave": "Gravur",
+      "vcarve": "V-Schnitzen",
+      "relief_rough": "3D-Schruppen",
+      "relief_finish": "3D-Schlichten"
+    },
+    "hints": {
+      "profile": "Ausschneiden: {target}",
+      "pocket": "Innen ausräumen: {target}",
+      "drill": "Punkte und Kreise bohren: {target}",
+      "engrave": "Entlang der Linien gravieren: {target}",
+      "vcarve": "{target} innen mit einem V-Fräser schnitzen, tiefer, wo es breiter ist",
+      "relief_rough": "Material über {model} in Ebenen abtragen, meist mit einem Schaftfräser",
+      "relief_finish": "{model} in parallelen Bahnen schlichten, meist mit einem Radiusfräser"
+    },
+    "missingDrill": "Füge deiner Bibliothek einen Bohrer oder Schaftfräser hinzu: V-Fräser bohren nicht",
+    "missingEngrave": "Füge deiner Bibliothek einen V-Fräser oder Schaftfräser hinzu: Bohrer gravieren nicht",
+    "missingVCarve": "Füge deiner Bibliothek einen V-Fräser zum V-Schnitzen hinzu",
+    "noTool": "Füge zuerst ein Werkzeug zu deiner Bibliothek hinzu",
+    "selectModel": "Wähle zuerst ein Modell in der Ansicht aus",
+    "selectPaths": "Wähle zuerst Pfade in der Ansicht aus",
+    "addLabel": "Hinzufügen: {operation}",
+    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Strg/Cmd/Umschalt+Klick wählt weitere aus.",
+    "addToolLibrary": "Füge deiner <link>Werkzeugbibliothek</link> ein Werkzeug hinzu, um Operationen zu erstellen.",
+    "inCuttingOrder": "Operationen in Schnittreihenfolge",
+    "selectInsideTitle": "Auch geschlossene Pfade innerhalb der ausgewählten auswählen, wie die Inseln einer Tasche",
+    "selectInside": "Innere auswählen",
+    "clearSelection": "Auswahl aufheben",
+    "enableLabel": "{name} aktivieren",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert: keine Werkzeugbahn",
+    "operationName": "Name der Operation",
+    "renameTitle": "Doppelklicken oder F2 drücken zum Umbenennen",
+    "moveUpLabel": "{name} nach oben",
+    "moveUp": "Nach oben",
+    "moveDownLabel": "{name} nach unten",
+    "moveDown": "Nach unten",
+    "deleteLabel": "{name} löschen",
+    "delete": "Löschen",
+    "toolpathOf": "Werkzeugbahn von {name}",
+    "showToolpath": "Werkzeugbahn zeigen",
+    "hideToolpath": "Werkzeugbahn ausblenden",
+    "computing": "Werkzeugbahn wird berechnet",
+    "computingPercent": "Werkzeugbahn wird berechnet, {percent} %",
+    "cancelled": "Werkzeugbahn abgebrochen",
+    "cancelledDetail": "Vor dem Ende abgebrochen.",
+    "failed": "Werkzeugbahn fehlgeschlagen: {error}",
+    "warnings": "Warnungen zur Werkzeugbahn: {warnings}"
+  },
+  "Bit": {
+    "types": {
+      "flat_end_mill": "Schaftfräser",
+      "ball_end_mill": "Radiusfräser",
+      "v_bit": "V-Fräser",
+      "drill": "Bohrer"
+    },
+    "cutDirections": {
+      "upcut": "Aufwärtsspiral",
+      "downcut": "Abwärtsspiral",
+      "compression": "Kompression"
+    },
+    "saveFailed": "Der Fräser konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "type": "Typ",
+    "name": "Name",
+    "namePlaceholder": "6 mm 2-Schneider aufwärts",
+    "colour": "Farbe",
+    "geometry": "Geometrie",
+    "diameter": "Durchmesser",
+    "flutes": "Schneiden",
+    "fluteLength": "Schneidenlänge",
+    "cutDirection": "Spiralrichtung",
+    "vAngle": "V-Winkel",
+    "tipDiameter": "Spitzendurchmesser",
+    "cuttingData": "Schnittdaten",
+    "spindleSpeed": "Spindeldrehzahl",
+    "feedRate": "Vorschub",
+    "plungeRate": "Eintauchvorschub",
+    "plungeAngle": "Eintauchwinkel",
+    "stepDown": "Zustellung pro Durchgang",
+    "stepOver": "Bahnabstand (vom Durchmesser)",
+    "notes": "Notizen (optional)",
+    "saving": "Wird gespeichert…",
+    "saveChanges": "Änderungen speichern",
+    "add": "Fräser hinzufügen",
+    "cancel": "Abbrechen"
+  },
+  "Machine": {
+    "blocks": {
+      "programStart": "Programmstart",
+      "programEnd": "Programmende",
+      "operationStart": "Operationsstart",
+      "toolChange": "Werkzeugwechsel"
+    },
+    "operationStartPlaceholder": "(Tasche für die Aussparung)",
+    "toolChangePlaceholder": "M5\nM0 (Fräser wechseln)",
+    "name": "Name",
+    "namePlaceholder": "Shapeoko 4 XL",
+    "postProcessor": "Postprozessor",
+    "workArea": "Arbeitsbereich",
+    "xTravel": "X-Verfahrweg",
+    "yTravel": "Y-Verfahrweg",
+    "zTravel": "Z-Verfahrweg",
+    "safeZ": "Sichere Z-Höhe (über dem Rohteil)",
+    "entryClearance": "Anfahrabstand (über dem Rohteil)",
+    "limits": "Grenzen",
+    "maxFeedXY": "Max. Vorschub X/Y",
+    "maxFeedZ": "Max. Vorschub Z",
+    "spindle": "Spindel",
+    "manualSpindle": "Manuelle Spindel",
+    "manualSpindleHint": "Drehzahl von Hand eingestellt (z. B. am Rad einer Oberfräse); der G-Code setzt keine Spindeldrehzahl.",
+    "minSpeed": "Min. Drehzahl",
+    "maxSpeed": "Max. Drehzahl",
+    "spinUpDelay": "Hochlaufzeit",
+    "spinUpHint": "Die Wartezeit nach dem Start der Spindel, bevor der Fräser ins Rohteil geht.",
+    "customGcode": "Eigener G-Code",
+    "customGcodeHint": "Ein ausgefüllter Block ersetzt, was der Postprozessor an dieser Stelle schreibt, also nimm alles auf, was deine Maschine braucht (z. B. <code>G21</code> und <code>G90</code> im Programmstart). Lass einen Block leer, um den Standard zu behalten. Der Text wird bis auf die Variablen wörtlich übernommen.",
+    "saving": "Wird gespeichert…",
+    "saveChanges": "Änderungen speichern",
+    "add": "Maschine hinzufügen",
+    "askedHint": "Für deine Maschine auszufüllen."
+  },
+  "NewMachine": {
+    "starts": {
+      "preset": "Mit einer Vorlage beginnen",
+      "scratch": "Bei null beginnen"
+    },
+    "startHints": {
+      "preset": "Wähle deine Fräse; ihre dokumentierten Einstellungen werden für dich ausgefüllt.",
+      "scratch": "Gib jede Einstellung selbst ein."
+    },
+    "discard": "Die eingegebenen Werte verwerfen?",
+    "start": "Start",
+    "presets": "Vorlagen",
+    "search": "Maschinen suchen…",
+    "searchLabel": "Maschinen suchen",
+    "noMatch": "Keine Vorlage passt zu „{query}“. Beginne bei null, um deine Maschine selbst zu beschreiben.",
+    "firmware": "Firmware:",
+    "youFillIn": "Selbst ausfüllen",
+    "sources": "Quellen",
+    "check": "Prüfe die Werte unten an deiner Maschine; du kannst jeden davon jetzt oder später ändern."
+  },
+  "Shell": {
+    "saveStates": {
+      "saved": "Gespeichert",
+      "unsaved": "Ungespeicherte Änderungen",
+      "saving": "Wird gespeichert…",
+      "error": "Nicht gespeichert",
+      "failed": "Nicht gespeichert"
+    },
+    "operations": "Operationen",
+    "properties": "Eigenschaften",
+    "versions": "Versionen",
+    "viewport": "Ansicht",
+    "loadingViewport": "Ansicht wird geladen…",
+    "chooseMachine": "Wähle zuerst eine Maschine in den Projekteigenschaften",
+    "addOperation": "Füge zuerst eine Operation hinzu oder aktiviere eine",
+    "operationProperties": "Operationseigenschaften",
+    "modelProperties": "Modelleigenschaften",
+    "saveFailed": "{message} Änderungen werden nicht mehr gespeichert; exportiere das Projekt, um sie zu behalten.",
+    "reload": "Neu laden",
+    "saveError": "{message} Änderungen werden wieder gespeichert, sobald das Problem behoben ist.",
+    "editBit": "Fräser bearbeiten",
+    "saveCopy": "Eine Kopie dieses Fräsers speichern",
+    "editCatalog": "Katalogfräser bleiben, wie sie sind. Dies speichert deine Kopie in deiner Bibliothek und verwendet sie in jeder Operation dieses Projekts, die den Katalogfräser verwendet.",
+    "editLibrary": "Ändert den Fräser in deiner Bibliothek und in jeder Operation dieses Projekts, die ihn verwendet.",
+    "notUpdated": "Der Fräser wurde gespeichert, aber diese Operationen behalten den Fräser, wie er war:",
+    "close": "Schließen",
+    "newBit": "Neuer Fräser",
+    "newBitDescription": "Fügt deiner Bibliothek einen Fräser hinzu und wählt ihn für diese Operation.",
+    "simulate": "Simulieren",
+    "simulateTitle": "Den Schnitt Bewegung für Bewegung abspielen",
+    "backToWorkspace": "Zurück zum Arbeitsbereich",
+    "loadingSimulator": "Simulator wird geladen…",
+    "exportFile": "Datei exportieren",
+    "exportProject": "Projektdatei exportieren",
+    "exportFailed": "Dieses Projekt konnte nicht exportiert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "exportedWithWarnings": "Der G-Code wurde mit Warnungen exportiert:",
+    "exportGcode": "G-Code exportieren",
+    "allProjects": "Alle Projekte",
+    "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten."
+  },
+  "BugReport": {
+    "report": "Fehler melden",
+    "description": "Dies öffnet ein neues GitHub-Issue mit deinem vorausgefüllten Bericht. Nichts wird gesendet, bis du es dort absendest, wofür ein GitHub-Konto nötig ist.",
+    "title": "Titel",
+    "titlePlaceholder": "z. B. Tasche lässt eine ungeschnittene Insel stehen",
+    "what": "Was ist passiert, und was hast du erwartet?",
+    "filledIn": "Für dich ausgefüllt",
+    "addYourself": "Selbst auf GitHub hinzufügen",
+    "noFiles": "GitHub kann keine Dateien aus der App empfangen. Füge sie nach dem Öffnen des Issues dort ein oder ziehe sie hinein.",
+    "screenshotAlt": "Screenshot der Ansicht",
+    "notAttached": "Die Ansicht, noch nicht angehängt.",
+    "copied": "Kopiert",
+    "copyScreenshot": "Screenshot kopieren",
+    "savePng": "Als PNG speichern",
+    "copyFailed": "Der Screenshot konnte nicht kopiert werden: speichere ihn stattdessen.",
+    "project": "Das Projekt, falls es hilft: exportiere es aus dem Operationsbereich und ziehe die Datei hinein.",
+    "opened": "Das Issue wurde in deinem Browser geöffnet. Füge von oben hinzu, was du möchtest, und sende es dann dort ab.",
+    "copiedReport": "Der Bericht war zu lang für den Link und wurde daher kopiert: füge ihn in das geöffnete GitHub-Issue ein.",
+    "notCopied": "Der Bericht ist zu lang für den Link und konnte nicht kopiert werden. Kürze ihn und versuche es erneut.",
+    "open": "GitHub-Issue öffnen"
+  },
+  "Versions": {
+    "unsaved": "Das Projekt hat Änderungen, die nicht gespeichert werden konnten. Speichere sie zuerst.",
+    "editing": "Beende zuerst die laufende Bearbeitung.",
+    "unavailable": "Versionen sind hier nicht verfügbar.",
+    "restoreConfirm": "„{name}“ wiederherstellen? Das ersetzt den Projektinhalt, der zuerst als Version behalten wird. Der Rückgängig-Verlauf wird geleert.",
+    "renamePrompt": "Version umbenennen (leer lassen, um ihr Datum anzuzeigen)",
+    "deleteConfirm": "Version „{name}“ löschen? Das kann nicht rückgängig gemacht werden.",
+    "loading": "Versionen werden geladen…",
+    "empty": "Noch keine Versionen. Speichere eine, um später zu diesem Stand zurückzukehren.",
+    "actionsLabel": "Aktionen für {name}",
+    "actions": "Aktionen",
+    "restore": "Wiederherstellen…",
+    "openAsProject": "Als neues Projekt öffnen",
+    "rename": "Umbenennen…",
+    "delete": "Löschen…",
+    "labelPlaceholder": "Bezeichnung (optional)",
+    "labelLabel": "Versionsbezeichnung",
+    "save": "Version speichern"
+  },
+  "Anchors": {
+    "top_left": "Oben links",
+    "top_center": "Oben Mitte",
+    "top_right": "Oben rechts",
+    "middle_left": "Mitte links",
+    "center": "Mitte",
+    "middle_right": "Mitte rechts",
+    "bottom_left": "Unten links",
+    "bottom_center": "Unten Mitte",
+    "bottom_right": "Unten rechts"
+  },
+  "Snap": {
+    "point": "Punkt",
+    "vertex": "Eckpunkt",
+    "arc_center": "Bogenmittelpunkt",
+    "circle_center": "Kreismittelpunkt",
+    "bounds_corner": "Ecke des Begrenzungsrahmens",
+    "bounds_center": "Mitte des Begrenzungsrahmens",
+    "anchors": {
+      "top_left": "Rohteil, oben links",
+      "top_center": "Rohteil, oben Mitte",
+      "top_right": "Rohteil, oben rechts",
+      "middle_left": "Rohteil, Mitte links",
+      "center": "Rohteilmitte",
+      "middle_right": "Rohteil, Mitte rechts",
+      "bottom_left": "Rohteil, unten links",
+      "bottom_center": "Rohteil, unten Mitte",
+      "bottom_right": "Rohteil, unten rechts"
+    }
+  },
+  "Stock": {
+    "units": {
+      "mm": "Millimeter",
+      "in": "Zoll"
+    },
+    "unitsLabel": "Einheiten",
+    "stock": "Rohteil",
+    "dimensions": {
+      "width": "Breite",
+      "height": "Höhe",
+      "thickness": "Dicke"
+    },
+    "zOrigins": {
+      "stock_top": "Rohteiloberseite",
+      "machine_bed": "Maschinentisch"
+    },
+    "machine": "Maschine",
+    "chooseMachine": "Maschine wählen…",
+    "projectCopy": "{name} (Projektkopie)",
+    "guestMachine": "G-Code wird für deine Maschine erstellt, gespeichert in einem kostenlosen Konto oder in der Desktop-App. <button>Maschine einrichten</button>.",
+    "noMachine": "Keine Maschine festgelegt. Wähle die Maschine dieses Projekts, um G-Code zu exportieren.",
+    "addMachine": "<link>Maschine hinzufügen</link>.",
+    "zero": "Nullpunkt",
+    "custom": "Benutzerdefiniert",
+    "cancel": "Abbrechen",
+    "pickInViewport": "In der Ansicht wählen",
+    "pickHint": "Klicke auf einen Punkt in der Ansicht; er rastet an Rohteilpunkten, Eckpunkten, Mittelpunkten und Begrenzungsrahmen in der Nähe ein. Esc oder Rechtsklick bricht ab.",
+    "touchOff": "Antastplatz",
+    "touchOffHint": "Eine Stelle der Rohteiloberseite, die keine Operation schneidet, um dort Z nach einem Werkzeugwechsel neu zu nullen.",
+    "padAxis": "Platz {axis}",
+    "padDiameter": "Platzdurchmesser",
+    "padTooWide": "Muss auf das Rohteil passen: höchstens {size}",
+    "padCentre": "Seine Mitte, von der unteren linken Ecke des Rohteils. Größenänderungen lassen die Mitte stehen.",
+    "padOff": "Ein Teil des Platzes liegt außerhalb des Rohteils: dort gibt es vielleicht nichts, um Z neu zu nullen.",
+    "padToolChange": "Werkzeugwechsel am Platz",
+    "toolChangePlaceholder": "M5\nM0 (Fräser wechseln)",
+    "padToolChangeHint": "Läuft bei jedem Werkzeugwechsel statt dem der Maschine. <strong>Vorschlagen</strong> schreibt einen aus dem Werkzeugwechsel der Maschine, mit einer Fahrt über den Platz; <strong>Den der Maschine verwenden</strong> kehrt zu dem der Maschine zurück, nach einer Fahrt über den Platz.",
+    "suggest": "Vorschlagen",
+    "useMachines": "Den der Maschine verwenden"
+  },
+  "Model": {
+    "closeLabel": "Modelleigenschaften schließen",
+    "close": "Schließen",
+    "triangles": "{count, plural, one {# Dreieck} other {# Dreiecke}}. Nur von oben bearbeitet: Hinterschnitte und Überhänge werden aufgefüllt, wie die Ansicht zeigt.",
+    "rotation": "Drehung",
+    "turn": "Um 90° um die {axis}-Achse drehen",
+    "size": "Größe",
+    "width": "Breite",
+    "height": "Höhe",
+    "depth": "Tiefe",
+    "tooDeep": "Das Modell ist tiefer als das Rohteil dick ist: es wird nicht tiefer als der Rohteilboden geschnitten.",
+    "original": "Original: {size} (Maßstab {scale} %)",
+    "border": "Rand",
+    "borderNote": "Wird beim nächsten An Rohteil anpassen auf jeder Seite gelassen; eine Änderung verschiebt das Modell nicht.",
+    "borderCapped": "Wird beim nächsten An Rohteil anpassen auf jeder Seite gelassen; eine Änderung verschiebt das Modell nicht. Auf diesem Rohteil lässt er {size}, ein Viertel seiner kürzeren Seite.",
+    "originalTitle": "Das Modell auf seine Größe in der Datei zurücksetzen",
+    "originalSize": "Originalgröße",
+    "fitTitle": "Das Modell so skalieren, dass es ins Rohteil passt, mit dem Rand auf jeder Seite",
+    "fit": "An Rohteil anpassen",
+    "position": "Position",
+    "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} des Modells liegt, vom Nullpunkt gemessen. Verschieben ändert nicht den Rand, den <em>An Rohteil anpassen</em> lässt.",
+    "removeTitle": "Entfernt auch {count, plural, one {die Operation, die es bearbeitet} other {die # Operationen, die es bearbeiten}}",
+    "remove": "Modell entfernen"
+  },
+  "Import": {
+    "units": {
+      "mm": "Millimeter",
+      "in": "Zoll"
+    },
+    "start": "Importiere eine SVG- oder DXF-Zeichnung oder ein STL-Modell, um zu beginnen.",
+    "importDrawing": "SVG/DXF importieren…",
+    "importStl": "STL importieren…",
+    "dpi": "DPI",
+    "dpiTitle": "Pixel pro Zoll",
+    "dpiQuestion": "<name>{file}</name> gibt seine Größe in Pixeln an oder gar nicht. Wie viele Pixel ergeben einen Zoll? Prüfe die Exporteinstellungen der Software, die sie erstellt hat.",
+    "units_": "Einheiten",
+    "unitsTitle": "Zeichnungseinheiten",
+    "unitsQuestion": "<name>{file}</name> gibt nicht an, in welcher Einheit seine Koordinaten sind. Prüfe die Exporteinstellungen der Software, die sie erstellt hat.",
+    "importing": "{file} wird importiert…",
+    "dismiss": "Schließen",
+    "import": "Importieren",
+    "cancel": "Abbrechen"
+  },
+  "Viewport": {
+    "scene": "Rohteil, Geometrie und Werkzeugbahnen",
+    "simulating": "Wird simuliert…",
+    "simulationFailed": "Simulation fehlgeschlagen: {error}",
+    "notSimulated": "Nicht simuliert, Werkzeugbahn fehlgeschlagen: {operations}",
+    "views": {
+      "top": "Draufsicht",
+      "orbit": "3D-Ansicht"
+    },
+    "viewHints": {
+      "top": "Mit rechter oder mittlerer Maustaste ziehen zum Verschieben, Mausrad zum Zoomen",
+      "orbit": "Ziehen zum Drehen, Rechtsziehen zum Verschieben, Mausrad zum Zoomen"
+    },
+    "viewHint": "{view}: {hint}",
+    "view": "Ansicht",
+    "fitStock": "Rohteil einpassen",
+    "cut": "Schnitt",
+    "showToolpaths": "Werkzeugbahnen zeigen",
+    "hideAll": "Alle Werkzeugbahnen ausblenden",
+    "showAll": "Alle Werkzeugbahnen zeigen",
+    "simulate": "Schnitt simulieren",
+    "simulateTitle": "Schnitt simulieren: das Rohteil zeigen, wie es nach den Werkzeugbahnen aussieht",
+    "simulation": "Simulation",
+    "simulationScene": "Rohteil, von den Werkzeugbahnen geschnitten",
+    "hideToolpathsShort": "Werkzeugbahnen ausblenden",
+    "showToolpathsShort": "Werkzeugbahnen zeigen",
+    "nothing": "Nichts zu simulieren: füge im Arbeitsbereich eine Operation hinzu oder aktiviere eine.",
+    "playback": "Wiedergabe",
+    "previous": "Vorherige Operation",
+    "previousTitle": "Zum Anfang der Operation zurück",
+    "pause": "Pause",
+    "play": "Abspielen",
+    "next": "Nächste Operation",
+    "nextTitle": "Zur nächsten Operation springen",
+    "position": "Position entlang der Werkzeugbahnen",
+    "jumpTo": "Zu {name} springen",
+    "speed": "Wiedergabegeschwindigkeit"
+  },
+  "Dialog": {
+    "close": "Schließen"
+  },
+  "Tour": {
+    "steps": {
+      "bits": {
+        "title": "Deine Fräser",
+        "body": "Füge die Fräser hinzu, die du besitzt, mit ihren Maßen und Vorschüben. Operationen wählen ihren Fräser aus dieser Bibliothek."
+      },
+      "machines": {
+        "title": "Deine Maschine",
+        "body": "Beschreibe deine Fräse einmal oder beginne mit einer Vorlage. Ihr Arbeitsbereich, ihre Vorschübe und ihr G-Code-Dialekt gelten für jedes Projekt, das du für sie erstellst."
+      },
+      "new-project": {
+        "title": "Ein Projekt beginnen",
+        "body": "Erstelle hier ein Projekt oder importiere eine Projektdatei. Seine Maschine kannst du jetzt oder später vor dem G-Code-Export wählen."
+      },
+      "import": {
+        "title": "Eine Zeichnung importieren",
+        "body": "Beginne mit einer SVG- oder DXF-Datei: ihre Pfade werden die Formen, die du schneidest."
+      },
+      "properties": {
+        "title": "Projekteigenschaften",
+        "body": "Lege Einheiten, Maschine und Rohteil fest: Größe und Dicke des Materials und wo sein Nullpunkt liegt."
+      },
+      "select": {
+        "title": "Pfade auswählen",
+        "body": "Klicke auf einen Pfad in der Ansicht, um ihn auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Operationen schneiden, was ausgewählt ist."
+      },
+      "operations": {
+        "title": "Operationen hinzufügen",
+        "body": "Füge eine Operation (Kontur, Tasche, Bohren, Gravur oder V-Schnitzen) für die ausgewählten Pfade hinzu und wähle dann ihren Fräser und ihre Tiefen."
+      },
+      "preview": {
+        "title": "Werkzeugbahnen ansehen",
+        "body": "Die Ansicht zeigt die Werkzeugbahnen jeder aktivierten Operation, Eilgänge getrennt von Schnitten. Prüfe sie vor dem Schneiden."
+      },
+      "export-gcode": {
+        "title": "G-Code exportieren",
+        "body": "Wenn die Werkzeugbahnen stimmen, exportiere den G-Code und führe ihn mit deinem üblichen Sender aus."
+      },
+      "versions": {
+        "title": "Versionen",
+        "body": "Optional: speichere vor einer großen Änderung eine benannte Version und stelle sie wieder her, wenn du sie brauchst."
+      }
+    },
+    "count": "Schritt {number} von {count}",
+    "skip": "Tour überspringen",
+    "back": "Zurück",
+    "done": "Fertig",
+    "next": "Weiter"
+  },
+  "Placeholders": {
+    "list": "Beim Export wird <code>{padX}</code> zum X der Mitte des Antastplatzes, <code>{padY}</code> zu seinem Y und <code>{safeZ}</code> zur sicheren Z-Höhe der Maschine, alle vom Nullpunkt gemessen."
+  },
+  "NumberField": {
+    "drag": "Seitlich ziehen zum Ändern"
   }
 }

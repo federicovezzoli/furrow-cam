@@ -130,7 +130,7 @@ export function scheduleModelPreviews({
       const { key, request } = entry;
       if (response.kind === "missing") {
         if (request.bytes) {
-          settle(key, { error: "The model couldn't be read." });
+          settle(key, { error: { code: "workspace.modelUnreadable" } });
           return;
         }
         try {

@@ -60,7 +60,7 @@ export function GcodeExportButton({
     if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
     if (result.warnings.length > 0) {
       const warnings = result.warnings.map((warning) => formatWarning(t, warning)).join("\n");
-      window.alert(`The G-code was exported with warnings:\n\n${warnings}`);
+      window.alert(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
     }
   }
 
@@ -72,7 +72,7 @@ export function GcodeExportButton({
       className={className}
     >
       <FileCodeIcon />
-      Export G-code
+      {t("Shell.exportGcode")}
     </Button>
   );
   if (disabledReason === undefined) return button;

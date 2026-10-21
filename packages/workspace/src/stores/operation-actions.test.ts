@@ -659,7 +659,7 @@ describe("updatePocketParams", () => {
     });
     expect(updatePocketParams(store, add(), { depth: 3 })).toEqual({
       ok: false,
-      error: "Not a pocket operation",
+      error: { code: "workspace.notOperationType", values: { type: "pocket" } },
     });
   });
 });

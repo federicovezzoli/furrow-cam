@@ -2,7 +2,7 @@
 
 import { Button } from "@furrow/ui/components/ui/button";
 import { errorText } from "@furrow/ui/lib/i18n";
-import { EXPORT_FAILED, exportProjectFile } from "@furrow/workspace/lib/export-project";
+import { exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
 import { useTranslations } from "use-intl";
@@ -25,7 +25,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       try {
         result = await loadProject(id);
       } catch {
-        window.alert(EXPORT_FAILED);
+        window.alert(t("Shell.exportFailed"));
         return;
       }
       if (result.error !== undefined) {
@@ -37,7 +37,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
         await exportProjectFile(document, projectName, (sha256) => loadMesh(id, sha256));
       } catch (error) {
         // A mesh that couldn't be downloaded says why.
-        window.alert(errorText(t, error, EXPORT_FAILED));
+        window.alert(errorText(t, error, t("Shell.exportFailed")));
       }
     });
   }

@@ -117,7 +117,7 @@ describe("toolpath store", () => {
     const cancelled: string[] = [];
     store.getState().controls.cancel("op");
     await expect(store.getState().controls.exportGcode(() => "Plate")).resolves.toEqual({
-      error: "Toolpaths aren't being computed.",
+      error: { code: "workspace.toolpathsOff" },
     });
     store.getState().setControls({
       cancel: (id) => cancelled.push(id),

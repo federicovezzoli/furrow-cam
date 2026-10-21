@@ -9,7 +9,6 @@ import {
 } from "@furrow/ui/components/ui/table";
 import type { Translator } from "@furrow/ui/lib/i18n";
 import { BitTypeIcon } from "@furrow/workspace/tools/components/bit-type-icon";
-import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@furrow/workspace/tools/lib/labels";
 import { PencilIcon } from "lucide-react";
 import { DeleteButton } from "@/components/delete-button";
 import { numberFormatter, Unit } from "@/components/table-format";
@@ -107,7 +106,7 @@ export async function ToolList({ tools }: { tools: ToolRow[] }) {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <BitTypeIcon type={tool.type} className="h-7 w-3.5 text-muted-foreground" />
-                    {TOOL_TYPE_LABELS[tool.type]}
+                    {t(`Bit.types.${tool.type}`)}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">{formatNumber(tool.diameter)}</TableCell>
@@ -154,7 +153,7 @@ export async function ToolList({ tools }: { tools: ToolRow[] }) {
 
 /** Cut direction for end mills, angle and tip for V-bits, nothing for drills. */
 function describeCut(tool: Tool, formatNumber: (value: number) => string, t: Translator): string {
-  if (tool.cutDirection) return CUT_DIRECTION_LABELS[tool.cutDirection];
+  if (tool.cutDirection) return t(`Bit.cutDirections.${tool.cutDirection}`);
   if (tool.vAngle === null) return "—";
   const tip = tool.tipDiameter
     ? ` · ${t("Tools.tip", { size: formatNumber(tool.tipDiameter) })}`

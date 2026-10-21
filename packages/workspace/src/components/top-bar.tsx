@@ -20,7 +20,7 @@ export function TopBar({
   saveStatus,
   machineName,
   onTakeTour,
-  back = { to: "projects", label: "All projects" },
+  back,
 }: {
   back?: { to: WorkspaceDestination; label: string };
   saveStatus: AutosaveStatus;
@@ -28,12 +28,14 @@ export function TopBar({
   onTakeTour?: (from: HTMLElement) => void;
 }) {
   const t = useTranslations("TopBar");
+  const shell = useTranslations("Shell");
+  const backTo = back ?? { to: "projects", label: shell("allProjects") };
   const { project, navigation } = useWorkspaceHost();
   const { Link, TopBarActions } = navigation;
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
-        <Link to={back.to} aria-label={back.label} title={back.label}>
+        <Link to={backTo.to} aria-label={backTo.label} title={backTo.label}>
           <ChevronLeftIcon />
         </Link>
       </Button>

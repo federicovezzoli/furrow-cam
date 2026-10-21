@@ -1,6 +1,7 @@
 "use client";
 
 import type { Operation } from "@furrow/document";
+import { useTranslations } from "use-intl";
 import type { SavedTool } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { ToolDialog } from "../tools/components/tool-dialog";
@@ -35,12 +36,13 @@ export function NewBitDialog({
     onSaved(saved);
   }
 
+  const t = useTranslations("Shell");
   return (
     <ToolDialog
       open={open}
       onClose={onClose}
-      title="New bit"
-      description="Adds a bit to your library and picks it for this operation."
+      title={t("newBit")}
+      description={t("newBitDescription")}
     >
       {open && (
         <ToolForm

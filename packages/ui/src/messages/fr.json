@@ -636,10 +636,661 @@
       "spindleClamped": "Les {rpm, number} tr/min de l'outil sont hors de la plage de broche de la machine, donc {used, number} tr/min sont utilisés.",
       "unfilledPlaceholder": "{block, select, programStart {Début du programme} toolChangePad {Changement d'outil sur la pastille} toolChange {Changement d'outil} operationStart {Début d'opération} other {Fin du programme}} : {placeholder} ne peut pas être rempli, donc il est écrit tel quel."
     },
+    "preset": {
+      "v1e": {
+        "firmware": "Nécessite FluidNC sur la carte Jackpot de V1 Engineering : le début du programme, le changement d’outil et la fin utilisent des commandes FluidNC. Les versions GRBL, grblHAL et Marlin ne sont pas encore prises en charge.",
+        "manualRouter": "Affleureuse manuelle (par ex. une Makita RT0701C) : réglez sa vitesse avec sa molette ; le G-code n’en règle aucune.",
+        "jackpotGcode": "Le début du programme, le changement d’outil et la fin sont le G-code Jackpot de V1 Engineering. Le début met X, Y et Z à zéro là où se trouve la fraise et palpe Z avec une plaque de 0,5 mm : amenez d’abord la machine sur le zéro du projet et utilisez le dessus du brut comme zéro Z. M62 P1 et M63 P1 commandent un relais optionnel de l’affleureuse sur la broche 27."
+      },
+      "longmill": {
+        "firmware": "Nécessite la LongBoard de Sienci (GRBL 1.1h, LongMill MK2) ou la SuperLongBoard (grblHAL, LongMill MK2.5).",
+        "spindle": "Broche : la LongMill est livrée sans affleureuse. Cochez Broche manuelle pour une affleureuse réglée par sa molette (par ex. une Makita RT0701), ou indiquez la plage de vitesse d’une broche pilotée, par ex. 7 500–24 000 tr/min pour le kit broche 1,5 kW de Sienci.",
+        "workArea": "La zone de travail est la plus petite entre la course maximale du firmware ($130–$132) et la zone annoncée par Sienci.",
+        "maxFeedZ": "L’avance max Z est celle de la LongBoard, 3000 mm/min ; la SuperLongBoard permet 4000 mm/min.",
+        "homing": "La prise d’origine est désactivée par défaut : mettez X, Y et Z à zéro sur le brut, par ex. avec une plaque de palpage.",
+        "advertised12x30": "Sienci annonce 820 × 368 mm, avec environ 125 mm de Z ; les 810 × 355 × 120 mm du firmware sont utilisés.",
+        "advertised30x30": "Sienci annonce 820 × 868 mm, avec environ 125 mm de Z ; les 810 × 855 × 120 mm du firmware sont utilisés.",
+        "advertised48x30": "Sienci annonce 48 × 30 pouces (1219,2 × 762 mm), que ce préréglage utilise pour X et Y ; le firmware permet 1270 × 855 mm."
+      },
+      "genmitsu": {
+        "firmware": "Fonctionne sous GRBL 1.1h sur son contrôleur fourni, livré configuré pour la machine.",
+        "maxFeedZ": "Avance max Z : SainSmart donne une seule vitesse maximale, pas une par axe. Envoyez $$ depuis votre logiciel d’envoi de G-code et indiquez $112, la vitesse maximale de l’axe Z en mm/min.",
+        "spindle": "Broche : la broche 775 d’origine est donnée pour 9 000 tr/min, et SainSmart ne publie pas de minimum. Indiquez les vitesses la plus lente et la plus rapide auxquelles vous l’utilisez, en tr/min. Les mots S du G-code sont en tr/min, donc le $30 de GRBL (vitesse de broche maximale) doit correspondre au maximum.",
+        "rexSwitches": "A des fins de course X, Y et Z pour la prise d’origine, et une sonde Z pour régler le zéro Z.",
+        "proverWorkArea": "La zone de travail est celle du manuel ; la page du produit indique 290 mm de X.",
+        "proverSwitches": "A des contacts d’origine et des fins de course, et une sonde Z pour régler le zéro Z."
+      },
+      "lowrider": {
+        "workArea": "Zone de travail : la zone de coupe utile pour laquelle vous l’avez construite, telle que saisie dans le calculateur LowRider de V1 Engineering (X est la poutre, l’axe le plus court), par ex. 1220 × 2440 mm pour un panneau entier. Pour vérifier une machine terminée, déplacez la fraise entre les coins opposés de la zone qu’elle atteint et notez la distance sur chaque axe.",
+        "zTravel": "La course Z est la profondeur de coupe de 50 mm d’un montage standard ; avec une table abaissée, vous pouvez aller jusqu’à 100 mm.",
+        "endstops": "Les fins de course n’agissent que pendant la prise d’origine et les limites logicielles sont désactivées : gardez le travail dans votre zone de travail."
+      },
+      "mpcnc": {
+        "workArea": "Zone de travail : la zone X et Y choisie dans le calculateur MPCNC de V1 Engineering, celle que l’outil atteint (par ex. 450 × 330 mm avec la courroie du kit). Des outils plus gros comme une DeWalt DW660 ou une broche en atteignent moins. Pour vérifier une machine terminée, déplacez la fraise entre les coins opposés de la zone qu’elle atteint et notez la distance sur chaque axe.",
+        "zTravel": "Course Z : la hauteur Z choisie dans le calculateur ; 81 mm est la plus courte, et celle que V1 Engineering recommande.",
+        "limits": "Z n’a pas de prise d’origine, et les limites logicielles sont désactivées : gardez le travail dans votre zone de travail."
+      },
+      "maslow": {
+        "firmware": "Fonctionne sous la version de FluidNC de Maslow, fournie sur la carte Maslow 4.",
+        "area": "Gardez le travail dans la zone que vous pouvez couper. Le firmware n’a pas de fins de course : il ramène sur le bord les déplacements hors de sa zone de travail (2440 × 1220 mm par défaut, centrée sur le cadre) au lieu de s’arrêter. Trace Boundary montre le contour avant de couper.",
+        "router": "Allumez l’affleureuse (une DeWalt DWP611, ou D26200 en 240 V) et réglez sa vitesse à la main ; le G-code n’en règle aucune.",
+        "maxFeeds": "Les avances max sont les valeurs officielles les plus basses : les 2000 mm/min des courroies du firmware (la fiche technique indique 2500 mm/min en X/Y) et les 300 mm/min en Z de la fiche technique (le firmware permet 400).",
+        "zTravel": "La course Z est celle de la fiche technique, 50 mm ; la zone de travail est annoncée profonde de 65 mm.",
+        "zZero": "Réglez le zéro Z sur le dessus du brut avec Define Z Home."
+      }
+    },
     "workspace": {
+      "needsShape": "Une opération demande au moins une forme",
+      "notOperationType": "Ce n’est pas une opération {type}",
+      "noTabs": "Le contour n’a pas d’attaches",
+      "bitNotFound": "Cette fraise n’existe plus.",
+      "machineNotFound": "Cette machine n’existe plus.",
+      "somethingWrong": "Une erreur s’est produite.",
+      "offline": "Le projet n’a pas pu être enregistré. Vérifiez votre connexion.",
+      "cancelled": "Annulé avant la fin.",
+      "toolpathsOff": "Les trajectoires ne sont pas calculées.",
+      "keptChanging": "Le projet n’a pas cessé de changer pendant la création de son G-code. Exportez à nouveau quand vous aurez fini vos modifications.",
       "unreadableFile": "Ce fichier n’a pas pu être lu.",
+      "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
+      "noShapes": "Ce fichier ne contient aucune forme à importer.",
+      "oneFile": "Un projet contient un seul fichier importé : un dessin SVG ou DXF, ou un modèle STL.",
+      "stlImportOff": "L’import STL n’est pas disponible sur ce serveur.",
+      "fileTooLarge": "Ce fichier est trop volumineux pour être importé (la limite est de {mb, number} Mo).",
       "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier."
     }
+  },
+  "Operation": {
+    "sides": {
+      "outside": "Extérieur",
+      "inside": "Intérieur",
+      "on": "Sur la ligne"
+    },
+    "directions": {
+      "climb": "En avalant",
+      "conventional": "En opposition"
+    },
+    "strategies": {
+      "offset": "Décalage",
+      "linear": "Linéaire",
+      "peel": "Spirale"
+    },
+    "strategyHints": {
+      "offset": "Anneaux parallèles aux parois, dégagés du centre vers l’extérieur",
+      "linear": "Passes en zigzag inclinées, après un tour le long des parois",
+      "peel": "Coupes jamais plus larges que le recouvrement, qui s’élargissent depuis le départ"
+    },
+    "roughingLinearHint": "Passes droites en zigzag inclinées, qui montent sur le modèle là où il est plus haut",
+    "raster": {
+      "zigzag": "Zigzag",
+      "one_way": "Sens unique"
+    },
+    "peelStarts": {
+      "centre": "Centre",
+      "inside": "Îlot",
+      "outside": "Paroi extérieure"
+    },
+    "boundaries": {
+      "model": "Modèle",
+      "margin": "Modèle et marge",
+      "stock": "Tout le brut"
+    },
+    "boundaryHints": {
+      "model": "Le centre de l’outil atteint les bords du contour du modèle.",
+      "margin": "Dégage un cadre de cette largeur autour du contour du modèle (au moins le rayon de l’outil), en gardant l’outil à l’intérieur : le dessus du brut au-delà reste pour la mise à zéro de Z après un changement d’outil.",
+      "stock": "Le centre de l’outil atteint les bords du brut : tout ce qui entoure le modèle est dégagé jusqu’au fond."
+    },
+    "finishing": {
+      "parallel": "Parallèle",
+      "waterline": "Niveaux constants",
+      "spiral": "Spirale"
+    },
+    "finishingHints": {
+      "parallel": "Passes droites inclinées. Idéal sur les pentes douces ; les faces raides le long des passes restent brutes.",
+      "waterline": "Contours à hauteur constante, espacés d’une passe, pour que les faces raides reçoivent autant de passes que les faces plates en reçoivent peu. Les zones plates entre les contours ne sont pas coupées.",
+      "spiral": "Une seule coupe continue en spirale sur le contour du modèle, sans remontée."
+    },
+    "spiralStarts": {
+      "outside": "Contour",
+      "centre": "Centre"
+    },
+    "closeLabel": "Fermer les propriétés de l’opération",
+    "close": "Fermer",
+    "name": "Nom",
+    "tool": "Outil",
+    "disabled": "Désactivée : aucune trajectoire n’est calculée.",
+    "catalog": "Catalogue (avances de départ pour le bois tendre et le contreplaqué)",
+    "yourBits": "Vos fraises",
+    "asPicked": "{name} (telle que choisie)",
+    "newBit": "Nouvelle fraise…",
+    "shapes": "Formes",
+    "cutInstead": "Couper plutôt : {targets}",
+    "selectToCut": "Sélectionnez des formes ou des tracés pour les couper à la place",
+    "useSelected": "Utiliser la sélection",
+    "unnamedShape": "Forme sans nom",
+    "pathsOf": "{count} tracés sur {total}",
+    "removeLabel": "Retirer {name}",
+    "needsShape": "Une opération demande au moins une forme",
+    "remove": "Retirer",
+    "model": "Modèle",
+    "missing": "Manquant",
+    "rampIn": "Entrée en rampe",
+    "rampStraight": "L’angle de plongée de l’outil est de 90°, il plonge donc à la verticale.",
+    "rampAngle": "À l’angle de plongée de l’outil ({angle}°).",
+    "profile": "Contour",
+    "side": "Côté",
+    "direction": "Sens",
+    "depth": "Profondeur",
+    "allowance": "Surépaisseur",
+    "finishPass": "Passe de finition",
+    "needsAllowance": "Il faut une surépaisseur à enlever.",
+    "leadIn": "Entrée en arc",
+    "leadInRadius": "Rayon de l’entrée",
+    "holdingTabs": "Attaches de maintien",
+    "pocket": "Poche",
+    "strategy": "Stratégie",
+    "angle": "Angle",
+    "startFrom": "Partir de",
+    "pocketHint": "{hint}, au recouvrement ({stepOver} %) et à la passe de l’outil.",
+    "linearDirection": "Les passes linéaires alternent de sens ; celui-ci s’applique aux tours et à la passe de finition.",
+    "finishLap": "Un tour sur les parois et les îlots à pleine profondeur.",
+    "drill": "Perçage",
+    "drillHint": "Des trous aux points et aux cercles. L’outil plonge dans les points et dans les cercles où il entre à {tolerance} près{bore, select, yes {, et alèse les cercles plus grands en hélice à son angle de plongée.} other { ; un foret ne peut pas aléser de cercles plus grands.}}",
+    "peck": "Débourrage",
+    "peckHint": "Plonge par étapes pas plus profondes que la passe de l’outil, en remontant après chacune pour évacuer les copeaux.",
+    "engrave": "Gravure",
+    "position": "Position",
+    "engraveHint": "{side, select, inside {Suit les tracés fermés à l’intérieur de la ligne, avec un bord de la rainure dessus,} outside {Suit les tracés fermés à l’extérieur de la ligne, avec un bord de la rainure dessus,} other {Suit tous les tracés, ouverts et fermés, sur la ligne,}} en passes pas plus profondes que la passe de l’outil.",
+    "lineWidth": "Largeur du trait",
+    "lineTooDeep": "Plus profond que le cône : le trait est aussi large que la fraise.",
+    "lineAtTop": "Au dessus du brut, d’après l’angle de {angle}° de la fraise.",
+    "lineAtTopTip": "Au dessus du brut, d’après l’angle de {angle}° de la fraise et sa pointe de {tip}.",
+    "vcarve": "Gravure en V",
+    "vcarveHint": "Suit le milieu des tracés fermés, aussi profond que l’angle de la fraise l’exige pour atteindre leurs bords, en passes pas plus profondes que la passe de l’outil. Les îlots restent debout.",
+    "maxDepth": "Profondeur max",
+    "vcarveTooDeep": "Plus profond que le cône : la fraise ne grave pas plus profond que {depth}.",
+    "vcarveReach": "Les parties plus larges que {width} l’atteignent.",
+    "flatBottom": "Fond plat",
+    "flatOn": "La fraise droite dégage d’abord ces parties à plat ; la fraise en V grave ensuite leurs parois.",
+    "flatOffer": "Dégager à plat avec une fraise droite les parties qui atteignent la profondeur max.",
+    "flatNeedTool": "Ajoutez une fraise droite à bout plat à votre bibliothèque pour dégager un fond plat.",
+    "endMill": "Fraise droite",
+    "rough": "Ébauche 3D",
+    "roughHint": "Enlève la matière au-dessus du modèle par niveaux, par le dessus uniquement, en laissant la surépaisseur pour la finition.",
+    "roughStrategyHint": "{hint}, en niveaux espacés au plus de la passe de l’outil ({stepDown}).",
+    "stepOver": "Recouvrement",
+    "toolStepOver": "Le recouvrement de l’outil. Le changer ici ne modifie pas l’outil.",
+    "ownStepOver": "Pour cette opération seulement ; celui de l’outil est de {stepOver} %.",
+    "useTools": "Utiliser celui de l’outil",
+    "stockToLeave": "Surépaisseur à laisser",
+    "clear": "Dégager",
+    "margin": "Marge",
+    "rest": "Couper seulement la matière restante",
+    "restHint": "Saute ce que les opérations activées au-dessus de celle-ci ont déjà coupé, pour qu’un outil plus petit ne travaille que là où le précédent n’allait pas.",
+    "finish": "Finition 3D",
+    "finishHint": "Des passes sur le modèle, l’outil posé dessus en chaque point, par le dessus uniquement. Une fraise hémisphérique laisse la surface la plus lisse.",
+    "stepDown": "Passe",
+    "spacingHint": "Du diamètre de l’outil : {spiral, select, yes {tours} other {passes}} espacés au plus de {spacing}.",
+    "zigzagHint": "Une passe sur deux revient, reliée le long du modèle.",
+    "oneWayHint": "Chaque passe coupe dans le même sens, en remontant entre deux.",
+    "tabWidth": "Largeur des attaches",
+    "tabHeight": "Hauteur des attaches",
+    "autoPlace": "Placement automatique",
+    "perContour": "Par contour",
+    "bySpacing": "Par espacement",
+    "tabs": "Attaches",
+    "every": "Tous les",
+    "placeTitle": "Remplacer les attaches par d’autres réparties régulièrement le long de chaque contour",
+    "place": "Placer",
+    "tabCount": "{count, plural, one {# attache} other {# attaches}}",
+    "done": "Terminé",
+    "editInViewport": "Modifier dans la vue",
+    "editHint": "Cliquez sur un contour pour ajouter une attache, faites-la glisser pour la déplacer, cliquez dessus pour la retirer.",
+    "computing": "Calcul de la trajectoire…",
+    "cancel": "Annuler",
+    "computeAgain": "Recalculer",
+    "cancelled": "Annulé avant la fin.",
+    "failed": "La trajectoire n’a pas pu être calculée : {error}",
+    "warnings": "Avertissements de la trajectoire"
+  },
+  "Selection": {
+    "shapes": "{count, plural, one {# forme sélectionnée} other {# formes sélectionnées}}",
+    "paths": "{count, plural, one {# tracé sélectionné} other {# tracés sélectionnés}}",
+    "both": "{shapes, plural, one {# forme sélectionnée} other {# formes sélectionnées}} et {paths, plural, one {# tracé} other {# tracés}}"
+  },
+  "Operations": {
+    "sideways": "Ajoutez une fraise droite ou une fraise en V à votre bibliothèque : les forets ne coupent pas latéralement",
+    "types": {
+      "profile": "Contour",
+      "pocket": "Poche",
+      "drill": "Perçage",
+      "engrave": "Gravure",
+      "vcarve": "Gravure en V",
+      "relief_rough": "Ébauche 3D",
+      "relief_finish": "Finition 3D"
+    },
+    "hints": {
+      "profile": "Couper autour de : {target}",
+      "pocket": "Dégager l’intérieur de : {target}",
+      "drill": "Percer les points et les cercles de : {target}",
+      "engrave": "Graver le long des traits de : {target}",
+      "vcarve": "Graver l’intérieur de {target} avec une fraise en V, plus profond là où c’est plus large",
+      "relief_rough": "Enlever la matière au-dessus de {model} par niveaux, en général avec une fraise droite à bout plat",
+      "relief_finish": "Finir {model} en passes parallèles, en général avec une fraise hémisphérique"
+    },
+    "missingDrill": "Ajoutez un foret ou une fraise droite à votre bibliothèque : les fraises en V ne percent pas",
+    "missingEngrave": "Ajoutez une fraise en V ou une fraise droite à votre bibliothèque : les forets ne gravent pas",
+    "missingVCarve": "Ajoutez une fraise en V à votre bibliothèque pour graver en V",
+    "noTool": "Ajoutez d’abord un outil à votre bibliothèque",
+    "selectModel": "Sélectionnez d’abord un modèle dans la vue",
+    "selectPaths": "Sélectionnez d’abord des tracés dans la vue",
+    "addLabel": "Ajouter : {operation}",
+    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Ctrl/Cmd/Maj+clic pour en sélectionner d’autres.",
+    "addToolLibrary": "Ajoutez un outil à votre <link>bibliothèque d’outils</link> pour créer des opérations.",
+    "inCuttingOrder": "Opérations dans l’ordre de coupe",
+    "selectInsideTitle": "Sélectionner aussi les tracés fermés à l’intérieur de ceux sélectionnés, comme les îlots d’une poche",
+    "selectInside": "Sélectionner l’intérieur",
+    "clearSelection": "Effacer la sélection",
+    "enableLabel": "Activer {name}",
+    "enabled": "Activée",
+    "disabled": "Désactivée : pas de trajectoire",
+    "operationName": "Nom de l’opération",
+    "renameTitle": "Double-cliquez ou appuyez sur F2 pour renommer",
+    "moveUpLabel": "Monter {name}",
+    "moveUp": "Monter",
+    "moveDownLabel": "Descendre {name}",
+    "moveDown": "Descendre",
+    "deleteLabel": "Supprimer {name}",
+    "delete": "Supprimer",
+    "toolpathOf": "Trajectoire de {name}",
+    "showToolpath": "Afficher la trajectoire",
+    "hideToolpath": "Masquer la trajectoire",
+    "computing": "Calcul de la trajectoire",
+    "computingPercent": "Calcul de la trajectoire, {percent} %",
+    "cancelled": "Trajectoire annulée",
+    "cancelledDetail": "Annulé avant la fin.",
+    "failed": "Échec de la trajectoire : {error}",
+    "warnings": "Avertissements de la trajectoire : {warnings}"
+  },
+  "Bit": {
+    "types": {
+      "flat_end_mill": "Fraise droite à bout plat",
+      "ball_end_mill": "Fraise hémisphérique",
+      "v_bit": "Fraise en V",
+      "drill": "Foret"
+    },
+    "cutDirections": {
+      "upcut": "Hélice montante",
+      "downcut": "Hélice descendante",
+      "compression": "Compression"
+    },
+    "saveFailed": "La fraise n’a pas pu être enregistrée. Vérifiez votre connexion et réessayez.",
+    "type": "Type",
+    "name": "Nom",
+    "namePlaceholder": "6 mm 2 dents hélice montante",
+    "colour": "Couleur",
+    "geometry": "Géométrie",
+    "diameter": "Diamètre",
+    "flutes": "Dents",
+    "fluteLength": "Longueur de coupe",
+    "cutDirection": "Sens de l’hélice",
+    "vAngle": "Angle du V",
+    "tipDiameter": "Diamètre de la pointe",
+    "cuttingData": "Conditions de coupe",
+    "spindleSpeed": "Vitesse de broche",
+    "feedRate": "Avance",
+    "plungeRate": "Vitesse de plongée",
+    "plungeAngle": "Angle de plongée",
+    "stepDown": "Passe par tour",
+    "stepOver": "Recouvrement (du diamètre)",
+    "notes": "Notes (facultatives)",
+    "saving": "Enregistrement…",
+    "saveChanges": "Enregistrer les modifications",
+    "add": "Ajouter la fraise",
+    "cancel": "Annuler"
+  },
+  "Machine": {
+    "blocks": {
+      "programStart": "Début du programme",
+      "programEnd": "Fin du programme",
+      "operationStart": "Début d’opération",
+      "toolChange": "Changement d’outil"
+    },
+    "operationStartPlaceholder": "(Poche de l’encastrement)",
+    "toolChangePlaceholder": "M5\nM0 (Changez la fraise)",
+    "name": "Nom",
+    "namePlaceholder": "Shapeoko 4 XL",
+    "postProcessor": "Post-processeur",
+    "workArea": "Zone de travail",
+    "xTravel": "Course X",
+    "yTravel": "Course Y",
+    "zTravel": "Course Z",
+    "safeZ": "Z de sécurité (au-dessus du brut)",
+    "entryClearance": "Dégagement d’entrée (au-dessus du brut)",
+    "limits": "Limites",
+    "maxFeedXY": "Avance max X/Y",
+    "maxFeedZ": "Avance max Z",
+    "spindle": "Broche",
+    "manualSpindle": "Broche manuelle",
+    "manualSpindleHint": "Vitesse réglée à la main (par ex. la molette d’une affleureuse) ; le G-code ne règle aucune vitesse de broche.",
+    "minSpeed": "Vitesse min",
+    "maxSpeed": "Vitesse max",
+    "spinUpDelay": "Délai de montée en vitesse",
+    "spinUpHint": "L’attente après le démarrage de la broche, avant que la fraise n’entre dans le brut.",
+    "customGcode": "G-code personnalisé",
+    "customGcodeHint": "Un bloc rempli remplace ce que le post-processeur écrit à cet endroit, donc incluez tout ce dont votre machine a besoin (par ex. <code>G21</code> et <code>G90</code> dans le début du programme). Laissez un bloc vide pour garder celui par défaut. Le texte est copié tel quel, à part les variables.",
+    "saving": "Enregistrement…",
+    "saveChanges": "Enregistrer les modifications",
+    "add": "Ajouter la machine",
+    "askedHint": "À remplir pour votre machine."
+  },
+  "NewMachine": {
+    "starts": {
+      "preset": "Partir d’un préréglage",
+      "scratch": "Partir de zéro"
+    },
+    "startHints": {
+      "preset": "Choisissez votre défonceuse ; ses réglages documentés sont remplis pour vous.",
+      "scratch": "Saisissez vous-même chaque réglage."
+    },
+    "discard": "Abandonner les valeurs saisies ?",
+    "start": "Départ",
+    "presets": "Préréglages",
+    "search": "Rechercher des machines…",
+    "searchLabel": "Rechercher des machines",
+    "noMatch": "Aucun préréglage ne correspond à « {query} ». Partez de zéro pour décrire vous-même votre machine.",
+    "firmware": "Firmware :",
+    "youFillIn": "À remplir",
+    "sources": "Sources",
+    "check": "Vérifiez les valeurs ci-dessous par rapport à votre machine ; vous pouvez toutes les modifier, maintenant ou plus tard."
+  },
+  "Shell": {
+    "saveStates": {
+      "saved": "Enregistré",
+      "unsaved": "Modifications non enregistrées",
+      "saving": "Enregistrement…",
+      "error": "Non enregistré",
+      "failed": "Non enregistré"
+    },
+    "operations": "Opérations",
+    "properties": "Propriétés",
+    "versions": "Versions",
+    "viewport": "Vue",
+    "loadingViewport": "Chargement de la vue…",
+    "chooseMachine": "Choisissez d’abord une machine dans les propriétés du projet",
+    "addOperation": "Ajoutez ou activez d’abord une opération",
+    "operationProperties": "Propriétés de l’opération",
+    "modelProperties": "Propriétés du modèle",
+    "saveFailed": "{message} Les modifications ne sont plus enregistrées ; exportez le projet pour les garder.",
+    "reload": "Recharger",
+    "saveError": "{message} Les modifications seront à nouveau enregistrées une fois le problème réglé.",
+    "editBit": "Modifier la fraise",
+    "saveCopy": "Enregistrer une copie de cette fraise",
+    "editCatalog": "Les fraises du catalogue restent telles quelles. Ceci enregistre votre copie dans votre bibliothèque et l’utilise dans chaque opération de ce projet qui utilise la fraise du catalogue.",
+    "editLibrary": "Modifie la fraise dans votre bibliothèque et dans chaque opération de ce projet qui l’utilise.",
+    "notUpdated": "La fraise a été enregistrée, mais ces opérations gardent la fraise telle qu’elle était :",
+    "close": "Fermer",
+    "newBit": "Nouvelle fraise",
+    "newBitDescription": "Ajoute une fraise à votre bibliothèque et la choisit pour cette opération.",
+    "simulate": "Simuler",
+    "simulateTitle": "Rejouer la coupe déplacement par déplacement",
+    "backToWorkspace": "Retour à l’espace de travail",
+    "loadingSimulator": "Chargement du simulateur…",
+    "exportFile": "Exporter le fichier",
+    "exportProject": "Exporter le fichier du projet",
+    "exportFailed": "Ce projet n’a pas pu être exporté. Vérifiez votre connexion et réessayez.",
+    "exportedWithWarnings": "Le G-code a été exporté avec des avertissements :",
+    "exportGcode": "Exporter le G-code",
+    "allProjects": "Tous les projets",
+    "leaveAnyway": "{error} Quitter quand même ? Les modifications non enregistrées seront perdues ; exportez d’abord le projet pour les garder."
+  },
+  "BugReport": {
+    "report": "Signaler un bug",
+    "description": "Ceci ouvre un nouveau ticket GitHub avec votre rapport pré-rempli. Rien n’est envoyé avant que vous ne le soumettiez là-bas, ce qui demande un compte GitHub.",
+    "title": "Titre",
+    "titlePlaceholder": "par ex. La poche laisse un îlot non coupé",
+    "what": "Que s’est-il passé, et qu’attendiez-vous ?",
+    "filledIn": "Rempli pour vous",
+    "addYourself": "À ajouter vous-même sur GitHub",
+    "noFiles": "GitHub ne peut pas recevoir de fichiers depuis l’application. Après avoir ouvert le ticket, collez-les ou déposez-les dedans.",
+    "screenshotAlt": "Capture d’écran de la vue",
+    "notAttached": "La vue, pas encore jointe.",
+    "copied": "Copiée",
+    "copyScreenshot": "Copier la capture",
+    "savePng": "Enregistrer en PNG",
+    "copyFailed": "La capture n’a pas pu être copiée : enregistrez-la plutôt.",
+    "project": "Le projet, si cela aide : exportez-le depuis le panneau des opérations et déposez le fichier.",
+    "opened": "Le ticket s’est ouvert dans votre navigateur. Ajoutez ce que vous voulez de ci-dessus, puis soumettez-le là-bas.",
+    "copiedReport": "Le rapport était trop long pour le lien, il a donc été copié : collez-le dans le ticket GitHub qui s’est ouvert.",
+    "notCopied": "Le rapport est trop long pour le lien et n’a pas pu être copié. Raccourcissez-le et réessayez.",
+    "open": "Ouvrir le ticket GitHub"
+  },
+  "Versions": {
+    "unsaved": "Le projet a des modifications qui n’ont pas pu être enregistrées. Enregistrez-les d’abord.",
+    "editing": "Terminez d’abord la modification en cours.",
+    "unavailable": "Les versions ne sont pas disponibles ici.",
+    "restoreConfirm": "Restaurer « {name} » ? Cela remplace le contenu du projet, qui est d’abord gardé comme version. L’historique d’annulation est effacé.",
+    "renamePrompt": "Renommer la version (laisser vide pour afficher sa date)",
+    "deleteConfirm": "Supprimer la version « {name} » ? Cette action est irréversible.",
+    "loading": "Chargement des versions…",
+    "empty": "Aucune version pour l’instant. Enregistrez-en une pour revenir à cet état plus tard.",
+    "actionsLabel": "Actions pour {name}",
+    "actions": "Actions",
+    "restore": "Restaurer…",
+    "openAsProject": "Ouvrir comme nouveau projet",
+    "rename": "Renommer…",
+    "delete": "Supprimer…",
+    "labelPlaceholder": "Libellé (facultatif)",
+    "labelLabel": "Libellé de la version",
+    "save": "Enregistrer la version"
+  },
+  "Anchors": {
+    "top_left": "En haut à gauche",
+    "top_center": "En haut au centre",
+    "top_right": "En haut à droite",
+    "middle_left": "Au milieu à gauche",
+    "center": "Centre",
+    "middle_right": "Au milieu à droite",
+    "bottom_left": "En bas à gauche",
+    "bottom_center": "En bas au centre",
+    "bottom_right": "En bas à droite"
+  },
+  "Snap": {
+    "point": "Point",
+    "vertex": "Sommet",
+    "arc_center": "Centre de l’arc",
+    "circle_center": "Centre du cercle",
+    "bounds_corner": "Coin de l’encombrement",
+    "bounds_center": "Centre de l’encombrement",
+    "anchors": {
+      "top_left": "Brut, en haut à gauche",
+      "top_center": "Brut, en haut au centre",
+      "top_right": "Brut, en haut à droite",
+      "middle_left": "Brut, au milieu à gauche",
+      "center": "Centre du brut",
+      "middle_right": "Brut, au milieu à droite",
+      "bottom_left": "Brut, en bas à gauche",
+      "bottom_center": "Brut, en bas au centre",
+      "bottom_right": "Brut, en bas à droite"
+    }
+  },
+  "Stock": {
+    "units": {
+      "mm": "Millimètres",
+      "in": "Pouces"
+    },
+    "unitsLabel": "Unités",
+    "stock": "Brut",
+    "dimensions": {
+      "width": "Largeur",
+      "height": "Hauteur",
+      "thickness": "Épaisseur"
+    },
+    "zOrigins": {
+      "stock_top": "Dessus du brut",
+      "machine_bed": "Table de la machine"
+    },
+    "machine": "Machine",
+    "chooseMachine": "Choisissez une machine…",
+    "projectCopy": "{name} (copie du projet)",
+    "guestMachine": "Le G-code est fait pour votre machine, enregistrée dans un compte gratuit ou dans l’application de bureau. <button>Configurer votre machine</button>.",
+    "noMachine": "Aucune machine définie. Choisissez la machine de ce projet pour exporter le G-code.",
+    "addMachine": "<link>Ajouter une machine</link>.",
+    "zero": "Zéro",
+    "custom": "Personnalisé",
+    "cancel": "Annuler",
+    "pickInViewport": "Choisir dans la vue",
+    "pickHint": "Cliquez sur un point dans la vue ; il s’accroche aux points du brut, aux sommets, aux centres et aux encombrements proches. Échap ou clic droit annule.",
+    "touchOff": "Pastille de mise à zéro",
+    "touchOffHint": "Un endroit du dessus du brut qu’aucune opération ne coupe, pour y remettre Z à zéro après un changement d’outil.",
+    "padAxis": "Pastille {axis}",
+    "padDiameter": "Diamètre de la pastille",
+    "padTooWide": "Doit tenir sur le brut : au plus {size}",
+    "padCentre": "Son centre, depuis le coin inférieur gauche du brut. La redimensionner garde le centre en place.",
+    "padOff": "Une partie de la pastille dépasse du brut : il n’y a peut-être rien pour y remettre Z à zéro.",
+    "padToolChange": "Changement d’outil sur la pastille",
+    "toolChangePlaceholder": "M5\nM0 (Changez la fraise)",
+    "padToolChangeHint": "S’exécute à chaque changement d’outil à la place de celui de la machine. <strong>Suggérer</strong> en écrit un à partir du changement d’outil de la machine, en passant au-dessus de la pastille ; <strong>Utiliser celui de la machine</strong> revient à celui de la machine, après un déplacement au-dessus de la pastille.",
+    "suggest": "Suggérer",
+    "useMachines": "Utiliser celui de la machine"
+  },
+  "Model": {
+    "closeLabel": "Fermer les propriétés du modèle",
+    "close": "Fermer",
+    "triangles": "{count, plural, one {# triangle} other {# triangles}}. Usiné par le dessus uniquement : les contre-dépouilles et les surplombs sont comblés, comme le montre la vue.",
+    "rotation": "Rotation",
+    "turn": "Tourner de 90° autour de l’axe {axis}",
+    "size": "Taille",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "depth": "Profondeur",
+    "tooDeep": "Le modèle est plus profond que l’épaisseur du brut : il n’est pas coupé plus profond que le fond du brut.",
+    "original": "Original : {size} (échelle {scale} %)",
+    "border": "Bordure",
+    "borderNote": "Laissée de chaque côté par le prochain Ajuster au brut ; la modifier ne déplace pas le modèle.",
+    "borderCapped": "Laissée de chaque côté par le prochain Ajuster au brut ; la modifier ne déplace pas le modèle. Sur ce brut, elle laisse {size}, un quart de son plus petit côté.",
+    "originalTitle": "Ramener le modèle à sa taille dans le fichier",
+    "originalSize": "Taille d’origine",
+    "fitTitle": "Mettre le modèle à l’échelle pour tenir dans le brut, en laissant la bordure de chaque côté",
+    "fit": "Ajuster au brut",
+    "position": "Position",
+    "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du modèle, mesuré depuis le zéro. Le déplacer ne change pas la bordure que laisse <em>Ajuster au brut</em>.",
+    "removeTitle": "Retire aussi {count, plural, one {l’opération qui l’usine} other {les # opérations qui l’usinent}}",
+    "remove": "Retirer le modèle"
+  },
+  "Import": {
+    "units": {
+      "mm": "Millimètres",
+      "in": "Pouces"
+    },
+    "start": "Importez un dessin SVG ou DXF, ou un modèle STL, pour commencer.",
+    "importDrawing": "Importer un SVG/DXF…",
+    "importStl": "Importer un STL…",
+    "dpi": "PPP",
+    "dpiTitle": "Pixels par pouce",
+    "dpiQuestion": "<name>{file}</name> donne sa taille en pixels, ou ne la donne pas. Combien de pixels font un pouce ? Vérifiez les réglages d’export du logiciel qui l’a créé.",
+    "units_": "Unités",
+    "unitsTitle": "Unités du dessin",
+    "unitsQuestion": "<name>{file}</name> n’indique pas l’unité de ses coordonnées. Vérifiez les réglages d’export du logiciel qui l’a créé.",
+    "importing": "Import de {file}…",
+    "dismiss": "Fermer",
+    "import": "Importer",
+    "cancel": "Annuler"
+  },
+  "Viewport": {
+    "scene": "Brut, géométrie et trajectoires",
+    "simulating": "Simulation…",
+    "simulationFailed": "Échec de la simulation : {error}",
+    "notSimulated": "Non simulées, échec de la trajectoire : {operations}",
+    "views": {
+      "top": "Vue de dessus",
+      "orbit": "Vue 3D"
+    },
+    "viewHints": {
+      "top": "Faites glisser avec le bouton droit ou central pour déplacer, molette pour zoomer",
+      "orbit": "Faites glisser pour tourner, clic droit glissé pour déplacer, molette pour zoomer"
+    },
+    "viewHint": "{view} : {hint}",
+    "view": "Vue",
+    "fitStock": "Cadrer le brut",
+    "cut": "Coupe",
+    "showToolpaths": "Afficher les trajectoires",
+    "hideAll": "Masquer toutes les trajectoires",
+    "showAll": "Afficher toutes les trajectoires",
+    "simulate": "Simuler la coupe",
+    "simulateTitle": "Simuler la coupe : montrer le brut tel qu’il sera après les trajectoires",
+    "simulation": "Simulation",
+    "simulationScene": "Brut coupé par les trajectoires",
+    "hideToolpathsShort": "Masquer les trajectoires",
+    "showToolpathsShort": "Afficher les trajectoires",
+    "nothing": "Rien à simuler : ajoutez ou activez une opération dans l’espace de travail.",
+    "playback": "Lecture",
+    "previous": "Opération précédente",
+    "previousTitle": "Retour au début de l’opération",
+    "pause": "Pause",
+    "play": "Lecture",
+    "next": "Opération suivante",
+    "nextTitle": "Avancer à l’opération suivante",
+    "position": "Position le long des trajectoires",
+    "jumpTo": "Aller à {name}",
+    "speed": "Vitesse de lecture"
+  },
+  "Dialog": {
+    "close": "Fermer"
+  },
+  "Tour": {
+    "steps": {
+      "bits": {
+        "title": "Vos fraises",
+        "body": "Ajoutez les fraises que vous possédez, avec leurs dimensions et leurs avances. Les opérations choisissent leur fraise dans cette bibliothèque."
+      },
+      "machines": {
+        "title": "Votre machine",
+        "body": "Décrivez votre défonceuse une fois, ou partez d’un préréglage. Sa zone de travail, ses avances et son dialecte G-code s’appliquent à chaque projet qui lui est destiné."
+      },
+      "new-project": {
+        "title": "Commencer un projet",
+        "body": "Créez un projet ici, ou importez un fichier de projet. Vous pouvez choisir sa machine maintenant ou plus tard, avant d’exporter le G-code."
+      },
+      "import": {
+        "title": "Importer un dessin",
+        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez."
+      },
+      "properties": {
+        "title": "Propriétés du projet",
+        "body": "Réglez les unités, la machine et le brut : la taille et l’épaisseur du matériau, et l’emplacement de son zéro."
+      },
+      "select": {
+        "title": "Sélectionner des tracés",
+        "body": "Cliquez sur un tracé dans la vue pour le sélectionner, et Maj+clic pour en ajouter d’autres. Les opérations coupent ce qui est sélectionné."
+      },
+      "operations": {
+        "title": "Ajouter des opérations",
+        "body": "Ajoutez une opération (contour, poche, perçage, gravure ou gravure en V) pour les tracés sélectionnés, puis choisissez sa fraise et ses profondeurs."
+      },
+      "preview": {
+        "title": "Prévisualiser les trajectoires",
+        "body": "La vue montre les trajectoires de chaque opération activée, avec les déplacements rapides distincts des coupes. Vérifiez-les avant de couper."
+      },
+      "export-gcode": {
+        "title": "Exporter le G-code",
+        "body": "Quand les trajectoires sont bonnes, exportez le G-code et lancez-le avec votre logiciel d’envoi habituel."
+      },
+      "versions": {
+        "title": "Versions",
+        "body": "Facultatif : enregistrez une version nommée avant un gros changement, et restaurez-la quand vous en avez besoin."
+      }
+    },
+    "count": "Étape {number} sur {count}",
+    "skip": "Passer la visite",
+    "back": "Retour",
+    "done": "Terminé",
+    "next": "Suivant"
+  },
+  "Placeholders": {
+    "list": "À l’export, <code>{padX}</code> devient le X du centre de la pastille de mise à zéro, <code>{padY}</code> son Y et <code>{safeZ}</code> le Z de sécurité de la machine, tous mesurés depuis le zéro."
+  },
+  "NumberField": {
+    "drag": "Faites glisser latéralement pour modifier"
   }
 }

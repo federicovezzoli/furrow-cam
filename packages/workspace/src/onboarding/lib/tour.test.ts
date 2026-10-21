@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { dropStep, isOnScreen, moveTour, startTour, TOURS, type TourStep } from "./tour";
+import {
+  dropStep,
+  isOnScreen,
+  moveTour,
+  startTour,
+  TOURS,
+  type TourStep,
+  type TourStepId,
+} from "./tour";
 
-const step = (id: string): TourStep => ({ id, anchor: id, side: "bottom", title: id, body: id });
+// Any ids will do: these steps are never shown.
+const step = (id: string): TourStep => ({ id: id as TourStepId, anchor: id, side: "bottom" });
 const steps = ["a", "b", "c"].map(step);
 const ids = (state: { steps: readonly TourStep[]; index: number } | null) =>
   state && { steps: state.steps.map((s) => s.id), at: state.steps[state.index]?.id };
