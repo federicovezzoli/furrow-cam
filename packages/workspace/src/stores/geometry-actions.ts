@@ -1,5 +1,4 @@
 import {
-  alignShapes,
   anchorPoint,
   closedLoops,
   drawingFit,
@@ -8,6 +7,8 @@ import {
   scalePoint,
   scaleShapes,
   shapesBounds,
+  stockInset,
+  translateShapes,
 } from "@furrow/cam-core";
 import {
   DRAWING_BORDER,
@@ -37,9 +38,10 @@ export function canImportModel({ geometry, models }: ProjectDocument): boolean {
 
 /**
  * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
- * step, aligned on its own to the stock at the XY zero's anchor (ADR-0022),
- * or at its bottom-left corner for a custom zero: it may overlap what the
- * project already holds. The shapes all name the new drawing, as an import
+ * step, at its size in the file, aligned on its own at the XY zero's anchor
+ * (bottom-left for a custom zero) to the stock less the drawing's border, the
+ * rectangle *Fit to stock* fits into: it may overlap what the project already
+ * holds. The shapes all name the new drawing, as an import
  * gives them, and it takes its name from their file. Returns `false`, adding
  * nothing, if the project holds a model. `name` labels the change, e.g.
  * `importSvg`.
@@ -49,8 +51,12 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   const { document } = store.getState();
   if (!first || !canImportDrawing(document)) return false;
   const { stock } = document;
-  const { anchor } = stock.xyOrigin;
-  const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
+  const anchor = modelAnchor(stock);
+  const bounds = shapesBounds(shapes);
+  if (!bounds) return false;
+  const [x, y] = anchorPoint(stockInset(stock, DRAWING_BORDER), anchor);
+  const [bx, by] = anchorPoint(bounds, anchor);
+  const placed = translateShapes(shapes, [x - bx, y - by]);
   const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
   // One assignment, not a spread push: a file may hold more shapes than a call takes arguments.
   const geometry = document.geometry.concat(placed);

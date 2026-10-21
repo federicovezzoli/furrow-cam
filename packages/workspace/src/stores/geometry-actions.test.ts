@@ -50,10 +50,12 @@ function storeAt(anchor: StockAnchor) {
   return store;
 }
 
-const stockAnchor = (anchor: StockAnchor) => anchorPoint({ min: [0, 0], max: [600, 400] }, anchor);
+/** Where a drawing lands at `anchor`: on the stock less the 10 mm border. */
+const stockAnchor = (anchor: StockAnchor) =>
+  anchorPoint({ min: [10, 10], max: [590, 390] }, anchor);
 
 describe("addImportedShapes", () => {
-  it.each(StockAnchor.options)("aligns a DXF drawing to the stock at %s", (anchor) => {
+  it.each(StockAnchor.options)("aligns a DXF drawing, its border in, at %s", (anchor) => {
     const store = storeAt(anchor);
     const before = store.getState().past.length;
     addImportedShapes(store, "importDxf", importDxf(DXF).shapes);
@@ -67,11 +69,11 @@ describe("addImportedShapes", () => {
     expect(drawingAnchor(store.getState().document, anchor)).toEqual(stockAnchor(anchor));
   });
 
-  it("aligns at the stock's bottom-left corner under a custom zero", () => {
+  it("aligns at the bottom-left, its border in, under a custom zero", () => {
     const store = storeAt("center");
     pickXYOrigin(store, [-20, 35.5]);
     addImportedShapes(store, "importDxf", importDxf(DXF).shapes);
-    expect(drawingAnchor(store.getState().document, "bottom_left")).toEqual([0, 0]);
+    expect(drawingAnchor(store.getState().document, "bottom_left")).toEqual([10, 10]);
     expect(store.getState().document.stock.xyOrigin).toEqual({ anchor: "custom", x: -20, y: 35.5 });
   });
 
