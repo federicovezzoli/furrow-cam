@@ -1,5 +1,20 @@
 # @furrow/web
 
+## 0.16.0
+
+### Minor Changes
+
+- Furrow CAM starts in your browser's or system's language when it's English, Italian, French or German, and a new language button next to the theme toggle lets you pick another. Only a few labels are translated so far; the rest follows in upcoming releases. ([#301](https://github.com/federicovezzoli/furrow-cam/pull/301))
+- Verification and password-reset emails now arrive in the language Furrow CAM is shown in when you ask for them: English, Italian, French or German. ([#302](https://github.com/federicovezzoli/furrow-cam/pull/302))
+- The web app's pages, forms, messages and errors now appear in English, Italian, French or German, and dates and numbers follow the chosen language. The privacy policy stays in English, with a note saying so. ([#304](https://github.com/federicovezzoli/furrow-cam/pull/304))
+
+### Patch Changes
+
+- Toolpath and import warnings, file errors, export messages and form validation now appear in English, Italian, French or German. ([#305](https://github.com/federicovezzoli/furrow-cam/pull/305))
+- A project or saved version that can't be upgraded to this release now says why when opened in the desktop app or from a `.furrow` archive, as it already did on the web. ([#289](https://github.com/federicovezzoli/furrow-cam/pull/289))
+- The CAM workspace, including its operations, bit and machine forms, machine presets, simulator and guided tour, now appears in English, Italian, French or German. In Italian, French and German, number fields also accept a comma as the decimal point. ([#306](https://github.com/federicovezzoli/furrow-cam/pull/306))
+- Updated dependencies: @furrow/document@0.11.0, @furrow/cam-core@0.10.0, @furrow/post@0.9.0, @furrow/workspace@0.9.0, @furrow/ui@0.2.0
+
 ## 0.15.0
 
 ### Minor Changes
