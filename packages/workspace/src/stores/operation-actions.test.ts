@@ -7,7 +7,7 @@ import {
   type Shape,
   type Tool,
 } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import {
@@ -74,6 +74,7 @@ const square: Shape = {
   id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
   name: "Square",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [10, 10],
@@ -91,6 +92,7 @@ const circle: Shape = {
   id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
   name: "Hole",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [110, 50],
@@ -105,6 +107,7 @@ const plate: Shape = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
   name: "Plate",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [200, 0],
@@ -136,6 +139,7 @@ const missing = { shapeId: MISSING_ID, paths: null };
 function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
+    drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
     geometry: [square, circle, plate],
     models: [],
   });

@@ -1,4 +1,5 @@
 import type { Shape, Stock, StockAnchor } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { flattenPath } from "../geometry/flatten";
 import { importSvg } from "../import/svg/import";
@@ -94,6 +95,7 @@ describe("anchorAlignment", () => {
     id: "00000000-0000-4000-8000-000000000000",
     name: "",
     layer: "0",
+    drawingId: DRAWING_ID,
     paths: [
       {
         start: [-10, -5],
@@ -160,6 +162,7 @@ describe("anchorAlignment rounding", () => {
       id: "00000000-0000-4000-8000-000000000000",
       name: "",
       layer: "0",
+      drawingId: DRAWING_ID,
       paths: [
         { start: [0.1 + 0.2, 0], segments: [{ kind: "line", to: [0.7, 0.4] }], closed: false },
       ],

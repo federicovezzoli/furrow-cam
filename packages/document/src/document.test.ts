@@ -51,6 +51,34 @@ describe("ProjectDocument", () => {
     expect(ProjectDocument.safeParse({ ...doc, operations: [dangling] }).success).toBe(false);
   });
 
+  it("checks that shapes and drawings name each other", () => {
+    const doc = fullDocument();
+    const [drawing] = doc.drawings;
+    if (!drawing) throw new Error("fixture");
+    const other = { ...drawing, id: "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e", name: "empty.svg" };
+    expect(ProjectDocument.safeParse({ ...doc, drawings: [drawing, other] }).error?.issues).toEqual(
+      [expect.objectContaining({ path: ["drawings", 1], message: "document.emptyDrawing" })],
+    );
+    expect(
+      ProjectDocument.safeParse({ ...doc, drawings: [drawing, drawing] }).error?.issues,
+    ).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "id"],
+        message: "document.duplicateDrawing",
+      }),
+    ]);
+    expect(ProjectDocument.safeParse({ ...doc, drawings: [] }).error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["geometry", 0, "drawingId"],
+        message: "document.unknownDrawing",
+      }),
+      expect.objectContaining({
+        path: ["geometry", 1, "drawingId"],
+        message: "document.unknownDrawing",
+      }),
+    ]);
+  });
+
   it("accepts models and rejects duplicate model ids", () => {
     const doc = { ...fullDocument(), models: [model] };
     expect(ProjectDocument.parse(doc)).toEqual(doc);

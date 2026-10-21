@@ -107,6 +107,7 @@ export const lowRider: Machine = {
 
 export const SQUARE_ID = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";
 export const CIRCLE_ID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+export const DRAWING_ID = "6e2d9b4a-1c3f-4a5e-8d7b-9f0a1b2c3d4e";
 export const OPERATION_ID = "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a";
 
 export const square: Shape = {
@@ -114,6 +115,7 @@ export const square: Shape = {
   name: "Square",
   layer: "0",
   source: "part.dxf",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [0, 0],
@@ -131,6 +133,7 @@ export const circle: Shape = {
   id: CIRCLE_ID,
   name: "Hole",
   layer: "holes",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [60, 50],
@@ -195,7 +198,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 16,
+    schemaVersion: 17,
     units: "in",
     stock: {
       width: 300,
@@ -206,6 +209,7 @@ export function fullDocument(): ProjectDocument {
       touchOff: { x: 10, y: 10, diameter: 15, toolChange: null },
     },
     machine,
+    drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
     geometry: [square, circle],
     models: [],
     operations: [

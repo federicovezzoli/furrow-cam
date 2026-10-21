@@ -1,4 +1,5 @@
 import type { Path, Point, Shape } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { closedPathsInside, pathAt, pathKey, pickablePaths } from "./pick";
 
@@ -6,7 +7,7 @@ const PART = "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b";
 const OTHER = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
 
 function shape(id: string, ...paths: Path[]): Shape {
-  return { id, name: "", layer: "", paths };
+  return { id, name: "", layer: "", drawingId: DRAWING_ID, paths };
 }
 
 function polyline(points: Point[], closed: boolean): Path {

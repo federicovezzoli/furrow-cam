@@ -16,7 +16,8 @@ import {
   sha256Hex,
 } from "./archive";
 import { createProjectDocument, type ProjectDocument } from "./document";
-import { model } from "./fixtures";
+import { circle, fullDocument, model, square } from "./fixtures";
+import { parseProjectDocument } from "./migrations";
 
 const MAX_MESH_BYTES = 1_000;
 
@@ -73,6 +74,21 @@ describe("packProjectArchive and readProjectArchive", () => {
     expect(archive.meshes).toEqual(meshes);
     expect(missingArchiveMeshes(document, archive.meshes)).toEqual([]);
     expect(missingArchiveMeshes(document, new Map())).toEqual([sha256]);
+  });
+
+  it("round-trip several drawings", async () => {
+    const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    const base = fullDocument();
+    const document: ProjectDocument = {
+      ...base,
+      drawings: [...base.drawings, { id: other, name: "hole.svg", border: 5 }],
+      geometry: [square, { ...circle, drawingId: other }],
+    };
+    const archive = await readProjectArchive(
+      packProjectArchive(document, new Map()),
+      MAX_MESH_BYTES,
+    );
+    expect(parseProjectDocument(JSON.parse(archive.contents))).toEqual(document);
   });
 
   it("only pack the meshes the document references", async () => {

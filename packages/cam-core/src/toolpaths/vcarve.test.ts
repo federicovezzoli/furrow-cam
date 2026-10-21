@@ -1,5 +1,5 @@
 import type { Path, Point, Shape, Tool, VCarveOperation, VCarveParams } from "@furrow/document";
-import { endMill, vBit } from "@furrow/document/fixtures";
+import { DRAWING_ID, endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../scene/stock";
 import { generateToolpath } from "./generate";
@@ -27,7 +27,13 @@ function rectangle(x: number, y: number, width: number, height: number, clockwis
 }
 
 function shape(...paths: Path[]): Shape {
-  return { id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b", name: "Shape", layer: "0", paths };
+  return {
+    id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
+    name: "Shape",
+    layer: "0",
+    drawingId: DRAWING_ID,
+    paths,
+  };
 }
 
 /** 100 × 20 mm: its axis is the centre line at 10 mm from the long edges. */

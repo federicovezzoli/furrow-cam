@@ -1,4 +1,5 @@
 import type { Path, Point, Shape } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { pathBounds, shapesBounds } from "./bounds";
 import { roundCoordinate } from "./round";
@@ -139,6 +140,7 @@ describe("shapesBounds", () => {
     id: "00000000-0000-4000-8000-000000000000",
     name: "",
     layer: "0",
+    drawingId: DRAWING_ID,
     paths: [{ start, segments: [], closed: false }],
   });
 

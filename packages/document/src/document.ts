@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { Shape } from "./geometry";
+import { Drawing, Shape } from "./geometry";
 import { GcodeBlock, Machine } from "./machine";
 import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 16;
+export const CURRENT_SCHEMA_VERSION = 17;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -103,6 +103,8 @@ export const ProjectDocument = z
     stock: Stock,
     /** Snapshot of the machine profile, or `null` if none is picked. */
     machine: Machine.nullable(),
+    /** Imported SVG and DXF files, each grouping its shapes in `geometry` (ADR-0055). */
+    drawings: z.array(Drawing),
     geometry: z.array(Shape),
     /** Imported 3D models, whose meshes are project assets (ADR-0029). */
     models: z.array(Model),
@@ -110,6 +112,19 @@ export const ProjectDocument = z
     operations: z.array(Operation),
   })
   .superRefine((doc, ctx) => {
+    /** Each drawing's number of shapes, by id. */
+    const shapeCounts = new Map<string, number>();
+    doc.drawings.forEach((drawing, i) => {
+      if (shapeCounts.has(drawing.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["drawings", i, "id"],
+          message: "document.duplicateDrawing",
+        });
+      }
+      shapeCounts.set(drawing.id, 0);
+    });
+
     /** Each shape's number of paths, by id. */
     const pathCounts = new Map<string, number>();
     doc.geometry.forEach((shape, i) => {
@@ -121,6 +136,21 @@ export const ProjectDocument = z
         });
       }
       pathCounts.set(shape.id, shape.paths.length);
+      const count = shapeCounts.get(shape.drawingId);
+      if (count === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["geometry", i, "drawingId"],
+          message: "document.unknownDrawing",
+        });
+      } else {
+        shapeCounts.set(shape.drawingId, count + 1);
+      }
+    });
+    doc.drawings.forEach((drawing, i) => {
+      if (shapeCounts.get(drawing.id) === 0) {
+        ctx.addIssue({ code: "custom", path: ["drawings", i], message: "document.emptyDrawing" });
+      }
     });
 
     const modelIds = new Set<string>();
@@ -200,6 +230,7 @@ export function createProjectDocument(): ProjectDocument {
       touchOff: null,
     },
     machine: null,
+    drawings: [],
     geometry: [],
     models: [],
     operations: [],

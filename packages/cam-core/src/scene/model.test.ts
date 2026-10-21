@@ -1,5 +1,5 @@
 import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   designAlignment,
@@ -185,6 +185,7 @@ describe("designBounds and designAlignment", () => {
       id: "square",
       name: "square",
       layer: "0",
+      drawingId: DRAWING_ID,
       paths: [
         {
           start: [10, 10] as [number, number],

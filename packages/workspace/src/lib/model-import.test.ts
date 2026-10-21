@@ -3,7 +3,7 @@ import { createProjectDocument } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
-import { addImportedShapes, ONE_FILE } from "../stores/geometry-actions";
+import { addImportedShapes, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
 import { addModel, removeModel } from "../stores/model-actions";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import { importModel } from "./model-import";
@@ -62,7 +62,10 @@ describe("importModel", () => {
     await importFile();
     expect(meshes.discard).toHaveBeenCalledWith(model.sha256);
     expect(document.getState().document.models).toEqual([]);
-    expect(workspace.getState().modelImport).toEqual({ fileName: "relief.stl", error: ONE_FILE });
+    expect(workspace.getState().modelImport).toEqual({
+      fileName: "relief.stl",
+      error: DRAWINGS_OR_MODEL,
+    });
   });
 
   it("discards the upload when another model was added meanwhile", async () => {
@@ -84,7 +87,7 @@ describe("importModel", () => {
     );
     await importFile();
     expect(meshes.discard).not.toHaveBeenCalled();
-    expect(workspace.getState().modelImport?.error).toBe(ONE_FILE);
+    expect(workspace.getState().modelImport?.error).toBe(DRAWINGS_OR_MODEL);
   });
 
   it("keeps a mesh the undo history refers to: the same file imported and removed meanwhile", async () => {
@@ -103,6 +106,6 @@ describe("importModel", () => {
     addModel(document, otherMesh);
     await importFile();
     expect(meshes.put).not.toHaveBeenCalled();
-    expect(workspace.getState().modelImport?.error).toBe(ONE_FILE);
+    expect(workspace.getState().modelImport?.error).toBe(DRAWINGS_OR_MODEL);
   });
 });
