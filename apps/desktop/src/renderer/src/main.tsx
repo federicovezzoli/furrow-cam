@@ -1,5 +1,5 @@
 import { LocaleProvider } from "@furrow/ui/components/locale-provider";
-import type { Locale } from "@furrow/ui/lib/locales";
+import { DEFAULT_LOCALE, type Locale } from "@furrow/ui/lib/locales";
 import { captureUncaughtErrors, setTelemetrySink } from "@furrow/workspace/lib/telemetry";
 import { ThemeProvider } from "next-themes";
 import type * as React from "react";
@@ -37,15 +37,24 @@ function DesktopLocale({ initial, children }: { initial: Locale; children: React
 }
 
 // Rendered once the language is known, so the window never shows English first.
-void api.getLocale().then((locale) => {
-  document.documentElement.lang = locale;
-  createRoot(root).render(
-    <StrictMode>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <DesktopLocale initial={locale}>
-          <App />
-        </DesktopLocale>
-      </ThemeProvider>
-    </StrictMode>,
-  );
-});
+// A failed lookup still opens the window, in English.
+void api
+  .getLocale()
+  .catch(() => DEFAULT_LOCALE)
+  .then((locale) => {
+    document.documentElement.lang = locale;
+    createRoot(root).render(
+      <StrictMode>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <DesktopLocale initial={locale}>
+            <App />
+          </DesktopLocale>
+        </ThemeProvider>
+      </StrictMode>,
+    );
+  });

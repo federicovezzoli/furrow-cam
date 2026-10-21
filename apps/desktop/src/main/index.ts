@@ -661,7 +661,9 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.setLocale, async (_event, locale: unknown) => {
     if (!isLocale(locale)) return;
     pickedLocale = locale;
-    await writeJson(localePath(), { picked: locale });
+    await writeJson(localePath(), { picked: locale }).catch((error: unknown) =>
+      warnUnsaved("Your language choice", error),
+    );
   });
 
   ipcMain.handle(CHANNELS.takePendingPaths, () => {
