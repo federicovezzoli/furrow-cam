@@ -4,6 +4,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@furrow/ui/components/ui/popover";
 import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "use-intl";
 import {
   dropStep,
   isOnScreen,
@@ -234,6 +235,7 @@ function StepPopover({
     [anchor, step.side],
   );
 
+  const t = useTranslations("Tour");
   return (
     <>
       <PopoverAnchor virtualRef={virtualRef} />
@@ -253,17 +255,17 @@ function StepPopover({
         className="grid gap-2 text-sm"
       >
         <p id={`${ids}-count`} className="text-xs text-muted-foreground tabular-nums">
-          Step {number} of {count}
+          {t("count", { number, count })}
         </p>
         <h2 id={`${ids}-title`} className="font-medium">
-          {step.title}
+          {t(`steps.${step.id}.title`)}
         </h2>
         <p id={`${ids}-body`} className="text-muted-foreground">
-          {step.body}
+          {t(`steps.${step.id}.body`)}
         </p>
         <div className="mt-2 flex items-center gap-2">
           <Button variant="ghost" size="sm" className="-ml-3" onClick={onSkip}>
-            Skip tour
+            {t("skip")}
           </Button>
           <Button
             variant="outline"
@@ -272,10 +274,10 @@ function StepPopover({
             disabled={number === 1}
             onClick={() => onMove(-1)}
           >
-            Back
+            {t("back")}
           </Button>
           <Button ref={next} size="sm" onClick={() => onMove(1)}>
-            {number === count ? "Done" : "Next"}
+            {number === count ? t("done") : t("next")}
           </Button>
         </div>
       </PopoverContent>

@@ -48,3 +48,26 @@ export function parseAcceptLanguage(header: string | null): string[] {
       .map(({ tag }) => tag)
   );
 }
+
+function decimalSeparator(locale: string): string {
+  return (
+    new Intl.NumberFormat(locale).formatToParts(1.5).find((part) => part.type === "decimal")
+      ?.value ?? "."
+  );
+}
+
+/** `text`, numbers as JavaScript writes them (e.g. `"3.5 × 2"`), with `locale`'s decimal separator. */
+export function localizeDecimal(text: string, locale: string): string {
+  const separator = decimalSeparator(locale);
+  return separator === "." ? text : text.replaceAll(".", separator);
+}
+
+/**
+ * Typed `text` with `locale`'s decimal separator turned back into a point. Only
+ * where the language writes decimals that way: in English `1,500` stays invalid
+ * instead of becoming 1.5.
+ */
+export function delocalizeDecimal(text: string, locale: string): string {
+  const separator = decimalSeparator(locale);
+  return separator === "." ? text : text.replaceAll(separator, ".");
+}

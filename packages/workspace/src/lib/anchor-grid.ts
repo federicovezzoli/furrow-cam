@@ -1,17 +1,5 @@
 import type { StockAnchor } from "@furrow/document";
 
-export const ANCHOR_LABELS: Record<StockAnchor, string> = {
-  top_left: "Top left",
-  top_center: "Top centre",
-  top_right: "Top right",
-  middle_left: "Middle left",
-  center: "Centre",
-  middle_right: "Middle right",
-  bottom_left: "Bottom left",
-  bottom_center: "Bottom centre",
-  bottom_right: "Bottom right",
-};
-
 /** The 9 stock anchors as seen in the top view: the top row first, left to right (PRD-0002 Z2). */
 export const ANCHOR_GRID = [
   ["top_left", "top_center", "top_right"],

@@ -8,6 +8,8 @@ import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
+const UNREADABLE = { code: "workspace.unreadableFile" } as const;
+
 /** Why an STL file can't be imported, for the user (ADR-0054). */
 export class MeshImportError extends Error {
   constructor(readonly detail: Translatable) {
@@ -31,15 +33,13 @@ export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSu
         const { sha256, triangles, bounds } = data;
         resolve({ sha256, triangles, bounds });
       } else {
-        reject(
-          new MeshImportError(data.kind === "failed" ? data.error : "This file couldn't be read."),
-        );
+        reject(new MeshImportError(data.kind === "failed" ? data.error : UNREADABLE));
       }
     };
     worker.onerror = (event) => {
       event.preventDefault();
       worker.terminate();
-      reject(new MeshImportError("This file couldn't be read."));
+      reject(new MeshImportError(UNREADABLE));
     };
     worker.postMessage({ kind: "parse", id: 0, bytes, limits }, [bytes]);
   });
@@ -95,7 +95,7 @@ export async function importModel(
   try {
     mesh = await parseMesh(await file.arrayBuffer(), limits);
   } catch (error) {
-    fail(error instanceof MeshImportError ? error.detail : "This file couldn't be read.");
+    fail(error instanceof MeshImportError ? error.detail : UNREADABLE);
     return;
   }
   const upload = await meshes.put(mesh.sha256, file);

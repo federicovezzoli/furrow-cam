@@ -1,6 +1,6 @@
 import type { Path, Shape } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { selectionTargets, targetsLabel } from "./path-selection";
+import { selectionCounts, selectionTargets } from "./path-selection";
 
 const point = (x: number): Path => ({ start: [x, 0], segments: [], closed: false });
 const a: Shape = { id: "a", name: "A", layer: "", paths: [point(0), point(1), point(2)] };
@@ -38,22 +38,14 @@ describe("selectionTargets", () => {
   });
 });
 
-describe("targetsLabel", () => {
+describe("selectionCounts", () => {
   it("counts whole shapes and the paths of the others", () => {
-    expect(targetsLabel([{ shapeId: "a", paths: null }])).toBe("1 selected shape");
+    expect(selectionCounts([{ shapeId: "a", paths: null }])).toEqual({ shapes: 1, paths: 0 });
     expect(
-      targetsLabel([
-        { shapeId: "a", paths: null },
-        { shapeId: "b", paths: null },
-      ]),
-    ).toBe("2 selected shapes");
-    expect(targetsLabel([{ shapeId: "a", paths: [1] }])).toBe("1 selected path");
-    expect(targetsLabel([{ shapeId: "a", paths: [0, 2] }])).toBe("2 selected paths");
-    expect(
-      targetsLabel([
+      selectionCounts([
         { shapeId: "a", paths: [0, 2] },
         { shapeId: "b", paths: null },
       ]),
-    ).toBe("1 selected shape and 2 paths");
+    ).toEqual({ shapes: 1, paths: 2 });
   });
 });

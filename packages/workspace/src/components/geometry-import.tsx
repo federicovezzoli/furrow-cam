@@ -29,6 +29,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslations } from "use-intl";
 import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -48,10 +49,7 @@ const DPI_OPTIONS = [96, 72, 90, 300] as const;
 type Notice = { kind: "error" | "info"; messages: Translatable[] };
 
 /** What a drawing unit is in a DXF file that doesn't say. */
-const UNIT_OPTIONS = [
-  { value: "mm", label: "Millimetres" },
-  { value: "in", label: "Inches" },
-] as const;
+const UNIT_OPTIONS = ["mm", "in"] as const;
 
 /**
  * A file waiting for the user: an SVG sized in pixels, or not at all, for its
@@ -86,6 +84,7 @@ export function GeometryImport() {
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const format = useFormatMessage();
+  const t = useTranslations("Import");
   /** Counts picks, so a slow file read can't land after the user picked another file. */
   const picks = useRef(0);
   /** Set by a successful import, whose warnings outlive the geometry it adds. */
@@ -105,7 +104,7 @@ export function GeometryImport() {
 
   function fail(error: unknown) {
     if (!isImportError(error)) console.error(error);
-    const message = isImportError(error) ? error.detail : "This file couldn't be imported.";
+    const message = isImportError(error) ? error.detail : { code: "workspace.importFailed" };
     setNotice({ kind: "error", messages: [message] });
   }
 
@@ -116,7 +115,7 @@ export function GeometryImport() {
           ? importSvg(request.svg, { dpi: request.dpi, fileName: request.name })
           : importDxf(request.dxf, { units: request.units, fileName: request.name });
       if (shapes.length === 0) {
-        setNotice({ kind: "error", messages: ["This file has no shapes to import.", ...warnings] });
+        setNotice({ kind: "error", messages: [{ code: "workspace.noShapes" }, ...warnings] });
         return;
       }
       if (!addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
@@ -141,7 +140,7 @@ export function GeometryImport() {
     if (picked.size > MAX_FILE_SIZE) {
       setNotice({
         kind: "error",
-        messages: ["This file is too large to import (the limit is 20 MB)."],
+        messages: [{ code: "workspace.fileTooLarge", values: { mb: MAX_FILE_SIZE / 1_000_000 } }],
       });
       return;
     }
@@ -187,11 +186,7 @@ export function GeometryImport() {
         data-tour={empty ? "import" : undefined}
         className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs"
       >
-        {empty && (
-          <p className="text-muted-foreground">
-            Import an SVG or DXF drawing, or an STL model, to start.
-          </p>
-        )}
+        {empty && <p className="text-muted-foreground">{t("start")}</p>}
         {empty && (
           <>
             <input
@@ -210,29 +205,26 @@ export function GeometryImport() {
               className="justify-self-start"
             >
               <UploadIcon />
-              Import SVG/DXF…
+              {t("importDrawing")}
             </Button>
           </>
         )}
         {empty && (
           <>
             <ModelImportButton />
-            {!meshLimits && <p className="text-muted-foreground">{STL_IMPORT_OFF}</p>}
+            {!meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
           </>
         )}
 
         {pending?.kind === "svg" && (
           <ImportPrompt
             id="svg-dpi"
-            label="DPI"
-            title="Pixels per inch"
-            question={
-              <>
-                <span className="font-medium break-all">{pending.name}</span> gives its size in
-                pixels, or not at all. How many pixels make an inch? Check the export settings of
-                the program that made it.
-              </>
-            }
+            label={t("dpi")}
+            title={t("dpiTitle")}
+            question={t.rich("dpiQuestion", {
+              file: pending.name,
+              name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
+            })}
             options={DPI_OPTIONS.map((value) => ({ value, label: String(value) }))}
             initial={DEFAULT_SVG_DPI}
             onImport={(dpi) => {
@@ -245,15 +237,13 @@ export function GeometryImport() {
         {pending?.kind === "dxf" && (
           <ImportPrompt
             id="dxf-units"
-            label="Units"
-            title="Drawing units"
-            question={
-              <>
-                <span className="font-medium break-all">{pending.name}</span> doesn't say what unit
-                its coordinates are in. Check the export settings of the program that made it.
-              </>
-            }
-            options={UNIT_OPTIONS}
+            label={t("units_")}
+            title={t("unitsTitle")}
+            question={t.rich("unitsQuestion", {
+              file: pending.name,
+              name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
+            })}
+            options={UNIT_OPTIONS.map((value) => ({ value, label: t(`units.${value}`) }))}
             initial="mm"
             onImport={(units: Units) => {
               setPending(null);
@@ -267,7 +257,7 @@ export function GeometryImport() {
           <div className="flex items-start gap-1">
             {modelImport.error === null ? (
               <p role="status" className="flex-1 break-all text-muted-foreground">
-                Importing {modelImport.fileName}…
+                {t("importing", { file: modelImport.fileName })}
               </p>
             ) : (
               <>
@@ -279,8 +269,8 @@ export function GeometryImport() {
                   variant="ghost"
                   size="icon-compact"
                   onClick={() => setModelImport(null)}
-                  aria-label="Dismiss"
-                  title="Dismiss"
+                  aria-label={t("dismiss")}
+                  title={t("dismiss")}
                   className="-mt-1 -mr-1"
                 >
                   <XIcon />
@@ -307,8 +297,8 @@ export function GeometryImport() {
               variant="ghost"
               size="icon-compact"
               onClick={() => setNotice(null)}
-              aria-label="Dismiss"
-              title="Dismiss"
+              aria-label={t("dismiss")}
+              title={t("dismiss")}
               className="-mt-1 -mr-1"
             >
               <XIcon />
@@ -342,6 +332,7 @@ function ImportPrompt<T extends string | number>({
   onCancel: () => void;
 }) {
   const [value, setValue] = useState<T>(initial);
+  const t = useTranslations("Import");
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -378,10 +369,10 @@ function ImportPrompt<T extends string | number>({
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="compact">
-          Import
+          {t("import")}
         </Button>
         <Button type="button" variant="ghost" size="compact" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     </form>

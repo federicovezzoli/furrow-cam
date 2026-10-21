@@ -1,4 +1,4 @@
-import type { ProjectDocument } from "@furrow/document";
+import type { Message, ProjectDocument } from "@furrow/document";
 import type { SaveResult } from "../lib/workspace-host";
 import type { DocumentStore } from "./document-store";
 
@@ -12,7 +12,7 @@ import type { DocumentStore } from "./document-store";
 export type SaveState = "saved" | "unsaved" | "saving" | "error" | "failed";
 
 /** `savedAt` is the server's `updatedAt` for the last save; `error` explains a failed one. */
-export type AutosaveStatus = { state: SaveState; savedAt: Date; error?: string };
+export type AutosaveStatus = { state: SaveState; savedAt: Date; error?: string | Message };
 
 export type SaveDocument = (
   document: ProjectDocument,
@@ -22,7 +22,7 @@ export type SaveDocument = (
 
 export type Autosave = ReturnType<typeof createAutosave>;
 
-export const OFFLINE = "The project couldn't be saved. Check your connection.";
+export const OFFLINE: Message = { code: "workspace.offline" };
 
 /** The least time between two `retry` calls that save, so focus and online events don't each send the document. */
 export const RETRY_INTERVAL = 10_000;
@@ -62,7 +62,7 @@ export function createAutosave(
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
 
-  function update(state: SaveState, error?: string) {
+  function update(state: SaveState, error?: string | Message) {
     status =
       error === undefined
         ? { state, savedAt: status.savedAt }

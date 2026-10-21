@@ -9,16 +9,18 @@ import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import type * as React from "react";
 import { type FormEvent, useState, useTransition } from "react";
+import { useTranslations } from "use-intl";
 import { PlaceholderList } from "../../components/placeholder-list";
 import { POST_PROCESSOR_LABELS } from "../lib/labels";
 import type { MachineFormErrors } from "../lib/machine-form-data";
 
+/** The custom G-code blocks; the placeholders without words stay as they are in every language. */
 const GCODE_BLOCKS = [
-  { name: "programStart", label: "Program start", placeholder: "G21\nG90\nG94" },
-  { name: "programEnd", label: "Program end", placeholder: "M5\nM30" },
-  { name: "operationStart", label: "Operation start", placeholder: "(Pocket the recess)" },
-  { name: "toolChange", label: "Tool change", placeholder: "M5\nM0 (Change the bit)" },
-] as const satisfies { name: keyof Machine; label: string; placeholder: string }[];
+  { name: "programStart", placeholder: "G21\nG90\nG94" },
+  { name: "programEnd", placeholder: "M5\nM30" },
+  { name: "operationStart", placeholder: null },
+  { name: "toolChange", placeholder: null },
+] as const satisfies { name: keyof Machine; placeholder: string | null }[];
 
 /**
  * Saves the form's fields as machine `id`, or a new machine when `null`.
@@ -48,6 +50,7 @@ export function MachineForm({
   const machine = id === null ? { ...NEW_MACHINE_DEFAULTS, ...values } : values;
   // A new machine leaves the speeds out (unset) unless a preset says the spindle is manual (`null`).
   const [manualSpindle, setManualSpindle] = useState(machine.spindleRpmMin === null);
+  const t = useTranslations("Machine");
   const [errors, setErrors] = useState<MachineFormErrors>({});
   const [pending, startTransition] = useTransition();
 
@@ -66,9 +69,9 @@ export function MachineForm({
   return (
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Name" {...field("name")} placeholder="Shapeoko 4 XL" />
+        <Field label={t("name")} {...field("name")} placeholder={t("namePlaceholder")} />
         <SelectField
-          label="Post-processor"
+          label={t("postProcessor")}
           id="postProcessor"
           defaultValue={machine.postProcessor ?? "grbl"}
           options={POST_PROCESSOR_LABELS}
@@ -77,22 +80,22 @@ export function MachineForm({
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">Work area</legend>
+        <legend className="mb-4 font-medium">{t("workArea")}</legend>
         <div className="grid content-start gap-1">
-          <NumberField label="X travel" {...number("workAreaX")} quantity="length" min={0} />
+          <NumberField label={t("xTravel")} {...number("workAreaX")} quantity="length" min={0} />
           {ask("workAreaX")}
         </div>
         <div className="grid content-start gap-1">
-          <NumberField label="Y travel" {...number("workAreaY")} quantity="length" min={0} />
+          <NumberField label={t("yTravel")} {...number("workAreaY")} quantity="length" min={0} />
           {ask("workAreaY")}
         </div>
         <div className="grid content-start gap-1">
-          <NumberField label="Z travel" {...number("workAreaZ")} quantity="length" min={0} />
+          <NumberField label={t("zTravel")} {...number("workAreaZ")} quantity="length" min={0} />
           {ask("workAreaZ")}
         </div>
-        <NumberField label="Safe Z (above stock)" {...number("safeZ")} quantity="length" min={0} />
+        <NumberField label={t("safeZ")} {...number("safeZ")} quantity="length" min={0} />
         <NumberField
-          label="Entry clearance (above stock)"
+          label={t("entryClearance")}
           {...number("entryClearance")}
           quantity="length"
           min={0}
@@ -100,19 +103,19 @@ export function MachineForm({
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">Limits</legend>
+        <legend className="mb-4 font-medium">{t("limits")}</legend>
         <div className="grid content-start gap-1">
-          <NumberField label="Max feed X/Y" {...number("maxFeedXY")} quantity="feed" min={0} />
+          <NumberField label={t("maxFeedXY")} {...number("maxFeedXY")} quantity="feed" min={0} />
           {ask("maxFeedXY")}
         </div>
         <div className="grid content-start gap-1">
-          <NumberField label="Max feed Z" {...number("maxFeedZ")} quantity="feed" min={0} />
+          <NumberField label={t("maxFeedZ")} {...number("maxFeedZ")} quantity="feed" min={0} />
           {ask("maxFeedZ")}
         </div>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">Spindle</legend>
+        <legend className="mb-4 font-medium">{t("spindle")}</legend>
         <div className="flex items-center gap-2 sm:col-span-full">
           <input
             type="checkbox"
@@ -123,9 +126,9 @@ export function MachineForm({
             className="size-4 accent-primary"
             aria-describedby="manualSpindle-hint"
           />
-          <Label htmlFor="manualSpindle">Manual spindle</Label>
+          <Label htmlFor="manualSpindle">{t("manualSpindle")}</Label>
           <span id="manualSpindle-hint" className="text-sm text-muted-foreground">
-            Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.
+            {t("manualSpindleHint")}
           </span>
         </div>
         {/* Ticking Manual spindle answers the question too. */}
@@ -139,7 +142,7 @@ export function MachineForm({
             manual: it is switched on by hand and already up to speed. */}
         <div className="contents" hidden={manualSpindle}>
           <NumberField
-            label="Min speed"
+            label={t("minSpeed")}
             {...number("spindleRpmMin")}
             suffix="RPM"
             integer
@@ -147,7 +150,7 @@ export function MachineForm({
             min={0}
           />
           <NumberField
-            label="Max speed"
+            label={t("maxSpeed")}
             {...number("spindleRpmMax")}
             suffix="RPM"
             integer
@@ -156,36 +159,37 @@ export function MachineForm({
           />
           <div className="grid content-start gap-1">
             <NumberField
-              label="Spin-up delay"
+              label={t("spinUpDelay")}
               {...number("spinUpDelay")}
               suffix="s"
               step={1}
               min={0}
               max={60}
             />
-            <p className="text-sm text-muted-foreground">
-              The wait after starting the spindle, before the bit enters the stock.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("spinUpHint")}</p>
           </div>
         </div>
       </fieldset>
 
       <fieldset className="grid gap-4 lg:grid-cols-2">
-        <legend className="mb-1 font-medium">Custom G-code</legend>
+        <legend className="mb-1 font-medium">{t("customGcode")}</legend>
         <p className="text-sm text-muted-foreground lg:col-span-full">
-          A filled-in block replaces what the post-processor writes at that point, so include
-          everything your machine needs there (e.g. <code>G21</code> and <code>G90</code> in the
-          program start). Leave a block empty to keep the default. Text is copied as is, apart from
-          placeholders. <PlaceholderList />
+          {t.rich("customGcodeHint", { code: (chunks) => <code>{chunks}</code> })}{" "}
+          <PlaceholderList />
         </p>
-        {GCODE_BLOCKS.map(({ name, label, placeholder }) => (
+        {GCODE_BLOCKS.map(({ name, placeholder }) => (
           <div key={name} className="grid content-start gap-2">
-            <Label htmlFor={name}>{label}</Label>
+            <Label htmlFor={name}>{t(`blocks.${name}`)}</Label>
             <Textarea
               id={name}
               name={name}
               defaultValue={machine[name] ?? ""}
-              placeholder={placeholder}
+              placeholder={
+                placeholder ??
+                (name === "operationStart"
+                  ? t("operationStartPlaceholder")
+                  : t("toolChangePlaceholder"))
+              }
               rows={6}
               spellCheck={false}
               className="font-mono text-sm"
@@ -200,7 +204,7 @@ export function MachineForm({
       <FormError message={errors.form ?? null} />
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : id ? "Save changes" : "Add machine"}
+          {pending ? t("saving") : id ? t("saveChanges") : t("add")}
         </Button>
         <Button asChild variant="outline">
           {cancel}
@@ -212,5 +216,6 @@ export function MachineForm({
 
 /** Marks a field the preset left for the user, because no official source states it. */
 function AskedHint() {
-  return <p className="text-sm text-muted-foreground">Fill in for your machine.</p>;
+  const t = useTranslations("Machine");
+  return <p className="text-sm text-muted-foreground">{t("askedHint")}</p>;
 }

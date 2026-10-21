@@ -632,6 +632,661 @@
       "slowed": "{count, plural, one {# movimento rallentato} other {# movimenti rallentati}} all'avanzamento massimo della macchina.",
       "spindleClamped": "I {rpm} giri/min dell'utensile sono fuori dall'intervallo del mandrino della macchina, quindi si usano {used} giri/min.",
       "unfilledPlaceholder": "{block, select, programStart {Inizio programma} toolChangePad {Cambio utensile sul tampone} toolChange {Cambio utensile} operationStart {Inizio operazione} other {Fine programma}}: {placeholder} non può essere compilato, quindi viene scritto così com'è."
+    },
+    "preset": {
+      "v1e": {
+        "firmware": "Richiede FluidNC sulla scheda Jackpot di V1 Engineering: inizio programma, cambio utensile e fine usano comandi FluidNC. Le versioni GRBL, grblHAL e Marlin non sono ancora supportate.",
+        "manualRouter": "Rifilatrice manuale (es. una Makita RT0701C): imposta la velocità con la sua ghiera; il G-code non ne imposta nessuna.",
+        "jackpotGcode": "Inizio programma, cambio utensile e fine sono il G-code Jackpot di V1 Engineering. L’inizio azzera X, Y e Z dove si trova la fresa e tasta Z con una piastrina da 0,5 mm, quindi porta prima la macchina sullo zero del progetto e usa la superficie del grezzo come zero Z. M62 P1 e M63 P1 comandano un relè opzionale della rifilatrice sul pin 27."
+      },
+      "longmill": {
+        "firmware": "Richiede la LongBoard di Sienci (GRBL 1.1h, LongMill MK2) o la SuperLongBoard (grblHAL, LongMill MK2.5).",
+        "spindle": "Mandrino: la LongMill non include una rifilatrice. Spunta Mandrino manuale per una rifilatrice regolata dalla ghiera (es. una Makita RT0701), oppure inserisci l’intervallo di velocità di un mandrino comandato, es. 7.500–24.000 giri/min per il kit mandrino da 1,5 kW di Sienci.",
+        "workArea": "L’area di lavoro è la minore tra la corsa massima del firmware ($130–$132) e l’area dichiarata da Sienci.",
+        "maxFeedZ": "L’avanzamento max Z è quello della LongBoard, 3000 mm/min; la SuperLongBoard consente 4000 mm/min.",
+        "homing": "L’homing è disattivato per impostazione predefinita: azzera X, Y e Z sul grezzo, es. con una piastrina di tastatura.",
+        "advertised12x30": "Sienci dichiara 820 × 368 mm, con circa 125 mm di Z; si usano i 810 × 355 × 120 mm del firmware.",
+        "advertised30x30": "Sienci dichiara 820 × 868 mm, con circa 125 mm di Z; si usano i 810 × 855 × 120 mm del firmware.",
+        "advertised48x30": "Sienci dichiara 48 × 30 pollici (1219,2 × 762 mm), che questo preset usa per X e Y; il firmware consente 1270 × 855 mm."
+      },
+      "genmitsu": {
+        "firmware": "Usa GRBL 1.1h sul controller incluso, già configurato per la macchina.",
+        "maxFeedZ": "Avanzamento max Z: SainSmart indica una sola velocità massima, non una per asse. Invia $$ dal tuo programma di invio G-code e inserisci $112, la velocità massima dell’asse Z in mm/min.",
+        "spindle": "Mandrino: il mandrino 775 di serie è dato per 9.000 giri/min, e SainSmart non indica un minimo. Inserisci le velocità più bassa e più alta a cui lo usi, in giri/min. Le parole S del G-code sono in giri/min, quindi il $30 di GRBL (velocità massima del mandrino) deve corrispondere al massimo.",
+        "rexSwitches": "Ha finecorsa su X, Y e Z per l’homing, e una sonda Z per impostare lo zero Z.",
+        "proverWorkArea": "L’area di lavoro è quella del manuale; la pagina del prodotto indica 290 mm di X.",
+        "proverSwitches": "Ha interruttori di homing e finecorsa, e una sonda Z per impostare lo zero Z."
+      },
+      "lowrider": {
+        "workArea": "Area di lavoro: l’area di taglio utile per cui l’hai costruita, come inserita nel calcolatore LowRider di V1 Engineering (X è la trave, l’asse più corto), es. 1220 × 2440 mm per un pannello intero. Per controllare una macchina finita, sposta la fresa tra gli angoli opposti dell’area che raggiunge e annota la distanza su ogni asse.",
+        "zTravel": "La corsa Z è la profondità di taglio di 50 mm di una costruzione standard; con un piano ribassato puoi usare fino a 100 mm.",
+        "endstops": "I finecorsa agiscono solo durante l’homing e i limiti software sono disattivati: tieni il lavoro dentro la tua area di lavoro."
+      },
+      "mpcnc": {
+        "workArea": "Area di lavoro: l’area X e Y scelta nel calcolatore MPCNC di V1 Engineering, cioè l’area che l’utensile raggiunge (es. 450 × 330 mm con la cinghia del kit). Utensili più grandi come una DeWalt DW660 o un mandrino ne raggiungono meno. Per controllare una macchina finita, sposta la fresa tra gli angoli opposti dell’area che raggiunge e annota la distanza su ogni asse.",
+        "zTravel": "Corsa Z: l’altezza Z scelta nel calcolatore; 81 mm è la più corta, e quella che V1 Engineering consiglia.",
+        "limits": "Z non ha homing, e i limiti software sono disattivati: tieni il lavoro dentro la tua area di lavoro."
+      },
+      "maslow": {
+        "firmware": "Usa la versione di FluidNC di Maslow, già presente sulla scheda Maslow 4.",
+        "area": "Tieni il lavoro dentro l’area che puoi tagliare. Il firmware non ha finecorsa: schiaccia sul bordo i movimenti fuori dalla sua area di lavoro (2440 × 1220 mm per impostazione predefinita, centrata sul telaio) invece di fermarsi. Trace Boundary mostra il contorno prima di tagliare.",
+        "router": "Accendi la rifilatrice (una DeWalt DWP611, o D26200 per 240 V) e imposta la velocità a mano; il G-code non ne imposta nessuna.",
+        "maxFeeds": "Gli avanzamenti massimi sono i valori ufficiali più bassi: i 2000 mm/min delle cinghie del firmware (la scheda tecnica indica 2500 mm/min X/Y) e i 300 mm/min Z della scheda tecnica (il firmware consente 400).",
+        "zTravel": "La corsa Z è quella della scheda tecnica, 50 mm; l’area di lavoro è indicata come profonda 65 mm.",
+        "zZero": "Imposta lo zero Z sulla superficie del grezzo con Define Z Home."
+      }
+    },
+    "workspace": {
+      "needsShape": "Un’operazione richiede almeno una forma",
+      "notOperationType": "Non è un’operazione {type}",
+      "noTabs": "Il contorno non ha ponticelli",
+      "bitNotFound": "Questa fresa non esiste più.",
+      "machineNotFound": "Questa macchina non esiste più.",
+      "somethingWrong": "Qualcosa è andato storto.",
+      "offline": "Non è stato possibile salvare il progetto. Controlla la connessione.",
+      "cancelled": "Annullato prima della fine.",
+      "toolpathsOff": "I percorsi utensile non vengono calcolati.",
+      "keptChanging": "Il progetto ha continuato a cambiare mentre veniva creato il G-code. Esporta di nuovo quando hai finito di modificare.",
+      "unreadableFile": "Non è stato possibile leggere questo file.",
+      "modelUnreadable": "Non è stato possibile leggere il modello.",
+      "importFailed": "Non è stato possibile importare questo file.",
+      "noShapes": "Questo file non contiene forme da importare.",
+      "oneFile": "Un progetto contiene un solo file importato: un disegno SVG o DXF, o un modello STL.",
+      "stlImportOff": "L’importazione STL non è disponibile su questo server.",
+      "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb} MB)."
     }
+  },
+  "Operation": {
+    "sides": {
+      "outside": "Esterno",
+      "inside": "Interno",
+      "on": "Sulla linea"
+    },
+    "directions": {
+      "climb": "Concorde",
+      "conventional": "Discorde"
+    },
+    "strategies": {
+      "offset": "Offset",
+      "linear": "Lineare",
+      "peel": "Spirale"
+    },
+    "strategyHints": {
+      "offset": "Anelli paralleli alle pareti, svuotati dal centro verso l’esterno",
+      "linear": "Passate a zig-zag inclinate, dopo un giro lungo le pareti",
+      "peel": "Tagli non più larghi della sovrapposizione, che si allargano dal punto di partenza"
+    },
+    "roughingLinearHint": "Passate a zig-zag diritte e inclinate, che si alzano sul modello dove è più alto",
+    "raster": {
+      "zigzag": "Zig-zag",
+      "one_way": "In un solo verso"
+    },
+    "peelStarts": {
+      "centre": "Centro",
+      "inside": "Isola",
+      "outside": "Parete esterna"
+    },
+    "boundaries": {
+      "model": "Modello",
+      "margin": "Modello e margine",
+      "stock": "Tutto il grezzo"
+    },
+    "boundaryHints": {
+      "model": "Il centro dell’utensile arriva ai bordi del contorno del modello.",
+      "margin": "Svuota una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell’utensile), tenendovi dentro l’utensile: la superficie del grezzo oltre resta per azzerare Z dopo un cambio utensile.",
+      "stock": "Il centro dell’utensile arriva ai bordi del grezzo: tutto attorno al modello viene svuotato fino al fondo."
+    },
+    "finishing": {
+      "parallel": "Parallela",
+      "waterline": "Curve di livello",
+      "spiral": "Spirale"
+    },
+    "finishingHints": {
+      "parallel": "Passate diritte inclinate. Ideale sulle pendenze dolci; le facce ripide lungo le passate restano grezze.",
+      "waterline": "Contorni ad altezza costante, distanti una passata, così le facce ripide ricevono tante passate quante poche ne ricevono quelle piatte. Le zone piatte tra i contorni non vengono tagliate.",
+      "spiral": "Un unico taglio continuo a spirale sul contorno del modello, senza risalite."
+    },
+    "spiralStarts": {
+      "outside": "Contorno",
+      "centre": "Centro"
+    },
+    "closeLabel": "Chiudi le proprietà dell’operazione",
+    "close": "Chiudi",
+    "name": "Nome",
+    "tool": "Utensile",
+    "disabled": "Disattivata: nessun percorso utensile viene calcolato.",
+    "catalog": "Catalogo (avanzamenti di partenza per legno tenero e compensato)",
+    "yourBits": "Le tue frese",
+    "asPicked": "{name} (come scelta)",
+    "newBit": "Nuova fresa…",
+    "shapes": "Forme",
+    "cutInstead": "Taglia invece {targets}",
+    "selectToCut": "Seleziona forme o percorsi per tagliarli invece",
+    "useSelected": "Usa la selezione",
+    "unnamedShape": "Forma senza nome",
+    "pathsOf": "{count} di {total} percorsi",
+    "removeLabel": "Rimuovi {name}",
+    "needsShape": "Un’operazione richiede almeno una forma",
+    "remove": "Rimuovi",
+    "model": "Modello",
+    "missing": "Mancante",
+    "rampIn": "Ingresso in rampa",
+    "rampStraight": "L’angolo di discesa dell’utensile è 90°, quindi scende in verticale.",
+    "rampAngle": "All’angolo di discesa dell’utensile ({angle}°).",
+    "profile": "Contorno",
+    "side": "Lato",
+    "direction": "Direzione",
+    "depth": "Profondità",
+    "allowance": "Sovrametallo",
+    "finishPass": "Passata di finitura",
+    "needsAllowance": "Serve un sovrametallo da togliere.",
+    "leadIn": "Attacco ad arco",
+    "leadInRadius": "Raggio dell’attacco",
+    "holdingTabs": "Ponticelli di tenuta",
+    "pocket": "Tasca",
+    "strategy": "Strategia",
+    "angle": "Angolo",
+    "startFrom": "Parti da",
+    "pocketHint": "{hint}, alla sovrapposizione ({stepOver}%) e alla passata dell’utensile.",
+    "linearDirection": "Le passate lineari alternano la direzione; questa vale per i giri e la passata di finitura.",
+    "finishLap": "Un giro sulle pareti e sulle isole a piena profondità.",
+    "drill": "Foratura",
+    "drillHint": "Fori nei punti e nei cerchi. L’utensile scende nei punti e nei cerchi in cui entra con una tolleranza di {tolerance}{bore, select, yes {, e alesa i cerchi più grandi con un’elica al suo angolo di discesa.} other {; una punta da foratura non può alesare cerchi più grandi.}}",
+    "peck": "Foratura a step",
+    "peckHint": "Scende a step non più profondi della passata dell’utensile, risalendo dopo ognuno per scaricare il truciolo.",
+    "engrave": "Incisione",
+    "position": "Posizione",
+    "engraveHint": "{side, select, inside {Segue i percorsi chiusi all’interno della linea, con un bordo della scanalatura su di essa,} outside {Segue i percorsi chiusi all’esterno della linea, con un bordo della scanalatura su di essa,} other {Segue ogni percorso, aperto e chiuso, sulla linea,}} in passate non più profonde della passata dell’utensile.",
+    "lineWidth": "Larghezza della linea",
+    "lineTooDeep": "Più profondo del cono, quindi la linea è larga quanto la fresa.",
+    "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
+    "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
+    "vcarve": "Intaglio a V",
+    "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
+    "maxDepth": "Profondità massima",
+    "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
+    "vcarveReach": "Le parti più larghe di {width} la raggiungono.",
+    "flatBottom": "Fondo piatto",
+    "flatOn": "La fresa a candela spiana prima quelle parti; la fresa a V ne incide poi le pareti.",
+    "flatOffer": "Spiana con una fresa a candela le parti che raggiungono la profondità massima.",
+    "flatNeedTool": "Aggiungi una fresa a candela piatta alla tua libreria per lavorare un fondo piatto.",
+    "endMill": "Fresa a candela",
+    "rough": "Sgrossatura 3D",
+    "roughHint": "Toglie il materiale sopra il modello a livelli, solo dall’alto, lasciando il sovrametallo per la finitura.",
+    "roughStrategyHint": "{hint}, a livelli distanti al massimo la passata dell’utensile ({stepDown}).",
+    "stepOver": "Sovrapposizione",
+    "toolStepOver": "La sovrapposizione dell’utensile. Cambiarla qui non modifica l’utensile.",
+    "ownStepOver": "Solo per questa operazione; quella dell’utensile è {stepOver}%.",
+    "useTools": "Usa quella dell’utensile",
+    "stockToLeave": "Sovrametallo da lasciare",
+    "clear": "Svuota",
+    "margin": "Margine",
+    "rest": "Taglia solo il materiale rimasto",
+    "restHint": "Salta quello che le operazioni attive sopra questa hanno già tagliato, così un utensile più piccolo lavora solo dove il precedente non arrivava.",
+    "finish": "Finitura 3D",
+    "finishHint": "Passate sul modello, con l’utensile appoggiato su di esso in ogni punto, solo dall’alto. Una fresa sferica lascia la superficie più liscia.",
+    "stepDown": "Passata",
+    "spacingHint": "Del diametro dell’utensile: {spiral, select, yes {giri} other {passate}} distanti al massimo {spacing}.",
+    "zigzagHint": "Una passata sì e una no torna indietro, collegata lungo il modello.",
+    "oneWayHint": "Ogni passata taglia nello stesso verso, risalendo tra una e l’altra.",
+    "tabWidth": "Larghezza dei ponticelli",
+    "tabHeight": "Altezza dei ponticelli",
+    "autoPlace": "Posizionamento automatico",
+    "perContour": "Per contorno",
+    "bySpacing": "Per distanza",
+    "tabs": "Ponticelli",
+    "every": "Ogni",
+    "placeTitle": "Sostituisci i ponticelli con altri distribuiti uniformemente lungo ogni contorno",
+    "place": "Posiziona",
+    "tabCount": "{count, plural, one {# ponticello} other {# ponticelli}}",
+    "done": "Fatto",
+    "editInViewport": "Modifica nella vista",
+    "editHint": "Clicca un contorno per aggiungere un ponticello, trascinalo per spostarlo, cliccalo per rimuoverlo.",
+    "computing": "Calcolo del percorso utensile…",
+    "cancel": "Annulla",
+    "computeAgain": "Calcola di nuovo",
+    "cancelled": "Annullato prima della fine.",
+    "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
+    "warnings": "Avvisi del percorso utensile"
+  },
+  "Selection": {
+    "shapes": "{count, plural, one {# forma selezionata} other {# forme selezionate}}",
+    "paths": "{count, plural, one {# percorso selezionato} other {# percorsi selezionati}}",
+    "both": "{shapes, plural, one {# forma selezionata} other {# forme selezionate}} e {paths, plural, one {# percorso} other {# percorsi}}"
+  },
+  "Operations": {
+    "sideways": "Aggiungi una fresa a candela o una fresa a V alla tua libreria: le punte da foratura non tagliano lateralmente",
+    "types": {
+      "profile": "Contorno",
+      "pocket": "Tasca",
+      "drill": "Foratura",
+      "engrave": "Incisione",
+      "vcarve": "Intaglio a V",
+      "relief_rough": "Sgrossatura 3D",
+      "relief_finish": "Finitura 3D"
+    },
+    "hints": {
+      "profile": "Taglia attorno a: {target}",
+      "pocket": "Svuota l’area all’interno di: {target}",
+      "drill": "Fora i punti e i cerchi di: {target}",
+      "engrave": "Incidi lungo le linee di: {target}",
+      "vcarve": "Intaglia all’interno di {target} con una fresa a V, più a fondo dove sono più larghe",
+      "relief_rough": "Togli il materiale sopra {model} a livelli, di solito con una fresa a candela piatta",
+      "relief_finish": "Rifinisci {model} con passate parallele, di solito con una fresa sferica"
+    },
+    "missingDrill": "Aggiungi una punta da foratura o una fresa a candela alla tua libreria: le frese a V non forano",
+    "missingEngrave": "Aggiungi una fresa a V o una fresa a candela alla tua libreria: le punte da foratura non incidono",
+    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per l’intaglio a V",
+    "noTool": "Aggiungi prima un utensile alla tua libreria",
+    "selectModel": "Seleziona prima un modello nella vista",
+    "selectPaths": "Seleziona prima dei percorsi nella vista",
+    "addLabel": "Aggiungi {operation}",
+    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Ctrl/Cmd/Maiusc+clic per selezionarne altri.",
+    "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
+    "inCuttingOrder": "Operazioni in ordine di taglio",
+    "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
+    "selectInside": "Seleziona interni",
+    "clearSelection": "Annulla la selezione",
+    "enableLabel": "Attiva {name}",
+    "enabled": "Attiva",
+    "disabled": "Disattivata: nessun percorso utensile",
+    "operationName": "Nome dell’operazione",
+    "renameTitle": "Doppio clic o F2 per rinominare",
+    "moveUpLabel": "Sposta in su {name}",
+    "moveUp": "Sposta in su",
+    "moveDownLabel": "Sposta in giù {name}",
+    "moveDown": "Sposta in giù",
+    "deleteLabel": "Elimina {name}",
+    "delete": "Elimina",
+    "toolpathOf": "Percorso utensile di {name}",
+    "showToolpath": "Mostra il percorso utensile",
+    "hideToolpath": "Nascondi il percorso utensile",
+    "computing": "Calcolo del percorso utensile",
+    "computingPercent": "Calcolo del percorso utensile, {percent}%",
+    "cancelled": "Percorso utensile annullato",
+    "cancelledDetail": "Annullato prima della fine.",
+    "failed": "Percorso utensile non riuscito: {error}",
+    "warnings": "Avvisi del percorso utensile: {warnings}"
+  },
+  "Bit": {
+    "types": {
+      "flat_end_mill": "Fresa a candela piatta",
+      "ball_end_mill": "Fresa sferica",
+      "v_bit": "Fresa a V",
+      "drill": "Punta da foratura"
+    },
+    "cutDirections": {
+      "upcut": "Elica destra (upcut)",
+      "downcut": "Elica sinistra (downcut)",
+      "compression": "A compressione"
+    },
+    "saveFailed": "Non è stato possibile salvare la fresa. Controlla la connessione e riprova.",
+    "type": "Tipo",
+    "name": "Nome",
+    "namePlaceholder": "6 mm 2 taglienti upcut",
+    "colour": "Colore",
+    "geometry": "Geometria",
+    "diameter": "Diametro",
+    "flutes": "Taglienti",
+    "fluteLength": "Lunghezza taglienti",
+    "cutDirection": "Direzione di taglio",
+    "vAngle": "Angolo della V",
+    "tipDiameter": "Diametro della punta",
+    "cuttingData": "Dati di taglio",
+    "spindleSpeed": "Velocità del mandrino",
+    "feedRate": "Avanzamento",
+    "plungeRate": "Velocità di discesa",
+    "plungeAngle": "Angolo di discesa",
+    "stepDown": "Passata per giro",
+    "stepOver": "Sovrapposizione (del diametro)",
+    "notes": "Note (facoltative)",
+    "saving": "Salvataggio…",
+    "saveChanges": "Salva le modifiche",
+    "add": "Aggiungi fresa",
+    "cancel": "Annulla"
+  },
+  "Machine": {
+    "blocks": {
+      "programStart": "Inizio programma",
+      "programEnd": "Fine programma",
+      "operationStart": "Inizio operazione",
+      "toolChange": "Cambio utensile"
+    },
+    "operationStartPlaceholder": "(Svuota l’incasso)",
+    "toolChangePlaceholder": "M5\nM0 (Cambia la fresa)",
+    "name": "Nome",
+    "namePlaceholder": "Shapeoko 4 XL",
+    "postProcessor": "Post-processore",
+    "workArea": "Area di lavoro",
+    "xTravel": "Corsa X",
+    "yTravel": "Corsa Y",
+    "zTravel": "Corsa Z",
+    "safeZ": "Z di sicurezza (sopra il grezzo)",
+    "entryClearance": "Distanza di ingresso (sopra il grezzo)",
+    "limits": "Limiti",
+    "maxFeedXY": "Avanzamento max X/Y",
+    "maxFeedZ": "Avanzamento max Z",
+    "spindle": "Mandrino",
+    "manualSpindle": "Mandrino manuale",
+    "manualSpindleHint": "Velocità impostata a mano (es. la ghiera di una rifilatrice); il G-code non imposta la velocità del mandrino.",
+    "minSpeed": "Velocità minima",
+    "maxSpeed": "Velocità massima",
+    "spinUpDelay": "Attesa di avvio",
+    "spinUpHint": "L’attesa dopo l’avvio del mandrino, prima che la fresa entri nel grezzo.",
+    "customGcode": "G-code personalizzato",
+    "customGcodeHint": "Un blocco compilato sostituisce quello che il post-processore scrive in quel punto, quindi includi tutto ciò che serve alla tua macchina (es. <code>G21</code> e <code>G90</code> nell’inizio programma). Lascia un blocco vuoto per mantenere quello predefinito. Il testo viene copiato così com’è, a parte i segnaposto.",
+    "saving": "Salvataggio…",
+    "saveChanges": "Salva le modifiche",
+    "add": "Aggiungi macchina",
+    "askedHint": "Da compilare per la tua macchina."
+  },
+  "NewMachine": {
+    "starts": {
+      "preset": "Parti da un preset",
+      "scratch": "Parti da zero"
+    },
+    "startHints": {
+      "preset": "Scegli il tuo router; le sue impostazioni documentate vengono compilate per te.",
+      "scratch": "Inserisci tu ogni impostazione."
+    },
+    "discard": "Scartare i valori inseriti?",
+    "start": "Inizio",
+    "presets": "Preset",
+    "search": "Cerca macchine…",
+    "searchLabel": "Cerca macchine",
+    "noMatch": "Nessun preset corrisponde a “{query}”. Parti da zero per descrivere tu la tua macchina.",
+    "firmware": "Firmware:",
+    "youFillIn": "Da compilare",
+    "sources": "Fonti",
+    "check": "Controlla i valori qui sotto rispetto alla tua macchina; puoi cambiarli tutti, ora o in seguito."
+  },
+  "Shell": {
+    "saveStates": {
+      "saved": "Salvato",
+      "unsaved": "Modifiche non salvate",
+      "saving": "Salvataggio…",
+      "error": "Non salvato",
+      "failed": "Non salvato"
+    },
+    "operations": "Operazioni",
+    "properties": "Proprietà",
+    "versions": "Versioni",
+    "viewport": "Vista",
+    "loadingViewport": "Caricamento della vista…",
+    "chooseMachine": "Scegli prima una macchina nelle proprietà del progetto",
+    "addOperation": "Aggiungi o attiva prima un’operazione",
+    "operationProperties": "Proprietà dell’operazione",
+    "modelProperties": "Proprietà del modello",
+    "saveFailed": "{message} Le modifiche non vengono più salvate; esporta il progetto per conservarle.",
+    "reload": "Ricarica",
+    "saveError": "{message} Le modifiche verranno salvate di nuovo appena il problema è risolto.",
+    "editBit": "Modifica fresa",
+    "saveCopy": "Salva una copia di questa fresa",
+    "editCatalog": "Le frese del catalogo restano come sono. Questo salva la tua copia nella tua libreria e la usa in ogni operazione di questo progetto che usa la fresa del catalogo.",
+    "editLibrary": "Modifica la fresa nella tua libreria e in ogni operazione di questo progetto che la usa.",
+    "notUpdated": "La fresa è stata salvata, ma queste operazioni mantengono la fresa com’era:",
+    "close": "Chiudi",
+    "newBit": "Nuova fresa",
+    "newBitDescription": "Aggiunge una fresa alla tua libreria e la sceglie per questa operazione.",
+    "simulate": "Simula",
+    "simulateTitle": "Riproduci il taglio movimento per movimento",
+    "backToWorkspace": "Torna all’area di lavoro",
+    "loadingSimulator": "Caricamento del simulatore…",
+    "exportFile": "Esporta file",
+    "exportProject": "Esporta il file del progetto",
+    "exportFailed": "Non è stato possibile esportare questo progetto. Controlla la connessione e riprova.",
+    "exportedWithWarnings": "Il G-code è stato esportato con degli avvisi:",
+    "exportGcode": "Esporta G-code",
+    "allProjects": "Tutti i progetti",
+    "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle."
+  },
+  "BugReport": {
+    "report": "Segnala un bug",
+    "description": "Apre una nuova issue su GitHub con la tua segnalazione già compilata. Non viene inviato nulla finché non la invii lì, il che richiede un account GitHub.",
+    "title": "Titolo",
+    "titlePlaceholder": "es. La tasca lascia un’isola non tagliata",
+    "what": "Cosa è successo, e cosa ti aspettavi?",
+    "filledIn": "Compilato per te",
+    "addYourself": "Aggiungili tu su GitHub",
+    "noFiles": "GitHub non può ricevere file dall’app. Dopo aver aperto la issue, incollali o trascinali lì.",
+    "screenshotAlt": "Screenshot della vista",
+    "notAttached": "La vista, non ancora allegata.",
+    "copied": "Copiato",
+    "copyScreenshot": "Copia lo screenshot",
+    "savePng": "Salva PNG",
+    "copyFailed": "Non è stato possibile copiare lo screenshot: salvalo invece.",
+    "project": "Il progetto, se serve: esportalo dal pannello delle operazioni e trascina lì il file.",
+    "opened": "La issue si è aperta nel browser. Aggiungi quello che vuoi da qui sopra, poi inviala lì.",
+    "copiedReport": "La segnalazione era troppo lunga per il link, quindi è stata copiata: incollala nella issue di GitHub che si è aperta.",
+    "notCopied": "La segnalazione è troppo lunga per il link e non è stato possibile copiarla. Accorciala e riprova.",
+    "open": "Apri la issue su GitHub"
+  },
+  "Versions": {
+    "unsaved": "Il progetto ha modifiche che non è stato possibile salvare. Salvale prima.",
+    "editing": "Completa prima la modifica che stai facendo.",
+    "unavailable": "Le versioni non sono disponibili qui.",
+    "restoreConfirm": "Ripristinare “{name}”? Sostituisce il contenuto del progetto, che viene prima conservato come versione. La cronologia di annullamento viene cancellata.",
+    "renamePrompt": "Rinomina la versione (lascia vuoto per mostrarne la data)",
+    "deleteConfirm": "Eliminare la versione “{name}”? L’operazione non si può annullare.",
+    "loading": "Caricamento delle versioni…",
+    "empty": "Ancora nessuna versione. Salvane una per tornare a questo stato in seguito.",
+    "actionsLabel": "Azioni per {name}",
+    "actions": "Azioni",
+    "restore": "Ripristina…",
+    "openAsProject": "Apri come nuovo progetto",
+    "rename": "Rinomina…",
+    "delete": "Elimina…",
+    "labelPlaceholder": "Etichetta (facoltativa)",
+    "labelLabel": "Etichetta della versione",
+    "save": "Salva versione"
+  },
+  "Anchors": {
+    "top_left": "In alto a sinistra",
+    "top_center": "In alto al centro",
+    "top_right": "In alto a destra",
+    "middle_left": "Al centro a sinistra",
+    "center": "Centro",
+    "middle_right": "Al centro a destra",
+    "bottom_left": "In basso a sinistra",
+    "bottom_center": "In basso al centro",
+    "bottom_right": "In basso a destra"
+  },
+  "Snap": {
+    "point": "Punto",
+    "vertex": "Vertice",
+    "arc_center": "Centro dell’arco",
+    "circle_center": "Centro del cerchio",
+    "bounds_corner": "Angolo del riquadro",
+    "bounds_center": "Centro del riquadro",
+    "anchors": {
+      "top_left": "Grezzo, in alto a sinistra",
+      "top_center": "Grezzo, in alto al centro",
+      "top_right": "Grezzo, in alto a destra",
+      "middle_left": "Grezzo, al centro a sinistra",
+      "center": "Centro del grezzo",
+      "middle_right": "Grezzo, al centro a destra",
+      "bottom_left": "Grezzo, in basso a sinistra",
+      "bottom_center": "Grezzo, in basso al centro",
+      "bottom_right": "Grezzo, in basso a destra"
+    }
+  },
+  "Stock": {
+    "units": {
+      "mm": "Millimetri",
+      "in": "Pollici"
+    },
+    "unitsLabel": "Unità",
+    "stock": "Grezzo",
+    "dimensions": {
+      "width": "Larghezza",
+      "height": "Altezza",
+      "thickness": "Spessore"
+    },
+    "zOrigins": {
+      "stock_top": "Superficie del grezzo",
+      "machine_bed": "Piano della macchina"
+    },
+    "machine": "Macchina",
+    "chooseMachine": "Scegli una macchina…",
+    "projectCopy": "{name} (copia del progetto)",
+    "guestMachine": "Il G-code è fatto per la tua macchina, che viene salvata in un account gratuito o nell’app desktop. <button>Configura la tua macchina</button>.",
+    "noMachine": "Nessuna macchina impostata. Scegli la macchina per questo progetto per esportare il G-code.",
+    "addMachine": "<link>Aggiungi una macchina</link>.",
+    "zero": "Zero",
+    "custom": "Personalizzato",
+    "cancel": "Annulla",
+    "pickInViewport": "Scegli nella vista",
+    "pickHint": "Clicca un punto nella vista; si aggancia ai punti del grezzo, ai vertici, ai centri e ai riquadri vicini. Esc o clic destro annulla.",
+    "touchOff": "Tampone di azzeramento",
+    "touchOffHint": "Un punto della superficie del grezzo che nessuna operazione taglia, così Z può essere azzerata lì dopo un cambio utensile.",
+    "padAxis": "Tampone {axis}",
+    "padDiameter": "Diametro del tampone",
+    "padTooWide": "Deve stare sul grezzo: al massimo {size}",
+    "padCentre": "Il suo centro, dall’angolo in basso a sinistra del grezzo. Ridimensionarlo lascia il centro dov’è.",
+    "padOff": "Una parte del tampone è fuori dal grezzo, quindi lì potrebbe non esserci niente su cui azzerare Z.",
+    "padToolChange": "Cambio utensile sul tampone",
+    "toolChangePlaceholder": "M5\nM0 (Cambia la fresa)",
+    "padToolChangeHint": "Viene eseguito a ogni cambio utensile al posto di quello della macchina. <strong>Suggerisci</strong> ne scrive uno dal cambio utensile della macchina, spostandosi sul tampone; <strong>Usa quello della macchina</strong> torna a quello della macchina, dopo uno spostamento sul tampone.",
+    "suggest": "Suggerisci",
+    "useMachines": "Usa quello della macchina"
+  },
+  "Model": {
+    "closeLabel": "Chiudi le proprietà del modello",
+    "close": "Chiudi",
+    "triangles": "{count, plural, one {# triangolo} other {# triangoli}}. Lavorato solo dall’alto: sottosquadri e sporgenze vengono riempiti, come mostra la vista.",
+    "rotation": "Rotazione",
+    "turn": "Ruota di 90° attorno all’asse {axis}",
+    "size": "Dimensioni",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "depth": "Profondità",
+    "tooDeep": "Il modello è più profondo dello spessore del grezzo: non viene tagliato oltre il fondo del grezzo.",
+    "original": "Originale: {size} (scala {scale}%)",
+    "border": "Bordo",
+    "borderNote": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il modello.",
+    "borderCapped": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il modello. Su questo grezzo lascia {size}, un quarto del suo lato minore.",
+    "originalTitle": "Riporta il modello alla sua dimensione nel file",
+    "originalSize": "Dimensione originale",
+    "fitTitle": "Scala il modello per farlo stare nel grezzo, lasciando il bordo su ogni lato",
+    "fit": "Adatta al grezzo",
+    "position": "Posizione",
+    "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del modello, misurato dallo zero. Spostarlo non cambia il bordo che lascia <em>Adatta al grezzo</em>.",
+    "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lo lavora} other {le # operazioni che lo lavorano}}",
+    "remove": "Rimuovi il modello"
+  },
+  "Import": {
+    "units": {
+      "mm": "Millimetri",
+      "in": "Pollici"
+    },
+    "start": "Importa un disegno SVG o DXF, o un modello STL, per iniziare.",
+    "importDrawing": "Importa SVG/DXF…",
+    "importStl": "Importa STL…",
+    "dpi": "DPI",
+    "dpiTitle": "Pixel per pollice",
+    "dpiQuestion": "<name>{file}</name> indica la sua dimensione in pixel, o non la indica. Quanti pixel fanno un pollice? Controlla le impostazioni di esportazione del programma che l’ha creato.",
+    "units_": "Unità",
+    "unitsTitle": "Unità del disegno",
+    "unitsQuestion": "<name>{file}</name> non dice in che unità sono le sue coordinate. Controlla le impostazioni di esportazione del programma che l’ha creato.",
+    "importing": "Importazione di {file}…",
+    "dismiss": "Chiudi",
+    "import": "Importa",
+    "cancel": "Annulla"
+  },
+  "Viewport": {
+    "scene": "Grezzo, geometria e percorsi utensile",
+    "simulating": "Simulazione…",
+    "simulationFailed": "Simulazione non riuscita: {error}",
+    "notSimulated": "Non simulati, percorso utensile non riuscito: {operations}",
+    "views": {
+      "top": "Vista dall’alto",
+      "orbit": "Vista 3D"
+    },
+    "viewHints": {
+      "top": "Trascina con il tasto destro o centrale per spostare, scorri per lo zoom",
+      "orbit": "Trascina per ruotare, trascina col tasto destro per spostare, scorri per lo zoom"
+    },
+    "viewHint": "{view}: {hint}",
+    "view": "Vista",
+    "fitStock": "Inquadra il grezzo",
+    "cut": "Taglio",
+    "showToolpaths": "Mostra i percorsi utensile",
+    "hideAll": "Nascondi tutti i percorsi utensile",
+    "showAll": "Mostra tutti i percorsi utensile",
+    "simulate": "Simula il taglio",
+    "simulateTitle": "Simula il taglio: mostra il grezzo come sarà dopo i percorsi utensile",
+    "simulation": "Simulazione",
+    "simulationScene": "Grezzo tagliato dai percorsi utensile",
+    "hideToolpathsShort": "Nascondi i percorsi utensile",
+    "showToolpathsShort": "Mostra i percorsi utensile",
+    "nothing": "Niente da simulare: aggiungi o attiva un’operazione nell’area di lavoro.",
+    "playback": "Riproduzione",
+    "previous": "Operazione precedente",
+    "previousTitle": "Torna all’inizio dell’operazione",
+    "pause": "Pausa",
+    "play": "Riproduci",
+    "next": "Operazione successiva",
+    "nextTitle": "Vai all’operazione successiva",
+    "position": "Posizione lungo i percorsi utensile",
+    "jumpTo": "Vai a {name}",
+    "speed": "Velocità di riproduzione"
+  },
+  "Dialog": {
+    "close": "Chiudi"
+  },
+  "Tour": {
+    "steps": {
+      "bits": {
+        "title": "Le tue frese",
+        "body": "Aggiungi le frese che possiedi, con dimensioni e avanzamenti. Le operazioni scelgono la fresa da questa libreria."
+      },
+      "machines": {
+        "title": "La tua macchina",
+        "body": "Descrivi il tuo router una volta, o parti da un preset. Area di lavoro, avanzamenti e dialetto G-code valgono per ogni progetto fatto per lui."
+      },
+      "new-project": {
+        "title": "Inizia un progetto",
+        "body": "Crea un progetto qui, o importa un file di progetto. Puoi scegliere la macchina ora o più tardi, prima di esportare il G-code."
+      },
+      "import": {
+        "title": "Importa un disegno",
+        "body": "Parti da un file SVG o DXF: i suoi percorsi diventano le forme che tagli."
+      },
+      "properties": {
+        "title": "Proprietà del progetto",
+        "body": "Imposta le unità, la macchina e il grezzo: dimensioni e spessore del materiale, e dove si trova il suo zero."
+      },
+      "select": {
+        "title": "Seleziona i percorsi",
+        "body": "Clicca un percorso nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Le operazioni tagliano ciò che è selezionato."
+      },
+      "operations": {
+        "title": "Aggiungi operazioni",
+        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o intaglio a V) per i percorsi selezionati, poi scegli fresa e profondità."
+      },
+      "preview": {
+        "title": "Anteprima dei percorsi utensile",
+        "body": "La vista mostra i percorsi utensile di ogni operazione attiva, con i movimenti rapidi distinti dai tagli. Controllali prima di tagliare."
+      },
+      "export-gcode": {
+        "title": "Esporta il G-code",
+        "body": "Quando i percorsi utensile sono corretti, esporta il G-code ed eseguilo con il tuo solito programma di invio."
+      },
+      "versions": {
+        "title": "Versioni",
+        "body": "Facoltativo: salva una versione con nome prima di una grande modifica, e ripristinala quando serve."
+      }
+    },
+    "count": "Passo {number} di {count}",
+    "skip": "Salta il tour",
+    "back": "Indietro",
+    "done": "Fatto",
+    "next": "Avanti"
+  },
+  "Placeholders": {
+    "list": "All’esportazione, <code>{padX}</code> diventa la X del centro del tampone di azzeramento, <code>{padY}</code> ne diventa la Y e <code>{safeZ}</code> diventa la Z di sicurezza della macchina, tutti misurati dallo zero."
+  },
+  "NumberField": {
+    "drag": "Trascina lateralmente per cambiare"
   }
 }

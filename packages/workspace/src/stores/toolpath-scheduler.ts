@@ -44,8 +44,7 @@ export type ToolpathMessage =
 
 /** How many times an export is made again for edits before it gives up (#252). */
 const MAX_EXPORT_RESTARTS = 5;
-const KEPT_CHANGING =
-  "The project kept changing while its G-code was being made. Export again once you're done editing.";
+const KEPT_CHANGING: Message = { code: "workspace.keptChanging" };
 
 /** An export waiting for the worker: its latest request, and the meshes sent so far by hash. */
 type PendingExport = {

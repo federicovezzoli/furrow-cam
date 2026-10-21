@@ -1,3 +1,4 @@
+import type { Message } from "@furrow/document";
 import { Machine, Tool, upgradeMachine } from "@furrow/document";
 import { type MachineFormErrors, parseMachineForm } from "../machines/lib/machine-form-data";
 import { DEFAULT_TOOL, parseToolForm } from "../tools/lib/tool-form-data";
@@ -67,7 +68,7 @@ export function saveTool(
     return { tools: [...tools, added].sort(byToolName), saved: { id: added.id, tool } };
   }
   if (!tools.some((choice) => choice.id === id)) {
-    return { errors: { form: "This bit no longer exists." } };
+    return { errors: { form: { code: "workspace.bitNotFound" } } };
   }
   return {
     tools: tools
@@ -103,7 +104,7 @@ export function saveMachine(
     return { machines: [...machines, { id: crypto.randomUUID(), machine }].sort(byMachineName) };
   }
   if (!machines.some((choice) => choice.id === id)) {
-    return { errors: { form: "This machine no longer exists." } };
+    return { errors: { form: { code: "workspace.machineNotFound" } } };
   }
   return {
     machines: machines
@@ -131,6 +132,6 @@ export function parseSettings(json: unknown): Settings {
 }
 
 /** `error`'s message for the user. */
-export function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : "Something went wrong.";
+export function messageOf(error: unknown): string | Message {
+  return error instanceof Error ? error.message : { code: "workspace.somethingWrong" };
 }

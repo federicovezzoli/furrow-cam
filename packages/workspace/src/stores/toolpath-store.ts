@@ -52,7 +52,7 @@ export type ToolpathControls = {
 };
 
 /** What a cancelled toolpath says. */
-export const CANCELLED = "Cancelled before it finished.";
+export const CANCELLED = "cancelled";
 
 /** Derived data (ADR-0010): never undoable, never saved. */
 export type ToolpathState = {
@@ -78,7 +78,7 @@ export type ToolpathStore = ReturnType<typeof createToolpathStore>;
 const NO_CONTROLS: ToolpathControls = {
   cancel() {},
   retry() {},
-  exportGcode: async () => ({ error: "Toolpaths aren't being computed." }),
+  exportGcode: async () => ({ error: { code: "workspace.toolpathsOff" } }),
 };
 
 /**
