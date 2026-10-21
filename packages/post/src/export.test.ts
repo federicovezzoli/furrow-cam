@@ -18,6 +18,7 @@ import {
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
+import { GcodeExportError } from "./post";
 
 function rectangle([x, y]: Point, width: number, height: number): Path {
   return {
@@ -187,7 +188,7 @@ describe("exportGcode", () => {
             ])
           : undefined,
     });
-    expect(warnings).toEqual([expect.stringContaining("no deeper than the stock's bottom")]);
+    expect(warnings).toEqual([{ operation: "Rough", message: { code: "toolpath.belowStock" } }]);
     expect(gcode).toContain("(Operation: Rough)");
   });
 
@@ -232,7 +233,7 @@ describe("exportGcode", () => {
     });
     expect(gcode).toContain("(Operation: Rough)");
     expect(gcode).not.toContain("(Operation: Rest)");
-    expect(warnings).toEqual(["Rest: no toolpath, left out of the program."]);
+    expect(warnings).toEqual([{ operation: "Rest", message: { code: "export.noToolpath" } }]);
   });
 
   it("includes the toolpath warnings, named by operation", () => {
@@ -247,7 +248,10 @@ describe("exportGcode", () => {
       },
     ];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
-      "Holes: Skipped 1 path: drilling needs circles or points.",
+      {
+        operation: "Holes",
+        message: { code: "toolpath.skippedNonCircles", values: { count: 1 } },
+      },
     ]);
   });
 
@@ -256,7 +260,7 @@ describe("exportGcode", () => {
     const [holes, ...rest] = doc.operations as [Operation, ...Operation[]];
     doc.operations = [{ ...holes, targets: [] }, ...rest];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
-      "Holes: no toolpath, left out of the program.",
+      { operation: "Holes", message: { code: "export.noToolpath" } },
     ]);
   });
 
@@ -265,9 +269,10 @@ describe("exportGcode", () => {
     doc.operations = doc.operations.map((operation) =>
       operation.type === "profile" ? { ...operation, tool: drill } : operation,
     );
-    expect(() => exportGcode(doc, "Plate")).toThrow(
-      "Cut out: Drill bits can't cut sideways: pick an end mill or a V-bit.",
-    );
+    expect(exportDetail(() => exportGcode(doc, "Plate"))).toEqual({
+      operation: "Cut out",
+      message: { code: "operation.drillsCantCutSideways" },
+    });
   });
 
   it("refuses a project with nothing to cut", () => {
@@ -277,7 +282,7 @@ describe("exportGcode", () => {
         { ...doc, operations: doc.operations.map((op) => ({ ...op, enabled: false })) },
         "Plate",
       ),
-    ).toThrow("There are no enabled operations to export.");
+    ).toThrow("export.noEnabled");
     expect(() =>
       exportGcode(
         {
@@ -288,6 +293,17 @@ describe("exportGcode", () => {
         },
         "Plate",
       ),
-    ).toThrow("None of the enabled operations has a toolpath to export.");
+    ).toThrow("export.noneHasToolpath");
   });
 });
+
+/** What `run` threw as a `GcodeExportError`. */
+function exportDetail(run: () => unknown) {
+  try {
+    run();
+  } catch (error) {
+    if (error instanceof GcodeExportError) return error.detail;
+    throw error;
+  }
+  throw new Error("Nothing was thrown");
+}

@@ -1,5 +1,5 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
-import type { ProjectDocument } from "@furrow/document";
+import type { Message, ProjectDocument } from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
 import type { ExportInput } from "../lib/toolpath-export";
 import type { DocumentStore } from "./document-store";
@@ -58,7 +58,8 @@ type PendingExport = {
 };
 
 /** The program, why it couldn't be exported, or the mesh the worker needs for it. */
-export type GcodeExportResult = GcodeExport | { error: string };
+/** An export's error is a core package's message, with the operation it is about, if any. */
+export type GcodeExportResult = GcodeExport | { error: string | Message; operation?: string };
 export type GcodeExportResponse = { export: number } & (
   | GcodeExportResult
   | { missingMesh: string }

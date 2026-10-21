@@ -8,7 +8,8 @@ import {
 } from "@furrow/document";
 import { DRILL_DIAMETER_TOLERANCE, isRound, roundness } from "../geometry/circle";
 import { arcStep } from "../geometry/flatten";
-import { depthLevels, plural } from "./passes";
+import type { ToolpathMessage } from "./messages";
+import { depthLevels } from "./passes";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type DrillOptions = {
@@ -51,7 +52,7 @@ export function drillToolpath(
   options: DrillOptions,
 ): Toolpath {
   const { tool, params } = operation;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
 
   const radius = tool.diameter / 2;
   const slack = DRILL_DIAMETER_TOLERANCE / 2 + 1e-9;
@@ -74,16 +75,15 @@ export function drillToolpath(
       else found.push({ center: round.center, bore: round.max - radius });
     }
   }
-  if (tooSmall > 0) warnings.push(`Skipped ${plural(tooSmall, "circle")} smaller than the tool.`);
+  if (tooSmall > 0)
+    warnings.push({ code: "toolpath.skippedSmallCircles", values: { count: tooSmall } });
   if (tooBig > 0) {
-    warnings.push(
-      `Skipped ${plural(tooBig, "circle")} larger than the drill: bore them with an end mill.`,
-    );
+    warnings.push({ code: "toolpath.skippedLargeCircles", values: { count: tooBig } });
   }
   if (other > 0) {
-    warnings.push(`Skipped ${plural(other, "path")}: drilling needs circles or points.`);
+    warnings.push({ code: "toolpath.skippedNonCircles", values: { count: other } });
   }
-  if (params.depth > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
   const builder = new ToolpathBuilder(options.safeZ, options.entryClearance);
   const { clearance } = builder;

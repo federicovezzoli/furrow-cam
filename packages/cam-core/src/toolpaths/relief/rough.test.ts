@@ -144,7 +144,7 @@ describe("roughingArea", () => {
       ),
     );
     expect(toolpath.moves).toEqual([]);
-    expect(toolpath.warnings).toEqual([expect.stringContaining("isn't on the stock")]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.roughMarginOffStock" }]);
   });
 
   it("brings the tool's centre to the stock's edges the margin reaches", () => {
@@ -468,7 +468,7 @@ describe("reliefRoughSteps", () => {
   it("cuts no deeper than the stock's bottom, and says so", () => {
     const toolpath = rough(endMill, { stockToLeave: 0.5 }, { stockBottom: -6 });
     expect(Math.min(...feedPoints(toolpath).map(([, , z]) => z))).toBeCloseTo(-6);
-    expect(toolpath.warnings).toEqual([expect.stringContaining("no deeper than the stock")]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.belowStock" }]);
     // A stock deep enough changes nothing.
     expect(rough(endMill, {}, { stockBottom: -20 })).toEqual(rough(endMill));
   });
@@ -476,13 +476,13 @@ describe("reliefRoughSteps", () => {
   it("has nothing to rough when the stock to leave covers the model", () => {
     expect(rough(endMill, { stockToLeave: 10 })).toEqual({
       moves: [],
-      warnings: [expect.stringContaining("nothing to rough out")],
+      warnings: [{ code: "toolpath.roughNothing" }],
     });
   });
 
   it("warns when the model is deeper than the tool's flutes", () => {
     expect(rough({ ...endMill, fluteLength: 5 }).warnings).toEqual([
-      "The depth exceeds the tool's flute length.",
+      { code: "toolpath.depthExceedsFlutes" },
     ]);
   });
 

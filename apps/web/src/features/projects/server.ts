@@ -1,6 +1,7 @@
 import "server-only";
 import {
   CURRENT_SCHEMA_VERSION,
+  issueMessage,
   type Machine,
   Name,
   type ProjectDocument,
@@ -8,7 +9,7 @@ import {
   ProjectDocumentVersionError,
   parseProjectDocument,
 } from "@furrow/document";
-import type { Translator } from "@furrow/ui/lib/i18n";
+import { formatMessage, type Translator } from "@furrow/ui/lib/i18n";
 import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
 import { z } from "zod";
@@ -92,7 +93,7 @@ export function parseStoredDocument(
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) return fail(savedByNewerRelease(error, t));
     // e.g. a missing migration.
-    if (error instanceof ProjectDocumentVersionError) return fail(`${error.message}.`);
+    if (error instanceof ProjectDocumentVersionError) return fail(formatMessage(t, error.detail));
     if (error instanceof z.ZodError) return fail(t("Projects.contentsInvalid"));
     throw error;
   }
@@ -180,11 +181,11 @@ export function parseProjectFile(
       return { error: t("Projects.fileCantImport", { reason: savedByNewerRelease(error, t) }) };
     }
     if (error instanceof ProjectDocumentVersionError) {
-      return { error: t("Projects.fileCantImport", { reason: `${error.message}.` }) };
+      return { error: t("Projects.fileCantImport", { reason: formatMessage(t, error.detail) }) };
     }
     if (error instanceof z.ZodError) {
       const { issues } = error;
-      const listed = z.prettifyError(new z.ZodError(issues.slice(0, MAX_LISTED_ISSUES)));
+      const listed = listIssues(issues.slice(0, MAX_LISTED_ISSUES), t);
       const more = issues.length - MAX_LISTED_ISSUES;
       const issuesText =
         more > 0 ? `${listed}\n${t("Projects.moreProblems", { count: more })}` : listed;
@@ -192,6 +193,16 @@ export function parseProjectFile(
     }
     throw error;
   }
+}
+
+/** Validation issues in `t`'s language, one per line with where they are (ADR-0054). */
+export function listIssues(issues: readonly z.core.$ZodIssue[], t: Translator): string {
+  return issues
+    .map((issue) => {
+      const message = formatMessage(t, issueMessage(issue));
+      return issue.path.length > 0 ? `✖ ${message} → ${issue.path.join(".")}` : `✖ ${message}`;
+    })
+    .join("\n");
 }
 
 export const PROJECT_NAME_MAX = 100;

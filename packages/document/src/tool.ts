@@ -8,7 +8,7 @@ export const CutDirection = z.enum(["upcut", "downcut", "compression"]);
 export type CutDirection = z.infer<typeof CutDirection>;
 
 /** `#rrggbb` in lowercase, as an `<input type="color">` produces. */
-export const HexColor = z.string().regex(/^#[0-9a-f]{6}$/, "Must be a #rrggbb colour");
+export const HexColor = z.string().regex(/^#[0-9a-f]{6}$/, "validation.colour");
 export type HexColor = z.infer<typeof HexColor>;
 
 const EndMillType = ToolType.extract(["flat_end_mill", "ball_end_mill"]);
@@ -53,34 +53,42 @@ export const Tool = z
   .superRefine((tool, ctx) => {
     const isEndMill = EndMillType.safeParse(tool.type).success;
     if (isEndMill && tool.cutDirection === null) {
-      ctx.addIssue({ code: "custom", path: ["cutDirection"], message: "Required for end mills" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["cutDirection"],
+        message: "tool.cutDirectionRequired",
+      });
     }
     if (!isEndMill && tool.cutDirection !== null) {
-      ctx.addIssue({ code: "custom", path: ["cutDirection"], message: "Only for end mills" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["cutDirection"],
+        message: "tool.cutDirectionEndMillsOnly",
+      });
     }
     for (const key of ["vAngle", "tipDiameter"] as const) {
       if (tool.type === "v_bit" && tool[key] === null) {
-        ctx.addIssue({ code: "custom", path: [key], message: "Required for V-bits" });
+        ctx.addIssue({ code: "custom", path: [key], message: "tool.vBitRequired" });
       }
       if (tool.type !== "v_bit" && tool[key] !== null) {
-        ctx.addIssue({ code: "custom", path: [key], message: "Only for V-bits" });
+        ctx.addIssue({ code: "custom", path: [key], message: "tool.vBitOnly" });
       }
     }
     if (tool.type === "drill" && tool.plungeAngle !== 90) {
-      ctx.addIssue({ code: "custom", path: ["plungeAngle"], message: "Drills plunge at 90°" });
+      ctx.addIssue({ code: "custom", path: ["plungeAngle"], message: "tool.drillPlunge90" });
     }
     if (tool.stepDown > tool.fluteLength) {
       ctx.addIssue({
         code: "custom",
         path: ["stepDown"],
-        message: "Must not exceed the flute length",
+        message: "tool.exceedsFluteLength",
       });
     }
     if (tool.tipDiameter !== null && tool.tipDiameter >= tool.diameter) {
       ctx.addIssue({
         code: "custom",
         path: ["tipDiameter"],
-        message: "Must be smaller than the diameter",
+        message: "tool.smallerThanDiameter",
       });
     }
   });

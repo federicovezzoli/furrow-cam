@@ -3,7 +3,7 @@ import { Point } from "./geometry";
 import { PositiveLength } from "./units";
 
 /** A SHA-256 digest as 64 lowercase hex digits. */
-export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, "Must be a SHA-256 hash in lowercase hex");
+export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, "validation.sha256");
 export type Sha256 = z.infer<typeof Sha256>;
 
 /** A point in 3D, `[x, y, z]`. */
@@ -55,7 +55,7 @@ export const Model = z.strictObject({
   bounds: z
     .strictObject({ min: Point3, max: Point3 })
     .refine(({ min, max }) => min.every((value, i) => value <= (max[i] as number)), {
-      message: "The minimum corner must not exceed the maximum",
+      message: "model.cornerOrder",
     }),
   placement: ModelPlacement,
   /**

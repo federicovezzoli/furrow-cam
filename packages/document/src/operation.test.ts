@@ -406,9 +406,9 @@ describe("toolProblem", () => {
 
   it("refuses drill bits on operations that cut sideways", () => {
     for (const operation of [profile, pocket, reliefRough, reliefFinish]) {
-      expect(toolProblem({ ...operation, tool: drill } as Operation)).toBe(
-        "Drill bits can't cut sideways: pick an end mill or a V-bit",
-      );
+      expect(toolProblem({ ...operation, tool: drill } as Operation)).toEqual({
+        code: "operation.drillsCantCutSideways",
+      });
       expect(toolProblem({ ...operation, tool: endMill } as Operation)).toBeNull();
       expect(toolProblem({ ...operation, tool: vBit } as Operation)).toBeNull();
     }

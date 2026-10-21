@@ -1,4 +1,5 @@
 import type { StlLimits } from "@furrow/cam-core";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentState, DocumentStore } from "../stores/document-store";
 import { hasImportedFile, ONE_FILE } from "../stores/geometry-actions";
 import { addModel } from "../stores/model-actions";
@@ -7,10 +8,17 @@ import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
+/** Why an STL file can't be imported, for the user (ADR-0054). */
+export class MeshImportError extends Error {
+  constructor(readonly detail: Translatable) {
+    super(typeof detail === "string" ? detail : detail.code);
+  }
+}
+
 /**
  * Reads and checks an STL file in a Web Worker of its own (ADR-0004), which
- * then goes away with the mesh. Throws an `Error` for the user if the file
- * can't be imported.
+ * then goes away with the mesh. Throws a `MeshImportError` if the file can't
+ * be imported.
  */
 export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSummary> {
   return new Promise((resolve, reject) => {
@@ -23,13 +31,15 @@ export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSu
         const { sha256, triangles, bounds } = data;
         resolve({ sha256, triangles, bounds });
       } else {
-        reject(new Error(data.kind === "failed" ? data.error : "This file couldn't be read."));
+        reject(
+          new MeshImportError(data.kind === "failed" ? data.error : "This file couldn't be read."),
+        );
       }
     };
     worker.onerror = (event) => {
       event.preventDefault();
       worker.terminate();
-      reject(new Error("This file couldn't be read."));
+      reject(new MeshImportError("This file couldn't be read."));
     };
     worker.postMessage({ kind: "parse", id: 0, bytes, limits }, [bytes]);
   });
@@ -70,7 +80,7 @@ export async function importModel(
 ) {
   const fileName = file.name;
   const { setModelImport } = workspace.getState();
-  const fail = (error: string) => setModelImport({ fileName, error });
+  const fail = (error: Translatable) => setModelImport({ fileName, error });
   setModelImport({ fileName, error: null });
 
   if (hasImportedFile(document.getState().document)) {
@@ -78,14 +88,14 @@ export async function importModel(
     return;
   }
   if (file.size > limits.maxBytes) {
-    fail(`This file is larger than ${limits.maxBytes / 1_000_000} MB, the most allowed.`);
+    fail({ code: "stl.tooLarge", values: { mb: limits.maxBytes / 1_000_000 } });
     return;
   }
   let mesh: MeshSummary;
   try {
     mesh = await parseMesh(await file.arrayBuffer(), limits);
   } catch (error) {
-    fail(error instanceof Error ? error.message : "This file couldn't be read.");
+    fail(error instanceof MeshImportError ? error.detail : "This file couldn't be read.");
     return;
   }
   const upload = await meshes.put(mesh.sha256, file);

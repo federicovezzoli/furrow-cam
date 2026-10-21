@@ -1,7 +1,9 @@
-import type { Toolpath, ToolpathMove } from "@furrow/cam-core";
+import type { Toolpath, ToolpathMessage, ToolpathMove } from "@furrow/cam-core";
 import {
   clearingTool,
+  type DocumentMessage,
   type Machine,
+  type Message,
   type Operation,
   type PostProcessorId,
   type Stock,
@@ -26,8 +28,33 @@ export type PostOutput = {
   /** The program, one block per line, ending with a newline. */
   gcode: string;
   /** Things the user should know, e.g. feeds lowered to the machine's limits. */
-  warnings: string[];
+  warnings: PostWarning[];
 };
+
+/** What exporting says (ADR-0054); toolpath warnings pass through as theirs. */
+export const POST_MESSAGES = [
+  "export.noEnabled",
+  "export.noneHasToolpath",
+  "export.noToolpath",
+  "grbl.slowed",
+  "grbl.spindleClamped",
+  "grbl.unfilledPlaceholder",
+] as const;
+
+export type PostMessage = Message<(typeof POST_MESSAGES)[number]>;
+
+/** A warning or error about the program, and the operation it is about, if any. */
+export type PostWarning = {
+  operation?: string;
+  message: PostMessage | ToolpathMessage | DocumentMessage;
+};
+
+/** Why there is no program to export (ADR-0054); the `message` is the code. */
+export class GcodeExportError extends Error {
+  constructor(readonly detail: PostWarning) {
+    super(detail.message.code);
+  }
+}
 
 /**
  * Turns toolpaths into a G-code dialect (PRD-0001 R12). A new dialect is a

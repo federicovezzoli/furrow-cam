@@ -1,3 +1,5 @@
+import type { ImportMessage } from "../messages";
+
 /** One group of a DXF file: a group code and its value, as text. */
 export type DxfPair = { code: number; value: string };
 
@@ -5,7 +7,12 @@ export type DxfPair = { code: number; value: string };
 export type DxfRecord = { type: string; pairs: DxfPair[] };
 
 /** The file isn't an ASCII DXF file at all; anything less is a warning instead. */
-export class DxfImportError extends Error {}
+export class DxfImportError extends Error {
+  /** Why, for the UI to translate (ADR-0054); the `message` is its code. */
+  constructor(readonly detail: ImportMessage) {
+    super(detail.code);
+  }
+}
 
 const BINARY_SENTINEL = "AutoCAD Binary DXF";
 
@@ -45,7 +52,7 @@ const Decoder = (globalThis as unknown as { TextDecoder: TextDecoderConstructor 
  * read as UTF-8 if it is valid UTF-8, else as Windows-1252, DXF's default.
  * Only names and text depend on it: coordinates are ASCII.
  */
-export function decodeDxf(bytes: Uint8Array): { text: string; warnings: string[] } {
+export function decodeDxf(bytes: Uint8Array): { text: string; warnings: ImportMessage[] } {
   // Every DXF encoding is ASCII-compatible, so the header can be read as Latin-1 first.
   // Binary files decode to text that starts with their sentinel, which `readPairs` rejects.
   const latin1 = new Decoder("latin1").decode(bytes.subarray(0, 64 * 1024));
@@ -59,9 +66,7 @@ export function decodeDxf(bytes: Uint8Array): { text: string; warnings: string[]
     if (label) return { text: new Decoder(label).decode(bytes), warnings: [] };
     return {
       text: new Decoder("windows-1252").decode(bytes),
-      warnings: [
-        `The file's code page (${codepage}) isn't supported, so layer names may show the wrong characters.`,
-      ],
+      warnings: [{ code: "dxf.codepage", values: { codepage } }],
     };
   }
   try {
@@ -88,9 +93,7 @@ function headerValue(text: string, name: string): string | null {
 /** Splits a DXF file into pairs. Throws `DxfImportError` if it isn't one. */
 export function readPairs(text: string): DxfPair[] {
   if (text.startsWith(BINARY_SENTINEL)) {
-    throw new DxfImportError(
-      "This is a binary DXF file, which isn't supported. Export it as ASCII DXF.",
-    );
+    throw new DxfImportError({ code: "dxf.binary" });
   }
   const lines = text.replace(/^﻿/, "").split(/\r\n|\r|\n/);
   // A trailing newline leaves an empty last line.
@@ -99,13 +102,13 @@ export function readPairs(text: string): DxfPair[] {
   for (let i = 0; i + 1 < lines.length; i += 2) {
     const codeText = (lines[i] as string).trim();
     if (!/^-?\d+$/.test(codeText)) {
-      throw new DxfImportError(`This file isn't a valid DXF file (line ${i + 1}).`);
+      throw new DxfImportError({ code: "dxf.invalid", values: { line: i + 1 } });
     }
     pairs.push({ code: Number(codeText), value: lines[i + 1] as string });
   }
   const first = pairs.find((pair) => pair.code !== 999);
   if (first?.code !== 0 || first.value.trim() !== "SECTION") {
-    throw new DxfImportError("This file isn't a DXF drawing.");
+    throw new DxfImportError({ code: "dxf.notDxf" });
   }
   return pairs;
 }

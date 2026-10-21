@@ -35,7 +35,10 @@ describe("exportFromResults", () => {
     const results = new ToolpathResults();
     const [first, ...others] = inputs as [ExportInput, ...ExportInput[]];
     // The first operation's toolpath is from older inputs; the others are missing.
-    results.keep(first.operationId, "older", { moves: [], warnings: ["stale"] });
+    results.keep(first.operationId, "older", {
+      moves: [],
+      warnings: [{ code: "toolpath.noArea" }],
+    });
     const compute = vi.fn(generateToolpath);
     const exported = exportFromResults(document, "Plate", inputs, results, compute);
     expect(compute).toHaveBeenCalledTimes(inputs.length);

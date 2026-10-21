@@ -17,6 +17,8 @@ import type { Units } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { UploadIcon, XIcon } from "lucide-react";
 import {
@@ -43,7 +45,7 @@ const MAX_FILE_SIZE = 20_000_000;
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
 
-type Notice = { kind: "error" | "info"; messages: string[] };
+type Notice = { kind: "error" | "info"; messages: Translatable[] };
 
 /** What a drawing unit is in a DXF file that doesn't say. */
 const UNIT_OPTIONS = [
@@ -83,6 +85,7 @@ export function GeometryImport() {
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const format = useFormatMessage();
   /** Counts picks, so a slow file read can't land after the user picked another file. */
   const picks = useRef(0);
   /** Set by a successful import, whose warnings outlive the geometry it adds. */
@@ -102,7 +105,7 @@ export function GeometryImport() {
 
   function fail(error: unknown) {
     if (!isImportError(error)) console.error(error);
-    const message = isImportError(error) ? error.message : "This file couldn't be imported.";
+    const message = isImportError(error) ? error.detail : "This file couldn't be imported.";
     setNotice({ kind: "error", messages: [message] });
   }
 
@@ -270,7 +273,7 @@ export function GeometryImport() {
               <>
                 <div role="alert" className="grid flex-1 gap-1 text-destructive">
                   <p className="font-medium break-all">{modelImport.fileName}</p>
-                  <p>{modelImport.error}</p>
+                  <p>{format(modelImport.error)}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -297,7 +300,7 @@ export function GeometryImport() {
               )}
             >
               {notice.messages.map((message) => (
-                <p key={message}>{message}</p>
+                <p key={JSON.stringify(message)}>{format(message)}</p>
               ))}
             </div>
             <Button

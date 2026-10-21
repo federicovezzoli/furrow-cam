@@ -8,8 +8,10 @@ import {
   canDrill,
   canEngrave,
   canVCarve,
+  type DocumentMessage,
   DrillParams,
   EngraveParams,
+  issueMessage,
   Name,
   normalizeTargets,
   Operation,
@@ -27,6 +29,7 @@ import {
   toolProblem,
   VCarveParams,
 } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { z } from "zod";
 import { track } from "../lib/telemetry";
 import type { DocumentStore } from "./document-store";
@@ -37,7 +40,7 @@ import type { DocumentStore } from "./document-store";
  * invalid change nothing and return why.
  */
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = { ok: true } | { ok: false; error: Translatable };
 
 const OK: ActionResult = { ok: true };
 
@@ -292,8 +295,9 @@ function changeOperation(
   });
 }
 
-function firstError(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Invalid value";
+function firstError(error: z.ZodError): DocumentMessage {
+  const [issue] = error.issues;
+  return issue ? issueMessage(issue) : { code: "validation.invalid" };
 }
 
 export function renameOperation(store: DocumentStore, id: string, name: string): ActionResult {
@@ -331,12 +335,12 @@ export function deleteOperation(store: DocumentStore, id: string) {
 }
 
 /** Why `operation` can't take `tool`, e.g. a V-bit to drill or a drill bit to profile, or `null`. */
-export function toolError(operation: Operation, tool: Tool): string | null {
+export function toolError(operation: Operation, tool: Tool): DocumentMessage | null {
   return operationError({ ...operation, tool } as Operation);
 }
 
 /** Why `candidate` is invalid or can't cut with its tool, or `null`. */
-function operationError(candidate: Operation): string | null {
+function operationError(candidate: Operation): DocumentMessage | null {
   const parsed = Operation.safeParse(candidate);
   return parsed.success ? toolProblem(candidate) : firstError(parsed.error);
 }
@@ -362,7 +366,7 @@ export function toolKey(tool: Tool): string {
 }
 
 /** An operation left with its old tool by `replaceToolSnapshots`, and why. */
-export type RejectedOperation = { id: string; name: string; error: string };
+export type RejectedOperation = { id: string; name: string; error: Translatable };
 
 /**
  * Gives every operation whose tool snapshot is `previous` the snapshot `next`

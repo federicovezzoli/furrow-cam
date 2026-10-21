@@ -1,4 +1,4 @@
-import type { ToolpathLines } from "@furrow/cam-core";
+import type { ToolpathLines, ToolpathMessage } from "@furrow/cam-core";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -10,7 +10,7 @@ import type { GcodeExportResult } from "./toolpath-scheduler";
  * moves stay in the worker (ADR-0004).
  */
 export type ToolpathPreview = {
-  warnings: string[];
+  warnings: ToolpathMessage[];
   lines: ToolpathLines;
   clearing?: ToolpathLines;
 };

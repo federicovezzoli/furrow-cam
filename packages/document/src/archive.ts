@@ -1,6 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { ProjectDocument } from "./document";
+import type { DocumentMessage } from "./message";
 import { ProjectDocumentTooNewError, parseProjectDocument } from "./migrations";
 
 /**
@@ -72,12 +73,16 @@ const VersionFile = z.object({
   document: z.unknown(),
 });
 
-/** Why an archive can't be imported, for the user. */
+/** Why an archive can't be imported, for the UI to translate (ADR-0054); the `message` is its code. */
 export class ProjectArchiveError extends Error {
   override name = "ProjectArchiveError";
+
+  constructor(readonly detail: DocumentMessage) {
+    super(detail.code);
+  }
 }
 
-const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
+const NOT_A_PROJECT: DocumentMessage = { code: "archive.notAProject" };
 
 /**
  * Packs `document` and its `versions` with the mesh files their models
@@ -189,7 +194,7 @@ export async function readProjectArchive(
     // The size in the header may not be the real one.
     if (mesh.byteLength > maxMeshBytes) throw archiveMeshTooLarge(maxMeshBytes);
     if ((await sha256Hex(mesh)) !== sha256) {
-      throw new ProjectArchiveError("A model in this file is damaged: it doesn't match its hash.");
+      throw new ProjectArchiveError({ code: "archive.modelDamaged" });
     }
     meshes.set(sha256, mesh);
   }
@@ -215,22 +220,25 @@ function readVersion(
   try {
     fields = VersionFile.parse(JSON.parse(strFromU8(file)));
   } catch {
-    throw new ProjectArchiveError("A version in this file is damaged.");
+    throw new ProjectArchiveError({ code: "archive.versionDamaged" });
   }
-  if (fields.id !== id) throw new ProjectArchiveError("A version in this file is damaged.");
-  const name = fields.label === null ? "A version in this file" : `The version “${fields.label}”`;
+  if (fields.id !== id) throw new ProjectArchiveError({ code: "archive.versionDamaged" });
+  // The messages name the version by its label, or say "a version" without one.
+  const name = { labelled: fields.label === null ? "no" : "yes", label: fields.label ?? "" };
   let document: ProjectDocument;
   try {
     document = parseProjectDocument(fields.document);
   } catch (error) {
-    throw new ProjectArchiveError(
-      error instanceof ProjectDocumentTooNewError
-        ? `${name} was saved by a newer version of Furrow CAM.`
-        : `${name} isn't a valid project.`,
-    );
+    throw new ProjectArchiveError({
+      code:
+        error instanceof ProjectDocumentTooNewError
+          ? "archive.versionTooNew"
+          : "archive.versionInvalid",
+      values: name,
+    });
   }
   if (missingArchiveMeshes(document, meshes).length > 0) {
-    throw new ProjectArchiveError(`${name} is missing one of its 3D models.`);
+    throw new ProjectArchiveError({ code: "archive.versionMissingModel", values: name });
   }
   return { ...fields, document };
 }
@@ -246,29 +254,34 @@ export function missingArchiveMeshes(
 }
 
 function tooManyMeshes() {
-  return new ProjectArchiveError(
-    `A project file holds at most ${MAX_ARCHIVE_MESHES} different 3D models.`,
-  );
+  return new ProjectArchiveError({
+    code: "archive.tooManyMeshes",
+    values: { max: MAX_ARCHIVE_MESHES },
+  });
 }
 
 function tooManyVersions() {
-  return new ProjectArchiveError(`A project file holds at most ${MAX_ARCHIVE_VERSIONS} versions.`);
+  return new ProjectArchiveError({
+    code: "archive.tooManyVersions",
+    values: { max: MAX_ARCHIVE_VERSIONS },
+  });
 }
 
 function documentTooLarge() {
-  return new ProjectArchiveError("This project's document is too large to import.");
+  return new ProjectArchiveError({ code: "archive.documentTooLarge" });
 }
 
 function tooLarge(maxMeshBytes: number) {
   const mb = Math.round(maxArchiveBytes(maxMeshBytes) / 1_000_000);
-  return new ProjectArchiveError(`This file is too large to import (the limit is ${mb} MB).`);
+  return new ProjectArchiveError({ code: "archive.fileTooLarge", values: { mb } });
 }
 
 /** The error for an archive with a mesh larger than `maxMeshBytes`. */
 export function archiveMeshTooLarge(maxMeshBytes: number) {
-  return new ProjectArchiveError(
-    `A model in this file is larger than ${maxMeshBytes / 1_000_000} MB, the most allowed.`,
-  );
+  return new ProjectArchiveError({
+    code: "archive.meshTooLarge",
+    values: { mb: maxMeshBytes / 1_000_000 },
+  });
 }
 
 /** The SHA-256 of `bytes` in lowercase hex, as models identify their meshes. */

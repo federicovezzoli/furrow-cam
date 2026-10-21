@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@furrow/ui/components/ui/dialog";
+import { errorText } from "@furrow/ui/lib/i18n";
 import { exportProjectFile } from "@furrow/workspace/lib/export-project";
 import type { AccountReason } from "@furrow/workspace/lib/workspace-host";
 import { useWorkspaceHost } from "@furrow/workspace/providers/workspace-host";
@@ -39,6 +40,7 @@ export function AccountDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("Guest");
+  const appT = useTranslations();
   const { project, meshes } = useWorkspaceHost();
   const documentStore = useDocumentStoreApi();
   // Kept while closing, so the text doesn't change as the dialog animates out.
@@ -60,7 +62,7 @@ export function AccountDialog({
       await exportProjectFile(documentStore.getState().document, project.name, meshes.get);
       setError(null);
     } catch (error) {
-      setError(error instanceof Error ? error.message : t("cantExport"));
+      setError(errorText(appT, error, error instanceof Error ? error.message : t("cantExport")));
     } finally {
       setExporting(false);
     }

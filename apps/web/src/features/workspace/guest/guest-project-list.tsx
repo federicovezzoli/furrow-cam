@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@furrow/ui/components/ui/table";
+import { errorText } from "@furrow/ui/lib/i18n";
 import { exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon, PencilIcon, UploadIcon } from "lucide-react";
 import Link from "next/link";
@@ -43,7 +44,8 @@ import {
 const ACCEPT = ".furrow,.furrow.json,.furrow.zip,.json,.zip,application/json,application/zip";
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : clientTranslator()("Guest.somethingWrong");
+  const t = clientTranslator();
+  return errorText(t, error, error instanceof Error ? error.message : t("Guest.somethingWrong"));
 }
 
 /**

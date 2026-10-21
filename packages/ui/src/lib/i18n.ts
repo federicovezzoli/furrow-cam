@@ -1,3 +1,4 @@
+import type { Message } from "@furrow/document";
 import { createTranslator, type IntlError, IntlErrorCode } from "use-intl/core";
 import de from "../messages/de.json";
 import en from "../messages/en.json";
@@ -39,4 +40,46 @@ export type Translator = ReturnType<typeof translator>;
 /** A translator outside React, e.g. in a server component. */
 export function translator(locale: Locale) {
   return createTranslator({ locale, messages: messagesFor(locale), onError: onIntlError });
+}
+
+/** Any translator, from `translator` or `useTranslations`, without a namespace. */
+// biome-ignore lint/suspicious/noExplicitAny: translators are typed by their catalog keys; these helpers build keys at runtime.
+type AnyTranslator = (key: any, values?: any) => string;
+
+/** Text to show: already translated, or a core package's message (ADR-0054). */
+export type Translatable = string | Message;
+
+/** `message` in `t`'s language: a core package's code under `Core`, or text as it is. */
+export function formatMessage(t: AnyTranslator, message: Translatable): string {
+  return typeof message === "string" ? message : t(`Core.${message.code}`, message.values);
+}
+
+/** A warning about the program, after the operation it is about, if any. */
+export function formatWarning(
+  t: AnyTranslator,
+  warning: { operation?: string; message: Translatable },
+): string {
+  const message = formatMessage(t, warning.message);
+  return warning.operation === undefined
+    ? message
+    : t("Core.withOperation", { operation: warning.operation, message });
+}
+
+/**
+ * What `error` says for the user: a core package's error translated from its
+ * `detail`, else `fallback` (its text is English, for developers).
+ */
+export function errorText(t: AnyTranslator, error: unknown, fallback: string): string {
+  const detail = (error as { detail?: unknown } | null)?.detail;
+  if (isMessage(detail)) return formatMessage(t, detail);
+  if (typeof detail === "object" && detail !== null && "message" in detail) {
+    const warning = detail as { operation?: string; message: unknown };
+    if (isMessage(warning.message))
+      return formatWarning(t, { ...warning, message: warning.message });
+  }
+  return fallback;
+}
+
+function isMessage(value: unknown): value is Message {
+  return typeof value === "object" && value !== null && typeof (value as Message).code === "string";
 }

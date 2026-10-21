@@ -24,6 +24,7 @@ import type {
  * the browser blocks storage in a private window.
  */
 
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import { clientTranslator } from "@/lib/client-translator";
 
 const DB_NAME = "furrow-guest";
@@ -151,7 +152,7 @@ function parseDocument(json: unknown): ProjectDocument {
       throw new UserError(t()("Guest.projectNewer"));
     }
     if (error instanceof ProjectDocumentVersionError) {
-      throw new UserError(t()("Guest.cantOpen", { reason: `${error.message}.` }));
+      throw new UserError(t()("Guest.cantOpen", { reason: formatMessage(t(), error.detail) }));
     }
     throw new UserError(t()("Guest.cantOpen", { reason: t()("Guest.contentsInvalid") }));
   }

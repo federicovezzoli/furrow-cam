@@ -63,7 +63,7 @@ scope.onmessage = ({ data }) => {
     } catch (error) {
       if (!(error instanceof StlImportError)) console.error(error);
       const message =
-        error instanceof StlImportError ? error.message : "This file couldn't be read.";
+        error instanceof StlImportError ? error.detail : "This file couldn't be read.";
       scope.postMessage({ kind: "failed", id: data.id, error: message });
     }
   });

@@ -5,6 +5,7 @@ import {
   sha256Hex,
 } from "@furrow/document";
 import { lowRider, model } from "@furrow/document/fixtures";
+import { MeshImportError } from "@furrow/workspace/lib/model-import";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const PROJECT = "00000000-0000-4000-8000-000000000001";
@@ -23,7 +24,10 @@ const parseMesh = vi.hoisted(() => vi.fn());
 vi.mock("@/features/projects/actions", () => actions);
 vi.mock("@/features/assets/lib/meshes", () => ({ uploadMesh }));
 vi.mock("@/features/assets/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
-vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
+vi.mock("@furrow/workspace/lib/model-import", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@furrow/workspace/lib/model-import")>()),
+  parseMesh,
+}));
 
 const { importArchive, readArchive } = await import("./archive-import");
 
@@ -70,9 +74,10 @@ describe("importArchive", () => {
   });
 
   it("creates nothing when a mesh fails the STL import checks", async () => {
-    parseMesh.mockRejectedValue(new Error("This file has too many triangles."));
+    parseMesh.mockRejectedValue(new MeshImportError({ code: "stl.noTriangles" }));
+    // Tests run without a document, so messages are in English.
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({
-      error: "A model in this file can't be imported: This file has too many triangles.",
+      error: "A model in this file can't be imported: This file has no triangles.",
     });
     expect(actions.startArchiveImport).not.toHaveBeenCalled();
   });

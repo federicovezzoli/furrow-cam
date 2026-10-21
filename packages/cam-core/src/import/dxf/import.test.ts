@@ -122,7 +122,7 @@ describe("parseDxf", () => {
 
   it("rejects binary DXF", () => {
     const bytes = utf8("AutoCAD Binary DXF\r\n\u001a\u0000");
-    expect(() => parseDxf(bytes)).toThrow(/binary DXF/);
+    expect(() => parseDxf(bytes)).toThrow("dxf.binary");
   });
 
   it("decodes files before AutoCAD 2007 with their code page", () => {
@@ -149,7 +149,7 @@ describe("parseDxf", () => {
       "  9\n$ACADVER\n  1\nAC1009\n  9\n$DWGCODEPAGE\n  3\nDOS850\n  9\n$INSUNITS",
     );
     const { warnings } = importDxf(parseDxf(utf8(text)));
-    expect(warnings).toEqual([expect.stringContaining("DOS850")]);
+    expect(warnings).toEqual([{ code: "dxf.codepage", values: { codepage: "DOS850" } }]);
   });
 
   it("finds the code page in files with CR line endings and padded names", () => {
@@ -392,7 +392,7 @@ describe("importDxf", () => {
       ]),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped 3D faces, meshes and surfaces (1)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.faces", values: { count: 1 } }]);
   });
 
   it("imports ellipses as cubics on the ellipse", () => {
@@ -472,9 +472,7 @@ describe("importDxf", () => {
       dxf([entity("SPLINE", [8, "0"], [71, 3], [74, 2], [11, 0], [21, 0], [11, 10], [21, 10])]),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual([
-      expect.stringMatching(/^Skipped splines defined only by fit points .*\(1\)\.$/),
-    ]);
+    expect(warnings).toEqual([{ code: "dxf.skip.fitSplines", values: { count: 1 } }]);
   });
 
   it("mirrors entities whose extrusion is -Z, as Fusion writes them", () => {
@@ -504,7 +502,7 @@ describe("importDxf", () => {
       dxf([entity("CIRCLE", [8, "0"], [10, 0], [20, 0], [40, 5], [210, 0], [220, 1], [230, 1])]),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped entities not parallel to the XY plane (1)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.tilted", values: { count: 1 } }]);
   });
 
   it("ignores Z", () => {
@@ -535,7 +533,7 @@ describe("importDxf", () => {
       ),
     );
     expect(shapes.map((shape) => shape.layer)).toEqual(["On"]);
-    expect(warnings).toEqual(["Skipped entities on layers that are off or frozen (2)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.layersOff", values: { count: 2 } }]);
   });
 
   it("skips invisible and paper-space entities", () => {
@@ -543,7 +541,7 @@ describe("importDxf", () => {
       dxf([line(0, 0, 1, 0, [60, 1]), line(0, 0, 1, 0, [67, 1]), line(0, 5, 1, 5)]),
     );
     expect(shapes).toHaveLength(1);
-    expect(warnings).toEqual(["Skipped paper-space entities (layouts) (1)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.paperSpace", values: { count: 1 } }]);
   });
 
   it("reports what it can't import", () => {
@@ -557,10 +555,10 @@ describe("importDxf", () => {
       ]),
     );
     expect(warnings).toEqual([
-      "Skipped text (convert it to outlines before exporting) (2).",
-      "Skipped dimensions (1).",
-      "Skipped hatches and fills (1).",
-      "Skipped HELIX entities (1).",
+      { code: "dxf.skip.text", values: { count: 2 } },
+      { code: "dxf.skip.dimensions", values: { count: 1 } },
+      { code: "dxf.skip.hatches", values: { count: 1 } },
+      { code: "dxf.skip.entityType", values: { type: "HELIX", count: 1 } },
     ]);
   });
 
@@ -569,7 +567,7 @@ describe("importDxf", () => {
       dxf([line(0, 0, 1, 0).map(([code, value]) => [code, code === 11 ? "x" : value])]),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped entities with invalid or too large coordinates (1)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.invalidCoordinates", values: { count: 1 } }]);
   });
 
   it("names shapes with their source file", () => {
@@ -696,12 +694,12 @@ describe("block references", () => {
     );
     expect(shapes).toHaveLength(1);
     expectBounds(shapes[0]?.paths ?? [], [10, 0], [20, 10]);
-    expect(warnings).toEqual(["Skipped blocks that contain themselves (1)."]);
+    expect(warnings).toEqual([{ code: "dxf.skip.recursiveBlocks", values: { count: 1 } }]);
   });
 
   it("reports references to missing blocks", () => {
     expect(shapesOf(dxf([entity("INSERT", [8, "0"], [2, "Nowhere"])])).warnings).toEqual([
-      "Skipped references to missing blocks (1).",
+      { code: "dxf.skip.missingBlocks", values: { count: 1 } },
     ]);
   });
 
@@ -715,9 +713,10 @@ describe("block references", () => {
       blocks.push(block(`L${level}`, [0, 0], ...references));
     }
     const { warnings } = importDxf(dxf([entity("INSERT", [8, "0"], [2, "L6"])], { blocks }));
-    expect(warnings).toContain(
-      `The drawing has more than ${MAX_DXF_ENTITIES.toLocaleString("en")} entities, counting repeated copies, so the rest was skipped.`,
-    );
+    expect(warnings).toContainEqual({
+      code: "dxf.tooManyEntities",
+      values: { max: MAX_DXF_ENTITIES },
+    });
   });
 
   it("stops a huge array at the cap", { timeout: CAP_TEST_TIMEOUT }, () => {

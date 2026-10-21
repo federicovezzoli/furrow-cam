@@ -267,7 +267,7 @@ describe("importSvg", () => {
   it("skips missing references with a warning", () => {
     const { shapes, warnings } = importSvg(svg('<use href="#missing"/>'));
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped references to missing elements (1)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.missingReferences", values: { count: 1 } }]);
   });
 
   it.each([
@@ -280,7 +280,7 @@ describe("importSvg", () => {
       svg(body, 'id="root" width="100mm" height="50mm" viewBox="0 0 100 50"'),
     );
     expect(shapes).toHaveLength(1);
-    expect(warnings).toEqual(["Skipped circular references (1)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.circular", values: { count: 1 } }]);
   });
 
   it("stops at an element budget when references fan out", () => {
@@ -293,7 +293,7 @@ describe("importSvg", () => {
       createId,
     });
     expect(shapes.length).toBeLessThan(MAX_SVG_ELEMENTS);
-    expect(warnings).toEqual([expect.stringContaining("more than 200,000 elements")]);
+    expect(warnings).toEqual([expect.objectContaining({ code: "svg.tooManyElements" })]);
   });
 
   it("skips elements with relative or invalid positions instead of importing NaN", () => {
@@ -304,13 +304,13 @@ describe("importSvg", () => {
       ),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped elements with invalid or relative (%) positions (3)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.invalidPosition", values: { count: 3 } }]);
   });
 
   it("skips shapes whose coordinates overflow", () => {
     const { shapes, warnings } = importSvg(svg('<path d="M0 0 H1e400"/><path d="M0 0 H1"/>'));
     expect(shapes).toHaveLength(1);
-    expect(warnings).toEqual(["Skipped shapes with coordinates too large to import (1)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.tooLarge", values: { count: 1 } }]);
   });
 
   it("maps a nested svg's viewBox onto its viewport", () => {
@@ -346,7 +346,7 @@ describe("importSvg", () => {
       ),
     );
     expect(shapes).toEqual([]);
-    expect(warnings).toEqual(["Skipped nested viewports with relative (%) or missing sizes (2)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.nestedViewports", values: { count: 2 } }]);
   });
 
   it("takes a parsed document, so a file is parsed once", () => {
@@ -365,8 +365,8 @@ describe("importSvg", () => {
     );
     expect(shapes).toEqual([]);
     expect(warnings).toEqual([
-      "Skipped text (convert it to paths before exporting) (2).",
-      "Skipped images (1).",
+      { code: "svg.skip.text", values: { count: 2 } },
+      { code: "svg.skip.images", values: { count: 1 } },
     ]);
   });
 
@@ -427,7 +427,7 @@ describe("importSvg", () => {
     const warnings = (sheet: string) =>
       importSvg(svg(`<style>${sheet}</style><path d="M0 0 H1"/>`)).warnings;
     expect(warnings("g > .x { display: none } .y{display:none}")).toEqual([
-      expect.stringContaining("stylesheet hides elements"),
+      { code: "svg.stylesheetHides" },
     ]);
     expect(warnings("g path:hover, [data-a] { visibility: hidden }")).toHaveLength(1);
     expect(warnings("g > .x { fill: red } .y{display:none}")).toEqual([]);
@@ -436,7 +436,7 @@ describe("importSvg", () => {
   it("warns about shapes with relative sizes and keeps the rest", () => {
     const { shapes, warnings } = importSvg(svg('<rect width="50%" height="10"/><circle r="5"/>'));
     expect(shapes).toHaveLength(1);
-    expect(warnings).toEqual([expect.stringContaining("relative (%)")]);
+    expect(warnings).toEqual([expect.objectContaining({ code: "svg.skip.invalidSizes" })]);
   });
 
   it("names shapes and layers after Inkscape, Illustrator and Affinity labels", () => {
@@ -499,7 +499,7 @@ describe("importSvg on editor exports", () => {
       { kind: "arc", to: [54, 50], center: [50, 50], clockwise: true },
     ]);
     expectBounds(square.paths, [160, 45], [180, 65], 9);
-    expect(warnings).toEqual(["Skipped text (convert it to paths before exporting) (1)."]);
+    expect(warnings).toEqual([{ code: "svg.skip.text", values: { count: 1 } }]);
   });
 
   it("imports an Illustrator drawing in points at 72 DPI", () => {

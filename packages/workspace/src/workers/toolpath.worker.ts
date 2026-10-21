@@ -14,6 +14,7 @@ import {
   toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
+import { GcodeExportError } from "@furrow/post";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
 import { exportFromResults, ToolpathResults } from "../lib/toolpath-export";
 import type {
@@ -203,6 +204,13 @@ async function exportProgram({
   } catch (error) {
     if (error instanceof MissingMeshError) {
       scope.postMessage({ export: id, missingMesh: error.sha256 });
+    } else if (error instanceof GcodeExportError) {
+      const { message, operation } = error.detail;
+      scope.postMessage({
+        export: id,
+        error: message,
+        ...(operation !== undefined && { operation }),
+      });
     } else {
       const message = error instanceof Error ? error.message : String(error);
       scope.postMessage({ export: id, error: message });

@@ -3,6 +3,7 @@ import { union } from "../../geometry/clipper";
 import { flattenPath } from "../../geometry/flatten";
 import { MM_PER_INCH } from "../../units/units";
 import { defaultCreateId, isFinitePath, toStock } from "../common";
+import { type ImportMessage, type ImportMessageCode, SkipCounter } from "../messages";
 import { NUMBER_PATTERN, parseNumbers } from "./number";
 import { arcToCubics, parsePathData, type RawSegment, type RawSubpath } from "./path-data";
 import { Stylesheet } from "./style";
@@ -41,23 +42,28 @@ export type SvgImportOptions = {
 export type SvgImportResult = {
   shapes: Shape[];
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
-  warnings: string[];
+  warnings: ImportMessage[];
 };
 
 /** A parsed SVG file, so it can be checked with `svgNeedsDpi` and imported without parsing it twice. */
 export type SvgDocument = { readonly root: XmlElement };
 
 /** The file isn't an SVG document at all; anything less is a warning instead. */
-export class SvgImportError extends Error {}
+export class SvgImportError extends Error {
+  /** Why, for the UI to translate (ADR-0054); the `message` is its code. */
+  constructor(readonly detail: ImportMessage) {
+    super(detail.code);
+  }
+}
 
 /** Elements whose children are drawn. `symbol` is only drawn through `use`. */
 const CONTAINERS = new Set(["g", "a", "svg", "switch"]);
 
-/** Content that can't become geometry, with the advice shown when it is skipped. */
-const UNSUPPORTED: Record<string, string> = {
-  text: "text (convert it to paths before exporting)",
-  image: "images",
-  foreignObject: "embedded non-SVG content",
+/** Content that can't become geometry, with what is said when it is skipped. */
+const UNSUPPORTED: Record<string, ImportMessageCode> = {
+  text: "svg.skip.text",
+  image: "svg.skip.images",
+  foreignObject: "svg.skip.foreignObject",
 };
 
 /** Lengths in CSS units inside the drawing, in user units (CSS pixels at 96 per inch). */
@@ -74,7 +80,7 @@ const CSS_PX_PER_UNIT: Record<string, number> = {
 
 const LENGTH = new RegExp(String.raw`^\s*(${NUMBER_PATTERN})\s*([a-zA-Z]*)\s*$`);
 
-const INVALID_POSITION = "elements with invalid or relative (%) positions";
+const INVALID_POSITION = "svg.skip.invalidPosition";
 
 type Context = {
   /** From this element's user units to millimetres, from the file's origin. */
@@ -95,11 +101,11 @@ export function parseSvg(text: string): SvgDocument {
     root = parseXml(text);
   } catch (error) {
     if (error instanceof XmlError) {
-      throw new SvgImportError(`This file isn't valid XML: ${error.message}`);
+      throw new SvgImportError({ code: "svg.invalidXml", values: { position: error.position } });
     }
     throw error;
   }
-  if (localName(root) !== "svg") throw new SvgImportError("This file isn't an SVG drawing.");
+  if (localName(root) !== "svg") throw new SvgImportError({ code: "svg.notSvg" });
   return { root };
 }
 
@@ -144,8 +150,8 @@ export function importSvg(
   collectIds(root, ids);
   const styles = new Stylesheet(root);
 
-  const skipped = new Map<string, number>();
-  const skip = (what: string) => skipped.set(what, (skipped.get(what) ?? 0) + 1);
+  const skipped = new SkipCounter();
+  const skip = (code: ImportMessageCode) => skipped.add(code);
   const shapes: Shape[] = [];
   const page = pageTransform(root, dpi);
   /** Elements being drawn, from the root down through `use` references, to catch cycles. */
@@ -177,7 +183,7 @@ export function importSvg(
         : parent.visible;
     if (drawing.has(element)) {
       // SVG draws nothing for a reference to an element that contains it.
-      skip("circular references");
+      skip("svg.skip.circular");
       return;
     }
     const tag = localName(element);
@@ -186,7 +192,7 @@ export function importSvg(
     if (transform !== undefined) {
       const parsed = parseTransform(transform);
       if (parsed) matrix = multiply(matrix, parsed);
-      else skip("elements with an invalid transform (drawn untransformed)");
+      else skip("svg.skip.invalidTransform");
     }
 
     if (CONTAINERS.has(tag)) {
@@ -231,7 +237,7 @@ export function importSvg(
       const href = element.attributes.href ?? element.attributes["xlink:href"];
       const target = href?.startsWith("#") ? ids.get(href.slice(1)) : undefined;
       if (!target) {
-        skip("references to missing elements");
+        skip("svg.skip.missingReferences");
         return;
       }
       const position = offset(element);
@@ -253,7 +259,7 @@ export function importSvg(
           return;
         }
         if (drawing.has(target)) {
-          skip("circular references");
+          skip("svg.skip.circular");
           return;
         }
         // The `use` sizes the symbol's viewport.
@@ -275,7 +281,7 @@ export function importSvg(
     const subpaths = shapeSubpaths(element, tag, matrix);
     if (subpaths === undefined) return; // Not drawable, e.g. defs, metadata or a gradient.
     if (subpaths === null) {
-      skip("shapes with invalid or relative (%) sizes or data");
+      skip("svg.skip.invalidSizes");
       return;
     }
     const paths = subpaths.flatMap((subpath) => {
@@ -284,7 +290,7 @@ export function importSvg(
       return path ? [path] : [];
     });
     if (!paths.every(isFinitePath)) {
-      skip("shapes with coordinates too large to import");
+      skip("svg.skip.tooLarge");
       return;
     }
     if (paths.length > 0) {
@@ -300,16 +306,10 @@ export function importSvg(
 
   drawChildren(root, { matrix: page, layer: "", name: "", topLevel: true, visible: true });
 
-  const warnings = Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`);
-  if (styles.unresolvedHiding) {
-    warnings.push(
-      "The drawing's stylesheet hides elements with rules the importer can't apply, so some imported shapes may be hidden in the drawing: check them.",
-    );
-  }
+  const warnings = skipped.messages();
+  if (styles.unresolvedHiding) warnings.push({ code: "svg.stylesheetHides" });
   if (drawn >= MAX_SVG_ELEMENTS) {
-    warnings.push(
-      `The drawing has more than ${MAX_SVG_ELEMENTS.toLocaleString("en")} elements, counting repeated copies, so the rest was skipped.`,
-    );
+    warnings.push({ code: "svg.tooManyElements", values: { max: MAX_SVG_ELEMENTS } });
   }
   return { shapes, warnings };
 }
@@ -326,7 +326,10 @@ function offset(element: XmlElement): Matrix | null {
  * from its `viewBox`, sized by the first of `sizedBy` that gives a size:
  * `null` if it draws nothing, or what to warn about when it can't be placed.
  */
-function viewportTransform(element: XmlElement, sizedBy: XmlElement[]): Matrix | null | string {
+function viewportTransform(
+  element: XmlElement,
+  sizedBy: XmlElement[],
+): Matrix | null | ImportMessageCode {
   const viewBox = parseViewBox(element.attributes.viewBox);
   if (!viewBox) return IDENTITY;
   const size = (name: string) => {
@@ -340,7 +343,7 @@ function viewportTransform(element: XmlElement, sizedBy: XmlElement[]): Matrix |
   const width = size("width");
   const height = size("height");
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
-    return "nested viewports with relative (%) or missing sizes";
+    return "svg.skip.nestedViewports";
   }
   if (width <= 0 || height <= 0) return null;
   return viewBoxTransform(viewBox, width, height, element.attributes.preserveAspectRatio);

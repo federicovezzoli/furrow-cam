@@ -2,6 +2,7 @@
 
 import { Button } from "@furrow/ui/components/ui/button";
 import { DialogFooter } from "@furrow/ui/components/ui/dialog";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { PencilIcon } from "lucide-react";
 import { useState } from "react";
 import type { SavedTool, ToolChoice } from "../lib/workspace-host";
@@ -92,6 +93,7 @@ function NotUpdated({
   operations: RejectedOperation[];
   onClose: () => void;
 }) {
+  const format = useFormatMessage();
   return (
     <>
       <div role="alert" className="grid gap-2 text-sm">
@@ -99,7 +101,7 @@ function NotUpdated({
         <ul className="list-disc pl-5">
           {operations.map((operation) => (
             <li key={operation.id}>
-              <span className="font-medium">{operation.name}</span>: {operation.error}
+              <span className="font-medium">{operation.name}</span>: {format(operation.error)}
             </li>
           ))}
         </ul>

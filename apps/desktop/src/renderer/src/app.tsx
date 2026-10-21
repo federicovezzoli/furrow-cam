@@ -1,4 +1,5 @@
 import { createProjectDocument, type Machine } from "@furrow/document";
+import { errorText } from "@furrow/ui/lib/i18n";
 import {
   parseMachines,
   parseSettings,
@@ -129,7 +130,8 @@ export function App() {
     try {
       prepared = session.prepareSave();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : t("Desktop.App.projectNotSaved"));
+      const text = error instanceof Error ? error.message : t("Desktop.App.projectNotSaved");
+      window.alert(errorText(t, error, text));
       return false;
     }
     const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);

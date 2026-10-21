@@ -10,7 +10,8 @@ import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type MedialAxisBranch, medialAxis } from "../geometry/medial-axis";
 import type { Vec3 } from "../scene/stock";
 import { vBitConeDepth } from "./engrave";
-import { depthLevels, plural } from "./passes";
+import type { ToolpathMessage } from "./messages";
+import { depthLevels } from "./passes";
 import { opening } from "./pocket/cut";
 import { clearPocket, type PocketOptions } from "./pocket/pocket";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
@@ -56,7 +57,7 @@ export function vcarveToolpath(
 ): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
 
   const closed: Polygon[] = [];
   let open = 0;
@@ -68,18 +69,18 @@ export function vcarveToolpath(
       else open++;
     }
   }
-  if (points > 0) warnings.push(`Skipped ${plural(points, "point")}: drill them instead.`);
+  if (points > 0) warnings.push({ code: "toolpath.skippedPoints", values: { count: points } });
   if (open > 0) {
-    warnings.push(`Skipped ${plural(open, "open path")}: V-carving needs closed paths.`);
+    warnings.push({ code: "toolpath.skippedOpenVCarve", values: { count: open } });
   }
 
   const cone = vBitConeDepth(tool);
   if (cone === null) throw new Error("Only V-bits V-carve");
   if (params.maxDepth > cone + 1e-9) {
-    warnings.push("The maximum depth exceeds the V-bit's cone, so it carves no deeper than that.");
+    warnings.push({ code: "toolpath.vcarveConeLimit" });
   }
   const limit = Math.min(params.maxDepth, cone);
-  if (limit > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (limit > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
   const tipRadius = (tool.tipDiameter ?? 0) / 2;
   const slope = Math.tan((((tool.vAngle as number) / 2) * Math.PI) / 180);
   /** Distance to the edges at which the bit reaches the limit: half its line width there. */
@@ -118,10 +119,10 @@ export function vcarveToolpath(
     // An offset pocket only warns that nothing fits, which `missesFloor` covers.
     clearing = pocket.moves;
     if (missesFloor(walls, flatBottom, tolerance)) {
-      warnings.push("Some flat areas are too narrow for the flat-bottom tool and stay uncut.");
+      warnings.push({ code: "toolpath.flatAreasNarrow" });
     }
     if (limit > flatBottom.fluteLength) {
-      warnings.push("The depth exceeds the flat-bottom tool's flute length.");
+      warnings.push({ code: "toolpath.flatDepthExceedsFlutes" });
     }
   } else {
     let tooWide = false;
@@ -130,10 +131,7 @@ export function vcarveToolpath(
       runs.push({ points, depths: radii.map(depthAt), closed: false });
     }
     if (tooWide) {
-      warnings.push(
-        "Parts are wider than the V-bit reaches at the maximum depth, so their edges stay " +
-          "uncarved: turn on a flat bottom to clear them.",
-      );
+      warnings.push({ code: "toolpath.vcarveEdgesUncarved" });
     }
   }
 

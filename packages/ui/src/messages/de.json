@@ -440,5 +440,198 @@
       "dontSave": "Nicht speichern",
       "cancel": "Abbrechen"
     }
+  },
+  "Core": {
+    "withOperation": "{operation}: {message}",
+    "validation": {
+      "required": "Erforderlich",
+      "invalid": "Ungültiger Wert",
+      "notANumber": "Muss eine Zahl sein",
+      "wholeNumber": "Muss eine ganze Zahl sein",
+      "atLeast": "Muss mindestens {min} sein",
+      "greaterThan": "Muss größer als {min} sein",
+      "atMost": "Darf höchstens {max} sein",
+      "lessThan": "Muss kleiner als {max} sein",
+      "minCharacters": "Muss mindestens {min} Zeichen haben",
+      "choose": "Wähle eine der Optionen",
+      "multipleOf": "Muss ein Vielfaches von {divisor} sein",
+      "blank": "Darf nicht leer sein",
+      "colour": "Muss eine Farbe im Format #rrggbb sein",
+      "sha256": "Muss ein SHA-256-Hash in Hexadezimal mit Kleinbuchstaben sein",
+      "maxCharacters": "Höchstens {max} Zeichen",
+      "maxSeconds": "Höchstens {max} Sekunden",
+      "maxRpm": "Höchstens {max} U/min"
+    },
+    "tool": {
+      "cutDirectionRequired": "Erforderlich für Schaftfräser",
+      "cutDirectionEndMillsOnly": "Nur für Schaftfräser",
+      "vBitRequired": "Erforderlich für V-Fräser",
+      "vBitOnly": "Nur für V-Fräser",
+      "drillPlunge90": "Bohrer tauchen mit 90° ein",
+      "exceedsFluteLength": "Darf die Schneidenlänge nicht überschreiten",
+      "smallerThanDiameter": "Muss kleiner als der Durchmesser sein"
+    },
+    "machine": {
+      "belowZTravel": "Muss kleiner als der Z-Verfahrweg sein",
+      "atMostSafeZ": "Darf höchstens die sichere Z-Höhe sein",
+      "spindleBoth": "Gib beide Spindeldrehzahlen an, oder keine für eine manuelle Spindel",
+      "spindleMinMax": "Muss mindestens die minimale Spindeldrehzahl sein"
+    },
+    "model": {
+      "cornerOrder": "Die minimale Ecke darf die maximale nicht überschreiten"
+    },
+    "geometry": {
+      "zeroLine": "Linie der Länge null",
+      "zeroCurve": "Kurve der Länge null",
+      "zeroArc": "Bogen mit Radius null",
+      "arcEndOffCircle": "Das Bogenende liegt nicht auf dem Kreis durch seinen Anfang",
+      "closedSingleLine": "Ein geschlossener Pfad braucht mehr als eine einzelne Linie"
+    },
+    "document": {
+      "padOffStock": "Die Antastplatte muss auf dem Rohteil liegen",
+      "duplicateShape": "Doppelte Form-ID",
+      "duplicateModel": "Doppelte Modell-ID",
+      "duplicateOperation": "Doppelte Operations-ID",
+      "unknownModel": "Unbekannte Modell-ID",
+      "unknownShape": "Unbekannte Form-ID",
+      "unknownPath": "Unbekannter Pfad"
+    },
+    "operation": {
+      "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
+      "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
+      "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
+      "vBitsCantDrill": "V-Fräser können nicht bohren",
+      "drillsCantEngrave": "Bohrer können nicht gravieren",
+      "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
+      "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
+      "modelNotShapes": "Bearbeitet ein Modell, keine Formen",
+      "peelStart": "Das Ausräumen in Spiralbahnen beginnt in der Mitte oder an der Außenwand",
+      "drillsCantCutSideways": "Bohrer schneiden nicht seitlich: Wähle einen Schaftfräser oder einen V-Fräser."
+    },
+    "archive": {
+      "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
+      "modelDamaged": "Ein Modell in dieser Datei ist beschädigt: Es passt nicht zu seinem Hash.",
+      "versionDamaged": "Eine Version in dieser Datei ist beschädigt.",
+      "versionTooNew": "{labelled, select, yes {Die Version „{label}“} other {Eine Version in dieser Datei}} wurde mit einer neueren Version von Furrow CAM gespeichert.",
+      "versionInvalid": "{labelled, select, yes {Die Version „{label}“} other {Eine Version in dieser Datei}} ist kein gültiges Projekt.",
+      "versionMissingModel": "{labelled, select, yes {Der Version „{label}“} other {Einer Version in dieser Datei}} fehlt eines ihrer 3D-Modelle.",
+      "tooManyMeshes": "Eine Projektdatei enthält höchstens {max} verschiedene 3D-Modelle.",
+      "tooManyVersions": "Eine Projektdatei enthält höchstens {max} Versionen.",
+      "documentTooLarge": "Das Dokument dieses Projekts ist zu groß zum Importieren.",
+      "fileTooLarge": "Diese Datei ist zu groß zum Importieren (das Limit ist {mb} MB).",
+      "meshTooLarge": "Ein Modell in dieser Datei ist größer als {mb} MB, das erlaubte Maximum."
+    },
+    "migration": {
+      "notObject": "Ein Projektdokument muss ein JSON-Objekt sein.",
+      "invalidVersion": "Seine Version ({version}) ist ungültig.",
+      "tooNew": "Dokumentversion {version} ist neuer als die unterstützte Version {supported}.",
+      "missing": "Es gibt keine Aktualisierung von Version {from} auf {to}.",
+      "notObjectResult": "Die Aktualisierung von Version {from} auf {to} ist fehlgeschlagen."
+    },
+    "quantity": {
+      "empty": "Gib eine Zahl ein",
+      "notFinite": "Das Ergebnis ist keine endliche Zahl",
+      "unknownUnit": "Unbekannte Einheit „{unit}“",
+      "invalid": "Keine Zahl und kein Ausdruck"
+    },
+    "svg": {
+      "invalidXml": "Diese Datei ist kein gültiges XML (Fehler bei Zeichen {position}).",
+      "notSvg": "Diese Datei ist keine SVG-Zeichnung.",
+      "stylesheetHides": "Das Stylesheet der Zeichnung blendet Elemente mit Regeln aus, die der Import nicht anwenden kann, daher könnten einige importierte Formen in der Zeichnung ausgeblendet sein: Prüfe sie.",
+      "tooManyElements": "Die Zeichnung hat mehr als {max} Elemente, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
+      "skip": {
+        "circular": "Übersprungen: zirkuläre Verweise ({count}).",
+        "invalidTransform": "Übersprungen: Elemente mit ungültiger Transformation (untransformiert gezeichnet) ({count}).",
+        "invalidPosition": "Übersprungen: Elemente mit ungültigen oder relativen (%) Positionen ({count}).",
+        "nestedViewports": "Übersprungen: verschachtelte Viewports mit relativen (%) oder fehlenden Größen ({count}).",
+        "missingReferences": "Übersprungen: Verweise auf fehlende Elemente ({count}).",
+        "invalidSizes": "Übersprungen: Formen mit ungültigen oder relativen (%) Größen oder Daten ({count}).",
+        "tooLarge": "Übersprungen: Formen mit zu großen Koordinaten für den Import ({count}).",
+        "text": "Übersprungen: Text (vor dem Export in Pfade umwandeln) ({count}).",
+        "images": "Übersprungen: Bilder ({count}).",
+        "foreignObject": "Übersprungen: eingebettete Nicht-SVG-Inhalte ({count})."
+      }
+    },
+    "dxf": {
+      "binary": "Dies ist eine binäre DXF-Datei, die nicht unterstützt wird. Exportiere sie als ASCII-DXF.",
+      "invalid": "Diese Datei ist keine gültige DXF-Datei (Zeile {line}).",
+      "notDxf": "Diese Datei ist keine DXF-Zeichnung.",
+      "codepage": "Die Codepage der Datei ({codepage}) wird nicht unterstützt, daher können Layernamen falsche Zeichen zeigen.",
+      "tooManyEntities": "Die Zeichnung hat mehr als {max} Objekte, wiederholte Kopien mitgezählt, daher wurde der Rest übersprungen.",
+      "skip": {
+        "paperSpace": "Übersprungen: Objekte im Papierbereich (Layouts) ({count}).",
+        "layersOff": "Übersprungen: Objekte auf ausgeschalteten oder gefrorenen Layern ({count}).",
+        "entityType": "Übersprungen: {type}-Objekte ({count}).",
+        "tilted": "Übersprungen: Objekte, die nicht parallel zur XY-Ebene liegen ({count}).",
+        "invalidCoordinates": "Übersprungen: Objekte mit ungültigen oder zu großen Koordinaten ({count}).",
+        "missingBlocks": "Übersprungen: Verweise auf fehlende Blöcke ({count}).",
+        "xrefs": "Übersprungen: externe Referenzen (Xrefs) ({count}).",
+        "recursiveBlocks": "Übersprungen: Blöcke, die sich selbst enthalten ({count}).",
+        "invalidBlockRefs": "Übersprungen: Blockreferenzen mit ungültigen Positionen oder Skalierungen ({count}).",
+        "fitSplines": "Übersprungen: Splines, die nur durch Anpassungspunkte definiert sind (mit Kontrollpunkten speichern) ({count}).",
+        "invalidSplines": "Übersprungen: ungültige Splines ({count}).",
+        "text": "Übersprungen: Text (vor dem Export in Umrisse umwandeln) ({count}).",
+        "dimensions": "Übersprungen: Bemaßungen ({count}).",
+        "leaders": "Übersprungen: Führungslinien ({count}).",
+        "hatches": "Übersprungen: Schraffuren und Füllungen ({count}).",
+        "images": "Übersprungen: Bilder ({count}).",
+        "solids": "Übersprungen: Volumenkörper und Regionen (vor dem Export in Linien und Bögen auflösen) ({count}).",
+        "faces": "Übersprungen: 3D-Flächen, Netze und Oberflächen ({count})."
+      }
+    },
+    "stl": {
+      "tooLarge": "Diese Datei ist größer als {mb} MB, das erlaubte Maximum.",
+      "empty": "Diese Datei ist leer.",
+      "sizeMismatch": "Dies ist keine STL-Datei, oder sie ist beschädigt: Ihre Größe passt nicht.",
+      "tooManyTriangles": "Dieses Modell hat mehr als {max} Dreiecke, das erlaubte Maximum. Vereinfache es und versuche es erneut.",
+      "noTriangles": "Diese Datei enthält keine Dreiecke.",
+      "vertexNaN": "Diese Datei hat einen Eckpunkt, der keine Zahl ist.",
+      "facetInFacet": "Diese STL-Datei ist beschädigt: Eine Facette beginnt in einer anderen in Zeile {line}.",
+      "vertexOutside": "Diese STL-Datei ist beschädigt: Ein Eckpunkt liegt außerhalb einer Facette in Zeile {line}.",
+      "tooManyVertices": "Diese STL-Datei ist beschädigt: Eine Facette hat mehr als drei Eckpunkte in Zeile {line}.",
+      "vertexCoordinates": "Diese STL-Datei ist beschädigt: Ein Eckpunkt hat keine drei Koordinaten in Zeile {line}.",
+      "facetVertices": "Diese STL-Datei ist beschädigt: Eine Facette hat keine drei Eckpunkte in Zeile {line}.",
+      "notStl": "Diese STL-Datei ist beschädigt: „{word}“ ist kein STL in Zeile {line}.",
+      "unfinished": "Diese STL-Datei ist beschädigt: Die letzte Facette ist nicht abgeschlossen in Zeile {line}."
+    },
+    "toolpath": {
+      "skippedPoints": "{count, plural, one {# Punkt übersprungen} other {# Punkte übersprungen}}: Bohre sie stattdessen.",
+      "skippedOpenProfile": "{count, plural, one {# offener Pfad übersprungen} other {# offene Pfade übersprungen}}: Innen- und Außenschnitte brauchen geschlossene Pfade.",
+      "skippedOpenPocket": "{count, plural, one {# offener Pfad übersprungen} other {# offene Pfade übersprungen}}: Taschen brauchen geschlossene Pfade.",
+      "skippedOpenVCarve": "{count, plural, one {# offener Pfad übersprungen} other {# offene Pfade übersprungen}}: V-Schnitzen braucht geschlossene Pfade.",
+      "skippedSmallCircles": "{count, plural, one {# Kreis übersprungen, der} other {# Kreise übersprungen, die}} kleiner als das Werkzeug {count, plural, one {ist} other {sind}}.",
+      "skippedLargeCircles": "{count, plural, one {# Kreis übersprungen, der} other {# Kreise übersprungen, die}} größer als der Bohrer {count, plural, one {ist} other {sind}}: Bohre sie mit einem Schaftfräser aus.",
+      "skippedNonCircles": "{count, plural, one {# Pfad übersprungen} other {# Pfade übersprungen}}: Bohren braucht Kreise oder Punkte.",
+      "depthExceedsFlutes": "Die Tiefe überschreitet die Schneidenlänge des Werkzeugs.",
+      "flatDepthExceedsFlutes": "Die Tiefe überschreitet die Schneidenlänge des Fräsers für den flachen Boden.",
+      "vcarveConeLimit": "Die maximale Tiefe überschreitet den Kegel des V-Fräsers, daher schnitzt er nicht tiefer als dieser.",
+      "vcarveEdgesUncarved": "Manche Bereiche sind breiter, als der V-Fräser bei der maximalen Tiefe reicht, daher bleiben ihre Ränder unbearbeitet: Schalte einen flachen Boden ein, um sie auszuräumen.",
+      "flatAreasNarrow": "Manche flachen Bereiche sind zu schmal für den Fräser des flachen Bodens und bleiben unbearbeitet.",
+      "engraveConeWide": "Die Tiefe überschreitet den Kegel des V-Fräsers, daher ist die Linie so breit wie der Fräser.",
+      "pathsTooSmall": "Die geschlossenen Pfade sind zu klein für das Werkzeug.",
+      "tabsTooTall": "Die Haltestege sind so hoch wie der Schnitt tief ist, daher wird unter ihnen nichts geschnitten.",
+      "tabsLeftOut": "{count, plural, one {# Haltesteg ausgelassen, der} other {# Haltestege ausgelassen, die}} zu weit von jeder geschlossenen Kontur entfernt {count, plural, one {ist} other {sind}}.",
+      "leadInMisfits": "Der Einlauf passte bei {count, plural, one {# Kontur} other {# Konturen}} nicht und wurde gekürzt oder ausgelassen.",
+      "peelIsland": "Spiralbahnen von der Insel aus brauchen genau eine Insel.",
+      "touchOffPad": "Diese Operation schneidet in die Antastplatte, daher kann Z nach einem Werkzeugwechsel nicht darauf genullt werden: Verschiebe die Platte oder den Schnitt.",
+      "modelMissing": "Das zu bearbeitende Modell fehlt.",
+      "noArea": "Das Modell hat von oben gesehen keine Fläche zum Bearbeiten.",
+      "belowStock": "Das Modell reicht unter das Rohteil: Es wird nicht tiefer als der Boden des Rohteils geschnitten.",
+      "coarsened": "Das Modell ist zu groß, um es mit diesem Werkzeug in voller Auflösung zu bearbeiten: Es wird mit Zellen von {size} mm statt {wanted} mm geschnitten.",
+      "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size} mm simuliert, daher kann Material, das schmaler als {width} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
+      "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
+      "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
+      "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
+    },
+    "export": {
+      "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
+      "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
+      "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
+    },
+    "grbl": {
+      "slowed": "{count, plural, one {# Bewegung} other {# Bewegungen}} auf den maximalen Vorschub der Maschine verlangsamt.",
+      "spindleClamped": "Die {rpm} U/min des Werkzeugs liegen außerhalb des Spindelbereichs der Maschine, daher werden {used} U/min verwendet.",
+      "unfilledPlaceholder": "{block, select, programStart {Programmstart} toolChangePad {Werkzeugwechsel auf der Platte} toolChange {Werkzeugwechsel} operationStart {Operationsstart} other {Programmende}}: {placeholder} kann nicht ausgefüllt werden, daher wird es unverändert geschrieben."
+    }
   }
 }

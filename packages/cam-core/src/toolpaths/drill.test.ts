@@ -156,9 +156,9 @@ describe("drillToolpath", () => {
     const toolpath = drill([shape(circle([10, 10], 3.2), circle([20, 20], 2), square, open)]);
     expect(toolpath.moves).toEqual([]);
     expect(toolpath.warnings).toEqual([
-      "Skipped 1 circle smaller than the tool.",
-      "Skipped 1 circle larger than the drill: bore them with an end mill.",
-      "Skipped 2 paths: drilling needs circles or points.",
+      { code: "toolpath.skippedSmallCircles", values: { count: 1 } },
+      { code: "toolpath.skippedLargeCircles", values: { count: 1 } },
+      { code: "toolpath.skippedNonCircles", values: { count: 2 } },
     ]);
   });
 
@@ -178,7 +178,9 @@ describe("drillToolpath", () => {
     };
     const toolpath = drill([shape(halves, half)]);
     expect(holeOrder(toolpath)).toEqual([[10, 10]]);
-    expect(toolpath.warnings).toEqual(["Skipped 1 path: drilling needs circles or points."]);
+    expect(toolpath.warnings).toEqual([
+      { code: "toolpath.skippedNonCircles", values: { count: 1 } },
+    ]);
   });
 
   it("drills circles exported as polygons or Béziers when the drill reproduces them", () => {
@@ -214,7 +216,9 @@ describe("drillToolpath", () => {
     const coarse = polygon([50, 10], 3, 12);
     const toolpath = drill([shape(square, hexagon, coarse)]);
     expect(toolpath.moves).toEqual([]);
-    expect(toolpath.warnings).toEqual(["Skipped 3 paths: drilling needs circles or points."]);
+    expect(toolpath.warnings).toEqual([
+      { code: "toolpath.skippedNonCircles", values: { count: 3 } },
+    ]);
   });
 
   it("takes large circles exported as coarse polygons, within 1% of their radius (#154)", () => {
@@ -257,14 +261,14 @@ describe("drillToolpath", () => {
       boring,
     );
     expect(past.moves).toEqual([]);
-    expect(past.warnings).toEqual(["Skipped 2 paths: drilling needs circles or points."]);
+    expect(past.warnings).toEqual([{ code: "toolpath.skippedNonCircles", values: { count: 2 } }]);
   });
 
   it("tells round outlines too large for a drill bit from other paths", () => {
     const toolpath = drill([shape(polygon([10, 10], 4, 36), polygon([30, 10], 3, 6))]);
     expect(toolpath.warnings).toEqual([
-      "Skipped 1 circle larger than the drill: bore them with an end mill.",
-      "Skipped 1 path: drilling needs circles or points.",
+      { code: "toolpath.skippedLargeCircles", values: { count: 1 } },
+      { code: "toolpath.skippedNonCircles", values: { count: 1 } },
     ]);
   });
 
@@ -276,7 +280,9 @@ describe("drillToolpath", () => {
     const { shapes } = importSvg(file, { createId: () => "00000000-0000-4000-8000-000000000999" });
     expect(shapes).toHaveLength(1);
     const toolpath = drill(shapes, {}, 5, { diameter: 5.3 });
-    expect(toolpath.warnings).toEqual(["Skipped 1 path: drilling needs circles or points."]);
+    expect(toolpath.warnings).toEqual([
+      { code: "toolpath.skippedNonCircles", values: { count: 1 } },
+    ]);
     const holes = holeOrder(toolpath);
     expect(holes).toHaveLength(1);
     // y flips from SVG's downward axis; the page's bottom is at y = 1 in SVG units.
@@ -291,7 +297,7 @@ describe("drillToolpath", () => {
 
   it("warns when the depth exceeds the flute length", () => {
     const toolpath = drill([shape(point([0, 0]))], { depth: 40 });
-    expect(toolpath.warnings).toEqual(["The depth exceeds the tool's flute length."]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.depthExceedsFlutes" }]);
   });
 
   it("rapids down to the entry clearance before each peck", () => {

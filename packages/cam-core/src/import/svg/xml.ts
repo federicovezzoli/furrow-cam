@@ -10,7 +10,15 @@ export type XmlElement = {
   text?: string;
 };
 
-export class XmlError extends Error {}
+export class XmlError extends Error {
+  /** The developer-facing `message` names the problem; the user is told where it is. */
+  constructor(
+    message: string,
+    readonly position: number,
+  ) {
+    super(`${message} (at character ${position})`);
+  }
+}
 
 const NAME = /[^\s/>=]+/y;
 const SPACE = /\s*/y;
@@ -49,7 +57,7 @@ export function parseXml(text: string): XmlElement {
   let root: XmlElement | null = null;
 
   function fail(message: string): never {
-    throw new XmlError(`${message} (at character ${index})`);
+    throw new XmlError(message, index);
   }
 
   function skipPast(terminator: string) {
@@ -141,6 +149,6 @@ export function parseXml(text: string): XmlElement {
   }
 
   if (stack.length > 0) fail(`Unclosed tag <${stack.at(-1)?.name}>`);
-  if (!root) throw new XmlError("No root element");
+  if (!root) throw new XmlError("No root element", index);
   return root;
 }

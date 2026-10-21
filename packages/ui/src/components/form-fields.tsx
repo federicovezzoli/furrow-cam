@@ -1,9 +1,13 @@
+"use client";
+
 import type { ComponentProps } from "react";
+import { useFormatMessage } from "../hooks/use-format-message";
+import type { Translatable } from "../lib/i18n";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { NativeSelect, NativeSelectOption } from "./ui/native-select";
 
-type FieldErrors<T> = Partial<Record<keyof T | "form", string>>;
+type FieldErrors<T> = Partial<Record<keyof T | "form", Translatable>>;
 
 /**
  * Props for a field named after one of the form's values, e.g.
@@ -33,7 +37,7 @@ export function fieldProps<T extends object>(
   });
 }
 
-type FieldProps<K extends string, V> = { id: K; name: K; defaultValue: V; error?: string };
+type FieldProps<K extends string, V> = { id: K; name: K; defaultValue: V; error?: Translatable };
 
 /** A labelled input whose error is announced via `aria-describedby`. */
 export function Field({
@@ -41,7 +45,7 @@ export function Field({
   id,
   error,
   ...props
-}: ComponentProps<typeof Input> & { label: string; id: string; error?: string }) {
+}: ComponentProps<typeof Input> & { label: string; id: string; error?: Translatable }) {
   return (
     <div className="grid content-start gap-2">
       <Label htmlFor={id}>{label}</Label>
@@ -68,7 +72,7 @@ export function SelectField<T extends string>({
   label: string;
   id: string;
   options: Record<T, string>;
-  error?: string;
+  error?: Translatable;
 }) {
   return (
     <div className="grid content-start gap-2 *:data-[slot=native-select-wrapper]:w-full">
@@ -91,11 +95,12 @@ export function SelectField<T extends string>({
   );
 }
 
-export function FieldError({ id, error }: { id: string; error?: string }) {
+export function FieldError({ id, error }: { id: string; error?: Translatable }) {
+  const format = useFormatMessage();
   if (!error) return null;
   return (
     <p id={`${id}-error`} className="text-sm text-destructive">
-      {error}
+      {format(error)}
     </p>
   );
 }

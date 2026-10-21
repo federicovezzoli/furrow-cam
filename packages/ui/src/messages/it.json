@@ -440,5 +440,198 @@
       "dontSave": "Non salvare",
       "cancel": "Annulla"
     }
+  },
+  "Core": {
+    "withOperation": "{operation}: {message}",
+    "validation": {
+      "required": "Obbligatorio",
+      "invalid": "Valore non valido",
+      "notANumber": "Deve essere un numero",
+      "wholeNumber": "Deve essere un numero intero",
+      "atLeast": "Deve essere almeno {min}",
+      "greaterThan": "Deve essere maggiore di {min}",
+      "atMost": "Deve essere al massimo {max}",
+      "lessThan": "Deve essere minore di {max}",
+      "minCharacters": "Deve avere almeno {min} caratteri",
+      "choose": "Scegli una delle opzioni",
+      "multipleOf": "Deve essere un multiplo di {divisor}",
+      "blank": "Non può essere vuoto",
+      "colour": "Deve essere un colore #rrggbb",
+      "sha256": "Deve essere un hash SHA-256 in esadecimale minuscolo",
+      "maxCharacters": "Al massimo {max} caratteri",
+      "maxSeconds": "Al massimo {max} secondi",
+      "maxRpm": "Al massimo {max} giri/min"
+    },
+    "tool": {
+      "cutDirectionRequired": "Obbligatorio per le frese a candela",
+      "cutDirectionEndMillsOnly": "Solo per le frese a candela",
+      "vBitRequired": "Obbligatorio per le frese a V",
+      "vBitOnly": "Solo per le frese a V",
+      "drillPlunge90": "Le punte da foratura scendono a 90°",
+      "exceedsFluteLength": "Non può superare la lunghezza dei taglienti",
+      "smallerThanDiameter": "Deve essere minore del diametro"
+    },
+    "machine": {
+      "belowZTravel": "Deve essere minore della corsa in Z",
+      "atMostSafeZ": "Deve essere al massimo la Z di sicurezza",
+      "spindleBoth": "Imposta entrambe le velocità del mandrino, o nessuna per un mandrino manuale",
+      "spindleMinMax": "Deve essere almeno la velocità minima del mandrino"
+    },
+    "model": {
+      "cornerOrder": "L'angolo minimo non può superare il massimo"
+    },
+    "geometry": {
+      "zeroLine": "Linea di lunghezza zero",
+      "zeroCurve": "Curva di lunghezza zero",
+      "zeroArc": "Arco di raggio zero",
+      "arcEndOffCircle": "La fine dell'arco non è sul cerchio che passa per il suo inizio",
+      "closedSingleLine": "Un percorso chiuso richiede più di una sola linea"
+    },
+    "document": {
+      "padOffStock": "Il tampone di azzeramento deve stare sul grezzo",
+      "duplicateShape": "Id di forma duplicato",
+      "duplicateModel": "Id di modello duplicato",
+      "duplicateOperation": "Id di operazione duplicato",
+      "unknownModel": "Id di modello sconosciuto",
+      "unknownShape": "Id di forma sconosciuto",
+      "unknownPath": "Percorso sconosciuto"
+    },
+    "operation": {
+      "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
+      "allowanceZeroOnLine": "Deve essere 0 sulla linea",
+      "allowanceNeeded": "Serve un sovrametallo da togliere",
+      "vBitsCantDrill": "Le frese a V non possono forare",
+      "drillsCantEngrave": "Le punte da foratura non possono incidere",
+      "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
+      "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
+      "modelNotShapes": "Lavora un modello, non forme",
+      "peelStart": "La spirale parte dal centro o dalla parete esterna",
+      "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V."
+    },
+    "archive": {
+      "notAProject": "Questo file non è un progetto Furrow CAM.",
+      "modelDamaged": "Un modello in questo file è danneggiato: non corrisponde al suo hash.",
+      "versionDamaged": "Una versione in questo file è danneggiata.",
+      "versionTooNew": "{labelled, select, yes {La versione “{label}”} other {Una versione in questo file}} è stata salvata da una versione più recente di Furrow CAM.",
+      "versionInvalid": "{labelled, select, yes {La versione “{label}”} other {Una versione in questo file}} non è un progetto valido.",
+      "versionMissingModel": "In {labelled, select, yes {la versione “{label}”} other {una versione in questo file}} manca uno dei modelli 3D.",
+      "tooManyMeshes": "Un file di progetto contiene al massimo {max} modelli 3D diversi.",
+      "tooManyVersions": "Un file di progetto contiene al massimo {max} versioni.",
+      "documentTooLarge": "Il documento di questo progetto è troppo grande da importare.",
+      "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb} MB).",
+      "meshTooLarge": "Un modello in questo file supera {mb} MB, il massimo consentito."
+    },
+    "migration": {
+      "notObject": "Un documento di progetto deve essere un oggetto JSON.",
+      "invalidVersion": "La sua versione ({version}) non è valida.",
+      "tooNew": "La versione del documento {version} è più recente di quella supportata, {supported}.",
+      "missing": "Non c'è un aggiornamento dalla versione {from} alla {to}.",
+      "notObjectResult": "L'aggiornamento dalla versione {from} alla {to} non è riuscito."
+    },
+    "quantity": {
+      "empty": "Inserisci un numero",
+      "notFinite": "Il risultato non è un numero finito",
+      "unknownUnit": "Unità sconosciuta \"{unit}\"",
+      "invalid": "Non è un numero o un'espressione"
+    },
+    "svg": {
+      "invalidXml": "Questo file non è un XML valido (errore al carattere {position}).",
+      "notSvg": "Questo file non è un disegno SVG.",
+      "stylesheetHides": "Il foglio di stile del disegno nasconde elementi con regole che l'importazione non sa applicare, quindi alcune forme importate potrebbero essere nascoste nel disegno: controllale.",
+      "tooManyElements": "Il disegno ha più di {max} elementi, contando le copie ripetute, quindi il resto è stato saltato.",
+      "skip": {
+        "circular": "Saltati: riferimenti circolari ({count}).",
+        "invalidTransform": "Saltati: elementi con una trasformazione non valida (disegnati senza trasformazione) ({count}).",
+        "invalidPosition": "Saltati: elementi con posizioni non valide o relative (%) ({count}).",
+        "nestedViewports": "Saltati: viewport annidati con dimensioni relative (%) o mancanti ({count}).",
+        "missingReferences": "Saltati: riferimenti a elementi mancanti ({count}).",
+        "invalidSizes": "Saltati: forme con dimensioni o dati non validi o relativi (%) ({count}).",
+        "tooLarge": "Saltati: forme con coordinate troppo grandi da importare ({count}).",
+        "text": "Saltati: testo (convertilo in tracciati prima di esportare) ({count}).",
+        "images": "Saltati: immagini ({count}).",
+        "foreignObject": "Saltati: contenuti incorporati non SVG ({count})."
+      }
+    },
+    "dxf": {
+      "binary": "Questo è un file DXF binario, che non è supportato. Esportalo come DXF ASCII.",
+      "invalid": "Questo file non è un DXF valido (riga {line}).",
+      "notDxf": "Questo file non è un disegno DXF.",
+      "codepage": "La code page del file ({codepage}) non è supportata, quindi i nomi dei layer potrebbero mostrare caratteri sbagliati.",
+      "tooManyEntities": "Il disegno ha più di {max} entità, contando le copie ripetute, quindi il resto è stato saltato.",
+      "skip": {
+        "paperSpace": "Saltati: entità nello spazio carta (layout) ({count}).",
+        "layersOff": "Saltati: entità su layer spenti o congelati ({count}).",
+        "entityType": "Saltati: entità {type} ({count}).",
+        "tilted": "Saltati: entità non parallele al piano XY ({count}).",
+        "invalidCoordinates": "Saltati: entità con coordinate non valide o troppo grandi ({count}).",
+        "missingBlocks": "Saltati: riferimenti a blocchi mancanti ({count}).",
+        "xrefs": "Saltati: riferimenti esterni (xref) ({count}).",
+        "recursiveBlocks": "Saltati: blocchi che contengono se stessi ({count}).",
+        "invalidBlockRefs": "Saltati: riferimenti a blocchi con posizioni o scale non valide ({count}).",
+        "fitSplines": "Saltati: spline definite solo da punti di interpolazione (salvale con i punti di controllo) ({count}).",
+        "invalidSplines": "Saltati: spline non valide ({count}).",
+        "text": "Saltati: testo (convertilo in contorni prima di esportare) ({count}).",
+        "dimensions": "Saltati: quote ({count}).",
+        "leaders": "Saltati: direttrici ({count}).",
+        "hatches": "Saltati: tratteggi e riempimenti ({count}).",
+        "images": "Saltati: immagini ({count}).",
+        "solids": "Saltati: solidi e regioni (esplodili in linee e archi prima di esportare) ({count}).",
+        "faces": "Saltati: facce 3D, mesh e superfici ({count})."
+      }
+    },
+    "stl": {
+      "tooLarge": "Questo file supera {mb} MB, il massimo consentito.",
+      "empty": "Questo file è vuoto.",
+      "sizeMismatch": "Questo non è un file STL, oppure è danneggiato: la sua dimensione non corrisponde.",
+      "tooManyTriangles": "Questo modello ha più di {max} triangoli, il massimo consentito. Semplificalo e riprova.",
+      "noTriangles": "Questo file non contiene triangoli.",
+      "vertexNaN": "Questo file ha un vertice che non è un numero.",
+      "facetInFacet": "Questo file STL è danneggiato: una faccia inizia dentro un'altra alla riga {line}.",
+      "vertexOutside": "Questo file STL è danneggiato: un vertice è fuori da una faccia alla riga {line}.",
+      "tooManyVertices": "Questo file STL è danneggiato: una faccia ha più di tre vertici alla riga {line}.",
+      "vertexCoordinates": "Questo file STL è danneggiato: un vertice non ha tre coordinate alla riga {line}.",
+      "facetVertices": "Questo file STL è danneggiato: una faccia non ha tre vertici alla riga {line}.",
+      "notStl": "Questo file STL è danneggiato: \"{word}\" non è STL alla riga {line}.",
+      "unfinished": "Questo file STL è danneggiato: l'ultima faccia non è finita alla riga {line}."
+    },
+    "toolpath": {
+      "skippedPoints": "{count, plural, one {Saltato # punto} other {Saltati # punti}}: foralo invece.",
+      "skippedOpenProfile": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: i tagli interni ed esterni richiedono percorsi chiusi.",
+      "skippedOpenPocket": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: le tasche richiedono percorsi chiusi.",
+      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: l'intaglio a V richiede percorsi chiusi.",
+      "skippedSmallCircles": "{count, plural, one {Saltato # cerchio più piccolo} other {Saltati # cerchi più piccoli}} dell'utensile.",
+      "skippedLargeCircles": "{count, plural, one {Saltato # cerchio più grande} other {Saltati # cerchi più grandi}} della punta: alesali con una fresa a candela.",
+      "skippedNonCircles": "{count, plural, one {Saltato # percorso} other {Saltati # percorsi}}: la foratura richiede cerchi o punti.",
+      "depthExceedsFlutes": "La profondità supera la lunghezza dei taglienti dell'utensile.",
+      "flatDepthExceedsFlutes": "La profondità supera la lunghezza dei taglienti della fresa per il fondo piatto.",
+      "vcarveConeLimit": "La profondità massima supera il cono della fresa a V, quindi non incide più a fondo di così.",
+      "vcarveEdgesUncarved": "Alcune parti sono più larghe di quanto la fresa a V raggiunga alla profondità massima, quindi i loro bordi restano non incisi: attiva il fondo piatto per pulirli.",
+      "flatAreasNarrow": "Alcune zone piatte sono troppo strette per la fresa del fondo piatto e restano non lavorate.",
+      "engraveConeWide": "La profondità supera il cono della fresa a V, quindi la linea è larga quanto la fresa.",
+      "pathsTooSmall": "I percorsi chiusi sono troppo piccoli per l'utensile.",
+      "tabsTooTall": "I ponticelli sono alti quanto la profondità del taglio, quindi sotto di essi non si taglia nulla.",
+      "tabsLeftOut": "{count, plural, one {Escluso # ponticello troppo lontano} other {Esclusi # ponticelli troppo lontani}} da ogni contorno chiuso.",
+      "leadInMisfits": "L'attacco non entrava in {count, plural, one {# contorno} other {# contorni}} ed è stato accorciato o omesso.",
+      "peelIsland": "La spirale dall'isola richiede esattamente un'isola.",
+      "touchOffPad": "Questa operazione taglia nel tampone di azzeramento, quindi dopo un cambio utensile non si può azzerare Z su di esso: sposta il tampone o il taglio.",
+      "modelMissing": "Manca il modello da lavorare.",
+      "noArea": "Il modello non ha un'area vista dall'alto da lavorare.",
+      "belowStock": "Il modello scende sotto il grezzo: non si taglia più a fondo del fondo del grezzo.",
+      "coarsened": "Il modello è troppo grande da lavorare alla risoluzione piena con questo utensile: viene tagliato con celle di {size} mm invece di {wanted} mm.",
+      "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size} mm, quindi il materiale più stretto di {width} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
+      "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
+      "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
+      "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
+    },
+    "export": {
+      "noEnabled": "Non ci sono operazioni attive da esportare.",
+      "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
+      "noToolpath": "Nessun percorso utensile, esclusa dal programma."
+    },
+    "grbl": {
+      "slowed": "{count, plural, one {# movimento rallentato} other {# movimenti rallentati}} all'avanzamento massimo della macchina.",
+      "spindleClamped": "I {rpm} giri/min dell'utensile sono fuori dall'intervallo del mandrino della macchina, quindi si usano {used} giri/min.",
+      "unfilledPlaceholder": "{block, select, programStart {Inizio programma} toolChangePad {Cambio utensile sul tampone} toolChange {Cambio utensile} operationStart {Inizio operazione} other {Fine programma}}: {placeholder} non può essere compilato, quindi viene scritto così com'è."
+    }
   }
 }

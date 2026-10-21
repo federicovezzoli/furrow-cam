@@ -1,5 +1,6 @@
 import { type PathRef, pathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -11,7 +12,7 @@ export type ViewMode = "top" | "orbit";
 export type HoveredGeometry = { shapeId: string; path: number };
 
 /** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
-export type ModelImport = { fileName: string; error: string | null };
+export type ModelImport = { fileName: string; error: Translatable | null };
 
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.

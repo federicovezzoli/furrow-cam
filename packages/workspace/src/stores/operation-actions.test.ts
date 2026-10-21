@@ -281,7 +281,7 @@ describe("operation edits", () => {
 
 describe("drill bits on operations that cut sideways", () => {
   const drillBit: Tool = { ...endMill, type: "drill", cutDirection: null, plungeAngle: 90 };
-  const sideways = "Drill bits can't cut sideways: pick an end mill or a V-bit";
+  const sideways = { code: "operation.drillsCantCutSideways" };
 
   it("aren't added to profiles, pockets or 3D operations", () => {
     const { store, operations } = setup();
@@ -300,7 +300,7 @@ describe("drill bits on operations that cut sideways", () => {
     const { store, operations, add } = setup();
     const id = add();
     expect(setOperationTool(store, id, drillBit)).toEqual({ ok: false, error: sideways });
-    expect(toolError(operations()[0] as Operation, drillBit)).toBe(sideways);
+    expect(toolError(operations()[0] as Operation, drillBit)).toEqual(sideways);
     expect(operations()[0]?.tool).toEqual(endMill);
   });
 
@@ -371,7 +371,10 @@ describe("addDrillOperation", () => {
     const { store, operations } = setup();
     expect(addDrillOperation(store, { targets: [whole(circle)], tool: vBit })).toBeNull();
     const id = addDrill(store);
-    expect(setOperationTool(store, id, vBit)).toEqual({ ok: false, error: "V-bits can't drill" });
+    expect(setOperationTool(store, id, vBit)).toEqual({
+      ok: false,
+      error: { code: "operation.vBitsCantDrill" },
+    });
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
   });
 
@@ -415,7 +418,7 @@ describe("addEngraveOperation", () => {
     const id = addEngrave(store, endMill);
     expect(setOperationTool(store, id, drillBit)).toEqual({
       ok: false,
-      error: "Drill bits can't engrave",
+      error: { code: "operation.drillsCantEngrave" },
     });
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
   });
@@ -474,7 +477,7 @@ describe("addVCarveOperation", () => {
     const id = addVCarve(store);
     expect(setOperationTool(store, id, endMill)).toEqual({
       ok: false,
-      error: "Only V-bits V-carve",
+      error: { code: "operation.onlyVBitsVCarve" },
     });
     expect(operations()[0]?.tool).toEqual(vBit);
   });
@@ -489,7 +492,7 @@ describe("addVCarveOperation", () => {
     expect(updateVCarveParams(store, id, { maxDepth: 0 })).toMatchObject({ ok: false });
     expect(updateVCarveParams(store, id, { flatBottom: { tool: vBit } })).toEqual({
       ok: false,
-      error: "Only flat end mills clear a flat bottom",
+      error: { code: "operation.flatBottomEndMill" },
     });
   });
 });
@@ -652,7 +655,7 @@ describe("updatePocketParams", () => {
     expect(updatePocketParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
     expect(updatePocketParams(store, id, { finishPass: true })).toEqual({
       ok: false,
-      error: "Needs an allowance to remove",
+      error: { code: "operation.allowanceNeeded" },
     });
     expect(updatePocketParams(store, add(), { depth: 3 })).toEqual({
       ok: false,
@@ -684,7 +687,7 @@ describe("updateProfileParams", () => {
     expect(updateProfileParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
     expect(updateProfileParams(store, id, { finishPass: true })).toEqual({
       ok: false,
-      error: "Needs an allowance to remove",
+      error: { code: "operation.allowanceNeeded" },
     });
     expect(updateProfileParams(store, id, { side: "on", allowance: 1 })).toMatchObject({
       ok: false,
@@ -795,7 +798,7 @@ describe("replaceToolSnapshots", () => {
     const asVBit: Tool = { ...vBit, name: endMill.name };
 
     expect(replaceToolSnapshots(store, endMill, asVBit)).toEqual([
-      { id: drill, name: "Drill 1", error: "V-bits can't drill" },
+      { id: drill, name: "Drill 1", error: { code: "operation.vBitsCantDrill" } },
     ]);
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(asVBit);
     expect(operations().find((operation) => operation.id === drill)?.tool).toEqual(endMill);
@@ -811,7 +814,7 @@ describe("replaceToolSnapshots", () => {
       {
         id,
         name: "Profile 1",
-        error: "Drill bits can't cut sideways: pick an end mill or a V-bit",
+        error: { code: "operation.drillsCantCutSideways" },
       },
     ]);
     expect(operations().find((operation) => operation.id === id)?.tool).toEqual(endMill);
@@ -829,7 +832,7 @@ describe("replaceToolSnapshots", () => {
 
     const asBall: Tool = { ...edited, type: "ball_end_mill" };
     expect(replaceToolSnapshots(store, edited, asBall)).toEqual([
-      { id, name: "V-carve 1", error: "Only flat end mills clear a flat bottom" },
+      { id, name: "V-carve 1", error: { code: "operation.flatBottomEndMill" } },
     ]);
     expect(operations()[0]).toMatchObject({ params: { flatBottom: { tool: edited } } });
   });
