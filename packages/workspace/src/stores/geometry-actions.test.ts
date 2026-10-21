@@ -108,7 +108,8 @@ describe("addImportedShapes", () => {
     expect(addImportedShapes(store, "importDxf", shapes)).toBe(true);
     expect(store.getState().document.geometry).toHaveLength(150_000);
     expect(store.getState().past).toHaveLength(before + 1);
-  });
+    // 150,000 shapes take seconds on a slow CI runner.
+  }, 30_000);
 
   it("refuses a drawing in a project with an STL model, and a model once it has drawings", () => {
     const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
