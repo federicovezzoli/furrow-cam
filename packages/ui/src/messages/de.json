@@ -697,6 +697,7 @@
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "drawingsOrModel": "Ein Projekt enthält SVG- und DXF-Zeichnungen oder ein STL-Modell, nicht beides.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
       "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",

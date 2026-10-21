@@ -22,6 +22,7 @@ import {
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
+import { canImportModel } from "./geometry-actions";
 
 /**
  * Document store actions on imported 3D models (PRD-0005 S2, ADR-0031): each
@@ -75,13 +76,17 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
 /**
  * Adds an imported mesh as a model, as one undo step: fitted inside the
  * stock less a border, its top at the stock top and aligned at the zero's
- * anchor (ADR-0031, ADR-0038). Returns the model's id.
+ * anchor (ADR-0031, ADR-0038). A project holds drawings or one model (ADR-0055): returns
+ * `null`, adding nothing, if it already has a drawing or a model;
+ * otherwise the model's id.
  */
 export function addModel(
   store: DocumentStore,
   mesh: Omit<Model, "id" | "placement" | "border">,
-): string {
-  const { stock } = store.getState().document;
+): string | null {
+  const { document } = store.getState();
+  if (!canImportModel(document)) return null;
+  const { stock } = document;
   const id = crypto.randomUUID();
   // The border it is fitted with is the one it keeps.
   const border = MODEL_BORDER;

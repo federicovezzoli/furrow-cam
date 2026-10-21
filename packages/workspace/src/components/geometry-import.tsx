@@ -30,7 +30,7 @@ import {
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "../providers/workspace-stores";
-import { addImportedShapes } from "../stores/geometry-actions";
+import { addImportedShapes, canImportDrawing, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
@@ -63,15 +63,17 @@ function isImportError(error: unknown): error is SvgImportError | DxfImportError
 
 /**
  * Imports SVG and DXF files and STL models, over the viewport: a card in its
- * centre while the project is empty, then in its corner, where each file adds
- * a drawing or a model (ADR-0055). It also shows import warnings until
- * dismissed, and says how an STL import is going.
+ * centre while the project is empty, then in its corner while it holds
+ * drawings, each file adding one; a project holds drawings or one model
+ * (ADR-0055). It also shows import warnings until dismissed, and says how an
+ * STL import is going.
  */
 export function GeometryImport() {
   const store = useDocumentStoreApi();
   const empty = useDocumentStore(
     (s) => s.document.geometry.length === 0 && s.document.models.length === 0,
   );
+  const drawings = useDocumentStore((s) => canImportDrawing(s.document));
   const meshLimits = useWorkspaceHost().limits.meshes;
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
@@ -99,7 +101,11 @@ export function GeometryImport() {
         setNotice({ kind: "error", messages: [{ code: "workspace.noShapes" }, ...warnings] });
         return;
       }
-      addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes);
+      if (!addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
+        // A model was imported, or a step redone, while the file was read or the prompt open.
+        setNotice({ kind: "error", messages: [DRAWINGS_OR_MODEL] });
+        return;
+      }
       track({ event: "file_imported", format: request.kind });
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
@@ -152,6 +158,7 @@ export function GeometryImport() {
 
   /** Only the import buttons to show: they keep to the corner, leaving the viewport free. */
   const bare = !empty && !pending && !notice && !modelImport;
+  if (bare && !drawings) return null;
 
   return (
     <div
@@ -168,22 +175,26 @@ export function GeometryImport() {
         )}
       >
         {empty && <p className="text-muted-foreground">{t("start")}</p>}
-        <input
-          ref={input}
-          type="file"
-          accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
-          onChange={onChange}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
-            <UploadIcon />
-            {t("importDrawing")}
-          </Button>
-          <ModelImportButton />
-        </div>
+        {drawings && (
+          <input
+            ref={input}
+            type="file"
+            accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
+            onChange={onChange}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+          />
+        )}
+        {drawings && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+              <UploadIcon />
+              {t("importDrawing")}
+            </Button>
+            {empty && <ModelImportButton />}
+          </div>
+        )}
         {empty && !meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
 
         {pending?.kind === "svg" && (

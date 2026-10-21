@@ -1,19 +1,34 @@
 import { alignShapes } from "@furrow/cam-core";
-import { DRAWING_BORDER, type Shape } from "@furrow/document";
+import { DRAWING_BORDER, type Message, type ProjectDocument, type Shape } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
+
+/** Why a file can't be imported: a project holds SVG and DXF drawings or one STL model (ADR-0055). */
+export const DRAWINGS_OR_MODEL: Message = { code: "workspace.drawingsOrModel" };
+
+/** Whether the project can take another drawing: it holds no model. */
+export function canImportDrawing({ models }: ProjectDocument): boolean {
+  return models.length === 0;
+}
+
+/** Whether the project can take a model: it holds no drawing and no model. */
+export function canImportModel({ geometry, models }: ProjectDocument): boolean {
+  return geometry.length === 0 && models.length === 0;
+}
 
 /**
  * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
  * step, aligned on its own to the stock at the XY zero's anchor (ADR-0022),
  * or at its bottom-left corner for a custom zero: it may overlap what the
  * project already holds. The shapes all name the new drawing, as an import
- * gives them, and it takes its name from their file. `name` labels the
- * change, e.g. `importSvg`.
+ * gives them, and it takes its name from their file. Returns `false`, adding
+ * nothing, if the project holds a model. `name` labels the change, e.g.
+ * `importSvg`.
  */
-export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]) {
+export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
   const [first] = shapes;
-  if (!first) return;
-  const { stock } = store.getState().document;
+  const { document } = store.getState();
+  if (!first || !canImportDrawing(document)) return false;
+  const { stock } = document;
   const { anchor } = stock.xyOrigin;
   const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
   const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
@@ -21,6 +36,7 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
     draft.drawings.push(drawing);
     draft.geometry.push(...placed);
   });
+  return true;
 }
 
 /**

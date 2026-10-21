@@ -12,7 +12,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor } from "./drawing-test-utils";
-import { addImportedShapes, removeDrawing } from "./geometry-actions";
+import { addImportedShapes, canImportModel, removeDrawing } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
 
 /** A DXF with a 20 mm circle centred on `(0, 0)`. */
@@ -79,9 +79,6 @@ describe("addImportedShapes", () => {
 
   it("adds each file as a drawing named after it, aligned on its own, in one undo step", () => {
     const store = storeAt("bottom_left");
-    store.getState().change("addModel", (draft) => {
-      draft.models.push(model);
-    });
     addImportedShapes(store, "importDxf", importDxf(DXF, { fileName: "hole.dxf" }).shapes);
     const before = store.getState().past.length;
     addImportedShapes(store, "importSvg", importSvg(SVG, { fileName: "part.svg" }).shapes);
@@ -100,7 +97,16 @@ describe("addImportedShapes", () => {
     expect(ProjectDocument.parse(document)).toEqual(document);
     store.getState().undo();
     expect(store.getState().document.drawings).toHaveLength(1);
-    expect(store.getState().document.models).toEqual([model]);
+  });
+
+  it("refuses a drawing in a project with an STL model, and a model once it has drawings", () => {
+    const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    const { document } = store.getState();
+    expect(addImportedShapes(store, "importSvg", importSvg(SVG).shapes)).toBe(false);
+    expect(store.getState().document).toBe(document);
+    expect(canImportModel(document)).toBe(false);
+    expect(canImportModel(fullDocument())).toBe(false);
+    expect(canImportModel(createProjectDocument())).toBe(true);
   });
 });
 
