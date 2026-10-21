@@ -1,5 +1,17 @@
 # @furrow/post
 
+## 0.9.0
+
+### Minor Changes
+
+- Toolpath and import warnings, file errors, export messages and form validation now appear in English, Italian, French or German. ([#305](https://github.com/federicovezzoli/furrow-cam/pull/305))
+- Export now reads back the machine's custom G-code blocks and warns, with the line number, when one moves the tool into material or below the stock bottom, or when it can't be followed (e.g. `G53`) and the rest of the program isn't checked. ([#291](https://github.com/federicovezzoli/furrow-cam/pull/291))
+
+### Patch Changes
+
+- The CAM workspace, including its operations, bit and machine forms, machine presets, simulator and guided tour, now appears in English, Italian, French or German. In Italian, French and German, number fields also accept a comma as the decimal point. ([#306](https://github.com/federicovezzoli/furrow-cam/pull/306))
+- Updated dependencies: @furrow/document@0.11.0, @furrow/cam-core@0.10.0
+
 ## 0.8.2
 
 ### Patch Changes

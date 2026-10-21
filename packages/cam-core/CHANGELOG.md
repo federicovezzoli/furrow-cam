@@ -1,5 +1,16 @@
 # @furrow/cam-core
 
+## 0.10.0
+
+### Minor Changes
+
+- Toolpath and import warnings, file errors, export messages and form validation now appear in English, Italian, French or German. ([#305](https://github.com/federicovezzoli/furrow-cam/pull/305))
+
+### Patch Changes
+
+- A profile with a finish pass whose roughing passes bridge a narrow notch now cuts only that notch in depth passes and still finishes the whole contour in one full-depth lap, instead of re-cutting the entire contour in depth passes. ([#290](https://github.com/federicovezzoli/furrow-cam/pull/290))
+- Updated dependencies: @furrow/document@0.11.0
+
 ## 0.9.0
 
 ### Minor Changes
