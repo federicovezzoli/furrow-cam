@@ -1,6 +1,7 @@
 "use client";
 
 import { FormError } from "@furrow/ui/components/form-error";
+import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
@@ -232,6 +233,7 @@ function UnreadableProject({ name, error }: { name: string; error: string }) {
           {name}
         </h1>
         <div className="ml-auto flex items-center gap-1">
+          <LanguagePicker size="icon-compact" />
           <ThemeToggle size="icon-compact" />
         </div>
       </header>

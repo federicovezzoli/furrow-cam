@@ -1,0 +1,27 @@
+{
+  "LanguagePicker": {
+    "label": "Sprache"
+  },
+  "ThemeToggle": {
+    "system": "Systemdesign",
+    "light": "Helles Design",
+    "dark": "Dunkles Design",
+    "switchTo": "Zu {theme, select, light {hellem Design} dark {dunklem Design} other {Systemdesign}} wechseln"
+  },
+  "Nav": {
+    "projects": "Projekte",
+    "bits": "Fräser",
+    "machines": "Maschinen",
+    "signIn": "Anmelden"
+  },
+  "AccountMenu": {
+    "account": "Konto",
+    "takeTour": "Tour starten",
+    "signOut": "Abmelden",
+    "deleteAccount": "Konto löschen…"
+  },
+  "TopBar": {
+    "noMachine": "Keine Maschine festgelegt",
+    "takeTour": "Tour starten"
+  }
+}
