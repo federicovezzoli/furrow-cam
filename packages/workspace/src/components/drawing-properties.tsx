@@ -6,7 +6,7 @@ import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import { Maximize2Icon, Trash2Icon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "use-intl";
 import { cappedBorder } from "../lib/model-size";
 import {
@@ -37,7 +37,9 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const drawing = useDocumentStore((s) => s.document.drawings.find(({ id }) => id === drawingId));
-  const bounds = useDocumentStore((s) => drawingBounds(s.document, drawingId));
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  // Computed here, not in the selector: a fresh box on every call would never settle.
+  const bounds = useMemo(() => drawingBounds(geometry, drawingId), [geometry, drawingId]);
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
   const operationCount = useDocumentStore((s) => drawingOperations(s.document, drawingId).length);
