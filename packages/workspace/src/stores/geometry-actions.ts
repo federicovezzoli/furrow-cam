@@ -8,7 +8,9 @@ import {
   scaleShapes,
   shapesBounds,
   stockInset,
+  translatePoint,
   translateShapes,
+  xyOriginPosition,
 } from "@furrow/cam-core";
 import {
   DRAWING_BORDER,
@@ -17,6 +19,7 @@ import {
   type Point,
   type ProjectDocument,
   type Shape,
+  type Stock,
   segmentIssue,
 } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
@@ -124,28 +127,26 @@ function degenerate(shapes: Shape[]): boolean {
 
 const TOO_SMALL: Message = { code: "workspace.drawingTooSmall" };
 
+/** A rewrite of a drawing's points: its shapes, and each of its tabs' positions. */
+type Transform = { shapes: (shapes: Shape[]) => Shape[]; point: (point: Point) => Point };
+
 /**
- * Scales drawing `id` by `scale` about `from`, which lands on `to`
- * (`scaleShapes`), as one undo step, and the profile tabs lying on its paths
- * with it (ADR-0055). Refuses, changing nothing, a scale that shrinks a
- * segment to nothing: the document would be invalid.
+ * Rewrites drawing `id` with `transform`, as one undo step, and the profile
+ * tabs lying on its paths with it (ADR-0055). Refuses, changing nothing, a
+ * result with a segment shrunk to nothing: the document would be invalid.
  */
-function scaleDrawing(
+function transformDrawing(
   store: DocumentStore,
   name: string,
   id: string,
-  scale: number,
-  from: Point,
-  to: Point,
+  transform: Transform,
 ): ActionResult {
   const { document } = store.getState();
   const shapes = drawingShapes(document.geometry, id);
-  if (shapes.length === 0 || (scale === 1 && from[0] === to[0] && from[1] === to[1])) {
-    return { ok: true };
-  }
-  const scaled = scaleShapes(shapes, scale, from, to);
-  if (degenerate(scaled)) return { ok: false, error: TOO_SMALL };
-  const byId = new Map(scaled.map((shape) => [shape.id, shape]));
+  if (shapes.length === 0) return { ok: true };
+  const rewritten = transform.shapes(shapes);
+  if (degenerate(rewritten)) return { ok: false, error: TOO_SMALL };
+  const byId = new Map(rewritten.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
   const tabs = drawingTabs(document, id);
@@ -156,11 +157,60 @@ function scaleDrawing(
       if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
       const { positions } = operation.params.tabs;
       positions.forEach((position, i) => {
-        if (moved[i]) positions[i] = scalePoint(position, scale, from, to);
+        if (moved[i]) positions[i] = transform.point(position);
       });
     }
   });
   return { ok: true };
+}
+
+/** Scales drawing `id` by `scale` about `from`, which lands on `to` (`scaleShapes`). */
+function scaleDrawing(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  scale: number,
+  from: Point,
+  to: Point,
+): ActionResult {
+  if (scale === 1 && from[0] === to[0] && from[1] === to[1]) return { ok: true };
+  return transformDrawing(store, name, id, {
+    shapes: (shapes) => scaleShapes(shapes, scale, from, to),
+    point: (point) => scalePoint(point, scale, from, to),
+  });
+}
+
+/** Moves drawing `id` by `offset` millimetres, with the tabs on its paths (PRD-0009 D5). */
+export function moveDrawing(store: DocumentStore, id: string, offset: Point) {
+  if (offset[0] === 0 && offset[1] === 0) return;
+  transformDrawing(store, "moveDrawing", id, {
+    shapes: (shapes) => translateShapes(shapes, offset),
+    point: (point) => translatePoint(point, offset),
+  });
+}
+
+/**
+ * Where drawing `bounds` sit relative to the XY zero: their point at the
+ * zero's anchor (`modelAnchor`), in millimetres, as a model's position.
+ */
+export function drawingOffset(stock: Stock, bounds: Rect): Point {
+  const [x, y] = anchorPoint(bounds, modelAnchor(stock));
+  const [zx, zy] = xyOriginPosition(stock);
+  return [x - zx, y - zy];
+}
+
+/**
+ * Moves drawing `id` along one axis so that its anchor point is `value`
+ * millimetres from the XY zero (`drawingOffset`).
+ */
+export function setDrawingOffset(store: DocumentStore, id: string, axis: "x" | "y", value: number) {
+  const { document } = store.getState();
+  const bounds = drawingBounds(document.geometry, id);
+  if (!bounds) return;
+  const i = axis === "x" ? 0 : 1;
+  const offset: Point = [0, 0];
+  offset[i] = value - (drawingOffset(document.stock, bounds)[i] as number);
+  moveDrawing(store, id, offset);
 }
 
 /**

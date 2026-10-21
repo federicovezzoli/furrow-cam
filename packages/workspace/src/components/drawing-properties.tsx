@@ -16,22 +16,25 @@ import {
 } from "../providers/workspace-stores";
 import {
   drawingBounds,
+  drawingOffset,
   drawingOperations,
   fitDrawingToStock,
   removeDrawing,
   setDrawingBorder,
+  setDrawingOffset,
   setDrawingSize,
 } from "../stores/geometry-actions";
 import { gestureHandlers } from "../stores/gesture-handlers";
+import { modelAnchor } from "../stores/model-actions";
 import type { ActionResult } from "../stores/operation-actions";
 
 /** Keeps sizes positive when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
 
 /**
- * The selected drawing's size (PRD-0009 D2, D3, ADR-0055): width and height,
- * which keep its proportions, the border *Fit to stock* leaves, and removing
- * it, each an undoable edit.
+ * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):
+ * width and height, which keep its proportions, the border *Fit to stock*
+ * leaves, its position from the zero, and removing it, each an undoable edit.
  */
 export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const store = useDocumentStoreApi();
@@ -52,6 +55,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
 
   const gestures = gestureHandlers(store);
   const capped = cappedBorder(drawing.border, stock, units);
+  const offset = drawingOffset(stock, bounds);
   const apply = (field: string, result: ActionResult) =>
     setError(result.ok ? null : { field, message: result.error });
 
@@ -130,6 +134,26 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
             {format(error.message)}
           </p>
         )}
+      </section>
+
+      <section aria-labelledby="drawing-position-heading" className="grid gap-2">
+        <h3 id="drawing-position-heading" className="font-medium">
+          {t("position")}
+        </h3>
+        <p className="text-muted-foreground">{t("positionHint", { anchor: modelAnchor(stock) })}</p>
+        {(["x", "y"] as const).map((axis, i) => (
+          <NumberField
+            key={axis}
+            id={`drawing-${axis}`}
+            label={axis.toUpperCase()}
+            layout="inline"
+            quantity="length"
+            units={units}
+            value={offset[i] as number}
+            onValueChange={(value) => setDrawingOffset(store, drawing.id, axis, value)}
+            {...gestures}
+          />
+        ))}
       </section>
 
       <div className="flex justify-end">

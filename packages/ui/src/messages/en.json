@@ -1196,6 +1196,8 @@
     "borderCapped": "Left on every side by the next Fit to stock; editing it doesn't move the drawing. On this stock it leaves {size}, a quarter of its smaller side.",
     "fitTitle": "Scale the drawing to fit inside the stock, leaving the border on every side",
     "fit": "Fit to stock",
+    "position": "Position",
+    "positionHint": "Where the drawing's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Drag the drawing in the top view to move it too.",
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that only machine it",
     "remove": "Remove drawing"
   },

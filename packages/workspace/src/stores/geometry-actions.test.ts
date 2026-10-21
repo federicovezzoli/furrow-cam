@@ -24,10 +24,13 @@ import {
   addImportedShapes,
   canImportModel,
   drawingBounds,
+  drawingOffset,
   drawingOperations,
   fitDrawingToStock,
+  moveDrawing,
   removeDrawing,
   setDrawingBorder,
+  setDrawingOffset,
   setDrawingSize,
 } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
@@ -340,6 +343,34 @@ describe("drawing size", () => {
     );
     removeDrawing(s, DRAWING_ID);
     expect(tabsOf(s)).toEqual([[50, 0]]);
+  });
+
+  it("moves with the tabs on its paths in one undo step, leaving the other drawing", () => {
+    const s = store();
+    const other = s.getState().document.geometry[2];
+    const before = size(s).bounds;
+    moveDrawing(s, DRAWING_ID, [12.5, -3]);
+    const after = size(s).bounds;
+    expect(after.min[0]).toBeCloseTo(before.min[0] + 12.5, 9);
+    expect(after.min[1]).toBeCloseTo(before.min[1] - 3, 9);
+    expect(tabsOf(s)).toEqual([[62.5, -3]]);
+    expect(s.getState().document.geometry[2]).toBe(other);
+    expect(s.getState().past).toHaveLength(1);
+    moveDrawing(s, DRAWING_ID, [0, 0]);
+    expect(s.getState().past).toHaveLength(1);
+  });
+
+  it("sets its anchor point's distance from the zero, one axis at a time", () => {
+    const s = store();
+    setDrawingOffset(s, DRAWING_ID, "x", 40);
+    setDrawingOffset(s, DRAWING_ID, "y", -5);
+    const { document } = s.getState();
+    expect(drawingOffset(document.stock, size(s).bounds)).toEqual([40, -5]);
+    // With the zero at the centre, the drawing's centre is measured from the stock's.
+    setXYAnchor(s, "center");
+    setDrawingOffset(s, DRAWING_ID, "x", 0);
+    const { bounds } = size(s);
+    expect((bounds.min[0] + bounds.max[0]) / 2).toBeCloseTo(150, 6);
   });
 
   it("counts the operations that only machine it", () => {
