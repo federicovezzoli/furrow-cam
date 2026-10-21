@@ -1,9 +1,20 @@
-import type { Locale } from "@furrow/ui/lib/locales";
+import { isLocale, type Locale, matchLocale, parseAcceptLanguage } from "@furrow/ui/lib/locales";
 
 /** The language the user picked, overriding `Accept-Language` (ADR-0054). Per browser, never on the account. */
 export const LOCALE_COOKIE = "furrow-locale";
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
+const PICKED = new RegExp(`(?:^|;\\s*)${LOCALE_COOKIE}=([^;]*)`);
+
+/**
+ * The language for a request with these headers (ADR-0054): the picked one,
+ * else the browser's, else English.
+ */
+export function requestLocale(headers: Headers): Locale {
+  const picked = headers.get("cookie")?.match(PICKED)?.[1];
+  if (isLocale(picked)) return picked;
+  return matchLocale(parseAcceptLanguage(headers.get("accept-language")));
+}
 
 /** Remembers `locale` for the next request. Browser only. */
 export function writeLocaleCookie(locale: Locale) {

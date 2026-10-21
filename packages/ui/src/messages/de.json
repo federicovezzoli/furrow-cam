@@ -166,5 +166,23 @@
       "dontSave": "Nicht speichern",
       "cancel": "Abbrechen"
     }
+  },
+  "Emails": {
+    "fallbackLink": "Wenn die Schaltfläche nicht funktioniert, öffne diesen Link:",
+    "verify": {
+      "subject": "Bestätige deine E-Mail-Adresse für Furrow CAM",
+      "preview": "Bestätige deine E-Mail-Adresse, um die Registrierung abzuschließen.",
+      "action": "E-Mail bestätigen",
+      "body": "Bestätige deine E-Mail-Adresse, um dein Furrow-CAM-Konto fertig einzurichten.",
+      "reason": "Du erhältst diese E-Mail, weil sich jemand mit dieser Adresse bei Furrow CAM registriert hat. Wenn du das nicht warst, kannst du sie ignorieren."
+    },
+    "reset": {
+      "subject": "Setze dein Furrow-CAM-Passwort zurück",
+      "preview": "Wähle ein neues Passwort für dein Furrow-CAM-Konto.",
+      "action": "Neues Passwort wählen",
+      "body": "Jemand hat angefordert, das Passwort deines Furrow-CAM-Kontos zurückzusetzen.",
+      "next": "Öffne den Link unten, um ein neues zu wählen.",
+      "reason": "Du erhältst diese E-Mail, weil für diese Adresse bei Furrow CAM das Zurücksetzen des Passworts angefordert wurde. Wenn du das nicht warst, kannst du sie ignorieren; dein Passwort bleibt unverändert."
+    }
   }
 }

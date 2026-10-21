@@ -166,5 +166,23 @@
       "dontSave": "Don't Save",
       "cancel": "Cancel"
     }
+  },
+  "Emails": {
+    "fallbackLink": "If the button doesn't work, open this link:",
+    "verify": {
+      "subject": "Verify your Furrow CAM email",
+      "preview": "Confirm your email address to finish signing up.",
+      "action": "Verify email",
+      "body": "Confirm your email address to finish creating your Furrow CAM account.",
+      "reason": "You received this email because this address was used to sign up for Furrow CAM. If that wasn't you, you can ignore it."
+    },
+    "reset": {
+      "subject": "Reset your Furrow CAM password",
+      "preview": "Choose a new password for your Furrow CAM account.",
+      "action": "Choose a new password",
+      "body": "Someone asked to reset the password for your Furrow CAM account.",
+      "next": "Open the link below to choose a new one.",
+      "reason": "You received this email because a password reset was requested for this address on Furrow CAM. If that wasn't you, you can ignore it; your password stays the same."
+    }
   }
 }

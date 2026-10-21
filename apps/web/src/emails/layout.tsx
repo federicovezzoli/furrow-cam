@@ -1,3 +1,5 @@
+import { translator } from "@furrow/ui/lib/i18n";
+import type { Locale } from "@furrow/ui/lib/locales";
 import type { ReactNode } from "react";
 import { Body, Button, Container, Head, Hr, Html, Link, Preview, Section, Text } from "react-email";
 
@@ -34,6 +36,7 @@ const styles = {
 };
 
 export interface EmailLayoutProps {
+  locale: Locale;
   /** Inbox preview line, hidden in the body and skipped in the text version. */
   preview: string;
   /** Call-to-action label and target. */
@@ -43,9 +46,10 @@ export interface EmailLayoutProps {
   children: ReactNode;
 }
 
-export function EmailLayout({ preview, action, reason, children }: EmailLayoutProps) {
+export function EmailLayout({ locale, preview, action, reason, children }: EmailLayoutProps) {
+  const t = translator(locale);
   return (
-    <Html lang="en">
+    <Html lang={locale}>
       <Head>
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
@@ -62,7 +66,7 @@ export function EmailLayout({ preview, action, reason, children }: EmailLayoutPr
           </Section>
           {/* The text version already prints the URL next to the button label. */}
           <Section data-skip-in-text="true">
-            <Text style={styles.small}>If the button doesn't work, open this link:</Text>
+            <Text style={styles.small}>{t("Emails.fallbackLink")}</Text>
             <Text style={styles.small}>
               <Link href={action.url} style={styles.link}>
                 {action.url}

@@ -1,24 +1,34 @@
+import { translator } from "@furrow/ui/lib/i18n";
+import type { Locale } from "@furrow/ui/lib/locales";
 import { EmailLayout, EmailText } from "./layout";
 
 export interface ResetPasswordProps {
   url: string;
+  /** The requester's language (ADR-0054). */
+  locale: Locale;
 }
 
-export const resetPasswordSubject = "Reset your Furrow CAM password";
+export function resetPasswordSubject(locale: Locale) {
+  return translator(locale)("Emails.reset.subject");
+}
 
-export default function ResetPassword({ url }: ResetPasswordProps) {
+export default function ResetPassword({ url, locale }: ResetPasswordProps) {
+  const t = translator(locale);
   return (
     <EmailLayout
-      preview="Choose a new password for your Furrow CAM account."
-      action={{ label: "Choose a new password", url }}
-      reason="You received this email because a password reset was requested for this address on Furrow CAM. If that wasn't you, you can ignore it; your password stays the same."
+      locale={locale}
+      preview={t("Emails.reset.preview")}
+      action={{ label: t("Emails.reset.action"), url }}
+      reason={t("Emails.reset.reason")}
     >
-      <EmailText>Someone asked to reset the password for your Furrow CAM account.</EmailText>
-      <EmailText>Open the link below to choose a new one.</EmailText>
+      <EmailText>{t("Emails.reset.body")}</EmailText>
+      <EmailText>{t("Emails.reset.next")}</EmailText>
     </EmailLayout>
   );
 }
 
+// Edit `locale` in the preview's props panel to see each language.
 ResetPassword.PreviewProps = {
   url: "http://localhost:3000/reset-password?token=preview",
+  locale: "en",
 } satisfies ResetPasswordProps;

@@ -166,5 +166,23 @@
       "dontSave": "Ne pas enregistrer",
       "cancel": "Annuler"
     }
+  },
+  "Emails": {
+    "fallbackLink": "Si le bouton ne fonctionne pas, ouvrez ce lien :",
+    "verify": {
+      "subject": "Vérifiez votre adresse e-mail Furrow CAM",
+      "preview": "Confirmez votre adresse e-mail pour terminer votre inscription.",
+      "action": "Vérifier l'adresse e-mail",
+      "body": "Confirmez votre adresse e-mail pour terminer la création de votre compte Furrow CAM.",
+      "reason": "Vous recevez cet e-mail parce que cette adresse a été utilisée pour s'inscrire à Furrow CAM. Si ce n'était pas vous, vous pouvez l'ignorer."
+    },
+    "reset": {
+      "subject": "Réinitialisez votre mot de passe Furrow CAM",
+      "preview": "Choisissez un nouveau mot de passe pour votre compte Furrow CAM.",
+      "action": "Choisir un nouveau mot de passe",
+      "body": "Quelqu'un a demandé à réinitialiser le mot de passe de votre compte Furrow CAM.",
+      "next": "Ouvrez le lien ci-dessous pour en choisir un nouveau.",
+      "reason": "Vous recevez cet e-mail parce qu'une réinitialisation du mot de passe a été demandée pour cette adresse sur Furrow CAM. Si ce n'était pas vous, vous pouvez l'ignorer : votre mot de passe reste inchangé."
+    }
   }
 }
