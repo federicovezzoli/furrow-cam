@@ -1,9 +1,4 @@
-import {
-  ProjectDocument,
-  ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
-} from "@furrow/document";
+import { ProjectDocument, readProjectJson } from "@furrow/document";
 import {
   parseSettings,
   parseTools,
@@ -24,6 +19,9 @@ import type {
  * the browser blocks storage in a private window.
  */
 
+import { errorText, formatMessage } from "@furrow/ui/lib/i18n";
+import { clientTranslator } from "@/lib/client-translator";
+
 const DB_NAME = "furrow-guest";
 const DB_VERSION = 1;
 const PROJECTS = "projects";
@@ -43,12 +41,15 @@ type ProjectRecord = { id: string; name: string; savedAt: Date; document: unknow
 
 type MeshRecord = { projectId: string; sha256: string; file: Blob };
 
-export const STORAGE_UNAVAILABLE =
-  "This browser isn't letting Furrow CAM keep projects, e.g. in a private window or with site data blocked. Create a free account or use the desktop app to keep your work.";
-const STORAGE_FAILED = "This browser couldn't store the project. Free some space and try again.";
-const PROJECT_NOT_FOUND = "This project no longer exists in this browser.";
-const CONFLICT =
-  "This project was changed in another tab since you opened it. Reload it to see the latest version.";
+const storageUnavailable = () => clientTranslator()("Guest.storageUnavailable");
+const projectNotFound = () => clientTranslator()("Guest.projectNotFound");
+const conflict = () => clientTranslator()("Guest.conflict");
+
+/** What a failed guest action says: why, translated, else that something went wrong. */
+export function messageOf(error: unknown): string {
+  const t = clientTranslator();
+  return errorText(t, error, t("Guest.somethingWrong"));
+}
 
 let opening: Promise<IDBDatabase> | null = null;
 
@@ -59,7 +60,7 @@ function open(): Promise<IDBDatabase> {
     try {
       request = indexedDB.open(DB_NAME, DB_VERSION);
     } catch {
-      reject(new UserError(STORAGE_UNAVAILABLE));
+      reject(new UserError(storageUnavailable()));
       return;
     }
     request.onupgradeneeded = () => {
@@ -81,8 +82,8 @@ function open(): Promise<IDBDatabase> {
       };
       resolve(db);
     };
-    request.onerror = () => reject(new UserError(STORAGE_UNAVAILABLE));
-    request.onblocked = () => reject(new UserError(STORAGE_UNAVAILABLE));
+    request.onerror = () => reject(new UserError(storageUnavailable()));
+    request.onblocked = () => reject(new UserError(storageUnavailable()));
   });
   opening = current;
   // A failed open is retried next time rather than remembered.
@@ -113,7 +114,7 @@ async function transaction<T>(
   try {
     tx = db.transaction(stores, mode);
   } catch {
-    throw new UserError(STORAGE_UNAVAILABLE);
+    throw new UserError(storageUnavailable());
   }
   const done = new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -129,8 +130,8 @@ async function transaction<T>(
   } catch (error) {
     if (error instanceof UserError) throw error;
     // A failed read means storage is unavailable; a failed write may pass, e.g. once there is space.
-    if (mode === "readonly") throw new UserError(STORAGE_UNAVAILABLE);
-    throw new Error(STORAGE_FAILED);
+    if (mode === "readonly") throw new UserError(storageUnavailable());
+    throw new Error(clientTranslator()("Guest.storageFailed"));
   }
 }
 
@@ -144,18 +145,17 @@ function fail(tx: IDBTransaction, message: string): never {
 
 /** The record's document upgraded to the current schema version, or why it can't be. */
 function parseDocument(json: unknown): ProjectDocument {
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      throw new UserError(
-        "This project was saved by a newer release of Furrow CAM. Reload the page to update.",
-      );
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      throw new UserError(`This project can't be opened: ${error.message}.`);
-    }
-    throw new UserError("This project can't be opened: its contents are invalid.");
+  const read = readProjectJson(json);
+  const t = clientTranslator();
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "too_new":
+      throw new UserError(t("Guest.projectNewer"));
+    case "version":
+      throw new UserError(t("Guest.cantOpen", { reason: formatMessage(t, read.error.detail) }));
+    default:
+      throw new UserError(t("Guest.cantOpen", { reason: t("Guest.contentsInvalid") }));
   }
 }
 
@@ -208,14 +208,14 @@ export async function saveGuestProject(
 ): Promise<SaveResult> {
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
-    return { error: "This project couldn't be saved: its contents are invalid.", retryable: true };
+    return { error: clientTranslator()("Guest.saveInvalid"), retryable: true };
   }
   try {
     return await transaction([PROJECTS], "readwrite", async (tx) => {
       const store = tx.objectStore(PROJECTS);
       const record = await result<ProjectRecord | undefined>(store.get(id));
-      if (!record) fail(tx, PROJECT_NOT_FOUND);
-      if (record.savedAt.getTime() !== savedAt.getTime()) fail(tx, CONFLICT);
+      if (!record) fail(tx, projectNotFound());
+      if (record.savedAt.getTime() !== savedAt.getTime()) fail(tx, conflict());
       // Never earlier than the last save, so the conflict check holds within a millisecond.
       const updatedAt = new Date(Math.max(Date.now(), record.savedAt.getTime() + 1));
       await result(store.put({ ...record, document: parsed.data, savedAt: updatedAt }));
@@ -232,7 +232,7 @@ export function renameGuestProject(id: string, name: string): Promise<void> {
   return transaction([PROJECTS], "readwrite", async (tx) => {
     const store = tx.objectStore(PROJECTS);
     const record = await result<ProjectRecord | undefined>(store.get(id));
-    if (!record) fail(tx, PROJECT_NOT_FOUND);
+    if (!record) fail(tx, projectNotFound());
     await result(store.put({ ...record, name }));
   });
 }
@@ -277,7 +277,7 @@ export function putGuestMesh(
 ): Promise<{ uploaded: boolean }> {
   return transaction([PROJECTS, MESHES], "readwrite", async (tx) => {
     if ((await result(tx.objectStore(PROJECTS).count(projectId))) === 0) {
-      fail(tx, PROJECT_NOT_FOUND);
+      fail(tx, projectNotFound());
     }
     const store = tx.objectStore(MESHES);
     if ((await result(store.count([projectId, sha256]))) > 0) return { uploaded: false };
@@ -291,7 +291,7 @@ export async function getGuestMesh(projectId: string, sha256: string): Promise<A
   const record = await transaction([MESHES], "readonly", (tx) =>
     result<MeshRecord | undefined>(tx.objectStore(MESHES).get([projectId, sha256])),
   );
-  if (!record) throw new Error("A 3D model's file is missing from this browser.");
+  if (!record) throw new Error(clientTranslator()("Guest.meshMissing"));
   return record.file.arrayBuffer();
 }
 

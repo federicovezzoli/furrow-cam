@@ -39,11 +39,48 @@ export type PresetSource = {
   fields: PresetField[];
 };
 
+/**
+ * The presets' texts as codes (ADR-0054): firmware, notes and questions are
+ * translated in the UI, under `Core.preset`.
+ */
+export const PRESET_MESSAGES = [
+  "preset.v1e.firmware",
+  "preset.v1e.manualRouter",
+  "preset.v1e.jackpotGcode",
+  "preset.longmill.firmware",
+  "preset.longmill.spindle",
+  "preset.longmill.workArea",
+  "preset.longmill.maxFeedZ",
+  "preset.longmill.homing",
+  "preset.genmitsu.firmware",
+  "preset.genmitsu.maxFeedZ",
+  "preset.genmitsu.spindle",
+  "preset.lowrider.workArea",
+  "preset.lowrider.zTravel",
+  "preset.lowrider.endstops",
+  "preset.mpcnc.workArea",
+  "preset.mpcnc.zTravel",
+  "preset.mpcnc.limits",
+  "preset.maslow.firmware",
+  "preset.maslow.area",
+  "preset.maslow.router",
+  "preset.maslow.maxFeeds",
+  "preset.maslow.zTravel",
+  "preset.maslow.zZero",
+  "preset.longmill.advertised12x30",
+  "preset.longmill.advertised30x30",
+  "preset.longmill.advertised48x30",
+  "preset.genmitsu.rexSwitches",
+  "preset.genmitsu.proverWorkArea",
+  "preset.genmitsu.proverSwitches",
+] as const;
+export type PresetMessageCode = (typeof PRESET_MESSAGES)[number];
+
 /** Values the user provides because no official source can (PRD-0004 M3, M4). */
 export type PresetQuestion = {
   fields: RequiredPresetField[];
   /** What to enter and how to find it, e.g. how to measure a build's work area. */
-  help: string;
+  help: PresetMessageCode;
 };
 
 /**
@@ -59,11 +96,11 @@ export type MachinePreset = {
   /** E.g. a size or revision; `null` when the model has one. */
   variant: string | null;
   /** The controller firmware it needs, as shown in the picker (PRD-0004 M7). */
-  firmware: string;
+  firmware: PresetMessageCode;
   values: Partial<Pick<Machine, PresetField>>;
   ask: PresetQuestion[];
   /** Shown when picking it (PRD-0004 M8). */
-  notes: string[];
+  notes: PresetMessageCode[];
   sources: PresetSource[];
 };
 
@@ -104,13 +141,9 @@ M0 (MSG Remove probe)
 M62 P1 (If used start spindle pin27 )`;
 
 /** The Jackpot G-code uses FluidNC commands (`M62`/`M63`, `G38.2 … P`, `$HZ`) that GRBL rejects. */
-const V1E_FIRMWARE =
-  "Requires FluidNC on V1 Engineering's Jackpot board: the program start, tool change and end use FluidNC commands. GRBL, grblHAL and Marlin builds aren't supported yet.";
+const V1E_FIRMWARE = "preset.v1e.firmware";
 
-const V1E_NOTES = [
-  "Manual router (e.g. a Makita RT0701C): set its speed on its dial; the G-code sets none.",
-  "The program start, tool change and end are V1 Engineering's Jackpot G-code. The start zeroes X, Y and Z where the bit is and probes Z with a 0.5 mm touch plate, so jog to the project's zero point first and use the stock top as Z zero. M62 P1 and M63 P1 switch an optional router relay on pin 27.",
-];
+const V1E_NOTES: PresetMessageCode[] = ["preset.v1e.manualRouter", "preset.v1e.jackpotGcode"];
 
 const LONGMILL_EEPROM: PresetSource = {
   title: "Sienci Labs: LongMill MK2 EEPROM settings",
@@ -144,19 +177,18 @@ const LONGMILL_SOURCES: PresetSource[] = [
   },
 ];
 
-const LONGMILL_FIRMWARE =
-  "Requires Sienci's LongBoard (GRBL 1.1h, LongMill MK2) or SuperLongBoard (grblHAL, LongMill MK2.5).";
+const LONGMILL_FIRMWARE = "preset.longmill.firmware";
 
 const LONGMILL_SPINDLE: PresetQuestion = {
   fields: ["spindleRpmMin", "spindleRpmMax"],
-  help: "Spindle: no router ships with the LongMill. Tick Manual spindle for a router set by its dial (e.g. a Makita RT0701), or enter the speed range of a controlled spindle, e.g. 7,500–24,000 RPM for Sienci's 1.5 kW spindle kit.",
+  help: "preset.longmill.spindle",
 };
 
 /** One LongMill MK2 size; the rest is the same for all of them. */
 function longMill(
   size: string,
   workArea: Pick<Machine, "workAreaX" | "workAreaY" | "workAreaZ">,
-  advertised: string,
+  advertised: PresetMessageCode,
 ): MachinePreset {
   return {
     id: `sienci-longmill-mk2-${size}`,
@@ -167,26 +199,26 @@ function longMill(
     values: { ...workArea, maxFeedXY: 4000, maxFeedZ: 3000 },
     ask: [LONGMILL_SPINDLE],
     notes: [
-      `The work area is the smaller of the firmware's maximum travel ($130–$132) and Sienci's advertised area. ${advertised}`,
-      "Max feed Z is the LongBoard's 3000 mm/min; the SuperLongBoard allows 4000 mm/min.",
-      "Homing is off by default: zero X, Y and Z on the stock, e.g. with a touch plate.",
+      "preset.longmill.workArea",
+      advertised,
+      "preset.longmill.maxFeedZ",
+      "preset.longmill.homing",
     ],
     sources: LONGMILL_SOURCES,
   };
 }
 
-const GENMITSU_FIRMWARE =
-  "Runs GRBL 1.1h on its included controller, which ships configured for the machine.";
+const GENMITSU_FIRMWARE = "preset.genmitsu.firmware";
 
 /** SainSmart publishes one "Max Speed" and only a maximum spindle speed. */
 const GENMITSU_ASK: PresetQuestion[] = [
   {
     fields: ["maxFeedZ"],
-    help: "Max feed Z: SainSmart gives one maximum speed, not one per axis. Send $$ in your G-code sender and enter $112, the Z axis maximum rate in mm/min.",
+    help: "preset.genmitsu.maxFeedZ",
   },
   {
     fields: ["spindleRpmMin", "spindleRpmMax"],
-    help: "Spindle: the stock 775 spindle is rated 9,000 RPM, and SainSmart publishes no minimum. Enter the slowest and fastest speeds you run it at, in RPM. The G-code's S words are in RPM, so GRBL's $30 (maximum spindle speed) should match the maximum.",
+    help: "preset.genmitsu.spindle",
   },
 ];
 
@@ -220,14 +252,10 @@ M30`,
     ask: [
       {
         fields: ["workAreaX", "workAreaY"],
-        help: "Work area: the usable cutting area you built for, as entered in V1 Engineering's LowRider calculator (X is the beam, the shorter axis), e.g. 1220 × 2440 mm for a full sheet. To check a finished build, jog the bit between opposite corners of the area it can reach and note the distance on each axis.",
+        help: "preset.lowrider.workArea",
       },
     ],
-    notes: [
-      ...V1E_NOTES,
-      "Z travel is the 50 mm cutting depth of a standard build; with a drop table you can use up to 100 mm.",
-      "The endstops only act while homing and soft limits are off: keep the job inside your work area.",
-    ],
+    notes: [...V1E_NOTES, "preset.lowrider.zTravel", "preset.lowrider.endstops"],
     sources: [
       {
         title: "V1 Engineering: LowRider CNC",
@@ -278,17 +306,14 @@ M30`,
     ask: [
       {
         fields: ["workAreaX", "workAreaY"],
-        help: "Work area: the X and Y build area you chose in V1 Engineering's MPCNC calculator, the area the tool can reach (e.g. 450 × 330 mm with the kit's belt). Larger tools such as a DeWalt DW660 or a spindle reach less of it. To check a finished build, jog the bit between opposite corners of the area it can reach and note the distance on each axis.",
+        help: "preset.mpcnc.workArea",
       },
       {
         fields: ["workAreaZ"],
-        help: "Z travel: the Z build size from the calculator; 81 mm is the shortest, and the one V1 Engineering recommends.",
+        help: "preset.mpcnc.zTravel",
       },
     ],
-    notes: [
-      ...V1E_NOTES,
-      "Z isn't homed, and soft limits are off: keep the job inside your work area.",
-    ],
+    notes: [...V1E_NOTES, "preset.mpcnc.limits"],
     sources: [
       {
         title: "V1 Engineering: MPCNC printed parts",
@@ -313,7 +338,7 @@ M30`,
     maker: "Maslow CNC",
     model: "Maslow 4",
     variant: null,
-    firmware: "Runs Maslow's own build of FluidNC, which comes on the Maslow 4 board.",
+    firmware: "preset.maslow.firmware",
     values: {
       workAreaX: 2440,
       workAreaY: 1220,
@@ -325,11 +350,11 @@ M30`,
     },
     ask: [],
     notes: [
-      "Keep the job inside the area you can cut. The firmware has no limit switches: it flattens moves outside its work area (2440 × 1220 mm by default, centred on the frame) onto its edge instead of stopping. Trace Boundary shows the outline before cutting.",
-      "Switch the router (a DeWalt DWP611, or D26200 for 240 V) on and set its speed by hand; the G-code sets none.",
-      "Max feeds are the lower official figures: the firmware's 2000 mm/min belt rate (the spec says 2500 mm/min X/Y) and the spec's 300 mm/min Z (the firmware allows 400).",
-      "Z travel is the spec's 50 mm; the work area is listed as 65 mm deep.",
-      "Set Z zero on the stock top with Define Z Home.",
+      "preset.maslow.area",
+      "preset.maslow.router",
+      "preset.maslow.maxFeeds",
+      "preset.maslow.zTravel",
+      "preset.maslow.zZero",
     ],
     sources: [
       {
@@ -362,18 +387,18 @@ M30`,
   longMill(
     "12x30",
     { workAreaX: 810, workAreaY: 355, workAreaZ: 120 },
-    "Sienci advertises 820 × 368 mm, with about 125 mm of Z; the firmware's 810 × 355 × 120 mm is used.",
+    "preset.longmill.advertised12x30",
   ),
   longMill(
     "30x30",
     { workAreaX: 810, workAreaY: 855, workAreaZ: 120 },
-    "Sienci advertises 820 × 868 mm, with about 125 mm of Z; the firmware's 810 × 855 × 120 mm is used.",
+    "preset.longmill.advertised30x30",
   ),
   // Sienci states a 48 × 30 in working area, smaller than the firmware's 1270 × 855 mm travel.
   longMill(
     "48x30",
     { workAreaX: 1219.2, workAreaY: 762, workAreaZ: 120 },
-    "Sienci advertises 48 × 30 in (1219.2 × 762 mm), which this preset uses for X and Y; the firmware allows 1270 × 855 mm.",
+    "preset.longmill.advertised48x30",
   ),
   {
     id: "sainsmart-genmitsu-3018-rex",
@@ -383,7 +408,7 @@ M30`,
     firmware: GENMITSU_FIRMWARE,
     values: { workAreaX: 300, workAreaY: 180, workAreaZ: 60, maxFeedXY: 3000 },
     ask: GENMITSU_ASK,
-    notes: ["Has X, Y and Z limit switches for homing, and a Z probe for setting Z zero."],
+    notes: ["preset.genmitsu.rexSwitches"],
     sources: [
       {
         title: "SainSmart: Genmitsu 3018 REX user guide",
@@ -405,10 +430,7 @@ M30`,
     firmware: GENMITSU_FIRMWARE,
     values: { workAreaX: 284, workAreaY: 180, workAreaZ: 40, maxFeedXY: 2000 },
     ask: GENMITSU_ASK,
-    notes: [
-      "The work area is the user manual's; the product page lists 290 mm of X.",
-      "Has home and limit switches, and a Z probe for setting Z zero.",
-    ],
+    notes: ["preset.genmitsu.proverWorkArea", "preset.genmitsu.proverSwitches"],
     sources: [
       {
         title: "SainSmart: Genmitsu 3018-PROVer V2 user manual",

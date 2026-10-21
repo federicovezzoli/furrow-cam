@@ -7,9 +7,10 @@ import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { type FormEvent, useState, useTransition } from "react";
+import { useTranslations } from "use-intl";
 import type { SavedTool, ToolFormErrors } from "../../lib/workspace-host";
-import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "../lib/labels";
 import { BitTypeIcon } from "./bit-type-icon";
 import { useToolDialogBusy } from "./tool-dialog";
 
@@ -50,6 +51,7 @@ type ToolFormProps = {
 export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps) {
   const tool = id === null ? { ...NEW_TOOL, ...values } : values;
   const [type, setType] = useState<ToolType>(tool.type ?? "flat_end_mill");
+  const t = useTranslations("Bit");
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
   useToolDialogBusy(pending);
@@ -61,7 +63,7 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
     startTransition(async () => {
       // Staying on the page, so a failure must not fall into the error boundary.
       const result = await save(id, form).catch(() => ({
-        errors: { form: "The bit couldn't be saved. Check your connection and try again." },
+        errors: { form: t("saveFailed") },
       }));
       if ("errors" in result) setErrors(result.errors);
       else onSaved(result);
@@ -75,29 +77,38 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
     <form onSubmit={onSubmit} className="grid gap-8" noValidate>
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <TypePicker value={type} onChange={setType} error={errors.type} />
-        <Field label="Name" {...field("name")} placeholder="6 mm 2-flute upcut" />
-        <Field label="Colour" {...field("color")} type="color" className="p-1" />
+        <Field label={t("name")} {...field("name")} placeholder={t("namePlaceholder")} />
+        <Field label={t("colour")} {...field("color")} type="color" className="p-1" />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">Geometry</legend>
-        <NumberField label="Diameter" {...number("diameter")} quantity="length" min={0} />
-        <NumberField label="Flutes" {...number("fluteCount")} integer min={1} />
-        <NumberField label="Flute length" {...number("fluteLength")} quantity="length" min={0} />
+        <legend className="mb-4 font-medium">{t("geometry")}</legend>
+        <NumberField label={t("diameter")} {...number("diameter")} quantity="length" min={0} />
+        <NumberField label={t("flutes")} {...number("fluteCount")} integer min={1} />
+        <NumberField
+          label={t("fluteLength")}
+          {...number("fluteLength")}
+          quantity="length"
+          min={0}
+        />
         {isEndMill && (
           <SelectField
-            label="Cut direction"
+            label={t("cutDirection")}
             id="cutDirection"
             defaultValue={tool.cutDirection ?? "upcut"}
-            options={CUT_DIRECTION_LABELS}
+            options={{
+              upcut: t("cutDirections.upcut"),
+              downcut: t("cutDirections.downcut"),
+              compression: t("cutDirections.compression"),
+            }}
             error={errors.cutDirection}
           />
         )}
         {type === "v_bit" && (
           <>
-            <NumberField label="V angle" {...number("vAngle")} suffix="°" min={0} />
+            <NumberField label={t("vAngle")} {...number("vAngle")} suffix="°" min={0} />
             <NumberField
-              label="Tip diameter"
+              label={t("tipDiameter")}
               {...number("tipDiameter")}
               defaultValue={tool.tipDiameter ?? 0}
               quantity="length"
@@ -108,49 +119,43 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">Cutting data</legend>
+        <legend className="mb-4 font-medium">{t("cuttingData")}</legend>
         <NumberField
-          label="Spindle speed"
+          label={t("spindleSpeed")}
           {...number("spindleRpm")}
           suffix="RPM"
           integer
           step={1000}
           min={0}
         />
-        <NumberField label="Feed rate" {...number("feedRate")} quantity="feed" min={0} />
-        <NumberField label="Plunge rate" {...number("plungeRate")} quantity="feed" min={0} />
+        <NumberField label={t("feedRate")} {...number("feedRate")} quantity="feed" min={0} />
+        <NumberField label={t("plungeRate")} {...number("plungeRate")} quantity="feed" min={0} />
         {/* Drills always plunge straight down. */}
         {type !== "drill" && (
           <NumberField
-            label="Plunge angle"
+            label={t("plungeAngle")}
             {...number("plungeAngle")}
             suffix="°"
             min={1}
             max={90}
           />
         )}
-        <NumberField label="Step down per pass" {...number("stepDown")} quantity="length" min={0} />
-        <NumberField
-          label="Step over (of diameter)"
-          {...number("stepOver")}
-          suffix="%"
-          min={0}
-          max={100}
-        />
+        <NumberField label={t("stepDown")} {...number("stepDown")} quantity="length" min={0} />
+        <NumberField label={t("stepOver")} {...number("stepOver")} suffix="%" min={0} max={100} />
       </fieldset>
 
       <div className="grid gap-2">
-        <Label htmlFor="notes">Notes (optional)</Label>
+        <Label htmlFor="notes">{t("notes")}</Label>
         <Textarea id="notes" name="notes" defaultValue={tool.notes ?? ""} />
       </div>
 
       <FormError message={errors.form ?? null} />
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : id ? "Save changes" : "Add bit"}
+          {pending ? t("saving") : id ? t("saveChanges") : t("add")}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     </form>
@@ -165,8 +170,9 @@ function TypePicker({
 }: {
   value: ToolType;
   onChange: (type: ToolType) => void;
-  error?: string;
+  error?: Translatable;
 }) {
+  const t = useTranslations("Bit");
   return (
     <div
       role="radiogroup"
@@ -175,7 +181,7 @@ function TypePicker({
       className="grid gap-2 sm:col-span-full"
     >
       <span id="type-label" className="text-sm leading-none font-medium">
-        Type
+        {t("type")}
       </span>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {ToolType.options.map((type) => (
@@ -192,7 +198,7 @@ function TypePicker({
               className="sr-only"
             />
             <BitTypeIcon type={type} className="h-14 w-7" />
-            {TOOL_TYPE_LABELS[type]}
+            {t(`types.${type}`)}
           </label>
         ))}
       </div>

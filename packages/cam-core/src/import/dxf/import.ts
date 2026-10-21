@@ -10,6 +10,7 @@ import {
 } from "@furrow/document";
 import { MM_PER_INCH } from "../../units/units";
 import { defaultCreateId, isFinitePath, toStock } from "../common";
+import { type ImportMessage, type ImportMessageCode, SkipCounter } from "../messages";
 import { determinant, isSimilarity, type Matrix, multiply, translation } from "../svg/transform";
 import { joinPaths } from "./join";
 import {
@@ -78,7 +79,7 @@ export type DxfImportOptions = {
 export type DxfImportResult = {
   shapes: Shape[];
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
-  warnings: string[];
+  warnings: ImportMessage[];
 };
 
 /** A parsed DXF file, so it can be checked with `dxfNeedsUnits` and imported without parsing it twice. */
@@ -86,7 +87,7 @@ export type DxfDocument = {
   readonly header: Map<string, DxfPair[]>;
   readonly sections: Map<string, DxfRecord[]>;
   /** About decoding the file, passed on with the import's. */
-  readonly warnings: readonly string[];
+  readonly warnings: readonly ImportMessage[];
 };
 
 /** An entity with the records that belong to it: a POLYLINE's VERTEXes. */
@@ -121,41 +122,41 @@ type Piece = { path: Path; layer: string; name: string };
 const FULL_TURN = 2 * Math.PI;
 
 /** Entities that can't become geometry, with what is said when they are skipped. */
-const UNSUPPORTED: Record<string, string> = {
-  TEXT: "text (convert it to outlines before exporting)",
-  MTEXT: "text (convert it to outlines before exporting)",
-  ATTDEF: "text (convert it to outlines before exporting)",
-  ATTRIB: "text (convert it to outlines before exporting)",
-  DIMENSION: "dimensions",
-  LEADER: "leaders",
-  MLEADER: "leaders",
-  MULTILEADER: "leaders",
-  TOLERANCE: "dimensions",
-  HATCH: "hatches and fills",
-  SOLID: "hatches and fills",
-  TRACE: "hatches and fills",
-  IMAGE: "images",
-  WIPEOUT: "images",
-  REGION: "solids and regions (explode them into lines and arcs before exporting)",
-  "3DSOLID": "solids and regions (explode them into lines and arcs before exporting)",
-  BODY: "solids and regions (explode them into lines and arcs before exporting)",
-  "3DFACE": "3D faces, meshes and surfaces",
-  MESH: "3D faces, meshes and surfaces",
-  SURFACE: "3D faces, meshes and surfaces",
-  PLANESURFACE: "3D faces, meshes and surfaces",
+const UNSUPPORTED: Record<string, ImportMessageCode> = {
+  TEXT: "dxf.skip.text",
+  MTEXT: "dxf.skip.text",
+  ATTDEF: "dxf.skip.text",
+  ATTRIB: "dxf.skip.text",
+  DIMENSION: "dxf.skip.dimensions",
+  LEADER: "dxf.skip.leaders",
+  MLEADER: "dxf.skip.leaders",
+  MULTILEADER: "dxf.skip.leaders",
+  TOLERANCE: "dxf.skip.dimensions",
+  HATCH: "dxf.skip.hatches",
+  SOLID: "dxf.skip.hatches",
+  TRACE: "dxf.skip.hatches",
+  IMAGE: "dxf.skip.images",
+  WIPEOUT: "dxf.skip.images",
+  REGION: "dxf.skip.solids",
+  "3DSOLID": "dxf.skip.solids",
+  BODY: "dxf.skip.solids",
+  "3DFACE": "dxf.skip.faces",
+  MESH: "dxf.skip.faces",
+  SURFACE: "dxf.skip.faces",
+  PLANESURFACE: "dxf.skip.faces",
 };
 
 /** Entities that draw nothing in model space, skipped without a word. */
 const IGNORED = new Set(["", "VIEWPORT", "SEQEND", "VERTEX", "XLINE", "RAY"]);
 
-const TILTED = "entities not parallel to the XY plane";
+const TILTED = "dxf.skip.tilted";
 
 /** Parses a DXF file, from its bytes or text. Throws `DxfImportError` if it isn't an ASCII DXF file. */
 export function parseDxf(input: string | Uint8Array): DxfDocument {
   const { text, warnings } =
     typeof input === "string" ? { text: input, warnings: [] } : decodeDxf(input);
   const sections = readSections(readPairs(text));
-  if (sections.size === 0) throw new DxfImportError("This file isn't a DXF drawing.");
+  if (sections.size === 0) throw new DxfImportError({ code: "dxf.notDxf" });
   return { header: readHeader(sections.get("HEADER")), sections, warnings };
 }
 
@@ -192,8 +193,8 @@ export function importDxf(
   const createId = options.createId ?? defaultCreateId;
   const scale = dxfUnitScale(document) ?? (options.units === "in" ? MM_PER_INCH : 1);
 
-  const skipped = new Map<string, number>();
-  const skip = (what: string) => skipped.set(what, (skipped.get(what) ?? 0) + 1);
+  const skipped = new SkipCounter();
+  const skip = (code: ImportMessageCode) => skipped.add(code);
   const layers = readLayers(document.sections.get("TABLES"));
   /** One spelling per layer, the table's or else the first seen: DXF layer names ignore case. */
   const spelling = (name: string) => {
@@ -222,13 +223,13 @@ export function importDxf(
     // Invisible entities are never drawn.
     if (fields.number(60, 0) === 1) return;
     if (context.layer === null && fields.number(67, 0) === 1) {
-      skip("paper-space entities (layouts)");
+      skip("dxf.skip.paperSpace");
       return;
     }
     const ownLayer = spelling(decodeName(fields.text(8) ?? "0"));
     const layer = context.layer !== null && ownLayer === "0" ? context.layer : ownLayer;
     if (layers.hidden.has(layer.toLowerCase())) {
-      skip("entities on layers that are off or frozen");
+      skip("dxf.skip.layersOff");
       return;
     }
 
@@ -244,7 +245,7 @@ export function importDxf(
 
     const shape = entityPaths(entity, skip);
     if (!shape) {
-      skip(`${type} entities`);
+      skipped.add("dxf.skip.entityType", type);
       return;
     }
     if (shape.tilted) {
@@ -258,7 +259,7 @@ export function importDxf(
       return path ? [path] : [];
     });
     if (!paths.every(isFinitePath)) {
-      skip("entities with invalid or too large coordinates");
+      skip("dxf.skip.invalidCoordinates");
       return;
     }
     for (const path of paths) pieces.push({ path, layer, name: context.name });
@@ -268,15 +269,15 @@ export function importDxf(
     const { fields } = entity;
     const block = blocks.get(decodeName(fields.text(2) ?? "").toLowerCase());
     if (!block) {
-      skip("references to missing blocks");
+      skip("dxf.skip.missingBlocks");
       return;
     }
     if (block.external) {
-      skip("external references (xrefs)");
+      skip("dxf.skip.xrefs");
       return;
     }
     if (drawing.has(block)) {
-      skip("blocks that contain themselves");
+      skip("dxf.skip.recursiveBlocks");
       return;
     }
     const { frame, tilted } = objectFrame(fields);
@@ -297,7 +298,7 @@ export function importDxf(
         Number.isFinite,
       )
     ) {
-      skip("block references with invalid positions or scales");
+      skip("dxf.skip.invalidBlockRefs");
       return;
     }
     const cos = Math.cos(angle);
@@ -333,14 +334,9 @@ export function importDxf(
   for (const entity of groupEntities(document.sections.get("ENTITIES") ?? [])) draw(entity, root);
 
   const shapes = toShapes(pieces, options.fileName, createId);
-  const warnings = [
-    ...document.warnings,
-    ...Array.from(skipped, ([what, count]) => `Skipped ${what} (${count}).`),
-  ];
+  const warnings = [...document.warnings, ...skipped.messages()];
   if (truncated) {
-    warnings.push(
-      `The drawing has more than ${MAX_DXF_ENTITIES.toLocaleString("en")} entities, counting repeated copies, so the rest was skipped.`,
-    );
+    warnings.push({ code: "dxf.tooManyEntities", values: { max: MAX_DXF_ENTITIES } });
   }
   return { shapes, warnings };
 }
@@ -395,7 +391,7 @@ function toShapes(pieces: Piece[], fileName: string | undefined, createId: () =>
 type EntityPaths = { paths: RawPath[]; frame?: Matrix; tilted?: boolean };
 
 /** `null` for an entity this importer doesn't know. */
-function entityPaths(entity: Entity, skip: (what: string) => void): EntityPaths | null {
+function entityPaths(entity: Entity, skip: (code: ImportMessageCode) => void): EntityPaths | null {
   const { type, fields } = entity;
   const n = (code: number, fallback = 0) => fields.number(code, fallback);
   switch (type) {
@@ -459,7 +455,7 @@ function entityPaths(entity: Entity, skip: (what: string) => void): EntityPaths 
     case "POLYLINE": {
       const flags = n(70);
       if (flags & (16 | 64)) {
-        skip("3D faces, meshes and surfaces");
+        skip("dxf.skip.faces");
         return { paths: [] };
       }
       // Spline-fitted polylines keep the frame they were fitted to as vertices flagged 16.
@@ -476,7 +472,7 @@ function entityPaths(entity: Entity, skip: (what: string) => void): EntityPaths 
     case "SPLINE": {
       const controlPoints = pointsOf(fields.pairs, 10, 20);
       if (controlPoints.length === 0) {
-        skip("splines defined only by fit points (save them with control points)");
+        skip("dxf.skip.fitSplines");
         return { paths: [] };
       }
       const converted = splineToSegments({
@@ -486,7 +482,7 @@ function entityPaths(entity: Entity, skip: (what: string) => void): EntityPaths 
         weights: fields.numbers(41),
       });
       if (!converted) {
-        skip("invalid splines");
+        skip("dxf.skip.invalidSplines");
         return { paths: [] };
       }
       return { paths: [{ ...converted, closed: false }] };

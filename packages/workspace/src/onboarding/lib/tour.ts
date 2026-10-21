@@ -11,16 +11,28 @@ export type TourId = "app" | "workspace";
 export type TourPane = "operations" | "properties" | "versions";
 
 export interface TourStep {
-  id: string;
+  /** Its title and text are `Tour.steps.<id>` in the catalogs (ADR-0054). */
+  id: TourStepId;
   /** The `data-tour` value of the element the step points at. */
   anchor: string;
   /** The collapsible pane holding the anchor, expanded for the step. */
   pane?: TourPane;
   /** Where the popover goes: beside the anchor, or inside the top of a large one. */
   side: "top" | "right" | "bottom" | "left" | "inside";
-  title: string;
-  body: string;
 }
+
+/** The steps of every tour, which the catalogs name and describe. */
+export type TourStepId =
+  | "bits"
+  | "machines"
+  | "new-project"
+  | "import"
+  | "properties"
+  | "select"
+  | "operations"
+  | "preview"
+  | "export-gcode"
+  | "versions";
 
 export const TOURS: Record<TourId, readonly TourStep[]> = {
   app: [
@@ -28,22 +40,16 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
       id: "bits",
       anchor: "bits",
       side: "bottom",
-      title: "Your bits",
-      body: "Add the router bits you own, with their sizes and feeds. Operations pick their bit from this library.",
     },
     {
       id: "machines",
       anchor: "machines",
       side: "bottom",
-      title: "Your machine",
-      body: "Describe your router once, or start from a preset. Its work area, feeds and G-code dialect apply to every project made for it.",
     },
     {
       id: "new-project",
       anchor: "new-project",
       side: "bottom",
-      title: "Start a project",
-      body: "Create a project here, or import a project file. You can choose its machine now or later, before exporting G-code.",
     },
   ],
   workspace: [
@@ -51,54 +57,40 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
       id: "import",
       anchor: "import",
       side: "bottom",
-      title: "Import a drawing",
-      body: "Start from an SVG or DXF file: its paths become the shapes you cut.",
     },
     {
       id: "properties",
       anchor: "properties",
       pane: "properties",
       side: "right",
-      title: "Project properties",
-      body: "Set the units, the machine and the stock: the size and thickness of the material, and where its zero is.",
     },
     {
       id: "select",
       anchor: "viewport",
       side: "inside",
-      title: "Select paths",
-      body: "Click a path in the viewport to select it, and Shift+click to add more. Operations cut what is selected.",
     },
     {
       id: "operations",
       anchor: "operations",
       pane: "operations",
       side: "right",
-      title: "Add operations",
-      body: "Add an operation (profile, pocket, drill, engrave or V-carve) for the selected paths, then pick its bit and depths.",
     },
     {
       id: "preview",
       anchor: "viewport",
       side: "inside",
-      title: "Preview the toolpaths",
-      body: "The viewport shows the toolpaths of every enabled operation, with rapid moves told apart from cuts. Check them before you cut.",
     },
     {
       id: "export-gcode",
       anchor: "export-gcode",
       pane: "operations",
       side: "right",
-      title: "Export G-code",
-      body: "When the toolpaths look right, export the G-code and run it with your usual sender.",
     },
     {
       id: "versions",
       anchor: "versions",
       pane: "versions",
       side: "right",
-      title: "Versions",
-      body: "Optional: save a named version before a big change, and restore it whenever you need.",
     },
   ],
 };

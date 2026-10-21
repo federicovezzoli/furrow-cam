@@ -12,6 +12,7 @@ import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
 import { modelRect, type PlacedModel } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
+import type { ToolpathMessage } from "../messages";
 import { type Descent, depthLevels, descend } from "../passes";
 import { LevelClearing } from "../pocket/pocket";
 import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "../toolpath";
@@ -22,6 +23,7 @@ import {
   liftHeight,
   MAX_RELIEF_CELLS,
   modelHeightsSteps,
+  NO_AREA_WARNING,
   outlineSpan,
   padDiscs,
   RELIEF_TOLERANCE,
@@ -37,6 +39,7 @@ import {
   reliefGrid,
   remainingRuns,
   restStockSteps,
+  round3,
   simplifyHeights,
   ToolDropper,
   toPassFrame,
@@ -97,9 +100,10 @@ const REST_SHARE = 0.25;
  *
  * The step-over is the tool's unless the operation sets its own.
  *
- * With `rest` (S8), the stock the earlier operations left is simulated on
- * the same grid, and only material more than `REST_MATERIAL` above a level,
- * and wider than `REST_MIN_WIDTH`, is cut: linear passes skip the samples
+ * With `rest` (S8), the stock the earlier operations left is simulated over
+ * the grid and all the tool reaches from the area, and only material more
+ * than `REST_MATERIAL` above a level, and wider than `REST_MIN_WIDTH`, is
+ * cut: linear passes skip the samples
  * where the tool meets none, rapiding over the gaps, and pockets are cleared
  * only within reach of it.
  */
@@ -121,7 +125,7 @@ export function* reliefRoughSteps(
   const { params } = operation;
   const tool = { ...operation.tool, stepOver: params.stepOver ?? operation.tool.stepOver };
   const { strategy } = params;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
   const radius = tool.diameter / 2;
   // Walls grow out by the stock to leave, and a tool centred outside the grid
@@ -130,15 +134,15 @@ export function* reliefRoughSteps(
   const angle = strategy.type === "linear" ? strategy.angle : 0;
   const grid = reliefGrid(model, angle, wanted, MAX_RELIEF_CELLS, margin);
   if (!grid) {
-    return { moves: [], warnings: ["The model has no area seen from above to machine."] };
+    return { moves: [], warnings: [NO_AREA_WARNING] };
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
   const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   if (!(floor < 0)) {
-    warnings.push("The stock to leave covers the whole model: there is nothing to rough out.");
+    warnings.push({ code: "toolpath.roughNothing" });
     return { moves: [], warnings };
   }
-  if (-floor > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (-floor > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
   const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
@@ -149,6 +153,11 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
+  const area = roughingArea(params.boundary, model, stock, radius);
+  if (!area) {
+    warnings.push({ code: "toolpath.roughMarginOffStock" });
+    return { moves: [], warnings };
+  }
   const restStock = rest
     ? yield* restStockSteps(
         grid,
@@ -156,14 +165,10 @@ export function* reliefRoughSteps(
         stockBottom ?? grid.base,
         HEIGHTMAP_SHARE - REST_SHARE,
         HEIGHTMAP_SHARE,
+        restCover(area, rest.stock, radius + wanted + 2 * restCellSize(grid)),
       )
     : null;
-
-  const area = roughingArea(params.boundary, model, stock, radius);
-  if (!area) {
-    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
-    return { moves: [], warnings };
-  }
+  if (restStock?.grid.coarsened) warnings.push(restCoarsenedWarning(restStock.grid));
   const levels = depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
@@ -198,7 +203,8 @@ export function* reliefRoughSteps(
   // hold every cell above the level: offsetting each step of a staircase
   // along the cells is slow.
   const simplification = Math.max(grid.cellWidth, grid.cellHeight);
-  const skipped = new Set<string>();
+  // The same warning from many levels is said once.
+  const skipped = new Map<string, ToolpathMessage>();
   for (const [i, z] of levels.entries()) {
     const contours = heightContours(heights, grid, z, grid.origin).map((ring) =>
       simplifyContour(ring, simplification),
@@ -219,7 +225,7 @@ export function* reliefRoughSteps(
         restStock.heights,
         restStock.grid,
         z + REST_MATERIAL,
-        grid.origin,
+        restStock.grid.origin,
       );
       const reachable = offset(offset(cleared, -radius, { arcTolerance: tolerance }), radius, {
         arcTolerance: tolerance,
@@ -232,10 +238,10 @@ export function* reliefRoughSteps(
       const reach = offset(opened, REST_MIN_WIDTH / 2 + 2 * radius, { arcTolerance: tolerance });
       cleared = intersection(cleared, reach);
     }
-    for (const warning of clearing.clear(cleared, z)) skipped.add(warning);
+    for (const warning of clearing.clear(cleared, z)) skipped.set(JSON.stringify(warning), warning);
     yield progress(i);
   }
-  return { moves: clearing.finish(), warnings: [...warnings, ...skipped] };
+  return { moves: clearing.finish(), warnings: [...warnings, ...skipped.values()] };
 }
 
 /**
@@ -272,6 +278,40 @@ export function roughingArea(
   const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
   const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
   return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
+}
+
+/**
+ * Where a rest roughing's stock left is simulated, besides the model's grid:
+ * the `area` grown by `margin`, wherever the tool may reach from it (its
+ * radius, the rest dropper's reach of a cell's diagonal and more), on the
+ * stock, where earlier operations can have cut. Without a stock, nothing
+ * past the model's grid: the stock is the model's outline (`roughingArea`).
+ */
+function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
+  if (!stock) return null;
+  const min: Point = [
+    Math.max(area.min[0] - margin, stock.min[0]),
+    Math.max(area.min[1] - margin, stock.min[1]),
+  ];
+  const max: Point = [
+    Math.min(area.max[0] + margin, stock.max[0]),
+    Math.min(area.max[1] + margin, stock.max[1]),
+  ];
+  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
+}
+
+/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
+function restCellSize(grid: ReliefGrid): number {
+  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+}
+
+/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
+function restCoarsenedWarning(grid: ReliefGrid): ToolpathMessage {
+  const size = Math.max(grid.cellWidth, grid.cellHeight);
+  return {
+    code: "toolpath.restCoarsened",
+    values: { size: round3(size), width: round3(2 * size) },
+  };
 }
 
 /**
@@ -387,12 +427,10 @@ function* rasterLevels(
     // The pad may be past the grid, where the pass still goes.
     dropper.dropDiscs(v, first, last, tips);
     // Only stock more than `REST_MATERIAL` above the pass counts, so the tool
-    // dropped onto it starts there, which spares scanning most cells. Past
-    // the grid, nothing is left that the model's margin would show.
+    // dropped onto it starts there, which spares scanning most cells. The
+    // stock left is simulated over the whole area, past the grid too.
     const stockTips = restDropper ? tips.map((tip) => tip + REST_MATERIAL) : null;
-    if (stockTips && row >= 0 && row < rows && from <= to) {
-      restDropper?.dropLine(v, from, to, stockTips.subarray(from - first, to - first + 1));
-    }
+    if (stockTips) restDropper?.dropLine(v, first, last, stockTips);
     passes.push({ v, first, tips, stockTips });
   }
 

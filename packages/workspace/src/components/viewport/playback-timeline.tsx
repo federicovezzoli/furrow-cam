@@ -4,7 +4,9 @@ import { fromMillimetres, moveStartDistance, type PlaybackPath } from "@furrow/c
 import type { Units } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { localizeDecimal } from "@furrow/ui/lib/locales";
 import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from "lucide-react";
+import { useLocale, useTranslations } from "use-intl";
 import { useStore } from "zustand";
 import type { PlaybackPart } from "../../lib/playback-moves";
 import {
@@ -41,6 +43,8 @@ export function PlaybackTimeline({
   const current = starts.findLastIndex((start) => start <= distance);
   const empty = length === 0;
   const { setDistance, setPlaying, setSpeed } = store.getState();
+  const t = useTranslations("Viewport");
+  const locale = useLocale();
 
   function jump(direction: -1 | 1) {
     // Back goes to the start of the part under way, or the one before when at its start.
@@ -53,15 +57,15 @@ export function PlaybackTimeline({
 
   return (
     <section
-      aria-label="Playback"
+      aria-label={t("playback")}
       className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-t bg-background px-2 py-1.5"
     >
       <div className="flex items-center gap-0.5">
         <Button
           variant="ghost"
           size="icon-compact"
-          aria-label="Previous operation"
-          title="Back to the start of the operation"
+          aria-label={t("previous")}
+          title={t("previousTitle")}
           disabled={empty}
           onClick={() => jump(-1)}
         >
@@ -70,8 +74,8 @@ export function PlaybackTimeline({
         <Button
           variant="secondary"
           size="icon-compact"
-          aria-label={playing ? "Pause" : "Play"}
-          title={playing ? "Pause" : "Play"}
+          aria-label={playing ? t("pause") : t("play")}
+          title={playing ? t("pause") : t("play")}
           disabled={empty}
           onClick={() => setPlaying(!playing)}
         >
@@ -80,8 +84,8 @@ export function PlaybackTimeline({
         <Button
           variant="ghost"
           size="icon-compact"
-          aria-label="Next operation"
-          title="Forward to the next operation"
+          aria-label={t("next")}
+          title={t("nextTitle")}
           disabled={empty}
           onClick={() => jump(1)}
         >
@@ -91,7 +95,7 @@ export function PlaybackTimeline({
       <div className="relative flex min-w-40 flex-1 items-center">
         <input
           type="range"
-          aria-label="Position along the toolpaths"
+          aria-label={t("position")}
           className="h-control w-full accent-primary"
           min={0}
           max={length}
@@ -105,7 +109,7 @@ export function PlaybackTimeline({
             <button
               key={`${part.operationId}:${part.clearing}`}
               type="button"
-              aria-label={`Jump to ${part.name}`}
+              aria-label={t("jumpTo", { name: part.name })}
               title={part.name}
               onClick={() => setDistance(starts[i] ?? 0)}
               className="absolute top-0 h-1.5 w-1 -translate-x-1/2 rounded-sm"
@@ -114,7 +118,7 @@ export function PlaybackTimeline({
           ))}
       </div>
       <NativeSelect
-        aria-label="Playback speed"
+        aria-label={t("speed")}
         size="sm"
         className="h-control px-2 pr-7 text-ui"
         value={speed}
@@ -129,7 +133,7 @@ export function PlaybackTimeline({
       <p className="min-w-0 truncate text-ui text-muted-foreground tabular-nums" aria-live="off">
         {status.length > 0
           ? status.join(" ")
-          : `${parts[current]?.name ?? ""} ${lengthLabel(distance, units)} / ${lengthLabel(length, units)}`}
+          : `${parts[current]?.name ?? ""} ${lengthLabel(distance, units, locale)} / ${lengthLabel(length, units, locale)}`}
       </p>
     </section>
   );
@@ -138,7 +142,7 @@ export function PlaybackTimeline({
 /** How close after an operation's start "back" still goes to the one before, in millimetres. */
 const JUMP_SLACK = 1;
 
-function lengthLabel(millimetres: number, units: Units): string {
+function lengthLabel(millimetres: number, units: Units, locale: string): string {
   const value = fromMillimetres(millimetres, units);
-  return `${value.toFixed(units === "in" ? 1 : 0)} ${units}`;
+  return `${localizeDecimal(value.toFixed(units === "in" ? 1 : 0), locale)} ${units}`;
 }

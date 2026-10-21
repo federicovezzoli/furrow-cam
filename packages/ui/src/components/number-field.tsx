@@ -11,6 +11,10 @@ import {
 import type { Units } from "@furrow/document";
 import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useLocale, useTranslations } from "use-intl";
+import { useFormatMessage } from "../hooks/use-format-message";
+import type { Translatable } from "../lib/i18n";
+import { delocalizeDecimal, localizeDecimal } from "../lib/locales";
 import { cn } from "../lib/utils";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -79,7 +83,7 @@ export type NumberFieldProps = {
   /** Shown inside the input instead of the display unit, e.g. `RPM` or `%`. */
   suffix?: string;
   /** An error from elsewhere, e.g. the server; a parse error takes its place while shown. */
-  error?: string;
+  error?: Translatable;
   placeholder?: string;
   disabled?: boolean;
   /** `stacked` puts the label above the input (forms), `inline` beside it (workspace panels). */
@@ -119,7 +123,7 @@ export function NumberField({
   const current = value === undefined ? ownValue : value;
   /** What's typed while editing; `null` shows the current value. */
   const [draft, setDraft] = useState<string | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<Translatable | null>(null);
   const press = useRef<Press | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const justScrubbed = useRef(false);
@@ -128,8 +132,14 @@ export function NumberField({
   const cancelOpenGesture = useEffectEvent(() => endGesture(true));
   useEffect(() => () => cancelOpenGesture(), []);
 
-  const text = draft ?? (current === null ? "" : formatQuantity(current, quantity, units));
+  const locale = useLocale();
+  const text =
+    draft ??
+    (current === null ? "" : localizeDecimal(formatQuantity(current, quantity, units), locale));
+  const format = useFormatMessage();
+  const t = useTranslations("NumberField");
   const shownError = parseError ?? error;
+  const parse = (typed: string) => parseQuantity(delocalizeDecimal(typed, locale), quantity, units);
 
   function update(next: number) {
     setOwnValue(next);
@@ -147,13 +157,17 @@ export function NumberField({
     return Math.min(max ?? Infinity, Math.max(min ?? -Infinity, next));
   }
 
-  function valueError(next: number): string | null {
-    if (integer && !Number.isInteger(next)) return "Must be a whole number";
+  function valueError(next: number): Translatable | null {
+    if (integer && !Number.isInteger(next)) return { code: "validation.wholeNumber" };
     // Rounded inwards, so typing the limit as shown is accepted.
     const limit = (bound: number, rounding: "up" | "down") =>
-      `${formatQuantity(bound, quantity, units, rounding)}${suffix ? ` ${suffix}` : ""}`;
-    if (min !== undefined && next < min) return `Must be at least ${limit(min, "up")}`;
-    if (max !== undefined && next > max) return `Must be at most ${limit(max, "down")}`;
+      `${localizeDecimal(formatQuantity(bound, quantity, units, rounding), locale)}${suffix ? ` ${suffix}` : ""}`;
+    if (min !== undefined && next < min) {
+      return { code: "validation.atLeast", values: { min: limit(min, "up") } };
+    }
+    if (max !== undefined && next > max) {
+      return { code: "validation.atMost", values: { max: limit(max, "down") } };
+    }
     return null;
   }
 
@@ -166,7 +180,7 @@ export function NumberField({
       revert();
       return;
     }
-    const result = parseQuantity(draft, quantity, units);
+    const result = parse(draft);
     const problem = result.ok ? valueError(result.value) : result.error;
     if (problem !== null || !result.ok) {
       setParseError(problem);
@@ -217,7 +231,7 @@ export function NumberField({
       revert();
     } else if (ARROW_KEYS.has(event.key)) {
       event.preventDefault();
-      const typed = draft === null ? null : parseQuantity(draft, quantity, units);
+      const typed = draft === null ? null : parse(draft);
       const start = typed?.ok ? typed.value : (current ?? 0);
       const delta = (event.key === "ArrowUp" ? 1 : -1) * stepSize(event);
       revert();
@@ -271,7 +285,7 @@ export function NumberField({
   /** Text that parses goes to the form as a value; anything else as typed, for the server to reject. */
   function submittedValue(): string {
     if (draft === null) return current === null ? "" : String(current);
-    const result = parseQuantity(draft, quantity, units);
+    const result = parse(draft);
     return result.ok ? String(result.value) : draft;
   }
 
@@ -287,7 +301,7 @@ export function NumberField({
     >
       <Label
         htmlFor={id}
-        title="Drag sideways to change"
+        title={t("drag")}
         className={cn("cursor-ew-resize touch-none", layout === "inline" && "text-ui font-normal")}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -351,7 +365,7 @@ export function NumberField({
             layout === "inline" ? "col-start-2 text-ui" : "text-sm",
           )}
         >
-          {shownError}
+          {format(shownError)}
         </p>
       )}
     </div>

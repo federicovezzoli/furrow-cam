@@ -7,6 +7,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 import { useModelPreviews } from "../../hooks/use-model-previews";
 import { useSimulation } from "../../hooks/use-simulation";
 import { belongsElsewhere } from "../../lib/keyboard-target";
@@ -66,7 +67,8 @@ export function Viewport() {
     sim.thickness === thickness
       ? simulation.heightmap
       : null;
-  const status = simulating ? simulationStatus(simulation) : [];
+  const t = useTranslations("Viewport");
+  const status = simulating ? simulationStatus(t, simulation) : [];
 
   return (
     <div
@@ -76,7 +78,7 @@ export function Viewport() {
       )}
       {...cancelPick}
     >
-      <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock, geometry and toolpaths">
+      <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("scene")}>
         <ReportCapture />
         {view === "top" ? (
           <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
@@ -102,19 +104,22 @@ export function Viewport() {
 }
 
 /** What the simulation is doing, and what it leaves out, one line each. */
-export function simulationStatus({
-  pending,
-  error,
-  skipped,
-}: {
-  pending: boolean;
-  error: string | null;
-  skipped: string[];
-}): string[] {
+export function simulationStatus(
+  t: ReturnType<typeof useTranslations<"Viewport">>,
+  {
+    pending,
+    error,
+    skipped,
+  }: {
+    pending: boolean;
+    error: string | null;
+    skipped: string[];
+  },
+): string[] {
   const lines: string[] = [];
-  if (pending) lines.push("Simulating…");
-  else if (error) lines.push(`Simulation failed: ${error}`);
-  if (skipped.length > 0) lines.push(`Not simulated, toolpath failed: ${skipped.join(", ")}`);
+  if (pending) lines.push(t("simulating"));
+  else if (error) lines.push(t("simulationFailed", { error }));
+  if (skipped.length > 0) lines.push(t("notSimulated", { operations: skipped.join(", ") }));
   return lines;
 }
 
@@ -165,19 +170,9 @@ function useCancelZeroPick(picking: boolean) {
   };
 }
 
-const VIEWS: { value: ViewMode; label: string; Icon: typeof SquareIcon; hint: string }[] = [
-  {
-    value: "top",
-    label: "Top view",
-    Icon: SquareIcon,
-    hint: "Drag with the right or middle button to pan, scroll to zoom",
-  },
-  {
-    value: "orbit",
-    label: "3D view",
-    Icon: BoxIcon,
-    hint: "Drag to orbit, right-drag to pan, scroll to zoom",
-  },
+const VIEWS: { value: ViewMode; Icon: typeof SquareIcon }[] = [
+  { value: "top", Icon: SquareIcon },
+  { value: "orbit", Icon: BoxIcon },
 ];
 
 function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
@@ -192,16 +187,17 @@ function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
 /** Top and 3D view, and fitting the stock in view. */
 export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void }) {
   const setView = useWorkspaceStore((s) => s.setView);
+  const t = useTranslations("Viewport");
   return (
-    <div role="toolbar" aria-label="View" className={TOOLBAR_GROUP}>
-      {VIEWS.map(({ value, label, Icon, hint }) => (
+    <div role="toolbar" aria-label={t("view")} className={TOOLBAR_GROUP}>
+      {VIEWS.map(({ value, Icon }) => (
         <Button
           key={value}
           variant={view === value ? "secondary" : "ghost"}
           size="icon-compact"
-          aria-label={label}
+          aria-label={t(`views.${value}`)}
           aria-pressed={view === value}
-          title={`${label}: ${hint}`}
+          title={t("viewHint", { view: t(`views.${value}`), hint: t(`viewHints.${value}`) })}
           onClick={() => setView(value)}
         >
           <Icon />
@@ -210,8 +206,8 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
       <Button
         variant="ghost"
         size="icon-compact"
-        aria-label="Fit stock"
-        title="Fit stock"
+        aria-label={t("fitStock")}
+        title={t("fitStock")}
         onClick={onFit}
       >
         <ScanIcon />
@@ -240,14 +236,15 @@ function CutToolbar() {
     operationIds.some((id) => !s.hiddenToolpathIds.includes(id)),
   );
   const ToolpathsIcon = anyShown ? RouteIcon : RouteOffIcon;
+  const t = useTranslations("Viewport");
   return (
-    <div role="toolbar" aria-label="Cut" className={TOOLBAR_GROUP}>
+    <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
       <Button
         variant={anyShown ? "secondary" : "ghost"}
         size="icon-compact"
-        aria-label="Show toolpaths"
+        aria-label={t("showToolpaths")}
         aria-pressed={anyShown}
-        title={anyShown ? "Hide all toolpaths" : "Show all toolpaths"}
+        title={anyShown ? t("hideAll") : t("showAll")}
         disabled={operationIds.length === 0}
         onClick={() => workspace.getState().setToolpathsVisible(operationIds, !anyShown)}
       >
@@ -256,9 +253,9 @@ function CutToolbar() {
       <Button
         variant={simulating ? "secondary" : "ghost"}
         size="icon-compact"
-        aria-label="Simulate cutting"
+        aria-label={t("simulate")}
         aria-pressed={simulating}
-        title="Simulate cutting: show the stock as it will look after the toolpaths"
+        title={t("simulateTitle")}
         onClick={() => workspace.getState().setSimulating(!simulating)}
       >
         <LayersIcon />

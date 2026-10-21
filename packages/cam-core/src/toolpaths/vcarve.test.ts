@@ -161,10 +161,7 @@ describe("vcarveToolpath", () => {
   it("stops at the maximum depth and warns about the edges it leaves", () => {
     const { moves, warnings } = carve({ maxDepth: 4 });
     expect(deepest(moves)).toBeCloseTo(-4, 6);
-    expect(warnings).toEqual([
-      "Parts are wider than the V-bit reaches at the maximum depth, so their edges stay " +
-        "uncarved: turn on a flat bottom to clear them.",
-    ]);
+    expect(warnings).toEqual([{ code: "toolpath.vcarveEdgesUncarved" }]);
     expect(carve({ maxDepth: 10 }).warnings).toEqual([]);
   });
 
@@ -173,9 +170,7 @@ describe("vcarveToolpath", () => {
     const { moves, warnings } = carve({}, [bar], small);
     expect(carve({ maxDepth: 15 }).warnings).toEqual([]);
     expect(deepest(moves)).toBeCloseTo(-6, 6);
-    expect(warnings).toContain(
-      "The maximum depth exceeds the V-bit's cone, so it carves no deeper than that.",
-    );
+    expect(warnings).toContainEqual({ code: "toolpath.vcarveConeLimit" });
   });
 
   it("with a flat bottom, carves the walls at the limit and clears the floor with the end mill", () => {
@@ -210,9 +205,7 @@ describe("vcarveToolpath", () => {
   it("warns when the floor is too narrow for the flat-bottom tool", () => {
     // 20 mm wide, the walls 8 mm in: a 4 mm floor for a 6.35 mm end mill.
     const { warnings, clearing } = carve({ maxDepth: 8, flatBottom: { tool: endMill } });
-    expect(warnings).toEqual([
-      "Some flat areas are too narrow for the flat-bottom tool and stay uncut.",
-    ]);
+    expect(warnings).toEqual([{ code: "toolpath.flatAreasNarrow" }]);
     expect(clearing).toEqual([]);
   });
 
@@ -281,8 +274,8 @@ describe("vcarveToolpath", () => {
     const { moves, warnings } = carve({}, [shape(open, point)]);
     expect(moves).toEqual([]);
     expect(warnings).toEqual([
-      "Skipped 1 point: drill them instead.",
-      "Skipped 1 open path: V-carving needs closed paths.",
+      { code: "toolpath.skippedPoints", values: { count: 1 } },
+      { code: "toolpath.skippedOpenVCarve", values: { count: 1 } },
     ]);
   });
 

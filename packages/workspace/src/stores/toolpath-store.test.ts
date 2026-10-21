@@ -15,7 +15,7 @@ const lines: ToolpathLines = {
   feedColors: new Float32Array(),
   kinds: new Uint8Array([0]),
 };
-const stale: ToolpathPreview = { warnings: ["stale"], lines };
+const stale: ToolpathPreview = { warnings: [{ code: "toolpath.noArea" }], lines };
 const fresh: ToolpathPreview = { warnings: [], lines };
 
 describe("toolpath store", () => {
@@ -117,7 +117,7 @@ describe("toolpath store", () => {
     const cancelled: string[] = [];
     store.getState().controls.cancel("op");
     await expect(store.getState().controls.exportGcode(() => "Plate")).resolves.toEqual({
-      error: "Toolpaths aren't being computed.",
+      error: { code: "workspace.toolpathsOff" },
     });
     store.getState().setControls({
       cancel: (id) => cancelled.push(id),

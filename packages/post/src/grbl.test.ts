@@ -246,7 +246,10 @@ describe("grbl", () => {
       });
       expect(gcode).toContain("M3 S30000");
       expect(warnings).toEqual([
-        "Holes: the tool's 40000 RPM is outside the machine's spindle range, so 30000 RPM is used.",
+        {
+          operation: "Holes",
+          message: { code: "grbl.spindleClamped", values: { rpm: 40000, used: 30000 } },
+        },
       ]);
     });
   });
@@ -277,7 +280,9 @@ describe("grbl", () => {
         "G1 X30 Z-4 F1008.849",
         "G1 Y10 F900",
       ]);
-      expect(warnings).toEqual(["Ramp: 2 moves slowed to the machine's maximum feed."]);
+      expect(warnings).toEqual([
+        { operation: "Ramp", message: { code: "grbl.slowed", values: { count: 2 } } },
+      ]);
     });
 
     it("leaves feeds alone without a machine profile", () => {
@@ -419,7 +424,12 @@ describe("grbl", () => {
       expect(gcode).toContain("M5\nG0 Z20\nM0 (Change the bit)");
       expect(gcode).toContain("(At 7.5 {safez})");
       expect(warnings).toEqual([
-        "Operation start: {safez} can't be filled in, so it's written as is.",
+        {
+          message: {
+            code: "grbl.unfilledPlaceholder",
+            values: { block: "operationStart", placeholder: "{safez}" },
+          },
+        },
       ]);
     });
 
@@ -547,29 +557,29 @@ describe("grbl", () => {
       const lineOf = (text: string) => output.gcode.split("\n").indexOf(text) + 1;
       return { ...output, lineOf };
     }
+    /** The warning about line `line` of custom block `block`. */
+    const moveWarning = (block: string, line: number, problem: string, amount = 0) => ({
+      message: {
+        code: "grbl.customBlockMove",
+        values: { block, after: "no", line, problem, amount },
+      },
+    });
 
     it("warn about a plunge into the stock", () => {
       const { warnings, lineOf } = withToolChange("G0 X150 Y100\nG1 Z-3 F300\nG0 Z20\nM0");
       // Backing out of the plunge goes through nothing left.
-      expect(warnings).toEqual([
-        `Tool change: line ${lineOf("G1 Z-3 F300")} moves through 3 mm of material.`,
-      ]);
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G1 Z-3 F300"), "material", 3)]);
     });
 
     it("follow relative coordinates", () => {
       // Down into the hole the first operation drilled is clear; across is not.
       const { warnings, lineOf } = withToolChange("G91\nG0 Z-10\nG0 X50\nG0 Z15\nG90\nM0");
-      expect(warnings).toEqual([
-        `Tool change: line ${lineOf("G0 X50")} moves through 5 mm of material.`,
-      ]);
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 X50"), "material", 5)]);
     });
 
     it("stop at a move in machine coordinates", () => {
       const { warnings, lineOf } = withToolChange("G53 G0 Z-5\nG1 Z-3 F300\nM0");
-      expect(warnings).toEqual([
-        `Tool change: line ${lineOf("G53 G0 Z-5")} leaves the tool where it can't be followed, ` +
-          "so the program isn't checked for moves into the stock from there on.",
-      ]);
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G53 G0 Z-5"), "unfollowed")]);
     });
 
     it("check a tool-change block's moves before the pause with the bit it changes", () => {
@@ -587,9 +597,7 @@ describe("grbl", () => {
 
     it("warn once about a block that leaves the tool in the stock, not the retract after it", () => {
       const { warnings, lineOf } = withToolChange("G0 X150 Y100\nG0 Z-3\nM0");
-      expect(warnings).toEqual([
-        `Tool change: line ${lineOf("G0 Z-3")} moves through 3 mm of material.`,
-      ]);
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 Z-3"), "material", 3)]);
     });
 
     it("stop at a line it can't read", () => {
@@ -598,10 +606,7 @@ describe("grbl", () => {
         operations,
       });
       const line = gcode.split("\n").indexOf("$H") + 1;
-      expect(warnings).toEqual([
-        `Program start: line ${line} can't be read, ` +
-          "so the program isn't checked for moves into the stock from there on.",
-      ]);
+      expect(warnings).toEqual([moveWarning("programStart", line, "unreadable")]);
     });
 
     it("leave the program's own cuts through the stock alone", () => {
@@ -631,7 +636,7 @@ describe("grbl", () => {
         operations,
       });
       const line = gcode.split("\n").indexOf("G0 Z-20") + 1;
-      expect(warnings).toEqual([`Program end: line ${line} goes below the stock bottom to Z-20.`]);
+      expect(warnings).toEqual([moveWarning("programEnd", line, "belowBottom", -20)]);
     });
   });
 

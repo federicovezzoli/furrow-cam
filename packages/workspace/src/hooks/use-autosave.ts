@@ -1,6 +1,8 @@
 "use client";
 
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useTranslations } from "use-intl";
 import { useAutosaveApi } from "../providers/workspace-stores";
 import type { AutosaveStatus } from "../stores/autosave";
 
@@ -42,9 +44,17 @@ export function useAutosave() {
  */
 export function useConfirmLeave(): () => boolean {
   const autosave = useAutosaveApi();
+  const t = useTranslations();
   return useCallback(
-    () => mayLeave(autosave.status, (message) => window.confirm(message)),
-    [autosave],
+    () =>
+      mayLeave(autosave.status, (error) =>
+        window.confirm(
+          t("Shell.leaveAnyway", {
+            error: formatMessage(t, error ?? { code: "workspace.offline" }),
+          }),
+        ),
+      ),
+    [autosave, t],
   );
 }
 
@@ -60,12 +70,13 @@ export function useLeaveNavigate(leaves = true): (event: { preventDefault(): voi
 }
 
 /** Whether to leave the project with `status`, asking `confirm` only while changes can't be saved. */
-export function mayLeave(status: AutosaveStatus, confirm: (message: string) => boolean): boolean {
+export function mayLeave(
+  status: AutosaveStatus,
+  confirm: (error: AutosaveStatus["error"]) => boolean,
+): boolean {
   const { state, error } = status;
   if (state !== "error" && state !== "failed") return true;
-  return confirm(
-    `${error ?? "The project couldn't be saved."} Leave it anyway? Changes not saved will be lost; export the project first to keep them.`,
-  );
+  return confirm(error);
 }
 
 /** The open project's save status. */

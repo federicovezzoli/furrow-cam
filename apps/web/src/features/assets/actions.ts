@@ -4,7 +4,8 @@ import { Sha256 } from "@furrow/document";
 import { getUserId } from "@/features/auth/server";
 import { lockProject, parseProjectId } from "@/features/projects/server";
 import { db } from "@/lib/db";
-import { type ActionResult, SIGNED_OUT } from "@/lib/form-data";
+import { type ActionResult, signedOut } from "@/lib/form-data";
+import { translate } from "@/lib/locale";
 import {
   assetKey,
   checkObject,
@@ -16,10 +17,10 @@ import {
   presignUpload,
 } from "./server";
 
-const NOT_FOUND = "This project no longer exists.";
-const NO_STORAGE = "STL import isn't available on this server.";
-const ASSET_NOT_FOUND = "This mesh hasn't been uploaded.";
-const MISMATCH = "The uploaded file doesn't match the one picked. Try again.";
+const notFound = () => translate("Projects.notFound");
+const noStorage = () => translate("Assets.noStorage");
+const assetNotFound = () => translate("Assets.notUploaded");
+const mismatch = () => translate("Assets.mismatch");
 
 /**
  * The asset and object key of mesh `sha256` in the user's project, or why
@@ -30,13 +31,13 @@ async function findProject(
   projectId: unknown,
   sha256: unknown,
 ): Promise<{ projectId: string; sha256: string; key: string; error?: never } | { error: string }> {
-  if (!isStorageConfigured()) return { error: NO_STORAGE };
+  if (!isStorageConfigured()) return { error: await noStorage() };
   const id = parseProjectId(projectId);
-  if (!id) return { error: NOT_FOUND };
+  if (!id) return { error: await notFound() };
   const hash = Sha256.safeParse(sha256);
-  if (!hash.success) return { error: "Invalid file hash." };
+  if (!hash.success) return { error: await translate("Assets.invalidHash") };
   const project = await db.project.findFirst({ where: { id, userId }, select: { id: true } });
-  if (!project) return { error: NOT_FOUND };
+  if (!project) return { error: await notFound() };
   return { projectId: id, sha256: hash.data, key: assetKey(userId, id, hash.data) };
 }
 
@@ -63,13 +64,13 @@ export async function requestMeshUpload(
   | { error: string }
 > {
   const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
+  if (!userId) return { error: await signedOut() };
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
-  if (!Number.isSafeInteger(size) || size <= 0) return { error: "This file is empty." };
+  if (!Number.isSafeInteger(size) || size <= 0) return { error: await translate("Assets.empty") };
   if (size > MAX_MESH_BYTES) {
     return {
-      error: `This file is larger than ${MAX_MESH_BYTES / 1_000_000} MB, the most allowed.`,
+      error: await translate("Assets.tooLarge", { mb: MAX_MESH_BYTES / 1_000_000 }),
     };
   }
 
@@ -105,21 +106,21 @@ export async function requestMeshUpload(
  */
 export async function verifyMeshUpload(projectId: string, sha256: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
+  if (!userId) return { error: await signedOut() };
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   const asset = await db.projectAsset.findUnique({
     where: { projectId_sha256: { projectId: project.projectId, sha256: project.sha256 } },
     select: { size: true, verifiedAt: true },
   });
-  if (!asset) return { error: ASSET_NOT_FOUND };
+  if (!asset) return { error: await assetNotFound() };
   if (asset.verifiedAt) return;
 
   const stored = await checkObject(project.key, asset.size, project.sha256);
-  if (stored === "missing") return { error: ASSET_NOT_FOUND };
+  if (stored === "missing") return { error: await assetNotFound() };
   if (stored === "mismatch") {
     await deleteObject(project.key);
-    return { error: MISMATCH };
+    return { error: await mismatch() };
   }
   await markVerified(project.projectId, project.sha256);
 }
@@ -130,14 +131,14 @@ export async function getMeshUrl(
   sha256: string,
 ): Promise<{ url: string; error?: never } | { error: string }> {
   const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
+  if (!userId) return { error: await signedOut() };
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   const asset = await db.projectAsset.findFirst({
     where: { projectId: project.projectId, sha256: project.sha256, verifiedAt: { not: null } },
     select: { id: true },
   });
-  if (!asset) return { error: ASSET_NOT_FOUND };
+  if (!asset) return { error: await assetNotFound() };
   return { url: await presignDownload(project.key) };
 }
 
@@ -148,7 +149,7 @@ export async function getMeshUrl(
  */
 export async function discardMesh(projectId: string, sha256: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: SIGNED_OUT };
+  if (!userId) return { error: await signedOut() };
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   const { projectId: id, sha256: hash } = project;

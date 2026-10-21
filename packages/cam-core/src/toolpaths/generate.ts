@@ -15,6 +15,7 @@ import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
 import { engraveToolpath } from "./engrave";
+import type { ToolpathMessage } from "./messages";
 import { pocketToolpath } from "./pocket/pocket";
 import { profileToolpath } from "./profile";
 import {
@@ -258,7 +259,7 @@ export function* toolpathSteps(
 function* restCuts(
   before: readonly ToolpathInput[],
   context: ToolpathContext,
-  warnings: string[],
+  warnings: ToolpathMessage[],
 ): Generator<number, SimulationCut[]> {
   const cuts: SimulationCut[] = [];
   for (const [i, input] of before.entries()) {
@@ -278,17 +279,17 @@ function* restCuts(
       }
     } catch (error) {
       if (error instanceof MissingMeshError) throw error;
-      warnings.push(
-        `"${input.operation.name}" failed, so the material it would cut is taken as left.`,
-      );
+      warnings.push({
+        code: "toolpath.restOperationFailed",
+        values: { operation: input.operation.name },
+      });
     }
   }
   return cuts;
 }
 
 /** Said when a 2D operation cuts into the touch-off pad. */
-export const TOUCH_OFF_WARNING =
-  "This operation cuts into the touch-off pad, so Z can't be zeroed on it after a tool change: move the pad or the cut.";
+export const TOUCH_OFF_WARNING: ToolpathMessage = { code: "toolpath.touchOffPad" };
 
 /**
  * Whether any cut of `operation`'s toolpath, below the stock top, reaches
@@ -340,7 +341,7 @@ function* operationSteps(
   const { mesh, cache } = context;
   // E.g. a drill bit on a profile saved before the tool picker refused it.
   const problem = toolProblem(operation);
-  if (problem) return { moves: [], warnings: [`${problem}.`] };
+  if (problem) return { moves: [], warnings: [problem] };
   switch (operation.type) {
     case "profile":
       return checkTouchOff(operation, profileToolpath(operation, shapes, options), touchOff);
@@ -354,10 +355,10 @@ function* operationSteps(
       return checkTouchOff(operation, vcarveToolpath(operation, shapes, options), touchOff);
     case "relief_finish":
     case "relief_rough": {
-      if (!model) return { moves: [], warnings: ["The model to machine is missing."] };
+      if (!model) return { moves: [], warnings: [{ code: "toolpath.modelMissing" }] };
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
-      const warnings: string[] = [];
+      const warnings: ToolpathMessage[] = [];
       let rest: RestOptions | null = null;
       let share = 0;
       if (operation.params.rest) {

@@ -13,6 +13,7 @@ import {
 } from "@furrow/cam-core";
 import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
 import { formatNumber } from "./format";
+import type { PostWarning } from "./post";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
 export const EPSILON = 1e-3;
@@ -47,8 +48,19 @@ export type GcodeMove = {
 /** What a program is read against: the project it was posted from. */
 export type CheckedProject = Pick<ProjectDocument, "stock" | "machine" | "operations">;
 
+/** The custom blocks, as warnings name them. */
+export type BlockLabel =
+  | "programStart"
+  | "toolChangePad"
+  | "toolChange"
+  | "operationStart"
+  | "programEnd";
+
 /** Lines `first` to `last` (1-based) of a program: one custom block, named by `label`. */
-export type CustomBlock = { label: string; first: number; last: number };
+export type CustomBlock = { label: BlockLabel; first: number; last: number };
+
+/** What a custom block's move does, as `grbl.customBlockMove` says it. */
+type BlockProblem = "material" | "belowBottom" | "unknownPosition" | "unreadable" | "unfollowed";
 
 /** Splits `gcode` into blocks, throwing on text that isn't G-code. */
 export function parseGcode(gcode: string): GcodeLine[] {
@@ -131,17 +143,17 @@ export function customBlockWarnings(
   gcode: string,
   project: CheckedProject,
   blocks: readonly CustomBlock[],
-): string[] {
+): PostWarning[] {
   if (blocks.length === 0) return [];
   const blockAt = (line: number) => blocks.findLast(({ first }) => first <= line);
   /** `problem` at `line`, named by the custom block it is in or after; `null` before any. */
-  const warning = (line: number, problem: string) => {
+  const warning = (line: number, problem: BlockProblem, amount = 0): PostWarning | null => {
     const block = blockAt(line);
     if (!block) return null;
-    if (line <= block.last) return `${block.label}: line ${line} ${problem}.`;
-    return `Line ${line}, after the ${block.label.toLowerCase()} block, ${problem}.`;
+    const after = line > block.last ? "yes" : "no";
+    const values = { block: block.label, after, line, problem, amount };
+    return { message: { code: "grbl.customBlockMove", values } };
   };
-  const unchecked = "so the program isn't checked for moves into the stock from there on";
 
   // Custom blocks are written by hand: lowercase, `;` comments, `G0Z5`, `X.5`.
   const text = gcode
@@ -151,20 +163,20 @@ export function customBlockWarnings(
       blocks.some(({ first, last }) => first <= i + 1 && i + 1 <= last) ? tidy(line) : line,
     );
   let lines: GcodeLine[];
-  let stop: string | null = null;
+  let stop: PostWarning | null = null;
   try {
     lines = parseGcode(text.join("\n"));
   } catch (error) {
     const line = Number(/line (\d+)/.exec((error as Error).message)?.[1]);
     lines = parseGcode(text.slice(0, line - 1).join("\n"));
-    stop = warning(line, `can't be read, ${unchecked}`);
+    stop = warning(line, "unreadable");
   }
   const unfollowed = lines.find(({ words }) =>
     words.some(({ letter, value }) => letter === "G" && UNFOLLOWED.has(Math.floor(value))),
   );
   if (unfollowed) {
     lines = lines.slice(0, unfollowed.number - 1);
-    stop = warning(unfollowed.number, `leaves the tool where it can't be followed, ${unchecked}`);
+    stop = warning(unfollowed.number, "unfollowed");
   }
 
   const tools = projectTools(project);
@@ -178,7 +190,7 @@ export function customBlockWarnings(
   /** The next tool, named before the tool change that loads it. */
   let next: Tool | undefined;
   const moves = new Map(gcodeMoves(lines).map((move) => [move.line, move]));
-  const warnings: (string | null)[] = [];
+  const warnings: (PostWarning | null)[] = [];
   for (const line of lines) {
     next = toolAt(line.comment) ?? next;
     const move = moves.get(line.number);
@@ -199,16 +211,16 @@ export function customBlockWarnings(
       continue;
     }
     if (move.to[2] < bottom - EPSILON) {
-      warnings.push(warning(line.number, `goes below the stock bottom to Z${move.to[2]}`));
+      warnings.push(warning(line.number, "belowBottom", move.to[2]));
     }
     const depth = material.pass(tool, move);
     if (Number.isNaN(depth)) {
-      warnings.push(warning(line.number, "goes below the stock top from an unknown position"));
+      warnings.push(warning(line.number, "unknownPosition"));
     } else if (depth > MATERIAL_TOLERANCE) {
-      warnings.push(warning(line.number, `moves through ${round(depth)} mm of material`));
+      warnings.push(warning(line.number, "material", round(depth)));
     }
   }
-  return [...warnings, stop].filter((text) => text !== null);
+  return [...warnings, stop].filter((warning) => warning !== null);
 }
 
 /** A hand-written block as `parseGcode` reads them, or unchanged if it isn't G-code. */

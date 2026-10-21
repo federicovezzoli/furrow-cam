@@ -69,23 +69,23 @@ export const Path = z
     let current = path.start;
     path.segments.forEach((segment, i) => {
       if (segment.kind === "line" && pointsCoincide(current, segment.to)) {
-        ctx.addIssue({ code: "custom", path: ["segments", i], message: "Zero-length line" });
+        ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroLine" });
       }
       if (
         segment.kind === "cubic" &&
         [segment.c1, segment.c2, segment.to].every((p) => pointsCoincide(current, p))
       ) {
-        ctx.addIssue({ code: "custom", path: ["segments", i], message: "Zero-length curve" });
+        ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroCurve" });
       }
       if (segment.kind === "arc") {
         const radius = distance(segment.center, current);
         if (radius <= GEOMETRY_TOLERANCE) {
-          ctx.addIssue({ code: "custom", path: ["segments", i], message: "Zero-radius arc" });
+          ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroArc" });
         } else if (Math.abs(distance(segment.center, segment.to) - radius) > GEOMETRY_TOLERANCE) {
           ctx.addIssue({
             code: "custom",
             path: ["segments", i, "to"],
-            message: "Arc end is not on the circle through its start",
+            message: "geometry.arcEndOffCircle",
           });
         }
       }
@@ -97,7 +97,7 @@ export const Path = z
       ctx.addIssue({
         code: "custom",
         path: ["closed"],
-        message: "A closed path needs more than a single line",
+        message: "geometry.closedSingleLine",
       });
     }
   });

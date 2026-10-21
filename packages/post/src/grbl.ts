@@ -8,8 +8,14 @@ import {
   type TouchOff,
 } from "@furrow/document";
 import { formatNumber } from "./format";
-import { type PostInput, type PostOutput, type PostProcessor, postSteps } from "./post";
-import { type CustomBlock, customBlockWarnings } from "./read-back";
+import {
+  type PostInput,
+  type PostOutput,
+  type PostProcessor,
+  type PostWarning,
+  postSteps,
+} from "./post";
+import { type BlockLabel, type CustomBlock, customBlockWarnings } from "./read-back";
 import { fillPlaceholders, unfilledPlaceholders } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
@@ -62,19 +68,23 @@ export const grbl: PostProcessor = { id: "grbl", extension: ".gcode", post: post
 
 function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostOutput {
   const out = new GcodeWriter(stockOffset(stock));
-  const warnings: string[] = [];
+  const warnings: PostWarning[] = [];
   const pad = activeTouchOff(stock);
+  const said = new Set<string>();
   /** `block` with its placeholders filled in, warning once about any left. */
-  function fill(label: string, block: string): string {
+  function fill(label: BlockLabel, block: string): string {
     const filled = fillPlaceholders(block, stock, pad, safeZ);
     for (const placeholder of unfilledPlaceholders(filled)) {
-      const warning = `${label}: ${placeholder} can't be filled in, so it's written as is.`;
-      if (!warnings.includes(warning)) warnings.push(warning);
+      if (said.has(`${label} ${placeholder}`)) continue;
+      said.add(`${label} ${placeholder}`);
+      warnings.push({
+        message: { code: "grbl.unfilledPlaceholder", values: { block: label, placeholder } },
+      });
     }
     return filled;
   }
   /** A custom block, then the modes the program's coordinates need. */
-  function custom(label: string, block: string) {
+  function custom(label: BlockLabel, block: string) {
     out.custom(label, fill(label, block));
     out.line(MODES);
   }
@@ -96,7 +106,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
   }
   const first = steps[0];
   if (first) out.line(toolShapeComment(first.tool));
-  if (machine?.programStart) custom("Program start", machine.programStart);
+  if (machine?.programStart) custom("programStart", machine.programStart);
   else out.line(MODES);
 
   const spinUpDelay = machineSpinUpDelay(machine);
@@ -113,14 +123,14 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
         speed = undefined;
         if (pad?.toolChange) {
           // The project's own tool change on the pad (ADR-0043) replaces it all.
-          custom("Tool change on the pad", pad.toolChange);
+          custom("toolChangePad", pad.toolChange);
         } else if (machine?.toolChange) {
           // Over the pad first, where Z is zeroed; the block may stop the spindle.
           if (pad) {
             out.rapid({ z: safeZ });
             out.rapid({ x: pad.x, y: pad.y });
           }
-          custom("Tool change", machine.toolChange);
+          custom("toolChange", machine.toolChange);
         } else {
           out.line("M5");
           out.rapid({ z: safeZ });
@@ -135,7 +145,7 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
     tool = step.tool;
 
     if (machine?.operationStart) {
-      custom("Operation start", machine.operationStart);
+      custom("operationStart", machine.operationStart);
       if (stopsSpindle(machine.operationStart)) speed = undefined;
     } else out.comment(`Operation: ${step.name}`);
 
@@ -146,10 +156,13 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
 
     const rpm = spindleSpeed(step.tool.spindleRpm, machine);
     if (rpm.clamped) {
-      warnings.push(
-        `${step.name}: the tool's ${step.tool.spindleRpm} RPM is outside the machine's ` +
-          `spindle range, so ${rpm.value} RPM is used.`,
-      );
+      warnings.push({
+        operation: step.name,
+        message: {
+          code: "grbl.spindleClamped",
+          values: { rpm: step.tool.spindleRpm, used: rpm.value ?? 0 },
+        },
+      });
     }
     out.line(rpm.value === null ? "M3" : `M3 S${rpm.value}`);
     // `null` only for a manual spindle, which never waits.
@@ -173,13 +186,14 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
       previous = move.to;
     }
     if (clamped > 0) {
-      warnings.push(
-        `${step.name}: ${plural(clamped, "move")} slowed to the machine's maximum feed.`,
-      );
+      warnings.push({
+        operation: step.name,
+        message: { code: "grbl.slowed", values: { count: clamped } },
+      });
     }
   }
 
-  if (machine?.programEnd) out.custom("Program end", fill("Program end", machine.programEnd));
+  if (machine?.programEnd) out.custom("programEnd", fill("programEnd", machine.programEnd));
   else {
     out.line("M5");
     out.rapid({ z: safeZ });
@@ -223,7 +237,7 @@ class GcodeWriter {
   }
 
   /** A custom block, verbatim; it may have moved the tool or changed modes. */
-  custom(label: string, block: string) {
+  custom(label: BlockLabel, block: string) {
     const first = this.lines.length + 1;
     this.lines.push(...block.replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n"));
     this.customBlocks.push({ label, first, last: this.lines.length });
@@ -377,8 +391,4 @@ function xyZeroLabel({ xyOrigin: origin }: Stock): string {
 
 function zZeroLabel({ zOrigin }: Stock): string {
   return zOrigin === "stock_top" ? "at the stock top" : "at the machine bed";
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }

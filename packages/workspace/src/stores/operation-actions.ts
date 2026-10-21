@@ -8,8 +8,10 @@ import {
   canDrill,
   canEngrave,
   canVCarve,
+  type DocumentMessage,
   DrillParams,
   EngraveParams,
+  issueMessage,
   Name,
   normalizeTargets,
   Operation,
@@ -27,6 +29,7 @@ import {
   toolProblem,
   VCarveParams,
 } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { z } from "zod";
 import { track } from "../lib/telemetry";
 import type { DocumentStore } from "./document-store";
@@ -37,7 +40,7 @@ import type { DocumentStore } from "./document-store";
  * invalid change nothing and return why.
  */
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = { ok: true } | { ok: false; error: Translatable };
 
 const OK: ActionResult = { ok: true };
 
@@ -158,7 +161,7 @@ export function addProfileOperation(store: DocumentStore, options: NewOperation)
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "profile",
-    name: nextName(document, "Profile"),
+    name: nextName(document, options.name ?? "Profile"),
     params: defaultProfileParams(document),
   }));
 }
@@ -168,7 +171,7 @@ export function addPocketOperation(store: DocumentStore, options: NewOperation):
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "pocket",
-    name: nextName(document, "Pocket"),
+    name: nextName(document, options.name ?? "Pocket"),
     params: defaultPocketParams(document),
   }));
 }
@@ -182,7 +185,7 @@ export function addDrillOperation(store: DocumentStore, options: NewOperation): 
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "drill",
-    name: nextName(document, "Drill"),
+    name: nextName(document, options.name ?? "Drill"),
     params: defaultDrillParams(document),
   }));
 }
@@ -196,7 +199,7 @@ export function addEngraveOperation(store: DocumentStore, options: NewOperation)
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "engrave",
-    name: nextName(document, "Engrave"),
+    name: nextName(document, options.name ?? "Engrave"),
     params: defaultEngraveParams(document),
   }));
 }
@@ -210,7 +213,7 @@ export function addVCarveOperation(store: DocumentStore, options: NewOperation):
   return appendOperation(store, options, (document, fields) => ({
     ...fields,
     type: "vcarve",
-    name: nextName(document, "V-carve"),
+    name: nextName(document, options.name ?? "V-carve"),
     params: defaultVCarveParams(document, options.tool),
   }));
 }
@@ -224,7 +227,7 @@ export function addReliefFinishOperation(store: DocumentStore, options: NewModel
   return appendModelOperation(store, options, (document, fields) => ({
     ...fields,
     type: "relief_finish",
-    name: nextName(document, "3D finish"),
+    name: nextName(document, options.name ?? "3D finish"),
     params: defaultReliefFinishParams(options.modelId),
   }));
 }
@@ -234,12 +237,12 @@ export function addReliefRoughOperation(store: DocumentStore, options: NewModelO
   return appendModelOperation(store, options, (document, fields) => ({
     ...fields,
     type: "relief_rough",
-    name: nextName(document, "3D rough"),
+    name: nextName(document, options.name ?? "3D rough"),
     params: defaultReliefRoughParams(options.modelId),
   }));
 }
 
-type NewModelOperation = { modelId: string; tool: Tool; id?: string };
+type NewModelOperation = { modelId: string; tool: Tool; id?: string; name?: string };
 
 function appendModelOperation(
   store: DocumentStore,
@@ -257,7 +260,8 @@ function appendModelOperation(
   return id;
 }
 
-type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string };
+/** `name` is the base of the new operation's name, translated by the caller; English by default. */
+type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string; name?: string };
 
 type OperationFields = Pick<Operation, "id" | "enabled" | "targets" | "tool">;
 
@@ -292,8 +296,9 @@ function changeOperation(
   });
 }
 
-function firstError(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Invalid value";
+function firstError(error: z.ZodError): DocumentMessage {
+  const [issue] = error.issues;
+  return issue ? issueMessage(issue) : { code: "validation.invalid" };
 }
 
 export function renameOperation(store: DocumentStore, id: string, name: string): ActionResult {
@@ -331,12 +336,12 @@ export function deleteOperation(store: DocumentStore, id: string) {
 }
 
 /** Why `operation` can't take `tool`, e.g. a V-bit to drill or a drill bit to profile, or `null`. */
-export function toolError(operation: Operation, tool: Tool): string | null {
+export function toolError(operation: Operation, tool: Tool): DocumentMessage | null {
   return operationError({ ...operation, tool } as Operation);
 }
 
 /** Why `candidate` is invalid or can't cut with its tool, or `null`. */
-function operationError(candidate: Operation): string | null {
+function operationError(candidate: Operation): DocumentMessage | null {
   const parsed = Operation.safeParse(candidate);
   return parsed.success ? toolProblem(candidate) : firstError(parsed.error);
 }
@@ -362,7 +367,7 @@ export function toolKey(tool: Tool): string {
 }
 
 /** An operation left with its old tool by `replaceToolSnapshots`, and why. */
-export type RejectedOperation = { id: string; name: string; error: string };
+export type RejectedOperation = { id: string; name: string; error: Translatable };
 
 /**
  * Gives every operation whose tool snapshot is `previous` the snapshot `next`
@@ -414,7 +419,7 @@ export function setOperationTargets(
   targets: OperationTarget[],
 ): ActionResult {
   const existing = normalizeTargets(store.getState().document.geometry, targets);
-  if (existing.length === 0) return { ok: false, error: "An operation needs at least one shape" };
+  if (existing.length === 0) return { ok: false, error: { code: "workspace.needsShape" } };
   changeOperation(store, "setOperationTargets", id, (operation) => {
     operation.targets = existing;
   });
@@ -512,7 +517,9 @@ function updateParams<T extends Operation["type"]>(
   changes: Partial<ParamsOf<T>>,
 ): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
-  if (operation?.type !== type) return { ok: false, error: `Not a ${type} operation` };
+  if (operation?.type !== type) {
+    return { ok: false, error: { code: "workspace.notOperationType", values: { type } } };
+  }
   const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   changeOperation(store, name, id, (draft) => {
@@ -574,7 +581,7 @@ export function autoPlaceTabs(
   const { document } = store.getState();
   const operation = document.operations.find((candidate) => candidate.id === id);
   if (operation?.type !== "profile" || !operation.params.tabs) {
-    return { ok: false, error: "The profile has no tabs" };
+    return { ok: false, error: { code: "workspace.noTabs" } };
   }
   const positions = autoTabPositions(
     operationShapes(document, operation),

@@ -56,4 +56,13 @@ describe("parseXml", () => {
   ])("rejects %s", (_, text) => {
     expect(() => parseXml(text)).toThrow(XmlError);
   });
+
+  it.each([
+    ["<a><b></a>", { closing: "a" }],
+    ["<a><b/>", { unclosed: "a" }],
+    ["<a x=1/>", { attribute: "x" }],
+    ["<a/><b/>", undefined],
+  ])("says what is wrong with %s", (text, problem) => {
+    expect(() => parseXml(text)).toThrow(expect.objectContaining({ problem }));
+  });
 });

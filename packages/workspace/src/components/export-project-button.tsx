@@ -2,9 +2,11 @@
 
 import type { ProjectDocument } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import { errorText } from "@furrow/ui/lib/i18n";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
-import { EXPORT_FAILED, exportProjectFile } from "../lib/export-project";
+import { useTranslations } from "use-intl";
+import { exportProjectFile } from "../lib/export-project";
 import { useWorkspaceHost } from "../providers/workspace-host";
 
 /**
@@ -21,6 +23,7 @@ export function ExportProjectButton({
 }) {
   const { project, meshes } = useWorkspaceHost();
   const [pending, startTransition] = useTransition();
+  const t = useTranslations();
 
   function onClick() {
     const document = getDocument();
@@ -29,7 +32,7 @@ export function ExportProjectButton({
         await exportProjectFile(document, project.name, meshes.get);
       } catch (error) {
         // A mesh that couldn't be read says why.
-        window.alert(error instanceof Error ? error.message : EXPORT_FAILED);
+        window.alert(errorText(t, error, t("Shell.exportFailed")));
       }
     });
   }
@@ -41,10 +44,10 @@ export function ExportProjectButton({
       className={className}
       onClick={onClick}
       disabled={pending}
-      title="Export file"
+      title={t("Shell.exportFile")}
     >
       <DownloadIcon />
-      Export project file
+      {t("Shell.exportProject")}
     </Button>
   );
 }

@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { RouteIcon, RouteOffIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
+import { useTranslations } from "use-intl";
 import { type HeightmapUpdates, usePlayback } from "../../hooks/use-playback";
 import { heightmapCellLimit } from "../../lib/simulation-mesh";
 import { boxWithPoint } from "../../lib/viewport-scene";
@@ -62,15 +63,16 @@ export function SimulatorViewport() {
     sim !== null && sim.width === width && sim.height === height && sim.thickness === thickness
       ? playback.heightmap
       : null;
-  const status = simulationStatus({ ...playback, skipped });
+  const t = useTranslations("Viewport");
+  const status = simulationStatus(t, { ...playback, skipped });
   const { store, path, parts } = playback;
   const scene = useMemo(() => path && { store, path, parts }, [store, path, parts]);
   const nothing = !operations.some((op) => op.enabled);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section aria-label="Simulation" className="relative min-h-0 flex-1 bg-muted/40">
-        <Canvas frameloop="demand" dpr={[1, 2]} aria-label="Stock cut by the toolpaths">
+      <section aria-label={t("simulation")} className="relative min-h-0 flex-1 bg-muted/40">
+        <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
           <ReportCapture />
           {view === "top" ? (
             <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
@@ -90,13 +92,13 @@ export function SimulatorViewport() {
         </Canvas>
         <div className="absolute top-2 left-2 flex items-center gap-2">
           <ViewButtons view={view} onFit={() => setFits((n) => n + 1)} />
-          <div role="toolbar" aria-label="Cut" className={TOOLBAR_GROUP}>
+          <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
             <Button
               variant={showToolpaths ? "secondary" : "ghost"}
               size="icon-compact"
-              aria-label="Show toolpaths"
+              aria-label={t("showToolpaths")}
               aria-pressed={showToolpaths}
-              title={showToolpaths ? "Hide the toolpaths" : "Show the toolpaths"}
+              title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
               onClick={() => setShowToolpaths(!showToolpaths)}
             >
               <ToolpathsIcon />
@@ -105,7 +107,7 @@ export function SimulatorViewport() {
         </div>
         {nothing && (
           <p className="absolute inset-x-0 top-1/2 text-center text-ui text-muted-foreground">
-            Nothing to simulate: add or enable an operation in the workspace.
+            {t("nothing")}
           </p>
         )}
       </section>

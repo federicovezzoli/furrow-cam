@@ -1,3 +1,4 @@
+import { CURRENT_SCHEMA_VERSION } from "@furrow/document";
 import { endMill, fullDocument, machine, OPERATION_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
@@ -99,7 +100,7 @@ describe("projectDiagnostics", () => {
     if (profile) profile.tool = { ...endMill, notes: "Bought at Ann's shop" };
     const diagnostics = projectDiagnostics(document, OPERATION_ID);
     expect(diagnostics.slice(0, 3)).toEqual([
-      ["Document schema", "15"],
+      ["Document schema", String(CURRENT_SCHEMA_VERSION)],
       ["Units", "in"],
       ["Machine", `${machine.name} (grbl)`],
     ]);
@@ -117,7 +118,7 @@ describe("projectDiagnostics", () => {
   it("leaves the operation out when none is selected", () => {
     const document = { ...fullDocument(), machine: null };
     expect(projectDiagnostics(document, null)).toEqual([
-      ["Document schema", "15"],
+      ["Document schema", String(CURRENT_SCHEMA_VERSION)],
       ["Units", "in"],
       ["Machine", "none"],
     ]);

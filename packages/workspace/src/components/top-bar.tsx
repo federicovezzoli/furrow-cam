@@ -1,8 +1,10 @@
 "use client";
 
+import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ChevronLeftIcon, CircleHelpIcon } from "lucide-react";
+import { useTranslations } from "use-intl";
 import type { WorkspaceDestination } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import type { AutosaveStatus } from "../stores/autosave";
@@ -18,19 +20,22 @@ export function TopBar({
   saveStatus,
   machineName,
   onTakeTour,
-  back = { to: "projects", label: "All projects" },
+  back,
 }: {
   back?: { to: WorkspaceDestination; label: string };
   saveStatus: AutosaveStatus;
   machineName: string | null;
   onTakeTour?: (from: HTMLElement) => void;
 }) {
+  const t = useTranslations("TopBar");
+  const shell = useTranslations("Shell");
+  const backTo = back ?? { to: "projects", label: shell("allProjects") };
   const { project, navigation } = useWorkspaceHost();
   const { Link, TopBarActions } = navigation;
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
       <Button variant="ghost" size="icon-compact" asChild>
-        <Link to={back.to} aria-label={back.label} title={back.label}>
+        <Link to={backTo.to} aria-label={backTo.label} title={backTo.label}>
           <ChevronLeftIcon />
         </Link>
       </Button>
@@ -41,7 +46,7 @@ export function TopBar({
         className="min-w-0 truncate text-ui text-muted-foreground"
         title={machineName ?? undefined}
       >
-        {machineName ?? "No machine set"}
+        {machineName ?? t("noMachine")}
       </span>
       {project.autosaves && <SaveStatus status={saveStatus} />}
       <div className="ml-auto flex items-center gap-1">
@@ -50,13 +55,14 @@ export function TopBar({
             variant="ghost"
             size="icon-compact"
             onClick={(event) => onTakeTour(event.currentTarget)}
-            aria-label="Take the tour"
-            title="Take the tour"
+            aria-label={t("takeTour")}
+            title={t("takeTour")}
           >
             <CircleHelpIcon />
           </Button>
         )}
         <ReportBugButton />
+        <LanguagePicker size="icon-compact" />
         <ThemeToggle size="icon-compact" />
         {TopBarActions && <TopBarActions />}
       </div>

@@ -2,8 +2,10 @@
 
 import { Button } from "@furrow/ui/components/ui/button";
 import { DialogFooter } from "@furrow/ui/components/ui/dialog";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { PencilIcon } from "lucide-react";
 import { useState } from "react";
+import { useTranslations } from "use-intl";
 import type { SavedTool, ToolChoice } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { useDocumentStoreApi } from "../providers/workspace-stores";
@@ -20,6 +22,7 @@ import { useAddTool, useUpdateTool } from "./tool-library";
  * library, which those operations then use.
  */
 export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
+  const t = useTranslations("Shell");
   const store = useDocumentStoreApi();
   const { library } = useWorkspaceHost();
   const updateTool = useUpdateTool();
@@ -51,20 +54,16 @@ export function EditBitButton({ choice }: { choice: ToolChoice | undefined }) {
         size="icon-compact"
         disabled={!choice}
         onClick={() => choice && setEditing(choice)}
-        aria-label="Edit bit"
-        title="Edit bit"
+        aria-label={t("editBit")}
+        title={t("editBit")}
       >
         <PencilIcon />
       </Button>
       <ToolDialog
         open={editing !== null}
         onClose={close}
-        title={editing?.catalog ? "Save a copy of this bit" : "Edit bit"}
-        description={
-          editing?.catalog
-            ? "Catalog bits stay as they are. This saves your copy to your library and uses it in every operation of this project that uses the catalog bit."
-            : "Changes the bit in your library and in every operation of this project that uses it."
-        }
+        title={editing?.catalog ? t("saveCopy") : t("editBit")}
+        description={editing?.catalog ? t("editCatalog") : t("editLibrary")}
       >
         {rejected ? (
           <NotUpdated operations={rejected} onClose={close} />
@@ -92,20 +91,22 @@ function NotUpdated({
   operations: RejectedOperation[];
   onClose: () => void;
 }) {
+  const format = useFormatMessage();
+  const t = useTranslations("Shell");
   return (
     <>
       <div role="alert" className="grid gap-2 text-sm">
-        <p>The bit was saved, but these operations keep the bit as it was:</p>
+        <p>{t("notUpdated")}</p>
         <ul className="list-disc pl-5">
           {operations.map((operation) => (
             <li key={operation.id}>
-              <span className="font-medium">{operation.name}</span>: {operation.error}
+              <span className="font-medium">{operation.name}</span>: {format(operation.error)}
             </li>
           ))}
         </ul>
       </div>
       <DialogFooter>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t("close")}</Button>
       </DialogFooter>
     </>
   );

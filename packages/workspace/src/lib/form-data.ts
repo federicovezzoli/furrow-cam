@@ -1,7 +1,9 @@
+import { issueMessage } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { z } from "zod";
 
 /** Field name → message; `form` holds errors that aren't about one field. */
-export type FormErrors<Field extends string> = Partial<Record<Field | "form", string>>;
+export type FormErrors<Field extends string> = Partial<Record<Field | "form", Translatable>>;
 
 /** A number field's value, or `null` when it's left blank; `NaN` when it isn't a number. */
 export function numberField(form: FormData, key: string): number | null {
@@ -11,10 +13,11 @@ export function numberField(form: FormData, key: string): number | null {
 }
 
 /**
- * Turns validation issues into one message per field, the first one wins. Any
- * issue on a field whose `input` value is blank reads "Required", including
- * cross-field rules such as "required for V-bits", and on one that isn't a
- * number reads "Must be a number".
+ * Turns validation issues into one message per field, the first one wins,
+ * as codes the form translates (ADR-0054). Any issue on a field whose
+ * `input` value is blank says it's required, including cross-field rules
+ * such as "required for V-bits", and on one that isn't a number that it
+ * must be one.
  */
 export function issuesToFormErrors<Field extends string>(
   issues: z.core.$ZodIssue[],
@@ -26,10 +29,10 @@ export function issuesToFormErrors<Field extends string>(
     const value = key === "form" ? undefined : input[key];
     errors[key] ??=
       key !== "form" && value == null
-        ? "Required"
+        ? { code: "validation.required" }
         : Number.isNaN(value)
-          ? "Must be a number"
-          : issue.message;
+          ? { code: "validation.notANumber" }
+          : issueMessage(issue);
   }
   return errors;
 }

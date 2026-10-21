@@ -5,6 +5,7 @@ import { DEFAULT_TOOL, parseToolForm } from "@furrow/workspace/tools/lib/tool-fo
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { translate } from "@/lib/locale";
 
 export type { SavedTool, ToolChoice, ToolFormErrors };
 export { DEFAULT_TOOL, parseToolForm };
@@ -61,7 +62,8 @@ export async function lockLibrary(tx: Prisma.TransactionClient, userId: string):
   await tx.$queryRaw`SELECT 1 FROM "user" WHERE "id" = ${userId} FOR UPDATE`;
 }
 
-export const TOOL_NOT_FOUND = "This bit no longer exists.";
+/** Why a bit can't be changed, in the request's language. */
+export const toolNotFound = () => translate("Tools.notFound");
 
 /**
  * Creates the user's tool, or updates it when `id` is given. A user's first
@@ -86,8 +88,8 @@ export async function writeTool(
     return { id: created.id, tool };
   }
   const toolId = z.uuid().safeParse(id);
-  if (!toolId.success) return { errors: { form: TOOL_NOT_FOUND } };
+  if (!toolId.success) return { errors: { form: await toolNotFound() } };
   const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
-  if (count === 0) return { errors: { form: TOOL_NOT_FOUND } };
+  if (count === 0) return { errors: { form: await toolNotFound() } };
   return { id: toolId.data, tool };
 }

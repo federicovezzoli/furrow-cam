@@ -500,7 +500,7 @@ describe("scheduleToolpaths", () => {
     }
     expect(exports).toHaveLength(6);
     await expect(exported).resolves.toEqual({
-      error: expect.stringContaining("kept changing"),
+      error: { code: "workspace.keptChanging" },
     });
   });
 

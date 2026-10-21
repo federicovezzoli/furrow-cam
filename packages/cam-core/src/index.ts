@@ -6,6 +6,11 @@ export * from "./geometry/loop";
 export * from "./geometry/medial-axis";
 export * from "./geometry/translate";
 export * from "./import/dxf/import";
+export {
+  IMPORT_MESSAGES,
+  type ImportMessage,
+  type ImportMessageCode,
+} from "./import/messages";
 export * from "./import/stl/import";
 export * from "./import/svg/import";
 export * from "./scene/model";
@@ -19,6 +24,7 @@ export * from "./simulation/simulation";
 export * from "./toolpaths/drill";
 export * from "./toolpaths/engrave";
 export * from "./toolpaths/generate";
+export * from "./toolpaths/messages";
 export { depthLevels } from "./toolpaths/passes";
 export * from "./toolpaths/pocket/pocket";
 export * from "./toolpaths/profile";

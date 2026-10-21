@@ -6,6 +6,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@furrow/ui/components/ui/resizable";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
 import type * as React from "react";
@@ -16,6 +18,7 @@ import {
   useGroupRef,
   usePanelRef,
 } from "react-resizable-panels";
+import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
 import { useUndoShortcuts } from "../hooks/use-undo-shortcuts";
 import { savedLayout, toggledPaneLayout, type WorkspaceLayout } from "../lib/workspace-layout";
@@ -55,6 +58,7 @@ const Viewport = lazy(() =>
  * stores come from `ProjectShell`, so they outlive this page.
  */
 export function WorkspaceShell() {
+  const t = useTranslations("Shell");
   const { project, library, settings, account } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
@@ -173,7 +177,7 @@ export function WorkspaceShell() {
             >
               <Pane
                 id="operations"
-                title="Operations"
+                title={t("operations")}
                 panel={operationsPanel}
                 onToggle={() => toggle("operations")}
                 defaultSize="35"
@@ -185,18 +189,16 @@ export function WorkspaceShell() {
                         disabledReason={
                           // Without an account, the button explains what it needs instead.
                           machineName === null && !account
-                            ? "Choose a machine in the project properties first"
+                            ? t("chooseMachine")
                             : !hasEnabledOperations
-                              ? "Add or enable an operation first"
+                              ? t("addOperation")
                               : undefined
                         }
                         className="w-full"
                       />
                     </div>
                     <SimulateButton
-                      disabledReason={
-                        hasEnabledOperations ? undefined : "Add or enable an operation first"
-                      }
+                      disabledReason={hasEnabledOperations ? undefined : t("addOperation")}
                     />
                   </div>
                 }
@@ -206,7 +208,7 @@ export function WorkspaceShell() {
               <ResizableHandle />
               <Pane
                 id="properties"
-                title="Properties"
+                title={t("properties")}
                 panel={propertiesPanel}
                 onToggle={() => toggle("properties")}
                 defaultSize="45"
@@ -217,7 +219,7 @@ export function WorkspaceShell() {
               <ResizableHandle />
               <Pane
                 id="versions"
-                title="Versions"
+                title={t("versions")}
                 panel={versionsPanel}
                 onToggle={() => toggle("versions")}
                 defaultSize="20"
@@ -231,14 +233,14 @@ export function WorkspaceShell() {
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
             <section
-              aria-label="Viewport"
+              aria-label={t("viewport")}
               data-tour="viewport"
               className="relative h-full bg-muted/40"
             >
               <BrowserOnly
                 fallback={
                   <div className="flex h-full items-center justify-center">
-                    <EmptyState>Loading viewport…</EmptyState>
+                    <EmptyState>{t("loadingViewport")}</EmptyState>
                   </div>
                 }
               >
@@ -262,10 +264,11 @@ export function WorkspaceShell() {
 function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
   const modelId = useWorkspaceStore((s) => s.selectedModelId);
+  const t = useTranslations("Shell");
   if (selectedId === null && modelId === null) return null;
   return (
     <aside
-      aria-label={selectedId !== null ? "Operation properties" : "Model properties"}
+      aria-label={selectedId !== null ? t("operationProperties") : t("modelProperties")}
       className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
     >
       {/* Keyed, so nothing typed or rejected for one operation or model shows on the next. */}
@@ -279,7 +282,9 @@ function SelectedOperation() {
 }
 
 /** Autosave stopped for good (e.g. a conflict): say so where it can't be missed. */
-function SaveFailed({ message }: { message: string | undefined }) {
+function SaveFailed({ message }: { message: Translatable | undefined }) {
+  const t = useTranslations("Shell");
+  const format = useFormatMessage();
   return (
     <div
       role="alert"
@@ -287,24 +292,28 @@ function SaveFailed({ message }: { message: string | undefined }) {
     >
       <CircleAlertIcon className="size-3.5 shrink-0" aria-hidden />
       <p className="min-w-0 flex-1">
-        {message} Changes are no longer saved; export the project to keep them.
+        {t("saveFailed", { message: message === undefined ? "" : format(message) })}
       </p>
       <Button variant="outline" size="compact" onClick={() => window.location.reload()}>
-        Reload
+        {t("reload")}
       </Button>
     </div>
   );
 }
 
 /** A save failed but autosave tries again (e.g. signed out): say why, so the user can fix it. */
-function SaveError({ message }: { message: string | undefined }) {
+function SaveError({ message }: { message: Translatable | undefined }) {
+  const t = useTranslations("Shell");
+  const format = useFormatMessage();
   return (
     <div
       role="alert"
       className="flex shrink-0 items-center gap-2 border-b bg-destructive/10 px-3 py-1.5 text-ui text-destructive"
     >
       <CircleAlertIcon className="size-3.5 shrink-0" aria-hidden />
-      <p className="min-w-0 flex-1">{message} Changes are saved again once this is fixed.</p>
+      <p className="min-w-0 flex-1">
+        {t("saveError", { message: message === undefined ? "" : format(message) })}
+      </p>
     </div>
   );
 }

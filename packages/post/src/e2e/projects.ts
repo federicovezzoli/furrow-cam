@@ -11,6 +11,7 @@ import {
 import {
   createProjectDocument,
   type Machine,
+  MODEL_BORDER,
   type Model,
   type Operation,
   type Path,
@@ -29,6 +30,7 @@ import {
   machine as shapeoko,
   vBit,
 } from "@furrow/document/fixtures";
+import type { PostWarning } from "../post";
 import flutedDoorsSvg from "./fixtures/fluted-doors.svg?raw";
 import panelSvg from "./fixtures/panel-inches.svg?raw";
 import partSvg from "./fixtures/part.svg?raw";
@@ -49,7 +51,7 @@ export type CorpusProject = {
   /** The meshes of its models, for 3D operations. */
   context?: ToolpathContext;
   /** The export's warnings, if it should have any. */
-  warnings?: string[];
+  warnings?: PostWarning[];
 };
 
 /** Ids that stay the same from run to run, so the programs do too. */
@@ -433,7 +435,8 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
     triangles: mesh.triangles,
     bounds: mesh.bounds,
     // Fitted inside the stock's 7.5 mm border (ADR-0038): 20 × 15 × 4 mm.
-    placement: initialPlacement(mesh.bounds, base.stock, "bottom_left"),
+    placement: initialPlacement(mesh.bounds, base.stock, "bottom_left", MODEL_BORDER),
+    border: MODEL_BORDER,
   };
   const finish = (name: string, tool: Tool, rest: boolean): Operation => ({
     id: id(),
@@ -791,7 +794,7 @@ export function corpus(): CorpusProject[] {
       covers: "the same part zeroed at the centre of the machine bed, manual spindle",
       document: valid(lowRiderPlate),
       // The LowRider's Z is slower than the tab's climb.
-      warnings: ["Cut out: 1 move slowed to the machine's maximum feed."],
+      warnings: [{ operation: "Cut out", message: { code: "grbl.slowed", values: { count: 1 } } }],
     },
     {
       name: "svg-part",
@@ -805,7 +808,7 @@ export function corpus(): CorpusProject[] {
       covers: "SVG import, V-bit engraving, V-carve with a flat bottom, helical boring",
       document: valid(svgSign()),
       // The V-carve plunges faster than the LowRider's Z.
-      warnings: ["Square: 5 moves slowed to the machine's maximum feed."],
+      warnings: [{ operation: "Square", message: { code: "grbl.slowed", values: { count: 5 } } }],
     },
     {
       name: "inch-panel",

@@ -13,7 +13,9 @@ import {
 } from "@furrow/ui/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { useTranslations } from "use-intl";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { authErrorMessage } from "@/features/auth/lib/auth-error";
 import { PasswordField } from "./password-field";
 
 /** Deletes the signed-in user's account after they confirm their password (#28). */
@@ -24,6 +26,8 @@ export function DeleteAccountDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("Auth");
+  const errors = useTranslations("AuthErrors");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -35,9 +39,9 @@ export function DeleteAccountDialog({
     setError(null);
     try {
       const { error } = await authClient.deleteUser({ password: String(form.get("password")) });
-      if (error) return setError(error.message ?? "Could not delete the account.");
+      if (error) return setError(authErrorMessage(errors, error, "deleteAccount"));
     } catch {
-      return setError("Could not delete the account. Check your connection and try again.");
+      return setError(t("deleteFailedConnection"));
     } finally {
       setPending(false);
     }
@@ -57,15 +61,12 @@ export function DeleteAccountDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete your account?</DialogTitle>
-          <DialogDescription>
-            Your account, projects, bits and machines are deleted right away. This cannot be undone.
-            Export the projects you want to keep first.
-          </DialogDescription>
+          <DialogTitle>{t("deleteTitle")}</DialogTitle>
+          <DialogDescription>{t("deleteDescription")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="grid gap-4">
           <PasswordField
-            label="Password"
+            label={t("password")}
             id="delete-account-password"
             name="password"
             autoComplete="current-password"
@@ -74,11 +75,11 @@ export function DeleteAccountDialog({
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">
-                Cancel
+                {t("cancel")}
               </Button>
             </DialogClose>
             <Button type="submit" variant="destructive" disabled={pending}>
-              {pending ? "Deleting…" : "Delete account"}
+              {pending ? t("deleting") : t("deleteAccount")}
             </Button>
           </DialogFooter>
         </form>

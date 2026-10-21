@@ -1,4 +1,5 @@
 import type { Box3, Heightmap, Rotation, StlLimits } from "@furrow/cam-core";
+import type { Message } from "@furrow/document";
 
 /**
  * Messages to and from the mesh worker (ADR-0004), which reads STL files and
@@ -31,7 +32,7 @@ export type MeshResponse =
   | { kind: "preview"; id: number; heightmap: Heightmap | null }
   | { kind: "missing"; id: number }
   /** `error` is for the user. */
-  | { kind: "failed"; id: number; error: string };
+  | { kind: "failed"; id: number; error: Message };
 
 /** The SHA-256 of `bytes` in lowercase hex, as the document stores it. */
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {

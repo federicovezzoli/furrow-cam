@@ -12,6 +12,7 @@ import {
 import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
@@ -27,6 +28,7 @@ export function AccountMenu({
   email: string;
   onTakeTour?: (trigger: HTMLElement | null) => void;
 }) {
+  const t = useTranslations("AccountMenu");
   const router = useRouter();
   const trigger = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState(false);
@@ -43,7 +45,7 @@ export function AccountMenu({
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button ref={trigger} variant="outline" size="sm">
-            Account
+            {t("account")}
             <ChevronDownIcon />
           </Button>
         </DropdownMenuTrigger>
@@ -55,16 +57,16 @@ export function AccountMenu({
           {onTakeTour && (
             <DropdownMenuItem onSelect={() => onTakeTour(trigger.current)}>
               <CircleHelpIcon />
-              Take the tour
+              {t("takeTour")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onSelect={signOut}>
             <LogOutIcon />
-            Sign out
+            {t("signOut")}
           </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(true)}>
             <Trash2Icon />
-            Delete account…
+            {t("deleteAccount")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

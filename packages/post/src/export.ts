@@ -14,7 +14,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import { grbl } from "./grbl";
-import type { PostOutput, PostProcessor } from "./post";
+import { GcodeExportError, type PostOutput, type PostProcessor, type PostWarning } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
 export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
@@ -72,26 +72,28 @@ export function postToolpaths(
   computed: readonly ComputedToolpath[],
 ): GcodeExport {
   const first = computed[0];
-  if (first === undefined) throw new Error("There are no enabled operations to export.");
+  if (first === undefined) {
+    throw new GcodeExportError({ message: { code: "export.noEnabled" } });
+  }
   // Leaving such an operation out could run the next bit into stock it was meant to clear.
   for (const { input } of computed) {
     const problem = toolProblem(input.operation);
-    if (problem) throw new Error(`${input.operation.name}: ${problem}.`);
+    if (problem) throw new GcodeExportError({ operation: input.operation.name, message: problem });
   }
 
-  const warnings: string[] = [];
+  const warnings: PostWarning[] = [];
   const operations = computed.flatMap(({ input, toolpath }) => {
     const { name: operationName } = input.operation;
-    warnings.push(...toolpath.warnings.map((warning) => `${operationName}: ${warning}`));
+    warnings.push(...toolpath.warnings.map((message) => ({ operation: operationName, message })));
     if (toolpath.moves.length > 0 || (toolpath.clearing?.length ?? 0) > 0) {
       return [{ operation: input.operation, toolpath }];
     }
     // Not every empty toolpath warns, e.g. an operation whose shapes were deleted.
-    warnings.push(`${operationName}: no toolpath, left out of the program.`);
+    warnings.push({ operation: operationName, message: { code: "export.noToolpath" } });
     return [];
   });
   if (operations.length === 0) {
-    throw new Error("None of the enabled operations has a toolpath to export.");
+    throw new GcodeExportError({ message: { code: "export.noneHasToolpath" } });
   }
 
   const processor = POST_PROCESSORS[doc.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR];

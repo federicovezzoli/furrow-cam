@@ -1,10 +1,9 @@
 import { alignShapes } from "@furrow/cam-core";
-import type { ProjectDocument, Shape } from "@furrow/document";
+import type { Message, ProjectDocument, Shape } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 
 /** Why another file can't be imported: a project holds one, a drawing or a model, for now. */
-export const ONE_FILE =
-  "A project holds one imported file: an SVG or DXF drawing, or an STL model.";
+export const ONE_FILE: Message = { code: "workspace.oneFile" };
 
 /** Whether the project already holds an imported file, a drawing or a model (ADR-0022, ADR-0031). */
 export function hasImportedFile({ geometry, models }: ProjectDocument): boolean {

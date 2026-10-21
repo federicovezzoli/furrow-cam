@@ -11,6 +11,7 @@ import { isPasswordBreached } from "@/features/auth/lib/breached-password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { requestLocale } from "@/lib/locale-cookie";
 
 // Endpoints that set a password, and the body field holding it (ADR-0023).
 const NEW_PASSWORD_FIELDS: Record<string, string> = {
@@ -18,6 +19,15 @@ const NEW_PASSWORD_FIELDS: Record<string, string> = {
   "/reset-password": "newPassword",
   "/change-password": "newPassword",
 };
+
+/**
+ * The language of the request that asked for an email, as the app picks it
+ * (ADR-0054): no language is stored on the account (ADR-0013). English when
+ * the email is sent from the server without a request.
+ */
+function emailLocale(request: Request | undefined) {
+  return request ? requestLocale(request.headers) : "en";
+}
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -29,22 +39,24 @@ export const auth = betterAuth({
     maxPasswordLength: PASSWORD_MAX_LENGTH,
     requireEmailVerification: true,
     revokeSessionsOnPasswordReset: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url }, request) => {
+      const locale = emailLocale(request);
       await sendEmail({
         to: user.email,
-        subject: resetPasswordSubject,
-        template: createElement(ResetPassword, { url }),
+        subject: resetPasswordSubject(locale),
+        template: createElement(ResetPassword, { url, locale }),
       });
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }, request) => {
+      const locale = emailLocale(request);
       await sendEmail({
         to: user.email,
-        subject: verifyEmailSubject,
-        template: createElement(VerifyEmail, { url }),
+        subject: verifyEmailSubject(locale),
+        template: createElement(VerifyEmail, { url, locale }),
       });
     },
   },
@@ -69,7 +81,9 @@ export const auth = betterAuth({
   // `/delete-user` checks the password, so it gets the same strict limit Better Auth gives sign-in.
   // `/reset-password` too: the breached-password check below runs before Better Auth validates the
   // token, so each request can hold an outbound HIBP call open (ADR-0023).
+  // Counters live in Postgres so every serverless instance shares them (#274).
   rateLimit: {
+    storage: "database",
     customRules: {
       "/delete-user": { window: 10, max: 3 },
       "/reset-password": { window: 10, max: 3 },
@@ -80,6 +94,7 @@ export const auth = betterAuth({
       // Better Auth also deletes without a password when the session is fresh; we always ask for it.
       if (ctx.path === "/delete-user" && !ctx.body?.password) {
         throw new APIError("BAD_REQUEST", {
+          code: "PASSWORD_REQUIRED",
           message: "Enter your password to delete your account.",
         });
       }
@@ -101,6 +116,7 @@ export const auth = betterAuth({
         console.warn(`Breached-password check unavailable on ${ctx.path}; accepting the password.`);
       } else if (breached) {
         throw new APIError("BAD_REQUEST", {
+          code: "PASSWORD_BREACHED",
           message: "This password has appeared in a data breach. Please choose a different one.",
         });
       }

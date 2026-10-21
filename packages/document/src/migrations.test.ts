@@ -6,6 +6,7 @@ import {
   migrateProjectDocument,
   ProjectDocumentVersionError,
   parseProjectDocument,
+  readProjectJson,
 } from "./migrations";
 
 describe("migrateProjectDocument", () => {
@@ -245,6 +246,17 @@ describe("migrations", () => {
     expect(parseProjectDocument({ ...v14, machine: null }).machine).toBeNull();
   });
 
+  it("gives v15 models the 10 mm border they were fitted with", () => {
+    const doc = { ...fullDocument(), models: [model] };
+    const v15 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      models: Record<string, unknown>[];
+    };
+    v15.schemaVersion = 15;
+    for (const stored of v15.models) delete stored.border;
+    expect(parseProjectDocument(v15)).toEqual(doc);
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());
@@ -271,5 +283,24 @@ describe("parseProjectDocument", () => {
     expect(() => parseProjectDocument({ ...fullDocument(), units: "cm" })).toThrow(
       expect.objectContaining({ name: "ZodError" }),
     );
+  });
+});
+
+describe("readProjectJson", () => {
+  const reason = (input: unknown) => readProjectJson(input).reason;
+
+  it("reads documents and their JSON text", () => {
+    const doc = fullDocument();
+    expect(readProjectJson(doc)).toEqual({ document: doc });
+    expect(readProjectJson(JSON.stringify(doc))).toEqual({ document: doc });
+  });
+
+  it("classifies why a project can't be read", () => {
+    for (const input of ["{", "[]", "null", '{"name":"x"}', [], 3]) {
+      expect(reason(input)).toBe("not_a_project");
+    }
+    expect(reason({ ...fullDocument(), schemaVersion: 99 })).toBe("too_new");
+    expect(reason({ ...fullDocument(), schemaVersion: 0 })).toBe("version");
+    expect(reason({ ...fullDocument(), units: "cm" })).toBe("invalid");
   });
 });

@@ -15,6 +15,7 @@ import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { downloadFile } from "@furrow/ui/lib/download";
 import { BugIcon, CopyIcon, DownloadIcon } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 import { type Diagnostics, projectDiagnostics, reportBody, reportUrl } from "../lib/bug-report";
 import { captureViewport } from "../lib/viewport-capture";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -37,6 +38,7 @@ export function ReportBugButton() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"opened" | "copied" | "not-copied" | null>(null);
+  const t = useTranslations("BugReport");
   const [screenshot, setScreenshot] = useState<{ blob: Blob; url: string } | null>(null);
   const [screenshotCopied, setScreenshotCopied] = useState<boolean | null>(null);
   // Counts openings, so a screenshot finished after its dialog closed is dropped.
@@ -97,29 +99,26 @@ export function ReportBugButton() {
     <>
       <Button variant="ghost" size="compact" onClick={open}>
         <BugIcon />
-        Report a bug
+        {t("report")}
       </Button>
       <Dialog open={diagnostics !== null} onOpenChange={(isOpen) => !isOpen && close()}>
         {diagnostics && (
           <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
             <DialogHeader>
-              <DialogTitle>Report a bug</DialogTitle>
-              <DialogDescription>
-                This opens a new GitHub issue with your report filled in. Nothing is sent until you
-                submit it there, which needs a GitHub account.
-              </DialogDescription>
+              <DialogTitle>{t("report")}</DialogTitle>
+              <DialogDescription>{t("description")}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-2">
-              <Label htmlFor={`${id}-title`}>Title</Label>
+              <Label htmlFor={`${id}-title`}>{t("title")}</Label>
               <Input
                 id={`${id}-title`}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="e.g. Pocket leaves an island uncut"
+                placeholder={t("titlePlaceholder")}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor={`${id}-description`}>What happened, and what did you expect?</Label>
+              <Label htmlFor={`${id}-description`}>{t("what")}</Label>
               <Textarea
                 id={`${id}-description`}
                 value={description}
@@ -128,7 +127,7 @@ export function ReportBugButton() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor={`${id}-diagnostics`}>Filled in for you</Label>
+              <Label htmlFor={`${id}-diagnostics`}>{t("filledIn")}</Label>
               <pre
                 id={`${id}-diagnostics`}
                 className="max-h-40 overflow-auto rounded-md border bg-muted p-2 text-xs whitespace-pre-wrap"
@@ -138,28 +137,25 @@ export function ReportBugButton() {
             </div>
             <section className="grid gap-2" aria-labelledby={`${id}-attach`}>
               <h3 id={`${id}-attach`} className="text-sm font-medium">
-                Add these yourself on GitHub
+                {t("addYourself")}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                GitHub can&apos;t receive files from the app. After opening the issue, paste or drop
-                them into it.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("noFiles")}</p>
               {screenshot && (
                 <figure className="grid gap-2">
                   <img
                     src={screenshot.url}
-                    alt="Screenshot of the viewport"
+                    alt={t("screenshotAlt")}
                     className="max-h-48 w-full rounded-md border object-contain"
                   />
                   <figcaption className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span className="mr-auto">The viewport, not attached yet.</span>
+                    <span className="mr-auto">{t("notAttached")}</span>
                     <Button
                       variant="outline"
                       size="compact"
                       onClick={() => copyScreenshot(screenshot.blob)}
                     >
                       <CopyIcon />
-                      {screenshotCopied ? "Copied" : "Copy screenshot"}
+                      {screenshotCopied ? t("copied") : t("copyScreenshot")}
                     </Button>
                     <Button
                       variant="outline"
@@ -167,40 +163,35 @@ export function ReportBugButton() {
                       onClick={() => saveScreenshot(screenshot.blob)}
                     >
                       <DownloadIcon />
-                      Save PNG
+                      {t("savePng")}
                     </Button>
                   </figcaption>
                   {screenshotCopied === false && (
                     <p className="text-sm text-destructive" role="alert">
-                      The screenshot couldn&apos;t be copied: save it instead.
+                      {t("copyFailed")}
                     </p>
                   )}
                 </figure>
               )}
-              <p className="text-sm text-muted-foreground">
-                The project, if it helps: export it from the operations pane and drop the file in.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("project")}</p>
             </section>
             {status === "opened" && (
               <p className="text-sm" role="status">
-                The issue opened in your browser. Add what you want from above, then submit it
-                there.
+                {t("opened")}
               </p>
             )}
             {status === "copied" && (
               <p className="text-sm" role="status">
-                The report was too long for the link, so it was copied: paste it into the GitHub
-                issue that opened.
+                {t("copiedReport")}
               </p>
             )}
             {status === "not-copied" && (
               <p className="text-sm text-destructive" role="alert">
-                The report is too long for the link and couldn&apos;t be copied. Shorten it and try
-                again.
+                {t("notCopied")}
               </p>
             )}
             <DialogFooter>
-              <Button onClick={() => send(diagnostics)}>Open GitHub issue</Button>
+              <Button onClick={() => send(diagnostics)}>{t("open")}</Button>
             </DialogFooter>
           </DialogContent>
         )}

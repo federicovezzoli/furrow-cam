@@ -152,7 +152,7 @@ describe("engraveToolpath", () => {
   it("skips open paths inside and outside, with a warning", () => {
     const toolpath = engrave([square, line], { side: "outside" });
     expect(toolpath.warnings).toEqual([
-      "Skipped 1 open path: inside and outside cuts need closed paths.",
+      { code: "toolpath.skippedOpenProfile", values: { count: 1 } },
     ]);
     expect(feedsAt(toolpath, -1).some(([, y]) => y === 10)).toBe(false);
   });
@@ -177,7 +177,7 @@ describe("engraveToolpath", () => {
     // 60° and 6.35 mm: the cone is 5.5 mm deep.
     expect(engrave([line], { depth: 5 }, vBit).warnings).toEqual([]);
     expect(engrave([line], { depth: 6 }, vBit).warnings).toEqual([
-      "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
+      { code: "toolpath.engraveConeWide" },
     ]);
     expect(engrave([line], { depth: 6 }).warnings).toEqual([]);
   });
