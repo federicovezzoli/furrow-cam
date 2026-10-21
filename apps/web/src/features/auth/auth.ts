@@ -11,6 +11,7 @@ import { isPasswordBreached } from "@/features/auth/lib/breached-password";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { requestLocale } from "@/lib/locale-cookie";
 
 // Endpoints that set a password, and the body field holding it (ADR-0023).
 const NEW_PASSWORD_FIELDS: Record<string, string> = {
@@ -18,6 +19,15 @@ const NEW_PASSWORD_FIELDS: Record<string, string> = {
   "/reset-password": "newPassword",
   "/change-password": "newPassword",
 };
+
+/**
+ * The language of the request that asked for an email, as the app picks it
+ * (ADR-0054): no language is stored on the account (ADR-0013). English when
+ * the email is sent from the server without a request.
+ */
+function emailLocale(request: Request | undefined) {
+  return request ? requestLocale(request.headers) : "en";
+}
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -29,22 +39,24 @@ export const auth = betterAuth({
     maxPasswordLength: PASSWORD_MAX_LENGTH,
     requireEmailVerification: true,
     revokeSessionsOnPasswordReset: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url }, request) => {
+      const locale = emailLocale(request);
       await sendEmail({
         to: user.email,
-        subject: resetPasswordSubject,
-        template: createElement(ResetPassword, { url }),
+        subject: resetPasswordSubject(locale),
+        template: createElement(ResetPassword, { url, locale }),
       });
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }, request) => {
+      const locale = emailLocale(request);
       await sendEmail({
         to: user.email,
-        subject: verifyEmailSubject,
-        template: createElement(VerifyEmail, { url }),
+        subject: verifyEmailSubject(locale),
+        template: createElement(VerifyEmail, { url, locale }),
       });
     },
   },

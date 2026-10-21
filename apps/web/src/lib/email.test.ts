@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import ResetPassword from "@/emails/reset-password";
+import ResetPassword, { resetPasswordSubject } from "@/emails/reset-password";
 import VerifyEmail from "@/emails/verify-email";
 import { renderEmail, sendEmail } from "./email";
 
@@ -9,8 +9,8 @@ vi.mock("@/env", () => ({ env: { EMAIL_FROM: "Furrow CAM <test@example.com>" } }
 const url = "https://furrow.example/api/auth/verify-email?token=abc&callbackURL=%2Fprojects";
 
 const templates = [
-  ["verification", createElement(VerifyEmail, { url })],
-  ["password reset", createElement(ResetPassword, { url })],
+  ["verification", createElement(VerifyEmail, { url, locale: "en" })],
+  ["password reset", createElement(ResetPassword, { url, locale: "en" })],
 ] as const;
 
 describe.each(templates)("%s email", (_, template) => {
@@ -42,5 +42,15 @@ describe("sendEmail without RESEND_API_KEY", () => {
     expect(info.mock.calls[0][0]).toContain(url);
     expect(info.mock.calls[0][0]).not.toContain("<html");
     info.mockRestore();
+  });
+});
+
+describe("translated emails", () => {
+  it("renders the subject and body in the requester's language", async () => {
+    const { html, text } = await renderEmail(createElement(ResetPassword, { url, locale: "it" }));
+    expect(resetPasswordSubject("it")).toBe("Reimposta la password di Furrow CAM");
+    expect(html).toContain('lang="it"');
+    expect(text).toContain("Scegli una nuova password");
+    expect(text).not.toContain("Choose a new password");
   });
 });
