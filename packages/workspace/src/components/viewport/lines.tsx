@@ -102,11 +102,13 @@ export function WideLines({
   color,
   width,
   renderOrder,
+  opacity = 1,
 }: {
   positions: Float32Array;
   color: string;
   width: number;
   renderOrder: number;
+  opacity?: number;
 }) {
   const points = useMemo(() => Array.from(positions), [positions]);
   const line = useRef<ComponentRef<typeof Line>>(null);
@@ -114,6 +116,7 @@ export function WideLines({
   useLayoutEffect(() => {
     if (!line.current) return;
     line.current.material.transparent = true;
+    line.current.material.opacity = opacity;
     line.current.material.depthTest = false;
   });
   if (points.length === 0) return null;

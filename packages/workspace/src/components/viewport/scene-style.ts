@@ -5,6 +5,8 @@ export type Palette = {
   model: string;
   hovered: string;
   selected: string;
+  /** Drawn wide under the selected paths, so they stand out on the stock. */
+  selectedHalo: string;
   /** Fills the selected drawing's box, faintly: unlike the stock, so the box shows on it. */
   selectedDrawing: string;
   tab: string;
@@ -26,6 +28,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     model: "#94a3b8",
     hovered: "#60a5fa",
     selected: "#ea580c",
+    selectedHalo: "#ffffff",
     selectedDrawing: "#27272a",
     tab: "#16a34a",
     touchOff: "#0891b2",
@@ -41,6 +44,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     model: "#8b9bb4",
     hovered: "#93c5fd",
     selected: "#fb923c",
+    selectedHalo: "#18181b",
     selectedDrawing: "#ffffff",
     tab: "#4ade80",
     touchOff: "#22d3ee",
