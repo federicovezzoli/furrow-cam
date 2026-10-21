@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-10-21
 - **Deciders:** Federico Vezzoli
-- **Related:** PRD-0009, PRD-0005 (S2), ADR-0007, ADR-0010, ADR-0014, ADR-0022, ADR-0031, ADR-0038
+- **Related:** PRD-0009, PRD-0005 (S2), ADR-0007, ADR-0010, ADR-0014, ADR-0022, ADR-0031, ADR-0038; #308–#312
 
 ## Context
 

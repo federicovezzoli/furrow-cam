@@ -60,4 +60,4 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 
 ## Changelog
 
-- 2026-10-21: initial draft (ADR-0055)
+- 2026-10-21: initial draft (ADR-0055, #308–#312)
