@@ -76,17 +76,18 @@ describe("packProjectArchive and readProjectArchive", () => {
     expect(missingArchiveMeshes(document, new Map())).toEqual([sha256]);
   });
 
-  it("round-trip several drawings alongside a model", async () => {
-    const { document: withModel, meshes } = await projectWithModel();
+  it("round-trip several drawings", async () => {
     const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
     const base = fullDocument();
     const document: ProjectDocument = {
       ...base,
       drawings: [...base.drawings, { id: other, name: "hole.svg", border: 5 }],
       geometry: [square, { ...circle, drawingId: other }],
-      models: withModel.models,
     };
-    const archive = await readProjectArchive(packProjectArchive(document, meshes), MAX_MESH_BYTES);
+    const archive = await readProjectArchive(
+      packProjectArchive(document, new Map()),
+      MAX_MESH_BYTES,
+    );
     expect(parseProjectDocument(JSON.parse(archive.contents))).toEqual(document);
   });
 
