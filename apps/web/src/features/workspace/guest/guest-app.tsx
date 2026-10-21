@@ -3,7 +3,6 @@
 import { createProjectDocument } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
-import { errorText } from "@furrow/ui/lib/i18n";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import { track } from "@furrow/workspace/lib/telemetry";
@@ -31,16 +30,12 @@ import {
   type GuestProject,
   getGuestProject,
   listGuestProjects,
+  messageOf,
   readGuestSettings,
   readGuestTools,
   readLastGuestProjectId,
   saveLastGuestProjectId,
 } from "./storage";
-
-function messageOf(error: unknown) {
-  const t = clientTranslator();
-  return errorText(t, error, error instanceof Error ? error.message : t("Guest.somethingWrong"));
-}
 
 /** Shown where the browser won't let the app keep projects at all. */
 function StorageUnavailable({ error }: { error: string }) {

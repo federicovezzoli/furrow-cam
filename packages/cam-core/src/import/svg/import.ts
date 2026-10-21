@@ -1,4 +1,11 @@
-import { type Path, type Point, pointsCoincide, type Segment, type Shape } from "@furrow/document";
+import {
+  MessageError,
+  type Path,
+  type Point,
+  pointsCoincide,
+  type Segment,
+  type Shape,
+} from "@furrow/document";
 import { union } from "../../geometry/clipper";
 import { flattenPath } from "../../geometry/flatten";
 import { MM_PER_INCH } from "../../units/units";
@@ -49,11 +56,18 @@ export type SvgImportResult = {
 export type SvgDocument = { readonly root: XmlElement };
 
 /** The file isn't an SVG document at all; anything less is a warning instead. */
-export class SvgImportError extends Error {
-  /** Why, for the UI to translate (ADR-0054); the `message` is its code. */
-  constructor(readonly detail: ImportMessage) {
-    super(detail.code);
+export class SvgImportError extends MessageError<ImportMessage> {}
+
+/** What is wrong with a file that isn't XML, and where. */
+function xmlMessage({ position, problem }: XmlError): ImportMessage {
+  if (problem === undefined) return { code: "svg.invalidXml", values: { position } };
+  if ("unclosed" in problem) {
+    return { code: "svg.unclosedElement", values: { element: problem.unclosed, position } };
   }
+  if ("closing" in problem) {
+    return { code: "svg.unexpectedClosingTag", values: { element: problem.closing, position } };
+  }
+  return { code: "svg.invalidAttribute", values: { attribute: problem.attribute, position } };
 }
 
 /** Elements whose children are drawn. `symbol` is only drawn through `use`. */
@@ -100,9 +114,7 @@ export function parseSvg(text: string): SvgDocument {
   try {
     root = parseXml(text);
   } catch (error) {
-    if (error instanceof XmlError) {
-      throw new SvgImportError({ code: "svg.invalidXml", values: { position: error.position } });
-    }
+    if (error instanceof XmlError) throw new SvgImportError(xmlMessage(error));
     throw error;
   }
   if (localName(root) !== "svg") throw new SvgImportError({ code: "svg.notSvg" });

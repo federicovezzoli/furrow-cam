@@ -130,8 +130,7 @@ export function App() {
     try {
       prepared = session.prepareSave();
     } catch (error) {
-      const text = error instanceof Error ? error.message : t("Desktop.App.projectNotSaved");
-      window.alert(errorText(t, error, text));
+      window.alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
       return false;
     }
     const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);

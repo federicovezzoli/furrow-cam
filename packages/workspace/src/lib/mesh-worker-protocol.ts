@@ -32,7 +32,7 @@ export type MeshResponse =
   | { kind: "preview"; id: number; heightmap: Heightmap | null }
   | { kind: "missing"; id: number }
   /** `error` is for the user. */
-  | { kind: "failed"; id: number; error: string | Message };
+  | { kind: "failed"; id: number; error: Message };
 
 /** The SHA-256 of `bytes` in lowercase hex, as the document stores it. */
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {

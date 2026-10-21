@@ -506,10 +506,10 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
     return (
       <CircleAlertIcon
         role="img"
-        aria-label={t("failed", { error: entry.error })}
+        aria-label={t("failed", { error: format(entry.error) })}
         className="size-3.5 shrink-0 text-destructive"
       >
-        <title>{entry.error}</title>
+        <title>{format(entry.error)}</title>
       </CircleAlertIcon>
     );
   }

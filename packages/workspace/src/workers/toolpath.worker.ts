@@ -14,7 +14,7 @@ import {
   toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
-import { GcodeExportError } from "@furrow/post";
+import { type Message, MessageError } from "@furrow/document";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
 import { exportFromResults, ToolpathResults } from "../lib/toolpath-export";
 import type {
@@ -85,10 +85,17 @@ function yieldToMessages(): Promise<void> {
   });
 }
 
+const STORED_MODEL_MISMATCH: Message = { code: "workspace.storedModelMismatch" };
+
+/** A bug's own text, for developers: what isn't a `MessageError` has no translation. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** Keeps a model's STL file, checked against the hashes of the meshes it may be (ADR-0029). */
 async function keepMesh(bytes: ArrayBuffer, hashes: ReadonlySet<string>) {
   const sha256 = await sha256Hex(bytes);
-  if (!hashes.has(sha256)) throw new Error("The stored model doesn't match its file.");
+  if (!hashes.has(sha256)) throw new MessageError(STORED_MODEL_MISMATCH);
   keep(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS));
 }
 
@@ -181,7 +188,7 @@ async function exportProgram({
     const exportMeshes = new Map<string, Float32Array>();
     for (const bytes of files) {
       const sha256 = await sha256Hex(bytes);
-      if (!hashes.has(sha256)) throw new Error("The stored model doesn't match its file.");
+      if (!hashes.has(sha256)) throw new MessageError(STORED_MODEL_MISMATCH);
       exportMeshes.set(sha256, parseStl(new Uint8Array(bytes), NO_LIMITS).positions);
     }
     // Room for every operation's cuts, starting with those of the toolpaths
@@ -204,16 +211,16 @@ async function exportProgram({
   } catch (error) {
     if (error instanceof MissingMeshError) {
       scope.postMessage({ export: id, missingMesh: error.sha256 });
-    } else if (error instanceof GcodeExportError) {
-      const { message, operation } = error.detail;
+    } else if (error instanceof MessageError) {
+      // A program that can't be made, or a stored model that can't be read, says why.
+      const { detail, operation } = error;
       scope.postMessage({
         export: id,
-        error: message,
+        error: detail,
         ...(operation !== undefined && { operation }),
       });
     } else {
-      const message = error instanceof Error ? error.message : String(error);
-      scope.postMessage({ export: id, error: message });
+      scope.postMessage({ export: id, error: errorMessage(error) });
     }
   }
 }
@@ -243,7 +250,7 @@ scope.onmessage = ({ data }) => {
       if (error instanceof MissingMeshError) {
         scope.postMessage({ operationId, inputHash, missingMesh: error.sha256 });
       } else {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = error instanceof MessageError ? error.detail : errorMessage(error);
         scope.postMessage({ operationId, inputHash, error: message });
       }
     } finally {

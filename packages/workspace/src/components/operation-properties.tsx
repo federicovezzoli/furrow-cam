@@ -1536,7 +1536,7 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
   if (entry.status === "error") {
     return (
       <p role="alert" className="text-destructive">
-        {t("failed", { error: entry.error })}
+        {t("failed", { error: format(entry.error) })}
       </p>
     );
   }

@@ -1,7 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { ProjectDocument } from "./document";
-import type { DocumentMessage } from "./message";
+import { type DocumentMessage, MessageError } from "./message";
 import { ProjectDocumentTooNewError, parseProjectDocument } from "./migrations";
 
 /**
@@ -74,12 +74,8 @@ const VersionFile = z.object({
 });
 
 /** Why an archive can't be imported, for the UI to translate (ADR-0054); the `message` is its code. */
-export class ProjectArchiveError extends Error {
+export class ProjectArchiveError extends MessageError<DocumentMessage> {
   override name = "ProjectArchiveError";
-
-  constructor(readonly detail: DocumentMessage) {
-    super(detail.code);
-  }
 }
 
 const NOT_A_PROJECT: DocumentMessage = { code: "archive.notAProject" };

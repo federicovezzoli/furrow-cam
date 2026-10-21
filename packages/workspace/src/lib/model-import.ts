@@ -1,4 +1,5 @@
 import type { StlLimits } from "@furrow/cam-core";
+import { type Message, MessageError } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentState, DocumentStore } from "../stores/document-store";
 import { hasImportedFile, ONE_FILE } from "../stores/geometry-actions";
@@ -8,14 +9,10 @@ import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
-const UNREADABLE = { code: "workspace.unreadableFile" } as const;
-
 /** Why an STL file can't be imported, for the user (ADR-0054). */
-export class MeshImportError extends Error {
-  constructor(readonly detail: Translatable) {
-    super(typeof detail === "string" ? detail : detail.code);
-  }
-}
+export class MeshImportError extends MessageError {}
+
+const UNREADABLE: Message = { code: "workspace.unreadableFile" };
 
 /**
  * Reads and checks an STL file in a Web Worker of its own (ADR-0004), which

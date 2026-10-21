@@ -4,6 +4,7 @@ import {
   type DocumentMessage,
   type Machine,
   type Message,
+  MessageError,
   type Operation,
   type PostProcessorId,
   type Stock,
@@ -50,9 +51,9 @@ export type PostWarning = {
 };
 
 /** Why there is no program to export (ADR-0054); the `message` is the code. */
-export class GcodeExportError extends Error {
-  constructor(readonly detail: PostWarning) {
-    super(detail.message.code);
+export class GcodeExportError extends MessageError<PostWarning["message"]> {
+  constructor({ message, operation }: PostWarning) {
+    super(message, operation);
   }
 }
 

@@ -55,9 +55,13 @@ describe("scheduleModelPreviews", () => {
     const { schedule, posted, previews } = setup();
     schedule.update([model, turned]);
     await schedule.receive({ kind: "preview", id: (posted[0] as MeshRequest).id, heightmap });
-    await schedule.receive({ kind: "failed", id: (posted[1] as MeshRequest).id, error: "Broken." });
+    await schedule.receive({
+      kind: "failed",
+      id: (posted[1] as MeshRequest).id,
+      error: { code: "stl.empty" },
+    });
     expect(previews().get(previewKey(model))).toEqual({ heightmap });
-    expect(previews().get(previewKey(turned))).toEqual({ error: "Broken." });
+    expect(previews().get(previewKey(turned))).toEqual({ error: { code: "stl.empty" } });
     schedule.update([turned]);
     expect([...previews().keys()]).toEqual([previewKey(turned)]);
     // Needed again: asked for again.
@@ -150,7 +154,7 @@ describe("scheduleModelPreviews", () => {
       await schedule.receive({
         kind: "failed",
         id: (posted[0] as MeshRequest).id,
-        error: "Broken.",
+        error: { code: "stl.empty" },
       });
       vi.runAllTimers();
       schedule.update([model]);

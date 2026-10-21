@@ -9,6 +9,20 @@ export type Message<Code extends string = string> = {
 };
 
 /**
+ * An error for the user from a core package (ADR-0054): `detail` says why,
+ * for the UI to translate, and `operation` what it is about, if anything.
+ * The `message` is the code, for developers.
+ */
+export class MessageError<M extends Message = Message> extends Error {
+  constructor(
+    readonly detail: M,
+    readonly operation?: string,
+  ) {
+    super(detail.code);
+  }
+}
+
+/**
  * The document package's codes: Zod issue messages (a schema's custom
  * issues and limits carry a code as their message) and archive and
  * migration errors.
