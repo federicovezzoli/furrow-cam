@@ -14,6 +14,7 @@ import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/nativ
 import type { MachineChoice } from "@furrow/workspace/lib/workspace-host";
 import { FileIcon, FolderOpenIcon, HistoryIcon, PlusIcon } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useFormatter, useTranslations } from "use-intl";
 import type { RecentFile, Recovery } from "../../shared/api";
 import { api } from "./api";
 import type { Page } from "./desktop-host";
@@ -48,6 +49,8 @@ export function StartScreen({
   onDiscardRecovery: (recovery: Recovery) => void;
   navigate: (page: Page) => void;
 }) {
+  const t = useTranslations("Desktop.StartScreen");
+  const format = useFormatter();
   const [recent, setRecent] = useState<RecentFile[]>([]);
 
   useEffect(() => {
@@ -56,31 +59,34 @@ export function StartScreen({
 
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
       {recoveries.length > 0 && (
         <section aria-labelledby="recover" className="grid gap-2 rounded-md border p-4">
           <h2 id="recover" className="flex items-center gap-2 font-medium">
             <HistoryIcon className="size-4" aria-hidden />
-            Unsaved changes
+            {t("unsavedChanges")}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Furrow CAM closed before these projects were saved.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("closedBefore")}</p>
           <ul className="grid gap-2">
             {recoveries.map((recovery) => (
               <li key={recovery.id} className="flex items-center gap-2 text-sm">
                 <span className="min-w-0 flex-1 truncate" title={recovery.path ?? undefined}>
                   {recovery.name}{" "}
                   <span className="text-muted-foreground">
-                    ({new Date(recovery.savedAt).toLocaleString()})
+                    (
+                    {format.dateTime(new Date(recovery.savedAt), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                    )
                   </span>
                 </span>
                 <Button size="sm" onClick={() => onRestore(recovery)}>
-                  Restore
+                  {t("restore")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => onDiscardRecovery(recovery)}>
-                  Discard
+                  {t("discard")}
                 </Button>
               </li>
             ))}
@@ -93,20 +99,20 @@ export function StartScreen({
       <div className="flex gap-2">
         <Button onClick={() => onNewProject(true)}>
           <PlusIcon />
-          New project
+          {t("newProject")}
         </Button>
         <Button variant="outline" onClick={onOpen}>
           <FolderOpenIcon />
-          Open…
+          {t("open")}
         </Button>
       </div>
 
       <section aria-labelledby="recent" className="grid gap-2">
         <h2 id="recent" className="text-sm font-medium text-muted-foreground">
-          Recent
+          {t("recent")}
         </h2>
         {recent.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Projects you open or save appear here.</p>
+          <p className="text-sm text-muted-foreground">{t("recentEmpty")}</p>
         ) : (
           <ul className="grid">
             {recent.map((file) => (
@@ -157,6 +163,7 @@ function NewProjectDialog({
   onCreate: (machine: Machine) => void;
   onAddMachine: () => void;
 }) {
+  const t = useTranslations("Desktop.StartScreen");
   const [machineId, setMachineId] = useState("");
   const chosen = machines.find((choice) => choice.id === machineId) ?? machines[0];
 
@@ -169,23 +176,23 @@ function NewProjectDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
-          <DialogDescription>Choose the machine this project is for.</DialogDescription>
+          <DialogTitle>{t("newProject")}</DialogTitle>
+          <DialogDescription>{t("chooseMachine")}</DialogDescription>
         </DialogHeader>
         {machines.length === 0 ? (
           <>
-            <p className="text-sm">Add your machine first: its size and G-code come from it.</p>
+            <p className="text-sm">{t("addMachineFirst")}</p>
             <DialogFooter>
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t("cancel")}
               </Button>
-              <Button onClick={onAddMachine}>Add a machine</Button>
+              <Button onClick={onAddMachine}>{t("addMachine")}</Button>
             </DialogFooter>
           </>
         ) : (
           <form onSubmit={onSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="machine">Machine</Label>
+              <Label htmlFor="machine">{t("machine")}</Label>
               <NativeSelect
                 id="machine"
                 value={chosen?.id ?? ""}
@@ -200,9 +207,9 @@ function NewProjectDialog({
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t("cancel")}
               </Button>
-              <Button type="submit">Create</Button>
+              <Button type="submit">{t("create")}</Button>
             </DialogFooter>
           </form>
         )}
