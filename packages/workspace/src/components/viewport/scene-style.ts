@@ -5,6 +5,10 @@ export type Palette = {
   model: string;
   hovered: string;
   selected: string;
+  /** Drawn wide under the selected paths, so they stand out on the stock. */
+  selectedHalo: string;
+  /** Fills the selected drawing's box, faintly: unlike the stock, so the box shows on it. */
+  selectedDrawing: string;
   tab: string;
   /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
   touchOff: string;
@@ -24,6 +28,8 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     model: "#94a3b8",
     hovered: "#60a5fa",
     selected: "#ea580c",
+    selectedHalo: "#ffffff",
+    selectedDrawing: "#27272a",
     tab: "#16a34a",
     touchOff: "#0891b2",
     snap: "#c026d3",
@@ -38,6 +44,8 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     model: "#8b9bb4",
     hovered: "#93c5fd",
     selected: "#fb923c",
+    selectedHalo: "#18181b",
+    selectedDrawing: "#ffffff",
     tab: "#4ade80",
     touchOff: "#22d3ee",
     snap: "#e879f9",
@@ -56,13 +64,14 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
  */
 export const RENDER_ORDER = {
   stock: 0,
-  shapes: 1,
-  selected: 2,
-  hovered: 3,
-  rapids: 4,
-  feeds: 5,
-  holes: 6,
-  origin: 7,
-  tabs: 8,
-  snap: 9,
+  selectedDrawing: 1,
+  shapes: 2,
+  selected: 3,
+  hovered: 4,
+  rapids: 5,
+  feeds: 6,
+  holes: 7,
+  origin: 8,
+  tabs: 9,
+  snap: 10,
 } as const;

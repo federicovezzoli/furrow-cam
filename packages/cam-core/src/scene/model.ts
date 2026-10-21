@@ -225,6 +225,12 @@ export function modelBorder(
   return Math.min(border, Math.min(width, height) / 4);
 }
 
+/** The stock less its `modelBorder` for `border` on every side, what *Fit to stock* fits into. */
+export function stockInset(stock: Pick<Stock, "width" | "height">, border: number): Rect {
+  const gap = modelBorder(stock, border);
+  return { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+}
+
 /**
  * The scale and position that fit a mesh rotated by `rotation` inside the
  * stock less its `modelBorder` for `border`, aligned to that inset rectangle
@@ -237,8 +243,7 @@ export function stockFit(
   anchor: StockAnchor,
   border = MODEL_BORDER,
 ): Pick<ModelPlacement, "scale" | "position"> {
-  const gap = modelBorder(stock, border);
-  const inset: Rect = { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+  const inset = stockInset(stock, border);
   const scale = fitScale(bounds, rotation, {
     width: inset.max[0] - inset.min[0],
     height: inset.max[1] - inset.min[1],
@@ -247,6 +252,30 @@ export function stockFit(
     scale,
     position: positionAt(bounds, { rotation, scale }, anchor, anchorPoint(inset, anchor)),
   };
+}
+
+/**
+ * How to fit a drawing with `bounds` inside the stock less its `modelBorder`
+ * for `border`, aligned to that inset rectangle at `anchor` (ADR-0055): the
+ * scale, and the drawing's anchor point (`from`) with where it lands (`to`),
+ * for `scaleShapes`. A drawing with no width or no height fits by the other;
+ * `null` for a single point.
+ */
+export function drawingFit(
+  bounds: Rect,
+  stock: Pick<Stock, "width" | "height">,
+  anchor: StockAnchor,
+  border: number,
+): { scale: number; from: Point; to: Point } | null {
+  const inset = stockInset(stock, border);
+  const width = bounds.max[0] - bounds.min[0];
+  const height = bounds.max[1] - bounds.min[1];
+  const scale = Math.min(
+    width > 0 ? (inset.max[0] - inset.min[0]) / width : Infinity,
+    height > 0 ? (inset.max[1] - inset.min[1]) / height : Infinity,
+  );
+  if (!Number.isFinite(scale)) return null;
+  return { scale, from: anchorPoint(bounds, anchor), to: anchorPoint(inset, anchor) };
 }
 
 /**

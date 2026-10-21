@@ -63,9 +63,10 @@ function ids(prefix: string): () => string {
 }
 
 /**
- * `shapes` added to `doc` the way the workspace imports a file: aligned to
- * the stock at the XY zero's anchor, or its bottom-left corner for a custom
- * zero (ADR-0022).
+ * `shapes` added to `doc` as one drawing, aligned to the stock at the XY
+ * zero's anchor, or its bottom-left corner for a custom zero (ADR-0022). The
+ * workspace now leaves the drawing's border in from the anchor (ADR-0055);
+ * the corpus keeps its programs as they were.
  */
 function withShapes(doc: ProjectDocument, shapes: Shape[]): ProjectDocument {
   const { anchor } = doc.stock.xyOrigin;

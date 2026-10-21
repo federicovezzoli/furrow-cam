@@ -1,9 +1,11 @@
 import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
 import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import type { Rect } from "../geometry/bounds";
 import {
   designAlignment,
   designBounds,
+  drawingFit,
   fitScale,
   initialPlacement,
   modelAt,
@@ -127,6 +129,31 @@ describe("modelBorder", () => {
     expect(modelBorder(stock, 0)).toBe(0);
     expect(modelBorder(stock, 25)).toBe(25);
     expect(modelBorder({ width: 30, height: 100 }, 25)).toBe(7.5);
+  });
+});
+
+describe("drawingFit", () => {
+  const stock = { width: 600, height: 400 };
+
+  it("fits inside the stock less the border, aligned at the anchor", () => {
+    const rect: Rect = { min: [100, 100], max: [200, 150] };
+    // 100 × 50 into 580 × 380: the width limits it.
+    expect(drawingFit(rect, stock, "bottom_left", 10)).toEqual({
+      scale: 5.8,
+      from: [100, 100],
+      to: [10, 10],
+    });
+    expect(drawingFit(rect, stock, "center", 10)).toEqual({
+      scale: 5.8,
+      from: [150, 125],
+      to: [300, 200],
+    });
+  });
+
+  it("fits a line by its length, caps the border, and leaves a point alone", () => {
+    const line: Rect = { min: [0, 5], max: [50, 5] };
+    expect(drawingFit(line, stock, "bottom_left", 500)?.scale).toBe(400 / 50);
+    expect(drawingFit({ min: [5, 5], max: [5, 5] }, stock, "center", 10)).toBeNull();
   });
 });
 
