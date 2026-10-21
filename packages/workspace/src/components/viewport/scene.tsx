@@ -152,7 +152,7 @@ function Shapes({ palette }: { palette: Palette }) {
     <>
       <SelectedDrawing color={palette.selectedDrawing} />
       <AllShapes color={palette.shape} />
-      <SelectedPaths color={palette.selected} halo={palette.selectedHalo} />
+      <SelectedPaths color={palette.selected} />
       <HoveredPaths color={palette.hovered} />
     </>
   );
@@ -182,8 +182,8 @@ function SelectedDrawing({ color }: { color: string }) {
   );
 }
 
-/** The selected paths, wide over a wider halo, so they show on the stock whatever its colour. */
-function SelectedPaths({ color, halo }: { color: string; halo: string }) {
+/** The selected paths, drawn wide so they show on the stock, centred on the paths so they keep their size. */
+function SelectedPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
@@ -192,15 +192,12 @@ function SelectedPaths({ color, halo }: { color: string; halo: string }) {
     return pathsLinePositions(paths);
   }, [geometry, selected]);
   return (
-    <>
-      <WideLines positions={positions} color={halo} width={6} renderOrder={RENDER_ORDER.selected} />
-      <WideLines
-        positions={positions}
-        color={color}
-        width={2.5}
-        renderOrder={RENDER_ORDER.selected}
-      />
-    </>
+    <WideLines
+      positions={positions}
+      color={color}
+      width={2.5}
+      renderOrder={RENDER_ORDER.selected}
+    />
   );
 }
 
