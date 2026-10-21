@@ -1,10 +1,13 @@
 import { posthogHost } from "@furrow/workspace/lib/telemetry";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import type * as React from "react";
 import { Suspense } from "react";
 import { Telemetry } from "@/components/telemetry";
 import { ThemeProvider } from "@/components/theme-provider";
+import { WebLocaleProvider } from "@/components/web-locale-provider";
 import { env } from "@/env";
+import { getLocale } from "@/lib/locale";
 import { themeColors } from "@/lib/theme-colors";
 import "./globals.css";
 
@@ -26,6 +29,10 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * `lang` is set by `LocalizedApp`: the language comes from the request, which
+ * would make the whole document request-bound if read here (ADR-0054).
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -34,7 +41,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {/* No fallback: pages stream in the request's language, never English first. */}
+          <Suspense>
+            <LocalizedApp>{children}</LocalizedApp>
+          </Suspense>
+        </ThemeProvider>
         {env.NEXT_PUBLIC_POSTHOG_KEY && (
           // Reads the current route, which is request data on dynamic pages.
           <Suspense>
@@ -46,5 +58,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         )}
       </body>
     </html>
+  );
+}
+
+/** The app in the request's language, with `<html lang>` set to match before it paints. */
+async function LocalizedApp({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  return (
+    <>
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed statement; `locale` is one of four codes.
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang=${JSON.stringify(locale)}`,
+        }}
+      />
+      <WebLocaleProvider locale={locale}>{children}</WebLocaleProvider>
+    </>
   );
 }

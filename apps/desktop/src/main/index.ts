@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
 import { extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isLocale, type Locale, matchLocale } from "@furrow/ui/lib/locales";
 import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import {
   captureError,
@@ -91,6 +92,8 @@ const updatesPath = () => join(dataDir(), "updates.json");
 /** An in-memory session for the update check alone (ADR-0048). */
 const UPDATE_PARTITION = "updates";
 const telemetryPath = () => join(dataDir(), "telemetry.json");
+/** The language picked in the app (ADR-0054), apart from `settings.json` as `updates.json` is. */
+const localePath = () => join(dataDir(), "locale.json");
 /** An in-memory session for usage statistics and error reports alone (ADR-0052). */
 const TELEMETRY_PARTITION = "telemetry";
 /** Set at build time; without it the app never asks or sends anything. */
@@ -122,6 +125,8 @@ let telemetryPrefs: TelemetryPrefs = {};
 let telemetryWrite = Promise.resolve();
 /** Running only while the user agrees. */
 let posthog: PostHog | null = null;
+/** The language picked in the app; `null` follows the system's. */
+let pickedLocale: Locale | null = null;
 
 // The main process's events and errors, the renderer's included, go through the shared
 // module, so each error is sent once and a session sends a limited number (ADR-0052).
@@ -169,6 +174,8 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
     telemetryPrefs = parseTelemetryPrefs(await readJson(telemetryPath()));
+    const saved = (await readJson(localePath())) as { picked?: unknown } | null;
+    pickedLocale = isLocale(saved?.picked) ? saved.picked : null;
     applyTelemetry();
     Menu.setApplicationMenu(buildMenu());
     createWindow();
@@ -650,11 +657,25 @@ function registerIpc() {
   });
   ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
 
+  ipcMain.handle(CHANNELS.getLocale, () => currentLocale());
+  ipcMain.handle(CHANNELS.setLocale, async (_event, locale: unknown) => {
+    if (!isLocale(locale)) return;
+    pickedLocale = locale;
+    await writeJson(localePath(), { picked: locale }).catch((error: unknown) =>
+      warnUnsaved("Your language choice", error),
+    );
+  });
+
   ipcMain.handle(CHANNELS.takePendingPaths, () => {
     const paths = pendingPaths;
     pendingPaths = [];
     return paths;
   });
+}
+
+/** The interface language: the picked one, else the first supported system language, else English. */
+function currentLocale(): Locale {
+  return pickedLocale ?? matchLocale([...app.getPreferredSystemLanguages(), app.getLocale()]);
 }
 
 function isDataFile(file: unknown): file is DataFile {

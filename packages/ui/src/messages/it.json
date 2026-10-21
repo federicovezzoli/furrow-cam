@@ -1,0 +1,27 @@
+{
+  "LanguagePicker": {
+    "label": "Lingua"
+  },
+  "ThemeToggle": {
+    "system": "Tema di sistema",
+    "light": "Tema chiaro",
+    "dark": "Tema scuro",
+    "switchTo": "Passa al {theme, select, light {tema chiaro} dark {tema scuro} other {tema di sistema}}"
+  },
+  "Nav": {
+    "projects": "Progetti",
+    "bits": "Frese",
+    "machines": "Macchine",
+    "signIn": "Accedi"
+  },
+  "AccountMenu": {
+    "account": "Account",
+    "takeTour": "Fai il tour",
+    "signOut": "Esci",
+    "deleteAccount": "Elimina account…"
+  },
+  "TopBar": {
+    "noMachine": "Nessuna macchina impostata",
+    "takeTour": "Fai il tour"
+  }
+}

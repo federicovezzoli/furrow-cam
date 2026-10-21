@@ -61,9 +61,9 @@ export default function PrivacyPage() {
           </List>
           <p>
             We don't collect your name, a profile picture or any other personal details, and we
-            don't use tracking cookies. The app sets a cookie for your session and one that
-            remembers the workspace panel sizes, and keeps your light or dark theme choice in your
-            browser&apos;s local storage.
+            don't use tracking cookies. The app sets a cookie for your session, one that remembers
+            the workspace panel sizes and one that remembers the language you picked, and keeps your
+            light or dark theme choice in your browser&apos;s local storage.
           </p>
         </Section>
 

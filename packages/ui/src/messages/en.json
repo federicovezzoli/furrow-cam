@@ -1,0 +1,27 @@
+{
+  "LanguagePicker": {
+    "label": "Language"
+  },
+  "ThemeToggle": {
+    "system": "System theme",
+    "light": "Light theme",
+    "dark": "Dark theme",
+    "switchTo": "Switch to {theme, select, light {light theme} dark {dark theme} other {system theme}}"
+  },
+  "Nav": {
+    "projects": "Projects",
+    "bits": "Bits",
+    "machines": "Machines",
+    "signIn": "Sign in"
+  },
+  "AccountMenu": {
+    "account": "Account",
+    "takeTour": "Take the tour",
+    "signOut": "Sign out",
+    "deleteAccount": "Delete account…"
+  },
+  "TopBar": {
+    "noMachine": "No machine set",
+    "takeTour": "Take the tour"
+  }
+}
