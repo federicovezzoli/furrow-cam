@@ -10,8 +10,15 @@ const OPTIONS: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "s
  * Browser only: the server doesn't know the viewer's time zone.
  */
 export function formatLocalDate(date: Date, locale?: string) {
-  return new Intl.DateTimeFormat(locale, OPTIONS).format(date);
+  let format = formats.get(locale);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, OPTIONS);
+    formats.set(locale, format);
+  }
+  return format.format(date);
 }
+
+const formats = new Map<string | undefined, Intl.DateTimeFormat>();
 
 /**
  * A date in the viewer's own time zone and the app's language. The server

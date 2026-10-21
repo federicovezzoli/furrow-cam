@@ -53,6 +53,11 @@ const versionNotFound = () => translate("Projects.versionNotFound");
 const tooManyVersions = () => translate("Projects.tooManyVersions", { max: MAX_VERSIONS });
 const meshMissing = () => translate("Projects.meshMissing");
 const conflict = () => translate("Projects.conflict");
+// `parseVersionLabel` reads anything but a string as blank, so a label can only fail by length.
+const labelTooLong = async () =>
+  translate("Projects.labelError", {
+    reason: await translate("Projects.tooLong", { max: VERSION_LABEL_MAX }),
+  });
 
 /**
  * Creates an empty project and opens it, for one of the user's machines or,
@@ -360,13 +365,7 @@ export async function createVersion(
   const id = parseProjectId(projectId);
   if (!id) return { error: await notFound() };
   const parsed = parseVersionLabel(label);
-  if (!parsed.success) {
-    return {
-      error: await translate("Projects.labelError", {
-        reason: await translate("Projects.tooLong", { max: VERSION_LABEL_MAX }),
-      }),
-    };
-  }
+  if (!parsed.success) return { error: await labelTooLong() };
 
   const error = await db.$transaction(async (tx) => {
     await lockProject(tx, id);
@@ -399,13 +398,7 @@ export async function renameVersion(id: string, label: string): Promise<ActionRe
   const versionId = parseProjectId(id);
   if (!versionId) return { error: await versionNotFound() };
   const parsed = parseVersionLabel(label);
-  if (!parsed.success) {
-    return {
-      error: await translate("Projects.labelError", {
-        reason: await translate("Projects.tooLong", { max: VERSION_LABEL_MAX }),
-      }),
-    };
-  }
+  if (!parsed.success) return { error: await labelTooLong() };
 
   const { count } = await db.projectVersion.updateMany({
     where: { id: versionId, project: { userId } },

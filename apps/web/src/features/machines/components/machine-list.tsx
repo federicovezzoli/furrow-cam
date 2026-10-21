@@ -69,7 +69,7 @@ export async function MachineList({ machines }: { machines: MachineRow[] }) {
               </TableCell>
               <TableCell className="text-right">
                 {[machine.workAreaX, machine.workAreaY, machine.workAreaZ]
-                  .map((value) => formatNumber(value))
+                  .map(formatNumber)
                   .join(" × ")}
               </TableCell>
               <TableCell className="text-right">{formatNumber(machine.maxFeedXY)}</TableCell>

@@ -45,10 +45,9 @@ type ProjectRecord = { id: string; name: string; savedAt: Date; document: unknow
 
 type MeshRecord = { projectId: string; sha256: string; file: Blob };
 
-const t = () => clientTranslator();
-const storageUnavailable = () => t()("Guest.storageUnavailable");
-const projectNotFound = () => t()("Guest.projectNotFound");
-const conflict = () => t()("Guest.conflict");
+const storageUnavailable = () => clientTranslator()("Guest.storageUnavailable");
+const projectNotFound = () => clientTranslator()("Guest.projectNotFound");
+const conflict = () => clientTranslator()("Guest.conflict");
 
 let opening: Promise<IDBDatabase> | null = null;
 
@@ -130,7 +129,7 @@ async function transaction<T>(
     if (error instanceof UserError) throw error;
     // A failed read means storage is unavailable; a failed write may pass, e.g. once there is space.
     if (mode === "readonly") throw new UserError(storageUnavailable());
-    throw new Error(t()("Guest.storageFailed"));
+    throw new Error(clientTranslator()("Guest.storageFailed"));
   }
 }
 
@@ -148,12 +147,14 @@ function parseDocument(json: unknown): ProjectDocument {
     return parseProjectDocument(json);
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) {
-      throw new UserError(t()("Guest.projectNewer"));
+      throw new UserError(clientTranslator()("Guest.projectNewer"));
     }
     if (error instanceof ProjectDocumentVersionError) {
-      throw new UserError(t()("Guest.cantOpen", { reason: `${error.message}.` }));
+      throw new UserError(clientTranslator()("Guest.cantOpen", { reason: `${error.message}.` }));
     }
-    throw new UserError(t()("Guest.cantOpen", { reason: t()("Guest.contentsInvalid") }));
+    throw new UserError(
+      clientTranslator()("Guest.cantOpen", { reason: clientTranslator()("Guest.contentsInvalid") }),
+    );
   }
 }
 
@@ -206,7 +207,7 @@ export async function saveGuestProject(
 ): Promise<SaveResult> {
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
-    return { error: t()("Guest.saveInvalid"), retryable: true };
+    return { error: clientTranslator()("Guest.saveInvalid"), retryable: true };
   }
   try {
     return await transaction([PROJECTS], "readwrite", async (tx) => {
@@ -289,7 +290,7 @@ export async function getGuestMesh(projectId: string, sha256: string): Promise<A
   const record = await transaction([MESHES], "readonly", (tx) =>
     result<MeshRecord | undefined>(tx.objectStore(MESHES).get([projectId, sha256])),
   );
-  if (!record) throw new Error(t()("Guest.meshMissing"));
+  if (!record) throw new Error(clientTranslator()("Guest.meshMissing"));
   return record.file.arrayBuffer();
 }
 
