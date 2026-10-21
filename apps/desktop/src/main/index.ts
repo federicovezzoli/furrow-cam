@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
 import { extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { translator } from "@furrow/ui/lib/i18n";
 import { isLocale, type Locale, matchLocale } from "@furrow/ui/lib/locales";
 import { blankReportUrl } from "@furrow/workspace/lib/bug-report";
 import {
@@ -267,12 +268,12 @@ function trackEvent({ event, ...properties }: TelemetryEvent) {
 /** Asks once whether to send usage statistics and error reports. */
 async function askAboutTelemetry() {
   if (!POSTHOG_KEY || telemetryPrefs.enabled !== undefined) return;
+  const t = tr();
   const { response } = await dialog.showMessageBox({
     type: "question",
-    message: "Send anonymous usage statistics and error reports?",
-    detail:
-      'They help fix crashes and show which features are used: events such as "G-code exported" and error messages, never your files, projects or anything that identifies you. You can change this in the Help menu.',
-    buttons: ["Send", "Don't Send"],
+    message: t("DesktopMain.telemetry.question"),
+    detail: t("DesktopMain.telemetry.detail"),
+    buttons: [t("DesktopMain.telemetry.send"), t("DesktopMain.telemetry.dontSend")],
     defaultId: 0,
     cancelId: 1,
   });
@@ -287,18 +288,19 @@ function saveTelemetryPrefs(change: TelemetryPrefs) {
   const prefs = telemetryPrefs;
   telemetryWrite = telemetryWrite
     .then(() => writeJson(telemetryPath(), prefs))
-    .catch((error: unknown) => warnUnsaved("Your choice about usage statistics", error));
+    .catch((error: unknown) => warnUnsaved("telemetry", error));
   return telemetryWrite;
 }
 
 /** Says that a choice couldn't be saved and only lasts until the app quits. */
-async function warnUnsaved(what: string, error: unknown) {
-  const reason = error instanceof Error ? ` (${error.message})` : "";
+async function warnUnsaved(what: "updates" | "telemetry" | "language", error: unknown) {
+  const t = tr();
+  const detail = t("DesktopMain.unsaved.detail");
   await dialog.showMessageBox({
     type: "warning",
-    message: `${what} couldn't be saved`,
-    detail: `It applies until Furrow CAM quits${reason}.`,
-    buttons: ["OK"],
+    message: t("DesktopMain.unsaved.title", { what }),
+    detail: error instanceof Error ? `${detail}\n\n${error.message}` : detail,
+    buttons: [t("DesktopMain.unsaved.ok")],
   });
 }
 
@@ -329,7 +331,7 @@ function saveUpdatePrefs(change: UpdatePrefs) {
   const prefs = updatePrefs;
   prefsWrite = prefsWrite
     .then(() => writeJson(updatesPath(), prefs))
-    .catch((error: unknown) => warnUnsaved("Your update choice", error));
+    .catch((error: unknown) => warnUnsaved("updates", error));
   return prefsWrite;
 }
 
@@ -347,12 +349,12 @@ async function withUpdateDialog(dialogs: () => Promise<void>) {
 /** Asks once whether to check at start-up, then checks quietly if allowed. */
 async function startupUpdateCheck() {
   if (updatePrefs.checkAtStartup === undefined) {
+    const t = tr();
     const { response } = await dialog.showMessageBox({
       type: "question",
-      message: "Check for new versions when Furrow CAM starts?",
-      detail:
-        "Furrow CAM will ask GitHub for its list of releases. Nothing about you or your projects is sent. You can change this in the Help menu.",
-      buttons: ["Check at Start-up", "Don't Check"],
+      message: t("DesktopMain.updates.question"),
+      detail: t("DesktopMain.updates.detail"),
+      buttons: [t("DesktopMain.updates.checkAtStartup"), t("DesktopMain.updates.dontCheck")],
       defaultId: 0,
       cancelId: 1,
     });
@@ -376,15 +378,16 @@ async function startupUpdateCheck() {
 /** Help → Check for Updates…: always reports what it found. */
 function checkForUpdatesNow() {
   return withUpdateDialog(async () => {
+    const t = tr();
     let release: Release | null;
     try {
       release = await checkForRelease();
     } catch {
       await dialog.showMessageBox({
         type: "warning",
-        message: "Couldn't check for updates",
-        detail: "Furrow CAM couldn't reach GitHub. Check your connection and try again.",
-        buttons: ["OK"],
+        message: t("DesktopMain.updates.failed"),
+        detail: t("DesktopMain.updates.failedDetail"),
+        buttons: [t("DesktopMain.updates.ok")],
       });
       return;
     }
@@ -392,9 +395,9 @@ function checkForUpdatesNow() {
     else {
       await dialog.showMessageBox({
         type: "info",
-        message: "Furrow CAM is up to date",
-        detail: `Version ${app.getVersion()} is the newest.`,
-        buttons: ["OK"],
+        message: t("DesktopMain.updates.upToDate"),
+        detail: t("DesktopMain.updates.upToDateDetail", { version: app.getVersion() }),
+        buttons: [t("DesktopMain.updates.ok")],
       });
     }
   });
@@ -402,11 +405,16 @@ function checkForUpdatesNow() {
 
 /** Offers to open the release page; the user downloads and installs it themselves. */
 async function offerRelease(release: Release) {
+  const t = tr();
   const { response } = await dialog.showMessageBox({
     type: "info",
-    message: `Furrow CAM ${release.version} is available`,
-    detail: `You have ${app.getVersion()}. Download the new version from its release page and install it over this one.`,
-    buttons: ["Download", "Skip This Version", "Later"],
+    message: t("DesktopMain.updates.available", { version: release.version }),
+    detail: t("DesktopMain.updates.availableDetail", { current: app.getVersion() }),
+    buttons: [
+      t("DesktopMain.updates.download"),
+      t("DesktopMain.updates.skip"),
+      t("DesktopMain.updates.later"),
+    ],
     defaultId: 0,
     cancelId: 2,
   });
@@ -463,30 +471,67 @@ function send(command: MenuCommand) {
   return () => window?.webContents.send(CHANNELS.menu, command);
 }
 
+/**
+ * The application menu, in the current language. Role items get labels too:
+ * Electron's own are English only.
+ */
 function buildMenu() {
+  const t = tr();
+  const name = app.name;
   const mac = process.platform === "darwin";
+  const quit = { role: "quit" as const, label: t("DesktopMain.menu.quit", { app: name }) };
   const template: MenuItemConstructorOptions[] = [
-    ...(mac ? [{ role: "appMenu" as const }] : []),
+    ...(mac
+      ? [
+          {
+            label: name,
+            submenu: [
+              { role: "about" as const, label: t("DesktopMain.menu.about", { app: name }) },
+              { type: "separator" as const },
+              { role: "services" as const, label: t("DesktopMain.menu.services") },
+              { type: "separator" as const },
+              { role: "hide" as const, label: t("DesktopMain.menu.hide", { app: name }) },
+              { role: "hideOthers" as const, label: t("DesktopMain.menu.hideOthers") },
+              { role: "unhide" as const, label: t("DesktopMain.menu.showAll") },
+              { type: "separator" as const },
+              quit,
+            ],
+          },
+        ]
+      : []),
     {
-      label: "File",
+      label: t("DesktopMain.menu.file"),
       submenu: [
-        { label: "New Project…", accelerator: "CmdOrCtrl+N", click: send("new") },
-        { label: "Open…", accelerator: "CmdOrCtrl+O", click: send("open") },
+        { label: t("DesktopMain.menu.newProject"), accelerator: "CmdOrCtrl+N", click: send("new") },
+        { label: t("DesktopMain.menu.open"), accelerator: "CmdOrCtrl+O", click: send("open") },
         { type: "separator" },
-        { label: "Save", accelerator: "CmdOrCtrl+S", click: send("save") },
-        { label: "Save As…", accelerator: "Shift+CmdOrCtrl+S", click: send("save-as") },
+        { label: t("DesktopMain.menu.save"), accelerator: "CmdOrCtrl+S", click: send("save") },
+        {
+          label: t("DesktopMain.menu.saveAs"),
+          accelerator: "Shift+CmdOrCtrl+S",
+          click: send("save-as"),
+        },
         { type: "separator" },
-        { label: "Close Project", accelerator: "CmdOrCtrl+W", click: send("close") },
-        ...(mac ? [] : [{ type: "separator" as const }, { role: "quit" as const }]),
+        {
+          label: t("DesktopMain.menu.closeProject"),
+          accelerator: "CmdOrCtrl+W",
+          click: send("close"),
+        },
+        ...(mac ? [] : [{ type: "separator" as const }, quit]),
       ],
     },
     {
       // No undo or redo roles: their shortcuts would never reach the workspace's own undo.
-      label: "Edit",
-      submenu: [{ role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }],
+      label: t("DesktopMain.menu.edit"),
+      submenu: [
+        { role: "cut", label: t("DesktopMain.menu.cut") },
+        { role: "copy", label: t("DesktopMain.menu.copy") },
+        { role: "paste", label: t("DesktopMain.menu.paste") },
+        { role: "selectAll", label: t("DesktopMain.menu.selectAll") },
+      ],
     },
     {
-      label: "View",
+      label: t("DesktopMain.menu.view"),
       submenu: [
         ...(DEV_URL
           ? [
@@ -495,20 +540,35 @@ function buildMenu() {
               { type: "separator" as const },
             ]
           : []),
-        { role: "resetZoom" },
-        { role: "zoomIn" },
-        { role: "zoomOut" },
+        { role: "resetZoom", label: t("DesktopMain.menu.actualSize") },
+        { role: "zoomIn", label: t("DesktopMain.menu.zoomIn") },
+        { role: "zoomOut", label: t("DesktopMain.menu.zoomOut") },
         { type: "separator" },
-        { role: "togglefullscreen" },
+        { role: "togglefullscreen", label: t("DesktopMain.menu.fullScreen") },
       ],
     },
-    { role: "windowMenu" },
+    {
+      // `window` makes it macOS's Window menu, which adds its own window list.
+      role: mac ? "window" : undefined,
+      label: t("DesktopMain.menu.window"),
+      submenu: [
+        { role: "minimize", label: t("DesktopMain.menu.minimize") },
+        ...(mac
+          ? [
+              { role: "zoom" as const, label: t("DesktopMain.menu.zoom") },
+              { type: "separator" as const },
+              { role: "front" as const, label: t("DesktopMain.menu.front") },
+            ]
+          : [{ role: "close" as const, label: t("DesktopMain.menu.closeWindow") }]),
+      ],
+    },
     {
       role: "help",
+      label: t("DesktopMain.menu.help"),
       submenu: [
-        { label: "Check for Updates…", click: () => void checkForUpdatesNow() },
+        { label: t("DesktopMain.menu.checkUpdates"), click: () => void checkForUpdatesNow() },
         {
-          label: "Report a Bug…",
+          label: t("DesktopMain.menu.reportBug"),
           click: () =>
             void shell.openExternal(
               blankReportUrl([
@@ -519,7 +579,7 @@ function buildMenu() {
         },
         { type: "separator" },
         {
-          label: "Check for Updates at Start-up",
+          label: t("DesktopMain.menu.checkAtStartup"),
           type: "checkbox",
           checked: updatePrefs.checkAtStartup === true,
           click: (item) => void saveUpdatePrefs({ checkAtStartup: item.checked }),
@@ -527,7 +587,7 @@ function buildMenu() {
         ...(POSTHOG_KEY
           ? [
               {
-                label: "Send Usage Statistics and Error Reports",
+                label: t("DesktopMain.menu.sendUsage"),
                 type: "checkbox" as const,
                 checked: telemetryPrefs.enabled === true,
                 click: (item: { checked: boolean }) =>
@@ -547,7 +607,7 @@ async function readProject(path: string) {
     await addRecent(path);
     return { path, name: projectName(path), bytes };
   } catch {
-    return { error: `${projectName(path)} couldn't be opened. It may have been moved or deleted.` };
+    return { error: tr()("DesktopMain.files.openFailed", { name: projectName(path) }) };
   }
 }
 
@@ -561,25 +621,26 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.openFile, async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openFile"],
-      filters: [{ name: "Furrow CAM projects", extensions: [...OPEN_EXTENSIONS] }],
+      filters: [{ name: tr()("DesktopMain.files.projects"), extensions: [...OPEN_EXTENSIONS] }],
     });
     const [path] = result.filePaths;
     return result.canceled || path === undefined ? null : readProject(path);
   });
 
   ipcMain.handle(CHANNELS.readFile, (_event, path: unknown) =>
-    typeof path === "string" ? readProject(path) : { error: "No file to open." },
+    typeof path === "string" ? readProject(path) : { error: tr()("DesktopMain.files.noFile") },
   );
 
   ipcMain.handle(
     CHANNELS.saveFile,
     async (_event, path: unknown, suggestedName: unknown, bytes: unknown) => {
-      if (!(bytes instanceof Uint8Array)) return { error: "Nothing to save." };
+      const t = tr();
+      if (!(bytes instanceof Uint8Array)) return { error: t("DesktopMain.files.nothingToSave") };
       let target = typeof path === "string" ? path : null;
       if (target === null) {
         const result = await dialog.showSaveDialog({
           defaultPath: join(app.getPath("documents"), `${String(suggestedName)}.furrow`),
-          filters: [{ name: "Furrow CAM project", extensions: ["furrow"] }],
+          filters: [{ name: t("DesktopMain.files.project"), extensions: ["furrow"] }],
         });
         if (result.canceled || !result.filePath) return null;
         target = result.filePath.endsWith(".furrow")
@@ -589,8 +650,8 @@ function registerIpc() {
       try {
         await writeFileAtomic(target, bytes);
       } catch (error) {
-        const reason = error instanceof Error ? ` (${error.message})` : "";
-        return { error: `The project couldn't be saved${reason}.` };
+        const reason = error instanceof Error ? error.message : String(error);
+        return { error: t("DesktopMain.files.saveFailed", { reason }) };
       }
       await addRecent(target);
       return { path: target, name: projectName(target) };
@@ -620,11 +681,16 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.readRecovery, (_event, id: string) => recoveries().read(id));
 
   ipcMain.handle(CHANNELS.askUnsaved, async (_event, name: unknown): Promise<UnsavedChoice> => {
+    const t = tr();
     const { response } = await dialog.showMessageBox({
       type: "warning",
-      message: `Save the changes to ${String(name)}?`,
-      detail: "Your changes will be lost if you don't save them.",
-      buttons: ["Save", "Don't Save", "Cancel"],
+      message: t("DesktopMain.files.askSave", { name: String(name) }),
+      detail: t("DesktopMain.files.askSaveDetail"),
+      buttons: [
+        t("DesktopMain.files.save"),
+        t("DesktopMain.files.dontSave"),
+        t("DesktopMain.files.cancel"),
+      ],
       defaultId: 0,
       cancelId: 2,
     });
@@ -661,8 +727,9 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.setLocale, async (_event, locale: unknown) => {
     if (!isLocale(locale)) return;
     pickedLocale = locale;
+    Menu.setApplicationMenu(buildMenu());
     await writeJson(localePath(), { picked: locale }).catch((error: unknown) =>
-      warnUnsaved("Your language choice", error),
+      warnUnsaved("language", error),
     );
   });
 
@@ -671,6 +738,11 @@ function registerIpc() {
     pendingPaths = [];
     return paths;
   });
+}
+
+/** Translates in the current language; a new one each time, so a change of language applies at once. */
+function tr() {
+  return translator(currentLocale());
 }
 
 /** The interface language: the picked one, else the first supported system language, else English. */

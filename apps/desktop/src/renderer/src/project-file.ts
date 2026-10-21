@@ -9,6 +9,7 @@ import {
   parseProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
+import { t } from "./i18n";
 
 /** A project as a file holds it: the document, its meshes by hash and its versions (ADR-0047). */
 export type ProjectFile = {
@@ -16,8 +17,6 @@ export type ProjectFile = {
   meshes: Map<string, Uint8Array>;
   versions: ArchiveVersion[];
 };
-
-const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
 
 /** Zip files start with `PK\x03\x04`. */
 function isZip(bytes: Uint8Array) {
@@ -36,7 +35,7 @@ export async function readProjectFile(
   if (!isZip(bytes)) {
     const document = parseDocument(new TextDecoder().decode(bytes));
     if (document.models.length > 0) {
-      throw new Error("This project has 3D models: open its .furrow or .furrow.zip file instead.");
+      throw new Error(t("Desktop.ProjectFile.modelsNeedArchive"));
     }
     return { document, meshes: new Map(), versions: [] };
   }
@@ -45,11 +44,11 @@ export async function readProjectFile(
     archive = await readProjectArchive(bytes, maxMeshBytes);
   } catch (error) {
     if (error instanceof ProjectArchiveError) throw new Error(error.message);
-    throw new Error(NOT_A_PROJECT);
+    throw new Error(t("Desktop.ProjectFile.notAProject"));
   }
   const document = parseDocument(archive.contents);
   if (missingArchiveMeshes(document, archive.meshes).length > 0) {
-    throw new Error("This project is missing one of its 3D models.");
+    throw new Error(t("Desktop.ProjectFile.missingModel"));
   }
   return { document, meshes: archive.meshes, versions: archive.versions };
 }
@@ -59,20 +58,18 @@ function parseDocument(contents: string): ProjectDocument {
   try {
     json = JSON.parse(contents);
   } catch {
-    throw new Error(NOT_A_PROJECT);
+    throw new Error(t("Desktop.ProjectFile.notAProject"));
   }
   if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(NOT_A_PROJECT);
+    throw new Error(t("Desktop.ProjectFile.notAProject"));
   }
   try {
     return parseProjectDocument(json);
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) {
-      throw new Error(
-        "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
-      );
+      throw new Error(t("Desktop.ProjectFile.tooNew"));
     }
-    throw new Error("This file isn't a valid Furrow CAM project.");
+    throw new Error(t("Desktop.ProjectFile.invalid"));
   }
 }
 

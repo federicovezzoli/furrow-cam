@@ -23,5 +23,148 @@
   "TopBar": {
     "noMachine": "Keine Maschine festgelegt",
     "takeTour": "Tour starten"
+  },
+  "Desktop": {
+    "StartScreen": {
+      "title": "Projekte",
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "closedBefore": "Furrow CAM wurde beendet, bevor diese Projekte gespeichert wurden.",
+      "restore": "Wiederherstellen",
+      "discard": "Verwerfen",
+      "newProject": "Neues Projekt",
+      "open": "Öffnen…",
+      "recent": "Zuletzt verwendet",
+      "recentEmpty": "Projekte, die du öffnest oder speicherst, erscheinen hier.",
+      "chooseMachine": "Wähle die Maschine für dieses Projekt.",
+      "addMachineFirst": "Füge zuerst deine Maschine hinzu: Größe und G-code kommen von ihr.",
+      "cancel": "Abbrechen",
+      "addMachine": "Maschine hinzufügen",
+      "machine": "Maschine",
+      "create": "Erstellen"
+    },
+    "Library": {
+      "back": "Zurück zum Projekt",
+      "bitsTitle": "Fräserbibliothek",
+      "newBit": "Neuer Fräser",
+      "noBits": "Noch keine Fräser. Füge die Fräser hinzu, mit denen du arbeitest.",
+      "defaultBit": "Standardfräser",
+      "makeDefaultLabel": "{name} zum Standardfräser machen",
+      "defaultTitle": "Standardfräser für neue Operationen",
+      "makeDefault": "Als Standard festlegen",
+      "editLabel": "{name} bearbeiten",
+      "edit": "Bearbeiten",
+      "deleteLabel": "{name} löschen",
+      "delete": "Löschen",
+      "confirmDeleteBit": "Den Fräser „{name}“ löschen? Projekte behalten ihre Kopie.",
+      "editBit": "Fräser bearbeiten",
+      "bitDescription": "Projekte behalten ihre eigene Kopie eines Fräsers; Änderungen hier betreffen neue Operationen.",
+      "machinesTitle": "Maschinen",
+      "newMachine": "Neue Maschine",
+      "noMachines": "Noch keine Maschinen. Füge die Maschine hinzu, auf der du fräst.",
+      "confirmDeleteMachine": "Die Maschine „{name}“ löschen? Projekte behalten ihre Kopie.",
+      "cancel": "Abbrechen",
+      "machineGone": "Diese Maschine gibt es nicht mehr."
+    },
+    "App": {
+      "libraryNotSaved": "Die Änderung konnte nicht in der Bibliothek dieses Computers gespeichert werden.",
+      "projectNotSaved": "Das Projekt konnte nicht gespeichert werden.",
+      "recoveryUnreadable": "Die nicht gespeicherten Änderungen konnten nicht gelesen werden.",
+      "openFailed": "{name} konnte nicht geöffnet werden: {reason}",
+      "unreadable": "Die Datei konnte nicht gelesen werden.",
+      "untitled": "Unbenannt",
+      "loading": "Wird geladen…"
+    },
+    "ProjectFile": {
+      "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
+      "modelsNeedArchive": "Dieses Projekt enthält 3D-Modelle: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
+      "missingModel": "In diesem Projekt fehlt eines seiner 3D-Modelle.",
+      "tooNew": "Dieses Projekt wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die neueste Version herunter, um es zu öffnen.",
+      "invalid": "Diese Datei ist kein gültiges Furrow-CAM-Projekt."
+    },
+    "Session": {
+      "tooManyVersions": "Dieses Projekt hat bereits {max} Versionen, mehr sind nicht möglich. Lösche zuerst eine.",
+      "versionNotFound": "Diese Version gibt es nicht mehr.",
+      "labelTooLong": "Bezeichnung: höchstens {max} Zeichen.",
+      "missingModel": "Dieses Modell fehlt im Projekt.",
+      "beforeRestoringEarlier": "Vor dem Wiederherstellen einer früheren Version",
+      "beforeRestoring": "Vor dem Wiederherstellen von „{label}“",
+      "cantOpenVersions": "Versionen können hier nicht als Projekte geöffnet werden."
+    }
+  },
+  "DesktopMain": {
+    "menu": {
+      "about": "Über {app}",
+      "services": "Dienste",
+      "hide": "{app} ausblenden",
+      "hideOthers": "Andere ausblenden",
+      "showAll": "Alle einblenden",
+      "quit": "{app} beenden",
+      "file": "Datei",
+      "newProject": "Neues Projekt…",
+      "open": "Öffnen…",
+      "save": "Speichern",
+      "saveAs": "Speichern unter…",
+      "closeProject": "Projekt schließen",
+      "edit": "Bearbeiten",
+      "cut": "Ausschneiden",
+      "copy": "Kopieren",
+      "paste": "Einsetzen",
+      "selectAll": "Alles auswählen",
+      "view": "Darstellung",
+      "actualSize": "Originalgröße",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "fullScreen": "Vollbild ein/aus",
+      "window": "Fenster",
+      "minimize": "Im Dock ablegen",
+      "zoom": "Zoomen",
+      "front": "Alle nach vorne bringen",
+      "closeWindow": "Fenster schließen",
+      "help": "Hilfe",
+      "checkUpdates": "Nach Updates suchen…",
+      "reportBug": "Fehler melden…",
+      "checkAtStartup": "Beim Start nach Updates suchen",
+      "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden"
+    },
+    "telemetry": {
+      "question": "Anonyme Nutzungsstatistiken und Fehlerberichte senden?",
+      "detail": "Sie helfen, Abstürze zu beheben, und zeigen, welche Funktionen genutzt werden: Ereignisse wie „G-code exportiert“ und Fehlermeldungen, nie deine Dateien, Projekte oder irgendetwas, das dich identifiziert. Du kannst das im Hilfe-Menü ändern.",
+      "send": "Senden",
+      "dontSend": "Nicht senden"
+    },
+    "unsaved": {
+      "title": "{what, select, updates {Deine Update-Einstellung konnte nicht gespeichert werden} telemetry {Deine Einstellung zu Nutzungsstatistiken konnte nicht gespeichert werden} other {Deine Sprachwahl konnte nicht gespeichert werden}}",
+      "detail": "Sie gilt, bis Furrow CAM beendet wird.",
+      "ok": "OK"
+    },
+    "updates": {
+      "question": "Beim Start von Furrow CAM nach neuen Versionen suchen?",
+      "detail": "Furrow CAM fragt GitHub nach der Liste seiner Versionen. Nichts über dich oder deine Projekte wird gesendet. Du kannst das im Hilfe-Menü ändern.",
+      "checkAtStartup": "Beim Start suchen",
+      "dontCheck": "Nicht suchen",
+      "failed": "Suche nach Updates fehlgeschlagen",
+      "failedDetail": "Furrow CAM konnte GitHub nicht erreichen. Prüfe deine Verbindung und versuche es erneut.",
+      "upToDate": "Furrow CAM ist auf dem neuesten Stand",
+      "upToDateDetail": "Version {version} ist die neueste.",
+      "available": "Furrow CAM {version} ist verfügbar",
+      "availableDetail": "Du hast {current}. Lade die neue Version von ihrer Release-Seite herunter und installiere sie über diese.",
+      "download": "Herunterladen",
+      "skip": "Diese Version überspringen",
+      "later": "Später",
+      "ok": "OK"
+    },
+    "files": {
+      "projects": "Furrow-CAM-Projekte",
+      "project": "Furrow-CAM-Projekt",
+      "openFailed": "{name} konnte nicht geöffnet werden. Die Datei wurde vielleicht verschoben oder gelöscht.",
+      "noFile": "Keine Datei zum Öffnen.",
+      "nothingToSave": "Nichts zu speichern.",
+      "saveFailed": "Das Projekt konnte nicht gespeichert werden ({reason}).",
+      "askSave": "Änderungen an {name} speichern?",
+      "askSaveDetail": "Deine Änderungen gehen verloren, wenn du sie nicht speicherst.",
+      "save": "Speichern",
+      "dontSave": "Nicht speichern",
+      "cancel": "Abbrechen"
+    }
   }
 }

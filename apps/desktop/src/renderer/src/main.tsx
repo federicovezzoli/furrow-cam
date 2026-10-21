@@ -7,6 +7,7 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { api } from "./api";
 import { App } from "./app";
+import { setTranslatorLocale } from "./i18n";
 import "./styles.css";
 
 // The main process sends them only if the user agreed (ADR-0052).
@@ -27,6 +28,7 @@ function DesktopLocale({ initial, children }: { initial: Locale; children: React
       locale={locale}
       onLocaleChange={(next) => {
         setLocale(next);
+        setTranslatorLocale(next);
         document.documentElement.lang = next;
         void api.setLocale(next);
       }}
@@ -43,6 +45,7 @@ void api
   .catch(() => DEFAULT_LOCALE)
   .then((locale) => {
     document.documentElement.lang = locale;
+    setTranslatorLocale(locale);
     createRoot(root).render(
       <StrictMode>
         <ThemeProvider
