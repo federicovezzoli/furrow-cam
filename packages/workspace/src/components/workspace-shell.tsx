@@ -11,7 +11,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
 import type * as React from "react";
-import { lazy, useMemo, useRef, useState } from "react";
+import { lazy, useRef, useState } from "react";
 import {
   type Layout,
   type LayoutChangedMeta,
@@ -20,8 +20,8 @@ import {
 } from "react-resizable-panels";
 import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
+import { useSelectedDrawingId } from "../hooks/use-selected-drawing";
 import { useUndoShortcuts } from "../hooks/use-undo-shortcuts";
-import { selectedDrawingId } from "../lib/path-selection";
 import { savedLayout, toggledPaneLayout, type WorkspaceLayout } from "../lib/workspace-layout";
 import { Tour, useTour } from "../onboarding/components/tour";
 import type { TourPane } from "../onboarding/lib/tour";
@@ -267,12 +267,7 @@ export function WorkspaceShell() {
 function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
   const modelId = useWorkspaceStore((s) => s.selectedModelId);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const geometry = useDocumentStore((s) => s.document.geometry);
-  const drawingId = useMemo(
-    () => selectedDrawingId(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const drawingId = useSelectedDrawingId();
   const t = useTranslations("Shell");
   if (selectedId === null && modelId === null && drawingId === null) return null;
   return (

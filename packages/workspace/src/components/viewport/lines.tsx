@@ -1,7 +1,8 @@
 "use client";
 
+import { Line } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { type ComponentRef, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { BufferAttribute, BufferGeometry, type LineDashedMaterial, Vector3 } from "three";
 import { pixelsPerMillimetre } from "../../lib/viewport-scene";
 
@@ -88,6 +89,43 @@ export function Lines({
         depthTest={!overlay}
       />
     </lineSegments>
+  );
+}
+
+/**
+ * Lines `width` pixels wide, which WebGL's own lines can't be, drawn over
+ * everything. For a few lines at a time, such as the selection: each is a
+ * quad of its own.
+ */
+export function WideLines({
+  positions,
+  color,
+  width,
+  renderOrder,
+}: {
+  positions: Float32Array;
+  color: string;
+  width: number;
+  renderOrder: number;
+}) {
+  const points = useMemo(() => Array.from(positions), [positions]);
+  const line = useRef<ComponentRef<typeof Line>>(null);
+  // Joins the transparent pass, drawn after the translucent stock, as `Lines` do.
+  useLayoutEffect(() => {
+    if (!line.current) return;
+    line.current.material.transparent = true;
+    line.current.material.depthTest = false;
+  });
+  if (points.length === 0) return null;
+  return (
+    <Line
+      ref={line}
+      points={points}
+      segments
+      color={color}
+      lineWidth={width}
+      renderOrder={renderOrder}
+    />
   );
 }
 

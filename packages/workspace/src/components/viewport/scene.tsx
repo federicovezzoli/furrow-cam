@@ -10,6 +10,7 @@ import {
 } from "@furrow/cam-core";
 import { Edges, Html } from "@react-three/drei";
 import { useMemo } from "react";
+import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
   gridLinePositions,
@@ -18,8 +19,9 @@ import {
   touchOffLinePositions,
 } from "../../lib/viewport-scene";
 import { useDocumentStore, useWorkspaceStore } from "../../providers/workspace-stores";
+import { drawingBounds } from "../../stores/geometry-actions";
 import type { ModelPreview } from "../../stores/model-preview-scheduler";
-import { DashedLines, Lines, useLineGeometry } from "./lines";
+import { DashedLines, Lines, useLineGeometry, WideLines } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
@@ -148,8 +150,9 @@ export function Stock({ box, palette }: { box: Box3; palette: Palette }) {
 function Shapes({ palette }: { palette: Palette }) {
   return (
     <>
+      <SelectedDrawing color={palette.selectedDrawing} />
       <AllShapes color={palette.shape} />
-      <SelectedPaths color={palette.selected} />
+      <SelectedPaths color={palette.selected} halo={palette.selectedHalo} />
       <HoveredPaths color={palette.hovered} />
     </>
   );
@@ -161,7 +164,26 @@ function AllShapes({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
 }
 
-function SelectedPaths({ color }: { color: string }) {
+/** A faint fill over the box of the drawing whose properties show, setting it apart from the others. */
+function SelectedDrawing({ color }: { color: string }) {
+  const id = useSelectedDrawingId();
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
+  if (!bounds) return null;
+  const { min, max } = bounds;
+  return (
+    <mesh
+      position={[(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, 0]}
+      renderOrder={RENDER_ORDER.selectedDrawing}
+    >
+      <planeGeometry args={[max[0] - min[0], max[1] - min[1]]} />
+      <meshBasicMaterial color={color} transparent opacity={0.2} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** The selected paths, wide over a wider halo, so they show on the stock whatever its colour. */
+function SelectedPaths({ color, halo }: { color: string; halo: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
@@ -169,7 +191,17 @@ function SelectedPaths({ color }: { color: string }) {
     const paths = selected.flatMap(({ shapeId, path }) => shapes.get(shapeId)?.paths[path] ?? []);
     return pathsLinePositions(paths);
   }, [geometry, selected]);
-  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.selected} />;
+  return (
+    <>
+      <WideLines positions={positions} color={halo} width={6} renderOrder={RENDER_ORDER.selected} />
+      <WideLines
+        positions={positions}
+        color={color}
+        width={2.5}
+        renderOrder={RENDER_ORDER.selected}
+      />
+    </>
+  );
 }
 
 /** The hovered path, unless it is selected: selection wins. */
