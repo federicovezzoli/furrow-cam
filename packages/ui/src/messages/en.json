@@ -297,5 +297,148 @@
   },
   "Privacy": {
     "englishOnly": "This privacy policy is kept in English only, and the English text is the one that applies."
+  },
+  "Desktop": {
+    "StartScreen": {
+      "title": "Projects",
+      "unsavedChanges": "Unsaved changes",
+      "closedBefore": "Furrow CAM closed before these projects were saved.",
+      "restore": "Restore",
+      "discard": "Discard",
+      "newProject": "New project",
+      "open": "Open…",
+      "recent": "Recent",
+      "recentEmpty": "Projects you open or save appear here.",
+      "chooseMachine": "Choose the machine this project is for.",
+      "addMachineFirst": "Add your machine first: its size and G-code come from it.",
+      "cancel": "Cancel",
+      "addMachine": "Add a machine",
+      "machine": "Machine",
+      "create": "Create"
+    },
+    "Library": {
+      "back": "Back to the project",
+      "bitsTitle": "Bits library",
+      "newBit": "New bit",
+      "noBits": "No bits yet. Add the bits you cut with.",
+      "defaultBit": "Default bit",
+      "makeDefaultLabel": "Make {name} the default bit",
+      "defaultTitle": "Default bit for new operations",
+      "makeDefault": "Make default",
+      "editLabel": "Edit {name}",
+      "edit": "Edit",
+      "deleteLabel": "Delete {name}",
+      "delete": "Delete",
+      "confirmDeleteBit": "Delete the bit \"{name}\"? Projects keep their copy.",
+      "editBit": "Edit bit",
+      "bitDescription": "Projects keep their own copy of a bit; editing it here changes new operations.",
+      "machinesTitle": "Machines",
+      "newMachine": "New machine",
+      "noMachines": "No machines yet. Add the machine you cut on.",
+      "confirmDeleteMachine": "Delete the machine \"{name}\"? Projects keep their copy.",
+      "cancel": "Cancel",
+      "machineGone": "This machine no longer exists."
+    },
+    "App": {
+      "libraryNotSaved": "The change couldn't be saved to this computer's library.",
+      "projectNotSaved": "The project couldn't be saved.",
+      "recoveryUnreadable": "The unsaved changes couldn't be read.",
+      "openFailed": "{name} couldn't be opened: {reason}",
+      "unreadable": "it couldn't be read.",
+      "untitled": "Untitled",
+      "loading": "Loading…"
+    },
+    "ProjectFile": {
+      "notAProject": "This file isn't a Furrow CAM project.",
+      "modelsNeedArchive": "This project has 3D models: open its .furrow or .furrow.zip file instead.",
+      "missingModel": "This project is missing one of its 3D models.",
+      "tooNew": "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
+      "invalid": "This file isn't a valid Furrow CAM project."
+    },
+    "Session": {
+      "tooManyVersions": "This project already has {max} versions, the most it can keep. Delete one first.",
+      "versionNotFound": "This version no longer exists.",
+      "labelTooLong": "Label: at most {max} characters.",
+      "missingModel": "This model is missing from the project.",
+      "beforeRestoringEarlier": "Before restoring an earlier version",
+      "beforeRestoring": "Before restoring “{label}”",
+      "cantOpenVersions": "Versions can't be opened as projects here."
+    }
+  },
+  "DesktopMain": {
+    "menu": {
+      "about": "About {app}",
+      "services": "Services",
+      "hide": "Hide {app}",
+      "hideOthers": "Hide Others",
+      "showAll": "Show All",
+      "quit": "Quit {app}",
+      "file": "File",
+      "newProject": "New Project…",
+      "open": "Open…",
+      "save": "Save",
+      "saveAs": "Save As…",
+      "closeProject": "Close Project",
+      "edit": "Edit",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "view": "View",
+      "actualSize": "Actual Size",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "fullScreen": "Toggle Full Screen",
+      "window": "Window",
+      "minimize": "Minimize",
+      "zoom": "Zoom",
+      "front": "Bring All to Front",
+      "closeWindow": "Close Window",
+      "help": "Help",
+      "checkUpdates": "Check for Updates…",
+      "reportBug": "Report a Bug…",
+      "checkAtStartup": "Check for Updates at Start-up",
+      "sendUsage": "Send Usage Statistics and Error Reports"
+    },
+    "telemetry": {
+      "question": "Send anonymous usage statistics and error reports?",
+      "detail": "They help fix crashes and show which features are used: events such as \"G-code exported\" and error messages, never your files, projects or anything that identifies you. You can change this in the Help menu.",
+      "send": "Send",
+      "dontSend": "Don't Send"
+    },
+    "unsaved": {
+      "title": "{what, select, updates {Your update choice couldn't be saved} telemetry {Your choice about usage statistics couldn't be saved} other {Your language choice couldn't be saved}}",
+      "detail": "It applies until Furrow CAM quits.",
+      "ok": "OK"
+    },
+    "updates": {
+      "question": "Check for new versions when Furrow CAM starts?",
+      "detail": "Furrow CAM will ask GitHub for its list of releases. Nothing about you or your projects is sent. You can change this in the Help menu.",
+      "checkAtStartup": "Check at Start-up",
+      "dontCheck": "Don't Check",
+      "failed": "Couldn't check for updates",
+      "failedDetail": "Furrow CAM couldn't reach GitHub. Check your connection and try again.",
+      "upToDate": "Furrow CAM is up to date",
+      "upToDateDetail": "Version {version} is the newest.",
+      "available": "Furrow CAM {version} is available",
+      "availableDetail": "You have {current}. Download the new version from its release page and install it over this one.",
+      "download": "Download",
+      "skip": "Skip This Version",
+      "later": "Later",
+      "ok": "OK"
+    },
+    "files": {
+      "projects": "Furrow CAM projects",
+      "project": "Furrow CAM project",
+      "openFailed": "{name} couldn't be opened. It may have been moved or deleted.",
+      "noFile": "No file to open.",
+      "nothingToSave": "Nothing to save.",
+      "saveFailed": "The project couldn't be saved ({reason}).",
+      "askSave": "Save the changes to {name}?",
+      "askSaveDetail": "Your changes will be lost if you don't save them.",
+      "save": "Save",
+      "dontSave": "Don't Save",
+      "cancel": "Cancel"
+    }
   }
 }
