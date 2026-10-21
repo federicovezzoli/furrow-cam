@@ -546,6 +546,100 @@ describe("grbl", () => {
     });
   });
 
+  describe("custom blocks read back (#179)", () => {
+    const operations = [
+      { operation: operation("Profile"), toolpath: plunge([0, 0]) },
+      { operation: operation("Holes", { ...endMill, name: "Second" }), toolpath: plunge([20, 0]) },
+    ];
+    /** The program with `toolChange` as the machine's tool change, and the line number of `text` in it. */
+    function withToolChange(toolChange: string) {
+      const output = post({ machine: { ...machine, toolChange }, operations });
+      const lineOf = (text: string) => output.gcode.split("\n").indexOf(text) + 1;
+      return { ...output, lineOf };
+    }
+    /** The warning about line `line` of custom block `block`. */
+    const moveWarning = (block: string, line: number, problem: string, amount = 0) => ({
+      message: {
+        code: "grbl.customBlockMove",
+        values: { block, after: "no", line, problem, amount },
+      },
+    });
+
+    it("warn about a plunge into the stock", () => {
+      const { warnings, lineOf } = withToolChange("G0 X150 Y100\nG1 Z-3 F300\nG0 Z20\nM0");
+      // Backing out of the plunge goes through nothing left.
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G1 Z-3 F300"), "material", 3)]);
+    });
+
+    it("follow relative coordinates", () => {
+      // Down into the hole the first operation drilled is clear; across is not.
+      const { warnings, lineOf } = withToolChange("G91\nG0 Z-10\nG0 X50\nG0 Z15\nG90\nM0");
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 X50"), "material", 5)]);
+    });
+
+    it("stop at a move in machine coordinates", () => {
+      const { warnings, lineOf } = withToolChange("G53 G0 Z-5\nG1 Z-3 F300\nM0");
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G53 G0 Z-5"), "unfollowed")]);
+    });
+
+    it("check a tool-change block's moves before the pause with the bit it changes", () => {
+      // Back down into the hole the 6.35 mm bit drilled: the 12 mm bit isn't in yet.
+      const big = { ...endMill, name: "Big", diameter: 12 };
+      const { warnings } = post({
+        machine: { ...machine, toolChange: "G0 Z-4\nG0 Z20\nM0" },
+        operations: [
+          { operation: operation("Profile"), toolpath: plunge([0, 0]) },
+          { operation: operation("Holes", big), toolpath: plunge([20, 0]) },
+        ],
+      });
+      expect(warnings).toEqual([]);
+    });
+
+    it("warn once about a block that leaves the tool in the stock, not the retract after it", () => {
+      const { warnings, lineOf } = withToolChange("G0 X150 Y100\nG0 Z-3\nM0");
+      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 Z-3"), "material", 3)]);
+    });
+
+    it("stop at a line it can't read", () => {
+      const { gcode, warnings } = post({
+        machine: { ...machine, programStart: "$H\nG21 G90" },
+        operations,
+      });
+      const line = gcode.split("\n").indexOf("$H") + 1;
+      expect(warnings).toEqual([moveWarning("programStart", line, "unreadable")]);
+    });
+
+    it("leave the program's own cuts through the stock alone", () => {
+      const through: Toolpath = {
+        moves: [
+          { kind: "rapid", to: [100, 50, 5] },
+          { kind: "feed", to: [100, 50, -18.5], feedRate: 500 },
+          { kind: "rapid", to: [100, 50, 5] },
+        ],
+        warnings: [],
+      };
+      const { warnings } = post({
+        machine: { ...machine, operationStart: "G4 P1" },
+        operations: [{ operation: operation("Cut out"), toolpath: through }],
+      });
+      expect(warnings).toEqual([]);
+    });
+
+    it("skip words that don't move the tool", () => {
+      const { warnings } = withToolChange("M5\nM62 P1\nG4 P2\ng91 g0z10 ; up\nG90\nM0 (change)");
+      expect(warnings).toEqual([]);
+    });
+
+    it("warn about a move below the stock bottom", () => {
+      const { gcode, warnings } = post({
+        machine: { ...machine, programEnd: "G0 X400\nG0 Z-20\nM30" },
+        operations,
+      });
+      const line = gcode.split("\n").indexOf("G0 Z-20") + 1;
+      expect(warnings).toEqual([moveWarning("programEnd", line, "belowBottom", -20)]);
+    });
+  });
+
   describe("tool shape comments (ADR-0042)", () => {
     it("give each tool type's cutter shape, leaving out fields that don't apply", () => {
       expect(toolShapeComment(endMill)).toBe("(Furrow tool: type=flat_end_mill diameter=6.35)");

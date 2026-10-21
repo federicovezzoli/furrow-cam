@@ -632,6 +632,7 @@
       "noToolpath": "No toolpath, left out of the program."
     },
     "grbl": {
+      "customBlockMove": "{after, select, yes {Line {line}, after the {block, select, programStart {program start} toolChangePad {tool change on the pad} toolChange {tool change} operationStart {operation start} other {program end}} block,} other {{block, select, programStart {Program start} toolChangePad {Tool change on the pad} toolChange {Tool change} operationStart {Operation start} other {Program end}}: line {line}}} {problem, select, material {moves through {amount, number} mm of material} belowBottom {goes below the stock bottom to Z{amount}} unknownPosition {goes below the stock top from an unknown position} unreadable {can't be read, so the program isn't checked for moves into the stock from there on} other {leaves the tool where it can't be followed, so the program isn't checked for moves into the stock from there on}}.",
       "slowed": "{count, plural, one {# move} other {# moves}} slowed to the machine's maximum feed.",
       "spindleClamped": "The tool's {rpm, number} RPM is outside the machine's spindle range, so {used, number} RPM is used.",
       "unfilledPlaceholder": "{block, select, programStart {Program start} toolChangePad {Tool change on the pad} toolChange {Tool change} operationStart {Operation start} other {Program end}}: {placeholder} can't be filled in, so it's written as is."

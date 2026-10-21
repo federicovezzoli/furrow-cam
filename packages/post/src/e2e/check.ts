@@ -1,58 +1,24 @@
-// A reader for the GRBL programs `grbl` writes, and the rules every one of
-// them must keep to be safe to run (#149). Test support for the corpus, not
+// The rules every GRBL program `grbl` writes must keep to be safe to run
+// (#149), read back with `../read-back`. Test support for the corpus, not
 // part of the package's API.
+import { type CutterProfile, cutterProfile, stockBounds, type Vec3 } from "@furrow/cam-core";
+import { machineSpinUpDelay } from "@furrow/document";
 import {
-  type CutterProfile,
-  cutterProfile,
-  type HeightmapGrid,
-  heightmapGrid,
-  stockBounds,
-  stockOffset,
-  sweepMoves,
-  type Vec3,
-} from "@furrow/cam-core";
-import {
-  clearingTool,
-  machineSpinUpDelay,
-  type ProjectDocument,
-  type Tool,
-} from "@furrow/document";
-import { formatNumber } from "../format";
+  type CheckedProject,
+  EPSILON,
+  type GcodeLine,
+  type GcodeMove,
+  gcodeMoves,
+  MATERIAL_TOLERANCE,
+  Material,
+  parseGcode,
+  projectTools,
+  round,
+} from "../read-back";
 
-/** Distance below which two coordinates count as equal: the programs' last decimal. */
-const EPSILON = 1e-3;
-
-/**
- * How far into the material left a rapid may seem to pass before it counts:
- * the heightmap's cells see the stock a little higher than the toolpaths'
- * own grids do, on slopes.
- */
-const MATERIAL_TOLERANCE = 0.05;
-
-/** One block of a program: its words, letter and value, and its comment. */
-export type GcodeLine = {
-  /** 1-based, as editors number lines. */
-  number: number;
-  text: string;
-  words: { letter: string; value: number }[];
-  comment: string | null;
-};
-
-/** A G0 or G1 the program makes, in work coordinates. */
-export type GcodeMove = {
-  line: number;
-  kind: "rapid" | "feed";
-  /** An axis is `NaN` until the program sets it. */
-  from: Vec3;
-  to: Vec3;
-  /** The active feed rate, for feeds. */
-  feedRate: number | null;
-};
+export type { CheckedProject, GcodeMove };
 
 export type Violation = { line: number; rule: string; message: string };
-
-/** What a program is checked against: the project it was posted from. */
-export type CheckedProject = Pick<ProjectDocument, "stock" | "machine" | "operations">;
 
 /** The commands `grbl` writes: the modes, moves, dwell, spindle, pause and end. */
 const ALLOWED = new Set([
@@ -70,63 +36,6 @@ const ALLOWED = new Set([
   "M30",
 ]);
 const MODES = ["G21", "G90", "G94", "G17"] as const;
-
-/** Splits `gcode` into blocks, throwing on text that isn't G-code. */
-export function parseGcode(gcode: string): GcodeLine[] {
-  return gcode
-    .replace(/\n$/, "")
-    .split("\n")
-    .map((text, i) => {
-      const number = i + 1;
-      const comments = [...text.matchAll(/\(([^)]*)\)/g)].map((match) => match[1]);
-      const code = text.replace(/\([^)]*\)/g, " ").trim();
-      const words: GcodeLine["words"] = [];
-      for (const token of code.split(/\s+/).filter(Boolean)) {
-        const match = /^([A-Z])(-?\d+(?:\.\d+)?)$/.exec(token);
-        if (!match) throw new Error(`line ${number}: "${token}" isn't a G-code word`);
-        words.push({ letter: match[1] as string, value: Number(match[2]) });
-      }
-      return { number, text, words, comment: comments.length > 0 ? comments.join(" ") : null };
-    });
-}
-
-/**
- * The moves of a program, starting from an unknown position. Coordinates are
- * absolute unless `G91` makes them relative.
- */
-export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
-  const moves: GcodeMove[] = [];
-  let position: Vec3 = [Number.NaN, Number.NaN, Number.NaN];
-  let motion: "rapid" | "feed" | null = null;
-  let relative = false;
-  let feedRate: number | null = null;
-  for (const line of lines) {
-    const target: Vec3 = [...position];
-    let moved = false;
-    for (const { letter, value } of line.words) {
-      if (letter === "G" && value === 0) motion = "rapid";
-      else if (letter === "G" && value === 1) motion = "feed";
-      else if (letter === "G" && value === 90) relative = false;
-      else if (letter === "G" && value === 91) relative = true;
-      else if (letter === "F") feedRate = value;
-      else if (letter === "X" || letter === "Y" || letter === "Z") {
-        const axis = "XYZ".indexOf(letter);
-        target[axis] = relative ? (target[axis] as number) + value : value;
-        moved = true;
-      }
-    }
-    if (!moved || motion === null) continue;
-    moves.push({
-      line: line.number,
-      kind: motion,
-      from: position,
-      to: target,
-      feedRate: motion === "feed" ? feedRate : null,
-    });
-    position = target;
-  }
-  return moves;
-}
 
 /**
  * Every way `gcode`, posted from `project`, breaks the rules a program must
@@ -279,19 +188,11 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
     }
     const known = from.every((value) => !Number.isNaN(value)) && !to.some(Number.isNaN);
     if (move.kind === "rapid") {
-      // A rapid up out of a cut can still cross material on its way.
-      const lowest = Number.isNaN(from[2]) ? to[2] : Math.min(from[2], to[2]);
-      if (lowest < top - EPSILON) {
-        if (!known || tool === null) {
-          fail(line.number, "rapid", "rapid below the stock top from an unknown position");
-        } else {
-          const depth = material.collision(tool, from, to);
-          if (depth > MATERIAL_TOLERANCE) {
-            fail(line.number, "rapid", `rapid through ${round(depth)} mm of material`);
-          }
-          // What it went through is gone, so backing out of it is no second fault.
-          material.cut(tool, from, to);
-        }
+      const depth = material.pass(tool, move);
+      if (Number.isNaN(depth)) {
+        fail(line.number, "rapid", "rapid below the stock top from an unknown position");
+      } else if (depth > MATERIAL_TOLERANCE) {
+        fail(line.number, "rapid", `rapid through ${round(depth)} mm of material`);
       }
     } else {
       if (!spindle) fail(line.number, "spindle", "cuts with the spindle off");
@@ -347,95 +248,6 @@ export function formatViolations(violations: Violation[]): string {
   return violations
     .map(({ line, rule, message }) => `line ${line}: ${rule}: ${message}`)
     .join("\n");
-}
-
-/** The project's tools by the label `grbl` writes in its `Tool:` comments. */
-function projectTools({ operations }: CheckedProject): Map<string, Tool> {
-  const tools = new Map<string, Tool>();
-  for (const operation of operations) {
-    for (const tool of [operation.tool, clearingTool(operation)]) {
-      if (tool) tools.set(`${tool.name}, ${formatNumber(tool.diameter)} mm`, tool);
-    }
-  }
-  return tools;
-}
-
-/**
- * The stock left so far, as a heightmap in stock coordinates (ADR-0019) on
- * a grid fine enough for the project's narrowest tool. Moves come in work
- * coordinates.
- */
-class Material {
-  private readonly grid: HeightmapGrid;
-  private readonly heights: Float32Array;
-  private readonly offset: Vec3;
-  private readonly segment = new Float32Array(6);
-
-  constructor({ stock }: CheckedProject, tools: Tool[]) {
-    const narrowest = Math.min(...tools.map((tool) => tool.diameter));
-    this.grid = heightmapGrid(stock, Number.isFinite(narrowest) ? narrowest : 1, 2_000_000);
-    this.heights = new Float32Array(this.grid.columns * this.grid.rows);
-    this.offset = stockOffset(stock);
-  }
-
-  cut(tool: CutterProfile, from: Vec3, to: Vec3) {
-    this.segment.set([...this.toStock(from), ...this.toStock(to)]);
-    sweepMoves(this.grid, this.heights, tool, this.segment, 0, 1);
-  }
-
-  /**
-   * How deep into the material left `tool` passes moving from `from` to `to`
-   * at its deepest, `0` (or less) if it clears it everywhere.
-   */
-  collision(tool: CutterProfile, from: Vec3, to: Vec3): number {
-    const a = this.toStock(from);
-    const b = this.toStock(to);
-    const { columns, rows, cellWidth, cellHeight } = this.grid;
-    const step = Math.min(cellWidth, cellHeight) / 2;
-    const samples = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
-    let deepest = -Infinity;
-    for (let i = 0; i <= samples; i++) {
-      const t = i / samples;
-      const x = a[0] + (b[0] - a[0]) * t;
-      const y = a[1] + (b[1] - a[1]) * t;
-      const z = a[2] + (b[2] - a[2]) * t;
-      // Nothing is ever higher than the stock top.
-      if (z >= 0) continue;
-      const first = Math.max(0, Math.floor((x - tool.radius) / cellWidth));
-      const last = Math.min(columns - 1, Math.floor((x + tool.radius) / cellWidth));
-      const firstRow = Math.max(0, Math.floor((y - tool.radius) / cellHeight));
-      const lastRow = Math.min(rows - 1, Math.floor((y + tool.radius) / cellHeight));
-      for (let row = firstRow; row <= lastRow; row++) {
-        for (let column = first; column <= last; column++) {
-          const dx = (column + 0.5) * cellWidth - x;
-          const dy = (row + 0.5) * cellHeight - y;
-          const distance = Math.hypot(dx, dy);
-          if (distance > tool.radius) continue;
-          const height = this.heights[row * columns + column] as number;
-          deepest = Math.max(deepest, height - (z + tool.height(distance)));
-        }
-      }
-    }
-    return deepest;
-  }
-
-  /** The height of the stock left at `[x, y]` in work coordinates, or `null` off the stock. */
-  height(x: number, y: number): number | null {
-    const [sx, sy] = this.toStock([x, y, 0]);
-    const { columns, rows, cellWidth, cellHeight } = this.grid;
-    const column = Math.floor(sx / cellWidth);
-    const row = Math.floor(sy / cellHeight);
-    if (column < 0 || row < 0 || column >= columns || row >= rows) return null;
-    return (this.heights[row * columns + column] as number) + this.offset[2];
-  }
-
-  private toStock([x, y, z]: Vec3): Vec3 {
-    return [x - this.offset[0], y - this.offset[1], z - this.offset[2]];
-  }
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
 }
 
 /**
