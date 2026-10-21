@@ -2,7 +2,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import type { ProjectDocument } from "./document";
 import { type DocumentMessage, MessageError } from "./message";
-import { ProjectDocumentTooNewError, parseProjectDocument } from "./migrations";
+import { readProjectJson } from "./migrations";
 
 /**
  * Extension of exported projects with 3D models: a zip of the document and
@@ -221,18 +221,14 @@ function readVersion(
   if (fields.id !== id) throw new ProjectArchiveError({ code: "archive.versionDamaged" });
   // The messages name the version by its label, or say "a version" without one.
   const name = { labelled: fields.label === null ? "no" : "yes", label: fields.label ?? "" };
-  let document: ProjectDocument;
-  try {
-    document = parseProjectDocument(fields.document);
-  } catch (error) {
+  const read = readProjectJson(fields.document);
+  if (read.reason !== undefined) {
     throw new ProjectArchiveError({
-      code:
-        error instanceof ProjectDocumentTooNewError
-          ? "archive.versionTooNew"
-          : "archive.versionInvalid",
+      code: read.reason === "too_new" ? "archive.versionTooNew" : "archive.versionInvalid",
       values: name,
     });
   }
+  const { document } = read;
   if (missingArchiveMeshes(document, meshes).length > 0) {
     throw new ProjectArchiveError({ code: "archive.versionMissingModel", values: name });
   }

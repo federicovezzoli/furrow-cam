@@ -1,9 +1,4 @@
-import {
-  ProjectDocument,
-  ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
-} from "@furrow/document";
+import { ProjectDocument, readProjectJson } from "@furrow/document";
 import {
   parseSettings,
   parseTools,
@@ -150,22 +145,17 @@ function fail(tx: IDBTransaction, message: string): never {
 
 /** The record's document upgraded to the current schema version, or why it can't be. */
 function parseDocument(json: unknown): ProjectDocument {
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      throw new UserError(clientTranslator()("Guest.projectNewer"));
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      throw new UserError(
-        clientTranslator()("Guest.cantOpen", {
-          reason: formatMessage(clientTranslator(), error.detail),
-        }),
-      );
-    }
-    throw new UserError(
-      clientTranslator()("Guest.cantOpen", { reason: clientTranslator()("Guest.contentsInvalid") }),
-    );
+  const read = readProjectJson(json);
+  const t = clientTranslator();
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "too_new":
+      throw new UserError(t("Guest.projectNewer"));
+    case "version":
+      throw new UserError(t("Guest.cantOpen", { reason: formatMessage(t, read.error.detail) }));
+    default:
+      throw new UserError(t("Guest.cantOpen", { reason: t("Guest.contentsInvalid") }));
   }
 }
 

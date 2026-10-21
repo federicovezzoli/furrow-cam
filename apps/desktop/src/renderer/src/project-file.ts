@@ -4,10 +4,9 @@ import {
   missingArchiveMeshes,
   ProjectArchiveError,
   ProjectDocument,
-  ProjectDocumentTooNewError,
   packProjectArchive,
-  parseProjectDocument,
   readProjectArchive,
+  readProjectJson,
 } from "@furrow/document";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { t } from "./i18n";
@@ -55,22 +54,17 @@ export async function readProjectFile(
 }
 
 function parseDocument(contents: string): ProjectDocument {
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    throw new Error(t("Desktop.ProjectFile.notAProject"));
-  }
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(t("Desktop.ProjectFile.notAProject"));
-  }
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
+  const read = readProjectJson(contents);
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "not_a_project":
+      throw new Error(t("Desktop.ProjectFile.notAProject"));
+    case "too_new":
       throw new Error(t("Desktop.ProjectFile.tooNew"));
-    }
-    throw new Error(t("Desktop.ProjectFile.invalid"));
+    case "version":
+    case "invalid":
+      throw new Error(t("Desktop.ProjectFile.invalid"));
   }
 }
 

@@ -2,10 +2,8 @@ import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import {
   archiveMeshTooLarge,
   type ProjectDocument,
-  ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
   projectNameFromFileName,
+  readProjectJson,
 } from "@furrow/document";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
@@ -22,26 +20,19 @@ function isArchive(file: File) {
 
 /** The project document in `contents`, upgraded to the current schema version. */
 export function parseGuestProjectFile(contents: string): ProjectDocument {
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    throw new Error(notAProject());
-  }
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(notAProject());
-  }
+  const read = readProjectJson(contents);
   const t = clientTranslator();
-  try {
-    return parseProjectDocument(json);
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
+  switch (read.reason) {
+    case undefined:
+      return read.document;
+    case "not_a_project":
+      throw new Error(notAProject());
+    case "too_new":
       throw new Error(t("Guest.fileNewer"));
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      throw new Error(t("Guest.fileCantImport", { reason: formatMessage(t, error.detail) }));
-    }
-    throw new Error(t("Guest.fileCantImport", { reason: t("Guest.contentsInvalid") }));
+    case "version":
+      throw new Error(t("Guest.fileCantImport", { reason: formatMessage(t, read.error.detail) }));
+    case "invalid":
+      throw new Error(t("Guest.fileCantImport", { reason: t("Guest.contentsInvalid") }));
   }
 }
 

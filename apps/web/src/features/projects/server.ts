@@ -6,8 +6,7 @@ import {
   Name,
   type ProjectDocument,
   ProjectDocumentTooNewError,
-  ProjectDocumentVersionError,
-  parseProjectDocument,
+  readProjectJson,
 } from "@furrow/document";
 import { formatMessage, type Translator } from "@furrow/ui/lib/i18n";
 import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
@@ -88,14 +87,17 @@ export function parseStoredDocument(
   const fail = (reason: string) => ({
     error: t("Projects.failure", { failure: t(`Projects.${failure}`), reason }),
   });
-  try {
-    return { document: parseProjectDocument(json) };
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) return fail(savedByNewerRelease(error, t));
+  const read = readProjectJson(json);
+  switch (read.reason) {
+    case undefined:
+      return { document: read.document };
+    case "too_new":
+      return fail(savedByNewerRelease(read.error, t));
     // e.g. a missing migration.
-    if (error instanceof ProjectDocumentVersionError) return fail(formatMessage(t, error.detail));
-    if (error instanceof z.ZodError) return fail(t("Projects.contentsInvalid"));
-    throw error;
+    case "version":
+      return fail(formatMessage(t, read.error.detail));
+    default:
+      return fail(t("Projects.contentsInvalid"));
   }
 }
 
@@ -162,36 +164,28 @@ export function parseProjectFile(
   contents: string,
   t: Translator,
 ): { document: ProjectDocument; error?: never } | { error: string } {
-  const NOT_A_PROJECT = t("Projects.notAProject");
-  let json: unknown;
-  try {
-    json = JSON.parse(contents);
-  } catch {
-    return { error: NOT_A_PROJECT };
-  }
-  // Any other JSON file (`package.json`, `[]`, …) would otherwise fail on its missing `schemaVersion`.
-  if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    return { error: NOT_A_PROJECT };
-  }
-
-  try {
-    return { document: parseProjectDocument(json) };
-  } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      return { error: t("Projects.fileCantImport", { reason: savedByNewerRelease(error, t) }) };
-    }
-    if (error instanceof ProjectDocumentVersionError) {
-      return { error: t("Projects.fileCantImport", { reason: formatMessage(t, error.detail) }) };
-    }
-    if (error instanceof z.ZodError) {
-      const { issues } = error;
+  const read = readProjectJson(contents);
+  switch (read.reason) {
+    case undefined:
+      return { document: read.document };
+    case "not_a_project":
+      return { error: t("Projects.notAProject") };
+    case "too_new":
+      return {
+        error: t("Projects.fileCantImport", { reason: savedByNewerRelease(read.error, t) }),
+      };
+    case "version":
+      return {
+        error: t("Projects.fileCantImport", { reason: formatMessage(t, read.error.detail) }),
+      };
+    case "invalid": {
+      const { issues } = read.error;
       const listed = listIssues(issues.slice(0, MAX_LISTED_ISSUES), t);
       const more = issues.length - MAX_LISTED_ISSUES;
       const issuesText =
         more > 0 ? `${listed}\n${t("Projects.moreProblems", { count: more })}` : listed;
       return { error: t("Projects.invalidProject", { issues: issuesText }) };
     }
-    throw error;
   }
 }
 

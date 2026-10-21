@@ -219,6 +219,10 @@ describe("archive versions", () => {
       code: "archive.versionTooNew",
       values: { labelled: "no", label: "" },
     });
+    expect(await damaged(versionFile({ document: { ...document, schemaVersion: 0 } }))).toEqual({
+      code: "archive.versionInvalid",
+      values: { labelled: "no", label: "" },
+    });
   });
 });
 

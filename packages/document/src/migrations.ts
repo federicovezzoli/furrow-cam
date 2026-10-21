@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
 import { DEFAULT_SPIN_UP_DELAY } from "./machine";
 import { type DocumentMessage, MessageError } from "./message";
@@ -222,4 +223,39 @@ export function migrateProjectDocument(
  */
 export function parseProjectDocument(json: unknown): ProjectDocument {
   return ProjectDocument.parse(migrateProjectDocument(json));
+}
+
+/** Why `readProjectJson` couldn't read a project, with the error behind it. */
+export type ProjectReadFailure =
+  | { reason: "not_a_project"; error?: never }
+  | { reason: "too_new"; error: ProjectDocumentTooNewError }
+  | { reason: "version"; error: ProjectDocumentVersionError }
+  | { reason: "invalid"; error: z.ZodError };
+
+/**
+ * `parseProjectDocument` for any input, JSON text included, that classifies
+ * why it fails instead of throwing; callers word the reason themselves. Not a
+ * JSON object with a `schemaVersion` (`package.json`, `[]`, …) is
+ * `"not_a_project"`. Throws only unexpected errors.
+ */
+export function readProjectJson(
+  input: unknown,
+): { document: ProjectDocument; reason?: never } | ProjectReadFailure {
+  let json = input;
+  if (typeof input === "string") {
+    try {
+      json = JSON.parse(input);
+    } catch {
+      return { reason: "not_a_project" };
+    }
+  }
+  if (!isObject(json) || !("schemaVersion" in json)) return { reason: "not_a_project" };
+  try {
+    return { document: parseProjectDocument(json) };
+  } catch (error) {
+    if (error instanceof ProjectDocumentTooNewError) return { reason: "too_new", error };
+    if (error instanceof ProjectDocumentVersionError) return { reason: "version", error };
+    if (error instanceof z.ZodError) return { reason: "invalid", error };
+    throw error;
+  }
 }
