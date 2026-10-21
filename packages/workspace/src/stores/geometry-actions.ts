@@ -1,31 +1,47 @@
 import { alignShapes } from "@furrow/cam-core";
-import type { Message, ProjectDocument, Shape } from "@furrow/document";
+import { DRAWING_BORDER, type Shape } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 
-/** Why another file can't be imported: a project holds one, a drawing or a model, for now. */
-export const ONE_FILE: Message = { code: "workspace.oneFile" };
-
-/** Whether the project already holds an imported file, a drawing or a model (ADR-0022, ADR-0031). */
-export function hasImportedFile({ geometry, models }: ProjectDocument): boolean {
-  return geometry.length > 0 || models.length > 0;
+/**
+ * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
+ * step, aligned on its own to the stock at the XY zero's anchor (ADR-0022),
+ * or at its bottom-left corner for a custom zero: it may overlap what the
+ * project already holds. The shapes all name the new drawing, as an import
+ * gives them, and it takes its name from their file. `name` labels the
+ * change, e.g. `importSvg`.
+ */
+export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]) {
+  const [first] = shapes;
+  if (!first) return;
+  const { stock } = store.getState().document;
+  const { anchor } = stock.xyOrigin;
+  const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
+  const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
+  store.getState().change(name, (draft) => {
+    draft.drawings.push(drawing);
+    draft.geometry.push(...placed);
+  });
 }
 
 /**
- * Adds an imported file's shapes as one undo step, aligned to the stock at
- * the XY zero's anchor (ADR-0022), or at its bottom-left corner for a custom
- * zero. Projects hold one file for now: returns `false`, adding nothing, if
- * the project already has shapes or a model. `name` labels the change, e.g.
- * `importSvg`.
+ * Removes a drawing, its shapes and the operation targets that point at
+ * them, as one undo step. An operation left with no targets goes too, as a
+ * model's operations go with it (ADR-0055).
  */
-export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
-  const { document } = store.getState();
-  if (hasImportedFile(document)) return false;
-  const { stock } = document;
-  const { anchor } = stock.xyOrigin;
-  const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
-  store.getState().change(name, (draft) => {
-    // The project has no shapes, so one assignment adds them as one patch.
-    draft.geometry = placed;
+export function removeDrawing(store: DocumentStore, id: string) {
+  store.getState().change("removeDrawing", (draft) => {
+    const index = draft.drawings.findIndex((drawing) => drawing.id === id);
+    if (index === -1) return;
+    draft.drawings.splice(index, 1);
+    const removed = new Set(
+      draft.geometry.filter((shape) => shape.drawingId === id).map((shape) => shape.id),
+    );
+    draft.geometry = draft.geometry.filter((shape) => !removed.has(shape.id));
+    draft.operations = draft.operations.filter((operation) => {
+      const targets = operation.targets.filter(({ shapeId }) => !removed.has(shapeId));
+      if (targets.length === operation.targets.length) return true;
+      operation.targets = targets;
+      return targets.length > 0;
+    });
   });
-  return true;
 }

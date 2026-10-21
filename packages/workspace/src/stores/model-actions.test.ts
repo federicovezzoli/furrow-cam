@@ -61,13 +61,12 @@ describe("addModel", () => {
     expect(store.getState().document.models[0]?.placement.position).toEqual([10, 10]);
   });
 
-  it("refuses a second file: a project holds one drawing or one model", () => {
-    const { store } = storeWithModel();
-    const steps = store.getState().past.length;
-    expect(addModel(store, mesh)).toBeNull();
-    expect(store.getState().document.models).toHaveLength(1);
-    expect(store.getState().past).toHaveLength(steps);
-    expect(addModel(createDocumentStore(fullDocument()), mesh)).toBeNull();
+  it("adds a model alongside other models and drawings", () => {
+    const store = createDocumentStore(fullDocument());
+    addModel(store, mesh);
+    addModel(store, mesh);
+    expect(store.getState().document.models).toHaveLength(2);
+    expect(store.getState().document.geometry).toEqual(fullDocument().geometry);
   });
 });
 

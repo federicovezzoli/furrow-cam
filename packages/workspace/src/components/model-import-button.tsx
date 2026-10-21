@@ -18,8 +18,8 @@ import {
 export const STL_IMPORT_OFF: Message = { code: "workspace.stlImportOff" };
 
 /**
- * Picks an STL file and imports it as a model (PRD-0005 S1), from the empty
- * project's import card. Disabled while a file imports and, saying why, when
+ * Picks an STL file and imports it as a model (PRD-0005 S1), from the import
+ * card. Disabled while a file imports and, saying why, when
  * the server can't store meshes.
  */
 export function ModelImportButton() {

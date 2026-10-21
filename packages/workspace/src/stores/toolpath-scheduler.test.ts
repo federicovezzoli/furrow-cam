@@ -1,6 +1,6 @@
 import { generateToolpath, type ToolpathInput, toolpathLines } from "@furrow/cam-core";
 import { createProjectDocument, type ProjectDocument, type Tool } from "@furrow/document";
-import { model, reliefFinish } from "@furrow/document/fixtures";
+import { DRAWING_ID, model, reliefFinish } from "@furrow/document/fixtures";
 import { describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "./document-store";
 import {
@@ -41,6 +41,7 @@ function documentWithProfile(): ProjectDocument {
         id: SHAPE_ID,
         name: "Square",
         layer: "0",
+        drawingId: DRAWING_ID,
         paths: [
           {
             start: [10, 10],

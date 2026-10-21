@@ -1,10 +1,17 @@
 import type { Path, Shape } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { selectionCounts, selectionTargets } from "./path-selection";
 
 const point = (x: number): Path => ({ start: [x, 0], segments: [], closed: false });
-const a: Shape = { id: "a", name: "A", layer: "", paths: [point(0), point(1), point(2)] };
-const b: Shape = { id: "b", name: "B", layer: "", paths: [point(3)] };
+const a: Shape = {
+  id: "a",
+  name: "A",
+  layer: "",
+  drawingId: DRAWING_ID,
+  paths: [point(0), point(1), point(2)],
+};
+const b: Shape = { id: "b", name: "B", layer: "", drawingId: DRAWING_ID, paths: [point(3)] };
 
 describe("selectionTargets", () => {
   it("groups paths by shape, in document order, whole when all are selected", () => {
