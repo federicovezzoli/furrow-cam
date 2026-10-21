@@ -94,6 +94,7 @@ export const auth = betterAuth({
       // Better Auth also deletes without a password when the session is fresh; we always ask for it.
       if (ctx.path === "/delete-user" && !ctx.body?.password) {
         throw new APIError("BAD_REQUEST", {
+          code: "PASSWORD_REQUIRED",
           message: "Enter your password to delete your account.",
         });
       }
@@ -115,6 +116,7 @@ export const auth = betterAuth({
         console.warn(`Breached-password check unavailable on ${ctx.path}; accepting the password.`);
       } else if (breached) {
         throw new APIError("BAD_REQUEST", {
+          code: "PASSWORD_BREACHED",
           message: "This password has appeared in a data breach. Please choose a different one.",
         });
       }

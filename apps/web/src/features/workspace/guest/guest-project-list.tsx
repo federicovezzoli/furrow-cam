@@ -25,7 +25,10 @@ import {
   useState,
   useTransition,
 } from "react";
+import { useTranslations } from "use-intl";
 import { DeleteButton } from "@/components/delete-button";
+import { Loading } from "@/components/loading";
+import { clientTranslator } from "@/lib/client-translator";
 import { DESKTOP_DOWNLOADS_PAGE } from "./desktop-download";
 import { importGuestProject } from "./import-guest-project";
 import {
@@ -40,7 +43,7 @@ import {
 const ACCEPT = ".furrow,.furrow.json,.furrow.zip,.json,.zip,application/json,application/zip";
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : clientTranslator()("Guest.somethingWrong");
 }
 
 /**
@@ -54,6 +57,8 @@ export function GuestProjectList({
   onCreate: (name: string) => Promise<void>;
   onOpen: (id: string) => Promise<void>;
 }) {
+  const t = useTranslations("Guest");
+  const projectsT = useTranslations("Projects");
   const [projects, setProjects] = useState<GuestProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -87,7 +92,7 @@ export function GuestProjectList({
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = String(new FormData(event.currentTarget).get("name") ?? "").trim();
-    run(() => onCreate(name || "Untitled project"));
+    run(() => onCreate(name || t("untitledProject")));
   }
 
   function onImport(event: ChangeEvent<HTMLInputElement>) {
@@ -98,7 +103,7 @@ export function GuestProjectList({
   }
 
   function rename(project: GuestProjectRow) {
-    const name = window.prompt("Rename project", project.name)?.trim();
+    const name = window.prompt(projectsT("renamePrompt"), project.name)?.trim();
     if (!name || name === project.name) return;
     run(async () => {
       await renameGuestProject(project.id, name.slice(0, 100));
@@ -109,7 +114,7 @@ export function GuestProjectList({
   function exportProject(project: GuestProjectRow) {
     run(async () => {
       const stored = await getGuestProject(project.id);
-      if (!stored) throw new Error("This project no longer exists in this browser.");
+      if (!stored) throw new Error(t("projectNotFound"));
       await exportProjectFile(stored.document, stored.name, (sha256) =>
         getGuestMesh(project.id, sha256),
       );
@@ -119,31 +124,33 @@ export function GuestProjectList({
   return (
     <>
       <p className="max-w-2xl text-muted-foreground">
-        Your projects are kept in this browser only, and clearing this site&apos;s data deletes
-        them. To keep your work,{" "}
-        <Link href="/sign-up" className="underline underline-offset-4">
-          create a free account
-        </Link>{" "}
-        and import them into it, or{" "}
-        <a href={DESKTOP_DOWNLOADS_PAGE} className="underline underline-offset-4">
-          download the desktop app
-        </a>{" "}
-        and open their exported files there.
+        {t.rich("intro", {
+          account: (chunks) => (
+            <Link href="/sign-up" className="underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+          desktop: (chunks) => (
+            <a href={DESKTOP_DOWNLOADS_PAGE} className="underline underline-offset-4">
+              {chunks}
+            </a>
+          ),
+        })}
       </p>
       <FormError message={error} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <form onSubmit={onSubmit} className="grid gap-2">
-          <Label htmlFor="guest-project-name">New project</Label>
+          <Label htmlFor="guest-project-name">{projectsT("newProject")}</Label>
           <div className="flex max-w-xl flex-wrap gap-2">
             <Input
               id="guest-project-name"
               name="name"
               maxLength={100}
-              placeholder="Walnut cutting board"
+              placeholder={projectsT("namePlaceholder")}
               className="w-auto min-w-48 flex-1"
             />
             <Button type="submit" disabled={pending}>
-              Create
+              {projectsT("create")}
             </Button>
           </div>
         </form>
@@ -159,25 +166,23 @@ export function GuestProjectList({
           />
           <Button variant="outline" onClick={() => input.current?.click()} disabled={pending}>
             <UploadIcon />
-            Import file…
+            {projectsT("importFile")}
           </Button>
         </div>
       </div>
       {projects === null ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <Loading />
       ) : projects.length === 0 ? (
-        <p className="rounded-lg border p-4 text-muted-foreground">
-          No projects yet. Create one, then import your drawings and set up the cuts.
-        </p>
+        <p className="rounded-lg border p-4 text-muted-foreground">{projectsT("noProjects")}</p>
       ) : (
         <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4">Name</TableHead>
-                <TableHead>Last saved</TableHead>
+                <TableHead className="pl-4">{projectsT("name")}</TableHead>
+                <TableHead>{projectsT("lastSaved")}</TableHead>
                 <TableHead className="pr-4">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{projectsT("actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -203,8 +208,8 @@ export function GuestProjectList({
                         size="icon-sm"
                         onClick={() => rename(project)}
                         disabled={pending}
-                        aria-label={`Rename ${project.name}`}
-                        title="Rename"
+                        aria-label={projectsT("renameLabel", { name: project.name })}
+                        title={projectsT("rename")}
                       >
                         <PencilIcon />
                       </Button>
@@ -213,14 +218,14 @@ export function GuestProjectList({
                         size="icon-sm"
                         onClick={() => exportProject(project)}
                         disabled={pending}
-                        aria-label={`Export ${project.name}`}
-                        title="Export"
+                        aria-label={t("exportLabel", { name: project.name })}
+                        title={t("export")}
                       >
                         <DownloadIcon />
                       </Button>
                       <DeleteButton
                         name={project.name}
-                        confirmText={`Delete "${project.name}" from this browser? This can't be undone.`}
+                        confirmText={t("deleteConfirm", { name: project.name })}
                         action={async () => {
                           try {
                             await deleteGuestProject(project.id);

@@ -11,15 +11,15 @@ import Link from "next/link";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteProject } from "@/features/projects/actions";
 import type { ProjectListRow } from "@/features/projects/server";
+import { getTranslator } from "@/lib/locale";
 import { ExportButton } from "./export-button";
 import { RenameButton } from "./rename-button";
 
-export function ProjectList({ projects }: { projects: ProjectListRow[] }) {
+export async function ProjectList({ projects }: { projects: ProjectListRow[] }) {
+  const t = await getTranslator();
   if (projects.length === 0) {
     return (
-      <p className="rounded-lg border p-4 text-muted-foreground">
-        No projects yet. Create one, then import your drawings and set up the cuts.
-      </p>
+      <p className="rounded-lg border p-4 text-muted-foreground">{t("Projects.noProjects")}</p>
     );
   }
 
@@ -28,12 +28,12 @@ export function ProjectList({ projects }: { projects: ProjectListRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="pl-4">Name</TableHead>
-            <TableHead>Machine</TableHead>
-            <TableHead>Last saved</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead className="pl-4">{t("Projects.name")}</TableHead>
+            <TableHead>{t("Projects.machine")}</TableHead>
+            <TableHead>{t("Projects.lastSaved")}</TableHead>
+            <TableHead>{t("Projects.created")}</TableHead>
             <TableHead className="pr-4">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t("Projects.actions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -46,7 +46,9 @@ export function ProjectList({ projects }: { projects: ProjectListRow[] }) {
                 </Link>
               </TableCell>
               <TableCell>
-                {project.machineName ?? <span className="text-muted-foreground">None</span>}
+                {project.machineName ?? (
+                  <span className="text-muted-foreground">{t("Projects.none")}</span>
+                )}
               </TableCell>
               <TableCell>
                 <LocalDate date={project.updatedAt} />
@@ -60,7 +62,7 @@ export function ProjectList({ projects }: { projects: ProjectListRow[] }) {
                   <ExportButton id={project.id} name={project.name} />
                   <DeleteButton
                     name={project.name}
-                    confirmText={`Delete "${project.name}"? This can't be undone.`}
+                    confirmText={t("Projects.deleteConfirm", { name: project.name })}
                     action={deleteProject.bind(null, project.id)}
                   />
                 </div>

@@ -11,17 +11,16 @@ import { POST_PROCESSOR_LABELS } from "@furrow/workspace/machines/lib/labels";
 import { PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { DeleteButton } from "@/components/delete-button";
-import { formatNumber, Unit } from "@/components/table-format";
+import { numberFormatter, Unit } from "@/components/table-format";
 import { deleteMachine } from "@/features/machines/actions";
 import type { Machine as MachineRow } from "@/generated/prisma/client";
+import { getLocale, getTranslator } from "@/lib/locale";
 
-export function MachineList({ machines }: { machines: MachineRow[] }) {
+export async function MachineList({ machines }: { machines: MachineRow[] }) {
+  const [t, locale] = await Promise.all([getTranslator(), getLocale()]);
+  const formatNumber = numberFormatter(locale);
   if (machines.length === 0) {
-    return (
-      <p className="rounded-lg border p-4 text-muted-foreground">
-        No machines yet. Describe your router once, and pick it when you set up a project.
-      </p>
-    );
+    return <p className="rounded-lg border p-4 text-muted-foreground">{t("Machines.empty")}</p>;
   }
 
   return (
@@ -29,28 +28,34 @@ export function MachineList({ machines }: { machines: MachineRow[] }) {
       <Table>
         <TableHeader>
           <TableRow className="[&>th]:h-auto [&>th]:py-2 [&>th]:align-bottom">
-            <TableHead className="pl-4">Name</TableHead>
+            <TableHead className="pl-4">{t("Machines.name")}</TableHead>
             <TableHead className="text-right">
-              Work area X × Y × Z<Unit>mm</Unit>
+              {t("Machines.workArea")}
+              <Unit>mm</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Max feed X/Y<Unit>mm/min</Unit>
+              {t("Machines.maxFeedXY")}
+              <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Max feed Z<Unit>mm/min</Unit>
+              {t("Machines.maxFeedZ")}
+              <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Spindle<Unit>RPM</Unit>
+              {t("Machines.spindle")}
+              <Unit>RPM</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Safe Z<Unit>mm</Unit>
+              {t("Machines.safeZ")}
+              <Unit>mm</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Entry clearance<Unit>mm</Unit>
+              {t("Machines.entryClearance")}
+              <Unit>mm</Unit>
             </TableHead>
-            <TableHead>Post-processor</TableHead>
+            <TableHead>{t("Machines.postProcessor")}</TableHead>
             <TableHead className="pr-4">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t("Machines.actions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -64,14 +69,14 @@ export function MachineList({ machines }: { machines: MachineRow[] }) {
               </TableCell>
               <TableCell className="text-right">
                 {[machine.workAreaX, machine.workAreaY, machine.workAreaZ]
-                  .map(formatNumber)
+                  .map((value) => formatNumber(value))
                   .join(" × ")}
               </TableCell>
               <TableCell className="text-right">{formatNumber(machine.maxFeedXY)}</TableCell>
               <TableCell className="text-right">{formatNumber(machine.maxFeedZ)}</TableCell>
               <TableCell className="text-right">
                 {machine.spindleRpmMin === null || machine.spindleRpmMax === null
-                  ? "Manual"
+                  ? t("Machines.manual")
                   : `${formatNumber(machine.spindleRpmMin)}–${formatNumber(machine.spindleRpmMax)}`}
               </TableCell>
               <TableCell className="text-right">{formatNumber(machine.safeZ)}</TableCell>
@@ -79,15 +84,18 @@ export function MachineList({ machines }: { machines: MachineRow[] }) {
               <TableCell>{POST_PROCESSOR_LABELS[machine.postProcessor]}</TableCell>
               <TableCell className="pr-4">
                 <div className="flex justify-end gap-1">
-                  <Button asChild variant="ghost" size="icon-sm" title="Edit">
-                    <Link href={`/machines/${machine.id}`} aria-label={`Edit ${machine.name}`}>
+                  <Button asChild variant="ghost" size="icon-sm" title={t("Machines.edit")}>
+                    <Link
+                      href={`/machines/${machine.id}`}
+                      aria-label={t("Machines.editLabel", { name: machine.name })}
+                    >
                       <PencilIcon />
                     </Link>
                   </Button>
                   <DeleteButton
                     name={machine.name}
                     // Projects keep their own snapshot of the machine, so deleting it is safe (ADR-0003).
-                    confirmText={`Delete "${machine.name}"? Existing projects keep their copy of this machine.`}
+                    confirmText={t("Machines.deleteConfirm", { name: machine.name })}
                     action={deleteMachine.bind(null, machine.id)}
                   />
                 </div>

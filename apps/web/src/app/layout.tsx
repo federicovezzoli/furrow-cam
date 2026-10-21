@@ -7,7 +7,7 @@ import { Telemetry } from "@/components/telemetry";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WebLocaleProvider } from "@/components/web-locale-provider";
 import { env } from "@/env";
-import { getLocale } from "@/lib/locale";
+import { getLocale, getTranslator } from "@/lib/locale";
 import { themeColors } from "@/lib/theme-colors";
 import "./globals.css";
 
@@ -16,10 +16,10 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Furrow CAM",
-  description: "Open source, web-based 2.5D CAM for CNC routers.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: "Furrow CAM", description: t("Meta.description") };
+}
 
 // Follows the system setting; ThemeProvider overrides it once the app theme is known.
 export const viewport: Viewport = {

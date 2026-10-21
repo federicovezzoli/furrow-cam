@@ -3,14 +3,16 @@
 import { Button } from "@furrow/ui/components/ui/button";
 import { PencilIcon } from "lucide-react";
 import { useTransition } from "react";
+import { useTranslations } from "use-intl";
 import { renameProject } from "@/features/projects/actions";
 
 /** Asks for a new name, then renames the project `id`. */
 export function RenameButton({ id, name }: { id: string; name: string }) {
+  const t = useTranslations("Projects");
   const [pending, startTransition] = useTransition();
 
   function onClick() {
-    const newName = window.prompt("Rename project", name);
+    const newName = window.prompt(t("renamePrompt"), name);
     if (newName === null || newName.trim() === name) return;
     startTransition(async () => {
       const result = await renameProject(id, newName);
@@ -24,8 +26,8 @@ export function RenameButton({ id, name }: { id: string; name: string }) {
       size="icon-sm"
       onClick={onClick}
       disabled={pending}
-      aria-label={`Rename ${name}`}
-      title="Rename"
+      aria-label={t("renameLabel", { name })}
+      title={t("rename")}
     >
       <PencilIcon />
     </Button>

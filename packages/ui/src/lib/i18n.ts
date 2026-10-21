@@ -34,6 +34,8 @@ export function onIntlError(error: IntlError) {
   if (error.code !== IntlErrorCode.ENVIRONMENT_FALLBACK) console.error(error);
 }
 
+export type Translator = ReturnType<typeof translator>;
+
 /** A translator outside React, e.g. in a server component. */
 export function translator(locale: Locale) {
   return createTranslator({ locale, messages: messagesFor(locale), onError: onIntlError });

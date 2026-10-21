@@ -2,23 +2,39 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/site-footer";
+import { getLocale, getTranslator } from "@/lib/locale";
 
-export const metadata: Metadata = { title: "Privacy policy · Furrow CAM" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslator())("Meta.privacyTitle") };
+}
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052).
 const LAST_UPDATED = "20 October 2026";
 const CONTACT = "privacy@furrow.cam";
 
-export default function PrivacyPage() {
+/**
+ * The policy stays in English, the version that applies: a translation would
+ * need a legal review in each language (ADR-0054). Other languages get a note.
+ */
+export default async function PrivacyPage() {
+  const [locale, t] = await Promise.all([getLocale(), getTranslator()]);
   return (
     <>
-      <main className="mx-auto flex w-full max-w-screen-md flex-1 flex-col gap-8 p-8 text-sm leading-relaxed">
+      <main
+        lang="en"
+        className="mx-auto flex w-full max-w-screen-md flex-1 flex-col gap-8 p-8 text-sm leading-relaxed"
+      >
         <header className="grid gap-2">
           <Link href="/" className="font-semibold tracking-tight">
             Furrow CAM
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Privacy policy</h1>
           <p className="text-muted-foreground">Last updated {LAST_UPDATED}</p>
+          {locale !== "en" && (
+            <p className="rounded-md border p-3 text-muted-foreground">
+              {t("Privacy.englishOnly")}
+            </p>
+          )}
         </header>
 
         <Section title="Who we are">

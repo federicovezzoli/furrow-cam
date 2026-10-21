@@ -17,6 +17,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
+import { Loading } from "@/components/loading";
+import { clientTranslator } from "@/lib/client-translator";
 import { LeaveGuard } from "../host/leave-guard";
 import { webRoute } from "../host/web-project-shell";
 import { AccountDialog } from "./account-dialog";
@@ -33,24 +36,23 @@ import {
   saveLastGuestProjectId,
 } from "./storage";
 
-const NEW_PROJECT = "Untitled project";
-
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : clientTranslator()("Guest.somethingWrong");
 }
 
 /** Shown where the browser won't let the app keep projects at all. */
 function StorageUnavailable({ error }: { error: string }) {
+  const t = useTranslations("Guest");
   return (
     <main className="mx-auto grid w-full max-w-xl gap-4 p-8">
       <h1 className="text-2xl font-semibold tracking-tight">Furrow CAM</h1>
       <FormError message={error} />
       <div className="flex flex-wrap gap-2">
         <Button asChild>
-          <Link href="/sign-up">Create a free account</Link>
+          <Link href="/sign-up">{t("createFreeAccount")}</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/sign-in">Sign in</Link>
+          <Link href="/sign-in">{t("signIn")}</Link>
         </Button>
       </div>
     </main>
@@ -83,7 +85,12 @@ export function GuestEntry({ fresh = false }: { fresh?: boolean }) {
             : projects[0]?.id;
         }
         if (!id) {
-          id = (await createGuestProject(NEW_PROJECT, createProjectDocument())).id;
+          id = (
+            await createGuestProject(
+              clientTranslator()("Guest.untitledProject"),
+              createProjectDocument(),
+            )
+          ).id;
           track({ event: "project_created" });
         }
         router.replace(webRoute("workspace", id));
@@ -94,7 +101,7 @@ export function GuestEntry({ fresh = false }: { fresh?: boolean }) {
   }, [router, fresh]);
 
   if (error) return <StorageUnavailable error={error} />;
-  return <p className="m-auto text-ui text-muted-foreground">Loading project…</p>;
+  return <Loading className="m-auto text-ui text-muted-foreground" project />;
 }
 
 /** `/projects` without an account: the projects kept in this browser (PRD-0008 G3). */
@@ -139,11 +146,12 @@ function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
 
 /** Sign in, at the end of the workspace's top bar (PRD-0008 G9). */
 function SignInButton() {
+  const t = useTranslations("Guest");
   const onNavigate = useLeaveNavigate();
   return (
     <Button size="compact" variant="outline" asChild>
       <Link href="/sign-in" onNavigate={onNavigate}>
-        Sign in
+        {t("signIn")}
       </Link>
     </Button>
   );
@@ -164,6 +172,7 @@ type Loaded =
  * account's project does (ADR-0042).
  */
 export function GuestProjectShell({ id, children }: { id: string; children: React.ReactNode }) {
+  const t = useTranslations("Guest");
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
   const [accountReason, setAccountReason] = useState<AccountReason | null>(null);
   const account = useMemo(() => ({ prompt: setAccountReason }), []);
@@ -205,19 +214,15 @@ export function GuestProjectShell({ id, children }: { id: string; children: Reac
   );
 
   if (loaded.state === "loading") {
-    return <p className="m-auto text-ui text-muted-foreground">Loading project…</p>;
+    return <Loading className="m-auto text-ui text-muted-foreground" project />;
   }
   if (loaded.state === "missing" || loaded.state === "error") {
     return (
       <main className="mx-auto grid w-full max-w-xl gap-4 p-8">
-        <FormError
-          message={
-            loaded.state === "error" ? loaded.error : "This project doesn't exist in this browser."
-          }
-        />
+        <FormError message={loaded.state === "error" ? loaded.error : t("doesntExist")} />
         <p>
           <Link href="/projects" className="underline underline-offset-4">
-            Your projects
+            {t("yourProjects")}
           </Link>
         </p>
       </main>

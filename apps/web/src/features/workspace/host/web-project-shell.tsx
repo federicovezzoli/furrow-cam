@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { useMemo, useRef } from "react";
+import { useTranslations } from "use-intl";
 import { cacheMesh, loadMesh } from "@/features/assets/lib/mesh-cache";
 import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
 import type { MeshLimits } from "@/features/assets/server";
@@ -221,11 +222,12 @@ function WebLink({ to, ...props }: WorkspaceLinkProps) {
 
 /** A project this release can't read, with a way back to all projects. */
 function UnreadableProject({ name, error }: { name: string; error: string }) {
+  const t = useTranslations("Common");
   return (
     <>
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
         <Button variant="ghost" size="icon-compact" asChild>
-          <Link href="/projects" aria-label="All projects" title="All projects">
+          <Link href="/projects" aria-label={t("allProjects")} title={t("allProjects")}>
             <ChevronLeftIcon />
           </Link>
         </Button>

@@ -9,9 +9,10 @@ import {
 } from "@furrow/document";
 import { parseMesh } from "@furrow/workspace/lib/model-import";
 import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
+import { clientTranslator } from "@/lib/client-translator";
 import { createGuestProject, deleteGuestProject, type GuestProject, putGuestMesh } from "./storage";
 
-const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
+const notAProject = () => clientTranslator()("Projects.notAProject");
 const NAME_MAX = 100;
 
 function isArchive(file: File) {
@@ -24,30 +25,29 @@ export function parseGuestProjectFile(contents: string): ProjectDocument {
   try {
     json = JSON.parse(contents);
   } catch {
-    throw new Error(NOT_A_PROJECT);
+    throw new Error(notAProject());
   }
   if (typeof json !== "object" || json === null || !("schemaVersion" in json)) {
-    throw new Error(NOT_A_PROJECT);
+    throw new Error(notAProject());
   }
+  const t = clientTranslator();
   try {
     return parseProjectDocument(json);
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) {
-      throw new Error(
-        "This file was saved by a newer release of Furrow CAM. Reload the page to update.",
-      );
+      throw new Error(t("Guest.fileNewer"));
     }
     if (error instanceof ProjectDocumentVersionError) {
-      throw new Error(`This file can't be imported: ${error.message}.`);
+      throw new Error(t("Guest.fileCantImport", { reason: `${error.message}.` }));
     }
-    throw new Error("This file can't be imported: its contents are invalid.");
+    throw new Error(t("Guest.fileCantImport", { reason: t("Guest.contentsInvalid") }));
   }
 }
 
 /** The project name a file called `fileName` gives, at most `NAME_MAX` characters. */
 export function guestProjectName(fileName: string): string {
   const name = [...(projectNameFromFileName(fileName) ?? "").trim()].slice(0, NAME_MAX).join("");
-  return name || "Imported project";
+  return name || clientTranslator()("Projects.importedProject");
 }
 
 /**
@@ -63,10 +63,11 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
   for (const model of document.models) {
     const bytes = meshes.get(model.sha256);
     if (!bytes) {
+      const t = clientTranslator();
       throw new Error(
         archive
-          ? `This file can't be imported: the mesh of ${model.fileName} is missing.`
-          : "This project has 3D models: import its .zip export instead.",
+          ? t("Projects.meshOfMissing", { file: model.fileName })
+          : t("Projects.modelsNeedZip"),
       );
     }
     if (bytes.byteLength > DEFAULT_STL_LIMITS.maxBytes) {
