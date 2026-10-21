@@ -1,7 +1,13 @@
 import { createProjectDocument } from "@furrow/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mayLeave } from "../hooks/use-autosave";
-import { createAutosave, OFFLINE, RETRY_INTERVAL, type SaveDocument } from "./autosave";
+import {
+  type AutosaveStatus,
+  createAutosave,
+  OFFLINE,
+  RETRY_INTERVAL,
+  type SaveDocument,
+} from "./autosave";
 import { createDocumentStore } from "./document-store";
 
 const DELAY = 1000;
@@ -342,9 +348,9 @@ describe("createAutosave", () => {
 
 describe("mayLeave", () => {
   it("asks only while changes can't be saved, with why", () => {
-    const asked: string[] = [];
-    const confirm = (message: string) => {
-      asked.push(message);
+    const asked: AutosaveStatus["error"][] = [];
+    const confirm = (error: AutosaveStatus["error"]) => {
+      asked.push(error);
       return false;
     };
     for (const state of ["saved", "unsaved", "saving"] as const) {
@@ -355,6 +361,6 @@ describe("mayLeave", () => {
       false,
     );
     expect(mayLeave({ state: "error", savedAt: LOADED_AT, error: OFFLINE }, () => true)).toBe(true);
-    expect(asked).toEqual([expect.stringMatching(/^Conflict\. Leave it anyway\?/)]);
+    expect(asked).toEqual(["Conflict."]);
   });
 });

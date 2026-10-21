@@ -2,6 +2,7 @@ import type { StlLimits } from "@furrow/cam-core";
 import { projectFileName } from "@furrow/document";
 import { importGuestDocument } from "@/features/projects/actions";
 import { importArchive } from "@/features/projects/lib/archive-import";
+import { clientTranslator } from "@/lib/client-translator";
 import { deleteGuestProjectIfSaved, getGuestMesh, getGuestProject } from "./storage";
 
 /** A guest project that couldn't be imported, and why; it stays in the browser. */
@@ -17,7 +18,7 @@ export type ImportToAccountResult = {
   changed: { id: string; name: string }[];
 };
 
-const IMPORT_FAILED = "It couldn't be imported. Check your connection and try again.";
+const importFailed = () => clientTranslator()("Guest.importFailed");
 
 /**
  * Imports the guest projects `ids` into the signed-in account, one at a time
@@ -46,7 +47,7 @@ export async function importToAccount(
           project.name,
         );
       } else if (!meshLimits) {
-        imported = { error: "It has 3D models, which this server can't store." };
+        imported = { error: clientTranslator()("Guest.noModelStorage") };
       } else {
         const meshes = new Map<string, Uint8Array>();
         for (const { sha256 } of project.document.models) {
@@ -74,7 +75,7 @@ export async function importToAccount(
       result.failed.push({
         id,
         name,
-        error: error instanceof Error && error.message ? error.message : IMPORT_FAILED,
+        error: error instanceof Error && error.message ? error.message : importFailed(),
       });
     }
   }

@@ -4,9 +4,10 @@ import {
   requestMeshUpload,
   verifyMeshUpload,
 } from "@/features/assets/actions";
+import { clientTranslator } from "@/lib/client-translator";
 
-const UPLOAD_FAILED = "The model couldn't be uploaded. Check your connection and try again.";
-const DOWNLOAD_FAILED = "The model couldn't be downloaded. Check your connection and reload.";
+const uploadFailed = () => clientTranslator()("Assets.uploadFailed");
+const downloadFailed = () => clientTranslator()("Assets.downloadFailed");
 
 /**
  * Uploads `file`, hashing to `sha256`, to the project's assets and has the
@@ -26,13 +27,13 @@ export async function uploadMesh(
     const { url, headers } = request.upload;
     const response = await fetch(url, { method: "PUT", headers, body: file });
     // 412: an earlier upload of the same file got there first, which verifying settles.
-    if (!response.ok && response.status !== 412) return { error: UPLOAD_FAILED };
+    if (!response.ok && response.status !== 412) return { error: uploadFailed() };
     const verified = await verifyMeshUpload(projectId, sha256);
     if (verified?.error !== undefined) return { error: verified.error };
     return { uploaded: true };
   } catch (error) {
     console.error(error);
-    return { error: UPLOAD_FAILED };
+    return { error: uploadFailed() };
   }
 }
 
@@ -53,9 +54,9 @@ export async function discardUpload(projectId: string, sha256: string) {
 
 /** Downloads the project's mesh `sha256`; throws an `Error` for the user if it can't. */
 export async function downloadMesh(projectId: string, sha256: string): Promise<ArrayBuffer> {
-  const link = await getMeshUrl(projectId, sha256).catch(() => ({ error: DOWNLOAD_FAILED }));
+  const link = await getMeshUrl(projectId, sha256).catch(() => ({ error: downloadFailed() }));
   if (link.error !== undefined) throw new Error(link.error);
   const response = await fetch(link.url).catch(() => null);
-  if (!response?.ok) throw new Error(DOWNLOAD_FAILED);
+  if (!response?.ok) throw new Error(downloadFailed());
   return response.arrayBuffer();
 }

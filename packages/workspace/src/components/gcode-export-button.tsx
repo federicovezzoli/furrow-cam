@@ -2,9 +2,11 @@
 
 import { Button } from "@furrow/ui/components/ui/button";
 import { downloadFile } from "@furrow/ui/lib/download";
+import { formatWarning } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { FileCodeIcon } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { useDocumentStoreApi, useToolpathStoreApi } from "../providers/workspace-stores";
@@ -27,6 +29,7 @@ export function GcodeExportButton({
   className?: string;
 }) {
   const [pending, setPending] = useState(false);
+  const t = useTranslations();
   // Read when the program is made, so a rename while it is made counts.
   const latestName = useRef(name);
   latestName.current = name;
@@ -49,14 +52,15 @@ export function GcodeExportButton({
       setPending(false);
     }
     if ("error" in result) {
-      window.alert(result.error);
+      window.alert(formatWarning(t, { operation: result.operation, message: result.error }));
       return;
     }
     downloadFile(result.gcode, result.fileName, "text/plain");
     const machine = documents.getState().document.machine;
     if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
     if (result.warnings.length > 0) {
-      window.alert(`The G-code was exported with warnings:\n\n${result.warnings.join("\n")}`);
+      const warnings = result.warnings.map((warning) => formatWarning(t, warning)).join("\n");
+      window.alert(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
     }
   }
 
@@ -68,7 +72,7 @@ export function GcodeExportButton({
       className={className}
     >
       <FileCodeIcon />
-      Export G-code
+      {t("Shell.exportGcode")}
     </Button>
   );
   if (disabledReason === undefined) return button;

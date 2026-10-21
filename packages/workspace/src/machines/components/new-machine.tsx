@@ -8,17 +8,14 @@ import {
   presetName,
 } from "@furrow/document";
 import { Input } from "@furrow/ui/components/ui/input";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { ExternalLinkIcon } from "lucide-react";
 import type * as React from "react";
 import { useState } from "react";
+import { useTranslations } from "use-intl";
 import { MachineForm, type SaveMachine } from "./machine-form";
 
 type Start = "preset" | "scratch";
-
-const START_LABELS: Record<Start, string> = {
-  preset: "Start from a preset",
-  scratch: "Start from scratch",
-};
 
 const RADIO_CARD =
   "flex cursor-pointer flex-col gap-0.5 rounded-md border p-3 text-sm shadow-xs transition-colors hover:bg-accent has-checked:border-primary has-checked:bg-accent has-checked:ring-1 has-checked:ring-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50";
@@ -29,6 +26,7 @@ const RADIO_CARD =
  * other, so it's fully editable and counts towards the machine limit (M10).
  */
 export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.ReactElement }) {
+  const t = useTranslations("NewMachine");
   const [start, setStart] = useState<Start>("preset");
   const [preset, setPreset] = useState<MachinePreset | null>(null);
   /** Something was typed in the form, which switching would throw away. */
@@ -36,7 +34,7 @@ export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.
 
   /** Asks before a switch that unmounts an edited form; `true` to go ahead. */
   function discardEdits(): boolean {
-    if (edited && !window.confirm("Discard the values you've entered?")) return false;
+    if (edited && !window.confirm(t("discard"))) return false;
     setEdited(false);
     return true;
   }
@@ -51,7 +49,11 @@ export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.
 
   return (
     <div className="grid gap-8">
-      <div role="radiogroup" aria-label="Start" className="grid gap-2 sm:grid-cols-2 lg:max-w-2xl">
+      <div
+        role="radiogroup"
+        aria-label={t("start")}
+        className="grid gap-2 sm:grid-cols-2 lg:max-w-2xl"
+      >
         {(["preset", "scratch"] as const).map((value) => (
           <label key={value} className={RADIO_CARD}>
             <input
@@ -62,12 +64,8 @@ export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.
               onChange={() => chooseStart(value)}
               className="sr-only"
             />
-            <span className="font-medium">{START_LABELS[value]}</span>
-            <span className="text-muted-foreground">
-              {value === "preset"
-                ? "Pick your router; its documented settings are filled in for you."
-                : "Type every setting yourself."}
-            </span>
+            <span className="font-medium">{t(`starts.${value}`)}</span>
+            <span className="text-muted-foreground">{t(`startHints.${value}`)}</span>
           </label>
         ))}
       </div>
@@ -118,6 +116,7 @@ function PresetPicker({
   value: MachinePreset | null;
   onChange: (preset: MachinePreset) => void;
 }) {
+  const t = useTranslations("NewMachine");
   const [query, setQuery] = useState("");
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const matches = MACHINE_PRESETS.filter((preset) =>
@@ -132,22 +131,18 @@ function PresetPicker({
     <section aria-labelledby="presets-heading" className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 id="presets-heading" className="font-medium">
-          Presets
+          {t("presets")}
         </h2>
         <Input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search machines…"
-          aria-label="Search machines"
+          placeholder={t("search")}
+          aria-label={t("searchLabel")}
           className="max-w-xs"
         />
       </div>
-      {matches.length === 0 && (
-        <p className="text-muted-foreground">
-          No preset matches “{query}”. Start from scratch to describe your machine yourself.
-        </p>
-      )}
+      {matches.length === 0 && <p className="text-muted-foreground">{t("noMatch", { query })}</p>}
       {shown.length > 0 && (
         <div role="radiogroup" aria-labelledby="presets-heading" className="grid gap-4">
           {groupByMaker(shown).map(([maker, presets]) => (
@@ -181,6 +176,8 @@ function PresetPicker({
 
 /** What to know before using a preset: firmware (M7), notes (M8), what to fill in and sources. */
 function PresetDetails({ preset }: { preset: MachinePreset }) {
+  const t = useTranslations("NewMachine");
+  const format = useFormatMessage();
   return (
     <section
       aria-labelledby="preset-heading"
@@ -190,28 +187,28 @@ function PresetDetails({ preset }: { preset: MachinePreset }) {
         {preset.maker} {presetName(preset)}
       </h2>
       <p>
-        <span className="font-medium">Firmware: </span>
-        {preset.firmware}
+        <span className="font-medium">{t("firmware")} </span>
+        {format({ code: preset.firmware })}
       </p>
       {preset.notes.length > 0 && (
         <ul className="grid list-disc gap-1 pl-5">
           {preset.notes.map((note) => (
-            <li key={note}>{note}</li>
+            <li key={note}>{format({ code: note })}</li>
           ))}
         </ul>
       )}
       {preset.ask.length > 0 && (
         <div className="grid gap-1">
-          <p className="font-medium">You fill in</p>
+          <p className="font-medium">{t("youFillIn")}</p>
           <ul className="grid list-disc gap-1 pl-5">
             {preset.ask.map((question) => (
-              <li key={question.help}>{question.help}</li>
+              <li key={question.help}>{format({ code: question.help })}</li>
             ))}
           </ul>
         </div>
       )}
       <div className="grid gap-1">
-        <p className="font-medium">Sources</p>
+        <p className="font-medium">{t("sources")}</p>
         <ul className="grid gap-1">
           {preset.sources.map((source) => (
             <li key={source.url}>
@@ -228,9 +225,7 @@ function PresetDetails({ preset }: { preset: MachinePreset }) {
           ))}
         </ul>
       </div>
-      <p className="text-muted-foreground">
-        Check the values below against your build; you can change any of them, now or later.
-      </p>
+      <p className="text-muted-foreground">{t("check")}</p>
     </section>
   );
 }

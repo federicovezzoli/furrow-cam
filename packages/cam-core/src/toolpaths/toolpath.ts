@@ -1,4 +1,5 @@
 import type { Vec3 } from "../scene/stock";
+import type { ToolpathMessage } from "./messages";
 
 /**
  * One straight move of the tool, in stock coordinates (ADR-0014). Feed rates
@@ -25,7 +26,7 @@ export type Toolpath = {
    */
   clearing?: ToolpathMove[];
   /** Problems that didn't stop the toolpath, e.g. paths it had to skip. */
-  warnings: string[];
+  warnings: ToolpathMessage[];
 };
 
 /** Accumulates moves, dropping ones that go nowhere. */

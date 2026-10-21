@@ -12,6 +12,7 @@ import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
 import { modelRect, type PlacedModel } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
+import type { ToolpathMessage } from "../messages";
 import { type Descent, depthLevels, descend } from "../passes";
 import { LevelClearing } from "../pocket/pocket";
 import { type Toolpath, ToolpathBuilder, type ToolpathMove } from "../toolpath";
@@ -22,6 +23,7 @@ import {
   liftHeight,
   MAX_RELIEF_CELLS,
   modelHeightsSteps,
+  NO_AREA_WARNING,
   outlineSpan,
   padDiscs,
   RELIEF_TOLERANCE,
@@ -37,6 +39,7 @@ import {
   reliefGrid,
   remainingRuns,
   restStockSteps,
+  round3,
   simplifyHeights,
   ToolDropper,
   toPassFrame,
@@ -122,7 +125,7 @@ export function* reliefRoughSteps(
   const { params } = operation;
   const tool = { ...operation.tool, stepOver: params.stepOver ?? operation.tool.stepOver };
   const { strategy } = params;
-  const warnings: string[] = [];
+  const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
   const radius = tool.diameter / 2;
   // Walls grow out by the stock to leave, and a tool centred outside the grid
@@ -131,15 +134,15 @@ export function* reliefRoughSteps(
   const angle = strategy.type === "linear" ? strategy.angle : 0;
   const grid = reliefGrid(model, angle, wanted, MAX_RELIEF_CELLS, margin);
   if (!grid) {
-    return { moves: [], warnings: ["The model has no area seen from above to machine."] };
+    return { moves: [], warnings: [NO_AREA_WARNING] };
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
   const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   if (!(floor < 0)) {
-    warnings.push("The stock to leave covers the whole model: there is nothing to rough out.");
+    warnings.push({ code: "toolpath.roughNothing" });
     return { moves: [], warnings };
   }
-  if (-floor > tool.fluteLength) warnings.push("The depth exceeds the tool's flute length.");
+  if (-floor > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
   const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
@@ -152,7 +155,7 @@ export function* reliefRoughSteps(
   }
   const area = roughingArea(params.boundary, model, stock, radius);
   if (!area) {
-    warnings.push("The margin around the model isn't on the stock: there is nothing to rough out.");
+    warnings.push({ code: "toolpath.roughMarginOffStock" });
     return { moves: [], warnings };
   }
   const restStock = rest
@@ -200,7 +203,8 @@ export function* reliefRoughSteps(
   // hold every cell above the level: offsetting each step of a staircase
   // along the cells is slow.
   const simplification = Math.max(grid.cellWidth, grid.cellHeight);
-  const skipped = new Set<string>();
+  // The same warning from many levels is said once.
+  const skipped = new Map<string, ToolpathMessage>();
   for (const [i, z] of levels.entries()) {
     const contours = heightContours(heights, grid, z, grid.origin).map((ring) =>
       simplifyContour(ring, simplification),
@@ -234,10 +238,10 @@ export function* reliefRoughSteps(
       const reach = offset(opened, REST_MIN_WIDTH / 2 + 2 * radius, { arcTolerance: tolerance });
       cleared = intersection(cleared, reach);
     }
-    for (const warning of clearing.clear(cleared, z)) skipped.add(warning);
+    for (const warning of clearing.clear(cleared, z)) skipped.set(JSON.stringify(warning), warning);
     yield progress(i);
   }
-  return { moves: clearing.finish(), warnings: [...warnings, ...skipped] };
+  return { moves: clearing.finish(), warnings: [...warnings, ...skipped.values()] };
 }
 
 /**
@@ -302,9 +306,12 @@ function restCellSize(grid: ReliefGrid): number {
 }
 
 /** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
-function restCoarsenedWarning(grid: ReliefGrid): string {
+function restCoarsenedWarning(grid: ReliefGrid): ToolpathMessage {
   const size = Math.max(grid.cellWidth, grid.cellHeight);
-  return `The area is too large to simulate the stock left at full resolution: it is simulated with cells of ${size.toFixed(3)} mm, so material narrower than ${(2 * size).toFixed(3)} mm the operations before left may be cut at full depth.`;
+  return {
+    code: "toolpath.restCoarsened",
+    values: { size: round3(size), width: round3(2 * size) },
+  };
 }
 
 /**

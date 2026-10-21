@@ -1,28 +1,24 @@
 import { formatQuantity, type SnapTarget, unitLabel } from "@furrow/cam-core";
 import type { Point, Units } from "@furrow/document";
-import { ANCHOR_LABELS } from "./anchor-grid";
+import { localizeDecimal } from "@furrow/ui/lib/locales";
 
-const KIND_LABELS: Record<Exclude<SnapTarget["kind"], "stock_anchor">, string> = {
-  vertex: "Vertex",
-  arc_center: "Arc centre",
-  circle_center: "Circle centre",
-  bounds_corner: "Bounding box corner",
-  bounds_center: "Bounding box centre",
-};
-
-/** What the cursor is on while picking the zero: a snap target, or `null` for a free point. */
-export function snapLabel(target: SnapTarget | null): string {
-  if (!target) return "Point";
-  if (target.kind === "stock_anchor") return `Stock ${ANCHOR_LABELS[target.anchor].toLowerCase()}`;
-  return KIND_LABELS[target.kind];
+/**
+ * The catalog key, under `Snap`, of what the cursor is on while picking the
+ * zero: a snap target, or a free point.
+ */
+export function snapKey(target: SnapTarget | null) {
+  if (!target) return "point" as const;
+  if (target.kind === "stock_anchor") return `anchors.${target.anchor}` as const;
+  return target.kind;
 }
 
 /**
  * A point in stock coordinates as the custom zero's X and Y fields show it:
- * from the stock's bottom-left corner, in the project's units.
+ * from the stock's bottom-left corner, in the project's units and `locale`'s decimals.
  */
-export function pointLabel([x, y]: Point, units: Units): string {
+export function pointLabel([x, y]: Point, units: Units, locale = "en"): string {
   const unit = unitLabel("length", units);
-  const format = (value: number) => `${formatQuantity(value, "length", units)} ${unit}`;
+  const format = (value: number) =>
+    `${localizeDecimal(formatQuantity(value, "length", units), locale)} ${unit}`;
   return `X ${format(x)}, Y ${format(y)}`;
 }

@@ -490,8 +490,8 @@ describe("pocketToolpath", () => {
     const toolpath = pocket({}, [open]);
     expect(toolpath.moves).toEqual([]);
     expect(toolpath.warnings).toEqual([
-      "Skipped 1 point: drill them instead.",
-      "Skipped 1 open path: pockets need closed paths.",
+      { code: "toolpath.skippedPoints", values: { count: 1 } },
+      { code: "toolpath.skippedOpenPocket", values: { count: 1 } },
     ]);
   });
 
@@ -500,8 +500,8 @@ describe("pocketToolpath", () => {
     const toolpath = pocket({ depth: 30 }, [tiny]);
     expect(toolpath.moves).toEqual([]);
     expect(toolpath.warnings).toEqual([
-      "The depth exceeds the tool's flute length.",
-      "The closed paths are too small for the tool.",
+      { code: "toolpath.depthExceedsFlutes" },
+      { code: "toolpath.pathsTooSmall" },
     ]);
   });
 
@@ -911,7 +911,7 @@ describe("pocketToolpath with peel clearing", () => {
   });
 
   it("needs exactly one island per pocket to start from it", () => {
-    const warning = "Peel from the island needs exactly one island.";
+    const warning = { code: "toolpath.peelIsland" };
     const second: Shape = {
       ...rectangle("0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a", 10, 10, 10, 10),
     };

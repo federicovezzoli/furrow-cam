@@ -13,20 +13,15 @@ export function selectionTargets(geometry: Shape[], selected: PathRef[]): Operat
   );
 }
 /**
- * How many shapes and paths `targets` cut, e.g. `2 selected shapes`,
- * `3 selected paths` or `1 selected shape and 2 paths`: whole shapes count as
- * shapes, the paths of the others one by one.
+ * How many shapes and paths `targets` cut, for `useTargetsLabel`: whole
+ * shapes count as shapes, the paths of the others one by one.
  */
-export function targetsLabel(targets: OperationTarget[]): string {
+export function selectionCounts(targets: OperationTarget[]): { shapes: number; paths: number } {
   let shapes = 0;
   let paths = 0;
   for (const target of targets) {
     if (target.paths === null) shapes++;
     else paths += target.paths.length;
   }
-  const noun = (n: number, word: string) => (n === 1 ? word : `${word}s`);
-  const shapesLabel = `${shapes} selected ${noun(shapes, "shape")}`;
-  if (paths === 0) return shapesLabel;
-  if (shapes === 0) return `${paths} selected ${noun(paths, "path")}`;
-  return `${shapesLabel} and ${paths} ${noun(paths, "path")}`;
+  return { shapes, paths };
 }

@@ -6,19 +6,19 @@ import {
   CardTitle,
 } from "@furrow/ui/components/ui/card";
 import Link from "next/link";
+import { getTranslator } from "@/lib/locale";
 
-export default function CheckEmailPage() {
+export default async function CheckEmailPage() {
+  const t = await getTranslator();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Check your email</CardTitle>
-        <CardDescription>
-          We've sent you a link to verify your email address. Open it to finish signing up.
-        </CardDescription>
+        <CardTitle>{t("Auth.checkEmailTitle")}</CardTitle>
+        <CardDescription>{t("Auth.checkEmailBody")}</CardDescription>
       </CardHeader>
       <CardFooter className="text-sm text-muted-foreground">
         <Link href="/sign-in" className="underline">
-          Back to sign in
+          {t("Auth.backToSignIn")}
         </Link>
       </CardFooter>
     </Card>

@@ -10,7 +10,19 @@ export type XmlElement = {
   text?: string;
 };
 
-export class XmlError extends Error {}
+/** What is wrong, for the user: an element left open, a closing tag that matches no open element, or a bad attribute. */
+export type XmlProblem = { unclosed: string } | { closing: string } | { attribute: string };
+
+export class XmlError extends Error {
+  /** The developer-facing `message` names the problem; the user is told where it is, and `problem`. */
+  constructor(
+    message: string,
+    readonly position: number,
+    readonly problem?: XmlProblem,
+  ) {
+    super(`${message} (at character ${position})`);
+  }
+}
 
 const NAME = /[^\s/>=]+/y;
 const SPACE = /\s*/y;
@@ -48,8 +60,8 @@ export function parseXml(text: string): XmlElement {
   const stack: XmlElement[] = [];
   let root: XmlElement | null = null;
 
-  function fail(message: string): never {
-    throw new XmlError(`${message} (at character ${index})`);
+  function fail(message: string, problem?: XmlProblem): never {
+    throw new XmlError(message, index, problem);
   }
 
   function skipPast(terminator: string) {
@@ -96,7 +108,7 @@ export function parseXml(text: string): XmlElement {
       if (text[index] !== ">") fail('Expected ">"');
       index++;
       const element = stack.pop();
-      if (element?.name !== name) fail(`Unexpected closing tag </${name}>`);
+      if (element?.name !== name) fail(`Unexpected closing tag </${name}>`, { closing: name });
     } else {
       index++;
       const element: XmlElement = { name: readName(), attributes: {}, children: [] };
@@ -112,7 +124,7 @@ export function parseXml(text: string): XmlElement {
           if (element.name === "style" || element.name.endsWith(":style")) {
             // A stylesheet is text up to its closing tag, which the loop then reads.
             const close = text.indexOf(`</${element.name}`, index);
-            if (close === -1) fail(`Unclosed tag <${element.name}>`);
+            if (close === -1) fail(`Unclosed tag <${element.name}>`, { unclosed: element.name });
             element.text = decodeEntities(
               text.slice(index, close).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"),
             );
@@ -120,16 +132,20 @@ export function parseXml(text: string): XmlElement {
           }
           break;
         }
-        if (index >= text.length) fail(`Unclosed tag <${element.name}>`);
+        if (index >= text.length) {
+          fail(`Unclosed tag <${element.name}>`, { unclosed: element.name });
+        }
         const name = readName();
         skipSpace();
-        if (text[index] !== "=") fail(`Expected "=" after attribute ${name}`);
+        if (text[index] !== "=") fail(`Expected "=" after attribute ${name}`, { attribute: name });
         index++;
         skipSpace();
         const quote = text[index];
-        if (quote !== '"' && quote !== "'") fail(`Expected a quoted value for attribute ${name}`);
+        if (quote !== '"' && quote !== "'") {
+          fail(`Expected a quoted value for attribute ${name}`, { attribute: name });
+        }
         const end = text.indexOf(quote, index + 1);
-        if (end === -1) fail(`Unterminated value of attribute ${name}`);
+        if (end === -1) fail(`Unterminated value of attribute ${name}`, { attribute: name });
         element.attributes[name] = decodeEntities(text.slice(index + 1, end));
         index = end + 1;
       }
@@ -140,7 +156,8 @@ export function parseXml(text: string): XmlElement {
     }
   }
 
-  if (stack.length > 0) fail(`Unclosed tag <${stack.at(-1)?.name}>`);
-  if (!root) throw new XmlError("No root element");
+  const open = stack.at(-1);
+  if (open) fail(`Unclosed tag <${open.name}>`, { unclosed: open.name });
+  if (!root) throw new XmlError("No root element", index);
   return root;
 }

@@ -1,8 +1,11 @@
 "use client";
 
+import type { Message } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { FileBoxIcon } from "lucide-react";
 import { type ChangeEvent, useRef } from "react";
+import { useTranslations } from "use-intl";
 import { importModel } from "../lib/model-import";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -12,7 +15,7 @@ import {
 } from "../providers/workspace-stores";
 
 /** Why STL import is off: the server has no storage for meshes (ADR-0029). */
-export const STL_IMPORT_OFF = "STL import isn't available on this server.";
+export const STL_IMPORT_OFF: Message = { code: "workspace.stlImportOff" };
 
 /**
  * Picks an STL file and imports it as a model (PRD-0005 S1), from the empty
@@ -20,6 +23,8 @@ export const STL_IMPORT_OFF = "STL import isn't available on this server.";
  * the server can't store meshes.
  */
 export function ModelImportButton() {
+  const t = useTranslations("Import");
+  const format = useFormatMessage();
   const document = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const host = useWorkspaceHost();
@@ -52,12 +57,12 @@ export function ModelImportButton() {
         variant="outline"
         size="compact"
         disabled={!limits || importing}
-        title={limits ? undefined : STL_IMPORT_OFF}
+        title={limits ? undefined : format(STL_IMPORT_OFF)}
         onClick={() => input.current?.click()}
         className="justify-self-start"
       >
         <FileBoxIcon />
-        Import STL…
+        {t("importStl")}
       </Button>
     </>
   );

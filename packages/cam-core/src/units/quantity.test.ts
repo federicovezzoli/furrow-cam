@@ -8,7 +8,7 @@ function value(
   quantity: "length" | "feed" | "number" = "length",
 ) {
   const result = parseQuantity(text, quantity, units);
-  if (!result.ok) throw new Error(`${text}: ${result.error}`);
+  if (!result.ok) throw new Error(`${text}: ${result.error.code}`);
   return result.value;
 }
 
@@ -64,23 +64,26 @@ describe("parseQuantity", () => {
   });
 
   it("rejects what isn't a number", () => {
-    expect(error("")).toBe("Enter a number");
-    expect(error("  ")).toBe("Enter a number");
-    expect(error("mm")).toBe("Enter a number");
-    expect(error("abc")).toBe('Unknown unit "abc"');
-    expect(error("10min")).toBe('Unknown unit "min"');
-    expect(error("10mm", "mm", "number")).toBe('Unknown unit "mm"');
-    expect(error("10in/min")).toBe('Unknown unit "in"');
-    expect(error("1 +")).toBe("Not a number or expression");
-    expect(error("(1 + 2")).toBe("Not a number or expression");
-    expect(error("1 2")).toBe("Not a number or expression");
-    expect(error("1,5")).toBe("Not a number or expression");
-    expect(error("1.2.3")).toBe("Not a number or expression");
+    expect(error("")).toEqual({ code: "quantity.empty" });
+    expect(error("  ")).toEqual({ code: "quantity.empty" });
+    expect(error("mm")).toEqual({ code: "quantity.empty" });
+    expect(error("abc")).toEqual({ code: "quantity.unknownUnit", values: { unit: "abc" } });
+    expect(error("10min")).toEqual({ code: "quantity.unknownUnit", values: { unit: "min" } });
+    expect(error("10mm", "mm", "number")).toEqual({
+      code: "quantity.unknownUnit",
+      values: { unit: "mm" },
+    });
+    expect(error("10in/min")).toEqual({ code: "quantity.unknownUnit", values: { unit: "in" } });
+    expect(error("1 +")).toEqual({ code: "quantity.invalid" });
+    expect(error("(1 + 2")).toEqual({ code: "quantity.invalid" });
+    expect(error("1 2")).toEqual({ code: "quantity.invalid" });
+    expect(error("1,5")).toEqual({ code: "quantity.invalid" });
+    expect(error("1.2.3")).toEqual({ code: "quantity.invalid" });
   });
 
   it("rejects results that aren't finite", () => {
-    expect(error("1/0")).toBe("The result isn't a finite number");
-    expect(error("0/0")).toBe("The result isn't a finite number");
+    expect(error("1/0")).toEqual({ code: "quantity.notFinite" });
+    expect(error("0/0")).toEqual({ code: "quantity.notFinite" });
   });
 });
 

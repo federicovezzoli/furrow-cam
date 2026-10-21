@@ -1,5 +1,7 @@
+import { z } from "zod";
 import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
 import { DEFAULT_SPIN_UP_DELAY } from "./machine";
+import { type DocumentMessage, MessageError } from "./message";
 
 type UnknownDocument = Record<string, unknown>;
 
@@ -142,7 +144,7 @@ export const migrations: Readonly<Record<number, Migration>> = {
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
-export class ProjectDocumentVersionError extends Error {
+export class ProjectDocumentVersionError extends MessageError<DocumentMessage> {
   override name = "ProjectDocumentVersionError";
 }
 
@@ -157,7 +159,7 @@ export class ProjectDocumentTooNewError extends ProjectDocumentVersionError {
     readonly version: number,
     readonly supportedVersion: number,
   ) {
-    super(`Document version ${version} is newer than the supported version ${supportedVersion}`);
+    super({ code: "migration.tooNew", values: { version, supported: supportedVersion } });
   }
 }
 
@@ -175,11 +177,14 @@ export function migrateProjectDocument(
   targetVersion: number = CURRENT_SCHEMA_VERSION,
 ): unknown {
   if (!isObject(json)) {
-    throw new ProjectDocumentVersionError("A project document must be a JSON object");
+    throw new ProjectDocumentVersionError({ code: "migration.notObject" });
   }
   const version = json.schemaVersion;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
-    throw new ProjectDocumentVersionError(`Invalid schemaVersion: ${JSON.stringify(version)}`);
+    throw new ProjectDocumentVersionError({
+      code: "migration.invalidVersion",
+      values: { version: JSON.stringify(version) ?? "undefined" },
+    });
   }
   if (version > targetVersion) {
     throw new ProjectDocumentTooNewError(version, targetVersion);
@@ -194,13 +199,17 @@ export function migrateProjectDocument(
   for (let from = version; from < targetVersion; from++) {
     const migrate = chain[from];
     if (!migrate) {
-      throw new ProjectDocumentVersionError(`No migration from version ${from} to ${from + 1}`);
+      throw new ProjectDocumentVersionError({
+        code: "migration.missing",
+        values: { from, to: from + 1 },
+      });
     }
     const migrated: unknown = migrate(doc);
     if (!isObject(migrated)) {
-      throw new ProjectDocumentVersionError(
-        `Migration from version ${from} to ${from + 1} did not return an object`,
-      );
+      throw new ProjectDocumentVersionError({
+        code: "migration.notObjectResult",
+        values: { from, to: from + 1 },
+      });
     }
     doc = { ...migrated, schemaVersion: from + 1 };
   }
@@ -214,4 +223,39 @@ export function migrateProjectDocument(
  */
 export function parseProjectDocument(json: unknown): ProjectDocument {
   return ProjectDocument.parse(migrateProjectDocument(json));
+}
+
+/** Why `readProjectJson` couldn't read a project, with the error behind it. */
+export type ProjectReadFailure =
+  | { reason: "not_a_project"; error?: never }
+  | { reason: "too_new"; error: ProjectDocumentTooNewError }
+  | { reason: "version"; error: ProjectDocumentVersionError }
+  | { reason: "invalid"; error: z.ZodError };
+
+/**
+ * `parseProjectDocument` for any input, JSON text included, that classifies
+ * why it fails instead of throwing; callers word the reason themselves. Not a
+ * JSON object with a `schemaVersion` (`package.json`, `[]`, …) is
+ * `"not_a_project"`. Throws only unexpected errors.
+ */
+export function readProjectJson(
+  input: unknown,
+): { document: ProjectDocument; reason?: never } | ProjectReadFailure {
+  let json = input;
+  if (typeof input === "string") {
+    try {
+      json = JSON.parse(input);
+    } catch {
+      return { reason: "not_a_project" };
+    }
+  }
+  if (!isObject(json) || !("schemaVersion" in json)) return { reason: "not_a_project" };
+  try {
+    return { document: parseProjectDocument(json) };
+  } catch (error) {
+    if (error instanceof ProjectDocumentTooNewError) return { reason: "too_new", error };
+    if (error instanceof ProjectDocumentVersionError) return { reason: "version", error };
+    if (error instanceof z.ZodError) return { reason: "invalid", error };
+    throw error;
+  }
 }

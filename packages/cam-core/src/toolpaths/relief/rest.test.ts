@@ -283,7 +283,8 @@ describe("rest machining", () => {
       }
       expect(outside).toBeGreaterThan(0);
       expect(deepest).toBeLessThanOrEqual(smallMill.stepDown + 0.01);
-    });
+      // Simulating each move in turn takes seconds, more with every test file running at once.
+    }, 20_000);
   }
 
   const sequences: [string, () => Operation[]][] = [

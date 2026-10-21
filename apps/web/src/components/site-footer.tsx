@@ -1,5 +1,6 @@
 import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import Link from "next/link";
+import { getTranslator } from "@/lib/locale";
 import packageJson from "../../package.json";
 
 // Changesets tags each release `<package>@<version>` (ADR-0012).
@@ -30,7 +31,8 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
 }
 
 /** Footer for every page outside the workspace, which stays full-screen. */
-export function SiteFooter() {
+export async function SiteFooter() {
+  const t = await getTranslator();
   return (
     <footer className="mt-auto border-t">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-8 py-3 text-xs text-muted-foreground">
@@ -39,9 +41,9 @@ export function SiteFooter() {
           <GitHubIcon />
           GitHub
         </ExternalLink>
-        <ExternalLink href={REPORT_URL}>Report a bug</ExternalLink>
+        <ExternalLink href={REPORT_URL}>{t("Footer.reportBug")}</ExternalLink>
         <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
-          Privacy
+          {t("Footer.privacy")}
         </Link>
         {/* The project's start year, deliberately not computed at runtime. */}
         <span>

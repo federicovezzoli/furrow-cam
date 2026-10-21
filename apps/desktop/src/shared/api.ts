@@ -1,3 +1,4 @@
+import type { Locale } from "@furrow/ui/lib/locales";
 import type { TelemetryEvent } from "@furrow/workspace/lib/telemetry";
 
 /**
@@ -69,6 +70,10 @@ export interface DesktopApi {
   trackEvent(event: TelemetryEvent): void;
   /** Hands an error report (from `reportableError`) to the main process, as `trackEvent`. */
   reportError(error: { name: string; message: string; stack?: string }): void;
+  /** The interface language: the one picked in the app, else the system's (ADR-0054). */
+  getLocale(): Promise<Locale>;
+  /** Remembers `locale` as the interface language, over the system's. */
+  setLocale(locale: Locale): Promise<void>;
   /** The window is closing with unsaved changes; call `closeWindow` once they're handled. */
   onCloseRequest(listener: () => void): () => void;
 }
@@ -91,6 +96,8 @@ export const CHANNELS = {
   takePendingPaths: "app:pending-paths",
   trackEvent: "telemetry:event",
   reportError: "telemetry:error",
+  getLocale: "locale:get",
+  setLocale: "locale:set",
   menu: "menu",
   openPath: "app:open-path",
   closeRequest: "window:close-request",

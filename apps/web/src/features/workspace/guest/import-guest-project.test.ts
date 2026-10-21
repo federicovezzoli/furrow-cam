@@ -1,3 +1,4 @@
+import { MeshImportError } from "@furrow/workspace/lib/model-import";
 import "fake-indexeddb/auto";
 import {
   CURRENT_SCHEMA_VERSION,
@@ -14,7 +15,10 @@ vi.mock("@/features/assets/lib/mesh-cache", () => ({}));
 vi.mock("@/features/assets/lib/meshes", () => ({}));
 // Parsing runs in a Web Worker in the browser.
 const parseMesh = vi.hoisted(() => vi.fn());
-vi.mock("@furrow/workspace/lib/model-import", () => ({ parseMesh }));
+vi.mock("@furrow/workspace/lib/model-import", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@furrow/workspace/lib/model-import")>()),
+  parseMesh,
+}));
 
 let storage: typeof import("./storage");
 let guest: typeof import("./import-guest-project");
@@ -91,9 +95,9 @@ describe("importGuestProject with 3D models", () => {
 
   it("refuses a damaged STL file, leaving nothing behind", async () => {
     const { file } = await archiveFile();
-    parseMesh.mockRejectedValue(new Error("This file isn't an STL model."));
+    parseMesh.mockRejectedValue(new MeshImportError({ code: "stl.sizeMismatch" }));
     await expect(guest.importGuestProject(file)).rejects.toThrow(
-      "A model in this file can't be imported: This file isn't an STL model.",
+      "A model in this file can't be imported: This isn't an STL file, or it is damaged: its size doesn't match.",
     );
     expect(await storage.listGuestProjects()).toEqual([]);
   });

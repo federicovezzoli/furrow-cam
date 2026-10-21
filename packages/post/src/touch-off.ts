@@ -5,13 +5,9 @@ import { formatNumber } from "./format";
 /**
  * The placeholders the post fills in a custom block, the machine's or a
  * pad's tool change (ADR-0043), so the block follows the pad and the
- * machine's safe Z, with what each stands for, measured from the zero.
+ * machine's safe Z, measured from the zero. What each stands for is in the catalogs (ADR-0054).
  */
-export const PLACEHOLDERS = {
-  "{padX}": "the touch-off pad's centre X",
-  "{padY}": "the touch-off pad's centre Y",
-  "{safeZ}": "the machine's safe Z",
-} as const;
+export const PLACEHOLDERS = ["{padX}", "{padY}", "{safeZ}"] as const;
 
 /**
  * `block` with the placeholders filled in, in work coordinates: `{safeZ}`

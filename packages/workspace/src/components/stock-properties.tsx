@@ -1,6 +1,6 @@
 "use client";
 
-import { formatQuantity, touchOffOutsideStock, unitLabel } from "@furrow/cam-core";
+import { touchOffOutsideStock } from "@furrow/cam-core";
 import { Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -12,12 +12,9 @@ import { cn } from "@furrow/ui/lib/utils";
 import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
 import type * as React from "react";
 import { useRef, useState } from "react";
-import {
-  ANCHOR_GRID,
-  ANCHOR_LABELS,
-  type ZeroChoice,
-  zeroChoiceInDirection,
-} from "../lib/anchor-grid";
+import { useTranslations } from "use-intl";
+import { useLength } from "../hooks/use-length";
+import { ANCHOR_GRID, type ZeroChoice, zeroChoiceInDirection } from "../lib/anchor-grid";
 import type { MachineChoice } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -42,21 +39,10 @@ import {
 } from "../stores/stock-actions";
 import { PlaceholderList } from "./placeholder-list";
 
-const UNIT_LABELS: Record<Units, string> = { mm: "Millimetres", in: "Inches" };
-
-const DIMENSIONS = [
-  ["width", "Width"],
-  ["height", "Height"],
-  ["thickness", "Thickness"],
-] as const satisfies [StockDimension, string][];
+const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
 
 /** Thinner than any stock worth cutting, and keeps the stock's sizes positive. */
 const MIN_STOCK = 0.1;
-
-const Z_ORIGIN_LABELS: Record<ZOrigin, string> = {
-  stock_top: "Stock top",
-  machine_bed: "Machine bed",
-};
 
 /**
  * The project's machine, display units, stock size and zero point, shown
@@ -66,13 +52,14 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
+  const t = useTranslations("Stock");
 
   return (
     <div className="grid gap-4 p-3 text-ui">
       <MachineField machines={machines} />
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
         <Label htmlFor="units" className="text-ui font-normal">
-          Units
+          {t("unitsLabel")}
         </Label>
         <NativeSelect
           id="units"
@@ -83,7 +70,7 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
         >
           {Units.options.map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {UNIT_LABELS[option]}
+              {t(`units.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -91,13 +78,13 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
 
       <section aria-labelledby="stock-heading" className="grid gap-2">
         <h3 id="stock-heading" className="font-medium">
-          Stock
+          {t("stock")}
         </h3>
-        {DIMENSIONS.map(([key, label]) => (
+        {DIMENSIONS.map((key) => (
           <NumberField
             key={key}
             id={`stock-${key}`}
-            label={label}
+            label={t(`dimensions.${key}`)}
             layout="inline"
             quantity="length"
             units={units}
@@ -123,6 +110,7 @@ const SNAPSHOT = "";
  * again picks up changes made to it since.
  */
 function MachineField({ machines }: { machines: MachineChoice[] }) {
+  const t = useTranslations("Stock");
   const { navigation, account } = useWorkspaceHost();
   const { Link } = navigation;
   const store = useDocumentStoreApi();
@@ -146,7 +134,7 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
     <div className="grid gap-2">
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
         <Label htmlFor="machine" className="text-ui font-normal">
-          Machine
+          {t("machine")}
         </Label>
         <NativeSelect
           id="machine"
@@ -158,9 +146,9 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
         >
           <NativeSelectOption value={SNAPSHOT} disabled>
             {machine === null
-              ? "Choose a machine…"
+              ? t("chooseMachine")
               : // Edited or deleted since it was snapshotted: the project keeps its copy.
-                `${machine.name} (project copy)`}
+                t("projectCopy", { name: machine.name })}
           </NativeSelectOption>
           {machines.map((choice) => (
             <NativeSelectOption key={choice.id} value={choice.id}>
@@ -173,11 +161,17 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
         <p role="status" className="flex gap-1.5 text-muted-foreground">
           <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
-            G-code is made for your machine, which is saved in a free account or the desktop app.{" "}
-            <button type="button" onClick={() => account.prompt("machine")} className="underline">
-              Set up your machine
-            </button>
-            .
+            {t.rich("guestMachine", {
+              button: (chunks) => (
+                <button
+                  type="button"
+                  onClick={() => account.prompt("machine")}
+                  className="underline"
+                >
+                  {chunks}
+                </button>
+              ),
+            })}
           </span>
         </p>
       )}
@@ -185,14 +179,17 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
         <p role="status" className="flex gap-1.5 text-destructive">
           <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
-            No machine set. Choose the machine this project is for to export G-code.
+            {t("noMachine")}
             {machines.length === 0 && (
               <>
                 {" "}
-                <Link to="new-machine" className="underline">
-                  Add a machine
-                </Link>
-                .
+                {t.rich("addMachine", {
+                  link: (chunks) => (
+                    <Link to="new-machine" className="underline">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
               </>
             )}
           </span>
@@ -214,6 +211,8 @@ function ZeroSection() {
   const radios = useRef(new Map<ZeroChoice, HTMLInputElement>());
   const picking = useWorkspaceStore((s) => s.pickingZero);
   const setPicking = useWorkspaceStore((s) => s.setPickingZero);
+  const t = useTranslations("Stock");
+  const anchors = useTranslations("Anchors");
 
   function choose(choice: ZeroChoice) {
     if (choice === "custom") setCustomXYOrigin(store);
@@ -244,7 +243,7 @@ function ZeroSection() {
   return (
     <section aria-labelledby="zero-heading" className="grid gap-2">
       <h3 id="zero-heading" className="font-medium">
-        Zero
+        {t("zero")}
       </h3>
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-x-2">
         <span id="zero-xy-label" className="py-1">
@@ -261,7 +260,7 @@ function ZeroSection() {
               row.map((anchor, c) => (
                 <label
                   key={anchor}
-                  title={ANCHOR_LABELS[anchor]}
+                  title={anchors(anchor)}
                   className={cn(
                     "flex cursor-pointer p-0.5",
                     ["items-start", "items-center", "items-end"][r],
@@ -272,7 +271,7 @@ function ZeroSection() {
                     ref={radioRef(anchor)}
                     type="radio"
                     name="zero-xy"
-                    aria-label={ANCHOR_LABELS[anchor]}
+                    aria-label={anchors(anchor)}
                     checked={xyOrigin.anchor === anchor}
                     onChange={() => choose(anchor)}
                     onKeyDown={(event) => onKeyDown(anchor, event)}
@@ -293,7 +292,7 @@ function ZeroSection() {
               onKeyDown={(event) => onKeyDown("custom", event)}
               className="accent-primary"
             />
-            Custom
+            {t("custom")}
           </label>
         </div>
       </div>
@@ -320,15 +319,10 @@ function ZeroSection() {
               onClick={() => setPicking(!picking)}
             >
               <CrosshairIcon />
-              {picking ? "Cancel" : "Pick in viewport"}
+              {picking ? t("cancel") : t("pickInViewport")}
             </Button>
           </div>
-          {picking && (
-            <p className="text-muted-foreground">
-              Click a point in the viewport; it snaps to stock anchors, vertices, centres and
-              bounding boxes nearby. Esc or right-click cancels.
-            </p>
-          )}
+          {picking && <p className="text-muted-foreground">{t("pickHint")}</p>}
         </>
       )}
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
@@ -344,7 +338,7 @@ function ZeroSection() {
         >
           {ZOrigin.options.map((option) => (
             <NativeSelectOption key={option} value={option}>
-              {Z_ORIGIN_LABELS[option]}
+              {t(`zOrigins.${option}`)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -365,6 +359,8 @@ function TouchOffFields() {
   const stock = useDocumentStore((s) => s.document.stock);
   const pad = stock.touchOff;
   const [refused, setRefused] = useState<number | null>(null);
+  const t = useTranslations("Stock");
+  const length = useLength(units);
   const widest = Math.min(stock.width, stock.height);
 
   return (
@@ -379,10 +375,10 @@ function TouchOffFields() {
           className="size-3.5 accent-primary"
         />
         <Label htmlFor="touch-off" className="text-ui font-normal">
-          Touch-off pad
+          {t("touchOff")}
         </Label>
         <p id="touch-off-hint" className="col-start-2 text-muted-foreground">
-          A spot of the stock top no operation cuts, so Z can be zeroed on it after a tool change.
+          {t("touchOffHint")}
         </p>
       </div>
       {pad && (
@@ -391,7 +387,7 @@ function TouchOffFields() {
             <NumberField
               key={axis}
               id={`touch-off-${axis}`}
-              label={`Pad ${axis.toUpperCase()}`}
+              label={t("padAxis", { axis: axis.toUpperCase() })}
               layout="inline"
               quantity="length"
               units={units}
@@ -402,7 +398,7 @@ function TouchOffFields() {
           ))}
           <NumberField
             id="touch-off-diameter"
-            label="Pad diameter"
+            label={t("padDiameter")}
             layout="inline"
             quantity="length"
             units={units}
@@ -411,21 +407,14 @@ function TouchOffFields() {
             onValueChange={(diameter) =>
               setRefused(setTouchOffField(store, "diameter", diameter) ? null : diameter)
             }
-            error={
-              refused === null
-                ? undefined
-                : `Must fit on the stock: at most ${formatQuantity(widest, "length", units)} ${unitLabel("length", units)}`
-            }
+            error={refused === null ? undefined : t("padTooWide", { size: length(widest) })}
             {...gestureHandlers(store)}
           />
-          <p className="text-muted-foreground">
-            Its centre, from the stock's bottom-left corner. Resizing it keeps the centre where it
-            is.
-          </p>
+          <p className="text-muted-foreground">{t("padCentre")}</p>
           {touchOffOutsideStock(stock, pad) && (
             <p role="alert" className="flex gap-1.5 text-destructive">
               <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-              Part of the pad is off the stock, so there may be nothing to zero Z on there.
+              {t("padOff")}
             </p>
           )}
           <TouchOffToolChange toolChange={pad.toolChange} />
@@ -447,6 +436,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
   /** What's typed while editing; `null` shows the saved block. */
   const [draft, setDraft] = useState<string | null>(null);
   const machineBlock = machine?.toolChange ?? null;
+  const t = useTranslations("Stock");
 
   function save() {
     if (draft !== null && draft !== (toolChange ?? "")) setTouchOffToolChange(store, draft);
@@ -456,12 +446,12 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
   return (
     <div className="grid gap-1.5">
       <Label htmlFor="touch-off-tool-change" className="text-ui font-normal">
-        Tool change on the pad
+        {t("padToolChange")}
       </Label>
       <Textarea
         id="touch-off-tool-change"
         value={draft ?? toolChange ?? ""}
-        placeholder={machineBlock ?? "M5\nM0 (Change the bit)"}
+        placeholder={machineBlock ?? t("toolChangePlaceholder")}
         rows={5}
         maxLength={10_000}
         spellCheck={false}
@@ -477,9 +467,8 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
         }}
       />
       <p id="touch-off-tool-change-hint" className="text-muted-foreground">
-        Runs at each tool change in place of the machine's. <strong>Suggest</strong> writes one from
-        the machine's tool change, moving over the pad; <strong>Use the machine's</strong> goes back
-        to the machine's own, after a move over the pad. <PlaceholderList />
+        {t.rich("padToolChangeHint", { strong: (chunks) => <strong>{chunks}</strong> })}{" "}
+        <PlaceholderList />
       </p>
       <div className="flex gap-2">
         <Button
@@ -491,7 +480,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
             setTouchOffToolChange(store, suggestTouchOffToolChange(machineBlock));
           }}
         >
-          Suggest
+          {t("suggest")}
         </Button>
         {toolChange !== null && (
           <Button
@@ -503,7 +492,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
               setTouchOffToolChange(store, null);
             }}
           >
-            Use the machine's
+            {t("useMachines")}
           </Button>
         )}
       </div>
