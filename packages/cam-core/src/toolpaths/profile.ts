@@ -74,7 +74,7 @@ type Cut = Descent & {
  *   cuts the exact contour at full depth, entering from the cleared slot,
  *   right after the depth passes of that contour. Where the exact contour
  *   strays further than `allowance` from them, into a gap the depth passes
- *   bridge, it is cut in depth passes of its own instead.
+ *   bridge, that stretch of it is cut in depth passes of its own first.
  * - Each pass enters by ramping at the tool's plunge angle (along the contour,
  *   or back and forth on the lead-in arc or an open path) or plunges straight
  *   down when ramping is off, the angle is 90° or the path is too short. A
@@ -206,19 +206,31 @@ export function contourToolpath(
     const margin = 2 * tolerance + 1e-3;
     const lapStock = Math.min(Math.max(params.allowance, radius) / 2 + margin, radius - margin);
     const boxes = roughing.contours.map((contour) => bounds(contour.ring));
+    // Shared by every finishing contour that enters from the same roughing one, like a part's holes.
+    const sweeps = new Map<number, Polygon[]>();
     for (const contour of finishing.contours) {
       const entry = slotFor(contour.ring[0] as Point, roughing.contours, boxes, within);
       const job = entry && jobs[entry.index];
       if (entry && job) {
         const roughingRun = job.run;
-        const roughed = roughing.contours[entry.index] as Contour;
-        // A narrower offset can run where the roughing one never went, like
-        // into a notch the roughing contour bridges: that takes depth passes.
-        const lap = follows(contour.ring, roughed.ring, radius, lapStock);
+        // `on` finishes the very rings it roughed.
+        let stretches: Point[][] | null = [];
+        if (params.side !== "on") {
+          let roughed = sweeps.get(entry.index);
+          if (!roughed) {
+            roughed = sweep((roughing.contours[entry.index] as Contour).ring, radius);
+            sweeps.set(entry.index, roughed);
+          }
+          stretches = beyondRoughing(contour, roughed, radius, lapStock, tolerance);
+        }
         job.run = () => {
           roughingRun();
-          if (lap) finishContour(cut, contour, entry.point, -params.depth);
-          else cutContour(cut, contour, levels, finishing.isFree);
+          if (stretches === null) {
+            cutContour(cut, contour, levels, finishing.isFree);
+            return;
+          }
+          for (const stretch of stretches) cutOpenPath(cut, stretch, levels);
+          finishContour(cut, contour, entry.point, -params.depth);
         };
       } else {
         jobs.push({
@@ -401,16 +413,66 @@ function slotFor(
   return best;
 }
 
+/** Where a tool of `radius` following closed `ring` cuts. */
+function sweep(ring: Point[], radius: number): Polygon[] {
+  return difference(offset([ring], radius), offset([ring], -radius));
+}
+
 /**
- * Whether a tool of `radius` following closed `ring` takes off nothing that
- * holds a circle of radius `stock` beyond what it took following closed
- * `along`: the allowance along the walls and into corners, not a slot `along`
- * bridged.
+ * The stretches of `contour` where a tool of `radius` takes off stock that
+ * holds a circle of radius `stock` beyond the `roughed` sweep, like a notch
+ * the roughing contour bridges: none when only the allowance along the walls
+ * and into corners is left. Each stretch starts and ends a little outside
+ * that stock. `null` when the whole contour needs depth passes, or a tab
+ * stands on a stretch.
  */
-function follows(ring: Point[], along: Point[], radius: number, stock: number): boolean {
-  const sweep = (path: Point[]) => difference(offset([path], radius), offset([path], -radius));
-  const beyond = difference(sweep(ring), sweep(along));
-  return offset(beyond, -stock).length === 0;
+function beyondRoughing(
+  contour: Contour,
+  roughed: Polygon[],
+  radius: number,
+  stock: number,
+  tolerance: number,
+): Point[][] | null {
+  const excess = offset(difference(sweep(contour.ring, radius), roughed), -stock);
+  if (excess.length === 0) return [];
+  // Where the tool centre reaches the stock `excess` leaves, rounded out by `stock` again.
+  const zone = offset(excess, stock + radius + tolerance);
+  const boxes = zone.map(bounds);
+  const inZone = (point: Point) =>
+    zone.filter(
+      (ring, i) => inBox(point, boxes[i] as Box, 0) && containment(point, ring) !== "outside",
+    ).length %
+      2 ===
+    1;
+
+  const track = new Track([...contour.ring, contour.ring[0] as Point]);
+  const step = Math.max(tolerance, radius / 8);
+  const count = Math.ceil(track.length / step);
+  const inside = Array.from({ length: count }, (_, i) =>
+    inZone(track.pointAt((i * track.length) / count)),
+  );
+  const first = inside.indexOf(false);
+  if (first < 0) return null;
+  // Runs of samples in the zone, from one sample outside it to the next, so none wraps past the start.
+  const spans: Span[] = [];
+  let from: number | null = null;
+  for (let k = 1; k <= count; k++) {
+    const i = first + k;
+    if (inside[i % count]) from ??= i - 1;
+    else if (from !== null) {
+      spans.push([(from * track.length) / count, (i * track.length) / count]);
+      from = null;
+    }
+  }
+  // shortcut: a tab on a stretch makes the whole contour take depth passes; cut around the tab if that's ever common.
+  const onTab = spans.some(([a, b]) =>
+    contour.tabs.some(([c, d]) => [0, track.length].some((lap) => c + lap < b && d + lap > a)),
+  );
+  if (onTab) return null;
+  return spans.map(([a, b]) => [
+    track.pointAt(a),
+    ...[...track.walk(a, b - a)].map(([point]) => point),
+  ]);
 }
 
 function nearestOnSegment(point: Point, a: Point, b: Point): Point {
