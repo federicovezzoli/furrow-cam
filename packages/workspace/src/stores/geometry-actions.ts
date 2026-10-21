@@ -11,12 +11,12 @@ import {
 } from "@furrow/cam-core";
 import {
   DRAWING_BORDER,
-  GEOMETRY_TOLERANCE,
   type Message,
   type Operation,
   type Point,
   type ProjectDocument,
-  Shape,
+  type Shape,
+  segmentIssue,
 } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
@@ -62,27 +62,58 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
 }
 
 /** The shapes of drawing `id`. */
-export function drawingShapes({ geometry }: ProjectDocument, id: string): Shape[] {
+export function drawingShapes(geometry: Shape[], id: string): Shape[] {
   return geometry.filter((shape) => shape.drawingId === id);
 }
 
 /** The bounding box of drawing `id`, or `null` if it has no shapes. */
-export function drawingBounds(document: ProjectDocument, id: string): Rect | null {
-  return shapesBounds(drawingShapes(document, id));
+export function drawingBounds(geometry: Shape[], id: string): Rect | null {
+  return shapesBounds(drawingShapes(geometry, id));
 }
 
 /** The operations that machine only drawing `id`, which go with it. */
 export function drawingOperations(document: ProjectDocument, id: string): Operation[] {
-  const shapeIds = new Set(drawingShapes(document, id).map((shape) => shape.id));
+  const shapeIds = new Set(drawingShapes(document.geometry, id).map((shape) => shape.id));
   return document.operations.filter(
     ({ targets }) => targets.length > 0 && targets.every(({ shapeId }) => shapeIds.has(shapeId)),
   );
 }
 
-/** Whether a tab at `position` lies on one of `loops` (from `closedLoops`): tabs are placed on them. */
-function onLoops(loops: Point[][], position: Point): boolean {
-  const nearest = nearestOnLoops(loops, position);
-  return nearest !== null && nearest.distance <= GEOMETRY_TOLERANCE;
+/**
+ * Which tab positions of each profile targeting drawing `id` belong to it,
+ * by operation id: those nearer its paths than the profile's other targets'
+ * (ADR-0055). Tabs are placed on the paths, but a tolerance can't tell after
+ * a scale moves them off the new flattening; a tie, coincident shapes of two
+ * drawings, stays with the other drawing.
+ */
+function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean[]> {
+  const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
+  const tabs = new Map<string, boolean[]>();
+  for (const operation of document.operations) {
+    if (operation.type !== "profile" || !operation.params.tabs) continue;
+    const targeted = operation.targets.flatMap(({ shapeId }) => shapes.get(shapeId) ?? []);
+    const mine = closedLoops(targeted.filter((shape) => shape.drawingId === id));
+    if (mine.length === 0) continue;
+    const others = closedLoops(targeted.filter((shape) => shape.drawingId !== id));
+    tabs.set(
+      operation.id,
+      operation.params.tabs.positions.map((position) => {
+        const near = nearestOnLoops(mine, position);
+        const other = nearestOnLoops(others, position);
+        return near !== null && (other === null || near.distance < other.distance);
+      }),
+    );
+  }
+  return tabs;
+}
+
+/** Whether a segment of `shapes` has no length, or an arc no radius (`segmentIssue`). */
+function degenerate(shapes: Shape[]): boolean {
+  return shapes.some(({ paths }) =>
+    paths.some(({ start, segments }) =>
+      segments.some((segment, i) => segmentIssue(segments[i - 1]?.to ?? start, segment) !== null),
+    ),
+  );
 }
 
 const TOO_SMALL: Message = { code: "workspace.drawingTooSmall" };
@@ -102,25 +133,24 @@ function scaleDrawing(
   to: Point,
 ): ActionResult {
   const { document } = store.getState();
-  const shapes = drawingShapes(document, id);
+  const shapes = drawingShapes(document.geometry, id);
   if (shapes.length === 0 || (scale === 1 && from[0] === to[0] && from[1] === to[1])) {
     return { ok: true };
   }
   const scaled = scaleShapes(shapes, scale, from, to);
-  if (!scaled.every((shape) => Shape.safeParse(shape).success)) {
-    return { ok: false, error: TOO_SMALL };
-  }
+  if (degenerate(scaled)) return { ok: false, error: TOO_SMALL };
   const byId = new Map(scaled.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
-  const loops = closedLoops(shapes);
+  const tabs = drawingTabs(document, id);
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
     for (const operation of draft.operations) {
-      if (operation.type !== "profile" || !operation.params.tabs) continue;
+      const moved = tabs.get(operation.id);
+      if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
       const { positions } = operation.params.tabs;
       positions.forEach((position, i) => {
-        if (onLoops(loops, position)) positions[i] = scalePoint(position, scale, from, to);
+        if (moved[i]) positions[i] = scalePoint(position, scale, from, to);
       });
     }
   });
@@ -139,7 +169,7 @@ export function setDrawingSize(
   value: number,
 ): ActionResult {
   const { document } = store.getState();
-  const bounds = drawingBounds(document, id);
+  const bounds = drawingBounds(document.geometry, id);
   if (!bounds) return { ok: true };
   const i = axis === "width" ? 0 : 1;
   const extent = (bounds.max[i] as number) - (bounds.min[i] as number);
@@ -155,7 +185,7 @@ export function setDrawingSize(
 export function fitDrawingToStock(store: DocumentStore, id: string): ActionResult {
   const { document } = store.getState();
   const drawing = document.drawings.find((d) => d.id === id);
-  const bounds = drawingBounds(document, id);
+  const bounds = drawingBounds(document.geometry, id);
   if (!drawing || !bounds) return { ok: true };
   const fit = drawingFit(bounds, document.stock, modelAnchor(document.stock), drawing.border);
   if (!fit) return { ok: true };
@@ -177,7 +207,7 @@ export function setDrawingBorder(store: DocumentStore, id: string, border: numbe
  * (ADR-0055).
  */
 export function removeDrawing(store: DocumentStore, id: string) {
-  const loops = closedLoops(drawingShapes(store.getState().document, id));
+  const ownTabs = drawingTabs(store.getState().document, id);
   store.getState().change("removeDrawing", (draft) => {
     const index = draft.drawings.findIndex((drawing) => drawing.id === id);
     if (index === -1) return;
@@ -190,10 +220,9 @@ export function removeDrawing(store: DocumentStore, id: string) {
       const targets = operation.targets.filter(({ shapeId }) => !removed.has(shapeId));
       if (targets.length === operation.targets.length) return true;
       operation.targets = targets;
-      if (operation.type === "profile" && operation.params.tabs) {
-        const { tabs } = operation.params;
-        tabs.positions = tabs.positions.filter((position) => !onLoops(loops, position));
-      }
+      const gone = ownTabs.get(operation.id);
+      const tabs = operation.type === "profile" ? operation.params.tabs : null;
+      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone[i]);
       return targets.length > 0;
     });
   });

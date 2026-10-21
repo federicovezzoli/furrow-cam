@@ -1,7 +1,15 @@
-import { anchorPoint, importDxf, importSvg, translateShape } from "@furrow/cam-core";
-import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
+import {
+  anchorPoint,
+  closedLoops,
+  importDxf,
+  importSvg,
+  nearestOnLoops,
+  translateShape,
+} from "@furrow/cam-core";
+import { createProjectDocument, type Point, ProjectDocument, StockAnchor } from "@furrow/document";
 import {
   CIRCLE_ID,
+  circle,
   DRAWING_ID,
   fullDocument,
   model,
@@ -215,7 +223,7 @@ describe("drawing size", () => {
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[200, 0]]);
   });
   const size = (s: ReturnType<typeof store>) => {
-    const bounds = drawingBounds(s.getState().document, DRAWING_ID);
+    const bounds = drawingBounds(s.getState().document.geometry, DRAWING_ID);
     if (!bounds) throw new Error("no drawing");
     return { bounds, width: bounds.max[0] - bounds.min[0], height: bounds.max[1] - bounds.min[1] };
   };
@@ -270,6 +278,66 @@ describe("drawing size", () => {
     expect(height).toBeCloseTo(160, 6);
     expect(width).toBeLessThanOrEqual(260);
     expect(s.getState().past).toHaveLength(2);
+  });
+
+  /** Profile 0 cut down to `targets`, with tabs at `positions`. */
+  function withProfile(
+    s: ReturnType<typeof store>,
+    targets: { shapeId: string; paths: null }[],
+    positions: Point[],
+  ) {
+    s.getState().change("setup", (draft) => {
+      const [profile] = draft.operations;
+      if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("fixture");
+      profile.targets = targets;
+      profile.params.tabs.positions = positions;
+    });
+  }
+  const tabsOf = (s: ReturnType<typeof store>) => {
+    const [profile] = s.getState().document.operations;
+    return profile?.type === "profile" ? profile.params.tabs?.positions : undefined;
+  };
+  /** Moves the other drawing's square onto this one's. */
+  const overlap = (s: ReturnType<typeof store>) =>
+    s.getState().change("overlap", (draft) => {
+      const copy = draft.geometry.find((shape) => shape.id === OTHER_SQUARE);
+      if (copy) copy.paths = square.paths;
+    });
+
+  it("leaves the tabs of a profile on another drawing, even where they overlap", () => {
+    const s = store();
+    overlap(s);
+    withProfile(s, [{ shapeId: OTHER_SQUARE, paths: null }], [[50, 0]]);
+    setDrawingSize(s, DRAWING_ID, "width", 300);
+    expect(tabsOf(s)).toEqual([[50, 0]]);
+  });
+
+  it("keeps a tab on an arc with its drawing over several resizes", () => {
+    const s = store();
+    const tab = nearestOnLoops(closedLoops([circle]), [70, 50])?.point;
+    if (!tab) throw new Error("fixture");
+    withProfile(s, [{ shapeId: CIRCLE_ID, paths: null }], [tab]);
+    const from = anchorPoint(size(s).bounds, "bottom_left");
+    setDrawingSize(s, DRAWING_ID, "width", size(s).width * 3);
+    setDrawingSize(s, DRAWING_ID, "width", size(s).width * 3);
+    const [moved] = tabsOf(s) ?? [];
+    expect(moved?.[0]).toBeCloseTo(from[0] + (tab[0] - from[0]) * 9, 6);
+    expect(moved?.[1]).toBeCloseTo(from[1] + (tab[1] - from[1]) * 9, 6);
+  });
+
+  it("keeps the tabs on a coincident shape of another drawing when one is removed", () => {
+    const s = store();
+    overlap(s);
+    withProfile(
+      s,
+      [
+        { shapeId: SQUARE_ID, paths: null },
+        { shapeId: OTHER_SQUARE, paths: null },
+      ],
+      [[50, 0]],
+    );
+    removeDrawing(s, DRAWING_ID);
+    expect(tabsOf(s)).toEqual([[50, 0]]);
   });
 
   it("counts the operations that only machine it", () => {

@@ -225,6 +225,12 @@ export function modelBorder(
   return Math.min(border, Math.min(width, height) / 4);
 }
 
+/** The stock less its `modelBorder` for `border` on every side, what *Fit to stock* fits into. */
+export function stockInset(stock: Pick<Stock, "width" | "height">, border: number): Rect {
+  const gap = modelBorder(stock, border);
+  return { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+}
+
 /**
  * The scale and position that fit a mesh rotated by `rotation` inside the
  * stock less its `modelBorder` for `border`, aligned to that inset rectangle
@@ -237,8 +243,7 @@ export function stockFit(
   anchor: StockAnchor,
   border = MODEL_BORDER,
 ): Pick<ModelPlacement, "scale" | "position"> {
-  const gap = modelBorder(stock, border);
-  const inset: Rect = { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+  const inset = stockInset(stock, border);
   const scale = fitScale(bounds, rotation, {
     width: inset.max[0] - inset.min[0],
     height: inset.max[1] - inset.min[1],
@@ -262,8 +267,7 @@ export function drawingFit(
   anchor: StockAnchor,
   border: number,
 ): { scale: number; from: Point; to: Point } | null {
-  const gap = modelBorder(stock, border);
-  const inset: Rect = { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+  const inset = stockInset(stock, border);
   const width = bounds.max[0] - bounds.min[0];
   const height = bounds.max[1] - bounds.min[1];
   const scale = Math.min(
