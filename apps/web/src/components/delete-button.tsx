@@ -3,6 +3,7 @@
 import { Button } from "@furrow/ui/components/ui/button";
 import { Trash2Icon } from "lucide-react";
 import { useTransition } from "react";
+import { useTranslations } from "use-intl";
 import type { ActionResult } from "@/lib/form-data";
 
 /** Asks `confirmText` before calling `action`, a server action bound to the item to delete. */
@@ -15,6 +16,7 @@ export function DeleteButton({
   confirmText: string;
   action: () => Promise<ActionResult>;
 }) {
+  const t = useTranslations("Common");
   const [pending, startTransition] = useTransition();
 
   function onClick() {
@@ -31,8 +33,8 @@ export function DeleteButton({
       size="icon-sm"
       onClick={onClick}
       disabled={pending}
-      aria-label={`Delete ${name}`}
-      title="Delete"
+      aria-label={t("deleteLabel", { name })}
+      title={t("delete")}
     >
       <Trash2Icon />
     </Button>

@@ -7,13 +7,15 @@ import {
   TableHeader,
   TableRow,
 } from "@furrow/ui/components/ui/table";
+import type { Translator } from "@furrow/ui/lib/i18n";
 import { BitTypeIcon } from "@furrow/workspace/tools/components/bit-type-icon";
 import { CUT_DIRECTION_LABELS, TOOL_TYPE_LABELS } from "@furrow/workspace/tools/lib/labels";
 import { PencilIcon } from "lucide-react";
 import { DeleteButton } from "@/components/delete-button";
-import { formatNumber, Unit } from "@/components/table-format";
+import { numberFormatter, Unit } from "@/components/table-format";
 import { deleteTool } from "@/features/tools/actions";
 import type { Tool as ToolRow } from "@/generated/prisma/client";
+import { getLocale, getTranslator } from "@/lib/locale";
 import { OpenToolButton } from "./library-dialog";
 import { SetDefaultButton } from "./set-default-button";
 
@@ -22,13 +24,11 @@ function toolValues(row: ToolRow): Partial<Tool> {
   return Object.fromEntries(Tool.keyof().options.map((key) => [key, row[key]]));
 }
 
-export function ToolList({ tools }: { tools: ToolRow[] }) {
+export async function ToolList({ tools }: { tools: ToolRow[] }) {
+  const [t, locale] = await Promise.all([getTranslator(), getLocale()]);
+  const formatNumber = numberFormatter(locale);
   if (tools.length === 0) {
-    return (
-      <p className="rounded-lg border p-4 text-muted-foreground">
-        No bits yet. Add the bits you cut with, and pick them when you create operations.
-      </p>
-    );
+    return <p className="rounded-lg border p-4 text-muted-foreground">{t("Tools.empty")}</p>;
   }
 
   return (
@@ -37,45 +37,45 @@ export function ToolList({ tools }: { tools: ToolRow[] }) {
         <TableHeader>
           <TableRow className="[&>th]:h-auto [&>th]:py-2 [&>th]:align-bottom">
             <TableHead className="w-0 pl-2">
-              <span className="sr-only">Default</span>
+              <span className="sr-only">{t("Tools.default")}</span>
             </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>{t("Tools.name")}</TableHead>
+            <TableHead>{t("Tools.type")}</TableHead>
             <TableHead className="text-right">
               Ø<Unit>mm</Unit>
             </TableHead>
-            <TableHead className="text-right">Flutes</TableHead>
+            <TableHead className="text-right">{t("Tools.flutes")}</TableHead>
             <TableHead className="text-right">
-              Flute length
+              {t("Tools.fluteLength")}
               <Unit>mm</Unit>
             </TableHead>
-            <TableHead>Cut / angle</TableHead>
+            <TableHead>{t("Tools.cutAngle")}</TableHead>
             <TableHead className="text-right">
-              Spindle
+              {t("Tools.spindle")}
               <Unit>RPM</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Feed
+              {t("Tools.feed")}
               <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Plunge
+              {t("Tools.plunge")}
               <Unit>mm/min</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Plunge angle
+              {t("Tools.plungeAngle")}
               <Unit>°</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Step down
+              {t("Tools.stepDown")}
               <Unit>mm</Unit>
             </TableHead>
             <TableHead className="text-right">
-              Step over
+              {t("Tools.stepOver")}
               <Unit>mm</Unit>
             </TableHead>
             <TableHead className="pr-4">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t("Tools.actions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -111,9 +111,9 @@ export function ToolList({ tools }: { tools: ToolRow[] }) {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">{formatNumber(tool.diameter)}</TableCell>
-                <TableCell className="text-right">{tool.fluteCount}</TableCell>
+                <TableCell className="text-right">{formatNumber(tool.fluteCount)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.fluteLength)}</TableCell>
-                <TableCell>{describeCut(tool)}</TableCell>
+                <TableCell>{describeCut(tool, formatNumber, t)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.spindleRpm)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.feedRate)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
@@ -130,15 +130,15 @@ export function ToolList({ tools }: { tools: ToolRow[] }) {
                       values={values}
                       variant="ghost"
                       size="icon-sm"
-                      title="Edit"
-                      aria-label={`Edit ${tool.name}`}
+                      title={t("Tools.edit")}
+                      aria-label={t("Tools.editLabel", { name: tool.name })}
                     >
                       <PencilIcon />
                     </OpenToolButton>
                     <DeleteButton
                       name={tool.name}
                       // Projects keep their own snapshot of the tool, so deleting it is safe (ADR-0003).
-                      confirmText={`Delete "${tool.name}"? Existing projects keep their copy of this bit.`}
+                      confirmText={t("Tools.deleteConfirm", { name: tool.name })}
                       action={deleteTool.bind(null, tool.id)}
                     />
                   </div>
@@ -153,9 +153,11 @@ export function ToolList({ tools }: { tools: ToolRow[] }) {
 }
 
 /** Cut direction for end mills, angle and tip for V-bits, nothing for drills. */
-function describeCut(tool: Tool): string {
+function describeCut(tool: Tool, formatNumber: (value: number) => string, t: Translator): string {
   if (tool.cutDirection) return CUT_DIRECTION_LABELS[tool.cutDirection];
   if (tool.vAngle === null) return "—";
-  const tip = tool.tipDiameter ? ` · ${formatNumber(tool.tipDiameter)} mm tip` : "";
+  const tip = tool.tipDiameter
+    ? ` · ${t("Tools.tip", { size: formatNumber(tool.tipDiameter) })}`
+    : "";
   return `${formatNumber(tool.vAngle)}°${tip}`;
 }

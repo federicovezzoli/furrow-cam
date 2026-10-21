@@ -4,6 +4,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { EXPORT_FAILED, exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
+import { useTranslations } from "use-intl";
 import { loadMesh } from "@/features/assets/lib/mesh-cache";
 import { loadProject } from "@/features/projects/actions";
 
@@ -13,6 +14,7 @@ import { loadProject } from "@/features/projects/actions";
  * exports its open document with its own button instead.
  */
 export function ExportButton({ id, name }: { id: string; name: string }) {
+  const t = useTranslations("Projects");
   const [pending, startTransition] = useTransition();
 
   function onClick() {
@@ -44,8 +46,8 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       size="icon-sm"
       onClick={onClick}
       disabled={pending}
-      aria-label={`Export ${name}`}
-      title="Export file"
+      aria-label={t("exportLabel", { name })}
+      title={t("exportFile")}
     >
       <DownloadIcon />
     </Button>

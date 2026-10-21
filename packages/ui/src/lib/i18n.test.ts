@@ -1,3 +1,4 @@
+import { createTranslator } from "use-intl/core";
 import { describe, expect, it } from "vitest";
 import { CATALOGS, type Catalog, messagesFor, translator } from "./i18n";
 import { LOCALES, matchLocale, parseAcceptLanguage } from "./locales";
@@ -12,6 +13,32 @@ describe("catalogs", () => {
   const english = keys(CATALOGS.en).sort();
   it.each(LOCALES.filter((locale) => locale !== "en"))("%s has every English key", (locale) => {
     expect(keys(CATALOGS[locale]).sort()).toEqual(english);
+  });
+});
+
+describe("every message", () => {
+  it.each(LOCALES)("formats in %s, with its tags and arguments", (locale) => {
+    const errors: string[] = [];
+    const t = createTranslator({
+      locale,
+      messages: CATALOGS[locale],
+      onError: (error) => errors.push(error.message),
+    });
+    for (const key of keys(CATALOGS[locale])) {
+      const raw = key
+        .split(".")
+        .reduce<Catalog | string>((node, part) => (node as Catalog)[part] ?? "", CATALOGS[locale]);
+      // Every tag wraps its text and any argument accepts 1: what's left is broken syntax.
+      const tags = [...String(raw).matchAll(/<(\w+)>/g)].map((match) => [
+        match[1],
+        (chunks: string) => `[${chunks}]`,
+      ]);
+      const args = [...String(raw).matchAll(/\{(\w+)/g)].map((match) => [match[1], 1]);
+      const values = Object.fromEntries([...args, ...tags]);
+      const text = t.markup(key as never, values as never);
+      if (/[<>{}]/.test(text)) errors.push(`${key}: ${text}`);
+    }
+    expect(errors).toEqual([]);
   });
 });
 
@@ -61,5 +88,12 @@ describe("parseAcceptLanguage", () => {
   it("drops q=0, wildcards and empty headers", () => {
     expect(parseAcceptLanguage("it;q=0, *, en")).toEqual(["en"]);
     expect(parseAcceptLanguage(null)).toEqual([]);
+  });
+});
+
+describe("translator", () => {
+  it("is built once per language", () => {
+    expect(translator("it")).toBe(translator("it"));
+    expect(translator("it")).not.toBe(translator("de"));
   });
 });

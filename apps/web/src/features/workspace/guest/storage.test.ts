@@ -1,7 +1,11 @@
+import { translator } from "@furrow/ui/lib/i18n";
 import "fake-indexeddb/auto";
 import { CURRENT_SCHEMA_VERSION, createProjectDocument } from "@furrow/document";
 import { forceCloseDatabase, IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Tests run without a document, so messages are in English.
+const STORAGE_UNAVAILABLE = translator("en")("Guest.storageUnavailable");
 
 let storage: typeof import("./storage");
 
@@ -208,9 +212,9 @@ describe("unavailable storage", () => {
         throw new DOMException("blocked", "SecurityError");
       },
     } as unknown as IDBFactory;
-    await expect(storage.listGuestProjects()).rejects.toThrow(storage.STORAGE_UNAVAILABLE);
+    await expect(storage.listGuestProjects()).rejects.toThrow(STORAGE_UNAVAILABLE);
     await expect(storage.saveGuestSettings(await settingsFallback())).rejects.toThrow(
-      storage.STORAGE_UNAVAILABLE,
+      STORAGE_UNAVAILABLE,
     );
   });
 
@@ -221,7 +225,7 @@ describe("unavailable storage", () => {
       },
     } as unknown as IDBFactory;
     expect(await storage.saveGuestProject("id", createProjectDocument(), new Date())).toEqual({
-      error: storage.STORAGE_UNAVAILABLE,
+      error: STORAGE_UNAVAILABLE,
     });
   });
 });

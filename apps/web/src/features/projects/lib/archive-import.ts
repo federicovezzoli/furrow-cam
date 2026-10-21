@@ -11,8 +11,9 @@ import { parseMesh } from "@furrow/workspace/lib/model-import";
 import { cacheMesh } from "@/features/assets/lib/mesh-cache";
 import { uploadMesh } from "@/features/assets/lib/meshes";
 import { deleteProject, saveProject, startArchiveImport } from "@/features/projects/actions";
+import { clientTranslator } from "@/lib/client-translator";
 
-const IMPORT_FAILED = "This file couldn't be imported. Check your connection and try again.";
+const importFailed = () => clientTranslator()("Projects.importFailedConnection");
 
 /**
  * Reads a `.furrow.zip` export; throws an `Error` for the user if it can't be
@@ -27,7 +28,7 @@ export async function readArchive(file: File, limits: StlLimits): Promise<Projec
   } catch (error) {
     if (error instanceof ProjectArchiveError) throw error;
     console.error(error);
-    throw new Error("This file couldn't be read.");
+    throw new Error(clientTranslator()("Projects.fileUnreadable"));
   }
 }
 
@@ -80,10 +81,11 @@ export async function importArchive(
       // A copy: the worker takes the buffer it is sent.
       const mesh = await parseMesh(bytes.slice().buffer, limits);
       // Checked when the archive was read; this only guards against a mix-up.
-      if (mesh.sha256 !== sha256) return { error: "A model in this file is damaged." };
+      if (mesh.sha256 !== sha256) return { error: clientTranslator()("Projects.modelDamaged") };
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "it couldn't be read.";
-      return { error: `A model in this file can't be imported: ${reason}` };
+      const t = clientTranslator();
+      const reason = error instanceof Error ? error.message : t("Projects.unreadableReason");
+      return { error: t("Projects.modelCantImport", { reason }) };
     }
   }
 
@@ -98,9 +100,9 @@ export async function importArchive(
       projectName,
     );
   } catch {
-    return { error: IMPORT_FAILED };
+    return { error: importFailed() };
   }
-  if (!started || !("projectId" in started)) return started ?? { error: IMPORT_FAILED };
+  if (!started || !("projectId" in started)) return started ?? { error: importFailed() };
   const { projectId, document, updatedAt } = started;
 
   const error = await finish(projectId, archive, document, updatedAt);
@@ -122,7 +124,7 @@ async function finish(
     for (const sha256 of new Set(document.models.map((model) => model.sha256))) {
       const bytes = archive.meshes.get(sha256);
       // The server checked that each model has its mesh.
-      if (!bytes) return IMPORT_FAILED;
+      if (!bytes) return importFailed();
       const blob = new Blob([bytes as Uint8Array<ArrayBuffer>]);
       const uploaded = await uploadMesh(projectId, sha256, blob);
       if (uploaded.error !== undefined) return uploaded.error;
@@ -132,6 +134,6 @@ async function finish(
     if (saved.error !== undefined) return saved.error;
   } catch (error) {
     console.error(error);
-    return IMPORT_FAILED;
+    return importFailed();
   }
 }

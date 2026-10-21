@@ -16,6 +16,17 @@ export function requestLocale(headers: Headers): Locale {
   return matchLocale(parseAcceptLanguage(headers.get("accept-language")));
 }
 
+/**
+ * The language in the browser, as `requestLocale` would pick it from this
+ * browser's request; English on the server.
+ */
+export function browserLocale(): Locale {
+  if (typeof document === "undefined") return "en";
+  const picked = document.cookie.match(PICKED)?.[1];
+  if (isLocale(picked)) return picked;
+  return matchLocale(navigator.languages);
+}
+
 /** Remembers `locale` for the next request. Browser only. */
 export function writeLocaleCookie(locale: Locale) {
   // biome-ignore lint/suspicious/noDocumentCookie: one cookie, written on a click; the Cookie Store API isn't in every browser yet.

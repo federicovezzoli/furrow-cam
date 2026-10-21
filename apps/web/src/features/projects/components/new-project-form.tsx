@@ -8,6 +8,7 @@ import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { track } from "@furrow/workspace/lib/telemetry";
 import { type FormEvent, useState, useTransition } from "react";
+import { useTranslations } from "use-intl";
 import type { MachineOption } from "@/features/machines/server";
 import { createProject, type ProjectFormErrors } from "@/features/projects/actions";
 
@@ -17,6 +18,7 @@ import { createProject, type ProjectFormErrors } from "@/features/projects/actio
  * is picked by default; with none, the form doesn't ask.
  */
 export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
+  const t = useTranslations("Projects");
   const [errors, setErrors] = useState<ProjectFormErrors>({});
   const [pending, startTransition] = useTransition();
 
@@ -37,12 +39,12 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
   return (
     <form onSubmit={onSubmit} className="grid gap-2" noValidate>
       <FormError message={errors.form ?? null} />
-      <Label htmlFor="name">New project</Label>
+      <Label htmlFor="name">{t("newProject")}</Label>
       <div className="flex max-w-xl flex-wrap gap-2">
         <Input
           id="name"
           name="name"
-          placeholder="Walnut cutting board"
+          placeholder={t("namePlaceholder")}
           className="w-auto min-w-48 flex-1"
           aria-invalid={errors.name ? true : undefined}
           aria-describedby={errors.name ? "name-error" : undefined}
@@ -52,11 +54,11 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
             id="machine"
             name="machine"
             defaultValue={machines.length === 1 ? machines[0]?.id : ""}
-            aria-label="Machine"
+            aria-label={t("machine")}
             aria-invalid={errors.machine ? true : undefined}
             aria-describedby={errors.machine ? "machine-error" : undefined}
           >
-            <NativeSelectOption value="">No machine yet</NativeSelectOption>
+            <NativeSelectOption value="">{t("noMachineYet")}</NativeSelectOption>
             {machines.map((machine) => (
               <NativeSelectOption key={machine.id} value={machine.id}>
                 {machine.name}
@@ -65,7 +67,7 @@ export function NewProjectForm({ machines }: { machines: MachineOption[] }) {
           </NativeSelect>
         )}
         <Button type="submit" disabled={pending}>
-          Create
+          {t("create")}
         </Button>
       </div>
       <FieldError id="name" error={errors.name} />

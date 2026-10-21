@@ -8,12 +8,14 @@ import {
   ProjectDocumentVersionError,
   parseProjectDocument,
 } from "@furrow/document";
+import type { Translator } from "@furrow/ui/lib/i18n";
 import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
 import { z } from "zod";
 import { getMachine, snapshotMachine } from "@/features/machines/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { getTranslator, translate } from "@/lib/locale";
 
 export type { VersionRow };
 
@@ -69,30 +71,29 @@ export async function getProject(
   if (!row) return null;
 
   const { document, ...project } = row;
-  return { ...project, ...parseStoredDocument(document, "This project can't be opened") };
+  return { ...project, ...parseStoredDocument(document, "cantOpen", await getTranslator()) };
 }
 
 /**
  * A stored document (a project's or a version's), upgraded to the current
- * schema version and validated, or why it can't be: `failure` starts the message.
+ * schema version and validated, or why it can't be, in `t`'s language:
+ * `failure` starts the message.
  */
 export function parseStoredDocument(
   json: unknown,
-  failure: string,
+  failure: "cantOpen" | "cantRestore" | "cantOpenVersion",
+  t: Translator,
 ): { document: ProjectDocument; error?: never } | { document?: never; error: string } {
+  const fail = (reason: string) => ({
+    error: t("Projects.failure", { failure: t(`Projects.${failure}`), reason }),
+  });
   try {
     return { document: parseProjectDocument(json) };
   } catch (error) {
-    if (error instanceof ProjectDocumentTooNewError) {
-      return { error: `${failure}: ${savedByNewerRelease(error)}` };
-    }
+    if (error instanceof ProjectDocumentTooNewError) return fail(savedByNewerRelease(error, t));
     // e.g. a missing migration.
-    if (error instanceof ProjectDocumentVersionError) {
-      return { error: `${failure}: ${error.message}.` };
-    }
-    if (error instanceof z.ZodError) {
-      return { error: `${failure}: its contents are invalid.` };
-    }
+    if (error instanceof ProjectDocumentVersionError) return fail(`${error.message}.`);
+    if (error instanceof z.ZodError) return fail(t("Projects.contentsInvalid"));
     throw error;
   }
 }
@@ -109,7 +110,7 @@ export function documentColumns(document: ProjectDocument) {
 const VersionLabel = z
   .string()
   .trim()
-  .max(VERSION_LABEL_MAX, `Must be at most ${VERSION_LABEL_MAX} characters`)
+  .max(VERSION_LABEL_MAX)
   .transform((label) => label || null);
 
 /** Reads a version label typed by the user: `null` when it's left blank. */
@@ -128,20 +129,25 @@ export async function listVersions(userId: string, projectId: string): Promise<V
     select: { id: true, label: true, schemaVersion: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
+  const t = await getTranslator();
   return rows.map(({ schemaVersion, ...version }) =>
     schemaVersion > CURRENT_SCHEMA_VERSION
       ? {
           ...version,
-          error: `This version can't be restored: ${savedByNewerRelease(
-            new ProjectDocumentTooNewError(schemaVersion, CURRENT_SCHEMA_VERSION),
-          )}`,
+          error: t("Projects.failure", {
+            failure: t("Projects.cantRestore"),
+            reason: savedByNewerRelease(
+              new ProjectDocumentTooNewError(schemaVersion, CURRENT_SCHEMA_VERSION),
+              t,
+            ),
+          }),
         }
       : version,
   );
 }
 
-function savedByNewerRelease(error: ProjectDocumentTooNewError) {
-  return `it was saved by a newer version of Furrow CAM (document version ${error.version}; this version reads up to ${error.supportedVersion}).`;
+function savedByNewerRelease(error: ProjectDocumentTooNewError, t: Translator) {
+  return t("Projects.savedByNewer", { version: error.version, supported: error.supportedVersion });
 }
 
 /** Validation issues shown for an invalid file; the rest are counted, not listed. */
@@ -153,8 +159,9 @@ const MAX_LISTED_ISSUES = 5;
  */
 export function parseProjectFile(
   contents: string,
+  t: Translator,
 ): { document: ProjectDocument; error?: never } | { error: string } {
-  const NOT_A_PROJECT = "This file isn't a Furrow CAM project.";
+  const NOT_A_PROJECT = t("Projects.notAProject");
   let json: unknown;
   try {
     json = JSON.parse(contents);
@@ -170,25 +177,25 @@ export function parseProjectFile(
     return { document: parseProjectDocument(json) };
   } catch (error) {
     if (error instanceof ProjectDocumentTooNewError) {
-      return { error: `This file can't be imported: ${savedByNewerRelease(error)}` };
+      return { error: t("Projects.fileCantImport", { reason: savedByNewerRelease(error, t) }) };
     }
     if (error instanceof ProjectDocumentVersionError) {
-      return { error: `This file can't be imported: ${error.message}.` };
+      return { error: t("Projects.fileCantImport", { reason: `${error.message}.` }) };
     }
     if (error instanceof z.ZodError) {
       const { issues } = error;
       const listed = z.prettifyError(new z.ZodError(issues.slice(0, MAX_LISTED_ISSUES)));
       const more = issues.length - MAX_LISTED_ISSUES;
-      return {
-        error: `This file isn't a valid Furrow CAM project: ${listed}${more > 0 ? `\n…and ${more} more problems.` : ""}`,
-      };
+      const issuesText =
+        more > 0 ? `${listed}\n${t("Projects.moreProblems", { count: more })}` : listed;
+      return { error: t("Projects.invalidProject", { issues: issuesText }) };
     }
     throw error;
   }
 }
 
 export const PROJECT_NAME_MAX = 100;
-const ProjectName = Name.max(PROJECT_NAME_MAX, `Must be at most ${PROJECT_NAME_MAX} characters`);
+const ProjectName = Name.max(PROJECT_NAME_MAX);
 
 /** Reads a name typed by the user; surrounding spaces are dropped. */
 export function parseName(value: unknown) {
@@ -204,13 +211,12 @@ export async function snapshotUserMachine(
   userId: string,
   id: unknown,
 ): Promise<{ machine: Machine; error?: never } | { error: string }> {
-  if (typeof id !== "string" || id === "") return { error: "Choose a machine." };
+  if (typeof id !== "string" || id === "")
+    return { error: await translate("Projects.chooseMachine") };
   const row = await getMachine(userId, id);
-  if (!row) return { error: "This machine no longer exists." };
+  if (!row) return { error: await translate("Projects.machineNotFound") };
   const machine = snapshotMachine(row);
-  if (!machine) {
-    return { error: "This machine's settings are no longer valid. Fix them on the Machines page." };
-  }
+  if (!machine) return { error: await translate("Projects.machineInvalid") };
   return { machine };
 }
 

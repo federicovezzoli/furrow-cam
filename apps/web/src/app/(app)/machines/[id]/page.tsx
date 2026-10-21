@@ -4,15 +4,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
+import { Loading } from "@/components/loading";
 import { requireUserId } from "@/features/auth/server";
 import { saveMachine } from "@/features/machines/actions";
 import { getMachine } from "@/features/machines/server";
+import { getTranslator } from "@/lib/locale";
 
-export default function EditMachinePage({ params }: PageProps<"/machines/[id]">) {
+export default async function EditMachinePage({ params }: PageProps<"/machines/[id]">) {
+  const t = await getTranslator();
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit machine</h1>
-      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("Machines.editMachine")}</h1>
+      <Suspense fallback={<Loading />}>
         <EditMachine params={params} />
       </Suspense>
     </main>
@@ -21,7 +24,7 @@ export default function EditMachinePage({ params }: PageProps<"/machines/[id]">)
 
 async function EditMachine({ params }: Pick<PageProps<"/machines/[id]">, "params">) {
   const { id } = await params;
-  const userId = await requireUserId();
+  const [userId, t] = await Promise.all([requireUserId(), getTranslator()]);
   const machine = z.uuid().safeParse(id).success ? await getMachine(userId, id) : null;
   if (!machine) notFound();
 
@@ -33,7 +36,7 @@ async function EditMachine({ params }: Pick<PageProps<"/machines/[id]">, "params
       id={machine.id}
       values={machineFields(machine)}
       save={saveMachine}
-      cancel={<Link href="/machines">Cancel</Link>}
+      cancel={<Link href="/machines">{t("Machines.cancel")}</Link>}
     />
   );
 }

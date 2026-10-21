@@ -6,6 +6,7 @@ import { ToolDialog } from "@furrow/workspace/tools/components/tool-dialog";
 import { ToolForm } from "@furrow/workspace/tools/components/tool-form";
 import type * as React from "react";
 import { createContext, useContext, useState } from "react";
+import { useTranslations } from "use-intl";
 import { saveTool } from "@/features/tools/lib/save-tool";
 
 /** The bit the library dialog edits; `id` is `null` for a new bit. */
@@ -18,6 +19,7 @@ const OpenToolContext = createContext<(editing: Editing) => void>(() => {});
  * Saving revalidates `/tools`, so the table behind the dialog refreshes on its own.
  */
 export function ToolDialogProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("Tools");
   const [open, setOpen] = useState(false);
   // Kept after closing, so the title doesn't change while the dialog animates out.
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -38,12 +40,8 @@ export function ToolDialogProvider({ children }: { children: React.ReactNode }) 
       <ToolDialog
         open={open}
         onClose={close}
-        title={isNew ? "New bit" : "Edit bit"}
-        description={
-          isNew
-            ? "Adds a bit to your library, to pick when you create operations."
-            : "Projects keep their own copy of this bit, so editing it here doesn't change them."
-        }
+        title={isNew ? t("newBit") : t("editBit")}
+        description={isNew ? t("newDescription") : t("editDescription")}
       >
         {editing && (
           <ToolForm

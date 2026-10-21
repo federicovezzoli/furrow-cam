@@ -14,12 +14,16 @@ import { track } from "@furrow/workspace/lib/telemetry";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { useTranslations } from "use-intl";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { authErrorMessage } from "@/features/auth/lib/auth-error";
 import { PASSWORD_MIN_LENGTH } from "@/features/auth/lib/password-policy";
 import { FormField } from "./form-field";
 import { PasswordField } from "./password-field";
 
 export function SignUpForm() {
+  const t = useTranslations("Auth");
+  const errors = useTranslations("AuthErrors");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -37,7 +41,7 @@ export function SignUpForm() {
       callbackURL: "/projects",
     });
     setPending(false);
-    if (error) return setError(error.message ?? "Sign-up failed.");
+    if (error) return setError(authErrorMessage(errors, error, "signUp"));
     track({ event: "signed_up" });
     router.push(`/check-email?email=${encodeURIComponent(email)}`);
   }
@@ -45,35 +49,37 @@ export function SignUpForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Save your projects, tools and machines.</CardDescription>
+        <CardTitle>{t("createAnAccount")}</CardTitle>
+        <CardDescription>{t("signUpDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
-          <FormField label="Email" id="email" type="email" autoComplete="email" />
+          <FormField label={t("email")} id="email" type="email" autoComplete="email" />
           <PasswordField
-            label="Password"
+            label={t("password")}
             id="password"
             autoComplete="new-password"
             minLength={PASSWORD_MIN_LENGTH}
           />
           <FormError message={error} />
           <Button type="submit" disabled={pending}>
-            {pending ? "Creating account…" : "Create account"}
+            {pending ? t("creatingAccount") : t("createAccount")}
           </Button>
           <p className="text-xs text-muted-foreground">
-            We only ask for your email address. Read the{" "}
-            <Link href="/privacy" className="underline">
-              privacy policy
-            </Link>
-            .
+            {t.rich("privacyNote", {
+              link: (chunks) => (
+                <Link href="/privacy" className="underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </p>
         </form>
       </CardContent>
       <CardFooter className="text-sm text-muted-foreground">
-        Already have an account?&nbsp;
+        {t("alreadyHaveAccount")}&nbsp;
         <Link href="/sign-in" className="underline">
-          Sign in
+          {t("signIn")}
         </Link>
       </CardFooter>
     </Card>

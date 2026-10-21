@@ -12,11 +12,15 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { useTranslations } from "use-intl";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { authErrorMessage } from "@/features/auth/lib/auth-error";
 import { FormField } from "./form-field";
 import { PasswordField } from "./password-field";
 
 export function SignInForm() {
+  const t = useTranslations("Auth");
+  const errors = useTranslations("AuthErrors");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -36,9 +40,9 @@ export function SignInForm() {
     setPending(false);
     if (error?.code === "EMAIL_NOT_VERIFIED") {
       setUnverifiedEmail(email);
-      return setError("Please verify your email first. Check your inbox for the link.");
+      return setError(t("verifyFirst"));
     }
-    if (error) return setError(error.message ?? "Sign-in failed.");
+    if (error) return setError(authErrorMessage(errors, error, "signIn"));
     router.push("/projects");
     router.refresh();
   }
@@ -52,29 +56,29 @@ export function SignInForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sign in</CardTitle>
+        <CardTitle>{t("signInTitle")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
-          <FormField label="Email" id="email" type="email" autoComplete="email" />
-          <PasswordField label="Password" id="password" autoComplete="current-password" />
+          <FormField label={t("email")} id="email" type="email" autoComplete="email" />
+          <PasswordField label={t("password")} id="password" autoComplete="current-password" />
           <FormError message={error} />
           {unverifiedEmail && (
             <Button type="button" variant="outline" onClick={resendVerification}>
-              Resend verification email
+              {t("resendVerification")}
             </Button>
           )}
           <Button type="submit" disabled={pending}>
-            {pending ? "Signing in…" : "Sign in"}
+            {pending ? t("signingIn") : t("signIn")}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex justify-between text-sm text-muted-foreground">
         <Link href="/forgot-password" className="underline">
-          Forgot password?
+          {t("forgotPassword")}
         </Link>
         <Link href="/sign-up" className="underline">
-          Create an account
+          {t("createAnAccount")}
         </Link>
       </CardFooter>
     </Card>

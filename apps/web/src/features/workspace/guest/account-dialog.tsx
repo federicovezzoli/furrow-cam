@@ -17,21 +17,14 @@ import { useDocumentStoreApi } from "@furrow/workspace/providers/workspace-store
 import { DownloadIcon, MonitorDownIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "use-intl";
 import { DESKTOP_DOWNLOADS_PAGE, desktopDownload } from "./desktop-download";
 
-/** What the dialog says each reason needs. */
-export const ACCOUNT_REASONS: Record<AccountReason, { title: string; description: string }> = {
-  "export-gcode": {
-    title: "G-code is made for your machine",
-    description:
-      "Exporting G-code needs your machine's work area, feeds and G-code dialect, which are saved in a free account or the desktop app.",
-  },
-  machine: {
-    title: "Your machine is saved in an account",
-    description:
-      "Machine profiles, from a preset or your own values, are saved in a free account or the desktop app, and used for every project made for them.",
-  },
-};
+/** The catalog keys of what the dialog says each reason needs. */
+const ACCOUNT_REASONS = {
+  "export-gcode": { title: "gcodeTitle", description: "gcodeDescription" },
+  machine: { title: "machineTitle", description: "machineDescription" },
+} as const satisfies Record<AccountReason, unknown>;
 
 /**
  * Explains what needs an account when a guest tries it (PRD-0008 G6), with
@@ -45,6 +38,7 @@ export function AccountDialog({
   reason: AccountReason | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("Guest");
   const { project, meshes } = useWorkspaceHost();
   const documentStore = useDocumentStoreApi();
   // Kept while closing, so the text doesn't change as the dialog animates out.
@@ -66,7 +60,7 @@ export function AccountDialog({
       await exportProjectFile(documentStore.getState().document, project.name, meshes.get);
       setError(null);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "This project couldn't be exported.");
+      setError(error instanceof Error ? error.message : t("cantExport"));
     } finally {
       setExporting(false);
     }
@@ -85,48 +79,48 @@ export function AccountDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{t(title)}</DialogTitle>
+          <DialogDescription>{t(description)}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 text-sm">
-          <p>After you sign in, you can bring the projects in this browser into your account.</p>
+          <p>{t("afterSignIn")}</p>
           <div className="flex flex-wrap gap-2">
             <Button asChild>
-              <Link href="/sign-up">Create a free account</Link>
+              <Link href="/sign-up">{t("createFreeAccount")}</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/sign-in">Sign in</Link>
+              <Link href="/sign-in">{t("signIn")}</Link>
             </Button>
           </div>
-          <p className="text-muted-foreground">
-            Or use the desktop app: no account, projects saved as files on your computer.
-          </p>
+          <p className="text-muted-foreground">{t("orDesktop")}</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
               <a href={download?.url ?? DESKTOP_DOWNLOADS_PAGE}>
                 <MonitorDownIcon />
-                {download ? `Download for ${download.system}` : "Download the desktop app"}
+                {download ? t("downloadFor", { system: download.system }) : t("downloadDesktop")}
               </a>
             </Button>
             <Button variant="outline" onClick={saveFile} disabled={exporting}>
               <DownloadIcon />
-              Save this project as a file
+              {t("saveAsFile")}
             </Button>
           </div>
           {download && (
             <p className="text-ui text-muted-foreground">
-              Other systems and Intel Macs:{" "}
-              <a href={DESKTOP_DOWNLOADS_PAGE} className="underline underline-offset-2">
-                all downloads
-              </a>
-              .
+              {t.rich("otherSystems", {
+                link: (chunks) => (
+                  <a href={DESKTOP_DOWNLOADS_PAGE} className="underline underline-offset-2">
+                    {chunks}
+                  </a>
+                ),
+              })}
             </p>
           )}
           <FormError message={error} />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Not now
+            {t("notNow")}
           </Button>
         </DialogFooter>
       </DialogContent>
