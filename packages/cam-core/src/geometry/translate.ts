@@ -11,7 +11,16 @@ export function translatePoint([x, y]: Point, [dx, dy]: Point): Point {
 }
 
 export function translatePath(path: Path, offset: Point): Path {
-  const move = (point: Point) => translatePoint(point, offset);
+  return mapPath(path, (point) => translatePoint(point, offset));
+}
+
+/**
+ * `path` with `move` applied to each of its points, arc centres and cubic
+ * control points included. Exact for moves that keep shapes' proportions
+ * and orientation (translations, uniform scaling), which keep an arc's
+ * direction.
+ */
+export function mapPath(path: Path, move: (point: Point) => Point): Path {
   return {
     start: move(path.start),
     segments: path.segments.map((segment): Segment => {

@@ -250,6 +250,31 @@ export function stockFit(
 }
 
 /**
+ * How to fit a drawing with `bounds` inside the stock less its `modelBorder`
+ * for `border`, aligned to that inset rectangle at `anchor` (ADR-0055): the
+ * scale, and the drawing's anchor point (`from`) with where it lands (`to`),
+ * for `scaleShapes`. A drawing with no width or no height fits by the other;
+ * `null` for a single point.
+ */
+export function drawingFit(
+  bounds: Rect,
+  stock: Pick<Stock, "width" | "height">,
+  anchor: StockAnchor,
+  border: number,
+): { scale: number; from: Point; to: Point } | null {
+  const gap = modelBorder(stock, border);
+  const inset: Rect = { min: [gap, gap], max: [stock.width - gap, stock.height - gap] };
+  const width = bounds.max[0] - bounds.min[0];
+  const height = bounds.max[1] - bounds.min[1];
+  const scale = Math.min(
+    width > 0 ? (inset.max[0] - inset.min[0]) / width : Infinity,
+    height > 0 ? (inset.max[1] - inset.min[1]) / height : Infinity,
+  );
+  if (!Number.isFinite(scale)) return null;
+  return { scale, from: anchorPoint(bounds, anchor), to: anchorPoint(inset, anchor) };
+}
+
+/**
  * The placement of a newly imported mesh: unrotated, fitted inside the stock
  * less `border` and aligned at `anchor` (`stockFit`), its depth what that
  * scale gives it, even deeper than the stock: a mesh is never stretched
