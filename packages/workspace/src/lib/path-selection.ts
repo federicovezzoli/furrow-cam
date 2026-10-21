@@ -13,6 +13,17 @@ export function selectionTargets(geometry: Shape[], selected: PathRef[]): Operat
   );
 }
 /**
+ * The drawing whose properties show (PRD-0009 D2): the one every selected
+ * path belongs to, or `null` when nothing is selected or the paths span
+ * several drawings.
+ */
+export function selectedDrawingId(geometry: Shape[], selected: PathRef[]): string | null {
+  const ids = new Set(selected.map(({ shapeId }) => shapeId));
+  const drawingIds = new Set(geometry.filter(({ id }) => ids.has(id)).map((s) => s.drawingId));
+  return drawingIds.size === 1 ? ([...drawingIds][0] as string) : null;
+}
+
+/**
  * How many shapes and paths `targets` cut, for `useTargetsLabel`: whole
  * shapes count as shapes, the paths of the others one by one.
  */

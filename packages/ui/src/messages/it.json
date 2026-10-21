@@ -701,7 +701,8 @@
       "noShapes": "Questo file non contiene forme da importare.",
       "stlImportOff": "L’importazione STL non è disponibile su questo server.",
       "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
-      "storedModelMismatch": "Il modello salvato non corrisponde al suo file."
+      "storedModelMismatch": "Il modello salvato non corrisponde al suo file.",
+      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore."
     }
   },
   "Operation": {
@@ -1046,7 +1047,8 @@
     "exportedWithWarnings": "Il G-code è stato esportato con degli avvisi:",
     "exportGcode": "Esporta G-code",
     "allProjects": "Tutti i progetti",
-    "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle."
+    "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle.",
+    "drawingProperties": "Proprietà del disegno"
   },
   "BugReport": {
     "report": "Segnala un bug",
@@ -1181,6 +1183,21 @@
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del modello, misurato dallo zero. Spostarlo non cambia il bordo che lascia <em>Adatta al grezzo</em>.",
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lo lavora} other {le # operazioni che lo lavorano}}",
     "remove": "Rimuovi il modello"
+  },
+  "Drawing": {
+    "closeLabel": "Chiudi le proprietà del disegno",
+    "close": "Chiudi",
+    "untitled": "Disegno",
+    "size": "Dimensioni",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "border": "Bordo",
+    "borderNote": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il disegno.",
+    "borderCapped": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il disegno. Su questo grezzo lascia {size}, un quarto del suo lato minore.",
+    "fitTitle": "Scala il disegno per farlo stare nel grezzo, lasciando il bordo su ogni lato",
+    "fit": "Adatta al grezzo",
+    "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lavora solo lui} other {le # operazioni che lavorano solo lui}}",
+    "remove": "Rimuovi il disegno"
   },
   "Import": {
     "units": {

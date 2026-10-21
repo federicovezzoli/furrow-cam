@@ -1,7 +1,7 @@
 import type { Path, Shape } from "@furrow/document";
 import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { selectionCounts, selectionTargets } from "./path-selection";
+import { selectedDrawingId, selectionCounts, selectionTargets } from "./path-selection";
 
 const point = (x: number): Path => ({ start: [x, 0], segments: [], closed: false });
 const a: Shape = {
@@ -54,5 +54,35 @@ describe("selectionCounts", () => {
         { shapeId: "b", paths: null },
       ]),
     ).toEqual({ shapes: 1, paths: 2 });
+  });
+});
+
+describe("selectedDrawingId", () => {
+  const c: Shape = { ...b, id: "c", drawingId: "other" };
+
+  it("is the drawing every selected path belongs to", () => {
+    expect(
+      selectedDrawingId(
+        [a, b, c],
+        [
+          { shapeId: "a", path: 1 },
+          { shapeId: "b", path: 0 },
+        ],
+      ),
+    ).toBe(DRAWING_ID);
+    expect(selectedDrawingId([a, b, c], [{ shapeId: "c", path: 0 }])).toBe("other");
+  });
+
+  it("is null for no selection, or paths of several drawings", () => {
+    expect(selectedDrawingId([a, b, c], [])).toBeNull();
+    expect(
+      selectedDrawingId(
+        [a, b, c],
+        [
+          { shapeId: "a", path: 0 },
+          { shapeId: "c", path: 0 },
+        ],
+      ),
+    ).toBeNull();
   });
 });

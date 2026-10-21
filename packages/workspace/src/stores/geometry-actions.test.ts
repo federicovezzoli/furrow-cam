@@ -1,4 +1,4 @@
-import { anchorPoint, importDxf, importSvg } from "@furrow/cam-core";
+import { anchorPoint, importDxf, importSvg, translateShape } from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
 import {
   CIRCLE_ID,
@@ -12,7 +12,16 @@ import {
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor } from "./drawing-test-utils";
-import { addImportedShapes, canImportModel, removeDrawing } from "./geometry-actions";
+import {
+  addImportedShapes,
+  canImportModel,
+  drawingBounds,
+  drawingOperations,
+  fitDrawingToStock,
+  removeDrawing,
+  setDrawingBorder,
+  setDrawingSize,
+} from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
 
 /** A DXF with a 20 mm circle centred on `(0, 0)`. */
@@ -174,5 +183,100 @@ describe("removeDrawing", () => {
     const store = createDocumentStore(document());
     removeDrawing(store, CIRCLE_ID);
     expect(store.getState().past).toHaveLength(0);
+  });
+});
+
+const OTHER_SQUARE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
+describe("drawing size", () => {
+  /** `fullDocument`, zeroed at the bottom-left, with a second drawing holding a copy of the square far off. */
+  function store() {
+    const doc = fullDocument();
+    doc.stock.xyOrigin = { anchor: "bottom_left" };
+    const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    doc.drawings.push({ id: other, name: "other.svg", border: 10 });
+    // The same square, 150 mm to the right.
+    const copy = translateShape({ ...square, id: OTHER_SQUARE, drawingId: other }, [150, 0]);
+    doc.geometry.push(copy);
+    return createDocumentStore(doc);
+  }
+
+  it("drops the tabs on a removed drawing's paths, keeping the others", () => {
+    const s = store();
+    s.getState().change("setup", (draft) => {
+      const [profile] = draft.operations;
+      if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("fixture");
+      profile.targets.push({ shapeId: OTHER_SQUARE, paths: null });
+      profile.params.tabs.positions.push([200, 0]);
+    });
+    removeDrawing(s, DRAWING_ID);
+    const [profile] = s.getState().document.operations;
+    expect(profile?.targets).toEqual([{ shapeId: OTHER_SQUARE, paths: null }]);
+    expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[200, 0]]);
+  });
+  const size = (s: ReturnType<typeof store>) => {
+    const bounds = drawingBounds(s.getState().document, DRAWING_ID);
+    if (!bounds) throw new Error("no drawing");
+    return { bounds, width: bounds.max[0] - bounds.min[0], height: bounds.max[1] - bounds.min[1] };
+  };
+
+  it("scales both ways about the anchor point in one undo step, moving the tabs on its paths", () => {
+    const s = store();
+    const before = size(s);
+    const otherBefore = s.getState().document.geometry[2];
+    expect(setDrawingSize(s, DRAWING_ID, "width", before.width * 2)).toEqual({ ok: true });
+    const after = size(s);
+    expect(after.width).toBeCloseTo(before.width * 2, 6);
+    expect(after.height).toBeCloseTo(before.height * 2, 6);
+    expect(after.bounds.min).toEqual(before.bounds.min);
+    expect(s.getState().past).toHaveLength(1);
+    // The tab at (50, 0) on the square's bottom edge doubles its distance from the corner.
+    const [profile] = s.getState().document.operations;
+    expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[100, 0]]);
+    expect(s.getState().document.geometry[2]).toBe(otherBefore);
+    expect(ProjectDocument.parse(s.getState().document)).toEqual(s.getState().document);
+  });
+
+  it("keeps the point at the zero's anchor in place", () => {
+    const s = store();
+    setXYAnchor(s, "top_right");
+    const corner = anchorPoint(size(s).bounds, "top_right");
+    setDrawingSize(s, DRAWING_ID, "height", 50);
+    // A cubic's top is found numerically, so it matches to a nanometre.
+    const [x, y] = anchorPoint(size(s).bounds, "top_right");
+    expect(x).toBeCloseTo(corner[0], 6);
+    expect(y).toBeCloseTo(corner[1], 6);
+    expect(size(s).height).toBeCloseTo(50, 6);
+  });
+
+  it("refuses a size that shrinks lines to nothing, changing nothing", () => {
+    const s = store();
+    const { document } = s.getState();
+    expect(setDrawingSize(s, DRAWING_ID, "width", 0.0001)).toEqual({
+      ok: false,
+      error: { code: "workspace.drawingTooSmall" },
+    });
+    expect(s.getState().document).toBe(document);
+  });
+
+  it("fits inside the stock less the border, at the anchor", () => {
+    const s = store();
+    setDrawingBorder(s, DRAWING_ID, 20);
+    fitDrawingToStock(s, DRAWING_ID);
+    const { bounds, width, height } = size(s);
+    expect(bounds.min[0]).toBeCloseTo(20, 6);
+    expect(bounds.min[1]).toBeCloseTo(20, 6);
+    // 300 × 200 stock less 20 mm: the height limits it.
+    expect(height).toBeCloseTo(160, 6);
+    expect(width).toBeLessThanOrEqual(260);
+    expect(s.getState().past).toHaveLength(2);
+  });
+
+  it("counts the operations that only machine it", () => {
+    const doc = store().getState().document;
+    expect(drawingOperations(doc, DRAWING_ID).map((operation) => operation.id)).toEqual([
+      doc.operations[0]?.id,
+    ]);
+    expect(drawingOperations(doc, "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e")).toEqual([]);
   });
 });
