@@ -150,16 +150,22 @@ export function GeometryImport() {
     }
   }
 
+  /** Only the import buttons to show: they keep to the corner, leaving the viewport free. */
+  const bare = !empty && !pending && !notice && !modelImport;
+
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 flex p-4",
-        empty ? "items-center justify-center" : "items-end justify-end p-2",
+        "pointer-events-none absolute flex",
+        empty ? "inset-0 items-center justify-center p-4" : "right-2 bottom-2 left-2 justify-end",
       )}
     >
       <div
         data-tour={empty ? "import" : undefined}
-        className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs"
+        className={cn(
+          "pointer-events-auto grid gap-2 rounded-md border bg-background/95 text-ui shadow-xs",
+          bare ? "p-1" : "w-full max-w-72 p-3",
+        )}
       >
         {empty && <p className="text-muted-foreground">{t("start")}</p>}
         <input

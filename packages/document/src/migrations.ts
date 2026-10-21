@@ -151,8 +151,9 @@ export const migrations: Readonly<Record<number, Migration>> = {
       doc.drawings = [];
       return doc;
     }
-    // Workers and Node both have Web Crypto; the package's lib types don't include it.
-    const id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+    // The first shape's id, so every read of a stored v16 document (and its
+    // versions) gives the drawing the same one.
+    const id = first.id;
     const name = typeof first.source === "string" && first.source !== "" ? first.source : "Drawing";
     doc.drawings = [{ id, name, border: 10 }];
     for (const shape of shapes) shape.drawingId = id;

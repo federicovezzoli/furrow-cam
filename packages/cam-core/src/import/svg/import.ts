@@ -158,8 +158,6 @@ export function importSvg(
   const dpi = options.dpi ?? DEFAULT_SVG_DPI;
   if (!(dpi > 0)) throw new RangeError("DPI must be positive");
   const createId = options.createId ?? defaultCreateId;
-  /** The file's shapes make one drawing (ADR-0055). */
-  const drawingId = defaultCreateId();
 
   const ids = new Map<string, XmlElement>();
   collectIds(root, ids);
@@ -167,7 +165,7 @@ export function importSvg(
 
   const skipped = new SkipCounter();
   const skip = (code: ImportMessageCode) => skipped.add(code);
-  const shapes: Shape[] = [];
+  const shapes: Omit<Shape, "drawingId">[] = [];
   const page = pageTransform(root, dpi);
   /** Elements being drawn, from the root down through `use` references, to catch cycles. */
   const drawing = new Set<XmlElement>();
@@ -314,7 +312,6 @@ export function importSvg(
         name: name || parent.name,
         layer: parent.layer,
         ...(options.fileName !== undefined && { source: options.fileName }),
-        drawingId,
         paths,
       });
     }
@@ -327,7 +324,9 @@ export function importSvg(
   if (drawn >= MAX_SVG_ELEMENTS) {
     warnings.push({ code: "svg.tooManyElements", values: { max: MAX_SVG_ELEMENTS } });
   }
-  return { shapes, warnings };
+  // The file's shapes make one drawing (ADR-0055), its id taken last so the shapes' ids stay as they were.
+  const drawingId = createId();
+  return { shapes: shapes.map((shape) => ({ ...shape, drawingId })), warnings };
 }
 
 /** The translation by an element's `x` and `y`, or `null` if they are invalid or relative. */

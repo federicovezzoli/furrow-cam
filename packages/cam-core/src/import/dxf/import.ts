@@ -376,10 +376,11 @@ function toShapes(pieces: Piece[], fileName: string | undefined, createId: () =>
     }
   }
   ordered.sort((a, b) => a.order - b.order);
-  /** The file's shapes make one drawing (ADR-0055). */
-  const drawingId = defaultCreateId();
-  return ordered.map(({ shape }) => ({
-    id: createId(),
+  const ids = ordered.map(() => createId());
+  // The file's shapes make one drawing (ADR-0055), its id taken last so the shapes' ids stay as they were.
+  const drawingId = createId();
+  return ordered.map(({ shape }, i) => ({
+    id: ids[i] as string,
     name: shape.name,
     layer: shape.layer,
     ...(fileName !== undefined && { source: fileName }),

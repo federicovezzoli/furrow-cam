@@ -269,7 +269,8 @@ describe("migrations", () => {
     for (const shape of v16.geometry) delete shape.drawingId;
     const migrated = parseProjectDocument(v16);
     const [drawing] = migrated.drawings;
-    expect(migrated.drawings).toEqual([{ id: expect.any(String), name: "part.dxf", border: 10 }]);
+    // The first shape's id, so every read gives the same one.
+    expect(migrated.drawings).toEqual([{ id: SQUARE_ID, name: "part.dxf", border: 10 }]);
     expect(migrated.geometry.map((shape) => shape.drawingId)).toEqual([drawing?.id, drawing?.id]);
     expect({ ...migrated, drawings: doc.drawings, geometry: doc.geometry }).toEqual(doc);
   });
