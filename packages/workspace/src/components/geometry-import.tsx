@@ -176,24 +176,24 @@ export function GeometryImport() {
       >
         {empty && <p className="text-muted-foreground">{t("start")}</p>}
         {drawings && (
-          <input
-            ref={input}
-            type="file"
-            accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
-            onChange={onChange}
-            className="sr-only"
-            tabIndex={-1}
-            aria-hidden
-          />
-        )}
-        {drawings && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
-              <UploadIcon />
-              {t("importDrawing")}
-            </Button>
-            {empty && <ModelImportButton />}
-          </div>
+          <>
+            <input
+              ref={input}
+              type="file"
+              accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
+              onChange={onChange}
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+                <UploadIcon />
+                {t("importDrawing")}
+              </Button>
+              {empty && <ModelImportButton />}
+            </div>
+          </>
         )}
         {empty && !meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
 

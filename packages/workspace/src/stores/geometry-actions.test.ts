@@ -99,6 +99,17 @@ describe("addImportedShapes", () => {
     expect(store.getState().document.drawings).toHaveLength(1);
   });
 
+  it("adds more shapes than a function call takes arguments, as one undo step", () => {
+    const store = storeAt("bottom_left");
+    const [hole] = importDxf(DXF).shapes;
+    if (!hole) throw new Error("fixture");
+    const shapes = Array.from({ length: 150_000 }, (_, i) => ({ ...hole, id: String(i) }));
+    const before = store.getState().past.length;
+    expect(addImportedShapes(store, "importDxf", shapes)).toBe(true);
+    expect(store.getState().document.geometry).toHaveLength(150_000);
+    expect(store.getState().past).toHaveLength(before + 1);
+  });
+
   it("refuses a drawing in a project with an STL model, and a model once it has drawings", () => {
     const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
     const { document } = store.getState();

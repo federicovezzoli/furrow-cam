@@ -32,9 +32,11 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   const { anchor } = stock.xyOrigin;
   const placed = alignShapes(stock, shapes, anchor === "custom" ? "bottom_left" : anchor);
   const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
+  // One assignment, not a spread push: a file may hold more shapes than a call takes arguments.
+  const geometry = document.geometry.concat(placed);
   store.getState().change(name, (draft) => {
     draft.drawings.push(drawing);
-    draft.geometry.push(...placed);
+    draft.geometry = geometry;
   });
   return true;
 }
