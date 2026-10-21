@@ -47,6 +47,7 @@ export type SvgImportOptions = {
 };
 
 export type SvgImportResult = {
+  /** All in one new drawing, which `drawingId` names. */
   shapes: Shape[];
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
   warnings: ImportMessage[];
@@ -157,6 +158,8 @@ export function importSvg(
   const dpi = options.dpi ?? DEFAULT_SVG_DPI;
   if (!(dpi > 0)) throw new RangeError("DPI must be positive");
   const createId = options.createId ?? defaultCreateId;
+  /** The file's shapes make one drawing (ADR-0055). */
+  const drawingId = defaultCreateId();
 
   const ids = new Map<string, XmlElement>();
   collectIds(root, ids);
@@ -311,6 +314,7 @@ export function importSvg(
         name: name || parent.name,
         layer: parent.layer,
         ...(options.fileName !== undefined && { source: options.fileName }),
+        drawingId,
         paths,
       });
     }

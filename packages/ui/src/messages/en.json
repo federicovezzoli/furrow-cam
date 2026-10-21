@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "The touch-off pad must fit on the stock",
+      "duplicateDrawing": "Duplicate drawing id",
       "duplicateShape": "Duplicate shape id",
       "duplicateModel": "Duplicate model id",
       "duplicateOperation": "Duplicate operation id",
       "unknownModel": "Unknown model id",
+      "unknownDrawing": "Unknown drawing id",
+      "emptyDrawing": "A drawing needs at least one shape",
       "unknownShape": "Unknown shape id",
       "unknownPath": "Unknown path"
     },
@@ -695,7 +698,6 @@
       "modelUnreadable": "The model couldn't be read.",
       "importFailed": "This file couldn't be imported.",
       "noShapes": "This file has no shapes to import.",
-      "oneFile": "A project holds one imported file: an SVG or DXF drawing, or an STL model.",
       "stlImportOff": "STL import isn't available on this server.",
       "fileTooLarge": "This file is too large to import (the limit is {mb, number} MB).",
       "storedModelMismatch": "The stored model doesn't match its file."

@@ -77,6 +77,7 @@ export type DxfImportOptions = {
 };
 
 export type DxfImportResult = {
+  /** All in one new drawing, which `drawingId` names. */
   shapes: Shape[];
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
   warnings: ImportMessage[];
@@ -346,7 +347,7 @@ export function importDxf(
  * paths joined per layer, a chain taking its pieces' block name if they share one.
  */
 function toShapes(pieces: Piece[], fileName: string | undefined, createId: () => string): Shape[] {
-  const ordered: { order: number; shape: Omit<Shape, "id"> }[] = [];
+  const ordered: { order: number; shape: Pick<Shape, "name" | "layer" | "paths"> }[] = [];
   const open = new Map<string, number[]>();
   pieces.forEach((piece, index) => {
     const { path, layer, name } = piece;
@@ -375,11 +376,14 @@ function toShapes(pieces: Piece[], fileName: string | undefined, createId: () =>
     }
   }
   ordered.sort((a, b) => a.order - b.order);
+  /** The file's shapes make one drawing (ADR-0055). */
+  const drawingId = defaultCreateId();
   return ordered.map(({ shape }) => ({
     id: createId(),
     name: shape.name,
     layer: shape.layer,
     ...(fileName !== undefined && { source: fileName }),
+    drawingId,
     paths: shape.paths,
   }));
 }

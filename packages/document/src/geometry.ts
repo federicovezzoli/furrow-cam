@@ -104,6 +104,22 @@ export const Path = z
 export type Path = z.infer<typeof Path>;
 
 /**
+ * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and
+ * placed together. Its shapes name it with `drawingId`.
+ */
+export const Drawing = z.strictObject({
+  id: z.uuid(),
+  /** Name of the imported file. */
+  name: z.string(),
+  /** The border, in millimetres, that *Fit to stock* leaves around it, as a model's (ADR-0038). */
+  border: z.number().nonnegative(),
+});
+export type Drawing = z.infer<typeof Drawing>;
+
+/** The border a new drawing leaves around it when fitted to the stock, in millimetres. */
+export const DRAWING_BORDER = 10;
+
+/**
  * Imported geometry, in stock coordinates (ADR-0014): `(0, 0)` is the stock's
  * bottom-left corner whatever the work origin. `stockOffset` in
  * `@furrow/cam-core` converts to work coordinates. Importing, choosing an XY
@@ -117,6 +133,8 @@ export const Shape = z.strictObject({
   layer: z.string(),
   /** Name of the imported file. */
   source: z.string().optional(),
+  /** The drawing it belongs to (ADR-0055). */
+  drawingId: z.uuid(),
   paths: z.array(Path).min(1),
 });
 export type Shape = z.infer<typeof Shape>;

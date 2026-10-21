@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "La pastille de mise à zéro doit tenir sur le brut",
+      "duplicateDrawing": "Identifiant de dessin en double",
       "duplicateShape": "Identifiant de forme en double",
       "duplicateModel": "Identifiant de modèle en double",
       "duplicateOperation": "Identifiant d'opération en double",
       "unknownModel": "Identifiant de modèle inconnu",
+      "unknownDrawing": "Identifiant de dessin inconnu",
+      "emptyDrawing": "Un dessin doit contenir au moins une forme",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu"
     },
@@ -695,7 +698,6 @@
       "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
       "noShapes": "Ce fichier ne contient aucune forme à importer.",
-      "oneFile": "Un projet contient un seul fichier importé : un dessin SVG ou DXF, ou un modèle STL.",
       "stlImportOff": "L’import STL n’est pas disponible sur ce serveur.",
       "fileTooLarge": "Ce fichier est trop volumineux pour être importé (la limite est de {mb, number} Mo).",
       "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier."

@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "Die Antastplatte muss auf dem Rohteil liegen",
+      "duplicateDrawing": "Doppelte Zeichnungs-ID",
       "duplicateShape": "Doppelte Form-ID",
       "duplicateModel": "Doppelte Modell-ID",
       "duplicateOperation": "Doppelte Operations-ID",
       "unknownModel": "Unbekannte Modell-ID",
+      "unknownDrawing": "Unbekannte Zeichnungs-ID",
+      "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad"
     },
@@ -695,7 +698,6 @@
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
-      "oneFile": "Ein Projekt enthält eine importierte Datei: eine SVG- oder DXF-Zeichnung oder ein STL-Modell.",
       "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
       "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei."

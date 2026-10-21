@@ -1,4 +1,5 @@
 import type { Shape } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { translatePath, translatePoint, translateShape, translateShapes } from "./translate";
 
@@ -44,6 +45,7 @@ describe("translateShape", () => {
       id: "00000000-0000-4000-8000-000000000000",
       name: "hole",
       layer: "0",
+      drawingId: DRAWING_ID,
       source: "part.dxf",
       paths: [{ start: [5, 5], segments: [], closed: false }],
     };

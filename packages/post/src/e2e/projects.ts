@@ -10,6 +10,7 @@ import {
 } from "@furrow/cam-core";
 import {
   createProjectDocument,
+  DRAWING_BORDER,
   type Machine,
   MODEL_BORDER,
   type Model,
@@ -24,6 +25,7 @@ import {
 } from "@furrow/document";
 import {
   ballEndMill,
+  DRAWING_ID,
   drill,
   endMill,
   lowRider,
@@ -67,8 +69,12 @@ function ids(prefix: string): () => string {
  */
 function withShapes(doc: ProjectDocument, shapes: Shape[]): ProjectDocument {
   const { anchor } = doc.stock.xyOrigin;
+  const [first] = shapes;
   return {
     ...doc,
+    drawings: first
+      ? [{ id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER }]
+      : [],
     geometry: alignShapes(doc.stock, shapes, anchor === "custom" ? "bottom_left" : anchor),
   };
 }
@@ -115,7 +121,13 @@ function circle(center: Point, radius: number): Path {
  */
 function plate(): ProjectDocument {
   const id = ids("10000000");
-  const shape = (name: string, ...paths: Path[]): Shape => ({ id: id(), name, layer: "0", paths });
+  const shape = (name: string, ...paths: Path[]): Shape => ({
+    id: id(),
+    name,
+    layer: "0",
+    drawingId: DRAWING_ID,
+    paths,
+  });
   const outline = shape("Plate", rectangle([20, 20], 120, 80));
   const holes = shape("Holes", circle([40, 40], 3), circle([120, 40], 3), circle([80, 80], 3));
   const recess = shape("Recess", rectangle([60, 50], 40, 20));
@@ -149,6 +161,7 @@ function plate(): ProjectDocument {
       },
       shapeoko,
     ),
+    drawings: [{ id: DRAWING_ID, name: "Plate", border: DRAWING_BORDER }],
     geometry: [outline, holes, recess],
     operations: [
       {
