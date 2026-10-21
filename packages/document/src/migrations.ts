@@ -151,7 +151,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
       doc.drawings = [];
       return doc;
     }
-    const id = crypto.randomUUID();
+    // Workers and Node both have Web Crypto; the package's lib types don't include it.
+    const id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
     const name = typeof first.source === "string" && first.source !== "" ? first.source : "Drawing";
     doc.drawings = [{ id, name, border: 10 }];
     for (const shape of shapes) shape.drawingId = id;
