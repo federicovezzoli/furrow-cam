@@ -72,7 +72,13 @@ export function MachineForm({
   const ask = (name: RequiredPresetField) => asked.includes(name) && <AskedHint />;
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-8" noValidate>
+    <form
+      onSubmit={onSubmit}
+      // An edit after saving is unsaved again.
+      onChange={() => setSaved(false)}
+      className="grid gap-8"
+      noValidate
+    >
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field label={t("name")} {...field("name")} placeholder={t("namePlaceholder")} />
         <SelectField
