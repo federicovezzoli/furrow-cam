@@ -16,7 +16,7 @@ import {
   postSteps,
 } from "./post";
 import { type BlockLabel, type CustomBlock, customBlockWarnings } from "./read-back";
-import { fillPlaceholders, unfilledPlaceholders } from "./touch-off";
+import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "./touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
@@ -47,9 +47,10 @@ const MODES = "G21 G90 G94 G17";
  *   sender's probe macro or jogging can leave `G91` or `G20` set. It leaves
  *   the work offset (`G54`…) and any `G43.1` alone: the program never sets
  *   them, and a macro's `G43.1` may be how the new bit was zeroed. With a
- *   touch-off pad (ADR-0041), it rapids over the pad's centre before
- *   pausing, and before a custom tool-change block. A pad's own tool change
- *   (ADR-0043) replaces all of it, its placeholders filled in.
+ *   touch-off pad (ADR-0041), the pad's tool change (ADR-0043) replaces all
+ *   of it, its placeholders filled in: the project's own block, or without
+ *   one the block derived from the machine's (`suggestTouchOffToolChange`,
+ *   ADR-0056), the one the zero section shows.
  * - Each tool's cutter shape is written in a machine-readable comment
  *   (`toolShapeComment`, ADR-0042) when the cutter is in the spindle: for the
  *   first tool in the header, before the program-start block; at a tool
@@ -121,22 +122,17 @@ function postGrbl({ name, stock, machine, safeZ, operations }: PostInput): PostO
         out.forget();
         // Changing the bit stops the spindle, whatever the blocks write.
         speed = undefined;
-        if (pad?.toolChange) {
-          // The project's own tool change on the pad (ADR-0043) replaces it all.
-          custom("toolChangePad", pad.toolChange);
+        if (pad) {
+          // The project's own block, else the one derived from the machine's (ADR-0056).
+          const block = pad.toolChange ?? suggestTouchOffToolChange(machine?.toolChange ?? null);
+          custom("toolChangePad", block);
         } else if (machine?.toolChange) {
-          // Over the pad first, where Z is zeroed; the block may stop the spindle.
-          if (pad) {
-            out.rapid({ z: safeZ });
-            out.rapid({ x: pad.x, y: pad.y });
-          }
+          // The block may stop the spindle.
           custom("toolChange", machine.toolChange);
         } else {
           out.line("M5");
           out.rapid({ z: safeZ });
-          if (pad) out.rapid({ x: pad.x, y: pad.y });
-          const zero = pad ? "zero Z on the touch-off pad" : "zero Z again";
-          out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and ${zero}`)}`);
+          out.line(`M0 ${comment(`Change the bit to ${toolLabel(step.tool)} and zero Z again`)}`);
           out.line(MODES);
         }
         out.line(toolShapeComment(step.tool));

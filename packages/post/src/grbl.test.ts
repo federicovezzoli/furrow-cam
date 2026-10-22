@@ -12,7 +12,6 @@ import { describe, expect, it } from "vitest";
 import { formatNumber } from "./format";
 import { grbl, toolShapeComment } from "./grbl";
 import { type PostInput, postSteps } from "./post";
-import { suggestTouchOffToolChange } from "./touch-off";
 
 const stock: Stock = {
   width: 300,
@@ -334,7 +333,7 @@ describe("grbl", () => {
     ];
     const pad = { x: 7.5, y: 192.5, diameter: 15, toolChange: null };
 
-    it("move over the pad before pausing, measured from the zero", () => {
+    it("derive the tool change from the default pause, over the pad from the zero", () => {
       for (const [xyOrigin, at] of [
         [{ anchor: "bottom_left" }, "X7.5 Y192.5"],
         [{ anchor: "center" }, "X-142.5 Y92.5"],
@@ -348,7 +347,7 @@ describe("grbl", () => {
             "M5",
             "G0 Z5",
             `G0 ${at}`,
-            "M0 (Change the bit to 6 mm drill, 6.35 mm and zero Z on the touch-off pad)",
+            "M0 (Change the bit and zero Z on the touch-off pad)",
             "G21 G90 G94 G17",
             "(Furrow tool: type=drill diameter=6.35)",
           ].join("\n"),
@@ -359,7 +358,7 @@ describe("grbl", () => {
       }
     });
 
-    it("move over the pad before a custom tool-change block", () => {
+    it("derive the tool change from the machine's block, over the pad", () => {
       const { gcode } = post({
         operations,
         stock: { ...stock, touchOff: pad },
@@ -401,10 +400,19 @@ describe("grbl", () => {
       expect(gcode).not.toContain("Change the bit");
     });
 
-    it("rise to the safe Z the program is exported with, after Suggest", () => {
-      const toolChange = suggestTouchOffToolChange(null);
+    it("keep the tool over the pad through the machine block's own moves (ADR-0056)", () => {
+      const { gcode } = post({
+        operations,
+        stock: { ...stock, touchOff: pad },
+        machine: { ...machine, toolChange: "M5\nG0 Z20\nG0 X10 Y10\nG38.2 Z-50 F100" },
+      });
+      expect(gcode).toContain("M5\nG0 Z20\nG0 X7.5 Y192.5\nG38.2 Z-50 F100\nG21 G90 G94 G17");
+      expect(gcode).not.toContain("X10 Y10");
+    });
+
+    it("rise to the safe Z the program is exported with", () => {
       const exported = (safeZ: number) =>
-        post({ operations, safeZ, stock: { ...stock, touchOff: { ...pad, toolChange } } }).gcode;
+        post({ operations, safeZ, stock: { ...stock, touchOff: pad } }).gcode;
       expect(exported(5)).toContain("M5\nG0 Z5\nG0 X7.5 Y192.5\nM0");
       expect(exported(20)).toContain("M5\nG0 Z20\nG0 X7.5 Y192.5\nM0");
       expect(exported(20)).not.toContain("{safeZ}");

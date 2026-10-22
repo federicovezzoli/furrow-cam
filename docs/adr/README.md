@@ -70,3 +70,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0053](0053-touch-off-suggest-every-xy-move.md) | Touch-off Suggest keeps the tool on the pad through every kind of XY move | Proposed |
 | [0054](0054-interface-languages.md) | Interface languages with use-intl, picked from the browser or the system | Proposed |
 | [0055](0055-several-drawings-transformed-in-place.md) | A project holds several drawings, each transformed by rewriting its points | Proposed |
+| [0056](0056-touch-off-tool-change-shows-what-runs.md) | The touch-off pad's tool change is always a block, and the field shows it | Proposed |

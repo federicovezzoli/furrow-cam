@@ -1155,10 +1155,8 @@
     "padCentre": "Son centre, depuis le coin inférieur gauche du brut. La redimensionner garde le centre en place.",
     "padOff": "Une partie de la pastille dépasse du brut : il n’y a peut-être rien pour y remettre Z à zéro.",
     "padToolChange": "Changement d’outil sur la pastille",
-    "toolChangePlaceholder": "M5\nM0 (Changez la fraise)",
-    "padToolChangeHint": "S’exécute à chaque changement d’outil à la place de celui de la machine. <strong>Suggérer</strong> en écrit un à partir du changement d’outil de la machine, en passant au-dessus de la pastille ; <strong>Utiliser celui de la machine</strong> revient à celui de la machine, après un déplacement au-dessus de la pastille.",
-    "suggest": "Suggérer",
-    "useMachines": "Utiliser celui de la machine"
+    "padToolChangeHint": "S’exécute à chaque changement d’outil.",
+    "reset": "Réinitialiser"
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",

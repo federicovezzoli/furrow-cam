@@ -1155,10 +1155,8 @@
     "padCentre": "Il suo centro, dall’angolo in basso a sinistra del grezzo. Ridimensionarlo lascia il centro dov’è.",
     "padOff": "Una parte del tampone è fuori dal grezzo, quindi lì potrebbe non esserci niente su cui azzerare Z.",
     "padToolChange": "Cambio utensile sul tampone",
-    "toolChangePlaceholder": "M5\nM0 (Cambia la fresa)",
-    "padToolChangeHint": "Viene eseguito a ogni cambio utensile al posto di quello della macchina. <strong>Suggerisci</strong> ne scrive uno dal cambio utensile della macchina, spostandosi sul tampone; <strong>Usa quello della macchina</strong> torna a quello della macchina, dopo uno spostamento sul tampone.",
-    "suggest": "Suggerisci",
-    "useMachines": "Usa quello della macchina"
+    "padToolChangeHint": "Viene eseguito a ogni cambio utensile.",
+    "reset": "Ripristina"
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",
