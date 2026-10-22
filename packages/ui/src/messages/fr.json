@@ -1204,6 +1204,8 @@
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du dessin, mesuré depuis le zéro. Vous pouvez aussi faire glisser le dessin dans la vue de dessus.",
     "offStock": "Une partie du dessin dépasse du brut.",
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui n’usine que lui} other {les # opérations qui n’usinent que lui}}",
+    "duplicateTitle": "Copie le dessin à sa droite, usiné par les mêmes opérations",
+    "duplicate": "Dupliquer",
     "remove": "Retirer le dessin"
   },
   "Import": {

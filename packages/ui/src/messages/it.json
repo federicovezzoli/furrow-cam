@@ -1204,6 +1204,8 @@
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del disegno, misurato dallo zero. Puoi anche trascinare il disegno nella vista dall’alto.",
     "offStock": "Una parte del disegno è fuori dal grezzo.",
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lavora solo lui} other {le # operazioni che lavorano solo lui}}",
+    "duplicateTitle": "Copia il disegno alla sua destra, lavorato dalle stesse operazioni",
+    "duplicate": "Duplica",
     "remove": "Rimuovi il disegno"
   },
   "Import": {
