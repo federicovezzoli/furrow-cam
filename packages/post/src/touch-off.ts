@@ -43,6 +43,8 @@ const STORED_POSITION = /G(28|30)(?![.\d])/gi;
 const SETS_AXES = /G(10|92)(?!\d)|G(28|30)\.1/i;
 /** `G90` or `G91`, not their arc modes `G90.1` and `G91.1`. */
 const DISTANCE_MODE = /G9([01])(?![.\d])/gi;
+/** `G20` (inches) or `G21` (millimetres). */
+const UNITS = /G2([01])(?![.\d])/gi;
 /** Where a tool change zeroes Z: a pause or a probe. */
 const ZEROING = /M0?[01](?!\d)|G38\.\d/i;
 const X_WORD = /X\s*[-+]?(\d+\.?\d*|\.\d+)/i;
@@ -57,10 +59,11 @@ const ARC_WORDS = /[IJKR]\s*[-+]?(\d+\.?\d*|\.\d+)/gi;
  * every other command as it was (ADR-0043, ADR-0053). XY moves are explicit
  * or modal straight moves and arcs, in work or machine coordinates (`G53`),
  * and moves to a stored position (`G28`, `G30`). The block starts in a
- * straight-move mode, as the program leaves it. The first absolute straight
- * move in work coordinates to an X or Y before the zeroing goes to the pad.
- * Any other first XY move is replaced by a move to the pad, absolute (`G91`
- * restored after it), after the move's other axes; a `G28` or `G30` with no
+ * straight-move mode and millimetres, as the program leaves it. The first
+ * absolute straight move in millimetres and work coordinates to an X or Y
+ * before the zeroing goes to the pad. Any other first XY move is replaced by
+ * a move to the pad, absolute and in millimetres (`G91` and `G20` restored
+ * after it), after the move's other axes; a `G28` or `G30` with no
  * axis words, which moves every axis, by a rise to `{safeZ}` and the move. The
  * other XY moves before the zeroing lose their X and Y, so the tool stays
  * there: an arc becomes a straight move of its other axes, and a `G28` or
@@ -83,6 +86,7 @@ export function suggestTouchOffToolChange(toolChange: string | null): string {
   const end = zeroing === -1 ? lines.length : zeroing;
   const suggested: string[] = [];
   let relative = false;
+  let inches = false;
   /** The block's modal motion: `0` to `3` for `G0` to `G3`, `null` for any other. */
   let motion: number | null = 0;
   /** The modal motion the suggested lines leave. */
@@ -99,6 +103,8 @@ export function suggestTouchOffToolChange(toolChange: string | null): string {
     const comment = line.slice(code.length);
     const mode = [...code.matchAll(DISTANCE_MODE)].at(-1);
     if (mode) relative = mode[1] === "1";
+    const units = [...code.matchAll(UNITS)].at(-1);
+    if (units) inches = units[1] === "0";
     motion = motionAfter(code, motion);
     // Lines after the zeroing run in the block's own mode, which a straight one can be set to.
     if (i === end && placed && written !== motion && (motion === 0 || motion === 1)) {
@@ -114,9 +120,12 @@ export function suggestTouchOffToolChange(toolChange: string | null): string {
     }
     // A straight move or an arc: `movesXY` needs a known motion for anything but `G28`/`G30`.
     const kind = motion ?? 0;
-    // `relative` holds while the pad move is written, which must be absolute.
-    const absolute = (...moves: string[]) =>
-      relative ? [`G90 ${moves[0]}`, ...moves.slice(1), "G91"] : moves;
+    // The pad move is absolute and in millimetres, the placeholders' units; the block's modes come back after it.
+    const absolute = (...moves: string[]) => {
+      const set = [relative && "G90", inches && "G21"].filter(Boolean).join(" ");
+      const restore = [relative && "G91", inches && "G20"].filter(Boolean).join(" ");
+      return set ? [`${set} ${moves[0]}`, ...moves.slice(1), restore] : moves;
+    };
     const first = !placed;
     placed = true;
     if (stored && !axes) {
@@ -126,7 +135,7 @@ export function suggestTouchOffToolChange(toolChange: string | null): string {
       push(...absolute(others ? rise : withComment(rise, comment), ...(first ? [move] : [])));
       return;
     }
-    if (first && !relative && !stored && kind <= 1 && !has(MACHINE_COORDINATES, code)) {
+    if (first && !relative && !inches && !stored && kind <= 1 && !has(MACHINE_COORDINATES, code)) {
       push(onPad(code) + comment);
       return;
     }

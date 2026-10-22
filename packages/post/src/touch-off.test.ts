@@ -82,6 +82,18 @@ describe("suggestTouchOffToolChange", () => {
     );
   });
 
+  it("moves to the pad in millimetres where the block works in inches", () => {
+    expect(suggestTouchOffToolChange("G20\nG0 Z1\nG0 X1 Y1\nM0")).toBe(
+      "G20\nG0 Z1\nG21 G0 X{padX} Y{padY}\nG20\nM0",
+    );
+    expect(suggestTouchOffToolChange("G91 G20\nG0 X1 Y1\nM0")).toBe(
+      "G91 G20\nG90 G21 G0 X{padX} Y{padY}\nG91 G20\nM0",
+    );
+    expect(suggestTouchOffToolChange("G20\nG28\nM0")).toBe(
+      "G20\nG21 G0 Z{safeZ}\nG0 X{padX} Y{padY}\nG20\nM0",
+    );
+  });
+
   it("moves over the pad before a block with no XY move before it zeroes Z", () => {
     const block = "G0 Z20\nG92 X0 Y0\nM0 (Change the bit)\nG0 X10 Y10";
     expect(suggestTouchOffToolChange(block)).toBe(`G0 Z{safeZ}\nG0 X{padX} Y{padY}\n${block}`);

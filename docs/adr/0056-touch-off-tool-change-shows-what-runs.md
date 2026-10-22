@@ -13,7 +13,7 @@ The move over the pad before the machine's block is also wasted when the block m
 
 ## Decision
 
-- **One block:** with a pad, a tool change always writes one block, its placeholders filled in: the project's own, or with `null` the one derived from the machine's, `suggestTouchOffToolChange(machine.toolChange)` (ADR-0053), which for a machine without a block is the default pause with the move over the pad. The separate move over the pad before the machine's block goes.
+- **One block:** with a pad, a tool change always writes one block, its placeholders filled in: the project's own, or with `null` the one derived from the machine's, `suggestTouchOffToolChange(machine.toolChange)` (ADR-0053), which for a machine without a block is the default pause with the move over the pad. The separate move over the pad before the machine's block goes. Since the derivation now runs on every export, it handles a block in inches: the placeholders are in millimetres, so a pad move written in place of the block's own move sets `G21` and restores `G20` after it, as it already set `G90` and restored `G91`.
 - **The field shows it:** the text area's value is the block that runs. Editing it saves the project's own block; clearing it goes back to the derived one. No schema change and no migration: existing `null` pads show their derived block.
 - **Reset:** **Suggest** and **Use the machine's** become one **Reset**, shown only when the block is the project's own, which sets it back to `null`.
 - **Hint:** one sentence, "Runs at each tool change.", followed by the placeholder list (`PLACEHOLDERS`).
