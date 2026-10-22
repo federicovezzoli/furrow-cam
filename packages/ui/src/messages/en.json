@@ -1270,7 +1270,11 @@
     "speed": "Playback speed"
   },
   "Dialog": {
-    "close": "Close"
+    "close": "Close",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "rename": "Rename"
   },
   "Tour": {
     "steps": {

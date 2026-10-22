@@ -1270,7 +1270,11 @@
     "speed": "Wiedergabegeschwindigkeit"
   },
   "Dialog": {
-    "close": "Schließen"
+    "close": "Schließen",
+    "ok": "OK",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "rename": "Umbenennen"
   },
   "Tour": {
     "steps": {
