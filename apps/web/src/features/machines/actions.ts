@@ -14,7 +14,10 @@ export type MachineFormErrors = FormErrors<keyof Machine>;
 
 const notFound = () => translate("Machines.notFound");
 
-/** Creates a machine, or updates it when `id` is given. Redirects to the list on success. */
+/**
+ * Creates a machine and redirects to the list, or updates it when `id` is
+ * given and stays on its page.
+ */
 export async function saveMachine(id: string | null, form: FormData): Promise<MachineFormErrors> {
   const userId = await getUserId();
   if (!userId) return { form: await signedOut() };
@@ -33,8 +36,10 @@ export async function saveMachine(id: string | null, form: FormData): Promise<Ma
     });
     if (count === 0) return { form: await notFound() };
   }
-  revalidatePath("/machines");
-  redirect("/machines");
+  // The machine list, the new-project options and every project's machine picker.
+  revalidatePath("/", "layout");
+  if (id === null) redirect("/machines");
+  return {};
 }
 
 /** Deletes a machine. Projects keep their own snapshot of it (ADR-0003). */
@@ -45,6 +50,6 @@ export async function deleteMachine(id: string): Promise<ActionResult> {
   if (!machineId.success) return { error: await notFound() };
 
   const { count } = await db.machine.deleteMany({ where: { id: machineId.data, userId } });
-  revalidatePath("/machines");
+  revalidatePath("/", "layout");
   if (count === 0) return { error: await notFound() };
 }

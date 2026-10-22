@@ -987,7 +987,8 @@
     "saving": "Wird gespeichert…",
     "saveChanges": "Änderungen speichern",
     "add": "Maschine hinzufügen",
-    "askedHint": "Für deine Maschine auszufüllen."
+    "askedHint": "Für deine Maschine auszufüllen.",
+    "saved": "Einstellungen gespeichert."
   },
   "NewMachine": {
     "starts": {
