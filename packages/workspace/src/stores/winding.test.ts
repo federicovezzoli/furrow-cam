@@ -2,7 +2,7 @@ import { generateToolpath, toolpathInput } from "@furrow/cam-core";
 import {
   createProjectDocument,
   type Path,
-  type ProfileSide,
+  type ProfileParams,
   type Segment,
   type Shape,
 } from "@furrow/document";
@@ -74,8 +74,17 @@ function shapes(flip: (path: Path) => Path): Shape[] {
 
 type Add = typeof addProfileOperation;
 
-/** Where an operation cuts: the box of its feed moves, depth included, to a micrometre. */
-function cutBox(flip: (path: Path) => Path, add: Add, tool = endMill, side?: ProfileSide) {
+/**
+ * Where an operation cuts, the box of its feed moves (depth included, to a
+ * micrometre), and which way it turns at its final depth: the sign of the
+ * area its feed moves there sweep, so climb and conventional milling differ.
+ */
+function cut(
+  flip: (path: Path) => Path,
+  add: Add,
+  tool = endMill,
+  params: Partial<ProfileParams> = {},
+) {
   const store = createDocumentStore({
     ...createProjectDocument(),
     drawings: [{ id: DRAWING_ID, name: "part.svg", border: 10 }],
@@ -84,45 +93,59 @@ function cutBox(flip: (path: Path) => Path, add: Add, tool = endMill, side?: Pro
   const targets = [OUTLINE, HOLE].map((shapeId) => ({ shapeId, paths: null }));
   const id = add(store, { targets, tool });
   if (!id) throw new Error("operation not added");
-  if (side) updateProfileParams(store, id, { side });
+  updateProfileParams(store, id, params);
   const { moves } = generateToolpath(toolpathInput(store.getState().document, id));
   const feeds = moves.filter((move) => move.kind === "feed").map((move) => move.to);
   expect(feeds.length).toBeGreaterThan(0);
   const round = (value: number) => Math.round(value * 1000) / 1000;
-  return [0, 1, 2].map((axis) => [
+  const box = [0, 1, 2].map((axis) => [
     round(Math.min(...feeds.map((point) => point[axis] as number))),
     round(Math.max(...feeds.map((point) => point[axis] as number))),
   ]);
+  const bottom = Math.min(...feeds.map(([, , z]) => z));
+  const floor = feeds.filter(([, , z]) => Math.abs(z - bottom) < 1e-6);
+  let area = 0;
+  floor.forEach(([x0, y0], i) => {
+    const [x1, y1] = floor[(i + 1) % floor.length] as (typeof floor)[number];
+    area += x0 * y1 - x1 * y0;
+  });
+  return { box, turn: Math.sign(area) };
 }
 
 const same = (path: Path) => path;
 
 describe("toolpaths don't depend on paths' winding", () => {
-  it.each(["outside", "inside", "on"] as const)("profile %s", (side) => {
-    expect(cutBox(reversed, addProfileOperation, endMill, side)).toEqual(
-      cutBox(same, addProfileOperation, endMill, side),
-    );
+  it.each(["outside", "inside", "on"] as const)("profile %s, in its milling direction", (side) => {
+    for (const direction of ["climb", "conventional"] as const) {
+      expect(cut(reversed, addProfileOperation, endMill, { side, direction })).toEqual(
+        cut(same, addProfileOperation, endMill, { side, direction }),
+      );
+    }
   });
 
-  it("pocket", () => {
-    expect(cutBox(reversed, addPocketOperation)).toEqual(cutBox(same, addPocketOperation));
+  it("pocket, in its milling direction", () => {
+    expect(cut(reversed, addPocketOperation)).toEqual(cut(same, addPocketOperation));
   });
 
+  // A V-bit's centreline and a drill's holes have no milling direction to keep.
   it("V-carve", () => {
-    expect(cutBox(reversed, addVCarveOperation, vBit)).toEqual(
-      cutBox(same, addVCarveOperation, vBit),
+    expect(cut(reversed, addVCarveOperation, vBit).box).toEqual(
+      cut(same, addVCarveOperation, vBit).box,
     );
   });
 
   it("drill", () => {
-    expect(cutBox(reversed, addDrillOperation, drill)).toEqual(
-      cutBox(same, addDrillOperation, drill),
+    expect(cut(reversed, addDrillOperation, drill).box).toEqual(
+      cut(same, addDrillOperation, drill).box,
     );
   });
 
-  it("tells a profile's sides apart, so a winding mix-up would show", () => {
-    expect(cutBox(same, addProfileOperation, endMill, "outside")).not.toEqual(
-      cutBox(same, addProfileOperation, endMill, "inside"),
+  it("tells sides and milling directions apart, so a winding mix-up would show", () => {
+    expect(cut(same, addProfileOperation, endMill, { side: "outside" }).box).not.toEqual(
+      cut(same, addProfileOperation, endMill, { side: "inside" }).box,
+    );
+    expect(cut(same, addProfileOperation, endMill, { direction: "climb" }).turn).toBe(
+      -cut(same, addProfileOperation, endMill, { direction: "conventional" }).turn,
     );
   });
 
