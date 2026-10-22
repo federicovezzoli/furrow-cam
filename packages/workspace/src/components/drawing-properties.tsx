@@ -6,6 +6,7 @@ import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
+  CircleAlertIcon,
   FlipHorizontal2Icon,
   FlipVertical2Icon,
   Maximize2Icon,
@@ -72,6 +73,12 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const gestures = gestureHandlers(store);
   const capped = cappedBorder(drawing.border, stock, units);
   const offset = drawingOffset(stock, bounds);
+  // A nanometre of slack: fitted and imported drawings sit exactly on their box.
+  const offStock =
+    bounds.min[0] < -1e-6 ||
+    bounds.min[1] < -1e-6 ||
+    bounds.max[0] > stock.width + 1e-6 ||
+    bounds.max[1] > stock.height + 1e-6;
   const apply = (field: string, result: ActionResult) =>
     setError(result.ok ? null : { field, message: result.error });
 
@@ -118,23 +125,20 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
             {...gestures}
           />
         ))}
-        <NumberField
-          id="drawing-border"
-          label={t("border")}
-          layout="inline"
-          quantity="length"
-          units={units}
-          min={0}
-          value={drawing.border}
-          onValueChange={(value) => setDrawingBorder(store, drawing.id, value)}
-          {...gestures}
-        />
-        <p className="text-muted-foreground">
-          {capped === null
-            ? t("borderNote")
-            : t("borderCapped", { size: localizeDecimal(capped, locale) })}
-        </p>
-        <div className="flex justify-end">
+        {/* The border is only *Fit to stock*'s margin: moving the drawing leaves it behind. */}
+        <div className="flex items-end gap-1">
+          <NumberField
+            id="drawing-border"
+            label={t("border")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={0}
+            value={drawing.border}
+            onValueChange={(value) => setDrawingBorder(store, drawing.id, value)}
+            className="flex-1"
+            {...gestures}
+          />
           <Button
             variant="outline"
             size="compact"
@@ -145,6 +149,11 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
             {t("fit")}
           </Button>
         </div>
+        <p className="text-muted-foreground">
+          {capped === null
+            ? t("borderNote")
+            : t("borderCapped", { size: localizeDecimal(capped, locale) })}
+        </p>
         {error?.field === "fit" && (
           <p role="alert" className="text-destructive">
             {format(error.message)}
@@ -210,6 +219,12 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
           {t("position")}
         </h3>
         <p className="text-muted-foreground">{t("positionHint", { anchor: modelAnchor(stock) })}</p>
+        {offStock && (
+          <p role="status" className="flex gap-1.5 text-destructive">
+            <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>{t("offStock")}</span>
+          </p>
+        )}
         {(["x", "y"] as const).map((axis, i) => (
           <NumberField
             key={axis}
