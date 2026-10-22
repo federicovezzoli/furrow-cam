@@ -21,14 +21,7 @@ import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { UploadIcon, XIcon } from "lucide-react";
-import {
-  type ChangeEvent,
-  type FormEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -37,7 +30,7 @@ import {
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "../providers/workspace-stores";
-import { addImportedShapes, hasImportedFile, ONE_FILE } from "../stores/geometry-actions";
+import { addImportedShapes, canImportDrawing, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
@@ -70,13 +63,17 @@ function isImportError(error: unknown): error is SvgImportError | DxfImportError
 
 /**
  * Imports SVG and DXF files and STL models, over the viewport: a card in its
- * centre while the project is empty (it holds one imported file for now),
- * then any import warnings in its corner until dismissed. It also says how an
+ * centre while the project is empty, then in its corner while it holds
+ * drawings, each file adding one; a project holds drawings or one model
+ * (ADR-0055). It also shows import warnings until dismissed, and says how an
  * STL import is going.
  */
 export function GeometryImport() {
   const store = useDocumentStoreApi();
-  const empty = useDocumentStore((s) => !hasImportedFile(s.document));
+  const empty = useDocumentStore(
+    (s) => s.document.geometry.length === 0 && s.document.models.length === 0,
+  );
+  const drawings = useDocumentStore((s) => canImportDrawing(s.document));
   const meshLimits = useWorkspaceHost().limits.meshes;
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
@@ -87,20 +84,6 @@ export function GeometryImport() {
   const t = useTranslations("Import");
   /** Counts picks, so a slow file read can't land after the user picked another file. */
   const picks = useRef(0);
-  /** Set by a successful import, whose warnings outlive the geometry it adds. */
-  const imported = useRef(false);
-  const wasEmpty = useRef(empty);
-
-  // Undo, redo or another tab can add or remove the geometry under an open prompt,
-  // an unfinished file read or a notice: they belong to the file before.
-  useEffect(() => {
-    if (wasEmpty.current === empty) return;
-    wasEmpty.current = empty;
-    picks.current++;
-    setPending(null);
-    if (!imported.current) setNotice(null);
-    imported.current = false;
-  }, [empty]);
 
   function fail(error: unknown) {
     if (!isImportError(error)) console.error(error);
@@ -119,10 +102,10 @@ export function GeometryImport() {
         return;
       }
       if (!addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
-        setNotice({ kind: "error", messages: [ONE_FILE] });
+        // A model was imported, or a step redone, while the file was read or the prompt open.
+        setNotice({ kind: "error", messages: [DRAWINGS_OR_MODEL] });
         return;
       }
-      imported.current = true;
       track({ event: "file_imported", format: request.kind });
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
@@ -173,21 +156,26 @@ export function GeometryImport() {
     }
   }
 
-  if (!empty && !notice && !modelImport) return null;
+  /** Only the import buttons to show: they keep to the corner, leaving the viewport free. */
+  const bare = !empty && !pending && !notice && !modelImport;
+  if (bare && !drawings) return null;
 
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 flex p-4",
-        empty ? "items-center justify-center" : "items-end justify-end p-2",
+        "pointer-events-none absolute flex",
+        empty ? "inset-0 items-center justify-center p-4" : "right-2 bottom-2 left-2 justify-end",
       )}
     >
       <div
         data-tour={empty ? "import" : undefined}
-        className="pointer-events-auto grid w-full max-w-72 gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs"
+        className={cn(
+          "pointer-events-auto grid gap-2 rounded-md border bg-background/95 text-ui shadow-xs",
+          bare ? "p-1" : "w-full max-w-72 p-3",
+        )}
       >
         {empty && <p className="text-muted-foreground">{t("start")}</p>}
-        {empty && (
+        {drawings && (
           <>
             <input
               ref={input}
@@ -198,23 +186,16 @@ export function GeometryImport() {
               tabIndex={-1}
               aria-hidden
             />
-            <Button
-              variant="outline"
-              size="compact"
-              onClick={() => input.current?.click()}
-              className="justify-self-start"
-            >
-              <UploadIcon />
-              {t("importDrawing")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+                <UploadIcon />
+                {t("importDrawing")}
+              </Button>
+              {empty && <ModelImportButton />}
+            </div>
           </>
         )}
-        {empty && (
-          <>
-            <ModelImportButton />
-            {!meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
-          </>
-        )}
+        {empty && !meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
 
         {pending?.kind === "svg" && (
           <ImportPrompt

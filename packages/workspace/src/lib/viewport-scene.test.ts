@@ -1,5 +1,6 @@
 import type { Box3 } from "@furrow/cam-core";
 import type { Path, Shape } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   boxCenter,
@@ -17,7 +18,13 @@ import {
   touchOffLinePositions,
 } from "./viewport-scene";
 
-const shape = (id: string, paths: Shape["paths"]): Shape => ({ id, name: "", layer: "0", paths });
+const shape = (id: string, paths: Shape["paths"]): Shape => ({
+  id,
+  name: "",
+  layer: "0",
+  drawingId: DRAWING_ID,
+  paths,
+});
 
 const square = shape("a", [
   {

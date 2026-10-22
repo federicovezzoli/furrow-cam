@@ -141,6 +141,24 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #308: several drawings (ADR-0055). A project's shapes, all from one file,
+  // become one drawing with the border models had then.
+  16: (doc) => {
+    if (Array.isArray(doc.drawings)) return doc;
+    const shapes = Array.isArray(doc.geometry) ? doc.geometry.filter(isObject) : [];
+    const [first] = shapes;
+    if (!first) {
+      doc.drawings = [];
+      return doc;
+    }
+    // The first shape's id, so every read of a stored v16 document (and its
+    // versions) gives the drawing the same one.
+    const id = first.id;
+    const name = typeof first.source === "string" && first.source !== "" ? first.source : "Drawing";
+    doc.drawings = [{ id, name, border: 10 }];
+    for (const shape of shapes) shape.drawingId = id;
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

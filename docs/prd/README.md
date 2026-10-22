@@ -23,3 +23,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0006](0006-gcode-simulation.md) | G-code simulation | Abandoned |
 | [0007](0007-desktop-app.md) | Desktop app | Draft |
 | [0008](0008-try-without-account.md) | Use the app without an account | Shipped |
+| [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Draft |

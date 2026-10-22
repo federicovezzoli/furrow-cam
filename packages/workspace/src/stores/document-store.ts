@@ -50,25 +50,26 @@ export type DocumentState = {
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
 
 /**
- * Patches of the open transaction. Kept out of the state and appended in
- * place: a gesture can make a change per pointer move, and copying the
- * arrays on each one would be quadratic.
+ * The open transaction: only the document it started from. A gesture makes a
+ * change per pointer move or scrub step, and keeping each one's patches would
+ * keep a copy of whatever it rewrote (a drawing's shapes) per move until undo
+ * drops it.
  */
-class Transaction {
-  private readonly patches: Patch[] = [];
-  /** One array per change, undone last change first. */
-  private readonly inverseChunks: Patch[][] = [];
+type Transaction = { start: ProjectDocument };
 
-  add(patches: Patch[], inversePatches: Patch[]) {
-    this.patches.push(...patches);
-    this.inverseChunks.push(inversePatches);
-  }
-
-  /** The changes as one undo step, or `null` if there were none. */
-  entry(): HistoryEntry | null {
-    if (this.patches.length === 0) return null;
-    return { patches: this.patches, inversePatches: this.inverseChunks.slice().reverse().flat() };
-  }
+/**
+ * The transaction's changes as one undo step, or `null` if there were none:
+ * a replacement of each top-level field the gesture changed, old and new.
+ */
+function transactionEntry({ start }: Transaction, end: ProjectDocument): HistoryEntry | null {
+  const keys = (Object.keys(end) as (keyof ProjectDocument)[]).filter(
+    (key) => end[key] !== start[key],
+  );
+  if (keys.length === 0) return null;
+  return {
+    patches: keys.map((key) => ({ op: "replace", path: [key], value: end[key] })),
+    inversePatches: keys.map((key) => ({ op: "replace", path: [key], value: start[key] })),
+  };
 }
 
 /** A document store for one open project, with an empty history. */
@@ -88,7 +89,6 @@ export function createDocumentStore(document: ProjectDocument) {
           const [next, patches, inversePatches] = produceWithPatches(document, recipe);
           if (patches.length === 0) return;
           if (transaction) {
-            transaction.add(patches, inversePatches);
             set({ document: next }, false, name);
           } else {
             set(
@@ -105,13 +105,13 @@ export function createDocumentStore(document: ProjectDocument) {
 
         beginTransaction() {
           if (transaction) return;
-          transaction = new Transaction();
+          transaction = { start: get().document };
           set({ inTransaction: true }, false, "beginTransaction");
         },
 
         commitTransaction() {
           if (!transaction) return;
-          const entry = transaction.entry();
+          const entry = transactionEntry(transaction, get().document);
           transaction = null;
           if (!entry) {
             set({ inTransaction: false }, false, "commitTransaction");
@@ -130,11 +130,11 @@ export function createDocumentStore(document: ProjectDocument) {
 
         cancelTransaction() {
           if (!transaction) return;
-          const entry = transaction.entry();
+          const { start } = transaction;
           transaction = null;
           set(
             {
-              document: entry ? applyPatches(get().document, entry.inversePatches) : get().document,
+              document: start,
               inTransaction: false,
             },
             false,

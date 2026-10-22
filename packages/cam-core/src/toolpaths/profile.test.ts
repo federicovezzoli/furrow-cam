@@ -7,6 +7,7 @@ import {
   type Shape,
   type Tool,
 } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../geometry/clipper";
 import { translatePath } from "../geometry/translate";
@@ -51,6 +52,7 @@ const square: Shape = {
   id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
   name: "Square",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [0, 0],
@@ -69,6 +71,7 @@ const hole: Shape = {
   id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
   name: "Hole",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [60, 50],
@@ -82,6 +85,7 @@ const line: Shape = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
   name: "Groove",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [{ start: [10, 10], segments: [{ kind: "line", to: [90, 10] }], closed: false }],
 };
 
@@ -705,6 +709,7 @@ describe("generateToolpath", () => {
             operationStart: null,
             toolChange: null,
           },
+    drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
     geometry: [square, hole],
     models: [],
     operations: [

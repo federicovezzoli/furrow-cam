@@ -1,4 +1,5 @@
 import type { ProfileOperation, ProfileParams, Shape, Tool } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { profileToolpath } from "../toolpaths/profile";
 import { toolpathLines } from "./preview";
@@ -91,6 +92,7 @@ const rectangle: Shape = {
   id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
   name: "Rectangle",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [40, 20],
@@ -108,6 +110,7 @@ const groove: Shape = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
   name: "Groove",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [{ start: [20.5, 30.5], segments: [{ kind: "line", to: [100.5, 30.5] }], closed: false }],
 };
 

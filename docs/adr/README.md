@@ -36,7 +36,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
 | [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed; superseded by ADR-0052 |
 | [0021](0021-web-app-feature-folders.md) | Feature folders in the web app | Proposed |
-| [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed |
+| [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed; superseded in part by ADR-0055 |
 | [0023](0023-password-policy-breached-passwords.md) | Password length limits and breached-password check | Proposed |
 | [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |
 | [0025](0025-medial-axis-sampled-voronoi.md) | Medial axis from a Voronoi diagram of boundary samples | Proposed |
@@ -45,7 +45,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
 | [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Proposed |
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
-| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed; superseded in part by ADR-0034, ADR-0038 and ADR-0055 |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Proposed |
 | [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Proposed |
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
@@ -69,3 +69,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Proposed |
 | [0053](0053-touch-off-suggest-every-xy-move.md) | Touch-off Suggest keeps the tool on the pad through every kind of XY move | Proposed |
 | [0054](0054-interface-languages.md) | Interface languages with use-intl, picked from the browser or the system | Proposed |
+| [0055](0055-several-drawings-transformed-in-place.md) | A project holds several drawings, each transformed by rewriting its points | Proposed |

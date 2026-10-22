@@ -1,4 +1,5 @@
 import type { DrillOperation, DrillParams, Path, Point, Shape, Tool } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { importSvg } from "../import/svg/import";
 import type { Vec3 } from "../scene/stock";
@@ -56,6 +57,7 @@ function shape(...paths: Path[]): Shape {
     id: `00000000-0000-4000-8000-${String(shapeCount).padStart(12, "0")}`,
     name: "",
     layer: "0",
+    drawingId: DRAWING_ID,
     paths,
   };
 }

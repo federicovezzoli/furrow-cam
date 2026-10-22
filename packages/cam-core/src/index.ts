@@ -4,6 +4,7 @@ export * from "./geometry/clipper";
 export * from "./geometry/flatten";
 export * from "./geometry/loop";
 export * from "./geometry/medial-axis";
+export * from "./geometry/scale";
 export * from "./geometry/translate";
 export * from "./import/dxf/import";
 export {

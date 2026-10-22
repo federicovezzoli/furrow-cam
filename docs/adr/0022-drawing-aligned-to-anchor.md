@@ -1,6 +1,6 @@
 # ADR-0022: The drawing is aligned to the stock at the zero's anchor
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0055](0055-several-drawings-transformed-in-place.md) (several drawings per project)
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0002 (Z1, Z3, Z4–Z6, Z9), PRD-0001 (R1, R2, R3), ADR-0014, ADR-0016, ADR-0010; issue #91

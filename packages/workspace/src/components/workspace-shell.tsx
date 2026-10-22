@@ -20,6 +20,7 @@ import {
 } from "react-resizable-panels";
 import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
+import { useSelectedDrawingId } from "../hooks/use-selected-drawing";
 import { useUndoShortcuts } from "../hooks/use-undo-shortcuts";
 import { savedLayout, toggledPaneLayout, type WorkspaceLayout } from "../lib/workspace-layout";
 import { Tour, useTour } from "../onboarding/components/tour";
@@ -31,6 +32,7 @@ import {
   useWorkspaceStore,
 } from "../providers/workspace-stores";
 import { BrowserOnly } from "./browser-only";
+import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
 import { GcodeExportButton } from "./gcode-export-button";
 import { GeometryImport } from "./geometry-import";
@@ -257,25 +259,35 @@ export function WorkspaceShell() {
 }
 
 /**
- * The selected operation's properties, or the selected model's placement, in
- * a panel floating over the viewport's top right corner, so the project's
+ * The selected operation's properties, the selected model's placement or
+ * the size of the drawing the selected paths belong to, in that order, in a
+ * panel floating over the viewport's top right corner, so the project's
  * stock stays in the Properties pane.
  */
 function SelectedOperation() {
   const selectedId = useWorkspaceStore((s) => s.selectedOperationId);
   const modelId = useWorkspaceStore((s) => s.selectedModelId);
+  const drawingId = useSelectedDrawingId();
   const t = useTranslations("Shell");
-  if (selectedId === null && modelId === null) return null;
+  if (selectedId === null && modelId === null && drawingId === null) return null;
   return (
     <aside
-      aria-label={selectedId !== null ? t("operationProperties") : t("modelProperties")}
+      aria-label={
+        selectedId !== null
+          ? t("operationProperties")
+          : modelId !== null
+            ? t("modelProperties")
+            : t("drawingProperties")
+      }
       className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
     >
       {/* Keyed, so nothing typed or rejected for one operation or model shows on the next. */}
       {selectedId !== null ? (
         <OperationProperties key={selectedId} operationId={selectedId} />
+      ) : modelId !== null ? (
+        <ModelProperties key={modelId} modelId={modelId} />
       ) : (
-        modelId !== null && <ModelProperties key={modelId} modelId={modelId} />
+        drawingId !== null && <DrawingProperties key={drawingId} drawingId={drawingId} />
       )}
     </aside>
   );

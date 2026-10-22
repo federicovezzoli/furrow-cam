@@ -2,7 +2,7 @@ import type { StlLimits } from "@furrow/cam-core";
 import { type Message, MessageError } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentState, DocumentStore } from "../stores/document-store";
-import { hasImportedFile, ONE_FILE } from "../stores/geometry-actions";
+import { canImportModel, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
 import { addModel } from "../stores/model-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
@@ -57,8 +57,8 @@ export function usesMesh({ document, past, future }: DocumentState, sha256: stri
 /**
  * Imports an STL file into the open project (PRD-0005 S1, ADR-0029): reads
  * and checks it, stores it in the project's `meshes`, then adds it to the
- * document as one undo step and selects it. A project holds one imported
- * file for now, so nothing is stored into one that has a drawing or a model.
+ * document as one undo step and selects it. A project holds drawings
+ * or one model (ADR-0055), so nothing is stored into one that has either.
  * The workspace's `modelImport` says how it is going.
  */
 export async function importModel(
@@ -80,8 +80,8 @@ export async function importModel(
   const fail = (error: Translatable) => setModelImport({ fileName, error });
   setModelImport({ fileName, error: null });
 
-  if (hasImportedFile(document.getState().document)) {
-    fail(ONE_FILE);
+  if (!canImportModel(document.getState().document)) {
+    fail(DRAWINGS_OR_MODEL);
     return;
   }
   if (file.size > limits.maxBytes) {
@@ -107,7 +107,7 @@ export async function importModel(
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
       await meshes.discard(mesh.sha256);
     }
-    fail(ONE_FILE);
+    fail(DRAWINGS_OR_MODEL);
     return;
   }
   workspace.getState().selectModel(id);

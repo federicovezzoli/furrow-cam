@@ -1,5 +1,5 @@
 import type { EngraveOperation, EngraveParams, Shape, Tool } from "@furrow/document";
-import { endMill, vBit } from "@furrow/document/fixtures";
+import { DRAWING_ID, endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   engraveToolpath,
@@ -18,6 +18,7 @@ const square: Shape = {
   id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",
   name: "Square",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [0, 0],
@@ -35,6 +36,7 @@ const line: Shape = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
   name: "Stroke",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [{ start: [10, 10], segments: [{ kind: "line", to: [90, 10] }], closed: false }],
 };
 

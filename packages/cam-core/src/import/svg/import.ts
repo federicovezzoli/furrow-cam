@@ -47,6 +47,7 @@ export type SvgImportOptions = {
 };
 
 export type SvgImportResult = {
+  /** All in one new drawing, which `drawingId` names. */
   shapes: Shape[];
   /** What was skipped or assumed, for the user; empty when the file imported as drawn. */
   warnings: ImportMessage[];
@@ -164,7 +165,7 @@ export function importSvg(
 
   const skipped = new SkipCounter();
   const skip = (code: ImportMessageCode) => skipped.add(code);
-  const shapes: Shape[] = [];
+  const shapes: Omit<Shape, "drawingId">[] = [];
   const page = pageTransform(root, dpi);
   /** Elements being drawn, from the root down through `use` references, to catch cycles. */
   const drawing = new Set<XmlElement>();
@@ -323,7 +324,9 @@ export function importSvg(
   if (drawn >= MAX_SVG_ELEMENTS) {
     warnings.push({ code: "svg.tooManyElements", values: { max: MAX_SVG_ELEMENTS } });
   }
-  return { shapes, warnings };
+  // The file's shapes make one drawing (ADR-0055), its id taken last so the shapes' ids stay as they were.
+  const drawingId = createId();
+  return { shapes: shapes.map((shape) => ({ ...shape, drawingId })), warnings };
 }
 
 /** The translation by an element's `x` and `y`, or `null` if they are invalid or relative. */

@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "Die Antastplatte muss auf dem Rohteil liegen",
+      "duplicateDrawing": "Doppelte Zeichnungs-ID",
       "duplicateShape": "Doppelte Form-ID",
       "duplicateModel": "Doppelte Modell-ID",
       "duplicateOperation": "Doppelte Operations-ID",
       "unknownModel": "Unbekannte Modell-ID",
+      "unknownDrawing": "Unbekannte Zeichnungs-ID",
+      "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad"
     },
@@ -694,11 +697,12 @@
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "drawingsOrModel": "Ein Projekt enthält SVG- und DXF-Zeichnungen oder ein STL-Modell, nicht beides.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
-      "oneFile": "Ein Projekt enthält eine importierte Datei: eine SVG- oder DXF-Zeichnung oder ein STL-Modell.",
       "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
-      "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei."
+      "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei.",
+      "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe."
     }
   },
   "Operation": {
@@ -1043,7 +1047,8 @@
     "exportedWithWarnings": "Der G-Code wurde mit Warnungen exportiert:",
     "exportGcode": "G-Code exportieren",
     "allProjects": "Alle Projekte",
-    "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten."
+    "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten.",
+    "drawingProperties": "Zeichnungseigenschaften"
   },
   "BugReport": {
     "report": "Fehler melden",
@@ -1178,6 +1183,32 @@
     "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} des Modells liegt, vom Nullpunkt gemessen. Verschieben ändert nicht den Rand, den <em>An Rohteil anpassen</em> lässt.",
     "removeTitle": "Entfernt auch {count, plural, one {die Operation, die es bearbeitet} other {die # Operationen, die es bearbeiten}}",
     "remove": "Modell entfernen"
+  },
+  "Drawing": {
+    "closeLabel": "Zeichnungseigenschaften schließen",
+    "close": "Schließen",
+    "untitled": "Zeichnung",
+    "size": "Größe",
+    "width": "Breite",
+    "height": "Höhe",
+    "border": "Abstand",
+    "borderNote": "Der Abstand, den An Rohteil anpassen auf jeder Seite lässt.",
+    "borderCapped": "Der Abstand, den An Rohteil anpassen auf jeder Seite lässt. Auf diesem Rohteil lässt er {size}, ein Viertel seiner kürzeren Seite.",
+    "fitTitle": "Die Zeichnung so skalieren, dass sie ins Rohteil passt, mit dem Rand auf jeder Seite",
+    "fit": "An Rohteil anpassen",
+    "orientation": "Ausrichtung",
+    "mirrorX": "Links nach rechts spiegeln",
+    "mirrorY": "Oben nach unten spiegeln",
+    "rotateLeft": "Um 90° gegen den Uhrzeigersinn drehen",
+    "rotateRight": "Um 90° im Uhrzeigersinn drehen",
+    "angle": "Winkel",
+    "rotate": "Drehen",
+    "rotateTitle": "Die Zeichnung um den Winkel gegen den Uhrzeigersinn drehen; ein negativer Winkel dreht im Uhrzeigersinn",
+    "position": "Position",
+    "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} der Zeichnung liegt, vom Nullpunkt gemessen. Du kannst die Zeichnung auch in der Draufsicht ziehen.",
+    "offStock": "Ein Teil der Zeichnung liegt außerhalb des Rohteils.",
+    "removeTitle": "Entfernt auch {count, plural, one {die Operation, die nur sie bearbeitet} other {die # Operationen, die nur sie bearbeiten}}",
+    "remove": "Zeichnung entfernen"
   },
   "Import": {
     "units": {

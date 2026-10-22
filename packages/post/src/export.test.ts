@@ -7,6 +7,7 @@ import {
   type Shape,
 } from "@furrow/document";
 import {
+  DRAWING_ID,
   drill,
   endMill,
   lowRider,
@@ -38,7 +39,13 @@ function circle(center: Point, radius: number): Path {
 }
 
 function shape(n: number, name: string, ...paths: Path[]): Shape {
-  return { id: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, name, layer: "0", paths };
+  return {
+    id: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
+    name,
+    layer: "0",
+    drawingId: DRAWING_ID,
+    paths,
+  };
 }
 
 function id(n: number): string {

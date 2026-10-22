@@ -1,4 +1,5 @@
 import type { PocketOperation, PocketParams, PocketStrategy, Shape, Tool } from "@furrow/document";
+import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../../scene/stock";
 import { generateToolpath } from "../generate";
@@ -39,6 +40,7 @@ function rectangle(id: string, x: number, y: number, width: number, height: numb
     id,
     name: "Rectangle",
     layer: "0",
+    drawingId: DRAWING_ID,
     paths: [
       {
         start: [x, y],
@@ -61,6 +63,7 @@ const island: Shape = {
   id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
   name: "Island",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [60, 50],
@@ -220,6 +223,7 @@ const dumbbell: Shape = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
   name: "Dumbbell",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [0, 0],
@@ -482,6 +486,7 @@ describe("pocketToolpath", () => {
       id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
       name: "Groove",
       layer: "0",
+      drawingId: DRAWING_ID,
       paths: [
         { start: [10, 10], segments: [{ kind: "line", to: [90, 10] }], closed: false },
         { start: [5, 5], segments: [], closed: false },
@@ -942,6 +947,7 @@ const tabbed: Shape = {
   id: "7c6b5a4f-3e2d-4c1b-8a9f-0e1d2c3b4a5f",
   name: "Tabbed square",
   layer: "0",
+  drawingId: DRAWING_ID,
   paths: [
     {
       start: [0, 0],

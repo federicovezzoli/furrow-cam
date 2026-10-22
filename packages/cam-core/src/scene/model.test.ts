@@ -1,9 +1,11 @@
 import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import type { Rect } from "../geometry/bounds";
 import {
   designAlignment,
   designBounds,
+  drawingFit,
   fitScale,
   initialPlacement,
   modelAt,
@@ -130,6 +132,31 @@ describe("modelBorder", () => {
   });
 });
 
+describe("drawingFit", () => {
+  const stock = { width: 600, height: 400 };
+
+  it("fits inside the stock less the border, aligned at the anchor", () => {
+    const rect: Rect = { min: [100, 100], max: [200, 150] };
+    // 100 × 50 into 580 × 380: the width limits it.
+    expect(drawingFit(rect, stock, "bottom_left", 10)).toEqual({
+      scale: 5.8,
+      from: [100, 100],
+      to: [10, 10],
+    });
+    expect(drawingFit(rect, stock, "center", 10)).toEqual({
+      scale: 5.8,
+      from: [150, 125],
+      to: [300, 200],
+    });
+  });
+
+  it("fits a line by its length, caps the border, and leaves a point alone", () => {
+    const line: Rect = { min: [0, 5], max: [50, 5] };
+    expect(drawingFit(line, stock, "bottom_left", 500)?.scale).toBe(400 / 50);
+    expect(drawingFit({ min: [5, 5], max: [5, 5] }, stock, "center", 10)).toBeNull();
+  });
+});
+
 describe("stockFit", () => {
   it("fits a turned mesh inside the border of a small stock", () => {
     // Turned a quarter about Z: 80 × 100 into 40 × 40 less 10 mm, so 20 × 20.
@@ -185,6 +212,7 @@ describe("designBounds and designAlignment", () => {
       id: "square",
       name: "square",
       layer: "0",
+      drawingId: DRAWING_ID,
       paths: [
         {
           start: [10, 10] as [number, number],

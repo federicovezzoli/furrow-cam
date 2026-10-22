@@ -11,13 +11,23 @@ export function translatePoint([x, y]: Point, [dx, dy]: Point): Point {
 }
 
 export function translatePath(path: Path, offset: Point): Path {
-  const move = (point: Point) => translatePoint(point, offset);
+  return mapPath(path, (point) => translatePoint(point, offset));
+}
+
+/**
+ * `path` with `move` applied to each of its points, arc centres and cubic
+ * control points included. Exact for moves that keep shapes' proportions
+ * (translations, uniform scaling, rotations, mirroring). A `mirrored` move
+ * reverses the way round arcs go, so their direction flips.
+ */
+export function mapPath(path: Path, move: (point: Point) => Point, mirrored = false): Path {
   return {
     start: move(path.start),
     segments: path.segments.map((segment): Segment => {
       if (segment.kind === "line") return { kind: "line", to: move(segment.to) };
       if (segment.kind === "arc") {
-        return { ...segment, to: move(segment.to), center: move(segment.center) };
+        const clockwise = mirrored ? !segment.clockwise : segment.clockwise;
+        return { kind: "arc", to: move(segment.to), center: move(segment.center), clockwise };
       }
       return { kind: "cubic", c1: move(segment.c1), c2: move(segment.c2), to: move(segment.to) };
     }),

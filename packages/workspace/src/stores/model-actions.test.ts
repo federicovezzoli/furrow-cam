@@ -61,7 +61,7 @@ describe("addModel", () => {
     expect(store.getState().document.models[0]?.placement.position).toEqual([10, 10]);
   });
 
-  it("refuses a second file: a project holds one drawing or one model", () => {
+  it("refuses a second file: a project holds drawings or one model", () => {
     const { store } = storeWithModel();
     const steps = store.getState().past.length;
     expect(addModel(store, mesh)).toBeNull();

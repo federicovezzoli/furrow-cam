@@ -56,6 +56,34 @@ export const Segment = z.discriminatedUnion("kind", [LineSegment, ArcSegment, Cu
 export type Segment = z.infer<typeof Segment>;
 
 /**
+ * What is wrong with `segment` drawn from `current`, or `null`: a line or
+ * curve of no length, an arc of no radius, or an arc ending off its circle.
+ * Scaling a drawing down can make segments degenerate (ADR-0055).
+ */
+export function segmentIssue(
+  current: Point,
+  segment: Segment,
+):
+  | "geometry.zeroLine"
+  | "geometry.zeroCurve"
+  | "geometry.zeroArc"
+  | "geometry.arcEndOffCircle"
+  | null {
+  if (segment.kind === "line")
+    return pointsCoincide(current, segment.to) ? "geometry.zeroLine" : null;
+  if (segment.kind === "cubic") {
+    const points = [segment.c1, segment.c2, segment.to];
+    return points.every((p) => pointsCoincide(current, p)) ? "geometry.zeroCurve" : null;
+  }
+  const radius = distance(segment.center, current);
+  if (radius <= GEOMETRY_TOLERANCE) return "geometry.zeroArc";
+  if (Math.abs(distance(segment.center, segment.to) - radius) > GEOMETRY_TOLERANCE) {
+    return "geometry.arcEndOffCircle";
+  }
+  return null;
+}
+
+/**
  * A path with no segments is a single point (e.g. a drill location). A closed
  * path ends with an implicit line back to `start` if it isn't already there.
  */
@@ -68,26 +96,11 @@ export const Path = z
   .superRefine((path, ctx) => {
     let current = path.start;
     path.segments.forEach((segment, i) => {
-      if (segment.kind === "line" && pointsCoincide(current, segment.to)) {
-        ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroLine" });
-      }
-      if (
-        segment.kind === "cubic" &&
-        [segment.c1, segment.c2, segment.to].every((p) => pointsCoincide(current, p))
-      ) {
-        ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroCurve" });
-      }
-      if (segment.kind === "arc") {
-        const radius = distance(segment.center, current);
-        if (radius <= GEOMETRY_TOLERANCE) {
-          ctx.addIssue({ code: "custom", path: ["segments", i], message: "geometry.zeroArc" });
-        } else if (Math.abs(distance(segment.center, segment.to) - radius) > GEOMETRY_TOLERANCE) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["segments", i, "to"],
-            message: "geometry.arcEndOffCircle",
-          });
-        }
+      const issue = segmentIssue(current, segment);
+      if (issue === "geometry.arcEndOffCircle") {
+        ctx.addIssue({ code: "custom", path: ["segments", i, "to"], message: issue });
+      } else if (issue !== null) {
+        ctx.addIssue({ code: "custom", path: ["segments", i], message: issue });
       }
       current = segment.to;
     });
@@ -104,6 +117,22 @@ export const Path = z
 export type Path = z.infer<typeof Path>;
 
 /**
+ * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and
+ * placed together. Its shapes name it with `drawingId`.
+ */
+export const Drawing = z.strictObject({
+  id: z.uuid(),
+  /** Name of the imported file. */
+  name: z.string(),
+  /** The border, in millimetres, that *Fit to stock* leaves around it, as a model's (ADR-0038). */
+  border: z.number().nonnegative(),
+});
+export type Drawing = z.infer<typeof Drawing>;
+
+/** The border a new drawing leaves around it when fitted to the stock, in millimetres. */
+export const DRAWING_BORDER = 10;
+
+/**
  * Imported geometry, in stock coordinates (ADR-0014): `(0, 0)` is the stock's
  * bottom-left corner whatever the work origin. `stockOffset` in
  * `@furrow/cam-core` converts to work coordinates. Importing, choosing an XY
@@ -117,6 +146,8 @@ export const Shape = z.strictObject({
   layer: z.string(),
   /** Name of the imported file. */
   source: z.string().optional(),
+  /** The drawing it belongs to (ADR-0055). */
+  drawingId: z.uuid(),
   paths: z.array(Path).min(1),
 });
 export type Shape = z.infer<typeof Shape>;

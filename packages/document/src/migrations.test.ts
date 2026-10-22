@@ -257,6 +257,41 @@ describe("migrations", () => {
     expect(parseProjectDocument(v15)).toEqual(doc);
   });
 
+  it("puts v16 shapes into one drawing named after their file", () => {
+    const doc = fullDocument();
+    const v16 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      drawings?: unknown;
+      geometry: Record<string, unknown>[];
+    };
+    v16.schemaVersion = 16;
+    delete v16.drawings;
+    for (const shape of v16.geometry) delete shape.drawingId;
+    const migrated = parseProjectDocument(v16);
+    const [drawing] = migrated.drawings;
+    // The first shape's id, so every read gives the same one.
+    expect(migrated.drawings).toEqual([{ id: SQUARE_ID, name: "part.dxf", border: 10 }]);
+    expect(migrated.geometry.map((shape) => shape.drawingId)).toEqual([drawing?.id, drawing?.id]);
+    expect({ ...migrated, drawings: doc.drawings, geometry: doc.geometry }).toEqual(doc);
+  });
+
+  it("names a v16 drawing whose file isn't known, and gives empty projects none", () => {
+    const v16 = JSON.parse(JSON.stringify(fullDocument())) as {
+      schemaVersion: number;
+      drawings?: unknown;
+      geometry: Record<string, unknown>[];
+    };
+    v16.schemaVersion = 16;
+    delete v16.drawings;
+    for (const shape of v16.geometry) {
+      delete shape.drawingId;
+      delete shape.source;
+    }
+    expect(parseProjectDocument(v16).drawings).toMatchObject([{ name: "Drawing" }]);
+    const { drawings: _, ...empty } = { ...createProjectDocument(), schemaVersion: 16 };
+    expect(parseProjectDocument(empty)).toEqual(createProjectDocument());
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

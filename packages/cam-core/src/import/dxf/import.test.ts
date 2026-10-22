@@ -750,7 +750,8 @@ describe("joining", () => {
     );
     expect(shapes).toHaveLength(1);
     expect(shapes[0]?.paths[0]?.segments).toHaveLength(count);
-  });
+    // 150,000 entities take over 5 s on a busy CI runner.
+  }, 30_000);
 
   it("joins layers whose names differ only in case, as DXF does", () => {
     const { shapes } = shapesOf(

@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "La pastille de mise à zéro doit tenir sur le brut",
+      "duplicateDrawing": "Identifiant de dessin en double",
       "duplicateShape": "Identifiant de forme en double",
       "duplicateModel": "Identifiant de modèle en double",
       "duplicateOperation": "Identifiant d'opération en double",
       "unknownModel": "Identifiant de modèle inconnu",
+      "unknownDrawing": "Identifiant de dessin inconnu",
+      "emptyDrawing": "Un dessin doit contenir au moins une forme",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu"
     },
@@ -694,11 +697,12 @@
       "unreadableFile": "Ce fichier n’a pas pu être lu.",
       "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
+      "drawingsOrModel": "Un projet contient des dessins SVG et DXF ou un modèle STL, pas les deux.",
       "noShapes": "Ce fichier ne contient aucune forme à importer.",
-      "oneFile": "Un projet contient un seul fichier importé : un dessin SVG ou DXF, ou un modèle STL.",
       "stlImportOff": "L’import STL n’est pas disponible sur ce serveur.",
       "fileTooLarge": "Ce fichier est trop volumineux pour être importé (la limite est de {mb, number} Mo).",
-      "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier."
+      "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier.",
+      "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande."
     }
   },
   "Operation": {
@@ -1043,7 +1047,8 @@
     "exportedWithWarnings": "Le G-code a été exporté avec des avertissements :",
     "exportGcode": "Exporter le G-code",
     "allProjects": "Tous les projets",
-    "leaveAnyway": "{error} Quitter quand même ? Les modifications non enregistrées seront perdues ; exportez d’abord le projet pour les garder."
+    "leaveAnyway": "{error} Quitter quand même ? Les modifications non enregistrées seront perdues ; exportez d’abord le projet pour les garder.",
+    "drawingProperties": "Propriétés du dessin"
   },
   "BugReport": {
     "report": "Signaler un bug",
@@ -1178,6 +1183,32 @@
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du modèle, mesuré depuis le zéro. Le déplacer ne change pas la bordure que laisse <em>Ajuster au brut</em>.",
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui l’usine} other {les # opérations qui l’usinent}}",
     "remove": "Retirer le modèle"
+  },
+  "Drawing": {
+    "closeLabel": "Fermer les propriétés du dessin",
+    "close": "Fermer",
+    "untitled": "Dessin",
+    "size": "Taille",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "border": "Marge",
+    "borderNote": "L’espace qu’Ajuster au brut laisse de chaque côté.",
+    "borderCapped": "L’espace qu’Ajuster au brut laisse de chaque côté. Sur ce brut, il laisse {size}, un quart de son plus petit côté.",
+    "fitTitle": "Mettre le dessin à l’échelle pour tenir dans le brut, en laissant la bordure de chaque côté",
+    "fit": "Ajuster au brut",
+    "orientation": "Orientation",
+    "mirrorX": "Retourner de gauche à droite",
+    "mirrorY": "Retourner de haut en bas",
+    "rotateLeft": "Tourner de 90° dans le sens antihoraire",
+    "rotateRight": "Tourner de 90° dans le sens horaire",
+    "angle": "Angle",
+    "rotate": "Tourner",
+    "rotateTitle": "Tourner le dessin de l’angle, dans le sens antihoraire ; un angle négatif le tourne dans le sens horaire",
+    "position": "Position",
+    "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du dessin, mesuré depuis le zéro. Vous pouvez aussi faire glisser le dessin dans la vue de dessus.",
+    "offStock": "Une partie du dessin dépasse du brut.",
+    "removeTitle": "Retire aussi {count, plural, one {l’opération qui n’usine que lui} other {les # opérations qui n’usinent que lui}}",
+    "remove": "Retirer le dessin"
   },
   "Import": {
     "units": {

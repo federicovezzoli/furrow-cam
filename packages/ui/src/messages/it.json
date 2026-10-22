@@ -489,10 +489,13 @@
     },
     "document": {
       "padOffStock": "Il tampone di azzeramento deve stare sul grezzo",
+      "duplicateDrawing": "Id di disegno duplicato",
       "duplicateShape": "Id di forma duplicato",
       "duplicateModel": "Id di modello duplicato",
       "duplicateOperation": "Id di operazione duplicato",
       "unknownModel": "Id di modello sconosciuto",
+      "unknownDrawing": "Id di disegno sconosciuto",
+      "emptyDrawing": "Un disegno deve avere almeno una forma",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto"
     },
@@ -694,11 +697,12 @@
       "unreadableFile": "Non è stato possibile leggere questo file.",
       "modelUnreadable": "Non è stato possibile leggere il modello.",
       "importFailed": "Non è stato possibile importare questo file.",
+      "drawingsOrModel": "Un progetto contiene disegni SVG e DXF o un modello STL, non entrambi.",
       "noShapes": "Questo file non contiene forme da importare.",
-      "oneFile": "Un progetto contiene un solo file importato: un disegno SVG o DXF, o un modello STL.",
       "stlImportOff": "L’importazione STL non è disponibile su questo server.",
       "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
-      "storedModelMismatch": "Il modello salvato non corrisponde al suo file."
+      "storedModelMismatch": "Il modello salvato non corrisponde al suo file.",
+      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore."
     }
   },
   "Operation": {
@@ -1043,7 +1047,8 @@
     "exportedWithWarnings": "Il G-code è stato esportato con degli avvisi:",
     "exportGcode": "Esporta G-code",
     "allProjects": "Tutti i progetti",
-    "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle."
+    "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle.",
+    "drawingProperties": "Proprietà del disegno"
   },
   "BugReport": {
     "report": "Segnala un bug",
@@ -1168,8 +1173,8 @@
     "tooDeep": "Il modello è più profondo dello spessore del grezzo: non viene tagliato oltre il fondo del grezzo.",
     "original": "Originale: {size} (scala {scale}%)",
     "border": "Bordo",
-    "borderNote": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il modello.",
-    "borderCapped": "Lasciato su ogni lato dal prossimo Adatta al grezzo; modificarlo non sposta il modello. Su questo grezzo lascia {size}, un quarto del suo lato minore.",
+    "borderNote": "Lo spazio che “Adatta al grezzo” lascerà su ogni lato. Modificarlo non sposta il modello.",
+    "borderCapped": "Lo spazio che “Adatta al grezzo” lascerà su ogni lato. Modificarlo non sposta il modello. Su questo grezzo sarà di {size}, un quarto del lato più corto.",
     "originalTitle": "Riporta il modello alla sua dimensione nel file",
     "originalSize": "Dimensione originale",
     "fitTitle": "Scala il modello per farlo stare nel grezzo, lasciando il bordo su ogni lato",
@@ -1178,6 +1183,32 @@
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del modello, misurato dallo zero. Spostarlo non cambia il bordo che lascia <em>Adatta al grezzo</em>.",
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lo lavora} other {le # operazioni che lo lavorano}}",
     "remove": "Rimuovi il modello"
+  },
+  "Drawing": {
+    "closeLabel": "Chiudi le proprietà del disegno",
+    "close": "Chiudi",
+    "untitled": "Disegno",
+    "size": "Dimensioni",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "border": "Margine",
+    "borderNote": "Lo spazio che “Adatta al grezzo” lascia su ogni lato.",
+    "borderCapped": "Lo spazio che “Adatta al grezzo” lascia su ogni lato. Su questo grezzo sarà di {size}, un quarto del lato più corto.",
+    "fitTitle": "Scala il disegno per farlo stare nel grezzo, lasciando il bordo su ogni lato",
+    "fit": "Adatta al grezzo",
+    "orientation": "Orientamento",
+    "mirrorX": "Specchia da sinistra a destra",
+    "mirrorY": "Specchia dall’alto in basso",
+    "rotateLeft": "Ruota di 90° in senso antiorario",
+    "rotateRight": "Ruota di 90° in senso orario",
+    "angle": "Angolo",
+    "rotate": "Ruota",
+    "rotateTitle": "Ruota il disegno dell’angolo indicato, in senso antiorario; un angolo negativo lo ruota in senso orario",
+    "position": "Posizione",
+    "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del disegno, misurato dallo zero. Puoi anche trascinare il disegno nella vista dall’alto.",
+    "offStock": "Una parte del disegno è fuori dal grezzo.",
+    "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lavora solo lui} other {le # operazioni che lavorano solo lui}}",
+    "remove": "Rimuovi il disegno"
   },
   "Import": {
     "units": {
