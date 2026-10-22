@@ -159,6 +159,29 @@ export const migrations: Readonly<Record<number, Migration>> = {
     for (const shape of shapes) shape.drawingId = id;
     return doc;
   },
+  // #332: the step-over moved from the tool to the operation. Operations
+  // take their tool's, and 3D roughing its own or the tool's, so they cut
+  // as before.
+  17: (doc) => {
+    if (!Array.isArray(doc.operations)) return doc;
+    const takeStepOver = (tool: unknown) => {
+      if (!isObject(tool)) return undefined;
+      const { stepOver } = tool;
+      delete tool.stepOver;
+      return stepOver;
+    };
+    for (const operation of doc.operations) {
+      if (!isObject(operation) || !isObject(operation.params)) continue;
+      const { params } = operation;
+      const stepOver = takeStepOver(operation.tool);
+      if (operation.type === "pocket" || operation.type === "drill") params.stepOver = stepOver;
+      if (operation.type === "relief_rough") params.stepOver ??= stepOver;
+      if (isObject(params.flatBottom)) {
+        params.flatBottom.stepOver = takeStepOver(params.flatBottom.tool);
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

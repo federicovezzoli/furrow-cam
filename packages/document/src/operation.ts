@@ -33,6 +33,13 @@ export const OperationTarget = z.strictObject({
 export type OperationTarget = z.infer<typeof OperationTarget>;
 
 /**
+ * Distance between neighbouring passes, as a percentage of the tool's
+ * diameter (#332). Each operation sets its own, since it varies with the job
+ * more than with the bit.
+ */
+export const StepOver = z.number().gt(0).max(100);
+
+/**
  * `targets` in the form the document stores: one per shape, in the order of
  * `geometry`, paths ascending and `null` once they are all the shape's.
  * Targets of the same shape are merged; shapes and paths not in `geometry`
@@ -165,13 +172,13 @@ export type PocketStrategy = z.infer<typeof PocketStrategy>;
 
 /**
  * Pocket parameters (#23): clearing of the area inside the closed paths,
- * islands left standing. The step-over, step-down and ramp angle come from
- * the tool.
+ * islands left standing. The step-down and ramp angle come from the tool.
  */
 export const PocketParams = z
   .strictObject({
     strategy: PocketStrategy,
     direction: MillingDirection,
+    stepOver: StepOver,
     /** Final depth below the stock top. */
     depth: PositiveLength,
     /** Material the clearing passes leave on the walls and islands. */
@@ -208,6 +215,8 @@ export const DrillParams = z.strictObject({
   depth: PositiveLength,
   /** Drill in pecks, retracting above the stock after each to clear chips. */
   peck: z.boolean(),
+  /** Between the rings an end mill bores a hole wider than itself with. */
+  stepOver: StepOver,
 });
 export type DrillParams = z.infer<typeof DrillParams>;
 
@@ -286,10 +295,10 @@ export const VCarveParams = z
     /**
      * Where the shape is wider than the V-bit reaches at `maxDepth`, the bit
      * carves the walls down to it and `tool`, a flat end mill, clears the
-     * floor between them flat, before the V-bit. `null` leaves those parts
-     * carved to `maxDepth` along the axis only.
+     * floor between them flat, before the V-bit, at `stepOver`. `null`
+     * leaves those parts carved to `maxDepth` along the axis only.
      */
-    flatBottom: z.strictObject({ tool: Tool }).nullable(),
+    flatBottom: z.strictObject({ tool: Tool, stepOver: StepOver }).nullable(),
   })
   .superRefine((params, ctx) => {
     const tool = params.flatBottom?.tool;
@@ -370,7 +379,7 @@ export const ReliefFinishParams = z.strictObject({
    * Distance between parallel passes or spiral laps, as a percentage of the
    * tool's diameter. Waterline contours are a step-down apart instead.
    */
-  stepOver: z.number().gt(0).max(100),
+  stepOver: StepOver,
   /** Material left on the model in every direction, walls included. */
   stockToLeave: z.number().nonnegative(),
   /** Rest machining (#118): only cut where the earlier operations left material. */
@@ -410,8 +419,7 @@ export type RoughingBoundaryType = RoughingBoundary["type"];
 /**
  * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,
  * offset by the stock to leave, cleared in levels with a pocket strategy
- * (ADR-0030). The step-down and ramp angle come from the tool, and the
- * step-over too unless the operation sets its own.
+ * (ADR-0030). The step-down and ramp angle come from the tool.
  */
 export const ReliefRoughParams = z
   .strictObject({
@@ -419,11 +427,7 @@ export const ReliefRoughParams = z
     modelId: z.uuid(),
     strategy: PocketStrategy,
     direction: MillingDirection,
-    /**
-     * Distance between passes, as a percentage of the tool's diameter, or
-     * `null` for the tool's own step-over. The tool itself is left alone.
-     */
-    stepOver: z.number().gt(0).max(100).nullable(),
+    stepOver: StepOver,
     /** Material left on the model in every direction, walls included. */
     stockToLeave: z.number().nonnegative(),
     boundary: RoughingBoundary,
