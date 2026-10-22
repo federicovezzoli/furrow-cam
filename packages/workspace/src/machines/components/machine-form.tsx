@@ -25,6 +25,7 @@ const GCODE_BLOCKS = [
 /**
  * Saves the form's fields as machine `id`, or a new machine when `null`.
  * Resolves with why it couldn't (nothing on success), or leaves the page.
+ * Saving changes to an existing machine that stays on the page says so.
  */
 export type SaveMachine = (id: string | null, form: FormData) => Promise<MachineFormErrors>;
 
@@ -52,13 +53,17 @@ export function MachineForm({
   const [manualSpindle, setManualSpindle] = useState(machine.spindleRpmMin === null);
   const t = useTranslations("Machine");
   const [errors, setErrors] = useState<MachineFormErrors>({});
+  const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    setSaved(false);
     startTransition(async () => {
-      setErrors(await save(id, form));
+      const result = await save(id, form);
+      setErrors(result);
+      setSaved(id !== null && Object.keys(result).length === 0);
     });
   }
 
@@ -202,13 +207,16 @@ export function MachineForm({
       </fieldset>
 
       <FormError message={errors.form ?? null} />
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending}>
           {pending ? t("saving") : id ? t("saveChanges") : t("add")}
         </Button>
         <Button asChild variant="outline">
           {cancel}
         </Button>
+        <p role="status" className="text-sm text-muted-foreground">
+          {saved && t("saved")}
+        </p>
       </div>
     </form>
   );

@@ -987,7 +987,8 @@
     "saving": "Salvataggio…",
     "saveChanges": "Salva le modifiche",
     "add": "Aggiungi macchina",
-    "askedHint": "Da compilare per la tua macchina."
+    "askedHint": "Da compilare per la tua macchina.",
+    "saved": "Impostazioni salvate."
   },
   "NewMachine": {
     "starts": {

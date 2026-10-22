@@ -987,7 +987,8 @@
     "saving": "Saving…",
     "saveChanges": "Save changes",
     "add": "Add machine",
-    "askedHint": "Fill in for your machine."
+    "askedHint": "Fill in for your machine.",
+    "saved": "Settings saved."
   },
   "NewMachine": {
     "starts": {

@@ -987,7 +987,8 @@
     "saving": "Enregistrement…",
     "saveChanges": "Enregistrer les modifications",
     "add": "Ajouter la machine",
-    "askedHint": "À remplir pour votre machine."
+    "askedHint": "À remplir pour votre machine.",
+    "saved": "Réglages enregistrés."
   },
   "NewMachine": {
     "starts": {
