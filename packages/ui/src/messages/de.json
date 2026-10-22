@@ -915,6 +915,12 @@
     "failed": "Werkzeugbahn fehlgeschlagen: {error}",
     "warnings": "Warnungen zur Werkzeugbahn: {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
+    "progress": "Fortschritt von {name}",
+    "cancel": "Abbrechen",
+    "cancelLabel": "Berechnung von {name} abbrechen"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Schaftfräser",

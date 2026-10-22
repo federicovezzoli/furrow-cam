@@ -915,6 +915,12 @@
     "failed": "Échec de la trajectoire : {error}",
     "warnings": "Avertissements de la trajectoire : {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Calcul des trajectoires · {done} sur {total} terminés",
+    "progress": "Progression de {name}",
+    "cancel": "Annuler",
+    "cancelLabel": "Annuler le calcul de {name}"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Fraise droite à bout plat",

@@ -915,6 +915,12 @@
     "failed": "Percorso utensile non riuscito: {error}",
     "warnings": "Avvisi del percorso utensile: {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
+    "progress": "Avanzamento di {name}",
+    "cancel": "Annulla",
+    "cancelLabel": "Annulla il calcolo di {name}"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Fresa a candela piatta",
