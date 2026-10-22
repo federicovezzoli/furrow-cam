@@ -9,6 +9,7 @@ import {
 } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { UploadIcon } from "lucide-react";
 import { unstable_rethrow, useRouter } from "next/navigation";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
@@ -67,7 +68,7 @@ export function ImportProjectButton({
   const t = useTranslations("Projects");
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Translatable | null>(null);
   const [pending, startTransition] = useTransition();
   const machineId = machines.length === 1 ? (machines[0]?.id ?? null) : null;
 

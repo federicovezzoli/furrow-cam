@@ -5,7 +5,7 @@ import type { TourId } from "../onboarding/lib/tour";
 import type { WorkspaceLayout } from "./workspace-layout";
 
 /** Nothing when an action succeeded, else why it failed, for the user. */
-export type ActionResult = { error: string } | undefined;
+export type ActionResult = { error: Translatable } | undefined;
 
 /**
  * A tool offered for operations: its id, whether new operations start with
@@ -27,7 +27,12 @@ export type ToolFormErrors = Partial<Record<keyof Tool | "form", Translatable>>;
 export type MeshLimits = { maxBytes: number; maxTriangles: number };
 
 /** A saved version of the project, without its document; `error` says why it can't be restored. */
-export type VersionRow = { id: string; label: string | null; createdAt: Date; error?: string };
+export type VersionRow = {
+  id: string;
+  label: string | null;
+  createdAt: Date;
+  error?: Translatable;
+};
 
 /**
  * A save's new saved time, or why it failed, for the user. `retryable` marks
@@ -38,14 +43,14 @@ export type VersionRow = { id: string; label: string | null; createdAt: Date; er
  */
 export type SaveResult =
   | { updatedAt: Date; error?: never }
-  | { error: string; retryable?: boolean };
+  | { error: Translatable; retryable?: boolean };
 
 /** The project's versions after an action on them, newest first, or why the action failed. */
-export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: string };
+export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: Translatable };
 
 export type RestoreResult =
   | { document: ProjectDocument; updatedAt: Date; versions: VersionRow[]; error?: never }
-  | { error: string };
+  | { error: Translatable };
 
 /** What a user without an account tried to do that needs one (PRD-0008 G6). */
 export type AccountReason = "export-gcode" | "machine";
@@ -103,7 +108,7 @@ export type WorkspaceHost = {
     put(
       sha256: string,
       file: Blob,
-    ): Promise<{ uploaded: boolean; error?: never } | { error: string }>;
+    ): Promise<{ uploaded: boolean; error?: never } | { error: Translatable }>;
     /** The file's bytes; throws an `Error` for the user if it can't be read. */
     get(sha256: string): Promise<ArrayBuffer>;
     /** Drops a stored file that an import then didn't use; never fails. */

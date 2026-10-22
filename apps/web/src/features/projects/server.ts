@@ -8,14 +8,13 @@ import {
   ProjectDocumentTooNewError,
   readProjectJson,
 } from "@furrow/document";
-import { formatMessage, type Translator } from "@furrow/ui/lib/i18n";
+import type { KeyMessage, Translatable } from "@furrow/ui/lib/i18n";
 import { VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
 import { z } from "zod";
 import { getMachine, snapshotMachine } from "@/features/machines/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { getTranslator, translate } from "@/lib/locale";
 
 export type { VersionRow };
 
@@ -59,7 +58,7 @@ export async function getProject(
   id: string,
 ): Promise<
   | (ProjectRow & { document: ProjectDocument; error?: never })
-  | (ProjectRow & { document?: never; error: string })
+  | (ProjectRow & { document?: never; error: KeyMessage })
   | null
 > {
   const projectId = parseProjectId(id);
@@ -71,33 +70,32 @@ export async function getProject(
   if (!row) return null;
 
   const { document, ...project } = row;
-  return { ...project, ...parseStoredDocument(document, "cantOpen", await getTranslator()) };
+  return { ...project, ...parseStoredDocument(document, "cantOpen") };
 }
 
 /**
  * A stored document (a project's or a version's), upgraded to the current
- * schema version and validated, or why it can't be, in `t`'s language:
- * `failure` starts the message.
+ * schema version and validated, or why it can't be: `failure` starts the
+ * message.
  */
 export function parseStoredDocument(
   json: unknown,
   failure: "cantOpen" | "cantRestore" | "cantOpenVersion",
-  t: Translator,
-): { document: ProjectDocument; error?: never } | { document?: never; error: string } {
-  const fail = (reason: string) => ({
-    error: t("Projects.failure", { failure: t(`Projects.${failure}`), reason }),
+): { document: ProjectDocument; error?: never } | { document?: never; error: KeyMessage } {
+  const fail = (reason: Translatable): { error: KeyMessage } => ({
+    error: { key: "Projects.failure", values: { failure: { key: `Projects.${failure}` }, reason } },
   });
   const read = readProjectJson(json);
   switch (read.reason) {
     case undefined:
       return { document: read.document };
     case "too_new":
-      return fail(savedByNewerRelease(read.error, t));
+      return fail(savedByNewerRelease(read.error));
     // e.g. a missing migration.
     case "version":
-      return fail(formatMessage(t, read.error.detail));
+      return fail(read.error.detail);
     default:
-      return fail(t("Projects.contentsInvalid"));
+      return fail({ key: "Projects.contentsInvalid" });
   }
 }
 
@@ -132,25 +130,29 @@ export async function listVersions(userId: string, projectId: string): Promise<V
     select: { id: true, label: true, schemaVersion: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
-  const t = await getTranslator();
   return rows.map(({ schemaVersion, ...version }) =>
     schemaVersion > CURRENT_SCHEMA_VERSION
       ? {
           ...version,
-          error: t("Projects.failure", {
-            failure: t("Projects.cantRestore"),
-            reason: savedByNewerRelease(
-              new ProjectDocumentTooNewError(schemaVersion, CURRENT_SCHEMA_VERSION),
-              t,
-            ),
-          }),
+          error: {
+            key: "Projects.failure",
+            values: {
+              failure: { key: "Projects.cantRestore" },
+              reason: savedByNewerRelease(
+                new ProjectDocumentTooNewError(schemaVersion, CURRENT_SCHEMA_VERSION),
+              ),
+            },
+          },
         }
       : version,
   );
 }
 
-function savedByNewerRelease(error: ProjectDocumentTooNewError, t: Translator) {
-  return t("Projects.savedByNewer", { version: error.version, supported: error.supportedVersion });
+function savedByNewerRelease(error: ProjectDocumentTooNewError): KeyMessage {
+  return {
+    key: "Projects.savedByNewer",
+    values: { version: error.version, supported: error.supportedVersion },
+  };
 }
 
 /** Validation issues shown for an invalid file; the rest are counted, not listed. */
@@ -162,41 +164,40 @@ const MAX_LISTED_ISSUES = 5;
  */
 export function parseProjectFile(
   contents: string,
-  t: Translator,
-): { document: ProjectDocument; error?: never } | { error: string } {
+): { document: ProjectDocument; error?: never } | { error: KeyMessage } {
   const read = readProjectJson(contents);
   switch (read.reason) {
     case undefined:
       return { document: read.document };
     case "not_a_project":
-      return { error: t("Projects.notAProject") };
+      return { error: { key: "Projects.notAProject" } };
     case "too_new":
       return {
-        error: t("Projects.fileCantImport", { reason: savedByNewerRelease(read.error, t) }),
+        error: {
+          key: "Projects.fileCantImport",
+          values: { reason: savedByNewerRelease(read.error) },
+        },
       };
     case "version":
-      return {
-        error: t("Projects.fileCantImport", { reason: formatMessage(t, read.error.detail) }),
-      };
+      return { error: { key: "Projects.fileCantImport", values: { reason: read.error.detail } } };
     case "invalid": {
       const { issues } = read.error;
-      const listed = listIssues(issues.slice(0, MAX_LISTED_ISSUES), t);
+      const listed = listIssues(issues.slice(0, MAX_LISTED_ISSUES));
       const more = issues.length - MAX_LISTED_ISSUES;
-      const issuesText =
-        more > 0 ? `${listed}\n${t("Projects.moreProblems", { count: more })}` : listed;
-      return { error: t("Projects.invalidProject", { issues: issuesText }) };
+      if (more > 0) listed.push({ key: "Projects.moreProblems", values: { count: more } });
+      return { error: { key: "Projects.invalidProject", values: { issues: listed } } };
     }
   }
 }
 
-/** Validation issues in `t`'s language, one per line with where they are (ADR-0054). */
-export function listIssues(issues: readonly z.core.$ZodIssue[], t: Translator): string {
-  return issues
-    .map((issue) => {
-      const message = formatMessage(t, issueMessage(issue));
-      return issue.path.length > 0 ? `✖ ${message} → ${issue.path.join(".")}` : `✖ ${message}`;
-    })
-    .join("\n");
+/** Validation issues, one line each with where they are (ADR-0054). */
+export function listIssues(issues: readonly z.core.$ZodIssue[]): KeyMessage[] {
+  return issues.map((issue): KeyMessage => {
+    const message = issueMessage(issue);
+    return issue.path.length > 0
+      ? { key: "Projects.issueAt", values: { message, path: issue.path.join(".") } }
+      : { key: "Projects.issue", values: { message } };
+  });
 }
 
 export const PROJECT_NAME_MAX = 100;
@@ -215,13 +216,12 @@ export function parseName(value: unknown) {
 export async function snapshotUserMachine(
   userId: string,
   id: unknown,
-): Promise<{ machine: Machine; error?: never } | { error: string }> {
-  if (typeof id !== "string" || id === "")
-    return { error: await translate("Projects.chooseMachine") };
+): Promise<{ machine: Machine; error?: never } | { error: KeyMessage }> {
+  if (typeof id !== "string" || id === "") return { error: { key: "Projects.chooseMachine" } };
   const row = await getMachine(userId, id);
-  if (!row) return { error: await translate("Projects.machineNotFound") };
+  if (!row) return { error: { key: "Projects.machineNotFound" } };
   const machine = snapshotMachine(row);
-  if (!machine) return { error: await translate("Projects.machineInvalid") };
+  if (!machine) return { error: { key: "Projects.machineInvalid" } };
   return { machine };
 }
 

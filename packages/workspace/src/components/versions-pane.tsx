@@ -12,6 +12,7 @@ import {
 } from "@furrow/ui/components/ui/dropdown-menu";
 import { Input } from "@furrow/ui/components/ui/input";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import {
   CopyPlusIcon,
   EllipsisIcon,
@@ -66,7 +67,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const versionName = (version: VersionRow) =>
     version.label ?? formatLocalDate(version.createdAt, locale);
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<Translatable>();
   const [label, setLabel] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -184,7 +185,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
                     </p>
                   )}
                   {version.error !== undefined && (
-                    <p className="text-destructive">{version.error}</p>
+                    <p className="text-destructive">{format(version.error)}</p>
                   )}
                 </div>
                 <DropdownMenu modal={false}>

@@ -21,7 +21,7 @@ export type { SavedTool, ToolFormErrors } from "./server";
  */
 export async function createTool(form: FormData): Promise<{ errors: ToolFormErrors } | SavedTool> {
   const userId = await getUserId();
-  if (!userId) return { errors: { form: await signedOut() } };
+  if (!userId) return { errors: { form: signedOut } };
   const result = await writeTool(userId, null, form);
   if ("tool" in result) revalidatePath("/tools");
   return result;
@@ -36,7 +36,7 @@ export async function updateTool(
   form: FormData,
 ): Promise<{ errors: ToolFormErrors } | SavedTool> {
   const userId = await getUserId();
-  if (!userId) return { errors: { form: await signedOut() } };
+  if (!userId) return { errors: { form: signedOut } };
   const result = await writeTool(userId, id, form);
   if ("tool" in result) revalidatePath("/tools");
   return result;
@@ -45,14 +45,14 @@ export async function updateTool(
 /** Deletes a tool. Deleting the default makes the first remaining tool, by name, the default. */
 export async function deleteTool(id: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const toolId = z.uuid().safeParse(id);
-  if (!toolId.success) return { error: await toolNotFound() };
+  if (!toolId.success) return { error: toolNotFound };
 
   const result = await db.$transaction(async (tx) => {
     await lockLibrary(tx, userId);
     const tool = await tx.tool.findFirst({ where: { id: toolId.data, userId } });
-    if (!tool) return { error: await toolNotFound() };
+    if (!tool) return { error: toolNotFound };
     await tx.tool.delete({ where: { id: tool.id } });
     if (tool.isDefault) {
       const next = await tx.tool.findFirst({ where: { userId }, orderBy: { name: "asc" } });
@@ -66,14 +66,14 @@ export async function deleteTool(id: string): Promise<ActionResult> {
 /** Makes `id` the tool preselected for new operations, replacing the previous default. */
 export async function setDefaultTool(id: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const toolId = z.uuid().safeParse(id);
-  if (!toolId.success) return { error: await toolNotFound() };
+  if (!toolId.success) return { error: toolNotFound };
 
   const result = await db.$transaction(async (tx) => {
     await lockLibrary(tx, userId);
     if (!(await tx.tool.findFirst({ where: { id: toolId.data, userId } }))) {
-      return { error: await toolNotFound() };
+      return { error: toolNotFound };
     }
     // Clear first: the database allows at most one default per user.
     await tx.tool.updateMany({ where: { userId, isDefault: true }, data: { isDefault: false } });

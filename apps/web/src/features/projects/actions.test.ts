@@ -99,7 +99,7 @@ describe("createProject", () => {
   it("rejects another user's machine", async () => {
     mocks.machines.set(MACHINE_ID, { ...machine, userId: "someone-else" });
     expect(await createProject(form({ name: "Board", machine: MACHINE_ID }))).toEqual({
-      machine: "This machine no longer exists.",
+      machine: { key: "Projects.machineNotFound" },
     });
     expect(mocks.created).toHaveLength(0);
   });
@@ -141,7 +141,7 @@ describe("importProject", () => {
   it("rejects another user's machine for a machine-less file", async () => {
     mocks.machines.set(MACHINE_ID, { ...machine, userId: "someone-else" });
     expect(await importProject(projectFile(createProjectDocument()), MACHINE_ID)).toEqual({
-      error: "This machine no longer exists.",
+      error: { key: "Projects.machineNotFound" },
     });
     expect(mocks.created).toHaveLength(0);
   });
@@ -157,14 +157,14 @@ describe("importProject", () => {
   it("refuses a machine-less .furrow.json file with models", async () => {
     const document = { ...createProjectDocument(), models: [model] };
     expect(await importProject(projectFile(document), null)).toEqual({
-      error: "This project has 3D models: import its .zip export instead.",
+      error: { key: "Projects.modelsNeedZip" },
     });
   });
 
   it("refuses a .furrow.json file with models, whose meshes it can't hold", async () => {
     const document = { ...createProjectDocument(), machine: lowRider, models: [model] };
     expect(await importProject(projectFile(document), MACHINE_ID)).toEqual({
-      error: "This project has 3D models: import its .zip export instead.",
+      error: { key: "Projects.modelsNeedZip" },
     });
     expect(mocks.created).toHaveLength(0);
   });
@@ -187,7 +187,7 @@ describe("importGuestDocument", () => {
     );
     const withModels = { ...createProjectDocument(), models: [model] };
     expect(await importGuestDocument(projectFile(withModels), "a.furrow.json")).toEqual({
-      error: "This project has 3D models: import its .zip export instead.",
+      error: { key: "Projects.modelsNeedZip" },
     });
     expect(mocks.created).toHaveLength(0);
   });
@@ -238,24 +238,23 @@ describe("startArchiveImport", () => {
 
   it("refuses a model whose mesh isn't in the file", async () => {
     expect(await startArchiveImport(documentFile(document), "a.zip", [], null)).toEqual({
-      error: "This file can't be imported: the mesh of emblem.stl is missing.",
+      error: { key: "Projects.meshOfMissing", values: { file: "emblem.stl" } },
     });
     expect(mocks.created).toHaveLength(0);
   });
 
   it("refuses a mesh larger than STL import allows", async () => {
     const large = [{ sha256: model.sha256, size: 50_000_001 }];
-    expect(await startArchiveImport(documentFile(document), "a.zip", large, null)).toHaveProperty(
-      "error",
-      expect.stringMatching(/larger than 50 MB/),
-    );
+    expect(await startArchiveImport(documentFile(document), "a.zip", large, null)).toEqual({
+      error: { key: "Projects.meshTooLarge", values: { file: "emblem.stl", mb: 50 } },
+    });
     expect(mocks.created).toHaveLength(0);
   });
 
   it("refuses when this server can't store meshes", async () => {
     mocks.storage = false;
     expect(await startArchiveImport(documentFile(document), "a.zip", meshes, null)).toEqual({
-      error: "This project has 3D models, which this server can't store.",
+      error: { key: "Projects.noModelStorage" },
     });
     expect(mocks.created).toHaveLength(0);
   });
@@ -264,7 +263,7 @@ describe("startArchiveImport", () => {
     expect(
       await startArchiveImport(new File(["[]"], "project.furrow.json"), "a.zip", meshes, null),
     ).toEqual({
-      error: "This file isn't a Furrow CAM project.",
+      error: { key: "Projects.notAProject" },
     });
   });
 });

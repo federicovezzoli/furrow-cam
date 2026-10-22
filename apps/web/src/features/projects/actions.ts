@@ -6,6 +6,7 @@ import {
   ProjectDocument,
   projectNameFromFileName,
 } from "@furrow/document";
+import type { KeyMessage } from "@furrow/ui/lib/i18n";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { SaveResult } from "@furrow/workspace/lib/workspace-host";
 import { revalidatePath } from "next/cache";
@@ -22,7 +23,7 @@ import { getUserId } from "@/features/auth/server";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { type ActionResult, type FormErrors, signedOut } from "@/lib/form-data";
-import { getTranslator, translate } from "@/lib/locale";
+import { getTranslator } from "@/lib/locale";
 import {
   documentColumns,
   getProject,
@@ -42,23 +43,26 @@ import {
 
 export type ProjectFormErrors = FormErrors<"name" | "machine">;
 
-/** Why a project name was refused, in the request's language: blank, or too long. */
-async function nameIssue(error: z.ZodError) {
+/** Why a project name was refused: blank, or too long. */
+function nameIssue(error: z.ZodError): KeyMessage {
   return error.issues[0]?.code === "too_big"
-    ? translate("Projects.tooLong", { max: PROJECT_NAME_MAX })
-    : translate("Projects.nameBlank");
+    ? { key: "Projects.tooLong", values: { max: PROJECT_NAME_MAX } }
+    : { key: "Projects.nameBlank" };
 }
 
-const notFound = () => translate("Projects.notFound");
-const versionNotFound = () => translate("Projects.versionNotFound");
-const tooManyVersions = () => translate("Projects.tooManyVersions", { max: MAX_VERSIONS });
-const meshMissing = () => translate("Projects.meshMissing");
-const conflict = () => translate("Projects.conflict");
+const notFound: KeyMessage = { key: "Projects.notFound" };
+const versionNotFound: KeyMessage = { key: "Projects.versionNotFound" };
+const tooManyVersions: KeyMessage = {
+  key: "Projects.tooManyVersions",
+  values: { max: MAX_VERSIONS },
+};
+const meshMissing: KeyMessage = { key: "Projects.meshMissing" };
+const conflict: KeyMessage = { key: "Projects.conflict" };
 // `parseVersionLabel` reads anything but a string as blank, so a label can only fail by length.
-const labelTooLong = async () =>
-  translate("Projects.labelError", {
-    reason: await translate("Projects.tooLong", { max: VERSION_LABEL_MAX }),
-  });
+const labelTooLong: KeyMessage = {
+  key: "Projects.labelError",
+  values: { reason: { key: "Projects.tooLong", values: { max: VERSION_LABEL_MAX } } },
+};
 
 /**
  * Creates an empty project and opens it, for one of the user's machines or,
@@ -67,9 +71,9 @@ const labelTooLong = async () =>
  */
 export async function createProject(form: FormData): Promise<ProjectFormErrors> {
   const userId = await getUserId();
-  if (!userId) return { form: await signedOut() };
+  if (!userId) return { form: signedOut };
   const name = parseName(form.get("name"));
-  if (!name.success) return { name: await nameIssue(name.error) };
+  if (!name.success) return { name: nameIssue(name.error) };
   const machineId = form.get("machine");
   let machine: Machine | null = null;
   if (machineId !== null && machineId !== "") {
@@ -102,12 +106,12 @@ async function prepareImport(
   fileName: string,
   machineId: string | null,
   { archive, projectName }: { archive: boolean; projectName?: string },
-): Promise<{ document: ProjectDocument; name: string; error?: never } | { error: string }> {
-  const parsed = parseProjectFile(contents, await getTranslator());
+): Promise<{ document: ProjectDocument; name: string; error?: never } | { error: KeyMessage }> {
+  const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
   if (!archive && document.models.length > 0) {
-    return { error: await translate("Projects.modelsNeedZip") };
+    return { error: { key: "Projects.modelsNeedZip" } };
   }
   if (document.machine === null && machineId !== null) {
     const snapshot = await snapshotUserMachine(userId, machineId);
@@ -117,7 +121,11 @@ async function prepareImport(
   const name = parseName(
     truncate(projectName ?? projectNameFromFileName(fileName) ?? "", PROJECT_NAME_MAX),
   );
-  return { document, name: name.success ? name.data : await translate("Projects.importedProject") };
+  // The stored name, so in the request's language.
+  return {
+    document,
+    name: name.success ? name.data : (await getTranslator())("Projects.importedProject"),
+  };
 }
 
 /**
@@ -127,8 +135,8 @@ async function prepareImport(
  */
 export async function importProject(file: File, machineId: string | null): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
-  if (!(file instanceof File)) return { error: await translate("Projects.pickFile") };
+  if (!userId) return { error: signedOut };
+  if (!(file instanceof File)) return { error: { key: "Projects.pickFile" } };
   const prepared = await prepareImport(userId, await file.text(), file.name, machineId, {
     archive: false,
   });
@@ -152,10 +160,10 @@ export async function importProject(file: File, machineId: string | null): Promi
 export async function importGuestDocument(
   documentFile: File,
   projectName: string,
-): Promise<{ projectId: string; error?: never } | { error: string }> {
+): Promise<{ projectId: string; error?: never } | { error: KeyMessage }> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
-  if (!(documentFile instanceof File)) return { error: await translate("Projects.pickFile") };
+  if (!userId) return { error: signedOut };
+  if (!(documentFile instanceof File)) return { error: { key: "Projects.pickFile" } };
   const prepared = await prepareImport(userId, await documentFile.text(), "", null, {
     archive: false,
     projectName: String(projectName),
@@ -174,7 +182,7 @@ export async function importGuestDocument(
 /** What `startArchiveImport` returns: the new project to finish, or an error. */
 export type ArchiveImportResult =
   | { projectId: string; document: ProjectDocument; updatedAt: Date; error?: never }
-  | { error: string };
+  | { error: KeyMessage };
 
 /**
  * Starts importing a `.furrow.zip` export (ADR-0029): `documentFile` is its
@@ -194,11 +202,11 @@ export async function startArchiveImport(
   projectName?: string,
 ): Promise<ArchiveImportResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   if (!isStorageConfigured()) {
-    return { error: await translate("Projects.noModelStorage") };
+    return { error: { key: "Projects.noModelStorage" } };
   }
-  if (!(documentFile instanceof File)) return { error: await translate("Projects.pickFile") };
+  if (!(documentFile instanceof File)) return { error: { key: "Projects.pickFile" } };
   const prepared = await prepareImport(
     userId,
     await documentFile.text(),
@@ -214,14 +222,17 @@ export async function startArchiveImport(
   for (const model of document.models) {
     const size = sizes.get(model.sha256);
     if (size === undefined) {
-      return { error: await translate("Projects.meshOfMissing", { file: model.fileName }) };
+      return { error: { key: "Projects.meshOfMissing", values: { file: model.fileName } } };
     }
     if (typeof size !== "number" || size > MAX_MESH_BYTES) {
       return {
-        error: await translate("Projects.meshTooLarge", {
-          file: model.fileName,
-          mb: MAX_MESH_BYTES / 1_000_000,
-        }),
+        error: {
+          key: "Projects.meshTooLarge",
+          values: {
+            file: model.fileName,
+            mb: MAX_MESH_BYTES / 1_000_000,
+          },
+        },
       };
     }
   }
@@ -241,13 +252,13 @@ export async function startArchiveImport(
 
 export async function renameProject(id: string, name: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const projectId = parseProjectId(id);
-  if (!projectId) return { error: await notFound() };
+  if (!projectId) return { error: notFound };
   const parsed = parseName(name);
   if (!parsed.success) {
     return {
-      error: await translate("Projects.nameError", { reason: await nameIssue(parsed.error) }),
+      error: { key: "Projects.nameError", values: { reason: nameIssue(parsed.error) } },
     };
   }
 
@@ -255,18 +266,18 @@ export async function renameProject(id: string, name: string): Promise<ActionRes
     where: { id: projectId, userId },
     data: { name: parsed.data },
   });
-  if (count === 0) return { error: await notFound() };
+  if (count === 0) return { error: notFound };
   revalidatePath("/projects");
 }
 
 export async function deleteProject(id: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const projectId = parseProjectId(id);
-  if (!projectId) return { error: await notFound() };
+  if (!projectId) return { error: notFound };
 
   const { count } = await db.project.deleteMany({ where: { id: projectId, userId } });
-  if (count === 0) return { error: await notFound() };
+  if (count === 0) return { error: notFound };
   await deleteProjectObjects(userId, projectId);
   revalidatePath("/projects");
 }
@@ -277,9 +288,9 @@ export async function deleteProject(id: string): Promise<ActionResult> {
  */
 export async function loadProject(id: string) {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const project = await getProject(userId, id);
-  if (!project) return { error: await notFound() };
+  if (!project) return { error: notFound };
   if (project.error !== undefined) return { error: project.error };
   return { project };
 }
@@ -301,15 +312,18 @@ export async function saveProject(
   updatedAt: Date,
 ): Promise<SaveResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut(), retryable: true };
+  if (!userId) return { error: signedOut, retryable: true };
   const projectId = parseProjectId(id);
-  if (!projectId) return { error: await notFound() };
+  if (!projectId) return { error: notFound };
   const parsed = ProjectDocument.safeParse(document);
   if (!parsed.success) {
     return {
-      error: await translate("Projects.saveFailed", {
-        reason: listIssues(parsed.error.issues, await getTranslator()),
-      }),
+      error: {
+        key: "Projects.saveFailed",
+        values: {
+          reason: listIssues(parsed.error.issues),
+        },
+      },
       retryable: true,
     };
   }
@@ -321,7 +335,7 @@ export async function saveProject(
       await lockProject(tx, projectId);
       if ((await missingAssets(userId, projectId, meshes, tx)).length > 0) {
         return {
-          error: await translate("Projects.saveFailed", { reason: await meshMissing() }),
+          error: { key: "Projects.saveFailed", values: { reason: meshMissing } },
           retryable: true,
         };
       }
@@ -337,19 +351,19 @@ export async function saveProject(
       throw error;
     }
     const exists = await db.project.count({ where: { id: projectId, userId } });
-    return { error: exists ? await conflict() : await notFound() };
+    return { error: exists ? conflict : notFound };
   }
 }
 
 /** A project's versions after an action on them, newest first, or why the action failed. */
-export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: string };
+export type VersionsResult = { versions: VersionRow[]; error?: never } | { error: KeyMessage };
 
 /** The versions of one of the user's projects (ADR-0028). */
 export async function getVersions(projectId: string): Promise<VersionsResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const id = parseProjectId(projectId);
-  if (!id) return { error: await notFound() };
+  if (!id) return { error: notFound };
   return { versions: await listVersions(userId, id) };
 }
 
@@ -364,11 +378,11 @@ export async function createVersion(
   updatedAt: Date,
 ): Promise<VersionsResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const id = parseProjectId(projectId);
-  if (!id) return { error: await notFound() };
+  if (!id) return { error: notFound };
   const parsed = parseVersionLabel(label);
-  if (!parsed.success) return { error: await labelTooLong() };
+  if (!parsed.success) return { error: labelTooLong };
 
   const error = await db.$transaction(async (tx) => {
     await lockProject(tx, id);
@@ -376,10 +390,10 @@ export async function createVersion(
       where: { id, userId },
       select: { schemaVersion: true, document: true, updatedAt: true },
     });
-    if (!project) return await notFound();
-    if (project.updatedAt.getTime() !== updatedAt.getTime()) return await conflict();
+    if (!project) return notFound;
+    if (project.updatedAt.getTime() !== updatedAt.getTime()) return conflict;
     if ((await tx.projectVersion.count({ where: { projectId: id } })) >= MAX_VERSIONS) {
-      return await tooManyVersions();
+      return tooManyVersions;
     }
     await tx.projectVersion.create({
       data: {
@@ -397,29 +411,29 @@ export async function createVersion(
 /** Relabels one of the user's versions; a blank label shows its date instead. */
 export async function renameVersion(id: string, label: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const versionId = parseProjectId(id);
-  if (!versionId) return { error: await versionNotFound() };
+  if (!versionId) return { error: versionNotFound };
   const parsed = parseVersionLabel(label);
-  if (!parsed.success) return { error: await labelTooLong() };
+  if (!parsed.success) return { error: labelTooLong };
 
   const { count } = await db.projectVersion.updateMany({
     where: { id: versionId, project: { userId } },
     data: { label: parsed.data },
   });
-  if (count === 0) return { error: await versionNotFound() };
+  if (count === 0) return { error: versionNotFound };
 }
 
 export async function deleteVersion(id: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const versionId = parseProjectId(id);
-  if (!versionId) return { error: await versionNotFound() };
+  if (!versionId) return { error: versionNotFound };
 
   const { count } = await db.projectVersion.deleteMany({
     where: { id: versionId, project: { userId } },
   });
-  if (count === 0) return { error: await versionNotFound() };
+  if (count === 0) return { error: versionNotFound };
 }
 
 /**
@@ -434,15 +448,18 @@ export async function restoreVersion(
   updatedAt: Date,
 ): Promise<
   | { document: ProjectDocument; updatedAt: Date; versions: VersionRow[]; error?: never }
-  | { error: string }
+  | { error: KeyMessage }
 > {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const versionId = parseProjectId(id);
-  if (!versionId) return { error: await versionNotFound() };
+  if (!versionId) return { error: versionNotFound };
 
+  // Labels the automatic version; read before the transaction, which holds a row lock.
   const t = await getTranslator();
-  let result: { error: string } | { projectId: string; document: ProjectDocument; updatedAt: Date };
+  let result:
+    | { error: KeyMessage }
+    | { projectId: string; document: ProjectDocument; updatedAt: Date };
   let projectId: string | undefined;
   try {
     result = await db.$transaction(async (tx) => {
@@ -454,15 +471,15 @@ export async function restoreVersion(
           project: { select: { id: true, schemaVersion: true, document: true, updatedAt: true } },
         },
       });
-      if (!version) return { error: await versionNotFound() };
+      if (!version) return { error: versionNotFound };
       const { project } = version;
       projectId = project.id;
-      const parsed = parseStoredDocument(version.document, "cantRestore", t);
+      const parsed = parseStoredDocument(version.document, "cantRestore");
       if (parsed.error !== undefined) return { error: parsed.error };
-      if (project.updatedAt.getTime() !== updatedAt.getTime()) return { error: await conflict() };
+      if (project.updatedAt.getTime() !== updatedAt.getTime()) return { error: conflict };
       await lockProject(tx, project.id);
       if ((await tx.projectVersion.count({ where: { projectId: project.id } })) >= MAX_VERSIONS) {
-        return { error: await tooManyVersions() };
+        return { error: tooManyVersions };
       }
 
       await tx.projectVersion.create({
@@ -492,7 +509,7 @@ export async function restoreVersion(
       throw error;
     }
     const exists = await db.project.count({ where: { id: projectId, userId } });
-    return { error: exists ? await conflict() : await notFound() };
+    return { error: exists ? conflict : notFound };
   }
   if ("error" in result) return result;
   const { projectId: restoredId, ...restored } = result;
@@ -506,16 +523,16 @@ export async function restoreVersion(
  */
 export async function openVersionAsProject(id: string, dateLabel: string): Promise<ActionResult> {
   const userId = await getUserId();
-  if (!userId) return { error: await signedOut() };
+  if (!userId) return { error: signedOut };
   const versionId = parseProjectId(id);
-  if (!versionId) return { error: await versionNotFound() };
+  if (!versionId) return { error: versionNotFound };
 
   const version = await db.projectVersion.findFirst({
     where: { id: versionId, project: { userId } },
     select: { label: true, document: true, project: { select: { id: true, name: true } } },
   });
-  if (!version) return { error: await versionNotFound() };
-  const parsed = parseStoredDocument(version.document, "cantOpenVersion", await getTranslator());
+  if (!version) return { error: versionNotFound };
+  const parsed = parseStoredDocument(version.document, "cantOpenVersion");
   if (parsed.error !== undefined) return { error: parsed.error };
   const date = parseVersionLabel(dateLabel);
   const label = version.label ?? (date.success ? date.data : null);
@@ -527,10 +544,10 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
 
   const meshes = [...new Set(parsed.document.models.map(({ sha256 }) => sha256))];
   if (meshes.length > 0) {
-    if (!isStorageConfigured()) return { error: await translate("Projects.versionNoModelStorage") };
+    if (!isStorageConfigured()) return { error: { key: "Projects.versionNoModelStorage" } };
     if ((await missingAssets(userId, version.project.id, meshes)).length > 0) {
       return {
-        error: await translate("Projects.versionCantOpen", { reason: await meshMissing() }),
+        error: { key: "Projects.versionCantOpen", values: { reason: meshMissing } },
       };
     }
   }
@@ -559,13 +576,13 @@ async function copyMeshes(
   from: string,
   to: string,
   sha256s: readonly string[],
-): Promise<string | undefined> {
+): Promise<KeyMessage | undefined> {
   try {
     await copyAssets(userId, from, to, sha256s);
   } catch (error) {
     console.error(`Couldn't copy the meshes of project ${from}`, error);
     await db.project.deleteMany({ where: { id: to, userId } });
     await deleteProjectObjects(userId, to);
-    return translate("Projects.copyFailed");
+    return { key: "Projects.copyFailed" };
   }
 }

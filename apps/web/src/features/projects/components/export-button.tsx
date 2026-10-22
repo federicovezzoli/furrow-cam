@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@furrow/ui/components/ui/button";
-import { errorText } from "@furrow/ui/lib/i18n";
+import { errorText, formatMessage } from "@furrow/ui/lib/i18n";
 import { exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
@@ -29,7 +29,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
         return;
       }
       if (result.error !== undefined) {
-        window.alert(result.error);
+        window.alert(formatMessage(t, result.error));
         return;
       }
       const { document, name: projectName } = result.project;

@@ -1,6 +1,13 @@
 import { createTranslator } from "use-intl/core";
 import { describe, expect, it } from "vitest";
-import { CATALOGS, type Catalog, messagesFor, translator } from "./i18n";
+import {
+  CATALOGS,
+  type Catalog,
+  formatMessage,
+  type KeyMessage,
+  messagesFor,
+  translator,
+} from "./i18n";
 import { LOCALES, matchLocale, parseAcceptLanguage } from "./locales";
 
 function keys(messages: Catalog, prefix = ""): string[] {
@@ -95,6 +102,32 @@ describe("translator", () => {
   it("is built once per language", () => {
     expect(translator("it")).toBe(translator("it"));
     expect(translator("it")).not.toBe(translator("de"));
+  });
+});
+
+describe("formatMessage", () => {
+  const t = translator("en");
+
+  it("looks a key message up by its full key, translating the messages in it", () => {
+    const message: KeyMessage = {
+      key: "Projects.saveFailed",
+      values: {
+        reason: [
+          {
+            key: "Projects.issueAt",
+            values: { message: { code: "validation.required" }, path: "name" },
+          },
+          "as is",
+        ],
+      },
+    };
+    expect(formatMessage(t, message)).toBe(
+      `The project couldn't be saved: ✖ ${t("Core.validation.required")} → name\nas is`,
+    );
+  });
+
+  it("looks a core message up under Core", () => {
+    expect(formatMessage(t, { code: "validation.required" })).toBe(t("Core.validation.required"));
   });
 });
 

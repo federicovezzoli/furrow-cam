@@ -1,3 +1,4 @@
+import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import {
   discardMesh,
   getMeshUrl,
@@ -19,7 +20,7 @@ export async function uploadMesh(
   projectId: string,
   sha256: string,
   file: Blob,
-): Promise<{ uploaded: boolean; error?: never } | { error: string }> {
+): Promise<{ uploaded: boolean; error?: never } | { error: Translatable }> {
   try {
     const request = await requestMeshUpload(projectId, sha256, file.size);
     if (request.error !== undefined) return { error: request.error };
@@ -55,7 +56,7 @@ export async function discardUpload(projectId: string, sha256: string) {
 /** Downloads the project's mesh `sha256`; throws an `Error` for the user if it can't. */
 export async function downloadMesh(projectId: string, sha256: string): Promise<ArrayBuffer> {
   const link = await getMeshUrl(projectId, sha256).catch(() => ({ error: downloadFailed() }));
-  if (link.error !== undefined) throw new Error(link.error);
+  if (link.error !== undefined) throw new Error(formatMessage(clientTranslator(), link.error));
   const response = await fetch(link.url).catch(() => null);
   if (!response?.ok) throw new Error(downloadFailed());
   return response.arrayBuffer();

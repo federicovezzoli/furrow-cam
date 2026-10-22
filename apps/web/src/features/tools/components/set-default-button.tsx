@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@furrow/ui/components/ui/button";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { StarIcon } from "lucide-react";
 import { useTransition } from "react";
 import { useTranslations } from "use-intl";
@@ -17,6 +18,7 @@ export function SetDefaultButton({
   isDefault: boolean;
 }) {
   const t = useTranslations("Tools");
+  const format = useFormatMessage();
   const [pending, startTransition] = useTransition();
 
   if (isDefault) {
@@ -33,7 +35,7 @@ export function SetDefaultButton({
       onClick={() =>
         startTransition(async () => {
           const result = await setDefaultTool(id);
-          if (result) window.alert(result.error);
+          if (result) window.alert(format(result.error));
         })
       }
       disabled={pending}
