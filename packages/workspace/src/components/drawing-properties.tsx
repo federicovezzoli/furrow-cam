@@ -7,6 +7,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
   CircleAlertIcon,
+  CopyIcon,
   FlipHorizontal2Icon,
   FlipVertical2Icon,
   Maximize2Icon,
@@ -27,6 +28,8 @@ import {
   drawingBounds,
   drawingOffset,
   drawingOperations,
+  drawingShapes,
+  duplicateDrawing,
   fitDrawingToStock,
   mirrorDrawing,
   removeDrawing,
@@ -48,8 +51,8 @@ const DEFAULT_ANGLE = 15;
 /**
  * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):
  * width and height, which keep its proportions, the border *Fit to stock*
- * leaves, mirroring and turning it (D6, D7), its position from the zero, and
- * removing it, each an undoable edit.
+ * leaves, mirroring and turning it (D6, D7), its position from the zero,
+ * duplicating (D8) and removing it, each an undoable edit.
  */
 export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const store = useDocumentStoreApi();
@@ -81,6 +84,17 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
     bounds.max[1] > stock.height + 1e-6;
   const apply = (field: string, result: ActionResult) =>
     setError(result.ok ? null : { field, message: result.error });
+  // Selects the copy, so it can be moved right away.
+  const duplicate = () => {
+    const copyId = duplicateDrawing(store, drawing.id);
+    if (copyId === null) return;
+    const shapes = drawingShapes(store.getState().document.geometry, copyId);
+    workspace
+      .getState()
+      .selectPaths(
+        shapes.flatMap((shape) => shape.paths.map((_, path) => ({ shapeId: shape.id, path }))),
+      );
+  };
 
   return (
     <div className="grid gap-4 p-3 text-ui">
@@ -240,7 +254,11 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
         ))}
       </section>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1">
+        <Button variant="outline" size="compact" onClick={duplicate} title={t("duplicateTitle")}>
+          <CopyIcon />
+          {t("duplicate")}
+        </Button>
         <Button
           variant="outline"
           size="compact"

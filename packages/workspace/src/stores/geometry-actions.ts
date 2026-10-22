@@ -11,6 +11,7 @@ import {
   scaleShapes,
   shapesBounds,
   stockInset,
+  targetedShapes,
   translatePoint,
   translateShapes,
   xyOriginPosition,
@@ -103,7 +104,8 @@ function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean
   const tabs = new Map<string, boolean[]>();
   for (const operation of document.operations) {
     if (operation.type !== "profile" || !operation.params.tabs) continue;
-    const targeted = operation.targets.flatMap(({ shapeId }) => shapes.get(shapeId) ?? []);
+    // Only the paths it cuts: a tab on an uncut path of another drawing doesn't take it.
+    const targeted = targetedShapes(shapes, operation.targets);
     const mine = closedLoops(targeted.filter((shape) => shape.drawingId === id));
     if (mine.length === 0) continue;
     const others = closedLoops(targeted.filter((shape) => shape.drawingId !== id));
@@ -313,6 +315,56 @@ export function setDrawingBorder(store: DocumentStore, id: string, border: numbe
     const drawing = draft.drawings.find((d) => d.id === id);
     if (drawing && drawing.border !== border) drawing.border = border;
   });
+}
+
+/** The gap between a drawing and its duplicate, in millimetres. */
+export const DUPLICATE_GAP = 10;
+
+/**
+ * Copies drawing `id` to the right of its box, `DUPLICATE_GAP` away, as one
+ * undo step (PRD-0009 D8): every operation targeting its shapes targets the
+ * copy's too, with the same paths, and the tabs on its paths are copied
+ * with it. The copy may run off the stock. Returns the copy's id, or `null`
+ * for an unknown drawing.
+ */
+export function duplicateDrawing(store: DocumentStore, id: string): string | null {
+  const { document } = store.getState();
+  const drawing = document.drawings.find((d) => d.id === id);
+  const shapes = drawingShapes(document.geometry, id);
+  const bounds = shapesBounds(shapes);
+  if (!drawing || !bounds) return null;
+  const offset: Point = [bounds.max[0] - bounds.min[0] + DUPLICATE_GAP, 0];
+  const copyId = crypto.randomUUID();
+  const ids = new Map(shapes.map((shape) => [shape.id, crypto.randomUUID()]));
+  const copies = translateShapes(shapes, offset).map((shape) => ({
+    ...shape,
+    id: ids.get(shape.id) as string,
+    drawingId: copyId,
+  }));
+  // One assignment, not a spread push, as on import.
+  const geometry = document.geometry.concat(copies);
+  const tabs = drawingTabs(document, id);
+  store.getState().change("duplicateDrawing", (draft) => {
+    draft.drawings.push({ ...drawing, id: copyId });
+    draft.geometry = geometry;
+    for (const operation of draft.operations) {
+      const extra = operation.targets.flatMap(({ shapeId, paths }) => {
+        const copy = ids.get(shapeId);
+        // A fresh array: the draft's may not sit in two places.
+        return copy ? [{ shapeId: copy, paths: paths && [...paths] }] : [];
+      });
+      // One assignment, not a spread push: a drawing may hold more shapes than a call takes arguments.
+      if (extra.length > 0) operation.targets = operation.targets.concat(extra);
+      const own = tabs.get(operation.id);
+      if (!own || operation.type !== "profile" || !operation.params.tabs) continue;
+      const { positions } = operation.params.tabs;
+      // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
+      operation.params.tabs.positions = positions.concat(
+        positions.filter((_, i) => own[i]).map((position) => translatePoint(position, offset)),
+      );
+    }
+  });
+  return copyId;
 }
 
 /**

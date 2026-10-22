@@ -1210,6 +1210,8 @@
     "positionHint": "Where the drawing's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Drag the drawing in the top view to move it too.",
     "offStock": "Part of the drawing lies outside the stock.",
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that only machine it",
+    "duplicateTitle": "Copies the drawing to its right, machined by the same operations",
+    "duplicate": "Duplicate",
     "remove": "Remove drawing"
   },
   "Import": {

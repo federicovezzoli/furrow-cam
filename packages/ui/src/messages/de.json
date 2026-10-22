@@ -1210,6 +1210,8 @@
     "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} der Zeichnung liegt, vom Nullpunkt gemessen. Du kannst die Zeichnung auch in der Draufsicht ziehen.",
     "offStock": "Ein Teil der Zeichnung liegt außerhalb des Rohteils.",
     "removeTitle": "Entfernt auch {count, plural, one {die Operation, die nur sie bearbeitet} other {die # Operationen, die nur sie bearbeiten}}",
+    "duplicateTitle": "Kopiert die Zeichnung rechts daneben, bearbeitet von denselben Operationen",
+    "duplicate": "Duplizieren",
     "remove": "Zeichnung entfernen"
   },
   "Import": {
