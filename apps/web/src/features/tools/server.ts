@@ -1,11 +1,11 @@
 import "server-only";
 import { Tool } from "@furrow/document";
+import type { KeyMessage } from "@furrow/ui/lib/i18n";
 import type { SavedTool, ToolChoice, ToolFormErrors } from "@furrow/workspace/lib/workspace-host";
 import { DEFAULT_TOOL, parseToolForm } from "@furrow/workspace/tools/lib/tool-form-data";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { translate } from "@/lib/locale";
 
 export type { SavedTool, ToolChoice, ToolFormErrors };
 export { DEFAULT_TOOL, parseToolForm };
@@ -63,7 +63,7 @@ export async function lockLibrary(tx: Prisma.TransactionClient, userId: string):
 }
 
 /** Why a bit can't be changed, in the request's language. */
-export const toolNotFound = () => translate("Tools.notFound");
+export const toolNotFound: KeyMessage = { key: "Tools.notFound" };
 
 /**
  * Creates the user's tool, or updates it when `id` is given. A user's first
@@ -88,8 +88,8 @@ export async function writeTool(
     return { id: created.id, tool };
   }
   const toolId = z.uuid().safeParse(id);
-  if (!toolId.success) return { errors: { form: await toolNotFound() } };
+  if (!toolId.success) return { errors: { form: toolNotFound } };
   const { count } = await db.tool.updateMany({ where: { id: toolId.data, userId }, data: tool });
-  if (count === 0) return { errors: { form: await toolNotFound() } };
+  if (count === 0) return { errors: { form: toolNotFound } };
   return { id: toolId.data, tool };
 }

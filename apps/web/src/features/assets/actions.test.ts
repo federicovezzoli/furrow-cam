@@ -172,11 +172,11 @@ describe("requestMeshUpload", () => {
 
   it("refuses files over the limit, empty files and malformed hashes", async () => {
     expect(await requestMeshUpload(PROJECT, SHA, 50_000_001)).toEqual({
-      error: "This file is larger than 50 MB, the most allowed.",
+      error: { key: "Assets.tooLarge", values: { mb: 50 } },
     });
-    expect(await requestMeshUpload(PROJECT, SHA, 0)).toEqual({ error: "This file is empty." });
+    expect(await requestMeshUpload(PROJECT, SHA, 0)).toEqual({ error: { key: "Assets.empty" } });
     expect(await requestMeshUpload(PROJECT, "../other", 10)).toEqual({
-      error: "Invalid file hash.",
+      error: { key: "Assets.invalidHash" },
     });
     expect(mocks.assets).toEqual([]);
   });
@@ -184,14 +184,14 @@ describe("requestMeshUpload", () => {
   it("refuses another user's project, signed-out users and servers without storage", async () => {
     mocks.projects = [{ id: PROJECT, userId: "someone-else" }];
     expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({
-      error: "This project no longer exists.",
+      error: { key: "Projects.notFound" },
     });
     mocks.userId = null;
     expect(await requestMeshUpload(PROJECT, SHA, model.size)).toHaveProperty("error");
     mocks.userId = USER;
     mocks.storage = false;
     expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({
-      error: "STL import isn't available on this server.",
+      error: { key: "Assets.noStorage" },
     });
     expect(mocks.assets).toEqual([]);
   });
@@ -201,7 +201,7 @@ describe("verifyMeshUpload", () => {
   it("marks the asset verified once the stored object matches", async () => {
     await requestMeshUpload(PROJECT, SHA, model.size);
     expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
-      error: "This mesh hasn't been uploaded.",
+      error: { key: "Assets.notUploaded" },
     });
     upload();
     expect(await verifyMeshUpload(PROJECT, SHA)).toBeUndefined();
@@ -212,7 +212,7 @@ describe("verifyMeshUpload", () => {
     await requestMeshUpload(PROJECT, SHA, model.size);
     upload(model.size + 1);
     expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
-      error: "The uploaded file doesn't match the one picked. Try again.",
+      error: { key: "Assets.mismatch" },
     });
     expect(mocks.objects.has(KEY)).toBe(false);
     expect(mocks.assets[0]?.verifiedAt).toBeNull();
@@ -221,7 +221,7 @@ describe("verifyMeshUpload", () => {
   it("refuses meshes nobody asked to upload", async () => {
     upload();
     expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
-      error: "This mesh hasn't been uploaded.",
+      error: { key: "Assets.notUploaded" },
     });
   });
 });
@@ -229,7 +229,7 @@ describe("verifyMeshUpload", () => {
 describe("getMeshUrl", () => {
   it("returns a download URL for verified meshes only", async () => {
     await requestMeshUpload(PROJECT, SHA, model.size);
-    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: "This mesh hasn't been uploaded." });
+    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: { key: "Assets.notUploaded" } });
     upload();
     await verifyMeshUpload(PROJECT, SHA);
     expect(await getMeshUrl(PROJECT, SHA)).toEqual({ url: `https://storage/${KEY}?get` });
@@ -243,7 +243,7 @@ describe("getMeshUrl", () => {
       verifiedAt: new Date(),
     });
     mocks.userId = "someone-else";
-    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: "This project no longer exists." });
+    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
   });
 });
 
@@ -280,7 +280,7 @@ describe("discardMesh", () => {
   it("refuses another user's project", async () => {
     await uploaded();
     mocks.userId = "someone-else";
-    expect(await discardMesh(PROJECT, SHA)).toEqual({ error: "This project no longer exists." });
+    expect(await discardMesh(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
     expect(mocks.assets).toHaveLength(1);
     expect(mocks.objects.has(KEY)).toBe(true);
   });

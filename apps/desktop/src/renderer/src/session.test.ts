@@ -1,7 +1,7 @@
 import { createProjectDocument, type ProjectDocument } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { MAX_VERSIONS } from "@furrow/workspace/lib/versions";
-import type { VersionRow } from "@furrow/workspace/lib/workspace-host";
+import type { VersionsResult } from "@furrow/workspace/lib/workspace-host";
 import { describe, expect, it, vi } from "vitest";
 import { type ProjectFile, readProjectFile } from "./project-file";
 import { createProjectSession } from "./session";
@@ -18,8 +18,8 @@ function widened(document: ProjectDocument, width: number): ProjectDocument {
 }
 
 /** `result`'s versions; throws its error otherwise. */
-function listed(result: { versions: VersionRow[]; error?: never } | { error: string }) {
-  if (result.error !== undefined) throw new Error(result.error);
+function listed(result: VersionsResult) {
+  if (result.error !== undefined) throw new Error(JSON.stringify(result.error));
   return result.versions;
 }
 
@@ -143,12 +143,12 @@ describe("createProjectSession", () => {
   it("restores a version, keeping the replaced document as an automatic version", async () => {
     const { session, versions } = setup();
     const created = await versions.create("first cut", session.savedAt);
-    if (created.error !== undefined) throw new Error(created.error);
+    if (created.error !== undefined) throw new Error(JSON.stringify(created.error));
     const [first] = created.versions;
     await session.host.save(widened(session.document, 321), session.savedAt);
 
     const restored = await versions.restore(first?.id ?? "", session.savedAt);
-    if (restored.error !== undefined) throw new Error(restored.error);
+    if (restored.error !== undefined) throw new Error(JSON.stringify(restored.error));
     expect(restored.document.stock.width).not.toBe(321);
     expect(session.document).toBe(restored.document);
     expect(restored.versions.map((v) => v.label)).toEqual([
@@ -160,7 +160,7 @@ describe("createProjectSession", () => {
   it("renames and deletes versions, which counts as a change", async () => {
     const { session, versions } = setup();
     const created = await versions.create("", session.savedAt);
-    if (created.error !== undefined) throw new Error(created.error);
+    if (created.error !== undefined) throw new Error(JSON.stringify(created.error));
     const id = created.versions[0]?.id ?? "";
     expect(created.versions[0]?.label).toBeNull();
     session.markSaved("/p/Coasters.furrow", "Coasters", session.prepareSave().contents);

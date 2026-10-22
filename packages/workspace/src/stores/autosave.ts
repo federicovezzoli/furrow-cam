@@ -1,4 +1,5 @@
 import type { Message, ProjectDocument } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { SaveResult } from "../lib/workspace-host";
 import type { DocumentStore } from "./document-store";
 
@@ -12,7 +13,7 @@ import type { DocumentStore } from "./document-store";
 export type SaveState = "saved" | "unsaved" | "saving" | "error" | "failed";
 
 /** `savedAt` is the server's `updatedAt` for the last save; `error` explains a failed one. */
-export type AutosaveStatus = { state: SaveState; savedAt: Date; error?: string | Message };
+export type AutosaveStatus = { state: SaveState; savedAt: Date; error?: Translatable };
 
 export type SaveDocument = (
   document: ProjectDocument,
@@ -62,7 +63,7 @@ export function createAutosave(
   let unsubscribe: (() => void) | undefined;
   const listeners = new Set<() => void>();
 
-  function update(state: SaveState, error?: string | Message) {
+  function update(state: SaveState, error?: Translatable) {
     status =
       error === undefined
         ? { state, savedAt: status.savedAt }

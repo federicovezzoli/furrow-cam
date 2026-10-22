@@ -149,6 +149,8 @@
     "notAProject": "Questo file non è un progetto Furrow CAM.",
     "invalidProject": "Questo file non è un progetto Furrow CAM valido: {issues}",
     "moreProblems": "…e {count, plural, one {# altro problema} other {altri # problemi}}.",
+    "issue": "✖ {message}",
+    "issueAt": "✖ {message} → {path}",
     "chooseMachine": "Scegli una macchina.",
     "machineNotFound": "Questa macchina non esiste più.",
     "machineInvalid": "Le impostazioni di questa macchina non sono più valide. Correggile nella pagina Macchine.",

@@ -4,6 +4,7 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import {
@@ -221,7 +222,7 @@ function WebLink({ to, ...props }: WorkspaceLinkProps) {
 }
 
 /** A project this release can't read, with a way back to all projects. */
-function UnreadableProject({ name, error }: { name: string; error: string }) {
+function UnreadableProject({ name, error }: { name: string; error: Translatable }) {
   const t = useTranslations("Common");
   return (
     <>

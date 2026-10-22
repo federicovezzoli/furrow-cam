@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/features/auth/server", () => ({ getUserId: async () => "user-1" }));
-vi.mock("@/lib/locale", () => ({ translate: async (key: string) => key }));
 vi.mock("./server", () => ({ parseMachineForm: () => ({ machine }) }));
 vi.mock("next/cache", () => ({
   revalidatePath: (path: string, type?: string) => mocks.revalidated.push([path, type]),
@@ -49,7 +48,7 @@ describe("saveMachine", () => {
   it("reports a machine that isn't the user's", async () => {
     mocks.updated = 0;
     await expect(saveMachine(MACHINE_ID, new FormData())).resolves.toEqual({
-      form: "Machines.notFound",
+      form: { key: "Machines.notFound" },
     });
     expect(mocks.revalidated).toEqual([]);
   });
