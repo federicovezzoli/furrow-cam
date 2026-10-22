@@ -1,5 +1,17 @@
 # @furrow/cam-core
 
+## 0.11.0
+
+### Minor Changes
+
+- Clicking a drawing's shape now also shows the drawing's properties over the viewport, where you can set its width or height (it keeps its proportions), fit it to the stock with a border, or remove it. Profile tabs placed on its paths move with it. A new drawing now lands its border in from the zero's anchor. The selected drawing is shaded in the viewport, and selected paths have a faint outline so they stand out on the stock. ([#316](https://github.com/federicovezzoli/furrow-cam/pull/316))
+- You can mirror a drawing left to right or top to bottom, and turn it by 90° steps or by any angle, from its properties. It stays in place at the zero's anchor, and profile tabs on its paths turn with it. ([#318](https://github.com/federicovezzoli/furrow-cam/pull/318))
+- A project can now hold several drawings: each SVG or DXF file you import is added as its own drawing, aligned to the stock at the XY zero. A project holds drawings or one STL model, not both. Existing projects open with their shapes as one drawing. ([#315](https://github.com/federicovezzoli/furrow-cam/pull/315))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.12.0
+
 ## 0.10.0
 
 ### Minor Changes

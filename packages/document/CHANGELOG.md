@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.12.0
+
+### Minor Changes
+
+- A project can now hold several drawings: each SVG or DXF file you import is added as its own drawing, aligned to the stock at the XY zero. A project holds drawings or one STL model, not both. Existing projects open with their shapes as one drawing. ([#315](https://github.com/federicovezzoli/furrow-cam/pull/315))
+
 ## 0.11.0
 
 ### Minor Changes
