@@ -217,8 +217,10 @@ export function webRoute(to: WorkspaceDestination, projectId: string): string {
 
 function WebLink({ to, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
-  const onNavigate = useLeaveNavigate(leavesProject(to));
-  return <Link href={webRoute(to, project.id)} {...props} onNavigate={onNavigate} />;
+  const router = useRouter();
+  const href = webRoute(to, project.id);
+  const onNavigate = useLeaveNavigate(() => router.push(href), leavesProject(to));
+  return <Link href={href} {...props} onNavigate={onNavigate} />;
 }
 
 /** A project this release can't read, with a way back to all projects. */

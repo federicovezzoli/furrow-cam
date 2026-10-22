@@ -15,14 +15,15 @@ export type GuardNavigation = {
  * Asks before the browser's Back leaves the project while its changes can't
  * be saved (#254). The app router has no way to block a back navigation, so
  * once they can't, a copy of the page's history entry goes on top (`arm`):
- * Back lands on the page itself and asks there (`popState`), then goes back
- * for real or puts the copy back. The copy goes only on a page whose previous
- * entry is outside the project, in this document: Back to another of the
- * project's pages needs no asking, and Back to another document (or none) is
- * `beforeunload`'s. Entries are told apart by their Navigation API index, as
- * Next.js drops custom `history.state` on a refresh. The copy is never taken
- * off by script (a traversal is asynchronous and would race the next one): if
- * saves went through again meanwhile, reaching it goes straight on back.
+ * Back lands on the page itself and asks there (`popState`), then, once the
+ * user answered, goes back for real or puts the copy back. The copy goes only
+ * on a page whose previous entry is outside the project, in this document:
+ * Back to another of the project's pages needs no asking, and Back to another
+ * document (or none) is `beforeunload`'s. Entries are told apart by their
+ * Navigation API index, as Next.js drops custom `history.state` on a refresh.
+ * The copy is never taken off by script (a traversal is asynchronous and would
+ * race the next one): if saves went through again meanwhile, reaching it goes
+ * straight on back.
  * `inProject` tells whether a path is one of the project's pages. `history`,
  * `navigation` and `pathname` are read when needed, so the guard can be made
  * while rendering on the server.
@@ -39,16 +40,18 @@ export function createLeaveGuard({
   navigation: () => GuardNavigation | undefined;
   pathname: () => string;
   inProject: (path: string) => boolean;
-  /** Whether to leave: asks while changes can't be saved, else true. */
-  confirmLeave: () => boolean;
+  /** Whether to leave: asks while changes can't be saved, else true at once. */
+  confirmLeave: () => true | Promise<boolean>;
 }) {
   let unsaved = false;
   /** The copy's index, while it's in the history. */
   let copy: number | null = null;
+  /** The user is being asked whether to leave: no copy goes on meanwhile, or "leave" would land on it. */
+  let asking = false;
 
   function arm() {
     const index = navigation()?.currentEntry?.index;
-    if (copy !== null || !unsaved || index === undefined) return;
+    if (copy !== null || asking || !unsaved || index === undefined) return;
     const previous = navigation()?.entries()[index - 1];
     if (!previous?.sameDocument || !previous.url) return;
     if (inProject(new URL(previous.url).pathname)) return;
@@ -74,8 +77,17 @@ export function createLeaveGuard({
       if (copy !== null && index >= copy) return;
       const onPage = copy === index + 1;
       copy = null;
-      if (onPage && confirmLeave()) history().back();
-      else arm();
+      if (!onPage) return arm();
+      const go = confirmLeave();
+      if (go === true) return history().back();
+      asking = true;
+      void go.then((yes) => {
+        asking = false;
+        // Left meanwhile (Back again while asking): nothing to undo.
+        if (!inProject(pathname())) return;
+        if (yes) history().back();
+        else arm();
+      });
     },
   };
 }

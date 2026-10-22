@@ -41,11 +41,11 @@ function setup(answer: boolean, entries = ["/projects", "/projects/p"], navigati
         : undefined,
     pathname: () => stack[index]?.path ?? "",
     inProject: (path) => path.startsWith("/projects/p"),
-    // As `mayLeave`: asks only while the changes can't be saved.
+    // As `mayLeave`: asks only while the changes can't be saved, answering later.
     confirmLeave: () => {
       if (!unsaved) return true;
       asked++;
-      return answer;
+      return Promise.resolve(answer);
     },
   });
   /** What autosave reports, passed on to the guard. */
@@ -60,6 +60,8 @@ function setup(answer: boolean, entries = ["/projects", "/projects/p"], navigati
   };
   return {
     setUnsaved,
+    /** Waits for the user's answer to be acted on. */
+    answered: () => new Promise((resolve) => setTimeout(resolve)),
     back: history.back,
     go,
     open,
@@ -78,24 +80,27 @@ describe("createLeaveGuard", () => {
     expect(asked()).toBe(0);
   });
 
-  it("asks before Back leaves unsaved changes, and stays when told to", () => {
-    const { setUnsaved, back, at, asked, stack } = setup(false);
+  it("asks before Back leaves unsaved changes, and stays when told to", async () => {
+    const { setUnsaved, back, answered, at, asked, stack } = setup(false);
     setUnsaved(true);
     back();
     expect(asked()).toBe(1);
+    await answered();
     expect(at()).toBe("/projects/p");
     // Armed again: the next Back asks too.
     back();
     expect(asked()).toBe(2);
+    await answered();
     expect(at()).toBe("/projects/p");
     expect(stack).toHaveLength(3);
   });
 
-  it("goes back past the copy when told to leave", () => {
-    const { setUnsaved, back, at, asked } = setup(true);
+  it("goes back past the copy when told to leave", async () => {
+    const { setUnsaved, back, answered, at, asked } = setup(true);
     setUnsaved(true);
     back();
     expect(asked()).toBe(1);
+    await answered();
     expect(at()).toBe("/projects");
   });
 
@@ -107,8 +112,8 @@ describe("createLeaveGuard", () => {
     expect(at()).toBe("/projects");
   });
 
-  it("asks only when Back leaves the copy, not when it lands on it from another project page", () => {
-    const { setUnsaved, back, open, at, asked } = setup(true);
+  it("asks only when Back leaves the copy, not when it lands on it from another project page", async () => {
+    const { setUnsaved, back, answered, open, at, asked } = setup(true);
     setUnsaved(true);
     open("/projects/p/simulate");
     back();
@@ -116,11 +121,12 @@ describe("createLeaveGuard", () => {
     expect(asked()).toBe(0);
     back();
     expect(asked()).toBe(1);
+    await answered();
     expect(at()).toBe("/projects");
   });
 
-  it("lets Back through to another of the project's pages, then guards there", () => {
-    const { setUnsaved, back, at, asked, stack } = setup(false, [
+  it("lets Back through to another of the project's pages, then guards there", async () => {
+    const { setUnsaved, back, answered, at, asked, stack } = setup(false, [
       "/projects",
       "/projects/p",
       "/projects/p/simulate",
@@ -136,7 +142,30 @@ describe("createLeaveGuard", () => {
     expect(stack.at(-1)?.path).toBe("/projects/p");
     back();
     expect(asked()).toBe(1);
+    await answered();
     expect(at()).toBe("/projects/p");
+  });
+
+  it("does nothing once Back left the project while asking", async () => {
+    const { setUnsaved, back, answered, at, stack } = setup(true);
+    setUnsaved(true);
+    back();
+    // Back again before answering: out of the project already.
+    back();
+    await answered();
+    expect(at()).toBe("/projects");
+    expect(stack).toHaveLength(3);
+  });
+
+  it("goes back when told to leave, even if saves failed again while asking", async () => {
+    const { setUnsaved, back, answered, at, asked } = setup(true);
+    setUnsaved(true);
+    back();
+    // A retry failed again while the dialog was open: no new copy goes on, so one answer leaves.
+    setUnsaved(true);
+    await answered();
+    expect(asked()).toBe(1);
+    expect(at()).toBe("/projects");
   });
 
   it("neither asks nor arms when Back skips past the project", () => {
