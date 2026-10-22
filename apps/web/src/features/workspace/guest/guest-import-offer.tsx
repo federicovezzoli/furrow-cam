@@ -1,9 +1,11 @@
 "use client";
 
 import type { StlLimits } from "@furrow/cam-core";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
+import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { track } from "@furrow/workspace/lib/telemetry";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,6 +39,7 @@ function dismissed(): boolean {
  */
 export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null }) {
   const t = useTranslations("Guest");
+  const format = useFormatMessage();
   const router = useRouter();
   const [projects, setProjects] = useState<GuestProjectRow[]>([]);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
@@ -45,6 +48,7 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
   const [lastCopy, setLastCopy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { confirm } = useDialogs();
 
   useEffect(() => {
     if (dismissed()) return;
@@ -102,9 +106,9 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
     setProjects([]);
   }
 
-  function onDiscard() {
+  async function onDiscard() {
     const count = projects.length;
-    if (!window.confirm(t("discardConfirm", { count }))) return;
+    if (!(await confirm(t("discardConfirm", { count }), { destructive: true }))) return;
     startTransition(async () => {
       try {
         for (const { id } of projects) await deleteGuestProject(id);
@@ -145,7 +149,7 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
             </label>
             {failures.has(project.id) && (
               <p role="alert" className="pl-6 text-destructive">
-                {t("notImported", { error: failures.get(project.id) ?? "" })}
+                {t("notImported", { error: format(failures.get(project.id) ?? "") })}
               </p>
             )}
             {changed.has(project.id) && (

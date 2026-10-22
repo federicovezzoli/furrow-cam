@@ -7,7 +7,7 @@ import {
   type ProjectDocument,
   readProjectArchive,
 } from "@furrow/document";
-import { formatMessage } from "@furrow/ui/lib/i18n";
+import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
 import { cacheMesh } from "@/features/assets/lib/mesh-cache";
 import { uploadMesh } from "@/features/assets/lib/meshes";
@@ -58,7 +58,7 @@ export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array>
 }
 
 /** What `importArchive` returns: the new project, or an error. */
-export type ArchiveImport = { projectId: string; error?: never } | { error: string };
+export type ArchiveImport = { projectId: string; error?: never } | { error: Translatable };
 
 /**
  * Creates a project from a `.furrow.zip` export read by `readArchive`
@@ -128,7 +128,7 @@ async function finish(
   archive: ProjectArchive,
   document: ProjectDocument,
   updatedAt: Date,
-): Promise<string | undefined> {
+): Promise<Translatable | undefined> {
   try {
     for (const sha256 of new Set(document.models.map((model) => model.sha256))) {
       const bytes = archive.meshes.get(sha256);

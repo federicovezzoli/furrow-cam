@@ -8,7 +8,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import type * as React from "react";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useRef, useState, useTransition } from "react";
 import { useTranslations } from "use-intl";
 import { PlaceholderList } from "../../components/placeholder-list";
 import { POST_PROCESSOR_LABELS } from "../lib/labels";
@@ -25,6 +25,7 @@ const GCODE_BLOCKS = [
 /**
  * Saves the form's fields as machine `id`, or a new machine when `null`.
  * Resolves with why it couldn't (nothing on success), or leaves the page.
+ * Saving changes to an existing machine that stays on the page says so.
  */
 export type SaveMachine = (id: string | null, form: FormData) => Promise<MachineFormErrors>;
 
@@ -52,22 +53,39 @@ export function MachineForm({
   const [manualSpindle, setManualSpindle] = useState(machine.spindleRpmMin === null);
   const t = useTranslations("Machine");
   const [errors, setErrors] = useState<MachineFormErrors>({});
+  const [saved, setSaved] = useState(false);
+  /** Whether a field changed since the last submit, so a save never confirms later edits. */
+  const edited = useRef(false);
   const [pending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    edited.current = false;
+    setSaved(false);
     startTransition(async () => {
-      setErrors(await save(id, form));
+      const result = await save(id, form);
+      setErrors(result);
+      setSaved(id !== null && Object.keys(result).length === 0 && !edited.current);
     });
   }
 
+  function onEdit() {
+    edited.current = true;
+    setSaved(false);
+  }
+
   const field = fieldProps(machine, errors);
-  const number = fieldProps(machine, errors, null);
+  const numberProps = fieldProps(machine, errors, null);
+  // Stepping or scrubbing a number fires no input event for the form to hear.
+  const number = <K extends keyof Machine & string>(name: K) => ({
+    ...numberProps(name),
+    onValueChange: onEdit,
+  });
   const ask = (name: RequiredPresetField) => asked.includes(name) && <AskedHint />;
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-8" noValidate>
+    <form onSubmit={onSubmit} onChange={onEdit} className="grid gap-8" noValidate>
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field label={t("name")} {...field("name")} placeholder={t("namePlaceholder")} />
         <SelectField
@@ -202,13 +220,16 @@ export function MachineForm({
       </fieldset>
 
       <FormError message={errors.form ?? null} />
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending}>
           {pending ? t("saving") : id ? t("saveChanges") : t("add")}
         </Button>
         <Button asChild variant="outline">
           {cancel}
         </Button>
+        <p role="status" className="text-sm text-muted-foreground">
+          {saved && t("saved")}
+        </p>
       </div>
     </form>
   );

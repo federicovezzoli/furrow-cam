@@ -149,6 +149,8 @@
     "notAProject": "This file isn't a Furrow CAM project.",
     "invalidProject": "This file isn't a valid Furrow CAM project: {issues}",
     "moreProblems": "…and {count, plural, one {# more problem} other {# more problems}}.",
+    "issue": "✖ {message}",
+    "issueAt": "✖ {message} → {path}",
     "chooseMachine": "Choose a machine.",
     "machineNotFound": "This machine no longer exists.",
     "machineInvalid": "This machine's settings are no longer valid. Fix them on the Machines page.",
@@ -213,7 +215,6 @@
     "plunge": "Plunge",
     "plungeAngle": "Plunge angle",
     "stepDown": "Step down",
-    "stepOver": "Step over",
     "actions": "Actions",
     "edit": "Edit",
     "editLabel": "Edit {name}",
@@ -796,7 +797,7 @@
     "strategy": "Strategy",
     "angle": "Angle",
     "startFrom": "Start from",
-    "pocketHint": "{hint}, at the tool's step-over ({stepOver}%) and step-down.",
+    "pocketHint": "{hint}, at the tool's step-down.",
     "linearDirection": "Linear passes alternate direction; this one applies to the laps and the finish pass.",
     "finishLap": "One lap on the walls and islands at full depth.",
     "drill": "Drill",
@@ -824,9 +825,6 @@
     "roughHint": "Clears the material above the model in levels, from the top only, leaving the stock to leave for finishing.",
     "roughStrategyHint": "{hint}, in levels no more than the tool's step-down ({stepDown}) apart.",
     "stepOver": "Step-over",
-    "toolStepOver": "The tool's step-over. Changing it here leaves the tool alone.",
-    "ownStepOver": "For this operation only; the tool's is {stepOver}%.",
-    "useTools": "Use the tool's",
     "stockToLeave": "Stock to leave",
     "clear": "Clear",
     "margin": "Margin",
@@ -917,6 +915,12 @@
     "failed": "Toolpath failed: {error}",
     "warnings": "Toolpath warnings: {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Computing toolpaths · {done} of {total} done",
+    "progress": "Progress of {name}",
+    "cancel": "Cancel",
+    "cancelLabel": "Cancel computing {name}"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Flat end mill",
@@ -947,7 +951,6 @@
     "plungeRate": "Plunge rate",
     "plungeAngle": "Plunge angle",
     "stepDown": "Step down per pass",
-    "stepOver": "Step over (of diameter)",
     "notes": "Notes (optional)",
     "saving": "Saving…",
     "saveChanges": "Save changes",
@@ -987,7 +990,8 @@
     "saving": "Saving…",
     "saveChanges": "Save changes",
     "add": "Add machine",
-    "askedHint": "Fill in for your machine."
+    "askedHint": "Fill in for your machine.",
+    "saved": "Settings saved."
   },
   "NewMachine": {
     "starts": {
@@ -1155,10 +1159,8 @@
     "padCentre": "Its centre, from the stock's bottom-left corner. Resizing it keeps the centre where it is.",
     "padOff": "Part of the pad is off the stock, so there may be nothing to zero Z on there.",
     "padToolChange": "Tool change on the pad",
-    "toolChangePlaceholder": "M5\nM0 (Change the bit)",
-    "padToolChangeHint": "Runs at each tool change in place of the machine's. <strong>Suggest</strong> writes one from the machine's tool change, moving over the pad; <strong>Use the machine's</strong> goes back to the machine's own, after a move over the pad.",
-    "suggest": "Suggest",
-    "useMachines": "Use the machine's"
+    "padToolChangeHint": "Runs at each tool change.",
+    "reset": "Reset"
   },
   "Model": {
     "closeLabel": "Close model properties",
@@ -1208,6 +1210,8 @@
     "positionHint": "Where the drawing's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Drag the drawing in the top view to move it too.",
     "offStock": "Part of the drawing lies outside the stock.",
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that only machine it",
+    "duplicateTitle": "Copies the drawing to its right, machined by the same operations",
+    "duplicate": "Duplicate",
     "remove": "Remove drawing"
   },
   "Import": {
@@ -1268,7 +1272,11 @@
     "speed": "Playback speed"
   },
   "Dialog": {
-    "close": "Close"
+    "close": "Close",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "rename": "Rename"
   },
   "Tour": {
     "steps": {

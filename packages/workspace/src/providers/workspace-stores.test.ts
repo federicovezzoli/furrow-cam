@@ -55,14 +55,14 @@ describe("createWorkspaceStores", () => {
 
     const first = await stores.autosave.settle();
     const created = await versions.create("first cut", first.savedAt);
-    if (created.error !== undefined) throw new Error(created.error);
+    if (created.error !== undefined) throw new Error(JSON.stringify(created.error));
     expect(created.versions).toMatchObject([{ label: "first cut" }]);
 
     setWidth(stores, 321);
     const changed = await stores.autosave.settle();
     const id = created.versions[0]?.id ?? "";
     const restored = await versions.restore(id, changed.savedAt);
-    if (restored.error !== undefined) throw new Error(restored.error);
+    if (restored.error !== undefined) throw new Error(JSON.stringify(restored.error));
     expect(restored.document.stock.width).toBe(host.project.document.stock.width);
     expect(restored.versions).toHaveLength(2);
   });

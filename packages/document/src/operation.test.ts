@@ -83,6 +83,7 @@ describe("PocketParams", () => {
   const pocket: PocketParams = {
     strategy: { type: "offset" },
     direction: "climb",
+    stepOver: 40,
     depth: 6,
     allowance: 0.3,
     finishPass: true,
@@ -100,7 +101,9 @@ describe("PocketParams", () => {
     expect(PocketParams.safeParse({ ...pocket, depth: 0 }).success).toBe(false);
     expect(PocketParams.safeParse({ ...pocket, allowance: -0.1 }).success).toBe(false);
     expect(PocketParams.safeParse({ ...pocket, direction: "up" }).success).toBe(false);
-    expect(PocketParams.safeParse({ ...pocket, stepOver: 40 }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, stepOver: 0 }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, stepOver: 101 }).success).toBe(false);
+    expect(PocketParams.safeParse({ ...pocket, feed: 1000 }).success).toBe(false);
   });
 
   it("needs an allowance for a finish pass", () => {
@@ -137,7 +140,7 @@ describe("PocketParams", () => {
 describe("DrillOperation", () => {
   const profile = fullDocument().operations[0];
   if (!profile) throw new Error("The fixture has an operation");
-  const drill = { ...profile, type: "drill", params: { depth: 10, peck: true } };
+  const drill = { ...profile, type: "drill", params: { depth: 10, peck: true, stepOver: 40 } };
 
   it("accepts drills and end mills", () => {
     expect(DrillOperation.safeParse(drill).success).toBe(true);
@@ -151,9 +154,13 @@ describe("DrillOperation", () => {
   });
 
   it("rejects invalid params and unknown keys", () => {
-    expect(DrillParams.safeParse({ depth: 0, peck: false }).success).toBe(false);
-    expect(DrillParams.safeParse({ depth: 5, peck: "yes" }).success).toBe(false);
-    expect(DrillParams.safeParse({ depth: 5, peck: true, peckDepth: 2 }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 0, peck: false, stepOver: 40 }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 5, peck: "yes", stepOver: 40 }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 5, peck: true, stepOver: 0 }).success).toBe(false);
+    expect(DrillParams.safeParse({ depth: 5, peck: true }).success).toBe(false);
+    expect(
+      DrillParams.safeParse({ depth: 5, peck: true, stepOver: 40, peckDepth: 2 }).success,
+    ).toBe(false);
   });
 });
 
@@ -202,7 +209,10 @@ describe("VCarveOperation", () => {
 
   it("accepts V-bits, with or without a flat bottom, as an operation too", () => {
     expect(VCarveOperation.safeParse(vcarve).success).toBe(true);
-    const flat = { ...vcarve, params: { maxDepth: 3, flatBottom: { tool: endMill } } };
+    const flat = {
+      ...vcarve,
+      params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
+    };
     expect(Operation.parse(flat)).toEqual(flat);
     expect(Operation.parse(vcarve)).toEqual(vcarve);
   });
@@ -215,7 +225,7 @@ describe("VCarveOperation", () => {
 
   it("clears a flat bottom with flat end mills only", () => {
     for (const tool of [vBit, { ...endMill, type: "ball_end_mill" }]) {
-      const params = { maxDepth: 3, flatBottom: { tool } };
+      const params = { maxDepth: 3, flatBottom: { tool, stepOver: 40 } };
       expect(VCarveOperation.safeParse({ ...vcarve, params }).success).toBe(false);
     }
   });
@@ -230,7 +240,7 @@ describe("VCarveOperation", () => {
 
   it("names the flat-bottom tool as the clearing tool", () => {
     expect(clearingTool(VCarveOperation.parse(vcarve))).toBeNull();
-    const params = { maxDepth: 3, flatBottom: { tool: endMill } };
+    const params = { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } };
     expect(clearingTool(VCarveOperation.parse({ ...vcarve, params }))).toEqual(endMill);
     expect(clearingTool(profile)).toBeNull();
   });

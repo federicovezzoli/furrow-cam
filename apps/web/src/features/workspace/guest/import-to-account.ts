@@ -1,12 +1,13 @@
 import type { StlLimits } from "@furrow/cam-core";
 import { projectFileName } from "@furrow/document";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { importGuestDocument } from "@/features/projects/actions";
 import { importArchive } from "@/features/projects/lib/archive-import";
 import { clientTranslator } from "@/lib/client-translator";
 import { deleteGuestProjectIfSaved, getGuestMesh, getGuestProject } from "./storage";
 
 /** A guest project that couldn't be imported, and why; it stays in the browser. */
-export type FailedImport = { id: string; name: string; error: string };
+export type FailedImport = { id: string; name: string; error: Translatable };
 
 /**
  * Which guest projects became which account projects, which failed, and
@@ -40,7 +41,7 @@ export async function importToAccount(
       name = project.name;
       const fileName = projectFileName(project.name);
       const contents = JSON.stringify(project.document);
-      let imported: { projectId: string; error?: never } | { error: string };
+      let imported: { projectId: string; error?: never } | { error: Translatable };
       if (project.document.models.length === 0) {
         imported = await importGuestDocument(
           new File([contents], fileName, { type: "application/json" }),

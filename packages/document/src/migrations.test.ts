@@ -137,12 +137,15 @@ describe("migrations", () => {
       id: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
       type: "pocket",
       name: "Pocket",
+      // Tools had a step-over until v18.
+      tool: { ...profile.tool, stepOver: 40 },
       params: { direction: "climb", depth: 6, allowance: 0, finishPass: false, ramp: true },
     };
     const v3 = { ...doc, schemaVersion: 3, operations: [profile, pocket] };
+    const params = { ...pocket.params, strategy: { type: "offset" }, stepOver: 40 };
     expect(parseProjectDocument(v3).operations).toEqual([
       profile,
-      { ...pocket, params: { ...pocket.params, strategy: { type: "offset" } } },
+      { ...pocket, tool: profile.tool, params },
     ]);
   });
 
@@ -290,6 +293,76 @@ describe("migrations", () => {
     expect(parseProjectDocument(v16).drawings).toMatchObject([{ name: "Drawing" }]);
     const { drawings: _, ...empty } = { ...createProjectDocument(), schemaVersion: 16 };
     expect(parseProjectDocument(empty)).toEqual(createProjectDocument());
+  });
+
+  it("moves v17 tool step-overs into the operations that use them", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (!profile) throw new Error("The fixture has an operation");
+    const { tool } = profile;
+    const vBit = {
+      ...tool,
+      type: "v_bit",
+      cutDirection: null,
+      vAngle: 60,
+      tipDiameter: 0,
+    } as const;
+    const pocket = {
+      ...profile,
+      id: "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
+      type: "pocket",
+      params: {
+        strategy: { type: "offset" },
+        direction: "climb",
+        stepOver: 35,
+        depth: 5,
+        allowance: 0,
+        finishPass: false,
+        ramp: true,
+      },
+    } as const;
+    const drill = {
+      ...profile,
+      id: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+      type: "drill",
+      params: { depth: 5, peck: false, stepOver: 35 },
+    } as const;
+    const vcarve = {
+      ...profile,
+      id: "3d4e5f6a-7b8c-4d9e-8f1a-2b3c4d5e6f7a",
+      type: "vcarve",
+      tool: vBit,
+      params: { maxDepth: 3, flatBottom: { tool, stepOver: 50 } },
+    } as const;
+    const ownRough = { ...reliefRough, params: { ...reliefRough.params, stepOver: 25 } };
+    const toolRough = {
+      ...reliefRough,
+      id: "4e5f6a7b-8c9d-4e0f-9a2b-3c4d5e6f7a8b",
+      params: { ...reliefRough.params, stepOver: 60 },
+    };
+    doc.models = [model];
+    doc.operations = [profile, pocket, drill, vcarve, ownRough, toolRough, reliefFinish];
+
+    const v17 = JSON.parse(JSON.stringify(doc));
+    v17.schemaVersion = 17;
+    const [, v17Pocket, v17Drill, v17VCarve, v17OwnRough, v17ToolRough, v17Finish] = v17.operations;
+    v17.operations[0].tool.stepOver = 70;
+    for (const operation of [v17Pocket, v17Drill]) {
+      operation.tool.stepOver = 35;
+      delete operation.params.stepOver;
+    }
+    v17VCarve.tool.stepOver = 40;
+    v17VCarve.params.flatBottom.tool.stepOver = 50;
+    delete v17VCarve.params.flatBottom.stepOver;
+    v17OwnRough.tool.stepOver = 40;
+    v17ToolRough.tool.stepOver = 60;
+    v17ToolRough.params.stepOver = null;
+    v17Finish.tool.stepOver = 15;
+
+    const migrated = migrateProjectDocument(v17);
+    expect(migrated).toEqual(doc);
+    expect(JSON.stringify(migrated)).not.toMatch(/"tool":\{[^}]*"stepOver"/);
+    expect(parseProjectDocument(v17)).toEqual(doc);
   });
 
   it("leaves v1 documents without operations alone", () => {

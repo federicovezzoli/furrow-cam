@@ -44,8 +44,6 @@ export const Tool = z
     plungeAngle: z.number().min(1).max(90),
     /** Depth per pass. */
     stepDown: PositiveLength,
-    /** Percentage of the diameter. */
-    stepOver: z.number().gt(0).max(100),
     notes: z.string().nullable(),
     /** Identifies the tool in the library and colours its toolpaths in the preview. */
     color: HexColor,

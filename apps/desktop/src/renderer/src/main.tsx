@@ -1,3 +1,4 @@
+import { DialogsProvider } from "@furrow/ui/components/dialogs";
 import { LocaleProvider } from "@furrow/ui/components/locale-provider";
 import { DEFAULT_LOCALE, type Locale } from "@furrow/ui/lib/locales";
 import { captureUncaughtErrors, setTelemetrySink } from "@furrow/workspace/lib/telemetry";
@@ -55,7 +56,9 @@ void api
           disableTransitionOnChange
         >
           <DesktopLocale initial={locale}>
-            <App />
+            <DialogsProvider>
+              <App />
+            </DialogsProvider>
           </DesktopLocale>
         </ThemeProvider>
       </StrictMode>,

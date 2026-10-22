@@ -31,7 +31,6 @@ const END_MILL = {
   vAngle: null,
   tipDiameter: null,
   plungeAngle: 3,
-  stepOver: 40,
   notes: null,
 } as const;
 
@@ -61,7 +60,6 @@ function vBit(name: string, diameter: number, angle: number, tip: number, color:
     plungeRate: angle < 60 ? 150 : 300,
     plungeAngle: 90,
     stepDown: angle < 60 ? 0.5 : 1.5,
-    stepOver: 40,
     notes: null,
     color,
   };
@@ -148,7 +146,6 @@ const PRESETS: Record<string, Tool> = {
     diameter: 6,
     fluteLength: 22,
     cutDirection: "upcut",
-    stepOver: 10,
     color: COLORS.blue,
   },
   "3mm-ball": {
@@ -159,7 +156,6 @@ const PRESETS: Record<string, Tool> = {
     diameter: 3,
     fluteLength: 12,
     cutDirection: "upcut",
-    stepOver: 10,
     color: COLORS.red,
   },
   "eighth-inch-ball": {
@@ -170,7 +166,6 @@ const PRESETS: Record<string, Tool> = {
     diameter: INCH / 8,
     fluteLength: INCH / 2,
     cutDirection: "upcut",
-    stepOver: 10,
     color: COLORS.green,
   },
   v90: vBit("90° V-bit", INCH / 2, 90, 0, COLORS.amber),

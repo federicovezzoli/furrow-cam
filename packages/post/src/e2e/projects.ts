@@ -172,7 +172,7 @@ function plate(): ProjectDocument {
         enabled: true,
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true },
+        params: { depth: 6, peck: true, stepOver: 40 },
       },
       {
         id: id(),
@@ -184,6 +184,7 @@ function plate(): ProjectDocument {
         params: {
           strategy: { type: "offset" },
           direction: "climb",
+          stepOver: 40,
           depth: 3,
           allowance: 0,
           finishPass: false,
@@ -249,6 +250,7 @@ function svgPart(): ProjectDocument {
         params: {
           strategy: { type: "linear", angle: 45 },
           direction: "conventional",
+          stepOver: 40,
           depth: 4,
           allowance: 0.3,
           finishPass: true,
@@ -324,7 +326,7 @@ function svgSign(): ProjectDocument {
         enabled: true,
         targets: targets(doc, byName("path3")),
         tool: vBit,
-        params: { maxDepth: 3, flatBottom: { tool: endMill } },
+        params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
       },
       {
         id: id(),
@@ -334,7 +336,7 @@ function svgSign(): ProjectDocument {
         targets: targets(doc, byName("Hole A")),
         // An end mill smaller than the hole bores it in a helix.
         tool: endMill,
-        params: { depth: 10, peck: false },
+        params: { depth: 10, peck: false, stepOver: 40 },
       },
     ],
   };
@@ -389,6 +391,7 @@ function inchPanel(): ProjectDocument {
         params: {
           strategy: { type: "peel", start: "inside" },
           direction: "climb",
+          stepOver: 40,
           depth: 0.25 * inch,
           allowance: 0,
           finishPass: false,
@@ -483,7 +486,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
             modelId: model.id,
             strategy: { type: "offset" },
             direction: "climb",
-            stepOver: null,
+            stepOver: 40,
             stockToLeave: 0.5,
             boundary: { type: "stock" },
             ramp: true,
@@ -531,7 +534,6 @@ const spiral6: Tool = {
   fluteLength: 42,
   plungeAngle: 45,
   stepDown: 3,
-  stepOver: 75,
 };
 const spiral3: Tool = {
   ...spiral6,
@@ -554,7 +556,6 @@ const straight19: Tool = {
   fluteLength: 32,
   plungeAngle: 20,
   stepDown: 1.5,
-  stepOver: 75,
 };
 const tornado35: Tool = {
   ...workshopTool,
@@ -564,7 +565,6 @@ const tornado35: Tool = {
   fluteLength: 10,
   plungeAngle: 5,
   stepDown: 0.75,
-  stepOver: 75,
 };
 /**
  * A bowl bit, 44.45 mm across with a 41.91 mm profile: there is no such
@@ -581,7 +581,6 @@ const bowl44: Tool = {
   plungeRate: 150,
   plungeAngle: 45,
   stepDown: 3,
-  stepOver: 10,
 };
 
 function outsideProfile(
@@ -648,7 +647,7 @@ function strutPlate(): ProjectDocument {
         enabled: true,
         targets: [{ shapeId: plates.id, paths: holes }],
         tool: spiral3,
-        params: { depth: 5, peck: false },
+        params: { depth: 5, peck: false, stepOver: 75 },
       },
       outsideProfile(id, "Plate", [{ shapeId: plates.id, paths: [0] }], spiral6, 5, null),
     ],
@@ -687,6 +686,7 @@ function pcShelf(): ProjectDocument {
     params: {
       strategy: { type: "linear", angle: 90 },
       direction: "climb",
+      stepOver: 75,
       depth,
       allowance: 0,
       finishPass: false,

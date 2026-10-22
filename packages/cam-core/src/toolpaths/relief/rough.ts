@@ -98,7 +98,6 @@ const REST_SHARE = 0.25;
  *   levels only clear less, so the tool crosses what the level above cleared
  *   at that level's height.
  *
- * The step-over is the tool's unless the operation sets its own.
  *
  * With `rest` (S8), the stock the earlier operations left is simulated over
  * the grid and all the tool reaches from the area, and only material more
@@ -123,7 +122,7 @@ export function* reliefRoughSteps(
   }: ReliefRoughOptions,
 ): Generator<number, Toolpath> {
   const { params } = operation;
-  const tool = { ...operation.tool, stepOver: params.stepOver ?? operation.tool.stepOver };
+  const { tool } = operation;
   const { strategy } = params;
   const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
@@ -180,6 +179,7 @@ export function* reliefRoughSteps(
       safeZ,
       entryClearance,
       ramp: params.ramp,
+      stepOver: params.stepOver,
       progress,
     });
     return { moves, warnings };
@@ -194,7 +194,13 @@ export function* reliefRoughSteps(
   ];
   const clearing = new LevelClearing(
     tool,
-    { strategy, direction: params.direction, allowance: 0, ramp: params.ramp },
+    {
+      strategy,
+      direction: params.direction,
+      stepOver: params.stepOver,
+      allowance: 0,
+      ramp: params.ramp,
+    },
     { safeZ, entryClearance, tolerance },
   );
   // The pad stays at the stock top: an island at every level, on its outside.
@@ -349,6 +355,8 @@ type RasterOptions = {
   safeZ: number;
   entryClearance: number;
   ramp: boolean;
+  /** Percentage of the tool's diameter. */
+  stepOver: number;
   /** The progress after level `i`. */
   progress: (i: number) => number;
 };
@@ -377,7 +385,7 @@ function* rasterLevels(
   area: Rect,
   levels: number[],
   floor: number,
-  { restStock, discs, safeZ, entryClearance, ramp, progress }: RasterOptions,
+  { restStock, discs, safeZ, entryClearance, ramp, stepOver, progress }: RasterOptions,
 ): Generator<number, ToolpathMove[]> {
   const { columns, rows, cellWidth, cellHeight } = grid;
   // Samples are a cell apart, and links no further: between two of them the
@@ -399,7 +407,7 @@ function* rasterLevels(
   // Rows of cells, inside the grid or past it, whose centres are in the area.
   const firstRow = Math.ceil(Math.min(...vs) / cellHeight - 0.5 - 1e-9);
   const lastRow = Math.floor(Math.max(...vs) / cellHeight - 0.5 + 1e-9);
-  const spacing = (tool.diameter * tool.stepOver) / 100;
+  const spacing = (tool.diameter * stepOver) / 100;
   const rowsApart = Math.max(1, Math.floor(spacing / cellHeight + 1e-9));
   const count = Math.ceil((lastRow - firstRow) / rowsApart) + 1;
 

@@ -4,6 +4,7 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import {
@@ -216,12 +217,14 @@ export function webRoute(to: WorkspaceDestination, projectId: string): string {
 
 function WebLink({ to, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
-  const onNavigate = useLeaveNavigate(leavesProject(to));
-  return <Link href={webRoute(to, project.id)} {...props} onNavigate={onNavigate} />;
+  const router = useRouter();
+  const href = webRoute(to, project.id);
+  const onNavigate = useLeaveNavigate(() => router.push(href), leavesProject(to));
+  return <Link href={href} {...props} onNavigate={onNavigate} />;
 }
 
 /** A project this release can't read, with a way back to all projects. */
-function UnreadableProject({ name, error }: { name: string; error: string }) {
+function UnreadableProject({ name, error }: { name: string; error: Translatable }) {
   const t = useTranslations("Common");
   return (
     <>

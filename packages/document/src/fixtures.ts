@@ -24,7 +24,6 @@ export const endMill: Tool = {
   plungeRate: 500,
   plungeAngle: 3,
   stepDown: 2,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };
@@ -46,7 +45,6 @@ export const ballEndMill: Tool = {
   diameter: 3,
   fluteLength: 12,
   stepDown: 1,
-  stepOver: 10,
   color: "#9333ea",
 };
 
@@ -188,7 +186,7 @@ export const reliefRough: ReliefRoughOperation = {
     modelId: model.id,
     strategy: { type: "offset" },
     direction: "climb",
-    stepOver: null,
+    stepOver: 40,
     stockToLeave: 0.5,
     boundary: { type: "model" },
     ramp: true,
@@ -198,7 +196,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 17,
+    schemaVersion: 18,
     units: "in",
     stock: {
       width: 300,

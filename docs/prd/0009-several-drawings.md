@@ -54,7 +54,6 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 
 ## Open questions
 
-- Where should a duplicate land: offset by a fixed distance, or next to the original's bounding box?
 - Should the drawings be listed somewhere (to select a hidden or overlapped one), or is clicking in the viewport enough?
 
 ## Changelog
@@ -62,3 +61,4 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 - 2026-10-21: initial draft (ADR-0055, #308–#312)
 - 2026-10-21: D1 a project holds drawings or one model, never both, so D9 no longer duplicates models (#308)
 - 2026-10-21: D1 an imported drawing lands its border in from the anchor (#309)
+- 2026-10-22: D8 a duplicate lands 10 mm to the right of the original's bounding box, machined by the same operations; open question closed (#312)

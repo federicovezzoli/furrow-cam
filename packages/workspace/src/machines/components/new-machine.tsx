@@ -7,6 +7,7 @@ import {
   presetMachine,
   presetName,
 } from "@furrow/document";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Input } from "@furrow/ui/components/ui/input";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { ExternalLinkIcon } from "lucide-react";
@@ -31,20 +32,21 @@ export function NewMachine({ save, cancel }: { save: SaveMachine; cancel: React.
   const [preset, setPreset] = useState<MachinePreset | null>(null);
   /** Something was typed in the form, which switching would throw away. */
   const [edited, setEdited] = useState(false);
+  const { confirm } = useDialogs();
 
   /** Asks before a switch that unmounts an edited form; `true` to go ahead. */
-  function discardEdits(): boolean {
-    if (edited && !window.confirm(t("discard"))) return false;
+  async function discardEdits(): Promise<boolean> {
+    if (edited && !(await confirm(t("discard")))) return false;
     setEdited(false);
     return true;
   }
 
-  function chooseStart(value: Start) {
-    if (value !== start && discardEdits()) setStart(value);
+  async function chooseStart(value: Start) {
+    if (value !== start && (await discardEdits())) setStart(value);
   }
 
-  function choosePreset(value: MachinePreset) {
-    if (value.id !== preset?.id && discardEdits()) setPreset(value);
+  async function choosePreset(value: MachinePreset) {
+    if (value.id !== preset?.id && (await discardEdits())) setPreset(value);
   }
 
   return (

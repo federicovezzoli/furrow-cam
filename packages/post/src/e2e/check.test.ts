@@ -11,7 +11,7 @@ const holes = {
   enabled: true,
   targets: [],
   tool: drill,
-  params: { depth: 6, peck: true },
+  params: { depth: 6, peck: true, stepOver: 40 },
 } satisfies Operation;
 
 const project: CheckedProject = {

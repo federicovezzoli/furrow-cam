@@ -60,6 +60,7 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import {
   type ActionResult,
   autoPlaceTabs,
+  DEFAULT_STEP_OVER,
   DEFAULT_TAB_COUNT,
   defaultTabs,
   renameOperation,
@@ -415,6 +416,51 @@ function RampCheckbox({
   );
 }
 
+/** The operation's step-over (#332), as a percentage of `tool`'s diameter, and the distance it makes. */
+function StepOverField({
+  id,
+  tool,
+  value,
+  error,
+  spiral = false,
+  onValueChange,
+}: {
+  id: string;
+  tool: Tool;
+  value: number;
+  error: string | undefined;
+  /** Spirals step over between laps rather than passes. */
+  spiral?: boolean;
+  onValueChange: (stepOver: number) => void;
+}) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const t = useTranslations("Operation");
+  const length = useLength(units);
+  return (
+    <>
+      <NumberField
+        id={id}
+        label={t("stepOver")}
+        layout="inline"
+        suffix="%"
+        min={1}
+        max={100}
+        value={value}
+        onValueChange={onValueChange}
+        error={error}
+        {...gestureHandlers(store)}
+      />
+      <p className="text-muted-foreground">
+        {t("spacingHint", {
+          spiral: spiral ? "yes" : "no",
+          spacing: length((tool.diameter * value) / 100),
+        })}
+      </p>
+    </>
+  );
+}
+
 function ProfileFields({ operation }: { operation: ProfileOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
@@ -637,11 +683,15 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         </Row>
       )}
       <p className="text-muted-foreground">
-        {t("pocketHint", {
-          hint: t(`strategyHints.${strategy.type}`),
-          stepOver: tool.stepOver,
-        })}
+        {t("pocketHint", { hint: t(`strategyHints.${strategy.type}`) })}
       </p>
+      <StepOverField
+        id="pocket-step-over"
+        tool={tool}
+        value={params.stepOver}
+        error={errors.stepOver}
+        onValueChange={(stepOver) => update("stepOver", { stepOver })}
+      />
       <Row id="pocket-direction" label={t("direction")}>
         <NativeSelect
           id="pocket-direction"
@@ -746,6 +796,15 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
         checked={params.peck}
         onChange={(peck) => update("peck", { peck })}
       />
+      {tool.type !== "drill" && (
+        <StepOverField
+          id="drill-step-over"
+          tool={tool}
+          value={params.stepOver}
+          error={errors.stepOver}
+          onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        />
+      )}
       {errors.peck && (
         <p role="alert" className="text-destructive">
           {errors.peck}
@@ -855,7 +914,8 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
   const length = useLength(units);
   const cone = vBitConeDepth(tool);
   const width = vBitLineWidth(tool, params.maxDepth);
-  const flatTool = params.flatBottom?.tool ?? null;
+  const { flatBottom } = params;
+  const flatTool = flatBottom?.tool ?? null;
   const defaultFlatTool = flatBottomToolChoice(tools);
   const current = flatTool ? matchingToolChoice(tools, flatTool) : undefined;
 
@@ -892,7 +952,10 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
         disabled={flatTool === null && !defaultFlatTool}
         onChange={(checked) =>
           update("flatBottom", {
-            flatBottom: checked && defaultFlatTool ? { tool: defaultFlatTool.tool } : null,
+            flatBottom:
+              checked && defaultFlatTool
+                ? { tool: defaultFlatTool.tool, stepOver: DEFAULT_STEP_OVER }
+                : null,
           })
         }
       />
@@ -904,7 +967,9 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
             value={current?.id ?? ""}
             onChange={(event) => {
               const choice = tools.find((candidate) => candidate.id === event.target.value);
-              if (choice) update("flatBottom", { flatBottom: { tool: choice.tool } });
+              if (choice && flatBottom) {
+                update("flatBottom", { flatBottom: { ...flatBottom, tool: choice.tool } });
+              }
             }}
             className={SELECT_CLASS}
           >
@@ -924,6 +989,17 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
             ))}
           </NativeSelect>
         </Row>
+      )}
+      {flatBottom && (
+        <StepOverField
+          id="vcarve-flat-step-over"
+          tool={flatBottom.tool}
+          value={flatBottom.stepOver}
+          error={undefined}
+          onValueChange={(stepOver) =>
+            update("flatBottom", { flatBottom: { ...flatBottom, stepOver } })
+          }
+        />
       )}
       {errors.flatBottom && (
         <p role="alert" className="text-destructive">
@@ -1023,34 +1099,13 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
           stepDown,
         })}
       </p>
-      <NumberField
+      <StepOverField
         id="relief-rough-step-over"
-        label={t("stepOver")}
-        layout="inline"
-        suffix="%"
-        min={1}
-        max={100}
-        value={params.stepOver ?? tool.stepOver}
-        onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        tool={tool}
+        value={params.stepOver}
         error={errors.stepOver}
-        {...gestureHandlers(store)}
+        onValueChange={(stepOver) => update("stepOver", { stepOver })}
       />
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <p className="flex-1">
-          {params.stepOver === null
-            ? t("toolStepOver")
-            : t("ownStepOver", { stepOver: tool.stepOver })}
-        </p>
-        {params.stepOver !== null && (
-          <Button
-            variant="outline"
-            size="compact"
-            onClick={() => update("stepOver", { stepOver: null })}
-          >
-            {t("useTools")}
-          </Button>
-        )}
-      </div>
       {strategy.type !== "linear" && (
         <Row id="relief-rough-direction" label={t("direction")}>
           <NativeSelect
@@ -1179,10 +1234,8 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
     updateReliefFinishParams(store, operation.id, changes),
   );
   const t = useTranslations("Operation");
-  const length = useLength(units);
   const { strategy } = params;
   const gestures = gestureHandlers(store);
-  const spacing = (tool.diameter * params.stepOver) / 100;
 
   return (
     <section aria-labelledby="relief-finish-heading" className="grid gap-2">
@@ -1264,26 +1317,14 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         </Row>
       )}
       {strategy.type !== "waterline" && (
-        <>
-          <NumberField
-            id="relief-step-over"
-            label={t("stepOver")}
-            layout="inline"
-            suffix="%"
-            min={1}
-            max={100}
-            value={params.stepOver}
-            onValueChange={(stepOver) => update("stepOver", { stepOver })}
-            error={errors.stepOver}
-            {...gestures}
-          />
-          <p className="text-muted-foreground">
-            {t("spacingHint", {
-              spiral: strategy.type === "spiral" ? "yes" : "no",
-              spacing: length(spacing),
-            })}
-          </p>
-        </>
+        <StepOverField
+          id="relief-step-over"
+          tool={tool}
+          value={params.stepOver}
+          error={errors.stepOver}
+          spiral={strategy.type === "spiral"}
+          onValueChange={(stepOver) => update("stepOver", { stepOver })}
+        />
       )}
       {strategy.type === "parallel" && (
         <>
@@ -1517,6 +1558,9 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
         >
           {percent}%
         </progress>
+        <span aria-hidden className="shrink-0 text-muted-foreground tabular-nums">
+          {percent}%
+        </span>
         <Button variant="outline" size="compact" onClick={() => controls.cancel(operationId)}>
           {t("cancel")}
         </Button>

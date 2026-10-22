@@ -122,11 +122,13 @@ const PromptContext = createContext<(reason: AccountReason) => void>(() => {});
 function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
   const { project } = useWorkspaceHost();
   const prompt = useContext(PromptContext);
-  const onNavigate = useLeaveNavigate(leavesProject(to));
+  const router = useRouter();
+  const href = webRoute(to, project.id);
+  const onNavigate = useLeaveNavigate(() => router.push(href), leavesProject(to));
   if (to === "new-machine") {
     return (
       <a
-        href={webRoute(to, project.id)}
+        href={href}
         {...props}
         onClick={(event) => {
           onClick?.(event);
@@ -136,15 +138,14 @@ function GuestLink({ to, onClick, ...props }: WorkspaceLinkProps) {
       />
     );
   }
-  return (
-    <Link href={webRoute(to, project.id)} onClick={onClick} {...props} onNavigate={onNavigate} />
-  );
+  return <Link href={href} onClick={onClick} {...props} onNavigate={onNavigate} />;
 }
 
 /** Sign in, at the end of the workspace's top bar (PRD-0008 G9). */
 function SignInButton() {
   const t = useTranslations("Guest");
-  const onNavigate = useLeaveNavigate();
+  const router = useRouter();
+  const onNavigate = useLeaveNavigate(() => router.push("/sign-in"));
   return (
     <Button size="compact" variant="outline" asChild>
       <Link href="/sign-in" onNavigate={onNavigate}>

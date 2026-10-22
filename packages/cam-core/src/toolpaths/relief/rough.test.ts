@@ -346,9 +346,9 @@ describe("reliefRoughSteps", () => {
   });
 
   it("clears linearly with straight passes that rise over the model", () => {
-    const tool = { ...endMill, stepOver: 20 };
-    const toolpath = rough(tool, { strategy: { type: "linear", angle: 0 }, ramp: false });
-    const spacing = (tool.diameter * tool.stepOver) / 100;
+    const linear = { type: "linear", angle: 0 } as const;
+    const toolpath = rough(endMill, { strategy: linear, ramp: false, stepOver: 20 });
+    const spacing = (endMill.diameter * 20) / 100;
     // Every move starts and ends on a pass: none follows the model's edges.
     const ys = new Set(feedPoints(toolpath).map(([, y]) => y.toFixed(6)));
     const rows = [...ys].map(Number).sort((a, b) => a - b);
@@ -439,7 +439,7 @@ describe("reliefRoughSteps", () => {
     expect(at([30, 20])).toBeCloseTo(-9.5);
   });
 
-  it("spaces the passes by its own step-over, if it has one", () => {
+  it("spaces the passes by its step-over", () => {
     const passes = (toolpath: Toolpath) =>
       new Set(
         feedPoints(toolpath)
@@ -447,10 +447,8 @@ describe("reliefRoughSteps", () => {
           .map(([, y]) => y.toFixed(6)),
       ).size;
     const linear = { strategy: { type: "linear", angle: 0 } } as const;
-    const own = rough(endMill, linear);
-    expect(own).toEqual(rough({ ...endMill, stepOver: 40 }, { ...linear, stepOver: null }));
-    expect(rough(endMill, { ...linear, stepOver: 40 })).toEqual(own);
-    expect(passes(rough(endMill, { ...linear, stepOver: 10 }))).toBeGreaterThan(passes(own));
+    const wide = rough(endMill, { ...linear, stepOver: 40 });
+    expect(passes(rough(endMill, { ...linear, stepOver: 10 }))).toBeGreaterThan(passes(wide));
   });
 
   it("starts and ends at the retract height", () => {

@@ -215,8 +215,8 @@ function addVersion(document: unknown, label: string | null = null, projectId = 
 const project = () => mocks.projects[0] as ProjectRow;
 
 /** The versions an action returned; fails the test on an error. */
-function versionsOf(result: { versions: ListedVersion[] } | { error: string }) {
-  if ("error" in result) throw new Error(result.error);
+function versionsOf(result: { versions: ListedVersion[] } | { error: unknown }) {
+  if ("error" in result) throw new Error(JSON.stringify(result.error));
   return result.versions;
 }
 
@@ -256,20 +256,23 @@ describe("createVersion", () => {
 
   it("creates nothing when the project was saved elsewhere since", async () => {
     const result = await createVersion(PROJECT, "", new Date("2026-09-01T00:00:00Z"));
-    expect(result.error).toMatch(/changed somewhere else/);
+    expect(result.error).toEqual({ key: "Projects.conflict" });
     expect(mocks.versions).toHaveLength(0);
   });
 
   it("refuses another user's project", async () => {
     mocks.userId = "user-2";
     expect(await createVersion(PROJECT, "", LOADED_AT)).toEqual({
-      error: "This project no longer exists.",
+      error: { key: "Projects.notFound" },
     });
   });
 
   it("refuses a 51st version", async () => {
     for (let i = 0; i < 50; i++) addVersion(documentWithWidth(i));
-    expect((await createVersion(PROJECT, "", LOADED_AT)).error).toMatch(/already has 50 versions/);
+    expect((await createVersion(PROJECT, "", LOADED_AT)).error).toEqual({
+      key: "Projects.tooManyVersions",
+      values: { max: 50 },
+    });
     expect(mocks.versions).toHaveLength(50);
     // Counted with the project's row locked, so concurrent writes can't both pass.
     expect(mocks.locked).toEqual([PROJECT]);
@@ -280,7 +283,7 @@ describe("restoreVersion", () => {
   it("keeps the current document as an automatic version and replaces it", async () => {
     const id = addVersion(documentWithWidth(42), "First pass");
     const result = await restoreVersion(id, LOADED_AT);
-    if (result.error !== undefined) throw new Error(result.error);
+    if (result.error !== undefined) throw new Error(JSON.stringify(result.error));
 
     expect(result.document).toEqual(documentWithWidth(42));
     expect(project().document).toEqual(documentWithWidth(42));
@@ -303,7 +306,7 @@ describe("restoreVersion", () => {
   it("changes nothing when the project was saved elsewhere since", async () => {
     const id = addVersion(documentWithWidth(42));
     const result = await restoreVersion(id, new Date("2026-09-01T00:00:00Z"));
-    expect(result.error).toMatch(/changed somewhere else/);
+    expect(result.error).toEqual({ key: "Projects.conflict" });
     expect(project().document).toEqual(documentWithWidth(100));
     expect(mocks.versions).toHaveLength(1);
   });
@@ -312,7 +315,7 @@ describe("restoreVersion", () => {
     const id = addVersion(documentWithWidth(42));
     mocks.raceNextUpdate = "saved";
     const result = await restoreVersion(id, LOADED_AT);
-    expect(result.error).toMatch(/changed somewhere else/);
+    expect(result.error).toEqual({ key: "Projects.conflict" });
     expect(project().document).toEqual(documentWithWidth(100));
     expect(mocks.versions).toHaveLength(1);
   });
@@ -322,7 +325,7 @@ describe("restoreVersion", () => {
     const { entryClearance: _, ...machine } = current.machine ?? {};
     const id = addVersion({ ...current, schemaVersion: 2, machine });
     const result = await restoreVersion(id, LOADED_AT);
-    if (result.error !== undefined) throw new Error(result.error);
+    if (result.error !== undefined) throw new Error(JSON.stringify(result.error));
 
     expect(result.document.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.document.machine).toEqual({ ...machine, entryClearance: 1 });
@@ -333,16 +336,31 @@ describe("restoreVersion", () => {
     const newer = CURRENT_SCHEMA_VERSION + 1;
     const id = addVersion({ ...documentWithWidth(42), schemaVersion: newer });
     const result = await restoreVersion(id, LOADED_AT);
-    const message = `This version can't be restored: it was saved by a newer version of Furrow CAM (document version ${newer}; this version reads up to ${CURRENT_SCHEMA_VERSION}).`;
+    const message = {
+      key: "Projects.failure",
+      values: {
+        failure: { key: "Projects.cantRestore" },
+        reason: {
+          key: "Projects.savedByNewer",
+          values: { version: newer, supported: CURRENT_SCHEMA_VERSION },
+        },
+      },
+    };
     expect(result).toEqual({ error: message });
-    expect(versionsOf(await getVersions(PROJECT))[0]?.error).toBe(message);
+    expect(versionsOf(await getVersions(PROJECT))[0]?.error).toEqual(message);
     expect(project().document).toEqual(documentWithWidth(100));
   });
 
   it("refuses a version whose contents are invalid", async () => {
     const id = addVersion({ ...documentWithWidth(42), stock: null });
     expect(await restoreVersion(id, LOADED_AT)).toEqual({
-      error: "This version can't be restored: its contents are invalid.",
+      error: {
+        key: "Projects.failure",
+        values: {
+          failure: { key: "Projects.cantRestore" },
+          reason: { key: "Projects.contentsInvalid" },
+        },
+      },
     });
     expect(mocks.versions).toHaveLength(1);
   });
@@ -350,7 +368,10 @@ describe("restoreVersion", () => {
   it("refuses at the version cap, since the automatic version counts", async () => {
     for (let i = 0; i < 49; i++) addVersion(documentWithWidth(i));
     const id = addVersion(documentWithWidth(42));
-    expect((await restoreVersion(id, LOADED_AT)).error).toMatch(/already has 50 versions/);
+    expect((await restoreVersion(id, LOADED_AT)).error).toEqual({
+      key: "Projects.tooManyVersions",
+      values: { max: 50 },
+    });
     expect(project().document).toEqual(documentWithWidth(100));
     expect(mocks.locked).toEqual([PROJECT]);
   });
@@ -359,7 +380,7 @@ describe("restoreVersion", () => {
     const id = addVersion(documentWithWidth(42));
     mocks.raceNextUpdate = "deleted";
     expect(await restoreVersion(id, LOADED_AT)).toEqual({
-      error: "This project no longer exists.",
+      error: { key: "Projects.notFound" },
     });
   });
 
@@ -367,7 +388,7 @@ describe("restoreVersion", () => {
     const id = addVersion(documentWithWidth(42));
     mocks.userId = "user-2";
     expect(await restoreVersion(id, LOADED_AT)).toEqual({
-      error: "This version no longer exists.",
+      error: { key: "Projects.versionNotFound" },
     });
   });
 });
@@ -381,7 +402,7 @@ describe("managing versions", () => {
     expect(mocks.versions[0]?.label).toBeNull();
 
     mocks.userId = "user-2";
-    const gone = { error: "This version no longer exists." };
+    const gone = { error: { key: "Projects.versionNotFound" } };
     expect(await renameVersion(id, "Mine")).toEqual(gone);
     expect(await deleteVersion(id)).toEqual(gone);
     expect(mocks.versions).toHaveLength(1);
@@ -420,7 +441,7 @@ describe("meshes", () => {
 
   it("saves a document only once its meshes are verified assets of the project", async () => {
     const unsaved = {
-      error: "The project couldn't be saved: a model's mesh hasn't been uploaded.",
+      error: { key: "Projects.saveFailed", values: { reason: { key: "Projects.meshMissing" } } },
       // Removing the model, or uploading its file, lets the next save through.
       retryable: true,
     };
@@ -446,7 +467,7 @@ describe("meshes", () => {
     expect(await saveProject(PROJECT, invalid, LOADED_AT)).toMatchObject({ retryable: true });
     mocks.raceNextUpdate = "saved";
     const conflict = await saveProject(PROJECT, documentWithWidth(1), LOADED_AT);
-    expect(conflict.error).toMatch(/changed somewhere else/);
+    expect(conflict.error).toEqual({ key: "Projects.conflict" });
     expect(conflict).not.toHaveProperty("retryable");
   });
 
@@ -466,7 +487,10 @@ describe("meshes", () => {
   it("creates nothing when a version's mesh is missing or there's no storage", async () => {
     const id = addVersion(withModel(), "Relief");
     expect(await openVersionAsProject(id, "")).toEqual({
-      error: "This version can't be opened: a model's mesh hasn't been uploaded.",
+      error: {
+        key: "Projects.versionCantOpen",
+        values: { reason: { key: "Projects.meshMissing" } },
+      },
     });
     mocks.assets.push({ projectId: PROJECT, sha256: model.sha256, verified: true });
     mocks.storage = false;
@@ -480,7 +504,7 @@ describe("meshes", () => {
     mocks.copyFails = true;
     const id = addVersion(withModel(), "Relief");
     expect(await openVersionAsProject(id, "")).toEqual({
-      error: "The 3D models couldn't be copied. Try again.",
+      error: { key: "Projects.copyFailed" },
     });
     expect(mocks.projects).toHaveLength(1);
     expect(mocks.deletedObjects).toHaveLength(1);

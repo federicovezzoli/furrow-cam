@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogsProvider } from "@furrow/ui/components/dialogs";
 import { LocaleProvider } from "@furrow/ui/components/locale-provider";
 import type { Locale } from "@furrow/ui/lib/locales";
 import { useRouter } from "next/navigation";
@@ -7,7 +8,7 @@ import type * as React from "react";
 import { writeLocaleCookie } from "@/lib/locale-cookie";
 
 /**
- * The request's language for client components. Picking another stores it in
+ * The request's language for client components, and the dialogs they ask with. Picking another stores it in
  * a cookie and re-renders the server components, keeping client state.
  */
 export function WebLocaleProvider({
@@ -27,7 +28,7 @@ export function WebLocaleProvider({
         router.refresh();
       }}
     >
-      {children}
+      <DialogsProvider>{children}</DialogsProvider>
     </LocaleProvider>
   );
 }

@@ -69,10 +69,6 @@ export async function ToolList({ tools }: { tools: ToolRow[] }) {
               {t("Tools.stepDown")}
               <Unit>mm</Unit>
             </TableHead>
-            <TableHead className="text-right">
-              {t("Tools.stepOver")}
-              <Unit>mm</Unit>
-            </TableHead>
             <TableHead className="pr-4">
               <span className="sr-only">{t("Tools.actions")}</span>
             </TableHead>
@@ -118,10 +114,6 @@ export async function ToolList({ tools }: { tools: ToolRow[] }) {
                 <TableCell className="text-right">{formatNumber(tool.plungeRate)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.plungeAngle)}</TableCell>
                 <TableCell className="text-right">{formatNumber(tool.stepDown)}</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber((tool.diameter * tool.stepOver) / 100)}{" "}
-                  <span className="text-muted-foreground">({formatNumber(tool.stepOver)}%)</span>
-                </TableCell>
                 <TableCell className="pr-4">
                   <div className="flex justify-end gap-1">
                     <OpenToolButton

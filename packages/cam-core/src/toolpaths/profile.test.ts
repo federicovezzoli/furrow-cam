@@ -31,7 +31,6 @@ const tool: Tool = {
   plungeRate: 500,
   plungeAngle: 3,
   stepDown: 2,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };

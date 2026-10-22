@@ -1,5 +1,11 @@
 import { type Message, MessageError } from "@furrow/document";
-import { createTranslator, type IntlError, IntlErrorCode } from "use-intl/core";
+import {
+  createTranslator,
+  type IntlError,
+  IntlErrorCode,
+  type MessageKeys,
+  type NestedKeyOf,
+} from "use-intl/core";
 import de from "../messages/de.json";
 import en from "../messages/en.json";
 import fr from "../messages/fr.json";
@@ -64,12 +70,38 @@ export function translator(locale: Locale) {
 // biome-ignore lint/suspicious/noExplicitAny: translators are typed by their catalog keys; these helpers build keys at runtime.
 type AnyTranslator = (key: any, values?: any) => string;
 
-/** Text to show: already translated, or a core package's message (ADR-0054). */
-export type Translatable = string | Message;
+/**
+ * One of the apps' own messages by its full catalog key, e.g. a server
+ * action's error (ADR-0054). Messages in `values` are translated too, and a
+ * list of them is shown one per line.
+ */
+export type KeyMessage = {
+  key: MessageKeys<Messages, NestedKeyOf<Messages>>;
+  values?: Record<string, string | number | Translatable | Translatable[]>;
+};
 
-/** `message` in `t`'s language: a core package's code under `Core`, or text as it is. */
+/** Text to show: already translated, a core package's message, or an app's (ADR-0054). */
+export type Translatable = string | Message | KeyMessage;
+
+/** `message` in `t`'s language: a core package's code under `Core`, a key, or text as it is. */
 export function formatMessage(t: AnyTranslator, message: Translatable): string {
-  return typeof message === "string" ? message : t(`Core.${message.code}`, message.values);
+  if (typeof message === "string") return message;
+  if ("code" in message) return t(`Core.${message.code}`, message.values);
+  const values = message.values && Object.entries(message.values);
+  return t(
+    message.key,
+    values &&
+      Object.fromEntries(
+        values.map(([name, value]) => [
+          name,
+          typeof value === "number"
+            ? value
+            : Array.isArray(value)
+              ? value.map((line) => formatMessage(t, line)).join("\n")
+              : formatMessage(t, value),
+        ]),
+      ),
+  );
 }
 
 /** A warning about the program, after the operation it is about, if any. */

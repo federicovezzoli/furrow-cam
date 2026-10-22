@@ -149,6 +149,8 @@
     "notAProject": "Ce fichier n'est pas un projet Furrow CAM.",
     "invalidProject": "Ce fichier n'est pas un projet Furrow CAM valide : {issues}",
     "moreProblems": "…et {count, plural, one {# autre problème} other {# autres problèmes}}.",
+    "issue": "✖ {message}",
+    "issueAt": "✖ {message} → {path}",
     "chooseMachine": "Choisissez une machine.",
     "machineNotFound": "Cette machine n'existe plus.",
     "machineInvalid": "Les réglages de cette machine ne sont plus valides. Corrigez-les sur la page Machines.",
@@ -213,7 +215,6 @@
     "plunge": "Plongée",
     "plungeAngle": "Angle de plongée",
     "stepDown": "Passe",
-    "stepOver": "Recouvrement",
     "actions": "Actions",
     "edit": "Modifier",
     "editLabel": "Modifier {name}",
@@ -796,7 +797,7 @@
     "strategy": "Stratégie",
     "angle": "Angle",
     "startFrom": "Partir de",
-    "pocketHint": "{hint}, au recouvrement ({stepOver} %) et à la passe de l’outil.",
+    "pocketHint": "{hint}, à la passe de l’outil.",
     "linearDirection": "Les passes linéaires alternent de sens ; celui-ci s’applique aux tours et à la passe de finition.",
     "finishLap": "Un tour sur les parois et les îlots à pleine profondeur.",
     "drill": "Perçage",
@@ -824,9 +825,6 @@
     "roughHint": "Enlève la matière au-dessus du modèle par niveaux, par le dessus uniquement, en laissant la surépaisseur pour la finition.",
     "roughStrategyHint": "{hint}, en niveaux espacés au plus de la passe de l’outil ({stepDown}).",
     "stepOver": "Recouvrement",
-    "toolStepOver": "Le recouvrement de l’outil. Le changer ici ne modifie pas l’outil.",
-    "ownStepOver": "Pour cette opération seulement ; celui de l’outil est de {stepOver} %.",
-    "useTools": "Utiliser celui de l’outil",
     "stockToLeave": "Surépaisseur à laisser",
     "clear": "Dégager",
     "margin": "Marge",
@@ -917,6 +915,12 @@
     "failed": "Échec de la trajectoire : {error}",
     "warnings": "Avertissements de la trajectoire : {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Calcul des trajectoires · {done} sur {total} terminés",
+    "progress": "Progression de {name}",
+    "cancel": "Annuler",
+    "cancelLabel": "Annuler le calcul de {name}"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Fraise droite à bout plat",
@@ -947,7 +951,6 @@
     "plungeRate": "Vitesse de plongée",
     "plungeAngle": "Angle de plongée",
     "stepDown": "Passe par tour",
-    "stepOver": "Recouvrement (du diamètre)",
     "notes": "Notes (facultatives)",
     "saving": "Enregistrement…",
     "saveChanges": "Enregistrer les modifications",
@@ -987,7 +990,8 @@
     "saving": "Enregistrement…",
     "saveChanges": "Enregistrer les modifications",
     "add": "Ajouter la machine",
-    "askedHint": "À remplir pour votre machine."
+    "askedHint": "À remplir pour votre machine.",
+    "saved": "Réglages enregistrés."
   },
   "NewMachine": {
     "starts": {
@@ -1155,10 +1159,8 @@
     "padCentre": "Son centre, depuis le coin inférieur gauche du brut. La redimensionner garde le centre en place.",
     "padOff": "Une partie de la pastille dépasse du brut : il n’y a peut-être rien pour y remettre Z à zéro.",
     "padToolChange": "Changement d’outil sur la pastille",
-    "toolChangePlaceholder": "M5\nM0 (Changez la fraise)",
-    "padToolChangeHint": "S’exécute à chaque changement d’outil à la place de celui de la machine. <strong>Suggérer</strong> en écrit un à partir du changement d’outil de la machine, en passant au-dessus de la pastille ; <strong>Utiliser celui de la machine</strong> revient à celui de la machine, après un déplacement au-dessus de la pastille.",
-    "suggest": "Suggérer",
-    "useMachines": "Utiliser celui de la machine"
+    "padToolChangeHint": "S’exécute à chaque changement d’outil.",
+    "reset": "Réinitialiser"
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",
@@ -1208,6 +1210,8 @@
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du dessin, mesuré depuis le zéro. Vous pouvez aussi faire glisser le dessin dans la vue de dessus.",
     "offStock": "Une partie du dessin dépasse du brut.",
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui n’usine que lui} other {les # opérations qui n’usinent que lui}}",
+    "duplicateTitle": "Copie le dessin à sa droite, usiné par les mêmes opérations",
+    "duplicate": "Dupliquer",
     "remove": "Retirer le dessin"
   },
   "Import": {
@@ -1268,7 +1272,11 @@
     "speed": "Vitesse de lecture"
   },
   "Dialog": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "ok": "OK",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "rename": "Renommer"
   },
   "Tour": {
     "steps": {

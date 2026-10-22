@@ -70,7 +70,7 @@ describe("guest projects", () => {
     const created = await storage.createGuestProject("Coasters", createProjectDocument());
     const changed = { ...createProjectDocument(), units: "in" as const };
     const saved = await storage.saveGuestProject(created.id, changed, created.savedAt);
-    if ("error" in saved) throw new Error(saved.error);
+    if ("error" in saved) throw new Error(JSON.stringify(saved.error));
     expect(saved.updatedAt.getTime()).toBeGreaterThan(created.savedAt.getTime());
     expect((await storage.getGuestProject(created.id))?.document).toEqual(changed);
 
@@ -88,7 +88,7 @@ describe("guest projects", () => {
       createProjectDocument(),
       created.savedAt,
     );
-    if ("error" in saved) throw new Error(saved.error);
+    if ("error" in saved) throw new Error(JSON.stringify(saved.error));
     expect(await storage.deleteGuestProjectIfSaved(created.id, created.savedAt)).toBe(false);
     expect(await storage.listGuestProjects()).toHaveLength(1);
     expect(await storage.deleteGuestProjectIfSaved(created.id, saved.updatedAt)).toBe(true);

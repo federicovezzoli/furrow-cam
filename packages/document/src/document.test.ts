@@ -144,7 +144,7 @@ describe("ProjectDocument", () => {
       enabled: true,
       targets: [{ shapeId: SQUARE_ID, paths: null }],
       tool: doc.operations[0]?.tool,
-      params: { stepOver: 40 },
+      params: { leadIn: { radius: 3 } },
     };
     expect(ProjectDocument.safeParse({ ...doc, operations: [operation] }).success).toBe(false);
   });

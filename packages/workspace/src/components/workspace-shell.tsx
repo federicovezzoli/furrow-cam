@@ -41,6 +41,7 @@ import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
+import { ToolpathProgressToast } from "./toolpath-progress-toast";
 import { TopBar } from "./top-bar";
 import { VersionsPane } from "./versions-pane";
 
@@ -249,6 +250,7 @@ export function WorkspaceShell() {
                 <Viewport />
               </BrowserOnly>
               <GeometryImport />
+              <ToolpathProgressToast />
               <SelectedOperation />
             </section>
           </ResizablePanel>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { FormError } from "@furrow/ui/components/form-error";
 import { formatLocalDate, LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -12,6 +13,7 @@ import {
 } from "@furrow/ui/components/ui/dropdown-menu";
 import { Input } from "@furrow/ui/components/ui/input";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import {
   CopyPlusIcon,
   EllipsisIcon,
@@ -66,9 +68,10 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const versionName = (version: VersionRow) =>
     version.label ?? formatLocalDate(version.createdAt, locale);
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<Translatable>();
   const [label, setLabel] = useState("");
   const [pending, startTransition] = useTransition();
+  const { confirm, prompt } = useDialogs();
 
   useEffect(() => {
     let current = true;
@@ -100,10 +103,8 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function restore(version: VersionRow) {
-    if (!window.confirm(t("restoreConfirm", { name: versionName(version) }))) {
-      return;
-    }
+  async function restore(version: VersionRow) {
+    if (!(await confirm(t("restoreConfirm", { name: versionName(version) })))) return;
     run(async () => {
       // No save may start while the host replaces the document: it would conflict.
       const status = await autosave.hold();
@@ -129,8 +130,8 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function rename(version: VersionRow) {
-    const newLabel = window.prompt(t("renamePrompt"), version.label ?? "");
+  async function rename(version: VersionRow) {
+    const newLabel = await prompt(t("renamePrompt"), version.label ?? "");
     if (newLabel === null || newLabel.trim() === (version.label ?? "")) return;
     startTransition(async () => {
       const result = await host.rename(version.id, newLabel);
@@ -143,8 +144,9 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function remove(version: VersionRow) {
-    if (!window.confirm(t("deleteConfirm", { name: versionName(version) }))) return;
+  async function remove(version: VersionRow) {
+    const message = t("deleteConfirm", { name: versionName(version) });
+    if (!(await confirm(message, { destructive: true }))) return;
     startTransition(async () => {
       const result = await host.delete(version.id);
       setError(result?.error);
@@ -184,7 +186,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
                     </p>
                   )}
                   {version.error !== undefined && (
-                    <p className="text-destructive">{version.error}</p>
+                    <p className="text-destructive">{format(version.error)}</p>
                   )}
                 </div>
                 <DropdownMenu modal={false}>
