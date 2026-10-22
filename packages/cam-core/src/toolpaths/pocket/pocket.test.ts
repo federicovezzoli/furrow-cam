@@ -253,7 +253,7 @@ describe("pocketToolpath", () => {
     }
   });
 
-  it("steps over no more than the tool's step-over", () => {
+  it("steps over no more than its step-over", () => {
     // With a step-over of 40% each ring is 2.4 mm further in: a 94 mm square of
     // tool centres needs 20 rings to reach the middle.
     const moves = pocket().moves.filter((move) => move.to[2] === -2);
