@@ -115,7 +115,6 @@ model Tool {
   /// Degrees from horizontal; 90 plunges straight down (see `Tool` in @furrow/document).
   plungeAngle  Float
   stepDown     Float
-  stepOver     Float
   notes        String?
   color        String
   /// The tool preselected for new operations; at most one per user.
