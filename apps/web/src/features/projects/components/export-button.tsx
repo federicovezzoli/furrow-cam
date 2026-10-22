@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { errorText, formatMessage } from "@furrow/ui/lib/i18n";
 import { exportProjectFile } from "@furrow/workspace/lib/export-project";
@@ -18,6 +19,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
   const projects = useTranslations("Projects");
   const [pending, startTransition] = useTransition();
   const t = useTranslations();
+  const { alert } = useDialogs();
 
   function onClick() {
     startTransition(async () => {
@@ -25,11 +27,11 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       try {
         result = await loadProject(id);
       } catch {
-        window.alert(t("Shell.exportFailed"));
+        void alert(t("Shell.exportFailed"));
         return;
       }
       if (result.error !== undefined) {
-        window.alert(formatMessage(t, result.error));
+        void alert(formatMessage(t, result.error));
         return;
       }
       const { document, name: projectName } = result.project;
@@ -37,7 +39,7 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
         await exportProjectFile(document, projectName, (sha256) => loadMesh(id, sha256));
       } catch (error) {
         // A mesh that couldn't be downloaded says why.
-        window.alert(errorText(t, error, t("Shell.exportFailed")));
+        void alert(errorText(t, error, t("Shell.exportFailed")));
       }
     });
   }

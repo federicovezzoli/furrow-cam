@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { FormError } from "@furrow/ui/components/form-error";
 import { formatLocalDate, LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -70,6 +71,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const [error, setError] = useState<Translatable>();
   const [label, setLabel] = useState("");
   const [pending, startTransition] = useTransition();
+  const { confirm, prompt } = useDialogs();
 
   useEffect(() => {
     let current = true;
@@ -101,10 +103,8 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function restore(version: VersionRow) {
-    if (!window.confirm(t("restoreConfirm", { name: versionName(version) }))) {
-      return;
-    }
+  async function restore(version: VersionRow) {
+    if (!(await confirm(t("restoreConfirm", { name: versionName(version) })))) return;
     run(async () => {
       // No save may start while the host replaces the document: it would conflict.
       const status = await autosave.hold();
@@ -130,8 +130,8 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function rename(version: VersionRow) {
-    const newLabel = window.prompt(t("renamePrompt"), version.label ?? "");
+  async function rename(version: VersionRow) {
+    const newLabel = await prompt(t("renamePrompt"), version.label ?? "");
     if (newLabel === null || newLabel.trim() === (version.label ?? "")) return;
     startTransition(async () => {
       const result = await host.rename(version.id, newLabel);
@@ -144,8 +144,9 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     });
   }
 
-  function remove(version: VersionRow) {
-    if (!window.confirm(t("deleteConfirm", { name: versionName(version) }))) return;
+  async function remove(version: VersionRow) {
+    const message = t("deleteConfirm", { name: versionName(version) });
+    if (!(await confirm(message, { destructive: true }))) return;
     startTransition(async () => {
       const result = await host.delete(version.id);
       setError(result?.error);

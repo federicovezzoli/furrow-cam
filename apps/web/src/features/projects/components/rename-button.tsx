@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { PencilIcon } from "lucide-react";
@@ -12,13 +13,14 @@ export function RenameButton({ id, name }: { id: string; name: string }) {
   const t = useTranslations("Projects");
   const format = useFormatMessage();
   const [pending, startTransition] = useTransition();
+  const { alert, prompt } = useDialogs();
 
-  function onClick() {
-    const newName = window.prompt(t("renamePrompt"), name);
+  async function onClick() {
+    const newName = await prompt(t("renamePrompt"), name);
     if (newName === null || newName.trim() === name) return;
     startTransition(async () => {
       const result = await renameProject(id, newName);
-      if (result) window.alert(format(result.error));
+      if (result) void alert(format(result.error));
     });
   }
 

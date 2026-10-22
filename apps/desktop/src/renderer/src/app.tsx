@@ -1,4 +1,5 @@
 import { createProjectDocument, type Machine } from "@furrow/document";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { errorText } from "@furrow/ui/lib/i18n";
 import {
   parseMachines,
@@ -40,6 +41,7 @@ export function App() {
   const [newProject, setNewProject] = useState(false);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { alert } = useDialogs();
   /** Settles the open workspace's autosave, so the session has the document on screen. */
   const flush = useRef<() => Promise<unknown>>(async () => {});
   /** The session as last rendered, for commands that outlive a render (menus, dialogs). */
@@ -130,13 +132,13 @@ export function App() {
     try {
       prepared = session.prepareSave();
     } catch (error) {
-      window.alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
+      void alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
       return false;
     }
     const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);
     if (result === null) return false;
     if ("error" in result) {
-      window.alert(result.error);
+      void alert(result.error);
       return false;
     }
     // Edits made while the file was written stay unsaved.
@@ -168,7 +170,7 @@ export function App() {
 
   /** Shows why something failed: on the start screen, or in a dialog over an open project. */
   function report(message: string) {
-    if (current.current) window.alert(message);
+    if (current.current) void alert(message);
     else setError(message);
   }
 

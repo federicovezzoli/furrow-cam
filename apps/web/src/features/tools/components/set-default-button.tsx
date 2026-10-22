@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { StarIcon } from "lucide-react";
@@ -20,6 +21,7 @@ export function SetDefaultButton({
   const t = useTranslations("Tools");
   const format = useFormatMessage();
   const [pending, startTransition] = useTransition();
+  const { alert } = useDialogs();
 
   if (isDefault) {
     return (
@@ -35,7 +37,7 @@ export function SetDefaultButton({
       onClick={() =>
         startTransition(async () => {
           const result = await setDefaultTool(id);
-          if (result) window.alert(format(result.error));
+          if (result) void alert(format(result.error));
         })
       }
       disabled={pending}
