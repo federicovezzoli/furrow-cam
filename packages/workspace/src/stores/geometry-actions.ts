@@ -2,8 +2,11 @@ import {
   anchorPoint,
   closedLoops,
   drawingFit,
+  mapShapes,
+  mirrorPoint,
   nearestOnLoops,
   type Rect,
+  rotatePoint,
   scalePoint,
   scaleShapes,
   shapesBounds,
@@ -178,6 +181,62 @@ function scaleDrawing(
     shapes: (shapes) => scaleShapes(shapes, scale, from, to),
     point: (point) => scalePoint(point, scale, from, to),
   });
+}
+
+/**
+ * Turns drawing `id` with `move` about the centre of its box, then moves it
+ * back so its point at the zero's anchor (`modelAnchor`) stays where it was.
+ * A `mirrored` move flips arcs' direction (`mapShapes`).
+ */
+function orientDrawing(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  move: (point: Point, centre: Point) => Point,
+  mirrored: boolean,
+): ActionResult {
+  const { document } = store.getState();
+  const shapes = drawingShapes(document.geometry, id);
+  const before = shapesBounds(shapes);
+  if (!before) return { ok: true };
+  const centre = anchorPoint(before, "center");
+  const turned = mapShapes(shapes, (point) => move(point, centre), mirrored);
+  const after = shapesBounds(turned);
+  if (!after) return { ok: true };
+  const anchor = modelAnchor(document.stock);
+  const [x, y] = anchorPoint(before, anchor);
+  const [ax, ay] = anchorPoint(after, anchor);
+  const back: Point = [x - ax, y - ay];
+  return transformDrawing(store, name, id, {
+    shapes: () => translateShapes(turned, back),
+    point: (point) => translatePoint(move(point, centre), back),
+  });
+}
+
+/** Mirrors drawing `id` left to right (`"x"`) or top to bottom (`"y"`), in place (PRD-0009 D6). */
+export function mirrorDrawing(store: DocumentStore, id: string, axis: "x" | "y"): ActionResult {
+  return orientDrawing(
+    store,
+    `mirrorDrawing.${axis}`,
+    id,
+    (point, centre) => mirrorPoint(point, axis, centre),
+    true,
+  );
+}
+
+/**
+ * Turns drawing `id` by `degrees`, counter-clockwise for positive ones,
+ * keeping its point at the zero's anchor in place (PRD-0009 D7).
+ */
+export function rotateDrawing(store: DocumentStore, id: string, degrees: number): ActionResult {
+  if (degrees % 360 === 0) return { ok: true };
+  return orientDrawing(
+    store,
+    "rotateDrawing",
+    id,
+    (point, centre) => rotatePoint(point, degrees, centre),
+    false,
+  );
 }
 
 /** Moves drawing `id` by `offset` millimetres, with the tabs on its paths (PRD-0009 D5). */
