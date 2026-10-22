@@ -1155,10 +1155,8 @@
     "padCentre": "Seine Mitte, von der unteren linken Ecke des Rohteils. Größenänderungen lassen die Mitte stehen.",
     "padOff": "Ein Teil des Platzes liegt außerhalb des Rohteils: dort gibt es vielleicht nichts, um Z neu zu nullen.",
     "padToolChange": "Werkzeugwechsel am Platz",
-    "toolChangePlaceholder": "M5\nM0 (Fräser wechseln)",
-    "padToolChangeHint": "Läuft bei jedem Werkzeugwechsel statt dem der Maschine. <strong>Vorschlagen</strong> schreibt einen aus dem Werkzeugwechsel der Maschine, mit einer Fahrt über den Platz; <strong>Den der Maschine verwenden</strong> kehrt zu dem der Maschine zurück, nach einer Fahrt über den Platz.",
-    "suggest": "Vorschlagen",
-    "useMachines": "Den der Maschine verwenden"
+    "padToolChangeHint": "Läuft bei jedem Werkzeugwechsel.",
+    "reset": "Zurücksetzen"
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",

@@ -1,6 +1,6 @@
 # ADR-0043: The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0053](0053-touch-off-suggest-every-xy-move.md) (which moves Suggest puts on the pad) and [ADR-0056](0056-touch-off-tool-change-shows-what-runs.md) (a `null` tool change runs the derived block; Reset replaces Suggest and Use the machine's)
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0002 (Z11), PRD-0005 (S12), ADR-0014, ADR-0016, ADR-0022, ADR-0041; issues #177, #178. Supersedes ADR-0041's *Default*, the viewport part of its *UI* bullet, and its *GRBL post* bullet where the pad has its own tool change.

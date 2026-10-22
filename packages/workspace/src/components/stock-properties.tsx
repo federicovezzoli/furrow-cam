@@ -425,21 +425,21 @@ function TouchOffFields() {
 }
 
 /**
- * The pad's own tool change (ADR-0043), in place of the machine's: edited as
- * text, saved as one undo step when the field loses focus (Escape reverts).
- * **Suggest** starts it from the machine's block with its move put on the
- * pad, every other command kept.
+ * The pad's tool change (ADR-0043, ADR-0056): the block the post writes, the
+ * project's own or, without one, the one derived from the machine's. Edited
+ * as text, saved as the project's own as one undo step when the field loses
+ * focus (Escape reverts); **Reset** goes back to the derived one.
  */
 function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
   const store = useDocumentStoreApi();
-  const machine = useDocumentStore((s) => s.document.machine);
-  /** What's typed while editing; `null` shows the saved block. */
+  const machineBlock = useDocumentStore((s) => s.document.machine?.toolChange ?? null);
+  /** What's typed while editing; `null` shows the block that runs. */
   const [draft, setDraft] = useState<string | null>(null);
-  const machineBlock = machine?.toolChange ?? null;
+  const block = toolChange ?? suggestTouchOffToolChange(machineBlock);
   const t = useTranslations("Stock");
 
   function save() {
-    if (draft !== null && draft !== (toolChange ?? "")) setTouchOffToolChange(store, draft);
+    if (draft !== null && draft !== block) setTouchOffToolChange(store, draft);
     setDraft(null);
   }
 
@@ -450,8 +450,7 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
       </Label>
       <Textarea
         id="touch-off-tool-change"
-        value={draft ?? toolChange ?? ""}
-        placeholder={machineBlock ?? t("toolChangePlaceholder")}
+        value={draft ?? block}
         rows={5}
         maxLength={10_000}
         spellCheck={false}
@@ -467,35 +466,23 @@ function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
         }}
       />
       <p id="touch-off-tool-change-hint" className="text-muted-foreground">
-        {t.rich("padToolChangeHint", { strong: (chunks) => <strong>{chunks}</strong> })}{" "}
-        <PlaceholderList />
+        {t("padToolChangeHint")} <PlaceholderList />
       </p>
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="compact"
-          onClick={() => {
-            setDraft(null);
-            setTouchOffToolChange(store, suggestTouchOffToolChange(machineBlock));
-          }}
-        >
-          {t("suggest")}
-        </Button>
-        {toolChange !== null && (
+      {toolChange !== null && (
+        <div className="flex gap-2">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="compact"
             onClick={() => {
               setDraft(null);
               setTouchOffToolChange(store, null);
             }}
           >
-            {t("useMachines")}
+            {t("reset")}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

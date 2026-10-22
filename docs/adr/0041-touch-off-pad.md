@@ -1,6 +1,6 @@
 # ADR-0041: A touch-off pad of stock top that no operation cuts
 
-- **Status:** Proposed; superseded in part by [ADR-0043](0043-touch-off-pad-opt-in.md) (no pad on import; centred on the zero; drawn as a dashed ring with a label; moves with the design; its own tool change)
+- **Status:** Proposed; superseded in part by [ADR-0043](0043-touch-off-pad-opt-in.md) (no pad on import; centred on the zero; drawn as a dashed ring with a label; moves with the design; its own tool change) and [ADR-0056](0056-touch-off-tool-change-shows-what-runs.md) (the tool change is one block derived from the machine's, with no move before it)
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0002, PRD-0005, ADR-0014, ADR-0016, ADR-0030, ADR-0033, ADR-0038, ADR-0039, ADR-0040; issue #147

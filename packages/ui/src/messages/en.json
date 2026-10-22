@@ -1155,10 +1155,8 @@
     "padCentre": "Its centre, from the stock's bottom-left corner. Resizing it keeps the centre where it is.",
     "padOff": "Part of the pad is off the stock, so there may be nothing to zero Z on there.",
     "padToolChange": "Tool change on the pad",
-    "toolChangePlaceholder": "M5\nM0 (Change the bit)",
-    "padToolChangeHint": "Runs at each tool change in place of the machine's. <strong>Suggest</strong> writes one from the machine's tool change, moving over the pad; <strong>Use the machine's</strong> goes back to the machine's own, after a move over the pad.",
-    "suggest": "Suggest",
-    "useMachines": "Use the machine's"
+    "padToolChangeHint": "Runs at each tool change.",
+    "reset": "Reset"
   },
   "Model": {
     "closeLabel": "Close model properties",
