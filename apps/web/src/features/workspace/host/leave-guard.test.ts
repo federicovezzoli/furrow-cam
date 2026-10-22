@@ -25,6 +25,7 @@ function setup(answer: boolean, entries = ["/projects", "/projects/p"], navigati
       index++;
     },
     back: () => go(-1),
+    go,
   };
   const guard = createLeaveGuard({
     history: () => history,
@@ -166,6 +167,30 @@ describe("createLeaveGuard", () => {
     await answered();
     expect(asked()).toBe(1);
     expect(at()).toBe("/projects");
+  });
+
+  it("leaves when told to after Forward while asking", async () => {
+    const { setUnsaved, back, go, answered, at, asked } = setup(true);
+    setUnsaved(true);
+    back();
+    // Forward onto the copy before answering.
+    go(1);
+    await answered();
+    expect(asked()).toBe(1);
+    expect(at()).toBe("/projects");
+  });
+
+  it("stays guarded when told to stay after Forward while asking", async () => {
+    const { setUnsaved, back, go, answered, at, asked, stack } = setup(false);
+    setUnsaved(true);
+    back();
+    go(1);
+    await answered();
+    expect(at()).toBe("/projects/p");
+    expect(stack).toHaveLength(3);
+    // Back from the copy lands on the page and asks at once.
+    back();
+    expect(asked()).toBe(2);
   });
 
   it("neither asks nor arms when Back skips past the project", () => {

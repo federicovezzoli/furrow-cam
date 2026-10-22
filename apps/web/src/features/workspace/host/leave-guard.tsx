@@ -3,7 +3,7 @@
 import { useConfirmLeave, useSaveStatus } from "@furrow/workspace/hooks/use-autosave";
 import { useEffect, useState } from "react";
 
-type GuardHistory = Pick<History, "pushState" | "back">;
+type GuardHistory = Pick<History, "pushState" | "back" | "go">;
 
 /** The part of the Navigation API the guard reads (TypeScript's DOM types lack `Navigation`). */
 export type GuardNavigation = {
@@ -83,9 +83,13 @@ export function createLeaveGuard({
       asking = true;
       void go.then((yes) => {
         asking = false;
+        const now = navigation()?.currentEntry?.index;
         // Left meanwhile (Back again while asking): nothing to undo.
-        if (!inProject(pathname())) return;
-        if (yes) history().back();
+        if (now === undefined || now < index || !inProject(pathname())) return;
+        // From the page, or from wherever Forward went while asking: back past the page.
+        if (yes) history().go(index - 1 - now);
+        // Forward went onto the copy (or past it), which is still there.
+        else if (now > index) copy = index + 1;
         else arm();
       });
     },
