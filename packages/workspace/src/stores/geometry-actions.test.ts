@@ -204,6 +204,8 @@ describe("removeDrawing", () => {
   });
 });
 
+const OTHER_SQUARE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
 describe("duplicateDrawing", () => {
   it("copies it to the right with fresh ids, its targets and tabs, in one undo step", () => {
     const store = createDocumentStore(fullDocument());
@@ -274,6 +276,29 @@ describe("duplicateDrawing", () => {
     expect(duplicateDrawing(store, DRAWING_ID)).not.toBeNull();
     expect(store.getState().document.operations[0]?.targets).toHaveLength(300_000);
     expect(store.getState().past).toHaveLength(1);
+  }, 30_000);
+
+  it("copies a tab that lies on an uncut path of another drawing", () => {
+    const doc = fullDocument();
+    const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    doc.drawings.push({ id: other, name: "other.svg", border: 10 });
+    // Its first path, the one cut, is the circle; its second lies on the square, under the tab.
+    doc.geometry.push({
+      ...square,
+      id: OTHER_SQUARE,
+      drawingId: other,
+      paths: [...circle.paths, ...square.paths],
+    });
+    const [profile] = doc.operations;
+    if (profile?.type !== "profile") throw new Error("fixture");
+    profile.targets = [
+      { shapeId: SQUARE_ID, paths: null },
+      { shapeId: OTHER_SQUARE, paths: [0] },
+    ];
+    const store = createDocumentStore(doc);
+    duplicateDrawing(store, DRAWING_ID);
+    const [copied] = store.getState().document.operations;
+    expect(copied?.type === "profile" && copied.params.tabs?.positions).toHaveLength(2);
   });
 
   it("does nothing for an unknown drawing", () => {
@@ -282,8 +307,6 @@ describe("duplicateDrawing", () => {
     expect(store.getState().past).toHaveLength(0);
   });
 });
-
-const OTHER_SQUARE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
 
 describe("drawing size", () => {
   /** `fullDocument`, zeroed at the bottom-left, with a second drawing holding a copy of the square far off. */

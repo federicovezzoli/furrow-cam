@@ -11,6 +11,7 @@ import {
   scaleShapes,
   shapesBounds,
   stockInset,
+  targetedShapes,
   translatePoint,
   translateShapes,
   xyOriginPosition,
@@ -103,7 +104,8 @@ function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean
   const tabs = new Map<string, boolean[]>();
   for (const operation of document.operations) {
     if (operation.type !== "profile" || !operation.params.tabs) continue;
-    const targeted = operation.targets.flatMap(({ shapeId }) => shapes.get(shapeId) ?? []);
+    // Only the paths it cuts: a tab on an uncut path of another drawing doesn't take it.
+    const targeted = targetedShapes(shapes, operation.targets);
     const mine = closedLoops(targeted.filter((shape) => shape.drawingId === id));
     if (mine.length === 0) continue;
     const others = closedLoops(targeted.filter((shape) => shape.drawingId !== id));
@@ -356,8 +358,9 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       const own = tabs.get(operation.id);
       if (!own || operation.type !== "profile" || !operation.params.tabs) continue;
       const { positions } = operation.params.tabs;
-      positions.push(
-        ...positions.filter((_, i) => own[i]).map((position) => translatePoint(position, offset)),
+      // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
+      operation.params.tabs.positions = positions.concat(
+        positions.filter((_, i) => own[i]).map((position) => translatePoint(position, offset)),
       );
     }
   });
