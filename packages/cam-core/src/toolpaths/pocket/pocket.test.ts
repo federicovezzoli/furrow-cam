@@ -21,7 +21,6 @@ const tool: Tool = {
   plungeRate: 500,
   plungeAngle: 3,
   stepDown: 2,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };
@@ -29,6 +28,7 @@ const tool: Tool = {
 const params: PocketParams = {
   strategy: { type: "offset" },
   direction: "climb",
+  stepOver: 40,
   depth: 6,
   allowance: 0,
   finishPass: false,
@@ -292,7 +292,7 @@ describe("pocketToolpath", () => {
 
   it("clears the middle with a step-over over half the diameter", () => {
     for (const stepOver of [60, 90, 100]) {
-      const toolpath = pocket({ depth: 2 }, [square, island], { stepOver });
+      const toolpath = pocket({ depth: 2, stepOver }, [square, island]);
       expect(missed(toolpath, -2, 3 + 1e-2, (p) => inSquare(p) && offIsland(p), 0.5)).toEqual([]);
     }
   });
@@ -574,7 +574,7 @@ describe.each(STRATEGIES.map((strategy) => [Object.values(strategy).join(" "), s
 
     it("clears with a step-over over half the diameter", () => {
       for (const stepOver of [60, 100]) {
-        const toolpath = clear({ depth: 2 }, [square, island], { stepOver });
+        const toolpath = clear({ depth: 2, stepOver }, [square, island]);
         expect(missed(toolpath, -2, 3 + 1e-2, (p) => inSquare(p) && offIsland(p), 0.5)).toEqual([]);
         for (const cut of cutsBelowTop(toolpath)) {
           expect(distanceToSegment([50, 50], cut)).toBeGreaterThanOrEqual(13 - 1e-2);
@@ -876,7 +876,7 @@ describe("pocketToolpath with peel clearing", () => {
   });
 
   it("crosses the core a helix wider than the tool leaves", () => {
-    const toolpath = peel("centre", {}, [square], { stepOver: 90 });
+    const toolpath = peel("centre", { stepOver: 90 }, [square]);
     for (const z of [-2, -4, -6]) {
       // Through the point furthest from the helix, give or take the tolerance.
       expect(cutsAt(toolpath, z).some((cut) => distanceToSegment([50, 50], cut) < 1e-2)).toBe(true);

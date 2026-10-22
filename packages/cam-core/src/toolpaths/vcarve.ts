@@ -88,7 +88,7 @@ export function vcarveToolpath(
   const depthAt = (radius: number) => Math.max(0, Math.min(limit, (radius - tipRadius) / slope));
 
   const branches = closed.length > 0 ? medialAxis(closed, { fillRule: "evenOdd" }) : [];
-  const flatBottom = params.flatBottom?.tool ?? null;
+  const { flatBottom } = params;
   const runs: Run[] = [];
   let clearing: Toolpath["moves"] | undefined;
   if (flatBottom) {
@@ -104,10 +104,11 @@ export function vcarveToolpath(
       runs.push({ points: loop, depths: loop.map(() => limit), closed: true });
     }
     const pocket = clearPocket(
-      flatBottom,
+      flatBottom.tool,
       {
         strategy: { type: "offset" },
         direction: "climb",
+        stepOver: flatBottom.stepOver,
         depth: limit,
         allowance: 0,
         finishPass: false,
@@ -118,10 +119,10 @@ export function vcarveToolpath(
     );
     // An offset pocket only warns that nothing fits, which `missesFloor` covers.
     clearing = pocket.moves;
-    if (missesFloor(walls, flatBottom, tolerance)) {
+    if (missesFloor(walls, flatBottom.tool, tolerance)) {
       warnings.push({ code: "toolpath.flatAreasNarrow" });
     }
-    if (limit > flatBottom.fluteLength) {
+    if (limit > flatBottom.tool.fluteLength) {
       warnings.push({ code: "toolpath.flatDepthExceedsFlutes" });
     }
   } else {
