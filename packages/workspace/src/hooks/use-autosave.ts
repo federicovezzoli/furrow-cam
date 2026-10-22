@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useTranslations } from "use-intl";
@@ -38,42 +39,52 @@ export function useAutosave() {
 /**
  * Asks whether to leave the open project while its changes can't be saved
  * (#254): autosave failed for good, or its last save failed and the one made
- * on leaving may too. Resolves to whether to go; nothing is asked while
- * saves go through. Hosts call it from their navigation away from the
- * project (ADR-0045), where `beforeunload` doesn't fire.
+ * on leaving may too. Gives whether to go: `true` at once while saves go
+ * through, else a promise of the user's answer. Hosts call it from their
+ * navigation away from the project (ADR-0045), where `beforeunload` doesn't
+ * fire.
  */
-export function useConfirmLeave(): () => boolean {
+export function useConfirmLeave(): () => true | Promise<boolean> {
   const autosave = useAutosaveApi();
   const t = useTranslations();
+  const { confirm } = useDialogs();
   return useCallback(
     () =>
       mayLeave(autosave.status, (error) =>
-        window.confirm(
+        confirm(
           t("Shell.leaveAnyway", {
             error: formatMessage(t, error ?? { code: "workspace.offline" }),
           }),
         ),
       ),
-    [autosave, t],
+    [autosave, t, confirm],
   );
 }
 
-/** A link's `onNavigate`: when the link `leaves` the project, asks through `useConfirmLeave` and stops it if told to stay. */
-export function useLeaveNavigate(leaves = true): (event: { preventDefault(): void }) => void {
+/**
+ * A link's `onNavigate`: when the link `leaves` the project and
+ * `useConfirmLeave` has to ask, stops it, then calls `navigate` (the same
+ * navigation, past the link) if told to go.
+ */
+export function useLeaveNavigate(
+  navigate: () => void,
+  leaves = true,
+): (event: { preventDefault(): void }) => void {
   const confirmLeave = useConfirmLeave();
-  return useCallback(
-    (event) => {
-      if (leaves && !confirmLeave()) event.preventDefault();
-    },
-    [leaves, confirmLeave],
-  );
+  return (event) => {
+    if (!leaves) return;
+    const go = confirmLeave();
+    if (go === true) return;
+    event.preventDefault();
+    void go.then((yes) => yes && navigate());
+  };
 }
 
 /** Whether to leave the project with `status`, asking `confirm` only while changes can't be saved. */
 export function mayLeave(
   status: AutosaveStatus,
-  confirm: (error: AutosaveStatus["error"]) => boolean,
-): boolean {
+  confirm: (error: AutosaveStatus["error"]) => Promise<boolean>,
+): true | Promise<boolean> {
   const { state, error } = status;
   if (state !== "error" && state !== "failed") return true;
   return confirm(error);

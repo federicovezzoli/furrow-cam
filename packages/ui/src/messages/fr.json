@@ -1272,7 +1272,11 @@
     "speed": "Vitesse de lecture"
   },
   "Dialog": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "ok": "OK",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "rename": "Renommer"
   },
   "Tour": {
     "steps": {

@@ -347,9 +347,9 @@ describe("createAutosave", () => {
 });
 
 describe("mayLeave", () => {
-  it("asks only while changes can't be saved, with why", () => {
+  it("asks only while changes can't be saved, with why", async () => {
     const asked: AutosaveStatus["error"][] = [];
-    const confirm = (error: AutosaveStatus["error"]) => {
+    const confirm = async (error: AutosaveStatus["error"]) => {
       asked.push(error);
       return false;
     };
@@ -357,10 +357,13 @@ describe("mayLeave", () => {
       expect(mayLeave({ state, savedAt: LOADED_AT }, confirm)).toBe(true);
     }
     expect(asked).toEqual([]);
-    expect(mayLeave({ state: "failed", savedAt: LOADED_AT, error: "Conflict." }, confirm)).toBe(
-      false,
+    expect(
+      await mayLeave({ state: "failed", savedAt: LOADED_AT, error: "Conflict." }, confirm),
+    ).toBe(false);
+    const agree = async () => true;
+    expect(await mayLeave({ state: "error", savedAt: LOADED_AT, error: OFFLINE }, agree)).toBe(
+      true,
     );
-    expect(mayLeave({ state: "error", savedAt: LOADED_AT, error: OFFLINE }, () => true)).toBe(true);
     expect(asked).toEqual(["Conflict."]);
   });
 });

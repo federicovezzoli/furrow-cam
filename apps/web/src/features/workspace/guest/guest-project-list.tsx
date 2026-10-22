@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -58,6 +59,7 @@ export function GuestProjectList({
   const [projects, setProjects] = useState<GuestProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { prompt } = useDialogs();
   const input = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
@@ -98,8 +100,8 @@ export function GuestProjectList({
     if (file) run(async () => onOpen((await importGuestProject(file)).id));
   }
 
-  function rename(project: GuestProjectRow) {
-    const name = window.prompt(projectsT("renamePrompt"), project.name)?.trim();
+  async function rename(project: GuestProjectRow) {
+    const name = (await prompt(projectsT("renamePrompt"), project.name))?.trim();
     if (!name || name === project.name) return;
     run(async () => {
       await renameGuestProject(project.id, name.slice(0, 100));

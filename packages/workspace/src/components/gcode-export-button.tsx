@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { downloadFile } from "@furrow/ui/lib/download";
 import { formatWarning } from "@furrow/ui/lib/i18n";
@@ -36,6 +37,7 @@ export function GcodeExportButton({
   const toolpaths = useToolpathStoreApi();
   const documents = useDocumentStoreApi();
   const { account } = useWorkspaceHost();
+  const { alert } = useDialogs();
 
   async function onClick() {
     if (account) {
@@ -52,7 +54,7 @@ export function GcodeExportButton({
       setPending(false);
     }
     if ("error" in result) {
-      window.alert(formatWarning(t, { operation: result.operation, message: result.error }));
+      void alert(formatWarning(t, { operation: result.operation, message: result.error }));
       return;
     }
     downloadFile(result.gcode, result.fileName, "text/plain");
@@ -60,7 +62,7 @@ export function GcodeExportButton({
     if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
     if (result.warnings.length > 0) {
       const warnings = result.warnings.map((warning) => formatWarning(t, warning)).join("\n");
-      window.alert(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
+      void alert(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
     }
   }
 

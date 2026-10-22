@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { Trash2Icon } from "lucide-react";
@@ -20,12 +21,13 @@ export function DeleteButton({
   const t = useTranslations("Common");
   const format = useFormatMessage();
   const [pending, startTransition] = useTransition();
+  const { alert, confirm } = useDialogs();
 
-  function onClick() {
-    if (!window.confirm(confirmText)) return;
+  async function onClick() {
+    if (!(await confirm(confirmText, { destructive: true }))) return;
     startTransition(async () => {
       const result = await action();
-      if (result) window.alert(format(result.error));
+      if (result) void alert(format(result.error));
     });
   }
 

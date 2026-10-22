@@ -1,6 +1,7 @@
 "use client";
 
 import type { StlLimits } from "@furrow/cam-core";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -47,6 +48,7 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
   const [lastCopy, setLastCopy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { confirm } = useDialogs();
 
   useEffect(() => {
     if (dismissed()) return;
@@ -104,9 +106,9 @@ export function GuestImportOffer({ meshLimits }: { meshLimits: StlLimits | null 
     setProjects([]);
   }
 
-  function onDiscard() {
+  async function onDiscard() {
     const count = projects.length;
-    if (!window.confirm(t("discardConfirm", { count }))) return;
+    if (!(await confirm(t("discardConfirm", { count }), { destructive: true }))) return;
     startTransition(async () => {
       try {
         for (const { id } of projects) await deleteGuestProject(id);

@@ -1,4 +1,5 @@
 import type { Tool } from "@furrow/document";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import {
@@ -26,8 +27,9 @@ import type { Page } from "./desktop-host";
 import { t } from "./i18n";
 
 /** Says why a library change failed; the library stays as it was. */
-function alertFailure(error: unknown) {
-  window.alert(formatMessage(t, messageOf(error)));
+function useAlertFailure() {
+  const { alert } = useDialogs();
+  return (error: unknown) => void alert(formatMessage(t, messageOf(error)));
 }
 
 type LibraryProps = {
@@ -74,6 +76,8 @@ function Header({ title, action }: { title: string; action?: React.ReactNode }) 
 function Tools({ library, updateLibrary }: LibraryProps) {
   const t = useTranslations("Desktop.Library");
   const bit = useTranslations("Bit");
+  const { confirm } = useDialogs();
+  const alertFailure = useAlertFailure();
   const { tools } = library;
   /** The bit in the dialog: `id` `null` for a new one. */
   const [editing, setEditing] = useState<{ id: string | null; values: Partial<Tool> } | null>(null);
@@ -136,8 +140,9 @@ function Tools({ library, updateLibrary }: LibraryProps) {
                 size="icon-sm"
                 aria-label={t("deleteLabel", { name: tool.name })}
                 title={t("delete")}
-                onClick={() => {
-                  if (!window.confirm(t("confirmDeleteBit", { name: tool.name }))) return;
+                onClick={async () => {
+                  const message = t("confirmDeleteBit", { name: tool.name });
+                  if (!(await confirm(message, { destructive: true }))) return;
                   updateLibrary((state) => ({
                     ...state,
                     tools: deleteTool(state.tools, id),
@@ -181,6 +186,8 @@ function Tools({ library, updateLibrary }: LibraryProps) {
 
 function Machines({ library, updateLibrary, navigate }: LibraryProps) {
   const t = useTranslations("Desktop.Library");
+  const { confirm } = useDialogs();
+  const alertFailure = useAlertFailure();
   const { machines } = library;
   return (
     <>
@@ -217,8 +224,9 @@ function Machines({ library, updateLibrary, navigate }: LibraryProps) {
                 size="icon-sm"
                 aria-label={t("deleteLabel", { name: machine.name })}
                 title={t("delete")}
-                onClick={() => {
-                  if (!window.confirm(t("confirmDeleteMachine", { name: machine.name }))) return;
+                onClick={async () => {
+                  const message = t("confirmDeleteMachine", { name: machine.name });
+                  if (!(await confirm(message, { destructive: true }))) return;
                   updateLibrary((state) => ({
                     ...state,
                     machines: deleteMachine(state.machines, id),
