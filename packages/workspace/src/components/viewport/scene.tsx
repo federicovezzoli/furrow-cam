@@ -8,8 +8,10 @@ import {
   stockBounds,
   stockOffset,
 } from "@furrow/cam-core";
+import type { Point } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
-import { useMemo } from "react";
+import { type ThreeEvent, useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -18,14 +20,19 @@ import {
   shapesLinePositions,
   touchOffLinePositions,
 } from "../../lib/viewport-scene";
-import { useDocumentStore, useWorkspaceStore } from "../../providers/workspace-stores";
-import { drawingBounds } from "../../stores/geometry-actions";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useWorkspaceStore,
+} from "../../providers/workspace-stores";
+import { drawingBounds, moveDrawing } from "../../stores/geometry-actions";
 import type { ModelPreview } from "../../stores/model-preview-scheduler";
 import { DashedLines, Lines, useLineGeometry, WideLines } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SimulatedStock } from "./simulated-stock";
+import { onStockTop } from "./stock-top";
 import { Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
@@ -164,17 +171,87 @@ function AllShapes({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
 }
 
-/** A faint fill over the box of the drawing whose properties show, setting it apart from the others. */
+/** Pointer travel, in pixels, before a press on the selected drawing becomes a drag rather than a click. */
+const DRAWING_DRAG_THRESHOLD = 3;
+
+/** A press on the selected drawing, which becomes a drag once the pointer moves far enough. */
+type DrawingPress = { pointerId: number; x: number; y: number; last: Point; dragging: boolean };
+
+/**
+ * A faint fill over the box of the drawing whose properties show, setting it
+ * apart from the others. In the top view, dragging it moves the drawing
+ * (PRD-0009 D5), one undo step per drag, showing the move cursor only then;
+ * a click goes through to the paths.
+ */
 function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
   const geometry = useDocumentStore((s) => s.document.geometry);
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
-  if (!bounds) return null;
+  const draggable = useWorkspaceStore((s) => s.view === "top" && !s.editingTabs && !s.pickingZero);
+  const store = useDocumentStoreApi();
+  const canvas = useThree((s) => s.gl.domElement);
+  const press = useRef<DrawingPress | null>(null);
+
+  // A drag cut short by unmounting (an undo, a deselection) is cancelled.
+  useEffect(
+    () => () => {
+      if (press.current?.dragging) store.getState().cancelTransaction();
+      canvas.style.cursor = "";
+    },
+    [store, canvas],
+  );
+
+  if (!bounds || id === null) return null;
   const { min, max } = bounds;
+
+  function end(event: ThreeEvent<PointerEvent>, cancelled: boolean) {
+    const current = press.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    (event.target as Element).releasePointerCapture(event.pointerId);
+    press.current = null;
+    if (!current.dragging) return;
+    canvas.style.cursor = "";
+    const state = store.getState();
+    if (cancelled) state.cancelTransaction();
+    else state.commitTransaction();
+  }
+
   return (
     <mesh
       position={[(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, 0]}
       renderOrder={RENDER_ORDER.selectedDrawing}
+      {...(draggable && {
+        onPointerDown: (event: ThreeEvent<PointerEvent>) => {
+          const point = onStockTop(event.ray);
+          if (event.button !== 0 || !point) return;
+          (event.target as Element).setPointerCapture(event.pointerId);
+          press.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            last: point,
+            dragging: false,
+          };
+        },
+        onPointerMove: (event: ThreeEvent<PointerEvent>) => {
+          const current = press.current;
+          if (!current || current.pointerId !== event.pointerId) return;
+          if (!current.dragging) {
+            const travel = Math.hypot(event.clientX - current.x, event.clientY - current.y);
+            if (travel < DRAWING_DRAG_THRESHOLD) return;
+            current.dragging = true;
+            store.getState().beginTransaction();
+            // Only while dragging: on hover, a click still selects the path under the pointer.
+            canvas.style.cursor = "move";
+          }
+          const point = onStockTop(event.ray);
+          if (!point) return;
+          moveDrawing(store, id, [point[0] - current.last[0], point[1] - current.last[1]]);
+          current.last = point;
+        },
+        onPointerUp: (event: ThreeEvent<PointerEvent>) => end(event, false),
+        onPointerCancel: (event: ThreeEvent<PointerEvent>) => end(event, true),
+      })}
     >
       <planeGeometry args={[max[0] - min[0], max[1] - min[1]]} />
       <meshBasicMaterial color={color} transparent opacity={0.2} depthWrite={false} />

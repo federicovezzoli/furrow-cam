@@ -24,10 +24,15 @@ import {
   addImportedShapes,
   canImportModel,
   drawingBounds,
+  drawingOffset,
   drawingOperations,
   fitDrawingToStock,
+  mirrorDrawing,
+  moveDrawing,
   removeDrawing,
+  rotateDrawing,
   setDrawingBorder,
+  setDrawingOffset,
   setDrawingSize,
 } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
@@ -340,6 +345,73 @@ describe("drawing size", () => {
     );
     removeDrawing(s, DRAWING_ID);
     expect(tabsOf(s)).toEqual([[50, 0]]);
+  });
+
+  it("moves with the tabs on its paths in one undo step, leaving the other drawing", () => {
+    const s = store();
+    const other = s.getState().document.geometry[2];
+    const before = size(s).bounds;
+    moveDrawing(s, DRAWING_ID, [12.5, -3]);
+    const after = size(s).bounds;
+    expect(after.min[0]).toBeCloseTo(before.min[0] + 12.5, 9);
+    expect(after.min[1]).toBeCloseTo(before.min[1] - 3, 9);
+    expect(tabsOf(s)).toEqual([[62.5, -3]]);
+    expect(s.getState().document.geometry[2]).toBe(other);
+    expect(s.getState().past).toHaveLength(1);
+    moveDrawing(s, DRAWING_ID, [0, 0]);
+    expect(s.getState().past).toHaveLength(1);
+  });
+
+  it("sets its anchor point's distance from the zero, one axis at a time", () => {
+    const s = store();
+    setDrawingOffset(s, DRAWING_ID, "x", 40);
+    setDrawingOffset(s, DRAWING_ID, "y", -5);
+    const { document } = s.getState();
+    expect(drawingOffset(document.stock, size(s).bounds)).toEqual([40, -5]);
+    // With the zero at the centre, the drawing's centre is measured from the stock's.
+    setXYAnchor(s, "center");
+    setDrawingOffset(s, DRAWING_ID, "x", 0);
+    const { bounds } = size(s);
+    expect((bounds.min[0] + bounds.max[0]) / 2).toBeCloseTo(150, 6);
+  });
+
+  it("mirrors in place, flipping arcs, with its tabs, in one undo step; twice restores it", () => {
+    const s = store();
+    const before = s.getState().document;
+    const box = size(s).bounds;
+    expect(mirrorDrawing(s, DRAWING_ID, "x")).toEqual({ ok: true });
+    const { document } = s.getState();
+    const after = size(s).bounds;
+    expect(after.min[0]).toBeCloseTo(box.min[0], 6);
+    expect(after.max[0]).toBeCloseTo(box.max[0], 6);
+    const hole = document.geometry.find((shape) => shape.id === CIRCLE_ID);
+    expect(hole?.paths[0]?.segments[0]).toMatchObject({ kind: "arc", clockwise: true });
+    // The tab mirrors across the box's centre line, with its path.
+    const centre = (box.min[0] + box.max[0]) / 2;
+    expect(tabsOf(s)?.[0]?.[0]).toBeCloseTo(2 * centre - 50, 6);
+    expect(s.getState().past).toHaveLength(1);
+    expect(ProjectDocument.parse(document)).toEqual(document);
+    mirrorDrawing(s, DRAWING_ID, "x");
+    expect(size(s).bounds.min[0]).toBeCloseTo(box.min[0], 6);
+    expect(s.getState().document.geometry[0]).toEqual(before.geometry[0]);
+  });
+
+  it("turns by 90° steps or any angle, keeping the anchor point in place", () => {
+    const s = store();
+    const corner = size(s).bounds.min;
+    const { width, height } = size(s);
+    rotateDrawing(s, DRAWING_ID, 90);
+    expect(size(s).width).toBeCloseTo(height, 6);
+    expect(size(s).height).toBeCloseTo(width, 6);
+    expect(size(s).bounds.min[0]).toBeCloseTo(corner[0], 6);
+    expect(size(s).bounds.min[1]).toBeCloseTo(corner[1], 6);
+    rotateDrawing(s, DRAWING_ID, 33);
+    expect(size(s).bounds.min[0]).toBeCloseTo(corner[0], 6);
+    expect(size(s).bounds.min[1]).toBeCloseTo(corner[1], 6);
+    expect(ProjectDocument.parse(s.getState().document)).toBeTruthy();
+    expect(s.getState().past).toHaveLength(2);
+    expect(rotateDrawing(s, DRAWING_ID, 360)).toEqual({ ok: true });
+    expect(s.getState().past).toHaveLength(2);
   });
 
   it("counts the operations that only machine it", () => {

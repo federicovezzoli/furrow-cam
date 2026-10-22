@@ -160,6 +160,18 @@ describe("transactions", () => {
     expect(store.getState().past).toHaveLength(2);
   });
 
+  it("keeps one replacement per changed field, however many changes it had", () => {
+    const { store, setWidth } = setup();
+    store.getState().beginTransaction();
+    for (let width = 101; width <= 400; width++) setWidth(width);
+    store.getState().commitTransaction();
+    const [entry] = store.getState().past;
+    expect(entry?.patches).toEqual([
+      { op: "replace", path: ["stock"], value: store.getState().document.stock },
+    ]);
+    expect(entry?.inversePatches).toHaveLength(1);
+  });
+
   it("ignores a nested begin", () => {
     const { store, setWidth } = setup();
     store.getState().beginTransaction();
