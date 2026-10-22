@@ -180,7 +180,8 @@ type DrawingPress = { pointerId: number; x: number; y: number; last: Point; drag
 /**
  * A faint fill over the box of the drawing whose properties show, setting it
  * apart from the others. In the top view, dragging it moves the drawing
- * (PRD-0009 D5), one undo step per drag; a click goes through to the paths.
+ * (PRD-0009 D5), one undo step per drag, showing the move cursor only then;
+ * a click goes through to the paths.
  */
 function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
@@ -209,6 +210,7 @@ function SelectedDrawing({ color }: { color: string }) {
     (event.target as Element).releasePointerCapture(event.pointerId);
     press.current = null;
     if (!current.dragging) return;
+    canvas.style.cursor = "";
     const state = store.getState();
     if (cancelled) state.cancelTransaction();
     else state.commitTransaction();
@@ -219,12 +221,6 @@ function SelectedDrawing({ color }: { color: string }) {
       position={[(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, 0]}
       renderOrder={RENDER_ORDER.selectedDrawing}
       {...(draggable && {
-        onPointerOver: () => {
-          canvas.style.cursor = "move";
-        },
-        onPointerOut: () => {
-          canvas.style.cursor = "";
-        },
         onPointerDown: (event: ThreeEvent<PointerEvent>) => {
           const point = onStockTop(event.ray);
           if (event.button !== 0 || !point) return;
@@ -245,6 +241,8 @@ function SelectedDrawing({ color }: { color: string }) {
             if (travel < DRAWING_DRAG_THRESHOLD) return;
             current.dragging = true;
             store.getState().beginTransaction();
+            // Only while dragging: on hover, a click still selects the path under the pointer.
+            canvas.style.cursor = "move";
           }
           const point = onStockTop(event.ray);
           if (!point) return;
