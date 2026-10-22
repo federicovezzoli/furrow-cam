@@ -915,6 +915,12 @@
     "failed": "Toolpath failed: {error}",
     "warnings": "Toolpath warnings: {warnings}"
   },
+  "ToolpathProgress": {
+    "title": "Computing toolpaths · {done} of {total} done",
+    "progress": "Progress of {name}",
+    "cancel": "Cancel",
+    "cancelLabel": "Cancel computing {name}"
+  },
   "Bit": {
     "types": {
       "flat_end_mill": "Flat end mill",

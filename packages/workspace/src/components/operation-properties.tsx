@@ -1558,6 +1558,9 @@ function ToolpathDetails({ operationId }: { operationId: string }) {
         >
           {percent}%
         </progress>
+        <span aria-hidden className="shrink-0 text-muted-foreground tabular-nums">
+          {percent}%
+        </span>
         <Button variant="outline" size="compact" onClick={() => controls.cancel(operationId)}>
           {t("cancel")}
         </Button>
