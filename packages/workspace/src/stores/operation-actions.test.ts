@@ -56,7 +56,6 @@ const endMill: Tool = {
   plungeRate: 300,
   plungeAngle: 3,
   stepDown: 1,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };
@@ -389,6 +388,7 @@ describe("addDrillOperation", () => {
     expect(operations().find((operation) => operation.id === id)?.params).toEqual({
       depth: 5,
       peck: false,
+      stepOver: 40,
     });
     expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
   });
@@ -489,12 +489,17 @@ describe("addVCarveOperation", () => {
   it("updates its params, flat bottom included, rejecting invalid ones", () => {
     const { store, operations } = setup();
     const id = addVCarve(store);
-    expect(updateVCarveParams(store, id, { maxDepth: 2, flatBottom: { tool: endMill } })).toEqual({
+    expect(
+      updateVCarveParams(store, id, { maxDepth: 2, flatBottom: { tool: endMill, stepOver: 40 } }),
+    ).toEqual({
       ok: true,
     });
-    expect(operations()[0]?.params).toEqual({ maxDepth: 2, flatBottom: { tool: endMill } });
+    expect(operations()[0]?.params).toEqual({
+      maxDepth: 2,
+      flatBottom: { tool: endMill, stepOver: 40 },
+    });
     expect(updateVCarveParams(store, id, { maxDepth: 0 })).toMatchObject({ ok: false });
-    expect(updateVCarveParams(store, id, { flatBottom: { tool: vBit } })).toEqual({
+    expect(updateVCarveParams(store, id, { flatBottom: { tool: vBit, stepOver: 40 } })).toEqual({
       ok: false,
       error: { code: "operation.flatBottomEndMill" },
     });
@@ -576,7 +581,7 @@ describe("addReliefRoughOperation", () => {
         modelId: model.id,
         strategy: { type: "offset" },
         direction: "climb",
-        stepOver: null,
+        stepOver: 40,
         stockToLeave: 0.5,
         boundary: { type: "model" },
         ramp: true,
@@ -829,7 +834,7 @@ describe("replaceToolSnapshots", () => {
     const { store, operations } = setup();
     const id = addVCarveOperation(store, { targets: [whole(square)], tool: vBit });
     if (!id) throw new Error("not added");
-    updateVCarveParams(store, id, { flatBottom: { tool: endMill } });
+    updateVCarveParams(store, id, { flatBottom: { tool: endMill, stepOver: 40 } });
 
     expect(replaceToolSnapshots(store, endMill, edited)).toEqual([]);
     expect(operations()[0]).toMatchObject({ tool: vBit, params: { flatBottom: { tool: edited } } });

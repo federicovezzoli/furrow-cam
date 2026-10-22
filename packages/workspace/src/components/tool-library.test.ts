@@ -25,7 +25,6 @@ const endMill: Tool = {
   plungeRate: 300,
   plungeAngle: 3,
   stepDown: 1,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };

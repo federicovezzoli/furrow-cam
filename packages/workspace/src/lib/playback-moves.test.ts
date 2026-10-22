@@ -24,7 +24,7 @@ const profile: Operation = {
   enabled: true,
   targets: [],
   tool: endMill,
-  params: { depth: 1, peck: false },
+  params: { depth: 1, peck: false, stepOver: 40 },
 };
 const vcarve: Operation = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
@@ -33,7 +33,7 @@ const vcarve: Operation = {
   enabled: true,
   targets: [],
   tool: vBit,
-  params: { maxDepth: 3, flatBottom: { tool: endMill } },
+  params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
 };
 
 const ready = (x: number, extra: Partial<ToolpathEntry> = {}): ToolpathEntry =>

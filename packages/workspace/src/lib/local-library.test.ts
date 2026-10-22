@@ -36,6 +36,11 @@ describe("tools", () => {
     expect(tools.map((t) => t.id)).toEqual(["a"]);
   });
 
+  it("loads tools saved with a step-over, which operations now own (#332)", () => {
+    const [stored] = parseTools([{ id: "a", tool: { ...DEFAULT_TOOL, stepOver: 40 } }]);
+    expect(stored?.tool).toEqual(DEFAULT_TOOL);
+  });
+
   it("adds, edits, defaults and deletes bits, by name", () => {
     let tools = parseTools([]);
     const first = saveTool(tools, null, toolForm({ ...DEFAULT_TOOL, name: "Zeta" }));
