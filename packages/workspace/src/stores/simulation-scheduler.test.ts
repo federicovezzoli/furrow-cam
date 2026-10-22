@@ -44,7 +44,7 @@ function documentWithOperations(): ProjectDocument {
         type: "drill",
         targets: [],
         tool: drill,
-        params: { depth: 6, peck: false },
+        params: { depth: 6, peck: false, stepOver: 40 },
       },
     ],
   };
@@ -97,7 +97,7 @@ describe("simulationRequest", () => {
           type: "vcarve",
           targets: [],
           tool: vBit,
-          params: { maxDepth: 3, flatBottom: { tool: endMill } },
+          params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
         },
       ],
     };

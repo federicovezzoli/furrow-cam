@@ -180,7 +180,10 @@ describe("vcarveToolpath", () => {
   });
 
   it("with a flat bottom, carves the walls at the limit and clears the floor with the end mill", () => {
-    const { moves, clearing, warnings } = carve({ maxDepth: 4, flatBottom: { tool: endMill } });
+    const { moves, clearing, warnings } = carve({
+      maxDepth: 4,
+      flatBottom: { tool: endMill, stepOver: 40 },
+    });
     expect(warnings).toEqual([]);
     expect(deepest(moves)).toBeCloseTo(-4, 6);
     for (const [x, y, z] of cuts(moves)) {
@@ -210,7 +213,10 @@ describe("vcarveToolpath", () => {
 
   it("warns when the floor is too narrow for the flat-bottom tool", () => {
     // 20 mm wide, the walls 8 mm in: a 4 mm floor for a 6.35 mm end mill.
-    const { warnings, clearing } = carve({ maxDepth: 8, flatBottom: { tool: endMill } });
+    const { warnings, clearing } = carve({
+      maxDepth: 8,
+      flatBottom: { tool: endMill, stepOver: 40 },
+    });
     expect(warnings).toEqual([{ code: "toolpath.flatAreasNarrow" }]);
     expect(clearing).toEqual([]);
   });
@@ -290,7 +296,7 @@ describe("vcarveToolpath", () => {
   });
 
   it("is what generateToolpath computes for V-carve operations", () => {
-    const operation = vcarve({ maxDepth: 4, flatBottom: { tool: endMill } });
+    const operation = vcarve({ maxDepth: 4, flatBottom: { tool: endMill, stepOver: 40 } });
     expect(
       generateToolpath({
         operation,

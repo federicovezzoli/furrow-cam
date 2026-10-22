@@ -21,12 +21,11 @@ const tool: Tool = {
   plungeRate: 300,
   plungeAngle: 90,
   stepDown: 4,
-  stepOver: 40,
   notes: null,
   color: "#2563eb",
 };
 
-const params: DrillParams = { depth: 10, peck: false };
+const params: DrillParams = { depth: 10, peck: false, stepOver: 40 };
 
 function circle(center: Point, radius: number): Path {
   const start: Point = [center[0] + radius, center[1]];

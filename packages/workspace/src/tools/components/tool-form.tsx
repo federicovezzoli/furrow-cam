@@ -24,7 +24,6 @@ const NEW_TOOL: Partial<Tool> = {
   plungeRate: 300,
   plungeAngle: 3,
   stepDown: 1,
-  stepOver: 40,
 };
 
 /** Saves the form's fields as tool `id`, or a new tool when `null`. */
@@ -141,7 +140,6 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
           />
         )}
         <NumberField label={t("stepDown")} {...number("stepDown")} quantity="length" min={0} />
-        <NumberField label={t("stepOver")} {...number("stepOver")} suffix="%" min={0} max={100} />
       </fieldset>
 
       <div className="grid gap-2">

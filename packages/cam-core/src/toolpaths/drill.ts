@@ -39,7 +39,7 @@ export type DrillOptions = {
  *   from just above the stock, no steeper than the tool's plunge angle and
  *   dropping no more than its step-down per turn, each ending with a full
  *   turn at depth; a circle over twice the tool diameter gets rings from the
- *   inside out, no further apart than the step-over. A drill bit can't cut
+ *   inside out, no further apart than the operation's step-over. A drill bit can't cut
  *   sideways, so it skips them; circles smaller than the tool are skipped too.
  * - Holes at the same centre are cut once, the largest. They start with the
  *   one nearest the stock's bottom-left corner and go each to the nearest
@@ -91,7 +91,7 @@ export function drillToolpath(
   for (const { center, bore } of drillOrder(unique(found))) {
     const [x, y] = center;
     if (bore !== null) {
-      boreHole(builder, center, bore, -params.depth, tool);
+      boreHole(builder, center, bore, -params.depth, tool, params.stepOver);
       continue;
     }
     builder.travel(x, y);
@@ -151,9 +151,10 @@ function boreHole(
   bore: number,
   bottom: number,
   tool: Tool,
+  stepOverPercent: number,
 ) {
   const radius = tool.diameter / 2;
-  const stepOver = (tool.diameter * tool.stepOver) / 100;
+  const stepOver = (tool.diameter * stepOverPercent) / 100;
   const extra = bore > radius ? Math.ceil((bore - radius) / stepOver - 1e-9) : 0;
   for (let i = 0; i <= extra; i++) {
     const ring = extra === 0 ? bore : radius + ((bore - radius) * i) / extra;

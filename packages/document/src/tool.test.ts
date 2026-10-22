@@ -35,7 +35,6 @@ describe("Tool", () => {
   it("rejects out-of-range values", () => {
     expect(Tool.safeParse({ ...endMill, diameter: 0 }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, fluteCount: 1.5 }).success).toBe(false);
-    expect(Tool.safeParse({ ...endMill, stepOver: 120 }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, name: "  " }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, stepDown: endMill.fluteLength + 1 }).success).toBe(false);
     expect(Tool.safeParse({ ...vBit, vAngle: 180 }).success).toBe(false);

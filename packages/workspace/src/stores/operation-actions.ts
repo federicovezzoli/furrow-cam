@@ -59,6 +59,12 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
 }
 
 /**
+ * Step-over of new operations that clear an area (pockets, boring, flat
+ * bottoms and 3D roughing), as a percentage of the tool's diameter.
+ */
+export const DEFAULT_STEP_OVER = 40;
+
+/**
  * New pockets go half through the stock with offset clearing, climb milling,
  * ramping in: an end mill plunging straight into the middle of a pocket has
  * nowhere to clear its chips.
@@ -67,6 +73,7 @@ export function defaultPocketParams(document: ProjectDocument): PocketParams {
   return {
     strategy: { type: "offset" },
     direction: "climb",
+    stepOver: DEFAULT_STEP_OVER,
     depth: document.stock.thickness / 2,
     allowance: 0,
     finishPass: false,
@@ -79,7 +86,7 @@ export function defaultPocketParams(document: ProjectDocument): PocketParams {
  * the tool's step-down is a single plunge anyway.
  */
 export function defaultDrillParams(document: ProjectDocument): DrillParams {
-  return { depth: document.stock.thickness, peck: true };
+  return { depth: document.stock.thickness, peck: true, stepOver: DEFAULT_STEP_OVER };
 }
 
 /** How deep new engravings go, unless the stock is thinner. */
@@ -126,7 +133,7 @@ export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
 
 /**
  * New 3D roughing operations on `modelId` clear the model's outline with
- * offset clearing at the tool's step-over, climb milling and ramping in,
+ * offset clearing at `DEFAULT_STEP_OVER`, climb milling and ramping in,
  * leaving 0.5 mm of stock for finishing (PRD-0005), and cutting everything
  * (no rest machining).
  */
@@ -135,7 +142,7 @@ export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
     modelId,
     strategy: { type: "offset" },
     direction: "climb",
-    stepOver: null,
+    stepOver: DEFAULT_STEP_OVER,
     stockToLeave: 0.5,
     boundary: { type: "model" },
     ramp: true,

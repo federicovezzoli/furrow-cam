@@ -30,7 +30,7 @@ function operation(name: string, tool: Tool = endMill): Operation {
     enabled: true,
     targets: [],
     tool,
-    params: { depth: 5, peck: false },
+    params: { depth: 5, peck: false, stepOver: 40 },
   };
 }
 
@@ -456,7 +456,7 @@ describe("grbl", () => {
     const vcarve: Operation = {
       ...operation("Sign", vBit),
       type: "vcarve",
-      params: { maxDepth: 3, flatBottom: { tool: endMill } },
+      params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
     };
     const toolpath = { ...plunge([30, 0]), clearing: plunge([40, 0]).moves };
 

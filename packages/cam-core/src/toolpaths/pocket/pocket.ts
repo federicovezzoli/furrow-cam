@@ -137,7 +137,7 @@ export function clearPocket(
 /** How a pocket's area is cleared, whatever its depth. */
 export type ClearingParams = Pick<
   PocketParams,
-  "strategy" | "direction" | "allowance" | "finishPass" | "ramp"
+  "strategy" | "direction" | "stepOver" | "allowance" | "finishPass" | "ramp"
 >;
 
 /** A pocket's regions, laid out once and cut at each level. */
@@ -159,7 +159,7 @@ function planPocket(
   const radius = tool.diameter / 2;
   const warnings: ToolpathMessage[] = [];
   const layout: Layout = {
-    stepOver: (tool.diameter * tool.stepOver) / 100,
+    stepOver: (tool.diameter * params.stepOver) / 100,
     radius,
     reverse: params.direction === "conventional",
     tolerance,

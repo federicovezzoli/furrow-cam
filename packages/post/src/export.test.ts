@@ -97,7 +97,7 @@ function referenceProject(): ProjectDocument {
         enabled: true,
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true },
+        params: { depth: 6, peck: true, stepOver: 40 },
       },
       {
         id: id(3),
@@ -109,6 +109,7 @@ function referenceProject(): ProjectDocument {
         params: {
           strategy: { type: "offset" },
           direction: "climb",
+          stepOver: 40,
           depth: 3,
           allowance: 0,
           finishPass: false,
@@ -149,7 +150,7 @@ describe("exportGcode", () => {
         enabled: true,
         targets: [{ shapeId: recess.id, paths: null }],
         tool: vBit,
-        params: { maxDepth: 2, flatBottom: { tool: endMill } },
+        params: { maxDepth: 2, flatBottom: { tool: endMill, stepOver: 40 } },
       },
     ];
     const { gcode, warnings } = exportGcode(doc, "Plate");

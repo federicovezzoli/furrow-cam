@@ -72,3 +72,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0055](0055-several-drawings-transformed-in-place.md) | A project holds several drawings, each transformed by rewriting its points | Proposed |
 | [0056](0056-touch-off-tool-change-shows-what-runs.md) | The touch-off pad's tool change is always a block, and the field shows it | Proposed |
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
+| [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
