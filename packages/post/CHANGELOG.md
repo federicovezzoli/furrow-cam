@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.10.0
+
+### Minor Changes
+
+- With a touch-off pad, the tool-change field now always shows the block that runs at each tool change, derived from the machine's unless you edit it, and **Reset** goes back to that block. Exported programs follow it: a machine tool change that moves now has its move put on the pad, and the default pause no longer names the bit, since the comment just before it already does. ([#320](https://github.com/federicovezzoli/furrow-cam/pull/320))
+
+### Patch Changes
+
+- The step-over is now set on each pocket, drill, V-carve flat bottom and 3D roughing operation instead of on the bit, so operations with the same bit can use different step-overs. Existing projects keep the step-over their bits had. ([#335](https://github.com/federicovezzoli/furrow-cam/pull/335))
+- Updated dependencies: @furrow/document@0.13.0, @furrow/cam-core@0.12.0
+
 ## 0.9.1
 
 ### Patch Changes

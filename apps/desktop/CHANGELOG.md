@@ -1,5 +1,15 @@
 # @furrow/desktop
 
+## 0.10.0
+
+### Minor Changes
+
+- Errors, confirmations and renames now open in an in-app dialog that matches the theme, instead of the browser's own alert, confirm and prompt boxes. ([#338](https://github.com/federicovezzoli/furrow-cam/pull/338))
+
+### Patch Changes
+
+- The step-over is now set on each pocket, drill, V-carve flat bottom and 3D roughing operation instead of on the bit, so operations with the same bit can use different step-overs. Existing projects keep the step-over their bits had. ([#335](https://github.com/federicovezzoli/furrow-cam/pull/335))
+
 ## 0.9.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.13.0
+
+### Minor Changes
+
+- The step-over is now set on each pocket, drill, V-carve flat bottom and 3D roughing operation instead of on the bit, so operations with the same bit can use different step-overs. Existing projects keep the step-over their bits had. ([#335](https://github.com/federicovezzoli/furrow-cam/pull/335))
+
 ## 0.12.0
 
 ### Minor Changes
