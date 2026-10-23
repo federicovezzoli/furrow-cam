@@ -1081,6 +1081,7 @@
     "renamePrompt": "Version umbenennen (leer lassen, um ihr Datum anzuzeigen)",
     "deleteConfirm": "Version „{name}“ löschen? Das kann nicht rückgängig gemacht werden.",
     "loading": "Versionen werden geladen…",
+    "loadFailed": "Die Versionen konnten nicht geladen werden.",
     "empty": "Noch keine Versionen. Speichere eine, um später zu diesem Stand zurückzukehren.",
     "actionsLabel": "Aktionen für {name}",
     "actions": "Aktionen",

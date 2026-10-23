@@ -1081,6 +1081,7 @@
     "renamePrompt": "Renommer la version (laisser vide pour afficher sa date)",
     "deleteConfirm": "Supprimer la version « {name} » ? Cette action est irréversible.",
     "loading": "Chargement des versions…",
+    "loadFailed": "Impossible de charger les versions.",
     "empty": "Aucune version pour l’instant. Enregistrez-en une pour revenir à cet état plus tard.",
     "actionsLabel": "Actions pour {name}",
     "actions": "Actions",

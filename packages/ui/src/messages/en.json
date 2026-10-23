@@ -1081,6 +1081,7 @@
     "renamePrompt": "Rename version (leave blank to show its date)",
     "deleteConfirm": "Delete the version “{name}”? This can't be undone.",
     "loading": "Loading versions…",
+    "loadFailed": "Couldn't load the versions.",
     "empty": "No versions yet. Save one to go back to this state later.",
     "actionsLabel": "Actions for {name}",
     "actions": "Actions",
