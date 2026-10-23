@@ -58,8 +58,10 @@ function program(name: string) {
    * The points every `step` mm from `from` to `to` (work coordinates) where
    * the program leaves the stock higher than `z`, as `[x, y, height]`.
    */
+  let simulated: ReturnType<typeof simulateGcode> | undefined;
   const above = (from: [number, number], to: [number, number], z: number, step = 1) => {
-    const stock = simulateGcode(gcode, project.document);
+    simulated ??= simulateGcode(gcode, project.document);
+    const stock = simulated;
     const steps = Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) / step);
     const left: [number, number, number][] = [];
     for (let i = 0; i <= steps; i++) {
