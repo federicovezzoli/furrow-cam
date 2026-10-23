@@ -6,12 +6,11 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
   CircleAlertIcon,
   CircleSlashIcon,
   EyeIcon,
   EyeOffIcon,
+  GripVerticalIcon,
   LoaderCircleIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -94,6 +93,12 @@ export function OperationsPane() {
   }
 
   const target = targets.length === 0 ? undefined : targetsLabel(targets);
+
+  // The operation being dragged and the gap it would drop into (0 is before the first row).
+  const [drag, setDrag] = useState<{ id: string; from: number; gap: number | null } | null>(null);
+  // Where the dragged operation ends up: gaps after it shift down by one once it is removed.
+  const dropIndex = drag?.gap == null ? null : drag.gap > drag.from ? drag.gap - 1 : drag.gap;
+  const dropGap = dropIndex === null || dropIndex === drag?.from ? null : drag?.gap;
 
   const kinds: {
     type: Operation["type"];
@@ -282,14 +287,40 @@ export function OperationsPane() {
       )}
 
       {operations.length > 0 && (
-        <ol aria-label={t("inCuttingOrder")} className="grid gap-0.5">
+        <ol
+          aria-label={t("inCuttingOrder")}
+          className="grid gap-0.5"
+          // On the list, not the rows, so the gaps between rows accept the drop too.
+          onDragOver={(event) => {
+            if (drag) event.preventDefault();
+          }}
+          onDrop={(event) => {
+            if (!drag) return;
+            event.preventDefault();
+            if (dropIndex !== null) moveOperation(store, drag.id, dropIndex);
+            setDrag(null);
+          }}
+          onDragLeave={(event) => {
+            // Outside the list there is no drop position, so dropping there cancels.
+            if (
+              drag?.gap != null &&
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            ) {
+              setDrag({ ...drag, gap: null });
+            }
+          }}
+        >
           {operations.map((operation, index) => (
             <OperationRow
               key={operation.id}
               operation={operation}
-              first={index === 0}
-              last={index === operations.length - 1}
               index={index}
+              dropLine={dropGap === index ? "before" : dropGap === index + 1 ? "after" : undefined}
+              onDragStart={() => setDrag({ id: operation.id, from: index, gap: null })}
+              onDragOver={(gap) => drag && drag.gap !== gap && setDrag({ ...drag, gap })}
+              // Fires on every drag end, including Esc and drops outside the list.
+              onDragEnd={() => setDrag(null)}
+              dragging={drag !== null}
             />
           ))}
         </ol>
@@ -342,13 +373,21 @@ function Selection({
 function OperationRow({
   operation,
   index,
-  first,
-  last,
+  dropLine,
+  dragging,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
 }: {
   operation: Operation;
   index: number;
-  first: boolean;
-  last: boolean;
+  /** Where to draw the drop position while an operation is dragged over this row. */
+  dropLine: "before" | "after" | undefined;
+  dragging: boolean;
+  onDragStart: () => void;
+  /** The gap the dragged operation is over: `index` above this row's middle, `index + 1` below. */
+  onDragOver: (gap: number) => void;
+  onDragEnd: () => void;
 }) {
   const t = useTranslations("Operations");
   const store = useDocumentStoreApi();
@@ -362,11 +401,46 @@ function OperationRow({
 
   return (
     <li
+      onDragOver={(event) => {
+        if (!dragging) return;
+        event.dataTransfer.dropEffect = "move";
+        const { top, height } = event.currentTarget.getBoundingClientRect();
+        onDragOver(event.clientY < top + height / 2 ? index : index + 1);
+      }}
       className={cn(
-        "flex min-w-0 items-center gap-1 rounded-md pl-1.5",
+        "flex min-w-0 items-center gap-1 rounded-md",
         selected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+        dropLine === "before" && "shadow-[inset_0_2px_0_var(--color-primary)]",
+        dropLine === "after" && "shadow-[inset_0_-2px_0_var(--color-primary)]",
       )}
     >
+      <Button
+        variant="ghost"
+        size="icon-compact"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          // Firefox starts a drag only with data; a private type that nothing else accepts.
+          event.dataTransfer.setData("application/x-furrow-operation", operation.id);
+          const row = event.currentTarget.closest("li");
+          if (row) event.dataTransfer.setDragImage(row, 12, row.offsetHeight / 2);
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+          event.preventDefault();
+          const handle = event.currentTarget;
+          moveOperation(store, operation.id, index + (event.key === "ArrowUp" ? -1 : 1));
+          // React moves the row by re-inserting it, which drops focus when moving down.
+          requestAnimationFrame(() => handle.focus());
+        }}
+        aria-label={t("reorderLabel", { name: operation.name })}
+        title={t("reorder")}
+        className="cursor-grab text-muted-foreground active:cursor-grabbing"
+      >
+        <GripVerticalIcon />
+      </Button>
       <input
         type="checkbox"
         checked={operation.enabled}
@@ -413,26 +487,6 @@ function OperationRow({
           <ToolpathVisibility operation={operation} />
         </>
       )}
-      <Button
-        variant="ghost"
-        size="icon-compact"
-        disabled={first}
-        onClick={() => moveOperation(store, operation.id, index - 1)}
-        aria-label={t("moveUpLabel", { name: operation.name })}
-        title={t("moveUp")}
-      >
-        <ArrowUpIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-compact"
-        disabled={last}
-        onClick={() => moveOperation(store, operation.id, index + 1)}
-        aria-label={t("moveDownLabel", { name: operation.name })}
-        title={t("moveDown")}
-      >
-        <ArrowDownIcon />
-      </Button>
       <Button
         variant="ghost"
         size="icon-compact"
