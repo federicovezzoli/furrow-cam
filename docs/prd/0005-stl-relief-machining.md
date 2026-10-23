@@ -22,7 +22,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 
 ## Non-goals
 
-- Undercuts, overhangs, 4th axis, flipping the stock to machine both sides.
+- Undercuts, overhangs, 4th axis. Flipping the stock to machine both sides is PRD-0011.
 - STEP, OBJ, 3MF or other mesh and solid formats.
 - Editing the mesh (sculpting, repairing, boolean operations).
 - Converting images or 2D drawings into reliefs (heightmap from a picture).
@@ -69,3 +69,4 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-10-17: S12, the touch-off pad (#147, ADR-0041)
 - 2026-10-17: S12 and the user flow: the touch-off pad is turned on by the user, not added on import (#178, ADR-0043)
 - 2026-10-19: S2's border is set by the user per model (#183, ADR-0038)
+- 2026-10-23: flipping the stock moves to PRD-0011 (two-sided machining)

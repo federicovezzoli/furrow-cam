@@ -24,3 +24,5 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0007](0007-desktop-app.md) | Desktop app | Draft |
 | [0008](0008-try-without-account.md) | Use the app without an account | Shipped |
 | [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Draft |
+| [0010](0010-text.md) | Text | Draft |
+| [0011](0011-two-sided-machining.md) | Two-sided machining | Draft |
