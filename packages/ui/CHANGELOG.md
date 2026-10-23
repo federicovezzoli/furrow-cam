@@ -1,5 +1,13 @@
 # @furrow/ui
 
+## 0.3.1
+
+### Patch Changes
+
+- Operations are reordered by dragging the handle at the start of their row, or with ↑ and ↓ while the handle is focused, instead of with up and down arrow buttons. ([#343](https://github.com/federicovezzoli/furrow-cam/pull/343))
+- The Versions pane now says why when the list of versions can't be loaded, instead of showing "Loading versions…" forever. ([#341](https://github.com/federicovezzoli/furrow-cam/pull/341))
+- Updated dependencies: @furrow/document@0.13.1, @furrow/cam-core@0.12.1
+
 ## 0.3.0
 
 ### Minor Changes
