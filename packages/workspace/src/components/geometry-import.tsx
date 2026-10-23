@@ -61,12 +61,40 @@ function isImportError(error: unknown): error is SvgImportError | DxfImportError
   return error instanceof SvgImportError || error instanceof DxfImportError;
 }
 
+/** The file input `GeometryImport` reads drawings from, which `ImportDrawingButton` opens. */
+const DRAWING_INPUT_ID = "workspace-drawing-file";
+
+/**
+ * The top bar's button importing another drawing once the project holds some
+ * (the empty project's card has its own). It opens `GeometryImport`'s file
+ * input, which handles the file.
+ */
+export function ImportDrawingButton() {
+  const shown = useDocumentStore(
+    (s) => s.document.geometry.length > 0 && canImportDrawing(s.document),
+  );
+  const t = useTranslations("Import");
+  if (!shown) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="compact"
+      data-tour="import"
+      // shortcut: finds the input by id, so only one workspace per page; share a ref if that changes.
+      onClick={() => document.getElementById(DRAWING_INPUT_ID)?.click()}
+    >
+      <UploadIcon />
+      {t("importDrawing")}
+    </Button>
+  );
+}
+
 /**
  * Imports SVG and DXF files and STL models, over the viewport: a card in its
- * centre while the project is empty, then in its corner while it holds
- * drawings, each file adding one; a project holds drawings or one model
- * (ADR-0055). It also shows import warnings until dismissed, and says how an
- * STL import is going.
+ * centre while the project is empty; then the top bar's `ImportDrawingButton`
+ * adds a drawing per file while the project holds drawings; a project holds
+ * drawings or one model (ADR-0055). Prompts, import warnings (until
+ * dismissed) and how an STL import is going show in the viewport's corner.
  */
 export function GeometryImport() {
   const store = useDocumentStoreApi();
@@ -156,138 +184,148 @@ export function GeometryImport() {
     }
   }
 
-  /** Only the import buttons to show: they keep to the corner, leaving the viewport free. */
+  /** Nothing to show over the viewport: the top bar has the import button. */
   const bare = !empty && !pending && !notice && !modelImport;
-  if (bare && !drawings) return null;
 
   return (
-    <div
-      className={cn(
-        "pointer-events-none absolute flex",
-        empty ? "inset-0 items-center justify-center p-4" : "right-2 bottom-2 left-2 justify-end",
+    <>
+      {drawings && (
+        <input
+          ref={input}
+          id={DRAWING_INPUT_ID}
+          type="file"
+          accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
+          onChange={onChange}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+        />
       )}
-    >
-      <div
-        data-tour={empty ? "import" : undefined}
-        className={cn(
-          "pointer-events-auto grid gap-2 rounded-md border bg-background/95 text-ui shadow-xs",
-          bare ? "p-1" : "w-full max-w-72 p-3",
-        )}
-      >
-        {empty && <p className="text-muted-foreground">{t("start")}</p>}
-        {drawings && (
-          <>
-            <input
-              ref={input}
-              type="file"
-              accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
-              onChange={onChange}
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
-                <UploadIcon />
-                {t("importDrawing")}
-              </Button>
-              {empty && <ModelImportButton />}
-            </div>
-          </>
-        )}
-        {empty && !meshLimits && <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>}
+      {!bare && (
+        <div
+          className={cn(
+            "pointer-events-none absolute flex",
+            empty
+              ? "inset-0 items-center justify-center p-4"
+              : "right-2 bottom-2 left-2 justify-end",
+          )}
+        >
+          <div
+            data-tour={empty ? "import" : undefined}
+            className={cn(
+              "pointer-events-auto grid gap-2 rounded-md border bg-background/85 text-ui shadow-xs backdrop-blur-md",
+              "w-full max-w-72 p-3",
+            )}
+          >
+            {empty && <p className="text-muted-foreground">{t("start")}</p>}
+            {empty && (
+              <div className="flex flex-wrap gap-2">
+                {drawings && (
+                  <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+                    <UploadIcon />
+                    {t("importDrawing")}
+                  </Button>
+                )}
+                <ModelImportButton />
+              </div>
+            )}
+            {empty && !meshLimits && (
+              <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>
+            )}
 
-        {pending?.kind === "svg" && (
-          <ImportPrompt
-            id="svg-dpi"
-            label={t("dpi")}
-            title={t("dpiTitle")}
-            question={t.rich("dpiQuestion", {
-              file: pending.name,
-              name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
-            })}
-            options={DPI_OPTIONS.map((value) => ({ value, label: String(value) }))}
-            initial={DEFAULT_SVG_DPI}
-            onImport={(dpi) => {
-              setPending(null);
-              add({ ...pending, dpi });
-            }}
-            onCancel={() => setPending(null)}
-          />
-        )}
-        {pending?.kind === "dxf" && (
-          <ImportPrompt
-            id="dxf-units"
-            label={t("units_")}
-            title={t("unitsTitle")}
-            question={t.rich("unitsQuestion", {
-              file: pending.name,
-              name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
-            })}
-            options={UNIT_OPTIONS.map((value) => ({ value, label: t(`units.${value}`) }))}
-            initial="mm"
-            onImport={(units: Units) => {
-              setPending(null);
-              add({ ...pending, units });
-            }}
-            onCancel={() => setPending(null)}
-          />
-        )}
+            {pending?.kind === "svg" && (
+              <ImportPrompt
+                id="svg-dpi"
+                label={t("dpi")}
+                title={t("dpiTitle")}
+                question={t.rich("dpiQuestion", {
+                  file: pending.name,
+                  name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
+                })}
+                options={DPI_OPTIONS.map((value) => ({ value, label: String(value) }))}
+                initial={DEFAULT_SVG_DPI}
+                onImport={(dpi) => {
+                  setPending(null);
+                  add({ ...pending, dpi });
+                }}
+                onCancel={() => setPending(null)}
+              />
+            )}
+            {pending?.kind === "dxf" && (
+              <ImportPrompt
+                id="dxf-units"
+                label={t("units_")}
+                title={t("unitsTitle")}
+                question={t.rich("unitsQuestion", {
+                  file: pending.name,
+                  name: (chunks) => <span className="font-medium break-all">{chunks}</span>,
+                })}
+                options={UNIT_OPTIONS.map((value) => ({ value, label: t(`units.${value}`) }))}
+                initial="mm"
+                onImport={(units: Units) => {
+                  setPending(null);
+                  add({ ...pending, units });
+                }}
+                onCancel={() => setPending(null)}
+              />
+            )}
 
-        {modelImport && (
-          <div className="flex items-start gap-1">
-            {modelImport.error === null ? (
-              <p role="status" className="flex-1 break-all text-muted-foreground">
-                {t("importing", { file: modelImport.fileName })}
-              </p>
-            ) : (
-              <>
-                <div role="alert" className="grid flex-1 gap-1 text-destructive">
-                  <p className="font-medium break-all">{modelImport.fileName}</p>
-                  <p>{format(modelImport.error)}</p>
+            {modelImport && (
+              <div className="flex items-start gap-1">
+                {modelImport.error === null ? (
+                  <p role="status" className="flex-1 break-all text-muted-foreground">
+                    {t("importing", { file: modelImport.fileName })}
+                  </p>
+                ) : (
+                  <>
+                    <div role="alert" className="grid flex-1 gap-1 text-destructive">
+                      <p className="font-medium break-all">{modelImport.fileName}</p>
+                      <p>{format(modelImport.error)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-compact"
+                      onClick={() => setModelImport(null)}
+                      aria-label={t("dismiss")}
+                      title={t("dismiss")}
+                      className="-mt-1 -mr-1"
+                    >
+                      <XIcon />
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {notice && (
+              <div className="flex items-start gap-1">
+                <div
+                  role={notice.kind === "error" ? "alert" : "status"}
+                  className={cn(
+                    "grid flex-1 gap-1",
+                    notice.kind === "error" ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {notice.messages.map((message) => (
+                    <p key={JSON.stringify(message)}>{format(message)}</p>
+                  ))}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon-compact"
-                  onClick={() => setModelImport(null)}
+                  onClick={() => setNotice(null)}
                   aria-label={t("dismiss")}
                   title={t("dismiss")}
                   className="-mt-1 -mr-1"
                 >
                   <XIcon />
                 </Button>
-              </>
+              </div>
             )}
           </div>
-        )}
-
-        {notice && (
-          <div className="flex items-start gap-1">
-            <div
-              role={notice.kind === "error" ? "alert" : "status"}
-              className={cn(
-                "grid flex-1 gap-1",
-                notice.kind === "error" ? "text-destructive" : "text-muted-foreground",
-              )}
-            >
-              {notice.messages.map((message) => (
-                <p key={JSON.stringify(message)}>{format(message)}</p>
-              ))}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-compact"
-              onClick={() => setNotice(null)}
-              aria-label={t("dismiss")}
-              title={t("dismiss")}
-              className="-mt-1 -mr-1"
-            >
-              <XIcon />
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -48,7 +48,7 @@ export function ToolpathProgressToast() {
       className="pointer-events-none absolute bottom-2 left-2 z-20 w-72 max-w-[calc(100%-1rem)]"
     >
       {shown && summary && (
-        <div className="pointer-events-auto grid gap-2 rounded-md border bg-background/95 p-3 text-ui shadow-xs">
+        <div className="pointer-events-auto grid gap-2 rounded-md border bg-background/85 p-3 text-ui shadow-xs backdrop-blur-md">
           <p className="text-muted-foreground">
             {t("title", { done: summary.done, total: summary.total })}
           </p>

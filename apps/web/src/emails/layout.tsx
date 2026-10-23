@@ -5,17 +5,17 @@ import { Body, Button, Container, Head, Hr, Html, Link, Preview, Section, Text }
 
 /*
  * Shared layout for transactional emails (#67). Inline styles only, no remote images or
- * fonts (ADR-0013). Monochrome with square corners like the app; clients that force a
+ * fonts (ADR-0013). Warm greys with square corners like the app; clients that force a
  * dark mode invert it cleanly. Consolas comes first because Outlook on Windows only
  * honours the first family in the list.
  */
 const font = 'Consolas, Menlo, "SFMono-Regular", "Courier New", monospace';
 
 const styles = {
-  body: { backgroundColor: "#f5f5f5", color: "#171717", fontFamily: font, margin: 0, padding: 0 },
+  body: { backgroundColor: "#efece8", color: "#171310", fontFamily: font, margin: 0, padding: 0 },
   container: {
-    backgroundColor: "#ffffff",
-    border: "1px solid #e5e5e5",
+    backgroundColor: "#f8f7f4",
+    border: "1px solid #dcdad6",
     margin: "32px auto",
     maxWidth: "480px",
     padding: "32px",
@@ -23,16 +23,16 @@ const styles = {
   wordmark: { fontSize: "18px", fontWeight: 600, letterSpacing: "-0.02em", margin: "0 0 24px" },
   text: { fontSize: "14px", lineHeight: "22px", margin: "0 0 16px" },
   button: {
-    backgroundColor: "#171717",
-    color: "#fafafa",
+    backgroundColor: "#171310",
+    color: "#f8f7f4",
     fontSize: "14px",
     fontWeight: 600,
     padding: "12px 20px",
     textDecoration: "none",
   },
-  small: { color: "#737373", fontSize: "12px", lineHeight: "18px", margin: "0 0 8px" },
-  link: { color: "#171717", textDecoration: "underline", wordBreak: "break-all" as const },
-  hr: { borderColor: "#e5e5e5", margin: "24px 0" },
+  small: { color: "#68625e", fontSize: "12px", lineHeight: "18px", margin: "0 0 8px" },
+  link: { color: "#171310", textDecoration: "underline", wordBreak: "break-all" as const },
+  hr: { borderColor: "#dcdad6", margin: "24px 0" },
 };
 
 export interface EmailLayoutProps {
