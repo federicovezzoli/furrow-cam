@@ -1,5 +1,11 @@
 # @furrow/ui
 
+## 0.3.3
+
+### Patch Changes
+
+- The app's header shows the Furrow CAM logo next to its name, as furrow.cam does. ([`cb8445f`](https://github.com/federicovezzoli/furrow-cam/commit/cb8445fb1c3da097e01cfd06b2d55f446180ba10))
+
 ## 0.3.2
 
 ### Patch Changes

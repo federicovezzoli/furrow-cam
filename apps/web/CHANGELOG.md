@@ -1,5 +1,13 @@
 # @furrow/web
 
+## 0.17.3
+
+### Patch Changes
+
+- The app's header shows the Furrow CAM logo next to its name, as furrow.cam does. ([`cb8445f`](https://github.com/federicovezzoli/furrow-cam/commit/cb8445fb1c3da097e01cfd06b2d55f446180ba10))
+- The navbar highlights the section you are in. ([`91e4026`](https://github.com/federicovezzoli/furrow-cam/commit/91e40261c4a304314cbdeb271e71b97a5e36ed3d))
+- Updated dependencies: @furrow/ui@0.3.3, @furrow/workspace@0.12.2
+
 ## 0.17.2
 
 ### Patch Changes
