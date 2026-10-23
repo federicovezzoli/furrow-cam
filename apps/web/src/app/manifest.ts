@@ -13,8 +13,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     start_url: "/projects",
     display: "standalone",
     // The light theme's --background (globals.css).
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: "#f8f7f4",
+    theme_color: "#f8f7f4",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
