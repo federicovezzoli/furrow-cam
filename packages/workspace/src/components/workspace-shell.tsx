@@ -281,7 +281,7 @@ function SelectedOperation() {
             ? t("modelProperties")
             : t("drawingProperties")
       }
-      className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/95 shadow-xs"
+      className="absolute top-2 right-2 z-10 max-h-[calc(100%-1rem)] w-80 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-background/85 shadow-xs backdrop-blur-md"
     >
       {/* Keyed, so nothing typed or rejected for one operation or model shows on the next. */}
       {selectedId !== null ? (

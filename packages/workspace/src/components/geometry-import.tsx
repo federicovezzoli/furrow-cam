@@ -170,7 +170,7 @@ export function GeometryImport() {
       <div
         data-tour={empty ? "import" : undefined}
         className={cn(
-          "pointer-events-auto grid gap-2 rounded-md border bg-background/95 text-ui shadow-xs",
+          "pointer-events-auto grid gap-2 rounded-md border bg-background/85 text-ui shadow-xs backdrop-blur-md",
           bare ? "p-1" : "w-full max-w-72 p-3",
         )}
       >

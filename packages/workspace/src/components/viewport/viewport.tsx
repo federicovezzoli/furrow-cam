@@ -92,7 +92,7 @@ export function Viewport() {
       {status.length > 0 && (
         <div
           role="status"
-          className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/90 px-2 py-1 text-muted-foreground text-xs shadow-xs"
+          className="absolute bottom-2 left-2 space-y-0.5 rounded-md border bg-background/85 px-2 py-1 text-muted-foreground text-xs shadow-xs backdrop-blur-md"
         >
           {status.map((line) => (
             <p key={line}>{line}</p>
@@ -217,7 +217,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
 }
 
 export const TOOLBAR_GROUP =
-  "flex items-center gap-0.5 rounded-md border bg-background/90 p-0.5 shadow-xs";
+  "flex items-center gap-0.5 rounded-md border bg-background/85 p-0.5 shadow-xs backdrop-blur-md";
 
 /**
  * What the viewport shows of the cut: the toolpaths of the enabled operations,
