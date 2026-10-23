@@ -1,4 +1,5 @@
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
+import { Logo } from "@furrow/ui/components/logo";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
@@ -15,7 +16,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <>
       <header className="border-b">
         <nav className="flex w-full items-center gap-6 px-8 py-3 text-sm">
-          <Link href="/projects" className="font-semibold tracking-tight">
+          <Link href="/projects" className="flex items-center gap-2.5 font-semibold tracking-tight">
+            <Logo />
             Furrow CAM
           </Link>
           <Link href="/projects" className="text-muted-foreground hover:text-foreground">

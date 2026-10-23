@@ -1,4 +1,5 @@
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
+import { Logo } from "@furrow/ui/components/logo";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import type * as React from "react";
@@ -31,6 +32,7 @@ export function AppFrame({
       <header className="border-b">
         <nav className="flex w-full items-center gap-6 px-8 py-3 text-sm">
           <NavButton onClick={() => navigate({ name: "start" })} brand>
+            <Logo />
             Furrow CAM
           </NavButton>
           <NavButton onClick={() => navigate({ name: "start" })}>{t("projects")}</NavButton>
@@ -62,7 +64,9 @@ function NavButton({
       type="button"
       onClick={onClick}
       className={
-        brand ? "font-semibold tracking-tight" : "text-muted-foreground hover:text-foreground"
+        brand
+          ? "flex items-center gap-2.5 font-semibold tracking-tight"
+          : "text-muted-foreground hover:text-foreground"
       }
     >
       {children}
