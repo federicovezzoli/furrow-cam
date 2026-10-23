@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.13.1
+
+### Patch Changes
+
+- Project files store 3D models uncompressed, so saving a project with a large model no longer makes the desktop app stutter after each edit. ([#342](https://github.com/federicovezzoli/furrow-cam/pull/342))
+
 ## 0.13.0
 
 ### Minor Changes
