@@ -2,7 +2,7 @@
   "name": "@furrow/desktop",
   "productName": "Furrow CAM",
   "desktopName": "furrow-cam.desktop",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "description": "Furrow CAM desktop app: the shared workspace in Electron, with projects as files (PRD-0007)",
   "homepage": "https://github.com/federicovezzoli/furrow-cam",
