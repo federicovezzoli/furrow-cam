@@ -1,4 +1,4 @@
-import { strToU8, zipSync } from "fflate";
+import { strToU8, unzipSync, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
   ARCHIVE_DOCUMENT_PATH,
@@ -74,6 +74,29 @@ describe("packProjectArchive and readProjectArchive", () => {
     expect(archive.meshes).toEqual(meshes);
     expect(missingArchiveMeshes(document, archive.meshes)).toEqual([]);
     expect(missingArchiveMeshes(document, new Map())).toEqual([sha256]);
+  });
+
+  it("store meshes uncompressed and deflate the document", async () => {
+    const { document, meshes, sha256 } = await projectWithModel();
+    const compression = new Map<string, number>();
+    unzipSync(packProjectArchive(document, meshes), {
+      filter: ({ name, compression: method }) => {
+        compression.set(name, method);
+        return false;
+      },
+    });
+    expect(compression.get(archiveMeshPath(sha256))).toBe(0);
+    expect(compression.get(ARCHIVE_DOCUMENT_PATH)).toBe(8);
+  });
+
+  it("read archives whose meshes are deflated", async () => {
+    const { document, meshes, sha256 } = await projectWithModel();
+    const zip = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(document)),
+      [archiveMeshPath(sha256)]: meshes.get(sha256) as Uint8Array,
+    });
+    const archive = await readProjectArchive(zip, MAX_MESH_BYTES);
+    expect(archive.meshes).toEqual(meshes);
   });
 
   it("round-trip several drawings", async () => {
