@@ -6,23 +6,18 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@furrow/ui/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@furrow/ui/components/ui/tabs";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
-import { cn } from "@furrow/ui/lib/utils";
-import { ChevronDownIcon, CircleAlertIcon } from "lucide-react";
+import { CircleAlertIcon } from "lucide-react";
 import type * as React from "react";
 import { lazy, useRef, useState } from "react";
-import {
-  type Layout,
-  type LayoutChangedMeta,
-  useGroupRef,
-  usePanelRef,
-} from "react-resizable-panels";
+import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
 import { useSelectedDrawingId } from "../hooks/use-selected-drawing";
 import { useUndoShortcuts } from "../hooks/use-undo-shortcuts";
-import { savedLayout, toggledPaneLayout, type WorkspaceLayout } from "../lib/workspace-layout";
+import { savedLayout } from "../lib/workspace-layout";
 import { Tour, useTour } from "../onboarding/components/tour";
 import type { TourPane } from "../onboarding/lib/tour";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -43,7 +38,7 @@ import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
 import { ToolpathProgressToast } from "./toolpath-progress-toast";
 import { TopBar } from "./top-bar";
-import { VersionsPane } from "./versions-pane";
+import { VersionsButton } from "./versions-pane";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
 const Viewport = lazy(() =>
@@ -53,10 +48,10 @@ const Viewport = lazy(() =>
 );
 
 /**
- * The CAM workspace (ADR-0009): a top bar over two resizable columns,
- * operations over the project's properties and its versions (ADR-0028) on
- * the left and the viewport on the right, with the selected operation's properties floating over it.
- * Panes collapse to their headers, each on its own; panel sizes are
+ * The CAM workspace (ADR-0009): a top bar, with the project's versions
+ * (ADR-0028), over two resizable columns: the operations and the project's
+ * properties in tabs on the left, the viewport on the right, with the
+ * selected operation's properties floating over it. Column sizes are
  * remembered by the host (`settings.layout`). The project and its
  * stores come from `ProjectShell`, so they outlive this page.
  */
@@ -77,67 +72,15 @@ export function WorkspaceShell() {
   });
   const documentStore = useDocumentStoreApi();
   const getDocument = () => documentStore.getState().document;
-  const sidebar = useGroupRef();
-  const operationsPanel = usePanelRef();
-  const propertiesPanel = usePanelRef();
-  const versionsPanel = usePanelRef();
+  const [tab, setTab] = useState<string>("operations");
   const [layout] = useState(() => settings.layout);
   const saved = useRef(layout);
-  const panes = {
-    operations: operationsPanel,
-    properties: propertiesPanel,
-    versions: versionsPanel,
-  };
-  /** The size each pane had when last collapsed, to expand it back to (percent). */
-  const openSizes = useRef({ operations: 35, properties: 45, versions: 20 });
 
-  function remember(group: keyof WorkspaceLayout) {
-    return (sizes: Layout, meta: LayoutChangedMeta) => {
-      // Window resizes and the initial mount aren't a choice worth keeping.
-      if (!meta.isUserInteraction) return;
-      saved.current = { ...saved.current, [group]: sizes };
-      settings.saveLayout(saved.current);
-    };
-  }
-
-  /**
-   * Collapses or expands pane `id` without opening or closing any other: with
-   * every pane collapsed, the space below their headers is left empty. The
-   * new layout is saved unless `persist` is false.
-   */
-  function toggle(id: keyof typeof panes, persist = true) {
-    const group = sidebar.current;
-    const panel = panes[id].current;
-    if (!group || !panel) return;
-    const layout = group.getLayout();
-    const { inPixels, asPercentage } = panel.getSize();
-    if (inPixels === 0) return;
-    const percentPerPixel = asPercentage / inPixels;
-    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-    const collapsed = new Set(
-      Object.entries(panes).flatMap(([pane, ref]) => (ref.current?.isCollapsed() ? [pane] : [])),
-    );
-    if (!collapsed.has(id)) openSizes.current[id] = layout[id] ?? openSizes.current[id];
-    const sizes = group.setLayout(
-      toggledPaneLayout({
-        layout,
-        panes: Object.keys(panes),
-        rest: SIDEBAR_REST,
-        collapsed,
-        target: id,
-        headerSize: PANE_HEADER_REM * rem * percentPerPixel,
-        openSize: openSizes.current[id],
-        minSize: PANE_MIN_SIZE * percentPerPixel,
-      }),
-    );
-    if (!persist) return;
-    saved.current = { ...saved.current, sidebar: sizes };
+  function remember(sizes: Layout, meta: LayoutChangedMeta) {
+    // Window resizes and the initial mount aren't a choice worth keeping.
+    if (!meta.isUserInteraction) return;
+    saved.current = { ...saved.current, columns: sizes };
     settings.saveLayout(saved.current);
-  }
-
-  /** Expands pane `id` for the tour's step inside it, leaving the saved layout as the user set it. */
-  function reveal(id: TourPane) {
-    if (panes[id].current?.isCollapsed()) toggle(id, false);
   }
 
   return (
@@ -146,13 +89,15 @@ export function WorkspaceShell() {
         saveStatus={saveStatus}
         machineName={machineName}
         onTakeTour={(from) => tour.start(from)}
-      />
+      >
+        <VersionsButton />
+      </TopBar>
       <Tour
         id="workspace"
         running={tour.running}
         origin={tour.origin}
         onEnd={tour.end}
-        revealPane={reveal}
+        revealPane={setTab}
       />
       {saveStatus.state === "failed" && <SaveFailed message={saveStatus.error} />}
       {saveStatus.state === "error" && <SaveError message={saveStatus.error} />}
@@ -162,7 +107,7 @@ export function WorkspaceShell() {
           orientation="horizontal"
           className="min-w-100"
           defaultLayout={savedLayout(layout.columns, ["sidebar", "viewport"])}
-          onLayoutChanged={remember("columns")}
+          onLayoutChanged={remember}
         >
           <ResizablePanel
             id="sidebar"
@@ -172,18 +117,13 @@ export function WorkspaceShell() {
             collapsible
             groupResizeBehavior="preserve-pixel-size"
           >
-            <ResizablePanelGroup
-              orientation="vertical"
-              groupRef={sidebar}
-              defaultLayout={savedLayout(layout.sidebar, [...Object.keys(panes), SIDEBAR_REST])}
-              onLayoutChanged={remember("sidebar")}
-            >
-              <Pane
+            <Tabs value={tab} onValueChange={setTab} className="h-full">
+              <TabsList>
+                <TabsTrigger value="operations">{t("operations")}</TabsTrigger>
+                <TabsTrigger value="properties">{t("properties")}</TabsTrigger>
+              </TabsList>
+              <SidebarTab
                 id="operations"
-                title={t("operations")}
-                panel={operationsPanel}
-                onToggle={() => toggle("operations")}
-                defaultSize="35"
                 footer={
                   <div className="flex gap-2">
                     <div data-tour="export-gcode" className="min-w-0 flex-1">
@@ -207,31 +147,14 @@ export function WorkspaceShell() {
                 }
               >
                 <OperationsPane />
-              </Pane>
-              <ResizableHandle />
-              <Pane
+              </SidebarTab>
+              <SidebarTab
                 id="properties"
-                title={t("properties")}
-                panel={propertiesPanel}
-                onToggle={() => toggle("properties")}
-                defaultSize="45"
                 footer={<ExportProjectButton getDocument={getDocument} className="w-full" />}
               >
                 <StockProperties machines={library.machines} />
-              </Pane>
-              <ResizableHandle />
-              <Pane
-                id="versions"
-                title={t("versions")}
-                panel={versionsPanel}
-                onToggle={() => toggle("versions")}
-                defaultSize="20"
-              >
-                <VersionsPane />
-              </Pane>
-              {/* No handle: it only holds the space below the headers while every pane is collapsed. */}
-              <ResizablePanel id={SIDEBAR_REST} defaultSize="0" minSize={0} />
-            </ResizablePanelGroup>
+              </SidebarTab>
+            </Tabs>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="viewport" minSize={200}>
@@ -332,80 +255,33 @@ function SaveError({ message }: { message: Translatable | undefined }) {
   );
 }
 
-type PanelRef = ReturnType<typeof usePanelRef>;
-
-/** The empty panel under the sidebar's panes. */
-const SIDEBAR_REST = "rest";
-
-/** The height of a pane's header (`h-control`) in rem, all that a collapsed pane shows. */
-const PANE_HEADER_REM = 1.75;
-
-/** The smallest an open pane gets, in pixels. */
-const PANE_MIN_SIZE = 96;
-
 /**
- * A sidebar pane: dragging its edge resizes it, and its header calls
- * `onToggle` to collapse it to just the header or expand it. `footer` stays
- * at its bottom while the rest scrolls. A collapsed pane's content stays
- * mounted, only hidden.
+ * A sidebar tab's content: `footer` stays at its bottom while the rest
+ * scrolls. Hidden rather than unmounted while another tab shows, so it keeps
+ * its state and running actions.
  */
-function Pane({
+function SidebarTab({
   id,
-  title,
-  panel,
-  onToggle,
-  defaultSize,
   footer,
   children,
 }: {
-  id: string;
-  title: string;
-  panel: PanelRef;
-  onToggle: () => void;
-  defaultSize: string;
-  footer?: React.ReactNode;
+  id: TourPane;
+  footer: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
+  const t = useTranslations("Shell");
   return (
-    <ResizablePanel
-      id={id}
-      panelRef={panel}
-      defaultSize={defaultSize}
-      minSize={PANE_MIN_SIZE}
-      collapsible
-      collapsedSize={`${PANE_HEADER_REM}rem`}
-      onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
+    <TabsContent
+      value={id}
+      forceMount
+      aria-label={t(id)}
+      data-tour={id}
+      className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
     >
-      <section aria-label={title} data-tour={id} className="flex h-full flex-col">
-        <h2 className="h-control shrink-0 border-b text-ui-label font-medium tracking-wide text-muted-foreground uppercase">
-          <button
-            type="button"
-            aria-expanded={!collapsed}
-            onClick={onToggle}
-            className="flex size-full items-center gap-1 px-2 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
-          >
-            <ChevronDownIcon
-              className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
-            />
-            {title}
-          </button>
-        </h2>
-        {/*
-          Hidden rather than unmounted, so a collapsed pane keeps its state and running actions.
-          Relative, so absolute content (`sr-only` inputs) scrolls with it instead of growing the page.
-        */}
-        <div hidden={collapsed} className="relative min-h-0 flex-1 overflow-auto">
-          {children}
-        </div>
-        {footer && (
-          <div hidden={collapsed} className="shrink-0 border-t p-2">
-            {footer}
-          </div>
-        )}
-      </section>
-    </ResizablePanel>
+      {/* Relative, so absolute content (`sr-only` inputs) scrolls with it instead of growing the page. */}
+      <div className="relative min-h-0 flex-1 overflow-auto">{children}</div>
+      <div className="shrink-0 border-t p-2">{footer}</div>
+    </TabsContent>
   );
 }
 

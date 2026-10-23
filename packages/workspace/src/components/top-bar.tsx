@@ -4,6 +4,7 @@ import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import { ChevronLeftIcon, CircleHelpIcon } from "lucide-react";
+import type * as React from "react";
 import { useTranslations } from "use-intl";
 import type { WorkspaceDestination } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -14,18 +15,21 @@ import { SaveStatus } from "./save-status";
 /**
  * The top bar of an open project's pages, with a way `back` (to all
  * projects unless given). `machineName` is `null` for a project without a
- * machine; `onTakeTour` replays the workspace tour.
+ * machine; `onTakeTour` replays the workspace tour. `children` go after the
+ * save status.
  */
 export function TopBar({
   saveStatus,
   machineName,
   onTakeTour,
   back,
+  children,
 }: {
   back?: { to: WorkspaceDestination; label: string };
   saveStatus: AutosaveStatus;
   machineName: string | null;
   onTakeTour?: (from: HTMLElement) => void;
+  children?: React.ReactNode;
 }) {
   const t = useTranslations("TopBar");
   const shell = useTranslations("Shell");
@@ -49,6 +53,7 @@ export function TopBar({
         {machineName ?? t("noMachine")}
       </span>
       {project.autosaves && <SaveStatus status={saveStatus} />}
+      {children}
       <div className="ml-auto flex items-center gap-1">
         {onTakeTour && (
           <Button

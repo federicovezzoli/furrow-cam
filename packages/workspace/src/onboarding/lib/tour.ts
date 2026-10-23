@@ -7,15 +7,15 @@
 
 export type TourId = "app" | "workspace";
 
-/** A workspace pane the tour expands when it reaches a step inside it. */
-export type TourPane = "operations" | "properties" | "versions";
+/** A workspace sidebar tab the tour opens when it reaches a step inside it. */
+export type TourPane = "operations" | "properties";
 
 export interface TourStep {
   /** Its title and text are `Tour.steps.<id>` in the catalogs (ADR-0054). */
   id: TourStepId;
   /** The `data-tour` value of the element the step points at. */
   anchor: string;
-  /** The collapsible pane holding the anchor, expanded for the step. */
+  /** The sidebar tab holding the anchor, opened for the step. */
   pane?: TourPane;
   /** Where the popover goes: beside the anchor, or inside the top of a large one. */
   side: "top" | "right" | "bottom" | "left" | "inside";
@@ -89,8 +89,7 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
     {
       id: "versions",
       anchor: "versions",
-      pane: "versions",
-      side: "right",
+      side: "bottom",
     },
   ],
 };

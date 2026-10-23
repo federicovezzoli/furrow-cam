@@ -93,7 +93,7 @@ function onScreen(element: HTMLElement | null): element is HTMLElement {
  * reached is dropped. `onEnd` is called when the tour is finished, skipped
  * (Esc too) or runs out of steps, with whether any step was shown; focus then
  * goes back to `origin`, or to where it was when the tour started.
- * `revealPane` expands a collapsed workspace pane before its step is shown.
+ * `revealPane` opens the workspace sidebar tab holding a step's anchor before the step is shown.
  */
 export function Tour({
   id,
@@ -147,7 +147,7 @@ export function Tour({
     setState(startTour(TOURS[id]));
   }, [running, id]);
 
-  // Show the step: expand its pane, let it lay out, then find its anchor or drop the step.
+  // Show the step: open its tab, let it lay out, then find its anchor or drop the step.
   useEffect(() => {
     if (!state) return;
     const step = state.steps[state.index];

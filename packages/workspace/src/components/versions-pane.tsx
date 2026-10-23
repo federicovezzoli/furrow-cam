@@ -5,6 +5,13 @@ import { FormError } from "@furrow/ui/components/form-error";
 import { formatLocalDate, LocalDate } from "@furrow/ui/components/local-date";
 import { Button } from "@furrow/ui/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@furrow/ui/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,10 +42,36 @@ import { useWorkspaceHost } from "../providers/workspace-host";
 import { useAutosaveApi, useDocumentStoreApi } from "../providers/workspace-stores";
 import type { AutosaveStatus } from "../stores/autosave";
 
+/** The top bar's button opening the project's versions in a dialog. */
+export function VersionsButton() {
+  const t = useTranslations("Shell");
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="compact" data-tour="versions">
+          <HistoryIcon />
+          {t("versions")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex h-[min(32rem,80vh)] flex-col gap-0 p-0"
+      >
+        <DialogHeader className="border-b p-3 pr-10">
+          <DialogTitle className="text-sm">{t("versions")}</DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 flex-1">
+          <VersionsPane />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * The Versions pane (ADR-0028): lists the project's versions, newest first,
  * to restore, rename, delete or open as a new project, over a form that saves
- * a new one. The list is fetched when the pane opens. Says so where the
+ * a new one. The list is fetched when the dialog opens. Says so where the
  * workspace host keeps no versions.
  */
 export function VersionsPane() {
