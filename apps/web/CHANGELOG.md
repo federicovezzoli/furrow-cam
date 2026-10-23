@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.17.2
+
+### Patch Changes
+
+- Furrow CAM has the logo and colours of furrow.cam: an F as a round end mill would carve it, for the favicons, the installable web app and the desktop app icon, and warm paper greys with an orange focus ring throughout the app. Panels floating over the 3D view blur what lies behind them. ([`033a756`](https://github.com/federicovezzoli/furrow-cam/commit/033a756b90c6014de4ab969143c415999782d157))
+- Updated dependencies: @furrow/ui@0.3.2, @furrow/workspace@0.12.1
+
 ## 0.17.1
 
 ### Patch Changes
