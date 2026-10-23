@@ -292,7 +292,7 @@ export function App() {
 
   const libraryPage =
     page.name === "tools" || page.name === "machines" || page.name === "machine" ? (
-      <AppFrame navigate={navigate}>
+      <AppFrame page={page} navigate={navigate}>
         <LibraryPage
           page={page}
           library={library}
@@ -320,7 +320,7 @@ export function App() {
 
   return (
     libraryPage ?? (
-      <AppFrame navigate={navigate}>
+      <AppFrame page={page} navigate={navigate}>
         <StartScreen
           machines={library.machines}
           recoveries={recoveries}

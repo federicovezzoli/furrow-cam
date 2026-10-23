@@ -4,6 +4,7 @@ import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
 import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
 import { Suspense } from "react";
+import { NavLink } from "@/components/nav-link";
 import { SiteFooter } from "@/components/site-footer";
 import { getSession } from "@/features/auth/server";
 import { AppTour } from "@/features/onboarding/components/app-tour";
@@ -15,14 +16,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <header className="border-b">
-        <nav className="flex w-full items-center gap-6 px-8 py-3 text-sm">
-          <Link href="/projects" className="flex items-center gap-2.5 font-semibold tracking-tight">
+        <nav className="flex w-full items-center gap-3 px-8 py-3 text-sm">
+          <Link
+            href="/projects"
+            className="mr-3 flex items-center gap-2.5 font-semibold tracking-tight"
+          >
             <Logo />
             Furrow CAM
           </Link>
-          <Link href="/projects" className="text-muted-foreground hover:text-foreground">
-            {t("Nav.projects")}
-          </Link>
+          <NavLink href="/projects">{t("Nav.projects")}</NavLink>
           <Suspense>
             <AccountNav />
           </Suspense>
@@ -54,16 +56,12 @@ async function AccountNav() {
   const { user } = session;
   return (
     <>
-      <Link href="/tools" data-tour="bits" className="text-muted-foreground hover:text-foreground">
+      <NavLink href="/tools" data-tour="bits">
         {t("Nav.bits")}
-      </Link>
-      <Link
-        href="/machines"
-        data-tour="machines"
-        className="text-muted-foreground hover:text-foreground"
-      >
+      </NavLink>
+      <NavLink href="/machines" data-tour="machines">
         {t("Nav.machines")}
-      </Link>
+      </NavLink>
       <div className="ml-auto flex items-center gap-2">
         <LanguagePicker />
         <ThemeToggle />

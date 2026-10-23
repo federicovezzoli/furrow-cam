@@ -1,6 +1,7 @@
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { Logo } from "@furrow/ui/components/logo";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
+import { cn } from "@furrow/ui/lib/utils";
 import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import type * as React from "react";
 import { useTranslations } from "use-intl";
@@ -20,9 +21,11 @@ const REPORT_URL = blankReportUrl([
  * web app. The workspace stays full-window.
  */
 export function AppFrame({
+  page,
   navigate,
   children,
 }: {
+  page: Page;
   navigate: (page: Page) => void;
   children: React.ReactNode;
 }) {
@@ -30,14 +33,23 @@ export function AppFrame({
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b">
-        <nav className="flex w-full items-center gap-6 px-8 py-3 text-sm">
+        <nav className="flex w-full items-center gap-3 px-8 py-3 text-sm">
           <NavButton onClick={() => navigate({ name: "start" })} brand>
             <Logo />
             Furrow CAM
           </NavButton>
-          <NavButton onClick={() => navigate({ name: "start" })}>{t("projects")}</NavButton>
-          <NavButton onClick={() => navigate({ name: "tools" })}>{t("bits")}</NavButton>
-          <NavButton onClick={() => navigate({ name: "machines" })}>{t("machines")}</NavButton>
+          <NavButton onClick={() => navigate({ name: "start" })} active={page.name === "start"}>
+            {t("projects")}
+          </NavButton>
+          <NavButton onClick={() => navigate({ name: "tools" })} active={page.name === "tools"}>
+            {t("bits")}
+          </NavButton>
+          <NavButton
+            onClick={() => navigate({ name: "machines" })}
+            active={page.name === "machines" || page.name === "machine"}
+          >
+            {t("machines")}
+          </NavButton>
           <div className="ml-auto flex items-center gap-2">
             <LanguagePicker />
             <ThemeToggle />
@@ -53,21 +65,28 @@ export function AppFrame({
 function NavButton({
   onClick,
   brand = false,
+  active = false,
   children,
 }: {
   onClick: () => void;
   brand?: boolean;
+  active?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
+      aria-current={active ? "page" : undefined}
+      className={cn(
         brand
-          ? "flex items-center gap-2.5 font-semibold tracking-tight"
-          : "text-muted-foreground hover:text-foreground"
-      }
+          ? "mr-3 flex items-center gap-2.5 font-semibold tracking-tight"
+          : "rounded-md px-2.5 py-1 transition-colors",
+        !brand &&
+          (active
+            ? "bg-accent font-medium text-foreground"
+            : "text-muted-foreground hover:text-foreground"),
+      )}
     >
       {children}
     </button>
