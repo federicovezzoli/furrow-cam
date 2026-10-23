@@ -2,9 +2,7 @@
 
 **Open source, web-based 2.5D CAM.** Turn 2D vector designs into G-code for CNC routers, right in your browser.
 
-**Try it at [app.furrow.cam](https://app.furrow.cam)** (free account, email and password).
-
-> **Status: alpha.** The MVP features are live and usable, but expect rough edges, and check your G-code in a simulator before the first cut on a new setup. See the [releases](https://github.com/federicovezzoli/furrow-cam/releases) for what changed.
+**Try it at [app.furrow.cam](https://app.furrow.cam)**: no account needed, projects stay in your browser until you sign up. See the [releases](https://github.com/federicovezzoli/furrow-cam/releases) for what changed.
 
 [![CI](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml)
 [![Release](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml)
@@ -41,18 +39,21 @@ Furrow CAM is a Computer-Aided Manufacturing tool for **2.5D machining**: operat
 - **Drilling**: plunging holes at circle centres or points
 - **Engraving**: following lines at a fixed depth, or a fixed line width with a V-bit
 - **V-carving**: variable-depth carving with a V-bit, for crisp lettering and sharp corners
+- **3D relief**: roughing in Z levels and parallel finishing passes on STL models, seen from the top, with rest machining for a smaller bit
 
-It is **not** a full 3D CAM (no surface finishing of freeform models; STL relief machining is being scoped in [#101](https://github.com/federicovezzoli/furrow-cam/issues/101)), and it is not a CAD tool. You design elsewhere, import here.
+It is **not** a full 3D CAM (relief only: no undercuts, 4th axis or tool tilting), and it is not a CAD tool. You design elsewhere, import here.
 
 ## Features
 
-- **Import** SVG and DXF drawings
+- **Import** SVG and DXF drawings, several per project, then move, size, rotate, mirror or fit each one to the stock; or one STL model for relief carving
 - **Zero point** on any of the stock's 9 anchors, a typed position, or a point picked in the viewport with snapping
 - **Tool library** and **machine profiles** saved to your account, with presets for popular hobby routers: V1 Engineering LowRider v4 and MPCNC Primo, Maslow 4, Sienci LongMill MK2, SainSmart Genmitsu 3018
-- **Preview**: toolpaths in a 2D/3D viewport, rapids and cuts shown apart, plus a simulation of the stock after cutting
+- **Preview**: toolpaths in a 2D/3D viewport, rapids and cuts shown apart, plus a simulator that plays the cut move by move on the stock
+- **Touch-off pad** on the stock top, where the machine stops at each tool change to re-zero Z
 - **G-code export** for GRBL-compatible controllers (GRBL, grblHAL, FluidNC), with optional custom start, end and tool-change blocks per machine
 - **Projects** saved to your account, with undo/redo, and export/import as a file
-- Metric and imperial units, light and dark theme
+- Metric and imperial units, light and dark theme, English, Italian, French and German
+- **Installable** from Chrome, Edge and Safari, or as a [desktop app](#desktop-app) that works offline
 
 ## Goals
 
@@ -101,7 +102,11 @@ The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hos
 ### Repository layout
 
 ```
-apps/web/            Next.js app: UI, viewport, server code (organised by feature, ADR-0021)
+apps/web/            Next.js app: routes, accounts, server code (organised by feature, ADR-0021)
+apps/desktop/        Electron desktop app (ADR-0044)
+apps/download/       Cloudflare Worker behind download.furrow.cam (ADR-0049)
+packages/workspace/  the CAM workspace UI shared by web and desktop
+packages/ui/         shadcn/ui components
 packages/document/   project document schema (Zod), migrations and machine presets
 packages/cam-core/   framework-agnostic geometry and toolpath generation
 packages/post/       post-processors (toolpaths → G-code)
