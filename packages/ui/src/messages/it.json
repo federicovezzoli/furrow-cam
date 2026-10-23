@@ -1083,6 +1083,7 @@
     "renamePrompt": "Rinomina la versione (lascia vuoto per mostrarne la data)",
     "deleteConfirm": "Eliminare la versione “{name}”? L’operazione non si può annullare.",
     "loading": "Caricamento delle versioni…",
+    "loadFailed": "Impossibile caricare le versioni.",
     "empty": "Ancora nessuna versione. Salvane una per tornare a questo stato in seguito.",
     "actionsLabel": "Azioni per {name}",
     "actions": "Azioni",

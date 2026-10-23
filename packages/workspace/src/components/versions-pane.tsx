@@ -13,7 +13,7 @@ import {
 } from "@furrow/ui/components/ui/dropdown-menu";
 import { Input } from "@furrow/ui/components/ui/input";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
-import type { Translatable } from "@furrow/ui/lib/i18n";
+import { errorText, type Translatable } from "@furrow/ui/lib/i18n";
 import {
   CopyPlusIcon,
   EllipsisIcon,
@@ -75,15 +75,20 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
 
   useEffect(() => {
     let current = true;
-    void host.list().then((result) => {
-      if (!current) return;
-      if (result.error !== undefined) setError(result.error);
-      else setVersions(result.versions);
-    });
+    void host.list().then(
+      (result) => {
+        if (!current) return;
+        if (result.error !== undefined) setError(result.error);
+        else setVersions(result.versions);
+      },
+      (error: unknown) => {
+        if (current) setError(errorText(t, error, t("loadFailed")));
+      },
+    );
     return () => {
       current = false;
     };
-  }, [host]);
+  }, [host, t]);
 
   function run(action: () => Promise<VersionsResult>) {
     startTransition(async () => {
