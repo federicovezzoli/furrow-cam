@@ -1,4 +1,4 @@
-import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
+import { strFromU8, strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 import { z } from "zod";
 import type { ProjectDocument } from "./document";
 import { type DocumentMessage, MessageError } from "./message";
@@ -93,7 +93,7 @@ export function packProjectArchive(
   versions: readonly ArchiveVersion[] = [],
 ): Uint8Array {
   if (versions.length > MAX_ARCHIVE_VERSIONS) throw tooManyVersions();
-  const files: Record<string, Uint8Array> = {
+  const files: Zippable = {
     [ARCHIVE_DOCUMENT_PATH]: documentFile(document),
   };
   for (const version of versions) {
@@ -118,7 +118,8 @@ export function packProjectArchive(
   for (const sha256 of sha256s) {
     const mesh = meshes.get(sha256);
     if (!mesh) throw new Error(`The mesh ${sha256} is missing`);
-    files[archiveMeshPath(sha256)] = mesh;
+    // Stored, not deflated: binary STL barely compresses and deflating it blocks the desktop UI on every recovery save.
+    files[archiveMeshPath(sha256)] = [mesh, { level: 0 }];
   }
   return zipSync(files);
 }
