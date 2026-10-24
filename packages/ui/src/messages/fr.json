@@ -706,7 +706,10 @@
       "stlImportOff": "L’import STL n’est pas disponible sur ce serveur.",
       "fileTooLarge": "Ce fichier est trop volumineux pour être importé (la limite est de {mb, number} Mo).",
       "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier.",
-      "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande."
+      "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande.",
+      "textNoOutlines": "Aucun de ces caractères n'est dans la police : il n'y a rien à découper.",
+      "unknownFont": "La police « {font} » n'est pas disponible dans cette version de l'application.",
+      "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez."
     }
   },
   "Operation": {
@@ -1214,7 +1217,21 @@
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui n’usine que lui} other {les # opérations qui n’usinent que lui}}",
     "duplicateTitle": "Copie le dessin à sa droite, usiné par les mêmes opérations",
     "duplicate": "Dupliquer",
-    "remove": "Retirer le dessin"
+    "remove": "Retirer le dessin",
+    "removeText": "Supprimer le texte"
+  },
+  "Text": {
+    "heading": "Texte",
+    "text": "Texte",
+    "font": "Police",
+    "height": "Hauteur des lettres",
+    "align": "Alignement",
+    "aligns": {
+      "left": "Gauche",
+      "center": "Centre",
+      "right": "Droite"
+    },
+    "heightNote": "La hauteur est celle des majuscules. Le texte reste à sa place quand vous le modifiez."
   },
   "Import": {
     "units": {
@@ -1233,7 +1250,9 @@
     "importing": "Import de {file}…",
     "dismiss": "Fermer",
     "import": "Importer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "addText": "Ajouter du texte",
+    "defaultText": "Texte"
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

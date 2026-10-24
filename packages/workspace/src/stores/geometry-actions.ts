@@ -22,11 +22,13 @@ import {
   type Drawing,
   type Message,
   type Operation,
+  type Path,
   type Point,
   type ProjectDocument,
   type Shape,
   type Stock,
   segmentIssue,
+  type TextSettings,
 } from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
@@ -47,33 +49,110 @@ export function canImportModel({ geometry, models }: ProjectDocument): boolean {
 
 /**
  * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
- * step, at its size in the file, aligned on its own at the XY zero's anchor
- * (bottom-left for a custom zero) to the stock less the drawing's border, the
- * rectangle *Fit to stock* fits into: it may overlap what the project already
- * holds. The shapes all name the new drawing, as an import
- * gives them, and it takes its name from their file. Returns `false`, adding
- * nothing, if the project holds a model. `name` labels the change, e.g.
- * `importSvg`.
+ * step, at its size in the file, placed as `placeDrawing` does. The shapes
+ * all name the new drawing, as an import gives them, and it takes its name
+ * from their file. Returns `false`, adding nothing, if the project holds a
+ * model. `name` labels the change, e.g. `importSvg`.
  */
 export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
   const [first] = shapes;
+  if (!first) return false;
+  const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
+  return placeDrawing(store, name, drawing, shapes);
+}
+
+/**
+ * Adds a text item (ADR-0059) as one undo step: `text`'s settings with
+ * `paths`, its outlines laid out at its placement, as its one shape, placed
+ * as `placeDrawing` does and named after its text. Returns its id, or `null`,
+ * adding nothing, if it has no outlines or the project holds a model.
+ */
+export function addTextItem(
+  store: DocumentStore,
+  text: TextSettings,
+  paths: Path[],
+): string | null {
+  if (paths.length === 0) return null;
+  const id = crypto.randomUUID();
+  const shape: Shape = { id: crypto.randomUUID(), name: "", layer: "", drawingId: id, paths };
+  const drawing = { id, name: text.text, border: DRAWING_BORDER, text };
+  return placeDrawing(store, "addText", drawing, [shape]) ? id : null;
+}
+
+/**
+ * Adds `drawing` and its `shapes` as one undo step, aligned on its own at the
+ * XY zero's anchor (bottom-left for a custom zero) to the stock less the
+ * drawing's border, the rectangle *Fit to stock* fits into (PRD-0009 D1): it
+ * may overlap what the project already holds. A text item's placement moves
+ * with its outlines. Returns `false`, adding nothing, if the project holds a
+ * model.
+ */
+function placeDrawing(
+  store: DocumentStore,
+  name: string,
+  drawing: Drawing,
+  shapes: Shape[],
+): boolean {
   const { document } = store.getState();
-  if (!first || !canImportDrawing(document)) return false;
+  const bounds = shapesBounds(shapes);
+  if (!bounds || !canImportDrawing(document)) return false;
   const { stock } = document;
   const anchor = modelAnchor(stock);
-  const bounds = shapesBounds(shapes);
-  if (!bounds) return false;
   const [x, y] = anchorPoint(stockInset(stock, DRAWING_BORDER), anchor);
   const [bx, by] = anchorPoint(bounds, anchor);
-  const placed = translateShapes(shapes, [x - bx, y - by]);
-  const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
+  const offset: Point = [x - bx, y - by];
+  const placed = translateShapes(shapes, offset);
+  const moved = { ...drawing };
+  moveTextWithOutlines(moved, (point) => translatePoint(point, offset));
   // One assignment, not a spread push: a file may hold more shapes than a call takes arguments.
   const geometry = document.geometry.concat(placed);
   store.getState().change(name, (draft) => {
-    draft.drawings.push(drawing);
+    draft.drawings.push(moved);
     draft.geometry = geometry;
   });
   return true;
+}
+
+const NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
+
+/**
+ * Sets text item `id`'s settings to `text` and its outlines to `paths`, laid
+ * out from them, as one undo step (ADR-0059). Its shape keeps its id, so the
+ * operations machining it still do; their targets listing some of its paths
+ * take all of them, as the old paths' numbers mean nothing in the new ones,
+ * and the profile tabs lying on its old paths go. Refuses, changing nothing,
+ * text with no outlines.
+ */
+export function setTextItem(
+  store: DocumentStore,
+  id: string,
+  text: TextSettings,
+  paths: Path[],
+): ActionResult {
+  if (paths.length === 0) return { ok: false, error: NO_OUTLINES };
+  const { document } = store.getState();
+  const [shape] = drawingShapes(document.geometry, id);
+  if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
+    return { ok: true };
+  }
+  const index = document.geometry.indexOf(shape);
+  const ownTabs = drawingTabs(document, id);
+  store.getState().change("setText", (draft) => {
+    const drawing = draft.drawings.find((d) => d.id === id);
+    if (drawing) Object.assign(drawing, { name: text.text, text });
+    // By index: finding it through the draft would read every shape.
+    const target = draft.geometry[index];
+    if (target) target.paths = paths;
+    for (const operation of draft.operations) {
+      for (const own of operation.targets) {
+        if (own.shapeId === shape.id && own.paths !== null) own.paths = null;
+      }
+      const gone = ownTabs.get(operation.id);
+      const tabs = operation.type === "profile" ? operation.params.tabs : null;
+      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone[i]);
+    }
+  });
+  return { ok: true };
 }
 
 /** The shapes of drawing `id`. */

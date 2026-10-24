@@ -41,6 +41,7 @@ import {
 import { gestureHandlers } from "../stores/gesture-handlers";
 import { modelAnchor } from "../stores/model-actions";
 import type { ActionResult } from "../stores/operation-actions";
+import { TextProperties } from "./text-properties";
 
 /** Keeps sizes positive when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
@@ -52,7 +53,8 @@ const DEFAULT_ANGLE = 15;
  * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):
  * width and height, which keep its proportions, the border *Fit to stock*
  * leaves, mirroring and turning it (D6, D7), its position from the zero,
- * duplicating (D8) and removing it, each an undoable edit.
+ * duplicating (D8) and removing it, each an undoable edit. A text item's
+ * settings come first (PRD-0010).
  */
 export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const store = useDocumentStoreApi();
@@ -112,6 +114,8 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
           <XIcon />
         </Button>
       </div>
+
+      {drawing.text && <TextProperties drawingId={drawing.id} text={drawing.text} />}
 
       <section aria-labelledby="drawing-size-heading" className="grid gap-2">
         <h3 id="drawing-size-heading" className="font-medium">
@@ -266,7 +270,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
           title={operationCount > 0 ? t("removeTitle", { count: operationCount }) : undefined}
         >
           <Trash2Icon />
-          {t("remove")}
+          {drawing.text ? t("removeText") : t("remove")}
         </Button>
       </div>
     </div>
