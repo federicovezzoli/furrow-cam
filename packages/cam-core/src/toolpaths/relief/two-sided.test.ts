@@ -86,11 +86,13 @@ function simulate(operation: Operation, toolpath: Toolpath) {
 const lowest = (toolpath: Toolpath) => Math.min(...toolpath.moves.map(({ to }) => to[2]));
 
 describe("relief toolpaths on two sides", () => {
-  it.each<[FlipAxis, number, number]>([
-    ["x", 1, -1],
-    ["y", -1, 1],
-  ])("rough a symmetric model the same from below, mirrored, about %s", (flipAxis, sx, sy) => {
-    const operations = [roughing("top"), roughing("bottom")];
+  it.each<[string, typeof roughing, FlipAxis, number, number]>([
+    ["rough", roughing, "x", 1, -1],
+    ["rough", roughing, "y", -1, 1],
+    ["finish", finishing, "x", 1, -1],
+    ["finish", finishing, "y", -1, 1],
+  ])("%s a symmetric model the same from below, mirrored, about %s", (_, cut, flipAxis, sx, sy) => {
+    const operations = [cut("top"), cut("bottom")];
     const [top, bottom] = toolpaths(project(operations, { flipAxis, partingDepth: 9 }));
     const above = simulate(operations[0] as Operation, top as Toolpath);
     const below = simulate(operations[1] as Operation, bottom as Toolpath);
@@ -129,15 +131,30 @@ describe("relief toolpaths on two sides", () => {
     }
   });
 
+  it("cuts down to the parting plane around a model that doesn't reach it", () => {
+    // 6 mm deep, so 3 mm of stock below it lies above the parting plane.
+    const shallow = { ...BLOCK, placement: { ...BLOCK.placement, depth: 6 } };
+    const doc = {
+      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9 }),
+      models: [shallow],
+    };
+    const [top] = toolpaths(doc) as Toolpath[];
+    expect(lowest(top as Toolpath)).toBeCloseTo(-9);
+  });
+
   it("rest machines the bottom side from what the bottom side's earlier operations left", () => {
+    // A 2D operation on the bottom side isn't flipped yet (#360), so it isn't counted.
+    const [profile] = fullDocument().operations;
     const operations = [
       roughing("top"),
       roughing("bottom"),
+      { ...(profile as Operation), stockSide: "bottom" as const },
       finishing("top"),
       finishing("bottom", true),
     ];
-    const inputs = toolpathInputs(project(operations, { flipAxis: "y", partingDepth: 9 }));
-    expect(inputs[3]?.before.map((input) => input.operation)).toEqual([operations[1]]);
+    const doc = { ...project(operations, { flipAxis: "y", partingDepth: 9 }) };
+    const inputs = toolpathInputs({ ...doc, geometry: fullDocument().geometry });
+    expect(inputs[4]?.before.map((input) => input.operation)).toEqual([operations[1]]);
   });
 
   it("machines one-sided projects as before", () => {

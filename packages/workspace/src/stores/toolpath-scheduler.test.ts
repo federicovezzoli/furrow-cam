@@ -208,6 +208,37 @@ describe("scheduleToolpaths", () => {
     expect(requests[3]?.input.touchOff).toBeNull();
   });
 
+  it("recomputes a 3D operation when the parting plane or the flip changes (ADR-0060)", () => {
+    const document = createProjectDocument();
+    const bottom = { ...reliefFinish, stockSide: "bottom" as const };
+    const { documents, requests, schedule } = setup({
+      ...document,
+      stock: { ...document.stock, twoSided: { flipAxis: "x", partingDepth: 9 } },
+      models: [model],
+      operations: [bottom],
+    });
+    const answer = () => {
+      const request = requests.at(-1) as ToolpathRequest;
+      schedule.receive({
+        ...request,
+        warnings: [],
+        lines: toolpathLines({ moves: [], warnings: [] }),
+      });
+    };
+    answer();
+    documents.getState().change("Parting", (draft) => {
+      if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = 12;
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.input.parting).toBe(-6);
+    answer();
+    documents.getState().change("Flip", (draft) => {
+      if (draft.stock.twoSided) draft.stock.twoSided.flipAxis = "y";
+    });
+    expect(requests).toHaveLength(3);
+    expect(requests[2]?.input.flip).toMatchObject({ axis: "y" });
+  });
+
   it("recomputes a rest operation when an enabled operation before it changes", () => {
     const withFinish = (rest: boolean): ProjectDocument => {
       const document = documentWithProfile();

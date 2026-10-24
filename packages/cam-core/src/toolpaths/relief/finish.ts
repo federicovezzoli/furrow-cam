@@ -7,7 +7,7 @@ import type {
 } from "@furrow/document";
 import { composeAffine } from "../../geometry/affine";
 import type { Rect } from "../../geometry/bounds";
-import { type ModelView, modelView } from "../../scene/sides";
+import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import {
   type CutterProfile,
@@ -602,10 +602,10 @@ export function createCache<T>(capacity: number): Cache<T> {
 /** Everything a model heightmap depends on: the mesh, where it is, the grid and the offset. */
 export function reliefCacheKey(
   { sha256, transform }: Pick<ModelView, "sha256" | "transform">,
-  { columns, rows, angle, origin }: ReliefGrid,
+  { columns, rows, angle, origin, base }: ReliefGrid,
   offset: number,
 ): string {
-  return JSON.stringify([sha256, transform, angle, origin, columns, rows, offset]);
+  return JSON.stringify([sha256, transform, angle, origin, columns, rows, base, offset]);
 }
 
 /** The model heightmap offset by `offset`, from `cache` or computed (and cached), reporting progress. */
@@ -974,8 +974,8 @@ export type ReliefFinishOptions = {
   stockBottom?: number | null;
   /** A two-sided project's parting plane, below which this side cuts nothing (ADR-0060); `null` for none. */
   parting?: number | null;
-  /** On the bottom side, the flip to its stock coordinates (`flipTransform`); `null` on the top. */
-  flip?: readonly number[] | null;
+  /** On the bottom side, the flip to its stock coordinates; `null` on the top. */
+  flip?: Flip | null;
   /** Model heightmaps kept between toolpaths. */
   cache?: ReliefCache;
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
@@ -1033,7 +1033,7 @@ export function* finishSetupSteps(
   const { tool, params } = operation;
   const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
-  const view = modelView(model, flip);
+  const view = modelView(model, flip, parting);
   const grid = reliefGrid(view, angle, wanted);
   if (!grid) return null;
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));

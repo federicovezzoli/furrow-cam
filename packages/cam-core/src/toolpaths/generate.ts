@@ -11,7 +11,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import { flipTransform } from "../scene/sides";
+import type { Flip } from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
@@ -54,11 +54,8 @@ export type ToolpathInput = {
    * otherwise.
    */
   parting: number | null;
-  /**
-   * For a 3D operation on the bottom side, the flip from the top side's
-   * stock coordinates to its own (`flipTransform`); `null` otherwise.
-   */
-  flip: number[] | null;
+  /** For a 3D operation on the bottom side, the flip to its stock coordinates; `null` otherwise. */
+  flip: Flip | null;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -104,7 +101,8 @@ export function toolpathInputs(
   // The disc alone, so editing the pad's tool change recomputes nothing.
   const touchOff: TouchOffDisc | null = pad && { x: pad.x, y: pad.y, diameter: pad.diameter };
   const enabled = doc.operations.filter((operation) => operation.enabled);
-  const { twoSided } = doc.stock;
+  const { twoSided, width, height, thickness } = doc.stock;
+  const size = { width, height, thickness };
   const inputs = new Map<Operation, ToolpathInput>();
   function inputOf(operation: Operation): ToolpathInput {
     const known = inputs.get(operation);
@@ -124,7 +122,7 @@ export function toolpathInputs(
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
-      flip: sided && bottom ? flipTransform(doc.stock, sided.flipAxis) : null,
+      flip: sided && bottom ? { ...size, axis: sided.flipAxis } : null,
       safeZ,
       entryClearance,
       // Each side starts from uncut stock (ADR-0060).
@@ -132,7 +130,11 @@ export function toolpathInputs(
         ? enabled
             .filter(
               (other) =>
-                doc.operations.indexOf(other) < index && other.stockSide === operation.stockSide,
+                doc.operations.indexOf(other) < index &&
+                other.stockSide === operation.stockSide &&
+                // shortcut: 2D cuts aren't flipped yet, so a bottom-side rest
+                // operation ignores them; count them once they are (#360).
+                (!bottom || operationModelId(other) !== null),
             )
             .map(inputOf)
         : [],

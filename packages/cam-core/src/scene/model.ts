@@ -132,7 +132,11 @@ export function placedModelBox({ bounds, placement }: PlacedModel): Box3 {
 
 /** A placed model's outline seen from above: its bounding rectangle in stock coordinates. */
 export function modelRect(model: PlacedModel): Rect {
-  const { min, max } = placedModelBox(model);
+  return boxRect(placedModelBox(model));
+}
+
+/** A box seen from above. */
+export function boxRect({ min, max }: Box3): Rect {
   return { min: [min[0], min[1]], max: [max[0], max[1]] };
 }
 

@@ -9,7 +9,8 @@ import type {
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
-import { type ModelView, modelView } from "../../scene/sides";
+import { boxRect } from "../../scene/model";
+import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
 import type { ToolpathMessage } from "../messages";
@@ -63,8 +64,8 @@ export type ReliefRoughOptions = {
   stockBottom?: number | null;
   /** A two-sided project's parting plane, below which this side cuts nothing (ADR-0060); `null` for none. */
   parting?: number | null;
-  /** On the bottom side, the flip to its stock coordinates (`flipTransform`); `null` on the top. */
-  flip?: readonly number[] | null;
+  /** On the bottom side, the flip to its stock coordinates; `null` on the top. */
+  flip?: Flip | null;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
   /** Model heightmaps kept between toolpaths. */
@@ -137,7 +138,7 @@ export function* reliefRoughSteps(
   // mustn't reach them: the grid has room for both, and a cell more.
   const margin = params.stockToLeave + radius + wanted;
   const angle = strategy.type === "linear" ? strategy.angle : 0;
-  const view = modelView(model, flip);
+  const view = modelView(model, flip, parting);
   const grid = reliefGrid(view, angle, wanted, MAX_RELIEF_CELLS, margin);
   if (!grid) {
     return { moves: [], warnings: [NO_AREA_WARNING] };
@@ -279,8 +280,7 @@ export function roughingArea(
   stock: Rect | null,
   radius: number,
 ): Rect | null {
-  const { min: low, max: high } = model.box;
-  const rect: Rect = { min: [low[0], low[1]], max: [high[0], high[1]] };
+  const rect = boxRect(model.box);
   if (boundary.type === "model") return rect;
   if (boundary.type === "stock") return stock ?? rect;
   const grow = Math.max(boundary.distance, radius);

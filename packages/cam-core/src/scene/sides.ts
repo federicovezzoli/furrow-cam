@@ -1,5 +1,5 @@
 import type { FlipAxis, Model, Stock } from "@furrow/document";
-import { applyAffine, composeAffine } from "../geometry/affine";
+import { composeAffine } from "../geometry/affine";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
 import type { Box3, Vec3 } from "./stock";
 
@@ -49,6 +49,9 @@ export function bottomModelTransform(
   return composeAffine(flipTransform(stock, axis), modelTransform(model));
 }
 
+/** The bottom side's flip: the stock's size and the axis it is turned over about. */
+export type Flip = Pick<Stock, "width" | "height" | "thickness"> & { axis: FlipAxis };
+
 /**
  * A model as one side sees it (ADR-0060): its mesh, the box it fills and the
  * transform from the mesh's file coordinates to that side's stock
@@ -57,25 +60,28 @@ export function bottomModelTransform(
 export type ModelView = { sha256: string; box: Box3; transform: number[] };
 
 /**
- * `model` as the top side sees it, or with `flip` (`flipTransform`) as the
- * bottom side does: turned over, reaching up from the stock's floor.
+ * `model` as the top side sees it, or with `flip` as the bottom side does:
+ * turned over, reaching up from the stock's floor. With a `parting` plane,
+ * its box reaches down to it at least, so a side cuts down to the plane
+ * around a model that doesn't (ADR-0060).
  */
 export function modelView(
   model: PlacedModel & Pick<Model, "sha256">,
-  flip: readonly number[] | null = null,
+  flip: Flip | null = null,
+  parting: number | null = null,
 ): ModelView {
   const placed = modelTransform(model);
-  const box = placedModelBox(model);
-  if (!flip) return { sha256: model.sha256, box, transform: placed };
-  // The flip only turns axes over, so the box's corners stay its corners.
-  const a = applyAffine(flip, box.min);
-  const b = applyAffine(flip, box.max);
+  let { min, max } = placedModelBox(model);
+  if (flip) {
+    const corners = [flipPoint(flip, flip.axis, min), flipPoint(flip, flip.axis, max)];
+    // Turned over, two of the corners' coordinates swap.
+    min = [0, 1, 2].map((i) => Math.min(...corners.map((c) => c[i] as number))) as Vec3;
+    max = [0, 1, 2].map((i) => Math.max(...corners.map((c) => c[i] as number))) as Vec3;
+  }
+  if (parting !== null && parting < min[2]) min = [min[0], min[1], parting];
   return {
     sha256: model.sha256,
-    box: {
-      min: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2])],
-      max: [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])],
-    },
-    transform: composeAffine(flip, placed),
+    box: { min, max },
+    transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
   };
 }

@@ -69,8 +69,12 @@ export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
 export function postToolpaths(
   doc: ProjectDocument,
   name: string,
-  computed: readonly ComputedToolpath[],
+  all: readonly ComputedToolpath[],
 ): GcodeExport {
+  // shortcut: one program for the top side only; the bottom side's toolpaths
+  // are in its own coordinates and need the stock turned over first, so they
+  // wait for one file per side (#359).
+  const computed = all.filter(({ input }) => input.operation.stockSide === "top");
   const first = computed[0];
   if (first === undefined) {
     throw new GcodeExportError({ message: { code: "export.noEnabled" } });
