@@ -8,13 +8,14 @@ import {
   toolpathInputs,
 } from "@furrow/cam-core";
 import {
+  operationModelId,
   type PostProcessorId,
   type ProjectDocument,
   projectFileName,
   toolProblem,
 } from "@furrow/document";
 import { grbl } from "./grbl";
-import { GcodeExportError, type PostOutput, type PostProcessor, type PostWarning } from "./post";
+import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
 export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
@@ -22,7 +23,14 @@ export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
 /** Used when the project has no machine profile. */
 export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
 
-export type GcodeExport = PostOutput & { fileName: string };
+/** One program to save, e.g. `Plate.gcode`. */
+export type GcodeFile = { fileName: string; gcode: string };
+
+/**
+ * What exporting gives: one file, or in a two-sided project one per side
+ * with something to cut, top first (ADR-0060); and the warnings about them.
+ */
+export type GcodeExport = { files: GcodeFile[]; warnings: PostWarning[] };
 
 /** An operation's inputs and the toolpath computed from them. */
 export type ComputedToolpath = { input: ToolpathInput; toolpath: Toolpath };
@@ -69,12 +77,8 @@ export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
 export function postToolpaths(
   doc: ProjectDocument,
   name: string,
-  all: readonly ComputedToolpath[],
+  computed: readonly ComputedToolpath[],
 ): GcodeExport {
-  // shortcut: one program for the top side only; the bottom side's toolpaths
-  // are in its own coordinates and need the stock turned over first, so they
-  // wait for one file per side (#359).
-  const computed = all.filter(({ input }) => input.operation.stockSide === "top");
   const first = computed[0];
   if (first === undefined) {
     throw new GcodeExportError({ message: { code: "export.noEnabled" } });
@@ -84,9 +88,21 @@ export function postToolpaths(
     const problem = toolProblem(input.operation);
     if (problem) throw new GcodeExportError({ operation: input.operation.name, message: problem });
   }
+  // shortcut: 2D toolpaths aren't in the bottom side's coordinates yet, so
+  // they'd cut the mirrored place; export them once they are (#360).
+  const flat = computed.find(
+    ({ input }) =>
+      input.operation.stockSide === "bottom" && operationModelId(input.operation) === null,
+  );
+  if (flat) {
+    throw new GcodeExportError({
+      operation: flat.input.operation.name,
+      message: { code: "export.bottomSide2d" },
+    });
+  }
 
   const warnings: PostWarning[] = [];
-  const operations = computed.flatMap(({ input, toolpath }) => {
+  const toPost = computed.flatMap(({ input, toolpath }) => {
     const { name: operationName } = input.operation;
     warnings.push(...toolpath.warnings.map((message) => ({ operation: operationName, message })));
     if (toolpath.moves.length > 0 || (toolpath.clearing?.length ?? 0) > 0) {
@@ -96,21 +112,34 @@ export function postToolpaths(
     warnings.push({ operation: operationName, message: { code: "export.noToolpath" } });
     return [];
   });
-  if (operations.length === 0) {
+  if (toPost.length === 0) {
     throw new GcodeExportError({ message: { code: "export.noneHasToolpath" } });
   }
 
   const processor = POST_PROCESSORS[doc.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR];
-  const output = processor.post({
-    name,
-    stock: doc.stock,
-    machine: doc.machine,
-    safeZ: first.input.safeZ,
-    operations,
-  });
-  return {
-    gcode: output.gcode,
-    warnings: [...warnings, ...output.warnings],
-    fileName: projectFileName(name, processor.extension),
+  const post = (operations: typeof toPost, side: SideSetup | null, fileName: string) => {
+    const output = processor.post({
+      name,
+      stock: doc.stock,
+      machine: doc.machine,
+      safeZ: first.input.safeZ,
+      operations,
+      side,
+    });
+    warnings.push(...output.warnings);
+    return { fileName, gcode: output.gcode };
   };
+  if (!doc.stock.twoSided) {
+    return { files: [post(toPost, null, projectFileName(name, processor.extension))], warnings };
+  }
+  const sides = (["top", "bottom"] as const).flatMap((side) => {
+    const operations = toPost.filter(({ operation }) => operation.stockSide === side);
+    const fileName = projectFileName(`${name}-${side}`, processor.extension);
+    return operations.length > 0 ? [{ side, operations, fileName }] : [];
+  });
+  const files = sides.map(({ side, operations, fileName }) => {
+    const other = sides.find((each) => each.side !== side);
+    return post(operations, { side, otherFile: other?.fileName ?? null }, fileName);
+  });
+  return { files, warnings };
 }

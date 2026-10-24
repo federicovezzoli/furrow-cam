@@ -634,6 +634,7 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
     },
     "export": {
+      "bottomSide2d": "Le operazioni 2D sul lato inferiore non si possono ancora esportare: disattiva questa o spostala sul lato superiore.",
       "noEnabled": "Non ci sono operazioni attive da esportare.",
       "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
       "noToolpath": "Nessun percorso utensile, esclusa dal programma."

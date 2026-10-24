@@ -634,6 +634,7 @@
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante."
     },
     "export": {
+      "bottomSide2d": "Les opérations 2D sur la face inférieure ne peuvent pas encore être exportées : désactivez celle-ci ou placez-la sur la face supérieure.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme."

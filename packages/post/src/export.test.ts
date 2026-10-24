@@ -19,6 +19,7 @@ import {
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { exportGcode } from "./export";
+import { oneFile } from "./export-test-utils";
 import { GcodeExportError } from "./post";
 
 function rectangle([x, y]: Point, width: number, height: number): Path {
@@ -129,28 +130,87 @@ function referenceProject(): ProjectDocument {
 describe("exportGcode", () => {
   // Whole programs are checked in by the corpus (e2e/corpus.test.ts).
   it("posts the enabled operations, in a file named after the project", () => {
-    const { gcode, warnings, fileName } = exportGcode(referenceProject(), "Plate");
+    const { gcode, warnings, fileName } = oneFile(exportGcode(referenceProject(), "Plate"));
     expect(fileName).toBe("Plate.gcode");
     expect(warnings).toEqual([]);
     expect(gcode).toContain("(Operation: Cut out)");
     expect(gcode).not.toContain("Disabled");
   });
 
-  it("leaves the bottom side of a two-sided project out, until each side has a file", () => {
-    const doc = referenceProject();
-    const operations = doc.operations.map((op) =>
-      op.name === "Cut out" ? { ...op, stockSide: "bottom" as const } : op,
-    );
-    const stock = { ...doc.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } };
-    const { gcode } = exportGcode({ ...doc, stock, operations }, "Plate");
-    expect(gcode).toContain("(Operation: Recess)");
-    expect(gcode).not.toContain("Cut out");
+  describe("two-sided projects", () => {
+    // The fixture model as a flat 100 × 80 × 12 mm block.
+    const mesh = new Float32Array([
+      ...[-50, -40, 0, 50, -40, 0, 50, 40, 0, -50, -40, 0, 50, 40, 0, -50, 40, 0],
+      ...[-50, -40, -12, 50, 40, -12, 50, -40, -12, -50, -40, -12, -50, 40, -12, 50, 40, -12],
+    ]);
+    const context = { mesh: () => mesh };
+    const placed = {
+      ...model,
+      bounds: { min: [-50, -40, -12], max: [50, 40, 0] } as typeof model.bounds,
+    };
+    function twoSided(operations: Operation[]) {
+      const doc = referenceProject();
+      const stock = {
+        ...doc.stock,
+        thickness: 18,
+        twoSided: { flipAxis: "x" as const, partingDepth: 9 },
+      };
+      return { ...doc, stock, models: [placed], operations };
+    }
+    const [plate] = referenceProject().operations;
+    const rough = (stockSide: Operation["stockSide"], name: string): Operation => ({
+      ...reliefRough,
+      id: crypto.randomUUID(),
+      name,
+      stockSide,
+      // Up to the stock's edges, so each side roughs around the block.
+      params: { ...reliefRough.params, boundary: { type: "stock" } },
+    });
+
+    it("exports one file per side, each saying what to do", () => {
+      const doc = twoSided([
+        plate as Operation,
+        rough("top", "Top rough"),
+        rough("bottom", "Bottom rough"),
+      ]);
+      const { files } = exportGcode(doc, "Owl", context);
+      expect(files.map((file) => file.fileName)).toEqual(["Owl-top.gcode", "Owl-bottom.gcode"]);
+      const [top, bottom] = files.map((file) => file.gcode);
+      expect(top).toContain("(Two-sided: top side, cut first)");
+      expect(top).toContain(
+        "(Then turn the stock over by half a turn about its centre line along X, in place, and run Owl-bottom.gcode)",
+      );
+      expect(top).toContain("(Operation: Top rough)");
+      expect(top).toContain(`(Operation: ${plate?.name})`);
+      expect(top).not.toContain("Bottom rough");
+      expect(bottom).toContain("(Two-sided: bottom side, cut second)");
+      expect(bottom).toContain("(The top side is Owl-top.gcode)");
+      expect(bottom).toContain(
+        "(Zero: X Y at the bottom-left corner of the stock, Z at the stock top)",
+      );
+      expect(bottom).toContain("(Operation: Bottom rough)");
+      expect(bottom).not.toContain("Top rough");
+    });
+
+    it("exports only the side that has something to cut", () => {
+      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), "Owl", context);
+      expect(files.map((file) => file.fileName)).toEqual(["Owl-top.gcode"]);
+      expect(files[0]?.gcode).not.toContain("Then turn");
+    });
+
+    it("refuses 2D operations on the bottom side until they are flipped", () => {
+      const doc = twoSided([{ ...(plate as Operation), stockSide: "bottom" }]);
+      expect(exportDetail(() => exportGcode(doc, "Owl", context))).toEqual({
+        operation: plate?.name,
+        message: { code: "export.bottomSide2d" },
+      });
+    });
   });
 
   it("writes no spindle speeds for a manual spindle", () => {
     const doc = referenceProject();
     doc.machine = lowRider;
-    const { gcode } = exportGcode(doc, "Plate");
+    const { gcode } = oneFile(exportGcode(doc, "Plate"));
     expect(gcode).toContain("M3\n");
     expect(gcode).not.toMatch(/ S\d/);
   });
@@ -169,7 +229,7 @@ describe("exportGcode", () => {
         params: { maxDepth: 2, flatBottom: { tool: endMill, stepOver: 40 } },
       },
     ];
-    const { gcode, warnings } = exportGcode(doc, "Plate");
+    const { gcode, warnings } = oneFile(exportGcode(doc, "Plate"));
     expect(warnings).toEqual([]);
     const clearing = gcode.indexOf("(Operation: Carve, clearing)");
     const carving = gcode.indexOf("(Operation: Carve)");
@@ -193,9 +253,11 @@ describe("exportGcode", () => {
     const reference = referenceProject();
     const doc = { ...reference, stock: { ...reference.stock, thickness: 18 }, models: [placed] };
     doc.operations = [{ ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } }];
-    const { gcode, warnings } = exportGcode(doc, "Relief", {
-      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
-    });
+    const { gcode, warnings } = oneFile(
+      exportGcode(doc, "Relief", {
+        mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+      }),
+    );
     expect(warnings).toEqual([]);
     expect(gcode).toContain("(Operation: Finish)");
     // Down onto the flat top, and across it.
@@ -204,14 +266,16 @@ describe("exportGcode", () => {
 
   it("cuts a model deeper than the stock no deeper than its bottom, and says so", () => {
     const doc = { ...referenceProject(), models: [model], operations: [reliefRough] };
-    const { gcode, warnings } = exportGcode(doc, "Relief", {
-      mesh: (sha256) =>
-        sha256 === model.sha256
-          ? new Float32Array([
-              -50, -40, -12, 50, -40, -12, 50, 40, -12, -50, 40, 0, -49, 40, 0, -50, 39, 0,
-            ])
-          : undefined,
-    });
+    const { gcode, warnings } = oneFile(
+      exportGcode(doc, "Relief", {
+        mesh: (sha256) =>
+          sha256 === model.sha256
+            ? new Float32Array([
+                -50, -40, -12, 50, -40, -12, 50, 40, -12, -50, 40, 0, -49, 40, 0, -50, 39, 0,
+              ])
+            : undefined,
+      }),
+    );
     expect(warnings).toEqual([{ operation: "Rough", message: { code: "toolpath.belowStock" } }]);
     expect(gcode).toContain("(Operation: Rough)");
   });
@@ -227,9 +291,11 @@ describe("exportGcode", () => {
       reliefRough,
       { ...reliefFinish, params: { ...reliefFinish.params, stepOver: 100 } },
     ];
-    const { gcode, warnings } = exportGcode(doc, "Relief", {
-      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
-    });
+    const { gcode, warnings } = oneFile(
+      exportGcode(doc, "Relief", {
+        mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+      }),
+    );
     expect(warnings).toEqual([]);
     const roughing = gcode.indexOf("(Operation: Rough)");
     expect(roughing).toBeGreaterThan(-1);
@@ -252,9 +318,11 @@ describe("exportGcode", () => {
         params: { ...reliefRough.params, rest: true },
       },
     ];
-    const { gcode, warnings } = exportGcode(doc, "Relief", {
-      mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
-    });
+    const { gcode, warnings } = oneFile(
+      exportGcode(doc, "Relief", {
+        mesh: (sha256) => (sha256 === model.sha256 ? mesh : undefined),
+      }),
+    );
     expect(gcode).toContain("(Operation: Rough)");
     expect(gcode).not.toContain("(Operation: Rest)");
     expect(warnings).toEqual([{ operation: "Rest", message: { code: "export.noToolpath" } }]);

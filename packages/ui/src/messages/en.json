@@ -634,6 +634,7 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left."
     },
     "export": {
+      "bottomSide2d": "2D operations on the bottom side can't be exported yet: turn this one off or move it to the top side.",
       "noEnabled": "There are no enabled operations to export.",
       "noneHasToolpath": "None of the enabled operations has a toolpath to export.",
       "noToolpath": "No toolpath, left out of the program."
