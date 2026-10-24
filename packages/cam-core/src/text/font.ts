@@ -50,23 +50,25 @@ function capHeight(font: OpentypeFont): number {
 }
 
 /**
- * Lays `text` out on one line with the font's kerning, at a cap height of
- * `height` millimetres: each glyph's outline commands, its origin on the
- * baseline at the line's start, and the line's advance width. Characters the
- * font lacks take their space but draw nothing, rather than its
- * missing-glyph box.
+ * Lays one `line` out with the font's kerning, at a cap height of `height`
+ * millimetres, `letterSpacing` millimetres added between characters: each
+ * glyph's outline commands, its origin on the baseline at the line's start,
+ * and the line's advance width. Characters the font lacks take their space
+ * but draw nothing, rather than its missing-glyph box.
  */
 export function layoutLine(
   { font, singleStroke }: Font,
-  text: string,
+  line: string,
   height: number,
+  letterSpacing = 0,
 ): { glyphs: GlyphCommand[][]; width: number } {
   const size = (height * font.unitsPerEm) / capHeight(font);
   const missing = font.glyphs.get(0);
   const glyphs: GlyphCommand[][] = [];
-  // shortcut: a line break lays out as a space, until several lines (#351).
-  const line = text.replace(/\r\n|[\n\r]/g, " ");
-  const width = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, x, y, fontSize) => {
+  let count = 0;
+  const advance = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, gx, y, fontSize) => {
+    // Spacing goes between characters, so after all but the last.
+    const x = gx + count++ * letterSpacing;
     if (glyph === missing) return;
     if (singleStroke && font.outlinesFormat === "truetype") {
       glyphs.push(strokeCommands(glyph, x, fontSize / font.unitsPerEm));
@@ -87,7 +89,7 @@ export function layoutLine(
     });
     glyphs.push(mapped);
   });
-  return { glyphs, width };
+  return { glyphs, width: advance + Math.max(count - 1, 0) * letterSpacing };
 }
 
 /** A TrueType point as opentype.js reads it; `@types/opentype.js` lists only `lastPointOfContour`. */

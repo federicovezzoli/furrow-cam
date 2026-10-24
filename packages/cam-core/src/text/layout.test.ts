@@ -104,6 +104,8 @@ function settings(text: string, fields: Partial<TextSettings> = {}): TextSetting
     font: "test",
     height: 10,
     align: "left",
+    lineSpacing: 1.5,
+    letterSpacing: 0,
     placement: { position: [0, 0], rotation: 0, mirrored: false },
     ...fields,
   };
@@ -290,8 +292,34 @@ describe("textPaths", () => {
     expect(textPaths(outline, settings("fi"))).toHaveLength(2);
   });
 
-  it("lays a line break out as a space, until several lines", () => {
-    expect(textPaths(outline, settings("H\nH"))).toEqual(textPaths(outline, settings("H H")));
+  it("lays each line out below the one before, line spacing times the height apart", () => {
+    const [first, second, third] = textPaths(outline, settings("H\nH\r\nH", { lineSpacing: 2 }));
+    expect([first, second, third].map((path) => path && pathBounds(path).min)).toEqual([
+      [0, 0],
+      [0, -20],
+      [0, -40],
+    ]);
+    // An empty line still takes its space.
+    const [, last] = textPaths(outline, settings("H\n\nH", { lineSpacing: 2 }));
+    expect(last && pathBounds(last).min[1]).toBe(-40);
+  });
+
+  it("aligns each line on its own", () => {
+    // The first line's two Hs, then the second line's.
+    const [, long, short] = textPaths(outline, settings("H H\nH", { align: "right" }));
+    expect(long && pathBounds(long).max[0]).toBeCloseTo(-100 * UNIT, 9);
+    expect(short && pathBounds(short).max[0]).toBeCloseTo(-100 * UNIT, 9);
+    expect(short && pathBounds(short).min[0]).toBeCloseTo(-700 * UNIT, 9);
+  });
+
+  it("adds the letter spacing between characters, and to the width it aligns", () => {
+    const [, second] = textPaths(outline, settings("HH", { letterSpacing: 2 }));
+    expect(second && pathBounds(second).min[0]).toBeCloseTo(700 * UNIT + 2, 9);
+    // Not after the last character: right-aligned, it still ends a side bearing short of the origin.
+    const right = textPaths(outline, settings("HH", { letterSpacing: 2, align: "right" }));
+    expect(bounds(right).max[0]).toBeCloseTo(-100 * UNIT, 9);
+    const tight = textPaths(outline, settings("HH", { letterSpacing: -1 }));
+    expect(tight[1] && pathBounds(tight[1]).min[0]).toBeCloseTo(700 * UNIT - 1, 9);
   });
 
   it("falls back to the ascender for the cap height of a font without an H", () => {
