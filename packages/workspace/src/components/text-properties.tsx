@@ -1,6 +1,6 @@
 "use client";
 
-import type { TextAlign, TextSettings } from "@furrow/document";
+import { MIN_LETTER_SPACING, type TextAlign, type TextSettings } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
@@ -135,6 +135,7 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         quantity="number"
         // A share of the letter height, so it scales with the text.
         suffix="%"
+        min={MIN_LETTER_SPACING * 100}
         value={text.letterSpacing * 100}
         onValueChange={(percent) => void edit({ letterSpacing: percent / 100 })}
         {...gestures}

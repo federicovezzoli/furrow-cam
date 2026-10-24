@@ -199,7 +199,7 @@ export const migrations: Readonly<Record<number, Migration>> = {
   // line, as they were laid out (a line break was a space), the line spacing
   // they'd have had, and no letter spacing.
   20: (doc) => {
-    const V20_LINE_SPACING = 1.5;
+    const V20_LINE_SPACING = 1.7;
     if (!Array.isArray(doc.drawings)) return doc;
     for (const drawing of doc.drawings) {
       if (!isObject(drawing) || !isObject(drawing.text)) continue;

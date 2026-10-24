@@ -134,7 +134,10 @@ export const TextPlacement = z.strictObject({
 });
 export type TextPlacement = z.infer<typeof TextPlacement>;
 
-/** A text item's settings (PRD-0010 T1, T3), from which its outlines are laid out. */
+/** The tightest letter spacing, a multiple of the letter height. */
+export const MIN_LETTER_SPACING = -0.5;
+
+/** A text item's settings (PRD-0010 T1, T3, T5, T6), from which its outlines are laid out. */
 export const TextSettings = z.strictObject({
   text: z.string().regex(/\S/, "validation.blank"),
   /** The font's id. */
@@ -149,15 +152,20 @@ export const TextSettings = z.strictObject({
    * Space between characters, on top of their advance and kerning, as a
    * multiple of `height`, so it scales with the text; negative tightens (T6).
    * None follows the last character of a line, nor precedes a zero-width
-   * accent.
+   * accent. No tighter than half the height, so a line never ends before it
+   * starts.
    */
-  letterSpacing: z.number(),
+  letterSpacing: z.number().min(MIN_LETTER_SPACING),
   placement: TextPlacement,
 });
 export type TextSettings = z.infer<typeof TextSettings>;
 
-/** The line spacing a new text item gets, and text items made before it was a setting. */
-export const DEFAULT_LINE_SPACING = 1.5;
+/**
+ * The line spacing a new text item gets, and text items made before it was a
+ * setting: about 1.2 em in most fonts, so descenders clear the next line's
+ * capitals and accents, and lines aren't merged into one outline.
+ */
+export const DEFAULT_LINE_SPACING = 1.7;
 
 /**
  * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and

@@ -105,6 +105,8 @@ describe("ProjectDocument", () => {
       }),
     ]);
     expect(ProjectDocument.safeParse(text({ height: 0 })).success).toBe(false);
+    expect(ProjectDocument.safeParse(text({ letterSpacing: -0.5 })).success).toBe(true);
+    expect(ProjectDocument.safeParse(text({ letterSpacing: -0.6 })).success).toBe(false);
     for (const rotation of [-90, 360]) {
       const placement = { ...textItem.text?.placement, rotation };
       expect(ProjectDocument.safeParse(text({ placement })).success).toBe(false);
