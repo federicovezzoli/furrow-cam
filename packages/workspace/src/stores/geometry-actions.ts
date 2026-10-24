@@ -436,6 +436,19 @@ export function setDrawingBorder(store: DocumentStore, id: string, border: numbe
   });
 }
 
+/**
+ * Turns text item `id` into a plain drawing (PRD-0010 T8, ADR-0059), as one
+ * undo step: it keeps its outlines as its shape, so the operations machining
+ * it still do, and is transformed like any drawing, but no longer edited as
+ * text.
+ */
+export function convertTextToDrawing(store: DocumentStore, id: string) {
+  store.getState().change("convertText", (draft) => {
+    const drawing = draft.drawings.find((d) => d.id === id);
+    if (drawing?.text) delete drawing.text;
+  });
+}
+
 /** The gap between a drawing and its duplicate, in millimetres. */
 export const DUPLICATE_GAP = 10;
 

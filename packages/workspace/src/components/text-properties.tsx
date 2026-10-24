@@ -2,15 +2,17 @@
 
 import { MIN_LETTER_SPACING, type TextAlign, type TextSettings } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
+import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
+import { ShapesIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 import { FONTS } from "../lib/fonts";
-import { editText, textSettled } from "../lib/text-items";
+import { convertText, editText, textSettled } from "../lib/text-items";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -161,6 +163,20 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
           {t("tabsRemoved", { count: removedTabs })}
         </p>
       )}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="compact"
+          onClick={async () => {
+            const result = await convertText(store, drawingId);
+            if (!result.ok) setError(result.error);
+          }}
+          title={t("convertTitle")}
+        >
+          <ShapesIcon />
+          {t("convert")}
+        </Button>
+      </div>
       {error && (
         <p role="alert" className="text-destructive">
           {format(error)}

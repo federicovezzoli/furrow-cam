@@ -1235,7 +1235,9 @@
       "right": "Destra"
     },
     "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi.",
-    "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere."
+    "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere.",
+    "convert": "Converti in disegno",
+    "convertTitle": "Tieni le lettere come disegno, lavorato dalle stesse operazioni; non si potrà più modificare come testo"
   },
   "Import": {
     "units": {

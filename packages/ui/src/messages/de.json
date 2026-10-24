@@ -1235,7 +1235,9 @@
       "right": "Rechts"
     },
     "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
-    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}."
+    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}.",
+    "convert": "In Zeichnung umwandeln",
+    "convertTitle": "Die Buchstaben als Zeichnung behalten, von denselben Operationen bearbeitet; sie lässt sich nicht mehr als Text bearbeiten"
   },
   "Import": {
     "units": {
