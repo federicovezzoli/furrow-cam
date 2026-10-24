@@ -84,9 +84,9 @@ describe("AddTextButton", () => {
 describe("TextProperties", () => {
   it("edits the text, font, letter height and alignment, each one undo step keeping its place", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
-    const field = screen.getByLabelText("Text", { selector: "input" });
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "Hello" } });
-    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
     await waitFor(() => expect(text()?.text).toBe("Hello"));
     expect(current().drawings.at(-1)?.name).toBe("Hello");
     const shape = current().geometry.at(-1);
@@ -116,6 +116,26 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
+  it("takes several lines, a line spacing and a letter spacing", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "Hi\nthere" } });
+    // Enter alone starts a new line; leaving the field changes the text.
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(text()?.text).toBe("I");
+    fireEvent.blur(field);
+    await waitFor(() => expect(text()?.text).toBe("Hi\nthere"));
+    const lineSpacing = screen.getByLabelText(/^Line spacing/);
+    fireEvent.change(lineSpacing, { target: { value: "2" } });
+    fireEvent.keyDown(lineSpacing, { key: "Enter" });
+    await waitFor(() => expect(text()?.lineSpacing).toBe(2));
+    const letterSpacing = screen.getByLabelText(/^Letter spacing/);
+    fireEvent.change(letterSpacing, { target: { value: "0.1" } });
+    fireEvent.keyDown(letterSpacing, { key: "Enter" });
+    // `fullDocument` shows inches.
+    await waitFor(() => expect(text()?.letterSpacing).toBeCloseTo(2.54, 9));
+  });
+
   it("makes a held arrow on the letter height one undo step, once its layouts land", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
     const height = screen.getByLabelText(/^Letter height/);
@@ -135,13 +155,13 @@ describe("TextProperties", () => {
 
   it("puts blank text back, and refuses text the font has nothing for", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
-    const field = screen.getByLabelText<HTMLInputElement>("Text", { selector: "input" });
+    const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "  " } });
     fireEvent.blur(field);
     expect(field.value).toBe("I");
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.change(field, { target: { value: "∅" } });
-    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
     expect(current()).toEqual(withText());
   });

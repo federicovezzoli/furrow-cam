@@ -2,7 +2,9 @@
 
 import type { TextAlign, TextSettings } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
+import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { useState } from "react";
@@ -15,11 +17,13 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { drawingShapes } from "../stores/geometry-actions";
-import { OperationNameInput } from "./operation-name-input";
 import { Row } from "./operation-properties";
 
 /** Keeps the height positive when stepping down. */
 const MIN_HEIGHT = 0.01;
+
+/** Keeps lines from landing on each other when stepping down. */
+const MIN_LINE_SPACING = 0.1;
 
 const ALIGNS: readonly TextAlign[] = ["left", "center", "right"];
 
@@ -41,6 +45,17 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   const t = useTranslations("Text");
   const format = useFormatMessage();
 
+  // A scrub or held arrow is one undo step: its layouts land before it ends.
+  const gestures = {
+    onGestureStart: () => store.getState().beginTransaction(),
+    onGestureEnd: async (cancelled: boolean) => {
+      await textSettled(drawingId);
+      const state = store.getState();
+      if (cancelled) state.cancelTransaction();
+      else state.commitTransaction();
+    },
+  };
+
   async function edit(edits: Partial<Omit<TextSettings, "placement">>) {
     const result = await editText(store, drawingId, edits);
     setError(result.ok ? null : result.error);
@@ -58,17 +73,17 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
       <h3 id="text-heading" className="font-medium">
         {t("heading")}
       </h3>
-      <Row id="text-text" label={t("text")}>
-        <OperationNameInput
+      <div className="grid gap-1">
+        <Label htmlFor="text-text" className="text-ui font-normal">
+          {t("text")}
+        </Label>
+        <TextField
           id="text-text"
-          name={text.text}
-          onRename={(value) => {
-            // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
-            if (/\S/.test(value)) void edit({ text: value });
-            return { ok: true };
-          }}
+          text={text.text}
+          // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
+          onCommit={(value) => /\S/.test(value) && void edit({ text: value })}
         />
-      </Row>
+      </div>
       <Row id="text-font" label={t("font")}>
         <NativeSelect
           id="text-font"
@@ -96,14 +111,29 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         min={MIN_HEIGHT}
         value={text.height}
         onValueChange={(height) => void edit({ height })}
-        // A scrub or held arrow is one undo step: its layouts land before it ends.
-        onGestureStart={() => store.getState().beginTransaction()}
-        onGestureEnd={async (cancelled) => {
-          await textSettled(drawingId);
-          const state = store.getState();
-          if (cancelled) state.cancelTransaction();
-          else state.commitTransaction();
-        }}
+        {...gestures}
+      />
+      <NumberField
+        id="text-line-spacing"
+        label={t("lineSpacing")}
+        layout="inline"
+        quantity="number"
+        suffix="×"
+        min={MIN_LINE_SPACING}
+        step={0.1}
+        value={text.lineSpacing}
+        onValueChange={(lineSpacing) => void edit({ lineSpacing })}
+        {...gestures}
+      />
+      <NumberField
+        id="text-letter-spacing"
+        label={t("letterSpacing")}
+        layout="inline"
+        quantity="length"
+        units={units}
+        value={text.letterSpacing}
+        onValueChange={(letterSpacing) => void edit({ letterSpacing })}
+        {...gestures}
       />
       <Row id="text-align" label={t("align")}>
         <NativeSelect
@@ -132,5 +162,47 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * The text, a line per line (PRD-0010 T5): it changes on blur or Ctrl/⌘+Enter,
+ * Enter starts a new line, and Escape puts the text back.
+ */
+function TextField({
+  id,
+  text,
+  onCommit,
+}: {
+  id: string;
+  text: string;
+  onCommit: (text: string) => void;
+}) {
+  /** What's typed while editing; `null` shows the text. */
+  const [draft, setDraft] = useState<string | null>(null);
+
+  function finish(commit: boolean) {
+    if (commit && draft !== null && draft !== text) onCommit(draft);
+    setDraft(null);
+  }
+
+  return (
+    <Textarea
+      id={id}
+      value={draft ?? text}
+      rows={2}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => finish(true)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          finish(false);
+        }
+      }}
+      className="min-h-0 px-2 py-1 text-ui md:text-ui"
+    />
   );
 }

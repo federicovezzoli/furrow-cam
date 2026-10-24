@@ -13,7 +13,7 @@ import {
   SvgImportError,
   svgNeedsDpi,
 } from "@furrow/cam-core";
-import type { Units } from "@furrow/document";
+import { DEFAULT_LINE_SPACING, type Units } from "@furrow/document";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
@@ -126,6 +126,8 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
       font: DEFAULT_FONT,
       height: DEFAULT_TEXT_HEIGHT,
       align: "left",
+      lineSpacing: DEFAULT_LINE_SPACING,
+      letterSpacing: 0,
       placement: { position: [0, 0], rotation: 0, mirrored: false },
     });
     setAdding(false);

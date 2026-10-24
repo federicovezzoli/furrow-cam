@@ -1227,6 +1227,8 @@
     "text": "Text",
     "font": "Schrift",
     "height": "Buchstabenhöhe",
+    "lineSpacing": "Zeilenabstand",
+    "letterSpacing": "Buchstabenabstand",
     "align": "Ausrichtung",
     "aligns": {
       "left": "Links",
