@@ -612,7 +612,9 @@ describe("addTextItem", () => {
 
   it("places it like an imported drawing, its origin moving with its outlines, in one undo step", () => {
     const store = storeAt("bottom_left");
-    const id = addTextItem(store, settings, [box(0, 0, 20)]);
+    const added = addTextItem(store, settings, [box(0, 0, 20)]);
+    if (!added.ok) throw new Error("not added");
+    const { id } = added;
     const { drawings, geometry } = store.getState().document;
     expect(drawings).toEqual([
       {
@@ -630,9 +632,15 @@ describe("addTextItem", () => {
 
   it("adds nothing without outlines, or to a project with a model", () => {
     const store = storeAt("bottom_left");
-    expect(addTextItem(store, settings, [])).toBeNull();
+    expect(addTextItem(store, settings, [])).toEqual({
+      ok: false,
+      error: { code: "workspace.textNoOutlines" },
+    });
     store.setState({ document: { ...createProjectDocument(), models: [model] } });
-    expect(addTextItem(store, settings, [box(0, 0, 20)])).toBeNull();
+    expect(addTextItem(store, settings, [box(0, 0, 20)])).toEqual({
+      ok: false,
+      error: { code: "workspace.drawingsOrModel" },
+    });
     expect(store.getState().document.drawings).toEqual([]);
   });
 });
@@ -666,8 +674,9 @@ describe("setTextItem", () => {
     const text = store();
     const before = text.getState().document;
     const settings = { ...(textItem.text as TextSettings), text: "II", height: 12 };
-    const paths = [box(10, 10, 2), box(14, 10, 2)];
-    expect(setTextItem(text, TEXT_ID, settings, paths)).toEqual({ ok: true });
+    // Away from the tab, which goes.
+    const paths = [box(20, 10, 2), box(24, 10, 2)];
+    expect(setTextItem(text, TEXT_ID, settings, paths)).toEqual({ ok: true, removedTabs: 1 });
     const after = text.getState().document;
     expect(after.drawings.at(-1)).toEqual({ ...textItem, name: "II", text: settings });
     expect(after.geometry.at(-1)).toEqual({ ...textShape, paths });
@@ -679,6 +688,16 @@ describe("setTextItem", () => {
     expect(() => ProjectDocument.parse(after)).not.toThrow();
     text.getState().undo();
     expect(text.getState().document).toEqual(before);
+  });
+
+  it("keeps the tabs that lie on the new outlines", () => {
+    const text = store();
+    const settings = { ...(textItem.text as TextSettings), text: "II" };
+    // The "I" stays where it was, so its tab does too.
+    const paths = [box(10, 10, 2), box(14, 10, 2)];
+    expect(setTextItem(text, TEXT_ID, settings, paths)).toEqual({ ok: true, removedTabs: 0 });
+    const onText = text.getState().document.operations.find(({ id }) => id === OPERATION);
+    expect(onText?.type === "profile" && onText.params.tabs?.positions).toEqual([[11, 10]]);
   });
 
   it("refuses text with no outlines, changing nothing", () => {

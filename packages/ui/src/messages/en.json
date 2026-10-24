@@ -1231,7 +1231,8 @@
       "center": "Centre",
       "right": "Right"
     },
-    "heightNote": "Height measures the capital letters. Changing the text keeps it in place."
+    "heightNote": "Height measures the capital letters. Changing the text keeps it in place.",
+    "tabsRemoved": "Removed {count, plural, one {# tab} other {# tabs}} that no longer lay on the letters."
   },
   "Import": {
     "units": {

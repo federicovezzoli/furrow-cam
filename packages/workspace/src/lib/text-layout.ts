@@ -9,7 +9,8 @@ export type TextLayoutResponse = { id: number; paths: Path[] } | { id: number; e
 /** Why a text item couldn't be laid out, for the user (ADR-0054). */
 export class TextLayoutError extends MessageError {}
 
-const FAILED: Message = { code: "workspace.textLayoutFailed" };
+/** Why text couldn't be laid out, when nothing more precise is known. */
+export const TEXT_LAYOUT_FAILED: Message = { code: "workspace.textLayoutFailed" };
 
 let worker: Worker | null = null;
 const waiting = new Map<
@@ -47,7 +48,7 @@ function start(): Worker {
     event.preventDefault();
     started.terminate();
     worker = null;
-    for (const request of waiting.values()) request.reject(new TextLayoutError(FAILED));
+    for (const request of waiting.values()) request.reject(new TextLayoutError(TEXT_LAYOUT_FAILED));
     waiting.clear();
   };
   worker = started;

@@ -1,6 +1,7 @@
 import {
   anchorPoint,
   closedLoops,
+  DEFAULT_CHORD_TOLERANCE,
   drawingFit,
   mapShapes,
   mapText,
@@ -20,6 +21,7 @@ import {
 import {
   DRAWING_BORDER,
   type Drawing,
+  GEOMETRY_TOLERANCE,
   type Message,
   type Operation,
   type Path,
@@ -61,22 +63,27 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   return placeDrawing(store, name, drawing, shapes);
 }
 
+/** Why text can't be added or changed: the font has none of its characters. */
+export const TEXT_NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
+
 /**
  * Adds a text item (ADR-0059) as one undo step: `text`'s settings with
  * `paths`, its outlines laid out at its placement, as its one shape, placed
- * as `placeDrawing` does and named after its text. Returns its id, or `null`,
- * adding nothing, if it has no outlines or the project holds a model.
+ * as `placeDrawing` does and named after its text. Returns its id; adds
+ * nothing if it has no outlines or the project holds a model.
  */
 export function addTextItem(
   store: DocumentStore,
   text: TextSettings,
   paths: Path[],
-): string | null {
-  if (paths.length === 0) return null;
+): { ok: true; id: string } | { ok: false; error: Message } {
+  if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const id = crypto.randomUUID();
   const shape: Shape = { id: crypto.randomUUID(), name: "", layer: "", drawingId: id, paths };
   const drawing = { id, name: text.text, border: DRAWING_BORDER, text };
-  return placeDrawing(store, "addText", drawing, [shape]) ? id : null;
+  return placeDrawing(store, "addText", drawing, [shape])
+    ? { ok: true, id }
+    : { ok: false, error: DRAWINGS_OR_MODEL };
 }
 
 /**
@@ -113,30 +120,45 @@ function placeDrawing(
   return true;
 }
 
-const NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
+/** How far off a text item's new outlines a tab may lie and stay: the flattening's chords, and float noise. */
+const TAB_ON_OUTLINE = DEFAULT_CHORD_TOLERANCE + GEOMETRY_TOLERANCE;
 
 /**
  * Sets text item `id`'s settings to `text` and its outlines to `paths`, laid
  * out from them, as one undo step (ADR-0059). Its shape keeps its id, so the
  * operations machining it still do; their targets listing some of its paths
- * take all of them, as the old paths' numbers mean nothing in the new ones,
- * and the profile tabs lying on its old paths go. Refuses, changing nothing,
- * text with no outlines.
+ * take all of them, as the old paths' numbers mean nothing in the new ones.
+ * The profile tabs on its old paths stay if they lie on the new ones, and
+ * go otherwise: `removedTabs` counts them. Refuses, changing nothing, text
+ * with no outlines.
  */
 export function setTextItem(
   store: DocumentStore,
   id: string,
   text: TextSettings,
   paths: Path[],
-): ActionResult {
-  if (paths.length === 0) return { ok: false, error: NO_OUTLINES };
+): { ok: true; removedTabs: number } | { ok: false; error: Message } {
+  if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const { document } = store.getState();
   const [shape] = drawingShapes(document.geometry, id);
   if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
-    return { ok: true };
+    return { ok: true, removedTabs: 0 };
   }
   const index = document.geometry.indexOf(shape);
-  const ownTabs = drawingTabs(document, id);
+  const loops = closedLoops([{ ...shape, paths }]);
+  const onOutlines = (position: Point) =>
+    (nearestOnLoops(loops, position)?.distance ?? Infinity) <= TAB_ON_OUTLINE;
+  /** Which tabs of each profile go: those on the old paths and off the new ones. */
+  const gone = new Map(
+    [...drawingTabs(document, id)].map(([operationId, own]) => {
+      const operation = document.operations.find((candidate) => candidate.id === operationId);
+      const positions =
+        operation?.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
+      return [operationId, own.map((mine, i) => mine && !onOutlines(positions[i] as Point))];
+    }),
+  );
+  let removedTabs = 0;
+  for (const flags of gone.values()) removedTabs += flags.filter(Boolean).length;
   store.getState().change("setText", (draft) => {
     const drawing = draft.drawings.find((d) => d.id === id);
     if (drawing) Object.assign(drawing, { name: text.text, text });
@@ -147,12 +169,12 @@ export function setTextItem(
       for (const own of operation.targets) {
         if (own.shapeId === shape.id && own.paths !== null) own.paths = null;
       }
-      const gone = ownTabs.get(operation.id);
+      const flags = gone.get(operation.id);
       const tabs = operation.type === "profile" ? operation.params.tabs : null;
-      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone[i]);
+      if (flags?.some(Boolean) && tabs) tabs.positions = tabs.positions.filter((_, i) => !flags[i]);
     }
   });
-  return { ok: true };
+  return { ok: true, removedTabs };
 }
 
 /** The shapes of drawing `id`. */

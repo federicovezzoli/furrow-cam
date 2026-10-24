@@ -93,6 +93,8 @@ describe("TextProperties", () => {
     expect(shape?.id).toBe(textShape.id);
     // The fake worker's box: 5 characters at 10 mm, from the item's origin.
     expect(shape?.paths[0]?.segments[0]?.to).toEqual([60, 10]);
+    // Its new outlines are selected whole.
+    expect(stores.workspace.getState().selectedPaths).toEqual([{ shapeId: textShape.id, path: 0 }]);
 
     fireEvent.change(screen.getByLabelText("Font"), { target: { value: "arvo" } });
     await waitFor(() => expect(text()?.font).toBe("arvo"));
@@ -114,12 +116,30 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
-  it("refuses blank text and text the font has nothing for", async () => {
+  it("makes a held arrow on the letter height one undo step, once its layouts land", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
-    const field = screen.getByLabelText("Text", { selector: "input" });
+    const height = screen.getByLabelText(/^Letter height/);
+    // Each step is laid out before the next, as in a slow scrub.
+    for (let i = 0; i < 3; i++) {
+      const before = text()?.height;
+      fireEvent.keyDown(height, { key: "ArrowUp", repeat: i > 0 });
+      await waitFor(() => expect(text()?.height).not.toBe(before));
+    }
+    fireEvent.keyUp(height, { key: "ArrowUp" });
+    await waitFor(() => expect(stores.document.getState().inTransaction).toBe(false));
+    expect(text()?.height).toBeGreaterThan(10);
+    expect(stores.document.getState().past).toHaveLength(1);
+    act(() => stores.document.getState().undo());
+    expect(current()).toEqual(withText());
+  });
+
+  it("puts blank text back, and refuses text the font has nothing for", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText<HTMLInputElement>("Text", { selector: "input" });
     fireEvent.change(field, { target: { value: "  " } });
     fireEvent.blur(field);
-    expect((await screen.findByRole("alert")).textContent).toMatch(/blank/i);
+    expect(field.value).toBe("I");
+    expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.change(field, { target: { value: "∅" } });
     fireEvent.keyDown(field, { key: "Enter" });
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();

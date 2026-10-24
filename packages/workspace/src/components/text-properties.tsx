@@ -2,17 +2,21 @@
 
 import type { TextAlign, TextSettings } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
-import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
-import type * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 import { FONTS } from "../lib/fonts";
-import { editText } from "../lib/text-items";
-import { useDocumentStore, useDocumentStoreApi } from "../providers/workspace-stores";
+import { editText, textSettled } from "../lib/text-items";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useWorkspaceStoreApi,
+} from "../providers/workspace-stores";
+import { drawingShapes } from "../stores/geometry-actions";
 import { OperationNameInput } from "./operation-name-input";
+import { Row } from "./operation-properties";
 
 /** Keeps the height positive when stepping down. */
 const MIN_HEIGHT = 0.01;
@@ -28,15 +32,25 @@ const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
  */
 export function TextProperties({ drawingId, text }: { drawingId: string; text: TextSettings }) {
   const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   /** Why the last edit was refused. */
   const [error, setError] = useState<Translatable | null>(null);
+  /** How many tabs the last edit took off the text, which no longer lay on its letters. */
+  const [removedTabs, setRemovedTabs] = useState(0);
   const t = useTranslations("Text");
   const format = useFormatMessage();
 
   async function edit(edits: Partial<Omit<TextSettings, "placement">>) {
     const result = await editText(store, drawingId, edits);
     setError(result.ok ? null : result.error);
+    if (!result.ok) return;
+    setRemovedTabs(result.removedTabs);
+    // The new outlines are numbered afresh: select all of them, as adding the text did.
+    const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
+    if (shape) {
+      workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+    }
   }
 
   return (
@@ -49,11 +63,8 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
           id="text-text"
           name={text.text}
           onRename={(value) => {
-            if (!/\S/.test(value)) {
-              setError({ code: "validation.blank" });
-              return { ok: true };
-            }
-            void edit({ text: value });
+            // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
+            if (/\S/.test(value)) void edit({ text: value });
             return { ok: true };
           }}
         />
@@ -85,6 +96,14 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         min={MIN_HEIGHT}
         value={text.height}
         onValueChange={(height) => void edit({ height })}
+        // A scrub or held arrow is one undo step: its layouts land before it ends.
+        onGestureStart={() => store.getState().beginTransaction()}
+        onGestureEnd={async (cancelled) => {
+          await textSettled(drawingId);
+          const state = store.getState();
+          if (cancelled) state.cancelTransaction();
+          else state.commitTransaction();
+        }}
       />
       <Row id="text-align" label={t("align")}>
         <NativeSelect
@@ -102,22 +121,16 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         </NativeSelect>
       </Row>
       <p className="text-muted-foreground">{t("heightNote")}</p>
+      {removedTabs > 0 && (
+        <p role="status" className="text-muted-foreground">
+          {t("tabsRemoved", { count: removedTabs })}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-destructive">
           {format(error)}
         </p>
       )}
     </section>
-  );
-}
-
-function Row({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
-      <Label htmlFor={id} className="text-ui font-normal">
-        {label}
-      </Label>
-      {children}
-    </div>
   );
 }

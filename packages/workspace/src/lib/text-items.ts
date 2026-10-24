@@ -1,11 +1,7 @@
 import type { Message, TextSettings } from "@furrow/document";
 import type { DocumentStore } from "../stores/document-store";
-import { addTextItem, DRAWINGS_OR_MODEL, setTextItem } from "../stores/geometry-actions";
-import type { ActionResult } from "../stores/operation-actions";
-import { layoutText, TextLayoutError } from "./text-layout";
-
-const FAILED: Message = { code: "workspace.textLayoutFailed" };
-const NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
+import { addTextItem, setTextItem } from "../stores/geometry-actions";
+import { layoutText, TEXT_LAYOUT_FAILED, TextLayoutError } from "./text-layout";
 
 /** `layoutText`, with why it failed as a result. */
 async function layout(settings: TextSettings) {
@@ -13,7 +9,8 @@ async function layout(settings: TextSettings) {
     return { ok: true as const, paths: await layoutText(settings) };
   } catch (error) {
     if (!(error instanceof TextLayoutError)) console.error(error);
-    return { ok: false as const, error: error instanceof TextLayoutError ? error.detail : FAILED };
+    const detail = error instanceof TextLayoutError ? error.detail : TEXT_LAYOUT_FAILED;
+    return { ok: false as const, error: detail };
   }
 }
 
@@ -26,32 +23,77 @@ export async function addText(
   settings: TextSettings,
 ): Promise<{ ok: true; id: string } | { ok: false; error: Message }> {
   const laid = await layout(settings);
-  if (!laid.ok) return laid;
-  if (laid.paths.length === 0) return { ok: false, error: NO_OUTLINES };
-  const id = addTextItem(store, settings, laid.paths);
-  // A model was imported, or a step redone, while the text was laid out.
-  return id === null ? { ok: false, error: DRAWINGS_OR_MODEL } : { ok: true, id };
+  return laid.ok ? addTextItem(store, settings, laid.paths) : laid;
 }
+
+type Edits = Partial<Omit<TextSettings, "placement">>;
+type EditResult = { ok: true; removedTabs: number } | { ok: false; error: Message };
+
+/**
+ * A text item's edits waiting to be laid out, merged so the latest value of
+ * each setting wins, and the callers waiting on them. One queue runs at a
+ * time per item.
+ */
+type Queue = { edits: Edits | null; waiting: ((result: EditResult) => void)[] };
+const queues = new Map<string, Queue>();
 
 /**
  * Changes text item `id`'s `edits` and lays it out again off the main thread,
  * as one undo step that keeps its placement and the operations machining it
- * (PRD-0010 T3, `setTextItem`). Moved, resized or turned while it was laid
- * out, it is laid out again where it is now.
+ * (PRD-0010 T3, `setTextItem`). Edits made while one is laid out are merged
+ * and laid out next, the latest value of each setting winning, so a scrub or
+ * fast typing lays the text out once per wait rather than once per change.
+ * Moved, resized or turned meanwhile, the item is laid out again where it is.
  */
-export async function editText(
-  store: DocumentStore,
-  id: string,
-  edits: Partial<Omit<TextSettings, "placement">>,
-): Promise<ActionResult> {
-  for (;;) {
+export function editText(store: DocumentStore, id: string, edits: Edits): Promise<EditResult> {
+  return new Promise((resolve) => {
+    const queue = queues.get(id);
+    if (queue) {
+      queue.edits = { ...queue.edits, ...edits };
+      queue.waiting.push(resolve);
+      return;
+    }
+    const started: Queue = { edits, waiting: [resolve] };
+    queues.set(id, started);
+    void run(store, id, started);
+  });
+}
+
+/** Resolves once text item `id` has no edits waiting or being laid out. */
+export function textSettled(id: string): Promise<void> {
+  const queue = queues.get(id);
+  return queue ? new Promise((resolve) => queue.waiting.push(() => resolve())) : Promise.resolve();
+}
+
+async function run(store: DocumentStore, id: string, queue: Queue) {
+  let result: EditResult = { ok: true, removedTabs: 0 };
+  while (queue.edits) {
+    const edits = queue.edits;
+    queue.edits = null;
     const text = currentText(store, id);
-    if (!text) return { ok: true };
+    if (!text) break;
     const settings = { ...text, ...edits };
     const laid = await layout(settings);
-    if (!laid.ok) return laid;
-    if (currentText(store, id) === text) return setTextItem(store, id, settings, laid.paths);
+    // Read again: `editText` may have queued newer edits during the layout.
+    const newer = queue.edits as Edits | null;
+    if (newer) {
+      // Lay theirs out over these instead.
+      queue.edits = { ...edits, ...newer };
+      continue;
+    }
+    if (!laid.ok) {
+      result = laid;
+      break;
+    }
+    // Moved, resized or turned meanwhile: lay it out again where it is now.
+    if (currentText(store, id) !== text) {
+      queue.edits = edits;
+      continue;
+    }
+    result = setTextItem(store, id, settings, laid.paths);
   }
+  queues.delete(id);
+  for (const resolve of queue.waiting) resolve(result);
 }
 
 function currentText(store: DocumentStore, id: string) {

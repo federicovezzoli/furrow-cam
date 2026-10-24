@@ -6,11 +6,15 @@ import { moveDrawing } from "../stores/geometry-actions";
 import { editText } from "./text-items";
 import type { TextLayoutRequest } from "./text-layout";
 
+/** Every request the text worker got. */
+const requests: TextLayoutRequest[] = [];
+
 /** The text worker, answering a turn later: a 1 mm square at the text's origin. */
 class TextWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror = null;
   postMessage({ id, settings }: TextLayoutRequest) {
+    requests.push({ id, settings });
     const [x, y] = settings.placement.position;
     const square: Path = {
       start: [x, y],
@@ -26,17 +30,41 @@ class TextWorker {
 }
 vi.stubGlobal("Worker", TextWorker);
 
+/** `fullDocument` with `textItem`. */
+function textStore() {
+  const doc = fullDocument();
+  return createDocumentStore({
+    ...doc,
+    drawings: [...doc.drawings, textItem],
+    geometry: [...doc.geometry, textShape],
+  });
+}
+
 describe("editText", () => {
-  it("lays the text out again where it is if it moved meanwhile", async () => {
-    const doc = fullDocument();
-    const store = createDocumentStore({
-      ...doc,
-      drawings: [...doc.drawings, textItem],
-      geometry: [...doc.geometry, textShape],
+  it("merges edits made while one is laid out, the latest of each winning, in one more layout", async () => {
+    const store = textStore();
+    requests.length = 0;
+    const edits = [
+      editText(store, TEXT_ID, { font: "arvo" }),
+      editText(store, TEXT_ID, { font: "pacifico" }),
+      editText(store, TEXT_ID, { height: 12 }),
+      editText(store, TEXT_ID, { font: "relief-singleline" }),
+    ];
+    for (const result of await Promise.all(edits))
+      expect(result).toEqual({ ok: true, removedTabs: 0 });
+    expect(store.getState().document.drawings.at(-1)?.text).toMatchObject({
+      font: "relief-singleline",
+      height: 12,
     });
+    expect(requests.map(({ settings }) => settings.font)).toEqual(["arvo", "relief-singleline"]);
+    expect(store.getState().past).toHaveLength(1);
+  });
+
+  it("lays the text out again where it is if it moved meanwhile", async () => {
+    const store = textStore();
     const edited = editText(store, TEXT_ID, { text: "II" });
     moveDrawing(store, TEXT_ID, [5, 0]);
-    expect(await edited).toEqual({ ok: true });
+    expect(await edited).toEqual({ ok: true, removedTabs: 0 });
     const { drawings, geometry } = store.getState().document;
     expect(drawings.at(-1)?.text).toMatchObject({ text: "II", placement: { position: [15, 10] } });
     expect(geometry.at(-1)?.paths[0]?.start).toEqual([15, 10]);

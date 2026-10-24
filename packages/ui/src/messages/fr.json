@@ -1231,7 +1231,8 @@
       "center": "Centre",
       "right": "Droite"
     },
-    "heightNote": "La hauteur est celle des majuscules. Le texte reste à sa place quand vous le modifiez."
+    "heightNote": "La hauteur est celle des majuscules. Le texte reste à sa place quand vous le modifiez.",
+    "tabsRemoved": "{count, plural, one {# attache retirée, qui ne tombait} other {# attaches retirées, qui ne tombaient}} plus sur les lettres."
   },
   "Import": {
     "units": {

@@ -1231,7 +1231,8 @@
       "center": "Mitte",
       "right": "Rechts"
     },
-    "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst."
+    "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
+    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}."
   },
   "Import": {
     "units": {

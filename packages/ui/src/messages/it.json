@@ -1231,7 +1231,8 @@
       "center": "Centro",
       "right": "Destra"
     },
-    "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi."
+    "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi.",
+    "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere."
   },
   "Import": {
     "units": {
