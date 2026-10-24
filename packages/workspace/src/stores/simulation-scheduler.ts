@@ -36,7 +36,9 @@ export function simulationRequest(
   const cuts: SimulationCut[] = [];
   const hashes: string[] = [];
   for (const operation of document.operations) {
-    if (!operation.enabled) continue;
+    // shortcut: the simulation cuts from above only; the bottom side's starts
+    // from the flipped top side's result with the side switch (#358).
+    if (!operation.enabled || operation.stockSide === "bottom") continue;
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;
     if (entry.status === "error") continue;

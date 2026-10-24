@@ -1,5 +1,15 @@
-import type { FlipAxis, Model, Stock } from "@furrow/document";
+import type {
+  FlipAxis,
+  LinearAngle,
+  Model,
+  Operation,
+  Point,
+  Shape,
+  Stock,
+} from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
+import { roundCoordinate } from "../geometry/round";
+import { mapShapes } from "../geometry/scale";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
 import type { Box3, Vec3 } from "./stock";
 
@@ -84,4 +94,40 @@ export function modelView(
     box: { min, max },
     transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
   };
+}
+
+/** A point of the drawing, `[x, y]`, as the other side sees it, rounded like imported coordinates. */
+export function flipPoint2(flip: Flip, [x, y]: Point): Point {
+  const [fx, fy] = flipPoint(flip, flip.axis, [x, y, 0]);
+  return [roundCoordinate(fx), roundCoordinate(fy)];
+}
+
+/**
+ * `shapes` as the bottom side sees them (ADR-0060): mirrored about the flip
+ * axis, arcs turning the other way. Toolpaths orient their paths
+ * themselves, so a mirrored shape is cut as the top side would cut it.
+ */
+export function flipShapes(shapes: Shape[], flip: Flip): Shape[] {
+  return mapShapes(shapes, (point) => flipPoint2(flip, point), true);
+}
+
+/**
+ * `operation` as the bottom side sees it, mirrored with its drawing so it
+ * cuts the same on the part: a profile's tabs at their mirrored places, and
+ * a linear pocket's passes at the mirrored angle (45° and −45° swap).
+ */
+export function flipOperation(operation: Operation, flip: Flip): Operation {
+  if (operation.type === "profile" && operation.params.tabs) {
+    const { tabs } = operation.params;
+    const positions = tabs.positions.map((point) => flipPoint2(flip, point));
+    return { ...operation, params: { ...operation.params, tabs: { ...tabs, positions } } };
+  }
+  if (operation.type === "pocket" && operation.params.strategy.type === "linear") {
+    const { angle } = operation.params.strategy;
+    // A mirror turns every line's angle round the other way; 0° and 90° stay.
+    const mirrored: LinearAngle = angle === 45 ? -45 : angle === -45 ? 45 : angle;
+    const strategy = { type: "linear" as const, angle: mirrored };
+    return { ...operation, params: { ...operation.params, strategy } };
+  }
+  return operation;
 }

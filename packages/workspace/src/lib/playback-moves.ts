@@ -64,7 +64,8 @@ export function playbackMoves(
     firstMove += moves;
   }
   for (const operation of operations) {
-    if (!operation.enabled) continue;
+    // shortcut: the bottom side plays back with its own simulation (#358).
+    if (!operation.enabled || operation.stockSide === "bottom") continue;
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;
     if (entry.status === "error") continue;
