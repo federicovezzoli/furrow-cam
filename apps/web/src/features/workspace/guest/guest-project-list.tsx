@@ -34,7 +34,7 @@ import { importGuestProject } from "./import-guest-project";
 import {
   deleteGuestProject,
   type GuestProjectRow,
-  getGuestMesh,
+  getGuestAsset,
   getGuestProject,
   listGuestProjects,
   messageOf,
@@ -113,8 +113,8 @@ export function GuestProjectList({
     run(async () => {
       const stored = await getGuestProject(project.id);
       if (!stored) throw new Error(t("projectNotFound"));
-      await exportProjectFile(stored.document, stored.name, (sha256) =>
-        getGuestMesh(project.id, sha256),
+      await exportProjectFile(stored.document, stored.name, (sha256, kind) =>
+        getGuestAsset(project.id, sha256, kind),
       );
     });
   }

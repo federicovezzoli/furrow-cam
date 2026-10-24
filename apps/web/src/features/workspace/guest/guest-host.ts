@@ -1,12 +1,13 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
+import { MAX_FONT_BYTES } from "@furrow/document";
 import type { Settings } from "@furrow/workspace/lib/local-library";
-import type { ToolChoice, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import type { AssetStore, ToolChoice, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
 import packageJson from "../../../../package.json";
 import {
-  deleteGuestMesh,
+  deleteGuestAsset,
   type GuestProject,
-  getGuestMesh,
-  putGuestMesh,
+  getGuestAsset,
+  putGuestAsset,
   saveGuestProject,
   saveGuestSettings,
   saveGuestTool,
@@ -46,17 +47,8 @@ export function guestHost(
       autosaves: true,
       save: (document, savedAt) => saveGuestProject(id, document, savedAt),
     },
-    meshes: {
-      async put(sha256, file) {
-        try {
-          return await putGuestMesh(id, sha256, file);
-        } catch (error) {
-          return { error: (error as Error).message };
-        }
-      },
-      get: (sha256) => getGuestMesh(id, sha256),
-      discard: (sha256) => deleteGuestMesh(id, sha256),
-    },
+    meshes: guestAssets(id, "mesh"),
+    fonts: guestAssets(id, "font"),
     versions: null,
     library: {
       tools: tools.current,
@@ -91,6 +83,21 @@ export function guestHost(
     },
     navigation,
     account,
-    limits: { meshes: DEFAULT_STL_LIMITS },
+    limits: { meshes: DEFAULT_STL_LIMITS, fonts: { maxBytes: MAX_FONT_BYTES } },
+  };
+}
+
+/** Guest project `id`'s `kind` files, in the browser (ADR-0050, ADR-0062). */
+function guestAssets(id: string, kind: "mesh" | "font"): AssetStore {
+  return {
+    async put(sha256, file) {
+      try {
+        return await putGuestAsset(id, sha256, file);
+      } catch (error) {
+        return { error: (error as Error).message };
+      }
+    },
+    get: (sha256) => getGuestAsset(id, sha256, kind),
+    discard: (sha256) => deleteGuestAsset(id, sha256),
   };
 }

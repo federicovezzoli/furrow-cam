@@ -6,6 +6,10 @@ const PROJECT = "00000000-0000-4000-8000-000000000001";
 const SHA = model.sha256;
 const KEY = `${USER}/${PROJECT}/${SHA}`;
 
+/** A filter `discardAsset` asks whether the document, or a version, lists a file with. */
+type ListFilter = { path: string[]; array_contains: { sha256: string }[] };
+type Filter = { document: ListFilter } | { versions: { some: { document: ListFilter } } };
+
 type Asset = {
   projectId: string;
   sha256: string;
@@ -57,14 +61,13 @@ vi.mock("@/lib/db", () => {
     project: {
       findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
         mocks.projects.find((p) => p.id === where.id && p.userId === where.userId) ?? null,
-      // Only the query `discardMesh` makes: does the project's document or a version use the mesh?
-      count: async ({
-        where,
-      }: {
-        where: { id: string; OR: { document: { array_contains: { sha256: string }[] } }[] };
-      }) => {
-        const [{ sha256 }] = where.OR[0]?.document.array_contains ?? [{ sha256: "" }];
-        return mocks.referenced.get(where.id)?.has(sha256) ? 1 : 0;
+      // Only the query `discardAsset` makes: does the project's document or a version list the file?
+      count: async ({ where }: { where: { id: string; OR: Filter[] } }) => {
+        const asked = where.OR.map((filter) => {
+          const document = "document" in filter ? filter.document : filter.versions.some.document;
+          return `${document.path[0]}:${document.array_contains[0]?.sha256}`;
+        });
+        return asked.some((use) => mocks.referenced.get(where.id)?.has(use)) ? 1 : 0;
       },
     },
     projectAsset: {
@@ -107,7 +110,9 @@ vi.mock("@/lib/db", () => {
   };
 });
 
-const { discardMesh, getMeshUrl, requestMeshUpload, verifyMeshUpload } = await import("./actions");
+const { discardAsset, getAssetUrl, requestAssetUpload, verifyAssetUpload } = await import(
+  "./actions"
+);
 
 /** What the browser does with a presigned URL: stores the bytes it has. */
 function upload(size = model.size, sha256 = SHA) {
@@ -124,9 +129,9 @@ beforeEach(() => {
   mocks.objects.clear();
 });
 
-describe("requestMeshUpload", () => {
+describe("requestAssetUpload", () => {
   it("records an unverified asset and returns an upload URL for its key", async () => {
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toEqual({
       upload: { url: `https://storage/${KEY}?put`, headers: {} },
     });
     expect(mocks.assets).toEqual([
@@ -141,13 +146,13 @@ describe("requestMeshUpload", () => {
       size: model.size,
       verifiedAt: new Date(),
     });
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({ uploaded: true });
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toEqual({ uploaded: true });
   });
 
   it("verifies an earlier upload that was never verified", async () => {
-    await requestMeshUpload(PROJECT, SHA, model.size);
+    await requestAssetUpload(PROJECT, SHA, model.size, "mesh");
     upload();
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({ uploaded: true });
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toEqual({ uploaded: true });
     expect(mocks.assets[0]?.verifiedAt).toBeInstanceOf(Date);
   });
 
@@ -160,58 +165,64 @@ describe("requestMeshUpload", () => {
       verifiedAt: null,
       createdAt: old,
     });
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toHaveProperty("upload");
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toHaveProperty("upload");
     expect(mocks.assets[0]?.createdAt?.getTime()).toBeGreaterThan(old.getTime());
   });
 
   it("replaces stored bytes that don't match", async () => {
     upload(model.size, "0".repeat(64));
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toHaveProperty("upload");
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toHaveProperty("upload");
     expect(mocks.objects.has(KEY)).toBe(false);
   });
 
   it("refuses files over the limit, empty files and malformed hashes", async () => {
-    expect(await requestMeshUpload(PROJECT, SHA, 50_000_001)).toEqual({
+    expect(await requestAssetUpload(PROJECT, SHA, 50_000_001, "mesh")).toEqual({
       error: { key: "Assets.tooLarge", values: { mb: 50 } },
     });
-    expect(await requestMeshUpload(PROJECT, SHA, 0)).toEqual({ error: { key: "Assets.empty" } });
-    expect(await requestMeshUpload(PROJECT, "../other", 10)).toEqual({
+    expect(await requestAssetUpload(PROJECT, SHA, 0, "mesh")).toEqual({
+      error: { key: "Assets.empty" },
+    });
+    expect(await requestAssetUpload(PROJECT, "../other", 10, "mesh")).toEqual({
       error: { key: "Assets.invalidHash" },
+    });
+    // Fonts take less (ADR-0062).
+    expect(await requestAssetUpload(PROJECT, SHA, 5_000_001, "font")).toEqual({
+      error: { key: "Assets.tooLarge", values: { mb: 5 } },
     });
     expect(mocks.assets).toEqual([]);
   });
 
   it("refuses another user's project, signed-out users and servers without storage", async () => {
     mocks.projects = [{ id: PROJECT, userId: "someone-else" }];
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toEqual({
       error: { key: "Projects.notFound" },
     });
     mocks.userId = null;
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toHaveProperty("error");
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toHaveProperty("error");
     mocks.userId = USER;
     mocks.storage = false;
-    expect(await requestMeshUpload(PROJECT, SHA, model.size)).toEqual({
+    expect(await requestAssetUpload(PROJECT, SHA, model.size, "mesh")).toEqual({
       error: { key: "Assets.noStorage" },
     });
     expect(mocks.assets).toEqual([]);
   });
 });
 
-describe("verifyMeshUpload", () => {
+describe("verifyAssetUpload", () => {
   it("marks the asset verified once the stored object matches", async () => {
-    await requestMeshUpload(PROJECT, SHA, model.size);
-    expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
+    await requestAssetUpload(PROJECT, SHA, model.size, "mesh");
+    expect(await verifyAssetUpload(PROJECT, SHA)).toEqual({
       error: { key: "Assets.notUploaded" },
     });
     upload();
-    expect(await verifyMeshUpload(PROJECT, SHA)).toBeUndefined();
+    expect(await verifyAssetUpload(PROJECT, SHA)).toBeUndefined();
     expect(mocks.assets[0]?.verifiedAt).toBeInstanceOf(Date);
   });
 
   it("deletes a stored object that doesn't match and stays unverified", async () => {
-    await requestMeshUpload(PROJECT, SHA, model.size);
+    await requestAssetUpload(PROJECT, SHA, model.size, "mesh");
     upload(model.size + 1);
-    expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
+    expect(await verifyAssetUpload(PROJECT, SHA)).toEqual({
       error: { key: "Assets.mismatch" },
     });
     expect(mocks.objects.has(KEY)).toBe(false);
@@ -220,19 +231,19 @@ describe("verifyMeshUpload", () => {
 
   it("refuses meshes nobody asked to upload", async () => {
     upload();
-    expect(await verifyMeshUpload(PROJECT, SHA)).toEqual({
+    expect(await verifyAssetUpload(PROJECT, SHA)).toEqual({
       error: { key: "Assets.notUploaded" },
     });
   });
 });
 
-describe("getMeshUrl", () => {
+describe("getAssetUrl", () => {
   it("returns a download URL for verified meshes only", async () => {
-    await requestMeshUpload(PROJECT, SHA, model.size);
-    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: { key: "Assets.notUploaded" } });
+    await requestAssetUpload(PROJECT, SHA, model.size, "mesh");
+    expect(await getAssetUrl(PROJECT, SHA)).toEqual({ error: { key: "Assets.notUploaded" } });
     upload();
-    await verifyMeshUpload(PROJECT, SHA);
-    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ url: `https://storage/${KEY}?get` });
+    await verifyAssetUpload(PROJECT, SHA);
+    expect(await getAssetUrl(PROJECT, SHA)).toEqual({ url: `https://storage/${KEY}?get` });
   });
 
   it("refuses another user's project", async () => {
@@ -243,20 +254,20 @@ describe("getMeshUrl", () => {
       verifiedAt: new Date(),
     });
     mocks.userId = "someone-else";
-    expect(await getMeshUrl(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
+    expect(await getAssetUrl(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
   });
 });
 
-describe("discardMesh", () => {
+describe("discardAsset", () => {
   async function uploaded() {
-    await requestMeshUpload(PROJECT, SHA, model.size);
+    await requestAssetUpload(PROJECT, SHA, model.size, "mesh");
     upload();
-    await verifyMeshUpload(PROJECT, SHA);
+    await verifyAssetUpload(PROJECT, SHA);
   }
 
   it("deletes a verified mesh that nothing saved refers to, row and object", async () => {
     await uploaded();
-    expect(await discardMesh(PROJECT, SHA)).toBeUndefined();
+    expect(await discardAsset(PROJECT, SHA)).toBeUndefined();
     expect(mocks.assets).toEqual([]);
     expect(mocks.objects.has(KEY)).toBe(false);
     // As saves do, so neither runs between the other's check and write.
@@ -265,22 +276,29 @@ describe("discardMesh", () => {
 
   it("keeps a mesh that the saved document or a version refers to", async () => {
     await uploaded();
-    mocks.referenced.set(PROJECT, new Set([SHA]));
-    expect(await discardMesh(PROJECT, SHA)).toBeUndefined();
+    mocks.referenced.set(PROJECT, new Set([`models:${SHA}`]));
+    expect(await discardAsset(PROJECT, SHA)).toBeUndefined();
     expect(mocks.assets).toHaveLength(1);
     expect(mocks.objects.has(KEY)).toBe(true);
   });
 
+  it("keeps a font that the saved document or a version lists", async () => {
+    await uploaded();
+    mocks.referenced.set(PROJECT, new Set([`fonts:${SHA}`]));
+    expect(await discardAsset(PROJECT, SHA)).toBeUndefined();
+    expect(mocks.assets).toHaveLength(1);
+  });
+
   it("leaves storage alone when the project has no such asset", async () => {
     upload();
-    expect(await discardMesh(PROJECT, SHA)).toBeUndefined();
+    expect(await discardAsset(PROJECT, SHA)).toBeUndefined();
     expect(mocks.objects.has(KEY)).toBe(true);
   });
 
   it("refuses another user's project", async () => {
     await uploaded();
     mocks.userId = "someone-else";
-    expect(await discardMesh(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
+    expect(await discardAsset(PROJECT, SHA)).toEqual({ error: { key: "Projects.notFound" } });
     expect(mocks.assets).toHaveLength(1);
     expect(mocks.objects.has(KEY)).toBe(true);
   });

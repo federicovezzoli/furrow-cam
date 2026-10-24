@@ -94,6 +94,7 @@ function bothSides(operation: Operation, flipAxis: FlipAxis): [Toolpath, Toolpat
     stock: { ...doc.stock, ...STOCK, touchOff: null, twoSided: { flipAxis, partingDepth: 9 } },
     geometry: [ELL, HOLE],
     models: [],
+    fonts: [],
     operations: [operation, { ...operation, id: crypto.randomUUID(), stockSide: "bottom" }],
   };
   const [top, bottom] = toolpathInputs(document).map((input) => generateToolpath(input));

@@ -1,6 +1,6 @@
 import type { ArchiveVersion, ProjectDocument } from "@furrow/document";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
-import type { VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import type { AssetStore, VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
 import { t } from "./i18n";
 import { type ProjectFile, writeProjectFile } from "./project-file";
 
@@ -51,6 +51,7 @@ export function createProjectSession({
   let currentName = name;
   let document = file.document;
   const meshes = new Map(file.meshes);
+  const fonts = new Map(file.fonts);
   let versions = [...file.versions];
   /** The document as last saved to the file, as JSON; `null` when it was never saved as is. */
   let savedDocument: string | null = startModified ? null : JSON.stringify(document);
@@ -76,7 +77,7 @@ export function createProjectSession({
   }
 
   function toFile(): Uint8Array {
-    return writeProjectFile({ document, meshes, versions });
+    return writeProjectFile({ document, meshes, fonts, versions });
   }
 
   /** Works out `modified` again after a change, and keeps the recovery copy up to date. */
@@ -130,7 +131,7 @@ export function createProjectSession({
     return { label: trimmed === "" ? null : trimmed };
   }
 
-  const host: Pick<WorkspaceHost, "meshes" | "versions"> & {
+  const host: Pick<WorkspaceHost, "meshes" | "fonts" | "versions"> & {
     save: WorkspaceHost["project"]["save"];
   } = {
     save: async (next) => {
@@ -138,22 +139,8 @@ export function createProjectSession({
       changed();
       return { updatedAt: tick() };
     },
-    meshes: {
-      put: async (sha256, blob) => {
-        if (meshes.has(sha256)) return { uploaded: false };
-        meshes.set(sha256, new Uint8Array(await blob.arrayBuffer()));
-        return { uploaded: true };
-      },
-      get: async (sha256) => {
-        const bytes = meshes.get(sha256);
-        if (!bytes) throw new Error(t("Desktop.Session.missingModel"));
-        // A copy: workers take the buffers they're sent.
-        return bytes.slice().buffer;
-      },
-      discard: async (sha256) => {
-        meshes.delete(sha256);
-      },
-    },
+    meshes: fileAssets(meshes, () => t("Desktop.Session.missingModel")),
+    fonts: fileAssets(fonts, () => t("Desktop.Session.missingFont")),
     versions: {
       list: async () => ({ versions: rows() }),
       create: async (label) => {
@@ -199,7 +186,12 @@ export function createProjectSession({
         if (!version) return { error: versionNotFound() };
         if (!openAsProject) return { error: t("Desktop.Session.cantOpenVersions") };
         openAsProject(
-          { document: version.document, meshes: new Map(meshes), versions: [] },
+          {
+            document: version.document,
+            meshes: new Map(meshes),
+            fonts: new Map(fonts),
+            versions: [],
+          },
           `${currentName} (${version.label ?? dateLabel})`,
         );
         return undefined;
@@ -250,6 +242,26 @@ export function createProjectSession({
     discard(): Promise<unknown> {
       closed = true;
       return queueRecovery(deleteRecovery);
+    },
+  };
+}
+
+/** An asset store over the file's `files` by hash; `missing` says why `get` fails. */
+function fileAssets(files: Map<string, Uint8Array>, missing: () => string): AssetStore {
+  return {
+    put: async (sha256, blob) => {
+      if (files.has(sha256)) return { uploaded: false };
+      files.set(sha256, new Uint8Array(await blob.arrayBuffer()));
+      return { uploaded: true };
+    },
+    get: async (sha256) => {
+      const bytes = files.get(sha256);
+      if (!bytes) throw new Error(missing());
+      // A copy: workers take the buffers they're sent.
+      return bytes.slice().buffer;
+    },
+    discard: async (sha256) => {
+      files.delete(sha256);
     },
   };
 }

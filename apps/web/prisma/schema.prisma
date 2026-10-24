@@ -204,7 +204,7 @@ model ProjectVersion {
   @@map("project_version")
 }
 
-/// A file stored outside the document, in S3-compatible storage (ADR-0029): today an STL mesh.
+/// A file stored outside the document, in S3-compatible storage (ADR-0029): an STL mesh or an uploaded font (ADR-0062).
 /// The object key is `<userId>/<projectId>/<sha256>`. Kept as long as the project, so its
 /// versions can reference it too.
 model ProjectAsset {

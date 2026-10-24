@@ -1,18 +1,20 @@
 import { MeshImportError } from "@furrow/workspace/lib/model-import";
 import "fake-indexeddb/auto";
+import { readFileSync } from "node:fs";
 import {
   CURRENT_SCHEMA_VERSION,
   createProjectDocument,
   packProjectArchive,
+  sha256Hex,
 } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import { model, uploadedFont } from "@furrow/document/fixtures";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The archive reader's module also holds the account import, which calls server actions.
 vi.mock("@/features/projects/actions", () => ({}));
-vi.mock("@/features/assets/lib/mesh-cache", () => ({}));
-vi.mock("@/features/assets/lib/meshes", () => ({}));
+vi.mock("@/features/assets/lib/asset-cache", () => ({}));
+vi.mock("@/features/assets/lib/assets", () => ({}));
 // Parsing runs in a Web Worker in the browser.
 const parseMesh = vi.hoisted(() => vi.fn());
 vi.mock("@furrow/workspace/lib/model-import", async (importOriginal) => ({
@@ -72,6 +74,27 @@ describe("guestProjectName", () => {
   });
 });
 
+describe("importGuestProject with uploaded fonts", () => {
+  it("stores the fonts the project lists, once they parse, and refuses them in a .furrow.json", async () => {
+    const font = new Uint8Array(
+      readFileSync(
+        new URL("../../../../../../packages/workspace/src/fonts/Arvo-Regular.ttf", import.meta.url),
+      ),
+    );
+    const sha256 = await sha256Hex(font);
+    const document = {
+      ...createProjectDocument(),
+      fonts: [{ ...uploadedFont, sha256, size: font.byteLength }],
+    };
+    const zip = packProjectArchive(document, new Map(), [], new Map([[sha256, font]]));
+    const project = await guest.importGuestProject(
+      new File([zip.slice()], "Sign.furrow.zip", { type: "application/zip" }),
+    );
+    expect(new Uint8Array(await storage.getGuestAsset(project.id, sha256, "font"))).toEqual(font);
+    await expect(guest.importGuestProject(jsonFile(document))).rejects.toThrow("uploaded fonts");
+  });
+});
+
 describe("importGuestProject with 3D models", () => {
   const bytes = new Uint8Array([1, 2, 3, 4]);
 
@@ -90,7 +113,7 @@ describe("importGuestProject with 3D models", () => {
     const { sha256, file } = await archiveFile();
     parseMesh.mockResolvedValue({ sha256, triangles: 1, bounds: model.bounds });
     const project = await guest.importGuestProject(file);
-    expect(new Uint8Array(await storage.getGuestMesh(project.id, sha256))).toEqual(bytes);
+    expect(new Uint8Array(await storage.getGuestAsset(project.id, sha256))).toEqual(bytes);
   });
 
   it("refuses a damaged STL file, leaving nothing behind", async () => {

@@ -1,6 +1,7 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
 import {
   type ArchiveVersion,
+  missingArchiveFonts,
   missingArchiveMeshes,
   ProjectArchiveError,
   ProjectDocument,
@@ -11,10 +12,14 @@ import {
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { t } from "./i18n";
 
-/** A project as a file holds it: the document, its meshes by hash and its versions (ADR-0047). */
+/**
+ * A project as a file holds it: the document, its meshes and uploaded fonts
+ * by hash, and its versions (ADR-0047, ADR-0062).
+ */
 export type ProjectFile = {
   document: ProjectDocument;
   meshes: Map<string, Uint8Array>;
+  fonts: Map<string, Uint8Array>;
   versions: ArchiveVersion[];
 };
 
@@ -37,7 +42,8 @@ export async function readProjectFile(
     if (document.models.length > 0) {
       throw new Error(t("Desktop.ProjectFile.modelsNeedArchive"));
     }
-    return { document, meshes: new Map(), versions: [] };
+    if (document.fonts.length > 0) throw new Error(t("Desktop.ProjectFile.fontsNeedArchive"));
+    return { document, meshes: new Map(), fonts: new Map(), versions: [] };
   }
   let archive: Awaited<ReturnType<typeof readProjectArchive>>;
   try {
@@ -50,7 +56,11 @@ export async function readProjectFile(
   if (missingArchiveMeshes(document, archive.meshes).length > 0) {
     throw new Error(t("Desktop.ProjectFile.missingModel"));
   }
-  return { document, meshes: archive.meshes, versions: archive.versions };
+  if (missingArchiveFonts(document, archive.fonts).length > 0) {
+    throw new Error(t("Desktop.ProjectFile.missingFont"));
+  }
+  const { meshes, fonts, versions } = archive;
+  return { document, meshes, fonts, versions };
 }
 
 function parseDocument(contents: string): ProjectDocument {
@@ -69,6 +79,6 @@ function parseDocument(contents: string): ProjectDocument {
 }
 
 /** The project as a `.furrow` file; throws a `ProjectArchiveError` past the file's limits. */
-export function writeProjectFile({ document, meshes, versions }: ProjectFile): Uint8Array {
-  return packProjectArchive(ProjectDocument.parse(document), meshes, versions);
+export function writeProjectFile({ document, meshes, fonts, versions }: ProjectFile): Uint8Array {
+  return packProjectArchive(ProjectDocument.parse(document), meshes, versions, fonts);
 }

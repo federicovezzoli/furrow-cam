@@ -1,6 +1,6 @@
 "use server";
 
-import { Sha256 } from "@furrow/document";
+import { MAX_FONT_BYTES, Sha256 } from "@furrow/document";
 import type { KeyMessage } from "@furrow/ui/lib/i18n";
 import { getUserId } from "@/features/auth/server";
 import { lockProject, parseProjectId } from "@/features/projects/server";
@@ -22,8 +22,16 @@ const noStorage: KeyMessage = { key: "Assets.noStorage" };
 const assetNotFound: KeyMessage = { key: "Assets.notUploaded" };
 const mismatch: KeyMessage = { key: "Assets.mismatch" };
 
+/** The kinds of project asset (ADR-0029, ADR-0062): they differ only in the largest file taken. */
+export type AssetKind = "mesh" | "font";
+
+/** The largest file of each kind, in bytes. */
+function maxBytes(kind: AssetKind) {
+  return kind === "font" ? MAX_FONT_BYTES : MAX_MESH_BYTES;
+}
+
 /**
- * The asset and object key of mesh `sha256` in the user's project, or why
+ * The asset and object key of file `sha256` in the user's project, or why
  * there is none: no storage, a malformed id or hash, or someone else's project.
  */
 async function findProject(
@@ -51,15 +59,17 @@ async function markVerified(projectId: string, sha256: string) {
 }
 
 /**
- * Starts uploading a mesh of `size` bytes hashing to `sha256` (lowercase
- * hex) to the user's project (ADR-0029). Returns where the browser uploads
- * it; call `verifyMeshUpload` afterwards. `uploaded` comes back instead when
- * the project already has it, and nothing needs uploading.
+ * Starts uploading a `kind` file of `size` bytes hashing to `sha256`
+ * (lowercase hex) to the user's project (ADR-0029, ADR-0062). Returns where
+ * the browser uploads it; call `verifyAssetUpload` afterwards. `uploaded`
+ * comes back instead when the project already has it, and nothing needs
+ * uploading.
  */
-export async function requestMeshUpload(
+export async function requestAssetUpload(
   projectId: string,
   sha256: string,
   size: number,
+  kind: AssetKind,
 ): Promise<
   | { upload: PresignedUpload; uploaded?: never; error?: never }
   | { uploaded: true; upload?: never; error?: never }
@@ -70,11 +80,8 @@ export async function requestMeshUpload(
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   if (!Number.isSafeInteger(size) || size <= 0) return { error: { key: "Assets.empty" } };
-  if (size > MAX_MESH_BYTES) {
-    return {
-      error: { key: "Assets.tooLarge", values: { mb: MAX_MESH_BYTES / 1_000_000 } },
-    };
-  }
+  const max = maxBytes(kind === "font" ? "font" : "mesh");
+  if (size > max) return { error: { key: "Assets.tooLarge", values: { mb: max / 1_000_000 } } };
 
   const where = { projectId_sha256: { projectId: project.projectId, sha256: project.sha256 } };
   // Retrying an unverified upload restarts its day before the sweep deletes it.
@@ -103,10 +110,10 @@ export async function requestMeshUpload(
 }
 
 /**
- * Checks that the mesh `sha256` the browser uploaded is stored, with the size
+ * Checks that the file `sha256` the browser uploaded is stored, with the size
  * and hash requested, so documents may reference it (ADR-0029).
  */
-export async function verifyMeshUpload(projectId: string, sha256: string): Promise<ActionResult> {
+export async function verifyAssetUpload(projectId: string, sha256: string): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: signedOut };
   const project = await findProject(userId, projectId, sha256);
@@ -127,8 +134,8 @@ export async function verifyMeshUpload(projectId: string, sha256: string): Promi
   await markVerified(project.projectId, project.sha256);
 }
 
-/** A short-lived URL to download the mesh `sha256` of the user's project. */
-export async function getMeshUrl(
+/** A short-lived URL to download the file `sha256` of the user's project. */
+export async function getAssetUrl(
   projectId: string,
   sha256: string,
 ): Promise<{ url: string; error?: never } | { error: KeyMessage }> {
@@ -145,22 +152,30 @@ export async function getMeshUrl(
 }
 
 /**
- * Deletes the mesh `sha256` from the user's project when nothing saved refers
- * to it: neither the document nor any version (ADR-0029). For an upload the
- * import then didn't use, such as one that lost the race to another import.
+ * Deletes the file `sha256` from the user's project when nothing saved refers
+ * to it: no model or font of the document or any version (ADR-0029,
+ * ADR-0062). For an upload the import then didn't use, such as one that lost
+ * the race to another import.
  */
-export async function discardMesh(projectId: string, sha256: string): Promise<ActionResult> {
+export async function discardAsset(projectId: string, sha256: string): Promise<ActionResult> {
   const userId = await getUserId();
   if (!userId) return { error: signedOut };
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   const { projectId: id, sha256: hash } = project;
-  const uses = { path: ["models"], array_contains: [{ sha256: hash }] };
+  // A hash names one file, which a model or a font lists.
+  const uses = ["models", "fonts"].map((list) => ({
+    path: [list],
+    array_contains: [{ sha256: hash }],
+  }));
   const count = await db.$transaction(async (tx) => {
-    // Locked so a save can't start referring to the mesh between the check and the delete.
+    // Locked so a save can't start referring to the file between the check and the delete.
     await lockProject(tx, id);
     const referenced = await tx.project.count({
-      where: { id, OR: [{ document: uses }, { versions: { some: { document: uses } } }] },
+      where: {
+        id,
+        OR: uses.flatMap((document) => [{ document }, { versions: { some: { document } } }]),
+      },
     });
     if (referenced > 0) return 0;
     const deleted = await tx.projectAsset.deleteMany({ where: { projectId: id, sha256: hash } });

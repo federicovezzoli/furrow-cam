@@ -41,7 +41,7 @@ export function AccountDialog({
 }) {
   const t = useTranslations("Guest");
   const appT = useTranslations();
-  const { project, meshes } = useWorkspaceHost();
+  const { project, meshes, fonts } = useWorkspaceHost();
   const documentStore = useDocumentStoreApi();
   // Kept while closing, so the text doesn't change as the dialog animates out.
   const [shown, setShown] = useState<AccountReason>("export-gcode");
@@ -59,7 +59,9 @@ export function AccountDialog({
   async function saveFile() {
     setExporting(true);
     try {
-      await exportProjectFile(documentStore.getState().document, project.name, meshes.get);
+      await exportProjectFile(documentStore.getState().document, project.name, (sha256, kind) =>
+        (kind === "font" ? fonts : meshes).get(sha256),
+      );
       setError(null);
     } catch (error) {
       setError(errorText(appT, error, t("cantExport")));

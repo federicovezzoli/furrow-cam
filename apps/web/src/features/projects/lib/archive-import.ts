@@ -1,4 +1,4 @@
-import { DEFAULT_STL_LIMITS, type StlLimits } from "@furrow/cam-core";
+import { DEFAULT_STL_LIMITS, parseFont, type StlLimits } from "@furrow/cam-core";
 import {
   ARCHIVE_DOCUMENT_PATH,
   archiveMeshTooLarge,
@@ -9,8 +9,8 @@ import {
 } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
-import { cacheMesh } from "@/features/assets/lib/mesh-cache";
-import { uploadMesh } from "@/features/assets/lib/meshes";
+import { cacheAsset } from "@/features/assets/lib/asset-cache";
+import { uploadAsset } from "@/features/assets/lib/assets";
 import { deleteProject, saveProject, startArchiveImport } from "@/features/projects/actions";
 import { clientTranslator } from "@/lib/client-translator";
 
@@ -42,19 +42,33 @@ export async function readArchive(file: File, limits: StlLimits): Promise<Projec
  * read keeps them all, for the server to explain.
  */
 export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array> {
-  let models: unknown;
+  return documentFiles(archive, "models", archive.meshes);
+}
+
+/** The fonts of `archive` its document lists (ADR-0062), as `documentMeshes`. */
+export function documentFonts(archive: ProjectArchive): Map<string, Uint8Array> {
+  return documentFiles(archive, "fonts", archive.fonts);
+}
+
+/** The `files` of `archive` its document's `list` names by hash; all of them if it can't be read. */
+function documentFiles(
+  archive: ProjectArchive,
+  list: "models" | "fonts",
+  files: Map<string, Uint8Array>,
+): Map<string, Uint8Array> {
+  let entries: unknown;
   try {
-    models = (JSON.parse(archive.contents) as { models?: unknown } | null)?.models;
+    entries = (JSON.parse(archive.contents) as Record<string, unknown> | null)?.[list];
   } catch {
-    return archive.meshes;
+    return files;
   }
-  if (!Array.isArray(models)) return archive.meshes;
+  if (!Array.isArray(entries)) return files;
   const used = new Set(
-    models.map((model: unknown) =>
-      typeof model === "object" && model !== null && "sha256" in model ? model.sha256 : null,
+    entries.map((entry: unknown) =>
+      typeof entry === "object" && entry !== null && "sha256" in entry ? entry.sha256 : null,
     ),
   );
-  return new Map([...archive.meshes].filter(([sha256]) => used.has(sha256)));
+  return new Map([...files].filter(([sha256]) => used.has(sha256)));
 }
 
 /** What `importArchive` returns: the new project, or an error. */
@@ -63,9 +77,10 @@ export type ArchiveImport = { projectId: string; error?: never } | { error: Tran
 /**
  * Creates a project from a `.furrow.zip` export read by `readArchive`
  * (ADR-0029), leaving out its versions. Each mesh the document uses is
- * checked as an STL import is (PRD-0005 S1), then
- * the server creates the project with an empty document, the meshes are
- * uploaded to it, and the imported document is saved. If any step after the
+ * checked as an STL import is (PRD-0005 S1), and each font it lists must
+ * parse (ADR-0062); then the server creates the project with an empty
+ * document, the meshes and fonts are uploaded to it, and the imported
+ * document is saved. If any step after the
  * project is created fails, it is deleted again. `machineId` is as for
  * `importProject`; `projectName`, when given, names the project instead of `fileName`.
  */
@@ -98,13 +113,22 @@ export async function importArchive(
     }
   }
 
+  const fonts = documentFonts(archive);
+  for (const bytes of fonts.values()) {
+    try {
+      parseFont(bytes);
+    } catch {
+      return { error: clientTranslator()("Projects.fontCantImport") };
+    }
+  }
+
   let started: Awaited<ReturnType<typeof startArchiveImport>>;
   try {
     started = await startArchiveImport(
       // Sent as a file: a string argument would be escaped into JSON, outgrowing the body limit.
       new File([archive.contents], ARCHIVE_DOCUMENT_PATH, { type: "application/json" }),
       fileName,
-      [...meshes].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
+      [...meshes, ...fonts].map(([sha256, bytes]) => ({ sha256, size: bytes.byteLength })),
       machineId,
       projectName,
     );
@@ -122,7 +146,7 @@ export async function importArchive(
   return { error };
 }
 
-/** Uploads the meshes `document` references to the new project `projectId`, then saves it. */
+/** Uploads the meshes and fonts `document` references to the new project `projectId`, then saves it. */
 async function finish(
   projectId: string,
   archive: ProjectArchive,
@@ -130,14 +154,25 @@ async function finish(
   updatedAt: Date,
 ): Promise<Translatable | undefined> {
   try {
-    for (const sha256 of new Set(document.models.map((model) => model.sha256))) {
-      const bytes = archive.meshes.get(sha256);
-      // The server checked that each model has its mesh.
+    const files = [
+      ...[...new Set(document.models.map((model) => model.sha256))].map((sha256) => ({
+        sha256,
+        bytes: archive.meshes.get(sha256),
+        kind: "mesh" as const,
+      })),
+      ...document.fonts.map(({ sha256 }) => ({
+        sha256,
+        bytes: archive.fonts.get(sha256),
+        kind: "font" as const,
+      })),
+    ];
+    for (const { sha256, bytes, kind } of files) {
+      // The server checked that each model has its mesh, and each font its file.
       if (!bytes) return importFailed();
       const blob = new Blob([bytes as Uint8Array<ArrayBuffer>]);
-      const uploaded = await uploadMesh(projectId, sha256, blob);
+      const uploaded = await uploadAsset(projectId, sha256, blob, kind);
       if (uploaded.error !== undefined) return uploaded.error;
-      await cacheMesh(sha256, blob);
+      await cacheAsset(sha256, blob);
     }
     const saved = await saveProject(projectId, document, updatedAt);
     if (saved.error !== undefined) return saved.error;

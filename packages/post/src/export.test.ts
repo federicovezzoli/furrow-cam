@@ -92,6 +92,7 @@ function referenceProject(): ProjectDocument {
     machine: shapeoko,
     geometry: [plate, holes, recess],
     models: [],
+    fonts: [],
     operations: [
       {
         id: id(2),

@@ -1,4 +1,5 @@
 import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
+import { MAX_FONT_BYTES } from "@furrow/document";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { SimulatorShell } from "@furrow/workspace/components/simulator-shell";
 import { WorkspaceShell } from "@furrow/workspace/components/workspace-shell";
@@ -94,6 +95,7 @@ export function ProjectView({
         save: session.host.save,
       },
       meshes: session.host.meshes,
+      fonts: session.host.fonts,
       versions: session.host.versions,
       library: {
         tools,
@@ -131,7 +133,7 @@ export function ProjectView({
         },
       },
       navigation: { Link: DesktopLink },
-      limits: { meshes: DEFAULT_STL_LIMITS },
+      limits: { meshes: DEFAULT_STL_LIMITS, fonts: { maxBytes: MAX_FONT_BYTES } },
     }),
     // `name` changes on Save As; the stores are keyed by `id`, so they stay.
     [session, session.name, tools, machines, workspaceTourDone, updateLibrary],

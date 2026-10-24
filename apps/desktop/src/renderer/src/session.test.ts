@@ -1,5 +1,5 @@
-import { createProjectDocument, type ProjectDocument } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import { createProjectDocument, type ProjectDocument, sha256Hex } from "@furrow/document";
+import { model, uploadedFont } from "@furrow/document/fixtures";
 import { MAX_VERSIONS } from "@furrow/workspace/lib/versions";
 import type { VersionsResult } from "@furrow/workspace/lib/workspace-host";
 import { describe, expect, it, vi } from "vitest";
@@ -7,7 +7,7 @@ import { type ProjectFile, readProjectFile } from "./project-file";
 import { createProjectSession } from "./session";
 
 function file(document: ProjectDocument = createProjectDocument()): ProjectFile {
-  return { document, meshes: new Map(), versions: [] };
+  return { document, meshes: new Map(), fonts: new Map(), versions: [] };
 }
 
 /** Lets queued recovery writes and deletes run. */
@@ -140,6 +140,20 @@ describe("createProjectSession", () => {
     expect(reopened.document.stock.width).toBe(321);
   });
 
+  it("keeps uploaded fonts in the file across saving and opening again", async () => {
+    const { session } = setup();
+    const bytes = new TextEncoder().encode("font bytes");
+    const sha256 = await sha256Hex(bytes);
+    expect(await session.host.fonts.put(sha256, new Blob([bytes]))).toEqual({ uploaded: true });
+    const font = { ...uploadedFont, sha256, size: bytes.byteLength };
+    await session.host.save({ ...session.document, fonts: [font] }, session.savedAt);
+
+    const reopened = await readProjectFile(session.toFile());
+    expect(reopened.document.fonts).toEqual([font]);
+    expect(reopened.fonts).toEqual(new Map([[sha256, bytes]]));
+    expect(new Uint8Array(await session.host.fonts.get(sha256))).toEqual(bytes);
+  });
+
   it("restores a version, keeping the replaced document as an automatic version", async () => {
     const { session, versions } = setup();
     const created = await versions.create("first cut", session.savedAt);
@@ -215,10 +229,14 @@ describe("readProjectFile", () => {
   it("opens a .furrow.json document, which can't carry models", async () => {
     const document = createProjectDocument();
     const read = await readProjectFile(new TextEncoder().encode(JSON.stringify(document)));
-    expect(read).toEqual({ document, meshes: new Map(), versions: [] });
+    expect(read).toEqual({ document, meshes: new Map(), fonts: new Map(), versions: [] });
     await expect(
       readProjectFile(new TextEncoder().encode(JSON.stringify({ ...document, models: [model] }))),
     ).rejects.toThrow(/3D models/);
+    const withFont = { ...document, fonts: [uploadedFont] };
+    await expect(
+      readProjectFile(new TextEncoder().encode(JSON.stringify(withFont))),
+    ).rejects.toThrow(/uploaded fonts/);
   });
 
   it("refuses files that aren't projects", async () => {
