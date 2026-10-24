@@ -34,6 +34,7 @@ import {
   addImportedShapes,
   addTextItem,
   canImportModel,
+  convertTextToDrawing,
   DUPLICATE_GAP,
   drawingBounds,
   drawingOffset,
@@ -727,5 +728,33 @@ describe("setTextItem", () => {
       error: { code: "workspace.textNoOutlines" },
     });
     expect(text.getState().document).toBe(before);
+  });
+});
+
+describe("convertTextToDrawing", () => {
+  it("keeps its outlines and the operations machining them, as a plain drawing, in one undo step", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (!profile) throw new Error("fixture");
+    const onText = { ...profile, targets: [{ shapeId: textShape.id, paths: null }] };
+    const before = {
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+      operations: [onText],
+    };
+    const store = createDocumentStore(before);
+    convertTextToDrawing(store, TEXT_ID);
+    const after = store.getState().document;
+    const { text: _, ...drawing } = textItem;
+    expect(after.drawings.at(-1)).toEqual(drawing);
+    expect(after.geometry).toEqual(before.geometry);
+    expect(after.operations).toEqual(before.operations);
+    expect(() => ProjectDocument.parse(after)).not.toThrow();
+    // Now a drawing: a transform no longer has a placement to keep.
+    expect(rotateDrawing(store, TEXT_ID, 90)).toEqual({ ok: true });
+    store.getState().undo();
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
   });
 });

@@ -154,6 +154,15 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
+  it("converts the text into a drawing, which has no text settings", () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    expect(text()).toBeUndefined();
+    expect(current().geometry).toEqual(withText().geometry);
+    expect(screen.queryByLabelText("Text", { selector: "textarea" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove drawing" })).toBeTruthy();
+  });
+
   it("puts blank text back, and refuses text the font has nothing for", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
     const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });

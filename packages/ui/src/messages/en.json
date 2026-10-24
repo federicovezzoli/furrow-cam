@@ -1235,7 +1235,9 @@
       "right": "Right"
     },
     "heightNote": "Height measures the capital letters. Changing the text keeps it in place.",
-    "tabsRemoved": "Removed {count, plural, one {# tab} other {# tabs}} that no longer lay on the letters."
+    "tabsRemoved": "Removed {count, plural, one {# tab} other {# tabs}} that no longer lay on the letters.",
+    "convert": "Convert to drawing",
+    "convertTitle": "Keep the letters as a drawing, machined by the same operations; it can no longer be edited as text"
   },
   "Import": {
     "units": {
