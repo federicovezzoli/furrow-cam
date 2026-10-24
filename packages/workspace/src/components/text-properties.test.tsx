@@ -154,13 +154,25 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
-  it("converts the text into a drawing, which has no text settings", () => {
+  it("converts the text into a drawing, which has no text settings", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
     fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
-    expect(text()).toBeUndefined();
+    await waitFor(() => expect(text()).toBeUndefined());
     expect(current().geometry).toEqual(withText().geometry);
     expect(screen.queryByLabelText("Text", { selector: "textarea" })).toBeNull();
     expect(screen.getByRole("button", { name: "Remove drawing" })).toBeTruthy();
+  });
+
+  it("converts what was just typed, once its edit lands", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "Hello" } });
+    // Clicking the button leaves the field first.
+    fireEvent.blur(field);
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    await waitFor(() => expect(text()).toBeUndefined());
+    expect(current().drawings.at(-1)?.name).toBe("Hello");
+    expect(current().geometry.at(-1)?.paths[0]?.segments[0]?.to).toEqual([60, 10]);
   });
 
   it("puts blank text back, and refuses text the font has nothing for", async () => {

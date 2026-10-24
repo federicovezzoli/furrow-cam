@@ -167,7 +167,11 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         <Button
           variant="outline"
           size="compact"
-          onClick={() => convertTextToDrawing(store, drawingId)}
+          onClick={async () => {
+            // Leaving the text field to click here starts an edit: let it land first.
+            await textSettled(drawingId);
+            convertTextToDrawing(store, drawingId);
+          }}
           title={t("convertTitle")}
         >
           <ShapesIcon />
