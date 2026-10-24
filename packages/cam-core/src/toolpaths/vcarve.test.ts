@@ -54,6 +54,7 @@ function vcarve(params: Partial<VCarveParams> = {}, tool = bit): VCarveOperation
     id: "6b1f3c2a-8d4e-4f5a-9b6c-7d8e9f0a1b2c",
     name: "V-carve",
     enabled: true,
+    side: "top",
     targets: [],
     tool,
     type: "vcarve",

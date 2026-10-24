@@ -20,6 +20,7 @@ const stock: Stock = {
   xyOrigin: { anchor: "bottom_left" },
   zOrigin: "stock_top",
   touchOff: null,
+  twoSided: null,
 };
 
 function operation(name: string, tool: Tool = endMill): Operation {
@@ -28,6 +29,7 @@ function operation(name: string, tool: Tool = endMill): Operation {
     type: "drill",
     name,
     enabled: true,
+    side: "top",
     targets: [],
     tool,
     params: { depth: 5, peck: false, stepOver: 40 },

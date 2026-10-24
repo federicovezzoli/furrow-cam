@@ -366,6 +366,19 @@ describe("migrations", () => {
     expect(parseProjectDocument(v17)).toEqual(doc);
   });
 
+  it("makes v19 projects one-sided, every operation on the top", () => {
+    const doc = fullDocument();
+    const v19 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      stock: Record<string, unknown>;
+      operations: Record<string, unknown>[];
+    };
+    v19.schemaVersion = 19;
+    delete v19.stock.twoSided;
+    for (const operation of v19.operations) delete operation.side;
+    expect(parseProjectDocument(v19)).toEqual({ ...doc, stock: { ...doc.stock, twoSided: null } });
+  });
+
   it("leaves v1 documents without operations alone", () => {
     const { schemaVersion: _, ...rest } = createProjectDocument();
     expect(parseProjectDocument({ ...rest, schemaVersion: 1 })).toEqual(createProjectDocument());

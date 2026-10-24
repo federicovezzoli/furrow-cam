@@ -197,6 +197,7 @@ export const reliefFinish: ReliefFinishOperation = {
   type: "relief_finish",
   name: "Finish",
   enabled: true,
+  side: "top",
   targets: [],
   tool: ballEndMill,
   params: {
@@ -216,6 +217,7 @@ export const reliefRough: ReliefRoughOperation = {
   type: "relief_rough",
   name: "Rough",
   enabled: true,
+  side: "top",
   targets: [],
   tool: endMill,
   params: {
@@ -232,7 +234,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 19,
+    schemaVersion: 20,
     units: "in",
     stock: {
       width: 300,
@@ -241,6 +243,7 @@ export function fullDocument(): ProjectDocument {
       xyOrigin: { anchor: "center" },
       zOrigin: "machine_bed",
       touchOff: { x: 10, y: 10, diameter: 15, toolChange: null },
+      twoSided: { flipAxis: "x", partingDepth: 9 },
     },
     machine,
     drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
@@ -252,6 +255,7 @@ export function fullDocument(): ProjectDocument {
         type: "profile",
         name: "Outside profile",
         enabled: true,
+        side: "top",
         targets: [
           { shapeId: SQUARE_ID, paths: null },
           { shapeId: CIRCLE_ID, paths: [0] },

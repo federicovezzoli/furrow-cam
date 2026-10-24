@@ -72,6 +72,7 @@ function profileCut(shape: Shape, overrides: Partial<ProfileParams>): Simulation
     id: "11111111-2222-4333-8444-555555555555",
     name: "Profile",
     enabled: true,
+    side: "top",
     type: "profile",
     targets: [{ shapeId: shape.id, paths: null }],
     tool,

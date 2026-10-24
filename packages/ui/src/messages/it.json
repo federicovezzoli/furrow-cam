@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "Il tampone di azzeramento deve stare sul grezzo",
+      "partingBelowStock": "Il piano di separazione deve stare dentro il grezzo",
+      "bottomSideOneSided": "Solo i progetti a due lati hanno un lato inferiore",
       "duplicateDrawing": "Id di disegno duplicato",
       "duplicateShape": "Id di forma duplicato",
       "duplicateModel": "Id di modello duplicato",

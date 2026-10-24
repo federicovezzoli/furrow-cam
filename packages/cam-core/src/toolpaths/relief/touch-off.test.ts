@@ -94,6 +94,7 @@ function project(operations: Operation[], touchOff: TouchOffDisc | null): Projec
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
       touchOff: touchOff && { ...touchOff, toolChange: null },
+      twoSided: null,
     },
     models: [STEP],
     operations,

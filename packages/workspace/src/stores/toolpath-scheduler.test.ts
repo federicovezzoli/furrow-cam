@@ -59,6 +59,7 @@ function documentWithProfile(): ProjectDocument {
         id: OPERATION_ID,
         name: "Outside",
         enabled: true,
+        side: "top",
         type: "profile",
         targets: [{ shapeId: SHAPE_ID, paths: null }],
         tool,

@@ -93,6 +93,7 @@ function operation(
     id: "11111111-2222-4333-8444-555555555555",
     name: "Pocket",
     enabled: true,
+    side: "top",
     type: "pocket",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
