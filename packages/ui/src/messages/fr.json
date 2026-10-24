@@ -723,7 +723,12 @@
       "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande.",
       "textNoOutlines": "Aucun de ces caractères n'est dans la police : il n'y a rien à découper.",
       "unknownFont": "La police « {font} » n'est pas disponible dans cette version de l'application.",
-      "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez."
+      "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez.",
+      "fontUnavailable": "Cette police n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+      "fontUnreadable": "Ce fichier n'est pas une police lisible : utilisez un fichier TTF, OTF ou WOFF.",
+      "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
+      "tooManyFonts": "Un projet contient au plus {max} polices.",
+      "fontUploadOff": "Ce serveur ne peut pas stocker de polices."
     }
   },
   "Operation": {
@@ -1251,7 +1256,11 @@
     "heightNote": "La hauteur est celle des majuscules. Le texte reste à sa place quand vous le modifiez.",
     "tabsRemoved": "{count, plural, one {# attache retirée, qui ne tombait} other {# attaches retirées, qui ne tombaient}} plus sur les lettres.",
     "convert": "Convertir en dessin",
-    "convertTitle": "Garder les lettres comme dessin, usiné par les mêmes opérations ; il ne pourra plus être modifié comme texte"
+    "convertTitle": "Garder les lettres comme dessin, usiné par les mêmes opérations ; il ne pourra plus être modifié comme texte",
+    "included": "Incluses",
+    "uploaded": "Importées",
+    "upload": "Importer une police…",
+    "singleStroke": "Trait simple (pour la gravure)"
   },
   "Import": {
     "units": {

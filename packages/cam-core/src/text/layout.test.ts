@@ -6,7 +6,7 @@ import { signedArea } from "../geometry/clipper";
 import { flattenPath } from "../geometry/flatten";
 import { mirrorPoint, rotatePoint } from "../geometry/scale";
 import { mapPath } from "../geometry/translate";
-import { type Font, parseFont } from "./font";
+import { type Font, fontName, parseFont } from "./font";
 import { textPaths } from "./layout";
 
 /** A drawing of a glyph in font units, y up. */
@@ -219,6 +219,10 @@ describe("parseFont", () => {
     expect(textPaths(parseFont(view), settings("HO"))).toEqual(
       textPaths(parseFont(otf), settings("HO")),
     );
+  });
+
+  it("names the font after its family", () => {
+    expect(fontName(parseFont(testFont().toArrayBuffer()))).toBe("Test");
   });
 
   it("throws on bytes that aren't a font", () => {
