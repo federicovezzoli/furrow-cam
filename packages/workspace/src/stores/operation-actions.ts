@@ -258,7 +258,7 @@ function appendModelOperation(
 ): string | null {
   const { document } = store.getState();
   if (!document.models.some((model) => model.id === modelId)) return null;
-  const operation = create(document, { id, enabled: true, side: "top", targets: [], tool });
+  const operation = create(document, { id, enabled: true, stockSide: "top", targets: [], tool });
   if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
@@ -270,7 +270,7 @@ function appendModelOperation(
 /** `name` is the base of the new operation's name, translated by the caller; English by default. */
 type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string; name?: string };
 
-type OperationFields = Pick<Operation, "id" | "enabled" | "side" | "targets" | "tool">;
+type OperationFields = Pick<Operation, "id" | "enabled" | "stockSide" | "targets" | "tool">;
 
 function appendOperation(
   store: DocumentStore,
@@ -280,7 +280,13 @@ function appendOperation(
   const { document } = store.getState();
   const existing = normalizeTargets(document.geometry, targets);
   if (existing.length === 0) return null;
-  const operation = create(document, { id, enabled: true, side: "top", targets: existing, tool });
+  const operation = create(document, {
+    id,
+    enabled: true,
+    stockSide: "top",
+    targets: existing,
+    tool,
+  });
   // E.g. a drill bit on a profile.
   if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {

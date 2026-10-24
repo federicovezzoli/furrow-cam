@@ -1,8 +1,9 @@
 import type { FlipAxis } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { modelTransform } from "./model";
-import { applyAffine, bottomModelTransform, flipPoint } from "./sides";
+import { applyAffine } from "../geometry/affine";
+import { modelTransform, type PlacedModel } from "./model";
+import { bottomModelTransform, flipPoint } from "./sides";
 import type { Vec3 } from "./stock";
 
 const stock = { width: 400, height: 200, thickness: 18 };
@@ -39,6 +40,22 @@ describe("bottomModelTransform", () => {
         flipPoint(stock, axis, applyAffine(modelTransform(model), point)),
       );
     }
+  });
+
+  it.each(AXES)("turns, scales and moves the model before flipping it, about %s", (axis) => {
+    const turned = {
+      ...model,
+      placement: { rotation: [90, 0, 270] as const, scale: 1.5, depth: 15, position: [30, 20] },
+    } as PlacedModel;
+    const transform = bottomModelTransform(turned, stock, axis);
+    for (const point of [top, bottom, [50, 40, 6] as Vec3, [-10, 25, 3] as Vec3]) {
+      const placed = applyAffine(modelTransform(turned), point);
+      expect(applyAffine(transform, point)).toEqual(flipPoint(stock, axis, placed));
+    }
+    // Rotated about X the mesh's 80 mm length becomes its height, scaled to the 15 mm depth.
+    const zs = [top, bottom].map((point) => applyAffine(transform, point)[2]);
+    expect(Math.min(...zs)).toBeGreaterThanOrEqual(-18);
+    expect(Math.max(...zs)).toBeLessThanOrEqual(-3);
   });
 
   it("reaches up from the bottom side's floor", () => {

@@ -375,7 +375,7 @@ describe("migrations", () => {
     };
     v19.schemaVersion = 19;
     delete v19.stock.twoSided;
-    for (const operation of v19.operations) delete operation.side;
+    for (const operation of v19.operations) delete operation.stockSide;
     expect(parseProjectDocument(v19)).toEqual({ ...doc, stock: { ...doc.stock, twoSided: null } });
   });
 

@@ -1,6 +1,7 @@
 import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
 import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import { applyAffine as apply } from "../geometry/affine";
 import type { Rect } from "../geometry/bounds";
 import {
   designAlignment,
@@ -20,7 +21,6 @@ import {
   stockFit,
   turnModel,
 } from "./model";
-import { applyAffine as apply } from "./sides";
 import type { Box3 } from "./stock";
 
 /** The fixture's 100 × 80 × 12 mesh, from (-50, -40, 0). */

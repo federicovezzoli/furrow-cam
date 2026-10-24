@@ -29,7 +29,7 @@ function operation(name: string, tool: Tool = endMill): Operation {
     type: "drill",
     name,
     enabled: true,
-    side: "top",
+    stockSide: "top",
     targets: [],
     tool,
     params: { depth: 5, peck: false, stepOver: 40 },

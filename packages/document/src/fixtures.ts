@@ -197,7 +197,7 @@ export const reliefFinish: ReliefFinishOperation = {
   type: "relief_finish",
   name: "Finish",
   enabled: true,
-  side: "top",
+  stockSide: "top",
   targets: [],
   tool: ballEndMill,
   params: {
@@ -217,7 +217,7 @@ export const reliefRough: ReliefRoughOperation = {
   type: "relief_rough",
   name: "Rough",
   enabled: true,
-  side: "top",
+  stockSide: "top",
   targets: [],
   tool: endMill,
   params: {
@@ -255,7 +255,7 @@ export function fullDocument(): ProjectDocument {
         type: "profile",
         name: "Outside profile",
         enabled: true,
-        side: "top",
+        stockSide: "top",
         targets: [
           { shapeId: SQUARE_ID, paths: null },
           { shapeId: CIRCLE_ID, paths: [0] },

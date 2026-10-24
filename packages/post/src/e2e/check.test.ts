@@ -9,7 +9,7 @@ const holes = {
   type: "drill",
   name: "Holes",
   enabled: true,
-  side: "top",
+  stockSide: "top",
   targets: [],
   tool: drill,
   params: { depth: 6, peck: true, stepOver: 40 },

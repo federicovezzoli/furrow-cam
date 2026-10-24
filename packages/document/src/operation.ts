@@ -73,7 +73,7 @@ const operationFields = {
   id: z.uuid(),
   name: Name,
   enabled: z.boolean(),
-  side: StockSide,
+  stockSide: StockSide,
   /** What this operation cuts, one target per shape. */
   targets: z.array(OperationTarget),
   /** Snapshot of the tool at the time it was picked (ADR-0003). */

@@ -84,7 +84,7 @@ function keepTouchOffOnStock(draft: Draft<ProjectDocument>, before: ProjectDocum
  * follows the stock and the drawing moves with it (ADR-0022), so a drawing
  * aligned to the anchor stays aligned; a custom zero and the drawing stay
  * where they are. The touch-off pad moves with the drawing and stays on the
- * stock (ADR-0041).
+ * stock (ADR-0041), and the parting plane in it (ADR-0060).
  */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
   const { stock, geometry } = store.getState().document;
@@ -97,6 +97,12 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     const widest = Math.min(draft.stock.width, draft.stock.height);
     if (pad && pad.diameter > widest) pad.diameter = widest;
     keepTouchOffOnStock(draft, stock);
+    // The parting plane must lie inside the stock (ADR-0060): a thinner stock
+    // than it allows keeps it at the same fraction of the thickness.
+    const twoSided = draft.stock.twoSided;
+    if (twoSided && twoSided.partingDepth >= draft.stock.thickness) {
+      twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
+    }
   });
 }
 

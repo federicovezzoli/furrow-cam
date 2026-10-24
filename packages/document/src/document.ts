@@ -205,10 +205,10 @@ export const ProjectDocument = z
         });
       }
       operationIds.add(operation.id);
-      if (operation.side === "bottom" && !doc.stock.twoSided) {
+      if (operation.stockSide === "bottom" && !doc.stock.twoSided) {
         ctx.addIssue({
           code: "custom",
-          path: ["operations", i, "side"],
+          path: ["operations", i, "stockSide"],
           message: "document.bottomSideOneSided",
         });
       }

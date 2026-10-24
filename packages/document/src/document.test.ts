@@ -176,7 +176,7 @@ describe("ProjectDocument", () => {
       type: "pocket",
       name: "Pocket",
       enabled: true,
-      side: "top",
+      stockSide: "top",
       targets: [{ shapeId: SQUARE_ID, paths: null }],
       tool: doc.operations[0]?.tool,
       params: { leadIn: { radius: 3 } },
@@ -297,13 +297,13 @@ describe("two-sided projects", () => {
 
   it("put operations on the bottom side, which one-sided projects don't have", () => {
     const doc = fullDocument();
-    doc.operations = doc.operations.map((operation) => ({ ...operation, side: "bottom" }));
+    doc.operations = doc.operations.map((operation) => ({ ...operation, stockSide: "bottom" }));
     expect(ProjectDocument.safeParse(doc).success).toBe(true);
     const oneSided = { ...doc, stock: { ...doc.stock, twoSided: null } };
     expect(ProjectDocument.safeParse(oneSided).error?.issues).toEqual(
       doc.operations.map((_, i) =>
         expect.objectContaining({
-          path: ["operations", i, "side"],
+          path: ["operations", i, "stockSide"],
           message: "document.bottomSideOneSided",
         }),
       ),

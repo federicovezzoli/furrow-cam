@@ -1,4 +1,5 @@
 import type { FlipAxis, Stock } from "@furrow/document";
+import { composeAffine } from "../geometry/affine";
 import { modelTransform, type PlacedModel } from "./model";
 import type { Vec3 } from "./stock";
 
@@ -27,11 +28,12 @@ export function flipTransform(
 
 /** `point` in one side's stock coordinates, in the other's. */
 export function flipPoint(
-  stock: Pick<Stock, "width" | "height" | "thickness">,
+  { width, height, thickness }: Pick<Stock, "width" | "height" | "thickness">,
   axis: FlipAxis,
-  point: Vec3,
+  [x, y, z]: Vec3,
 ): Vec3 {
-  return applyAffine(flipTransform(stock, axis), point);
+  // `+ 0` turns -0 into 0, as `flipTransform` gives.
+  return axis === "x" ? [x, height - y, -thickness - z + 0] : [width - x, y, -thickness - z + 0];
 }
 
 /**
@@ -44,29 +46,5 @@ export function bottomModelTransform(
   stock: Pick<Stock, "width" | "height" | "thickness">,
   axis: FlipAxis,
 ): number[] {
-  const flip = flipTransform(stock, axis);
-  const placed = modelTransform(model);
-  const matrix: number[] = [];
-  for (let row = 0; row < 3; row++) {
-    for (let column = 0; column < 4; column++) {
-      let sum = column === 3 ? (flip[row * 4 + 3] as number) : 0;
-      for (let k = 0; k < 3; k++) {
-        sum += (flip[row * 4 + k] as number) * (placed[k * 4 + column] as number);
-      }
-      // `+ 0` turns -0 into 0, as `modelTransform` does.
-      matrix.push(sum + 0);
-    }
-  }
-  return matrix;
-}
-
-/** `point` moved by a row-major 3 × 4 affine `matrix`. */
-export function applyAffine(matrix: readonly number[], [x, y, z]: Vec3): Vec3 {
-  const row = (r: number) =>
-    (matrix[r * 4] as number) * x +
-    (matrix[r * 4 + 1] as number) * y +
-    (matrix[r * 4 + 2] as number) * z +
-    (matrix[r * 4 + 3] as number) +
-    0;
-  return [row(0), row(1), row(2)];
+  return composeAffine(flipTransform(stock, axis), modelTransform(model));
 }

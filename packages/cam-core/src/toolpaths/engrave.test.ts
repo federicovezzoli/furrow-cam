@@ -51,7 +51,7 @@ function engraving(
     id: "11111111-2222-4333-8444-555555555555",
     name: "Engrave",
     enabled: true,
-    side: "top",
+    stockSide: "top",
     type: "engrave",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool,

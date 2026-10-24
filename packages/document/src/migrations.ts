@@ -190,7 +190,7 @@ export const migrations: Readonly<Record<number, Migration>> = {
     if (isObject(doc.stock) && !("twoSided" in doc.stock)) doc.stock.twoSided = null;
     if (Array.isArray(doc.operations)) {
       for (const operation of doc.operations) {
-        if (isObject(operation) && !("side" in operation)) operation.side = "top";
+        if (isObject(operation) && !("stockSide" in operation)) operation.stockSide = "top";
       }
     }
     return doc;

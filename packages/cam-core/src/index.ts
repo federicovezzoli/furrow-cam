@@ -1,3 +1,4 @@
+export * from "./geometry/affine";
 export * from "./geometry/bounds";
 export { circleCenter, DRILL_DIAMETER_TOLERANCE } from "./geometry/circle";
 export * from "./geometry/clipper";
