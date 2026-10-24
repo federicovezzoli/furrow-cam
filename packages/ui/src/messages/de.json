@@ -707,7 +707,10 @@
       "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
       "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei.",
-      "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe."
+      "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe.",
+      "textNoOutlines": "Keines dieser Zeichen ist in der Schrift, also gibt es nichts zu fräsen.",
+      "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
+      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut."
     }
   },
   "Operation": {
@@ -1216,7 +1219,22 @@
     "removeTitle": "Entfernt auch {count, plural, one {die Operation, die nur sie bearbeitet} other {die # Operationen, die nur sie bearbeiten}}",
     "duplicateTitle": "Kopiert die Zeichnung rechts daneben, bearbeitet von denselben Operationen",
     "duplicate": "Duplizieren",
-    "remove": "Zeichnung entfernen"
+    "remove": "Zeichnung entfernen",
+    "removeText": "Text entfernen"
+  },
+  "Text": {
+    "heading": "Text",
+    "text": "Text",
+    "font": "Schrift",
+    "height": "Buchstabenhöhe",
+    "align": "Ausrichtung",
+    "aligns": {
+      "left": "Links",
+      "center": "Mitte",
+      "right": "Rechts"
+    },
+    "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
+    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}."
   },
   "Import": {
     "units": {
@@ -1235,7 +1253,9 @@
     "importing": "{file} wird importiert…",
     "dismiss": "Schließen",
     "import": "Importieren",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "addText": "Text hinzufügen",
+    "defaultText": "Text"
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

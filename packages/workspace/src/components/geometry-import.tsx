@@ -14,23 +14,32 @@ import {
   svgNeedsDpi,
 } from "@furrow/cam-core";
 import type { Units } from "@furrow/document";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
-import { UploadIcon, XIcon } from "lucide-react";
+import { TypeIcon, UploadIcon, XIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import { DEFAULT_FONT } from "../lib/fonts";
 import { track } from "../lib/telemetry";
+import { addText } from "../lib/text-items";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
+  useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { addImportedShapes, canImportDrawing, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
+import {
+  addImportedShapes,
+  canImportDrawing,
+  DRAWINGS_OR_MODEL,
+  drawingShapes,
+} from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 
 /** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
@@ -85,6 +94,51 @@ export function ImportDrawingButton() {
     >
       <UploadIcon />
       {t("importDrawing")}
+    </Button>
+  );
+}
+
+/** A new text item's cap height, in millimetres. */
+const DEFAULT_TEXT_HEIGHT = 20;
+
+/**
+ * Adds a text item (PRD-0010 T1), placed like an imported drawing, and
+ * selects it so its properties open. In the top bar once the project holds
+ * drawings, as `ImportDrawingButton`, or in the empty project's card
+ * (`inCard`).
+ */
+export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
+  const shown = useDocumentStore(
+    (s) => inCard || (s.document.geometry.length > 0 && canImportDrawing(s.document)),
+  );
+  const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
+  const { alert } = useDialogs();
+  const format = useFormatMessage();
+  const [adding, setAdding] = useState(false);
+  const t = useTranslations("Import");
+  if (!shown) return null;
+
+  async function add() {
+    setAdding(true);
+    const result = await addText(store, {
+      text: t("defaultText"),
+      font: DEFAULT_FONT,
+      height: DEFAULT_TEXT_HEIGHT,
+      align: "left",
+      placement: { position: [0, 0], rotation: 0, mirrored: false },
+    });
+    setAdding(false);
+    if (!result.ok) return alert(format(result.error));
+    const [shape] = drawingShapes(store.getState().document.geometry, result.id);
+    if (shape)
+      workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+  }
+
+  return (
+    <Button variant={inCard ? "outline" : "ghost"} size="compact" disabled={adding} onClick={add}>
+      <TypeIcon />
+      {t("addText")}
     </Button>
   );
 }
@@ -226,6 +280,7 @@ export function GeometryImport() {
                     {t("importDrawing")}
                   </Button>
                 )}
+                {drawings && <AddTextButton inCard />}
                 <ModelImportButton />
               </div>
             )}

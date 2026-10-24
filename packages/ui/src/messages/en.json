@@ -707,7 +707,10 @@
       "stlImportOff": "STL import isn't available on this server.",
       "fileTooLarge": "This file is too large to import (the limit is {mb, number} MB).",
       "storedModelMismatch": "The stored model doesn't match its file.",
-      "drawingTooSmall": "That would shrink some of the drawing's lines to nothing. Choose a larger size."
+      "drawingTooSmall": "That would shrink some of the drawing's lines to nothing. Choose a larger size.",
+      "textNoOutlines": "None of these characters are in the font, so there is nothing to cut.",
+      "unknownFont": "The font “{font}” isn't available in this version of the app.",
+      "textLayoutFailed": "The text couldn't be laid out. Try again."
     }
   },
   "Operation": {
@@ -1216,7 +1219,22 @@
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that only machine it",
     "duplicateTitle": "Copies the drawing to its right, machined by the same operations",
     "duplicate": "Duplicate",
-    "remove": "Remove drawing"
+    "remove": "Remove drawing",
+    "removeText": "Remove text"
+  },
+  "Text": {
+    "heading": "Text",
+    "text": "Text",
+    "font": "Font",
+    "height": "Letter height",
+    "align": "Alignment",
+    "aligns": {
+      "left": "Left",
+      "center": "Centre",
+      "right": "Right"
+    },
+    "heightNote": "Height measures the capital letters. Changing the text keeps it in place.",
+    "tabsRemoved": "Removed {count, plural, one {# tab} other {# tabs}} that no longer lay on the letters."
   },
   "Import": {
     "units": {
@@ -1235,7 +1253,9 @@
     "importing": "Importing {file}…",
     "dismiss": "Dismiss",
     "import": "Import",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "addText": "Add text",
+    "defaultText": "Text"
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

@@ -707,7 +707,10 @@
       "stlImportOff": "L’importazione STL non è disponibile su questo server.",
       "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
       "storedModelMismatch": "Il modello salvato non corrisponde al suo file.",
-      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore."
+      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore.",
+      "textNoOutlines": "Nessuno di questi caratteri è nel font, quindi non c'è niente da tagliare.",
+      "unknownFont": "Il font “{font}” non è disponibile in questa versione dell'app.",
+      "textLayoutFailed": "Non è stato possibile comporre il testo. Riprova."
     }
   },
   "Operation": {
@@ -1216,7 +1219,22 @@
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lavora solo lui} other {le # operazioni che lavorano solo lui}}",
     "duplicateTitle": "Copia il disegno alla sua destra, lavorato dalle stesse operazioni",
     "duplicate": "Duplica",
-    "remove": "Rimuovi il disegno"
+    "remove": "Rimuovi il disegno",
+    "removeText": "Rimuovi testo"
+  },
+  "Text": {
+    "heading": "Testo",
+    "text": "Testo",
+    "font": "Font",
+    "height": "Altezza lettere",
+    "align": "Allineamento",
+    "aligns": {
+      "left": "Sinistra",
+      "center": "Centro",
+      "right": "Destra"
+    },
+    "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi.",
+    "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere."
   },
   "Import": {
     "units": {
@@ -1235,7 +1253,9 @@
     "importing": "Importazione di {file}…",
     "dismiss": "Chiudi",
     "import": "Importa",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "addText": "Aggiungi testo",
+    "defaultText": "Testo"
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",
