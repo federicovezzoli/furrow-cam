@@ -79,7 +79,8 @@ const PROBE = 1000;
 /**
  * Text item `text`'s settings once `move`, which keeps shapes' proportions
  * (`mapPath`), has rewritten its outlines (ADR-0059): its origin moves, a turn
- * adds to its rotation, a mirror flips it and a scale multiplies its height.
+ * adds to its rotation, a mirror flips it and a scale multiplies its height
+ * and letter spacing, its lengths (its line spacing follows the height).
  */
 export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
   // The text's own axes in the stock, after the move.
@@ -93,9 +94,11 @@ export function mapText(text: TextSettings, move: (point: Point) => Point): Text
     throw new Error("mapText needs a move that keeps shapes' proportions");
   }
   const turned = (Math.atan2(vy, vx) * 180) / Math.PI - 90;
+  const scale = Math.hypot(vx, vy) / PROBE;
   return {
     ...text,
-    height: roundCoordinate((text.height * Math.hypot(vx, vy)) / PROBE),
+    height: roundCoordinate(text.height * scale),
+    letterSpacing: roundCoordinate(text.letterSpacing * scale),
     placement: {
       position: [ox, oy],
       rotation: roundCoordinate(((turned % 360) + 360) % 360) % 360,

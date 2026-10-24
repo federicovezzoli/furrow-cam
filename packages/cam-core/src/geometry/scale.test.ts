@@ -156,6 +156,16 @@ describe("mapText", () => {
     }
   });
 
+  it("scales the letter spacing with the height, so laying it out again gives the same outlines", () => {
+    const spaced = { ...text, letterSpacing: 2 };
+    expect(mapText(spaced, (point) => scalePoint(point, 2.5, [0, 0], [0, 0]))).toMatchObject({
+      height: 25,
+      letterSpacing: 5,
+      lineSpacing: text.lineSpacing,
+    });
+    expect(mapText(spaced, (point) => rotatePoint(point, 90, [0, 0])).letterSpacing).toBe(2);
+  });
+
   it("refuses a move that scales x and y differently", () => {
     expect(() => mapText(text, ([x, y]) => [x * 2, y])).toThrow("proportions");
   });
