@@ -5,6 +5,7 @@ import type {
   Machine,
   Model,
   ProjectDocument,
+  ProjectFont,
   ReliefFinishOperation,
   ReliefRoughOperation,
   Shape,
@@ -179,6 +180,15 @@ export const textShape: Shape = {
   ],
 };
 
+/** An uploaded font (ADR-0062); its file is a project asset. */
+export const uploadedFont: ProjectFont = {
+  sha256: "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+  fileName: "Sign Painter.ttf",
+  name: "Sign Painter",
+  size: 3,
+  singleStroke: false,
+};
+
 /** An imported STL relief (PRD-0005); its mesh is a project asset (ADR-0029). */
 export const model: Model = {
   id: "5f0c2a8e-3b7d-4e19-9c6a-2d8f1b4e7a30",
@@ -236,7 +246,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 21,
+    schemaVersion: 22,
     units: "in",
     stock: {
       width: 300,
@@ -251,6 +261,7 @@ export function fullDocument(): ProjectDocument {
     drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
     geometry: [square, circle],
     models: [],
+    fonts: [],
     operations: [
       {
         id: OPERATION_ID,

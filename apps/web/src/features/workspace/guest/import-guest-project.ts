@@ -1,4 +1,4 @@
-import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
+import { DEFAULT_STL_LIMITS, parseFont } from "@furrow/cam-core";
 import {
   archiveMeshTooLarge,
   type ProjectDocument,
@@ -7,9 +7,14 @@ import {
 } from "@furrow/document";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
-import { documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
+import { documentAssets, readArchive } from "@/features/projects/lib/archive-import";
 import { clientTranslator } from "@/lib/client-translator";
-import { createGuestProject, deleteGuestProject, type GuestProject, putGuestMesh } from "./storage";
+import {
+  createGuestProject,
+  deleteGuestProject,
+  type GuestProject,
+  putGuestAsset,
+} from "./storage";
 
 const notAProject = () => clientTranslator()("Projects.notAProject");
 const NAME_MAX = 100;
@@ -51,7 +56,28 @@ export function guestProjectName(fileName: string): string {
 export async function importGuestProject(file: File): Promise<GuestProject> {
   const archive = isArchive(file) ? await readArchive(file, DEFAULT_STL_LIMITS) : null;
   const document = parseGuestProjectFile(archive?.contents ?? (await file.text()));
-  const meshes = archive ? documentMeshes(archive) : new Map<string, Uint8Array>();
+  const { meshes, fonts } = archive
+    ? documentAssets(archive)
+    : { meshes: new Map<string, Uint8Array>(), fonts: new Map<string, Uint8Array>() };
+  for (const font of document.fonts) {
+    const bytes = fonts.get(font.sha256);
+    if (!bytes) {
+      const t = clientTranslator();
+      throw new Error(
+        archive
+          ? t("Projects.meshOfMissing", { file: font.fileName })
+          : t("Projects.modelsNeedZip"),
+      );
+    }
+    if (bytes.byteLength !== font.size) {
+      throw new Error(clientTranslator()("Projects.fileSizeMismatch", { file: font.fileName }));
+    }
+    try {
+      parseFont(bytes);
+    } catch {
+      throw new Error(clientTranslator()("Projects.fontCantImport"));
+    }
+  }
   for (const model of document.models) {
     const bytes = meshes.get(model.sha256);
     if (!bytes) {
@@ -86,8 +112,8 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
 
   const project = await createGuestProject(guestProjectName(file.name), document);
   try {
-    for (const [sha256, bytes] of meshes) {
-      await putGuestMesh(project.id, sha256, new Blob([bytes.slice()]));
+    for (const [sha256, bytes] of [...meshes, ...fonts]) {
+      await putGuestAsset(project.id, sha256, new Blob([bytes.slice()]));
     }
   } catch (error) {
     await deleteGuestProject(project.id).catch(() => {});

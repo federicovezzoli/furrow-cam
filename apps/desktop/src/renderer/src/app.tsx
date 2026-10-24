@@ -224,7 +224,12 @@ export function App() {
     setNewProject(false);
     track({ event: "project_created" });
     open(
-      { document: { ...createProjectDocument(), machine }, meshes: new Map(), versions: [] },
+      {
+        document: { ...createProjectDocument(), machine },
+        meshes: new Map(),
+        fonts: new Map(),
+        versions: [],
+      },
       { path: null, name: t("Desktop.App.untitled") },
     );
   }

@@ -1,10 +1,11 @@
+import { readFileSync } from "node:fs";
 import {
   createProjectDocument,
   type ProjectArchive,
   packProjectArchive,
   sha256Hex,
 } from "@furrow/document";
-import { lowRider, model } from "@furrow/document/fixtures";
+import { lowRider, model, uploadedFont } from "@furrow/document/fixtures";
 import { MeshImportError } from "@furrow/workspace/lib/model-import";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,12 +19,12 @@ const actions = vi.hoisted(() => ({
   saveProject: vi.fn(),
   deleteProject: vi.fn(),
 }));
-const uploadMesh = vi.hoisted(() => vi.fn());
+const uploadAsset = vi.hoisted(() => vi.fn());
 const parseMesh = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/projects/actions", () => actions);
-vi.mock("@/features/assets/lib/meshes", () => ({ uploadMesh }));
-vi.mock("@/features/assets/lib/mesh-cache", () => ({ cacheMesh: async () => {} }));
+vi.mock("@/features/assets/lib/assets", () => ({ uploadAsset }));
+vi.mock("@/features/assets/lib/asset-cache", () => ({ cacheAsset: async () => {} }));
 vi.mock("@furrow/workspace/lib/model-import", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@furrow/workspace/lib/model-import")>()),
   parseMesh,
@@ -35,6 +36,7 @@ const bytes = new Uint8Array(model.size);
 const archive: ProjectArchive = {
   contents: JSON.stringify(document),
   meshes: new Map([[model.sha256, bytes]]),
+  fonts: new Map(),
   versions: [],
 };
 
@@ -48,10 +50,50 @@ beforeEach(() => {
   });
   actions.saveProject.mockResolvedValue({ updatedAt: new Date() });
   actions.deleteProject.mockResolvedValue(undefined);
-  uploadMesh.mockResolvedValue({ uploaded: true });
+  uploadAsset.mockResolvedValue({ uploaded: true });
 });
 
 describe("importArchive", () => {
+  it("uploads the fonts the document lists as fonts, after checking they parse", async () => {
+    const font = new Uint8Array(
+      readFileSync(
+        new URL("../../../../../../packages/workspace/src/fonts/Arvo-Regular.ttf", import.meta.url),
+      ),
+    );
+    const sha256 = await sha256Hex(font);
+    const withFont = {
+      ...createProjectDocument(),
+      fonts: [{ ...uploadedFont, sha256, size: font.byteLength }],
+    };
+    actions.startArchiveImport.mockResolvedValue({
+      projectId: PROJECT,
+      document: withFont,
+      updatedAt: UPDATED_AT,
+    });
+    const fontArchive = {
+      contents: JSON.stringify(withFont),
+      meshes: new Map(),
+      fonts: new Map([[sha256, font]]),
+      versions: [],
+    };
+    expect(await importArchive(fontArchive, "Sign.furrow.zip", null, LIMITS)).toEqual({
+      projectId: PROJECT,
+    });
+    expect(actions.startArchiveImport).toHaveBeenCalledWith(
+      expect.any(File),
+      "Sign.furrow.zip",
+      [{ sha256, size: font.byteLength }],
+      null,
+      undefined,
+    );
+    expect(uploadAsset).toHaveBeenCalledWith(PROJECT, sha256, expect.any(Blob), "font");
+
+    const broken = { ...fontArchive, fonts: new Map([[sha256, new Uint8Array(16)]]) };
+    expect(await importArchive(broken, "Sign.furrow.zip", null, LIMITS)).toEqual({
+      error: "A font in this file can't be read.",
+    });
+  });
+
   it("uploads the meshes, then saves the imported document", async () => {
     expect(await importArchive(archive, "Relief.furrow.zip", null, LIMITS)).toEqual({
       projectId: PROJECT,
@@ -65,9 +107,9 @@ describe("importArchive", () => {
       null,
       undefined,
     );
-    expect(uploadMesh).toHaveBeenCalledWith(PROJECT, model.sha256, expect.any(Blob));
+    expect(uploadAsset).toHaveBeenCalledWith(PROJECT, model.sha256, expect.any(Blob), "mesh");
     expect(actions.saveProject).toHaveBeenCalledWith(PROJECT, document, UPDATED_AT);
-    expect(uploadMesh.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(uploadAsset.mock.invocationCallOrder[0]).toBeLessThan(
       actions.saveProject.mock.invocationCallOrder[0] as number,
     );
     expect(actions.deleteProject).not.toHaveBeenCalled();
@@ -123,7 +165,7 @@ describe("importArchive", () => {
   });
 
   it("deletes the project when an upload fails", async () => {
-    uploadMesh.mockResolvedValue({ error: "The model couldn't be uploaded." });
+    uploadAsset.mockResolvedValue({ error: "The model couldn't be uploaded." });
     expect(await importArchive(archive, "a.zip", null, LIMITS)).toEqual({
       error: "The model couldn't be uploaded.",
     });
@@ -177,7 +219,7 @@ describe("readArchive", () => {
     ).toEqual({
       projectId: PROJECT,
     });
-    expect(uploadMesh).toHaveBeenCalledTimes(1);
-    expect(uploadMesh).toHaveBeenCalledWith(PROJECT, smallSha, expect.any(Blob));
+    expect(uploadAsset).toHaveBeenCalledTimes(1);
+    expect(uploadAsset).toHaveBeenCalledWith(PROJECT, smallSha, expect.any(Blob), "mesh");
   });
 });

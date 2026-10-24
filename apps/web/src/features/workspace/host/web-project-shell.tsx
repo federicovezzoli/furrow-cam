@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_FONT_BYTES } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { LanguagePicker } from "@furrow/ui/components/language-picker";
 import { ThemeToggle } from "@furrow/ui/components/theme-toggle";
@@ -8,6 +9,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { useLeaveNavigate } from "@furrow/workspace/hooks/use-autosave";
 import {
+  type AssetStore,
   leavesProject,
   type WorkspaceDestination,
   type WorkspaceHost,
@@ -21,8 +23,9 @@ import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { useMemo, useRef } from "react";
 import { useTranslations } from "use-intl";
-import { cacheMesh, loadMesh } from "@/features/assets/lib/mesh-cache";
-import { discardUpload, uploadMesh } from "@/features/assets/lib/meshes";
+import type { AssetKind } from "@/features/assets/actions";
+import { cacheAsset, loadAsset } from "@/features/assets/lib/asset-cache";
+import { discardUpload, uploadAsset } from "@/features/assets/lib/assets";
 import type { MeshLimits } from "@/features/assets/server";
 import type { MachineChoice } from "@/features/machines/server";
 import { finishTour } from "@/features/onboarding/actions";
@@ -107,15 +110,8 @@ function WebHost({
   // Kept per project, so a refresh that brings the library again restarts nothing.
   const services = useMemo(
     () => ({
-      meshes: {
-        put: async (sha256: string, file: Blob) => {
-          const upload = await uploadMesh(id, sha256, file);
-          if (upload.error === undefined) await cacheMesh(sha256, file);
-          return upload;
-        },
-        get: (sha256: string) => loadMesh(id, sha256),
-        discard: (sha256: string) => discardUpload(id, sha256),
-      },
+      meshes: projectAssets(id, "mesh"),
+      fonts: projectAssets(id, "font"),
       versions: {
         list: () => getVersions(id),
         create: (label: string, savedAt: Date) => createVersion(id, label, savedAt),
@@ -176,7 +172,8 @@ function WebHost({
         },
       },
       navigation: { Link: WebLink },
-      limits: { meshes: meshLimits },
+      // Both need the asset storage, which `meshLimits` is `null` without.
+      limits: { meshes: meshLimits, fonts: meshLimits && { maxBytes: MAX_FONT_BYTES } },
     };
   }, [
     id,
@@ -247,4 +244,17 @@ function UnreadableProject({ name, error }: { name: string; error: Translatable 
       </main>
     </>
   );
+}
+
+/** Project `id`'s `kind` files in the asset storage, cached in the browser (ADR-0029, ADR-0062). */
+function projectAssets(id: string, kind: AssetKind): AssetStore {
+  return {
+    put: async (sha256, file) => {
+      const upload = await uploadAsset(id, sha256, file, kind);
+      if (upload.error === undefined) await cacheAsset(sha256, file);
+      return upload;
+    },
+    get: (sha256) => loadAsset(id, sha256),
+    discard: (sha256) => discardUpload(id, sha256),
+  };
 }

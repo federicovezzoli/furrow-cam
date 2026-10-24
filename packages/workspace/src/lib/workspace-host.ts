@@ -26,6 +26,22 @@ export type ToolFormErrors = Partial<Record<keyof Tool | "form", Translatable>>;
 /** The STL files a project may hold (PRD-0005 S1). */
 export type MeshLimits = { maxBytes: number; maxTriangles: number };
 
+/** The font files a project may hold (ADR-0062). */
+export type FontLimits = { maxBytes: number };
+
+/** A project's files of one kind, by SHA-256 (ADR-0029, ADR-0062). */
+export type AssetStore = {
+  /** Stores `file`; `uploaded` is `false` when the project already had it. */
+  put(
+    sha256: string,
+    file: Blob,
+  ): Promise<{ uploaded: boolean; error?: never } | { error: Translatable }>;
+  /** The file's bytes; throws an `Error` for the user if it can't be read. */
+  get(sha256: string): Promise<ArrayBuffer>;
+  /** Drops a stored file that an import or upload then didn't use; never fails. */
+  discard(sha256: string): Promise<void>;
+};
+
 /** A saved version of the project, without its document; `error` says why it can't be restored. */
 export type VersionRow = {
   id: string;
@@ -103,17 +119,9 @@ export type WorkspaceHost = {
     save(document: ProjectDocument, savedAt: Date): Promise<SaveResult>;
   };
   /** The project's STL files, by SHA-256 (ADR-0029). */
-  meshes: {
-    /** Stores `file`; `uploaded` is `false` when the project already had it. */
-    put(
-      sha256: string,
-      file: Blob,
-    ): Promise<{ uploaded: boolean; error?: never } | { error: Translatable }>;
-    /** The file's bytes; throws an `Error` for the user if it can't be read. */
-    get(sha256: string): Promise<ArrayBuffer>;
-    /** Drops a stored file that an import then didn't use; never fails. */
-    discard(sha256: string): Promise<void>;
-  };
+  meshes: AssetStore;
+  /** The project's uploaded font files, by SHA-256 (ADR-0062). */
+  fonts: AssetStore;
   /** The project's named versions (ADR-0028), or `null` where there are none. */
   versions: {
     list(): Promise<VersionsResult>;
@@ -163,5 +171,7 @@ export type WorkspaceHost = {
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
     meshes: MeshLimits | null;
+    /** The fonts the project may hold, or `null` when nothing can store them. */
+    fonts: FontLimits | null;
   };
 };

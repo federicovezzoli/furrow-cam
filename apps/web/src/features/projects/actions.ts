@@ -2,6 +2,8 @@
 
 import {
   createProjectDocument,
+  documentAssetHashes,
+  MAX_FONT_BYTES,
   type Machine,
   ProjectDocument,
   projectNameFromFileName,
@@ -110,7 +112,7 @@ async function prepareImport(
   const parsed = parseProjectFile(contents);
   if (parsed.error !== undefined) return { error: parsed.error };
   let document = parsed.document;
-  if (!archive && document.models.length > 0) {
+  if (!archive && (document.models.length > 0 || document.fonts.length > 0)) {
     return { error: { key: "Projects.modelsNeedZip" } };
   }
   if (document.machine === null && machineId !== null) {
@@ -187,9 +189,10 @@ export type ArchiveImportResult =
 /**
  * Starts importing a `.furrow.zip` export (ADR-0029): `documentFile` is its
  * document (a file, so it is sent as is rather than escaped into JSON),
- * `meshes` the hashes and sizes of the mesh files the browser found in it,
- * and `fileName` the zip's name. The document is prepared as by
- * `importProject`, and every model must have its mesh. The project is created
+ * `files` the hashes and sizes of the mesh and font files the browser found
+ * in it, and `fileName` the zip's name. The document is prepared as by
+ * `importProject`, and every model must have its mesh and every font its file
+ * (ADR-0029, ADR-0062). The project is created
  * with an empty document; the browser then uploads the meshes and saves the
  * returned document with `saveProject`, or deletes the project if a step
  * fails.
@@ -197,7 +200,7 @@ export type ArchiveImportResult =
 export async function startArchiveImport(
   documentFile: File,
   fileName: string,
-  meshes: { sha256: string; size: number }[],
+  files: { sha256: string; size: number }[],
   machineId: string | null,
   projectName?: string,
 ): Promise<ArchiveImportResult> {
@@ -217,23 +220,30 @@ export async function startArchiveImport(
   if (!("document" in prepared)) return prepared;
   const { document, name } = prepared;
   const sizes = new Map(
-    Array.isArray(meshes) ? meshes.map(({ sha256, size }) => [sha256, size]) : [],
+    Array.isArray(files) ? files.map(({ sha256, size }) => [sha256, size]) : [],
   );
-  for (const model of document.models) {
-    const size = sizes.get(model.sha256);
+  const needed: { sha256: string; fileName: string; max: number; expected?: number }[] = [
+    ...document.models.map(({ sha256, fileName }) => ({ sha256, fileName, max: MAX_MESH_BYTES })),
+    ...document.fonts.map(({ sha256, fileName, size }) => ({
+      sha256,
+      fileName,
+      max: MAX_FONT_BYTES,
+      // A font must be the size the document gives it, which saving checks (`missingAssets`).
+      expected: size,
+    })),
+  ];
+  for (const { sha256, fileName, max, expected } of needed) {
+    const size = sizes.get(sha256);
     if (size === undefined) {
-      return { error: { key: "Projects.meshOfMissing", values: { file: model.fileName } } };
+      return { error: { key: "Projects.meshOfMissing", values: { file: fileName } } };
     }
-    if (typeof size !== "number" || size > MAX_MESH_BYTES) {
+    if (typeof size !== "number" || size > max) {
       return {
-        error: {
-          key: "Projects.meshTooLarge",
-          values: {
-            file: model.fileName,
-            mb: MAX_MESH_BYTES / 1_000_000,
-          },
-        },
+        error: { key: "Projects.meshTooLarge", values: { file: fileName, mb: max / 1_000_000 } },
       };
+    }
+    if (expected !== undefined && size !== expected) {
+      return { error: { key: "Projects.fileSizeMismatch", values: { file: fileName } } };
     }
   }
 
@@ -241,7 +251,7 @@ export async function startArchiveImport(
     data: {
       userId,
       name,
-      // Meshes it references are uploaded first: saving checks that they are (ADR-0029).
+      // Meshes and fonts it references are uploaded first: saving checks that they are (ADR-0029).
       ...documentColumns({ ...createProjectDocument(), machine: document.machine }),
     },
     select: { id: true, updatedAt: true },
@@ -327,13 +337,15 @@ export async function saveProject(
       retryable: true,
     };
   }
-  const meshes = parsed.data.models.map(({ sha256 }) => sha256);
+  const assets = documentAssetHashes(parsed.data);
+  // Each font's file must be the size the document gives it, which the schema keeps within the font limit.
+  const fontSizes = new Map(parsed.data.fonts.map(({ sha256, size }) => [sha256, size]));
 
   try {
     return await db.$transaction(async (tx) => {
-      // Locked so a mesh can't be discarded between the check and the write (`discardMesh`).
+      // Locked so a file can't be discarded between the check and the write (`discardAsset`).
       await lockProject(tx, projectId);
-      if ((await missingAssets(userId, projectId, meshes, tx)).length > 0) {
+      if ((await missingAssets(userId, projectId, assets, tx, fontSizes)).length > 0) {
         return {
           error: { key: "Projects.saveFailed", values: { reason: meshMissing } },
           retryable: true,
@@ -542,10 +554,10 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
     truncate(version.project.name, PROJECT_NAME_MAX - suffix.length).trimEnd() + suffix,
   );
 
-  const meshes = [...new Set(parsed.document.models.map(({ sha256 }) => sha256))];
-  if (meshes.length > 0) {
+  const assets = documentAssetHashes(parsed.document);
+  if (assets.length > 0) {
     if (!isStorageConfigured()) return { error: { key: "Projects.versionNoModelStorage" } };
-    if ((await missingAssets(userId, version.project.id, meshes)).length > 0) {
+    if ((await missingAssets(userId, version.project.id, assets)).length > 0) {
       return {
         error: { key: "Projects.versionCantOpen", values: { reason: meshMissing } },
       };
@@ -561,17 +573,17 @@ export async function openVersionAsProject(id: string, dateLabel: string): Promi
     select: { id: true },
   });
   // Projects never share objects (ADR-0029): the new one gets copies.
-  const error = await copyMeshes(userId, version.project.id, projectId, meshes);
+  const error = await copyProjectAssets(userId, version.project.id, projectId, assets);
   if (error) return { error };
   revalidatePath("/projects");
   redirect(`/projects/${projectId}`);
 }
 
 /**
- * Copies the meshes `sha256s` of project `from` to the new project `to`. If
+ * Copies the files `sha256s` of project `from` to the new project `to`. If
  * that fails, `to` is deleted with its objects and an error comes back.
  */
-async function copyMeshes(
+async function copyProjectAssets(
   userId: string,
   from: string,
   to: string,
@@ -580,7 +592,7 @@ async function copyMeshes(
   try {
     await copyAssets(userId, from, to, sha256s);
   } catch (error) {
-    console.error(`Couldn't copy the meshes of project ${from}`, error);
+    console.error(`Couldn't copy the files of project ${from}`, error);
     await db.project.deleteMany({ where: { id: to, userId } });
     await deleteProjectObjects(userId, to);
     return { key: "Projects.copyFailed" };

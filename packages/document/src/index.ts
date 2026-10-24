@@ -1,6 +1,7 @@
 export * from "./archive";
 export * from "./document";
 export * from "./file";
+export * from "./font";
 export * from "./geometry";
 export * from "./machine";
 export * from "./machine-presets";

@@ -1,5 +1,5 @@
 import { createProjectDocument, type Machine, type ProjectDocument } from "@furrow/document";
-import { lowRider, machine, model } from "@furrow/document/fixtures";
+import { lowRider, machine, model, uploadedFont } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const USER = "user-1";
@@ -249,6 +249,28 @@ describe("startArchiveImport", () => {
       error: { key: "Projects.meshTooLarge", values: { file: "emblem.stl", mb: 50 } },
     });
     expect(mocks.created).toHaveLength(0);
+  });
+
+  it("checks each font against the font limit, and that the file has it", async () => {
+    const withFont = { ...createProjectDocument(), fonts: [uploadedFont] };
+    const file = documentFile(withFont);
+    expect(await startArchiveImport(file, "a.zip", [], null)).toEqual({
+      error: { key: "Projects.meshOfMissing", values: { file: "Sign Painter.ttf" } },
+    });
+    const large = [{ sha256: uploadedFont.sha256, size: 5_000_001 }];
+    expect(await startArchiveImport(documentFile(withFont), "a.zip", large, null)).toEqual({
+      error: { key: "Projects.meshTooLarge", values: { file: "Sign Painter.ttf", mb: 5 } },
+    });
+    // A file of another size than the document gives the font is refused before anything is made.
+    const other = [{ sha256: uploadedFont.sha256, size: 4 }];
+    expect(await startArchiveImport(documentFile(withFont), "a.zip", other, null)).toEqual({
+      error: { key: "Projects.fileSizeMismatch", values: { file: "Sign Painter.ttf" } },
+    });
+    expect(mocks.created).toHaveLength(0);
+    const fits = [{ sha256: uploadedFont.sha256, size: uploadedFont.size }];
+    expect(await startArchiveImport(documentFile(withFont), "a.zip", fits, null)).toHaveProperty(
+      "projectId",
+    );
   });
 
   it("refuses when this server can't store meshes", async () => {

@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import type { VersionRow, WorkspaceHost } from "./workspace-host";
+import type { AssetStore, VersionRow, WorkspaceHost } from "./workspace-host";
 
 /** A version kept by `createMemoryHost`, with its document. */
 type StoredVersion = VersionRow & { document: WorkspaceHost["project"]["document"] };
@@ -20,12 +20,14 @@ export function createMemoryHost(
   stored: {
     document: () => WorkspaceHost["project"]["document"];
     meshes: Map<string, ArrayBuffer>;
+    fonts: Map<string, ArrayBuffer>;
     versions: () => StoredVersion[];
   };
 } {
   let document = project.document;
   let savedAt = project.savedAt ?? new Date(0);
   const meshes = new Map<string, ArrayBuffer>();
+  const fonts = new Map<string, ArrayBuffer>();
   let versions: StoredVersion[] = [];
   let nextId = 1;
 
@@ -49,21 +51,8 @@ export function createMemoryHost(
       },
       ...project,
     },
-    meshes: {
-      put: async (sha256, file) => {
-        if (meshes.has(sha256)) return { uploaded: false };
-        meshes.set(sha256, await file.arrayBuffer());
-        return { uploaded: true };
-      },
-      get: async (sha256) => {
-        const bytes = meshes.get(sha256);
-        if (!bytes) throw new Error("This model is missing.");
-        return bytes;
-      },
-      discard: async (sha256) => {
-        meshes.delete(sha256);
-      },
-    },
+    meshes: memoryAssets(meshes, "This model is missing."),
+    fonts: memoryAssets(fonts, "This font is missing."),
     versions: {
       list: async () => ({ versions: rows() }),
       create: async (label, at) => {
@@ -108,8 +97,27 @@ export function createMemoryHost(
     },
     app: { name: "memory", version: "0.0.0" },
     navigation: { Link: ({ to: _, ...props }) => createElement("a", props) },
-    limits: { meshes: null },
+    limits: { meshes: null, fonts: null },
     ...overrides,
-    stored: { document: () => document, meshes, versions: () => versions },
+    stored: { document: () => document, meshes, fonts, versions: () => versions },
+  };
+}
+
+/** An asset store over `files`; `missing` is why `get` fails. */
+function memoryAssets(files: Map<string, ArrayBuffer>, missing: string): AssetStore {
+  return {
+    put: async (sha256, file) => {
+      if (files.has(sha256)) return { uploaded: false };
+      files.set(sha256, await file.arrayBuffer());
+      return { uploaded: true };
+    },
+    get: async (sha256) => {
+      const bytes = files.get(sha256);
+      if (!bytes) throw new Error(missing);
+      return bytes;
+    },
+    discard: async (sha256) => {
+      files.delete(sha256);
+    },
   };
 }

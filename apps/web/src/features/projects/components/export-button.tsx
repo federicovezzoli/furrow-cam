@@ -7,7 +7,7 @@ import { exportProjectFile } from "@furrow/workspace/lib/export-project";
 import { DownloadIcon } from "lucide-react";
 import { useTransition } from "react";
 import { useTranslations } from "use-intl";
-import { loadMesh } from "@/features/assets/lib/mesh-cache";
+import { loadAsset } from "@/features/assets/lib/asset-cache";
 import { loadProject } from "@/features/projects/actions";
 
 /**
@@ -36,7 +36,9 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       }
       const { document, name: projectName } = result.project;
       try {
-        await exportProjectFile(document, projectName, (sha256) => loadMesh(id, sha256));
+        // A hash names one file: both kinds load the same way.
+        const store = { get: (sha256: string) => loadAsset(id, sha256) };
+        await exportProjectFile(document, projectName, { meshes: store, fonts: store });
       } catch (error) {
         // A mesh that couldn't be downloaded says why.
         void alert(errorText(t, error, t("Shell.exportFailed")));

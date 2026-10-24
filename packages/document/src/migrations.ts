@@ -210,6 +210,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #352: uploaded fonts (ADR-0062). Existing projects have none.
+  21: (doc) => {
+    doc.fonts ??= [];
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

@@ -713,6 +713,7 @@ describe("generateToolpath", () => {
     drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
     geometry: [square, hole],
     models: [],
+    fonts: [],
     operations: [
       {
         id: "11111111-2222-4333-8444-555555555555",

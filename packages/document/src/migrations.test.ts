@@ -193,6 +193,11 @@ describe("migrations", () => {
     expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);
   });
 
+  it("gives v21 documents no fonts", () => {
+    const { fonts: _, ...v21 } = { ...fullDocument(), schemaVersion: 21 };
+    expect(parseProjectDocument(v21)).toEqual(fullDocument());
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());
