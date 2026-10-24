@@ -1,4 +1,4 @@
-import { textPaths } from "@furrow/cam-core";
+import { type Font, parseFont, textPaths } from "@furrow/cam-core";
 import { loadFont } from "../lib/fonts";
 import type { TextLayoutRequest, TextLayoutResponse } from "../lib/text-layout";
 
@@ -8,9 +8,20 @@ const scope = self as unknown as {
   postMessage: (response: TextLayoutResponse) => void;
 };
 
-/** Lays text items out (`layoutText`), loading each bundled font once. */
-scope.onmessage = async ({ data: { id, settings } }) => {
-  const font = loadFont(settings.font);
+/** The project's uploaded fonts this worker was sent, parsed, by hash (ADR-0062). */
+const uploaded = new Map<string, Font>();
+
+/** Lays text items out (`layoutText`), loading each bundled font once and keeping uploaded ones. */
+scope.onmessage = async ({ data: { id, settings, font: file } }) => {
+  if (file) {
+    try {
+      uploaded.set(settings.font, parseFont(file.bytes, file.singleStroke));
+    } catch {
+      scope.postMessage({ id, error: { code: "workspace.fontUnreadable" } });
+      return;
+    }
+  }
+  const font = uploaded.get(settings.font) ?? loadFont(settings.font);
   if (!font) {
     scope.postMessage({
       id,

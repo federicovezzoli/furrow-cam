@@ -3,6 +3,7 @@ import { createProjectDocument, type Path, type ProjectDocument } from "@furrow/
 import { fullDocument, TEXT_ID, textItem, textShape } from "@furrow/document/fixtures";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import arvo from "../fonts/Arvo-Regular.ttf?inline";
 import { createMemoryHost } from "../lib/memory-host";
 import type { TextLayoutRequest } from "../lib/text-layout";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
@@ -45,13 +46,16 @@ function Stores() {
   return null;
 }
 
-function render(ui: React.ReactElement, document: ProjectDocument) {
+function render(ui: React.ReactElement, document: ProjectDocument, fonts = false) {
   return renderWorkspace(
     <>
       <Stores />
       {ui}
     </>,
-    createMemoryHost({ document }),
+    createMemoryHost(
+      { document },
+      { limits: { meshes: null, fonts: fonts ? { maxBytes: 5_000_000 } : null } },
+    ),
   );
 }
 
@@ -184,6 +188,23 @@ describe("TextProperties", () => {
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
     expect(text()?.text).toBe("I");
     expect(field.value).toBe("∅");
+  });
+
+  it("uploads a font, single-stroke if ticked, and sets the text in it", async () => {
+    const { container } = render(<DrawingProperties drawingId={TEXT_ID} />, withText(), true);
+    fireEvent.click(screen.getByLabelText("Single-stroke (for engraving)"));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File([await (await fetch(arvo)).arrayBuffer()], "Arvo-Regular.ttf");
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+    await waitFor(() => expect(text()?.font).toBe(current().fonts[0]?.sha256));
+    expect(current().fonts[0]).toMatchObject({ name: "Arvo", singleStroke: true });
+    const uploaded = screen.getByRole("group", { name: "Uploaded" });
+    expect(uploaded.textContent).toBe("Arvo");
+  });
+
+  it("offers no upload where the host can't store fonts", () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    expect(screen.queryByRole("button", { name: "Upload font…" })).toBeNull();
   });
 
   it("puts blank text back, and refuses text the font has nothing for", async () => {

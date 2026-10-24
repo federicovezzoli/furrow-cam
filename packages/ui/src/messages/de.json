@@ -723,7 +723,12 @@
       "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe.",
       "textNoOutlines": "Keines dieser Zeichen ist in der Schrift, also gibt es nichts zu fräsen.",
       "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
-      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut."
+      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut.",
+      "fontUnavailable": "Diese Schrift konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+      "fontUnreadable": "Diese Datei ist keine lesbare Schrift: Verwende eine TTF-, OTF- oder WOFF-Datei.",
+      "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
+      "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",
+      "fontUploadOff": "Dieser Server kann keine Schriften speichern."
     }
   },
   "Operation": {
@@ -1251,7 +1256,11 @@
     "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
     "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}.",
     "convert": "In Zeichnung umwandeln",
-    "convertTitle": "Die Buchstaben als Zeichnung behalten, von denselben Operationen bearbeitet; sie lässt sich nicht mehr als Text bearbeiten"
+    "convertTitle": "Die Buchstaben als Zeichnung behalten, von denselben Operationen bearbeitet; sie lässt sich nicht mehr als Text bearbeiten",
+    "included": "Enthalten",
+    "uploaded": "Hochgeladen",
+    "upload": "Schrift hochladen…",
+    "singleStroke": "Einstrich (zum Gravieren)"
   },
   "Import": {
     "units": {
