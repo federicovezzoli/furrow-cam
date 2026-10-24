@@ -175,6 +175,17 @@ describe("TextProperties", () => {
     expect(current().geometry.at(-1)?.paths[0]?.segments[0]?.to).toEqual([60, 10]);
   });
 
+  it("doesn't convert when the edit it waits for is refused, keeping what was typed", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "∅" } });
+    fireEvent.blur(field);
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
+    expect(text()?.text).toBe("I");
+    expect(field.value).toBe("∅");
+  });
+
   it("puts blank text back, and refuses text the font has nothing for", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
     const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });

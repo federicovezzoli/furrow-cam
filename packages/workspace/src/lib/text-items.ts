@@ -1,6 +1,7 @@
 import type { Message, TextSettings } from "@furrow/document";
 import type { DocumentStore } from "../stores/document-store";
-import { addTextItem, setTextItem } from "../stores/geometry-actions";
+import { addTextItem, convertTextToDrawing, setTextItem } from "../stores/geometry-actions";
+import type { ActionResult } from "../stores/operation-actions";
 import { layoutText, TEXT_LAYOUT_FAILED, TextLayoutError } from "./text-layout";
 
 /** `layoutText`, with why it failed as a result. */
@@ -59,10 +60,29 @@ export function editText(store: DocumentStore, id: string, edits: Edits): Promis
   });
 }
 
-/** Resolves once text item `id` has no edits waiting or being laid out. */
-export function textSettled(id: string): Promise<void> {
+/**
+ * Resolves once text item `id` has no edits waiting or being laid out, with
+ * how the last went, or `null` if none was.
+ */
+export function textSettled(id: string): Promise<EditResult | null> {
   const queue = queues.get(id);
-  return queue ? new Promise((resolve) => queue.waiting.push(() => resolve())) : Promise.resolve();
+  return queue ? new Promise((resolve) => queue.waiting.push(resolve)) : Promise.resolve(null);
+}
+
+/**
+ * Turns text item `id` into a drawing (PRD-0010 T8, `convertTextToDrawing`)
+ * once its pending edits have landed, e.g. the one leaving the text field to
+ * click *Convert* starts. Refuses, converting nothing, if that edit was
+ * refused, so what was typed isn't lost. An undo step left open by a scrub
+ * is closed first, so the conversion is one of its own.
+ */
+export async function convertText(store: DocumentStore, id: string): Promise<ActionResult> {
+  const pending = await textSettled(id);
+  if (pending && !pending.ok) return pending;
+  const state = store.getState();
+  if (state.inTransaction) state.commitTransaction();
+  convertTextToDrawing(store, id);
+  return { ok: true };
 }
 
 async function run(store: DocumentStore, id: string, queue: Queue) {

@@ -3,7 +3,7 @@ import { fullDocument, TEXT_ID, textItem, textShape } from "@furrow/document/fix
 import { describe, expect, it, vi } from "vitest";
 import { createDocumentStore } from "../stores/document-store";
 import { moveDrawing } from "../stores/geometry-actions";
-import { editText } from "./text-items";
+import { convertText, editText } from "./text-items";
 import type { TextLayoutRequest } from "./text-layout";
 
 /** Every request the text worker got. */
@@ -68,5 +68,18 @@ describe("editText", () => {
     const { drawings, geometry } = store.getState().document;
     expect(drawings.at(-1)?.text).toMatchObject({ text: "II", placement: { position: [15, 10] } });
     expect(geometry.at(-1)?.paths[0]?.start).toEqual([15, 10]);
+  });
+});
+
+describe("convertText", () => {
+  it("closes an undo step a scrub left open, so converting is one of its own", async () => {
+    const store = textStore();
+    store.getState().beginTransaction();
+    expect(await editText(store, TEXT_ID, { height: 12 })).toEqual({ ok: true, removedTabs: 0 });
+    expect(await convertText(store, TEXT_ID)).toEqual({ ok: true });
+    expect(store.getState().inTransaction).toBe(false);
+    expect(store.getState().document.drawings.at(-1)?.text).toBeUndefined();
+    store.getState().undo();
+    expect(store.getState().document.drawings.at(-1)?.text?.height).toBe(12);
   });
 });

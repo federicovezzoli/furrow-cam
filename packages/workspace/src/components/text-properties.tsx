@@ -12,13 +12,13 @@ import { ShapesIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 import { FONTS } from "../lib/fonts";
-import { editText, textSettled } from "../lib/text-items";
+import { convertText, editText, textSettled } from "../lib/text-items";
 import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { convertTextToDrawing, drawingShapes } from "../stores/geometry-actions";
+import { drawingShapes } from "../stores/geometry-actions";
 import { Row } from "./operation-properties";
 
 /** Keeps the height positive when stepping down. */
@@ -168,9 +168,8 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
           variant="outline"
           size="compact"
           onClick={async () => {
-            // Leaving the text field to click here starts an edit: let it land first.
-            await textSettled(drawingId);
-            convertTextToDrawing(store, drawingId);
+            const result = await convertText(store, drawingId);
+            if (!result.ok) setError(result.error);
           }}
           title={t("convertTitle")}
         >
