@@ -37,38 +37,32 @@ export async function readArchive(file: File, limits: StlLimits): Promise<Projec
 }
 
 /**
- * The meshes of `archive` its document's models use: those only its versions
- * use are left out, as the versions are (ADR-0047). A document that can't be
- * read keeps them all, for the server to explain.
+ * The meshes and fonts of `archive` its document uses (ADR-0029, ADR-0062):
+ * those only its versions use are left out, as the versions are (ADR-0047).
+ * A document that can't be read keeps them all, for the server to explain.
  */
-export function documentMeshes(archive: ProjectArchive): Map<string, Uint8Array> {
-  return documentFiles(archive, "models", archive.meshes);
-}
-
-/** The fonts of `archive` its document lists (ADR-0062), as `documentMeshes`. */
-export function documentFonts(archive: ProjectArchive): Map<string, Uint8Array> {
-  return documentFiles(archive, "fonts", archive.fonts);
-}
-
-/** The `files` of `archive` its document's `list` names by hash; all of them if it can't be read. */
-function documentFiles(
-  archive: ProjectArchive,
-  list: "models" | "fonts",
-  files: Map<string, Uint8Array>,
-): Map<string, Uint8Array> {
-  let entries: unknown;
+export function documentAssets(archive: ProjectArchive): {
+  meshes: Map<string, Uint8Array>;
+  fonts: Map<string, Uint8Array>;
+} {
+  let document: Record<string, unknown> | null = null;
   try {
-    entries = (JSON.parse(archive.contents) as Record<string, unknown> | null)?.[list];
+    document = JSON.parse(archive.contents) as Record<string, unknown> | null;
   } catch {
-    return files;
+    // Kept whole below.
   }
-  if (!Array.isArray(entries)) return files;
-  const used = new Set(
-    entries.map((entry: unknown) =>
-      typeof entry === "object" && entry !== null && "sha256" in entry ? entry.sha256 : null,
-    ),
-  );
-  return new Map([...files].filter(([sha256]) => used.has(sha256)));
+  /** `files` that the document's `list` names by hash; all of them if it can't be read. */
+  const used = (list: "models" | "fonts", files: Map<string, Uint8Array>) => {
+    const entries = document?.[list];
+    if (!Array.isArray(entries)) return files;
+    const hashes = new Set(
+      entries.map((entry: unknown) =>
+        typeof entry === "object" && entry !== null && "sha256" in entry ? entry.sha256 : null,
+      ),
+    );
+    return new Map([...files].filter(([sha256]) => hashes.has(sha256)));
+  };
+  return { meshes: used("models", archive.meshes), fonts: used("fonts", archive.fonts) };
 }
 
 /** What `importArchive` returns: the new project, or an error. */
@@ -91,7 +85,7 @@ export async function importArchive(
   limits: StlLimits,
   projectName?: string,
 ): Promise<ArchiveImport> {
-  const meshes = documentMeshes(archive);
+  const { meshes, fonts } = documentAssets(archive);
   for (const [sha256, bytes] of meshes) {
     if (bytes.byteLength > limits.maxBytes) {
       return {
@@ -113,7 +107,6 @@ export async function importArchive(
     }
   }
 
-  const fonts = documentFonts(archive);
   for (const bytes of fonts.values()) {
     try {
       parseFont(bytes);

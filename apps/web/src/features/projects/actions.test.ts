@@ -261,7 +261,13 @@ describe("startArchiveImport", () => {
     expect(await startArchiveImport(documentFile(withFont), "a.zip", large, null)).toEqual({
       error: { key: "Projects.meshTooLarge", values: { file: "Sign Painter.ttf", mb: 5 } },
     });
-    const fits = [{ sha256: uploadedFont.sha256, size: 5_000_000 }];
+    // A file of another size than the document gives the font is refused before anything is made.
+    const other = [{ sha256: uploadedFont.sha256, size: 4 }];
+    expect(await startArchiveImport(documentFile(withFont), "a.zip", other, null)).toEqual({
+      error: { key: "Projects.fileSizeMismatch", values: { file: "Sign Painter.ttf" } },
+    });
+    expect(mocks.created).toHaveLength(0);
+    const fits = [{ sha256: uploadedFont.sha256, size: uploadedFont.size }];
     expect(await startArchiveImport(documentFile(withFont), "a.zip", fits, null)).toHaveProperty(
       "projectId",
     );

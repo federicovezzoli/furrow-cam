@@ -7,7 +7,7 @@ import {
 } from "@furrow/document";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { MeshImportError, parseMesh } from "@furrow/workspace/lib/model-import";
-import { documentFonts, documentMeshes, readArchive } from "@/features/projects/lib/archive-import";
+import { documentAssets, readArchive } from "@/features/projects/lib/archive-import";
 import { clientTranslator } from "@/lib/client-translator";
 import {
   createGuestProject,
@@ -56,8 +56,9 @@ export function guestProjectName(fileName: string): string {
 export async function importGuestProject(file: File): Promise<GuestProject> {
   const archive = isArchive(file) ? await readArchive(file, DEFAULT_STL_LIMITS) : null;
   const document = parseGuestProjectFile(archive?.contents ?? (await file.text()));
-  const meshes = archive ? documentMeshes(archive) : new Map<string, Uint8Array>();
-  const fonts = archive ? documentFonts(archive) : new Map<string, Uint8Array>();
+  const { meshes, fonts } = archive
+    ? documentAssets(archive)
+    : { meshes: new Map<string, Uint8Array>(), fonts: new Map<string, Uint8Array>() };
   for (const font of document.fonts) {
     const bytes = fonts.get(font.sha256);
     if (!bytes) {
@@ -67,6 +68,9 @@ export async function importGuestProject(file: File): Promise<GuestProject> {
           ? t("Projects.meshOfMissing", { file: font.fileName })
           : t("Projects.modelsNeedZip"),
       );
+    }
+    if (bytes.byteLength !== font.size) {
+      throw new Error(clientTranslator()("Projects.fileSizeMismatch", { file: font.fileName }));
     }
     try {
       parseFont(bytes);

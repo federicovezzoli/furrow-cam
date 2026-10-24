@@ -24,8 +24,12 @@ export const ARCHIVE_DOCUMENT_PATH = "project.furrow.json";
 /** The most meshes an archive may hold, counting those only its versions use. */
 export const MAX_ARCHIVE_MESHES = 4;
 
-/** The most fonts an archive may hold, counting those only its versions use (ADR-0062). */
-export const MAX_ARCHIVE_FONTS = MAX_PROJECT_FONTS;
+/**
+ * The most fonts an archive may hold, counting those only its versions list
+ * (ADR-0062): more than a project holds at once, so a project whose versions
+ * used other fonts still saves.
+ */
+export const MAX_ARCHIVE_FONTS = 4 * MAX_PROJECT_FONTS;
 
 /** The most versions an archive may hold, as a project keeps (ADR-0028). */
 export const MAX_ARCHIVE_VERSIONS = 50;

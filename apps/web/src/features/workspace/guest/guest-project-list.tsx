@@ -113,9 +113,10 @@ export function GuestProjectList({
     run(async () => {
       const stored = await getGuestProject(project.id);
       if (!stored) throw new Error(t("projectNotFound"));
-      await exportProjectFile(stored.document, stored.name, (sha256, kind) =>
-        getGuestAsset(project.id, sha256, kind),
-      );
+      await exportProjectFile(stored.document, stored.name, {
+        meshes: { get: (sha256) => getGuestAsset(project.id, sha256) },
+        fonts: { get: (sha256) => getGuestAsset(project.id, sha256, "font") },
+      });
     });
   }
 

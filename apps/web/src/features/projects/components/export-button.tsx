@@ -36,7 +36,9 @@ export function ExportButton({ id, name }: { id: string; name: string }) {
       }
       const { document, name: projectName } = result.project;
       try {
-        await exportProjectFile(document, projectName, (sha256) => loadAsset(id, sha256));
+        // A hash names one file: both kinds load the same way.
+        const store = { get: (sha256: string) => loadAsset(id, sha256) };
+        await exportProjectFile(document, projectName, { meshes: store, fonts: store });
       } catch (error) {
         // A mesh that couldn't be downloaded says why.
         void alert(errorText(t, error, t("Shell.exportFailed")));

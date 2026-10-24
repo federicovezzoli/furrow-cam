@@ -80,7 +80,7 @@ export async function requestAssetUpload(
   const project = await findProject(userId, projectId, sha256);
   if (project.error !== undefined) return { error: project.error };
   if (!Number.isSafeInteger(size) || size <= 0) return { error: { key: "Assets.empty" } };
-  const max = maxBytes(kind === "font" ? "font" : "mesh");
+  const max = maxBytes(kind);
   if (size > max) return { error: { key: "Assets.tooLarge", values: { mb: max / 1_000_000 } } };
 
   const where = { projectId_sha256: { projectId: project.projectId, sha256: project.sha256 } };

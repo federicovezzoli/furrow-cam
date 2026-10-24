@@ -180,6 +180,7 @@
     "modelDamaged": "A model in this file is damaged.",
     "modelCantImport": "A model in this file can't be imported: {reason}",
     "fontCantImport": "A font in this file can't be read.",
+    "fileSizeMismatch": "This file can't be imported: {file} isn't the size the project says it is.",
     "unreadableReason": "it couldn't be read.",
     "loading": "Loading…",
     "loadingProject": "Loading project…"
@@ -264,7 +265,7 @@
     "fileNewer": "This file was saved by a newer release of Furrow CAM. Reload the page to update.",
     "fileCantImport": "This file can't be imported: {reason}",
     "importFailed": "It couldn't be imported. Check your connection and try again.",
-    "noModelStorage": "It has 3D models, which this server can't store.",
+    "noModelStorage": "It has 3D models or uploaded fonts, which this server can't store.",
     "untitledProject": "Untitled project",
     "somethingWrong": "Something went wrong.",
     "createFreeAccount": "Create a free account",
@@ -356,6 +357,7 @@
       "modelsNeedArchive": "This project has 3D models: open its .furrow or .furrow.zip file instead.",
       "fontsNeedArchive": "This project has uploaded fonts: open its .furrow or .furrow.zip file instead.",
       "missingFont": "This project is missing one of its fonts.",
+      "unreadableFont": "One of this project's fonts can't be read.",
       "missingModel": "This project is missing one of its 3D models.",
       "tooNew": "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
       "invalid": "This file isn't a valid Furrow CAM project."

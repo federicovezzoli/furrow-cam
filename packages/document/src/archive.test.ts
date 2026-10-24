@@ -186,13 +186,14 @@ describe("archive fonts", () => {
     const many = zipSync({
       [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(document)),
       ...Object.fromEntries(
-        ["a", "b", "c", "d", "e"].map((c) => [
-          archiveFontPath(c.repeat(64)),
+        // One more than an archive holds.
+        Array.from({ length: 17 }, (_, i) => [
+          archiveFontPath(i.toString(16).padStart(64, "0")),
           fonts.get(sha256) as Uint8Array,
         ]),
       ),
     });
-    expect(await readError(many)).toEqual({ code: "archive.tooManyFonts", values: { max: 4 } });
+    expect(await readError(many)).toEqual({ code: "archive.tooManyFonts", values: { max: 16 } });
   });
 });
 

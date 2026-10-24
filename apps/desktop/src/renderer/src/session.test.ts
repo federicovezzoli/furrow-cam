@@ -3,7 +3,8 @@ import { model, uploadedFont } from "@furrow/document/fixtures";
 import { MAX_VERSIONS } from "@furrow/workspace/lib/versions";
 import type { VersionsResult } from "@furrow/workspace/lib/workspace-host";
 import { describe, expect, it, vi } from "vitest";
-import { type ProjectFile, readProjectFile } from "./project-file";
+import arvo from "../../../../../packages/workspace/src/fonts/Arvo-Regular.ttf?inline";
+import { type ProjectFile, readProjectFile, writeProjectFile } from "./project-file";
 import { createProjectSession } from "./session";
 
 function file(document: ProjectDocument = createProjectDocument()): ProjectFile {
@@ -142,7 +143,8 @@ describe("createProjectSession", () => {
 
   it("keeps uploaded fonts in the file across saving and opening again", async () => {
     const { session } = setup();
-    const bytes = new TextEncoder().encode("font bytes");
+    // A real font: opening the file checks that its fonts parse.
+    const bytes = new Uint8Array(await (await fetch(arvo)).arrayBuffer());
     const sha256 = await sha256Hex(bytes);
     expect(await session.host.fonts.put(sha256, new Blob([bytes]))).toEqual({ uploaded: true });
     const font = { ...uploadedFont, sha256, size: bytes.byteLength };
@@ -226,6 +228,17 @@ describe("createProjectSession", () => {
 });
 
 describe("readProjectFile", () => {
+  it("refuses a file whose font can't be read", async () => {
+    const bytes = new TextEncoder().encode("not a font");
+    const sha256 = await sha256Hex(bytes);
+    const document = {
+      ...createProjectDocument(),
+      fonts: [{ ...uploadedFont, sha256, size: bytes.byteLength }],
+    };
+    const packed = writeProjectFile({ ...file(document), fonts: new Map([[sha256, bytes]]) });
+    await expect(readProjectFile(packed)).rejects.toThrow("can't be read");
+  });
+
   it("opens a .furrow.json document, which can't carry models", async () => {
     const document = createProjectDocument();
     const read = await readProjectFile(new TextEncoder().encode(JSON.stringify(document)));

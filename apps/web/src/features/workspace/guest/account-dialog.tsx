@@ -59,9 +59,7 @@ export function AccountDialog({
   async function saveFile() {
     setExporting(true);
     try {
-      await exportProjectFile(documentStore.getState().document, project.name, (sha256, kind) =>
-        (kind === "font" ? fonts : meshes).get(sha256),
-      );
+      await exportProjectFile(documentStore.getState().document, project.name, { meshes, fonts });
       setError(null);
     } catch (error) {
       setError(errorText(appT, error, t("cantExport")));

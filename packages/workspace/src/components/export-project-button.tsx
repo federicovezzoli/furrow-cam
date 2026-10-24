@@ -31,9 +31,7 @@ export function ExportProjectButton({
     const document = getDocument();
     startTransition(async () => {
       try {
-        await exportProjectFile(document, project.name, (sha256, kind) =>
-          (kind === "font" ? fonts : meshes).get(sha256),
-        );
+        await exportProjectFile(document, project.name, { meshes, fonts });
       } catch (error) {
         // A file that couldn't be read says why.
         void alert(errorText(t, error, t("Shell.exportFailed")));

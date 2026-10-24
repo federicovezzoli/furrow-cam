@@ -222,11 +222,17 @@ export async function startArchiveImport(
   const sizes = new Map(
     Array.isArray(files) ? files.map(({ sha256, size }) => [sha256, size]) : [],
   );
-  const needed = [
+  const needed: { sha256: string; fileName: string; max: number; expected?: number }[] = [
     ...document.models.map(({ sha256, fileName }) => ({ sha256, fileName, max: MAX_MESH_BYTES })),
-    ...document.fonts.map(({ sha256, fileName }) => ({ sha256, fileName, max: MAX_FONT_BYTES })),
+    ...document.fonts.map(({ sha256, fileName, size }) => ({
+      sha256,
+      fileName,
+      max: MAX_FONT_BYTES,
+      // A font must be the size the document gives it, which saving checks (`missingAssets`).
+      expected: size,
+    })),
   ];
-  for (const { sha256, fileName, max } of needed) {
+  for (const { sha256, fileName, max, expected } of needed) {
     const size = sizes.get(sha256);
     if (size === undefined) {
       return { error: { key: "Projects.meshOfMissing", values: { file: fileName } } };
@@ -235,6 +241,9 @@ export async function startArchiveImport(
       return {
         error: { key: "Projects.meshTooLarge", values: { file: fileName, mb: max / 1_000_000 } },
       };
+    }
+    if (expected !== undefined && size !== expected) {
+      return { error: { key: "Projects.fileSizeMismatch", values: { file: fileName } } };
     }
   }
 

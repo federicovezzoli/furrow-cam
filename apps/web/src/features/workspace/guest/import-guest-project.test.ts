@@ -92,6 +92,18 @@ describe("importGuestProject with uploaded fonts", () => {
     );
     expect(new Uint8Array(await storage.getGuestAsset(project.id, sha256, "font"))).toEqual(font);
     await expect(guest.importGuestProject(jsonFile(document))).rejects.toThrow("uploaded fonts");
+    const wrongSize = { ...document, fonts: [{ ...document.fonts[0], size: 3 }] };
+    const wrong = packProjectArchive(
+      wrongSize as typeof document,
+      new Map(),
+      [],
+      new Map([[sha256, font]]),
+    );
+    await expect(
+      guest.importGuestProject(
+        new File([wrong.slice()], "Sign.furrow.zip", { type: "application/zip" }),
+      ),
+    ).rejects.toThrow("isn't the size the project says");
   });
 });
 

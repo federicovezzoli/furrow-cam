@@ -1,4 +1,4 @@
-import { DEFAULT_STL_LIMITS } from "@furrow/cam-core";
+import { DEFAULT_STL_LIMITS, parseFont } from "@furrow/cam-core";
 import {
   type ArchiveVersion,
   missingArchiveFonts,
@@ -58,6 +58,14 @@ export async function readProjectFile(
   }
   if (missingArchiveFonts(document, archive.fonts).length > 0) {
     throw new Error(t("Desktop.ProjectFile.missingFont"));
+  }
+  // As the web app checks imported fonts: one that can't be read would fail wherever text is laid out.
+  for (const bytes of archive.fonts.values()) {
+    try {
+      parseFont(bytes);
+    } catch {
+      throw new Error(t("Desktop.ProjectFile.unreadableFont"));
+    }
   }
   const { meshes, fonts, versions } = archive;
   return { document, meshes, fonts, versions };

@@ -180,6 +180,7 @@
     "modelDamaged": "Ein Modell in dieser Datei ist beschädigt.",
     "modelCantImport": "Ein Modell in dieser Datei kann nicht importiert werden: {reason}",
     "fontCantImport": "Eine Schrift in dieser Datei kann nicht gelesen werden.",
+    "fileSizeMismatch": "Diese Datei kann nicht importiert werden: {file} hat nicht die Größe, die das Projekt angibt.",
     "unreadableReason": "Es konnte nicht gelesen werden.",
     "loading": "Wird geladen…",
     "loadingProject": "Projekt wird geladen…"
@@ -264,7 +265,7 @@
     "fileNewer": "Diese Datei wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die Seite neu, um zu aktualisieren.",
     "fileCantImport": "Diese Datei kann nicht importiert werden: {reason}",
     "importFailed": "Es konnte nicht importiert werden. Prüfe deine Verbindung und versuche es erneut.",
-    "noModelStorage": "Es enthält 3D-Modelle, die dieser Server nicht speichern kann.",
+    "noModelStorage": "Es enthält 3D-Modelle oder hochgeladene Schriften, die dieser Server nicht speichern kann.",
     "untitledProject": "Unbenanntes Projekt",
     "somethingWrong": "Etwas ist schiefgelaufen.",
     "createFreeAccount": "Kostenloses Konto erstellen",
@@ -356,6 +357,7 @@
       "modelsNeedArchive": "Dieses Projekt enthält 3D-Modelle: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
       "fontsNeedArchive": "Dieses Projekt hat hochgeladene Schriften: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
       "missingFont": "Diesem Projekt fehlt eine seiner Schriften.",
+      "unreadableFont": "Eine der Schriften dieses Projekts kann nicht gelesen werden.",
       "missingModel": "In diesem Projekt fehlt eines seiner 3D-Modelle.",
       "tooNew": "Dieses Projekt wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die neueste Version herunter, um es zu öffnen.",
       "invalid": "Diese Datei ist kein gültiges Furrow-CAM-Projekt."
