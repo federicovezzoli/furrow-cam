@@ -118,7 +118,8 @@
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
                   "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015).",
-                  "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025)."
+                  "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025).",
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
                 },
                 "patterns": [
                   {
@@ -212,7 +213,8 @@
                   "react-dom": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
-                  "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025)."
+                  "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025).",
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
                 },
                 "patterns": [
                   {
@@ -239,7 +241,36 @@
                   "react-dom": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
-                  "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015)."
+                  "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015).",
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
+                },
+                "patterns": [
+                  {
+                    "group": ["react/*", "react-dom/*", "next/*", "three/*", "@react-three/*"],
+                    "message": "Packages must be framework- and renderer-agnostic (ADR-0011)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/cam-core/src/text/font.ts", "packages/cam-core/src/text/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "react-dom": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
+                  "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
+                  "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015).",
+                  "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025)."
                 },
                 "patterns": [
                   {
