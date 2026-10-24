@@ -5,6 +5,7 @@ import type {
   Tool,
   TouchOffDisc,
 } from "@furrow/document";
+import { composeAffine } from "../../geometry/affine";
 import type { Rect } from "../../geometry/bounds";
 import { modelTransform, type PlacedModel, placedModelBox } from "../../scene/model";
 import type { Vec3 } from "../../scene/stock";
@@ -171,23 +172,10 @@ export function toStock({ angle, origin }: ReliefGrid, u: number, v: number): [n
   return [c * pu - s * pv, s * pu + c * pv];
 }
 
-/** The transform from the mesh's file coordinates to `grid`'s, as `modelTransform` gives it. */
-export function reliefGridTransform(model: PlacedModel, grid: ReliefGrid): number[] {
-  const m = modelTransform(model);
+/** The transform from the mesh's file coordinates to `grid`'s, given `placed`, the one to stock coordinates (`modelTransform`, or `bottomModelTransform` seen from below). */
+export function reliefGridTransform(placed: readonly number[], grid: ReliefGrid): number[] {
   const [c, s] = cosSin(grid.angle);
-  const transform: number[] = [];
-  for (let k = 0; k < 4; k++) {
-    transform.push(
-      c * (m[k] as number) + s * (m[4 + k] as number) - (k === 3 ? grid.origin[0] : 0),
-    );
-  }
-  for (let k = 0; k < 4; k++) {
-    transform.push(
-      -s * (m[k] as number) + c * (m[4 + k] as number) - (k === 3 ? grid.origin[1] : 0),
-    );
-  }
-  for (let k = 0; k < 4; k++) transform.push(m[8 + k] as number);
-  return transform;
+  return composeAffine([c, s, 0, -grid.origin[0], -s, c, 0, -grid.origin[1], 0, 0, 1, 0], placed);
 }
 
 /** Triangles rasterised between two progress reports. */
@@ -204,7 +192,7 @@ export function* rasterizeModelSteps(
   grid: ReliefGrid,
 ): Generator<number, Float32Array> {
   const heights = new Float32Array(grid.columns * grid.rows).fill(grid.base);
-  const transform = reliefGridTransform(model, grid);
+  const transform = reliefGridTransform(modelTransform(model), grid);
   const triangles = positions.length / 9;
   for (let first = 0; first < triangles; first += TRIANGLES_PER_STEP) {
     rasterizeTriangles(positions, transform, grid, heights, first, first + TRIANGLES_PER_STEP);

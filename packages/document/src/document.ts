@@ -5,7 +5,7 @@ import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 19;
+export const CURRENT_SCHEMA_VERSION = 20;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -66,6 +66,23 @@ export type TouchOff = z.infer<typeof TouchOff>;
 /** The pad as a disc of stock top, all operations need of it. */
 export type TouchOffDisc = Pick<TouchOff, "x" | "y" | "diameter">;
 
+/** The axis the stock is turned over about between a two-sided project's sides (ADR-0060). */
+export const FlipAxis = z.enum(["x", "y"]);
+export type FlipAxis = z.infer<typeof FlipAxis>;
+
+/**
+ * A two-sided project's setup (PRD-0011, ADR-0060): the stock is cut from
+ * the top, turned over by half a turn about a line through its centre
+ * parallel to `flipAxis`, and cut from the other face. Each side cuts down
+ * to the parting plane, `partingDepth` below the stock top, which is less
+ * than the stock's thickness.
+ */
+export const TwoSided = z.strictObject({
+  flipAxis: FlipAxis,
+  partingDepth: PositiveLength,
+});
+export type TwoSided = z.infer<typeof TwoSided>;
+
 export const Stock = z
   .strictObject({
     width: PositiveLength,
@@ -75,8 +92,17 @@ export const Stock = z
     zOrigin: ZOrigin,
     /** The touch-off pad, or `null` for none. */
     touchOff: TouchOff.nullable(),
+    /** The two-sided setup, or `null` for a project cut from the top only. */
+    twoSided: TwoSided.nullable(),
   })
   .superRefine((stock, ctx) => {
+    if (stock.twoSided && stock.twoSided.partingDepth >= stock.thickness) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["twoSided", "partingDepth"],
+        message: "document.partingBelowStock",
+      });
+    }
     if (stock.touchOff && stock.touchOff.diameter > Math.min(stock.width, stock.height)) {
       ctx.addIssue({
         code: "custom",
@@ -179,6 +205,13 @@ export const ProjectDocument = z
         });
       }
       operationIds.add(operation.id);
+      if (operation.stockSide === "bottom" && !doc.stock.twoSided) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["operations", i, "stockSide"],
+          message: "document.bottomSideOneSided",
+        });
+      }
       const modelId = operationModelId(operation);
       if (modelId !== null && !modelIds.has(modelId)) {
         ctx.addIssue({
@@ -232,6 +265,7 @@ export function createProjectDocument(): ProjectDocument {
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
       touchOff: null,
+      twoSided: null,
     },
     machine: null,
     drawings: [],

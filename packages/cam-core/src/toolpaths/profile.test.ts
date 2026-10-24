@@ -97,6 +97,7 @@ function profile(
     id: "11111111-2222-4333-8444-555555555555",
     name: "Profile",
     enabled: true,
+    stockSide: "top",
     type: "profile",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool: { ...tool, ...toolOverrides },
@@ -686,6 +687,7 @@ describe("generateToolpath", () => {
       xyOrigin: { anchor: "bottom_left" },
       zOrigin: "stock_top",
       touchOff: null,
+      twoSided: null,
     },
     machine:
       machineSafeZ === null
@@ -716,6 +718,7 @@ describe("generateToolpath", () => {
         id: "11111111-2222-4333-8444-555555555555",
         name: "Profile",
         enabled: true,
+        stockSide: "top",
         type: "profile",
         targets: [{ shapeId: hole.id, paths: null }],
         tool,

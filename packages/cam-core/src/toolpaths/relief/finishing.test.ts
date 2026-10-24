@@ -68,6 +68,7 @@ function finishing(
     type: "relief_finish",
     name: "Finish",
     enabled: true,
+    stockSide: "top",
     targets: [],
     tool,
     params: { modelId: STEP.id, strategy, stepOver: 20, stockToLeave: 0, rest: false, ...params },

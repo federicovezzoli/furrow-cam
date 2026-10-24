@@ -1,4 +1,4 @@
-# ADR-0060: Fonts are parsed and laid out with opentype.js, behind one adapter
+# ADR-0061: Fonts are parsed and laid out with opentype.js, behind one adapter
 
 - **Status:** Proposed
 - **Date:** 2026-10-24

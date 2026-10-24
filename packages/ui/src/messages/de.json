@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "Die Antastplatte muss auf dem Rohteil liegen",
+      "partingBelowStock": "Die Trennebene muss im Rohteil liegen",
+      "bottomSideOneSided": "Nur zweiseitige Projekte haben eine Unterseite",
       "duplicateDrawing": "Doppelte Zeichnungs-ID",
       "duplicateShape": "Doppelte Form-ID",
       "duplicateModel": "Doppelte Modell-ID",

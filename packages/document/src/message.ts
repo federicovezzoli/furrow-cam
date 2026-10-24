@@ -63,6 +63,8 @@ export const DOCUMENT_MESSAGES = [
   "geometry.arcEndOffCircle",
   "geometry.closedSingleLine",
   "document.padOffStock",
+  "document.partingBelowStock",
+  "document.bottomSideOneSided",
   "document.duplicateDrawing",
   "document.duplicateShape",
   "document.duplicateModel",

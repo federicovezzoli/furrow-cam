@@ -9,6 +9,7 @@ const stock: Stock = {
   xyOrigin: { anchor: "center" },
   zOrigin: "stock_top",
   touchOff: null,
+  twoSided: null,
 };
 
 describe("fillPlaceholders", () => {

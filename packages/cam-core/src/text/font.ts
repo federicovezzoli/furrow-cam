@@ -2,7 +2,7 @@ import type { Point } from "@furrow/document";
 import { type Font as OpentypeFont, parse, type RenderOptions } from "opentype.js";
 
 /**
- * A parsed TTF, OTF or WOFF font (ADR-0060). A `singleStroke` font draws
+ * A parsed TTF, OTF or WOFF font (ADR-0061). A `singleStroke` font draws
  * each stroke once, so its contours are open paths an engraving follows,
  * not outlines to cut around.
  */
@@ -16,7 +16,7 @@ export type GlyphCommand =
   | { type: "Z" };
 
 /**
- * Kerning on; no ligatures (ADR-0060), no hinting, and no colour layers or
+ * Kerning on; no ligatures (ADR-0061), no hinting, and no colour layers or
  * SVG glyphs, which need a DOM. Cast: `@types/opentype.js` describes 1.3,
  * without 2.0's options.
  */

@@ -119,7 +119,7 @@
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
                   "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015).",
                   "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025).",
-                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0060)."
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
                 },
                 "patterns": [
                   {
@@ -214,7 +214,7 @@
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
                   "delaunator": "Only the medial-axis adapter may import Delaunator (ADR-0025).",
-                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0060)."
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
                 },
                 "patterns": [
                   {
@@ -242,7 +242,7 @@
                   "next": "Packages must be framework-agnostic (ADR-0002, ADR-0011).",
                   "three": "Packages must be renderer-agnostic (ADR-0008, ADR-0011).",
                   "clipper2-ts": "Only the geometry adapter may import the kernel (ADR-0007, ADR-0015).",
-                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0060)."
+                  "opentype.js": "Only the font adapter may import opentype.js (ADR-0061)."
                 },
                 "patterns": [
                   {

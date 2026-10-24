@@ -176,6 +176,7 @@ describe("ProjectDocument", () => {
       type: "pocket",
       name: "Pocket",
       enabled: true,
+      stockSide: "top",
       targets: [{ shapeId: SQUARE_ID, paths: null }],
       tool: doc.operations[0]?.tool,
       params: { leadIn: { radius: 3 } },
@@ -274,6 +275,48 @@ describe("Stock", () => {
   });
 });
 
+describe("two-sided projects", () => {
+  it("cut each side down to a parting plane inside the stock", () => {
+    const stock = fullDocument().stock;
+    expect(
+      Stock.safeParse({ ...stock, twoSided: { flipAxis: "y", partingDepth: 17.9 } }).success,
+    ).toBe(true);
+    for (const twoSided of [
+      { flipAxis: "x", partingDepth: 18 },
+      { flipAxis: "x", partingDepth: 0 },
+      { flipAxis: "z", partingDepth: 9 },
+      { flipAxis: "x" },
+    ]) {
+      expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
+    }
+    const below = { flipAxis: "x", partingDepth: 20 };
+    expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
+    ]);
+  });
+
+  it("put operations on the bottom side, which one-sided projects don't have", () => {
+    const doc = fullDocument();
+    doc.operations = doc.operations.map((operation) => ({ ...operation, stockSide: "bottom" }));
+    expect(ProjectDocument.safeParse(doc).success).toBe(true);
+    const oneSided = { ...doc, stock: { ...doc.stock, twoSided: null } };
+    expect(ProjectDocument.safeParse(oneSided).error?.issues).toEqual(
+      doc.operations.map((_, i) =>
+        expect.objectContaining({
+          path: ["operations", i, "stockSide"],
+          message: "document.bottomSideOneSided",
+        }),
+      ),
+    );
+  });
+
+  it("let a model reach through the whole stock", () => {
+    const doc = fullDocument();
+    doc.models = [{ ...model, placement: { ...model.placement, depth: doc.stock.thickness } }];
+    expect(ProjectDocument.safeParse(doc).success).toBe(true);
+  });
+});
+
 describe("createProjectDocument", () => {
   it("returns a valid empty project with the default stock", () => {
     const doc = createProjectDocument();
@@ -287,6 +330,7 @@ describe("createProjectDocument", () => {
         xyOrigin: { anchor: "bottom_left" },
         zOrigin: "stock_top",
         touchOff: null,
+        twoSided: null,
       },
       machine: null,
       geometry: [],

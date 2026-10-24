@@ -65,10 +65,15 @@ export function normalizeTargets(
   });
 }
 
+/** The face of the stock an operation cuts from (ADR-0060); one-sided projects only have the top. */
+export const StockSide = z.enum(["top", "bottom"]);
+export type StockSide = z.infer<typeof StockSide>;
+
 const operationFields = {
   id: z.uuid(),
   name: Name,
   enabled: z.boolean(),
+  stockSide: StockSide,
   /** What this operation cuts, one target per shape. */
   targets: z.array(OperationTarget),
   /** Snapshot of the tool at the time it was picked (ADR-0003). */

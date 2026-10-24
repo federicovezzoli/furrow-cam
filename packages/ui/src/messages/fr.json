@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "La pastille de mise à zéro doit tenir sur le brut",
+      "partingBelowStock": "Le plan de joint doit se trouver dans le brut",
+      "bottomSideOneSided": "Seuls les projets double face ont une face inférieure",
       "duplicateDrawing": "Identifiant de dessin en double",
       "duplicateShape": "Identifiant de forme en double",
       "duplicateModel": "Identifiant de modèle en double",
