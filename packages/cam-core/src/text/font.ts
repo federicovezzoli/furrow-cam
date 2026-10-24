@@ -28,7 +28,11 @@ const RENDER = {
 
 /** Parses `bytes` (TTF, OTF or WOFF; not WOFF2). Throws if they aren't a font it can read. */
 export function parseFont(bytes: ArrayBuffer | Uint8Array, singleStroke = false): Font {
-  return { font: parse(bytes instanceof Uint8Array ? bytes.slice().buffer : bytes), singleStroke };
+  // A copy: a view's buffer, or a Node `Buffer`'s, may hold other bytes around the font.
+  return {
+    font: parse(bytes instanceof Uint8Array ? Uint8Array.from(bytes).buffer : bytes),
+    singleStroke,
+  };
 }
 
 /** The font's cap height in font units: from its OS/2 table, else the top of its "H". */

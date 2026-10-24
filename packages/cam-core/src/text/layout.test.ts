@@ -150,6 +150,22 @@ describe("parseFont", () => {
     expect(textPaths(parseFont(new Uint8Array(otf)), settings("HO"))).toEqual(fromOtf);
   });
 
+  it("reads a font that is a view into larger memory, as Node's Buffer gives", () => {
+    const otf = new Uint8Array(testFont().toArrayBuffer());
+    /** Like a Node `Buffer`, whose `slice` is a view, not a copy. */
+    class View extends Uint8Array {
+      override slice(start?: number, end?: number) {
+        return this.subarray(start, end);
+      }
+    }
+    const pool = new Uint8Array(otf.length + 32);
+    pool.set(otf, 16);
+    const view = new View(pool.buffer, 16, otf.length);
+    expect(textPaths(parseFont(view), settings("HO"))).toEqual(
+      textPaths(parseFont(otf), settings("HO")),
+    );
+  });
+
   it("throws on bytes that aren't a font", () => {
     expect(() => parseFont(new Uint8Array(64))).toThrow();
   });
