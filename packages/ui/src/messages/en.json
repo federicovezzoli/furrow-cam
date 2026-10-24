@@ -1226,6 +1226,8 @@
     "text": "Text",
     "font": "Font",
     "height": "Letter height",
+    "lineSpacing": "Line spacing",
+    "letterSpacing": "Letter spacing",
     "align": "Alignment",
     "aligns": {
       "left": "Left",

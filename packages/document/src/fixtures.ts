@@ -154,6 +154,8 @@ export const textItem: Drawing = {
     font: "sans",
     height: 10,
     align: "left",
+    lineSpacing: 1.7,
+    letterSpacing: 0,
     placement: { position: [10, 10], rotation: 0, mirrored: false },
   },
 };
@@ -234,7 +236,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 20,
+    schemaVersion: 21,
     units: "in",
     stock: {
       width: 300,

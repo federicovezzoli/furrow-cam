@@ -572,6 +572,23 @@ describe("text items", () => {
     expect(text(store.getState().document)).toMatchObject({ rotation: 270, height: 10 });
   });
 
+  it("keep their letter spacing a share of their height when resized", () => {
+    const doc = fullDocument();
+    const spaced = {
+      ...textItem,
+      text: { ...(textItem.text as TextSettings), letterSpacing: 0.2 },
+    };
+    const store = createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, spaced],
+      geometry: [...doc.geometry, textShape],
+    });
+    // The "I" is 10 mm tall: 20 doubles it.
+    expect(setDrawingSize(store, TEXT_ID, "height", 20)).toEqual({ ok: true });
+    expect(text(store.getState().document).height).toBe(20);
+    expect(store.getState().document.drawings.at(-1)?.text?.letterSpacing).toBe(0.2);
+  });
+
   it("keep their placement on their outlines when duplicated or the design is aligned", () => {
     const store = textStore();
     const copyId = duplicateDrawing(store, TEXT_ID) as string;
@@ -607,6 +624,8 @@ describe("addTextItem", () => {
     font: "jetbrains-mono",
     height: 10,
     align: "left",
+    lineSpacing: 1.5,
+    letterSpacing: 0,
     placement: { position: [0, 0], rotation: 0, mirrored: false },
   };
 

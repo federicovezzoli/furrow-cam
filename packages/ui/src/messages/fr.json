@@ -1226,6 +1226,8 @@
     "text": "Texte",
     "font": "Police",
     "height": "Hauteur des lettres",
+    "lineSpacing": "Interligne",
+    "letterSpacing": "Espacement des lettres",
     "align": "Alignement",
     "aligns": {
       "left": "Gauche",

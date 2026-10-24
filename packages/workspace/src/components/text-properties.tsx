@@ -1,8 +1,10 @@
 "use client";
 
-import type { TextAlign, TextSettings } from "@furrow/document";
+import { MIN_LETTER_SPACING, type TextAlign, type TextSettings } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
+import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { useState } from "react";
@@ -15,19 +17,22 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { drawingShapes } from "../stores/geometry-actions";
-import { OperationNameInput } from "./operation-name-input";
 import { Row } from "./operation-properties";
 
 /** Keeps the height positive when stepping down. */
 const MIN_HEIGHT = 0.01;
+
+/** Keeps lines from landing on each other when stepping down. */
+const MIN_LINE_SPACING = 0.1;
 
 const ALIGNS: readonly TextAlign[] = ["left", "center", "right"];
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
 /**
- * A text item's settings (PRD-0010 T1, T3): its text, font, cap height and
- * alignment. Each edit is laid out again off the main thread and lands as one
+ * A text item's settings (PRD-0010 T1, T3, T5, T6): its text, over one or
+ * more lines, font, cap height, line and letter spacing and alignment. Each
+ * edit is laid out again off the main thread and lands as one
  * undo step, keeping the item's placement and the operations machining it.
  */
 export function TextProperties({ drawingId, text }: { drawingId: string; text: TextSettings }) {
@@ -41,16 +46,29 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   const t = useTranslations("Text");
   const format = useFormatMessage();
 
-  async function edit(edits: Partial<Omit<TextSettings, "placement">>) {
+  // A scrub or held arrow is one undo step: its layouts land before it ends.
+  const gestures = {
+    onGestureStart: () => store.getState().beginTransaction(),
+    onGestureEnd: async (cancelled: boolean) => {
+      await textSettled(drawingId);
+      const state = store.getState();
+      if (cancelled) state.cancelTransaction();
+      else state.commitTransaction();
+    },
+  };
+
+  /** Applies `edits` once laid out; whether they were. */
+  async function edit(edits: Partial<Omit<TextSettings, "placement">>): Promise<boolean> {
     const result = await editText(store, drawingId, edits);
     setError(result.ok ? null : result.error);
-    if (!result.ok) return;
+    if (!result.ok) return false;
     setRemovedTabs(result.removedTabs);
     // The new outlines are numbered afresh: select all of them, as adding the text did.
     const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
     if (shape) {
       workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
     }
+    return true;
   }
 
   return (
@@ -58,17 +76,17 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
       <h3 id="text-heading" className="font-medium">
         {t("heading")}
       </h3>
-      <Row id="text-text" label={t("text")}>
-        <OperationNameInput
+      <div className="grid gap-1">
+        <Label htmlFor="text-text" className="text-ui font-normal">
+          {t("text")}
+        </Label>
+        <TextField
           id="text-text"
-          name={text.text}
-          onRename={(value) => {
-            // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
-            if (/\S/.test(value)) void edit({ text: value });
-            return { ok: true };
-          }}
+          text={text.text}
+          // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
+          onCommit={async (value) => !/\S/.test(value) || (await edit({ text: value }))}
         />
-      </Row>
+      </div>
       <Row id="text-font" label={t("font")}>
         <NativeSelect
           id="text-font"
@@ -96,14 +114,31 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         min={MIN_HEIGHT}
         value={text.height}
         onValueChange={(height) => void edit({ height })}
-        // A scrub or held arrow is one undo step: its layouts land before it ends.
-        onGestureStart={() => store.getState().beginTransaction()}
-        onGestureEnd={async (cancelled) => {
-          await textSettled(drawingId);
-          const state = store.getState();
-          if (cancelled) state.cancelTransaction();
-          else state.commitTransaction();
-        }}
+        {...gestures}
+      />
+      <NumberField
+        id="text-line-spacing"
+        label={t("lineSpacing")}
+        layout="inline"
+        quantity="number"
+        suffix="×"
+        min={MIN_LINE_SPACING}
+        step={0.1}
+        value={text.lineSpacing}
+        onValueChange={(lineSpacing) => void edit({ lineSpacing })}
+        {...gestures}
+      />
+      <NumberField
+        id="text-letter-spacing"
+        label={t("letterSpacing")}
+        layout="inline"
+        quantity="number"
+        // A share of the letter height, so it scales with the text.
+        suffix="%"
+        min={MIN_LETTER_SPACING * 100}
+        value={text.letterSpacing * 100}
+        onValueChange={(percent) => void edit({ letterSpacing: percent / 100 })}
+        {...gestures}
       />
       <Row id="text-align" label={t("align")}>
         <NativeSelect
@@ -132,5 +167,54 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * The text, a line per line (PRD-0010 T5): it changes on blur or Ctrl/⌘+Enter,
+ * Enter starts a new line, and Escape puts the text back. What was typed
+ * stays until the change lands, and after it is refused, so a long text isn't
+ * lost to a character the font lacks.
+ */
+function TextField({
+  id,
+  text,
+  onCommit,
+}: {
+  id: string;
+  text: string;
+  /** Whether `text` was taken; if not, the field keeps showing it. */
+  onCommit: (text: string) => Promise<boolean>;
+}) {
+  /** What's typed while editing, or waiting to land; `null` shows the text. */
+  const [draft, setDraft] = useState<string | null>(null);
+
+  function finish(commit: boolean) {
+    if (!commit || draft === null || draft === text) return setDraft(null);
+    const typed = draft;
+    void onCommit(typed).then((taken) => {
+      // Unless the user typed on meanwhile.
+      if (taken) setDraft((current) => (current === typed ? null : current));
+    });
+  }
+
+  return (
+    <Textarea
+      id={id}
+      value={draft ?? text}
+      rows={2}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => finish(true)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          finish(false);
+        }
+      }}
+      className="min-h-0 px-2 py-1 text-ui md:text-ui"
+    />
   );
 }

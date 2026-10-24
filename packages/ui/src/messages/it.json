@@ -1226,6 +1226,8 @@
     "text": "Testo",
     "font": "Font",
     "height": "Altezza lettere",
+    "lineSpacing": "Interlinea",
+    "letterSpacing": "Spaziatura lettere",
     "align": "Allineamento",
     "aligns": {
       "left": "Sinistra",
