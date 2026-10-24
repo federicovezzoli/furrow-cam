@@ -73,6 +73,10 @@ export function mapText(text: TextSettings, move: (point: Point) => Point): Text
   const [xx, xy] = move([position[0] + flip * cos, position[1] + flip * sin]);
   const [yx, yy] = move([position[0] - sin, position[1] + cos]);
   const [ux, uy, vx, vy] = [xx - ox, xy - oy, yx - ox, yy - oy];
+  // The height comes from the y axis alone, so a move that stretches one axis would lose the outlines.
+  if (Math.abs(Math.hypot(ux, uy) - Math.hypot(vx, vy)) > PROBE * 1e-6) {
+    throw new Error("mapText needs a move that keeps shapes' proportions");
+  }
   const turned = (Math.atan2(vy, vx) * 180) / Math.PI - 90;
   return {
     ...text,

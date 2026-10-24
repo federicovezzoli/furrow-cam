@@ -19,6 +19,7 @@ import {
 } from "@furrow/cam-core";
 import {
   DRAWING_BORDER,
+  type Drawing,
   type Message,
   type Operation,
   type Point,
@@ -122,6 +123,15 @@ function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean
   return tabs;
 }
 
+/**
+ * Keeps text item `drawing`'s placement on its outlines once `move` has
+ * rewritten their points (ADR-0059). Every change to a text item's points
+ * calls it with the same move, in the same undo step.
+ */
+export function moveTextWithOutlines(drawing: Drawing, move: (point: Point) => Point) {
+  if (drawing.text) drawing.text = mapText(drawing.text, move);
+}
+
 /** Whether a segment of `shapes` has no length, or an arc no radius (`segmentIssue`). */
 function degenerate(shapes: Shape[]): boolean {
   return shapes.some(({ paths }) =>
@@ -156,12 +166,10 @@ function transformDrawing(
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
   const tabs = drawingTabs(document, id);
-  const text = document.drawings.find((drawing) => drawing.id === id)?.text;
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
-    // A text item's placement follows its outlines (ADR-0059).
     const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing && text) drawing.text = mapText(text, transform.point);
+    if (drawing) moveTextWithOutlines(drawing, transform.point);
     for (const operation of draft.operations) {
       const moved = tabs.get(operation.id);
       if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
@@ -350,11 +358,9 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const geometry = document.geometry.concat(copies);
   const tabs = drawingTabs(document, id);
   store.getState().change("duplicateDrawing", (draft) => {
-    const { text } = drawing;
-    const copy = text
-      ? { ...drawing, text: mapText(text, (p) => translatePoint(p, offset)) }
-      : drawing;
-    draft.drawings.push({ ...copy, id: copyId });
+    const copy = { ...drawing, id: copyId };
+    moveTextWithOutlines(copy, (point) => translatePoint(point, offset));
+    draft.drawings.push(copy);
     draft.geometry = geometry;
     for (const operation of draft.operations) {
       const extra = operation.targets.flatMap(({ shapeId, paths }) => {

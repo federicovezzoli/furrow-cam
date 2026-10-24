@@ -128,7 +128,8 @@ export type TextAlign = z.infer<typeof TextAlign>;
  */
 export const TextPlacement = z.strictObject({
   position: Point,
-  rotation: z.number(),
+  /** Degrees, from 0 up to 360. */
+  rotation: z.number().min(0).lt(360),
   mirrored: z.boolean(),
 });
 export type TextPlacement = z.infer<typeof TextPlacement>;

@@ -156,6 +156,10 @@ describe("mapText", () => {
     }
   });
 
+  it("refuses a move that scales x and y differently", () => {
+    expect(() => mapText(text, ([x, y]) => [x * 2, y])).toThrow("proportions");
+  });
+
   it("keeps the rotation in [0, 360) and drops float noise", () => {
     const back = (point: Point) => rotatePoint(point, -30, [0, 0]);
     expect(mapText(turned, back).placement).toEqual({
