@@ -415,6 +415,9 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     // A new rectangle every time, for the operations that have one.
     JSON.stringify(a.stock) === JSON.stringify(b.stock) &&
     a.stockBottom === b.stockBottom &&
+    a.parting === b.parting &&
+    // A new object every time, like the stock rectangle.
+    JSON.stringify(a.flip) === JSON.stringify(b.flip) &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     // A new disc every time, like the stock rectangle.

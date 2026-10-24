@@ -1,7 +1,7 @@
-import type { FlipAxis, Stock } from "@furrow/document";
+import type { FlipAxis, Model, Stock } from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
-import { modelTransform, type PlacedModel } from "./model";
-import type { Vec3 } from "./stock";
+import { modelTransform, type PlacedModel, placedModelBox } from "./model";
+import type { Box3, Vec3 } from "./stock";
 
 /**
  * The two sides of a two-sided project (PRD-0011, ADR-0060). The bottom
@@ -47,4 +47,41 @@ export function bottomModelTransform(
   axis: FlipAxis,
 ): number[] {
   return composeAffine(flipTransform(stock, axis), modelTransform(model));
+}
+
+/** The bottom side's flip: the stock's size and the axis it is turned over about. */
+export type Flip = Pick<Stock, "width" | "height" | "thickness"> & { axis: FlipAxis };
+
+/**
+ * A model as one side sees it (ADR-0060): its mesh, the box it fills and the
+ * transform from the mesh's file coordinates to that side's stock
+ * coordinates. All a relief toolpath needs of it.
+ */
+export type ModelView = { sha256: string; box: Box3; transform: number[] };
+
+/**
+ * `model` as the top side sees it, or with `flip` as the bottom side does:
+ * turned over, reaching up from the stock's floor. With a `parting` plane,
+ * its box reaches down to it at least, so a side cuts down to the plane
+ * around a model that doesn't (ADR-0060).
+ */
+export function modelView(
+  model: PlacedModel & Pick<Model, "sha256">,
+  flip: Flip | null = null,
+  parting: number | null = null,
+): ModelView {
+  const placed = modelTransform(model);
+  let { min, max } = placedModelBox(model);
+  if (flip) {
+    const corners = [flipPoint(flip, flip.axis, min), flipPoint(flip, flip.axis, max)];
+    // Turned over, two of the corners' coordinates swap.
+    min = [0, 1, 2].map((i) => Math.min(...corners.map((c) => c[i] as number))) as Vec3;
+    max = [0, 1, 2].map((i) => Math.max(...corners.map((c) => c[i] as number))) as Vec3;
+  }
+  if (parting !== null && parting < min[2]) min = [min[0], min[1], parting];
+  return {
+    sha256: model.sha256,
+    box: { min, max },
+    transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
+  };
 }

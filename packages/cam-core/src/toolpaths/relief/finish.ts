@@ -7,7 +7,7 @@ import type {
 } from "@furrow/document";
 import { composeAffine } from "../../geometry/affine";
 import type { Rect } from "../../geometry/bounds";
-import { modelTransform, type PlacedModel, placedModelBox } from "../../scene/model";
+import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import {
   type CutterProfile,
@@ -79,13 +79,13 @@ export type ReliefGrid = HeightmapGrid & {
  * every side. `null` for a model with no area seen from above.
  */
 export function reliefGrid(
-  model: PlacedModel,
+  model: Pick<ModelView, "box">,
   angle: number,
   cellSize: number,
   maxCells = MAX_RELIEF_CELLS,
   margin = 0,
 ): ReliefGrid | null {
-  const { min, max } = placedModelBox(model);
+  const { min, max } = model.box;
   if (!(max[0] > min[0] && max[1] > min[1])) return null;
   const grown: Rect = {
     min: [min[0] - margin, min[1] - margin],
@@ -188,11 +188,11 @@ const TRIANGLES_PER_STEP = 65_536;
  */
 export function* rasterizeModelSteps(
   positions: Float32Array,
-  model: PlacedModel,
+  model: Pick<ModelView, "transform">,
   grid: ReliefGrid,
 ): Generator<number, Float32Array> {
   const heights = new Float32Array(grid.columns * grid.rows).fill(grid.base);
-  const transform = reliefGridTransform(modelTransform(model), grid);
+  const transform = reliefGridTransform(model.transform, grid);
   const triangles = positions.length / 9;
   for (let first = 0; first < triangles; first += TRIANGLES_PER_STEP) {
     rasterizeTriangles(positions, transform, grid, heights, first, first + TRIANGLES_PER_STEP);
@@ -599,18 +599,18 @@ export function createCache<T>(capacity: number): Cache<T> {
   };
 }
 
-/** Everything a model heightmap depends on: the mesh, its placement, the grid and the offset. */
+/** Everything a model heightmap depends on: the mesh, where it is, the grid and the offset. */
 export function reliefCacheKey(
-  { sha256, bounds, placement }: Pick<Model, "sha256" | "bounds" | "placement">,
-  { columns, rows, angle, origin }: ReliefGrid,
+  { sha256, transform }: Pick<ModelView, "sha256" | "transform">,
+  { columns, rows, angle, origin, base }: ReliefGrid,
   offset: number,
 ): string {
-  return JSON.stringify([sha256, bounds, placement, angle, origin, columns, rows, offset]);
+  return JSON.stringify([sha256, transform, angle, origin, columns, rows, base, offset]);
 }
 
 /** The model heightmap offset by `offset`, from `cache` or computed (and cached), reporting progress. */
 export function* modelHeightsSteps(
-  model: Model,
+  model: ModelView,
   positions: Float32Array,
   grid: ReliefGrid,
   offset: number,
@@ -972,6 +972,10 @@ export type ReliefFinishOptions = {
   entryClearance: number;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
+  /** A two-sided project's parting plane, below which this side cuts nothing (ADR-0060); `null` for none. */
+  parting?: number | null;
+  /** On the bottom side, the flip to its stock coordinates; `null` on the top. */
+  flip?: Flip | null;
   /** Model heightmaps kept between toolpaths. */
   cache?: ReliefCache;
   /** For rest machining (#118), what the earlier operations cut; `null` to cut everything. */
@@ -1017,17 +1021,25 @@ export function* finishSetupSteps(
   model: Model,
   positions: Float32Array,
   angle: number,
-  { stockBottom = null, cache, rest = null, touchOff = null }: ReliefFinishOptions,
+  {
+    stockBottom = null,
+    parting = null,
+    flip = null,
+    cache,
+    rest = null,
+    touchOff = null,
+  }: ReliefFinishOptions,
 ): Generator<number, FinishSetup | null> {
   const { tool, params } = operation;
   const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
-  const grid = reliefGrid(model, angle, wanted);
+  const view = modelView(model, flip, parting);
+  const grid = reliefGrid(view, angle, wanted);
   if (!grid) return null;
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
   const modelShare = rest ? FINISH_SETUP_SHARE - REST_SHARE : FINISH_SETUP_SHARE;
-  const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
+  const heightsSteps = modelHeightsSteps(view, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
   for (let step = heightsSteps.next(); ; step = heightsSteps.next()) {
     if (step.done) {
@@ -1038,7 +1050,7 @@ export function* finishSetupSteps(
   }
 
   const profile = cutterProfile(tool);
-  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings, parting);
   const restDropper = rest
     ? new RestDropper(
         yield* restStockSteps(grid, rest, stockBottom ?? grid.base, modelShare, FINISH_SETUP_SHARE),
@@ -1214,16 +1226,22 @@ export function* parallelPassesSteps(
 /**
  * The lowest a 3D operation cuts: the model's bottom plus the stock to leave,
  * `lowest`, but no lower than the stock's bottom, saying so in `warnings`
- * (ADR-0034): a model deeper than the stock is cut off there.
+ * (ADR-0034): a model deeper than the stock is cut off there. In a
+ * two-sided project, no lower than the `parting` plane either: the other
+ * side cuts below it (ADR-0060).
  */
 export function reliefFloor(
   lowest: number,
   stockBottom: number | null,
   warnings: ToolpathMessage[],
+  parting: number | null = null,
 ): number {
-  if (stockBottom === null || lowest >= stockBottom) return lowest;
-  warnings.push({ code: "toolpath.belowStock" });
-  return stockBottom;
+  let floor = lowest;
+  if (stockBottom !== null && lowest < stockBottom) {
+    warnings.push({ code: "toolpath.belowStock" });
+    floor = stockBottom;
+  }
+  return parting === null ? floor : Math.max(floor, parting);
 }
 
 /** Millimetres to three decimals, as warnings show sizes. */

@@ -136,6 +136,17 @@ describe("exportGcode", () => {
     expect(gcode).not.toContain("Disabled");
   });
 
+  it("leaves the bottom side of a two-sided project out, until each side has a file", () => {
+    const doc = referenceProject();
+    const operations = doc.operations.map((op) =>
+      op.name === "Cut out" ? { ...op, stockSide: "bottom" as const } : op,
+    );
+    const stock = { ...doc.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } };
+    const { gcode } = exportGcode({ ...doc, stock, operations }, "Plate");
+    expect(gcode).toContain("(Operation: Recess)");
+    expect(gcode).not.toContain("Cut out");
+  });
+
   it("writes no spindle speeds for a manual spindle", () => {
     const doc = referenceProject();
     doc.machine = lowRider;

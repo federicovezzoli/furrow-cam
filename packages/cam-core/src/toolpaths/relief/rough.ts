@@ -9,7 +9,8 @@ import type {
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
-import { modelRect, type PlacedModel } from "../../scene/model";
+import { boxRect } from "../../scene/model";
+import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
 import type { ToolpathMessage } from "../messages";
@@ -61,6 +62,10 @@ export type ReliefRoughOptions = {
   stock: Rect | null;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
+  /** A two-sided project's parting plane, below which this side cuts nothing (ADR-0060); `null` for none. */
+  parting?: number | null;
+  /** On the bottom side, the flip to its stock coordinates; `null` on the top. */
+  flip?: Flip | null;
   /** Chord tolerance for curves and offsets, in millimetres. */
   tolerance?: number;
   /** Model heightmaps kept between toolpaths. */
@@ -115,6 +120,8 @@ export function* reliefRoughSteps(
     entryClearance,
     stock,
     stockBottom = null,
+    parting = null,
+    flip = null,
     tolerance = DEFAULT_CHORD_TOLERANCE,
     cache,
     rest = null,
@@ -131,19 +138,20 @@ export function* reliefRoughSteps(
   // mustn't reach them: the grid has room for both, and a cell more.
   const margin = params.stockToLeave + radius + wanted;
   const angle = strategy.type === "linear" ? strategy.angle : 0;
-  const grid = reliefGrid(model, angle, wanted, MAX_RELIEF_CELLS, margin);
+  const view = modelView(model, flip, parting);
+  const grid = reliefGrid(view, angle, wanted, MAX_RELIEF_CELLS, margin);
   if (!grid) {
     return { moves: [], warnings: [NO_AREA_WARNING] };
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
-  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings, parting);
   if (!(floor < 0)) {
     warnings.push({ code: "toolpath.roughNothing" });
     return { moves: [], warnings };
   }
   if (-floor > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
-  const heightsSteps = modelHeightsSteps(model, positions, grid, params.stockToLeave, cache);
+  const heightsSteps = modelHeightsSteps(view, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
   for (let step = heightsSteps.next(); ; step = heightsSteps.next()) {
     if (step.done) {
@@ -152,7 +160,7 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
-  const area = roughingArea(params.boundary, model, stock, radius);
+  const area = roughingArea(params.boundary, view, stock, radius);
   if (!area) {
     warnings.push({ code: "toolpath.roughMarginOffStock" });
     return { moves: [], warnings };
@@ -268,11 +276,11 @@ export function* reliefRoughSteps(
  */
 export function roughingArea(
   boundary: RoughingBoundary,
-  model: PlacedModel,
+  model: Pick<ModelView, "box">,
   stock: Rect | null,
   radius: number,
 ): Rect | null {
-  const rect = modelRect(model);
+  const rect = boxRect(model.box);
   if (boundary.type === "model") return rect;
   if (boundary.type === "stock") return stock ?? rect;
   const grow = Math.max(boundary.distance, radius);

@@ -8,6 +8,7 @@ import {
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { containment, difference, offset, type Polygon, signedArea } from "../../geometry/clipper";
+import { modelView } from "../../scene/sides";
 import { simulateCuts } from "../../simulation/simulation";
 import { generateToolpath, toolpathInputs, toolpathKey } from "../generate";
 import type { Toolpath } from "../toolpath";
@@ -102,26 +103,26 @@ describe("roughingArea", () => {
   const stock = { min: [0, 0] as Point, max: [50, 40] as Point };
 
   it("is the model's outline, or the whole stock", () => {
-    expect(roughingArea({ type: "model" }, model, stock, 3)).toEqual({
+    expect(roughingArea({ type: "model" }, modelView(model), stock, 3)).toEqual({
       min: [10, 10],
       max: [30, 20],
     });
-    expect(roughingArea({ type: "stock" }, model, stock, 3)).toEqual(stock);
-    expect(roughingArea({ type: "stock" }, model, null, 3)).toEqual({
+    expect(roughingArea({ type: "stock" }, modelView(model), stock, 3)).toEqual(stock);
+    expect(roughingArea({ type: "stock" }, modelView(model), null, 3)).toEqual({
       min: [10, 10],
       max: [30, 20],
     });
   });
 
   it("keeps the tool inside the margin", () => {
-    expect(roughingArea({ type: "margin", distance: 5 }, model, stock, 3)).toEqual({
+    expect(roughingArea({ type: "margin", distance: 5 }, modelView(model), stock, 3)).toEqual({
       min: [8, 8],
       max: [32, 22],
     });
   });
 
   it("grows by the radius at least, so the tool's centre reaches the model's edges", () => {
-    expect(roughingArea({ type: "margin", distance: 1 }, model, stock, 3)).toEqual({
+    expect(roughingArea({ type: "margin", distance: 1 }, modelView(model), stock, 3)).toEqual({
       min: [10, 10],
       max: [30, 20],
     });
@@ -131,10 +132,10 @@ describe("roughingArea", () => {
     // The model 200 mm off a 100 mm wide stock.
     const off: Model = { ...STEP, placement: { ...STEP.placement, position: [200, 10] } };
     const narrow = { min: [0, 0] as Point, max: [100, 40] as Point };
-    expect(roughingArea({ type: "margin", distance: 10 }, off, narrow, 3)).toBeNull();
+    expect(roughingArea({ type: "margin", distance: 10 }, modelView(off), narrow, 3)).toBeNull();
     // Just off the stock: the margin reaches 2 mm onto it, less than the tool.
     const edge: Model = { ...STEP, placement: { ...STEP.placement, position: [108, 10] } };
-    expect(roughingArea({ type: "margin", distance: 10 }, edge, narrow, 3)).toBeNull();
+    expect(roughingArea({ type: "margin", distance: 10 }, modelView(edge), narrow, 3)).toBeNull();
     const toolpath = runSteps(
       reliefRoughSteps(
         roughing(endMill, { boundary: { type: "margin", distance: 10 } }),
@@ -149,11 +150,11 @@ describe("roughingArea", () => {
 
   it("brings the tool's centre to the stock's edges the margin reaches", () => {
     // Left and bottom reach the stock's edges; right and top stay inside.
-    expect(roughingArea({ type: "margin", distance: 12 }, model, stock, 3)).toEqual({
+    expect(roughingArea({ type: "margin", distance: 12 }, modelView(model), stock, 3)).toEqual({
       min: [0, 0],
       max: [39, 29],
     });
-    expect(roughingArea({ type: "margin", distance: 12 }, model, null, 3)).toEqual({
+    expect(roughingArea({ type: "margin", distance: 12 }, modelView(model), null, 3)).toEqual({
       min: [1, 1],
       max: [39, 29],
     });
@@ -305,9 +306,11 @@ describe("reliefRoughSteps", () => {
       const stockToLeave = "stockToLeave" in params ? params.stockToLeave : 0.5;
       const toolpath = rough(tool, { stockToLeave, ...params });
       const stock = simulate(toolpath, tool);
-      const grid = reliefGrid(STEP, 0, 0.1, undefined, stockToLeave + 0.1);
+      const grid = reliefGrid(modelView(STEP), 0, 0.1, undefined, stockToLeave + 0.1);
       if (!grid) throw new Error("no grid");
-      const model = runSteps(modelHeightsSteps(STEP, stepMesh, grid, stockToLeave, undefined));
+      const model = runSteps(
+        modelHeightsSteps(modelView(STEP), stepMesh, grid, stockToLeave, undefined),
+      );
       for (let row = 0; row < stock.rows; row++) {
         for (let column = 0; column < stock.columns; column++) {
           const x = (column + 0.5) * 0.1 - grid.origin[0];
@@ -496,7 +499,11 @@ describe("reliefRoughSteps", () => {
 });
 
 describe("generateToolpath", () => {
-  const document = () => ({ ...fullDocument(), models: [STEP], operations: [roughing(endMill)] });
+  const document = () => {
+    const doc = fullDocument();
+    const stock = { ...doc.stock, twoSided: null };
+    return { ...doc, stock, models: [STEP], operations: [roughing(endMill)] };
+  };
 
   it("computes 3D roughing from the model's mesh", () => {
     const [input] = toolpathInputs(document());

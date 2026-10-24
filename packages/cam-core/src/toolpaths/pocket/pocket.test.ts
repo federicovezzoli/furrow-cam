@@ -519,6 +519,8 @@ describe("pocketToolpath", () => {
         model: null,
         stock: null,
         stockBottom: null,
+        parting: null,
+        flip: null,
         before: [],
         touchOff: null,
         safeZ: 5,

@@ -11,6 +11,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
+import type { Flip } from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
@@ -47,6 +48,14 @@ export type ToolpathInput = {
   stock: Rect | null;
   /** The stock's bottom, below which 3D operations don't cut; `null` for the others. */
   stockBottom: number | null;
+  /**
+   * In a two-sided project, the parting plane in this side's stock
+   * coordinates, below which its 3D operations don't cut (ADR-0060); `null`
+   * otherwise.
+   */
+  parting: number | null;
+  /** For a 3D operation on the bottom side, the flip to its stock coordinates; `null` otherwise. */
+  flip: Flip | null;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -92,12 +101,16 @@ export function toolpathInputs(
   // The disc alone, so editing the pad's tool change recomputes nothing.
   const touchOff: TouchOffDisc | null = pad && { x: pad.x, y: pad.y, diameter: pad.diameter };
   const enabled = doc.operations.filter((operation) => operation.enabled);
+  const { twoSided, width, height, thickness } = doc.stock;
+  const size = { width, height, thickness };
   const inputs = new Map<Operation, ToolpathInput>();
   function inputOf(operation: Operation): ToolpathInput {
     const known = inputs.get(operation);
     if (known) return known;
     const rest = isRestMachining(operation);
     const index = doc.operations.indexOf(operation);
+    const sided = twoSided && operationModelId(operation) !== null ? twoSided : null;
+    const bottom = operation.stockSide === "bottom";
     const input: ToolpathInput = {
       operation,
       shapes: targetedShapes(shapes, operation.targets),
@@ -108,10 +121,22 @@ export function toolpathInputs(
           ? stock
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
+      parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
+      flip: sided && bottom ? { ...size, axis: sided.flipAxis } : null,
       safeZ,
       entryClearance,
+      // Each side starts from uncut stock (ADR-0060).
       before: rest
-        ? enabled.filter((other) => doc.operations.indexOf(other) < index).map(inputOf)
+        ? enabled
+            .filter(
+              (other) =>
+                doc.operations.indexOf(other) < index &&
+                other.stockSide === operation.stockSide &&
+                // shortcut: 2D cuts aren't flipped yet, so a bottom-side rest
+                // operation ignores them; count them once they are (#360).
+                (!bottom || operationModelId(other) !== null),
+            )
+            .map(inputOf)
         : [],
       touchOff,
     };
@@ -158,6 +183,8 @@ function ownKey({
   model,
   stock,
   stockBottom,
+  parting,
+  flip,
   safeZ,
   entryClearance,
   touchOff,
@@ -171,6 +198,8 @@ function ownKey({
     model && [model.sha256, model.bounds, model.placement],
     stock,
     stockBottom,
+    parting,
+    flip,
     safeZ,
     entryClearance,
     touchOff,
@@ -335,7 +364,18 @@ function checkTouchOff(
 }
 
 function* operationSteps(
-  { operation, shapes, model, stock, stockBottom, before, touchOff, ...options }: ToolpathInput,
+  {
+    operation,
+    shapes,
+    model,
+    stock,
+    stockBottom,
+    parting,
+    flip,
+    before,
+    touchOff,
+    ...options
+  }: ToolpathInput,
   context: ToolpathContext,
 ): Generator<number, Toolpath> {
   const { mesh, cache } = context;
@@ -382,6 +422,8 @@ function* operationSteps(
           ? reliefFinishSteps(operation, model, positions, {
               ...options,
               stockBottom,
+              parting,
+              flip,
               cache,
               rest,
               touchOff,
@@ -390,6 +432,8 @@ function* operationSteps(
               ...options,
               stock,
               stockBottom,
+              parting,
+              flip,
               cache,
               rest,
               touchOff,
