@@ -76,20 +76,17 @@ export function heightmapGrid(
  *
  * The buffer under `heights` is padded to a multiple of `bufferMultiple`
  * cells, so a renderer that wraps the cells onto rows of that many texels can
- * upload it as it is, without a copy. The cuts start from uncut stock, or
- * from the heights of `start` on the same grid (`flipHeightmap`).
+ * upload it as it is, without a copy.
  */
 export function simulateCuts(
   stock: Pick<Stock, "width" | "height" | "thickness">,
   cuts: readonly SimulationCut[],
   grid: HeightmapGrid = heightmapGrid(stock, smallestCutWidth(cuts)),
   bufferMultiple = 1,
-  start?: Float32Array,
 ): Heightmap {
   const cells = grid.columns * grid.rows;
   const padded = Math.ceil(cells / bufferMultiple) * bufferMultiple;
   const heights = new Float32Array(new ArrayBuffer(padded * 4), 0, cells);
-  if (start) heights.set(start);
   for (const { tool, segments } of cuts) {
     const profile = cutterProfile(tool);
     for (let i = 0; i + 5 < segments.length; i += 6) {
@@ -394,29 +391,36 @@ export function heightmapBuffers({ heights }: Heightmap): ArrayBuffer[] {
 }
 
 /**
- * The stock `heightmap` shows, as the other side of a two-sided project sees
- * it once turned over about `axis` (ADR-0060), on the same grid: mirrored,
- * cut through where it was cut through, uncut elsewhere. A heightmap holds
- * only the face in view, and a side cuts no deeper than the parting plane
- * except through the stock, so the face underneath is otherwise whole.
+ * The heights of `heightmap`, the stock one side's cuts leave, mirrored onto
+ * the same grid as the other side of a two-sided project sees it once the
+ * stock is turned over about `axis` (ADR-0060). Still measured from that
+ * side's own face: `joinSides` uses them to open what both sides cut through.
  */
-export function flipHeightmap(
-  { columns, rows, heights }: Heightmap,
-  axis: FlipAxis,
-  thickness: number,
-): Float32Array {
+export function flipHeightmap({ columns, rows, heights }: Heightmap, axis: FlipAxis): Float32Array {
   const flipped = new Float32Array(columns * rows);
-  const through = -thickness + THROUGH_TOLERANCE;
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
       const [c, r] = axis === "x" ? [column, rows - 1 - row] : [columns - 1 - column, row];
-      if ((heights[r * columns + c] as number) <= through) {
-        flipped[row * columns + column] = -thickness;
-      }
+      flipped[row * columns + column] = heights[r * columns + c] as number;
     }
   }
   return flipped;
 }
 
-/** How close to the stock's bottom a cell counts as cut through, in millimetres. */
+/**
+ * Cuts through `heights`, the bottom side's stock, wherever it and the top
+ * side's cuts, `flippedTop` (`flipHeightmap`), together reach through the
+ * stock's `thickness`: a heightmap holds only the face in view, so a cut
+ * from each side that meets the other's shows only here.
+ */
+export function joinSides(heights: Float32Array, flippedTop: Float32Array, thickness: number) {
+  for (let i = 0; i < heights.length; i++) {
+    // Each height is minus the depth cut from its face.
+    if ((heights[i] as number) + (flippedTop[i] as number) <= -thickness + THROUGH_TOLERANCE) {
+      heights[i] = -thickness;
+    }
+  }
+}
+
+/** How close to the stock's full thickness the two sides' cuts count as meeting, in millimetres. */
 const THROUGH_TOLERANCE = 1e-3;

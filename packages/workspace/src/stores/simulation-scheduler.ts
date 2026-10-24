@@ -17,7 +17,7 @@ export type SimulationInput = {
   /**
    * For the bottom side of a two-sided project (ADR-0060), the top side's
    * cuts and the axis the stock is turned over about: the bottom side's
-   * cuts start from the stock they leave, turned over (`flipHeightmap`).
+   * stock is cut through where they meet its own (`joinSides`).
    */
   before?: { cuts: SimulationCut[]; axis: FlipAxis };
   /** Most cells the heightmap may have, so the device can draw it. */

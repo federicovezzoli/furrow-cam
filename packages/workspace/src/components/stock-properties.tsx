@@ -172,8 +172,9 @@ function TwoSidedSection() {
             layout="inline"
             quantity="length"
             units={units}
-            min={MIN_STOCK}
-            max={stock.thickness - MIN_STOCK}
+            // Within the stock, however thin.
+            min={Math.min(MIN_STOCK, stock.thickness / 2)}
+            max={stock.thickness - Math.min(MIN_STOCK, stock.thickness / 2)}
             value={twoSided.partingDepth}
             onValueChange={(value) => setPartingDepth(store, value)}
             {...gestureHandlers(store)}

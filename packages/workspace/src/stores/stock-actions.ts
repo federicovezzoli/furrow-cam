@@ -252,8 +252,13 @@ export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
   });
 }
 
-/** Sets how far below the stock top a two-sided project's sides part, in millimetres. */
+/**
+ * Sets how far below the stock top a two-sided project's sides part, in
+ * millimetres; a depth outside the stock is refused.
+ */
 export function setPartingDepth(store: DocumentStore, partingDepth: number) {
+  const { thickness } = store.getState().document.stock;
+  if (!(partingDepth > 0 && partingDepth < thickness)) return;
   store.getState().change("setStock.partingDepth", (draft) => {
     if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
   });

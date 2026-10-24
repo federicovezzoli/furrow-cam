@@ -2,6 +2,7 @@ import {
   flipHeightmap,
   heightmapBuffers,
   heightmapGrid,
+  joinSides,
   simulateCuts,
   smallestCutWidth,
 } from "@furrow/cam-core";
@@ -20,11 +21,13 @@ scope.onmessage = ({ data: { key, input } }) => {
     const { stock, cuts, before, maxCells } = input;
     const all = before ? [...before.cuts, ...cuts] : cuts;
     const grid = heightmapGrid(stock, smallestCutWidth(all), maxCells);
-    // The bottom side's cuts start from the stock the top side's leave, turned over.
-    const start =
-      before && flipHeightmap(simulateCuts(stock, before.cuts, grid), before.axis, stock.thickness);
     // Padded to whole texture rows, so the viewport uploads it without a copy.
-    const heightmap = simulateCuts(stock, cuts, grid, TEXTURE_WIDTH, start);
+    const heightmap = simulateCuts(stock, cuts, grid, TEXTURE_WIDTH);
+    // The bottom side's stock is cut through where the top side's cuts meet its own.
+    if (before) {
+      const top = flipHeightmap(simulateCuts(stock, before.cuts, grid), before.axis);
+      joinSides(heightmap.heights, top, stock.thickness);
+    }
     scope.postMessage({ key, heightmap, stock }, heightmapBuffers(heightmap));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

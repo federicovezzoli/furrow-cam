@@ -10,6 +10,7 @@ import {
   type Heightmap,
   type HeightmapGrid,
   heightmapGrid,
+  joinSides,
   MAX_HEIGHTMAP_CELLS,
   type SimulationCut,
   simulateCuts,
@@ -302,7 +303,7 @@ describe("simulateCuts", () => {
 });
 
 describe("flipHeightmap", () => {
-  // 3 × 2 cells: one cut through, one cut partly, the rest uncut.
+  // 3 × 2 cells: one cut through, one cut 5 mm deep, the rest uncut.
   const heightmap = {
     columns: 3,
     rows: 2,
@@ -311,23 +312,21 @@ describe("flipHeightmap", () => {
     heights: new Float32Array([-18, -5, 0, 0, 0, 0]),
   };
 
-  it("turns the stock over about X: rows swap, cut-through cells stay, the rest is whole", () => {
-    expect([...flipHeightmap(heightmap, "x", 18)]).toEqual([0, 0, 0, -18, 0, 0]);
+  it("mirrors the heights about X: rows swap", () => {
+    expect([...flipHeightmap(heightmap, "x")]).toEqual([0, 0, 0, -18, -5, 0]);
   });
 
-  it("turns the stock over about Y: columns swap", () => {
-    expect([...flipHeightmap(heightmap, "y", 18)]).toEqual([0, 0, -18, 0, 0, 0]);
+  it("mirrors the heights about Y: columns swap", () => {
+    expect([...flipHeightmap(heightmap, "y")]).toEqual([0, -5, -18, 0, 0, 0]);
   });
+});
 
-  it("is where the other side's cuts start", () => {
-    const start = flipHeightmap(heightmap, "x", 18);
-    const { heights } = simulateCuts(
-      { width: 3, height: 2, thickness: 18 },
-      [],
-      heightmap,
-      1,
-      start,
-    );
-    expect([...heights]).toEqual([...start]);
+describe("joinSides", () => {
+  it("cuts through where the two sides' cuts together reach through the stock", () => {
+    // In 18 mm stock: 6 mm from the top and 12 mm from below meet; 6 and 6 don't.
+    const bottom = new Float32Array([-12, -6, 0, -3]);
+    const top = new Float32Array([-6, -6, -18, 0]);
+    joinSides(bottom, top, 18);
+    expect([...bottom]).toEqual([-18, -6, -18, -3]);
   });
 });

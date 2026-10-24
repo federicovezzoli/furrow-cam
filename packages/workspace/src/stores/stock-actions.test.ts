@@ -435,6 +435,9 @@ describe("two-sided projects (ADR-0060)", () => {
     setFlipAxis(store, "y");
     setPartingDepth(store, 6);
     expect(stock(store).twoSided).toEqual({ flipAxis: "y", partingDepth: 6 });
+    // Outside the stock: refused.
+    for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
+    expect(stock(store).twoSided?.partingDepth).toBe(6);
   });
 
   it("part at half the deepest model's depth, within the stock", () => {
