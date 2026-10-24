@@ -1,5 +1,12 @@
 # @furrow/document
 
+## 0.14.0
+
+### Minor Changes
+
+- Projects can now store text items, which keep their text, font, height and placement and machine like any drawing. Projects saved by this release can't be opened by older ones. ([#373](https://github.com/federicovezzoli/furrow-cam/pull/373))
+- Projects can now record a two-sided setup, the axis the stock is turned over about and where the two sides part, and which side each operation cuts; existing projects open as one-sided. Turning it on in the workspace comes in a later release. ([#374](https://github.com/federicovezzoli/furrow-cam/pull/374))
+
 ## 0.13.1
 
 ### Patch Changes

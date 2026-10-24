@@ -1,5 +1,12 @@
 # @furrow/ui
 
+## 0.3.4
+
+### Patch Changes
+
+- A two-sided project exports one G-code file per side, such as `Owl-top.gcode` and `Owl-bottom.gcode`, and each file's header says when to turn the stock over and how to zero it. ([#378](https://github.com/federicovezzoli/furrow-cam/pull/378))
+- Updated dependencies: @furrow/cam-core@0.13.0, @furrow/document@0.14.0
+
 ## 0.3.3
 
 ### Patch Changes

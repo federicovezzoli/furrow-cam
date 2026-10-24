@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.11.0
+
+### Minor Changes
+
+- A two-sided project exports one G-code file per side, such as `Owl-top.gcode` and `Owl-bottom.gcode`, and each file's header says when to turn the stock over and how to zero it. ([#378](https://github.com/federicovezzoli/furrow-cam/pull/378))
+
+### Patch Changes
+
+- 3D roughing and finishing can cut the bottom side of a two-sided project, on the model as seen from below, and each side stops at the parting plane. G-code export covers the top side only until each side gets its own file. ([#376](https://github.com/federicovezzoli/furrow-cam/pull/376))
+- Updated dependencies: @furrow/cam-core@0.13.0, @furrow/document@0.14.0
+
 ## 0.10.1
 
 ### Patch Changes

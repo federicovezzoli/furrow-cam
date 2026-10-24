@@ -1,5 +1,20 @@
 # @furrow/workspace
 
+## 0.13.0
+
+### Minor Changes
+
+- Add text to a project with *Add text*: type it, pick a font, a letter height and an alignment, and change any of them later. The text stays where it is and the operations that machine it keep doing so. It moves, resizes, turns, mirrors and duplicates like a drawing. ([#379](https://github.com/federicovezzoli/furrow-cam/pull/379))
+- Adds the four open-licence fonts text will use, JetBrains Mono, Arvo, Pacifico and the single-stroke Relief SingleLine, with their licences, and lays single-stroke TrueType fonts out as open strokes, without a line closing each one. ([#377](https://github.com/federicovezzoli/furrow-cam/pull/377))
+- A two-sided project exports one G-code file per side, such as `Owl-top.gcode` and `Owl-bottom.gcode`, and each file's header says when to turn the stock over and how to zero it. ([#378](https://github.com/federicovezzoli/furrow-cam/pull/378))
+- Projects can now store text items, which keep their text, font, height and placement and machine like any drawing. Projects saved by this release can't be opened by older ones. ([#373](https://github.com/federicovezzoli/furrow-cam/pull/373))
+
+### Patch Changes
+
+- 3D roughing and finishing can cut the bottom side of a two-sided project, on the model as seen from below, and each side stops at the parting plane. G-code export covers the top side only until each side gets its own file. ([#376](https://github.com/federicovezzoli/furrow-cam/pull/376))
+- Projects can now record a two-sided setup, the axis the stock is turned over about and where the two sides part, and which side each operation cuts; existing projects open as one-sided. Turning it on in the workspace comes in a later release. ([#374](https://github.com/federicovezzoli/furrow-cam/pull/374))
+- Updated dependencies: @furrow/cam-core@0.13.0, @furrow/post@0.11.0, @furrow/ui@0.3.4, @furrow/document@0.14.0
+
 ## 0.12.2
 
 ### Patch Changes
