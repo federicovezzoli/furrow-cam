@@ -8,6 +8,7 @@ import {
   type Operation,
   type PostProcessorId,
   type Stock,
+  type StockSide,
   type Tool,
 } from "@furrow/document";
 
@@ -23,6 +24,18 @@ export type PostInput = {
   safeZ: number;
   /** The operations to cut with their toolpaths, in cutting order. */
   operations: { operation: Operation; toolpath: Toolpath }[];
+  /**
+   * In a two-sided project, which side this program cuts and the other
+   * side's file, for the header to say what to do between them (ADR-0060).
+   */
+  side?: SideSetup | null;
+};
+
+/** One side of a two-sided project's export. */
+export type SideSetup = {
+  side: StockSide;
+  /** Whether the other side has a file too, i.e. something to cut. */
+  other: boolean;
 };
 
 export type PostOutput = {
@@ -34,6 +47,7 @@ export type PostOutput = {
 
 /** What exporting says (ADR-0054); toolpath warnings pass through as theirs. */
 export const POST_MESSAGES = [
+  "export.bottomSide2d",
   "export.noEnabled",
   "export.noneHasToolpath",
   "export.noToolpath",

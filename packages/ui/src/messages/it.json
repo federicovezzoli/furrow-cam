@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "Il tampone di azzeramento deve stare sul grezzo",
+      "partingBelowStock": "Il piano di separazione deve stare dentro il grezzo",
+      "bottomSideOneSided": "Solo i progetti a due lati hanno un lato inferiore",
       "duplicateDrawing": "Id di disegno duplicato",
       "duplicateShape": "Id di forma duplicato",
       "duplicateModel": "Id di modello duplicato",
@@ -497,6 +499,7 @@
       "unknownModel": "Id di modello sconosciuto",
       "unknownDrawing": "Id di disegno sconosciuto",
       "emptyDrawing": "Un disegno deve avere almeno una forma",
+      "textShapes": "Un testo deve avere esattamente una forma",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto"
     },
@@ -631,6 +634,7 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
     },
     "export": {
+      "bottomSide2d": "Le operazioni 2D sul lato inferiore non si possono ancora esportare: disattiva questa o spostala sul lato superiore.",
       "noEnabled": "Non ci sono operazioni attive da esportare.",
       "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
       "noToolpath": "Nessun percorso utensile, esclusa dal programma."
@@ -703,7 +707,10 @@
       "stlImportOff": "L’importazione STL non è disponibile su questo server.",
       "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
       "storedModelMismatch": "Il modello salvato non corrisponde al suo file.",
-      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore."
+      "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore.",
+      "textNoOutlines": "Nessuno di questi caratteri è nel font, quindi non c'è niente da tagliare.",
+      "unknownFont": "Il font “{font}” non è disponibile in questa versione dell'app.",
+      "textLayoutFailed": "Non è stato possibile comporre il testo. Riprova."
     }
   },
   "Operation": {
@@ -1046,6 +1053,7 @@
     "exportFile": "Esporta file",
     "exportProject": "Esporta il file del progetto",
     "exportFailed": "Non è stato possibile esportare questo progetto. Controlla la connessione e riprova.",
+    "exportedFiles": "Il G-code è in un file per lato, salvati come {files}. Se il browser ha chiesto se consentire più download, consentili, altrimenti manca il file del lato inferiore.",
     "exportedWithWarnings": "Il G-code è stato esportato con degli avvisi:",
     "exportGcode": "Esporta G-code",
     "allProjects": "Tutti i progetti",
@@ -1211,7 +1219,22 @@
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lavora solo lui} other {le # operazioni che lavorano solo lui}}",
     "duplicateTitle": "Copia il disegno alla sua destra, lavorato dalle stesse operazioni",
     "duplicate": "Duplica",
-    "remove": "Rimuovi il disegno"
+    "remove": "Rimuovi il disegno",
+    "removeText": "Rimuovi testo"
+  },
+  "Text": {
+    "heading": "Testo",
+    "text": "Testo",
+    "font": "Font",
+    "height": "Altezza lettere",
+    "align": "Allineamento",
+    "aligns": {
+      "left": "Sinistra",
+      "center": "Centro",
+      "right": "Destra"
+    },
+    "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi.",
+    "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere."
   },
   "Import": {
     "units": {
@@ -1230,7 +1253,9 @@
     "importing": "Importazione di {file}…",
     "dismiss": "Chiudi",
     "import": "Importa",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "addText": "Aggiungi testo",
+    "defaultText": "Testo"
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",

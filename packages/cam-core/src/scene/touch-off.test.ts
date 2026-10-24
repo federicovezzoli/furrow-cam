@@ -9,6 +9,7 @@ const stock: Stock = {
   xyOrigin: { anchor: "bottom_left" },
   zOrigin: "stock_top",
   touchOff: null,
+  twoSided: null,
 };
 const zeroed = (anchor: StockAnchor): Stock => ({ ...stock, xyOrigin: { anchor } });
 

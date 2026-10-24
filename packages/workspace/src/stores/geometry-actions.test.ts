@@ -6,7 +6,14 @@ import {
   nearestOnLoops,
   translateShape,
 } from "@furrow/cam-core";
-import { createProjectDocument, type Point, ProjectDocument, StockAnchor } from "@furrow/document";
+import {
+  createProjectDocument,
+  type Path,
+  type Point,
+  ProjectDocument,
+  StockAnchor,
+  type TextSettings,
+} from "@furrow/document";
 import {
   CIRCLE_ID,
   circle,
@@ -16,12 +23,16 @@ import {
   reliefFinish,
   SQUARE_ID,
   square,
+  TEXT_ID,
+  textItem,
+  textShape,
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor } from "./drawing-test-utils";
 import {
   addImportedShapes,
+  addTextItem,
   canImportModel,
   DUPLICATE_GAP,
   drawingBounds,
@@ -37,6 +48,7 @@ import {
   setDrawingBorder,
   setDrawingOffset,
   setDrawingSize,
+  setTextItem,
 } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
 
@@ -525,5 +537,176 @@ describe("drawing size", () => {
       doc.operations[0]?.id,
     ]);
     expect(drawingOperations(doc, "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e")).toEqual([]);
+  });
+});
+
+describe("text items", () => {
+  /** A project with `textItem`, whose origin is its outline's first point. */
+  function textStore() {
+    const doc = fullDocument();
+    return createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+    });
+  }
+
+  /** The text item's settings, and its origin's point on its outline. */
+  function text(document: ProjectDocument, id = TEXT_ID) {
+    const settings = document.drawings.find((drawing) => drawing.id === id)?.text;
+    const [shape] = drawingShapes(document.geometry, id);
+    return { ...settings?.placement, height: settings?.height, origin: shape?.paths[0]?.start };
+  }
+
+  it("keep their placement on their outlines when moved, turned, mirrored and resized", () => {
+    const store = textStore();
+    moveDrawing(store, TEXT_ID, [5, 7]);
+    expect(text(store.getState().document)).toMatchObject({ position: [15, 17], height: 10 });
+    rotateDrawing(store, TEXT_ID, 90);
+    mirrorDrawing(store, TEXT_ID, "x");
+    expect(setDrawingSize(store, TEXT_ID, "height", 4)).toEqual({ ok: true });
+    const { position, origin, ...rest } = text(store.getState().document);
+    expect(position).toEqual(origin);
+    expect(rest).toEqual({ rotation: 270, mirrored: true, height: 20 });
+    store.getState().undo();
+    expect(text(store.getState().document)).toMatchObject({ rotation: 270, height: 10 });
+  });
+
+  it("keep their placement on their outlines when duplicated or the design is aligned", () => {
+    const store = textStore();
+    const copyId = duplicateDrawing(store, TEXT_ID) as string;
+    const copy = text(store.getState().document, copyId);
+    expect(copy.position).toEqual(copy.origin);
+    expect(copy.position).not.toEqual(textItem.text?.placement.position);
+    const before = text(store.getState().document).position;
+    setXYAnchor(store, "center");
+    expect(text(store.getState().document).position).not.toEqual(before);
+    for (const id of [TEXT_ID, copyId]) {
+      const { position, origin } = text(store.getState().document, id);
+      expect(position).toEqual(origin);
+    }
+  });
+});
+
+/** A closed `width` × 10 mm box with its bottom-left corner at `[x, y]`. */
+function box(x: number, y: number, width: number): Path {
+  return {
+    start: [x, y],
+    segments: [
+      { kind: "line", to: [x + width, y] },
+      { kind: "line", to: [x + width, y + 10] },
+      { kind: "line", to: [x, y + 10] },
+    ],
+    closed: true,
+  };
+}
+
+describe("addTextItem", () => {
+  const settings: TextSettings = {
+    text: "Hi",
+    font: "jetbrains-mono",
+    height: 10,
+    align: "left",
+    placement: { position: [0, 0], rotation: 0, mirrored: false },
+  };
+
+  it("places it like an imported drawing, its origin moving with its outlines, in one undo step", () => {
+    const store = storeAt("bottom_left");
+    const added = addTextItem(store, settings, [box(0, 0, 20)]);
+    if (!added.ok) throw new Error("not added");
+    const { id } = added;
+    const { drawings, geometry } = store.getState().document;
+    expect(drawings).toEqual([
+      {
+        id,
+        name: "Hi",
+        border: 10,
+        text: { ...settings, placement: { ...settings.placement, position: [10, 10] } },
+      },
+    ]);
+    expect(geometry).toMatchObject([{ drawingId: id, paths: [box(10, 10, 20)] }]);
+    expect(() => ProjectDocument.parse(store.getState().document)).not.toThrow();
+    store.getState().undo();
+    expect(store.getState().document.drawings).toEqual([]);
+  });
+
+  it("adds nothing without outlines, or to a project with a model", () => {
+    const store = storeAt("bottom_left");
+    expect(addTextItem(store, settings, [])).toEqual({
+      ok: false,
+      error: { code: "workspace.textNoOutlines" },
+    });
+    store.setState({ document: { ...createProjectDocument(), models: [model] } });
+    expect(addTextItem(store, settings, [box(0, 0, 20)])).toEqual({
+      ok: false,
+      error: { code: "workspace.drawingsOrModel" },
+    });
+    expect(store.getState().document.drawings).toEqual([]);
+  });
+});
+
+describe("setTextItem", () => {
+  const OPERATION = "5b2c8e1a-7d4f-4a3b-9c6e-0f1a2b3c4d5e";
+
+  /** `textItem`, cut by a profile on its path 0 with a tab on it, and the fixture's profile. */
+  function store() {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("fixture");
+    const onText = {
+      ...profile,
+      id: OPERATION,
+      targets: [{ shapeId: textShape.id, paths: [0] }],
+      params: {
+        ...profile.params,
+        tabs: { ...profile.params.tabs, positions: [[11, 10]] as Point[] },
+      },
+    };
+    return createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+      operations: [...doc.operations, onText],
+    });
+  }
+
+  it("replaces its settings and outlines in one undo step, keeping its shape and operations", () => {
+    const text = store();
+    const before = text.getState().document;
+    const settings = { ...(textItem.text as TextSettings), text: "II", height: 12 };
+    // Away from the tab, which goes.
+    const paths = [box(20, 10, 2), box(24, 10, 2)];
+    expect(setTextItem(text, TEXT_ID, settings, paths)).toEqual({ ok: true, removedTabs: 1 });
+    const after = text.getState().document;
+    expect(after.drawings.at(-1)).toEqual({ ...textItem, name: "II", text: settings });
+    expect(after.geometry.at(-1)).toEqual({ ...textShape, paths });
+    const onText = after.operations.find(({ id }) => id === OPERATION);
+    expect(onText?.targets).toEqual([{ shapeId: textShape.id, paths: null }]);
+    expect(onText?.type === "profile" && onText.params.tabs?.positions).toEqual([]);
+    // The other profile's targets and tabs aren't the text's.
+    expect(after.operations[0]).toEqual(before.operations[0]);
+    expect(() => ProjectDocument.parse(after)).not.toThrow();
+    text.getState().undo();
+    expect(text.getState().document).toEqual(before);
+  });
+
+  it("keeps the tabs that lie on the new outlines", () => {
+    const text = store();
+    const settings = { ...(textItem.text as TextSettings), text: "II" };
+    // The "I" stays where it was, so its tab does too.
+    const paths = [box(10, 10, 2), box(14, 10, 2)];
+    expect(setTextItem(text, TEXT_ID, settings, paths)).toEqual({ ok: true, removedTabs: 0 });
+    const onText = text.getState().document.operations.find(({ id }) => id === OPERATION);
+    expect(onText?.type === "profile" && onText.params.tabs?.positions).toEqual([[11, 10]]);
+  });
+
+  it("refuses text with no outlines, changing nothing", () => {
+    const text = store();
+    const before = text.getState().document;
+    expect(setTextItem(text, TEXT_ID, textItem.text as TextSettings, [])).toEqual({
+      ok: false,
+      error: { code: "workspace.textNoOutlines" },
+    });
+    expect(text.getState().document).toBe(before);
   });
 });

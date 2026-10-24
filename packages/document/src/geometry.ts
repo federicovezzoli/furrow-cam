@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PositiveLength } from "./units";
 
 /**
  * Distance in millimetres below which two points are the same. Imported
@@ -116,16 +117,48 @@ export const Path = z
   });
 export type Path = z.infer<typeof Path>;
 
+export const TextAlign = z.enum(["left", "center", "right"]);
+export type TextAlign = z.infer<typeof TextAlign>;
+
+/**
+ * Where a text item sits (ADR-0059): its origin, the point on its first
+ * line's baseline at the alignment, lands at `position` in stock
+ * coordinates. The text is mirrored left to right first if `mirrored`, then
+ * turned `rotation` degrees counter-clockwise about its origin.
+ */
+export const TextPlacement = z.strictObject({
+  position: Point,
+  /** Degrees, from 0 up to 360. */
+  rotation: z.number().min(0).lt(360),
+  mirrored: z.boolean(),
+});
+export type TextPlacement = z.infer<typeof TextPlacement>;
+
+/** A text item's settings (PRD-0010 T1, T3), from which its outlines are laid out. */
+export const TextSettings = z.strictObject({
+  text: z.string().regex(/\S/, "validation.blank"),
+  /** The font's id. */
+  font: z.string().min(1),
+  /** Cap height, in millimetres. */
+  height: PositiveLength,
+  align: TextAlign,
+  placement: TextPlacement,
+});
+export type TextSettings = z.infer<typeof TextSettings>;
+
 /**
  * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and
- * placed together. Its shapes name it with `drawingId`.
+ * placed together, or a text item (ADR-0059). Its shapes name it with
+ * `drawingId`.
  */
 export const Drawing = z.strictObject({
   id: z.uuid(),
-  /** Name of the imported file. */
+  /** Name of the imported file, or the text item's. */
   name: z.string(),
   /** The border, in millimetres, that *Fit to stock* leaves around it, as a model's (ADR-0038). */
   border: z.number().nonnegative(),
+  /** A text item's settings; its outlines are its one shape, laid out from them (ADR-0059). */
+  text: TextSettings.optional(),
 });
 export type Drawing = z.infer<typeof Drawing>;
 

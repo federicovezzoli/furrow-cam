@@ -1,4 +1,4 @@
-import type { Point, Shape } from "@furrow/document";
+import type { Point, Shape, TextPlacement, TextSettings } from "@furrow/document";
 import { roundCoordinate } from "./round";
 import { mapPath } from "./translate";
 
@@ -52,4 +52,54 @@ export function rotatePoint([x, y]: Point, degrees: number, [cx, cy]: Point): Po
  */
 export function mirrorPoint([x, y]: Point, axis: "x" | "y", [cx, cy]: Point): Point {
   return axis === "x" ? [roundCoordinate(2 * cx - x), y] : [x, roundCoordinate(2 * cy - y)];
+}
+
+/**
+ * Where a point of a text item's layout lies in the stock (ADR-0059): flipped
+ * left to right if `mirrored`, turned `rotation` degrees counter-clockwise
+ * about the text's origin, then moved to `position`, rounded like imported
+ * coordinates.
+ */
+export function textFrame({ position, rotation, mirrored }: TextPlacement) {
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return ([x, y]: Point): Point => {
+    const flipped = mirrored ? -x : x;
+    return [
+      roundCoordinate(position[0] + flipped * cos - y * sin),
+      roundCoordinate(position[1] + flipped * sin + y * cos),
+    ];
+  };
+}
+
+/** Length of the axes `mapText` probes a move along, long enough that rounding doesn't show. */
+const PROBE = 1000;
+
+/**
+ * Text item `text`'s settings once `move`, which keeps shapes' proportions
+ * (`mapPath`), has rewritten its outlines (ADR-0059): its origin moves, a turn
+ * adds to its rotation, a mirror flips it and a scale multiplies its height.
+ */
+export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
+  // The text's own axes in the stock, after the move.
+  const frame = textFrame(text.placement);
+  const [ox, oy] = move(frame([0, 0]));
+  const [xx, xy] = move(frame([PROBE, 0]));
+  const [yx, yy] = move(frame([0, PROBE]));
+  const [ux, uy, vx, vy] = [xx - ox, xy - oy, yx - ox, yy - oy];
+  // The height comes from the y axis alone, so a move that stretches one axis would lose the outlines.
+  if (Math.abs(Math.hypot(ux, uy) - Math.hypot(vx, vy)) > PROBE * 1e-6) {
+    throw new Error("mapText needs a move that keeps shapes' proportions");
+  }
+  const turned = (Math.atan2(vy, vx) * 180) / Math.PI - 90;
+  return {
+    ...text,
+    height: roundCoordinate((text.height * Math.hypot(vx, vy)) / PROBE),
+    placement: {
+      position: [ox, oy],
+      rotation: roundCoordinate(((turned % 360) + 360) % 360) % 360,
+      mirrored: ux * vy - uy * vx < 0,
+    },
+  };
 }

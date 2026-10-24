@@ -1,6 +1,7 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
 import type {
+  Drawing,
   Machine,
   Model,
   ProjectDocument,
@@ -141,6 +142,41 @@ export const circle: Shape = {
   ],
 };
 
+export const TEXT_ID = "2c7e5a1b-8d4f-4b3a-9e6c-1f0d2a3b4c5e";
+
+/** A text item (ADR-0059): "I" in a 10 mm cap height, its stem's corner at `[10, 10]`. */
+export const textItem: Drawing = {
+  id: TEXT_ID,
+  name: "I",
+  border: 10,
+  text: {
+    text: "I",
+    font: "sans",
+    height: 10,
+    align: "left",
+    placement: { position: [10, 10], rotation: 0, mirrored: false },
+  },
+};
+
+/** `textItem`'s outlines, its one shape. */
+export const textShape: Shape = {
+  id: "8b4d2f6a-3c1e-4a9b-8d7c-5e0f1a2b3c4d",
+  name: "I",
+  layer: "",
+  drawingId: TEXT_ID,
+  paths: [
+    {
+      start: [10, 10],
+      segments: [
+        { kind: "line", to: [12, 10] },
+        { kind: "line", to: [12, 20] },
+        { kind: "line", to: [10, 20] },
+      ],
+      closed: true,
+    },
+  ],
+};
+
 /** An imported STL relief (PRD-0005); its mesh is a project asset (ADR-0029). */
 export const model: Model = {
   id: "5f0c2a8e-3b7d-4e19-9c6a-2d8f1b4e7a30",
@@ -161,6 +197,7 @@ export const reliefFinish: ReliefFinishOperation = {
   type: "relief_finish",
   name: "Finish",
   enabled: true,
+  stockSide: "top",
   targets: [],
   tool: ballEndMill,
   params: {
@@ -180,6 +217,7 @@ export const reliefRough: ReliefRoughOperation = {
   type: "relief_rough",
   name: "Rough",
   enabled: true,
+  stockSide: "top",
   targets: [],
   tool: endMill,
   params: {
@@ -196,7 +234,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 18,
+    schemaVersion: 20,
     units: "in",
     stock: {
       width: 300,
@@ -205,6 +243,7 @@ export function fullDocument(): ProjectDocument {
       xyOrigin: { anchor: "center" },
       zOrigin: "machine_bed",
       touchOff: { x: 10, y: 10, diameter: 15, toolChange: null },
+      twoSided: { flipAxis: "x", partingDepth: 9 },
     },
     machine,
     drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
@@ -216,6 +255,7 @@ export function fullDocument(): ProjectDocument {
         type: "profile",
         name: "Outside profile",
         enabled: true,
+        stockSide: "top",
         targets: [
           { shapeId: SQUARE_ID, paths: null },
           { shapeId: CIRCLE_ID, paths: [0] },

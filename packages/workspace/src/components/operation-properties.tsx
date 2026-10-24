@@ -159,7 +159,16 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   );
 }
 
-function Row({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+/** A label beside its control, as the panels lay fields out. */
+export function Row({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
       <Label htmlFor={id} className="text-ui font-normal">

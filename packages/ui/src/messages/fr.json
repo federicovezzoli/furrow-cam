@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "La pastille de mise à zéro doit tenir sur le brut",
+      "partingBelowStock": "Le plan de joint doit se trouver dans le brut",
+      "bottomSideOneSided": "Seuls les projets double face ont une face inférieure",
       "duplicateDrawing": "Identifiant de dessin en double",
       "duplicateShape": "Identifiant de forme en double",
       "duplicateModel": "Identifiant de modèle en double",
@@ -497,6 +499,7 @@
       "unknownModel": "Identifiant de modèle inconnu",
       "unknownDrawing": "Identifiant de dessin inconnu",
       "emptyDrawing": "Un dessin doit contenir au moins une forme",
+      "textShapes": "Un texte doit avoir exactement une forme",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu"
     },
@@ -631,6 +634,7 @@
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante."
     },
     "export": {
+      "bottomSide2d": "Les opérations 2D sur la face inférieure ne peuvent pas encore être exportées : désactivez celle-ci ou placez-la sur la face supérieure.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme."
@@ -703,7 +707,10 @@
       "stlImportOff": "L’import STL n’est pas disponible sur ce serveur.",
       "fileTooLarge": "Ce fichier est trop volumineux pour être importé (la limite est de {mb, number} Mo).",
       "storedModelMismatch": "Le modèle enregistré ne correspond pas à son fichier.",
-      "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande."
+      "drawingTooSmall": "Certaines lignes du dessin seraient réduites à rien. Choisissez une taille plus grande.",
+      "textNoOutlines": "Aucun de ces caractères n'est dans la police : il n'y a rien à découper.",
+      "unknownFont": "La police « {font} » n'est pas disponible dans cette version de l'application.",
+      "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez."
     }
   },
   "Operation": {
@@ -1046,6 +1053,7 @@
     "exportFile": "Exporter le fichier",
     "exportProject": "Exporter le fichier du projet",
     "exportFailed": "Ce projet n’a pas pu être exporté. Vérifiez votre connexion et réessayez.",
+    "exportedFiles": "Le G-code tient en un fichier par face, enregistrés sous {files}. Si votre navigateur a demandé d'autoriser plusieurs téléchargements, autorisez-les, sinon le fichier de la face inférieure manque.",
     "exportedWithWarnings": "Le G-code a été exporté avec des avertissements :",
     "exportGcode": "Exporter le G-code",
     "allProjects": "Tous les projets",
@@ -1211,7 +1219,22 @@
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui n’usine que lui} other {les # opérations qui n’usinent que lui}}",
     "duplicateTitle": "Copie le dessin à sa droite, usiné par les mêmes opérations",
     "duplicate": "Dupliquer",
-    "remove": "Retirer le dessin"
+    "remove": "Retirer le dessin",
+    "removeText": "Supprimer le texte"
+  },
+  "Text": {
+    "heading": "Texte",
+    "text": "Texte",
+    "font": "Police",
+    "height": "Hauteur des lettres",
+    "align": "Alignement",
+    "aligns": {
+      "left": "Gauche",
+      "center": "Centre",
+      "right": "Droite"
+    },
+    "heightNote": "La hauteur est celle des majuscules. Le texte reste à sa place quand vous le modifiez.",
+    "tabsRemoved": "{count, plural, one {# attache retirée, qui ne tombait} other {# attaches retirées, qui ne tombaient}} plus sur les lettres."
   },
   "Import": {
     "units": {
@@ -1230,7 +1253,9 @@
     "importing": "Import de {file}…",
     "dismiss": "Fermer",
     "import": "Importer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "addText": "Ajouter du texte",
+    "defaultText": "Texte"
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

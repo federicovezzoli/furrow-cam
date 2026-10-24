@@ -45,7 +45,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Proposed |
 | [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Proposed |
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Proposed |
-| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed; superseded in part by ADR-0034, ADR-0038 and ADR-0055 |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Proposed; superseded in part by ADR-0034, ADR-0038, ADR-0055 and ADR-0060 |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Proposed |
 | [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Proposed |
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
@@ -73,3 +73,6 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0056](0056-touch-off-tool-change-shows-what-runs.md) | The touch-off pad's tool change is always a block, and the field shows it | Proposed |
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
 | [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
+| [0059](0059-text-items-are-drawings-with-settings.md) | A text item is a drawing that keeps its settings and stores its outlines as one shape | Proposed |
+| [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Proposed |
+| [0061](0061-fonts-parsed-with-opentype-js.md) | Fonts are parsed and laid out with opentype.js, behind one adapter | Proposed |

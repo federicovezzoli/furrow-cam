@@ -149,10 +149,11 @@ describe("migrations", () => {
     ]);
   });
 
-  it("leaves v4 and v5 documents as they are", () => {
+  it("leaves v4, v5 and v18 documents as they are", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
+    expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);
   });
 
   it("gives v6 documents no models", () => {
@@ -363,6 +364,19 @@ describe("migrations", () => {
     expect(migrated).toEqual(doc);
     expect(JSON.stringify(migrated)).not.toMatch(/"tool":\{[^}]*"stepOver"/);
     expect(parseProjectDocument(v17)).toEqual(doc);
+  });
+
+  it("makes v19 projects one-sided, every operation on the top", () => {
+    const doc = fullDocument();
+    const v19 = JSON.parse(JSON.stringify(doc)) as {
+      schemaVersion: number;
+      stock: Record<string, unknown>;
+      operations: Record<string, unknown>[];
+    };
+    v19.schemaVersion = 19;
+    delete v19.stock.twoSided;
+    for (const operation of v19.operations) delete operation.stockSide;
+    expect(parseProjectDocument(v19)).toEqual({ ...doc, stock: { ...doc.stock, twoSided: null } });
   });
 
   it("leaves v1 documents without operations alone", () => {

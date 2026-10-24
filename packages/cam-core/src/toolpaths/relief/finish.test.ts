@@ -1,6 +1,7 @@
 import type { Model, ReliefFinishOperation, Tool } from "@furrow/document";
 import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import { modelView } from "../../scene/sides";
 import { cutterProfile } from "../../simulation/simulation";
 import { generateToolpath, MissingMeshError, type ToolpathInput, toolpathKey } from "../generate";
 import type { Toolpath, ToolpathMove } from "../toolpath";
@@ -67,6 +68,7 @@ function finishing(
     type: "relief_finish",
     name: "Finish",
     enabled: true,
+    stockSide: "top",
     targets: [],
     tool,
     params: {
@@ -108,7 +110,7 @@ describe("reliefCellSize", () => {
 
 describe("reliefGrid", () => {
   it("covers the model's outline with cells of the wanted size", () => {
-    const grid = reliefGrid(placed(300, 200, 10), 0, 0.075);
+    const grid = reliefGrid(modelView(placed(300, 200, 10)), 0, 0.075);
     expect(grid).toMatchObject({ columns: 4000, rows: 2667, coarsened: false, base: -10 });
     expect(grid?.outline).toEqual([
       [0, 0],
@@ -119,7 +121,7 @@ describe("reliefGrid", () => {
   });
 
   it("grows the cells to stay within the cap, and says so", () => {
-    const grid = reliefGrid(placed(600, 400, 10), 0, 0.075);
+    const grid = reliefGrid(modelView(placed(600, 400, 10)), 0, 0.075);
     if (!grid) throw new Error("no grid");
     expect(grid.coarsened).toBe(true);
     expect(grid.columns * grid.rows).toBeLessThanOrEqual(MAX_RELIEF_CELLS);
@@ -127,7 +129,7 @@ describe("reliefGrid", () => {
   });
 
   it("is laid out along the passes", () => {
-    const grid = reliefGrid(placed(20, 10, 5), 90, 0.5);
+    const grid = reliefGrid(modelView(placed(20, 10, 5)), 90, 0.5);
     // Turned a quarter turn, the outline is 10 wide and 20 long.
     expect(grid?.columns).toBe(20);
     expect(grid?.rows).toBe(40);
@@ -135,13 +137,17 @@ describe("reliefGrid", () => {
 
   it("is null for a model with no area", () => {
     expect(
-      reliefGrid({ ...placed(20, 10, 5), bounds: { min: [0, 0, 0], max: [0, 10, 5] } }, 0, 0.1),
+      reliefGrid(
+        modelView({ ...placed(20, 10, 5), bounds: { min: [0, 0, 0], max: [0, 10, 5] } }),
+        0,
+        0.1,
+      ),
     ).toBeNull();
   });
 });
 
 describe("restGrid", () => {
-  const grid = reliefGrid(placed(20, 10, 5), 0, 0.1);
+  const grid = reliefGrid(modelView(placed(20, 10, 5)), 0, 0.1);
   if (!grid) throw new Error("no grid");
 
   it("covers the operation's grid with cells of at least a quarter millimetre", () => {
@@ -175,7 +181,7 @@ describe("restGrid", () => {
 
 describe("RestDropper", () => {
   it("drops along a pass as each sample's own drop would, skipping the cleared stretches", () => {
-    const grid = reliefGrid(placed(20, 10, 5), 0, 0.1);
+    const grid = reliefGrid(modelView(placed(20, 10, 5)), 0, 0.1);
     if (!grid) throw new Error("no grid");
     const coarse = restGrid(grid, { min: [-5, -5], max: [30, 15] });
     // Mostly cleared to -5, with a few spots of stock left at varying heights.
@@ -197,9 +203,9 @@ describe("RestDropper", () => {
 });
 
 function raster(model: Model, mesh: Float32Array, cell = 1, angle = 0) {
-  const grid = reliefGrid(model, angle, cell);
+  const grid = reliefGrid(modelView(model), angle, cell);
   if (!grid) throw new Error("no grid");
-  return { grid, heights: runSteps(rasterizeModelSteps(mesh, model, grid)) };
+  return { grid, heights: runSteps(rasterizeModelSteps(mesh, modelView(model), grid)) };
 }
 
 describe("rasterizeModelSteps", () => {
@@ -511,6 +517,8 @@ describe("generateToolpath", () => {
     model: STEP,
     stock: null,
     stockBottom: null,
+    parting: null,
+    flip: null,
     before: [],
     touchOff: null,
     ...options,

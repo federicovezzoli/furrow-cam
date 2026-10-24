@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "Die Antastplatte muss auf dem Rohteil liegen",
+      "partingBelowStock": "Die Trennebene muss im Rohteil liegen",
+      "bottomSideOneSided": "Nur zweiseitige Projekte haben eine Unterseite",
       "duplicateDrawing": "Doppelte Zeichnungs-ID",
       "duplicateShape": "Doppelte Form-ID",
       "duplicateModel": "Doppelte Modell-ID",
@@ -497,6 +499,7 @@
       "unknownModel": "Unbekannte Modell-ID",
       "unknownDrawing": "Unbekannte Zeichnungs-ID",
       "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
+      "textShapes": "Ein Text braucht genau eine Form",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad"
     },
@@ -631,6 +634,7 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
     },
     "export": {
+      "bottomSide2d": "2D-Operationen auf der Unterseite lassen sich noch nicht exportieren: Schalte diese aus oder verschiebe sie auf die Oberseite.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
@@ -703,7 +707,10 @@
       "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
       "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei.",
-      "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe."
+      "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe.",
+      "textNoOutlines": "Keines dieser Zeichen ist in der Schrift, also gibt es nichts zu fräsen.",
+      "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
+      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut."
     }
   },
   "Operation": {
@@ -1046,6 +1053,7 @@
     "exportFile": "Datei exportieren",
     "exportProject": "Projektdatei exportieren",
     "exportFailed": "Dieses Projekt konnte nicht exportiert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "exportedFiles": "Der G-Code liegt in einer Datei pro Seite, gespeichert als {files}. Hat dein Browser gefragt, ob mehrere Downloads erlaubt sind, erlaube sie, sonst fehlt die Datei der Unterseite.",
     "exportedWithWarnings": "Der G-Code wurde mit Warnungen exportiert:",
     "exportGcode": "G-Code exportieren",
     "allProjects": "Alle Projekte",
@@ -1211,7 +1219,22 @@
     "removeTitle": "Entfernt auch {count, plural, one {die Operation, die nur sie bearbeitet} other {die # Operationen, die nur sie bearbeiten}}",
     "duplicateTitle": "Kopiert die Zeichnung rechts daneben, bearbeitet von denselben Operationen",
     "duplicate": "Duplizieren",
-    "remove": "Zeichnung entfernen"
+    "remove": "Zeichnung entfernen",
+    "removeText": "Text entfernen"
+  },
+  "Text": {
+    "heading": "Text",
+    "text": "Text",
+    "font": "Schrift",
+    "height": "Buchstabenhöhe",
+    "align": "Ausrichtung",
+    "aligns": {
+      "left": "Links",
+      "center": "Mitte",
+      "right": "Rechts"
+    },
+    "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
+    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}."
   },
   "Import": {
     "units": {
@@ -1230,7 +1253,9 @@
     "importing": "{file} wird importiert…",
     "dismiss": "Schließen",
     "import": "Importieren",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "addText": "Text hinzufügen",
+    "defaultText": "Text"
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

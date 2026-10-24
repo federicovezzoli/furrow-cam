@@ -30,7 +30,7 @@ import { BrowserOnly } from "./browser-only";
 import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
 import { GcodeExportButton } from "./gcode-export-button";
-import { GeometryImport, ImportDrawingButton } from "./geometry-import";
+import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-import";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
@@ -91,6 +91,7 @@ export function WorkspaceShell() {
         onTakeTour={(from) => tour.start(from)}
       >
         <ImportDrawingButton />
+        <AddTextButton />
         <VersionsButton />
       </TopBar>
       <Tour

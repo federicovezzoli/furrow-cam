@@ -1,0 +1,133 @@
+import type { Point } from "@furrow/document";
+import { type Glyph, type Font as OpentypeFont, parse, type RenderOptions } from "opentype.js";
+
+/**
+ * A parsed TTF, OTF or WOFF font (ADR-0061). A `singleStroke` font draws
+ * each stroke once, so its contours are open paths an engraving follows,
+ * not outlines to cut around.
+ */
+export type Font = { readonly font: OpentypeFont; readonly singleStroke: boolean };
+
+/** One command of a glyph's outline, in millimetres, y up. */
+export type GlyphCommand =
+  | { type: "M" | "L"; to: Point }
+  | { type: "Q"; control: Point; to: Point }
+  | { type: "C"; c1: Point; c2: Point; to: Point }
+  | { type: "Z" };
+
+/**
+ * Kerning on; no ligatures (ADR-0061), no hinting, and no colour layers or
+ * SVG glyphs, which need a DOM. Cast: `@types/opentype.js` describes 1.3,
+ * without 2.0's options.
+ */
+const RENDER = {
+  kerning: true,
+  features: { liga: false, rlig: false },
+  hinting: false,
+  drawLayers: false,
+  drawSVG: false,
+} as RenderOptions;
+
+/** Parses `bytes` (TTF, OTF or WOFF; not WOFF2). Throws if they aren't a font it can read. */
+export function parseFont(bytes: ArrayBuffer | Uint8Array, singleStroke = false): Font {
+  // A copy: a view's buffer, or a Node `Buffer`'s, may hold other bytes around the font.
+  return {
+    font: parse(bytes instanceof Uint8Array ? Uint8Array.from(bytes).buffer : bytes),
+    singleStroke,
+  };
+}
+
+/**
+ * The font's cap height in font units: from its OS/2 table, else the top of
+ * its "H", else its ascender, else its em.
+ */
+function capHeight(font: OpentypeFont): number {
+  const stored = font.tables.os2?.sCapHeight;
+  if (typeof stored === "number" && stored > 0) return stored;
+  const top = font.hasChar("H") ? font.charToGlyph("H").getBoundingBox().y2 : 0;
+  if (top > 0) return top;
+  return font.ascender > 0 ? font.ascender : font.unitsPerEm;
+}
+
+/**
+ * Lays `text` out on one line with the font's kerning, at a cap height of
+ * `height` millimetres: each glyph's outline commands, its origin on the
+ * baseline at the line's start, and the line's advance width. Characters the
+ * font lacks take their space but draw nothing, rather than its
+ * missing-glyph box.
+ */
+export function layoutLine(
+  { font, singleStroke }: Font,
+  text: string,
+  height: number,
+): { glyphs: GlyphCommand[][]; width: number } {
+  const size = (height * font.unitsPerEm) / capHeight(font);
+  const missing = font.glyphs.get(0);
+  const glyphs: GlyphCommand[][] = [];
+  // shortcut: a line break lays out as a space, until several lines (#351).
+  const line = text.replace(/\r\n|[\n\r]/g, " ");
+  const width = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, x, y, fontSize) => {
+    if (glyph === missing) return;
+    if (singleStroke && font.outlinesFormat === "truetype") {
+      glyphs.push(strokeCommands(glyph, x, fontSize / font.unitsPerEm));
+      return;
+    }
+    // opentype.js draws y down, as on a screen.
+    const point = (px: number, py: number): Point => [px, -py];
+    const commands = glyph.getPath(x, y, fontSize, RENDER, font).commands;
+    const mapped = commands.map((command): GlyphCommand => {
+      if (command.type === "Z") return command;
+      const to = point(command.x, command.y);
+      if (command.type === "Q") return { type: "Q", control: point(command.x1, command.y1), to };
+      if (command.type === "C") {
+        const c1 = point(command.x1, command.y1);
+        return { type: "C", c1, c2: point(command.x2, command.y2), to };
+      }
+      return { type: command.type, to };
+    });
+    glyphs.push(mapped);
+  });
+  return { glyphs, width };
+}
+
+/** A TrueType point as opentype.js reads it; `@types/opentype.js` lists only `lastPointOfContour`. */
+type GlyphPoint = { x: number; y: number; onCurve: boolean };
+
+/**
+ * A single-stroke TrueType glyph's strokes, read from its points, `x` along
+ * the line, `scale` millimetres per font unit (ADR-0061). TrueType closes
+ * every contour, and opentype.js draws the closing segment, but a
+ * single-stroke font's contours are open strokes: nothing joins a stroke's
+ * last point back to its first, whether either end is a curve's or a line's.
+ */
+function strokeCommands(glyph: Glyph, x: number, scale: number): GlyphCommand[] {
+  // opentype.js reads a glyph's points when its path is first built.
+  if (glyph.path.commands.length === 0) return [];
+  const at = (point: GlyphPoint): Point => [x + point.x * scale, point.y * scale];
+  return glyph.getContours().flatMap((contour) => {
+    const [first, ...rest] = contour as unknown as GlyphPoint[];
+    if (!first) return [];
+    const commands: GlyphCommand[] = [{ type: "M", to: at(first) }];
+    let control: GlyphPoint | null = null;
+    for (const point of rest) {
+      if (point.onCurve) {
+        commands.push(
+          control
+            ? { type: "Q", control: at(control), to: at(point) }
+            : { type: "L", to: at(point) },
+        );
+        control = null;
+        continue;
+      }
+      // Between two control points lies an implied point on the curve, halfway.
+      if (control) {
+        const half = { x: (control.x + point.x) / 2, y: (control.y + point.y) / 2, onCurve: true };
+        commands.push({ type: "Q", control: at(control), to: at(half) });
+      }
+      control = point;
+    }
+    // A stroke whose last point is a control point ends on it.
+    if (control) commands.push({ type: "L", to: at(control) });
+    return commands;
+  });
+}

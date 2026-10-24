@@ -18,6 +18,7 @@ import type {
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
+import { moveTextWithOutlines } from "./geometry-actions";
 
 /**
  * Document store actions on the project's units and stock (ADR-0010): each
@@ -34,10 +35,11 @@ export function setUnits(store: DocumentStore, units: Units) {
 }
 
 /**
- * Moves the design on the stock by `offset`: its shapes, the models placed
- * with them (ADR-0031) and everything else stored in stock coordinates with
- * them, the profiles' tab positions and the touch-off pad (ADR-0043), which
- * was placed on the zero the design follows. `geometry` is the document's,
+ * Moves the design on the stock by `offset`: its shapes, the text items'
+ * placements (ADR-0059), the models placed with them (ADR-0031) and
+ * everything else stored in stock coordinates with them, the profiles' tab
+ * positions and the touch-off pad (ADR-0043), which was placed on the zero
+ * the design follows. `geometry` is the document's,
  * read outside the draft: reading every point through it would be slow.
  */
 function moveDrawing(
@@ -48,6 +50,9 @@ function moveDrawing(
   if (offset[0] === 0 && offset[1] === 0) return;
   // One assignment, so the undo step is one patch rather than one per point.
   draft.geometry = translateShapes(geometry, offset);
+  for (const drawing of draft.drawings) {
+    moveTextWithOutlines(drawing, (point) => translatePoint(point, offset));
+  }
   for (const { placement } of draft.models) {
     placement.position = translatePoint(placement.position, offset);
   }
@@ -79,7 +84,7 @@ function keepTouchOffOnStock(draft: Draft<ProjectDocument>, before: ProjectDocum
  * follows the stock and the drawing moves with it (ADR-0022), so a drawing
  * aligned to the anchor stays aligned; a custom zero and the drawing stay
  * where they are. The touch-off pad moves with the drawing and stays on the
- * stock (ADR-0041).
+ * stock (ADR-0041), and the parting plane in it (ADR-0060).
  */
 export function setStockDimension(store: DocumentStore, dimension: StockDimension, value: number) {
   const { stock, geometry } = store.getState().document;
@@ -92,6 +97,12 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     const widest = Math.min(draft.stock.width, draft.stock.height);
     if (pad && pad.diameter > widest) pad.diameter = widest;
     keepTouchOffOnStock(draft, stock);
+    // The parting plane must lie inside the stock (ADR-0060): a thinner stock
+    // than it allows keeps it at the same fraction of the thickness.
+    const twoSided = draft.stock.twoSided;
+    if (twoSided && twoSided.partingDepth >= draft.stock.thickness) {
+      twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
+    }
   });
 }
 

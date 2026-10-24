@@ -1,6 +1,7 @@
 import { createCache, generateToolpath, type SimulationCut, type Vec3 } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
 import { enabledInputs, exportGcode, postToolpaths } from "../export";
+import { oneFile } from "../export-test-utils";
 import {
   checkGcode,
   formatViolations,
@@ -15,7 +16,7 @@ const projects = corpus();
 describe.each(projects)(
   "$name: $covers",
   ({ name, title, document, context, warnings: expected = [] }) => {
-    const { gcode, warnings } = exportGcode(document, title, context);
+    const { gcode, warnings } = oneFile(exportGcode(document, title, context));
 
     it("posts the program checked in", async () => {
       await expect(gcode).toMatchFileSnapshot(`programs/${name}.gcode`);
@@ -36,7 +37,7 @@ describe.each(projects)(
         input,
         toolpath: generateToolpath(input, toolpathContext),
       }));
-      const posted = postToolpaths(document, title, computed);
+      const posted = oneFile(postToolpaths(document, title, computed));
       expect(posted.gcode).toBe(gcode);
       expect(posted.warnings).toEqual(warnings);
     });
@@ -46,7 +47,7 @@ describe.each(projects)(
 /** The program of the corpus project `name`, split by operation. */
 function program(name: string) {
   const project = projects.find((candidate) => candidate.name === name) as CorpusProject;
-  const { gcode } = exportGcode(project.document, project.title, project.context);
+  const { gcode } = oneFile(exportGcode(project.document, project.title, project.context));
   const operations = operationMoves(gcode);
   /** The cutting moves of operation `operation`. */
   const feeds = (operation: string) => {
