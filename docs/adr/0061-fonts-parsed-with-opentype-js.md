@@ -18,7 +18,7 @@ Text items (PRD-0010, ADR-0059) store their outlines, laid out from a font when 
 ## Decision
 
 - Use **option 1, `opentype.js` 2.0**, in `@furrow/cam-core`. Only `src/text/font.ts` imports it (and the text tests, which build fonts in memory); Biome's `noRestrictedImports` enforces it, as for Clipper2 and Delaunator. `@types/opentype.js` describes 1.3; the members the adapter uses are unchanged in 2.0.
-- `parseFont(bytes, singleStroke)` reads a font. `textPaths(font, settings)` lays a text item's line out with kerning, at its cap height (the OS/2 table's, else the top of its "H") and alignment, and places it: quadratics become cubics, as on SVG import.
+- `parseFont(bytes, singleStroke)` reads a font. `textPaths(font, settings)` lays a text item's lines out with kerning, at its cap height (the OS/2 table's, else the top of its "H"), each line aligned on its own and set below the one before by the line spacing, with the letter spacing between characters (none before a zero-width accent, so it stays on its letter), and places them: quadratics become cubics, as on SVG import.
 - **Overlapping glyphs** (script fonts) are merged with the geometry kernel's union, so profiles go around them once and pockets don't cut the overlap twice. A merged outline is flattened at the default chord tolerance; glyphs that don't overlap keep their curves.
 - **Single-stroke fonts** are flagged when parsed, as the app knows which of its fonts are (#349). Their contours become open paths, unless they end where they start, and are never merged: font formats close every contour, and engraving the closing line would cut a stroke the font doesn't have.
 - A character the font lacks takes its advance but draws nothing, rather than the font's missing-glyph box.
