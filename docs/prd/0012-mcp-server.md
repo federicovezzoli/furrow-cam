@@ -38,7 +38,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 | M3 | Import SVG, DXF and STL files by path into a project, with the same limits, units and placement rules as the app | Must |
 | M4 | Set the stock, the zero and the machine; read the desktop app's tool library and machine list (ADR-0047) and add tools to a project | Must |
 | M5 | Add, edit, reorder, enable, disable and remove operations of every type, with the same defaults and validation as the app. An invalid request is refused with the app's message | Must |
-| M6 | Check a project: the problems the app shows (tools, toolpath warnings), the machining time, and whether there is anything to cut | Must |
+| M6 | Check a project: the problems the app shows (tools, toolpath warnings) and whether there is anything to cut | Must |
 | M7 | Export G-code to a path, for the project's post-processor, identical to the app's export | Must |
 | M8 | Before the first change in a session, the server keeps the project as an automatic version (ADR-0028), so the user can restore what the assistant changed | Must |
 | M9 | Installed with one command, with setup instructions for common MCP clients (Claude Desktop, Claude Code, editors) | Must |
@@ -50,7 +50,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 
 1. The user installs the local server in Claude Desktop with the command from the docs.
 2. They ask: "Make a project from `~/signs/rossi.svg`, 300 × 200 × 18 mm pine, zero at the bottom-left of the top face. V-carve the lettering with my 60° bit and cut the outline out with the 6 mm end mill, with four tabs."
-3. The assistant creates `rossi.furrow`, imports the drawing, sets the stock and zero, adds the two operations with tools from the library, checks the project and reports the machining time.
+3. The assistant creates `rossi.furrow`, imports the drawing, sets the stock and zero, adds the two operations with tools from the library, checks the project and reports any problems.
 4. The user opens `rossi.furrow` in the desktop app, looks at the toolpaths and the simulation, and asks the assistant to export the G-code (or exports it themselves).
 
 ## Success criteria
