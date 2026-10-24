@@ -1,4 +1,5 @@
 import type { Point } from "@furrow/document";
+import { quadraticToCubic } from "../../geometry/curve";
 import { NUMBER_PATTERN } from "./number";
 
 /** A line or cubic Bézier in SVG user units; arcs and quadratics are converted to cubics. */
@@ -160,15 +161,6 @@ export function parsePathData(d: string): { subpaths: RawSubpath[]; valid: boole
 
 function reflect(control: Point | null, about: Point): Point {
   return control ? [2 * about[0] - control[0], 2 * about[1] - control[1]] : about;
-}
-
-function quadraticToCubic(p0: Point, q: Point, p3: Point): RawSegment {
-  return {
-    kind: "cubic",
-    c1: [p0[0] + (2 / 3) * (q[0] - p0[0]), p0[1] + (2 / 3) * (q[1] - p0[1])],
-    c2: [p3[0] + (2 / 3) * (q[0] - p3[0]), p3[1] + (2 / 3) * (q[1] - p3[1])],
-    to: p3,
-  };
 }
 
 /**

@@ -16,11 +16,13 @@ export type GlyphCommand =
   | { type: "Z" };
 
 /**
- * Kerning on; no hinting, and no colour layers or SVG glyphs, which need a
- * DOM. Cast: `@types/opentype.js` describes 1.3, without 2.0's options.
+ * Kerning on; no ligatures (ADR-0060), no hinting, and no colour layers or
+ * SVG glyphs, which need a DOM. Cast: `@types/opentype.js` describes 1.3,
+ * without 2.0's options.
  */
 const RENDER = {
   kerning: true,
+  features: { liga: false, rlig: false },
   hinting: false,
   drawLayers: false,
   drawSVG: false,
@@ -35,12 +37,16 @@ export function parseFont(bytes: ArrayBuffer | Uint8Array, singleStroke = false)
   };
 }
 
-/** The font's cap height in font units: from its OS/2 table, else the top of its "H". */
+/**
+ * The font's cap height in font units: from its OS/2 table, else the top of
+ * its "H", else its ascender, else its em.
+ */
 function capHeight(font: OpentypeFont): number {
   const stored = font.tables.os2?.sCapHeight;
   if (typeof stored === "number" && stored > 0) return stored;
-  const top = font.charToGlyph("H").getBoundingBox().y2;
-  return top > 0 ? top : font.ascender;
+  const top = font.hasChar("H") ? font.charToGlyph("H").getBoundingBox().y2 : 0;
+  if (top > 0) return top;
+  return font.ascender > 0 ? font.ascender : font.unitsPerEm;
 }
 
 /**
@@ -58,7 +64,9 @@ export function layoutLine(
   const size = (height * font.unitsPerEm) / capHeight(font);
   const missing = font.glyphs.get(0);
   const glyphs: GlyphCommand[][] = [];
-  const width = font.forEachGlyph(text, 0, 0, size, RENDER, (glyph, x, y, fontSize) => {
+  // shortcut: a line break lays out as a space, until several lines (#351).
+  const line = text.replace(/\r\n|[\n\r]/g, " ");
+  const width = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, x, y, fontSize) => {
     if (glyph === missing) return;
     // opentype.js draws y down, as on a screen.
     const point = (px: number, py: number): Point => [px, -py];

@@ -33,7 +33,8 @@ function glyph(name: string, char: string | null, advanceWidth: number, ...draws
  * A 1000-unit font: "H" is 600 × 700 (its cap height), "O" a ring with a
  * quadratic, "a" a 600 × 300 box that overlaps the next glyph by 100, "l"
  * and "v" single strokes, open and closed by the font, and "o" a closed
- * single-stroke loop. "H" then "O" kern by -100.
+ * single-stroke loop. "H" then "O" kern by -100. "X" overlaps itself, and
+ * "f" then "i" has a ligature.
  */
 function testFont(): OpentypeFont {
   const font = new OpentypeFont({
@@ -65,6 +66,11 @@ function testFont(): OpentypeFont {
         path.lineTo(500, 700);
         path.close();
       }),
+      // Two bars drawn the same way round, crossing within the glyph.
+      glyph("X", "X", 700, rect(0, 300, 600, 400), rect(250, 0, 350, 700)),
+      glyph("f", "f", 400, rect(0, 0, 300, 700)),
+      glyph("i", "i", 300, rect(0, 0, 200, 500)),
+      glyph("f_i", null, 700, rect(0, 0, 600, 700)),
       glyph("o", "o", 500, (path) => {
         path.moveTo(0, 0);
         path.lineTo(400, 0);
@@ -76,6 +82,12 @@ function testFont(): OpentypeFont {
   });
   // Parsing numbers the glyphs; a font made in memory leaves them all 0.
   for (let i = 0; i < font.glyphs.length; i++) font.glyphs.get(i).index = i;
+  // `@types/opentype.js` describes 1.3, without `addLigature`.
+  const substitution = font.substitution as unknown as {
+    addLigature(feature: string, ligature: { sub: number[]; by: number }, script: string): void;
+  };
+  const f = font.charToGlyphIndex("f");
+  substitution.addLigature("liga", { sub: [f, font.charToGlyphIndex("i")], by: f + 2 }, "latn");
   font.kerningPairs = { [`${font.charToGlyphIndex("H")},${font.charToGlyphIndex("O")}`]: -100 };
   return font;
 }
@@ -226,6 +238,37 @@ describe("textPaths", () => {
     // Clipper rounds to 0.1 µm.
     expect(area(merged[0] as Path)).toBeCloseTo(1100 * 300 * UNIT ** 2, 3);
     expect(textPaths(outline, settings("a a"))).toHaveLength(2);
+  });
+
+  it("merges a glyph's own overlapping contours", () => {
+    const [cross, ...rest] = textPaths(outline, settings("X"));
+    expect(rest).toEqual([]);
+    // Clipper rounds to 0.1 µm.
+    expect(area(cross as Path)).toBeCloseTo((600 * 100 + 100 * 600) * UNIT ** 2, 3);
+  });
+
+  it("sets no ligatures, so each character keeps its glyph", () => {
+    expect(textPaths(outline, settings("fi"))).toHaveLength(2);
+  });
+
+  it("lays a line break out as a space, until several lines", () => {
+    expect(textPaths(outline, settings("H\nH"))).toEqual(textPaths(outline, settings("H H")));
+  });
+
+  it("falls back to the ascender for the cap height of a font without an H", () => {
+    const font = new OpentypeFont({
+      familyName: "Test",
+      styleName: "Regular",
+      unitsPerEm: 1000,
+      ascender: 800,
+      descender: -200,
+      glyphs: [
+        glyph(".notdef", null, 500, rect(0, 0, 500, 700)),
+        glyph("a", "a", 500, rect(0, 0, 600, 300)),
+      ],
+    });
+    const top = bounds(textPaths({ font, singleStroke: false }, settings("a"))).max[1];
+    expect(top).toBeCloseTo(300 * (10 / 800), 9);
   });
 
   it("draws nothing for characters the font lacks, and nothing for blank text", () => {

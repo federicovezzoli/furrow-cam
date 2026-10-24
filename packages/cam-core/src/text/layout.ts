@@ -6,9 +6,11 @@ import {
   segmentIssue,
   type TextSettings,
 } from "@furrow/document";
-import { intersection, type Polygon, signedArea, union } from "../geometry/clipper";
+import { pathBounds, type Rect } from "../geometry/bounds";
+import { type FillRule, intersection, type Polygon, signedArea, union } from "../geometry/clipper";
+import { quadraticToCubic } from "../geometry/curve";
 import { flattenPath } from "../geometry/flatten";
-import { roundCoordinate } from "../geometry/round";
+import { textFrame } from "../geometry/scale";
 import { mapPath } from "../geometry/translate";
 import { type Font, type GlyphCommand, layoutLine } from "./font";
 
@@ -19,8 +21,9 @@ const OVERLAP_AREA = 1e-6;
  * Text item `settings`' outlines in stock coordinates (PRD-0010 T2,
  * ADR-0059): one line laid out in `font` with its kerning, at the cap
  * height and alignment, then placed. Quadratics become cubics, as on SVG
- * import. Glyphs that overlap, as in script fonts, are merged into one
- * outline, flattened, so a pocket doesn't cut the overlap twice. A
+ * import. Glyphs that overlap, as in script fonts, or whose own contours do,
+ * are merged into one outline, flattened, so a pocket doesn't cut the
+ * overlap twice. A
  * single-stroke font gives open paths that an engraving follows once. Empty
  * if no character has an outline.
  */
@@ -29,18 +32,10 @@ export function textPaths(font: Font, settings: TextSettings): Path[] {
   const shift = settings.align === "left" ? 0 : settings.align === "center" ? -width / 2 : -width;
   const outlines = glyphs.map((commands) => glyphPaths(commands, font.singleStroke, shift));
   const paths = font.singleStroke ? outlines.flat() : mergeOverlaps(outlines);
-  const { position, rotation, mirrored } = settings.placement;
-  const radians = (rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const place = ([x, y]: Point): Point => {
-    const flipped = mirrored ? -x : x;
-    return [
-      roundCoordinate(position[0] + flipped * cos - y * sin),
-      roundCoordinate(position[1] + flipped * sin + y * cos),
-    ];
-  };
-  return paths.flatMap((path) => cleanPath(mapPath(path, place, mirrored)) ?? []);
+  const place = textFrame(settings.placement);
+  return paths.flatMap(
+    (path) => cleanPath(mapPath(path, place, settings.placement.mirrored)) ?? [],
+  );
 }
 
 /**
@@ -85,51 +80,68 @@ function segment(
 ): Segment {
   if (command.type === "C") return { kind: "cubic", c1: at(command.c1), c2: at(command.c2), to };
   if (command.type !== "Q") return { kind: "line", to };
-  // A quadratic is the cubic whose controls are 2/3 of the way to its control point.
-  const [qx, qy] = at(command.control);
-  const third = ([x, y]: Point): Point => [x + ((qx - x) * 2) / 3, y + ((qy - y) * 2) / 3];
-  return { kind: "cubic", c1: third(current), c2: third(to), to };
+  return quadraticToCubic(current, at(command.control), to);
 }
 
 /**
  * The glyphs' paths, with every group of glyphs whose outlines overlap
- * merged into one outline (its union, flattened). Glyphs that only touch, or
- * stand alone, keep their curves.
+ * merged into one outline (its union, flattened), and every glyph whose own
+ * contours overlap, as composite accented letters' may. Other glyphs keep
+ * their curves.
  */
-function mergeOverlaps(glyphs: Path[][]): Path[] {
-  const polygons = glyphs.map((paths) => union(paths.map((path) => flattenPath(path))));
-  const boxes = polygons.map(box);
+function mergeOverlaps(all: Path[][]): Path[] {
+  // A space has no contours.
+  const glyphs = all.filter((paths) => paths.length > 0);
+  const polygons = glyphs.map((paths) => paths.map((path) => flattenPath(path)));
+  const filled = polygons.map((rings) => union(rings));
+  const boxes = glyphs.map((paths) => paths.map(pathBounds).reduce(joinRects));
   const group = glyphs.map((_, i) => i);
   const root = (i: number): number => {
-    while (group[i] !== i) i = group[i] as number;
+    while (group[i] !== i) {
+      group[i] = group[group[i] as number] as number;
+      i = group[i] as number;
+    }
     return i;
   };
   for (let i = 0; i < glyphs.length; i++) {
     for (let j = i + 1; j < glyphs.length; j++) {
-      const [a, b] = [boxes[i], boxes[j]];
-      if (!a || !b || a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1]) continue;
-      const overlap = intersection(polygons[i] ?? [], polygons[j] ?? []);
-      const area = overlap.reduce((sum, polygon) => sum + Math.abs(signedArea(polygon)), 0);
-      if (area > OVERLAP_AREA) group[root(j)] = root(i);
+      const [a, b] = [boxes[i] as Rect, boxes[j] as Rect];
+      if (a.max[0] <= b.min[0] || b.max[0] <= a.min[0]) continue;
+      if (a.max[1] <= b.min[1] || b.max[1] <= a.min[1]) continue;
+      const overlap = intersection(filled[i] ?? [], filled[j] ?? []);
+      if (overlap.reduce((sum, ring) => sum + Math.abs(signedArea(ring)), 0) > OVERLAP_AREA) {
+        group[root(j)] = root(i);
+      }
     }
   }
   const members = new Map<number, number[]>();
   for (let i = 0; i < glyphs.length; i++) {
-    members.set(root(i), [...(members.get(root(i)) ?? []), i]);
+    const r = root(i);
+    const list = members.get(r);
+    if (list) list.push(i);
+    else members.set(r, [i]);
   }
   return [...members.values()].flatMap((indices) => {
-    if (indices.length === 1) return glyphs[indices[0] as number] ?? [];
+    const [only] = indices as [number];
+    const rings = polygons[only] ?? [];
+    // Contours that overlap fill more with the non-zero rule than with even-odd.
+    if (indices.length === 1 && area(rings, "nonZero") - area(rings, "evenOdd") <= OVERLAP_AREA) {
+      return glyphs[only] ?? [];
+    }
     return union(indices.flatMap((i) => polygons[i] ?? [])).map(polygonPath);
   });
 }
 
-/** The bounding box of `polygons` as `[minX, minY, maxX, maxY]`, or `null` for none. */
-function box(polygons: Polygon[]): [number, number, number, number] | null {
-  const points = polygons.flat();
-  if (points.length === 0) return null;
-  const xs = points.map(([x]) => x);
-  const ys = points.map(([, y]) => y);
-  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+/** The area `rings` fill under `fillRule`, in mm². */
+function area(rings: Polygon[], fillRule: FillRule): number {
+  return Math.abs(union(rings, fillRule).reduce((sum, ring) => sum + signedArea(ring), 0));
+}
+
+function joinRects(a: Rect, b: Rect): Rect {
+  return {
+    min: [Math.min(a.min[0], b.min[0]), Math.min(a.min[1], b.min[1])],
+    max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1])],
+  };
 }
 
 /** A closed path of straight lines around `polygon`. */
