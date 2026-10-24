@@ -141,10 +141,18 @@ export const TextSettings = z.strictObject({
   font: z.string().min(1),
   /** Cap height, in millimetres. */
   height: PositiveLength,
+  /** Applies to each line (PRD-0010 T5). */
   align: TextAlign,
+  /** From one line's baseline to the next, as a multiple of `height` (T5). */
+  lineSpacing: z.number().positive(),
+  /** Millimetres added after each character, on top of its advance and kerning; negative tightens (T6). */
+  letterSpacing: z.number(),
   placement: TextPlacement,
 });
 export type TextSettings = z.infer<typeof TextSettings>;
+
+/** The line spacing a new text item gets, and text items made before it was a setting. */
+export const DEFAULT_LINE_SPACING = 1.5;
 
 /**
  * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and

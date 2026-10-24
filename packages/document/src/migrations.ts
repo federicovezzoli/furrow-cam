@@ -195,6 +195,18 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #351: several lines and letter spacing. Text items keep their look: the
+  // line spacing they'd have had, and no letter spacing.
+  20: (doc) => {
+    const V20_LINE_SPACING = 1.5;
+    if (!Array.isArray(doc.drawings)) return doc;
+    for (const drawing of doc.drawings) {
+      if (!isObject(drawing) || !isObject(drawing.text)) continue;
+      drawing.text.lineSpacing ??= V20_LINE_SPACING;
+      drawing.text.letterSpacing ??= 0;
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

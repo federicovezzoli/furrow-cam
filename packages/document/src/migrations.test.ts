@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument } from "./document";
-import { CIRCLE_ID, fullDocument, model, reliefFinish, reliefRough, SQUARE_ID } from "./fixtures";
+import {
+  CIRCLE_ID,
+  fullDocument,
+  model,
+  reliefFinish,
+  reliefRough,
+  SQUARE_ID,
+  textItem,
+  textShape,
+} from "./fixtures";
 import {
   type Migration,
   migrateProjectDocument,
@@ -147,6 +156,22 @@ describe("migrations", () => {
       profile,
       { ...pocket, tool: profile.tool, params },
     ]);
+  });
+
+  it("gives v20 text items the line spacing they had and no letter spacing", () => {
+    const doc = fullDocument();
+    const current = {
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+    };
+    const { lineSpacing: _, letterSpacing: __, ...v20Text } = textItem.text ?? {};
+    const v20 = {
+      ...current,
+      schemaVersion: 20,
+      drawings: [...doc.drawings, { ...textItem, text: v20Text }],
+    };
+    expect(parseProjectDocument(v20)).toEqual(current);
   });
 
   it("leaves v4, v5 and v18 documents as they are", () => {
