@@ -1,5 +1,19 @@
 # @furrow/cam-core
 
+## 0.13.0
+
+### Minor Changes
+
+- 3D roughing and finishing can cut the bottom side of a two-sided project, on the model as seen from below, and each side stops at the parting plane. G-code export covers the top side only until each side gets its own file. ([#376](https://github.com/federicovezzoli/furrow-cam/pull/376))
+- Text can now be laid out from TTF, OTF and WOFF fonts into outlines that profiles, pockets, engravings and V-carves machine, with kerning, overlapping script letters merged, and single-stroke fonts kept as open strokes for engraving. ([#375](https://github.com/federicovezzoli/furrow-cam/pull/375))
+- Projects can now store text items, which keep their text, font, height and placement and machine like any drawing. Projects saved by this release can't be opened by older ones. ([#373](https://github.com/federicovezzoli/furrow-cam/pull/373))
+- Projects can now record a two-sided setup, the axis the stock is turned over about and where the two sides part, and which side each operation cuts; existing projects open as one-sided. Turning it on in the workspace comes in a later release. ([#374](https://github.com/federicovezzoli/furrow-cam/pull/374))
+
+### Patch Changes
+
+- Adds the four open-licence fonts text will use, JetBrains Mono, Arvo, Pacifico and the single-stroke Relief SingleLine, with their licences, and lays single-stroke TrueType fonts out as open strokes, without a line closing each one. ([#377](https://github.com/federicovezzoli/furrow-cam/pull/377))
+- Updated dependencies: @furrow/document@0.14.0
+
 ## 0.12.1
 
 ### Patch Changes
