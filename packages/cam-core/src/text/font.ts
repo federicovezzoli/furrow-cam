@@ -71,18 +71,32 @@ export function layoutLine(
     // opentype.js draws y down, as on a screen.
     const point = (px: number, py: number): Point => [px, -py];
     const commands = glyph.getPath(x, y, fontSize, RENDER, font).commands;
-    glyphs.push(
-      commands.map((command): GlyphCommand => {
-        if (command.type === "Z") return command;
-        const to = point(command.x, command.y);
-        if (command.type === "Q") return { type: "Q", control: point(command.x1, command.y1), to };
-        if (command.type === "C") {
-          const c1 = point(command.x1, command.y1);
-          return { type: "C", c1, c2: point(command.x2, command.y2), to };
-        }
-        return { type: command.type, to };
-      }),
-    );
+    const mapped = commands.map((command): GlyphCommand => {
+      if (command.type === "Z") return command;
+      const to = point(command.x, command.y);
+      if (command.type === "Q") return { type: "Q", control: point(command.x1, command.y1), to };
+      if (command.type === "C") {
+        const c1 = point(command.x1, command.y1);
+        return { type: "C", c1, c2: point(command.x2, command.y2), to };
+      }
+      return { type: command.type, to };
+    });
+    glyphs.push(font.outlinesFormat === "truetype" ? startAtFirstPoint(mapped) : mapped);
   });
   return { glyphs, width };
+}
+
+/**
+ * TrueType contours as CFF ones draw them, starting at their first point and
+ * closed by `Z`. opentype.js starts a TrueType contour at its last point,
+ * with a line to its first: the closing line, which a single-stroke font's
+ * open strokes don't have (ADR-0061). Outlines keep their shape.
+ */
+function startAtFirstPoint(commands: GlyphCommand[]): GlyphCommand[] {
+  return commands.flatMap((command, i) => {
+    const next = commands[i + 1];
+    if (command.type === "M" && next?.type === "L") return [{ type: "M", to: next.to }];
+    if (command.type === "L" && commands[i - 1]?.type === "M") return [];
+    return [command];
+  });
 }
