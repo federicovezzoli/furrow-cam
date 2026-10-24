@@ -1,5 +1,12 @@
-import { type Font, parseFont, pathBounds, textPaths } from "@furrow/cam-core";
-import type { TextSettings } from "@furrow/document";
+import {
+  type Font,
+  flattenPath,
+  parseFont,
+  pathBounds,
+  signedArea,
+  textPaths,
+} from "@furrow/cam-core";
+import type { Path, TextSettings } from "@furrow/document";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import arvo from "../fonts/Arvo-Regular.ttf?inline";
 import jetbrainsMono from "../fonts/JetBrainsMono-Regular.ttf?inline";
@@ -20,7 +27,7 @@ const files = new Map(
 );
 const bytes = (id: string) => files.get(id) as ArrayBuffer;
 const bundled = (id: string) => FONTS.find((font) => font.id === id) as BundledFont;
-const parsed = (id: string) => parseFont(bytes(id), bundled(id).singleStroke);
+const parsed = (id: string) => parseFont(bytes(id), bundled(id).kind === "singleStroke");
 
 function settings(text: string): TextSettings {
   return {
@@ -65,6 +72,23 @@ describe("FONTS", () => {
     const scale = 10 / (source.tables.os2?.sCapHeight as number);
     const alone = right(font, pair.slice(1));
     expect(right(font, pair)).toBeCloseTo(((first.advanceWidth ?? 0) + kern) * scale + alone, 2);
+  });
+
+  it("keeps an outline font's letters whole: every contour, every edge", () => {
+    const font = parsed("arvo");
+    const { font: source } = font;
+    const scale = 10 / (source.tables.os2?.sCapHeight as number);
+    // Arvo's "l" is straight lines only: its area from the font's own points.
+    const points = source
+      .charToGlyph("l")
+      .path.commands.flatMap((command) => ("x" in command ? [[command.x, command.y]] : []));
+    const stored = Math.abs(signedArea(points as [number, number][])) * scale ** 2;
+    const [l, ...rest] = textPaths(font, settings("l"));
+    expect(rest).toEqual([]);
+    expect(Math.abs(signedArea(flattenPath(l as Path)))).toBeCloseTo(stored, 6);
+    // An "O" keeps its outer edge and its hole.
+    expect(textPaths(font, settings("O")).every((path) => path.closed)).toBe(true);
+    expect(textPaths(font, settings("O"))).toHaveLength(2);
   });
 
   it("merges the script font's joined letters into one outline", () => {

@@ -11,28 +11,24 @@ export const FONTS = [
     name: "JetBrains Mono",
     // The interface's font.
     kind: "mono",
-    singleStroke: false,
     url: new URL("../fonts/JetBrainsMono-Regular.ttf", import.meta.url),
   },
   {
     id: "arvo",
     name: "Arvo",
     kind: "serif",
-    singleStroke: false,
     url: new URL("../fonts/Arvo-Regular.ttf", import.meta.url),
   },
   {
     id: "pacifico",
     name: "Pacifico",
     kind: "script",
-    singleStroke: false,
     url: new URL("../fonts/Pacifico-Regular.ttf", import.meta.url),
   },
   {
     id: "relief-singleline",
     name: "Relief SingleLine",
     kind: "singleStroke",
-    singleStroke: true,
     url: new URL("../fonts/ReliefSingleLineCAD-Regular.ttf", import.meta.url),
   },
 ] as const;
@@ -59,7 +55,7 @@ export function loadFont(id: string): Promise<Font> | null {
         if (!response.ok) throw new Error(`Font ${id}: HTTP ${response.status}`);
         return response.arrayBuffer();
       })
-      .then((bytes) => parseFont(bytes, font.singleStroke));
+      .then((bytes) => parseFont(bytes, font.kind === "singleStroke"));
     promise.catch(() => loaded.delete(id));
     loaded.set(id, promise);
   }
