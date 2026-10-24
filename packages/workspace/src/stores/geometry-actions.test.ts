@@ -569,7 +569,9 @@ describe("text items", () => {
     const copy = text(store.getState().document, copyId);
     expect(copy.position).toEqual(copy.origin);
     expect(copy.position).not.toEqual(textItem.text?.placement.position);
+    const before = text(store.getState().document).position;
     setXYAnchor(store, "center");
+    expect(text(store.getState().document).position).not.toEqual(before);
     for (const id of [TEXT_ID, copyId]) {
       const { position, origin } = text(store.getState().document, id);
       expect(position).toEqual(origin);
