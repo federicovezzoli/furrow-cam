@@ -18,7 +18,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 ## Goals
 
 - An assistant can do everything the workspace does to a project (import, stock and zero, tools, operations, checks, G-code export) through MCP tools, with the same results as the app.
-- Phase 1 works locally on `.furrow` files, with no account and nothing leaving the user's computer.
+- Phase 1 works locally on `.furrow` files, with no account: Furrow CAM uploads nothing. What the server returns goes to the user's assistant, which decides where it is sent (a cloud model, for most assistants).
 - Phase 2 reaches the projects saved in the user's web account.
 - The user can always see and undo what an assistant changed.
 
@@ -57,7 +57,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 
 - An assistant goes from an SVG and a one-sentence brief to a project and G-code that the user cuts on a GRBL machine without manual G-code edits.
 - G-code exported through the server is byte-identical to the app's export of the same project.
-- No personal data or project content leaves the computer in phase 1.
+- In phase 1, Furrow CAM sends no project content or personal data anywhere; the docs say that tool results go wherever the user's assistant sends them.
 
 ## Open questions
 
@@ -68,3 +68,4 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 ## Changelog
 
 - 2026-10-24: initial draft
+- 2026-10-24: phase 1 uploads nothing, but tool results go where the assistant sends them
