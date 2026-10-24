@@ -57,7 +57,8 @@ export function GcodeExportButton({
       void alert(formatWarning(t, { operation: result.operation, message: result.error }));
       return;
     }
-    downloadFile(result.gcode, result.fileName, "text/plain");
+    // One file per side in a two-sided project (ADR-0060).
+    for (const file of result.files) downloadFile(file.gcode, file.fileName, "text/plain");
     const machine = documents.getState().document.machine;
     if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
     if (result.warnings.length > 0) {
