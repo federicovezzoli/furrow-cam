@@ -195,15 +195,18 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
-  // #351: several lines and letter spacing. Text items keep their look: the
-  // line spacing they'd have had, and no letter spacing.
+  // #351: several lines and letter spacing. Text items keep their look: one
+  // line, as they were laid out (a line break was a space), the line spacing
+  // they'd have had, and no letter spacing.
   20: (doc) => {
     const V20_LINE_SPACING = 1.5;
     if (!Array.isArray(doc.drawings)) return doc;
     for (const drawing of doc.drawings) {
       if (!isObject(drawing) || !isObject(drawing.text)) continue;
-      drawing.text.lineSpacing ??= V20_LINE_SPACING;
-      drawing.text.letterSpacing ??= 0;
+      const { text } = drawing;
+      if (typeof text.text === "string") text.text = text.text.replace(/\r\n|[\n\r]/g, " ");
+      text.lineSpacing ??= V20_LINE_SPACING;
+      text.letterSpacing ??= 0;
     }
     return doc;
   },

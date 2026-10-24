@@ -12,16 +12,16 @@ import { quadraticToCubic } from "../geometry/curve";
 import { flattenPath } from "../geometry/flatten";
 import { textFrame } from "../geometry/scale";
 import { mapPath } from "../geometry/translate";
-import { type Font, type GlyphCommand, layoutLine } from "./font";
+import { emSize, type Font, type GlyphCommand, layoutLine } from "./font";
 
 /** Overlaps smaller than this, in mm², are where glyphs only touch. */
 const OVERLAP_AREA = 1e-6;
 
 /**
  * Text item `settings`' outlines in stock coordinates (PRD-0010 T2, T5, T6,
- * ADR-0059): each line laid out in `font` with its kerning and the letter
- * spacing, at the cap height, aligned on its own, `lineSpacing` times the
- * height below the one before; then placed. Quadratics become cubics, as on
+ * ADR-0059): each line laid out in `font` with its kerning, at the cap
+ * height, `letterSpacing` times the height between characters, aligned on its
+ * own, `lineSpacing` times the height below the one before; then placed. Quadratics become cubics, as on
  * SVG import. Glyphs that overlap, as in script fonts, or whose own contours
  * do, are merged into one outline, flattened, so a pocket doesn't cut the
  * overlap twice. A single-stroke font gives open paths that an engraving
@@ -29,8 +29,9 @@ const OVERLAP_AREA = 1e-6;
  */
 export function textPaths(font: Font, settings: TextSettings): Path[] {
   const { height, align, lineSpacing, letterSpacing } = settings;
+  const size = emSize(font, height);
   const outlines = settings.text.split(/\r\n|\n|\r/).flatMap((line, i) => {
-    const { glyphs, width } = layoutLine(font, line, height, letterSpacing);
+    const { glyphs, width } = layoutLine(font, line, size, letterSpacing * height);
     const dx = align === "left" ? 0 : align === "center" ? -width / 2 : -width;
     const dy = -i * lineSpacing * height;
     return glyphs.map((commands) => glyphPaths(commands, font.singleStroke, [dx, dy]));

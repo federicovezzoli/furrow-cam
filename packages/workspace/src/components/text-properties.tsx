@@ -30,8 +30,9 @@ const ALIGNS: readonly TextAlign[] = ["left", "center", "right"];
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
 
 /**
- * A text item's settings (PRD-0010 T1, T3): its text, font, cap height and
- * alignment. Each edit is laid out again off the main thread and lands as one
+ * A text item's settings (PRD-0010 T1, T3, T5, T6): its text, over one or
+ * more lines, font, cap height, line and letter spacing and alignment. Each
+ * edit is laid out again off the main thread and lands as one
  * undo step, keeping the item's placement and the operations machining it.
  */
 export function TextProperties({ drawingId, text }: { drawingId: string; text: TextSettings }) {
@@ -56,16 +57,18 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
     },
   };
 
-  async function edit(edits: Partial<Omit<TextSettings, "placement">>) {
+  /** Applies `edits` once laid out; whether they were. */
+  async function edit(edits: Partial<Omit<TextSettings, "placement">>): Promise<boolean> {
     const result = await editText(store, drawingId, edits);
     setError(result.ok ? null : result.error);
-    if (!result.ok) return;
+    if (!result.ok) return false;
     setRemovedTabs(result.removedTabs);
     // The new outlines are numbered afresh: select all of them, as adding the text did.
     const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
     if (shape) {
       workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
     }
+    return true;
   }
 
   return (
@@ -81,7 +84,7 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
           id="text-text"
           text={text.text}
           // Blank text has nothing to cut: the field goes back to the text, as a blank name does.
-          onCommit={(value) => /\S/.test(value) && void edit({ text: value })}
+          onCommit={async (value) => !/\S/.test(value) || (await edit({ text: value }))}
         />
       </div>
       <Row id="text-font" label={t("font")}>
@@ -129,10 +132,11 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
         id="text-letter-spacing"
         label={t("letterSpacing")}
         layout="inline"
-        quantity="length"
-        units={units}
-        value={text.letterSpacing}
-        onValueChange={(letterSpacing) => void edit({ letterSpacing })}
+        quantity="number"
+        // A share of the letter height, so it scales with the text.
+        suffix="%"
+        value={text.letterSpacing * 100}
+        onValueChange={(percent) => void edit({ letterSpacing: percent / 100 })}
         {...gestures}
       />
       <Row id="text-align" label={t("align")}>
@@ -167,7 +171,9 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
 
 /**
  * The text, a line per line (PRD-0010 T5): it changes on blur or Ctrl/⌘+Enter,
- * Enter starts a new line, and Escape puts the text back.
+ * Enter starts a new line, and Escape puts the text back. What was typed
+ * stays until the change lands, and after it is refused, so a long text isn't
+ * lost to a character the font lacks.
  */
 function TextField({
   id,
@@ -176,14 +182,19 @@ function TextField({
 }: {
   id: string;
   text: string;
-  onCommit: (text: string) => void;
+  /** Whether `text` was taken; if not, the field keeps showing it. */
+  onCommit: (text: string) => Promise<boolean>;
 }) {
-  /** What's typed while editing; `null` shows the text. */
+  /** What's typed while editing, or waiting to land; `null` shows the text. */
   const [draft, setDraft] = useState<string | null>(null);
 
   function finish(commit: boolean) {
-    if (commit && draft !== null && draft !== text) onCommit(draft);
-    setDraft(null);
+    if (!commit || draft === null || draft === text) return setDraft(null);
+    const typed = draft;
+    void onCommit(typed).then((taken) => {
+      // Unless the user typed on meanwhile.
+      if (taken) setDraft((current) => (current === typed ? null : current));
+    });
   }
 
   return (

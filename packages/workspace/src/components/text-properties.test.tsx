@@ -125,15 +125,16 @@ describe("TextProperties", () => {
     expect(text()?.text).toBe("I");
     fireEvent.blur(field);
     await waitFor(() => expect(text()?.text).toBe("Hi\nthere"));
+    expect(current().drawings.at(-1)?.name).toBe("Hi there");
     const lineSpacing = screen.getByLabelText(/^Line spacing/);
     fireEvent.change(lineSpacing, { target: { value: "2" } });
     fireEvent.keyDown(lineSpacing, { key: "Enter" });
     await waitFor(() => expect(text()?.lineSpacing).toBe(2));
     const letterSpacing = screen.getByLabelText(/^Letter spacing/);
-    fireEvent.change(letterSpacing, { target: { value: "0.1" } });
+    // A share of the letter height, whatever the units.
+    fireEvent.change(letterSpacing, { target: { value: "10" } });
     fireEvent.keyDown(letterSpacing, { key: "Enter" });
-    // `fullDocument` shows inches.
-    await waitFor(() => expect(text()?.letterSpacing).toBeCloseTo(2.54, 9));
+    await waitFor(() => expect(text()?.letterSpacing).toBeCloseTo(0.1, 9));
   });
 
   it("makes a held arrow on the letter height one undo step, once its layouts land", async () => {
@@ -158,11 +159,13 @@ describe("TextProperties", () => {
     const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "  " } });
     fireEvent.blur(field);
-    expect(field.value).toBe("I");
+    await waitFor(() => expect(field.value).toBe("I"));
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.change(field, { target: { value: "∅" } });
     fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
+    // What was typed stays, to be fixed.
+    expect(field.value).toBe("∅");
     expect(current()).toEqual(withText());
   });
 });

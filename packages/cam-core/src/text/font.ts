@@ -49,9 +49,14 @@ function capHeight(font: OpentypeFont): number {
   return font.ascender > 0 ? font.ascender : font.unitsPerEm;
 }
 
+/** The font size, in millimetres per em, that gives `font` a cap height of `height` millimetres. */
+export function emSize({ font }: Font, height: number): number {
+  return (height * font.unitsPerEm) / capHeight(font);
+}
+
 /**
- * Lays one `line` out with the font's kerning, at a cap height of `height`
- * millimetres, `letterSpacing` millimetres added between characters: each
+ * Lays one `line` out with the font's kerning, at `size` millimetres per em
+ * (`emSize`), `letterSpacing` millimetres added between characters: each
  * glyph's outline commands, its origin on the baseline at the line's start,
  * and the line's advance width. Characters the font lacks take their space
  * but draw nothing, rather than its missing-glyph box.
@@ -59,16 +64,20 @@ function capHeight(font: OpentypeFont): number {
 export function layoutLine(
   { font, singleStroke }: Font,
   line: string,
-  height: number,
+  size: number,
   letterSpacing = 0,
 ): { glyphs: GlyphCommand[][]; width: number } {
-  const size = (height * font.unitsPerEm) / capHeight(font);
   const missing = font.glyphs.get(0);
   const glyphs: GlyphCommand[][] = [];
-  let count = 0;
+  /**
+   * The spacings before this glyph: one before each glyph that advances but
+   * the first, so none after the last, and a zero-width accent stays on its
+   * letter.
+   */
+  let spacings = -1;
   const advance = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, gx, y, fontSize) => {
-    // Spacing goes between characters, so after all but the last.
-    const x = gx + count++ * letterSpacing;
+    if (glyph.advanceWidth) spacings++;
+    const x = gx + Math.max(spacings, 0) * letterSpacing;
     if (glyph === missing) return;
     if (singleStroke && font.outlinesFormat === "truetype") {
       glyphs.push(strokeCommands(glyph, x, fontSize / font.unitsPerEm));
@@ -89,7 +98,7 @@ export function layoutLine(
     });
     glyphs.push(mapped);
   });
-  return { glyphs, width: advance + Math.max(count - 1, 0) * letterSpacing };
+  return { glyphs, width: advance + Math.max(spacings, 0) * letterSpacing };
 }
 
 /** A TrueType point as opentype.js reads it; `@types/opentype.js` lists only `lastPointOfContour`. */

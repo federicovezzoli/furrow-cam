@@ -174,6 +174,18 @@ describe("migrations", () => {
     expect(parseProjectDocument(v20)).toEqual(current);
   });
 
+  it("keeps v20 text on one line, its line breaks spaces as they were laid out", () => {
+    const doc = fullDocument();
+    const { lineSpacing: _, letterSpacing: __, ...v20Text } = textItem.text ?? {};
+    const v20 = {
+      ...doc,
+      schemaVersion: 20,
+      drawings: [...doc.drawings, { ...textItem, text: { ...v20Text, text: "A\nB\r\nC" } }],
+      geometry: [...doc.geometry, textShape],
+    };
+    expect(parseProjectDocument(v20).drawings.at(-1)?.text?.text).toBe("A B C");
+  });
+
   it("leaves v4, v5 and v18 documents as they are", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);

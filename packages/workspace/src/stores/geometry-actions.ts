@@ -63,6 +63,11 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   return placeDrawing(store, name, drawing, shapes);
 }
 
+/** A text item's name: its text on one line, its lines joined by spaces. */
+function textName(text: string): string {
+  return text.trim().replace(/\s*[\r\n]+\s*/g, " ");
+}
+
 /** Why text can't be added or changed: the font has none of its characters. */
 export const TEXT_NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
 
@@ -80,7 +85,7 @@ export function addTextItem(
   if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const id = crypto.randomUUID();
   const shape: Shape = { id: crypto.randomUUID(), name: "", layer: "", drawingId: id, paths };
-  const drawing = { id, name: text.text, border: DRAWING_BORDER, text };
+  const drawing = { id, name: textName(text.text), border: DRAWING_BORDER, text };
   return placeDrawing(store, "addText", drawing, [shape])
     ? { ok: true, id }
     : { ok: false, error: DRAWINGS_OR_MODEL };
@@ -161,7 +166,7 @@ export function setTextItem(
   for (const flags of gone.values()) removedTabs += flags.filter(Boolean).length;
   store.getState().change("setText", (draft) => {
     const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing) Object.assign(drawing, { name: text.text, text });
+    if (drawing) Object.assign(drawing, { name: textName(text.text), text });
     // By index: finding it through the draft would read every shape.
     const target = draft.geometry[index];
     if (target) target.paths = paths;

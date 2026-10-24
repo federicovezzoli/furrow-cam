@@ -145,7 +145,12 @@ export const TextSettings = z.strictObject({
   align: TextAlign,
   /** From one line's baseline to the next, as a multiple of `height` (T5). */
   lineSpacing: z.number().positive(),
-  /** Millimetres added after each character, on top of its advance and kerning; negative tightens (T6). */
+  /**
+   * Space between characters, on top of their advance and kerning, as a
+   * multiple of `height`, so it scales with the text; negative tightens (T6).
+   * None follows the last character of a line, nor precedes a zero-width
+   * accent.
+   */
   letterSpacing: z.number(),
   placement: TextPlacement,
 });
