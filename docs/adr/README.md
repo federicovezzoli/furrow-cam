@@ -73,3 +73,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0056](0056-touch-off-tool-change-shows-what-runs.md) | The touch-off pad's tool change is always a block, and the field shows it | Proposed |
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
 | [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
+| [0059](0059-text-items-are-drawings-with-settings.md) | A text item is a drawing that keeps its settings and stores its outlines as one shape | Proposed |
