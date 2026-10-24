@@ -47,6 +47,7 @@ describe("FONTS", () => {
     expect(FONTS.map((font) => font.kind)).toEqual(["mono", "serif", "script", "singleStroke"]);
     expect(new Set(FONTS.map((font) => font.id)).size).toBe(FONTS.length);
     expect(FONTS.some((font) => font.id === DEFAULT_FONT)).toBe(true);
+    expect(FONTS.every((font) => font.licence.pathname.endsWith("-OFL.txt"))).toBe(true);
   });
 
   it.each(FONTS)("lays $name out at its cap height", (font) => {
