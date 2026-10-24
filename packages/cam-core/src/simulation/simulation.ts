@@ -1,4 +1,4 @@
-import type { Stock, Tool } from "@furrow/document";
+import type { FlipAxis, Stock, Tool } from "@furrow/document";
 
 /**
  * Cells across the narrowest cut: enough for a slot that narrow to show its
@@ -76,17 +76,20 @@ export function heightmapGrid(
  *
  * The buffer under `heights` is padded to a multiple of `bufferMultiple`
  * cells, so a renderer that wraps the cells onto rows of that many texels can
- * upload it as it is, without a copy.
+ * upload it as it is, without a copy. The cuts start from uncut stock, or
+ * from the heights of `start` on the same grid (`flipHeightmap`).
  */
 export function simulateCuts(
   stock: Pick<Stock, "width" | "height" | "thickness">,
   cuts: readonly SimulationCut[],
   grid: HeightmapGrid = heightmapGrid(stock, smallestCutWidth(cuts)),
   bufferMultiple = 1,
+  start?: Float32Array,
 ): Heightmap {
   const cells = grid.columns * grid.rows;
   const padded = Math.ceil(cells / bufferMultiple) * bufferMultiple;
   const heights = new Float32Array(new ArrayBuffer(padded * 4), 0, cells);
+  if (start) heights.set(start);
   for (const { tool, segments } of cuts) {
     const profile = cutterProfile(tool);
     for (let i = 0; i + 5 < segments.length; i += 6) {
@@ -389,3 +392,31 @@ function lowestAlong(
 export function heightmapBuffers({ heights }: Heightmap): ArrayBuffer[] {
   return [heights.buffer as ArrayBuffer];
 }
+
+/**
+ * The stock `heightmap` shows, as the other side of a two-sided project sees
+ * it once turned over about `axis` (ADR-0060), on the same grid: mirrored,
+ * cut through where it was cut through, uncut elsewhere. A heightmap holds
+ * only the face in view, and a side cuts no deeper than the parting plane
+ * except through the stock, so the face underneath is otherwise whole.
+ */
+export function flipHeightmap(
+  { columns, rows, heights }: Heightmap,
+  axis: FlipAxis,
+  thickness: number,
+): Float32Array {
+  const flipped = new Float32Array(columns * rows);
+  const through = -thickness + THROUGH_TOLERANCE;
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const [c, r] = axis === "x" ? [column, rows - 1 - row] : [columns - 1 - column, row];
+      if ((heights[r * columns + c] as number) <= through) {
+        flipped[row * columns + column] = -thickness;
+      }
+    }
+  }
+  return flipped;
+}
+
+/** How close to the stock's bottom a cell counts as cut through, in millimetres. */
+const THROUGH_TOLERANCE = 1e-3;

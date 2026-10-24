@@ -6,6 +6,7 @@ import { toolpathLines } from "./preview";
 import {
   type CutterShape,
   cutterProfile,
+  flipHeightmap,
   type Heightmap,
   type HeightmapGrid,
   heightmapGrid,
@@ -297,5 +298,36 @@ describe("simulateCuts", () => {
   it("ignores moves above the stock", () => {
     const map = simulateCuts(stock, [moves(flat, [10, 10, 5], [100, 50, 0])], grid);
     expect(map.heights.every((h) => h === 0)).toBe(true);
+  });
+});
+
+describe("flipHeightmap", () => {
+  // 3 × 2 cells: one cut through, one cut partly, the rest uncut.
+  const heightmap = {
+    columns: 3,
+    rows: 2,
+    cellWidth: 1,
+    cellHeight: 1,
+    heights: new Float32Array([-18, -5, 0, 0, 0, 0]),
+  };
+
+  it("turns the stock over about X: rows swap, cut-through cells stay, the rest is whole", () => {
+    expect([...flipHeightmap(heightmap, "x", 18)]).toEqual([0, 0, 0, -18, 0, 0]);
+  });
+
+  it("turns the stock over about Y: columns swap", () => {
+    expect([...flipHeightmap(heightmap, "y", 18)]).toEqual([0, 0, -18, 0, 0, 0]);
+  });
+
+  it("is where the other side's cuts start", () => {
+    const start = flipHeightmap(heightmap, "x", 18);
+    const { heights } = simulateCuts(
+      { width: 3, height: 2, thickness: 18 },
+      [],
+      heightmap,
+      1,
+      start,
+    );
+    expect([...heights]).toEqual([...start]);
   });
 });
