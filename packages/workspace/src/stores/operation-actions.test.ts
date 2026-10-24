@@ -141,6 +141,7 @@ function setup() {
     drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
     geometry: [square, circle, plate],
     models: [],
+    fonts: [],
   });
   const document = () => store.getState().document;
   const operations = () => document().operations;

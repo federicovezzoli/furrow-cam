@@ -22,7 +22,7 @@ export function ExportProjectButton({
   getDocument: () => ProjectDocument;
   className?: string;
 }) {
-  const { project, meshes } = useWorkspaceHost();
+  const { project, meshes, fonts } = useWorkspaceHost();
   const [pending, startTransition] = useTransition();
   const t = useTranslations();
   const { alert } = useDialogs();
@@ -31,9 +31,11 @@ export function ExportProjectButton({
     const document = getDocument();
     startTransition(async () => {
       try {
-        await exportProjectFile(document, project.name, meshes.get);
+        await exportProjectFile(document, project.name, (sha256, kind) =>
+          (kind === "font" ? fonts : meshes).get(sha256),
+        );
       } catch (error) {
-        // A mesh that couldn't be read says why.
+        // A file that couldn't be read says why.
         void alert(errorText(t, error, t("Shell.exportFailed")));
       }
     });
