@@ -188,8 +188,17 @@ describe("exportGcode", () => {
       expect(bottom).toContain(
         "(Zero: X Y at the bottom-left corner of the stock, Z at the stock top)",
       );
+      expect(bottom).toContain("(Zero as for the top side, Z on the face now on top)");
       expect(bottom).toContain("(Operation: Bottom rough)");
       expect(bottom).not.toContain("Top rough");
+    });
+
+    it("keeps a machine-bed zero at the bed on the bottom side", () => {
+      const doc = twoSided([rough("bottom", "Bottom rough")]);
+      const bed = { ...doc, stock: { ...doc.stock, zOrigin: "machine_bed" as const } };
+      const [bottom] = exportGcode(bed, "Owl", context).files;
+      expect(bottom?.gcode).toContain("(Zero as for the top side, Z still at the machine bed)");
+      expect(bottom?.gcode).not.toContain("face now on top");
     });
 
     it("exports only the side that has something to cut", () => {

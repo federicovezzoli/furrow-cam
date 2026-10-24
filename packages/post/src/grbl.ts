@@ -397,7 +397,7 @@ function zZeroLabel({ zOrigin }: Stock): string {
  * centre line along the flip axis, and is zeroed as the top side was, on
  * the face now on top.
  */
-function sideSetupLines({ twoSided }: Stock, { side, otherFile }: SideSetup): string[] {
+function sideSetupLines({ twoSided, zOrigin }: Stock, { side, otherFile }: SideSetup): string[] {
   const axis = (twoSided?.flipAxis ?? "x").toUpperCase();
   const flip = `turn the stock over by half a turn about its centre line along ${axis}, in place`;
   if (side === "top") {
@@ -410,6 +410,8 @@ function sideSetupLines({ twoSided }: Stock, { side, otherFile }: SideSetup): st
     "Two-sided: bottom side, cut second",
     `Before this file, ${flip}, so the face that was underneath is on top`,
     ...(otherFile ? [`The top side is ${otherFile}`] : []),
-    "Zero on the face now on top, as for the top side",
+    zOrigin === "stock_top"
+      ? "Zero as for the top side, Z on the face now on top"
+      : "Zero as for the top side, Z still at the machine bed",
   ];
 }
