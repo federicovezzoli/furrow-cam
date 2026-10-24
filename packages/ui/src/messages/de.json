@@ -497,6 +497,7 @@
       "unknownModel": "Unbekannte Modell-ID",
       "unknownDrawing": "Unbekannte Zeichnungs-ID",
       "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
+      "textShapes": "Ein Text braucht genau eine Form",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad"
     },

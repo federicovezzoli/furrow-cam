@@ -16,7 +16,7 @@ import {
   sha256Hex,
 } from "./archive";
 import { createProjectDocument, type ProjectDocument } from "./document";
-import { circle, fullDocument, model, square } from "./fixtures";
+import { circle, fullDocument, model, square, textItem, textShape } from "./fixtures";
 import { parseProjectDocument } from "./migrations";
 
 const MAX_MESH_BYTES = 1_000;
@@ -99,19 +99,20 @@ describe("packProjectArchive and readProjectArchive", () => {
     expect(archive.meshes).toEqual(meshes);
   });
 
-  it("round-trip several drawings", async () => {
+  it("round-trip several drawings and text items, in the document and its versions", async () => {
     const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
     const base = fullDocument();
     const document: ProjectDocument = {
       ...base,
-      drawings: [...base.drawings, { id: other, name: "hole.svg", border: 5 }],
-      geometry: [square, { ...circle, drawingId: other }],
+      drawings: [...base.drawings, { id: other, name: "hole.svg", border: 5 }, textItem],
+      geometry: [square, { ...circle, drawingId: other }, textShape],
     };
     const archive = await readProjectArchive(
-      packProjectArchive(document, new Map()),
+      packProjectArchive(document, new Map(), [version("v", document)]),
       MAX_MESH_BYTES,
     );
     expect(parseProjectDocument(JSON.parse(archive.contents))).toEqual(document);
+    expect(archive.versions[0]?.document).toEqual(document);
   });
 
   it("only pack the meshes the document references", async () => {

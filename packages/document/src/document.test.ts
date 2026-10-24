@@ -7,6 +7,8 @@ import {
   reliefFinish,
   reliefRough,
   SQUARE_ID,
+  textItem,
+  textShape,
 } from "./fixtures";
 
 describe("ProjectDocument", () => {
@@ -77,6 +79,38 @@ describe("ProjectDocument", () => {
         message: "document.unknownDrawing",
       }),
     ]);
+  });
+
+  it("accepts text items with exactly one shape and valid settings", () => {
+    const doc = fullDocument();
+    const withText = {
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+    };
+    expect(ProjectDocument.parse(withText)).toEqual(withText);
+    const second = { ...textShape, id: "9c5e3a7b-4d2f-4b0c-9e8d-6f1a2b3c4d5e" };
+    expect(
+      ProjectDocument.safeParse({ ...withText, geometry: [...withText.geometry, second] }).error
+        ?.issues,
+    ).toEqual([expect.objectContaining({ path: ["drawings", 1], message: "document.textShapes" })]);
+    const text = (fields: object) => ({
+      ...withText,
+      drawings: [...doc.drawings, { ...textItem, text: { ...textItem.text, ...fields } }],
+    });
+    expect(ProjectDocument.safeParse(text({ text: " \n" })).error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "text", "text"],
+        message: "validation.blank",
+      }),
+    ]);
+    expect(ProjectDocument.safeParse(text({ height: 0 })).success).toBe(false);
+    for (const rotation of [-90, 360]) {
+      const placement = { ...textItem.text?.placement, rotation };
+      expect(ProjectDocument.safeParse(text({ placement })).success).toBe(false);
+    }
+    expect(ProjectDocument.safeParse(text({ font: "" })).success).toBe(false);
+    expect(ProjectDocument.safeParse(text({ align: "justify" })).success).toBe(false);
   });
 
   it("accepts models and rejects duplicate model ids", () => {

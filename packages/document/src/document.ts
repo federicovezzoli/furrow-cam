@@ -5,7 +5,7 @@ import { Model } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 18;
+export const CURRENT_SCHEMA_VERSION = 19;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -103,7 +103,7 @@ export const ProjectDocument = z
     stock: Stock,
     /** Snapshot of the machine profile, or `null` if none is picked. */
     machine: Machine.nullable(),
-    /** Imported SVG and DXF files, each grouping its shapes in `geometry` (ADR-0055). */
+    /** Imported SVG and DXF files and text items, each grouping its shapes in `geometry` (ADR-0055, ADR-0059). */
     drawings: z.array(Drawing),
     geometry: z.array(Shape),
     /** Imported 3D models, whose meshes are project assets (ADR-0029). */
@@ -148,8 +148,12 @@ export const ProjectDocument = z
       }
     });
     doc.drawings.forEach((drawing, i) => {
-      if (shapeCounts.get(drawing.id) === 0) {
+      const count = shapeCounts.get(drawing.id);
+      if (count === 0) {
         ctx.addIssue({ code: "custom", path: ["drawings", i], message: "document.emptyDrawing" });
+      } else if (drawing.text && count !== 1) {
+        // Its outlines are one shape, which operations target across edits (ADR-0059).
+        ctx.addIssue({ code: "custom", path: ["drawings", i], message: "document.textShapes" });
       }
     });
 

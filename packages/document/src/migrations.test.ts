@@ -149,10 +149,11 @@ describe("migrations", () => {
     ]);
   });
 
-  it("leaves v4 and v5 documents as they are", () => {
+  it("leaves v4, v5 and v18 documents as they are", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
+    expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);
   });
 
   it("gives v6 documents no models", () => {
