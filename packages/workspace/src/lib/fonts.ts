@@ -7,11 +7,12 @@ import { type Font, parseFont } from "@furrow/cam-core";
  */
 export const FONTS = [
   {
-    id: "archivo-black",
-    name: "Archivo Black",
-    kind: "sans",
+    id: "jetbrains-mono",
+    name: "JetBrains Mono",
+    // The interface's font.
+    kind: "mono",
     singleStroke: false,
-    url: new URL("../fonts/ArchivoBlack-Regular.ttf", import.meta.url),
+    url: new URL("../fonts/JetBrainsMono-Regular.ttf", import.meta.url),
   },
   {
     id: "arvo",
@@ -39,7 +40,7 @@ export const FONTS = [
 export type BundledFont = (typeof FONTS)[number];
 
 /** The font a new text item gets. */
-export const DEFAULT_FONT: BundledFont["id"] = "archivo-black";
+export const DEFAULT_FONT: BundledFont["id"] = "jetbrains-mono";
 
 const loaded = new Map<string, Promise<Font>>();
 

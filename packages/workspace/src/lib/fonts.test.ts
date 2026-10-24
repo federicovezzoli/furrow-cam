@@ -1,8 +1,8 @@
 import { type Font, parseFont, pathBounds, textPaths } from "@furrow/cam-core";
 import type { TextSettings } from "@furrow/document";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import archivoBlack from "../fonts/ArchivoBlack-Regular.ttf?inline";
 import arvo from "../fonts/Arvo-Regular.ttf?inline";
+import jetbrainsMono from "../fonts/JetBrainsMono-Regular.ttf?inline";
 import pacifico from "../fonts/Pacifico-Regular.ttf?inline";
 import reliefSingleLine from "../fonts/ReliefSingleLineCAD-Regular.ttf?inline";
 import { type BundledFont, DEFAULT_FONT, FONTS, loadFont } from "./fonts";
@@ -11,7 +11,7 @@ import { type BundledFont, DEFAULT_FONT, FONTS, loadFont } from "./fonts";
 const files = new Map(
   await Promise.all(
     Object.entries({
-      "archivo-black": archivoBlack,
+      "jetbrains-mono": jetbrainsMono,
       arvo,
       pacifico,
       "relief-singleline": reliefSingleLine,
@@ -36,8 +36,8 @@ const right = (font: Font, text: string) =>
   Math.max(...textPaths(font, settings(text)).map((path) => pathBounds(path).max[0]));
 
 describe("FONTS", () => {
-  it("ships a sans, a serif, a script and a single-stroke font, with unique ids", () => {
-    expect(FONTS.map((font) => font.kind)).toEqual(["sans", "serif", "script", "singleStroke"]);
+  it("ships a monospaced, a serif, a script and a single-stroke font, with unique ids", () => {
+    expect(FONTS.map((font) => font.kind)).toEqual(["mono", "serif", "script", "singleStroke"]);
     expect(new Set(FONTS.map((font) => font.id)).size).toBe(FONTS.length);
     expect(FONTS.some((font) => font.id === DEFAULT_FONT)).toBe(true);
   });
@@ -51,18 +51,20 @@ describe("FONTS", () => {
     expect(top).toBeLessThan(10.5);
   });
 
-  // Arvo kerns with a `kern` table, Archivo Black with GPOS.
-  it.each(["arvo", "archivo-black"])("kerns %s's TrueType outlines", (id) => {
+  // Arvo kerns with a `kern` table, Pacifico with GPOS.
+  it.each([
+    ["arvo", "AV"],
+    ["pacifico", "To"],
+  ])("kerns %s's TrueType outlines (%s)", (id, pair) => {
     const font = parsed(id);
     const { font: source } = font;
-    const [a, v] = [source.charToGlyph("A"), source.charToGlyph("V")];
-    const kern = source.getKerningValue(a, v);
+    const first = source.charToGlyph(pair.charAt(0));
+    const second = source.charToGlyph(pair.charAt(1));
+    const kern = source.getKerningValue(first, second);
     expect(kern).toBeLessThan(0);
     const scale = 10 / (source.tables.os2?.sCapHeight as number);
-    expect(right(font, "AV")).toBeCloseTo(
-      ((a.advanceWidth ?? 0) + kern) * scale + right(font, "V"),
-      2,
-    );
+    const alone = right(font, pair.slice(1));
+    expect(right(font, pair)).toBeCloseTo(((first.advanceWidth ?? 0) + kern) * scale + alone, 2);
   });
 
   it("merges the script font's joined letters into one outline", () => {
