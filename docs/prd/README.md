@@ -26,3 +26,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Draft |
 | [0010](0010-text.md) | Text | Draft |
 | [0011](0011-two-sided-machining.md) | Two-sided machining | Draft |
+| [0012](0012-mcp-server.md) | MCP server | Draft |
