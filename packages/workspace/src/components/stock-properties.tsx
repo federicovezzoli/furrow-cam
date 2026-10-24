@@ -1,8 +1,9 @@
 "use client";
 
 import { touchOffOutsideStock } from "@furrow/cam-core";
-import { Units, ZOrigin } from "@furrow/document";
+import { FlipAxis, Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
@@ -30,9 +31,12 @@ import {
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFlipAxis,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
   setTouchOffToolChange,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -96,8 +100,88 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
         ))}
       </section>
 
+      <TwoSidedSection />
+
       <ZeroSection />
     </div>
+  );
+}
+
+/**
+ * Two-sided machining (PRD-0011, ADR-0060): the axis the stock is turned
+ * over about and the depth the sides part at. Turning it off moves the
+ * bottom side's operations to the top side, once the user agrees.
+ */
+function TwoSidedSection() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const bottom = useDocumentStore(
+    (s) => s.document.operations.filter((operation) => operation.stockSide === "bottom").length,
+  );
+  const { confirm } = useDialogs();
+  const t = useTranslations("Stock");
+  const { twoSided } = stock;
+
+  async function toggle(on: boolean) {
+    if (!on && bottom > 0 && !(await confirm(t("twoSidedOff", { count: bottom })))) return;
+    setTwoSided(store, on);
+  }
+
+  return (
+    <section aria-labelledby="two-sided-heading" className="grid gap-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
+        <input
+          type="checkbox"
+          id="two-sided"
+          checked={twoSided !== null}
+          onChange={(event) => void toggle(event.target.checked)}
+          aria-describedby="two-sided-hint"
+          className="size-3.5 accent-primary"
+        />
+        <Label id="two-sided-heading" htmlFor="two-sided" className="text-ui font-medium">
+          {t("twoSided")}
+        </Label>
+        <p id="two-sided-hint" className="col-start-2 text-muted-foreground">
+          {t("twoSidedHint")}
+        </p>
+      </div>
+      {twoSided && (
+        <>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="flip-axis" className="text-ui font-normal">
+              {t("flipAxis")}
+            </Label>
+            <NativeSelect
+              id="flip-axis"
+              size="sm"
+              value={twoSided.flipAxis}
+              onChange={(event) => setFlipAxis(store, FlipAxis.parse(event.target.value))}
+              className="h-control px-2 pr-7 text-ui"
+            >
+              {FlipAxis.options.map((axis) => (
+                <NativeSelectOption key={axis} value={axis}>
+                  {axis.toUpperCase()}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <NumberField
+            id="parting-depth"
+            label={t("partingDepth")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            max={stock.thickness - MIN_STOCK}
+            value={twoSided.partingDepth}
+            onValueChange={(value) => setPartingDepth(store, value)}
+            {...gestureHandlers(store)}
+          />
+          <p className="text-muted-foreground">{t("partingDepthHint")}</p>
+        </>
+      )}
+    </section>
   );
 }
 

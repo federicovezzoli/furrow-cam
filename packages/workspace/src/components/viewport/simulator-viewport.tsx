@@ -5,7 +5,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { Canvas } from "@react-three/fiber";
 import { RouteIcon, RouteOffIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 import { type HeightmapUpdates, usePlayback } from "../../hooks/use-playback";
 import { heightmapCellLimit } from "../../lib/simulation-mesh";
@@ -33,6 +33,10 @@ import { simulationStatus, TextureLimit, TOOLBAR_GROUP, ViewButtons } from "./vi
  */
 export function SimulatorViewport() {
   const view = useWorkspaceStore((s) => s.view);
+  const setSide = useWorkspaceStore((s) => s.setSide);
+  // shortcut: the playback cuts the top side only, so it shows that side;
+  // play the bottom side back from the flipped top side in a follow-up.
+  useEffect(() => setSide("top"), [setSide]);
   // Known once the renderer is up, inside the canvas.
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const playback = usePlayback(maxTextureSize === null ? null : heightmapCellLimit(maxTextureSize));

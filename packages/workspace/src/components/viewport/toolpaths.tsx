@@ -1,9 +1,7 @@
 "use client";
 
-import { flipTransform, type ToolpathLines } from "@furrow/cam-core";
+import type { ToolpathLines } from "@furrow/cam-core";
 import { clearingTool, type Operation } from "@furrow/document";
-import { useMemo } from "react";
-import { Matrix4 } from "three";
 import {
   useDocumentStore,
   useToolpathStore,
@@ -12,38 +10,7 @@ import {
 import { DashedLines, Lines } from "./lines";
 import { usePlaybackProgress } from "./playback";
 import { type Palette, RENDER_ORDER } from "./scene-style";
-
-const IDENTITY = new Matrix4();
-
-/**
- * For a bottom-side operation, the flip that turns its toolpath, computed in
- * the bottom side's coordinates (ADR-0060), back into the top side's: it is
- * drawn where it cuts the part, from below, under its drawing.
- * shortcut: shown from above only; the side switch shows each side (#358).
- */
-function useBottomSideMatrix(operation: Operation): Matrix4 | null {
-  const stock = useDocumentStore((s) => s.document.stock);
-  return useMemo(() => {
-    if (operation.stockSide !== "bottom" || !stock.twoSided) return null;
-    const m = flipTransform(stock, stock.twoSided.flipAxis);
-    return new Matrix4().set(...(m as Matrix3x4), 0, 0, 0, 1);
-  }, [operation.stockSide, stock]);
-}
-
-type Matrix3x4 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
+import { SideFrame } from "./side-frame";
 
 /** Opacity of a toolpath being recomputed, drawn from its last result meanwhile. */
 const STALE_OPACITY = 0.35;
@@ -92,7 +59,6 @@ function OperationToolpath({
   showHoles: boolean;
 }) {
   const entry = useToolpathStore((s) => s.entries[operation.id]);
-  const matrix = useBottomSideMatrix(operation);
   const progress = usePlaybackProgress(operation.id, false);
   const clearingProgress = usePlaybackProgress(operation.id, true);
   const lines = entry && entry.status !== "error" ? entry.lines : undefined;
@@ -100,7 +66,7 @@ function OperationToolpath({
   const opacity = entry.status === "ready" ? 1 : STALE_OPACITY;
   const clearing = clearingTool(operation);
   return (
-    <group matrix={matrix ?? IDENTITY} matrixAutoUpdate={false}>
+    <SideFrame side={operation.stockSide}>
       {clearing && entry.status !== "error" && entry.clearing && (
         <ToolpathLinesView
           lines={entry.clearing}
@@ -119,7 +85,7 @@ function OperationToolpath({
         showHoles={showHoles}
         progress={progress}
       />
-    </group>
+    </SideFrame>
   );
 }
 

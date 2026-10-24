@@ -25,6 +25,7 @@ import {
   ReliefFinishParams,
   ReliefRoughParams,
   type Shape,
+  type StockSide,
   type Tool,
   toolProblem,
   VCarveParams,
@@ -249,16 +250,23 @@ export function addReliefRoughOperation(store: DocumentStore, options: NewModelO
   }));
 }
 
-type NewModelOperation = { modelId: string; tool: Tool; id?: string; name?: string };
+/** `stockSide` is the side of a two-sided project the operation cuts (ADR-0060), the top by default. */
+type NewModelOperation = {
+  modelId: string;
+  tool: Tool;
+  id?: string;
+  name?: string;
+  stockSide?: StockSide;
+};
 
 function appendModelOperation(
   store: DocumentStore,
-  { modelId, tool, id = crypto.randomUUID() }: NewModelOperation,
+  { modelId, tool, id = crypto.randomUUID(), stockSide = "top" }: NewModelOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
   if (!document.models.some((model) => model.id === modelId)) return null;
-  const operation = create(document, { id, enabled: true, stockSide: "top", targets: [], tool });
+  const operation = create(document, { id, enabled: true, stockSide, targets: [], tool });
   if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
@@ -267,14 +275,23 @@ function appendModelOperation(
   return id;
 }
 
-/** `name` is the base of the new operation's name, translated by the caller; English by default. */
-type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string; name?: string };
+/**
+ * `name` is the base of the new operation's name, translated by the caller;
+ * English by default. `stockSide` is as for `NewModelOperation`.
+ */
+type NewOperation = {
+  targets: OperationTarget[];
+  tool: Tool;
+  id?: string;
+  name?: string;
+  stockSide?: StockSide;
+};
 
 type OperationFields = Pick<Operation, "id" | "enabled" | "stockSide" | "targets" | "tool">;
 
 function appendOperation(
   store: DocumentStore,
-  { targets, tool, id = crypto.randomUUID() }: NewOperation,
+  { targets, tool, id = crypto.randomUUID(), stockSide = "top" }: NewOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
@@ -283,7 +300,7 @@ function appendOperation(
   const operation = create(document, {
     id,
     enabled: true,
-    stockSide: "top",
+    stockSide,
     targets: existing,
     tool,
   });

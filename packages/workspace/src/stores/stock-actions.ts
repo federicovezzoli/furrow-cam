@@ -9,6 +9,7 @@ import {
   xyOriginShift,
 } from "@furrow/cam-core";
 import type {
+  FlipAxis,
   Point,
   ProjectDocument,
   StockAnchor,
@@ -219,5 +220,41 @@ export function setTouchOffToolChange(store: DocumentStore, block: string | null
   store.getState().change("setStock.touchOff.toolChange", (draft) => {
     const pad = draft.stock.touchOff;
     if (pad && pad.toolChange !== toolChange) pad.toolChange = toolChange;
+  });
+}
+
+/**
+ * Makes the project two-sided (PRD-0011, ADR-0060), flipped about X, the
+ * sides parting at half the deepest model's depth, or at half the stock's
+ * thickness without a model; or one-sided again, moving every bottom-side
+ * operation to the top side in the same undo step.
+ */
+export function setTwoSided(store: DocumentStore, twoSided: boolean) {
+  const { stock, models } = store.getState().document;
+  if (twoSided === (stock.twoSided !== null)) return;
+  const deepest = Math.max(0, ...models.map(({ placement }) => placement.depth));
+  // Within the stock, whatever the models' depth.
+  const partingDepth = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  store.getState().change("setStock.twoSided", (draft) => {
+    if (!twoSided) {
+      draft.stock.twoSided = null;
+      for (const operation of draft.operations) operation.stockSide = "top";
+      return;
+    }
+    draft.stock.twoSided = { flipAxis: "x", partingDepth };
+  });
+}
+
+/** Sets the axis a two-sided project's stock is turned over about. */
+export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
+  store.getState().change("setStock.flipAxis", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.flipAxis = flipAxis;
+  });
+}
+
+/** Sets how far below the stock top a two-sided project's sides part, in millimetres. */
+export function setPartingDepth(store: DocumentStore, partingDepth: number) {
+  store.getState().change("setStock.partingDepth", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
   });
 }

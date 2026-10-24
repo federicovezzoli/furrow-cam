@@ -186,6 +186,16 @@ describe("addProfileOperation", () => {
     ]);
   });
 
+  it("puts the profile on the side it is given, the top by default (ADR-0060)", () => {
+    const { store, profile } = setup();
+    const id = addProfileOperation(store, {
+      targets: [whole(square)],
+      tool: endMill,
+      stockSide: "bottom",
+    });
+    expect(profile(id as string).stockSide).toBe("bottom");
+  });
+
   it("adds nothing without shapes that exist", () => {
     const { store, operations } = setup();
     expect(addProfileOperation(store, { targets: [missing], tool: endMill })).toBeNull();
