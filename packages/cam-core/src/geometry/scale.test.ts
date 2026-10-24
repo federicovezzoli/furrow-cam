@@ -1,8 +1,9 @@
-import { Shape } from "@furrow/document";
-import { square } from "@furrow/document/fixtures";
+import { type Point, Shape, type TextSettings } from "@furrow/document";
+import { square, textItem } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { shapesBounds } from "./bounds";
-import { mapShapes, mirrorPoint, rotatePoint, scalePoint, scaleShapes } from "./scale";
+import { mapShapes, mapText, mirrorPoint, rotatePoint, scalePoint, scaleShapes } from "./scale";
+import { translatePoint } from "./translate";
 
 describe("scalePoint", () => {
   it("scales about `from` and lands it on `to`, rounding float noise", () => {
@@ -108,5 +109,61 @@ describe("mapShapes", () => {
     const [turned] = mapShapes([arc], (point) => rotatePoint(point, 37, [3, 4]));
     expect(Shape.parse(turned)).toEqual(turned);
     expect(turned?.paths[0]?.segments[0]).toMatchObject({ kind: "arc", clockwise: false });
+  });
+});
+
+describe("mapText", () => {
+  const text = textItem.text as TextSettings;
+  const turned: TextSettings = {
+    ...text,
+    placement: { position: [30, 20], rotation: 30, mirrored: true },
+  };
+
+  /** Where `[x, y]` of the text's layout, at `text`'s height, lies in the stock after `settings`. */
+  function place(settings: TextSettings, [x, y]: Point): Point {
+    const { position, rotation, mirrored } = settings.placement;
+    const k = settings.height / text.height;
+    const radians = (rotation * Math.PI) / 180;
+    const lx = (mirrored ? -x : x) * k;
+    const ly = y * k;
+    return [
+      position[0] + lx * Math.cos(radians) - ly * Math.sin(radians),
+      position[1] + lx * Math.sin(radians) + ly * Math.cos(radians),
+    ];
+  }
+
+  const moves: [string, (point: Point) => Point][] = [
+    ["a translation", (point) => translatePoint(point, [5, -3])],
+    ["a scale", (point) => scalePoint(point, 2.5, [0, 0], [10, 10])],
+    ["a turn", (point) => rotatePoint(point, 90, [50, 50])],
+    ["a mirror left to right", (point) => mirrorPoint(point, "x", [50, 50])],
+    ["a mirror top to bottom", (point) => mirrorPoint(point, "y", [50, 50])],
+  ];
+
+  it.each(moves)("places the layout where %s moves the outlines", (_, move) => {
+    for (const settings of [text, turned]) {
+      const mapped = mapText(settings, move);
+      for (const point of [
+        [0, 0],
+        [7, 0],
+        [3, 10],
+      ] as Point[]) {
+        const [x, y] = move(place(settings, point));
+        const [px, py] = place(mapped, point);
+        expect(px).toBeCloseTo(x, 6);
+        expect(py).toBeCloseTo(y, 6);
+      }
+    }
+  });
+
+  it("keeps the rotation in [0, 360) and drops float noise", () => {
+    const back = (point: Point) => rotatePoint(point, -30, [0, 0]);
+    expect(mapText(turned, back).placement).toEqual({
+      position: rotatePoint([30, 20], -30, [0, 0]),
+      rotation: 0,
+      mirrored: true,
+    });
+    expect(mapText(text, (point) => rotatePoint(point, -90, [0, 0])).placement.rotation).toBe(270);
+    expect(mapText(text, (point) => scalePoint(point, 0.1, [0, 0], [0, 0])).height).toBe(1);
   });
 });

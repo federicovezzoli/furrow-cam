@@ -70,6 +70,7 @@ export const DOCUMENT_MESSAGES = [
   "document.unknownModel",
   "document.unknownDrawing",
   "document.emptyDrawing",
+  "document.textShapes",
   "document.unknownShape",
   "document.unknownPath",
   "operation.pathIndices",

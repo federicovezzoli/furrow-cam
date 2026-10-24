@@ -497,6 +497,7 @@
       "unknownModel": "Id di modello sconosciuto",
       "unknownDrawing": "Id di disegno sconosciuto",
       "emptyDrawing": "Un disegno deve avere almeno una forma",
+      "textShapes": "Un testo deve avere esattamente una forma",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto"
     },

@@ -1,4 +1,4 @@
-import type { Point, Shape } from "@furrow/document";
+import type { Point, Shape, TextSettings } from "@furrow/document";
 import { roundCoordinate } from "./round";
 import { mapPath } from "./translate";
 
@@ -52,4 +52,35 @@ export function rotatePoint([x, y]: Point, degrees: number, [cx, cy]: Point): Po
  */
 export function mirrorPoint([x, y]: Point, axis: "x" | "y", [cx, cy]: Point): Point {
   return axis === "x" ? [roundCoordinate(2 * cx - x), y] : [x, roundCoordinate(2 * cy - y)];
+}
+
+/** Length of the axes `mapText` probes a move along, long enough that rounding doesn't show. */
+const PROBE = 1000;
+
+/**
+ * Text item `text`'s settings once `move`, which keeps shapes' proportions
+ * (`mapPath`), has rewritten its outlines (ADR-0059): its origin moves, a turn
+ * adds to its rotation, a mirror flips it and a scale multiplies its height.
+ */
+export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
+  const { position, rotation, mirrored } = text.placement;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians) * PROBE;
+  const sin = Math.sin(radians) * PROBE;
+  const flip = mirrored ? -1 : 1;
+  // The text's own axes in the stock, before and after the move.
+  const [ox, oy] = move(position);
+  const [xx, xy] = move([position[0] + flip * cos, position[1] + flip * sin]);
+  const [yx, yy] = move([position[0] - sin, position[1] + cos]);
+  const [ux, uy, vx, vy] = [xx - ox, xy - oy, yx - ox, yy - oy];
+  const turned = (Math.atan2(vy, vx) * 180) / Math.PI - 90;
+  return {
+    ...text,
+    height: roundCoordinate((text.height * Math.hypot(vx, vy)) / PROBE),
+    placement: {
+      position: [ox, oy],
+      rotation: roundCoordinate(((turned % 360) + 360) % 360) % 360,
+      mirrored: ux * vy - uy * vx < 0,
+    },
+  };
 }

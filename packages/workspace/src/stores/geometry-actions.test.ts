@@ -16,6 +16,9 @@ import {
   reliefFinish,
   SQUARE_ID,
   square,
+  TEXT_ID,
+  textItem,
+  textShape,
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
@@ -525,5 +528,51 @@ describe("drawing size", () => {
       doc.operations[0]?.id,
     ]);
     expect(drawingOperations(doc, "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e")).toEqual([]);
+  });
+});
+
+describe("text items", () => {
+  /** A project with `textItem`, whose origin is its outline's first point. */
+  function textStore() {
+    const doc = fullDocument();
+    return createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+    });
+  }
+
+  /** The text item's settings, and its origin's point on its outline. */
+  function text(document: ProjectDocument, id = TEXT_ID) {
+    const settings = document.drawings.find((drawing) => drawing.id === id)?.text;
+    const [shape] = drawingShapes(document.geometry, id);
+    return { ...settings?.placement, height: settings?.height, origin: shape?.paths[0]?.start };
+  }
+
+  it("keep their placement on their outlines when moved, turned, mirrored and resized", () => {
+    const store = textStore();
+    moveDrawing(store, TEXT_ID, [5, 7]);
+    expect(text(store.getState().document)).toMatchObject({ position: [15, 17], height: 10 });
+    rotateDrawing(store, TEXT_ID, 90);
+    mirrorDrawing(store, TEXT_ID, "x");
+    expect(setDrawingSize(store, TEXT_ID, "height", 4)).toEqual({ ok: true });
+    const { position, origin, ...rest } = text(store.getState().document);
+    expect(position).toEqual(origin);
+    expect(rest).toEqual({ rotation: 270, mirrored: true, height: 20 });
+    store.getState().undo();
+    expect(text(store.getState().document)).toMatchObject({ rotation: 270, height: 10 });
+  });
+
+  it("keep their placement on their outlines when duplicated or the design is aligned", () => {
+    const store = textStore();
+    const copyId = duplicateDrawing(store, TEXT_ID) as string;
+    const copy = text(store.getState().document, copyId);
+    expect(copy.position).toEqual(copy.origin);
+    expect(copy.position).not.toEqual(textItem.text?.placement.position);
+    setXYAnchor(store, "center");
+    for (const id of [TEXT_ID, copyId]) {
+      const { position, origin } = text(store.getState().document, id);
+      expect(position).toEqual(origin);
+    }
   });
 });

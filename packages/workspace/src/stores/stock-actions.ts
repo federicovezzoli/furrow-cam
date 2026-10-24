@@ -34,8 +34,8 @@ export function setUnits(store: DocumentStore, units: Units) {
 }
 
 /**
- * Moves the design on the stock by `offset`: its shapes, the models placed
- * with them (ADR-0031) and everything else stored in stock coordinates with
+ * Moves the design on the stock by `offset`: its shapes, the text items'
+ * placements (ADR-0059), the models placed with them (ADR-0031) and everything else stored in stock coordinates with
  * them, the profiles' tab positions and the touch-off pad (ADR-0043), which
  * was placed on the zero the design follows. `geometry` is the document's,
  * read outside the draft: reading every point through it would be slow.
@@ -48,6 +48,9 @@ function moveDrawing(
   if (offset[0] === 0 && offset[1] === 0) return;
   // One assignment, so the undo step is one patch rather than one per point.
   draft.geometry = translateShapes(geometry, offset);
+  for (const { text } of draft.drawings) {
+    if (text) text.placement.position = translatePoint(text.placement.position, offset);
+  }
   for (const { placement } of draft.models) {
     placement.position = translatePoint(placement.position, offset);
   }

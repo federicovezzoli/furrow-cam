@@ -3,6 +3,7 @@ import {
   closedLoops,
   drawingFit,
   mapShapes,
+  mapText,
   mirrorPoint,
   nearestOnLoops,
   type Rect,
@@ -155,8 +156,12 @@ function transformDrawing(
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
   const tabs = drawingTabs(document, id);
+  const text = document.drawings.find((drawing) => drawing.id === id)?.text;
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
+    // A text item's placement follows its outlines (ADR-0059).
+    const drawing = draft.drawings.find((d) => d.id === id);
+    if (drawing && text) drawing.text = mapText(text, transform.point);
     for (const operation of draft.operations) {
       const moved = tabs.get(operation.id);
       if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
@@ -345,7 +350,11 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const geometry = document.geometry.concat(copies);
   const tabs = drawingTabs(document, id);
   store.getState().change("duplicateDrawing", (draft) => {
-    draft.drawings.push({ ...drawing, id: copyId });
+    const { text } = drawing;
+    const copy = text
+      ? { ...drawing, text: mapText(text, (p) => translatePoint(p, offset)) }
+      : drawing;
+    draft.drawings.push({ ...copy, id: copyId });
     draft.geometry = geometry;
     for (const operation of draft.operations) {
       const extra = operation.targets.flatMap(({ shapeId, paths }) => {

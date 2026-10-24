@@ -182,6 +182,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #347: text items (ADR-0059). Nothing to change, as for #95.
+  18: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

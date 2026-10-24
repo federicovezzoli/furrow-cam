@@ -497,6 +497,7 @@
       "unknownModel": "Unknown model id",
       "unknownDrawing": "Unknown drawing id",
       "emptyDrawing": "A drawing needs at least one shape",
+      "textShapes": "A text item needs exactly one shape",
       "unknownShape": "Unknown shape id",
       "unknownPath": "Unknown path"
     },
