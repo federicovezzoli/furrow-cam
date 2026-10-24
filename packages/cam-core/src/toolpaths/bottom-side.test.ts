@@ -1,5 +1,5 @@
 import type { FlipAxis, Operation, ProjectDocument, Shape } from "@furrow/document";
-import { DRAWING_ID, endMill, fullDocument } from "@furrow/document/fixtures";
+import { DRAWING_ID, drill, endMill, fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../geometry/clipper";
 import { flipPoint2 } from "../scene/sides";
@@ -49,6 +49,19 @@ const profile = (side: "inside" | "outside", direction: "climb" | "conventional"
       tabs: tabs ? { width: 8, height: 2, positions: [[45, 10]] } : null,
     },
   }) satisfies Operation;
+/** A 6 mm hole centred at (150, 30), for the 6 mm drill. */
+const HOLE: Shape = {
+  ...ELL,
+  id: "5a9b2d3f-7c4e-4f6a-8b8c-9d0e1f2a3b4c",
+  paths: [
+    {
+      start: [153, 30],
+      segments: [{ kind: "arc", to: [153, 30], center: [150, 30], clockwise: false }],
+      closed: true,
+    },
+  ],
+};
+
 const pocket = {
   ...base,
   id: crypto.randomUUID(),
@@ -66,13 +79,20 @@ const pocket = {
   },
 } satisfies Operation;
 
+const pocketing = (direction: "climb" | "conventional") =>
+  ({
+    ...pocket,
+    id: crypto.randomUUID(),
+    params: { ...pocket.params, direction },
+  }) satisfies Operation;
+
 /** The toolpath of `operation` on the top side and on the bottom side, flipped about `flipAxis`. */
 function bothSides(operation: Operation, flipAxis: FlipAxis): [Toolpath, Toolpath] {
   const doc = fullDocument();
   const document: ProjectDocument = {
     ...doc,
     stock: { ...doc.stock, ...STOCK, touchOff: null, twoSided: { flipAxis, partingDepth: 9 } },
-    geometry: [ELL],
+    geometry: [ELL, HOLE],
     models: [],
     operations: [operation, { ...operation, id: crypto.randomUUID(), stockSide: "bottom" }],
   };
@@ -139,11 +159,56 @@ describe("2D operations on the bottom side", () => {
         },
       );
 
-      it("pockets the drawing seen from below", () => {
-        // Its passes may be cleared in another order, so only where they reach is compared.
-        const [top, bottom] = bothSides(pocket, axis);
+      it.each(["climb", "conventional"] as const)(
+        "pockets the drawing seen from below, %s",
+        (direction) => {
+          // Its passes may be cleared in another order, so only where they reach is compared.
+          const [top, bottom] = bothSides(pocketing(direction), axis);
+          const back = deepBox(bottom, (point) => flipPoint2(flip(axis), point));
+          for (const [i, value] of deepBox(top).entries()) expect(back[i]).toBeCloseTo(value, 3);
+          // The last pass follows the wall, round it the same way as on the top side.
+          const wall = (toolpath: Toolpath) => {
+            const deep = toolpath.moves.filter(({ to }) => Math.abs(to[2] + DEPTH) < 1e-9);
+            const last = deep.slice(-40).map(({ to }): [number, number] => [to[0], to[1]]);
+            return Math.sign(signedArea(last));
+          };
+          expect(wall(bottom)).toBe(wall(top));
+        },
+      );
+
+      it("drills a hole where the drawing seen from below has it", () => {
+        const drilling: Operation = {
+          ...base,
+          id: crypto.randomUUID(),
+          type: "drill",
+          tool: drill,
+          stockSide: "top",
+          targets: [{ shapeId: HOLE.id, paths: null }],
+          params: { depth: DEPTH, peck: false, stepOver: 40 },
+        };
+        const [, bottom] = bothSides(drilling, axis);
+        const plunges = bottom.moves.filter(({ to }) => Math.abs(to[2] + DEPTH) < 1e-9);
+        expect(plunges.length).toBeGreaterThan(0);
+        const [x, y] = flipPoint2(flip(axis), [150, 30]);
+        for (const { to } of plunges) {
+          expect(to[0]).toBeCloseTo(x);
+          expect(to[1]).toBeCloseTo(y);
+        }
+      });
+
+      it("engraves the drawing seen from below", () => {
+        const engraving: Operation = {
+          ...base,
+          id: crypto.randomUUID(),
+          type: "engrave",
+          tool: endMill,
+          stockSide: "top",
+          params: { side: "on", depth: DEPTH, ramp: false },
+        };
+        const [top, bottom] = bothSides(engraving, axis);
+        expect(bottom.moves).toHaveLength(top.moves.length);
         const back = deepBox(bottom, (point) => flipPoint2(flip(axis), point));
-        for (const [i, value] of deepBox(top).entries()) expect(back[i]).toBeCloseTo(value, 3);
+        for (const [i, value] of deepBox(top).entries()) expect(back[i]).toBeCloseTo(value, 6);
       });
 
       it("leaves the profile's tabs where they are on the part", () => {

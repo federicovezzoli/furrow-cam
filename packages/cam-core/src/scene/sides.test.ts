@@ -1,9 +1,9 @@
-import type { FlipAxis } from "@furrow/document";
-import { model } from "@furrow/document/fixtures";
+import type { FlipAxis, Operation } from "@furrow/document";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { applyAffine } from "../geometry/affine";
 import { modelTransform, type PlacedModel } from "./model";
-import { bottomModelTransform, flipPoint } from "./sides";
+import { bottomModelTransform, flipOperation, flipPoint } from "./sides";
 import type { Vec3 } from "./stock";
 
 const stock = { width: 400, height: 200, thickness: 18 };
@@ -68,5 +68,31 @@ describe("bottomModelTransform", () => {
   it("puts a model through the whole stock with its bottom on the bottom face", () => {
     const deep = { ...model, placement: { ...model.placement, depth: stock.thickness } };
     expect(applyAffine(bottomModelTransform(deep, stock, "y"), bottom)).toEqual([400, 0, 0]);
+  });
+});
+
+describe("flipOperation", () => {
+  it("mirrors a linear pocket's passes with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    const pocket = {
+      ...(profile as Operation),
+      type: "pocket",
+      params: {
+        strategy: { type: "linear", angle: 45 },
+        direction: "climb",
+        stepOver: 40,
+        depth: 3,
+        allowance: 0,
+        finishPass: false,
+        ramp: true,
+      },
+    } as Operation;
+    const angle = (operation: Operation) =>
+      operation.type === "pocket" && operation.params.strategy.type === "linear"
+        ? operation.params.strategy.angle
+        : null;
+    const flip = { ...stock, axis: "x" as const };
+    expect(angle(flipOperation(pocket, flip))).toBe(-45);
+    expect(angle(flipOperation(flipOperation(pocket, flip), flip))).toBe(45);
   });
 });
