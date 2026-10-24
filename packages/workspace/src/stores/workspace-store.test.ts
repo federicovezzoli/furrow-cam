@@ -7,6 +7,23 @@ describe("workspace store", () => {
   const a1 = { shapeId: "a", path: 1 };
   const b0 = { shapeId: "b", path: 0 };
 
+  it("shows the bottom side for viewing only, and only in a two-sided project", () => {
+    const store = createWorkspaceStore();
+    store.getState().setEditingTabs(true);
+    store.getState().setSide("bottom");
+    expect(store.getState()).toMatchObject({ side: "bottom", editingTabs: false });
+    store.getState().setPickingZero(true);
+    expect(store.getState()).toMatchObject({ side: "top", pickingZero: true });
+
+    store.getState().setSide("bottom");
+    const document = createProjectDocument();
+    const twoSided = { ...document.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } };
+    store.getState().prune({ ...document, stock: twoSided });
+    expect(store.getState().side).toBe("bottom");
+    store.getState().prune(document);
+    expect(store.getState().side).toBe("top");
+  });
+
   it("replaces the path selection", () => {
     const store = createWorkspaceStore();
     store.getState().selectPaths([a0, b0, { ...a0 }]);

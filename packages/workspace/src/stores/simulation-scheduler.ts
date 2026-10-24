@@ -1,5 +1,12 @@
 import type { Heightmap, SimulationCut, ToolpathLines } from "@furrow/cam-core";
-import { clearingTool, type ProjectDocument, type Stock, type Tool } from "@furrow/document";
+import {
+  clearingTool,
+  type FlipAxis,
+  type ProjectDocument,
+  type Stock,
+  type StockSide,
+  type Tool,
+} from "@furrow/document";
 import type { DocumentStore } from "./document-store";
 import type { ToolpathState, ToolpathStore } from "./toolpath-store";
 
@@ -7,6 +14,12 @@ import type { ToolpathState, ToolpathStore } from "./toolpath-store";
 export type SimulationInput = {
   stock: Pick<Stock, "width" | "height" | "thickness">;
   cuts: SimulationCut[];
+  /**
+   * For the bottom side of a two-sided project (ADR-0060), the top side's
+   * cuts and the axis the stock is turned over about: the bottom side's
+   * stock is cut through where they meet its own (`joinSides`).
+   */
+  before?: { cuts: SimulationCut[]; axis: FlipAxis };
   /** Most cells the heightmap may have, so the device can draw it. */
   maxCells: number;
 };
@@ -25,31 +38,39 @@ export type SimulationResponse = { key: string } & (
  * every edit. Clearing moves (ADR-0026) are cut with the clearing tool. Operations whose toolpath failed are left out, and hidden
  * toolpaths still cut. Rapids are simulated too: one that runs through the
  * stock would cut it. `key` changes exactly when the result may, so an
- * unchanged key needs no new simulation.
+ * unchanged key needs no new simulation. It is the stock `side` leaves: in a
+ * two-sided project, the bottom side's operations cut the stock the top
+ * side's leave, turned over (ADR-0060).
  */
 export function simulationRequest(
   document: ProjectDocument,
   entries: ToolpathState["entries"],
   maxCells: number,
+  side: StockSide = "top",
 ): SimulationRequest | null {
-  const { width, height, thickness } = document.stock;
-  const cuts: SimulationCut[] = [];
+  const { width, height, thickness, twoSided } = document.stock;
+  const cuts: Record<StockSide, SimulationCut[]> = { top: [], bottom: [] };
   const hashes: string[] = [];
   for (const operation of document.operations) {
-    // shortcut: the simulation cuts from above only; the bottom side's starts
-    // from the flipped top side's result with the side switch (#358).
-    if (!operation.enabled || operation.stockSide === "bottom") continue;
+    if (!operation.enabled) continue;
+    // The top side's cut first, so the bottom side's start from them.
+    if (operation.stockSide === "bottom" && side === "top") continue;
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;
     if (entry.status === "error") continue;
+    const sideCuts = cuts[operation.stockSide];
     const clearing = clearingTool(operation);
-    if (clearing && entry.clearing) cuts.push(...lineCuts(clearing, entry.clearing));
-    cuts.push(...lineCuts(operation.tool, entry.lines));
+    if (clearing && entry.clearing) sideCuts.push(...lineCuts(clearing, entry.clearing));
+    sideCuts.push(...lineCuts(operation.tool, entry.lines));
     hashes.push(entry.inputHash);
   }
+  const stock = { width, height, thickness };
+  const flip = side === "bottom" && twoSided ? twoSided.flipAxis : null;
   return {
-    key: JSON.stringify([width, height, thickness, hashes]),
-    input: { stock: { width, height, thickness }, cuts, maxCells },
+    key: JSON.stringify([width, height, thickness, flip, hashes]),
+    input: flip
+      ? { stock, cuts: cuts.bottom, before: { cuts: cuts.top, axis: flip }, maxCells }
+      : { stock, cuts: cuts.top, maxCells },
   };
 }
 
@@ -77,6 +98,7 @@ export function scheduleSimulation(
   post: (request: SimulationRequest) => void,
   onResult: (response: SimulationResponse) => void,
   maxCells: number,
+  side: StockSide = "top",
 ) {
   let sentKey: string | null = null;
   let inFlight = false;
@@ -90,7 +112,7 @@ export function scheduleSimulation(
 
   function update() {
     const { document } = documents.getState();
-    const request = simulationRequest(document, toolpaths.getState().entries, maxCells);
+    const request = simulationRequest(document, toolpaths.getState().entries, maxCells, side);
     if (!request) return;
     if (inFlight) {
       waiting = request.key === sentKey ? null : request;

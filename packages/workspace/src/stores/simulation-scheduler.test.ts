@@ -143,7 +143,7 @@ describe("simulationRequest", () => {
     );
   });
 
-  it("leaves out the bottom side of a two-sided project, cut from below", () => {
+  it("simulates each side of a two-sided project, the bottom from the top's cuts (ADR-0060)", () => {
     const document = documentWithOperations();
     const twoSided = {
       ...document,
@@ -155,9 +155,15 @@ describe("simulationRequest", () => {
     const toolpaths = createToolpathStore();
     ready(toolpaths, PROFILE_ID, "a");
     ready(toolpaths, DRILL_ID, "b");
-    // The profile's feeds and rapids only.
-    const request = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS);
-    expect(request?.input.cuts).toHaveLength(2);
+    // The top side: the profile's feeds and rapids only.
+    const top = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS);
+    expect(top?.input.cuts).toHaveLength(2);
+    expect(top?.input.before).toBeUndefined();
+    // The bottom side: the drill's, from the stock the profile leaves, turned over about X.
+    const bottom = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS, "bottom");
+    expect(bottom?.input.cuts).toHaveLength(2);
+    expect(bottom?.input.before).toEqual({ cuts: top?.input.cuts, axis: "x" });
+    expect(bottom?.key).not.toBe(top?.key);
   });
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Heightmap } from "@furrow/cam-core";
+import type { StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -29,14 +30,15 @@ const EMPTY: Result = { heightmap: null, stock: null, error: null };
  * The open project's stock as simulated after cutting (ADR-0019), from the
  * toolpaths of its enabled operations, computed in a Web Worker while
  * `maxCells` is set (ADR-0004) and redone whenever they change. `maxCells`
- * caps the heightmap at what the viewport's renderer can draw. Derived data:
+ * caps the heightmap at what the viewport's renderer can draw; `side` is the
+ * side of a two-sided project it shows (ADR-0060). Derived data:
  * it lives here, never in the document.
  *
  * While toolpaths recompute or a new simulation runs, `heightmap` keeps the
  * last one and `pending` is true. `skipped` names the enabled operations left
  * out because their toolpath failed.
  */
-export function useSimulation(maxCells: number | null) {
+export function useSimulation(maxCells: number | null, side: StockSide = "top") {
   const documents = useDocumentStoreApi();
   const toolpaths = useToolpathStoreApi();
   const [result, setResult] = useState<Result>(EMPTY);
@@ -88,6 +90,7 @@ export function useSimulation(maxCells: number | null) {
         );
       },
       maxCells,
+      side,
     );
     return () => {
       schedule.stop();
@@ -97,7 +100,7 @@ export function useSimulation(maxCells: number | null) {
       setSentKey(null);
       setReceivedKey(null);
     };
-  }, [maxCells, documents, toolpaths]);
+  }, [maxCells, side, documents, toolpaths]);
 
   const enabled = maxCells !== null;
   return {

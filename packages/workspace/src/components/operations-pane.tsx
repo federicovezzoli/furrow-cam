@@ -88,7 +88,9 @@ export function OperationsPane() {
 
   function add(addOperation: typeof addProfileOperation, choice: typeof tool, name: string) {
     if (!choice) return;
-    const id = addOperation(store, { targets, tool: choice.tool, name });
+    // On the side in view (ADR-0060), the top in a one-sided project.
+    const { side } = workspace.getState();
+    const id = addOperation(store, { targets, tool: choice.tool, name, stockSide: side });
     if (id) workspace.getState().selectOperation(id);
   }
 
@@ -201,6 +203,7 @@ export function OperationsPane() {
                       modelId: model.id,
                       tool: choice.tool,
                       name: label,
+                      stockSide: workspace.getState().side,
                     });
                     if (id) workspace.getState().selectOperation(id);
                   }}
@@ -393,6 +396,7 @@ function OperationRow({
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const selected = useWorkspaceStore((s) => s.selectedOperationId === operation.id);
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const [renaming, setRenaming] = useState(false);
 
   function select() {
@@ -480,6 +484,14 @@ function OperationRow({
         >
           {operation.name}
         </button>
+      )}
+      {twoSided && (
+        <span
+          className="shrink-0 rounded-sm border px-1 text-[10px] text-muted-foreground uppercase"
+          title={t(`sideHints.${operation.stockSide}`)}
+        >
+          {t(`sides.${operation.stockSide}`)}
+        </span>
       )}
       {operation.enabled && (
         <>

@@ -917,7 +917,15 @@
     "cancelled": "Percorso utensile annullato",
     "cancelledDetail": "Annullato prima della fine.",
     "failed": "Percorso utensile non riuscito: {error}",
-    "warnings": "Avvisi del percorso utensile: {warnings}"
+    "warnings": "Avvisi del percorso utensile: {warnings}",
+    "sides": {
+      "top": "Sopra",
+      "bottom": "Sotto"
+    },
+    "sideHints": {
+      "top": "Lavorata sul lato superiore, per prima",
+      "bottom": "Lavorata sul lato inferiore, una volta girato il grezzo"
+    }
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -1159,6 +1167,12 @@
     "pickHint": "Clicca un punto nella vista; si aggancia ai punti del grezzo, ai vertici, ai centri e ai riquadri vicini. Esc o clic destro annulla.",
     "touchOff": "Tampone di azzeramento",
     "touchOffHint": "Un punto della superficie del grezzo che nessuna operazione taglia, così Z può essere azzerata lì dopo un cambio utensile.",
+    "twoSided": "Due lati",
+    "twoSidedHint": "Lavora il grezzo dall'alto, giralo e lavoralo da sotto.",
+    "flipAxis": "Girato attorno a",
+    "partingDepth": "Profondità di separazione",
+    "partingDepthHint": "Sotto la superficie del grezzo, dove i due lati si incontrano: ogni lato taglia fin lì.",
+    "twoSidedOff": "{count, plural, one {# operazione è} other {# operazioni sono}} sul lato inferiore. Disattivando i due lati, {count, plural, one {passa} other {passano}} sul lato superiore.",
     "padAxis": "Tampone {axis}",
     "padDiameter": "Diametro del tampone",
     "padTooWide": "Deve stare sul grezzo: al massimo {size}",
@@ -1292,7 +1306,17 @@
     "nextTitle": "Vai all’operazione successiva",
     "position": "Posizione lungo i percorsi utensile",
     "jumpTo": "Vai a {name}",
-    "speed": "Velocità di riproduzione"
+    "speed": "Velocità di riproduzione",
+    "side": "Lato",
+    "sides": {
+      "top": "Sopra",
+      "bottom": "Sotto"
+    },
+    "sideHints": {
+      "top": "Mostra il lato superiore, lavorato per primo",
+      "bottom": "Mostra il lato inferiore, visto da sotto una volta girato il grezzo"
+    },
+    "bottomSideHint": "Lato inferiore, visto da sotto. Scegli lo zero, seleziona i percorsi e modifica i ponticelli sul lato superiore."
   },
   "Dialog": {
     "close": "Chiudi",

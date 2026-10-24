@@ -31,6 +31,7 @@ import { DashedLines, Lines, useLineGeometry, WideLines } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
+import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
 import { Tabs } from "./tabs";
@@ -56,23 +57,31 @@ export function Scene({
   heightmap: Heightmap | null;
   modelPreviews: ReadonlyMap<string, ModelPreview>;
 }) {
+  const topSide = useWorkspaceStore((s) => s.side === "top");
   return (
     <>
       <WorkOrigin palette={palette} />
       <TouchOffPad color={palette.touchOff} />
+      {/* The simulation is of the side in view; the stock looks the same from either. */}
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
       ) : (
+        <Stock box={box} palette={palette} />
+      )}
+      {/* In the top side's coordinates: turned over in the bottom side's view (ADR-0060). */}
+      <SideFrame side="top">
+        {!heightmap && <Models previews={modelPreviews} palette={palette} />}
+        <Shapes palette={palette} />
+        <Tabs color={palette.tab} />
+      </SideFrame>
+      <Toolpaths palette={palette} />
+      {/* Picking works on the top side only, which the drawing is in. */}
+      {topSide && (
         <>
-          <Stock box={box} palette={palette} />
-          <Models previews={modelPreviews} palette={palette} />
+          <ZeroPick color={palette.snap} />
+          <PathPick />
         </>
       )}
-      <Shapes palette={palette} />
-      <Toolpaths palette={palette} />
-      <Tabs color={palette.tab} />
-      <ZeroPick color={palette.snap} />
-      <PathPick />
     </>
   );
 }
@@ -187,7 +196,9 @@ function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
   const geometry = useDocumentStore((s) => s.document.geometry);
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
-  const draggable = useWorkspaceStore((s) => s.view === "top" && !s.editingTabs && !s.pickingZero);
+  const draggable = useWorkspaceStore(
+    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+  );
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);
   const press = useRef<DrawingPress | null>(null);

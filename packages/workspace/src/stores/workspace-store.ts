@@ -1,5 +1,5 @@
 import { type PathRef, pathKey } from "@furrow/cam-core";
-import type { ProjectDocument } from "@furrow/document";
+import type { ProjectDocument, StockSide } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -30,6 +30,12 @@ export type ModelImport = { fileName: string; error: Translatable | null };
  */
 export type WorkspaceState = {
   view: ViewMode;
+  /**
+   * The side of a two-sided project the viewport shows (ADR-0060), which new
+   * operations go on. The bottom side is for viewing: editing tabs and
+   * picking the zero are top-side only, so each ends the other.
+   */
+  side: StockSide;
   /** In the order they were selected. */
   selectedPaths: PathRef[];
   /**
@@ -64,6 +70,7 @@ export type WorkspaceState = {
   modelImport: ModelImport | null;
 
   setView: (view: ViewMode) => void;
+  setSide: (side: StockSide) => void;
   /**
    * `replace` selects only `paths`; `toggle` (Ctrl/Cmd/Shift+click) deselects
    * them if all are selected, otherwise adds the others.
@@ -84,7 +91,8 @@ export type WorkspaceState = {
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
-   * editing without tabs and picking the zero without a custom zero.
+   * editing without tabs, picking the zero without a custom zero and the
+   * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;
 };
@@ -96,6 +104,7 @@ export function createWorkspaceStore() {
     devtools(
       immer((set) => ({
         view: "top",
+        side: "top",
         selectedPaths: [],
         selectedModelId: null,
         selectedOperationId: null,
@@ -117,6 +126,20 @@ export function createWorkspaceStore() {
             },
             false,
             "setView",
+          );
+        },
+
+        setSide(side) {
+          set(
+            (state) => {
+              state.side = side;
+              if (side === "bottom") {
+                state.editingTabs = false;
+                state.pickingZero = false;
+              }
+            },
+            false,
+            "setSide",
           );
         },
 
@@ -190,6 +213,7 @@ export function createWorkspaceStore() {
               state.editingTabs = editing;
               if (editing) {
                 state.view = "top";
+                state.side = "top";
                 state.pickingZero = false;
                 state.simulating = false;
               }
@@ -205,6 +229,7 @@ export function createWorkspaceStore() {
               state.pickingZero = picking;
               if (picking) {
                 state.view = "top";
+                state.side = "top";
                 state.editingTabs = false;
                 state.simulating = false;
               }
@@ -312,6 +337,7 @@ export function createWorkspaceStore() {
               if (state.pickingZero && document.stock.xyOrigin.anchor !== "custom") {
                 state.pickingZero = false;
               }
+              if (state.side === "bottom" && !document.stock.twoSided) state.side = "top";
               // Nothing left to edit once the profile's tabs are turned off (or undone).
               if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
                 state.editingTabs = false;
