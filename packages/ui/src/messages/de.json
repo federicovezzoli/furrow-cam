@@ -634,6 +634,7 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
     },
     "export": {
+      "bottomSide2d": "2D-Operationen auf der Unterseite lassen sich noch nicht exportieren: Schalte diese aus oder verschiebe sie auf die Oberseite.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
@@ -1049,6 +1050,7 @@
     "exportFile": "Datei exportieren",
     "exportProject": "Projektdatei exportieren",
     "exportFailed": "Dieses Projekt konnte nicht exportiert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "exportedFiles": "Der G-Code liegt in einer Datei pro Seite, gespeichert als {files}. Hat dein Browser gefragt, ob mehrere Downloads erlaubt sind, erlaube sie, sonst fehlt die Datei der Unterseite.",
     "exportedWithWarnings": "Der G-Code wurde mit Warnungen exportiert:",
     "exportGcode": "G-Code exportieren",
     "allProjects": "Alle Projekte",

@@ -634,6 +634,7 @@
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante."
     },
     "export": {
+      "bottomSide2d": "Les opérations 2D sur la face inférieure ne peuvent pas encore être exportées : désactivez celle-ci ou placez-la sur la face supérieure.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme."
@@ -1049,6 +1050,7 @@
     "exportFile": "Exporter le fichier",
     "exportProject": "Exporter le fichier du projet",
     "exportFailed": "Ce projet n’a pas pu être exporté. Vérifiez votre connexion et réessayez.",
+    "exportedFiles": "Le G-code tient en un fichier par face, enregistrés sous {files}. Si votre navigateur a demandé d'autoriser plusieurs téléchargements, autorisez-les, sinon le fichier de la face inférieure manque.",
     "exportedWithWarnings": "Le G-code a été exporté avec des avertissements :",
     "exportGcode": "Exporter le G-code",
     "allProjects": "Tous les projets",
