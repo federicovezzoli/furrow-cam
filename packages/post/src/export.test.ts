@@ -138,7 +138,7 @@ describe("exportGcode", () => {
   });
 
   describe("two-sided projects", () => {
-    // The fixture model as a flat 100 × 80 × 12 mm block.
+    // The fixture model as a flat block, placed at a quarter of its 100 × 80 mm.
     const mesh = new Float32Array([
       ...[-50, -40, 0, 50, -40, 0, 50, 40, 0, -50, -40, 0, 50, 40, 0, -50, 40, 0],
       ...[-50, -40, -12, 50, 40, -12, 50, -40, -12, -50, -40, -12, -50, 40, -12, 50, 40, -12],
@@ -147,6 +147,7 @@ describe("exportGcode", () => {
     const placed = {
       ...model,
       bounds: { min: [-50, -40, -12], max: [50, 40, 0] } as typeof model.bounds,
+      placement: { ...model.placement, scale: 0.25, depth: 3 },
     };
     function twoSided(operations: Operation[]) {
       const doc = referenceProject();
@@ -163,8 +164,8 @@ describe("exportGcode", () => {
       id: crypto.randomUUID(),
       name,
       stockSide,
-      // Up to the stock's edges, so each side roughs around the block.
-      params: { ...reliefRough.params, boundary: { type: "stock" } },
+      // Past the block's edges, so each side roughs around it.
+      params: { ...reliefRough.params, boundary: { type: "margin", distance: 10 } },
     });
 
     it("exports one file per side, each saying what to do", () => {
@@ -178,19 +179,38 @@ describe("exportGcode", () => {
       const [top, bottom] = files.map((file) => file.gcode);
       expect(top).toContain("(Two-sided: top side, cut first)");
       expect(top).toContain(
-        "(Then turn the stock over by half a turn about its centre line along X, in place, and run Owl-bottom.gcode)",
+        "(Then turn the stock over by half a turn about its centre line along X, in place, and run the bottom side's file)",
       );
       expect(top).toContain("(Operation: Top rough)");
       expect(top).toContain(`(Operation: ${plate?.name})`);
       expect(top).not.toContain("Bottom rough");
       expect(bottom).toContain("(Two-sided: bottom side, cut second)");
-      expect(bottom).toContain("(The top side is Owl-top.gcode)");
+      expect(bottom).toContain("(Run the top side's file first)");
+      // The top side's file may end with another bit.
+      expect(bottom).toContain(`(Load ${endMill.name}, ${endMill.diameter} mm)`);
       expect(bottom).toContain(
         "(Zero: X Y at the bottom-left corner of the stock, Z at the stock top)",
       );
       expect(bottom).toContain("(Zero as for the top side, Z on the face now on top)");
       expect(bottom).toContain("(Operation: Bottom rough)");
       expect(bottom).not.toContain("Top rough");
+    });
+
+    it("names an untitled project's files after its sides", () => {
+      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), " ", context);
+      expect(files.map((file) => file.fileName)).toEqual(["project-top.gcode"]);
+    });
+
+    it("says what both sides' programs say once", () => {
+      const doc = twoSided([rough("top", "Top rough"), rough("bottom", "Bottom rough")]);
+      const machine = {
+        ...(doc.machine as NonNullable<typeof doc.machine>),
+        programStart: "(At {nowhere})",
+      };
+      const { warnings } = exportGcode({ ...doc, machine }, "Owl", context);
+      expect(
+        warnings.filter(({ message }) => message.code === "grbl.unfilledPlaceholder"),
+      ).toHaveLength(1);
     });
 
     it("keeps a machine-bed zero at the bed on the bottom side", () => {

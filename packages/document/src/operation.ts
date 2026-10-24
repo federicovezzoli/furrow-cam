@@ -469,6 +469,16 @@ export function operationModelId(operation: Operation): string | null {
     : null;
 }
 
+/**
+ * Whether `operation`'s toolpath is in its own side's stock coordinates
+ * (ADR-0060): every top-side operation, and 3D ones on the bottom side.
+ * shortcut: 2D operations aren't flipped to the bottom side yet, so they are
+ * left out of rest machining and refused by export; drop this with #360.
+ */
+export function cutsOnItsSide(operation: Operation): boolean {
+  return operation.stockSide === "top" || operationModelId(operation) !== null;
+}
+
 export const Operation = z.discriminatedUnion("type", [
   ProfileOperation,
   PocketOperation,

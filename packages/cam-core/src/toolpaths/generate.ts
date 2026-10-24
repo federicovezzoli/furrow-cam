@@ -1,5 +1,6 @@
 import {
   clearingTool,
+  cutsOnItsSide,
   DEFAULT_ENTRY_CLEARANCE,
   type Model,
   type Operation,
@@ -132,9 +133,7 @@ export function toolpathInputs(
               (other) =>
                 doc.operations.indexOf(other) < index &&
                 other.stockSide === operation.stockSide &&
-                // shortcut: 2D cuts aren't flipped yet, so a bottom-side rest
-                // operation ignores them; count them once they are (#360).
-                (!bottom || operationModelId(other) !== null),
+                cutsOnItsSide(other),
             )
             .map(inputOf)
         : [],

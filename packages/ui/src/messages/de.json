@@ -1050,6 +1050,7 @@
     "exportFile": "Datei exportieren",
     "exportProject": "Projektdatei exportieren",
     "exportFailed": "Dieses Projekt konnte nicht exportiert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "exportedFiles": "Der G-Code liegt in einer Datei pro Seite, gespeichert als {files}. Hat dein Browser gefragt, ob mehrere Downloads erlaubt sind, erlaube sie, sonst fehlt die Datei der Unterseite.",
     "exportedWithWarnings": "Der G-Code wurde mit Warnungen exportiert:",
     "exportGcode": "G-Code exportieren",
     "allProjects": "Alle Projekte",

@@ -34,8 +34,8 @@ export type PostInput = {
 /** One side of a two-sided project's export. */
 export type SideSetup = {
   side: StockSide;
-  /** The other side's file, or `null` when that side has nothing to cut. */
-  otherFile: string | null;
+  /** Whether the other side has a file too, i.e. something to cut. */
+  other: boolean;
 };
 
 export type PostOutput = {

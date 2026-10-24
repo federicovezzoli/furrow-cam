@@ -39,5 +39,7 @@ describe("GcodeExportButton", () => {
       ["(top)", "Owl-top.gcode", "text/plain"],
       ["(bottom)", "Owl-bottom.gcode", "text/plain"],
     ]);
+    // Said, in case the browser saved only one.
+    expect(await screen.findByText(/saved as Owl-top\.gcode, Owl-bottom\.gcode/)).toBeTruthy();
   });
 });

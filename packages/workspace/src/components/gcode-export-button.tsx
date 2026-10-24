@@ -13,6 +13,9 @@ import { useWorkspaceHost } from "../providers/workspace-host";
 import { useDocumentStoreApi, useToolpathStoreApi } from "../providers/workspace-stores";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 
+/** Milliseconds between the downloads of one export's files. */
+const DOWNLOAD_GAP = 500;
+
 /**
  * Downloads the open project's G-code for its machine's post-processor
  * (PRD-0001 R11). The toolpath worker posts the program from the toolpaths
@@ -57,14 +60,24 @@ export function GcodeExportButton({
       void alert(formatWarning(t, { operation: result.operation, message: result.error }));
       return;
     }
-    // One file per side in a two-sided project (ADR-0060).
-    for (const file of result.files) downloadFile(file.gcode, file.fileName, "text/plain");
+    // One file per side in a two-sided project (ADR-0060), a moment apart:
+    // some browsers save only the first of downloads started together.
+    for (const [i, file] of result.files.entries()) {
+      if (i > 0) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP));
+      downloadFile(file.gcode, file.fileName, "text/plain");
+    }
     const machine = documents.getState().document.machine;
     if (machine) track({ event: "gcode_exported", postProcessor: machine.postProcessor });
+    // Said, so a file the browser didn't save is missed.
+    const notes =
+      result.files.length > 1
+        ? [t("Shell.exportedFiles", { files: result.files.map((f) => f.fileName).join(", ") })]
+        : [];
     if (result.warnings.length > 0) {
       const warnings = result.warnings.map((warning) => formatWarning(t, warning)).join("\n");
-      void alert(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
+      notes.push(`${t("Shell.exportedWithWarnings")}\n\n${warnings}`);
     }
+    if (notes.length > 0) void alert(notes.join("\n\n"));
   }
 
   const button = (

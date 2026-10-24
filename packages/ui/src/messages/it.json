@@ -1050,6 +1050,7 @@
     "exportFile": "Esporta file",
     "exportProject": "Esporta il file del progetto",
     "exportFailed": "Non è stato possibile esportare questo progetto. Controlla la connessione e riprova.",
+    "exportedFiles": "Il G-code è in un file per lato, salvati come {files}. Se il browser ha chiesto se consentire più download, consentili, altrimenti manca il file del lato inferiore.",
     "exportedWithWarnings": "Il G-code è stato esportato con degli avvisi:",
     "exportGcode": "Esporta G-code",
     "allProjects": "Tutti i progetti",

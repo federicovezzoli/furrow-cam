@@ -8,7 +8,7 @@ import {
   toolpathInputs,
 } from "@furrow/cam-core";
 import {
-  operationModelId,
+  cutsOnItsSide,
   type PostProcessorId,
   type ProjectDocument,
   projectFileName,
@@ -88,12 +88,8 @@ export function postToolpaths(
     const problem = toolProblem(input.operation);
     if (problem) throw new GcodeExportError({ operation: input.operation.name, message: problem });
   }
-  // shortcut: 2D toolpaths aren't in the bottom side's coordinates yet, so
-  // they'd cut the mirrored place; export them once they are (#360).
-  const flat = computed.find(
-    ({ input }) =>
-      input.operation.stockSide === "bottom" && operationModelId(input.operation) === null,
-  );
+  // Elsewhere, it would cut the mirrored place on the part.
+  const flat = computed.find(({ input }) => !cutsOnItsSide(input.operation));
   if (flat) {
     throw new GcodeExportError({
       operation: flat.input.operation.name,
@@ -126,7 +122,9 @@ export function postToolpaths(
       operations,
       side,
     });
-    warnings.push(...output.warnings);
+    // Each side's program may say the same, e.g. of a custom block.
+    const said = new Set(warnings.map((warning) => JSON.stringify(warning)));
+    warnings.push(...output.warnings.filter((warning) => !said.has(JSON.stringify(warning))));
     return { fileName, gcode: output.gcode };
   };
   if (!doc.stock.twoSided) {
@@ -134,12 +132,13 @@ export function postToolpaths(
   }
   const sides = (["top", "bottom"] as const).flatMap((side) => {
     const operations = toPost.filter(({ operation }) => operation.stockSide === side);
-    const fileName = projectFileName(`${name}-${side}`, processor.extension);
+    // The name is made safe first, so an untitled project's are `project-top`…
+    const fileName = `${projectFileName(name, "")}-${side}${processor.extension}`;
     return operations.length > 0 ? [{ side, operations, fileName }] : [];
   });
   const files = sides.map(({ side, operations, fileName }) => {
-    const other = sides.find((each) => each.side !== side);
-    return post(operations, { side, otherFile: other?.fileName ?? null }, fileName);
+    const other = sides.some((each) => each.side !== side);
+    return post(operations, { side, other }, fileName);
   });
   return { files, warnings };
 }
