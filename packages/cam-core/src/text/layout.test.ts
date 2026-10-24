@@ -153,6 +153,45 @@ function woff(sfnt: ArrayBuffer): Uint8Array {
   return out;
 }
 
+/** A TrueType point: on the curve, or a quadratic's control point. */
+type TruePoint = { x: number; y: number; onCurve: boolean; lastPointOfContour?: boolean };
+
+/**
+ * A single-stroke TrueType font of open strokes, each glyph given by its
+ * contours' points as a TrueType file stores them: "l" a straight stroke,
+ * "c" one whose end is a control point, "s" one whose start is.
+ */
+function trueTypeStrokes(): Font {
+  const contour = (...points: [number, number, boolean][]) =>
+    points.map(([x, y, onCurve], i) => ({
+      x,
+      y,
+      onCurve,
+      lastPointOfContour: i === points.length - 1,
+    }));
+  const strokes: [string, TruePoint[]][] = [
+    ["l", contour([100, 0, true], [100, 700, true])],
+    ["c", contour([400, 0, true], [0, 0, false], [0, 700, false], [400, 700, false])],
+    ["s", contour([0, 0, false], [400, 0, true], [400, 700, true])],
+  ];
+  const font = new OpentypeFont({
+    familyName: "Strokes",
+    styleName: "Regular",
+    unitsPerEm: 1000,
+    ascender: 800,
+    descender: -200,
+    glyphs: [
+      glyph(".notdef", null, 500),
+      // The outline opentype.js draws doesn't matter: the points do.
+      ...strokes.map(([c]) => glyph(c, c, 500, rect(0, 0, 400, 700))),
+    ],
+  });
+  for (let i = 0; i < font.glyphs.length; i++) font.glyphs.get(i).index = i;
+  for (const [c, points] of strokes) Object.assign(font.charToGlyph(c), { points });
+  Object.assign(font, { outlinesFormat: "truetype" });
+  return { font, singleStroke: true };
+}
+
 describe("parseFont", () => {
   it("reads OTF and WOFF bytes, taking the cap height from the font", () => {
     const otf = testFont().toArrayBuffer();
@@ -274,6 +313,30 @@ describe("textPaths", () => {
   it("draws nothing for characters the font lacks, and nothing for blank text", () => {
     expect(textPaths(outline, settings("HЖ"))).toHaveLength(1);
     expect(textPaths(outline, settings("   "))).toEqual([]);
+  });
+
+  it("reads a single-stroke TrueType font's strokes from its points, with no closing segment", () => {
+    const font = trueTypeStrokes();
+    // No "H": the ascender sets the cap height.
+    const unit = 10 / 800;
+    const [l, ...more] = textPaths(font, settings("l"));
+    expect(more).toEqual([]);
+    expect(l).toEqual({
+      start: [100 * unit, 0],
+      segments: [{ kind: "line", to: [100 * unit, 700 * unit] }],
+      closed: false,
+    });
+    // Ends on a control point: the curve, then a line to it, and nothing back to the start.
+    const [c] = textPaths(font, settings("c"));
+    expect(c?.closed).toBe(false);
+    expect(c?.segments.map((segment) => segment.kind)).toEqual(["cubic", "cubic", "line"]);
+    expect(c?.segments.at(-1)?.to[0]).toBeCloseTo(400 * unit, 9);
+    expect(c?.segments.at(-1)?.to[1]).toBeCloseTo(700 * unit, 9);
+    // Starts on a control point: it starts there.
+    const [s] = textPaths(font, settings("s"));
+    expect(s?.start).toEqual([0, 0]);
+    expect(s?.closed).toBe(false);
+    expect(s?.segments.at(-1)?.to[1]).toBeCloseTo(700 * unit, 9);
   });
 
   it("gives a single-stroke font's strokes as open paths, unless they end where they start", () => {
