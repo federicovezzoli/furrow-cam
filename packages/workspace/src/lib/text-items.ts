@@ -33,10 +33,10 @@ export function uploadedFonts(
   store: DocumentStore,
   assets: Pick<AssetStore, "get">,
 ): UploadedFonts {
-  return async (sha256) => {
-    const font = store.getState().document.fonts.find((listed) => listed.sha256 === sha256);
-    if (!font) throw new Error(`The project lists no font ${sha256}`);
-    return { bytes: await assets.get(sha256), singleStroke: font.singleStroke };
+  return {
+    singleStroke: (sha256) =>
+      store.getState().document.fonts.find((listed) => listed.sha256 === sha256)?.singleStroke,
+    read: (sha256) => assets.get(sha256),
   };
 }
 

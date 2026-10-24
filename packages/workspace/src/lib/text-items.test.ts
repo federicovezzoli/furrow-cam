@@ -168,5 +168,15 @@ describe("uploadFont", () => {
     await editText(store, TEXT_ID, { font: result.sha256 }, fonts);
     await editText(store, TEXT_ID, { height: 12 }, fonts);
     expect(requests.map(({ font }) => font?.singleStroke)).toEqual([true, undefined]);
+    // Uploaded again unticked after undoing: the same file, sent again with the new flag.
+    const { document } = store.getState();
+    store.setState({
+      document: {
+        ...document,
+        fonts: [{ ...document.fonts[0], singleStroke: false }] as typeof document.fonts,
+      },
+    });
+    await editText(store, TEXT_ID, { height: 14 }, fonts);
+    expect(requests.at(-1)?.font?.singleStroke).toBe(false);
   });
 });
