@@ -1,6 +1,7 @@
 import { MODEL_BORDER, type ModelPlacement } from "@furrow/document";
 import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import { applyAffine as apply } from "../geometry/affine";
 import type { Rect } from "../geometry/bounds";
 import {
   designAlignment,
@@ -20,7 +21,7 @@ import {
   stockFit,
   turnModel,
 } from "./model";
-import type { Box3, Vec3 } from "./stock";
+import type { Box3 } from "./stock";
 
 /** The fixture's 100 × 80 × 12 mesh, from (-50, -40, 0). */
 const BOUNDS = model.bounds as Box3;
@@ -28,15 +29,6 @@ const stock = { width: 400, height: 200, thickness: 18 };
 
 function placed(placement: Partial<ModelPlacement>) {
   return { ...model, placement: { ...model.placement, ...placement } };
-}
-
-function apply(matrix: number[], [x, y, z]: Vec3): Vec3 {
-  const row = (r: number) =>
-    (matrix[r * 4] as number) * x +
-    (matrix[r * 4 + 1] as number) * y +
-    (matrix[r * 4 + 2] as number) * z +
-    (matrix[r * 4 + 3] as number);
-  return [row(0) + 0, row(1) + 0, row(2) + 0];
 }
 
 describe("rotatedBounds", () => {

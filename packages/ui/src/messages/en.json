@@ -490,6 +490,8 @@
     },
     "document": {
       "padOffStock": "The touch-off pad must fit on the stock",
+      "partingBelowStock": "The parting plane must lie inside the stock",
+      "bottomSideOneSided": "Only two-sided projects have a bottom side",
       "duplicateDrawing": "Duplicate drawing id",
       "duplicateShape": "Duplicate shape id",
       "duplicateModel": "Duplicate model id",

@@ -184,6 +184,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
   },
   // #347: text items (ADR-0059). Nothing to change, as for #95.
   18: (doc) => doc,
+  // #354: two-sided projects (ADR-0060). Existing projects are cut from the
+  // top only.
+  19: (doc) => {
+    if (isObject(doc.stock) && !("twoSided" in doc.stock)) doc.stock.twoSided = null;
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && !("stockSide" in operation)) operation.stockSide = "top";
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

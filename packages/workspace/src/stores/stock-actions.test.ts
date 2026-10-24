@@ -67,6 +67,18 @@ describe("setUnits", () => {
 });
 
 describe("setStockDimension", () => {
+  it("keeps the parting plane inside a stock made thinner than it allows", () => {
+    // 18 mm thick, parting 9 mm below the top.
+    const store = createDocumentStore(fullDocument());
+    setStockDimension(store, "thickness", 12);
+    expect(stock(store).twoSided?.partingDepth).toBe(9);
+    setStockDimension(store, "thickness", 6);
+    expect(stock(store).twoSided?.partingDepth).toBe(4.5);
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    store.getState().undo();
+    expect(stock(store).twoSided?.partingDepth).toBe(9);
+  });
+
   it("resizes one dimension as one undo step", () => {
     const store = newStore();
     setStockDimension(store, "thickness", 12);

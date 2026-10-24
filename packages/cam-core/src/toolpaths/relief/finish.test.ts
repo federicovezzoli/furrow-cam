@@ -67,6 +67,7 @@ function finishing(
     type: "relief_finish",
     name: "Finish",
     enabled: true,
+    stockSide: "top",
     targets: [],
     tool,
     params: {

@@ -9,6 +9,7 @@ const holes = {
   type: "drill",
   name: "Holes",
   enabled: true,
+  stockSide: "top",
   targets: [],
   tool: drill,
   params: { depth: 6, peck: true, stepOver: 40 },
@@ -22,6 +23,7 @@ const project: CheckedProject = {
     xyOrigin: { anchor: "bottom_left" },
     zOrigin: "stock_top",
     touchOff: null,
+    twoSided: null,
   },
   machine,
   operations: [

@@ -1,3 +1,4 @@
+export * from "./geometry/affine";
 export * from "./geometry/bounds";
 export { circleCenter, DRILL_DIAMETER_TOLERANCE } from "./geometry/circle";
 export * from "./geometry/clipper";
@@ -16,6 +17,7 @@ export * from "./import/stl/import";
 export * from "./import/svg/import";
 export * from "./scene/model";
 export * from "./scene/pick";
+export * from "./scene/sides";
 export * from "./scene/snap";
 export * from "./scene/stock";
 export * from "./scene/touch-off";
