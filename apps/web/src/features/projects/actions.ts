@@ -329,12 +329,14 @@ export async function saveProject(
     };
   }
   const assets = documentAssetHashes(parsed.data);
+  // Each font's file must be the size the document gives it, which the schema keeps within the font limit.
+  const fontSizes = new Map(parsed.data.fonts.map(({ sha256, size }) => [sha256, size]));
 
   try {
     return await db.$transaction(async (tx) => {
       // Locked so a file can't be discarded between the check and the write (`discardAsset`).
       await lockProject(tx, projectId);
-      if ((await missingAssets(userId, projectId, assets, tx)).length > 0) {
+      if ((await missingAssets(userId, projectId, assets, tx, fontSizes)).length > 0) {
         return {
           error: { key: "Projects.saveFailed", values: { reason: meshMissing } },
           retryable: true,

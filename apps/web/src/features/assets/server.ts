@@ -249,12 +249,15 @@ export async function deleteProjectObjects(userId: string, projectId: string) {
 /**
  * The hashes among `sha256s` that the user's project `projectId` has no
  * verified asset for: a document may only reference verified ones (ADR-0029).
+ * One whose file isn't the size `sizes` gives it counts as missing too, so a
+ * file uploaded under another kind's limit can't pass for a smaller one.
  */
 export async function missingAssets(
   userId: string,
   projectId: string,
   sha256s: readonly string[],
   client: Prisma.TransactionClient = db,
+  sizes: ReadonlyMap<string, number> = new Map(),
 ): Promise<string[]> {
   if (sha256s.length === 0) return [];
   const rows = await client.projectAsset.findMany({
@@ -264,9 +267,13 @@ export async function missingAssets(
       sha256: { in: [...sha256s] },
       verifiedAt: { not: null },
     },
-    select: { sha256: true },
+    select: { sha256: true, size: true },
   });
-  const verified = new Set(rows.map(({ sha256 }) => sha256));
+  const verified = new Set(
+    rows
+      .filter(({ sha256, size }) => (sizes.get(sha256) ?? size) === size)
+      .map(({ sha256 }) => sha256),
+  );
   return sha256s.filter((sha256) => !verified.has(sha256));
 }
 
