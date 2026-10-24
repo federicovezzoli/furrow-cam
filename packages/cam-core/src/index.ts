@@ -22,6 +22,8 @@ export * from "./scene/touch-off";
 export * from "./simulation/playback";
 export * from "./simulation/preview";
 export * from "./simulation/simulation";
+export { type Font, parseFont } from "./text/font";
+export { textPaths } from "./text/layout";
 export * from "./toolpaths/drill";
 export * from "./toolpaths/engrave";
 export * from "./toolpaths/generate";
