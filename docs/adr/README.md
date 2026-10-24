@@ -74,3 +74,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
 | [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
 | [0059](0059-text-items-are-drawings-with-settings.md) | A text item is a drawing that keeps its settings and stores its outlines as one shape | Proposed |
+| [0060](0060-fonts-parsed-with-opentype-js.md) | Fonts are parsed and laid out with opentype.js, behind one adapter | Proposed |

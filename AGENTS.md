@@ -40,7 +40,7 @@ packages/workspace/   the CAM workspace: components, stores, hooks, providers, w
 - **Desktop app (ADR-0044, ADR-0047):** the main process (`src/main/`) owns windows, menus, dialogs and every file; the renderer reaches it only through the typed preload API (`src/shared/api.ts`). The renderer has no network: a CSP and a request filter block it. `pnpm --filter @furrow/desktop dev` runs it; `dist` builds installers. Launching Electron from a VS Code terminal needs `ELECTRON_RUN_AS_NODE` unset.
 - All packages are consumed as TypeScript source (`transpilePackages` in `next.config.ts`); Tailwind scans the UI packages through `@source` in `globals.css`. Run `shadcn add` in `packages/ui`.
 - **Component tests** are `*.test.tsx` files beside the component in `packages/workspace`, starting with `// @vitest-environment jsdom` and rendering through `renderWorkspace` (`src/test-render.tsx`: English messages, dialogs, the stores, an in-memory `WorkspaceHost`). `pnpm test` runs them with the other tests; `pnpm --filter @furrow/workspace exec vitest run <file>` runs one.
-- `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/` and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
+- `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/`, `text/` (fonts, ADR-0060) and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
 
 Inside `apps/web/src` (ADR-0021):
 
