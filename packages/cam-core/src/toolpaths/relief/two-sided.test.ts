@@ -143,7 +143,7 @@ describe("relief toolpaths on two sides", () => {
   });
 
   it("rest machines the bottom side from what the bottom side's earlier operations left", () => {
-    // A 2D operation on the bottom side isn't flipped yet (#360), so it isn't counted.
+    // A 2D operation on the bottom side counts too: it is flipped like the rest.
     const [profile] = fullDocument().operations;
     const operations = [
       roughing("top"),
@@ -154,7 +154,10 @@ describe("relief toolpaths on two sides", () => {
     ];
     const doc = { ...project(operations, { flipAxis: "y", partingDepth: 9 }) };
     const inputs = toolpathInputs({ ...doc, geometry: fullDocument().geometry });
-    expect(inputs[4]?.before.map((input) => input.operation)).toEqual([operations[1]]);
+    expect(inputs[4]?.before.map((input) => input.operation)).toEqual([
+      operations[1],
+      operations[2],
+    ]);
   });
 
   it("machines one-sided projects as before", () => {

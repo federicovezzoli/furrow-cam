@@ -1,5 +1,6 @@
-import type { FlipAxis, Model, Stock } from "@furrow/document";
+import type { FlipAxis, Model, Operation, Point, Shape, Stock } from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
+import { mapShapes } from "../geometry/scale";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
 import type { Box3, Vec3 } from "./stock";
 
@@ -84,4 +85,26 @@ export function modelView(
     box: { min, max },
     transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
   };
+}
+
+/** A point of the drawing, `[x, y]`, as the other side sees it. */
+export function flipPoint2({ width, height, axis }: Flip, [x, y]: Point): Point {
+  return axis === "x" ? [x, height - y] : [width - x, y];
+}
+
+/**
+ * `shapes` as the bottom side sees them (ADR-0060): mirrored about the flip
+ * axis, arcs turning the other way. Toolpaths orient their paths
+ * themselves, so a mirrored shape is cut as the top side would cut it.
+ */
+export function flipShapes(shapes: Shape[], flip: Flip): Shape[] {
+  return mapShapes(shapes, (point) => flipPoint2(flip, point), true);
+}
+
+/** `operation` with the points it holds (a profile's tabs) as the bottom side sees them. */
+export function flipOperation(operation: Operation, flip: Flip): Operation {
+  if (operation.type !== "profile" || !operation.params.tabs) return operation;
+  const { tabs } = operation.params;
+  const positions = tabs.positions.map((point) => flipPoint2(flip, point));
+  return { ...operation, params: { ...operation.params, tabs: { ...tabs, positions } } };
 }

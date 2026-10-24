@@ -8,7 +8,6 @@ import {
   toolpathInputs,
 } from "@furrow/cam-core";
 import {
-  cutsOnItsSide,
   type PostProcessorId,
   type ProjectDocument,
   projectFileName,
@@ -87,14 +86,6 @@ export function postToolpaths(
   for (const { input } of computed) {
     const problem = toolProblem(input.operation);
     if (problem) throw new GcodeExportError({ operation: input.operation.name, message: problem });
-  }
-  // Elsewhere, it would cut the mirrored place on the part.
-  const flat = computed.find(({ input }) => !cutsOnItsSide(input.operation));
-  if (flat) {
-    throw new GcodeExportError({
-      operation: flat.input.operation.name,
-      message: { code: "export.bottomSide2d" },
-    });
   }
 
   const warnings: PostWarning[] = [];
