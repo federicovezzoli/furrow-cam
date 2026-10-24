@@ -1,7 +1,7 @@
-import type { FlipAxis, Stock } from "@furrow/document";
-import { composeAffine } from "../geometry/affine";
-import { modelTransform, type PlacedModel } from "./model";
-import type { Vec3 } from "./stock";
+import type { FlipAxis, Model, Stock } from "@furrow/document";
+import { applyAffine, composeAffine } from "../geometry/affine";
+import { modelTransform, type PlacedModel, placedModelBox } from "./model";
+import type { Box3, Vec3 } from "./stock";
 
 /**
  * The two sides of a two-sided project (PRD-0011, ADR-0060). The bottom
@@ -47,4 +47,35 @@ export function bottomModelTransform(
   axis: FlipAxis,
 ): number[] {
   return composeAffine(flipTransform(stock, axis), modelTransform(model));
+}
+
+/**
+ * A model as one side sees it (ADR-0060): its mesh, the box it fills and the
+ * transform from the mesh's file coordinates to that side's stock
+ * coordinates. All a relief toolpath needs of it.
+ */
+export type ModelView = { sha256: string; box: Box3; transform: number[] };
+
+/**
+ * `model` as the top side sees it, or with `flip` (`flipTransform`) as the
+ * bottom side does: turned over, reaching up from the stock's floor.
+ */
+export function modelView(
+  model: PlacedModel & Pick<Model, "sha256">,
+  flip: readonly number[] | null = null,
+): ModelView {
+  const placed = modelTransform(model);
+  const box = placedModelBox(model);
+  if (!flip) return { sha256: model.sha256, box, transform: placed };
+  // The flip only turns axes over, so the box's corners stay its corners.
+  const a = applyAffine(flip, box.min);
+  const b = applyAffine(flip, box.max);
+  return {
+    sha256: model.sha256,
+    box: {
+      min: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2])],
+      max: [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])],
+    },
+    transform: composeAffine(flip, placed),
+  };
 }

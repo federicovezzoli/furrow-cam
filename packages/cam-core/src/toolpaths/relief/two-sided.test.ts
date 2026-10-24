@@ -1,0 +1,148 @@
+import type { FlipAxis, Model, Operation, ProjectDocument, TwoSided } from "@furrow/document";
+import {
+  ballEndMill,
+  endMill,
+  fullDocument,
+  model as modelFixture,
+  reliefFinish,
+  reliefRough,
+} from "@furrow/document/fixtures";
+import { describe, expect, it } from "vitest";
+import { simulateCuts } from "../../simulation/simulation";
+import { generateToolpath, toolpathCuts, toolpathInputs } from "../generate";
+import type { Toolpath } from "../toolpath";
+import { createCache } from "./finish";
+
+/** A horizontal rectangle at height `z`, as two triangles. */
+function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
+  return [x0, y0, z, x1, y0, z, x1, y1, z, x0, y0, z, x1, y1, z, x0, y1, z];
+}
+
+/**
+ * A 20 × 10 block through the 18 mm stock: full height over y < 5, 4 mm
+ * thinner on each face over y > 5. The same from either face, so the
+ * bottom side sees the top side's view mirrored.
+ */
+const BLOCK: Model = {
+  ...modelFixture,
+  bounds: { min: [0, 0, 0], max: [20, 10, 18] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 18, position: [20, 20] },
+};
+const blockMesh = new Float32Array([
+  ...rect(0, 0, 20, 5, 18),
+  ...rect(0, 5, 20, 10, 14),
+  ...rect(0, 0, 20, 5, 0),
+  ...rect(0, 5, 20, 10, 4),
+]);
+
+const STOCK = { width: 60, height: 50, thickness: 18 };
+
+let next = 0;
+function id() {
+  next++;
+  return `00000000-0000-4000-8000-${next.toString().padStart(12, "0")}`;
+}
+
+/** 3D roughing up to the stock's edges, so it clears down to the floor around the model. */
+function roughing(stockSide: Operation["stockSide"], rest = false): Operation {
+  const boundary = { type: "stock" } as const;
+  const params = { ...reliefRough.params, modelId: BLOCK.id, stockToLeave: 0, boundary, rest };
+  return { ...reliefRough, id: id(), stockSide, tool: endMill, params };
+}
+
+function finishing(stockSide: Operation["stockSide"], rest = false): Operation {
+  const params = { ...reliefFinish.params, modelId: BLOCK.id, stockToLeave: 0, rest };
+  return { ...reliefFinish, id: id(), stockSide, tool: ballEndMill, params };
+}
+
+function project(operations: Operation[], twoSided: TwoSided): ProjectDocument {
+  const doc = fullDocument();
+  return {
+    ...doc,
+    stock: {
+      ...STOCK,
+      xyOrigin: { anchor: "bottom_left" },
+      zOrigin: "stock_top",
+      touchOff: null,
+      twoSided,
+    },
+    models: [BLOCK],
+    operations,
+  };
+}
+
+function toolpaths(doc: ProjectDocument): Toolpath[] {
+  const context = { mesh: () => blockMesh, cuts: createCache<never>(8) };
+  return toolpathInputs(doc).map((input) => generateToolpath(input, context));
+}
+
+/** The stock one operation leaves, on 0.25 mm cells, as `(column, row) => height`. */
+function simulate(operation: Operation, toolpath: Toolpath) {
+  const grid = { columns: 240, rows: 200, cellWidth: 0.25, cellHeight: 0.25 };
+  const { heights } = simulateCuts(STOCK, toolpathCuts(operation, toolpath), grid);
+  return (column: number, row: number) => heights[row * grid.columns + column] as number;
+}
+
+const lowest = (toolpath: Toolpath) => Math.min(...toolpath.moves.map(({ to }) => to[2]));
+
+describe("relief toolpaths on two sides", () => {
+  it.each<[FlipAxis, number, number]>([
+    ["x", 1, -1],
+    ["y", -1, 1],
+  ])("rough a symmetric model the same from below, mirrored, about %s", (flipAxis, sx, sy) => {
+    const operations = [roughing("top"), roughing("bottom")];
+    const [top, bottom] = toolpaths(project(operations, { flipAxis, partingDepth: 9 }));
+    const above = simulate(operations[0] as Operation, top as Toolpath);
+    const below = simulate(operations[1] as Operation, bottom as Toolpath);
+    const column = (c: number) => (sx > 0 ? c : 239 - c);
+    const row = (r: number) => (sy > 0 ? r : 199 - r);
+    let differing = 0;
+    for (let r = 0; r < 200; r++) {
+      for (let c = 0; c < 240; c++) {
+        if (Math.abs(above(c, r) - below(column(c), row(r))) > 0.05) differing++;
+      }
+    }
+    // Only cells along the tool's path edges may round differently.
+    expect(differing / (240 * 200)).toBeLessThan(0.002);
+    // The thinner half is cut into on either face, the full-height half isn't.
+    expect(above(120, 108)).toBeLessThan(-3);
+    expect(above(120, 88)).toBe(0);
+  });
+
+  it("cuts each side down to the parting plane and no further", () => {
+    const operations = [roughing("top"), finishing("top"), roughing("bottom"), finishing("bottom")];
+    const [roughTop, finishTop, roughBottom, finishBottom] = toolpaths(
+      project(operations, { flipAxis: "x", partingDepth: 6 }),
+    ) as Toolpath[];
+    // 6 mm below the top, 12 mm below the bottom face.
+    for (const toolpath of [roughTop, finishTop]) {
+      expect(lowest(toolpath as Toolpath)).toBeGreaterThanOrEqual(-6 - 1e-9);
+    }
+    for (const toolpath of [roughBottom, finishBottom]) {
+      expect(lowest(toolpath as Toolpath)).toBeGreaterThanOrEqual(-12 - 1e-9);
+    }
+    expect(lowest(roughTop as Toolpath)).toBeCloseTo(-6);
+    expect(lowest(roughBottom as Toolpath)).toBeCloseTo(-12);
+    // The stock reaching past the model's depth isn't a warning on either side.
+    for (const toolpath of [roughTop, roughBottom]) {
+      expect(toolpath?.warnings).not.toContainEqual({ code: "toolpath.belowStock" });
+    }
+  });
+
+  it("rest machines the bottom side from what the bottom side's earlier operations left", () => {
+    const operations = [
+      roughing("top"),
+      roughing("bottom"),
+      finishing("top"),
+      finishing("bottom", true),
+    ];
+    const inputs = toolpathInputs(project(operations, { flipAxis: "y", partingDepth: 9 }));
+    expect(inputs[3]?.before.map((input) => input.operation)).toEqual([operations[1]]);
+  });
+
+  it("machines one-sided projects as before", () => {
+    const doc = { ...project([roughing("top")], { flipAxis: "x", partingDepth: 9 }) };
+    const [oneSided] = toolpathInputs({ ...doc, stock: { ...doc.stock, twoSided: null } });
+    expect(oneSided).toMatchObject({ parting: null, flip: null, stockBottom: -18 });
+  });
+});

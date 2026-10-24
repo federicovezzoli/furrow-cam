@@ -8,6 +8,7 @@ import type {
 import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../../geometry/clipper";
+import { modelView } from "../../scene/sides";
 import { cutterProfile, simulateCuts } from "../../simulation/simulation";
 import type { Toolpath, ToolpathMove } from "../toolpath";
 import {
@@ -121,9 +122,11 @@ function expectNoGouge(
     [{ tool, segments: new Float32Array(segments) }],
     { columns, rows, cellWidth: 0.1, cellHeight: 0.1 },
   );
-  const grid = reliefGrid(model, 0, 0.1);
+  const grid = reliefGrid(modelView(model), 0, 0.1);
   if (!grid) throw new Error("no grid");
-  const heights = runSteps(modelHeightsSteps(model, mesh, grid, stockToLeave, undefined));
+  const heights = runSteps(
+    modelHeightsSteps(modelView(model), mesh, grid, stockToLeave, undefined),
+  );
   let worst = Infinity;
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
@@ -283,9 +286,9 @@ describe("isoLines", () => {
     // corners would sag into the flat end mill's reach.
     const pillar = placed(12, 12, 8);
     const mesh = new Float32Array([...rect(0, 0, 12, 12, -8), ...rect(5, 5, 7, 7, 0)]);
-    const grid = reliefGrid(pillar, 0, 0.5);
+    const grid = reliefGrid(modelView(pillar), 0, 0.5);
     if (!grid) throw new Error("no grid");
-    const heights = runSteps(modelHeightsSteps(pillar, mesh, grid, 0, undefined));
+    const heights = runSteps(modelHeightsSteps(modelView(pillar), mesh, grid, 0, undefined));
     const dropper = new ToolDropper(heights, grid, cutterProfile(endMill));
     const tips = runSteps(tipHeightsSteps({ grid, dropper, floor: -8 }));
     const widened = new ToolDropper(heights, grid, widenedProfile(cutterProfile(endMill), 0.001));
