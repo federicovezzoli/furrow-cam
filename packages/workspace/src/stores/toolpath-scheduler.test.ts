@@ -213,7 +213,10 @@ describe("scheduleToolpaths", () => {
     const bottom = { ...reliefFinish, stockSide: "bottom" as const };
     const { documents, requests, schedule } = setup({
       ...document,
-      stock: { ...document.stock, twoSided: { flipAxis: "x", partingDepth: 9, pins: null } },
+      stock: {
+        ...document.stock,
+        twoSided: { flipAxis: "x", partingDepth: 9, pins: null, edges: null },
+      },
       models: [model],
       operations: [bottom],
     });

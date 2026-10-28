@@ -512,7 +512,8 @@
       "tooManyFonts": "Un progetto contiene al massimo {max} font",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto",
-      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo"
+      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo",
+      "pinsAndEdges": "Allinea il grezzo sui perni o su un angolo di battuta, non su entrambi"
     },
     "operation": {
       "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
@@ -1226,7 +1227,12 @@
     "pinOff": "Un perno è fuori dal grezzo.",
     "addPinDrill": "Fora i perni",
     "pinDrill": "Perni di riferimento",
-    "noPinBit": "Aggiungi una punta della misura dei perni, o una fresa più piccola, per forarli."
+    "noPinBit": "Aggiungi una punta della misura dei perni, o una fresa più piccola, per forarli.",
+    "lineUp": "Allineato su",
+    "lineUpNone": "Niente",
+    "edges": "Un angolo di battuta",
+    "edgeCorner": "Angolo",
+    "edgesHint": "Spingi questo angolo del grezzo in un angolo di battuta per entrambi i lati. I lati combaciano solo se il grezzo misura esattamente {size} lungo {axis}: misuralo."
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",

@@ -30,7 +30,12 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     const document = render(createProjectDocument());
     expect(screen.queryByLabelText("Turned over about")).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
-    expect(document().stock.twoSided).toEqual({ flipAxis: "x", partingDepth: 9, pins: null });
+    expect(document().stock.twoSided).toEqual({
+      flipAxis: "x",
+      partingDepth: 9,
+      pins: null,
+      edges: null,
+    });
     fireEvent.change(screen.getByLabelText("Turned over about"), { target: { value: "y" } });
     expect(document().stock.twoSided?.flipAxis).toBe("y");
     expect(screen.getByLabelText(/Parting depth/)).toBeTruthy();
@@ -53,7 +58,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
   it("sets locating pins: their positions on the flip axis and how deep their holes go", () => {
     const document = render(createProjectDocument());
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Locating pins/ }));
+    fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "pins" } });
     expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
     fireEvent.click(screen.getByRole("button", { name: "Add pin" }));
     expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240, 268.5]);
@@ -64,5 +69,19 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     fireEvent.change(screen.getByLabelText("Holes"), { target: { value: "blind" } });
     expect(document().stock.twoSided?.pins?.holes).toEqual({ type: "blind", depth: 9 });
     expect(screen.getByLabelText(/Hole depth/)).toBeTruthy();
+  });
+
+  it("lines the stock up by a corner in a fence corner instead of pins", () => {
+    const document = render(createProjectDocument());
+    fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
+    fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "pins" } });
+    fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "edges" } });
+    expect(document().stock.twoSided).toMatchObject({ pins: null, edges: "bottom_left" });
+    fireEvent.change(screen.getByLabelText("Corner"), { target: { value: "top_right" } });
+    expect(document().stock.twoSided?.edges).toBe("top_right");
+    // 600 × 400 mm, turned over about X: the height is what the sides meet by.
+    expect(screen.getByText(/exactly 400 mm along Y/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "none" } });
+    expect(document().stock.twoSided).toMatchObject({ pins: null, edges: null });
   });
 });

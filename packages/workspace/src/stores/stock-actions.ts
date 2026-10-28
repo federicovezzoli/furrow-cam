@@ -14,6 +14,7 @@ import {
   type Point,
   type ProjectDocument,
   type StockAnchor,
+  type StockCorner,
   type TouchOffDisc,
   type Units,
   type ZOrigin,
@@ -249,7 +250,7 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
       for (const operation of draft.operations) operation.stockSide = "top";
       return;
     }
-    draft.stock.twoSided = { flipAxis: "x", partingDepth, pins: null };
+    draft.stock.twoSided = { flipAxis: "x", partingDepth, pins: null, edges: null };
   });
 }
 
@@ -290,8 +291,9 @@ export function setPartingDepth(store: DocumentStore, partingDepth: number) {
 /**
  * Adds locating pins to a two-sided project (#356), as one undo step: two
  * 6 mm pins symmetric about the stock's centre, two fifths of its length
- * along the flip axis from it, through into the spoilboard. Or removes them;
- * drills of the pins then cut nothing until there are pins again.
+ * along the flip axis from it, through into the spoilboard, in place of
+ * edges (#361). Or removes them; drills of the pins then cut nothing until
+ * there are pins again.
  */
 export function setLocatingPins(store: DocumentStore, on: boolean) {
   const { twoSided, width, height } = store.getState().document.stock;
@@ -299,6 +301,7 @@ export function setLocatingPins(store: DocumentStore, on: boolean) {
   const offset = Math.round(0.4 * (twoSided.flipAxis === "x" ? width : height));
   store.getState().change("setStock.pins", (draft) => {
     if (!draft.stock.twoSided) return;
+    if (on) draft.stock.twoSided.edges = null;
     draft.stock.twoSided.pins = on
       ? {
           diameter: 6,
@@ -306,6 +309,19 @@ export function setLocatingPins(store: DocumentStore, on: boolean) {
           holes: { type: "through", spoilboardDepth: 5 },
         }
       : null;
+  });
+}
+
+/**
+ * Lines a two-sided project's stock up by `corner` in a fence corner (#361),
+ * in place of locating pins, as one undo step; `null` for no edges.
+ */
+export function setEdges(store: DocumentStore, corner: StockCorner | null) {
+  store.getState().change("setStock.edges", (draft) => {
+    const { twoSided } = draft.stock;
+    if (!twoSided) return;
+    if (corner) twoSided.pins = null;
+    twoSided.edges = corner;
   });
 }
 

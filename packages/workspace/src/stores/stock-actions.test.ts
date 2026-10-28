@@ -434,10 +434,20 @@ describe("two-sided projects (ADR-0060)", () => {
   it("part at half the stock's thickness without a model, flipped about X", () => {
     const store = newStore();
     setTwoSided(store, true);
-    expect(stock(store).twoSided).toEqual({ flipAxis: "x", partingDepth: 9, pins: null });
+    expect(stock(store).twoSided).toEqual({
+      flipAxis: "x",
+      partingDepth: 9,
+      pins: null,
+      edges: null,
+    });
     setFlipAxis(store, "y");
     setPartingDepth(store, 6);
-    expect(stock(store).twoSided).toEqual({ flipAxis: "y", partingDepth: 6, pins: null });
+    expect(stock(store).twoSided).toEqual({
+      flipAxis: "y",
+      partingDepth: 6,
+      pins: null,
+      edges: null,
+    });
     // Outside the stock: refused.
     for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
     expect(stock(store).twoSided?.partingDepth).toBe(6);
