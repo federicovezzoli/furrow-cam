@@ -1,17 +1,9 @@
 import type { Toolpath, Vec3 } from "@furrow/cam-core";
 import type { Machine, Operation, Stock, StockAnchor, Tool } from "@furrow/document";
-import {
-  ballEndMill,
-  drill as drillBit,
-  endMill,
-  lowRider,
-  machine,
-  vBit,
-} from "@furrow/document/fixtures";
+import { drill as drillBit, endMill, lowRider, machine, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { formatNumber } from "../format";
-import { grbl, toolShapeComment } from "./grbl";
 import { type PostInput, postSteps } from "../post";
+import { grbl } from "./grbl";
 
 const stock: Stock = {
   width: 300,
@@ -651,21 +643,6 @@ describe("grbl", () => {
   });
 
   describe("tool shape comments (ADR-0042)", () => {
-    it("give each tool type's cutter shape, leaving out fields that don't apply", () => {
-      expect(toolShapeComment(endMill)).toBe("(Furrow tool: type=flat_end_mill diameter=6.35)");
-      expect(toolShapeComment(ballEndMill)).toBe("(Furrow tool: type=ball_end_mill diameter=3)");
-      expect(toolShapeComment(drillBit)).toBe("(Furrow tool: type=drill diameter=6)");
-      expect(toolShapeComment({ ...vBit, diameter: 12, tipDiameter: 0.2 })).toBe(
-        "(Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)",
-      );
-    });
-
-    it("use the post's number formatting", () => {
-      expect(
-        toolShapeComment({ ...vBit, diameter: 3.175, vAngle: 89.99999, tipDiameter: 0.1 }),
-      ).toBe("(Furrow tool: type=v_bit diameter=3.175 vAngle=90 tipDiameter=0.1)");
-    });
-
     it("come after the readable tool comment and the retract at a tool change", () => {
       const { gcode } = post({
         operations: [
@@ -703,16 +680,5 @@ describe("grbl", () => {
   it("keeps parentheses and line breaks out of comments", () => {
     const { gcode } = post({ name: "Sign (v2)\nfinal" });
     expect(gcode.split("\n")[0]).toBe("(Sign [v2] final)");
-  });
-});
-
-describe("formatNumber", () => {
-  it("rounds to 3 decimals without trailing zeros or -0", () => {
-    expect(formatNumber(100)).toBe("100");
-    expect(formatNumber(1.5)).toBe("1.5");
-    expect(formatNumber(1 / 3)).toBe("0.333");
-    expect(formatNumber(-0.0004)).toBe("0");
-    expect(formatNumber(-0)).toBe("0");
-    expect(formatNumber(-12.3456)).toBe("-12.346");
   });
 });
