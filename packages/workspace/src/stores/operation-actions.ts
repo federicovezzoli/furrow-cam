@@ -87,7 +87,12 @@ export function defaultPocketParams(document: ProjectDocument): PocketParams {
  * the tool's step-down is a single plunge anyway.
  */
 export function defaultDrillParams(document: ProjectDocument): DrillParams {
-  return { depth: document.stock.thickness, peck: true, stepOver: DEFAULT_STEP_OVER };
+  return {
+    depth: document.stock.thickness,
+    peck: true,
+    stepOver: DEFAULT_STEP_OVER,
+    pins: false,
+  };
 }
 
 /** How deep new engravings go, unless the stock is thinner. */
@@ -196,6 +201,43 @@ export function addDrillOperation(store: DocumentStore, options: NewOperation): 
     name: nextName(document, options.name ?? "Drill"),
     params: defaultDrillParams(document),
   }));
+}
+
+/**
+ * Appends a drill of a two-sided project's locating pins (#356) on the top
+ * side, named "Locating pins" in English by default. Returns its id, or
+ * `null` if the project has no pins or `tool` can't drill.
+ */
+export function addPinDrillOperation(
+  store: DocumentStore,
+  { tool, name = "Locating pins" }: { tool: Tool; name?: string },
+): string | null {
+  const { document } = store.getState();
+  if (!canDrill(tool) || !document.stock.twoSided?.pins) return null;
+  const operation: Operation = {
+    id: crypto.randomUUID(),
+    type: "drill",
+    name: nextName(document, name),
+    enabled: true,
+    stockSide: "top",
+    targets: [],
+    tool,
+    params: { ...defaultDrillParams(document), pins: true },
+  };
+  store.getState().change("addOperation", (draft) => {
+    draft.operations.push(operation);
+  });
+  track({ event: "operation_added", type: operation.type });
+  return operation.id;
+}
+
+/** Makes the drill `id` cut the locating pins (#356) instead of its shapes. */
+export function setDrillPins(store: DocumentStore, id: string) {
+  changeOperation(store, "setOperationTargets", id, (operation) => {
+    if (operation.type !== "drill") return;
+    operation.targets = [];
+    operation.params.pins = true;
+  });
 }
 
 /**
@@ -452,6 +494,8 @@ export function setOperationTargets(
   if (existing.length === 0) return { ok: false, error: { code: "workspace.needsShape" } };
   changeOperation(store, "setOperationTargets", id, (operation) => {
     operation.targets = existing;
+    // A pin drill (#356) cuts its shapes again.
+    if (operation.type === "drill") operation.params.pins = false;
   });
   return OK;
 }

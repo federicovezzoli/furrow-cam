@@ -46,7 +46,7 @@ function documentWithOperations(): ProjectDocument {
         type: "drill",
         targets: [],
         tool: drill,
-        params: { depth: 6, peck: false, stepOver: 40 },
+        params: { depth: 6, peck: false, stepOver: 40, pins: false },
       },
     ],
   };
@@ -147,7 +147,10 @@ describe("simulationRequest", () => {
     const document = documentWithOperations();
     const twoSided = {
       ...document,
-      stock: { ...document.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } },
+      stock: {
+        ...document.stock,
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null },
+      },
       operations: document.operations.map((op) =>
         op.id === DRILL_ID ? { ...op, stockSide: "bottom" as const } : op,
       ),

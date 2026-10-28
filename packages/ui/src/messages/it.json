@@ -645,7 +645,8 @@
       "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size, number} mm, quindi il materiale più stretto di {width, number} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
       "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
       "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
-      "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
+      "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
+      "noLocatingPins": "Il progetto non ha perni di riferimento da forare."
     },
     "export": {
       "noEnabled": "Non ci sono operazioni attive da esportare.",
@@ -881,7 +882,10 @@
     "computeAgain": "Calcola di nuovo",
     "cancelled": "Annullato prima della fine.",
     "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
-    "warnings": "Avvisi del percorso utensile"
+    "warnings": "Avvisi del percorso utensile",
+    "usePins": "Usa i perni",
+    "locatingPins": "I perni di riferimento",
+    "pinDepth": "Profondo quanto dicono le impostazioni dei perni: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# forma selezionata} other {# forme selezionate}}",
@@ -1201,7 +1205,24 @@
     "padOff": "Una parte del tampone è fuori dal grezzo, quindi lì potrebbe non esserci niente su cui azzerare Z.",
     "padToolChange": "Cambio utensile sul tampone",
     "padToolChangeHint": "Viene eseguito a ogni cambio utensile.",
-    "reset": "Ripristina"
+    "reset": "Ripristina",
+    "pins": "Perni di riferimento",
+    "pinsHint": "Perni sull'asse di ribaltamento allineano il grezzo ribaltato al lato superiore.",
+    "pinDiameter": "Diametro dei perni",
+    "pinPosition": "Perno {n}",
+    "pinPositionHint": "La distanza di ogni perno dal centro del grezzo, lungo l'asse di ribaltamento.",
+    "addPin": "Aggiungi perno",
+    "removePin": "Rimuovi perno",
+    "pinHoles": "Fori",
+    "pinHoleTypes": {
+      "through": "Passanti, fino nel piano sacrificale",
+      "blind": "Solo nel grezzo"
+    },
+    "spoilboardDepth": "Nel piano sacrificale",
+    "pinHoleDepth": "Profondità dei fori",
+    "pinOff": "Un perno è fuori dal grezzo.",
+    "addPinDrill": "Fora i perni",
+    "pinDrill": "Perni di riferimento"
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",

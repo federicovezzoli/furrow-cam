@@ -11,6 +11,7 @@ import {
   setCustomOrigin,
   setCustomXYOrigin,
   setFlipAxis,
+  setLocatingPins,
   setPartingDepth,
   setStockDimension,
   setTouchOffField,
@@ -19,6 +20,7 @@ import {
   setUnits,
   setXYAnchor,
   setZOrigin,
+  updateLocatingPins,
 } from "./stock-actions";
 
 /** 600 × 400 mm stock, zeroed at its bottom-left corner. */
@@ -431,10 +433,10 @@ describe("two-sided projects (ADR-0060)", () => {
   it("part at half the stock's thickness without a model, flipped about X", () => {
     const store = newStore();
     setTwoSided(store, true);
-    expect(stock(store).twoSided).toEqual({ flipAxis: "x", partingDepth: 9 });
+    expect(stock(store).twoSided).toEqual({ flipAxis: "x", partingDepth: 9, pins: null });
     setFlipAxis(store, "y");
     setPartingDepth(store, 6);
-    expect(stock(store).twoSided).toEqual({ flipAxis: "y", partingDepth: 6 });
+    expect(stock(store).twoSided).toEqual({ flipAxis: "y", partingDepth: 6, pins: null });
     // Outside the stock: refused.
     for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
     expect(stock(store).twoSided?.partingDepth).toBe(6);
@@ -469,5 +471,30 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(ProjectDocument.safeParse(after).success).toBe(true);
     store.getState().undo();
     expect(store.getState().document).toEqual({ ...document, operations });
+  });
+
+  it("add a symmetric pair of locating pins, and take valid changes to them only", () => {
+    const store = newStore();
+    setLocatingPins(store, true);
+    expect(stock(store).twoSided).toBeNull();
+    setTwoSided(store, true);
+    setLocatingPins(store, true);
+    // 600 mm along X: two fifths of it either side of the centre.
+    expect(stock(store).twoSided?.pins).toEqual({
+      diameter: 6,
+      positions: [-240, 240],
+      holes: { type: "through", spoilboardDepth: 5 },
+    });
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 8 } })).toBe(true);
+    expect(updateLocatingPins(store, { positions: [0] })).toBe(false);
+    expect(updateLocatingPins(store, { diameter: 0 })).toBe(false);
+    expect(stock(store).twoSided?.pins).toMatchObject({
+      diameter: 6,
+      positions: [-240, 240],
+      holes: { type: "blind", depth: 8 },
+    });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    setLocatingPins(store, false);
+    expect(stock(store).twoSided?.pins).toBeNull();
   });
 });

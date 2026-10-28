@@ -3,6 +3,7 @@
 import {
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
+  pinDepth,
   vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
@@ -64,6 +65,7 @@ import {
   DEFAULT_TAB_COUNT,
   defaultTabs,
   renameOperation,
+  setDrillPins,
   setOperationTargets,
   setOperationTool,
   toolError,
@@ -114,7 +116,17 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const t = useTranslations("Operation");
+  const hasPins = useDocumentStore((s) => !!s.document.stock.twoSided?.pins);
   if (!operation) return null;
+  // A drill on the top side may cut the locating pins (#356) instead of shapes.
+  const pins =
+    operation.type !== "drill"
+      ? null
+      : operation.params.pins
+        ? "on"
+        : hasPins && operation.stockSide === "top"
+          ? "available"
+          : null;
 
   return (
     <div className="grid gap-4 p-3 text-ui">
@@ -142,7 +154,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
-        <TargetsField operationId={operation.id} targets={operation.targets} />
+        <TargetsField operationId={operation.id} targets={operation.targets} pins={pins} />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -285,9 +297,12 @@ function ToolPicker({ operation }: { operation: Operation }) {
 function TargetsField({
   operationId,
   targets,
+  pins,
 }: {
   operationId: string;
   targets: OperationTarget[];
+  /** For a drill: whether it cuts the locating pins, or may. */
+  pins: "on" | "available" | null;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
@@ -325,7 +340,13 @@ function TargetsField({
         >
           {t("useSelected")}
         </Button>
+        {pins === "available" && (
+          <Button variant="outline" size="compact" onClick={() => setDrillPins(store, operationId)}>
+            {t("usePins")}
+          </Button>
+        )}
       </div>
+      {pins === "on" && <p>{t("locatingPins")}</p>}
       <ul className="grid gap-0.5">
         {rows.map(({ shape, paths }) => (
           <li key={shape.id} className="flex min-w-0 items-center gap-1">
@@ -769,6 +790,8 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
 function DrillFields({ operation }: { operation: DrillOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
+  const thickness = useDocumentStore((s) => s.document.stock.thickness);
+  const pins = useDocumentStore((s) => s.document.stock.twoSided?.pins);
   const { params, tool } = operation;
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateDrillParams(store, operation.id, changes),
@@ -787,18 +810,22 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
           bore: tool.type === "drill" ? "no" : "yes",
         })}
       </p>
-      <NumberField
-        id="drill-depth"
-        label={t("depth")}
-        min={MIN_LENGTH}
-        value={params.depth}
-        onValueChange={(depth) => update("depth", { depth })}
-        error={errors.depth}
-        layout="inline"
-        quantity="length"
-        units={units}
-        {...gestureHandlers(store)}
-      />
+      {params.pins ? (
+        pins && <p>{t("pinDepth", { depth: length(pinDepth(thickness, pins)) })}</p>
+      ) : (
+        <NumberField
+          id="drill-depth"
+          label={t("depth")}
+          min={MIN_LENGTH}
+          value={params.depth}
+          onValueChange={(depth) => update("depth", { depth })}
+          error={errors.depth}
+          layout="inline"
+          quantity="length"
+          units={units}
+          {...gestureHandlers(store)}
+        />
+      )}
       <Checkbox
         id="drill-peck"
         label={t("peck")}

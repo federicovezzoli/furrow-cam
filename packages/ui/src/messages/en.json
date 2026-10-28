@@ -645,7 +645,8 @@
       "restCoarsened": "The area is too large to simulate the stock left at full resolution: it is simulated with cells of {size, number} mm, so material narrower than {width, number} mm the operations before left may be cut at full depth.",
       "roughNothing": "The stock to leave covers the whole model: there is nothing to rough out.",
       "roughMarginOffStock": "The margin around the model isn't on the stock: there is nothing to rough out.",
-      "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left."
+      "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
+      "noLocatingPins": "The project has no locating pins to drill."
     },
     "export": {
       "noEnabled": "There are no enabled operations to export.",
@@ -881,7 +882,10 @@
     "computeAgain": "Compute again",
     "cancelled": "Cancelled before it finished.",
     "failed": "The toolpath couldn't be computed: {error}",
-    "warnings": "Toolpath warnings"
+    "warnings": "Toolpath warnings",
+    "usePins": "Use pins",
+    "locatingPins": "The locating pins",
+    "pinDepth": "As deep as the pin settings say: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# selected shape} other {# selected shapes}}",
@@ -1201,7 +1205,24 @@
     "padOff": "Part of the pad is off the stock, so there may be nothing to zero Z on there.",
     "padToolChange": "Tool change on the pad",
     "padToolChangeHint": "Runs at each tool change.",
-    "reset": "Reset"
+    "reset": "Reset",
+    "pins": "Locating pins",
+    "pinsHint": "Pins on the flip axis line the turned-over stock up with the top side.",
+    "pinDiameter": "Pin diameter",
+    "pinPosition": "Pin {n}",
+    "pinPositionHint": "Each pin's distance along the flip axis from the stock's centre.",
+    "addPin": "Add pin",
+    "removePin": "Remove pin",
+    "pinHoles": "Holes",
+    "pinHoleTypes": {
+      "through": "Through, into the spoilboard",
+      "blind": "Into the stock only"
+    },
+    "spoilboardDepth": "Into the spoilboard",
+    "pinHoleDepth": "Hole depth",
+    "pinOff": "A pin is off the stock.",
+    "addPinDrill": "Drill the pins",
+    "pinDrill": "Locating pins"
   },
   "Model": {
     "closeLabel": "Close model properties",

@@ -645,7 +645,8 @@
       "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size, number} mm simuliert, daher kann Material, das schmaler als {width, number} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
       "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
       "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
-      "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
+      "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
+      "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren."
     },
     "export": {
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
@@ -881,7 +882,10 @@
     "computeAgain": "Neu berechnen",
     "cancelled": "Vor dem Ende abgebrochen.",
     "failed": "Die Werkzeugbahn konnte nicht berechnet werden: {error}",
-    "warnings": "Warnungen zur Werkzeugbahn"
+    "warnings": "Warnungen zur Werkzeugbahn",
+    "usePins": "Stifte verwenden",
+    "locatingPins": "Die Passstifte",
+    "pinDepth": "So tief, wie die Stifteinstellungen sagen: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# Form ausgewählt} other {# Formen ausgewählt}}",
@@ -1201,7 +1205,24 @@
     "padOff": "Ein Teil des Platzes liegt außerhalb des Rohteils: dort gibt es vielleicht nichts, um Z neu zu nullen.",
     "padToolChange": "Werkzeugwechsel am Platz",
     "padToolChangeHint": "Läuft bei jedem Werkzeugwechsel.",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "pins": "Passstifte",
+    "pinsHint": "Stifte auf der Wendeachse richten das gewendete Rohteil an der Oberseite aus.",
+    "pinDiameter": "Stiftdurchmesser",
+    "pinPosition": "Stift {n}",
+    "pinPositionHint": "Der Abstand jedes Stifts von der Mitte des Rohteils entlang der Wendeachse.",
+    "addPin": "Stift hinzufügen",
+    "removePin": "Stift entfernen",
+    "pinHoles": "Bohrungen",
+    "pinHoleTypes": {
+      "through": "Durchgehend, bis in die Opferplatte",
+      "blind": "Nur ins Rohteil"
+    },
+    "spoilboardDepth": "In die Opferplatte",
+    "pinHoleDepth": "Bohrtiefe",
+    "pinOff": "Ein Stift liegt außerhalb des Rohteils.",
+    "addPinDrill": "Stifte bohren",
+    "pinDrill": "Passstifte"
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",

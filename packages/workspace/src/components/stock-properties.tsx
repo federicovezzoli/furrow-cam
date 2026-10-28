@@ -10,7 +10,7 @@ import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { cn } from "@furrow/ui/lib/utils";
-import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
+import { CircleAlertIcon, CrosshairIcon, PlusIcon } from "lucide-react";
 import type * as React from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -22,9 +22,11 @@ import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
+  useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { gestureHandlers } from "../stores/gesture-handlers";
 import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
+import { addPinDrillOperation } from "../stores/operation-actions";
 import {
   addTouchOff,
   partingDepthLimits,
@@ -33,6 +35,7 @@ import {
   setCustomOrigin,
   setCustomXYOrigin,
   setFlipAxis,
+  setLocatingPins,
   setPartingDepth,
   setStockDimension,
   setTouchOffField,
@@ -41,9 +44,11 @@ import {
   setUnits,
   setXYAnchor,
   setZOrigin,
+  updateLocatingPins,
 } from "../stores/stock-actions";
 import { Checkbox } from "./checkbox";
 import { PlaceholderList } from "./placeholder-list";
+import { drillToolChoice, useToolLibrary } from "./tool-library";
 
 const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
 
@@ -174,9 +179,161 @@ function TwoSidedSection() {
             {...gestureHandlers(store)}
           />
           <p className="text-muted-foreground">{t("partingDepthHint")}</p>
+          <PinFields />
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * Locating pins (#356) on the flip axis: their diameter, each one's
+ * distance from the stock's centre, and how deep their holes go. A button
+ * adds a drill of them on the top side.
+ */
+function PinFields() {
+  const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const drill = drillToolChoice(useToolLibrary());
+  const t = useTranslations("Stock");
+  const pins = stock.twoSided?.pins;
+  if (!stock.twoSided) return null;
+  const half = (stock.twoSided.flipAxis === "x" ? stock.width : stock.height) / 2;
+  const off = pins?.positions.some((p) => Math.abs(p) + pins.diameter / 2 > half);
+
+  function addDrill() {
+    if (!drill) return;
+    const id = addPinDrillOperation(store, { tool: drill.tool, name: t("pinDrill") });
+    if (id) workspace.getState().selectOperation(id);
+  }
+
+  return (
+    <>
+      <Checkbox
+        id="locating-pins"
+        label={t("pins")}
+        hint={t("pinsHint")}
+        checked={!!pins}
+        onChange={(on) => setLocatingPins(store, on)}
+      />
+      {pins && (
+        <>
+          <NumberField
+            id="pin-diameter"
+            label={t("pinDiameter")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={pins.diameter}
+            onValueChange={(diameter) => updateLocatingPins(store, { diameter })}
+            {...gestureHandlers(store)}
+          />
+          {pins.positions.map((position, i) => (
+            <NumberField
+              // Pins are only added and removed at the end.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              key={i}
+              id={`pin-${i}`}
+              label={t("pinPosition", { n: i + 1 })}
+              layout="inline"
+              quantity="length"
+              units={units}
+              value={position}
+              onValueChange={(value) =>
+                updateLocatingPins(store, { positions: pins.positions.with(i, value) })
+              }
+              {...gestureHandlers(store)}
+            />
+          ))}
+          <p className="text-muted-foreground">{t("pinPositionHint")}</p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="compact"
+              disabled={pins.positions.length <= 2}
+              onClick={() => updateLocatingPins(store, { positions: pins.positions.slice(0, -1) })}
+            >
+              {t("removePin")}
+            </Button>
+            <Button
+              variant="outline"
+              size="compact"
+              onClick={() => updateLocatingPins(store, { positions: [...pins.positions, 0] })}
+            >
+              <PlusIcon />
+              {t("addPin")}
+            </Button>
+          </div>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="pin-holes" className="text-ui font-normal">
+              {t("pinHoles")}
+            </Label>
+            <NativeSelect
+              id="pin-holes"
+              size="sm"
+              value={pins.holes.type}
+              onChange={(event) =>
+                updateLocatingPins(store, {
+                  holes:
+                    event.target.value === "blind"
+                      ? { type: "blind", depth: Math.min(10, stock.thickness / 2) }
+                      : { type: "through", spoilboardDepth: 5 },
+                })
+              }
+              className="h-control px-2 pr-7 text-ui"
+            >
+              <NativeSelectOption value="through">{t("pinHoleTypes.through")}</NativeSelectOption>
+              <NativeSelectOption value="blind">{t("pinHoleTypes.blind")}</NativeSelectOption>
+            </NativeSelect>
+          </div>
+          {pins.holes.type === "through" ? (
+            <NumberField
+              id="pin-spoilboard-depth"
+              label={t("spoilboardDepth")}
+              layout="inline"
+              quantity="length"
+              units={units}
+              min={MIN_STOCK}
+              value={pins.holes.spoilboardDepth}
+              onValueChange={(spoilboardDepth) =>
+                updateLocatingPins(store, { holes: { type: "through", spoilboardDepth } })
+              }
+              {...gestureHandlers(store)}
+            />
+          ) : (
+            <NumberField
+              id="pin-hole-depth"
+              label={t("pinHoleDepth")}
+              layout="inline"
+              quantity="length"
+              units={units}
+              min={MIN_STOCK}
+              max={stock.thickness}
+              value={pins.holes.depth}
+              onValueChange={(depth) =>
+                updateLocatingPins(store, { holes: { type: "blind", depth } })
+              }
+              {...gestureHandlers(store)}
+            />
+          )}
+          {off && (
+            <p role="alert" className="flex gap-1.5 text-destructive">
+              <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              {t("pinOff")}
+            </p>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" size="compact" disabled={!drill} onClick={addDrill}>
+              <PlusIcon />
+              {t("addPinDrill")}
+            </Button>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
