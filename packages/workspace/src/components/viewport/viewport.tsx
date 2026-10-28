@@ -73,6 +73,8 @@ export function Viewport() {
   const t = useTranslations("Viewport");
   const status = [
     ...(side === "bottom" ? [t("bottomSideHint")] : []),
+    // The top side is simulated as it is cut, before the stock is turned over.
+    ...(simulating && side === "top" && stock.twoSided ? [t("topSideSimulationHint")] : []),
     ...(simulating ? simulationStatus(t, simulation) : []),
   ];
 

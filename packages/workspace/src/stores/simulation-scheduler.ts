@@ -17,9 +17,10 @@ export type SimulationInput = {
   /**
    * For the bottom side of a two-sided project (ADR-0060), the top side's
    * cuts and the axis the stock is turned over about: the bottom side's
-   * stock is cut through where they meet its own (`joinSides`).
+   * stock is cut through where they meet its own (`joinSides`). `key`
+   * changes exactly when they do, so the worker keeps their result between requests.
    */
-  before?: { cuts: SimulationCut[]; axis: FlipAxis };
+  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
   /** Most cells the heightmap may have, so the device can draw it. */
   maxCells: number;
 };
@@ -50,7 +51,7 @@ export function simulationRequest(
 ): SimulationRequest | null {
   const { width, height, thickness, twoSided } = document.stock;
   const cuts: Record<StockSide, SimulationCut[]> = { top: [], bottom: [] };
-  const hashes: string[] = [];
+  const hashes: Record<StockSide, string[]> = { top: [], bottom: [] };
   for (const operation of document.operations) {
     if (!operation.enabled) continue;
     // The top side's cut first, so the bottom side's start from them.
@@ -62,14 +63,15 @@ export function simulationRequest(
     const clearing = clearingTool(operation);
     if (clearing && entry.clearing) sideCuts.push(...lineCuts(clearing, entry.clearing));
     sideCuts.push(...lineCuts(operation.tool, entry.lines));
-    hashes.push(entry.inputHash);
+    hashes[operation.stockSide].push(entry.inputHash);
   }
   const stock = { width, height, thickness };
   const flip = side === "bottom" && twoSided ? twoSided.flipAxis : null;
+  const topKey = JSON.stringify([width, height, thickness, hashes.top]);
   return {
-    key: JSON.stringify([width, height, thickness, flip, hashes]),
+    key: JSON.stringify([width, height, thickness, hashes.top, side, flip, hashes.bottom]),
     input: flip
-      ? { stock, cuts: cuts.bottom, before: { cuts: cuts.top, axis: flip }, maxCells }
+      ? { stock, cuts: cuts.bottom, before: { key: topKey, cuts: cuts.top, axis: flip }, maxCells }
       : { stock, cuts: cuts.top, maxCells },
   };
 }
@@ -90,7 +92,8 @@ function lineCuts({ type, diameter, vAngle, tipDiameter }: Tool, lines: Toolpath
  * `onResult`. One request at a time, like the toolpaths: changes made while
  * the worker simulates wait, and only the latest is sent once it answers.
  * `stop` stops listening; `fail` reports the request in flight as failed,
- * e.g. when the worker crashed, and sends the one waiting, if any.
+ * e.g. when the worker crashed, and sends the one waiting, if any. `setSide`
+ * switches the side simulated; responses for the other side are then dropped.
  */
 export function scheduleSimulation(
   documents: DocumentStore,
@@ -103,9 +106,11 @@ export function scheduleSimulation(
   let sentKey: string | null = null;
   let inFlight = false;
   let waiting: SimulationRequest | null = null;
+  let sentSide = side;
 
   function send(request: SimulationRequest) {
     sentKey = request.key;
+    sentSide = side;
     inFlight = true;
     post(request);
   }
@@ -134,9 +139,14 @@ export function scheduleSimulation(
       stopDocuments();
       stopToolpaths();
     },
+    setSide(next: StockSide) {
+      if (next === side) return;
+      side = next;
+      update();
+    },
     receive(response: SimulationResponse) {
       inFlight = false;
-      onResult(response);
+      if (sentSide === side) onResult(response);
       const next = waiting;
       waiting = null;
       if (next) send(next);

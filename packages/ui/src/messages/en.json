@@ -1316,7 +1316,8 @@
       "top": "Show the top side, cut first",
       "bottom": "Show the bottom side, seen from below once the stock is turned over"
     },
-    "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side."
+    "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side.",
+    "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts."
   },
   "Dialog": {
     "close": "Close",

@@ -1316,7 +1316,8 @@
       "top": "Afficher la face supérieure, usinée en premier",
       "bottom": "Afficher la face inférieure, vue de dessous une fois le brut retourné"
     },
-    "bottomSideHint": "Face inférieure, vue de dessous. Choisissez le zéro, sélectionnez les tracés et modifiez les attaches sur la face supérieure."
+    "bottomSideHint": "Face inférieure, vue de dessous. Choisissez le zéro, sélectionnez les tracés et modifiez les attaches sur la face supérieure.",
+    "topSideSimulationHint": "Face supérieure seule : le brut avant retournement, sans les coupes de la face inférieure."
   },
   "Dialog": {
     "close": "Fermer",
