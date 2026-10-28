@@ -102,7 +102,7 @@ function referenceProject(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40 },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false },
       },
       {
         id: id(3),
@@ -155,7 +155,7 @@ describe("exportGcode", () => {
       const stock = {
         ...doc.stock,
         thickness: 18,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9 },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null },
       };
       return { ...doc, stock, models: [placed], operations };
     }
@@ -195,6 +195,17 @@ describe("exportGcode", () => {
       expect(bottom).toContain("(Zero as for the top side, Z on the face now on top)");
       expect(bottom).toContain("(Operation: Bottom rough)");
       expect(bottom).not.toContain("Top rough");
+    });
+
+    it("turns the stock over onto its locating pins", () => {
+      const doc = twoSided([rough("bottom", "Bottom rough")]);
+      const holes = { type: "through" as const, spoilboardDepth: 5 };
+      const pins = { diameter: 6, positions: [-120, 120], holes };
+      const stock = { ...doc.stock, twoSided: { flipAxis: "y" as const, partingDepth: 9, pins } };
+      const [bottom] = exportGcode({ ...doc, stock }, "Owl", context).files;
+      expect(bottom?.gcode).toContain(
+        "(Before this file, turn the stock over by half a turn about its centre line along Y, onto its 2 locating pins of 6 mm, so the face that was underneath is on top)",
+      );
     });
 
     it("names an untitled project's files after its sides", () => {

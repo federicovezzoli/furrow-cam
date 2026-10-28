@@ -246,7 +246,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 22,
+    schemaVersion: 23,
     units: "in",
     stock: {
       width: 300,
@@ -255,7 +255,15 @@ export function fullDocument(): ProjectDocument {
       xyOrigin: { anchor: "center" },
       zOrigin: "machine_bed",
       touchOff: { x: 10, y: 10, diameter: 15, toolChange: null },
-      twoSided: { flipAxis: "x", partingDepth: 9 },
+      twoSided: {
+        flipAxis: "x",
+        partingDepth: 9,
+        pins: {
+          diameter: 6,
+          positions: [-120, 120],
+          holes: { type: "through", spoilboardDepth: 5 },
+        },
+      },
     },
     machine,
     drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],

@@ -222,6 +222,11 @@ export const DrillParams = z.strictObject({
   peck: z.boolean(),
   /** Between the rings an end mill bores a hole wider than itself with. */
   stepOver: StepOver,
+  /**
+   * Drill the two-sided project's locating pins (#356) instead of the
+   * targets, which are then empty, as deep as the pin settings say.
+   */
+  pins: z.boolean(),
 });
 export type DrillParams = z.infer<typeof DrillParams>;
 

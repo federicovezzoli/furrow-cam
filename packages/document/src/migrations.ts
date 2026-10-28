@@ -215,6 +215,18 @@ export const migrations: Readonly<Record<number, Migration>> = {
     doc.fonts ??= [];
     return doc;
   },
+  // #356: locating pins. Existing projects have none, and drills cut their shapes.
+  22: (doc) => {
+    if (isObject(doc.stock) && isObject(doc.stock.twoSided)) doc.stock.twoSided.pins ??= null;
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "drill" && isObject(operation.params)) {
+          operation.params.pins ??= false;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

@@ -91,7 +91,12 @@ function bothSides(operation: Operation, flipAxis: FlipAxis): [Toolpath, Toolpat
   const doc = fullDocument();
   const document: ProjectDocument = {
     ...doc,
-    stock: { ...doc.stock, ...STOCK, touchOff: null, twoSided: { flipAxis, partingDepth: 9 } },
+    stock: {
+      ...doc.stock,
+      ...STOCK,
+      touchOff: null,
+      twoSided: { flipAxis, partingDepth: 9, pins: null },
+    },
     geometry: [ELL, HOLE],
     models: [],
     fonts: [],
@@ -185,7 +190,7 @@ describe("2D operations on the bottom side", () => {
           tool: drill,
           stockSide: "top",
           targets: [{ shapeId: HOLE.id, paths: null }],
-          params: { depth: DEPTH, peck: false, stepOver: 40 },
+          params: { depth: DEPTH, peck: false, stepOver: 40, pins: false },
         };
         const [, bottom] = bothSides(drilling, axis);
         const plunges = bottom.moves.filter(({ to }) => Math.abs(to[2] + DEPTH) < 1e-9);

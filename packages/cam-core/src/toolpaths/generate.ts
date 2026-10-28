@@ -11,7 +11,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import { type Flip, flipOperation, flipShapes } from "../scene/sides";
+import { drillTargets, type Flip, flipOperation, flipShapes } from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
@@ -115,9 +115,11 @@ export function toolpathInputs(
     const sided = twoSided && operationModelId(operation) !== null ? twoSided : null;
     const bottom = operation.stockSide === "bottom";
     const flip: Flip | null = twoSided && bottom ? { ...size, axis: twoSided.flipAxis } : null;
+    const targeted = targetedShapes(shapes, operation.targets);
     const input: ToolpathInput = {
-      operation,
-      shapes: targetedShapes(shapes, operation.targets),
+      ...(operation.type === "drill"
+        ? drillTargets(operation, targeted, doc.stock)
+        : { operation, shapes: targeted }),
       model: models.get(operationModelId(operation) ?? "") ?? null,
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
@@ -393,6 +395,9 @@ function* operationSteps(
     case "pocket":
       return checkTouchOff(operation, pocketToolpath(operation, shapes, options), touchOff);
     case "drill":
+      if (operation.params.pins && shapes.length === 0) {
+        return { moves: [], warnings: [{ code: "toolpath.noLocatingPins" }] };
+      }
       return checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff);
     case "engrave":
       return checkTouchOff(operation, engraveToolpath(operation, shapes, options), touchOff);

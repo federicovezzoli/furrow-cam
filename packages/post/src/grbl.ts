@@ -403,7 +403,12 @@ function sideSetupLines(
   firstTool: Tool | undefined,
 ): string[] {
   const axis = (twoSided?.flipAxis ?? "x").toUpperCase();
-  const flip = `turn the stock over by half a turn about its centre line along ${axis}, in place`;
+  const pins = twoSided?.pins;
+  // Pins on the centre line hold it in place (#356).
+  const onto = pins
+    ? `onto its ${pins.positions.length} locating pins of ${formatNumber(pins.diameter)} mm`
+    : "in place";
+  const flip = `turn the stock over by half a turn about its centre line along ${axis}, ${onto}`;
   // Files aren't named: G-code comments can't hold the parentheses names may have.
   if (side === "top") {
     return [

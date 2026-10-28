@@ -1,6 +1,8 @@
 import type {
+  DrillOperation,
   FlipAxis,
   LinearAngle,
+  LocatingPins,
   Model,
   Operation,
   Point,
@@ -130,4 +132,52 @@ export function flipOperation(operation: Operation, flip: Flip): Operation {
     return { ...operation, params: { ...operation.params, strategy } };
   }
   return operation;
+}
+
+/**
+ * The centres of the locating pins (#356) in stock coordinates, none without
+ * any: on the line the stock turns about, so the same on either side and
+ * where the turned-over stock's holes land.
+ */
+export function pinCenters({ width, height, twoSided }: Stock): Point[] {
+  if (!twoSided?.pins) return [];
+  const { flipAxis, pins } = twoSided;
+  return pins.positions.map((position) =>
+    flipAxis === "x" ? [width / 2 + position, height / 2] : [width / 2, height / 2 + position],
+  );
+}
+
+/** How deep the pin holes go below the stock top: through it and into the spoilboard, or blind. */
+export function pinDepth(thickness: number, { holes }: LocatingPins): number {
+  return holes.type === "through" ? thickness + holes.spoilboardDepth : holes.depth;
+}
+
+/**
+ * A drill operation as it cuts: a pin drill (#356) has the pin holes for
+ * shapes, circles of the pins' diameter, and their depth; none in a project
+ * without pins. Others keep their own.
+ */
+export function drillTargets(
+  operation: DrillOperation,
+  shapes: Shape[],
+  stock: Stock,
+): { operation: DrillOperation; shapes: Shape[] } {
+  const pins = stock.twoSided?.pins;
+  if (!operation.params.pins) return { operation, shapes };
+  if (!pins) return { operation, shapes: [] };
+  const r = pins.diameter / 2;
+  const paths = pinCenters(stock).map(([x, y]) => {
+    const start: Point = [x + r, y];
+    return {
+      start,
+      segments: [{ kind: "arc" as const, to: start, center: [x, y] as Point, clockwise: false }],
+      closed: true,
+    };
+  });
+  const depth = pinDepth(stock.thickness, pins);
+  return {
+    operation: { ...operation, params: { ...operation.params, depth } },
+    // Not a drawing's: only its paths are cut.
+    shapes: [{ id: "locating-pins", name: "", layer: "", drawingId: "locating-pins", paths }],
+  };
 }
