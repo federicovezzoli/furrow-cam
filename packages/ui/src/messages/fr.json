@@ -636,6 +636,7 @@
       "flatAreasNarrow": "Certaines zones plates sont trop étroites pour la fraise du fond plat et restent non usinées.",
       "engraveConeWide": "La profondeur dépasse le cône de la fraise en V, donc la ligne est aussi large que la fraise.",
       "pathsTooSmall": "Les tracés fermés sont trop petits pour l'outil.",
+      "nothingOutside": "Les tracés fermés ne laissent aucun brut à évider à l'extérieur.",
       "tabsTooTall": "Les attaches sont aussi hautes que la coupe est profonde, donc rien n'est coupé sous elles.",
       "tabsLeftOut": "{count, plural, one {# attache omise, trop éloignée} other {# attaches omises, trop éloignées}} de tout contour fermé.",
       "leadInMisfits": "L'entrée ne tenait pas sur {count, plural, one {# contour} other {# contours}} et a été raccourcie ou omise.",

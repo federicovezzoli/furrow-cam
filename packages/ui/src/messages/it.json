@@ -636,6 +636,7 @@
       "flatAreasNarrow": "Alcune zone piatte sono troppo strette per la fresa del fondo piatto e restano non lavorate.",
       "engraveConeWide": "La profondità supera il cono della fresa a V, quindi la linea è larga quanto la fresa.",
       "pathsTooSmall": "I percorsi chiusi sono troppo piccoli per l'utensile.",
+      "nothingOutside": "I percorsi chiusi non lasciano grezzo da svuotare all'esterno.",
       "tabsTooTall": "I ponticelli sono alti quanto la profondità del taglio, quindi sotto di essi non si taglia nulla.",
       "tabsLeftOut": "{count, plural, one {Escluso # ponticello troppo lontano} other {Esclusi # ponticelli troppo lontani}} da ogni contorno chiuso.",
       "leadInMisfits": "L'attacco non entrava in {count, plural, one {# contorno} other {# contorni}} ed è stato accorciato o omesso.",

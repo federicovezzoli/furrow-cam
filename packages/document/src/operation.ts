@@ -177,10 +177,16 @@ export type PocketStrategy = z.infer<typeof PocketStrategy>;
 
 /**
  * Pocket parameters (#23): clearing of the area inside the closed paths,
- * islands left standing. The step-down and ramp angle come from the tool.
+ * islands left standing, or around them or up to them (#386). The step-down
+ * and ramp angle come from the tool.
  */
 export const PocketParams = z
   .strictObject({
+    /**
+     * The area cleared: inside the paths, the stock outside them up to its
+     * edge, or inside them with the tool centre reaching the paths.
+     */
+    side: ProfileSide,
     strategy: PocketStrategy,
     direction: MillingDirection,
     stepOver: StepOver,

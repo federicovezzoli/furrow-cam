@@ -636,6 +636,7 @@
       "flatAreasNarrow": "Some flat areas are too narrow for the flat-bottom tool and stay uncut.",
       "engraveConeWide": "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
       "pathsTooSmall": "The closed paths are too small for the tool.",
+      "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
       "tabsLeftOut": "Left out {count, plural, one {# tab} other {# tabs}} too far from every closed contour.",
       "leadInMisfits": "The lead-in didn't fit {count, plural, one {# contour} other {# contours}} and was shortened or left out.",

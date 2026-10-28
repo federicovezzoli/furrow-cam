@@ -1,4 +1,5 @@
 import type { PocketOperation, PocketParams, Point, Shape, Tool } from "@furrow/document";
+import type { Rect } from "../../geometry/bounds";
 import { difference, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../../geometry/flatten";
 import { projectOnLoop } from "../../geometry/loop";
@@ -44,6 +45,12 @@ type Region = { pieces: Piece[]; container: Piece; finishing: Piece | null };
  * - The area enclosed by the closed paths of all `shapes` is cleared, with
  *   nested rings toggling inside and outside (even-odd): a ring inside the
  *   pocket is an island left standing, a ring inside an island another pocket.
+ *   The params' side may change that area (#386):
+ *   - `outside`: the `stock` outside the paths instead, the tool centre
+ *     reaching the stock edge. The allowance and finish pass are for the
+ *     paths' walls only. Without a stock, nothing is cut.
+ *   - `on`: the area grown by the tool radius, the tool centre reaching the
+ *     paths.
  * - Clearing stops `allowance` plus the tool radius from the walls and
  *   islands, with the params' strategy:
  *   - `offset`: rings there, then every step-over further in, cut from the
@@ -75,6 +82,7 @@ export function pocketToolpath(
   operation: PocketOperation,
   shapes: Shape[],
   options: PocketOptions,
+  stock: Rect | null = null,
 ): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
@@ -95,8 +103,65 @@ export function pocketToolpath(
     warnings.push({ code: "toolpath.skippedOpenPocket", values: { count: open } });
   }
   if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
-  const toolpath = clearPocket(tool, params, closed, options);
-  return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+  const toolpath = clearPocket(tool, params, sideArea(tool, params, closed, stock, tolerance), {
+    ...options,
+    stock: params.side === "outside" ? stock : null,
+  });
+  if (params.side !== "outside") {
+    return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+  }
+  // Outside, nothing to clear means the paths leave no stock around them, not that they are small.
+  if (!stock && closed.length > 0) warnings.push({ code: "toolpath.nothingOutside" });
+  for (const warning of toolpath.warnings) {
+    warnings.push(
+      warning.code === "toolpath.pathsTooSmall" ? { code: "toolpath.nothingOutside" } : warning,
+    );
+  }
+  return { moves: toolpath.moves, warnings };
+}
+
+/** Whether the segment `a`–`b` passes through the inside of `rect` (Liang–Barsky). */
+function crossesRect(a: Point, b: Point, rect: Rect): boolean {
+  let [t0, t1] = [0, 1];
+  for (const axis of [0, 1] as const) {
+    const d = b[axis] - a[axis];
+    const low = rect.min[axis] - a[axis];
+    const high = rect.max[axis] - a[axis];
+    if (d === 0) {
+      if (low >= 0 || high <= 0) return false;
+      continue;
+    }
+    const [enter, exit] = d > 0 ? [low / d, high / d] : [high / d, low / d];
+    t0 = Math.max(t0, enter);
+    t1 = Math.min(t1, exit);
+  }
+  return t0 < t1;
+}
+
+/** The rings of the area a pocket on `params.side` of the rings `closed` clears. */
+function sideArea(
+  tool: Tool,
+  params: PocketParams,
+  closed: Polygon[],
+  stock: Rect | null,
+  tolerance: number,
+): Polygon[] {
+  const radius = tool.diameter / 2;
+  const options = { fillRule: "evenOdd", arcTolerance: tolerance } as const;
+  if (params.side === "on") return offset(closed, radius, options);
+  if (params.side === "inside") return closed;
+  if (!stock || closed.length === 0) return [];
+  // Grown so clearing, which stops this far from every edge, reaches the stock edge.
+  const grow = radius + params.allowance;
+  const [x0, y0] = [stock.min[0] - grow, stock.min[1] - grow];
+  const [x1, y1] = [stock.max[0] + grow, stock.max[1] + grow];
+  const outline: Polygon = [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
+  return difference([outline], closed, "evenOdd");
 }
 
 /**
@@ -105,12 +170,25 @@ export function pocketToolpath(
  */
 export function clearPocket(
   tool: Tool,
-  params: PocketParams,
+  params: ClearingParams & Pick<PocketParams, "depth">,
   closed: Polygon[],
-  options: PocketOptions,
+  options: PocketOptions & {
+    /** Finish laps wholly off this stock are left out: an outside pocket's edge. */
+    stock?: Rect | null;
+  },
 ): Toolpath {
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const { regions, drawn, area, warnings } = planPocket(tool, params, closed, tolerance);
+  const { stock } = options;
+  if (stock) {
+    // No edge crossing the stock: a lap around a grown stock edge, in the air.
+    const onStock = ({ loop }: Ring) =>
+      loop.some((a, i) => crossesRect(a, loop[(i + 1) % loop.length] as Point, stock));
+    for (const region of regions) {
+      const { finishing } = region;
+      if (finishing) region.finishing = { ...finishing, rings: finishing.rings.filter(onStock) };
+    }
+  }
   // Unless the strategy left nothing to clear, having said why.
   if (
     closed.length > 0 &&

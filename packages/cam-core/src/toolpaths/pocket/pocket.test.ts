@@ -26,6 +26,7 @@ const tool: Tool = {
 };
 
 const params: PocketParams = {
+  side: "inside",
   strategy: { type: "offset" },
   direction: "climb",
   stepOver: 40,
@@ -1034,4 +1035,107 @@ describe("pocketToolpath with tabs sticking in from the walls", () => {
       expect(closest).toBeGreaterThan(3 - 2e-2);
     });
   }
+});
+
+describe.each(
+  [{ type: "offset" } as const, ...STRATEGIES].map(
+    (strategy) => [Object.values(strategy).join(" "), strategy] as const,
+  ),
+)("pocketToolpath on the side of the paths with %s clearing (#386)", (_, strategy) => {
+  /** 20 × 20 mm in the middle of the 100 × 100 mm stock. */
+  const boss = rectangle("6c5b4a3f-2e1d-4c0b-9a8f-7e6d5c4b3a2f", 40, 40, 20, 20);
+  const stock = { min: [0, 0], max: [100, 100] } as const;
+  const offBoss = ([x, y]: [number, number]) =>
+    Math.hypot(Math.max(0, 40 - x, x - 60), Math.max(0, 40 - y, y - 60));
+  const clear = (overrides: Partial<PocketParams>, shapes = [boss]) =>
+    pocketToolpath(
+      operation({ strategy, ...overrides }, shapes),
+      shapes,
+      {
+        safeZ: 5,
+        entryClearance: 1,
+      },
+      { min: [...stock.min], max: [...stock.max] },
+    );
+  /** Points along `cut` no more than half a millimetre apart. */
+  const along = ([a, b]: [[number, number], [number, number]]) => {
+    const count = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5);
+    return Array.from({ length: count + 1 }, (_, i): [number, number] => [
+      a[0] + ((b[0] - a[0]) * i) / Math.max(count, 1),
+      a[1] + ((b[1] - a[1]) * i) / Math.max(count, 1),
+    ]);
+  };
+  const extremes = (toolpath: Toolpath) => {
+    const values = cutsAt(toolpath, -6).flat(2);
+    return [Math.min(...values), Math.max(...values)];
+  };
+  // Peeling from the island skips pockets without one.
+  const islandless = it.skipIf(strategy.type === "peel" && strategy.start === "inside");
+
+  it("clears the stock outside the paths to its edge, leaving the shape standing", () => {
+    const toolpath = clear({ side: "outside" });
+    expect(missed(toolpath, -6, 3 + 1e-2, (p) => offBoss(p) > 0.5)).toEqual([]);
+    for (const cut of cutsBelowTop(toolpath)) {
+      for (const point of along(cut)) expect(offBoss(point)).toBeGreaterThan(3 - 2e-2);
+    }
+    const [min, max] = extremes(toolpath);
+    expect(min).toBeCloseTo(0, 3);
+    expect(max).toBeCloseTo(100, 3);
+  });
+
+  islandless("cuts a hole in the shape as a pocket when clearing outside", () => {
+    const toolpath = clear({ side: "outside" }, [square, island]);
+    expect(cutsAt(toolpath, -6).some((cut) => distanceToSegment([50, 50], cut) < 7)).toBe(true);
+  });
+
+  it("leaves the allowance and finishes only the shape's walls when clearing outside", () => {
+    const toolpath = clear({ side: "outside", allowance: 0.5, finishPass: true });
+    let closest = Infinity;
+    for (const cut of cutsBelowTop(toolpath)) {
+      for (const point of along(cut)) closest = Math.min(closest, offBoss(point));
+    }
+    expect(closest).toBeCloseTo(3, 1);
+    // The stock edge is cleared once, with no lap around it in the air.
+    const [min, max] = extremes(toolpath);
+    expect(min).toBeCloseTo(0, 3);
+    expect(max).toBeCloseTo(100, 3);
+  });
+
+  islandless("finishes the walls of a shape that spans the stock when clearing outside", () => {
+    // From off one side of the stock to off the other: no lap corner lands on the stock.
+    const band = rectangle("1e2d3c4b-5a69-4788-97a6-b5c4d3e2f1a0", -10, 40, 120, 20);
+    const offBand = ([, y]: [number, number]) => Math.max(0, 40 - y, y - 60);
+    const toolpath = clear({ side: "outside", allowance: 0.5, finishPass: true }, [band]);
+    let closest = Infinity;
+    for (const cut of cutsBelowTop(toolpath)) {
+      for (const point of along(cut)) closest = Math.min(closest, offBand(point));
+    }
+    expect(closest).toBeCloseTo(3, 1);
+  });
+
+  it("warns when the paths leave no stock outside them", () => {
+    const cover = rectangle("2f3e4d5c-6b7a-4899-a8b7-c6d5e4f3a2b1", 0, 0, 100, 100);
+    const toolpath = clear({ side: "outside" }, [cover]);
+    expect(toolpath.moves).toEqual([]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.nothingOutside" }]);
+    const unknown = pocketToolpath(operation({ strategy, side: "outside" }, [boss]), [boss], {
+      safeZ: 5,
+      entryClearance: 1,
+    });
+    expect(unknown.warnings).toEqual([{ code: "toolpath.nothingOutside" }]);
+  });
+
+  islandless("overcuts the paths by the tool radius when clearing on them", () => {
+    const toolpath = clear({ side: "on" });
+    expect(extremes(toolpath)).toEqual([expect.closeTo(40, 2), expect.closeTo(60, 2)]);
+    const finished = clear({ side: "on", allowance: 0.5, finishPass: true });
+    expect(extremes(finished)).toEqual([expect.closeTo(40, 2), expect.closeTo(60, 2)]);
+  });
+
+  islandless("keeps the tool radius inside the paths when clearing inside", () => {
+    expect(extremes(clear({ side: "inside" }))).toEqual([
+      expect.closeTo(43, 2),
+      expect.closeTo(57, 2),
+    ]);
+  });
 });

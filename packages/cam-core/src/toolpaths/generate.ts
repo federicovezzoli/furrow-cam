@@ -44,8 +44,9 @@ export type ToolpathInput = {
   /** The model a 3D operation machines (PRD-0005), `null` for the others. */
   model: Model | null;
   /**
-   * The stock seen from above, for 3D roughing up to its edges, for rest
-   * machining and for checking locating pins are on it; `null` for the others.
+   * The stock seen from above, for 3D roughing and outside pockets up to its
+   * edges, for rest machining and for checking locating pins are on it;
+   * `null` for the others.
    */
   stock: Rect | null;
   /** The stock's bottom, below which 3D operations don't cut; `null` for the others. */
@@ -134,7 +135,8 @@ export function toolpathInputs(
       stock:
         rest ||
         (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
-        (operation.type === "drill" && operation.params.pins)
+        (operation.type === "drill" && operation.params.pins) ||
+        (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
@@ -446,7 +448,7 @@ function* operationSteps(
     case "profile":
       return checkTouchOff(operation, profileToolpath(operation, shapes, options), touchOff);
     case "pocket":
-      return checkTouchOff(operation, pocketToolpath(operation, shapes, options), touchOff);
+      return checkTouchOff(operation, pocketToolpath(operation, shapes, options, stock), touchOff);
     case "drill":
       if (operation.params.pins && shapes.length === 0) {
         return { moves: [], warnings: [{ code: "toolpath.noLocatingPins" }] };
