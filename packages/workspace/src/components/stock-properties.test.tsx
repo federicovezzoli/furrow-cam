@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createProjectDocument, type ProjectDocument } from "@furrow/document";
+import { createProjectDocument, type ProjectDocument, stockPins } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -33,8 +33,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(document().stock.twoSided).toEqual({
       flipAxis: "x",
       partingDepth: 9,
-      pins: null,
-      edges: null,
+      lineUp: null,
     });
     fireEvent.change(screen.getByLabelText("Turned over about"), { target: { value: "y" } });
     expect(document().stock.twoSided?.flipAxis).toBe("y");
@@ -59,15 +58,15 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     const document = render(createProjectDocument());
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
     fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "pins" } });
-    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
+    expect(stockPins(document().stock)?.positions).toEqual([-240, 240]);
     fireEvent.click(screen.getByRole("button", { name: "Add pin" }));
-    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240, 268.5]);
+    expect(stockPins(document().stock)?.positions).toEqual([-240, 240, 268.5]);
     expect(screen.getByLabelText(/^Pin 3/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove pin" }));
-    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
+    expect(stockPins(document().stock)?.positions).toEqual([-240, 240]);
     expect(screen.getByRole("button", { name: "Remove pin" }).hasAttribute("disabled")).toBe(true);
     fireEvent.change(screen.getByLabelText("Holes"), { target: { value: "blind" } });
-    expect(document().stock.twoSided?.pins?.holes).toEqual({ type: "blind", depth: 9 });
+    expect(stockPins(document().stock)?.holes).toEqual({ type: "blind", depth: 9 });
     expect(screen.getByLabelText(/Hole depth/)).toBeTruthy();
   });
 
@@ -76,12 +75,26 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
     fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "pins" } });
     fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "edges" } });
-    expect(document().stock.twoSided).toMatchObject({ pins: null, edges: "bottom_left" });
+    expect(document().stock.twoSided?.lineUp).toEqual({ type: "edges", corner: "bottom_left" });
     fireEvent.change(screen.getByLabelText("Corner"), { target: { value: "top_right" } });
-    expect(document().stock.twoSided?.edges).toBe("top_right");
+    expect(document().stock.twoSided?.lineUp).toEqual({ type: "edges", corner: "top_right" });
     // 600 × 400 mm, turned over about X: the height is what the sides meet by.
     expect(screen.getByText(/exactly 400 mm along Y/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "none" } });
-    expect(document().stock.twoSided).toMatchObject({ pins: null, edges: null });
+    expect(document().stock.twoSided).toMatchObject({ lineUp: null });
+  });
+
+  it("says when drills of the pins cut nothing, once the stock isn't lined up on pins", () => {
+    const full = fullDocument();
+    const pinDrill = {
+      ...(full.operations[0] as (typeof full.operations)[number]),
+      type: "drill" as const,
+      targets: [],
+      params: { depth: 5, peck: false, stepOver: 40, pins: true },
+    };
+    render({ ...full, operations: [pinDrill] });
+    expect(screen.queryByText(/drill of the pins cuts nothing/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "edges" } });
+    expect(screen.getByText("1 drill of the pins cuts nothing without pins.")).toBeTruthy();
   });
 });

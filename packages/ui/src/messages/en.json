@@ -512,8 +512,7 @@
       "tooManyFonts": "A project holds at most {max} fonts",
       "unknownShape": "Unknown shape id",
       "unknownPath": "Unknown path",
-      "pinHolesThrough": "Blind pin holes must end inside the stock",
-      "pinsAndEdges": "Line the stock up on pins or on a fence corner, not both"
+      "pinHolesThrough": "Blind pin holes must end inside the stock"
     },
     "operation": {
       "pathIndices": "Path indices must be ascending, each once",
@@ -1232,7 +1231,8 @@
     "lineUpNone": "Nothing",
     "edges": "A fence corner",
     "edgeCorner": "Corner",
-    "edgesHint": "Push this corner of the stock into a fence corner for both sides. The sides only meet if the stock is exactly {size} along {axis}: measure it."
+    "edgesHint": "Push this corner of the stock into a fence corner for both sides. The sides only meet if the stock is exactly {size} along {axis}: measure it.",
+    "idlePinDrills": "{count, plural, one {# drill of the pins cuts} other {# drills of the pins cut}} nothing without pins."
   },
   "Model": {
     "closeLabel": "Close model properties",

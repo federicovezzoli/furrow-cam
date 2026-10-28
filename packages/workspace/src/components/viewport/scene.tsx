@@ -9,7 +9,7 @@ import {
   stockBounds,
   stockOffset,
 } from "@furrow/cam-core";
-import type { Point } from "@furrow/document";
+import { type Point, stockPins } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
@@ -157,7 +157,7 @@ function TouchOffPad({ color }: { color: string }) {
 function LocatingPins({ color }: { color: string }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const positions = useMemo(() => {
-    const diameter = stock.twoSided?.pins?.diameter ?? 0;
+    const diameter = stockPins(stock)?.diameter ?? 0;
     return concatPositions(
       pinCenters(stock).flatMap(([x, y]) => {
         const { ring, cross } = touchOffLinePositions({ x, y, diameter });

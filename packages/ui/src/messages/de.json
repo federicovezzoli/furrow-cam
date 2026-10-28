@@ -512,8 +512,7 @@
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad",
-      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden",
-      "pinsAndEdges": "Richten Sie das Rohteil an Passstiften oder an einer Anschlagecke aus, nicht an beidem"
+      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden"
     },
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
@@ -1232,7 +1231,8 @@
     "lineUpNone": "Nichts",
     "edges": "Einer Anschlagecke",
     "edgeCorner": "Ecke",
-    "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach."
+    "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach.",
+    "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts."
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",

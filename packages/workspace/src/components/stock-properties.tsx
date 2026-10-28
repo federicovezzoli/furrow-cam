@@ -1,7 +1,7 @@
 "use client";
 
-import { touchOffOutsideStock } from "@furrow/cam-core";
-import { FlipAxis, StockCorner, Units, ZOrigin } from "@furrow/document";
+import { edgeSetup, touchOffOutsideStock } from "@furrow/cam-core";
+import { FlipAxis, StockCorner, stockPins, Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -35,9 +35,9 @@ import {
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
-  setEdges,
+  setFenceCorner,
   setFlipAxis,
-  setLocatingPins,
+  setLineUp,
   setPartingDepth,
   setStockDimension,
   setTouchOffField,
@@ -204,8 +204,15 @@ function PinFields() {
   const t = useTranslations("Stock");
   const anchors = useTranslations("Anchors");
   const length = useLength(units);
-  const pins = stock.twoSided?.pins;
-  const edges = stock.twoSided?.edges;
+  // Drills of the pins with no pins to drill cut nothing (#356).
+  const idleDrills = useDocumentStore(
+    (s) =>
+      s.document.operations.filter(
+        (operation) => operation.type === "drill" && operation.params.pins,
+      ).length,
+  );
+  const pins = stockPins(stock);
+  const edges = edgeSetup(stock);
   if (!stock.twoSided) return null;
   const [along, across] =
     stock.twoSided.flipAxis === "x" ? [stock.width, stock.height] : [stock.height, stock.width];
@@ -230,15 +237,10 @@ function PinFields() {
         <NativeSelect
           id="line-up"
           size="sm"
-          value={pins ? "pins" : edges ? "edges" : "none"}
+          value={stock.twoSided.lineUp?.type ?? "none"}
           onChange={(event) => {
             const { value } = event.target;
-            if (value === "pins") setLocatingPins(store, true);
-            else if (value === "edges") setEdges(store, "bottom_left");
-            else {
-              setLocatingPins(store, false);
-              setEdges(store, null);
-            }
+            setLineUp(store, value === "pins" || value === "edges" ? value : null);
           }}
           className="h-control px-2 pr-7 text-ui"
         >
@@ -248,6 +250,12 @@ function PinFields() {
         </NativeSelect>
       </div>
       {pins && <p className="text-muted-foreground">{t("pinsHint")}</p>}
+      {!pins && idleDrills > 0 && (
+        <p role="alert" className="flex gap-1.5 text-destructive">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+          {t("idlePinDrills", { count: idleDrills })}
+        </p>
+      )}
       {edges && (
         <>
           <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
@@ -257,8 +265,8 @@ function PinFields() {
             <NativeSelect
               id="edge-corner"
               size="sm"
-              value={edges}
-              onChange={(event) => setEdges(store, StockCorner.parse(event.target.value))}
+              value={edges.corner}
+              onChange={(event) => setFenceCorner(store, StockCorner.parse(event.target.value))}
               className="h-control px-2 pr-7 text-ui"
             >
               {StockCorner.options.map((corner) => (
@@ -270,8 +278,8 @@ function PinFields() {
           </div>
           <p className="text-muted-foreground">
             {t("edgesHint", {
-              size: length(across),
-              axis: stock.twoSided.flipAxis === "x" ? "Y" : "X",
+              size: length(edges.measure.size),
+              axis: edges.measure.axis.toUpperCase(),
             })}
           </p>
         </>

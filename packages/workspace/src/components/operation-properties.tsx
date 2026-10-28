@@ -29,6 +29,7 @@ import {
   type RoughingBoundary,
   type RoughingBoundaryType,
   SpiralStart,
+  stockPins,
   type Tool,
   toolProblem,
   type VCarveOperation,
@@ -116,7 +117,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const t = useTranslations("Operation");
-  const hasPins = useDocumentStore((s) => !!s.document.stock.twoSided?.pins);
+  const hasPins = useDocumentStore((s) => !!stockPins(s.document.stock));
   if (!operation) return null;
   // A drill on the top side may cut the locating pins (#356) instead of shapes.
   const pins =
@@ -792,7 +793,7 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
   const units = useDocumentStore((s) => s.document.units);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
   const format = useFormatMessage();
-  const pins = useDocumentStore((s) => s.document.stock.twoSided?.pins);
+  const pins = useDocumentStore((s) => stockPins(s.document.stock));
   const { params, tool } = operation;
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateDrillParams(store, operation.id, changes),

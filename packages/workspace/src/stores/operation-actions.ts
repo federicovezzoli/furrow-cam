@@ -26,6 +26,7 @@ import {
   ReliefRoughParams,
   type Shape,
   type StockSide,
+  stockPins,
   type Tool,
   toolProblem,
   VCarveParams,
@@ -213,7 +214,7 @@ export function addPinDrillOperation(
   { tool, name = "Locating pins" }: { tool: Tool; name?: string },
 ): string | null {
   const { document } = store.getState();
-  if (!canDrill(tool) || !document.stock.twoSided?.pins) return null;
+  if (!canDrill(tool) || !stockPins(document.stock)) return null;
   const operation: Operation = {
     id: crypto.randomUUID(),
     type: "drill",

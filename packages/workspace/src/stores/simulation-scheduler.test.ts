@@ -149,7 +149,7 @@ describe("simulationRequest", () => {
       ...document,
       stock: {
         ...document.stock,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null, edges: null },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, lineUp: null },
       },
       operations: document.operations.map((op) =>
         op.id === DRILL_ID ? { ...op, stockSide: "bottom" as const } : op,

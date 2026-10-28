@@ -512,8 +512,7 @@
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu",
-      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut",
-      "pinsAndEdges": "Alignez le brut sur des pions ou sur un coin de butée, pas les deux"
+      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut"
     },
     "operation": {
       "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
@@ -1232,7 +1231,8 @@
     "lineUpNone": "Rien",
     "edges": "Un coin de butée",
     "edgeCorner": "Coin",
-    "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le."
+    "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le.",
+    "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions."
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",
