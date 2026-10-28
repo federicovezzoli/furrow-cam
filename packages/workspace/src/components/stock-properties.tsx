@@ -1,7 +1,7 @@
 "use client";
 
-import { touchOffOutsideStock } from "@furrow/cam-core";
-import { FlipAxis, Units, ZOrigin } from "@furrow/document";
+import { edgeSetup, touchOffOutsideStock } from "@furrow/cam-core";
+import { FlipAxis, StockCorner, stockPins, Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -35,8 +35,9 @@ import {
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFenceCorner,
   setFlipAxis,
-  setLocatingPins,
+  setLineUp,
   setPartingDepth,
   setStockDimension,
   setTouchOffField,
@@ -188,9 +189,11 @@ function TwoSidedSection() {
 }
 
 /**
- * Locating pins (#356) on the flip axis: their diameter, each one's
- * distance from the stock's centre, and how deep their holes go. A button
- * adds a drill of them on the top side.
+ * How the turned-over stock is lined up: on locating pins (#356) on the flip
+ * axis, with their diameter, each one's distance from the stock's centre,
+ * how deep their holes go and a button adding a drill of them on the top
+ * side; or by a corner in a fence corner (#361), which relies on the stock's
+ * size across the flip axis.
  */
 function PinFields() {
   const store = useDocumentStoreApi();
@@ -199,7 +202,17 @@ function PinFields() {
   const stock = useDocumentStore((s) => s.document.stock);
   const tools = useToolLibrary();
   const t = useTranslations("Stock");
-  const pins = stock.twoSided?.pins;
+  const anchors = useTranslations("Anchors");
+  const length = useLength(units);
+  // Drills of the pins with no pins to drill cut nothing (#356).
+  const idleDrills = useDocumentStore(
+    (s) =>
+      s.document.operations.filter(
+        (operation) => operation.type === "drill" && operation.params.pins,
+      ).length,
+  );
+  const pins = stockPins(stock);
+  const edges = edgeSetup(stock);
   if (!stock.twoSided) return null;
   const [along, across] =
     stock.twoSided.flipAxis === "x" ? [stock.width, stock.height] : [stock.height, stock.width];
@@ -217,13 +230,60 @@ function PinFields() {
 
   return (
     <>
-      <Checkbox
-        id="locating-pins"
-        label={t("pins")}
-        hint={t("pinsHint")}
-        checked={!!pins}
-        onChange={(on) => setLocatingPins(store, on)}
-      />
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+        <Label htmlFor="line-up" className="text-ui font-normal">
+          {t("lineUp")}
+        </Label>
+        <NativeSelect
+          id="line-up"
+          size="sm"
+          value={stock.twoSided.lineUp?.type ?? "none"}
+          onChange={(event) => {
+            const { value } = event.target;
+            setLineUp(store, value === "pins" || value === "edges" ? value : null);
+          }}
+          className="h-control px-2 pr-7 text-ui"
+        >
+          <NativeSelectOption value="none">{t("lineUpNone")}</NativeSelectOption>
+          <NativeSelectOption value="pins">{t("pins")}</NativeSelectOption>
+          <NativeSelectOption value="edges">{t("edges")}</NativeSelectOption>
+        </NativeSelect>
+      </div>
+      {pins && <p className="text-muted-foreground">{t("pinsHint")}</p>}
+      {!pins && idleDrills > 0 && (
+        <p role="alert" className="flex gap-1.5 text-destructive">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+          {t("idlePinDrills", { count: idleDrills })}
+        </p>
+      )}
+      {edges && (
+        <>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="edge-corner" className="text-ui font-normal">
+              {t("edgeCorner")}
+            </Label>
+            <NativeSelect
+              id="edge-corner"
+              size="sm"
+              value={edges.corner}
+              onChange={(event) => setFenceCorner(store, StockCorner.parse(event.target.value))}
+              className="h-control px-2 pr-7 text-ui"
+            >
+              {StockCorner.options.map((corner) => (
+                <NativeSelectOption key={corner} value={corner}>
+                  {anchors(corner)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <p className="text-muted-foreground">
+            {t("edgesHint", {
+              size: length(edges.measure.size),
+              axis: edges.measure.axis.toUpperCase(),
+            })}
+          </p>
+        </>
+      )}
       {pins && (
         <>
           <NumberField

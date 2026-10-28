@@ -41,7 +41,7 @@ import {
   updateReliefRoughParams,
   updateVCarveParams,
 } from "./operation-actions";
-import { setLocatingPins, setTwoSided } from "./stock-actions";
+import { setLineUp, setTwoSided } from "./stock-actions";
 
 const MISSING_ID = "11111111-2222-4333-8444-555555555555";
 
@@ -416,7 +416,7 @@ describe("addPinDrillOperation", () => {
   it("drills the locating pins on the top side, switching to shapes and back", () => {
     const { store, document, operations } = setup();
     setTwoSided(store, true);
-    setLocatingPins(store, true);
+    setLineUp(store, "pins");
     const id = addPinDrillOperation(store, { tool: endMill });
     if (!id) throw new Error("not added");
     const pinDrill = () => operations().find((operation) => operation.id === id);
@@ -447,7 +447,7 @@ describe("addPinDrillOperation", () => {
     const { store } = setup();
     setTwoSided(store, true);
     expect(addPinDrillOperation(store, { tool: endMill })).toBeNull();
-    setLocatingPins(store, true);
+    setLineUp(store, "pins");
     expect(addPinDrillOperation(store, { tool: vBit })).toBeNull();
   });
 });

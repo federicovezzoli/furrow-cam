@@ -1226,7 +1226,13 @@
     "pinOff": "Ein Stift liegt außerhalb des Rohteils.",
     "addPinDrill": "Stifte bohren",
     "pinDrill": "Passstifte",
-    "noPinBit": "Fügen Sie einen Bohrer in Stiftgröße oder einen kleineren Fräser hinzu, um sie zu bohren."
+    "noPinBit": "Fügen Sie einen Bohrer in Stiftgröße oder einen kleineren Fräser hinzu, um sie zu bohren.",
+    "lineUp": "Ausgerichtet an",
+    "lineUpNone": "Nichts",
+    "edges": "Einer Anschlagecke",
+    "edgeCorner": "Ecke",
+    "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach.",
+    "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts."
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",

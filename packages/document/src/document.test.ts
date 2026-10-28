@@ -319,18 +319,20 @@ describe("two-sided projects", () => {
   it("cut each side down to a parting plane inside the stock", () => {
     const stock = fullDocument().stock;
     expect(
-      Stock.safeParse({ ...stock, twoSided: { flipAxis: "y", partingDepth: 17.9, pins: null } })
-        .success,
+      Stock.safeParse({
+        ...stock,
+        twoSided: { flipAxis: "y", partingDepth: 17.9, lineUp: null },
+      }).success,
     ).toBe(true);
     for (const twoSided of [
-      { flipAxis: "x", partingDepth: 18, pins: null },
-      { flipAxis: "x", partingDepth: 0, pins: null },
-      { flipAxis: "z", partingDepth: 9, pins: null },
-      { flipAxis: "x", pins: null },
+      { flipAxis: "x", partingDepth: 18, lineUp: null },
+      { flipAxis: "x", partingDepth: 0, lineUp: null },
+      { flipAxis: "z", partingDepth: 9, lineUp: null },
+      { flipAxis: "x", lineUp: null },
     ]) {
       expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
     }
-    const below = { flipAxis: "x", partingDepth: 20, pins: null };
+    const below = { flipAxis: "x", partingDepth: 20, lineUp: null };
     expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
       expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
     ]);
@@ -338,10 +340,10 @@ describe("two-sided projects", () => {
 
   it("locate the turned-over stock on two pins or more, through or blind", () => {
     const { stock } = fullDocument();
-    const pins = stock.twoSided?.pins;
+    const pins = stock.twoSided?.lineUp;
     const withPins = (changes: object) => ({
       ...stock,
-      twoSided: { flipAxis: "x", partingDepth: 9, pins: { ...pins, ...changes } },
+      twoSided: { flipAxis: "x", partingDepth: 9, lineUp: { ...pins, ...changes } },
     });
     expect(Stock.safeParse(withPins({ holes: { type: "blind", depth: 8 } })).success).toBe(true);
     for (const changes of [
@@ -352,6 +354,17 @@ describe("two-sided projects", () => {
     ]) {
       expect(Stock.safeParse(withPins(changes)).success).toBe(false);
     }
+  });
+
+  it("line the stock up on pins or by a corner in a fence corner", () => {
+    const { stock } = fullDocument();
+    const twoSided = stock.twoSided as NonNullable<typeof stock.twoSided>;
+    const fenced = (lineUp: object) =>
+      Stock.safeParse({ ...stock, twoSided: { ...twoSided, lineUp } });
+    expect(fenced({ type: "edges", corner: "top_right" }).success).toBe(true);
+    expect(fenced({ type: "edges", corner: "center" }).success).toBe(false);
+    // Not both: a fence corner has no pin settings.
+    expect(fenced({ ...twoSided.lineUp, type: "edges", corner: "top_right" }).success).toBe(false);
   });
 
   it("drill the pins from the top side only, with no shapes", () => {

@@ -1226,7 +1226,13 @@
     "pinOff": "Un pion est hors du brut.",
     "addPinDrill": "Percer les pions",
     "pinDrill": "Pions de centrage",
-    "noPinBit": "Ajoutez un foret de la taille des pions, ou une fraise plus petite, pour les percer."
+    "noPinBit": "Ajoutez un foret de la taille des pions, ou une fraise plus petite, pour les percer.",
+    "lineUp": "Aligné sur",
+    "lineUpNone": "Rien",
+    "edges": "Un coin de butée",
+    "edgeCorner": "Coin",
+    "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le.",
+    "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions."
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",

@@ -1,19 +1,21 @@
-import type {
-  DrillOperation,
-  FlipAxis,
-  LinearAngle,
-  LocatingPins,
-  Model,
-  Operation,
-  Point,
-  Shape,
-  Stock,
+import {
+  type DrillOperation,
+  type FlipAxis,
+  type LinearAngle,
+  type LocatingPins,
+  type Model,
+  type Operation,
+  type Point,
+  type Shape,
+  type Stock,
+  type StockCorner,
+  stockPins,
 } from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
 import { roundCoordinate } from "../geometry/round";
 import { mapShapes } from "../geometry/scale";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
-import type { Box3, Vec3 } from "./stock";
+import { type Box3, type Vec3, xyOriginPosition } from "./stock";
 
 /**
  * The two sides of a two-sided project (PRD-0011, ADR-0060). The bottom
@@ -139,9 +141,11 @@ export function flipOperation(operation: Operation, flip: Flip): Operation {
  * any: on the line the stock turns about, so the same on either side and
  * where the turned-over stock's holes land.
  */
-export function pinCenters({ width, height, twoSided }: Stock): Point[] {
-  if (!twoSided?.pins) return [];
-  const { flipAxis, pins } = twoSided;
+export function pinCenters(stock: Stock): Point[] {
+  const { width, height, twoSided } = stock;
+  const pins = stockPins(stock);
+  if (!twoSided || !pins) return [];
+  const { flipAxis } = twoSided;
   return pins.positions.map((position) =>
     flipAxis === "x" ? [width / 2 + position, height / 2] : [width / 2, height / 2 + position],
   );
@@ -162,7 +166,7 @@ export function drillTargets(
   shapes: Shape[],
   stock: Stock,
 ): { operation: DrillOperation; shapes: Shape[] } {
-  const pins = stock.twoSided?.pins;
+  const pins = stockPins(stock);
   if (!operation.params.pins) return { operation, shapes };
   if (!pins) return { operation, shapes: [] };
   const r = pins.diameter / 2;
@@ -179,5 +183,32 @@ export function drillTargets(
     operation: { ...operation, params: { ...operation.params, depth } },
     // Not a drawing's: only its paths are cut.
     shapes: [{ id: "locating-pins", name: "", layer: "", drawingId: "locating-pins", paths }],
+  };
+}
+
+/**
+ * Lining the stock up by a fence corner (#361): the corner, as each side
+ * sees it, pushed into the fence corner on both sides; the XY zero's offset
+ * from it, the same on both sides; and the stock's size the sides meet by,
+ * along the axis across the flip axis, which turning it over swaps end for
+ * end. `null` unless lined up by a fence corner.
+ */
+export function edgeSetup(
+  stock: Stock,
+): { corner: StockCorner; offset: Point; measure: { axis: "x" | "y"; size: number } } | null {
+  const lineUp = stock.twoSided?.lineUp;
+  if (lineUp?.type !== "edges") return null;
+  const { corner } = lineUp;
+  const [x, y] = xyOriginPosition(stock);
+  const cornerX = corner.endsWith("right") ? stock.width : 0;
+  const cornerY = corner.startsWith("top") ? stock.height : 0;
+  return {
+    corner,
+    // `+ 0` turns -0 into 0.
+    offset: [x - cornerX + 0, y - cornerY + 0],
+    measure:
+      stock.twoSided?.flipAxis === "x"
+        ? { axis: "y", size: stock.height }
+        : { axis: "x", size: stock.width },
   };
 }

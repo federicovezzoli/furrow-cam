@@ -246,7 +246,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 23,
+    schemaVersion: 24,
     units: "in",
     stock: {
       width: 300,
@@ -258,7 +258,8 @@ export function fullDocument(): ProjectDocument {
       twoSided: {
         flipAxis: "x",
         partingDepth: 9,
-        pins: {
+        lineUp: {
+          type: "pins",
           diameter: 6,
           positions: [-120, 120],
           holes: { type: "through", spoilboardDepth: 5 },

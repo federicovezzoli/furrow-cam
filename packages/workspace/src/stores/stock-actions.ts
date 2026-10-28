@@ -10,10 +10,13 @@ import {
 } from "@furrow/cam-core";
 import {
   type FlipAxis,
+  type LineUp,
   LocatingPins,
   type Point,
   type ProjectDocument,
   type StockAnchor,
+  type StockCorner,
+  stockPins,
   type TouchOffDisc,
   type Units,
   type ZOrigin,
@@ -106,7 +109,7 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
       twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
     }
     // So must blind pin holes, kept the same way.
-    const holes = twoSided?.pins?.holes;
+    const holes = twoSided?.lineUp?.type === "pins" ? twoSided.lineUp.holes : null;
     if (holes?.type === "blind" && holes.depth >= draft.stock.thickness) {
       holes.depth = (holes.depth * draft.stock.thickness) / stock.thickness;
     }
@@ -249,7 +252,7 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
       for (const operation of draft.operations) operation.stockSide = "top";
       return;
     }
-    draft.stock.twoSided = { flipAxis: "x", partingDepth, pins: null };
+    draft.stock.twoSided = { flipAxis: "x", partingDepth, lineUp: null };
   });
 }
 
@@ -263,8 +266,9 @@ export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
     if (!twoSided || twoSided.flipAxis === flipAxis) return;
     twoSided.flipAxis = flipAxis;
     const scale = flipAxis === "x" ? width / height : height / width;
-    if (twoSided.pins) {
-      twoSided.pins.positions = twoSided.pins.positions.map((position) => position * scale);
+    if (twoSided.lineUp?.type === "pins") {
+      const pins = twoSided.lineUp;
+      pins.positions = pins.positions.map((position) => position * scale);
     }
   });
 }
@@ -288,24 +292,37 @@ export function setPartingDepth(store: DocumentStore, partingDepth: number) {
 }
 
 /**
- * Adds locating pins to a two-sided project (#356), as one undo step: two
- * 6 mm pins symmetric about the stock's centre, two fifths of its length
- * along the flip axis from it, through into the spoilboard. Or removes them;
- * drills of the pins then cut nothing until there are pins again.
+ * Sets how a two-sided project's turned-over stock is lined up, as one undo
+ * step: on locating pins (#356), two 6 mm pins symmetric about the stock's
+ * centre, two fifths of its length along the flip axis from it, through into
+ * the spoilboard; by its bottom-left corner in a fence corner (#361); or
+ * neither. Drills of the pins cut nothing until there are pins again.
  */
-export function setLocatingPins(store: DocumentStore, on: boolean) {
+export function setLineUp(store: DocumentStore, type: LineUp["type"] | null) {
   const { twoSided, width, height } = store.getState().document.stock;
-  if (!twoSided || on === (twoSided.pins !== null)) return;
+  if (!twoSided || type === (twoSided.lineUp?.type ?? null)) return;
   const offset = Math.round(0.4 * (twoSided.flipAxis === "x" ? width : height));
-  store.getState().change("setStock.pins", (draft) => {
-    if (!draft.stock.twoSided) return;
-    draft.stock.twoSided.pins = on
+  const lineUp: LineUp | null =
+    type === "pins"
       ? {
+          type,
           diameter: 6,
           positions: [-offset, offset],
           holes: { type: "through", spoilboardDepth: 5 },
         }
-      : null;
+      : type === "edges"
+        ? { type, corner: "bottom_left" }
+        : null;
+  store.getState().change("setStock.lineUp", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.lineUp = lineUp;
+  });
+}
+
+/** Sets the corner a stock lined up by a fence corner (#361) goes into it by. */
+export function setFenceCorner(store: DocumentStore, corner: StockCorner) {
+  store.getState().change("setStock.lineUp", (draft) => {
+    const lineUp = draft.stock.twoSided?.lineUp;
+    if (lineUp?.type === "edges") lineUp.corner = corner;
   });
 }
 
@@ -314,9 +331,10 @@ export function setLocatingPins(store: DocumentStore, on: boolean) {
  * place is free, else halfway from it to the stock's edge beyond it.
  */
 export function addLocatingPin(store: DocumentStore) {
-  const { twoSided, width, height } = store.getState().document.stock;
-  const pins = twoSided?.pins;
-  if (!pins) return;
+  const { stock } = store.getState().document;
+  const { twoSided, width, height } = stock;
+  const pins = stockPins(stock);
+  if (!twoSided || !pins) return;
   const last = pins.positions.at(-1) ?? 0;
   const edge = ((twoSided.flipAxis === "x" ? width : height) - pins.diameter) / 2;
   const position = pins.positions.includes(-last) ? (last + (last < 0 ? -edge : edge)) / 2 : -last;
@@ -328,14 +346,16 @@ export function addLocatingPin(store: DocumentStore) {
  * result is valid `LocatingPins` with blind holes inside the stock. Returns whether they were taken.
  */
 export function updateLocatingPins(store: DocumentStore, changes: Partial<LocatingPins>): boolean {
-  const { twoSided, thickness } = store.getState().document.stock;
-  const pins = twoSided?.pins;
+  const { stock } = store.getState().document;
+  const pins = stockPins(stock);
   const parsed = LocatingPins.safeParse({ ...pins, ...changes });
   if (!pins || !parsed.success) return false;
   // Blind holes stay inside the stock, as the document requires.
-  if (parsed.data.holes.type === "blind" && parsed.data.holes.depth >= thickness) return false;
-  store.getState().change("setStock.pins", (draft) => {
-    if (draft.stock.twoSided) draft.stock.twoSided.pins = parsed.data;
+  if (parsed.data.holes.type === "blind" && parsed.data.holes.depth >= stock.thickness) {
+    return false;
+  }
+  store.getState().change("setStock.lineUp", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.lineUp = parsed.data;
   });
   return true;
 }

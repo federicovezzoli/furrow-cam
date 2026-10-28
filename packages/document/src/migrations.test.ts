@@ -207,7 +207,7 @@ describe("migrations", () => {
       type: "drill" as const,
       params: { depth: 10, peck: true, stepOver: 40, pins: false },
     };
-    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, pins: null };
+    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, lineUp: null };
     current.operations.push(drill);
     const { pins: _, ...v22Params } = drill.params;
     const v22 = {
@@ -217,6 +217,19 @@ describe("migrations", () => {
       operations: [current.operations[0], { ...drill, params: v22Params }],
     };
     expect(parseProjectDocument(v22)).toEqual(current);
+  });
+
+  it("gives v23 documents' pins a line-up of their own", () => {
+    const current = fullDocument();
+    const { lineUp, ...rest } = current.stock.twoSided ?? {};
+    const { type: _, ...pins } = (lineUp ?? {}) as object & { type?: string };
+    const v23 = (twoSided: object) => ({
+      ...current,
+      schemaVersion: 23,
+      stock: { ...current.stock, twoSided },
+    });
+    expect(parseProjectDocument(v23({ ...rest, pins }))).toEqual(current);
+    expect(parseProjectDocument(v23({ ...rest, pins: null })).stock.twoSided?.lineUp).toBeNull();
   });
 
   it("gives v6 documents no models", () => {

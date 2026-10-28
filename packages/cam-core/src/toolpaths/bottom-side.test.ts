@@ -95,7 +95,7 @@ function bothSides(operation: Operation, flipAxis: FlipAxis): [Toolpath, Toolpat
       ...doc.stock,
       ...STOCK,
       touchOff: null,
-      twoSided: { flipAxis, partingDepth: 9, pins: null },
+      twoSided: { flipAxis, partingDepth: 9, lineUp: null },
     },
     geometry: [ELL, HOLE],
     models: [],

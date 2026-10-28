@@ -1226,7 +1226,13 @@
     "pinOff": "A pin is off the stock.",
     "addPinDrill": "Drill the pins",
     "pinDrill": "Locating pins",
-    "noPinBit": "Add a drill bit of the pins' size, or a smaller end mill, to drill them."
+    "noPinBit": "Add a drill bit of the pins' size, or a smaller end mill, to drill them.",
+    "lineUp": "Lined up on",
+    "lineUpNone": "Nothing",
+    "edges": "A fence corner",
+    "edgeCorner": "Corner",
+    "edgesHint": "Push this corner of the stock into a fence corner for both sides. The sides only meet if the stock is exactly {size} along {axis}: measure it.",
+    "idlePinDrills": "{count, plural, one {# drill of the pins cuts} other {# drills of the pins cut}} nothing without pins."
   },
   "Model": {
     "closeLabel": "Close model properties",
