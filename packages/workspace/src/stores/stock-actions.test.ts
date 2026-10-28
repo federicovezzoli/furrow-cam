@@ -451,6 +451,11 @@ describe("two-sided projects (ADR-0060)", () => {
     const thin = createDocumentStore({ ...document, models: [deeper] });
     setTwoSided(thin, true);
     expect(thin.getState().document.stock.twoSided?.partingDepth).toBe(9);
+    // A shallow model's half depth is below the field's least: clamped to it.
+    const shallow = { ...model, placement: { ...model.placement, depth: 0.1 } };
+    const flat = createDocumentStore({ ...document, models: [shallow] });
+    setTwoSided(flat, true);
+    expect(flat.getState().document.stock.twoSided?.partingDepth).toBe(0.1);
   });
 
   it("move the bottom side's operations to the top when turned off, in one undo step", () => {

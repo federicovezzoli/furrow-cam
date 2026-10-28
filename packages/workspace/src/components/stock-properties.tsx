@@ -27,6 +27,7 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
 import {
   addTouchOff,
+  partingDepthLimits,
   removeTouchOff,
   type StockDimension,
   setCustomOrigin,
@@ -41,6 +42,7 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "../stores/stock-actions";
+import { Checkbox } from "./checkbox";
 import { PlaceholderList } from "./placeholder-list";
 
 const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
@@ -130,22 +132,14 @@ function TwoSidedSection() {
 
   return (
     <section aria-labelledby="two-sided-heading" className="grid gap-2">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-        <input
-          type="checkbox"
-          id="two-sided"
-          checked={twoSided !== null}
-          onChange={(event) => void toggle(event.target.checked)}
-          aria-describedby="two-sided-hint"
-          className="size-3.5 accent-primary"
-        />
-        <Label id="two-sided-heading" htmlFor="two-sided" className="text-ui font-medium">
-          {t("twoSided")}
-        </Label>
-        <p id="two-sided-hint" className="col-start-2 text-muted-foreground">
-          {t("twoSidedHint")}
-        </p>
-      </div>
+      <Checkbox
+        id="two-sided"
+        label={t("twoSided")}
+        heading
+        hint={t("twoSidedHint")}
+        checked={twoSided !== null}
+        onChange={(on) => void toggle(on)}
+      />
       {twoSided && (
         <>
           <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
@@ -173,8 +167,8 @@ function TwoSidedSection() {
             quantity="length"
             units={units}
             // Within the stock, however thin.
-            min={Math.min(MIN_STOCK, stock.thickness / 2)}
-            max={stock.thickness - Math.min(MIN_STOCK, stock.thickness / 2)}
+            min={partingDepthLimits(stock.thickness)[0]}
+            max={partingDepthLimits(stock.thickness)[1]}
             value={twoSided.partingDepth}
             onValueChange={(value) => setPartingDepth(store, value)}
             {...gestureHandlers(store)}
@@ -450,22 +444,13 @@ function TouchOffFields() {
 
   return (
     <>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-        <input
-          type="checkbox"
-          id="touch-off"
-          checked={pad !== null}
-          onChange={(event) => (event.target.checked ? addTouchOff(store) : removeTouchOff(store))}
-          aria-describedby="touch-off-hint"
-          className="size-3.5 accent-primary"
-        />
-        <Label htmlFor="touch-off" className="text-ui font-normal">
-          {t("touchOff")}
-        </Label>
-        <p id="touch-off-hint" className="col-start-2 text-muted-foreground">
-          {t("touchOffHint")}
-        </p>
-      </div>
+      <Checkbox
+        id="touch-off"
+        label={t("touchOff")}
+        hint={t("touchOffHint")}
+        checked={pad !== null}
+        onChange={(on) => (on ? addTouchOff(store) : removeTouchOff(store))}
+      />
       {pad && (
         <>
           {(["x", "y"] as const).map((axis) => (

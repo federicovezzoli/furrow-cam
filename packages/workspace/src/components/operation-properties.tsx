@@ -75,6 +75,7 @@ import {
   updateReliefRoughParams,
   updateVCarveParams,
 } from "../stores/operation-actions";
+import { Checkbox } from "./checkbox";
 import { EditBitButton } from "./edit-bit-dialog";
 import { NewBitDialog } from "./new-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
@@ -1497,44 +1498,6 @@ function TabsFields({
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
-    </div>
-  );
-}
-
-function Checkbox({
-  id,
-  label,
-  hint,
-  checked,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        className="size-3.5 accent-primary"
-      />
-      <Label htmlFor={id} className="text-ui font-normal">
-        {label}
-      </Label>
-      {hint && (
-        <p id={`${id}-hint`} className="col-start-2 text-muted-foreground">
-          {hint}
-        </p>
-      )}
     </div>
   );
 }

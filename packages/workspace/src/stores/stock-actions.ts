@@ -233,8 +233,10 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
   const { stock, models } = store.getState().document;
   if (twoSided === (stock.twoSided !== null)) return;
   const deepest = Math.max(0, ...models.map(({ placement }) => placement.depth));
-  // Within the stock, whatever the models' depth.
-  const partingDepth = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  // Within the parting depth field's limits, whatever the models' depth.
+  const [min, max] = partingDepthLimits(stock.thickness);
+  const half = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  const partingDepth = Math.min(Math.max(half, min), max);
   store.getState().change("setStock.twoSided", (draft) => {
     if (!twoSided) {
       draft.stock.twoSided = null;
@@ -256,6 +258,12 @@ export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
  * Sets how far below the stock top a two-sided project's sides part, in
  * millimetres; a depth outside the stock is refused.
  */
+/** The parting depth's field limits: a tenth of a millimetre from either face, or the middle of thinner stock. */
+export function partingDepthLimits(thickness: number): [min: number, max: number] {
+  const margin = Math.min(0.1, thickness / 2);
+  return [margin, thickness - margin];
+}
+
 export function setPartingDepth(store: DocumentStore, partingDepth: number) {
   const { thickness } = store.getState().document.stock;
   if (!(partingDepth > 0 && partingDepth < thickness)) return;
