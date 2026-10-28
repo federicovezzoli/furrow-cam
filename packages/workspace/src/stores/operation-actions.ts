@@ -73,6 +73,7 @@ export const DEFAULT_STEP_OVER = 40;
  */
 export function defaultPocketParams(document: ProjectDocument): PocketParams {
   return {
+    side: "inside",
     strategy: { type: "offset" },
     direction: "climb",
     stepOver: DEFAULT_STEP_OVER,

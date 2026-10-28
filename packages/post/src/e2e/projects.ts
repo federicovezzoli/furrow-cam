@@ -186,6 +186,7 @@ function plate(): ProjectDocument {
         targets: [{ shapeId: recess.id, paths: null }],
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "offset" },
           direction: "climb",
           stepOver: 40,
@@ -255,6 +256,7 @@ function svgPart(): ProjectDocument {
         targets: targets(doc, byLayer("Pocket")),
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "linear", angle: 45 },
           direction: "conventional",
           stepOver: 40,
@@ -404,6 +406,7 @@ function inchPanel(): ProjectDocument {
         targets: targets(doc, (shape) => shape.name === "Window" || shape.name === "Knob"),
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "peel", start: "inside" },
           direction: "climb",
           stepOver: 40,
@@ -708,6 +711,7 @@ function pcShelf(): ProjectDocument {
     targets: targets(doc, byName(shape)),
     tool,
     params: {
+      side: "inside",
       strategy: { type: "linear", angle: 90 },
       direction: "climb",
       stepOver: 75,

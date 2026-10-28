@@ -1,4 +1,5 @@
 import type { PocketOperation, PocketParams, Point, Shape, Tool } from "@furrow/document";
+import type { Rect } from "../../geometry/bounds";
 import { difference, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../../geometry/flatten";
 import { projectOnLoop } from "../../geometry/loop";
@@ -44,6 +45,12 @@ type Region = { pieces: Piece[]; container: Piece; finishing: Piece | null };
  * - The area enclosed by the closed paths of all `shapes` is cleared, with
  *   nested rings toggling inside and outside (even-odd): a ring inside the
  *   pocket is an island left standing, a ring inside an island another pocket.
+ *   The params' side may change that area (#386):
+ *   - `outside`: the `stock` outside the paths instead, the tool centre
+ *     reaching the stock edge. The allowance and finish pass are for the
+ *     paths' walls only. Without a stock, nothing is cut.
+ *   - `on`: the area grown by the tool radius, the tool centre reaching the
+ *     paths.
  * - Clearing stops `allowance` plus the tool radius from the walls and
  *   islands, with the params' strategy:
  *   - `offset`: rings there, then every step-over further in, cut from the
@@ -75,6 +82,7 @@ export function pocketToolpath(
   operation: PocketOperation,
   shapes: Shape[],
   options: PocketOptions,
+  stock: Rect | null = null,
 ): Toolpath {
   const { tool, params } = operation;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
@@ -95,8 +103,37 @@ export function pocketToolpath(
     warnings.push({ code: "toolpath.skippedOpenPocket", values: { count: open } });
   }
   if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
-  const toolpath = clearPocket(tool, params, closed, options);
+  const toolpath = clearPocket(tool, params, sideArea(tool, params, closed, stock, tolerance), {
+    ...options,
+    stock: params.side === "outside" ? stock : null,
+  });
   return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+}
+
+/** The rings of the area a pocket on `params.side` of the rings `closed` clears. */
+function sideArea(
+  tool: Tool,
+  params: PocketParams,
+  closed: Polygon[],
+  stock: Rect | null,
+  tolerance: number,
+): Polygon[] {
+  const radius = tool.diameter / 2;
+  const options = { fillRule: "evenOdd", arcTolerance: tolerance } as const;
+  if (params.side === "on") return offset(closed, radius, options);
+  if (params.side === "inside") return closed;
+  if (!stock || closed.length === 0) return [];
+  // Grown so clearing, which stops this far from every edge, reaches the stock edge.
+  const grow = radius + params.allowance;
+  const [x0, y0] = [stock.min[0] - grow, stock.min[1] - grow];
+  const [x1, y1] = [stock.max[0] + grow, stock.max[1] + grow];
+  const outline: Polygon = [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
+  return difference([outline], closed, "evenOdd");
 }
 
 /**
@@ -105,12 +142,27 @@ export function pocketToolpath(
  */
 export function clearPocket(
   tool: Tool,
-  params: PocketParams,
+  params: ClearingParams & Pick<PocketParams, "depth">,
   closed: Polygon[],
-  options: PocketOptions,
+  options: PocketOptions & {
+    /** Finish laps wholly off this stock are left out: an outside pocket's edge. */
+    stock?: Rect | null;
+  },
 ): Toolpath {
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const { regions, drawn, area, warnings } = planPocket(tool, params, closed, tolerance);
+  const { stock } = options;
+  if (stock) {
+    // Each vertex off the stock: a lap around a grown stock edge, in the air.
+    const onStock = ({ loop }: Ring) =>
+      loop.some(
+        ([x, y]) => x > stock.min[0] && x < stock.max[0] && y > stock.min[1] && y < stock.max[1],
+      );
+    for (const region of regions) {
+      const { finishing } = region;
+      if (finishing) region.finishing = { ...finishing, rings: finishing.rings.filter(onStock) };
+    }
+  }
   // Unless the strategy left nothing to clear, having said why.
   if (
     closed.length > 0 &&

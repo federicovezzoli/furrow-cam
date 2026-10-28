@@ -654,6 +654,21 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       <h4 id="pocket-heading" className="font-medium">
         {t("pocket")}
       </h4>
+      <Row id="pocket-side" label={t("side")}>
+        <NativeSelect
+          id="pocket-side"
+          size="sm"
+          value={params.side}
+          onChange={(event) => update("side", { side: ProfileSide.parse(event.target.value) })}
+          className={SELECT_CLASS}
+        >
+          {ProfileSide.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {t(`sides.${option}`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
       <Row id="pocket-strategy" label={t("strategy")}>
         <NativeSelect
           id="pocket-strategy"
@@ -779,9 +794,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
-      {(errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
+      {(errors.side ?? errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
-          {errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp}
+          {errors.side ?? errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp}
         </p>
       )}
     </section>

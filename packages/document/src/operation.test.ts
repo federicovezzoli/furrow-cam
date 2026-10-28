@@ -81,6 +81,7 @@ describe("ProfileParams", () => {
 
 describe("PocketParams", () => {
   const pocket: PocketParams = {
+    side: "inside",
     strategy: { type: "offset" },
     direction: "climb",
     stepOver: 40,

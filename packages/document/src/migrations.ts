@@ -236,6 +236,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
     doc.stock.twoSided = twoSided;
     return doc;
   },
+  // #386: pockets choose the side of their paths. Existing ones clear inside.
+  24: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "pocket" && isObject(operation.params)) {
+          operation.params.side ??= "inside";
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

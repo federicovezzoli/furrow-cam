@@ -152,7 +152,7 @@ describe("migrations", () => {
       params: { direction: "climb", depth: 6, allowance: 0, finishPass: false, ramp: true },
     };
     const v3 = { ...doc, schemaVersion: 3, operations: [profile, pocket] };
-    const params = { ...pocket.params, strategy: { type: "offset" }, stepOver: 40 };
+    const params = { ...pocket.params, side: "inside", strategy: { type: "offset" }, stepOver: 40 };
     expect(parseProjectDocument(v3).operations).toEqual([
       profile,
       { ...pocket, tool: profile.tool, params },
@@ -230,6 +230,35 @@ describe("migrations", () => {
     });
     expect(parseProjectDocument(v23({ ...rest, pins }))).toEqual(current);
     expect(parseProjectDocument(v23({ ...rest, pins: null })).stock.twoSided?.lineUp).toBeNull();
+  });
+
+  it("gives v24 pockets the inside of their paths", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fixture");
+    const pocket: Operation = {
+      ...profile,
+      id: "5f6a7b8c-9d0e-4f1a-8b2c-3d4e5f6a7b8c",
+      type: "pocket",
+      params: {
+        side: "inside",
+        strategy: { type: "offset" },
+        direction: "climb",
+        stepOver: 40,
+        depth: 6,
+        allowance: 0,
+        finishPass: false,
+        ramp: true,
+      },
+    };
+    current.operations.push(pocket);
+    const { side: _, ...v24Params } = pocket.params as { side: string };
+    const v24 = {
+      ...current,
+      schemaVersion: 24,
+      operations: [profile, { ...pocket, params: v24Params }],
+    };
+    expect(parseProjectDocument(v24)).toEqual(current);
   });
 
   it("gives v6 documents no models", () => {
@@ -389,6 +418,7 @@ describe("migrations", () => {
       id: "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
       type: "pocket",
       params: {
+        side: "inside",
         strategy: { type: "offset" },
         direction: "climb",
         stepOver: 35,

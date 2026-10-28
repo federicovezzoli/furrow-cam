@@ -113,6 +113,7 @@ function referenceProject(): ProjectDocument {
         targets: [{ shapeId: recess.id, paths: null }],
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "offset" },
           direction: "climb",
           stepOver: 40,

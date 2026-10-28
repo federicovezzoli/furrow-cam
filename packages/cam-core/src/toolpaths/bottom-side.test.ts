@@ -69,6 +69,7 @@ const pocket = {
   tool: endMill,
   stockSide: "top",
   params: {
+    side: "inside",
     strategy: { type: "offset" },
     direction: "climb",
     stepOver: 40,
@@ -181,6 +182,22 @@ describe("2D operations on the bottom side", () => {
           expect(wall(bottom)).toBe(wall(top));
         },
       );
+
+      it("pockets outside the drawing seen from below up to the stock edges (#386)", () => {
+        const outside = { ...pocket, params: { ...pocket.params, side: "outside" as const } };
+        const [, bottom] = bothSides(outside, axis);
+        expect(deepBox(bottom).map((value) => Number(value.toFixed(3)))).toEqual([
+          0,
+          0,
+          STOCK.width,
+          STOCK.height,
+        ]);
+        // The L stays standing where the drawing seen from below has it.
+        const [x, y] = flipPoint2(flip(axis), [30, 45]);
+        expect(
+          bottom.moves.some(({ to }) => to[2] < 0 && Math.hypot(to[0] - x, to[1] - y) < 8),
+        ).toBe(false);
+      });
 
       it("drills a hole where the drawing seen from below has it", () => {
         const drilling: Operation = {
