@@ -726,7 +726,7 @@ describe("setTextItem", () => {
     const settings = { ...(textItem.text as TextSettings), font: "f".repeat(64) };
     expect(setTextItem(text, TEXT_ID, settings, [box(10, 10, 2)])).toEqual({
       ok: false,
-      error: { code: "workspace.fontUnavailable" },
+      error: { code: "workspace.fontRemoved" },
     });
     expect(text.getState().document).toBe(before);
   });

@@ -1,4 +1,3 @@
-import { fontName, parseFont } from "@furrow/cam-core";
 import {
   MAX_PROJECT_FONTS,
   type Message,
@@ -8,10 +7,16 @@ import {
 } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentStore } from "../stores/document-store";
-import { addFont } from "../stores/font-actions";
+import { addFont, setFontSingleStroke } from "../stores/font-actions";
 import { addTextItem, convertTextToDrawing, setTextItem } from "../stores/geometry-actions";
 import type { ActionResult } from "../stores/operation-actions";
-import { layoutText, TEXT_LAYOUT_FAILED, TextLayoutError, type UploadedFonts } from "./text-layout";
+import {
+  inspectFont,
+  layoutText,
+  TEXT_LAYOUT_FAILED,
+  TextLayoutError,
+  type UploadedFonts,
+} from "./text-layout";
 import type { AssetStore, WorkspaceHost } from "./workspace-host";
 
 /** `layoutText`, with why it failed as a result. */
@@ -158,10 +163,11 @@ function currentText(store: DocumentStore, id: string) {
 
 /**
  * Uploads `file` into the project as a font (PRD-0010 T7, ADR-0062), after
- * checking it is a font of at most the host's size and that the project has
- * room for it, and lists it in the document as one undo step, `singleStroke`
- * as the user says. Returns its hash, the id text items use it by; a font the
- * project already holds is taken as it is.
+ * the text worker checks it is a font (`inspectFont`, which also keeps it for
+ * layouts), of at most the host's size, and that the project has room for it,
+ * and lists it in the document as one undo step, `singleStroke` as the user
+ * says. A font the project already holds takes the new `singleStroke`, also
+ * one undo step. Returns its hash, the id text items use it by.
  */
 export async function uploadFont(
   store: DocumentStore,
@@ -177,31 +183,41 @@ export async function uploadFont(
       error: { code: "workspace.fontTooLarge", values: { mb: limits.maxBytes / 1_000_000 } },
     };
   }
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let name: string;
   try {
-    name = fontName(parseFont(bytes, singleStroke));
-  } catch {
-    return { ok: false, error: { code: "workspace.fontUnreadable" } };
+    const bytes = await file.arrayBuffer();
+    const sha256 = await sha256Hex(new Uint8Array(bytes));
+    const { fonts } = store.getState().document;
+    if (fonts.some((listed) => listed.sha256 === sha256)) {
+      setFontSingleStroke(store, sha256, singleStroke);
+      return { ok: true, sha256 };
+    }
+    const tooMany: Message = { code: "workspace.tooManyFonts", values: { max: MAX_PROJECT_FONTS } };
+    if (fonts.length >= MAX_PROJECT_FONTS) return { ok: false, error: tooMany };
+    let name: string;
+    try {
+      name = await inspectFont(sha256, bytes, singleStroke);
+    } catch (error) {
+      if (error instanceof TextLayoutError) return { ok: false, error: error.detail };
+      throw error;
+    }
+    const upload = await host.fonts.put(sha256, file);
+    if (upload.error !== undefined) return { ok: false, error: upload.error };
+    const font: ProjectFont = {
+      sha256,
+      fileName: file.name,
+      name: name || file.name.replace(/\.[^.]*$/, ""),
+      size: file.size,
+      singleStroke,
+    };
+    // Another font may have been uploaded meanwhile, filling the project.
+    if (!addFont(store, font)) {
+      if (upload.uploaded) await host.fonts.discard(sha256);
+      return { ok: false, error: tooMany };
+    }
+    return { ok: true, sha256 };
+  } catch (error) {
+    // The file went away after it was picked, or the host threw rather than said why.
+    console.error(error);
+    return { ok: false, error: { code: "workspace.fontUploadFailed" } };
   }
-  const sha256 = await sha256Hex(bytes);
-  const font: ProjectFont = {
-    sha256,
-    fileName: file.name,
-    name: name || file.name.replace(/\.[^.]*$/, ""),
-    size: file.size,
-    singleStroke,
-  };
-  const { fonts } = store.getState().document;
-  if (fonts.some((listed) => listed.sha256 === sha256)) return { ok: true, sha256 };
-  const tooMany: Message = { code: "workspace.tooManyFonts", values: { max: MAX_PROJECT_FONTS } };
-  if (fonts.length >= MAX_PROJECT_FONTS) return { ok: false, error: tooMany };
-  const upload = await host.fonts.put(sha256, file);
-  if (upload.error !== undefined) return { ok: false, error: upload.error };
-  // Another font may have been uploaded meanwhile, filling the project.
-  if (!addFont(store, font)) {
-    if (upload.uploaded) await host.fonts.discard(sha256);
-    return { ok: false, error: tooMany };
-  }
-  return { ok: true, sha256 };
 }

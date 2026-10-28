@@ -36,10 +36,10 @@ function glyph(name: string, char: string | null, advanceWidth: number, ...draws
  * single-stroke loop. "H" then "O" kern by -100. "X" overlaps itself, and
  * "f" then "i" has a ligature.
  */
-function testFont(): OpentypeFont {
+function testFont(styleName = "Regular"): OpentypeFont {
   const font = new OpentypeFont({
     familyName: "Test",
-    styleName: "Regular",
+    styleName,
     unitsPerEm: 1000,
     ascender: 800,
     descender: -200,
@@ -221,8 +221,9 @@ describe("parseFont", () => {
     );
   });
 
-  it("names the font after its family", () => {
+  it("names the font after its family and its style, but for Regular", () => {
     expect(fontName(parseFont(testFont().toArrayBuffer()))).toBe("Test");
+    expect(fontName(parseFont(testFont("Bold").toArrayBuffer()))).toBe("Test Bold");
   });
 
   it("throws on bytes that aren't a font", () => {

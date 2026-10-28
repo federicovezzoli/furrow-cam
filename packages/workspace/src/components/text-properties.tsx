@@ -87,8 +87,10 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   /** Uploads `file` as a font, then sets the text in it (PRD-0010 T7). */
   async function upload(file: File) {
     setUploading(true);
-    const result = await uploadFont(store, host, file, singleStroke);
-    setUploading(false);
+    // `uploadFont` reports what fails; the button comes back whatever happens.
+    const result = await uploadFont(store, host, file, singleStroke).finally(() =>
+      setUploading(false),
+    );
     if (!result.ok) return setError(result.error);
     await edit({ font: result.sha256 });
   }

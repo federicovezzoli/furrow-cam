@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
+import { fontName, parseFont } from "@furrow/cam-core";
 import { createProjectDocument, type Path, type ProjectDocument } from "@furrow/document";
 import { fullDocument, TEXT_ID, textItem, textShape } from "@furrow/document/fixtures";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import arvo from "../fonts/Arvo-Regular.ttf?inline";
 import { createMemoryHost } from "../lib/memory-host";
-import type { TextLayoutRequest } from "../lib/text-layout";
+import type { TextWorkerRequest } from "../lib/text-layout";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
 import type { WorkspaceStore } from "../stores/workspace-store";
@@ -16,11 +17,19 @@ import { GeometryImport } from "./geometry-import";
 /**
  * The text worker: lays every text out as one box at its origin, as wide as
  * its characters times its height and its height tall. "∅" has no outlines.
+ * Fonts to check are parsed for real.
  */
 class TextWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror = null;
-  postMessage({ id, settings }: TextLayoutRequest) {
+  postMessage(request: TextWorkerRequest) {
+    const { id } = request;
+    if (request.kind === "inspect") {
+      const name = fontName(parseFont(request.font.bytes));
+      queueMicrotask(() => this.onmessage?.({ data: { id, name } } as MessageEvent));
+      return;
+    }
+    const { settings } = request;
     const [x, y] = settings.placement.position;
     const width = settings.text.length * settings.height;
     const box: Path = {

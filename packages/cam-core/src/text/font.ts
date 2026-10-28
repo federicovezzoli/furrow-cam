@@ -37,19 +37,27 @@ export function parseFont(bytes: ArrayBuffer | Uint8Array, singleStroke = false)
   };
 }
 
-/** The family name `font` gives, in English if it has one, else the first it has; empty if none. */
+/**
+ * The name `font` gives, to tell fonts apart: its family, then its style
+ * unless that is "Regular" (e.g. "Arvo", "Arvo Bold"), in English if it has
+ * one, else the first it has; empty if none.
+ */
 export function fontName({ font }: Font): string {
   // `@types/opentype.js` describes 1.3's flat names; 2.0 keeps a table per platform.
   const names = font.names as unknown as Record<
     string,
     Record<string, Record<string, string>> | undefined
   >;
-  for (const table of ["windows", "macintosh", "unicode"]) {
-    const family = names[table]?.fontFamily;
-    const name = family?.en ?? Object.values(family ?? {})[0];
-    if (name) return name;
-  }
-  return "";
+  const read = (key: string) => {
+    for (const table of ["windows", "macintosh", "unicode"]) {
+      const entry = names[table]?.[key];
+      const name = entry?.en ?? Object.values(entry ?? {})[0];
+      if (name) return name;
+    }
+    return "";
+  };
+  const style = read("fontSubfamily");
+  return [read("fontFamily"), style === "Regular" ? "" : style].filter(Boolean).join(" ");
 }
 
 /**

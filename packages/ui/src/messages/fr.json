@@ -725,6 +725,8 @@
       "unknownFont": "La police « {font} » n'est pas disponible dans cette version de l'application.",
       "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez.",
       "fontUnavailable": "Cette police n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+      "fontRemoved": "Cette police n'est plus dans le projet.",
+      "fontUploadFailed": "La police n'a pas pu être importée. Choisissez-la à nouveau et réessayez.",
       "fontUnreadable": "Ce fichier n'est pas une police lisible : utilisez un fichier TTF, OTF ou WOFF.",
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",

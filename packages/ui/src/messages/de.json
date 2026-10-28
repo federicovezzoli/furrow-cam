@@ -725,6 +725,8 @@
       "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
       "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut.",
       "fontUnavailable": "Diese Schrift konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+      "fontRemoved": "Diese Schrift ist nicht mehr im Projekt.",
+      "fontUploadFailed": "Die Schrift konnte nicht hochgeladen werden. Wähle sie erneut aus und versuche es noch einmal.",
       "fontUnreadable": "Diese Datei ist keine lesbare Schrift: Verwende eine TTF-, OTF- oder WOFF-Datei.",
       "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",

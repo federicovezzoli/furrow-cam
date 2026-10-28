@@ -33,6 +33,7 @@ import {
   segmentIssue,
   type TextSettings,
 } from "@furrow/document";
+import { FONT_REMOVED } from "../lib/text-layout";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
 import type { ActionResult } from "./operation-actions";
@@ -151,7 +152,7 @@ export function setTextItem(
     Sha256.safeParse(text.font).success &&
     !document.fonts.some(({ sha256 }) => sha256 === text.font)
   ) {
-    return { ok: false, error: { code: "workspace.fontUnavailable" } };
+    return { ok: false, error: FONT_REMOVED };
   }
   const [shape] = drawingShapes(document.geometry, id);
   if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
