@@ -2,7 +2,7 @@ import type { Vec3 } from "@furrow/cam-core";
 import { formatNumber } from "./format";
 import type { BlockLabel, CustomBlock } from "./read-back";
 
-export type Axes = { x?: number; y?: number; z?: number };
+type Axes = { x?: number; y?: number; z?: number };
 const AXES = ["x", "y", "z"] as const;
 
 /** A G-code comment, which can't nest or span lines. */

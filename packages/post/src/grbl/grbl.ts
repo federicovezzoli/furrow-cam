@@ -91,10 +91,7 @@ function postGrbl(input: PostInput): PostOutput {
   writeHeader(program, steps);
   let tool: Tool | null = null;
   for (const step of steps) {
-    if (tool === null || !sameBit(tool, step.tool)) {
-      program.out.comment(`Tool: ${toolLabel(step.tool)}`);
-      if (tool !== null) writeToolChange(program, step.tool);
-    }
+    writeTool(program, tool, step.tool);
     tool = step.tool;
     writeOperation(program, step);
   }
@@ -132,10 +129,16 @@ function writeHeader(program: Program, steps: PostStep[]) {
   else out.line(MODES);
 }
 
-/** Swaps the bit for `tool`: the pad's block, the machine's, or a pause to do it by hand. */
-function writeToolChange(program: Program, tool: Tool) {
+/**
+ * Names `tool` when it isn't the `previous` bit, and after the first tool
+ * swaps it in: the pad's block, the machine's, or a pause to do it by hand.
+ */
+function writeTool(program: Program, previous: Tool | null, tool: Tool) {
   const { out, pad, input } = program;
   const { machine, safeZ } = input;
+  if (previous !== null && sameBit(previous, tool)) return;
+  out.comment(`Tool: ${toolLabel(tool)}`);
+  if (previous === null) return;
   out.forget();
   // Changing the bit stops the spindle, whatever the blocks write.
   program.speed = undefined;
