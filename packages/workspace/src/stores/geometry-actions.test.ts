@@ -720,6 +720,17 @@ describe("setTextItem", () => {
     expect(onText?.type === "profile" && onText.params.tabs?.positions).toEqual([[11, 10]]);
   });
 
+  it("refuses an uploaded font the project no longer lists, changing nothing", () => {
+    const text = store();
+    const before = text.getState().document;
+    const settings = { ...(textItem.text as TextSettings), font: "f".repeat(64) };
+    expect(setTextItem(text, TEXT_ID, settings, [box(10, 10, 2)])).toEqual({
+      ok: false,
+      error: { code: "workspace.fontRemoved" },
+    });
+    expect(text.getState().document).toBe(before);
+  });
+
   it("refuses text with no outlines, changing nothing", () => {
     const text = store();
     const before = text.getState().document;

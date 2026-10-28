@@ -723,7 +723,14 @@
       "drawingTooSmall": "That would shrink some of the drawing's lines to nothing. Choose a larger size.",
       "textNoOutlines": "None of these characters are in the font, so there is nothing to cut.",
       "unknownFont": "The font “{font}” isn't available in this version of the app.",
-      "textLayoutFailed": "The text couldn't be laid out. Try again."
+      "textLayoutFailed": "The text couldn't be laid out. Try again.",
+      "fontUnavailable": "This font couldn't be loaded. Check your connection and try again.",
+      "fontRemoved": "This font is no longer in the project.",
+      "fontUploadFailed": "The font couldn't be uploaded. Pick it again and try once more.",
+      "fontUnreadable": "This file isn't a font that can be read: use a TTF, OTF or WOFF file.",
+      "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
+      "tooManyFonts": "A project holds at most {max} fonts.",
+      "fontUploadOff": "This server can't store fonts."
     }
   },
   "Operation": {
@@ -1251,7 +1258,11 @@
     "heightNote": "Height measures the capital letters. Changing the text keeps it in place.",
     "tabsRemoved": "Removed {count, plural, one {# tab} other {# tabs}} that no longer lay on the letters.",
     "convert": "Convert to drawing",
-    "convertTitle": "Keep the letters as a drawing, machined by the same operations; it can no longer be edited as text"
+    "convertTitle": "Keep the letters as a drawing, machined by the same operations; it can no longer be edited as text",
+    "included": "Included",
+    "uploaded": "Uploaded",
+    "upload": "Upload font…",
+    "singleStroke": "Single-stroke (for engraving)"
   },
   "Import": {
     "units": {

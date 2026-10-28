@@ -4,15 +4,20 @@ import { MIN_LETTER_SPACING, type TextAlign, type TextSettings } from "@furrow/d
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
+import {
+  NativeSelect,
+  NativeSelectOptGroup,
+  NativeSelectOption,
+} from "@furrow/ui/components/ui/native-select";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
-import { ShapesIcon } from "lucide-react";
-import { useState } from "react";
+import { ShapesIcon, UploadIcon } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { FONTS } from "../lib/fonts";
-import { convertText, editText, textSettled } from "../lib/text-items";
+import { convertText, editText, textSettled, uploadedFonts, uploadFont } from "../lib/text-items";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -41,6 +46,12 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const units = useDocumentStore((s) => s.document.units);
+  const uploaded = useDocumentStore((s) => s.document.fonts);
+  const host = useWorkspaceHost();
+  const fontInput = useRef<HTMLInputElement>(null);
+  /** Whether the next uploaded font is single-stroke, as the user says (ADR-0062). */
+  const [singleStroke, setSingleStroke] = useState(false);
+  const [uploading, setUploading] = useState(false);
   /** Why the last edit was refused. */
   const [error, setError] = useState<Translatable | null>(null);
   /** How many tabs the last edit took off the text, which no longer lay on its letters. */
@@ -61,7 +72,7 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
 
   /** Applies `edits` once laid out; whether they were. */
   async function edit(edits: Partial<Omit<TextSettings, "placement">>): Promise<boolean> {
-    const result = await editText(store, drawingId, edits);
+    const result = await editText(store, drawingId, edits, uploadedFonts(store, host.fonts));
     setError(result.ok ? null : result.error);
     if (!result.ok) return false;
     setRemovedTabs(result.removedTabs);
@@ -71,6 +82,17 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
       workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
     }
     return true;
+  }
+
+  /** Uploads `file` as a font, then sets the text in it (PRD-0010 T7). */
+  async function upload(file: File) {
+    setUploading(true);
+    // `uploadFont` reports what fails; the button comes back whatever happens.
+    const result = await uploadFont(store, host, file, singleStroke).finally(() =>
+      setUploading(false),
+    );
+    if (!result.ok) return setError(result.error);
+    await edit({ font: result.sha256 });
   }
 
   return (
@@ -97,16 +119,67 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
           onChange={(event) => void edit({ font: event.target.value })}
           className={SELECT_CLASS}
         >
-          {!FONTS.some((font) => font.id === text.font) && (
-            <NativeSelectOption value={text.font}>{text.font}</NativeSelectOption>
+          {!FONTS.some((font) => font.id === text.font) &&
+            !uploaded.some((font) => font.sha256 === text.font) && (
+              <NativeSelectOption value={text.font}>{text.font}</NativeSelectOption>
+            )}
+          <NativeSelectOptGroup label={t("included")}>
+            {FONTS.map((font) => (
+              <NativeSelectOption key={font.id} value={font.id}>
+                {font.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelectOptGroup>
+          {uploaded.length > 0 && (
+            <NativeSelectOptGroup label={t("uploaded")}>
+              {uploaded.map((font) => (
+                <NativeSelectOption key={font.sha256} value={font.sha256}>
+                  {font.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelectOptGroup>
           )}
-          {FONTS.map((font) => (
-            <NativeSelectOption key={font.id} value={font.id}>
-              {font.name}
-            </NativeSelectOption>
-          ))}
         </NativeSelect>
       </Row>
+      {host.limits.fonts && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fontInput}
+            type="file"
+            accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              // Lets the same file be picked again, e.g. with the other stroke choice.
+              event.currentTarget.value = "";
+              if (file) void upload(file);
+            }}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+          />
+          <Button
+            variant="outline"
+            size="compact"
+            disabled={uploading}
+            onClick={() => fontInput.current?.click()}
+          >
+            <UploadIcon />
+            {t("upload")}
+          </Button>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              id="text-single-stroke"
+              checked={singleStroke}
+              onChange={(event) => setSingleStroke(event.target.checked)}
+              className="size-3.5 accent-primary"
+            />
+            <Label htmlFor="text-single-stroke" className="text-ui font-normal">
+              {t("singleStroke")}
+            </Label>
+          </div>
+        </div>
+      )}
       <NumberField
         id="text-height"
         label={t("height")}

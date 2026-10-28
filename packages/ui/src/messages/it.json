@@ -723,7 +723,14 @@
       "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore.",
       "textNoOutlines": "Nessuno di questi caratteri è nel font, quindi non c'è niente da tagliare.",
       "unknownFont": "Il font “{font}” non è disponibile in questa versione dell'app.",
-      "textLayoutFailed": "Non è stato possibile comporre il testo. Riprova."
+      "textLayoutFailed": "Non è stato possibile comporre il testo. Riprova.",
+      "fontUnavailable": "Non è stato possibile caricare questo font. Controlla la connessione e riprova.",
+      "fontRemoved": "Questo font non è più nel progetto.",
+      "fontUploadFailed": "Non è stato possibile caricare il font. Sceglilo di nuovo e riprova.",
+      "fontUnreadable": "Questo file non è un font leggibile: usa un file TTF, OTF o WOFF.",
+      "fontTooLarge": "Questo font supera {mb, number} MB, il massimo consentito.",
+      "tooManyFonts": "Un progetto contiene al massimo {max} font.",
+      "fontUploadOff": "Questo server non può archiviare font."
     }
   },
   "Operation": {
@@ -1251,7 +1258,11 @@
     "heightNote": "L'altezza è quella delle lettere maiuscole. Il testo resta dov'è quando lo modifichi.",
     "tabsRemoved": "{count, plural, one {Rimosso # ponticello che non stava} other {Rimossi # ponticelli che non stavano}} più sulle lettere.",
     "convert": "Converti in disegno",
-    "convertTitle": "Tieni le lettere come disegno, lavorato dalle stesse operazioni; non si potrà più modificare come testo"
+    "convertTitle": "Tieni le lettere come disegno, lavorato dalle stesse operazioni; non si potrà più modificare come testo",
+    "included": "Inclusi",
+    "uploaded": "Caricati",
+    "upload": "Carica font…",
+    "singleStroke": "Tratto singolo (per incisione)"
   },
   "Import": {
     "units": {

@@ -27,11 +27,13 @@ import {
   type Path,
   type Point,
   type ProjectDocument,
+  Sha256,
   type Shape,
   type Stock,
   segmentIssue,
   type TextSettings,
 } from "@furrow/document";
+import { FONT_REMOVED } from "../lib/text-layout";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
 import type { ActionResult } from "./operation-actions";
@@ -145,6 +147,13 @@ export function setTextItem(
 ): { ok: true; removedTabs: number } | { ok: false; error: Message } {
   if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const { document } = store.getState();
+  // An uploaded font the project no longer lists, e.g. its upload undone meanwhile, would leave it invalid.
+  if (
+    Sha256.safeParse(text.font).success &&
+    !document.fonts.some(({ sha256 }) => sha256 === text.font)
+  ) {
+    return { ok: false, error: FONT_REMOVED };
+  }
   const [shape] = drawingShapes(document.geometry, id);
   if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
     return { ok: true, removedTabs: 0 };

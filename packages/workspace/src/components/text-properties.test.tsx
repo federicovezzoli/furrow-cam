@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
+import { fontName, parseFont } from "@furrow/cam-core";
 import { createProjectDocument, type Path, type ProjectDocument } from "@furrow/document";
 import { fullDocument, TEXT_ID, textItem, textShape } from "@furrow/document/fixtures";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import arvo from "../fonts/Arvo-Regular.ttf?inline";
 import { createMemoryHost } from "../lib/memory-host";
-import type { TextLayoutRequest } from "../lib/text-layout";
+import type { TextWorkerRequest } from "../lib/text-layout";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
 import type { WorkspaceStore } from "../stores/workspace-store";
@@ -15,11 +17,19 @@ import { GeometryImport } from "./geometry-import";
 /**
  * The text worker: lays every text out as one box at its origin, as wide as
  * its characters times its height and its height tall. "∅" has no outlines.
+ * Fonts to check are parsed for real.
  */
 class TextWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror = null;
-  postMessage({ id, settings }: TextLayoutRequest) {
+  postMessage(request: TextWorkerRequest) {
+    const { id } = request;
+    if (request.kind === "inspect") {
+      const name = fontName(parseFont(request.font.bytes));
+      queueMicrotask(() => this.onmessage?.({ data: { id, name } } as MessageEvent));
+      return;
+    }
+    const { settings } = request;
     const [x, y] = settings.placement.position;
     const width = settings.text.length * settings.height;
     const box: Path = {
@@ -45,13 +55,16 @@ function Stores() {
   return null;
 }
 
-function render(ui: React.ReactElement, document: ProjectDocument) {
+function render(ui: React.ReactElement, document: ProjectDocument, fonts = false) {
   return renderWorkspace(
     <>
       <Stores />
       {ui}
     </>,
-    createMemoryHost({ document }),
+    createMemoryHost(
+      { document },
+      { limits: { meshes: null, fonts: fonts ? { maxBytes: 5_000_000 } : null } },
+    ),
   );
 }
 
@@ -184,6 +197,23 @@ describe("TextProperties", () => {
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
     expect(text()?.text).toBe("I");
     expect(field.value).toBe("∅");
+  });
+
+  it("uploads a font, single-stroke if ticked, and sets the text in it", async () => {
+    const { container } = render(<DrawingProperties drawingId={TEXT_ID} />, withText(), true);
+    fireEvent.click(screen.getByLabelText("Single-stroke (for engraving)"));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File([await (await fetch(arvo)).arrayBuffer()], "Arvo-Regular.ttf");
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+    await waitFor(() => expect(text()?.font).toBe(current().fonts[0]?.sha256));
+    expect(current().fonts[0]).toMatchObject({ name: "Arvo", singleStroke: true });
+    const uploaded = screen.getByRole("group", { name: "Uploaded" });
+    expect(uploaded.textContent).toBe("Arvo");
+  });
+
+  it("offers no upload where the host can't store fonts", () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    expect(screen.queryByRole("button", { name: "Upload font…" })).toBeNull();
   });
 
   it("puts blank text back, and refuses text the font has nothing for", async () => {
