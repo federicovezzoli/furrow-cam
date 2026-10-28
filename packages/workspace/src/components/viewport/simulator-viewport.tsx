@@ -21,6 +21,7 @@ import { PlaybackTimeline } from "./playback-timeline";
 import { ReportCapture } from "./report-capture";
 import { Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
+import { FixedSideProvider } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
 import { simulationStatus, TextureLimit, TOOLBAR_GROUP, ViewButtons } from "./viewport";
@@ -79,15 +80,19 @@ export function SimulatorViewport() {
           ) : (
             <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
           )}
-          <PlaybackProvider value={scene}>
-            <SimulatorScene
-              box={box}
-              palette={palette}
-              heightmap={heightmap}
-              updates={playback.updates}
-              showToolpaths={showToolpaths}
-            />
-          </PlaybackProvider>
+          {/* shortcut: the playback cuts the top side only, so it shows that side;
+              play the bottom side back from the flipped top side in a follow-up. */}
+          <FixedSideProvider value="top">
+            <PlaybackProvider value={scene}>
+              <SimulatorScene
+                box={box}
+                palette={palette}
+                heightmap={heightmap}
+                updates={playback.updates}
+                showToolpaths={showToolpaths}
+              />
+            </PlaybackProvider>
+          </FixedSideProvider>
           <TextureLimit onLimit={setMaxTextureSize} />
         </Canvas>
         <div className="absolute top-2 left-2 flex items-center gap-2">

@@ -1,8 +1,9 @@
 "use client";
 
 import { touchOffOutsideStock } from "@furrow/cam-core";
-import { Units, ZOrigin } from "@furrow/document";
+import { FlipAxis, Units, ZOrigin } from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
@@ -26,17 +27,22 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
 import {
   addTouchOff,
+  partingDepthLimits,
   removeTouchOff,
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFlipAxis,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
   setTouchOffToolChange,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
 } from "../stores/stock-actions";
+import { Checkbox } from "./checkbox";
 import { PlaceholderList } from "./placeholder-list";
 
 const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
@@ -96,8 +102,81 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
         ))}
       </section>
 
+      <TwoSidedSection />
+
       <ZeroSection />
     </div>
+  );
+}
+
+/**
+ * Two-sided machining (PRD-0011, ADR-0060): the axis the stock is turned
+ * over about and the depth the sides part at. Turning it off moves the
+ * bottom side's operations to the top side, once the user agrees.
+ */
+function TwoSidedSection() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const bottom = useDocumentStore(
+    (s) => s.document.operations.filter((operation) => operation.stockSide === "bottom").length,
+  );
+  const { confirm } = useDialogs();
+  const t = useTranslations("Stock");
+  const { twoSided } = stock;
+
+  async function toggle(on: boolean) {
+    if (!on && bottom > 0 && !(await confirm(t("twoSidedOff", { count: bottom })))) return;
+    setTwoSided(store, on);
+  }
+
+  return (
+    <section aria-labelledby="two-sided-heading" className="grid gap-2">
+      <Checkbox
+        id="two-sided"
+        label={t("twoSided")}
+        heading
+        hint={t("twoSidedHint")}
+        checked={twoSided !== null}
+        onChange={(on) => void toggle(on)}
+      />
+      {twoSided && (
+        <>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="flip-axis" className="text-ui font-normal">
+              {t("flipAxis")}
+            </Label>
+            <NativeSelect
+              id="flip-axis"
+              size="sm"
+              value={twoSided.flipAxis}
+              onChange={(event) => setFlipAxis(store, FlipAxis.parse(event.target.value))}
+              className="h-control px-2 pr-7 text-ui"
+            >
+              {FlipAxis.options.map((axis) => (
+                <NativeSelectOption key={axis} value={axis}>
+                  {axis.toUpperCase()}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <NumberField
+            id="parting-depth"
+            label={t("partingDepth")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            // Within the stock, however thin.
+            min={partingDepthLimits(stock.thickness)[0]}
+            max={partingDepthLimits(stock.thickness)[1]}
+            value={twoSided.partingDepth}
+            onValueChange={(value) => setPartingDepth(store, value)}
+            {...gestureHandlers(store)}
+          />
+          <p className="text-muted-foreground">{t("partingDepthHint")}</p>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -365,22 +444,13 @@ function TouchOffFields() {
 
   return (
     <>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-        <input
-          type="checkbox"
-          id="touch-off"
-          checked={pad !== null}
-          onChange={(event) => (event.target.checked ? addTouchOff(store) : removeTouchOff(store))}
-          aria-describedby="touch-off-hint"
-          className="size-3.5 accent-primary"
-        />
-        <Label htmlFor="touch-off" className="text-ui font-normal">
-          {t("touchOff")}
-        </Label>
-        <p id="touch-off-hint" className="col-start-2 text-muted-foreground">
-          {t("touchOffHint")}
-        </p>
-      </div>
+      <Checkbox
+        id="touch-off"
+        label={t("touchOff")}
+        hint={t("touchOffHint")}
+        checked={pad !== null}
+        onChange={(on) => (on ? addTouchOff(store) : removeTouchOff(store))}
+      />
       {pad && (
         <>
           {(["x", "y"] as const).map((axis) => (

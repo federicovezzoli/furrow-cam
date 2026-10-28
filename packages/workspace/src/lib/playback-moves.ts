@@ -64,7 +64,8 @@ export function playbackMoves(
     firstMove += moves;
   }
   for (const operation of operations) {
-    // shortcut: the bottom side plays back with its own simulation (#358).
+    // shortcut: the playback cuts the top side only (the simulator shows it);
+    // play the bottom side back from the flipped top side in a follow-up.
     if (!operation.enabled || operation.stockSide === "bottom") continue;
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;

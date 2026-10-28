@@ -938,7 +938,15 @@
     "cancelled": "Trajectoire annulée",
     "cancelledDetail": "Annulé avant la fin.",
     "failed": "Échec de la trajectoire : {error}",
-    "warnings": "Avertissements de la trajectoire : {warnings}"
+    "warnings": "Avertissements de la trajectoire : {warnings}",
+    "sides": {
+      "top": "Dessus",
+      "bottom": "Dessous"
+    },
+    "sideHints": {
+      "top": "Usinée sur la face supérieure, en premier",
+      "bottom": "Usinée sur la face inférieure, une fois le brut retourné"
+    }
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",
@@ -1180,6 +1188,12 @@
     "pickHint": "Cliquez sur un point dans la vue ; il s’accroche aux points du brut, aux sommets, aux centres et aux encombrements proches. Échap ou clic droit annule.",
     "touchOff": "Pastille de mise à zéro",
     "touchOffHint": "Un endroit du dessus du brut qu’aucune opération ne coupe, pour y remettre Z à zéro après un changement d’outil.",
+    "twoSided": "Double face",
+    "twoSidedHint": "Usiner le brut par le dessus, le retourner, puis l'usiner par le dessous.",
+    "flipAxis": "Retourné autour de",
+    "partingDepth": "Profondeur de joint",
+    "partingDepthHint": "Sous le dessus du brut, là où les deux faces se rejoignent : chaque face coupe jusque-là.",
+    "twoSidedOff": "{count, plural, one {# opération est} other {# opérations sont}} sur la face inférieure. Désactiver le double face {count, plural, one {la place} other {les place}} sur la face supérieure.",
     "padAxis": "Pastille {axis}",
     "padDiameter": "Diamètre de la pastille",
     "padTooWide": "Doit tenir sur le brut : au plus {size}",
@@ -1321,7 +1335,18 @@
     "nextTitle": "Avancer à l’opération suivante",
     "position": "Position le long des trajectoires",
     "jumpTo": "Aller à {name}",
-    "speed": "Vitesse de lecture"
+    "speed": "Vitesse de lecture",
+    "side": "Face",
+    "sides": {
+      "top": "Dessus",
+      "bottom": "Dessous"
+    },
+    "sideHints": {
+      "top": "Afficher la face supérieure, usinée en premier",
+      "bottom": "Afficher la face inférieure, vue de dessous une fois le brut retourné"
+    },
+    "bottomSideHint": "Face inférieure, vue de dessous. Choisissez le zéro, sélectionnez les tracés et modifiez les attaches sur la face supérieure.",
+    "topSideSimulationHint": "Face supérieure seule : le brut avant retournement, sans les coupes de la face inférieure."
   },
   "Dialog": {
     "close": "Fermer",

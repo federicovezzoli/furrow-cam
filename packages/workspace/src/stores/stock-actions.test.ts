@@ -1,6 +1,6 @@
 import { touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
@@ -10,9 +10,12 @@ import {
   removeTouchOff,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFlipAxis,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
   setTouchOffToolChange,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
@@ -421,5 +424,50 @@ describe("touch-off pad", () => {
     const store = newStore();
     expect(setTouchOffField(store, "x", 100)).toBe(false);
     expect(stock(store).touchOff).toBeNull();
+  });
+});
+
+describe("two-sided projects (ADR-0060)", () => {
+  it("part at half the stock's thickness without a model, flipped about X", () => {
+    const store = newStore();
+    setTwoSided(store, true);
+    expect(stock(store).twoSided).toEqual({ flipAxis: "x", partingDepth: 9 });
+    setFlipAxis(store, "y");
+    setPartingDepth(store, 6);
+    expect(stock(store).twoSided).toEqual({ flipAxis: "y", partingDepth: 6 });
+    // Outside the stock: refused.
+    for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
+    expect(stock(store).twoSided?.partingDepth).toBe(6);
+  });
+
+  it("part at half the deepest model's depth, within the stock", () => {
+    const document = createProjectDocument();
+    const deep = { ...model, placement: { ...model.placement, depth: 12 } };
+    const store = createDocumentStore({ ...document, models: [model, deep] });
+    setTwoSided(store, true);
+    expect(stock(store).twoSided?.partingDepth).toBe(6);
+
+    const deeper = { ...model, placement: { ...model.placement, depth: 40 } };
+    const thin = createDocumentStore({ ...document, models: [deeper] });
+    setTwoSided(thin, true);
+    expect(thin.getState().document.stock.twoSided?.partingDepth).toBe(9);
+    // A shallow model's half depth is below the field's least: clamped to it.
+    const shallow = { ...model, placement: { ...model.placement, depth: 0.1 } };
+    const flat = createDocumentStore({ ...document, models: [shallow] });
+    setTwoSided(flat, true);
+    expect(flat.getState().document.stock.twoSided?.partingDepth).toBe(0.1);
+  });
+
+  it("move the bottom side's operations to the top when turned off, in one undo step", () => {
+    const document = fullDocument();
+    const operations = document.operations.map((op) => ({ ...op, stockSide: "bottom" as const }));
+    const store = createDocumentStore({ ...document, operations });
+    setTwoSided(store, false);
+    const after = store.getState().document;
+    expect(after.stock.twoSided).toBeNull();
+    expect(after.operations.every((op) => op.stockSide === "top")).toBe(true);
+    expect(ProjectDocument.safeParse(after).success).toBe(true);
+    store.getState().undo();
+    expect(store.getState().document).toEqual({ ...document, operations });
   });
 });

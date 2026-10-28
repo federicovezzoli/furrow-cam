@@ -938,7 +938,15 @@
     "cancelled": "Werkzeugbahn abgebrochen",
     "cancelledDetail": "Vor dem Ende abgebrochen.",
     "failed": "Werkzeugbahn fehlgeschlagen: {error}",
-    "warnings": "Warnungen zur Werkzeugbahn: {warnings}"
+    "warnings": "Warnungen zur Werkzeugbahn: {warnings}",
+    "sides": {
+      "top": "Oben",
+      "bottom": "Unten"
+    },
+    "sideHints": {
+      "top": "Auf der Oberseite geschnitten, zuerst",
+      "bottom": "Auf der Unterseite geschnitten, wenn das Rohteil umgedreht ist"
+    }
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
@@ -1180,6 +1188,12 @@
     "pickHint": "Klicke auf einen Punkt in der Ansicht; er rastet an Rohteilpunkten, Eckpunkten, Mittelpunkten und Begrenzungsrahmen in der Nähe ein. Esc oder Rechtsklick bricht ab.",
     "touchOff": "Antastplatz",
     "touchOffHint": "Eine Stelle der Rohteiloberseite, die keine Operation schneidet, um dort Z nach einem Werkzeugwechsel neu zu nullen.",
+    "twoSided": "Zweiseitig",
+    "twoSidedHint": "Das Rohteil von oben bearbeiten, umdrehen und von unten bearbeiten.",
+    "flipAxis": "Umgedreht um",
+    "partingDepth": "Trenntiefe",
+    "partingDepthHint": "Unter der Rohteiloberseite, wo sich beide Seiten treffen: Jede Seite schneidet bis dorthin.",
+    "twoSidedOff": "{count, plural, one {# Operation liegt} other {# Operationen liegen}} auf der Unterseite. Wird zweiseitig ausgeschaltet, {count, plural, one {wandert sie} other {wandern sie}} auf die Oberseite.",
     "padAxis": "Platz {axis}",
     "padDiameter": "Platzdurchmesser",
     "padTooWide": "Muss auf das Rohteil passen: höchstens {size}",
@@ -1321,7 +1335,18 @@
     "nextTitle": "Zur nächsten Operation springen",
     "position": "Position entlang der Werkzeugbahnen",
     "jumpTo": "Zu {name} springen",
-    "speed": "Wiedergabegeschwindigkeit"
+    "speed": "Wiedergabegeschwindigkeit",
+    "side": "Seite",
+    "sides": {
+      "top": "Oben",
+      "bottom": "Unten"
+    },
+    "sideHints": {
+      "top": "Die Oberseite zeigen, die zuerst bearbeitet wird",
+      "bottom": "Die Unterseite zeigen, von unten gesehen, wenn das Rohteil umgedreht ist"
+    },
+    "bottomSideHint": "Unterseite, von unten gesehen. Nullpunkt wählen, Pfade auswählen und Stege bearbeiten geht auf der Oberseite.",
+    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite."
   },
   "Dialog": {
     "close": "Schließen",

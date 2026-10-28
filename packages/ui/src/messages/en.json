@@ -938,7 +938,15 @@
     "cancelled": "Toolpath cancelled",
     "cancelledDetail": "Cancelled before it finished.",
     "failed": "Toolpath failed: {error}",
-    "warnings": "Toolpath warnings: {warnings}"
+    "warnings": "Toolpath warnings: {warnings}",
+    "sides": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "sideHints": {
+      "top": "Cut on the top side, first",
+      "bottom": "Cut on the bottom side, once the stock is turned over"
+    }
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
@@ -1180,6 +1188,12 @@
     "pickHint": "Click a point in the viewport; it snaps to stock anchors, vertices, centres and bounding boxes nearby. Esc or right-click cancels.",
     "touchOff": "Touch-off pad",
     "touchOffHint": "A spot of the stock top no operation cuts, so Z can be zeroed on it after a tool change.",
+    "twoSided": "Two-sided",
+    "twoSidedHint": "Cut the stock from the top, turn it over, and cut it from below.",
+    "flipAxis": "Turned over about",
+    "partingDepth": "Parting depth",
+    "partingDepthHint": "Below the stock top, where the two sides meet: each side cuts down to it.",
+    "twoSidedOff": "{count, plural, one {# operation is} other {# operations are}} on the bottom side. Turning two-sided off moves {count, plural, one {it} other {them}} to the top side.",
     "padAxis": "Pad {axis}",
     "padDiameter": "Pad diameter",
     "padTooWide": "Must fit on the stock: at most {size}",
@@ -1321,7 +1335,18 @@
     "nextTitle": "Forward to the next operation",
     "position": "Position along the toolpaths",
     "jumpTo": "Jump to {name}",
-    "speed": "Playback speed"
+    "speed": "Playback speed",
+    "side": "Side",
+    "sides": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "sideHints": {
+      "top": "Show the top side, cut first",
+      "bottom": "Show the bottom side, seen from below once the stock is turned over"
+    },
+    "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side.",
+    "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts."
   },
   "Dialog": {
     "close": "Close",
