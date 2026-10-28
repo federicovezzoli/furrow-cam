@@ -13,7 +13,7 @@ import {
   projectFileName,
   toolProblem,
 } from "@furrow/document";
-import { grbl } from "./grbl";
+import { grbl } from "./grbl/grbl";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
