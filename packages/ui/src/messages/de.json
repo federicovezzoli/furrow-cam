@@ -922,7 +922,7 @@
     "selectModel": "Wähle zuerst ein Modell in der Ansicht aus",
     "selectPaths": "Wähle zuerst Pfade in der Ansicht aus",
     "addLabel": "Hinzufügen: {operation}",
-    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Strg/Cmd/Umschalt+Klick wählt weitere aus.",
+    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Umschalt+Klick, um weitere hinzuzufügen.",
     "addToolLibrary": "Füge deiner <link>Werkzeugbibliothek</link> ein Werkzeug hinzu, um Operationen zu erstellen.",
     "inCuttingOrder": "Operationen in Schnittreihenfolge",
     "selectInsideTitle": "Auch geschlossene Pfade innerhalb der ausgewählten auswählen, wie die Inseln einer Tasche",

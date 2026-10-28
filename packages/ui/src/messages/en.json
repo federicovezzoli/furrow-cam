@@ -922,7 +922,7 @@
     "selectModel": "Select a model in the viewport first",
     "selectPaths": "Select paths in the viewport first",
     "addLabel": "Add {operation}",
-    "selectHint": "Click paths in the top view to select what to cut; Ctrl/Cmd/Shift+click to select more.",
+    "selectHint": "Click paths in the top view to select what to cut; Shift+click to add more.",
     "addToolLibrary": "Add a tool to your <link>tool library</link> to create operations.",
     "inCuttingOrder": "Operations in cutting order",
     "selectInsideTitle": "Also select the closed paths inside the selected ones, such as a pocket's islands",

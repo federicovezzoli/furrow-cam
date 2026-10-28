@@ -922,7 +922,7 @@
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
     "addLabel": "Aggiungi {operation}",
-    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Ctrl/Cmd/Maiusc+clic per selezionarne altri.",
+    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Maiusc+clic per aggiungerne altri.",
     "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
     "inCuttingOrder": "Operazioni in ordine di taglio",
     "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
