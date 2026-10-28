@@ -81,7 +81,11 @@ function cachedPathLinePositions(path: Path): Float32Array {
 
 /** Several paths' line positions in one buffer, to draw them in a single call (ADR-0008). */
 export function pathsLinePositions(paths: Iterable<Path>): Float32Array {
-  const parts = Array.from(paths, cachedPathLinePositions);
+  return concatPositions(Array.from(paths, cachedPathLinePositions));
+}
+
+/** `parts` one after another in one buffer. */
+export function concatPositions(parts: readonly Float32Array[]): Float32Array {
   const merged = new Float32Array(parts.reduce((length, part) => length + part.length, 0));
   let offset = 0;
   for (const part of parts) {

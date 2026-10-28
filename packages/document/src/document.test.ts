@@ -12,6 +12,7 @@ import {
   uploadedFont,
 } from "./fixtures";
 import type { TextSettings } from "./geometry";
+import { DrillOperation, type Operation } from "./operation";
 
 describe("ProjectDocument", () => {
   it("accepts a document with machine, geometry and operations", () => {
@@ -318,20 +319,58 @@ describe("two-sided projects", () => {
   it("cut each side down to a parting plane inside the stock", () => {
     const stock = fullDocument().stock;
     expect(
-      Stock.safeParse({ ...stock, twoSided: { flipAxis: "y", partingDepth: 17.9 } }).success,
+      Stock.safeParse({ ...stock, twoSided: { flipAxis: "y", partingDepth: 17.9, pins: null } })
+        .success,
     ).toBe(true);
     for (const twoSided of [
-      { flipAxis: "x", partingDepth: 18 },
-      { flipAxis: "x", partingDepth: 0 },
-      { flipAxis: "z", partingDepth: 9 },
-      { flipAxis: "x" },
+      { flipAxis: "x", partingDepth: 18, pins: null },
+      { flipAxis: "x", partingDepth: 0, pins: null },
+      { flipAxis: "z", partingDepth: 9, pins: null },
+      { flipAxis: "x", pins: null },
     ]) {
       expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
     }
-    const below = { flipAxis: "x", partingDepth: 20 };
+    const below = { flipAxis: "x", partingDepth: 20, pins: null };
     expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
       expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
     ]);
+  });
+
+  it("locate the turned-over stock on two pins or more, through or blind", () => {
+    const { stock } = fullDocument();
+    const pins = stock.twoSided?.pins;
+    const withPins = (changes: object) => ({
+      ...stock,
+      twoSided: { flipAxis: "x", partingDepth: 9, pins: { ...pins, ...changes } },
+    });
+    expect(Stock.safeParse(withPins({ holes: { type: "blind", depth: 8 } })).success).toBe(true);
+    for (const changes of [
+      { positions: [0] },
+      { diameter: 0 },
+      { holes: { type: "blind", spoilboardDepth: 5 } },
+      { holes: { type: "blind", depth: 18 } },
+    ]) {
+      expect(Stock.safeParse(withPins(changes)).success).toBe(false);
+    }
+  });
+
+  it("drill the pins from the top side only, with no shapes", () => {
+    const doc = fullDocument();
+    const pinDrill = {
+      ...(doc.operations[0] as Operation),
+      type: "drill" as const,
+      targets: [],
+      params: { depth: 5, peck: false, stepOver: 40, pins: true },
+    };
+    expect(DrillOperation.safeParse(pinDrill).success).toBe(true);
+    for (const changes of [
+      { stockSide: "bottom" as const },
+      { targets: (doc.operations[0] as Operation).targets },
+    ]) {
+      expect(DrillOperation.safeParse({ ...pinDrill, ...changes }).error?.issues).toEqual([
+        expect.objectContaining({ path: ["params", "pins"], message: "operation.pinsTopOnly" }),
+      ]);
+    }
   });
 
   it("put operations on the bottom side, which one-sided projects don't have", () => {

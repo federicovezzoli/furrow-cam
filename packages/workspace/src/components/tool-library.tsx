@@ -1,5 +1,6 @@
 "use client";
 
+import { DRILL_DIAMETER_TOLERANCE } from "@furrow/cam-core";
 import {
   canClearFlatBottom,
   canCutSideways,
@@ -127,6 +128,25 @@ function toolChoiceFor(tools: ToolChoice[], test: (tool: Tool) => boolean): Tool
 /** The tool new profiles and pockets start with: the default one if it can cut sideways, else the first that can. */
 export function cuttingToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
   return toolChoiceFor(tools, canCutSideways);
+}
+
+/**
+ * The tool a drill of `diameter` pins (#356) starts with: a drill bit of
+ * their size, else an end mill small enough to bore them; none if the
+ * library has neither, as any other bit would skip every hole.
+ */
+export function pinDrillToolChoice(tools: ToolChoice[], diameter: number): ToolChoice | undefined {
+  return (
+    toolChoiceFor(
+      tools,
+      (tool) =>
+        tool.type === "drill" && Math.abs(tool.diameter - diameter) <= DRILL_DIAMETER_TOLERANCE,
+    ) ??
+    toolChoiceFor(
+      tools,
+      (tool) => tool.type !== "drill" && canDrill(tool) && tool.diameter < diameter,
+    )
+  );
 }
 
 /** The tool new drill operations start with: the default one if it can drill, else the first that can. */

@@ -5,6 +5,7 @@ import {
   type Box3,
   type Heightmap,
   pathKey,
+  pinCenters,
   stockBounds,
   stockOffset,
 } from "@furrow/cam-core";
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
+  concatPositions,
   gridLinePositions,
   pathsLinePositions,
   shapesLinePositions,
@@ -62,6 +64,7 @@ export function Scene({
     <>
       <WorkOrigin palette={palette} />
       <TouchOffPad color={palette.touchOff} />
+      <LocatingPins color={palette.pin} />
       {/* The simulation is of the side in view; the stock looks the same from either. */}
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
@@ -144,6 +147,25 @@ function TouchOffPad({ color }: { color: string }) {
       </Html>
     </>
   );
+}
+
+/**
+ * The locating pins (#356): a ring at their diameter and a cross at each
+ * centre, on the face in view. They are on the line the stock turns about,
+ * so in the same place from either side.
+ */
+function LocatingPins({ color }: { color: string }) {
+  const stock = useDocumentStore((s) => s.document.stock);
+  const positions = useMemo(() => {
+    const diameter = stock.twoSided?.pins?.diameter ?? 0;
+    return concatPositions(
+      pinCenters(stock).flatMap(([x, y]) => {
+        const { ring, cross } = touchOffLinePositions({ x, y, diameter });
+        return [ring, cross];
+      }),
+    );
+  }, [stock]);
+  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
 }
 
 export function Stock({ box, palette }: { box: Box3; palette: Palette }) {

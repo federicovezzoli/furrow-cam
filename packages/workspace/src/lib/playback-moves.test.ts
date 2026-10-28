@@ -25,7 +25,7 @@ const profile: Operation = {
   stockSide: "top",
   targets: [],
   tool: endMill,
-  params: { depth: 1, peck: false, stepOver: 40 },
+  params: { depth: 1, peck: false, stepOver: 40, pins: false },
 };
 const vcarve: Operation = {
   id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",

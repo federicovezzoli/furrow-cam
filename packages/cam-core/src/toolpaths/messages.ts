@@ -25,6 +25,8 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.peelIsland",
   "toolpath.touchOffPad",
   "toolpath.modelMissing",
+  "toolpath.noLocatingPins",
+  "toolpath.pinsOffStock",
   "toolpath.noArea",
   "toolpath.belowStock",
   "toolpath.coarsened",

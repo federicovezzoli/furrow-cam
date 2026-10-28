@@ -25,7 +25,7 @@ const tool: Tool = {
   color: "#2563eb",
 };
 
-const params: DrillParams = { depth: 10, peck: false, stepOver: 40 };
+const params: DrillParams = { depth: 10, peck: false, stepOver: 40, pins: false };
 
 function circle(center: Point, radius: number): Path {
   const start: Point = [center[0] + radius, center[1]];

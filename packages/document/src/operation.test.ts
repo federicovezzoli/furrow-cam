@@ -140,7 +140,11 @@ describe("PocketParams", () => {
 describe("DrillOperation", () => {
   const profile = fullDocument().operations[0];
   if (!profile) throw new Error("The fixture has an operation");
-  const drill = { ...profile, type: "drill", params: { depth: 10, peck: true, stepOver: 40 } };
+  const drill = {
+    ...profile,
+    type: "drill",
+    params: { depth: 10, peck: true, stepOver: 40, pins: false },
+  };
 
   it("accepts drills and end mills", () => {
     expect(DrillOperation.safeParse(drill).success).toBe(true);

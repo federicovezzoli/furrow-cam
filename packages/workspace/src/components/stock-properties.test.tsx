@@ -30,7 +30,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     const document = render(createProjectDocument());
     expect(screen.queryByLabelText("Turned over about")).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
-    expect(document().stock.twoSided).toEqual({ flipAxis: "x", partingDepth: 9 });
+    expect(document().stock.twoSided).toEqual({ flipAxis: "x", partingDepth: 9, pins: null });
     fireEvent.change(screen.getByLabelText("Turned over about"), { target: { value: "y" } });
     expect(document().stock.twoSided?.flipAxis).toBe("y");
     expect(screen.getByLabelText(/Parting depth/)).toBeTruthy();
@@ -48,5 +48,21 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
     await waitFor(() => expect(document().stock.twoSided).toBeNull());
     expect(document().operations.map((op) => op.stockSide)).toEqual(["top"]);
+  });
+
+  it("sets locating pins: their positions on the flip axis and how deep their holes go", () => {
+    const document = render(createProjectDocument());
+    fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Locating pins/ }));
+    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
+    fireEvent.click(screen.getByRole("button", { name: "Add pin" }));
+    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240, 268.5]);
+    expect(screen.getByLabelText(/^Pin 3/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove pin" }));
+    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
+    expect(screen.getByRole("button", { name: "Remove pin" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Holes"), { target: { value: "blind" } });
+    expect(document().stock.twoSided?.pins?.holes).toEqual({ type: "blind", depth: 9 });
+    expect(screen.getByLabelText(/Hole depth/)).toBeTruthy();
   });
 });

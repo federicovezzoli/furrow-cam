@@ -12,7 +12,7 @@ const holes = {
   stockSide: "top",
   targets: [],
   tool: drill,
-  params: { depth: 6, peck: true, stepOver: 40 },
+  params: { depth: 6, peck: true, stepOver: 40, pins: false },
 } satisfies Operation;
 
 const project: CheckedProject = {

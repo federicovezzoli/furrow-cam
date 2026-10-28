@@ -511,7 +511,8 @@
       "unknownFont": "Le texte utilise une police que le projet ne contient pas",
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
-      "unknownPath": "Tracé inconnu"
+      "unknownPath": "Tracé inconnu",
+      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut"
     },
     "operation": {
       "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
@@ -523,7 +524,8 @@
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",
       "modelNotShapes": "Usine un modèle, pas des formes",
       "peelStart": "L'usinage en spirale part du centre ou de la paroi extérieure",
-      "drillsCantCutSideways": "Les forets ne coupent pas latéralement : choisissez une fraise droite ou une fraise en V."
+      "drillsCantCutSideways": "Les forets ne coupent pas latéralement : choisissez une fraise droite ou une fraise en V.",
+      "pinsTopOnly": "Seul un perçage de la face du dessus, sans formes, peut percer les pions de centrage"
     },
     "archive": {
       "notAProject": "Ce fichier n'est pas un projet Furrow CAM.",
@@ -645,7 +647,9 @@
       "restCoarsened": "La zone est trop grande pour simuler la matière restante à pleine résolution : elle est simulée avec des cellules de {size, number} mm, donc la matière plus étroite que {width, number} mm laissée par les opérations précédentes peut être coupée à pleine profondeur.",
       "roughNothing": "La surépaisseur à laisser couvre tout le modèle : il n'y a rien à ébaucher.",
       "roughMarginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à ébaucher.",
-      "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante."
+      "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
+      "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
+      "pinsOffStock": "Un pion de centrage est hors du brut."
     },
     "export": {
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
@@ -881,7 +885,10 @@
     "computeAgain": "Recalculer",
     "cancelled": "Annulé avant la fin.",
     "failed": "La trajectoire n’a pas pu être calculée : {error}",
-    "warnings": "Avertissements de la trajectoire"
+    "warnings": "Avertissements de la trajectoire",
+    "usePins": "Utiliser les pions",
+    "locatingPins": "Les pions de centrage",
+    "pinDepth": "Aussi profond que le disent les réglages des pions : {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# forme sélectionnée} other {# formes sélectionnées}}",
@@ -1201,7 +1208,25 @@
     "padOff": "Une partie de la pastille dépasse du brut : il n’y a peut-être rien pour y remettre Z à zéro.",
     "padToolChange": "Changement d’outil sur la pastille",
     "padToolChangeHint": "S’exécute à chaque changement d’outil.",
-    "reset": "Réinitialiser"
+    "reset": "Réinitialiser",
+    "pins": "Pions de centrage",
+    "pinsHint": "Des pions sur l'axe de retournement alignent le brut retourné sur la face du dessus.",
+    "pinDiameter": "Diamètre des pions",
+    "pinPosition": "Pion {n}",
+    "pinPositionHint": "La distance de chaque pion au centre du brut, le long de l'axe de retournement.",
+    "addPin": "Ajouter un pion",
+    "removePin": "Retirer un pion",
+    "pinHoles": "Trous",
+    "pinHoleTypes": {
+      "through": "Traversants, jusque dans le martyr",
+      "blind": "Dans le brut seulement"
+    },
+    "spoilboardDepth": "Dans le martyr",
+    "pinHoleDepth": "Profondeur des trous",
+    "pinOff": "Un pion est hors du brut.",
+    "addPinDrill": "Percer les pions",
+    "pinDrill": "Pions de centrage",
+    "noPinBit": "Ajoutez un foret de la taille des pions, ou une fraise plus petite, pour les percer."
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",

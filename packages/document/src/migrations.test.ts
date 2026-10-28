@@ -17,6 +17,7 @@ import {
   parseProjectDocument,
   readProjectJson,
 } from "./migrations";
+import type { Operation } from "./operation";
 
 describe("migrateProjectDocument", () => {
   // A made-up history: v1 had `size`, v2 renamed it to `stock`, v3 added `units`.
@@ -198,6 +199,26 @@ describe("migrations", () => {
     expect(parseProjectDocument(v21)).toEqual(fullDocument());
   });
 
+  it("gives v22 documents no locating pins, their drills cutting shapes", () => {
+    const current = fullDocument();
+    const drill = {
+      ...(current.operations[0] as Operation),
+      id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      type: "drill" as const,
+      params: { depth: 10, peck: true, stepOver: 40, pins: false },
+    };
+    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, pins: null };
+    current.operations.push(drill);
+    const { pins: _, ...v22Params } = drill.params;
+    const v22 = {
+      ...current,
+      schemaVersion: 22,
+      stock: { ...current.stock, twoSided: { flipAxis: "x", partingDepth: 9 } },
+      operations: [current.operations[0], { ...drill, params: v22Params }],
+    };
+    expect(parseProjectDocument(v22)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());
@@ -368,7 +389,7 @@ describe("migrations", () => {
       ...profile,
       id: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
       type: "drill",
-      params: { depth: 5, peck: false, stepOver: 35 },
+      params: { depth: 5, peck: false, stepOver: 35, pins: false },
     } as const;
     const vcarve = {
       ...profile,
@@ -393,6 +414,7 @@ describe("migrations", () => {
     for (const operation of [v17Pocket, v17Drill]) {
       operation.tool.stepOver = 35;
       delete operation.params.stepOver;
+      delete operation.params.pins;
     }
     v17VCarve.tool.stepOver = 40;
     v17VCarve.params.flatBottom.tool.stepOver = 50;

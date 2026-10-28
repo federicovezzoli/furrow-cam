@@ -8,14 +8,15 @@ import {
   xyOriginPosition,
   xyOriginShift,
 } from "@furrow/cam-core";
-import type {
-  FlipAxis,
-  Point,
-  ProjectDocument,
-  StockAnchor,
-  TouchOffDisc,
-  Units,
-  ZOrigin,
+import {
+  type FlipAxis,
+  LocatingPins,
+  type Point,
+  type ProjectDocument,
+  type StockAnchor,
+  type TouchOffDisc,
+  type Units,
+  type ZOrigin,
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
@@ -103,6 +104,11 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     const twoSided = draft.stock.twoSided;
     if (twoSided && twoSided.partingDepth >= draft.stock.thickness) {
       twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
+    }
+    // So must blind pin holes, kept the same way.
+    const holes = twoSided?.pins?.holes;
+    if (holes?.type === "blind" && holes.depth >= draft.stock.thickness) {
+      holes.depth = (holes.depth * draft.stock.thickness) / stock.thickness;
     }
   });
 }
@@ -243,14 +249,23 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
       for (const operation of draft.operations) operation.stockSide = "top";
       return;
     }
-    draft.stock.twoSided = { flipAxis: "x", partingDepth };
+    draft.stock.twoSided = { flipAxis: "x", partingDepth, pins: null };
   });
 }
 
-/** Sets the axis a two-sided project's stock is turned over about. */
+/**
+ * Sets the axis a two-sided project's stock is turned over about. The
+ * locating pins keep their place along it, as a share of its length.
+ */
 export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
   store.getState().change("setStock.flipAxis", (draft) => {
-    if (draft.stock.twoSided) draft.stock.twoSided.flipAxis = flipAxis;
+    const { twoSided, width, height } = draft.stock;
+    if (!twoSided || twoSided.flipAxis === flipAxis) return;
+    twoSided.flipAxis = flipAxis;
+    const scale = flipAxis === "x" ? width / height : height / width;
+    if (twoSided.pins) {
+      twoSided.pins.positions = twoSided.pins.positions.map((position) => position * scale);
+    }
   });
 }
 
@@ -270,4 +285,57 @@ export function setPartingDepth(store: DocumentStore, partingDepth: number) {
   store.getState().change("setStock.partingDepth", (draft) => {
     if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
   });
+}
+
+/**
+ * Adds locating pins to a two-sided project (#356), as one undo step: two
+ * 6 mm pins symmetric about the stock's centre, two fifths of its length
+ * along the flip axis from it, through into the spoilboard. Or removes them;
+ * drills of the pins then cut nothing until there are pins again.
+ */
+export function setLocatingPins(store: DocumentStore, on: boolean) {
+  const { twoSided, width, height } = store.getState().document.stock;
+  if (!twoSided || on === (twoSided.pins !== null)) return;
+  const offset = Math.round(0.4 * (twoSided.flipAxis === "x" ? width : height));
+  store.getState().change("setStock.pins", (draft) => {
+    if (!draft.stock.twoSided) return;
+    draft.stock.twoSided.pins = on
+      ? {
+          diameter: 6,
+          positions: [-offset, offset],
+          holes: { type: "through", spoilboardDepth: 5 },
+        }
+      : null;
+  });
+}
+
+/**
+ * Adds a locating pin, as one undo step: opposite the last one if that
+ * place is free, else halfway from it to the stock's edge beyond it.
+ */
+export function addLocatingPin(store: DocumentStore) {
+  const { twoSided, width, height } = store.getState().document.stock;
+  const pins = twoSided?.pins;
+  if (!pins) return;
+  const last = pins.positions.at(-1) ?? 0;
+  const edge = ((twoSided.flipAxis === "x" ? width : height) - pins.diameter) / 2;
+  const position = pins.positions.includes(-last) ? (last + (last < 0 ? -edge : edge)) / 2 : -last;
+  updateLocatingPins(store, { positions: [...pins.positions, position] });
+}
+
+/**
+ * Changes some of the locating pins' settings at once; refused unless the
+ * result is valid `LocatingPins` with blind holes inside the stock. Returns whether they were taken.
+ */
+export function updateLocatingPins(store: DocumentStore, changes: Partial<LocatingPins>): boolean {
+  const { twoSided, thickness } = store.getState().document.stock;
+  const pins = twoSided?.pins;
+  const parsed = LocatingPins.safeParse({ ...pins, ...changes });
+  if (!pins || !parsed.success) return false;
+  // Blind holes stay inside the stock, as the document requires.
+  if (parsed.data.holes.type === "blind" && parsed.data.holes.depth >= thickness) return false;
+  store.getState().change("setStock.pins", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.pins = parsed.data;
+  });
+  return true;
 }

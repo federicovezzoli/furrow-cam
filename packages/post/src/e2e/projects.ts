@@ -175,7 +175,7 @@ function plate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40 },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false },
       },
       {
         id: id(),
@@ -348,7 +348,7 @@ function svgSign(): ProjectDocument {
         targets: targets(doc, byName("Hole A")),
         // An end mill smaller than the hole bores it in a helix.
         tool: endMill,
-        params: { depth: 10, peck: false, stepOver: 40 },
+        params: { depth: 10, peck: false, stepOver: 40, pins: false },
       },
     ],
   };
@@ -669,7 +669,7 @@ function strutPlate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: plates.id, paths: holes }],
         tool: spiral3,
-        params: { depth: 5, peck: false, stepOver: 75 },
+        params: { depth: 5, peck: false, stepOver: 75, pins: false },
       },
       outsideProfile(id, "Plate", [{ shapeId: plates.id, paths: [0] }], spiral6, 5, null),
     ],

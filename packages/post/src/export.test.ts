@@ -102,7 +102,7 @@ function referenceProject(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40 },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false },
       },
       {
         id: id(3),
@@ -155,7 +155,7 @@ describe("exportGcode", () => {
       const stock = {
         ...doc.stock,
         thickness: 18,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9 },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null },
       };
       return { ...doc, stock, models: [placed], operations };
     }
@@ -195,6 +195,34 @@ describe("exportGcode", () => {
       expect(bottom).toContain("(Zero as for the top side, Z on the face now on top)");
       expect(bottom).toContain("(Operation: Bottom rough)");
       expect(bottom).not.toContain("Top rough");
+    });
+
+    it("turns the stock over onto its locating pins once the top side drills them", () => {
+      const pinDrill: Operation = {
+        ...(plate as Operation),
+        id: crypto.randomUUID(),
+        type: "drill",
+        tool: drill,
+        targets: [],
+        params: { depth: 1, peck: false, stepOver: 40, pins: true },
+      };
+      const holes = { type: "through" as const, spoilboardDepth: 5 };
+      const pins = { diameter: 6, positions: [-120, 120], holes };
+      const withPins = (operations: Operation[]) => {
+        const doc = twoSided(operations);
+        const stock = { ...doc.stock, twoSided: { flipAxis: "y" as const, partingDepth: 9, pins } };
+        return exportGcode({ ...doc, stock }, "Owl", context).files.at(-1)?.gcode;
+      };
+      expect(withPins([pinDrill, rough("bottom", "Bottom rough")])).toContain(
+        "(Before this file, turn the stock over by half a turn about its centre line along Y, onto its 2 locating pins of 6 mm, so the face that was underneath is on top)",
+      );
+      // Pins set but never drilled: nothing to turn it over onto.
+      for (const operations of [
+        [rough("bottom", "Bottom rough")],
+        [{ ...pinDrill, enabled: false }, rough("bottom", "Bottom rough")],
+      ]) {
+        expect(withPins(operations)).toContain("along Y, in place, so the face");
+      }
     });
 
     it("names an untitled project's files after its sides", () => {

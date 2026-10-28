@@ -17,7 +17,10 @@ describe("workspace store", () => {
 
     store.getState().setSide("bottom");
     const document = createProjectDocument();
-    const twoSided = { ...document.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } };
+    const twoSided = {
+      ...document.stock,
+      twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null },
+    };
     store.getState().prune({ ...document, stock: twoSided });
     expect(store.getState().side).toBe("bottom");
     store.getState().prune(document);

@@ -6,7 +6,7 @@ import { Model, Sha256 } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 22;
+export const CURRENT_SCHEMA_VERSION = 23;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -72,6 +72,35 @@ export const FlipAxis = z.enum(["x", "y"]);
 export type FlipAxis = z.infer<typeof FlipAxis>;
 
 /**
+ * How deep locating pin holes go (PRD-0011 B4): through the stock and
+ * `spoilboardDepth` into the spoilboard, for pins fixed in it, or `depth`
+ * below the stock top only.
+ */
+export const PinHoles = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("through"), spoilboardDepth: PositiveLength }),
+  z.strictObject({ type: z.literal("blind"), depth: PositiveLength }),
+]);
+export type PinHoles = z.infer<typeof PinHoles>;
+
+/**
+ * Locating pins (PRD-0011 B4, #356) on the flip axis, which line the
+ * turned-over stock up with the top side: being on the line the stock turns
+ * about, their holes land on themselves, so the bottom side keeps the top
+ * side's zero (ADR-0060). A drill operation with `params.pins` cuts them.
+ */
+export const LocatingPins = z.strictObject({
+  diameter: PositiveLength,
+  /**
+   * Each pin's distance along the flip axis from the stock's centre, so a
+   * symmetric pair stays symmetric when the stock is resized. Two at least,
+   * to stop the stock turning.
+   */
+  positions: z.array(z.number()).min(2),
+  holes: PinHoles,
+});
+export type LocatingPins = z.infer<typeof LocatingPins>;
+
+/**
  * A two-sided project's setup (PRD-0011, ADR-0060): the stock is cut from
  * the top, turned over by half a turn about a line through its centre
  * parallel to `flipAxis`, and cut from the other face. Each side cuts down
@@ -81,6 +110,8 @@ export type FlipAxis = z.infer<typeof FlipAxis>;
 export const TwoSided = z.strictObject({
   flipAxis: FlipAxis,
   partingDepth: PositiveLength,
+  /** The locating pins, or `null` for none. */
+  pins: LocatingPins.nullable(),
 });
 export type TwoSided = z.infer<typeof TwoSided>;
 
@@ -102,6 +133,14 @@ export const Stock = z
         code: "custom",
         path: ["twoSided", "partingDepth"],
         message: "document.partingBelowStock",
+      });
+    }
+    const holes = stock.twoSided?.pins?.holes;
+    if (holes?.type === "blind" && holes.depth >= stock.thickness) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["twoSided", "pins", "holes", "depth"],
+        message: "document.pinHolesThrough",
       });
     }
     if (stock.touchOff && stock.touchOff.diameter > Math.min(stock.width, stock.height)) {
