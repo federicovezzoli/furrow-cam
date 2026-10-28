@@ -418,6 +418,8 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     a.parting === b.parting &&
     // A new object every time, like the stock rectangle.
     JSON.stringify(a.flip) === JSON.stringify(b.flip) &&
+    // Holding tabs too, built afresh for every input.
+    JSON.stringify(a.tabs) === JSON.stringify(b.tabs) &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     // A new disc every time, like the stock rectangle.
