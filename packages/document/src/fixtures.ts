@@ -258,12 +258,12 @@ export function fullDocument(): ProjectDocument {
       twoSided: {
         flipAxis: "x",
         partingDepth: 9,
-        pins: {
+        lineUp: {
+          type: "pins",
           diameter: 6,
           positions: [-120, 120],
           holes: { type: "through", spoilboardDepth: 5 },
         },
-        edges: null,
       },
     },
     machine,

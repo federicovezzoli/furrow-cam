@@ -4,6 +4,7 @@ import {
   machineSpinUpDelay,
   type Stock,
   type StockAnchor,
+  stockPins,
   type Tool,
   type TouchOff,
 } from "@furrow/document";
@@ -404,20 +405,21 @@ function sideSetupLines(
 ): string[] {
   const { twoSided, zOrigin } = stock;
   const axis = (twoSided?.flipAxis ?? "x").toUpperCase();
-  const pins = drilled ? twoSided?.pins : null;
+  const pins = drilled ? stockPins(stock) : null;
   const edges = edgeSetup(stock);
-  const corner = edges && `${edges.corner.replace("_", "-")} corner`;
+  // As each side sees it: turned over, another corner of the stock lies there.
+  const corner = edges && `the stock's corner at the ${edges.corner.replace("_", "-")}`;
   // Pins on the centre line hold it in place (#356), once the top side drilled them;
   // a fence corner keeps its footprint (#361).
   const onto = pins
     ? `onto its ${pins.positions.length} locating pins of ${formatNumber(pins.diameter)} mm`
-    : corner
-      ? `with its ${corner} in the fence corner`
+    : edges
+      ? "back into the same fence corner"
       : "in place";
   const flip = `turn the stock over by half a turn about its centre line along ${axis}, ${onto}`;
   const fence = edges
     ? [
-        `Line up: push the stock's ${corner} into the fence corner, ` +
+        `Line up: push ${corner}, as it lies, into the fence corner, ` +
           `the XY zero at X${formatNumber(edges.offset[0])} Y${formatNumber(edges.offset[1])} mm from it`,
       ]
     : [];
@@ -425,10 +427,11 @@ function sideSetupLines(
   if (side === "top") {
     return [
       "Two-sided: top side, cut first",
-      ...fence,
-      ...(other ? [`Then ${flip}, and run the bottom side's file`] : []),
+      // Without a bottom side's file the stock is never turned over.
+      ...(other ? [...fence, `Then ${flip}, and run the bottom side's file`] : []),
     ];
   }
+  const z = zOrigin === "stock_top" ? "Z on the face now on top" : "Z still at the machine bed";
   return [
     "Two-sided: bottom side, cut second",
     ...(other ? ["Run the top side's file first"] : []),
@@ -436,14 +439,13 @@ function sideSetupLines(
     ...fence,
     ...(edges
       ? [
-          `The sides only meet if the stock is ${formatNumber(stock[edges.across])} mm ` +
-            `along ${edges.across === "height" ? "Y" : "X"}: measure it`,
+          `The sides only meet if the stock is ${formatNumber(edges.measure.size)} mm ` +
+            `along ${edges.measure.axis.toUpperCase()}: measure it`,
         ]
       : []),
     // The top side's file may have ended with another bit.
     ...(firstTool ? [`Load ${toolLabel(firstTool)}`] : []),
-    zOrigin === "stock_top"
-      ? "Zero as for the top side, Z on the face now on top"
-      : "Zero as for the top side, Z still at the machine bed",
+    // Zeroing XY again on the turned-over stock would throw the fence corner away.
+    edges ? `Keep the top side's XY zero, and set ${z}` : `Zero as for the top side, ${z}`,
   ];
 }

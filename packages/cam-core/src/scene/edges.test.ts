@@ -2,6 +2,7 @@ import type { FlipAxis, Point, Stock, StockCorner } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { edgeSetup, flipPoint } from "./sides";
+import { xyOriginPosition } from "./stock";
 
 /** A two-sided 300 × 200 mm stock zeroed at its centre, lined up by `corner`. */
 function stock(flipAxis: FlipAxis, corner: StockCorner | null = "bottom_right"): Stock {
@@ -9,25 +10,26 @@ function stock(flipAxis: FlipAxis, corner: StockCorner | null = "bottom_right"):
   return {
     ...doc.stock,
     xyOrigin: { anchor: "center" },
-    twoSided: { flipAxis, partingDepth: 9, pins: null, edges: corner },
+    twoSided: { flipAxis, partingDepth: 9, lineUp: corner && { type: "edges", corner } },
   };
 }
 
 /**
  * Where the bottom side cuts the material the top side cut at `point`,
  * relative to it, when the stock in the fence corner is `real` in size but
- * the project says `planned`: the program places stock coordinates from the
- * corner as planned, the material sits from the corner as it really is.
+ * the project says `planned`. The corner in the fence is where `edgeSetup`
+ * puts it, back from the zero by its offset: the program places stock
+ * coordinates from it as planned, the material sits from it as it really is.
  */
 function mismatch(planned: Stock, real: Pick<Stock, "width" | "height">, point: Point): Point {
   const setup = edgeSetup(planned);
-  if (!setup) throw new Error("no edges");
-  const right = setup.corner.endsWith("right");
-  const top = setup.corner.startsWith("top");
+  if (!setup) throw new Error("no fence corner");
+  const [zx, zy] = xyOriginPosition(planned);
+  const corner: Point = [zx - setup.offset[0], zy - setup.offset[1]];
   // From planned stock coordinates to the real stock's, both from the fence corner.
   const shift: Point = [
-    right ? real.width - planned.width : 0,
-    top ? real.height - planned.height : 0,
+    corner[0] > 0 ? real.width - planned.width : 0,
+    corner[1] > 0 ? real.height - planned.height : 0,
   ];
   const axis = planned.twoSided?.flipAxis ?? "x";
   const topCut: Point = [point[0] + shift[0], point[1] + shift[1]];
@@ -45,27 +47,28 @@ describe("edgeSetup", () => {
     expect(edgeSetup(stock("x"))).toEqual({
       corner: "bottom_right",
       offset: [-150, 100],
-      across: "height",
+      measure: { axis: "y", size: 200 },
     });
     expect(edgeSetup(stock("y", "top_left"))).toEqual({
       corner: "top_left",
       offset: [150, -100],
-      across: "width",
+      measure: { axis: "x", size: 300 },
     });
     expect(edgeSetup(stock("x", null))).toBeNull();
   });
 
-  it.each(["x", "y"] as FlipAxis[])(
-    "meets exactly when the stock is the planned size, and is off by the error across the axis, about %s",
-    (axis) => {
-      for (const corner of ["bottom_left", "bottom_right", "top_left", "top_right"] as const) {
-        const planned = stock(axis, corner);
+  // 1 mm too wide and 2 mm too tall: only the size across the flip axis
+  // shows, away from the fence corner or towards it.
+  it.each([
+    ["x", { bottom_left: [0, 2], bottom_right: [0, 2], top_left: [0, -2], top_right: [0, -2] }],
+    ["y", { bottom_left: [1, 0], bottom_right: [-1, 0], top_left: [1, 0], top_right: [-1, 0] }],
+  ] as const)(
+    "meets exactly when the stock is the planned size, and is off by its error across the axis, about %s",
+    (axis, expected) => {
+      for (const [corner, off] of Object.entries(expected)) {
+        const planned = stock(axis, corner as StockCorner);
         expect(mismatch(planned, planned, [37, 151])).toEqual([0, 0]);
-        // 1 mm too wide and 2 mm too tall: only the size across the flip axis shows.
-        // Which way depends on the corner; how far doesn't.
-        const off = mismatch(planned, { width: 301, height: 202 }, [37, 151]).map(Math.abs);
-        expect(off).toEqual(axis === "x" ? [0, 2] : [1, 0]);
-        expect(edgeSetup(planned)?.across).toBe(axis === "x" ? "height" : "width");
+        expect(mismatch(planned, { width: 301, height: 202 }, [37, 151])).toEqual(off);
       }
     },
   );

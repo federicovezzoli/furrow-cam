@@ -89,6 +89,7 @@ export type PinHoles = z.infer<typeof PinHoles>;
  * side's zero (ADR-0060). A drill operation with `params.pins` cuts them.
  */
 export const LocatingPins = z.strictObject({
+  type: z.literal("pins"),
   diameter: PositiveLength,
   /**
    * Each pin's distance along the flip axis from the stock's centre, so a
@@ -105,6 +106,19 @@ export const StockCorner = z.enum(["bottom_left", "bottom_right", "top_left", "t
 export type StockCorner = z.infer<typeof StockCorner>;
 
 /**
+ * Lining the turned-over stock up against its edges (PRD-0011 B9, #361),
+ * for users without a spoilboard to drill into: `corner` goes into a fence
+ * corner on both sides. Turned over, the stock fills the same footprint, so
+ * the zero carries over as far as its size across the flip axis is right.
+ */
+export const FenceCorner = z.strictObject({ type: z.literal("edges"), corner: StockCorner });
+export type FenceCorner = z.infer<typeof FenceCorner>;
+
+/** How the turned-over stock is lined up with the top side: on pins or by a fence corner. */
+export const LineUp = z.discriminatedUnion("type", [LocatingPins, FenceCorner]);
+export type LineUp = z.infer<typeof LineUp>;
+
+/**
  * A two-sided project's setup (PRD-0011, ADR-0060): the stock is cut from
  * the top, turned over by half a turn about a line through its centre
  * parallel to `flipAxis`, and cut from the other face. Each side cuts down
@@ -114,17 +128,15 @@ export type StockCorner = z.infer<typeof StockCorner>;
 export const TwoSided = z.strictObject({
   flipAxis: FlipAxis,
   partingDepth: PositiveLength,
-  /** The locating pins, or `null` for none. */
-  pins: LocatingPins.nullable(),
-  /**
-   * Without pins, the corner pushed into a fence corner on both sides
-   * (PRD-0011 B9, #361): turned over, the stock fills the same footprint, so
-   * the zero carries over as far as its size across the flip axis is right.
-   * `null` for none.
-   */
-  edges: StockCorner.nullable(),
+  /** How the turned-over stock is lined up, or `null` for turning it over in place by eye. */
+  lineUp: LineUp.nullable(),
 });
 export type TwoSided = z.infer<typeof TwoSided>;
+
+/** The stock's locating pins (#356), or `null` unless it is lined up on them. */
+export function stockPins({ twoSided }: { twoSided: TwoSided | null }): LocatingPins | null {
+  return twoSided?.lineUp?.type === "pins" ? twoSided.lineUp : null;
+}
 
 export const Stock = z
   .strictObject({
@@ -146,18 +158,11 @@ export const Stock = z
         message: "document.partingBelowStock",
       });
     }
-    if (stock.twoSided?.pins && stock.twoSided.edges) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["twoSided", "edges"],
-        message: "document.pinsAndEdges",
-      });
-    }
-    const holes = stock.twoSided?.pins?.holes;
+    const holes = stockPins(stock)?.holes;
     if (holes?.type === "blind" && holes.depth >= stock.thickness) {
       ctx.addIssue({
         code: "custom",
-        path: ["twoSided", "pins", "holes", "depth"],
+        path: ["twoSided", "lineUp", "holes", "depth"],
         message: "document.pinHolesThrough",
       });
     }

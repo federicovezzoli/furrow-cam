@@ -155,7 +155,7 @@ describe("exportGcode", () => {
       const stock = {
         ...doc.stock,
         thickness: 18,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9, pins: null, edges: null },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, lineUp: null },
       };
       return { ...doc, stock, models: [placed], operations };
     }
@@ -207,12 +207,12 @@ describe("exportGcode", () => {
         params: { depth: 1, peck: false, stepOver: 40, pins: true },
       };
       const holes = { type: "through" as const, spoilboardDepth: 5 };
-      const pins = { diameter: 6, positions: [-120, 120], holes };
+      const pins = { type: "pins" as const, diameter: 6, positions: [-120, 120], holes };
       const withPins = (operations: Operation[]) => {
         const doc = twoSided(operations);
         const stock = {
           ...doc.stock,
-          twoSided: { flipAxis: "y" as const, partingDepth: 9, pins, edges: null },
+          twoSided: { flipAxis: "y" as const, partingDepth: 9, lineUp: pins },
         };
         return exportGcode({ ...doc, stock }, "Owl", context).files.at(-1)?.gcode;
       };
@@ -240,21 +240,35 @@ describe("exportGcode", () => {
           width: 300,
           height: 200,
           xyOrigin: { anchor: "center" as const },
-          twoSided: { flipAxis, partingDepth: 9, pins: null, edges: "bottom_right" as const },
+          twoSided: {
+            flipAxis,
+            partingDepth: 9,
+            lineUp: { type: "edges" as const, corner: "bottom_right" as const },
+          },
         };
         const [top, bottom] = exportGcode({ ...doc, stock }, "Owl", context).files.map(
           (file) => file.gcode,
         );
         const fence =
-          "(Line up: push the stock's bottom-right corner into the fence corner, the XY zero at X-150 Y100 mm from it)";
+          "(Line up: push the stock's corner at the bottom-right, as it lies, into the fence corner, the XY zero at X-150 Y100 mm from it)";
         expect(top).toContain(fence);
         expect(top).toContain(
-          `along ${flipAxis.toUpperCase()}, with its bottom-right corner in the fence corner, and run`,
+          `along ${flipAxis.toUpperCase()}, back into the same fence corner, and run`,
         );
         expect(bottom).toContain(fence);
         expect(bottom).toContain(
           `(The sides only meet if the stock is ${size} mm along ${along}: measure it)`,
         );
+        // Zeroing XY again would lose the fence corner.
+        expect(bottom).toContain("(Keep the top side's XY zero, and set Z on the face now on top)");
+        expect(bottom).not.toContain("Zero as for the top side");
+        // Never turned over without a bottom side's file: no fence to set up.
+        const alone = exportGcode(
+          { ...doc, stock, operations: [rough("top", "Top rough")] },
+          "Owl",
+          context,
+        );
+        expect(alone.files[0]?.gcode).not.toContain("fence corner");
       },
     );
 

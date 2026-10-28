@@ -94,7 +94,7 @@ describe("relief toolpaths on two sides", () => {
   ])("%s a symmetric model the same from below, mirrored, about %s", (_, cut, flipAxis, sx, sy) => {
     const operations = [cut("top"), cut("bottom")];
     const [top, bottom] = toolpaths(
-      project(operations, { flipAxis, partingDepth: 9, pins: null, edges: null }),
+      project(operations, { flipAxis, partingDepth: 9, lineUp: null }),
     );
     const above = simulate(operations[0] as Operation, top as Toolpath);
     const below = simulate(operations[1] as Operation, bottom as Toolpath);
@@ -116,7 +116,7 @@ describe("relief toolpaths on two sides", () => {
   it("cuts each side down to the parting plane and no further", () => {
     const operations = [roughing("top"), finishing("top"), roughing("bottom"), finishing("bottom")];
     const [roughTop, finishTop, roughBottom, finishBottom] = toolpaths(
-      project(operations, { flipAxis: "x", partingDepth: 6, pins: null, edges: null }),
+      project(operations, { flipAxis: "x", partingDepth: 6, lineUp: null }),
     ) as Toolpath[];
     // 6 mm below the top, 12 mm below the bottom face.
     for (const toolpath of [roughTop, finishTop]) {
@@ -137,7 +137,7 @@ describe("relief toolpaths on two sides", () => {
     // 6 mm deep, so 3 mm of stock below it lies above the parting plane.
     const shallow = { ...BLOCK, placement: { ...BLOCK.placement, depth: 6 } };
     const doc = {
-      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, pins: null, edges: null }),
+      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, lineUp: null }),
       models: [shallow],
     };
     const [top] = toolpaths(doc) as Toolpath[];
@@ -155,7 +155,7 @@ describe("relief toolpaths on two sides", () => {
       finishing("bottom", true),
     ];
     const doc = {
-      ...project(operations, { flipAxis: "y", partingDepth: 9, pins: null, edges: null }),
+      ...project(operations, { flipAxis: "y", partingDepth: 9, lineUp: null }),
     };
     const inputs = toolpathInputs({ ...doc, geometry: fullDocument().geometry });
     expect(inputs[4]?.before.map((input) => input.operation)).toEqual([
@@ -166,7 +166,7 @@ describe("relief toolpaths on two sides", () => {
 
   it("machines one-sided projects as before", () => {
     const doc = {
-      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, pins: null, edges: null }),
+      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, lineUp: null }),
     };
     const [oneSided] = toolpathInputs({ ...doc, stock: { ...doc.stock, twoSided: null } });
     expect(oneSided).toMatchObject({ parting: null, flip: null, stockBottom: -18 });

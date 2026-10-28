@@ -227,9 +227,13 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
-  // #361: lining up against the stock's edges. Existing projects don't.
+  // #361: the stock is lined up on pins or by a fence corner, one `lineUp`.
+  // Existing projects keep their pins.
   23: (doc) => {
-    if (isObject(doc.stock) && isObject(doc.stock.twoSided)) doc.stock.twoSided.edges ??= null;
+    if (!isObject(doc.stock) || !isObject(doc.stock.twoSided)) return doc;
+    const { pins, ...twoSided } = doc.stock.twoSided;
+    twoSided.lineUp ??= isObject(pins) ? { type: "pins", ...pins } : null;
+    doc.stock.twoSided = twoSided;
     return doc;
   },
 };

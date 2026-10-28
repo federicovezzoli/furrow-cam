@@ -14,14 +14,14 @@ function project(
   positions = [-80, 60],
 ): ProjectDocument {
   const doc = fullDocument();
-  const pins = holes && { diameter: 6, positions, holes };
+  const lineUp = holes && { type: "pins" as const, diameter: 6, positions, holes };
   return {
     ...doc,
     stock: {
       ...doc.stock,
       xyOrigin: { anchor: "bottom_left" },
       touchOff: null,
-      twoSided: { flipAxis, partingDepth: 9, pins, edges: null },
+      twoSided: { flipAxis, partingDepth: 9, lineUp },
     },
     operations: [
       {
