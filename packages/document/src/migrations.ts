@@ -227,6 +227,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #361: lining up against the stock's edges. Existing projects don't.
+  23: (doc) => {
+    if (isObject(doc.stock) && isObject(doc.stock.twoSided)) doc.stock.twoSided.edges ??= null;
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

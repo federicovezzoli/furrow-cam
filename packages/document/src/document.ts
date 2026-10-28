@@ -6,7 +6,7 @@ import { Model, Sha256 } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 23;
+export const CURRENT_SCHEMA_VERSION = 24;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -100,6 +100,10 @@ export const LocatingPins = z.strictObject({
 });
 export type LocatingPins = z.infer<typeof LocatingPins>;
 
+/** A corner of the stock, in the stock coordinates of the side in view. */
+export const StockCorner = z.enum(["bottom_left", "bottom_right", "top_left", "top_right"]);
+export type StockCorner = z.infer<typeof StockCorner>;
+
 /**
  * A two-sided project's setup (PRD-0011, ADR-0060): the stock is cut from
  * the top, turned over by half a turn about a line through its centre
@@ -112,6 +116,13 @@ export const TwoSided = z.strictObject({
   partingDepth: PositiveLength,
   /** The locating pins, or `null` for none. */
   pins: LocatingPins.nullable(),
+  /**
+   * Without pins, the corner pushed into a fence corner on both sides
+   * (PRD-0011 B9, #361): turned over, the stock fills the same footprint, so
+   * the zero carries over as far as its size across the flip axis is right.
+   * `null` for none.
+   */
+  edges: StockCorner.nullable(),
 });
 export type TwoSided = z.infer<typeof TwoSided>;
 
@@ -133,6 +144,13 @@ export const Stock = z
         code: "custom",
         path: ["twoSided", "partingDepth"],
         message: "document.partingBelowStock",
+      });
+    }
+    if (stock.twoSided?.pins && stock.twoSided.edges) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["twoSided", "edges"],
+        message: "document.pinsAndEdges",
       });
     }
     const holes = stock.twoSided?.pins?.holes;

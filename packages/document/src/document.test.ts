@@ -319,18 +319,20 @@ describe("two-sided projects", () => {
   it("cut each side down to a parting plane inside the stock", () => {
     const stock = fullDocument().stock;
     expect(
-      Stock.safeParse({ ...stock, twoSided: { flipAxis: "y", partingDepth: 17.9, pins: null } })
-        .success,
+      Stock.safeParse({
+        ...stock,
+        twoSided: { flipAxis: "y", partingDepth: 17.9, pins: null, edges: null },
+      }).success,
     ).toBe(true);
     for (const twoSided of [
-      { flipAxis: "x", partingDepth: 18, pins: null },
-      { flipAxis: "x", partingDepth: 0, pins: null },
-      { flipAxis: "z", partingDepth: 9, pins: null },
-      { flipAxis: "x", pins: null },
+      { flipAxis: "x", partingDepth: 18, pins: null, edges: null },
+      { flipAxis: "x", partingDepth: 0, pins: null, edges: null },
+      { flipAxis: "z", partingDepth: 9, pins: null, edges: null },
+      { flipAxis: "x", pins: null, edges: null },
     ]) {
       expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
     }
-    const below = { flipAxis: "x", partingDepth: 20, pins: null };
+    const below = { flipAxis: "x", partingDepth: 20, pins: null, edges: null };
     expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
       expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
     ]);
@@ -341,7 +343,7 @@ describe("two-sided projects", () => {
     const pins = stock.twoSided?.pins;
     const withPins = (changes: object) => ({
       ...stock,
-      twoSided: { flipAxis: "x", partingDepth: 9, pins: { ...pins, ...changes } },
+      twoSided: { flipAxis: "x", partingDepth: 9, pins: { ...pins, ...changes }, edges: null },
     });
     expect(Stock.safeParse(withPins({ holes: { type: "blind", depth: 8 } })).success).toBe(true);
     for (const changes of [
@@ -352,6 +354,19 @@ describe("two-sided projects", () => {
     ]) {
       expect(Stock.safeParse(withPins(changes)).success).toBe(false);
     }
+  });
+
+  it("line the stock up on pins or against a corner, not both", () => {
+    const { stock } = fullDocument();
+    const twoSided = stock.twoSided as NonNullable<typeof stock.twoSided>;
+    const edges = { ...twoSided, pins: null, edges: "top_right" };
+    expect(Stock.safeParse({ ...stock, twoSided: edges }).success).toBe(true);
+    expect(Stock.safeParse({ ...stock, twoSided: { ...edges, edges: "center" } }).success).toBe(
+      false,
+    );
+    expect(
+      Stock.safeParse({ ...stock, twoSided: { ...twoSided, edges: "top_right" } }).error?.issues,
+    ).toEqual([expect.objectContaining({ path: ["twoSided", "edges"] })]);
   });
 
   it("drill the pins from the top side only, with no shapes", () => {

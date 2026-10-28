@@ -1,4 +1,4 @@
-import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
+import { activeTouchOff, edgeSetup, stockOffset, type Vec3 } from "@furrow/cam-core";
 import {
   type Machine,
   machineSpinUpDelay,
@@ -398,21 +398,34 @@ function zZeroLabel({ zOrigin }: Stock): string {
  * the face now on top.
  */
 function sideSetupLines(
-  { twoSided, zOrigin }: Stock,
+  stock: Stock,
   { side, other, pins: drilled }: SideSetup,
   firstTool: Tool | undefined,
 ): string[] {
+  const { twoSided, zOrigin } = stock;
   const axis = (twoSided?.flipAxis ?? "x").toUpperCase();
   const pins = drilled ? twoSided?.pins : null;
-  // Pins on the centre line hold it in place (#356), once the top side drilled them.
+  const edges = edgeSetup(stock);
+  const corner = edges && `${edges.corner.replace("_", "-")} corner`;
+  // Pins on the centre line hold it in place (#356), once the top side drilled them;
+  // a fence corner keeps its footprint (#361).
   const onto = pins
     ? `onto its ${pins.positions.length} locating pins of ${formatNumber(pins.diameter)} mm`
-    : "in place";
+    : corner
+      ? `with its ${corner} in the fence corner`
+      : "in place";
   const flip = `turn the stock over by half a turn about its centre line along ${axis}, ${onto}`;
+  const fence = edges
+    ? [
+        `Line up: push the stock's ${corner} into the fence corner, ` +
+          `the XY zero at X${formatNumber(edges.offset[0])} Y${formatNumber(edges.offset[1])} mm from it`,
+      ]
+    : [];
   // Files aren't named: G-code comments can't hold the parentheses names may have.
   if (side === "top") {
     return [
       "Two-sided: top side, cut first",
+      ...fence,
       ...(other ? [`Then ${flip}, and run the bottom side's file`] : []),
     ];
   }
@@ -420,6 +433,13 @@ function sideSetupLines(
     "Two-sided: bottom side, cut second",
     ...(other ? ["Run the top side's file first"] : []),
     `Before this file, ${flip}, so the face that was underneath is on top`,
+    ...fence,
+    ...(edges
+      ? [
+          `The sides only meet if the stock is ${formatNumber(stock[edges.across])} mm ` +
+            `along ${edges.across === "height" ? "Y" : "X"}: measure it`,
+        ]
+      : []),
     // The top side's file may have ended with another bit.
     ...(firstTool ? [`Load ${toolLabel(firstTool)}`] : []),
     zOrigin === "stock_top"

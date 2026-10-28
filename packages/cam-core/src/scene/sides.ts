@@ -8,12 +8,13 @@ import type {
   Point,
   Shape,
   Stock,
+  StockCorner,
 } from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
 import { roundCoordinate } from "../geometry/round";
 import { mapShapes } from "../geometry/scale";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
-import type { Box3, Vec3 } from "./stock";
+import { type Box3, type Vec3, xyOriginPosition } from "./stock";
 
 /**
  * The two sides of a two-sided project (PRD-0011, ADR-0060). The bottom
@@ -179,5 +180,28 @@ export function drillTargets(
     operation: { ...operation, params: { ...operation.params, depth } },
     // Not a drawing's: only its paths are cut.
     shapes: [{ id: "locating-pins", name: "", layer: "", drawingId: "locating-pins", paths }],
+  };
+}
+
+/**
+ * Lining the stock up against its edges (#361): the corner pushed into the
+ * fence corner on both sides, the XY zero's offset from it (the same on both
+ * sides, each in its own stock coordinates), and the stock's size the sides
+ * meet by: across the flip axis, which turning it over swaps end for end.
+ * `null` without edges.
+ */
+export function edgeSetup(
+  stock: Stock,
+): { corner: StockCorner; offset: Point; across: "width" | "height" } | null {
+  const corner = stock.twoSided?.edges;
+  if (!corner) return null;
+  const [x, y] = xyOriginPosition(stock);
+  const cornerX = corner.endsWith("right") ? stock.width : 0;
+  const cornerY = corner.startsWith("top") ? stock.height : 0;
+  return {
+    corner,
+    // `+ 0` turns -0 into 0.
+    offset: [x - cornerX + 0, y - cornerY + 0],
+    across: stock.twoSided?.flipAxis === "x" ? "height" : "width",
   };
 }

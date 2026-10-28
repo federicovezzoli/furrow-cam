@@ -246,7 +246,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 23,
+    schemaVersion: 24,
     units: "in",
     stock: {
       width: 300,
@@ -263,6 +263,7 @@ export function fullDocument(): ProjectDocument {
           positions: [-120, 120],
           holes: { type: "through", spoilboardDepth: 5 },
         },
+        edges: null,
       },
     },
     machine,

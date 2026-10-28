@@ -21,7 +21,7 @@ function project(
       ...doc.stock,
       xyOrigin: { anchor: "bottom_left" },
       touchOff: null,
-      twoSided: { flipAxis, partingDepth: 9, pins },
+      twoSided: { flipAxis, partingDepth: 9, pins, edges: null },
     },
     operations: [
       {
