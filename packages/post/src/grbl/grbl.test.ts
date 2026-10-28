@@ -9,9 +9,9 @@ import {
   vBit,
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { formatNumber } from "./format";
+import { formatNumber } from "../format";
 import { grbl, toolShapeComment } from "./grbl";
-import { type PostInput, postSteps } from "./post";
+import { type PostInput, postSteps } from "../post";
 
 const stock: Stock = {
   width: 300,

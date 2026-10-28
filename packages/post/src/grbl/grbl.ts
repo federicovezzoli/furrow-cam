@@ -8,7 +8,7 @@ import {
   type Tool,
   type TouchOff,
 } from "@furrow/document";
-import { formatNumber } from "./format";
+import { formatNumber } from "../format";
 import {
   type PostInput,
   type PostOutput,
@@ -16,9 +16,9 @@ import {
   type PostWarning,
   postSteps,
   type SideSetup,
-} from "./post";
-import { type BlockLabel, type CustomBlock, customBlockWarnings } from "./read-back";
-import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "./touch-off";
+} from "../post";
+import { type BlockLabel, type CustomBlock, customBlockWarnings } from "../read-back";
+import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "../touch-off";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
