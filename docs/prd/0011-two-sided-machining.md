@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-23
-- **Related:** PRD-0001, PRD-0002, PRD-0005, ADR-0016, ADR-0030, ADR-0031, ADR-0035, ADR-0041
+- **Related:** PRD-0001, PRD-0002, PRD-0005, ADR-0016, ADR-0030, ADR-0031, ADR-0035, ADR-0041, ADR-0060, ADR-0063
 
 ## Problem
 
@@ -31,10 +31,10 @@ Furrow CAM machines from the top only (PRD-0005 S3, which lists flipping the sto
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | B1 | A project can be two-sided: the user picks the flip axis (X or Y). Each operation belongs to the top or the bottom side | Must |
-| B2 | A model in a two-sided project is machined from both faces, each side down to a parting height the user sets (half the model's depth by default). The model's depth may now reach the full stock thickness | Must |
+| B2 | A model in a two-sided project is machined from both faces. Each side cuts all of the model it can see from its face, and around the model down to a parting height the user sets (half the model's depth by default), so models not widest at that height are cut without a skirt. The model's depth may now reach the full stock thickness | Must |
 | B3 | Relief roughing and finishing (PRD-0005 S4, S5, S10) work on the bottom side, on the model as seen from below | Must |
 | B4 | Locating pin holes: the user sets their diameter and positions on the flip axis, and chooses whether they go through the stock into the spoilboard (pins fixed in the spoilboard) or only into the stock to a depth they set. A drill operation on the top side cuts them, and the bottom side's zero is placed so the flipped stock lines up on them | Must |
-| B5 | Holding tabs keep the part attached to the surrounding stock at the parting height, so it does not come loose while the bottom side is cut. The user sets their number, width and thickness, as for profile tabs | Must |
+| B5 | Holding tabs keep the part attached to the surrounding stock at the parting height, so it does not come loose while the bottom side is cut. They belong to the two-sided setup and every bottom-side 3D operation leaves them. The user sets their width and thickness, places a number of them evenly around the model's outline and drags them along it, as for profile tabs | Must |
 | B6 | The viewport and the simulation show each side; the bottom side's simulation starts from the stock the top side left, flipped | Must |
 | B7 | G-code is exported as one file per side, named after the side, with the setup to do between them (flip, pins, zero) in the file's header comment | Must |
 | B8 | 2D operations (profile, pocket, drill, engrave, V-carve) on the bottom side, on drawings mirrored about the flip axis | Should |
@@ -53,12 +53,8 @@ Furrow CAM machines from the top only (PRD-0005 S3, which lists flipping the sto
 - A user cuts a two-sided relief from a downloaded STL on a GRBL machine, with the two halves meeting without a visible step beyond the machine's repeatability, and no manual G-code edits.
 - The part is still held to the stock at the end of the bottom side's roughing.
 
-## Open questions
-
-- Is the parting height one plane for the whole model, or should it follow the model's widest outline (its silhouette)?
-- Should the bottom side's roughing leave the tabs on its own, or should tabs be an operation the user adds?
-
 ## Changelog
 
 - 2026-10-23: initial draft
 - 2026-10-23: B4 the user chooses through or blind pin holes
+- 2026-10-28: B2 each side cuts all of the model it can see, the parting height bounds only the cut around it; B5 tabs belong to the setup (ADR-0063); open questions closed
