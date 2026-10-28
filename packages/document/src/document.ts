@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { MAX_PROJECT_FONTS, ProjectFont } from "./font";
-import { Drawing, Shape } from "./geometry";
+import { Drawing, Point, Shape } from "./geometry";
 import { GcodeBlock, Machine } from "./machine";
 import { Model, Sha256 } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 24;
+export const CURRENT_SCHEMA_VERSION = 25;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -119,17 +119,35 @@ export const LineUp = z.discriminatedUnion("type", [LocatingPins, FenceCorner]);
 export type LineUp = z.infer<typeof LineUp>;
 
 /**
+ * Holding tabs (PRD-0011 B5, ADR-0063): strips of material the bottom side's
+ * 3D operations leave between the part and the stock around it, so the part
+ * stays held until the last pass. Each is `width` wide, from the model's
+ * outline out to the stock's edge, and `thickness` thick just below the
+ * parting plane, on the bottom side.
+ */
+export const HoldingTabs = z.strictObject({
+  width: PositiveLength,
+  thickness: PositiveLength,
+  /** Where the tabs are, in the top side's stock coordinates; each goes to the nearest model's outline. */
+  positions: z.array(Point),
+});
+export type HoldingTabs = z.infer<typeof HoldingTabs>;
+
+/**
  * A two-sided project's setup (PRD-0011, ADR-0060): the stock is cut from
  * the top, turned over by half a turn about a line through its centre
- * parallel to `flipAxis`, and cut from the other face. Each side cuts down
- * to the parting plane, `partingDepth` below the stock top, which is less
- * than the stock's thickness.
+ * parallel to `flipAxis`, and cut from the other face. Around the model,
+ * each side cuts down to the parting plane, `partingDepth` below the stock
+ * top, which is less than the stock's thickness; over it, each side cuts
+ * all of the model it can see (ADR-0063).
  */
 export const TwoSided = z.strictObject({
   flipAxis: FlipAxis,
   partingDepth: PositiveLength,
   /** How the turned-over stock is lined up, or `null` for turning it over in place by eye. */
   lineUp: LineUp.nullable(),
+  /** The holding tabs, or `null` for none. */
+  tabs: HoldingTabs.nullable(),
 });
 export type TwoSided = z.infer<typeof TwoSided>;
 
@@ -156,6 +174,14 @@ export const Stock = z
         code: "custom",
         path: ["twoSided", "partingDepth"],
         message: "document.partingBelowStock",
+      });
+    }
+    const tabs = stock.twoSided?.tabs;
+    if (stock.twoSided && tabs && tabs.thickness >= stock.thickness - stock.twoSided.partingDepth) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["twoSided", "tabs", "thickness"],
+        message: "document.tabsThickerThanSide",
       });
     }
     const holes = stockPins(stock)?.holes;

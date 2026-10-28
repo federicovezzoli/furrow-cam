@@ -29,6 +29,7 @@ export { textPaths } from "./text/layout";
 export * from "./toolpaths/drill";
 export * from "./toolpaths/engrave";
 export * from "./toolpaths/generate";
+export * from "./toolpaths/holding-tabs";
 export * from "./toolpaths/messages";
 export { depthLevels } from "./toolpaths/passes";
 export * from "./toolpaths/pocket/pocket";

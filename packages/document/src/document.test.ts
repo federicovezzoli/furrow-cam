@@ -321,20 +321,40 @@ describe("two-sided projects", () => {
     expect(
       Stock.safeParse({
         ...stock,
-        twoSided: { flipAxis: "y", partingDepth: 17.9, lineUp: null },
+        twoSided: { flipAxis: "y", partingDepth: 17.9, tabs: null, lineUp: null },
       }).success,
     ).toBe(true);
     for (const twoSided of [
-      { flipAxis: "x", partingDepth: 18, lineUp: null },
-      { flipAxis: "x", partingDepth: 0, lineUp: null },
-      { flipAxis: "z", partingDepth: 9, lineUp: null },
-      { flipAxis: "x", lineUp: null },
+      { flipAxis: "x", partingDepth: 18, tabs: null, lineUp: null },
+      { flipAxis: "x", partingDepth: 0, tabs: null, lineUp: null },
+      { flipAxis: "z", partingDepth: 9, tabs: null, lineUp: null },
+      { flipAxis: "x", tabs: null, lineUp: null },
     ]) {
       expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
     }
-    const below = { flipAxis: "x", partingDepth: 20, lineUp: null };
+    const below = { flipAxis: "x", partingDepth: 20, tabs: null, lineUp: null };
     expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
       expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
+    ]);
+  });
+
+  it("hold the part by tabs thinner than the bottom side's depth", () => {
+    const { stock } = fullDocument();
+    const withTabs = (thickness: number) => ({
+      ...stock,
+      twoSided: {
+        flipAxis: "x",
+        partingDepth: 9,
+        lineUp: null,
+        tabs: { width: 6, thickness, positions: [[0, 50]] },
+      },
+    });
+    expect(Stock.safeParse(withTabs(8.9)).success).toBe(true);
+    expect(Stock.safeParse(withTabs(9)).error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["twoSided", "tabs", "thickness"],
+        message: "document.tabsThickerThanSide",
+      }),
     ]);
   });
 
@@ -343,7 +363,7 @@ describe("two-sided projects", () => {
     const pins = stock.twoSided?.lineUp;
     const withPins = (changes: object) => ({
       ...stock,
-      twoSided: { flipAxis: "x", partingDepth: 9, lineUp: { ...pins, ...changes } },
+      twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: { ...pins, ...changes } },
     });
     expect(Stock.safeParse(withPins({ holes: { type: "blind", depth: 8 } })).success).toBe(true);
     for (const changes of [

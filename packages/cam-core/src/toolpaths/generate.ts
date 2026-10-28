@@ -11,17 +11,19 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import { drillTargets, type Flip, flipOperation, flipShapes } from "../scene/sides";
+import { drillTargets, type Flip, flipOperation, flipPoint2, flipShapes } from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
 import { engraveToolpath } from "./engrave";
+import { holdingTabStrips } from "./holding-tabs";
 import type { ToolpathMessage } from "./messages";
 import { pocketToolpath } from "./pocket/pocket";
 import { profileToolpath } from "./profile";
 import {
   type Cache,
   createCache,
+  type HoldingTab,
   type ReliefCache,
   type RestOptions,
   runSteps,
@@ -59,6 +61,12 @@ export type ToolpathInput = {
    * shapes or the model before the toolpath is computed; `null` on the top.
    */
   flip: Flip | null;
+  /**
+   * In a two-sided project, the holding tabs a 3D operation leaves, in its
+   * side's stock coordinates (ADR-0063), empty without any; `null` for every
+   * other operation.
+   */
+  tabs: HoldingTab[] | null;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -106,6 +114,7 @@ export function toolpathInputs(
   const enabled = doc.operations.filter((operation) => operation.enabled);
   const { twoSided, width, height, thickness } = doc.stock;
   const size = { width, height, thickness };
+  const strips = twoSided?.tabs ? holdingTabStrips(size, doc.models, twoSided.tabs) : [];
   const inputs = new Map<Operation, ToolpathInput>();
   function inputOf(operation: Operation): ToolpathInput {
     const known = inputs.get(operation);
@@ -131,6 +140,19 @@ export function toolpathInputs(
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
       flip,
+      // The bottom side leaves the tabs up to their thickness past the
+      // parting plane, the top side stops at the plane over them (ADR-0063).
+      tabs:
+        sided &&
+        strips.map(({ modelId, at, to }) => ({
+          modelId,
+          from: flip ? flipPoint2(flip, at) : at,
+          to: flip ? flipPoint2(flip, to) : to,
+          width: sided.tabs?.width ?? 0,
+          top: flip
+            ? sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0)
+            : -sided.partingDepth,
+        })),
       safeZ,
       entryClearance,
       // Each side starts from uncut stock (ADR-0060).
@@ -189,6 +211,7 @@ function ownKey({
   stockBottom,
   parting,
   flip,
+  tabs,
   safeZ,
   entryClearance,
   touchOff,
@@ -204,6 +227,7 @@ function ownKey({
     stockBottom,
     parting,
     flip,
+    tabs,
     safeZ,
     entryClearance,
     touchOff,
@@ -402,6 +426,7 @@ function* operationSteps(
     stockBottom,
     parting,
     flip,
+    tabs,
     before,
     touchOff,
     ...options
@@ -442,6 +467,17 @@ function* operationSteps(
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
       const warnings: ToolpathMessage[] = [];
+      // Cut all round from both sides, a model with no tabs comes loose (ADR-0063).
+      if (flip && tabs && !tabs.some(({ modelId }) => modelId === model.id)) {
+        warnings.push({ code: "toolpath.noHoldingTabs" });
+      }
+      if (
+        parting !== null &&
+        operation.type === "relief_rough" &&
+        operation.params.boundary.type === "stock"
+      ) {
+        warnings.push({ code: "toolpath.stockBoundaryTwoSided" });
+      }
       let rest: RestOptions | null = null;
       let share = 0;
       if (operation.params.rest) {
@@ -470,6 +506,7 @@ function* operationSteps(
               cache,
               rest,
               touchOff,
+              tabs: tabs ?? [],
             })
           : reliefRoughSteps(operation, model, positions, {
               ...options,
@@ -480,6 +517,7 @@ function* operationSteps(
               cache,
               rest,
               touchOff,
+              tabs: tabs ?? [],
             });
       for (let step = steps.next(); ; step = steps.next()) {
         if (step.done) {

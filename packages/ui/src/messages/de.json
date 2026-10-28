@@ -512,7 +512,8 @@
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad",
-      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden"
+      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden",
+      "tabsThickerThanSide": "Haltestege müssen dünner sein als die Tiefe der Unterseite"
     },
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
@@ -649,7 +650,9 @@
       "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
       "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
-      "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils."
+      "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
+      "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
+      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil geschruppt, bleibt kein Rahmen, an dem das Teil hält: Schruppe mit einem Rand."
     },
     "export": {
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
@@ -1199,7 +1202,7 @@
     "twoSidedHint": "Das Rohteil von oben bearbeiten, umdrehen und von unten bearbeiten.",
     "flipAxis": "Umgedreht um",
     "partingDepth": "Trenntiefe",
-    "partingDepthHint": "Unter der Rohteiloberseite, wo sich beide Seiten treffen: Jede Seite schneidet bis dorthin.",
+    "partingDepthHint": "Unter der Rohteiloberseite, wo sich beide Seiten um die Modelle treffen: Jede Seite schneidet dort bis dorthin, und alles vom Modell, was sie sieht.",
     "twoSidedOff": "{count, plural, one {# Operation liegt} other {# Operationen liegen}} auf der Unterseite. Wird zweiseitig ausgeschaltet, {count, plural, one {wandert sie} other {wandern sie}} auf die Oberseite.",
     "padAxis": "Platz {axis}",
     "padDiameter": "Platzdurchmesser",
@@ -1232,7 +1235,15 @@
     "edges": "Einer Anschlagecke",
     "edgeCorner": "Ecke",
     "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach.",
-    "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts."
+    "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts.",
+    "holdingTabs": "Haltestege",
+    "holdingTabsHint": "Streifen des Rohteils, die die Unterseite auf der Trenntiefe stehen lässt, damit das Teil bis zum letzten Durchgang hält. In der Draufsicht entlang der Modellumrisse ziehen.",
+    "holdingTabWidth": "Stegbreite",
+    "holdingTabThickness": "Stegdicke",
+    "holdingTabTooThick": "Muss dünner sein als die Tiefe der Unterseite: weniger als {size}",
+    "holdingTabsPerModel": "Stege pro Modell",
+    "placeHoldingTabs": "Verteilen",
+    "holdingTabCount": "{count, plural, =0 {Keine Stege} one {# Steg} other {# Stege}}"
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",
