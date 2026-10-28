@@ -512,7 +512,8 @@
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu",
-      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut"
+      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut",
+      "tabsThickerThanSide": "Les attaches doivent être plus fines que la profondeur de la face du dessous"
     },
     "operation": {
       "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
@@ -650,7 +651,9 @@
       "roughMarginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à ébaucher.",
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
       "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
-      "pinsOffStock": "Un pion de centrage est hors du brut."
+      "pinsOffStock": "Un pion de centrage est hors du brut.",
+      "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
+      "stockBoundaryTwoSided": "Ébaucher tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : ébauchez avec une marge."
     },
     "export": {
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
@@ -923,7 +926,7 @@
     "selectModel": "Sélectionnez d’abord un modèle dans la vue",
     "selectPaths": "Sélectionnez d’abord des tracés dans la vue",
     "addLabel": "Ajouter : {operation}",
-    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Ctrl/Cmd/Maj+clic pour en sélectionner d’autres.",
+    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Maj+clic pour en ajouter d’autres.",
     "addToolLibrary": "Ajoutez un outil à votre <link>bibliothèque d’outils</link> pour créer des opérations.",
     "inCuttingOrder": "Opérations dans l’ordre de coupe",
     "selectInsideTitle": "Sélectionner aussi les tracés fermés à l’intérieur de ceux sélectionnés, comme les îlots d’une poche",
@@ -1200,7 +1203,7 @@
     "twoSidedHint": "Usiner le brut par le dessus, le retourner, puis l'usiner par le dessous.",
     "flipAxis": "Retourné autour de",
     "partingDepth": "Profondeur de joint",
-    "partingDepthHint": "Sous le dessus du brut, là où les deux faces se rejoignent : chaque face coupe jusque-là.",
+    "partingDepthHint": "Sous le dessus du brut, là où les deux faces se rejoignent autour des modèles : chaque face y coupe jusque-là, et tout ce qu'elle voit du modèle.",
     "twoSidedOff": "{count, plural, one {# opération est} other {# opérations sont}} sur la face inférieure. Désactiver le double face {count, plural, one {la place} other {les place}} sur la face supérieure.",
     "padAxis": "Pastille {axis}",
     "padDiameter": "Diamètre de la pastille",
@@ -1233,7 +1236,15 @@
     "edges": "Un coin de butée",
     "edgeCorner": "Coin",
     "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le.",
-    "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions."
+    "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions.",
+    "holdingTabs": "Attaches",
+    "holdingTabsHint": "Bandes de brut que la face du dessous laisse à la profondeur de séparation, pour que la pièce tienne jusqu'à la dernière passe. Faites-les glisser le long des contours des modèles en vue de dessus.",
+    "holdingTabWidth": "Largeur des attaches",
+    "holdingTabThickness": "Épaisseur des attaches",
+    "holdingTabTooThick": "Doit être plus fine que la profondeur de la face du dessous : moins de {size}",
+    "holdingTabsPerModel": "Attaches par modèle",
+    "placeHoldingTabs": "Placer",
+    "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}"
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",

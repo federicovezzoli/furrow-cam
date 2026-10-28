@@ -236,8 +236,13 @@ export const migrations: Readonly<Record<number, Migration>> = {
     doc.stock.twoSided = twoSided;
     return doc;
   },
-  // #386: pockets choose the side of their paths. Existing ones clear inside.
+  // #357: holding tabs. Existing two-sided projects have none.
   24: (doc) => {
+    if (isObject(doc.stock) && isObject(doc.stock.twoSided)) doc.stock.twoSided.tabs ??= null;
+    return doc;
+  },
+  // #386: pockets choose the side of their paths. Existing ones clear inside.
+  25: (doc) => {
     if (Array.isArray(doc.operations)) {
       for (const operation of doc.operations) {
         if (isObject(operation) && operation.type === "pocket" && isObject(operation.params)) {

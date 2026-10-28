@@ -10,7 +10,12 @@ function stock(flipAxis: FlipAxis, corner: StockCorner | null = "bottom_right"):
   return {
     ...doc.stock,
     xyOrigin: { anchor: "center" },
-    twoSided: { flipAxis, partingDepth: 9, lineUp: corner && { type: "edges", corner } },
+    twoSided: {
+      flipAxis,
+      partingDepth: 9,
+      tabs: null,
+      lineUp: corner && { type: "edges", corner },
+    },
   };
 }
 

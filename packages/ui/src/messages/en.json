@@ -512,7 +512,8 @@
       "tooManyFonts": "A project holds at most {max} fonts",
       "unknownShape": "Unknown shape id",
       "unknownPath": "Unknown path",
-      "pinHolesThrough": "Blind pin holes must end inside the stock"
+      "pinHolesThrough": "Blind pin holes must end inside the stock",
+      "tabsThickerThanSide": "Holding tabs must be thinner than the bottom side's depth"
     },
     "operation": {
       "pathIndices": "Path indices must be ascending, each once",
@@ -650,7 +651,9 @@
       "roughMarginOffStock": "The margin around the model isn't on the stock: there is nothing to rough out.",
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
-      "pinsOffStock": "A locating pin is off the stock."
+      "pinsOffStock": "A locating pin is off the stock.",
+      "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
+      "stockBoundaryTwoSided": "Roughing the whole stock on both sides leaves no frame for the part to hang on: rough within a margin."
     },
     "export": {
       "noEnabled": "There are no enabled operations to export.",
@@ -923,7 +926,7 @@
     "selectModel": "Select a model in the viewport first",
     "selectPaths": "Select paths in the viewport first",
     "addLabel": "Add {operation}",
-    "selectHint": "Click paths in the top view to select what to cut; Ctrl/Cmd/Shift+click to select more.",
+    "selectHint": "Click paths in the top view to select what to cut; Shift+click to add more.",
     "addToolLibrary": "Add a tool to your <link>tool library</link> to create operations.",
     "inCuttingOrder": "Operations in cutting order",
     "selectInsideTitle": "Also select the closed paths inside the selected ones, such as a pocket's islands",
@@ -1200,7 +1203,7 @@
     "twoSidedHint": "Cut the stock from the top, turn it over, and cut it from below.",
     "flipAxis": "Turned over about",
     "partingDepth": "Parting depth",
-    "partingDepthHint": "Below the stock top, where the two sides meet: each side cuts down to it.",
+    "partingDepthHint": "Below the stock top, where the two sides meet around the models: each side cuts down to it there, and all of the model it can see.",
     "twoSidedOff": "{count, plural, one {# operation is} other {# operations are}} on the bottom side. Turning two-sided off moves {count, plural, one {it} other {them}} to the top side.",
     "padAxis": "Pad {axis}",
     "padDiameter": "Pad diameter",
@@ -1233,7 +1236,15 @@
     "edges": "A fence corner",
     "edgeCorner": "Corner",
     "edgesHint": "Push this corner of the stock into a fence corner for both sides. The sides only meet if the stock is exactly {size} along {axis}: measure it.",
-    "idlePinDrills": "{count, plural, one {# drill of the pins cuts} other {# drills of the pins cut}} nothing without pins."
+    "idlePinDrills": "{count, plural, one {# drill of the pins cuts} other {# drills of the pins cut}} nothing without pins.",
+    "holdingTabs": "Holding tabs",
+    "holdingTabsHint": "Strips of stock the bottom side leaves at the parting depth, so the part stays held until the last pass. Drag them along the models' outlines in the top view.",
+    "holdingTabWidth": "Tab width",
+    "holdingTabThickness": "Tab thickness",
+    "holdingTabTooThick": "Must be thinner than the bottom side's depth: less than {size}",
+    "holdingTabsPerModel": "Tabs per model",
+    "placeHoldingTabs": "Place",
+    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}"
   },
   "Model": {
     "closeLabel": "Close model properties",

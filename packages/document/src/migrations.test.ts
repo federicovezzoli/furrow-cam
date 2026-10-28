@@ -207,7 +207,7 @@ describe("migrations", () => {
       type: "drill" as const,
       params: { depth: 10, peck: true, stepOver: 40, pins: false },
     };
-    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, lineUp: null };
+    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null };
     current.operations.push(drill);
     const { pins: _, ...v22Params } = drill.params;
     const v22 = {
@@ -232,7 +232,20 @@ describe("migrations", () => {
     expect(parseProjectDocument(v23({ ...rest, pins: null })).stock.twoSided?.lineUp).toBeNull();
   });
 
-  it("gives v24 pockets the inside of their paths", () => {
+  it("gives v24 two-sided documents no holding tabs", () => {
+    const current = fullDocument();
+    const { tabs: _, ...v24TwoSided } = current.stock.twoSided ?? {};
+    const v24 = {
+      ...current,
+      schemaVersion: 24,
+      stock: { ...current.stock, twoSided: v24TwoSided },
+    };
+    expect(parseProjectDocument(v24).stock.twoSided?.tabs).toBeNull();
+    const oneSided = { ...current, stock: { ...current.stock, twoSided: null } };
+    expect(parseProjectDocument({ ...oneSided, schemaVersion: 24 })).toEqual(oneSided);
+  });
+
+  it("gives v25 pockets the inside of their paths", () => {
     const current = fullDocument();
     const [profile] = current.operations;
     if (profile?.type !== "profile") throw new Error("fixture");
@@ -252,13 +265,13 @@ describe("migrations", () => {
       },
     };
     current.operations.push(pocket);
-    const { side: _, ...v24Params } = pocket.params as { side: string };
-    const v24 = {
+    const { side: _, ...v25Params } = pocket.params as { side: string };
+    const v25 = {
       ...current,
-      schemaVersion: 24,
-      operations: [profile, { ...pocket, params: v24Params }],
+      schemaVersion: 25,
+      operations: [profile, { ...pocket, params: v25Params }],
     };
-    expect(parseProjectDocument(v24)).toEqual(current);
+    expect(parseProjectDocument(v25)).toEqual(current);
   });
 
   it("gives v6 documents no models", () => {

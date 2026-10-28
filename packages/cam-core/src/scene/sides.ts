@@ -67,17 +67,19 @@ export function bottomModelTransform(
 export type Flip = Pick<Stock, "width" | "height" | "thickness"> & { axis: FlipAxis };
 
 /**
- * A model as one side sees it (ADR-0060): its mesh, the box it fills and the
+ * A model as one side sees it (ADR-0060): its mesh, the box it fills, the
  * transform from the mesh's file coordinates to that side's stock
- * coordinates. All a relief toolpath needs of it.
+ * coordinates and `outside`, the height a relief toolpath cuts down to where
+ * no part of the model is: its bottom, or a two-sided project's parting
+ * plane (ADR-0063). All a relief toolpath needs of it.
  */
-export type ModelView = { sha256: string; box: Box3; transform: number[] };
+export type ModelView = { sha256: string; box: Box3; transform: number[]; outside: number };
 
 /**
  * `model` as the top side sees it, or with `flip` as the bottom side does:
  * turned over, reaching up from the stock's floor. With a `parting` plane,
- * its box reaches down to it at least, so a side cuts down to the plane
- * around a model that doesn't (ADR-0060).
+ * its box reaches down to it at least, and the side cuts down to the plane
+ * around the model but all of the model it sees over it (ADR-0063).
  */
 export function modelView(
   model: PlacedModel & Pick<Model, "sha256">,
@@ -96,6 +98,7 @@ export function modelView(
   return {
     sha256: model.sha256,
     box: { min, max },
+    outside: parting ?? min[2],
     transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
   };
 }

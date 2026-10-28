@@ -28,6 +28,8 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.modelMissing",
   "toolpath.noLocatingPins",
   "toolpath.pinsOffStock",
+  "toolpath.noHoldingTabs",
+  "toolpath.stockBoundaryTwoSided",
   "toolpath.noArea",
   "toolpath.belowStock",
   "toolpath.coarsened",

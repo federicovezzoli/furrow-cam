@@ -74,6 +74,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
 | [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
 | [0059](0059-text-items-are-drawings-with-settings.md) | A text item is a drawing that keeps its settings and stores its outlines as one shape | Proposed |
-| [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Proposed |
+| [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Proposed; superseded in part by ADR-0063 |
 | [0061](0061-fonts-parsed-with-opentype-js.md) | Fonts are parsed and laid out with opentype.js, behind one adapter | Proposed |
 | [0062](0062-uploaded-fonts-are-project-assets.md) | Uploaded fonts are project assets, listed in the document like models | Proposed |
+| [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Proposed |

@@ -512,7 +512,8 @@
       "tooManyFonts": "Un progetto contiene al massimo {max} font",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto",
-      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo"
+      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo",
+      "tabsThickerThanSide": "I ponticelli devono essere più sottili della profondità del lato inferiore"
     },
     "operation": {
       "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
@@ -650,7 +651,9 @@
       "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
-      "pinsOffStock": "Un perno di riferimento è fuori dal grezzo."
+      "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
+      "stockBoundaryTwoSided": "Sgrossare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: sgrossa con un margine."
     },
     "export": {
       "noEnabled": "Non ci sono operazioni attive da esportare.",
@@ -923,7 +926,7 @@
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
     "addLabel": "Aggiungi {operation}",
-    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Ctrl/Cmd/Maiusc+clic per selezionarne altri.",
+    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Maiusc+clic per aggiungerne altri.",
     "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
     "inCuttingOrder": "Operazioni in ordine di taglio",
     "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
@@ -1200,7 +1203,7 @@
     "twoSidedHint": "Lavora il grezzo dall'alto, giralo e lavoralo da sotto.",
     "flipAxis": "Girato attorno a",
     "partingDepth": "Profondità di separazione",
-    "partingDepthHint": "Sotto la superficie del grezzo, dove i due lati si incontrano: ogni lato taglia fin lì.",
+    "partingDepthHint": "Sotto la superficie del grezzo, dove i due lati si incontrano attorno ai modelli: lì ogni lato taglia fin lì, e tutto ciò che vede del modello.",
     "twoSidedOff": "{count, plural, one {# operazione è} other {# operazioni sono}} sul lato inferiore. Disattivando i due lati, {count, plural, one {passa} other {passano}} sul lato superiore.",
     "padAxis": "Tampone {axis}",
     "padDiameter": "Diametro del tampone",
@@ -1233,7 +1236,15 @@
     "edges": "Un angolo di battuta",
     "edgeCorner": "Angolo",
     "edgesHint": "Spingi questo angolo del grezzo in un angolo di battuta per entrambi i lati. I lati combaciano solo se il grezzo misura esattamente {size} lungo {axis}: misuralo.",
-    "idlePinDrills": "{count, plural, one {# foratura dei perni non fora} other {# forature dei perni non forano}} nulla senza perni."
+    "idlePinDrills": "{count, plural, one {# foratura dei perni non fora} other {# forature dei perni non forano}} nulla senza perni.",
+    "holdingTabs": "Ponticelli",
+    "holdingTabsHint": "Strisce di grezzo che il lato inferiore lascia alla profondità di separazione, così il pezzo resta fermo fino all'ultima passata. Trascinali lungo i contorni dei modelli nella vista dall'alto.",
+    "holdingTabWidth": "Larghezza ponticelli",
+    "holdingTabThickness": "Spessore ponticelli",
+    "holdingTabTooThick": "Deve essere più sottile della profondità del lato inferiore: meno di {size}",
+    "holdingTabsPerModel": "Ponticelli per modello",
+    "placeHoldingTabs": "Posiziona",
+    "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}"
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",
