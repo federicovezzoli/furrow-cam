@@ -36,6 +36,8 @@ export type SideSetup = {
   side: StockSide;
   /** Whether the other side has a file too, i.e. something to cut. */
   other: boolean;
+  /** Whether the top side's file drills the locating pins (#356) to turn the stock over onto. */
+  pins: boolean;
 };
 
 export type PostOutput = {

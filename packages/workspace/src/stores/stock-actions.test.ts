@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
 import {
+  addLocatingPin,
   addTouchOff,
   pickXYOrigin,
   removeTouchOff,
@@ -494,6 +495,19 @@ describe("two-sided projects (ADR-0060)", () => {
       holes: { type: "blind", depth: 8 },
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    // A new pin goes opposite the last, else halfway from it to the stock's edge.
+    updateLocatingPins(store, { positions: [-240, 100] });
+    addLocatingPin(store);
+    expect(stock(store).twoSided?.pins?.positions).toEqual([-240, 100, -100]);
+    addLocatingPin(store);
+    expect(stock(store).twoSided?.pins?.positions).toEqual([-240, 100, -100, -198.5]);
+    // Turned over about Y instead, they keep their place along the 400 mm side.
+    setFlipAxis(store, "y");
+    const turned = stock(store).twoSided?.pins?.positions ?? [];
+    for (const [i, position] of [-160, 200 / 3, -200 / 3, -397 / 3].entries()) {
+      expect(turned[i]).toBeCloseTo(position);
+    }
+    updateLocatingPins(store, { positions: [-240, 240] });
     // Blind holes stay inside the stock, also when it gets thinner.
     expect(updateLocatingPins(store, { holes: { type: "blind", depth: 18 } })).toBe(false);
     expect(updateLocatingPins(store, { holes: { type: "blind", depth: 15 } })).toBe(true);

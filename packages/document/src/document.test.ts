@@ -12,6 +12,7 @@ import {
   uploadedFont,
 } from "./fixtures";
 import type { TextSettings } from "./geometry";
+import { DrillOperation, type Operation } from "./operation";
 
 describe("ProjectDocument", () => {
   it("accepts a document with machine, geometry and operations", () => {
@@ -350,6 +351,25 @@ describe("two-sided projects", () => {
       { holes: { type: "blind", depth: 18 } },
     ]) {
       expect(Stock.safeParse(withPins(changes)).success).toBe(false);
+    }
+  });
+
+  it("drill the pins from the top side only, with no shapes", () => {
+    const doc = fullDocument();
+    const pinDrill = {
+      ...(doc.operations[0] as Operation),
+      type: "drill" as const,
+      targets: [],
+      params: { depth: 5, peck: false, stepOver: 40, pins: true },
+    };
+    expect(DrillOperation.safeParse(pinDrill).success).toBe(true);
+    for (const changes of [
+      { stockSide: "bottom" as const },
+      { targets: (doc.operations[0] as Operation).targets },
+    ]) {
+      expect(DrillOperation.safeParse({ ...pinDrill, ...changes }).error?.issues).toEqual([
+        expect.objectContaining({ path: ["params", "pins"], message: "operation.pinsTopOnly" }),
+      ]);
     }
   });
 

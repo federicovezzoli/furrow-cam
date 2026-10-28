@@ -197,15 +197,32 @@ describe("exportGcode", () => {
       expect(bottom).not.toContain("Top rough");
     });
 
-    it("turns the stock over onto its locating pins", () => {
-      const doc = twoSided([rough("bottom", "Bottom rough")]);
+    it("turns the stock over onto its locating pins once the top side drills them", () => {
+      const pinDrill: Operation = {
+        ...(plate as Operation),
+        id: crypto.randomUUID(),
+        type: "drill",
+        tool: drill,
+        targets: [],
+        params: { depth: 1, peck: false, stepOver: 40, pins: true },
+      };
       const holes = { type: "through" as const, spoilboardDepth: 5 };
       const pins = { diameter: 6, positions: [-120, 120], holes };
-      const stock = { ...doc.stock, twoSided: { flipAxis: "y" as const, partingDepth: 9, pins } };
-      const [bottom] = exportGcode({ ...doc, stock }, "Owl", context).files;
-      expect(bottom?.gcode).toContain(
+      const withPins = (operations: Operation[]) => {
+        const doc = twoSided(operations);
+        const stock = { ...doc.stock, twoSided: { flipAxis: "y" as const, partingDepth: 9, pins } };
+        return exportGcode({ ...doc, stock }, "Owl", context).files.at(-1)?.gcode;
+      };
+      expect(withPins([pinDrill, rough("bottom", "Bottom rough")])).toContain(
         "(Before this file, turn the stock over by half a turn about its centre line along Y, onto its 2 locating pins of 6 mm, so the face that was underneath is on top)",
       );
+      // Pins set but never drilled: nothing to turn it over onto.
+      for (const operations of [
+        [rough("bottom", "Bottom rough")],
+        [{ ...pinDrill, enabled: false }, rough("bottom", "Bottom rough")],
+      ]) {
+        expect(withPins(operations)).toContain("along Y, in place, so the face");
+      }
     });
 
     it("names an untitled project's files after its sides", () => {

@@ -399,12 +399,12 @@ function zZeroLabel({ zOrigin }: Stock): string {
  */
 function sideSetupLines(
   { twoSided, zOrigin }: Stock,
-  { side, other }: SideSetup,
+  { side, other, pins: drilled }: SideSetup,
   firstTool: Tool | undefined,
 ): string[] {
   const axis = (twoSided?.flipAxis ?? "x").toUpperCase();
-  const pins = twoSided?.pins;
-  // Pins on the centre line hold it in place (#356).
+  const pins = drilled ? twoSided?.pins : null;
+  // Pins on the centre line hold it in place (#356), once the top side drilled them.
   const onto = pins
     ? `onto its ${pins.positions.length} locating pins of ${formatNumber(pins.diameter)} mm`
     : "in place";

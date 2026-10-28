@@ -524,7 +524,8 @@
       "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
       "modelNotShapes": "Lavora un modello, non forme",
       "peelStart": "La spirale parte dal centro o dalla parete esterna",
-      "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V."
+      "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V.",
+      "pinsTopOnly": "Solo una foratura sul lato superiore, senza forme, può forare i perni di riferimento"
     },
     "archive": {
       "notAProject": "Questo file non è un progetto Furrow CAM.",
@@ -647,7 +648,8 @@
       "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
       "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
-      "noLocatingPins": "Il progetto non ha perni di riferimento da forare."
+      "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
+      "pinsOffStock": "Un perno di riferimento è fuori dal grezzo."
     },
     "export": {
       "noEnabled": "Non ci sono operazioni attive da esportare.",
@@ -1223,7 +1225,8 @@
     "pinHoleDepth": "Profondità dei fori",
     "pinOff": "Un perno è fuori dal grezzo.",
     "addPinDrill": "Fora i perni",
-    "pinDrill": "Perni di riferimento"
+    "pinDrill": "Perni di riferimento",
+    "noPinBit": "Aggiungi una punta della misura dei perni, o una fresa più piccola, per forarli."
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",

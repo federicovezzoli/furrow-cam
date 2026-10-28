@@ -144,7 +144,7 @@ describe("pinDrillToolChoice", () => {
     const pinDrill = tool("d6", "drill", 6);
     expect(pinDrillToolChoice([smallDrill, mill, pinDrill], 6)).toBe(pinDrill);
     expect(pinDrillToolChoice([smallDrill, mill], 6)).toBe(mill);
-    // Nothing fits: as for other drills.
-    expect(pinDrillToolChoice([smallDrill], 6)).toBe(smallDrill);
+    // Nothing fits: no bit, rather than one that skips every hole.
+    expect(pinDrillToolChoice([smallDrill, tool("m8", "flat_end_mill", 8)], 6)).toBeUndefined();
   });
 });

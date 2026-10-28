@@ -11,10 +11,10 @@ const THROUGH: PinHoles = { type: "through", spoilboardDepth: 5 };
 function project(
   flipAxis: FlipAxis,
   holes: PinHoles | null = THROUGH,
-  stockSide: Operation["stockSide"] = "top",
+  positions = [-80, 60],
 ): ProjectDocument {
   const doc = fullDocument();
-  const pins = holes && { diameter: 6, positions: [-80, 60], holes };
+  const pins = holes && { diameter: 6, positions, holes };
   return {
     ...doc,
     stock: {
@@ -28,7 +28,7 @@ function project(
         ...(doc.operations[0] as Operation),
         type: "drill",
         tool: drill,
-        stockSide,
+        stockSide: "top",
         targets: [],
         params: { depth: 1, peck: false, stepOver: 40, pins: true },
       },
@@ -75,12 +75,25 @@ describe("locating pins", () => {
       for (const [x, y] of centers as [number, number][]) {
         expect(flipPoint(doc.stock, axis, [x, y, 0]).slice(0, 2)).toEqual([x, y]);
       }
-      expect(holes(project(axis, THROUGH, "bottom")).at).toEqual(top.at);
     },
   );
 
   it("drills blind holes as deep as the pin settings say, whatever the drill's own depth", () => {
     expect(holes(project("x", { type: "blind", depth: 8 })).bottom).toBeCloseTo(-8);
+  });
+
+  it("warns when a pin is off the stock, along the flip axis or across it", () => {
+    const warnings = (doc: ProjectDocument) =>
+      generateToolpath(toolpathInputs(doc)[0] as ReturnType<typeof toolpathInputs>[number])
+        .warnings;
+    expect(warnings(project("x"))).toEqual([]);
+    // 300 mm along X: a 6 mm pin 148 mm from the centre reaches past the edge.
+    expect(warnings(project("x", THROUGH, [-80, 148]))).toEqual([
+      { code: "toolpath.pinsOffStock" },
+    ]);
+    const narrow = project("x");
+    narrow.stock.height = 4;
+    expect(warnings(narrow)).toEqual([{ code: "toolpath.pinsOffStock" }]);
   });
 
   it("warns when the project has no pins to drill", () => {

@@ -524,7 +524,8 @@
       "onlyVBitsVCarve": "Only V-bits V-carve",
       "modelNotShapes": "Machines a model, not shapes",
       "peelStart": "Peeling starts from the centre or the outer wall",
-      "drillsCantCutSideways": "Drill bits can't cut sideways: pick an end mill or a V-bit."
+      "drillsCantCutSideways": "Drill bits can't cut sideways: pick an end mill or a V-bit.",
+      "pinsTopOnly": "Only a top-side drill with no shapes can drill the locating pins"
     },
     "archive": {
       "notAProject": "This file isn't a Furrow CAM project.",
@@ -647,7 +648,8 @@
       "roughNothing": "The stock to leave covers the whole model: there is nothing to rough out.",
       "roughMarginOffStock": "The margin around the model isn't on the stock: there is nothing to rough out.",
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
-      "noLocatingPins": "The project has no locating pins to drill."
+      "noLocatingPins": "The project has no locating pins to drill.",
+      "pinsOffStock": "A locating pin is off the stock."
     },
     "export": {
       "noEnabled": "There are no enabled operations to export.",
@@ -1223,7 +1225,8 @@
     "pinHoleDepth": "Hole depth",
     "pinOff": "A pin is off the stock.",
     "addPinDrill": "Drill the pins",
-    "pinDrill": "Locating pins"
+    "pinDrill": "Locating pins",
+    "noPinBit": "Add a drill bit of the pins' size, or a smaller end mill, to drill them."
   },
   "Model": {
     "closeLabel": "Close model properties",

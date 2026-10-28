@@ -524,7 +524,8 @@
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
       "modelNotShapes": "Bearbeitet ein Modell, keine Formen",
       "peelStart": "Das Ausräumen in Spiralbahnen beginnt in der Mitte oder an der Außenwand",
-      "drillsCantCutSideways": "Bohrer schneiden nicht seitlich: Wähle einen Schaftfräser oder einen V-Fräser."
+      "drillsCantCutSideways": "Bohrer schneiden nicht seitlich: Wähle einen Schaftfräser oder einen V-Fräser.",
+      "pinsTopOnly": "Nur eine Bohrung auf der Oberseite ohne Formen kann die Passstifte bohren"
     },
     "archive": {
       "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
@@ -647,7 +648,8 @@
       "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
       "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
-      "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren."
+      "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
+      "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils."
     },
     "export": {
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
@@ -1223,7 +1225,8 @@
     "pinHoleDepth": "Bohrtiefe",
     "pinOff": "Ein Stift liegt außerhalb des Rohteils.",
     "addPinDrill": "Stifte bohren",
-    "pinDrill": "Passstifte"
+    "pinDrill": "Passstifte",
+    "noPinBit": "Fügen Sie einen Bohrer in Stiftgröße oder einen kleineren Fräser hinzu, um sie zu bohren."
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",

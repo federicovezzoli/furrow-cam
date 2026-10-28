@@ -234,7 +234,8 @@ export function addPinDrillOperation(
 /** Makes the drill `id` cut the locating pins (#356) instead of its shapes. */
 export function setDrillPins(store: DocumentStore, id: string) {
   changeOperation(store, "setOperationTargets", id, (operation) => {
-    if (operation.type !== "drill") return;
+    // Top side only: turned over, the stock sits on the pins.
+    if (operation.type !== "drill" || operation.stockSide !== "top") return;
     operation.targets = [];
     operation.params.pins = true;
   });

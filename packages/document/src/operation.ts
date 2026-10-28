@@ -224,7 +224,8 @@ export const DrillParams = z.strictObject({
   stepOver: StepOver,
   /**
    * Drill the two-sided project's locating pins (#356) instead of the
-   * targets, which are then empty, as deep as the pin settings say.
+   * targets, which are then empty, as deep as the pin settings say. Top
+   * side only.
    */
   pins: z.boolean(),
 });
@@ -244,6 +245,10 @@ export const DrillOperation = z
   .superRefine((operation, ctx) => {
     if (!canDrill(operation.tool)) {
       ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "operation.vBitsCantDrill" });
+    }
+    // The pins are drilled from the top; turned over, the stock sits on them.
+    if (operation.params.pins && (operation.targets.length > 0 || operation.stockSide !== "top")) {
+      ctx.addIssue({ code: "custom", path: ["params", "pins"], message: "operation.pinsTopOnly" });
     }
   });
 export type DrillOperation = z.infer<typeof DrillOperation>;

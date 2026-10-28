@@ -56,7 +56,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Locating pins/ }));
     expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);
     fireEvent.click(screen.getByRole("button", { name: "Add pin" }));
-    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240, 0]);
+    expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240, 268.5]);
     expect(screen.getByLabelText(/^Pin 3/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove pin" }));
     expect(document().stock.twoSided?.pins?.positions).toEqual([-240, 240]);

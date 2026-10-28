@@ -432,6 +432,15 @@ describe("addPinDrillOperation", () => {
     expect(pinDrill()).toMatchObject({ targets: [whole(circle)], params: { pins: false } });
     setDrillPins(store, id);
     expect(pinDrill()).toMatchObject({ targets: [], params: { pins: true } });
+    // Not from the bottom side, which sits on the pins.
+    const bottom = addDrillOperation(store, {
+      targets: [whole(circle)],
+      tool: endMill,
+      stockSide: "bottom",
+    });
+    setDrillPins(store, bottom ?? "");
+    const bottomDrill = operations().find((operation) => operation.id === bottom);
+    expect(bottomDrill).toMatchObject({ targets: [whole(circle)], params: { pins: false } });
   });
 
   it("refuses projects without pins and V-bits", () => {

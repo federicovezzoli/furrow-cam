@@ -28,6 +28,7 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
 import { addPinDrillOperation } from "../stores/operation-actions";
 import {
+  addLocatingPin,
   addTouchOff,
   partingDepthLimits,
   removeTouchOff,
@@ -263,11 +264,7 @@ function PinFields() {
             >
               {t("removePin")}
             </Button>
-            <Button
-              variant="outline"
-              size="compact"
-              onClick={() => updateLocatingPins(store, { positions: [...pins.positions, 0] })}
-            >
+            <Button variant="outline" size="compact" onClick={() => addLocatingPin(store)}>
               <PlusIcon />
               {t("addPin")}
             </Button>
@@ -336,6 +333,7 @@ function PinFields() {
               {t("addPinDrill")}
             </Button>
           </div>
+          {!drill && <p className="text-muted-foreground">{t("noPinBit")}</p>}
         </>
       )}
     </>

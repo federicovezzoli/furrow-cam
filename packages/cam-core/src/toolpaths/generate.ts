@@ -42,8 +42,8 @@ export type ToolpathInput = {
   /** The model a 3D operation machines (PRD-0005), `null` for the others. */
   model: Model | null;
   /**
-   * The stock seen from above, for 3D roughing up to its edges and for rest
-   * machining; `null` for the others.
+   * The stock seen from above, for 3D roughing up to its edges, for rest
+   * machining and for checking locating pins are on it; `null` for the others.
    */
   stock: Rect | null;
   /** The stock's bottom, below which 3D operations don't cut; `null` for the others. */
@@ -123,7 +123,9 @@ export function toolpathInputs(
       model: models.get(operationModelId(operation) ?? "") ?? null,
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
-        rest || (operation.type === "relief_rough" && operation.params.boundary.type !== "model")
+        rest ||
+        (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
+        (operation.type === "drill" && operation.params.pins)
           ? stock
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
@@ -365,6 +367,32 @@ function checkTouchOff(
   return { ...toolpath, warnings: [...toolpath.warnings, TOUCH_OFF_WARNING] };
 }
 
+/** A pin drill's toolpath (#356), warning when a pin hole reaches past the stock's edges. */
+function checkPinsOnStock(
+  operation: Operation,
+  shapes: Shape[],
+  stock: Rect | null,
+  toolpath: Toolpath,
+): Toolpath {
+  if (operation.type !== "drill" || !operation.params.pins || !stock) return toolpath;
+  const tolerance = 1e-9;
+  const off = shapes.some(({ paths }) =>
+    paths.some(({ start: [x, y], segments }) => {
+      // Each pin is a circle from its rightmost point around its centre.
+      const [cx, cy] = segments[0]?.kind === "arc" ? segments[0].center : [x, y];
+      const r = x - cx;
+      return (
+        cx - r < stock.min[0] - tolerance ||
+        cx + r > stock.max[0] + tolerance ||
+        cy - r < stock.min[1] - tolerance ||
+        cy + r > stock.max[1] + tolerance
+      );
+    }),
+  );
+  if (!off) return toolpath;
+  return { ...toolpath, warnings: [...toolpath.warnings, { code: "toolpath.pinsOffStock" }] };
+}
+
 function* operationSteps(
   {
     operation,
@@ -398,7 +426,12 @@ function* operationSteps(
       if (operation.params.pins && shapes.length === 0) {
         return { moves: [], warnings: [{ code: "toolpath.noLocatingPins" }] };
       }
-      return checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff);
+      return checkPinsOnStock(
+        operation,
+        shapes,
+        stock,
+        checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff),
+      );
     case "engrave":
       return checkTouchOff(operation, engraveToolpath(operation, shapes, options), touchOff);
     case "vcarve":

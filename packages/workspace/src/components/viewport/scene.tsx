@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
+  concatPositions,
   gridLinePositions,
   pathsLinePositions,
   shapesLinePositions,
@@ -157,17 +158,12 @@ function LocatingPins({ color }: { color: string }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const positions = useMemo(() => {
     const diameter = stock.twoSided?.pins?.diameter ?? 0;
-    const parts = pinCenters(stock).flatMap(([x, y]) => {
-      const { ring, cross } = touchOffLinePositions({ x, y, diameter });
-      return [ring, cross];
-    });
-    const all = new Float32Array(parts.reduce((sum, part) => sum + part.length, 0));
-    let at = 0;
-    for (const part of parts) {
-      all.set(part, at);
-      at += part.length;
-    }
-    return all;
+    return concatPositions(
+      pinCenters(stock).flatMap(([x, y]) => {
+        const { ring, cross } = touchOffLinePositions({ x, y, diameter });
+        return [ring, cross];
+      }),
+    );
   }, [stock]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
 }

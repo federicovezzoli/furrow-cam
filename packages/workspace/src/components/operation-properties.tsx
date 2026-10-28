@@ -791,6 +791,7 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
+  const format = useFormatMessage();
   const pins = useDocumentStore((s) => s.document.stock.twoSided?.pins);
   const { params, tool } = operation;
   const { errors, update } = useParamsUpdate(params, (changes) =>
@@ -811,7 +812,11 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
         })}
       </p>
       {params.pins ? (
-        pins && <p>{t("pinDepth", { depth: length(pinDepth(thickness, pins)) })}</p>
+        <p>
+          {pins
+            ? t("pinDepth", { depth: length(pinDepth(thickness, pins)) })
+            : format({ code: "toolpath.noLocatingPins" })}
+        </p>
       ) : (
         <NumberField
           id="drill-depth"

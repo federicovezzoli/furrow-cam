@@ -132,8 +132,8 @@ export function cuttingToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
 
 /**
  * The tool a drill of `diameter` pins (#356) starts with: a drill bit of
- * their size, else an end mill small enough to bore them, else as for other
- * drills.
+ * their size, else an end mill small enough to bore them; none if the
+ * library has neither, as any other bit would skip every hole.
  */
 export function pinDrillToolChoice(tools: ToolChoice[], diameter: number): ToolChoice | undefined {
   return (
@@ -145,8 +145,7 @@ export function pinDrillToolChoice(tools: ToolChoice[], diameter: number): ToolC
     toolChoiceFor(
       tools,
       (tool) => tool.type !== "drill" && canDrill(tool) && tool.diameter < diameter,
-    ) ??
-    drillToolChoice(tools)
+    )
   );
 }
 

@@ -253,10 +253,19 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
   });
 }
 
-/** Sets the axis a two-sided project's stock is turned over about. */
+/**
+ * Sets the axis a two-sided project's stock is turned over about. The
+ * locating pins keep their place along it, as a share of its length.
+ */
 export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
   store.getState().change("setStock.flipAxis", (draft) => {
-    if (draft.stock.twoSided) draft.stock.twoSided.flipAxis = flipAxis;
+    const { twoSided, width, height } = draft.stock;
+    if (!twoSided || twoSided.flipAxis === flipAxis) return;
+    twoSided.flipAxis = flipAxis;
+    const scale = flipAxis === "x" ? width / height : height / width;
+    if (twoSided.pins) {
+      twoSided.pins.positions = twoSided.pins.positions.map((position) => position * scale);
+    }
   });
 }
 
@@ -298,6 +307,20 @@ export function setLocatingPins(store: DocumentStore, on: boolean) {
         }
       : null;
   });
+}
+
+/**
+ * Adds a locating pin, as one undo step: opposite the last one if that
+ * place is free, else halfway from it to the stock's edge beyond it.
+ */
+export function addLocatingPin(store: DocumentStore) {
+  const { twoSided, width, height } = store.getState().document.stock;
+  const pins = twoSided?.pins;
+  if (!pins) return;
+  const last = pins.positions.at(-1) ?? 0;
+  const edge = ((twoSided.flipAxis === "x" ? width : height) - pins.diameter) / 2;
+  const position = pins.positions.includes(-last) ? (last + (last < 0 ? -edge : edge)) / 2 : -last;
+  updateLocatingPins(store, { positions: [...pins.positions, position] });
 }
 
 /**

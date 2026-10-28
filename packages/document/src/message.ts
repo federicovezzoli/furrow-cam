@@ -83,6 +83,7 @@ export const DOCUMENT_MESSAGES = [
   "operation.allowanceZeroOnLine",
   "operation.allowanceNeeded",
   "operation.vBitsCantDrill",
+  "operation.pinsTopOnly",
   "operation.drillsCantEngrave",
   "operation.flatBottomEndMill",
   "operation.onlyVBitsVCarve",
