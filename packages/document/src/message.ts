@@ -64,6 +64,7 @@ export const DOCUMENT_MESSAGES = [
   "geometry.closedSingleLine",
   "document.padOffStock",
   "document.partingBelowStock",
+  "document.pinHolesThrough",
   "document.bottomSideOneSided",
   "document.duplicateDrawing",
   "document.duplicateShape",

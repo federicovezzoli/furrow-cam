@@ -135,6 +135,14 @@ export const Stock = z
         message: "document.partingBelowStock",
       });
     }
+    const holes = stock.twoSided?.pins?.holes;
+    if (holes?.type === "blind" && holes.depth >= stock.thickness) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["twoSided", "pins", "holes", "depth"],
+        message: "document.pinHolesThrough",
+      });
+    }
     if (stock.touchOff && stock.touchOff.diameter > Math.min(stock.width, stock.height)) {
       ctx.addIssue({
         code: "custom",

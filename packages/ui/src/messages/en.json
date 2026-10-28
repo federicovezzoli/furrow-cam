@@ -511,7 +511,8 @@
       "unknownFont": "The text uses a font the project doesn't hold",
       "tooManyFonts": "A project holds at most {max} fonts",
       "unknownShape": "Unknown shape id",
-      "unknownPath": "Unknown path"
+      "unknownPath": "Unknown path",
+      "pinHolesThrough": "Blind pin holes must end inside the stock"
     },
     "operation": {
       "pathIndices": "Path indices must be ascending, each once",

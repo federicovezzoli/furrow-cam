@@ -511,7 +511,8 @@
       "unknownFont": "Le texte utilise une police que le projet ne contient pas",
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
-      "unknownPath": "Tracé inconnu"
+      "unknownPath": "Tracé inconnu",
+      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut"
     },
     "operation": {
       "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",

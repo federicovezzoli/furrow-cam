@@ -511,7 +511,8 @@
       "unknownFont": "Il testo usa un font che il progetto non contiene",
       "tooManyFonts": "Un progetto contiene al massimo {max} font",
       "unknownShape": "Id di forma sconosciuto",
-      "unknownPath": "Percorso sconosciuto"
+      "unknownPath": "Percorso sconosciuto",
+      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo"
     },
     "operation": {
       "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",

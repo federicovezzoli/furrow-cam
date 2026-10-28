@@ -494,6 +494,12 @@ describe("two-sided projects (ADR-0060)", () => {
       holes: { type: "blind", depth: 8 },
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    // Blind holes stay inside the stock, also when it gets thinner.
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 18 } })).toBe(false);
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 15 } })).toBe(true);
+    setStockDimension(store, "thickness", 10);
+    expect(stock(store).twoSided?.pins?.holes).toEqual({ type: "blind", depth: 15 * (10 / 18) });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
     setLocatingPins(store, false);
     expect(stock(store).twoSided?.pins).toBeNull();
   });

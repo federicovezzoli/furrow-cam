@@ -511,7 +511,8 @@
       "unknownFont": "Der Text nutzt eine Schrift, die das Projekt nicht enthält",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
-      "unknownPath": "Unbekannter Pfad"
+      "unknownPath": "Unbekannter Pfad",
+      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden"
     },
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",

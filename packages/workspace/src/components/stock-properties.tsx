@@ -48,7 +48,7 @@ import {
 } from "../stores/stock-actions";
 import { Checkbox } from "./checkbox";
 import { PlaceholderList } from "./placeholder-list";
-import { drillToolChoice, useToolLibrary } from "./tool-library";
+import { pinDrillToolChoice, useToolLibrary } from "./tool-library";
 
 const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
 
@@ -196,12 +196,17 @@ function PinFields() {
   const workspace = useWorkspaceStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
-  const drill = drillToolChoice(useToolLibrary());
+  const tools = useToolLibrary();
   const t = useTranslations("Stock");
   const pins = stock.twoSided?.pins;
   if (!stock.twoSided) return null;
-  const half = (stock.twoSided.flipAxis === "x" ? stock.width : stock.height) / 2;
-  const off = pins?.positions.some((p) => Math.abs(p) + pins.diameter / 2 > half);
+  const [along, across] =
+    stock.twoSided.flipAxis === "x" ? [stock.width, stock.height] : [stock.height, stock.width];
+  const off =
+    pins &&
+    (pins.diameter > across ||
+      pins.positions.some((p) => Math.abs(p) + pins.diameter / 2 > along / 2));
+  const drill = pins && pinDrillToolChoice(tools, pins.diameter);
 
   function addDrill() {
     if (!drill) return;
@@ -311,7 +316,7 @@ function PinFields() {
               quantity="length"
               units={units}
               min={MIN_STOCK}
-              max={stock.thickness}
+              max={stock.thickness - MIN_STOCK}
               value={pins.holes.depth}
               onValueChange={(depth) =>
                 updateLocatingPins(store, { holes: { type: "blind", depth } })

@@ -347,6 +347,7 @@ describe("two-sided projects", () => {
       { positions: [0] },
       { diameter: 0 },
       { holes: { type: "blind", spoilboardDepth: 5 } },
+      { holes: { type: "blind", depth: 18 } },
     ]) {
       expect(Stock.safeParse(withPins(changes)).success).toBe(false);
     }

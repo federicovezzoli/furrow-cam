@@ -105,6 +105,11 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     if (twoSided && twoSided.partingDepth >= draft.stock.thickness) {
       twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
     }
+    // So must blind pin holes, kept the same way.
+    const holes = twoSided?.pins?.holes;
+    if (holes?.type === "blind" && holes.depth >= draft.stock.thickness) {
+      holes.depth = (holes.depth * draft.stock.thickness) / stock.thickness;
+    }
   });
 }
 
@@ -297,12 +302,15 @@ export function setLocatingPins(store: DocumentStore, on: boolean) {
 
 /**
  * Changes some of the locating pins' settings at once; refused unless the
- * result is valid `LocatingPins`. Returns whether they were taken.
+ * result is valid `LocatingPins` with blind holes inside the stock. Returns whether they were taken.
  */
 export function updateLocatingPins(store: DocumentStore, changes: Partial<LocatingPins>): boolean {
-  const pins = store.getState().document.stock.twoSided?.pins;
+  const { twoSided, thickness } = store.getState().document.stock;
+  const pins = twoSided?.pins;
   const parsed = LocatingPins.safeParse({ ...pins, ...changes });
   if (!pins || !parsed.success) return false;
+  // Blind holes stay inside the stock, as the document requires.
+  if (parsed.data.holes.type === "blind" && parsed.data.holes.depth >= thickness) return false;
   store.getState().change("setStock.pins", (draft) => {
     if (draft.stock.twoSided) draft.stock.twoSided.pins = parsed.data;
   });
