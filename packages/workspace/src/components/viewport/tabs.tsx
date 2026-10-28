@@ -2,6 +2,8 @@
 
 import {
   closedLoops,
+  holdingTabStrips,
+  modelOutlines,
   nearestOnLoops,
   type TabFrame,
   tabFrame,
@@ -19,6 +21,7 @@ import {
   useWorkspaceStore,
 } from "../../providers/workspace-stores";
 import { addTab, moveTab, removeTab } from "../../stores/operation-actions";
+import { moveHoldingTab } from "../../stores/stock-actions";
 import { RENDER_ORDER } from "./scene-style";
 import { onStockTop, StockTopCatcher } from "./stock-top";
 
@@ -110,6 +113,49 @@ export function Tabs({ color }: { color: string }) {
   );
 }
 
+/**
+ * A two-sided project's holding tabs (PRD-0011 B5, ADR-0063), in the top
+ * side's coordinates: each a strip from the model's outline to the stock's
+ * edge, as wide and thick as the tabs, just below the parting plane. In the
+ * top view of the top side, dragging one moves it along the outlines.
+ */
+export function HoldingTabs({ color }: { color: string }) {
+  const stock = useDocumentStore((s) => s.document.stock);
+  const models = useDocumentStore((s) => s.document.models);
+  const editing = useWorkspaceStore(
+    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+  );
+  const store = useDocumentStoreApi();
+  const loops = useMemo(() => modelOutlines(models), [models]);
+  const tabs = stock.twoSided?.tabs;
+  const strips = useMemo(
+    () => (tabs ? holdingTabStrips(stock, models, tabs) : []),
+    [stock, models, tabs],
+  );
+  if (!stock.twoSided || !tabs) return null;
+  const { partingDepth } = stock.twoSided;
+
+  return strips.map(({ at, to }, index) => (
+    <TabMarker
+      // Positions have no ids; a marker keeps its index while dragged.
+      // biome-ignore lint/suspicious/noArrayIndexKey: see above
+      key={index}
+      frame={{
+        center: [(at[0] + to[0]) / 2, (at[1] + to[1]) / 2],
+        angle: Math.atan2(to[1] - at[1], to[0] - at[0]),
+      }}
+      size={[Math.hypot(to[0] - at[0], to[1] - at[1]), tabs.width, tabs.thickness]}
+      bottom={-partingDepth - tabs.thickness}
+      color={color}
+      editing={editing}
+      onMove={(point) => {
+        const nearest = nearestOnLoops(loops, point);
+        if (nearest) moveHoldingTab(store, index, nearest.point);
+      }}
+    />
+  ));
+}
+
 /** A press on a tab marker, which becomes a drag once the pointer moves far enough. */
 type TabPress = { pointerId: number; x: number; y: number; dragging: boolean };
 
@@ -125,12 +171,13 @@ function TabMarker({
   frame: TabFrame;
   /** Along the contour, across it and up. */
   size: Vec3;
-  /** Height of the tab's base, the profile's final depth. */
+  /** Height of the tab's base: a profile's final depth, or a holding tab's below the parting plane. */
   bottom: number;
   color: string;
   editing: boolean;
   onMove: (point: Point) => void;
-  onRemove: () => void;
+  /** Without it, a click on the tab does nothing. */
+  onRemove?: () => void;
 }) {
   const store = useDocumentStoreApi();
   const grab = useRef<Mesh>(null);
@@ -197,7 +244,7 @@ function TabMarker({
         if (!editing) return;
         // Keeps the click from adding a tab underneath, whether it removes this one or ends a drag.
         event.stopPropagation();
-        if (event.delta <= TAB_DRAG_THRESHOLD) onRemove();
+        if (event.delta <= TAB_DRAG_THRESHOLD) onRemove?.();
       }}
     >
       {/* Drawn over the stock and the shapes, which would otherwise hide it from above. */}

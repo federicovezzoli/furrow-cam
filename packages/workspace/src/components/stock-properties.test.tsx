@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createProjectDocument, type ProjectDocument, stockPins } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
@@ -33,6 +33,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(document().stock.twoSided).toEqual({
       flipAxis: "x",
       partingDepth: 9,
+      tabs: null,
       lineUp: null,
     });
     fireEvent.change(screen.getByLabelText("Turned over about"), { target: { value: "y" } });
@@ -82,6 +83,20 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(screen.getByText(/exactly 400 mm along Y/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Lined up on"), { target: { value: "none" } });
     expect(document().stock.twoSided).toMatchObject({ lineUp: null });
+  });
+
+  it("turns holding tabs on, sizes them and spreads them round the models", () => {
+    const document = render({ ...createProjectDocument(), models: [model] });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
+    expect(document().stock.twoSided?.tabs).toMatchObject({ width: 6, thickness: 2 });
+    expect(screen.getByText("4 tabs")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Tabs per model/), { target: { value: "3" } });
+    fireEvent.blur(screen.getByLabelText(/Tabs per model/));
+    fireEvent.click(screen.getByRole("button", { name: "Place" }));
+    expect(document().stock.twoSided?.tabs?.positions).toHaveLength(3);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
+    expect(document().stock.twoSided?.tabs).toBeNull();
   });
 
   it("says when drills of the pins cut nothing, once the stock isn't lined up on pins", () => {

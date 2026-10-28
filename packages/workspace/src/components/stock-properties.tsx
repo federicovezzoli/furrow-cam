@@ -30,6 +30,8 @@ import { addPinDrillOperation } from "../stores/operation-actions";
 import {
   addLocatingPin,
   addTouchOff,
+  autoPlaceHoldingTabs,
+  HOLDING_TABS_PER_MODEL,
   partingDepthLimits,
   removeTouchOff,
   type StockDimension,
@@ -37,6 +39,8 @@ import {
   setCustomXYOrigin,
   setFenceCorner,
   setFlipAxis,
+  setHoldingTabSize,
+  setHoldingTabs,
   setLineUp,
   setPartingDepth,
   setStockDimension,
@@ -182,9 +186,92 @@ function TwoSidedSection() {
           />
           <p className="text-muted-foreground">{t("partingDepthHint")}</p>
           <PinFields />
+          <HoldingTabFields />
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * Holding tabs (PRD-0011 B5, ADR-0063), which the bottom side's 3D
+ * operations leave between the part and the stock: their width and
+ * thickness, and a number of them to spread round each model. The tabs are
+ * dragged along the models' outlines in the top view.
+ */
+function HoldingTabFields() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const [count, setCount] = useState(HOLDING_TABS_PER_MODEL);
+  const [refused, setRefused] = useState<number | null>(null);
+  const t = useTranslations("Stock");
+  const length = useLength(units);
+  const tabs = stock.twoSided?.tabs ?? null;
+  const depth = stock.thickness - (stock.twoSided?.partingDepth ?? 0);
+
+  return (
+    <>
+      <Checkbox
+        id="holding-tabs"
+        label={t("holdingTabs")}
+        hint={t("holdingTabsHint")}
+        checked={tabs !== null}
+        onChange={(on) => setHoldingTabs(store, on)}
+      />
+      {tabs && (
+        <div className="grid gap-2 border-l-2 pl-2">
+          <NumberField
+            id="holding-tab-width"
+            label={t("holdingTabWidth")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={tabs.width}
+            onValueChange={(width) => setHoldingTabSize(store, "width", width)}
+            {...gestureHandlers(store)}
+          />
+          <NumberField
+            id="holding-tab-thickness"
+            label={t("holdingTabThickness")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={tabs.thickness}
+            onValueChange={(thickness) =>
+              setRefused(setHoldingTabSize(store, "thickness", thickness) ? null : thickness)
+            }
+            error={refused === null ? undefined : t("holdingTabTooThick", { size: length(depth) })}
+            {...gestureHandlers(store)}
+          />
+          <div className="flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <NumberField
+                id="holding-tab-count"
+                label={t("holdingTabsPerModel")}
+                layout="inline"
+                integer
+                min={1}
+                value={count}
+                onValueChange={setCount}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="compact"
+              onClick={() => autoPlaceHoldingTabs(store, count)}
+            >
+              {t("placeHoldingTabs")}
+            </Button>
+          </div>
+          <p className="text-muted-foreground">
+            {t("holdingTabCount", { count: tabs.positions.length })}
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 

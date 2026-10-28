@@ -1,4 +1,5 @@
 import {
+  autoHoldingTabPositions,
   clampTouchOff,
   defaultTouchOff,
   designAlignment,
@@ -10,6 +11,7 @@ import {
 } from "@furrow/cam-core";
 import {
   type FlipAxis,
+  HoldingTabs,
   type LineUp,
   LocatingPins,
   type Point,
@@ -113,6 +115,7 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     if (holes?.type === "blind" && holes.depth >= draft.stock.thickness) {
       holes.depth = (holes.depth * draft.stock.thickness) / stock.thickness;
     }
+    keepTabsInBottomSide(draft);
   });
 }
 
@@ -252,7 +255,7 @@ export function setTwoSided(store: DocumentStore, twoSided: boolean) {
       for (const operation of draft.operations) operation.stockSide = "top";
       return;
     }
-    draft.stock.twoSided = { flipAxis: "x", partingDepth, lineUp: null };
+    draft.stock.twoSided = { flipAxis: "x", partingDepth, lineUp: null, tabs: null };
   });
 }
 
@@ -288,6 +291,80 @@ export function setPartingDepth(store: DocumentStore, partingDepth: number) {
   if (!(partingDepth > 0 && partingDepth < thickness)) return;
   store.getState().change("setStock.partingDepth", (draft) => {
     if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
+    keepTabsInBottomSide(draft);
+  });
+}
+
+/** How deep the bottom side cuts up to the parting plane, which holding tabs must be thinner than. */
+function bottomSideDepth({ thickness, twoSided }: ProjectDocument["stock"]): number {
+  return twoSided ? thickness - twoSided.partingDepth : 0;
+}
+
+/** Holding tabs too thick for the bottom side (#357) take half its depth, as the document requires. */
+function keepTabsInBottomSide(draft: Draft<ProjectDocument>) {
+  const tabs = draft.stock.twoSided?.tabs;
+  const depth = bottomSideDepth(draft.stock);
+  if (tabs && tabs.thickness >= depth) tabs.thickness = depth / 2;
+}
+
+/** Holding tabs round each model when they're turned on, or auto-placed without a count. */
+export const HOLDING_TABS_PER_MODEL = 4;
+
+/**
+ * Turns a two-sided project's holding tabs (PRD-0011 B5, ADR-0063) on, 6 mm
+ * wide, 2 mm thick but no more than half the bottom side's depth, and
+ * `HOLDING_TABS_PER_MODEL` round each model; or off.
+ */
+export function setHoldingTabs(store: DocumentStore, on: boolean) {
+  const { stock, models } = store.getState().document;
+  if (!stock.twoSided || on === (stock.twoSided.tabs !== null)) return;
+  const tabs: HoldingTabs | null = on
+    ? {
+        width: 6,
+        thickness: Math.min(2, bottomSideDepth(stock) / 2),
+        positions: autoHoldingTabPositions(models, HOLDING_TABS_PER_MODEL),
+      }
+    : null;
+  store.getState().change("setStock.tabs", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.tabs = tabs;
+  });
+}
+
+/**
+ * Sets the holding tabs' width or thickness; refused unless positive, and
+ * for the thickness, thinner than the bottom side's depth, as the document
+ * requires. Returns whether it was taken.
+ */
+export function setHoldingTabSize(
+  store: DocumentStore,
+  field: "width" | "thickness",
+  value: number,
+): boolean {
+  const { stock } = store.getState().document;
+  const tabs = stock.twoSided?.tabs;
+  if (!tabs || !HoldingTabs.safeParse({ ...tabs, [field]: value }).success) return false;
+  if (field === "thickness" && value >= bottomSideDepth(stock)) return false;
+  store.getState().change(`setStock.tabs.${field}`, (draft) => {
+    const draftTabs = draft.stock.twoSided?.tabs;
+    if (draftTabs) draftTabs[field] = value;
+  });
+  return true;
+}
+
+/** Replaces the holding tabs with `count` spread round each model's outline. */
+export function autoPlaceHoldingTabs(store: DocumentStore, count: number) {
+  const { models } = store.getState().document;
+  store.getState().change("setStock.tabs.positions", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs) tabs.positions = autoHoldingTabPositions(models, count);
+  });
+}
+
+/** Moves holding tab `index` to `position`, already on a model's outline. */
+export function moveHoldingTab(store: DocumentStore, index: number, position: Point) {
+  store.getState().change("setStock.tabs.positions", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs && index >= 0 && index < tabs.positions.length) tabs.positions[index] = position;
   });
 }
 

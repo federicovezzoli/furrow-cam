@@ -1,4 +1,4 @@
-import { touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
+import { autoHoldingTabPositions, touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, StockAnchor, stockPins } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
@@ -7,12 +7,16 @@ import { drawingAnchor, expectClose } from "./drawing-test-utils";
 import {
   addLocatingPin,
   addTouchOff,
+  autoPlaceHoldingTabs,
+  moveHoldingTab,
   pickXYOrigin,
   removeTouchOff,
   setCustomOrigin,
   setCustomXYOrigin,
   setFenceCorner,
   setFlipAxis,
+  setHoldingTabSize,
+  setHoldingTabs,
   setLineUp,
   setPartingDepth,
   setStockDimension,
@@ -431,6 +435,59 @@ describe("touch-off pad", () => {
   });
 });
 
+describe("holding tabs (#357)", () => {
+  /** A two-sided 18 mm stock with `model`, parting 9 mm down. */
+  function tabbedStore() {
+    const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    setTwoSided(store, true);
+    setPartingDepth(store, 9);
+    return store;
+  }
+
+  it("start four round each model, 6 mm wide and 2 mm thick, and turn off", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    expect(stock(store).twoSided?.tabs).toEqual({
+      width: 6,
+      thickness: 2,
+      positions: autoHoldingTabPositions([model], 4),
+    });
+    setHoldingTabs(store, false);
+    expect(stock(store).twoSided?.tabs).toBeNull();
+    // A one-sided project has none to turn on.
+    const oneSided = newStore();
+    setHoldingTabs(oneSided, true);
+    expect(stock(oneSided).twoSided).toBeNull();
+  });
+
+  it("stay thinner than the bottom side's depth", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    expect(setHoldingTabSize(store, "thickness", 9)).toBe(false);
+    expect(setHoldingTabSize(store, "width", 0)).toBe(false);
+    expect(setHoldingTabSize(store, "thickness", 8)).toBe(true);
+    expect(setHoldingTabSize(store, "width", 10)).toBe(true);
+    expect(stock(store).twoSided?.tabs).toMatchObject({ width: 10, thickness: 8 });
+    // A deeper parting plane leaves the bottom side 4 mm: the tabs take half.
+    setPartingDepth(store, 14);
+    expect(stock(store).twoSided?.tabs?.thickness).toBe(2);
+    setStockDimension(store, "thickness", 15);
+    expect(stock(store).twoSided?.tabs?.thickness).toBe(0.5);
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+  });
+
+  it("are placed again by a count and moved one by one", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    autoPlaceHoldingTabs(store, 2);
+    expect(stock(store).twoSided?.tabs?.positions).toEqual(autoHoldingTabPositions([model], 2));
+    moveHoldingTab(store, 1, [1, 2]);
+    moveHoldingTab(store, 5, [3, 4]);
+    expect(stock(store).twoSided?.tabs?.positions[1]).toEqual([1, 2]);
+    expect(stock(store).twoSided?.tabs?.positions).toHaveLength(2);
+  });
+});
+
 describe("two-sided projects (ADR-0060)", () => {
   it("part at half the stock's thickness without a model, flipped about X", () => {
     const store = newStore();
@@ -438,6 +495,7 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(stock(store).twoSided).toEqual({
       flipAxis: "x",
       partingDepth: 9,
+      tabs: null,
       lineUp: null,
     });
     setFlipAxis(store, "y");
@@ -445,6 +503,7 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(stock(store).twoSided).toEqual({
       flipAxis: "y",
       partingDepth: 6,
+      tabs: null,
       lineUp: null,
     });
     // Outside the stock: refused.

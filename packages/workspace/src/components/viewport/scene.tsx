@@ -36,7 +36,7 @@ import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
-import { Tabs } from "./tabs";
+import { HoldingTabs, Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
 
@@ -76,6 +76,7 @@ export function Scene({
         {!heightmap && <Models previews={modelPreviews} palette={palette} />}
         <Shapes palette={palette} />
         <Tabs color={palette.tab} />
+        <HoldingTabs color={palette.tab} />
       </SideFrame>
       <Toolpaths palette={palette} />
       {/* Picking works on the top side only, which the drawing is in. */}

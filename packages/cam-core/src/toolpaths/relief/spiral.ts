@@ -113,7 +113,7 @@ function transposed(heights: Float32Array, grid: HeightmapGrid) {
  */
 export function* spiralSteps(
   operation: ReliefFinishOperation,
-  { grid, heights, profile, discs, dropper, floor, restDropper, warnings }: FinishSetup,
+  { grid, heights, profile, discs, dropper, floor, outside, restDropper, warnings }: FinishSetup,
   strategy: Extract<FinishingStrategy, { type: "spiral" }>,
   { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
 ): Generator<number, Toolpath> {
@@ -132,7 +132,8 @@ export function* spiralSteps(
     turned.heights,
     turned.grid,
     profile,
-    discs.map((disc) => ({ ...disc, x: disc.y, y: disc.x })),
+    discs.map(({ x, y, to, ...disc }) => ({ ...disc, x: y, y: x, to: to && [to[1], to[0]] })),
+    outside,
   );
 
   const builder = new ToolpathBuilder(safeZ, entryClearance);

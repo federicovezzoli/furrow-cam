@@ -155,7 +155,7 @@ describe("exportGcode", () => {
       const stock = {
         ...doc.stock,
         thickness: 18,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9, lineUp: null },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, tabs: null, lineUp: null },
       };
       return { ...doc, stock, models: [placed], operations };
     }
@@ -212,7 +212,7 @@ describe("exportGcode", () => {
         const doc = twoSided(operations);
         const stock = {
           ...doc.stock,
-          twoSided: { flipAxis: "y" as const, partingDepth: 9, lineUp: pins },
+          twoSided: { flipAxis: "y" as const, partingDepth: 9, tabs: null, lineUp: pins },
         };
         return exportGcode({ ...doc, stock }, "Owl", context).files.at(-1)?.gcode;
       };
@@ -243,6 +243,7 @@ describe("exportGcode", () => {
           twoSided: {
             flipAxis,
             partingDepth: 9,
+            tabs: null,
             lineUp: { type: "edges" as const, corner: "bottom_right" as const },
           },
         };

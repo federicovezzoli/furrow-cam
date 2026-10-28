@@ -215,7 +215,7 @@ describe("scheduleToolpaths", () => {
       ...document,
       stock: {
         ...document.stock,
-        twoSided: { flipAxis: "x", partingDepth: 9, lineUp: null },
+        twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null },
       },
       models: [model],
       operations: [bottom],
