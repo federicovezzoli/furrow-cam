@@ -196,10 +196,11 @@ describe("relief toolpaths on two sides", () => {
     const doc = project(operations, { flipAxis, partingDepth: 9, tabs, lineUp: null });
     const [top, rough, finish] = toolpaths(doc) as Toolpath[];
     const inputs = toolpathInputs(doc);
-    expect(inputs[0]?.tabs).toBeNull();
-    const [from, to] = [flip(30, 25), flip(30, 0)];
-    expect(inputs[1]?.tabs).toEqual([{ from, to, width: 6, top: -7 }]);
-    expect(lowest(top as Toolpath)).toBeLessThan(-7);
+    // The top side stops at the parting plane over them.
+    const strip = { modelId: BLOCK.id, width: 6 };
+    expect(inputs[0]?.tabs).toEqual([{ ...strip, from: [30, 20], to: [30, 0], top: -9 }]);
+    expect(inputs[1]?.tabs).toEqual([{ ...strip, from: flip(30, 20), to: flip(30, 0), top: -7 }]);
+    expect(lowest(top as Toolpath)).toBeCloseTo(-9);
     for (const [index, toolpath] of [rough, finish].entries()) {
       const below = simulate(operations[index + 1] as Operation, toolpath as Toolpath);
       /** The bottom side's simulated height at the top side's `(x, y)`. */
@@ -220,6 +221,19 @@ describe("relief toolpaths on two sides", () => {
     for (const toolpath of [rough, finish]) {
       expect(toolpath?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
     }
+  });
+
+  it("warns about a model the tabs don't hold", () => {
+    const other = { ...BLOCK, id: "00000000-0000-4000-8000-0000000000ff" };
+    const onOther = roughing("bottom");
+    if (onOther.type === "relief_rough") onOther.params.modelId = other.id;
+    const operations = [roughing("bottom"), onOther];
+    const tabs = { width: 6, thickness: 2, positions: [[30, 12] as [number, number]] };
+    const doc = project(operations, { flipAxis: "x", partingDepth: 9, tabs, lineUp: null });
+    // Both models at the same place, so the tab goes to the first.
+    const [held, loose] = toolpaths({ ...doc, models: [BLOCK, other] }) as Toolpath[];
+    expect(held?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
+    expect(loose?.warnings).toContainEqual({ code: "toolpath.noHoldingTabs" });
   });
 
   it("warns when the bottom side frees the part without tabs, or roughs the whole stock", () => {

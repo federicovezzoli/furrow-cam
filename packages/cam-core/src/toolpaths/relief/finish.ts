@@ -435,11 +435,47 @@ function discDistance({ x: ax, y: ay, radius, to }: FlatDisc, x: number, y: numb
 }
 
 /**
- * A two-sided project's holding tab (PRD-0011 B5, ADR-0063) in the stock
- * coordinates of the side cutting round it: a strip `width` wide from `from`
- * to `to`, which the tool cuts no lower than `top` over.
+ * A two-sided project's holding tab (PRD-0011 B5, ADR-0063) on the model
+ * `modelId`, in the stock coordinates of the side cutting round it: a strip
+ * `width` wide from `from`, on the model's outline, out to `to`, which the
+ * tool cuts no lower than `top` over.
  */
-export type HoldingTab = { from: Point; to: Point; width: number; top: number };
+export type HoldingTab = { modelId: string; from: Point; to: Point; width: number; top: number };
+
+/**
+ * `tabs` carried on inward from the model's outline to the first cell of
+ * `heights` with model under it, so a tab reaches the model's surface but
+ * bridges no hole or pocket further in (#357). A tab whose way in meets no
+ * part of the model is left as it is.
+ */
+export function reachModel(
+  tabs: readonly HoldingTab[],
+  grid: ReliefGrid,
+  heights: Float32Array,
+): HoldingTab[] {
+  const { columns, rows, cellWidth, cellHeight } = grid;
+  const step = Math.min(cellWidth, cellHeight);
+  const steps = Math.ceil(Math.hypot(columns * cellWidth, rows * cellHeight) / step);
+  return tabs.map((tab) => {
+    const [fu, fv] = toPassFrame(grid.angle, tab.from);
+    const [tu, tv] = toPassFrame(grid.angle, tab.to);
+    const length = Math.hypot(fu - tu, fv - tv);
+    if (length === 0) return tab;
+    // Inwards, in the grid's coordinates.
+    const [du, dv] = [(fu - tu) / length, (fv - tv) / length];
+    for (let k = 0; k <= steps; k++) {
+      const u = fu - grid.origin[0] + du * k * step;
+      const v = fv - grid.origin[1] + dv * k * step;
+      // On a cell edge, the cell inwards: the outline is the grid's edge in finishing.
+      const column = Math.floor(u / cellWidth + du * 1e-9);
+      const row = Math.floor(v / cellHeight + dv * 1e-9);
+      if (column < 0 || column >= columns || row < 0 || row >= rows) continue;
+      if (heights[row * columns + column] === -Infinity) continue;
+      return k === 0 ? tab : { ...tab, from: toStock(grid, u, v) };
+    }
+    return tab;
+  });
+}
 
 /** `tabs` as swept discs in `grid`'s coordinates, for dropping tools onto. */
 export function tabDiscs(tabs: readonly HoldingTab[], grid: ReliefGrid): FlatDisc[] {
@@ -663,10 +699,10 @@ export function createCache<T>(capacity: number): Cache<T> {
 /** Everything a model heightmap depends on: the mesh, where it is, the grid and the offset. */
 export function reliefCacheKey(
   { sha256, transform }: Pick<ModelView, "sha256" | "transform">,
-  { columns, rows, angle, origin, base, outside }: ReliefGrid,
+  { columns, rows, angle, origin }: ReliefGrid,
   offset: number,
 ): string {
-  return JSON.stringify([sha256, transform, angle, origin, columns, rows, base, outside, offset]);
+  return JSON.stringify([sha256, transform, angle, origin, columns, rows, offset]);
 }
 
 /** The model heightmap offset by `offset`, from `cache` or computed (and cached), reporting progress. */
@@ -1043,7 +1079,7 @@ export type ReliefFinishOptions = {
   rest?: RestOptions | null;
   /** The touch-off pad, which no pass cuts (#147); `null` for none. */
   touchOff?: TouchOffDisc | null;
-  /** On a two-sided project's bottom side, the holding tabs to leave (#357). */
+  /** In a two-sided project, the holding tabs to leave (#357). */
   tabs?: readonly HoldingTab[];
 };
 
@@ -1125,7 +1161,7 @@ export function* finishSetupSteps(
         profile,
       )
     : null;
-  const discs = [...padDiscs(touchOff, grid), ...tabDiscs(tabs, grid)];
+  const discs = [...padDiscs(touchOff, grid), ...tabDiscs(reachModel(tabs, grid, heights), grid)];
   return {
     grid,
     heights,

@@ -9,8 +9,10 @@ import {
   createReliefCache,
   MAX_RELIEF_CELLS,
   offsetHeightsSteps,
+  type ReliefGrid,
   RestDropper,
   rasterizeModelSteps,
+  reachModel,
   reliefCellSize,
   reliefGrid,
   restGrid,
@@ -542,5 +544,26 @@ describe("generateToolpath", () => {
     expect(toolpathKey({ ...input, model: { ...STEP, fileName: "renamed.stl" } })).toBe(
       toolpathKey(input),
     );
+  });
+});
+
+describe("reachModel", () => {
+  // 10 × 10 cells of 1 mm, the model over x ≥ 5 only.
+  const grid = reliefGrid({ box: { min: [0, 0, -10], max: [10, 10, 0] } }, 0, 1) as ReliefGrid;
+  const heights = new Float32Array(100).map((_, i) => (i % 10 >= 5 ? -2 : -Infinity));
+  const tab = { modelId: "m", width: 2, top: -5 };
+
+  it("carries a tab in from the outline to the model's surface, and no further", () => {
+    expect(reachModel([{ ...tab, from: [0, 5.5], to: [-20, 5.5] }], grid, heights)).toEqual([
+      { ...tab, from: [5, 5.5], to: [-20, 5.5] },
+    ]);
+  });
+
+  it("leaves a tab already on the model, or whose way in misses it", () => {
+    const on = { ...tab, from: [10, 5.5] as [number, number], to: [30, 5.5] as [number, number] };
+    const away = { ...tab, from: [5, 0] as [number, number], to: [5, -20] as [number, number] };
+    const empty = new Float32Array(100).fill(-Infinity);
+    expect(reachModel([on], grid, heights)).toEqual([on]);
+    expect(reachModel([away], grid, empty)).toEqual([away]);
   });
 });

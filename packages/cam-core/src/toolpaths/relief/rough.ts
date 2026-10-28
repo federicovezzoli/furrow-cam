@@ -36,6 +36,7 @@ import {
   RestDropper,
   type RestOptions,
   type RestStock,
+  reachModel,
   reliefCellSize,
   reliefFloor,
   reliefGrid,
@@ -76,7 +77,7 @@ export type ReliefRoughOptions = {
   rest?: RestOptions | null;
   /** The touch-off pad, an island at every level (#147); `null` for none. */
   touchOff?: TouchOffDisc | null;
-  /** On a two-sided project's bottom side, the holding tabs to leave, islands below their top (#357). */
+  /** In a two-sided project, the holding tabs to leave, islands below their top (#357). */
   tabs?: readonly HoldingTab[];
 };
 
@@ -167,6 +168,7 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
+  const tabsOnModel = reachModel(tabs, grid, heights);
   const area = roughingArea(params.boundary, view, stock, radius);
   if (!area) {
     warnings.push({ code: "toolpath.roughMarginOffStock" });
@@ -197,7 +199,7 @@ export function* reliefRoughSteps(
   if (strategy.type === "linear") {
     const moves = yield* rasterLevels(tool, grid, heights, area, levels, floor, outsideFloor, {
       restStock,
-      discs: [...padDiscs(touchOff, grid), ...tabDiscs(tabs, grid)],
+      discs: [...padDiscs(touchOff, grid), ...tabDiscs(tabsOnModel, grid)],
       safeZ,
       entryClearance,
       ramp: params.ramp,
@@ -253,7 +255,7 @@ export function* reliefRoughSteps(
       arcTolerance: tolerance,
     });
     if (pad) islands.push(pad);
-    for (const tab of tabs) if (z < tab.top) islands.push(tabPolygon(tab));
+    for (const tab of tabsOnModel) if (z < tab.top) islands.push(tabPolygon(tab));
     // Islands may reach past the boundary; the pits inside them are cleared too.
     const within = z < outsideFloor ? intersection([boundary], overModel) : [boundary];
     let cleared = difference(within, islands);

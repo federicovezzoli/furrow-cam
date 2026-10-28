@@ -1,5 +1,6 @@
 import {
   anchorPoint,
+  followModels,
   initialPlacement,
   modelRect,
   proportionalDepth,
@@ -52,11 +53,23 @@ function changeModel(
   id: string,
   recipe: (model: Draft<Model>, current: Model) => void,
 ) {
-  const current = store.getState().document.models.find((model) => model.id === id);
+  const { models } = store.getState().document;
+  const current = models.find((model) => model.id === id);
   if (!current) return;
   store.getState().change(name, (draft) => {
     const model = draft.models.find((m) => m.id === id);
-    if (model) recipe(model, current);
+    if (!model) return;
+    recipe(model, current);
+    // Holding tabs keep their place round the model (#357).
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs) {
+      const moved = followModels(tabs.positions, models, draft.models);
+      if (
+        moved.some((p, i) => p[0] !== tabs.positions[i]?.[0] || p[1] !== tabs.positions[i]?.[1])
+      ) {
+        tabs.positions = moved;
+      }
+    }
   });
 }
 

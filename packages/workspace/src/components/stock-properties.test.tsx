@@ -99,6 +99,20 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(document().stock.twoSided?.tabs).toBeNull();
   });
 
+  it("says a tab thickness is refused until the bottom side gets deeper", () => {
+    render({ ...createProjectDocument(), models: [model] });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
+    const thickness = screen.getByLabelText(/Tab thickness/);
+    fireEvent.change(thickness, { target: { value: "15" } });
+    fireEvent.blur(thickness);
+    expect(screen.getByText(/Must be thinner than the bottom side's depth/)).toBeTruthy();
+    const parting = screen.getByLabelText(/Parting depth/);
+    fireEvent.change(parting, { target: { value: "2" } });
+    fireEvent.blur(parting);
+    expect(screen.queryByText(/Must be thinner than the bottom side's depth/)).toBeNull();
+  });
+
   it("says when drills of the pins cut nothing, once the stock isn't lined up on pins", () => {
     const full = fullDocument();
     const pinDrill = {

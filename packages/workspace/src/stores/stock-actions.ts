@@ -68,6 +68,8 @@ function moveDrawing(
     const { tabs } = operation.params;
     tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
   }
+  const holding = draft.stock.twoSided?.tabs;
+  if (holding) holding.positions = holding.positions.map((p) => translatePoint(p, offset));
   const pad = draft.stock.touchOff;
   if (pad) [pad.x, pad.y] = translatePoint([pad.x, pad.y], offset);
 }

@@ -4,6 +4,7 @@ import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
+import { setModelOffset } from "./model-actions";
 import {
   addLocatingPin,
   addTouchOff,
@@ -485,6 +486,35 @@ describe("holding tabs (#357)", () => {
     moveHoldingTab(store, 5, [3, 4]);
     expect(stock(store).twoSided?.tabs?.positions[1]).toEqual([1, 2]);
     expect(stock(store).twoSided?.tabs?.positions).toHaveLength(2);
+  });
+
+  it("keep their place on the model when it or the design moves", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    const at = () => stock(store).twoSided?.tabs?.positions ?? [];
+    const before = at();
+    const placed = () => store.getState().document.models[0]?.placement.position ?? [0, 0];
+    const [x, y] = placed();
+    setModelOffset(store, model.id, "x", 25);
+    const dx = (placed()[0] as number) - x;
+    expect(dx).not.toBe(0);
+    for (const [i, [px, py]] of at().entries()) {
+      expectClose([px, py], [(before[i]?.[0] as number) + dx, before[i]?.[1] as number]);
+    }
+    // The zero's anchor moves the design, the tabs with it.
+    const moved = at();
+    setXYAnchor(store, "center");
+    const shift = [(placed()[0] as number) - x - dx, (placed()[1] as number) - y];
+    expect(shift).not.toEqual([0, 0]);
+    for (const [i, [px, py]] of at().entries()) {
+      expectClose(
+        [px, py],
+        [
+          (moved[i]?.[0] as number) + (shift[0] as number),
+          (moved[i]?.[1] as number) + (shift[1] as number),
+        ],
+      );
+    }
   });
 });
 

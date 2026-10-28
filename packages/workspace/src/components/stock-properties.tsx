@@ -1,7 +1,14 @@
 "use client";
 
 import { edgeSetup, touchOffOutsideStock } from "@furrow/cam-core";
-import { FlipAxis, StockCorner, stockPins, Units, ZOrigin } from "@furrow/document";
+import {
+  FlipAxis,
+  type HoldingTabs,
+  StockCorner,
+  stockPins,
+  Units,
+  ZOrigin,
+} from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -204,11 +211,13 @@ function HoldingTabFields() {
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
   const [count, setCount] = useState(HOLDING_TABS_PER_MODEL);
-  const [refused, setRefused] = useState<number | null>(null);
+  // What a thickness was refused against: once either changes, it may fit.
+  const [refused, setRefused] = useState<{ depth: number; tabs: HoldingTabs } | null>(null);
   const t = useTranslations("Stock");
   const length = useLength(units);
   const tabs = stock.twoSided?.tabs ?? null;
   const depth = stock.thickness - (stock.twoSided?.partingDepth ?? 0);
+  const tooThick = refused !== null && refused.depth === depth && refused.tabs === tabs;
 
   return (
     <>
@@ -241,9 +250,9 @@ function HoldingTabFields() {
             min={MIN_STOCK}
             value={tabs.thickness}
             onValueChange={(thickness) =>
-              setRefused(setHoldingTabSize(store, "thickness", thickness) ? null : thickness)
+              setRefused(setHoldingTabSize(store, "thickness", thickness) ? null : { depth, tabs })
             }
-            error={refused === null ? undefined : t("holdingTabTooThick", { size: length(depth) })}
+            error={tooThick ? t("holdingTabTooThick", { size: length(depth) }) : undefined}
             {...gestureHandlers(store)}
           />
           <div className="flex items-end gap-2">

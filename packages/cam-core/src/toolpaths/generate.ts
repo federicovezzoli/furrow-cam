@@ -62,9 +62,9 @@ export type ToolpathInput = {
    */
   flip: Flip | null;
   /**
-   * On a two-sided project's bottom side, the holding tabs a 3D operation
-   * leaves, in that side's stock coordinates (ADR-0063), empty without any;
-   * `null` for every other operation.
+   * In a two-sided project, the holding tabs a 3D operation leaves, in its
+   * side's stock coordinates (ADR-0063), empty without any; `null` for every
+   * other operation.
    */
   tabs: HoldingTab[] | null;
   /** Retract height above the stock top. */
@@ -140,16 +140,19 @@ export function toolpathInputs(
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
       flip,
-      // Only the bottom side cuts the part free (ADR-0063).
+      // The bottom side leaves the tabs up to their thickness past the
+      // parting plane, the top side stops at the plane over them (ADR-0063).
       tabs:
-        sided && flip
-          ? strips.map(({ from, to }) => ({
-              from: flipPoint2(flip, from),
-              to: flipPoint2(flip, to),
-              width: sided.tabs?.width ?? 0,
-              top: sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0),
-            }))
-          : null,
+        sided &&
+        strips.map(({ modelId, at, to }) => ({
+          modelId,
+          from: flip ? flipPoint2(flip, at) : at,
+          to: flip ? flipPoint2(flip, to) : to,
+          width: sided.tabs?.width ?? 0,
+          top: flip
+            ? sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0)
+            : -sided.partingDepth,
+        })),
       safeZ,
       entryClearance,
       // Each side starts from uncut stock (ADR-0060).
@@ -464,8 +467,10 @@ function* operationSteps(
       const positions = mesh?.(model.sha256);
       if (!positions) throw new MissingMeshError(model.sha256);
       const warnings: ToolpathMessage[] = [];
-      // Cut all round from both sides, the part comes loose (ADR-0063).
-      if (tabs?.length === 0) warnings.push({ code: "toolpath.noHoldingTabs" });
+      // Cut all round from both sides, a model with no tabs comes loose (ADR-0063).
+      if (flip && tabs && !tabs.some(({ modelId }) => modelId === model.id)) {
+        warnings.push({ code: "toolpath.noHoldingTabs" });
+      }
       if (
         parting !== null &&
         operation.type === "relief_rough" &&

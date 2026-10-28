@@ -24,25 +24,33 @@ export function autoTabPositions(
   const freeing =
     side === "outside" ? loops.filter((loop) => nestingDepth(loop, loops) % 2 === 0) : loops;
   return freeing.flatMap((loop) => {
-    const length = loopLength(loop);
-    if (length === 0) return [];
     const count = Math.max(
       1,
-      Math.round("count" in placement ? placement.count : length / placement.spacing),
+      Math.round("count" in placement ? placement.count : loopLength(loop) / placement.spacing),
     );
-    return Array.from({ length: count }, (_, i) => pointAlong(loop, ((i + 0.5) * length) / count));
+    return spreadAlong(loop, count);
   });
 }
 
+/** `count` points spread evenly along `loop`, the first half a gap from its start; none on a loop of no length. */
+export function spreadAlong(loop: Point[], count: number): Point[] {
+  const length = loopLength(loop);
+  if (length === 0) return [];
+  return Array.from({ length: count }, (_, i) => pointAlong(loop, ((i + 0.5) * length) / count));
+}
+
 /**
- * The point of `loops` (from `closedLoops`) nearest to `point`, or `null`
- * without loops. Tabs are dragged along these.
+ * The point of `loops` (from `closedLoops`) nearest to `point`, with the
+ * index of its loop, or `null` without loops. Tabs are dragged along these.
  */
-export function nearestOnLoops(loops: Point[][], point: Point): Projection | null {
-  let best: Projection | null = null;
-  for (const loop of loops) {
-    const projection = projectOnLoop(loop, point);
-    if (!best || projection.distance < best.distance) best = projection;
+export function nearestOnLoops(
+  loops: Point[][],
+  point: Point,
+): (Projection & { loop: number }) | null {
+  let best: (Projection & { loop: number }) | null = null;
+  for (const [loop, points] of loops.entries()) {
+    const projection = projectOnLoop(points, point);
+    if (!best || projection.distance < best.distance) best = { ...projection, loop };
   }
   return best;
 }

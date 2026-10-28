@@ -31,18 +31,39 @@ describe("holding tabs", () => {
     expect(autoHoldingTabPositions([], 4)).toEqual([]);
   });
 
-  it("reach from the middle of the model's box out to the stock's edge", () => {
-    expect(
-      holdingTabStrips(STOCK, [BLOCK], {
-        positions: [
-          [30, 12],
-          [45, 26],
-        ],
-      }),
-    ).toEqual([
-      { at: [30, 20], from: [30, 25], to: [30, 0] },
-      { at: [40, 26], from: [30, 26], to: [60, 26] },
+  it("reach from the model's outline out to the stock's edge", () => {
+    const tabs = {
+      width: 6,
+      positions: [
+        [30, 12],
+        [45, 26],
+      ] as [number, number][],
+    };
+    expect(holdingTabStrips(STOCK, [BLOCK], tabs)).toEqual([
+      { modelId: BLOCK.id, at: [30, 20], to: [30, 0] },
+      { modelId: BLOCK.id, at: [40, 26], to: [60, 26] },
     ]);
-    expect(holdingTabStrips(STOCK, [], { positions: [[30, 12]] })).toEqual([]);
+    expect(holdingTabStrips(STOCK, [], tabs)).toEqual([]);
+  });
+
+  it("stop where they would reach another model", () => {
+    // 5 × 5 at x 50, its box grown by half the tab's width from x 47.
+    const other: Model = {
+      ...BLOCK,
+      id: "00000000-0000-4000-8000-000000000002",
+      bounds: { min: [0, 0, 0], max: [5, 5, 18] },
+      placement: { ...BLOCK.placement, position: [50, 24] },
+    };
+    const tabs = {
+      width: 6,
+      positions: [
+        [45, 26],
+        [30, 12],
+      ] as [number, number][],
+    };
+    expect(holdingTabStrips(STOCK, [BLOCK, other], tabs)).toEqual([
+      { modelId: BLOCK.id, at: [40, 26], to: [47, 26] },
+      { modelId: BLOCK.id, at: [30, 20], to: [30, 0] },
+    ]);
   });
 });
