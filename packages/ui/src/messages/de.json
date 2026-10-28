@@ -635,6 +635,7 @@
       "flatAreasNarrow": "Manche flachen Bereiche sind zu schmal für den Fräser des flachen Bodens und bleiben unbearbeitet.",
       "engraveConeWide": "Die Tiefe überschreitet den Kegel des V-Fräsers, daher ist die Linie so breit wie der Fräser.",
       "pathsTooSmall": "Die geschlossenen Pfade sind zu klein für das Werkzeug.",
+      "nothingOutside": "Die geschlossenen Pfade lassen außerhalb keinen Rohling zum Ausräumen übrig.",
       "tabsTooTall": "Die Haltestege sind so hoch wie der Schnitt tief ist, daher wird unter ihnen nichts geschnitten.",
       "tabsLeftOut": "{count, plural, one {# Haltesteg ausgelassen, der} other {# Haltestege ausgelassen, die}} zu weit von jeder geschlossenen Kontur entfernt {count, plural, one {ist} other {sind}}.",
       "leadInMisfits": "Der Einlauf passte bei {count, plural, one {# Kontur} other {# Konturen}} nicht und wurde gekürzt oder ausgelassen.",

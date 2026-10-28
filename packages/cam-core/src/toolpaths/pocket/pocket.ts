@@ -107,7 +107,35 @@ export function pocketToolpath(
     ...options,
     stock: params.side === "outside" ? stock : null,
   });
-  return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+  if (params.side !== "outside") {
+    return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
+  }
+  // Outside, nothing to clear means the paths leave no stock around them, not that they are small.
+  if (!stock && closed.length > 0) warnings.push({ code: "toolpath.nothingOutside" });
+  for (const warning of toolpath.warnings) {
+    warnings.push(
+      warning.code === "toolpath.pathsTooSmall" ? { code: "toolpath.nothingOutside" } : warning,
+    );
+  }
+  return { moves: toolpath.moves, warnings };
+}
+
+/** Whether the segment `a`–`b` passes through the inside of `rect` (Liang–Barsky). */
+function crossesRect(a: Point, b: Point, rect: Rect): boolean {
+  let [t0, t1] = [0, 1];
+  for (const axis of [0, 1] as const) {
+    const d = b[axis] - a[axis];
+    const low = rect.min[axis] - a[axis];
+    const high = rect.max[axis] - a[axis];
+    if (d === 0) {
+      if (low >= 0 || high <= 0) return false;
+      continue;
+    }
+    const [enter, exit] = d > 0 ? [low / d, high / d] : [high / d, low / d];
+    t0 = Math.max(t0, enter);
+    t1 = Math.min(t1, exit);
+  }
+  return t0 < t1;
 }
 
 /** The rings of the area a pocket on `params.side` of the rings `closed` clears. */
@@ -153,11 +181,9 @@ export function clearPocket(
   const { regions, drawn, area, warnings } = planPocket(tool, params, closed, tolerance);
   const { stock } = options;
   if (stock) {
-    // Each vertex off the stock: a lap around a grown stock edge, in the air.
+    // No edge crossing the stock: a lap around a grown stock edge, in the air.
     const onStock = ({ loop }: Ring) =>
-      loop.some(
-        ([x, y]) => x > stock.min[0] && x < stock.max[0] && y > stock.min[1] && y < stock.max[1],
-      );
+      loop.some((a, i) => crossesRect(a, loop[(i + 1) % loop.length] as Point, stock));
     for (const region of regions) {
       const { finishing } = region;
       if (finishing) region.finishing = { ...finishing, rings: finishing.rings.filter(onStock) };

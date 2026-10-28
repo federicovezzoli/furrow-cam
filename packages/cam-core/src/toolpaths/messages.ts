@@ -19,6 +19,7 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.flatAreasNarrow",
   "toolpath.engraveConeWide",
   "toolpath.pathsTooSmall",
+  "toolpath.nothingOutside",
   "toolpath.tabsTooTall",
   "toolpath.tabsLeftOut",
   "toolpath.leadInMisfits",

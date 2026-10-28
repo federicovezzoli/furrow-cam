@@ -1100,6 +1100,30 @@ describe.each(
     expect(max).toBeCloseTo(100, 3);
   });
 
+  islandless("finishes the walls of a shape that spans the stock when clearing outside", () => {
+    // From off one side of the stock to off the other: no lap corner lands on the stock.
+    const band = rectangle("1e2d3c4b-5a69-4788-97a6-b5c4d3e2f1a0", -10, 40, 120, 20);
+    const offBand = ([, y]: [number, number]) => Math.max(0, 40 - y, y - 60);
+    const toolpath = clear({ side: "outside", allowance: 0.5, finishPass: true }, [band]);
+    let closest = Infinity;
+    for (const cut of cutsBelowTop(toolpath)) {
+      for (const point of along(cut)) closest = Math.min(closest, offBand(point));
+    }
+    expect(closest).toBeCloseTo(3, 1);
+  });
+
+  it("warns when the paths leave no stock outside them", () => {
+    const cover = rectangle("2f3e4d5c-6b7a-4899-a8b7-c6d5e4f3a2b1", 0, 0, 100, 100);
+    const toolpath = clear({ side: "outside" }, [cover]);
+    expect(toolpath.moves).toEqual([]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.nothingOutside" }]);
+    const unknown = pocketToolpath(operation({ strategy, side: "outside" }, [boss]), [boss], {
+      safeZ: 5,
+      entryClearance: 1,
+    });
+    expect(unknown.warnings).toEqual([{ code: "toolpath.nothingOutside" }]);
+  });
+
   islandless("overcuts the paths by the tool radius when clearing on them", () => {
     const toolpath = clear({ side: "on" });
     expect(extremes(toolpath)).toEqual([expect.closeTo(40, 2), expect.closeTo(60, 2)]);
