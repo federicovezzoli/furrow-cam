@@ -1,0 +1,31 @@
+{
+  "name": "@furrow/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Furrow CAM's local MCP server: AI assistants work on .furrow projects over stdio (PRD-0012, ADR-0067)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "furrow-mcp": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@furrow/cam-core": "workspace:*",
+    "@furrow/document": "workspace:*",
+    "@furrow/ui": "workspace:*",
+    "@furrow/workspace": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "esbuild": "^0.28.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
