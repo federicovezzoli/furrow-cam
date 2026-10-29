@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createProjectDocument, packProjectArchive, sha256Hex } from "@furrow/document";
@@ -73,6 +73,34 @@ describe("exportProject", () => {
     await expect(
       exportProject(await createProjects().get(path), { folder: "out" }),
     ).rejects.toThrow("absolute folder");
+  });
+
+  it("writes nothing once cancelled during the last operation", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    const controller = new AbortController();
+    const project = await createProjects().get(path);
+    await expect(
+      exportProject(
+        project,
+        {},
+        (done, total) => {
+          if (done === total) controller.abort();
+        },
+        controller.signal,
+      ),
+    ).rejects.toThrow();
+    expect(await readdir(dir)).toEqual(["Part.furrow"]);
+  });
+
+  it("won't replace what isn't a file", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    await mkdir(join(dir, "Part-top.gcode"));
+    await expect(
+      exportProject(await createProjects().get(path), { overwrite: true }),
+    ).rejects.toThrow("isn't a file");
+    expect((await readdir(dir)).sort()).toEqual(["Part-top.gcode", "Part.furrow"]);
   });
 
   it("stops when the request is cancelled", async () => {

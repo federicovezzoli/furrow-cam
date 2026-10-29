@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import {
   createCache,
@@ -71,6 +71,9 @@ async function computeToolpaths(
     computed.push({ input, toolpath: generateToolpath(input, context) });
   }
   await progress?.(inputs.length, inputs.length, "");
+  // A cancellation during the last operation still stops what comes after.
+  await new Promise((resolve) => setImmediate(resolve));
+  signal?.throwIfAborted();
   return computed;
 }
 
@@ -136,19 +139,17 @@ export async function exportProject(
   if ("error" in posted) throw new ToolError(`Nothing to export: ${posted.error}`);
   const { files, warnings }: GcodeExport = posted.result;
   const paths = files.map(({ fileName }) => join(folder ?? dirname(project.path), fileName));
-  if (!overwrite) {
-    for (const path of paths) {
-      // Checked for every file first, so a two-sided export isn't left half written.
-      if (
-        await access(path).then(
-          () => true,
-          () => false,
-        )
-      ) {
-        throw new ToolError(`${path} already exists: pass overwrite to replace it.`);
-      }
+  for (const path of paths) {
+    // Every target is checked before any is written, so a two-sided export isn't left half written;
+    // `lstat` sees a dangling link, which an exclusive write would refuse.
+    const entry = await lstat(path).catch(() => null);
+    if (entry && !overwrite) {
+      throw new ToolError(`${path} already exists: pass overwrite to replace it.`);
     }
+    if (entry && !entry.isFile())
+      throw new ToolError(`${path} isn't a file: it can't be replaced.`);
   }
+  signal?.throwIfAborted();
   for (const [i, path] of paths.entries()) {
     const bytes = new TextEncoder().encode(files[i]?.gcode);
     try {
