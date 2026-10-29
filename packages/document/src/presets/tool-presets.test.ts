@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Tool } from "./tool";
+import { Tool } from "../schema/tool";
 import { DEFAULT_TOOL_PRESET, TOOL_PRESET_ID_PREFIX, TOOL_PRESETS } from "./tool-presets";
 
 describe("TOOL_PRESETS", () => {

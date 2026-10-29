@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lowRider, machine } from "./fixtures";
+import { lowRider, machine } from "../fixtures";
 import {
   DEFAULT_SPIN_UP_DELAY,
   Machine,

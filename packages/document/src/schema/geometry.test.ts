@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { circle, square } from "./fixtures";
+import { circle, square } from "../fixtures";
 import { GEOMETRY_TOLERANCE, Path, pointsCoincide, Shape } from "./geometry";
 
 describe("Shape", () => {

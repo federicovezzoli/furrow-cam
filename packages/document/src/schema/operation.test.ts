@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ProjectDocument } from "./document";
 import {
   CIRCLE_ID,
   circle,
@@ -11,7 +10,8 @@ import {
   SQUARE_ID,
   square,
   vBit,
-} from "./fixtures";
+} from "../fixtures";
+import { ProjectDocument } from "./document";
 import {
   clearingTool,
   DrillOperation,

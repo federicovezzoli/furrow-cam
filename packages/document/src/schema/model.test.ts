@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { model } from "./fixtures";
+import { model } from "../fixtures";
 import { Model, Sha256 } from "./model";
 
 describe("Sha256", () => {

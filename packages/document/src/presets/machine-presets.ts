@@ -1,4 +1,4 @@
-import type { Machine } from "./machine";
+import type { Machine } from "../schema/machine";
 
 /**
  * The fields a preset can fill: facts about the machine. Name, safe Z, entry

@@ -1,6 +1,16 @@
 import { strToU8, unzipSync, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
+  circle,
+  fullDocument,
+  model,
+  square,
+  textItem,
+  textShape,
+  uploadedFont,
+} from "../fixtures";
+import { createProjectDocument, type ProjectDocument } from "../schema/document";
+import {
   ARCHIVE_DOCUMENT_PATH,
   type ArchiveVersion,
   archiveFontPath,
@@ -17,8 +27,6 @@ import {
   readProjectArchive,
   sha256Hex,
 } from "./archive";
-import { createProjectDocument, type ProjectDocument } from "./document";
-import { circle, fullDocument, model, square, textItem, textShape, uploadedFont } from "./fixtures";
 import { parseProjectDocument } from "./migrations";
 
 const MAX_MESH_BYTES = 1_000;

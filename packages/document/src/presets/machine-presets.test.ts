@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Machine, NEW_MACHINE_DEFAULTS } from "./machine";
+import { Machine, NEW_MACHINE_DEFAULTS } from "../schema/machine";
 import {
   askedFields,
   MACHINE_PRESETS,

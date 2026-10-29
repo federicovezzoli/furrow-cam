@@ -1,8 +1,8 @@
 import { strFromU8, strToU8, unzipSync, type Zippable, zipSync } from "fflate";
 import { z } from "zod";
-import type { ProjectDocument } from "./document";
-import { MAX_FONT_BYTES, MAX_PROJECT_FONTS } from "./font";
-import { type DocumentMessage, MessageError } from "./message";
+import type { ProjectDocument } from "../schema/document";
+import { MAX_FONT_BYTES, MAX_PROJECT_FONTS } from "../schema/font";
+import { type DocumentMessage, MessageError } from "../schema/message";
 import { readProjectJson } from "./migrations";
 
 /**

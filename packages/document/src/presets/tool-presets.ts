@@ -1,4 +1,4 @@
-import { Tool } from "./tool";
+import { Tool } from "../schema/tool";
 
 /**
  * A bit from the built-in catalog (PRD-0008 G4), offered next to the user's
