@@ -16,7 +16,7 @@ let client: Client;
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "furrow-mcp-"));
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await createServer().connect(serverTransport);
+  await createServer(undefined, dir).connect(serverTransport);
   client = new Client({ name: "test", version: "0" });
   await client.connect(clientTransport);
 });
@@ -46,9 +46,15 @@ describe("the MCP server", () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "create_project",
+      "get_library",
       "get_project",
       "open_project",
       "save_project",
+      "set_machine",
+      "set_operation_tool",
+      "set_stock",
+      "set_touch_off_pad",
+      "set_zero",
     ]);
   });
 
@@ -86,5 +92,21 @@ describe("the MCP server", () => {
         saveAs: join(dir, "Copy.furrow"),
       }),
     ).toEqual({ saved: join(dir, "Copy.furrow") });
+  });
+
+  it("lists the library, reporting files the app hasn't written", async () => {
+    const library = await call("get_library", {});
+    expect(library).toMatchObject({ tools: [], machines: [] });
+    expect(library.problems).toEqual([
+      expect.stringContaining("tools.json doesn't exist"),
+      expect.stringContaining("machines.json doesn't exist"),
+    ]);
+  });
+
+  it("sets the stock through its tool, refusing a size that isn't positive", async () => {
+    const path = join(dir, "Sign.furrow");
+    await call("create_project", { path });
+    expect((await call("set_stock", { path, width: 300 })).stock.width).toBe(300);
+    expect(await refusal("set_stock", { path, width: 0 })).toBeTruthy();
   });
 });
