@@ -226,7 +226,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
 }
 
 /** In a two-sided project, which side the viewport shows (ADR-0060). */
-function SideButtons() {
+export function SideButtons() {
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const side = useWorkspaceStore((s) => s.side);
   const setSide = useWorkspaceStore((s) => s.setSide);

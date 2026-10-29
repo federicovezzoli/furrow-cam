@@ -1,8 +1,10 @@
 import {
+  flipHeightmap,
   type HeightmapPlayback,
   heightmapGrid,
   heightmapPlayback,
   playbackPath,
+  simulateCuts,
   smallestCutWidth,
 } from "@furrow/cam-core";
 import type { PlaybackRequest, PlaybackResponse } from "../stores/playback-scheduler";
@@ -19,16 +21,27 @@ let current: { key: string; playback: HeightmapPlayback } | null = null;
  * Keeps a playback's heightmap (#100) off the main thread (ADR-0004): on the
  * same grid as the whole simulation (ADR-0019), so its end matches it, and
  * swept incrementally as the playback seeks. Each frame sends back only the
- * cells that changed.
+ * cells that changed. The bottom side of a two-sided project starts from the
+ * top side's stock, flipped, as the simulation does (ADR-0060).
  */
 scope.onmessage = ({ data: request }) => {
   const { key } = request;
   try {
     if (request.type === "load") {
-      const { stock, cuts, maxCells } = request;
-      const grid = heightmapGrid(stock, smallestCutWidth(cuts), maxCells);
-      current = { key, playback: heightmapPlayback(stock, playbackPath(cuts), grid) };
-      scope.postMessage({ key, type: "loaded", grid });
+      const { stock, cuts, before, maxCells } = request;
+      const all = before ? [...before.cuts, ...cuts] : cuts;
+      const grid = heightmapGrid(stock, smallestCutWidth(all), maxCells);
+      const flippedTop = before
+        ? flipHeightmap(simulateCuts(stock, before.cuts, grid), before.axis)
+        : undefined;
+      const playback = heightmapPlayback(stock, playbackPath(cuts), grid, 1, flippedTop);
+      current = { key, playback };
+      if (!flippedTop) {
+        scope.postMessage({ key, type: "loaded", grid });
+        return;
+      }
+      const heights = playback.heightmap.heights.slice();
+      scope.postMessage({ key, type: "loaded", grid, heights }, [heights.buffer]);
       return;
     }
     if (current?.key !== key) return;

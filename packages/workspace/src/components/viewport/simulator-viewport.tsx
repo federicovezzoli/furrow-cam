@@ -21,16 +21,21 @@ import { PlaybackTimeline } from "./playback-timeline";
 import { ReportCapture } from "./report-capture";
 import { Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
-import { FixedSideProvider } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
-import { simulationStatus, TextureLimit, TOOLBAR_GROUP, ViewButtons } from "./viewport";
+import {
+  SideButtons,
+  simulationStatus,
+  TextureLimit,
+  TOOLBAR_GROUP,
+  ViewButtons,
+} from "./viewport";
 
 /**
  * The simulator's viewport (#100, ADR-0042): the stock cut move by move as
  * the playback advances, the tool drawn where it is, the toolpaths trailing
- * behind it (unless hidden), and the timeline under the scene. Cameras and
- * views work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
+ * behind it (unless hidden), and the timeline under the scene. Cameras,
+ * views and, in a two-sided project, sides work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
 export function SimulatorViewport() {
   const view = useWorkspaceStore((s) => s.view);
@@ -80,23 +85,20 @@ export function SimulatorViewport() {
           ) : (
             <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
           )}
-          {/* shortcut: the playback cuts the top side only, so it shows that side;
-              play the bottom side back from the flipped top side in a follow-up. */}
-          <FixedSideProvider value="top">
-            <PlaybackProvider value={scene}>
-              <SimulatorScene
-                box={box}
-                palette={palette}
-                heightmap={heightmap}
-                updates={playback.updates}
-                showToolpaths={showToolpaths}
-              />
-            </PlaybackProvider>
-          </FixedSideProvider>
+          <PlaybackProvider value={scene}>
+            <SimulatorScene
+              box={box}
+              palette={palette}
+              heightmap={heightmap}
+              updates={playback.updates}
+              showToolpaths={showToolpaths}
+            />
+          </PlaybackProvider>
           <TextureLimit onLimit={setMaxTextureSize} />
         </Canvas>
         <div className="absolute top-2 left-2 flex items-center gap-2">
           <ViewButtons view={view} onFit={() => setFits((n) => n + 1)} />
+          <SideButtons />
           <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
             <Button
               variant={showToolpaths ? "secondary" : "ghost"}

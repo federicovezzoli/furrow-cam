@@ -12,7 +12,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { type PlaybackPart, playbackMoves } from "../lib/playback-moves";
 import { TEXTURE_WIDTH } from "../lib/simulation-mesh";
-import { useDocumentStore, useToolpathStore } from "../providers/workspace-stores";
+import {
+  useDocumentStore,
+  useToolpathStore,
+  useWorkspaceStore,
+} from "../providers/workspace-stores";
 import {
   type PlaybackRequest,
   type PlaybackResponse,
@@ -38,11 +42,16 @@ type Loaded = {
  * (ADR-0004, ADR-0019). `heightmap` changes in place; `updates` says which
  * cells did. While toolpaths recompute, the last moves and stock stay,
  * `pending` is true and the playback is paused: it neither plays nor cuts
- * until the new moves are in. Derived data: none of it is saved.
+ * until the new moves are in. In a two-sided project it plays the side the
+ * workspace shows, the bottom side over the stock the top side left (ADR-0060).
+ * Derived data: none of it is saved.
  */
 export function usePlayback(maxCells: number | null) {
   const operations = useDocumentStore((s) => s.document.operations);
   const { width, height, thickness } = useDocumentStore((s) => s.document.stock);
+  const flipAxis = useDocumentStore((s) => s.document.stock.twoSided?.flipAxis ?? null);
+  const workspaceSide = useWorkspaceStore((s) => s.side);
+  const side = flipAxis ? workspaceSide : "top";
   const entries = useToolpathStore((s) => s.entries);
   const [store] = useState(createPlaybackStore);
   const [listeners] = useState(() => new Set<(range: CellRange) => void>());
@@ -55,8 +64,8 @@ export function usePlayback(maxCells: number | null) {
   const enabled = maxCells !== null;
 
   const latest = useMemo(
-    () => (enabled ? playbackMoves(operations, entries) : null),
-    [enabled, operations, entries],
+    () => (enabled ? playbackMoves(operations, entries, side) : null),
+    [enabled, operations, entries, side],
   );
   // Kept while toolpaths recompute, and the same object while their key is.
   const [moves, setMoves] = useState(latest);
@@ -89,11 +98,12 @@ export function usePlayback(maxCells: number | null) {
       },
     );
     const scheduler = schedulePlayback((request) => worker.post(request), {
-      onLoaded(grid) {
+      onLoaded(grid, start) {
         const cells = grid.columns * grid.rows;
         // Padded to whole texture rows, so the viewport uploads it without a copy.
         const padded = Math.ceil(cells / TEXTURE_WIDTH) * TEXTURE_WIDTH;
         heights = new Float32Array(new ArrayBuffer(padded * 4), 0, cells);
+        if (start) heights.set(start);
         const stock = stockRef.current;
         setLoaded(stock && { heightmap: { ...grid, heights }, stock });
         setError(null);
@@ -131,13 +141,15 @@ export function usePlayback(maxCells: number | null) {
     const { distance } = store.getState();
     if (distance > path.length) store.getState().setDistance(path.length);
     stockRef.current = { width, height, thickness };
+    const before = moves.before && flipAxis ? { cuts: moves.before, axis: flipAxis } : undefined;
     schedule.current?.load({
-      key: `${moves.key}:${width}x${height}x${thickness}:${maxCells}`,
+      key: `${moves.key}:${before?.axis}:${width}x${height}x${thickness}:${maxCells}`,
       stock: { width, height, thickness },
       cuts: moves.cuts,
+      before,
       maxCells,
     });
-  }, [path, moves, width, height, thickness, maxCells, store]);
+  }, [path, moves, flipAxis, width, height, thickness, maxCells, store]);
 
   useEffect(() => {
     if (computing) store.getState().setPlaying(false);

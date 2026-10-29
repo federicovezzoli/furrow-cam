@@ -3,22 +3,10 @@
 import { flipTransform } from "@furrow/cam-core";
 import type { StockSide } from "@furrow/document";
 import type * as React from "react";
-import { createContext, useContext, useMemo } from "react";
+import { useMemo } from "react";
 import { Matrix4 } from "three";
 import { useShallow } from "zustand/react/shallow";
 import { useDocumentStore, useWorkspaceStore } from "../../providers/workspace-stores";
-
-const FixedSide = createContext<StockSide | null>(null);
-
-/** Shows its children from `value`'s side whatever side the workspace is on, as the simulator does. */
-export const FixedSideProvider = FixedSide.Provider;
-
-/** The side in view: the fixed one inside a `FixedSideProvider`, the workspace's otherwise. */
-export function useSideInView(): StockSide {
-  const fixed = useContext(FixedSide);
-  const side = useWorkspaceStore((s) => s.side);
-  return fixed ?? side;
-}
 
 /**
  * Draws `children`, which are in `side`'s stock coordinates, as the side in
@@ -47,7 +35,7 @@ function useSideMatrix(side: StockSide): Matrix4 | null {
       flipAxis: stock.twoSided?.flipAxis,
     })),
   );
-  const inView = useSideInView();
+  const inView = useWorkspaceStore((s) => s.side);
   return useMemo(() => {
     if (side === inView || !flipAxis) return null;
     const affine = flipTransform({ width, height, thickness }, flipAxis);
