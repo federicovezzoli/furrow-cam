@@ -198,6 +198,30 @@ describe("heightmapPlayback", () => {
       expect(expected.filter((h) => h === -stock.thickness).length).toBeGreaterThan(grid.columns);
     });
 
+    it("cuts through as far as the tool has gone, part of a move too", () => {
+      const path = playbackPath(cuts);
+      const playback = heightmapPlayback(stock, path, grid, 1, flippedTop);
+      const expected = (distance: number) => {
+        const fresh = heightmapPlayback(stock, path, grid, 1, flippedTop);
+        const at = positionAt(path, distance);
+        fresh.seek(at.move, at.fraction);
+        return fresh.heightmap.heights;
+      };
+      // Part of the slot, its start, the end, then part of it again.
+      const slotStart = moveStartDistance(path, positionAt(path, 57).move);
+      for (const distance of [57, slotStart, path.length, 57]) {
+        const at = positionAt(path, distance);
+        playback.seek(at.move, at.fraction);
+        expect(playback.heightmap.heights, `at ${distance} mm`).toEqual(expected(distance));
+      }
+      // Halfway along the slot the sides meet behind the tool, not ahead of it.
+      const { heights, columns, cellWidth, cellHeight } = playback.heightmap;
+      const cell = (x: number, y: number) =>
+        heights[Math.floor(y / cellHeight) * columns + Math.floor(x / cellWidth)];
+      expect(cell(30, 28)).toBe(-stock.thickness);
+      expect(cell(100, 28)).toBe(0);
+    });
+
     it("goes back to where it started", () => {
       const path = playbackPath(cuts);
       const playback = heightmapPlayback(stock, path, grid, 1, flippedTop);
