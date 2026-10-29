@@ -112,7 +112,7 @@ export function createServer(projects: Projects = createProjects()) {
     {
       title: "Check a project",
       description:
-        "Computes the toolpaths of a project's enabled operations, as the app does, and returns what the app would show: operations whose tool can't cut them (toolProblems), each toolpath's warnings, and whether there is anything to export (canExport, with whyNot if not, or the G-code files an export would write). Changes nothing. Reports progress per operation; 3D operations can take a while.",
+        "Computes the toolpaths of a project's enabled operations, as the app does, and returns what the app would show for them: enabled operations whose tool can't cut them (toolProblems), the toolpath and program warnings, and whether there is anything to export (canExport, with whyNot if not, or the G-code files an export would write). Changes nothing. Reports progress as it computes; 3D operations can take a while.",
       inputSchema: { path: projectPath },
       annotations: { readOnlyHint: true },
     },
