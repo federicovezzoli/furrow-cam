@@ -11,6 +11,8 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # npm provenance for @furrow/mcp, the one package published to npm.
+  id-token: write
 
 jobs:
   release:
@@ -35,7 +37,8 @@ jobs:
 
       # With pending changesets: opens/updates the "Version Packages" PR.
       # After that PR is merged: tags each bumped package and creates GitHub Releases.
-      # All packages are private, so nothing is published to npm.
+      # Every package is private except @furrow/mcp, which is published to npm
+      # (its prepack bundles the private packages it uses, ADR-0067).
       # v2 is required for Changesets CLI v3.
       - uses: changesets/action@v2
         id: changesets
@@ -45,6 +48,9 @@ jobs:
           commit-message: "chore: version packages"
           pr-title: "chore: version packages"
           create-github-releases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Releases made with this workflow's token don't trigger other workflows,
       # so the desktop installers are built from here (desktop.yml).

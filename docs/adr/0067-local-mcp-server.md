@@ -34,5 +34,5 @@ We will use option 2.
 
 - A rule added to a workspace action reaches the app and the server at once; a tool that bypasses `change()` loses the automatic version, which reviews must catch.
 - The workspace's `stores/` and `lib/` modules the server imports must stay free of React and the DOM; the server's typecheck and Biome override fail if they don't.
-- The server is bundled with esbuild into one `dist/main.js`, since the packages are consumed as TypeScript source; publishing it (`npx @furrow/mcp`) is #369.
+- The server is bundled with esbuild into one `dist/main.js`, since the packages are consumed as TypeScript source. It is the one `@furrow/*` package published to npm (`npx @furrow/mcp`, #369): every dependency, the private `@furrow/*` packages included, is bundled, so the published package has none. The release workflow publishes it with `NPM_TOKEN`, with provenance.
 - `writeFileAtomic` exists in both the desktop main process and the server, whose copy can also refuse to replace a file even when another process creates it meanwhile (a hard link, or an exclusive copy where links aren't supported): a few lines of Node code that neither the browser-safe packages nor another app can share.
