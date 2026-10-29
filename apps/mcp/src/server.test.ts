@@ -46,8 +46,11 @@ describe("the MCP server", () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "create_project",
+      "fit_to_stock",
       "get_project",
+      "import_file",
       "open_project",
+      "resize",
       "save_project",
     ]);
   });
