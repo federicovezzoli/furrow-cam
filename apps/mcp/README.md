@@ -6,7 +6,7 @@ Lets an AI assistant work on your [Furrow CAM](https://github.com/federicovezzol
 npx -y @furrow/mcp
 ```
 
-It needs [Node.js](https://nodejs.org) 20 or later.
+It needs [Node.js](https://nodejs.org) 22 or later.
 
 ## What it can do
 
@@ -15,9 +15,12 @@ It needs [Node.js](https://nodejs.org) 20 or later.
 | `create_project` | Creates an empty `.furrow` project at a path |
 | `open_project` | Opens a `.furrow`, `.furrow.zip` or `.furrow.json` project, dropping changes the server hasn't saved |
 | `get_project` | Summarises a project: units, stock and zero, machine, drawings, 3D models and operations with their settings |
+| `import_file` | Imports an SVG or DXF drawing, or an STL 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
+| `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
+| `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `save_project` | Saves the project as `.furrow`, which the desktop app opens; never replaces another file, nor a project changed since it was opened (for example in the app) |
 
-Importing drawings and models, setting up the stock and tools, adding operations and exporting G-code come with the next releases.
+Setting up the stock and tools, adding operations, checking a project and exporting G-code come with the next releases.
 
 The server changes projects with the same code as the app. Before its first change to a project you opened, it keeps the project as it was as a version (*Before the assistant's changes*), which you can restore from the app's versions.
 

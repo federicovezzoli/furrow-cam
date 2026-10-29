@@ -1,6 +1,7 @@
 {
   "name": "@furrow/mcp",
   "version": "0.0.0",
+  "private": true,
   "description": "Furrow CAM's local MCP server: AI assistants work on .furrow projects over stdio (PRD-0012, ADR-0067)",
   "license": "MIT",
   "homepage": "https://github.com/federicovezzoli/furrow-cam/tree/main/apps/mcp#readme",
@@ -14,18 +15,19 @@
     "furrow-mcp": "./dist/main.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js",
-    "prepack": "pnpm run build",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js --metafile=dist/meta.json && node scripts/notices.mjs",
+    "prepack": "pnpm run build && cp ../../LICENSE LICENSE",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
