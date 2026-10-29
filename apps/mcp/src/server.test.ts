@@ -46,9 +46,12 @@ describe("the MCP server", () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "create_project",
+      "fit_to_stock",
       "get_library",
       "get_project",
+      "import_file",
       "open_project",
+      "resize",
       "save_project",
       "set_machine",
       "set_operation_tool",
@@ -75,6 +78,9 @@ describe("the MCP server", () => {
     const broken = join(dir, "broken.furrow.json");
     await writeFile(broken, "{}");
     expect(await refusal("open_project", { path: broken })).toBe(t("ProjectFile.notAProject"));
+    // Smaller than the app's size fields take.
+    const tiny = { path: join(dir, "Part.furrow"), id: "x", side: "width", mm: 0.001 };
+    expect(await refusal("resize", tiny)).toContain("mm");
   });
 
   it("summarises a project by the path it was opened from, and saves it as .furrow", async () => {
