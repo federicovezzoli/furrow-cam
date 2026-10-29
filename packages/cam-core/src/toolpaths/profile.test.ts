@@ -710,7 +710,7 @@ describe("generateToolpath", () => {
             operationStart: null,
             toolChange: null,
           },
-    drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "", border: 10, rotation: 0 }],
     geometry: [square, hole],
     models: [],
     fonts: [],

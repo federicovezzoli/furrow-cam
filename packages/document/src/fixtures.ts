@@ -147,6 +147,7 @@ export const textItem: Drawing = {
   id: TEXT_ID,
   name: "I",
   border: 10,
+  rotation: 0,
   text: {
     text: "I",
     font: "sans",
@@ -244,7 +245,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 27,
+    schemaVersion: 28,
     units: "in",
     stock: {
       width: 300,
@@ -266,7 +267,7 @@ export function fullDocument(): ProjectDocument {
       },
     },
     machine,
-    drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10, rotation: 0 }],
     geometry: [square, circle],
     models: [],
     fonts: [],

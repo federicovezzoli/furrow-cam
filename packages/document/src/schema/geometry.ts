@@ -178,6 +178,11 @@ export const Drawing = z.strictObject({
   name: z.string(),
   /** The border, in millimetres, that *Fit to stock* leaves around it, as a model's (ADR-0038). */
   border: z.number().nonnegative(),
+  /**
+   * How far it has been turned since it was imported or typed, in degrees
+   * counter-clockwise, from above -180 up to 180 (ADR-0066). Mirroring negates it.
+   */
+  rotation: z.number().gt(-180).lte(180),
   /** A text item's settings; its outlines are its one shape, laid out from them (ADR-0059). */
   text: TextSettings.optional(),
 });
