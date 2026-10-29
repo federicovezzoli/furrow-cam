@@ -7,6 +7,7 @@ import {
   parseTools,
   type Settings,
 } from "@furrow/workspace/lib/local-library";
+import { type ProjectFile, readProjectFile } from "@furrow/workspace/lib/project-file";
 import { track } from "@furrow/workspace/lib/telemetry";
 import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-host";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -16,7 +17,6 @@ import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
 import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
-import { type ProjectFile, readProjectFile } from "./project-file";
 import { createProjectSession, type ProjectSession } from "./session";
 import { StartScreen } from "./start-screen";
 
@@ -177,7 +177,7 @@ export function App() {
   async function openBytes(bytes: Uint8Array, path: string, name: string) {
     let file: ProjectFile;
     try {
-      file = await readProjectFile(bytes);
+      file = await readProjectFile(bytes, t);
     } catch (error) {
       const reason = error instanceof Error ? error.message : t("Desktop.App.unreadable");
       report(t("Desktop.App.openFailed", { name, reason }));
@@ -208,7 +208,7 @@ export function App() {
       return;
     }
     try {
-      const file = await readProjectFile(bytes);
+      const file = await readProjectFile(bytes, t);
       open(file, { path: recovery.path, name: recovery.name, id: recovery.id, modified: true });
     } catch (error) {
       setError(error instanceof Error ? error.message : t("Desktop.App.recoveryUnreadable"));

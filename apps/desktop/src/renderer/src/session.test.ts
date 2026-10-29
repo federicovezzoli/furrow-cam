@@ -1,10 +1,15 @@
 import { createProjectDocument, type ProjectDocument, sha256Hex } from "@furrow/document";
 import { model, uploadedFont } from "@furrow/document/fixtures";
+import {
+  type ProjectFile,
+  readProjectFile,
+  writeProjectFile,
+} from "@furrow/workspace/lib/project-file";
 import { MAX_VERSIONS } from "@furrow/workspace/lib/versions";
 import type { VersionsResult } from "@furrow/workspace/lib/workspace-host";
 import { describe, expect, it, vi } from "vitest";
 import arvo from "../../../../../packages/workspace/src/fonts/Arvo-Regular.ttf?inline";
-import { type ProjectFile, readProjectFile, writeProjectFile } from "./project-file";
+import { t } from "./i18n";
 import { createProjectSession } from "./session";
 
 function file(document: ProjectDocument = createProjectDocument()): ProjectFile {
@@ -70,7 +75,7 @@ describe("createProjectSession", () => {
       name: "Coasters 2",
     });
     expect(deleteRecovery).toHaveBeenCalled();
-    expect((await readProjectFile(bytes)).document.stock.width).toBe(321);
+    expect((await readProjectFile(bytes, t)).document.stock.width).toBe(321);
   });
 
   it("keeps changes made while a save was written unsaved, with their recovery copy", async () => {
@@ -135,7 +140,7 @@ describe("createProjectSession", () => {
     expect(session.modified).toBe(true);
     await session.host.save(widened(session.document, 321), session.savedAt);
 
-    const reopened = await readProjectFile(session.toFile());
+    const reopened = await readProjectFile(session.toFile(), t);
     expect(reopened.versions).toMatchObject([{ label: "first cut", automatic: false }]);
     expect(reopened.versions[0]?.document.stock.width).not.toBe(321);
     expect(reopened.document.stock.width).toBe(321);
@@ -150,7 +155,7 @@ describe("createProjectSession", () => {
     const font = { ...uploadedFont, sha256, size: bytes.byteLength };
     await session.host.save({ ...session.document, fonts: [font] }, session.savedAt);
 
-    const reopened = await readProjectFile(session.toFile());
+    const reopened = await readProjectFile(session.toFile(), t);
     expect(reopened.document.fonts).toEqual([font]);
     expect(reopened.fonts).toEqual(new Map([[sha256, bytes]]));
     expect(new Uint8Array(await session.host.fonts.get(sha256))).toEqual(bytes);
@@ -236,33 +241,38 @@ describe("readProjectFile", () => {
       fonts: [{ ...uploadedFont, sha256, size: bytes.byteLength }],
     };
     const packed = writeProjectFile({ ...file(document), fonts: new Map([[sha256, bytes]]) });
-    await expect(readProjectFile(packed)).rejects.toThrow("can't be read");
+    await expect(readProjectFile(packed, t)).rejects.toThrow("can't be read");
   });
 
   it("opens a .furrow.json document, which can't carry models", async () => {
     const document = createProjectDocument();
-    const read = await readProjectFile(new TextEncoder().encode(JSON.stringify(document)));
+    const read = await readProjectFile(new TextEncoder().encode(JSON.stringify(document)), t);
     expect(read).toEqual({ document, meshes: new Map(), fonts: new Map(), versions: [] });
     await expect(
-      readProjectFile(new TextEncoder().encode(JSON.stringify({ ...document, models: [model] }))),
+      readProjectFile(
+        new TextEncoder().encode(JSON.stringify({ ...document, models: [model] })),
+        t,
+      ),
     ).rejects.toThrow(/3D models/);
     const withFont = { ...document, fonts: [uploadedFont] };
     await expect(
-      readProjectFile(new TextEncoder().encode(JSON.stringify(withFont))),
+      readProjectFile(new TextEncoder().encode(JSON.stringify(withFont)), t),
     ).rejects.toThrow(/uploaded fonts/);
   });
 
   it("refuses files that aren't projects", async () => {
-    await expect(readProjectFile(new TextEncoder().encode("{}"))).rejects.toThrow(
+    await expect(readProjectFile(new TextEncoder().encode("{}"), t)).rejects.toThrow(
       "This file isn't a Furrow CAM project.",
     );
-    await expect(readProjectFile(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0]))).rejects.toThrow();
+    await expect(
+      readProjectFile(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0]), t),
+    ).rejects.toThrow();
   });
 
   it("refuses a document from a newer release", async () => {
     const newer = { ...createProjectDocument(), schemaVersion: 999 };
-    await expect(readProjectFile(new TextEncoder().encode(JSON.stringify(newer)))).rejects.toThrow(
-      /newer version of Furrow CAM/,
-    );
+    await expect(
+      readProjectFile(new TextEncoder().encode(JSON.stringify(newer)), t),
+    ).rejects.toThrow(/newer version of Furrow CAM/);
   });
 });

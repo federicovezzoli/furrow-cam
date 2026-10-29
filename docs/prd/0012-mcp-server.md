@@ -63,9 +63,9 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 
 - Phase 2: the server never computes toolpaths or G-code (ADR-0004). Does the remote server only edit documents and leave export to the app, or does a new ADR allow server-side export for MCP?
 - Phase 2: which OAuth provider for Better Auth, and does granting access to an MCP client collect any new personal data (ADR-0013)?
-- Does the local server send anonymous usage events like the apps (ADR-0052), or none at all?
 
 ## Changelog
 
 - 2026-10-24: initial draft
 - 2026-10-24: phase 1 uploads nothing, but tool results go where the assistant sends them
+- 2026-10-29: the local server sends no usage events and makes no network requests (ADR-0067, #364)
