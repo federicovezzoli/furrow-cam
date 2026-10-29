@@ -252,6 +252,21 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #396: 3D finishing chooses a boundary. Existing operations cover the model's outline.
+  26: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          operation.type === "relief_finish" &&
+          isObject(operation.params)
+        ) {
+          operation.params.boundary ??= { type: "model" };
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

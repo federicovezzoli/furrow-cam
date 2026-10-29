@@ -3,13 +3,15 @@ import type {
   Model,
   Point,
   ReliefFinishOperation,
+  RoughingBoundary,
   Tool,
   TouchOffDisc,
 } from "@furrow/document";
 import { composeAffine } from "../../geometry/affine";
 import type { Rect } from "../../geometry/bounds";
+import { boxRect } from "../../scene/model";
 import { type Flip, type ModelView, modelView } from "../../scene/sides";
-import type { Vec3 } from "../../scene/stock";
+import type { Box3, Vec3 } from "../../scene/stock";
 import {
   type CutterProfile,
   cutterProfile,
@@ -1067,6 +1069,8 @@ export type ReliefFinishOptions = {
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
   entryClearance: number;
+  /** The stock seen from above, for the `stock` and `margin` boundaries. */
+  stock?: Rect | null;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
   /** A two-sided project's parting plane, below which this side cuts nothing around the model (ADR-0063); `null` for none. */
@@ -1113,9 +1117,11 @@ export type FinishSetup = {
 };
 
 /**
- * The `FinishSetup` of a 3D finishing operation, its grid along `angle`,
- * yielding the fraction done up to `FINISH_SETUP_SHARE`. `null` for a model
- * with no area seen from above.
+ * The `FinishSetup` of a 3D finishing operation, its grid along `angle` over
+ * the boundary's `roughingArea`, which every strategy covers with the tool's
+ * centre, yielding the fraction done up to `FINISH_SETUP_SHARE`. A warning
+ * instead for a model with no area seen from above, or a margin off the
+ * stock.
  */
 export function* finishSetupSteps(
   operation: ReliefFinishOperation,
@@ -1123,6 +1129,7 @@ export function* finishSetupSteps(
   positions: Float32Array,
   angle: number,
   {
+    stock = null,
     stockBottom = null,
     parting = null,
     flip = null,
@@ -1131,13 +1138,19 @@ export function* finishSetupSteps(
     touchOff = null,
     tabs = [],
   }: ReliefFinishOptions,
-): Generator<number, FinishSetup | null> {
+): Generator<number, FinishSetup | ToolpathMessage> {
   const { tool, params } = operation;
   const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
   const view = modelView(model, flip, parting);
-  const grid = reliefGrid(view, angle, wanted);
-  if (!grid) return null;
+  const { min, max } = view.box;
+  if (!(max[0] > min[0] && max[1] > min[1])) return NO_AREA_WARNING;
+  const area = roughingArea(params.boundary, view, stock, tool.diameter / 2);
+  if (!area) return { code: "toolpath.marginOffStock" };
+  // Past the model, its cells are empty: the tool drops to `outside` there.
+  const box: Box3 = { min: [...area.min, min[2]], max: [...area.max, max[2]] };
+  const grid = reliefGrid({ box, outside: view.outside }, angle, wanted);
+  if (!grid) return NO_AREA_WARNING;
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
   const modelShare = rest ? FINISH_SETUP_SHARE - REST_SHARE : FINISH_SETUP_SHARE;
@@ -1173,6 +1186,42 @@ export function* finishSetupSteps(
     restDropper,
     warnings,
   };
+}
+
+/**
+ * The rectangle the tool's centre covers when roughing or finishing within
+ * `boundary` (ADR-0033, ADR-0038, ADR-0064), in stock coordinates:
+ *
+ * - `model`: the model's outline, so the tool cuts a radius past it.
+ * - `stock`: the whole stock, the tool overhanging its edges by its radius.
+ * - `margin`: the model's outline grown by the distance, or by the radius if
+ *   that is more, so finishing never meets uncut material at the model's
+ *   edge. The tool stays inside it, except where it reaches the stock's
+ *   edge: there the centre goes to the edge, as for the whole stock.
+ *
+ * Without `stock`, the whole stock is the model's outline and a margin isn't
+ * clipped. `null` when the margin leaves the tool no room inside the stock:
+ * the model is off the stock, or only a sliver narrower than the tool of the
+ * margin is on it.
+ */
+export function roughingArea(
+  boundary: RoughingBoundary,
+  model: Pick<ModelView, "box">,
+  stock: Rect | null,
+  radius: number,
+): Rect | null {
+  const rect = boxRect(model.box);
+  if (boundary.type === "model") return rect;
+  if (boundary.type === "stock") return stock ?? rect;
+  const grow = Math.max(boundary.distance, radius);
+  const side = (edge: number, direction: 1 | -1, stockEdge: number | undefined) => {
+    const cut = edge + direction * grow;
+    if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
+    return cut - direction * radius;
+  };
+  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
+  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
+  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
 }
 
 /**

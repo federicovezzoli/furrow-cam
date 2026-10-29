@@ -422,6 +422,64 @@ function useParamsUpdate<P extends object>(
   return { errors, update };
 }
 
+/** What a 3D operation covers (ADR-0038, ADR-0064): the model, a margin around it, or the whole stock. */
+function BoundaryFields({
+  id,
+  label,
+  hint,
+  boundary,
+  error,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  boundary: RoughingBoundary;
+  error: string | undefined;
+  onChange: (boundary: RoughingBoundary) => void;
+}) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const t = useTranslations("Operation");
+  return (
+    <>
+      <Row id={`${id}-boundary`} label={label}>
+        <NativeSelect
+          id={`${id}-boundary`}
+          size="sm"
+          value={boundary.type}
+          onChange={(event) => {
+            const type = event.target.value as RoughingBoundaryType;
+            if (type !== boundary.type) onChange(DEFAULT_BOUNDARIES[type]);
+          }}
+          className={SELECT_CLASS}
+        >
+          {(["model", "margin", "stock"] as const).map((type) => (
+            <NativeSelectOption key={type} value={type}>
+              {t(`boundaries.${type}`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      {boundary.type === "margin" && (
+        <NumberField
+          id={`${id}-margin`}
+          label={t("margin")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={boundary.distance}
+          onValueChange={(distance) => onChange({ type: "margin", distance })}
+          error={error}
+          {...gestureHandlers(store)}
+        />
+      )}
+      <p className="text-muted-foreground">{hint}</p>
+    </>
+  );
+}
+
 /** The "Ramp in" checkbox, disabled for a tool that plunges straight down whatever it says. */
 function RampCheckbox({
   id,
@@ -1195,43 +1253,14 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         error={errors.stockToLeave}
         {...gestureHandlers(store)}
       />
-      <Row id="relief-rough-boundary" label={t("clear")}>
-        <NativeSelect
-          id="relief-rough-boundary"
-          size="sm"
-          value={params.boundary.type}
-          onChange={(event) => {
-            const type = event.target.value as RoughingBoundaryType;
-            if (type !== params.boundary.type) {
-              update("boundary", { boundary: DEFAULT_BOUNDARIES[type] });
-            }
-          }}
-          className={SELECT_CLASS}
-        >
-          {(["model", "margin", "stock"] as const).map((type) => (
-            <NativeSelectOption key={type} value={type}>
-              {t(`boundaries.${type}`)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Row>
-      {params.boundary.type === "margin" && (
-        <NumberField
-          id="relief-rough-margin"
-          label={t("margin")}
-          layout="inline"
-          quantity="length"
-          units={units}
-          min={MIN_LENGTH}
-          value={params.boundary.distance}
-          onValueChange={(distance) =>
-            update("boundary", { boundary: { type: "margin", distance } })
-          }
-          error={errors.boundary}
-          {...gestureHandlers(store)}
-        />
-      )}
-      <p className="text-muted-foreground">{t(`boundaryHints.${params.boundary.type}`)}</p>
+      <BoundaryFields
+        id="relief-rough"
+        label={t("clear")}
+        hint={t(`boundaryHints.${params.boundary.type}`)}
+        boundary={params.boundary}
+        error={errors.boundary}
+        onChange={(boundary) => update("boundary", { boundary })}
+      />
       <RampCheckbox
         id="relief-rough-ramp"
         tool={tool}
@@ -1422,6 +1451,17 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         error={errors.stockToLeave}
         {...gestures}
       />
+      <BoundaryFields
+        id="relief-finish"
+        label={t("cover")}
+        hint={t(`finishBoundaryHints.${params.boundary.type}`)}
+        boundary={params.boundary}
+        error={errors.boundary}
+        onChange={(boundary) => update("boundary", { boundary })}
+      />
+      {strategy.type === "waterline" && params.boundary.type !== "model" && (
+        <p className="text-muted-foreground">{t("finishBoundaryWaterline")}</p>
+      )}
       <RestCheckbox
         id="relief-finish-rest"
         checked={params.rest}

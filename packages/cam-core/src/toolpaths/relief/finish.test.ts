@@ -78,6 +78,7 @@ function finishing(
       strategy: { type: "parallel", angle: 0, direction: "zigzag" },
       stepOver: 50,
       stockToLeave: 0,
+      boundary: { type: "model" },
       rest: false,
       ...params,
     },

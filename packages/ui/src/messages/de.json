@@ -648,12 +648,12 @@
       "coarsened": "Das Modell ist zu groß, um es mit diesem Werkzeug in voller Auflösung zu bearbeiten: Es wird mit Zellen von {size, number} mm statt {wanted, number} mm geschnitten.",
       "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size, number} mm simuliert, daher kann Material, das schmaler als {width, number} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
       "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
-      "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
+      "marginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu bearbeiten.",
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
       "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
       "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
       "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
-      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil geschruppt, bleibt kein Rahmen, an dem das Teil hält: Schruppe mit einem Rand."
+      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
     "export": {
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
@@ -781,6 +781,12 @@
       "margin": "Räumt einen Rahmen dieser Breite um den Modellumriss aus (mindestens den Werkzeugradius) und hält das Werkzeug darin: die Rohteiloberseite außerhalb bleibt für das Nullen von Z nach einem Werkzeugwechsel.",
       "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: alles um das Modell wird bis zum Boden ausgeräumt."
     },
+    "finishBoundaryHints": {
+      "model": "Die Werkzeugmitte erreicht die Kanten des Modellumrisses.",
+      "margin": "Schlichtet auch einen so breiten Rahmen um den Modellumriss (mindestens den Werkzeugradius) bis zum Modellboden, wobei das Werkzeug darin bleibt, wie beim Schruppen mit demselben Rand.",
+      "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: Alles um das Modell wird bis zu seinem Boden geschlichtet."
+    },
+    "finishBoundaryWaterline": "Z-konstante Konturen folgen den Wänden des Modells, nicht dem flachen Boden darum: Schlichte den Boden mit parallelen Bahnen oder einer Spirale.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Wasserlinie",
@@ -862,6 +868,7 @@
     "stepOver": "Bahnabstand",
     "stockToLeave": "Aufmaß stehen lassen",
     "clear": "Ausräumen",
+    "cover": "Abdecken",
     "margin": "Rand",
     "rest": "Nur Restmaterial schneiden",
     "restHint": "Überspringt, was die aktivierten Operationen darüber schon geschnitten haben, sodass ein kleineres Werkzeug nur dort arbeitet, wo das vorige nicht hinkam.",

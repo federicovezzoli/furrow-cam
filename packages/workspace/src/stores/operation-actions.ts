@@ -126,8 +126,8 @@ export const DEFAULT_RELIEF_STEP_OVER = 10;
 
 /**
  * New 3D finishing operations on `modelId` run parallel zig-zag passes along
- * X at a 10% step-over (PRD-0005), leaving no stock and cutting everything
- * (no rest machining).
+ * X at a 10% step-over over the model's outline (PRD-0005), leaving no stock
+ * and cutting everything (no rest machining).
  */
 export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
   return {
@@ -135,6 +135,7 @@ export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
     strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: DEFAULT_RELIEF_STEP_OVER,
     stockToLeave: 0,
+    boundary: { type: "model" },
     rest: false,
   };
 }

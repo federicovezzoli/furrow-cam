@@ -35,7 +35,7 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.coarsened",
   "toolpath.restCoarsened",
   "toolpath.roughNothing",
-  "toolpath.roughMarginOffStock",
+  "toolpath.marginOffStock",
   "toolpath.restOperationFailed",
 ] as const;
 

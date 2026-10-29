@@ -1,11 +1,6 @@
 import type { Model, ReliefFinishOperation } from "@furrow/document";
 import type { Toolpath } from "../toolpath";
-import {
-  finishSetupSteps,
-  NO_AREA_WARNING,
-  parallelPassesSteps,
-  type ReliefFinishOptions,
-} from "./finish";
+import { finishSetupSteps, parallelPassesSteps, type ReliefFinishOptions } from "./finish";
 import { spiralSteps } from "./spiral";
 import { waterlineSteps } from "./waterline";
 
@@ -27,7 +22,7 @@ export function* reliefFinishSteps(
   const { strategy } = operation.params;
   const angle = strategy.type === "parallel" ? strategy.angle : 0;
   const setup = yield* finishSetupSteps(operation, model, positions, angle, options);
-  if (!setup) return { moves: [], warnings: [NO_AREA_WARNING] };
+  if ("code" in setup) return { moves: [], warnings: [setup] };
   switch (strategy.type) {
     case "parallel":
       return yield* parallelPassesSteps(operation, setup, strategy, options);

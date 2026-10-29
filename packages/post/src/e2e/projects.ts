@@ -488,6 +488,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
       strategy: { type: "parallel", angle: 45, direction: "zigzag" },
       stepOver: 50,
       stockToLeave: 0,
+      boundary: { type: "model" },
       rest,
     },
   });

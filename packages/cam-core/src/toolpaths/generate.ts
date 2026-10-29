@@ -44,7 +44,7 @@ export type ToolpathInput = {
   /** The model a 3D operation machines (PRD-0005), `null` for the others. */
   model: Model | null;
   /**
-   * The stock seen from above, for 3D roughing and outside pockets up to its
+   * The stock seen from above, for 3D operations past the model and outside pockets up to its
    * edges, for rest machining and for checking locating pins are on it;
    * `null` for the others.
    */
@@ -134,7 +134,8 @@ export function toolpathInputs(
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
         rest ||
-        (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
+        ((operation.type === "relief_rough" || operation.type === "relief_finish") &&
+          operation.params.boundary.type !== "model") ||
         (operation.type === "drill" && operation.params.pins) ||
         (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
@@ -473,11 +474,7 @@ function* operationSteps(
       if (flip && tabs && !tabs.some(({ modelId }) => modelId === model.id)) {
         warnings.push({ code: "toolpath.noHoldingTabs" });
       }
-      if (
-        parting !== null &&
-        operation.type === "relief_rough" &&
-        operation.params.boundary.type === "stock"
-      ) {
+      if (parting !== null && operation.params.boundary.type === "stock") {
         warnings.push({ code: "toolpath.stockBoundaryTwoSided" });
       }
       let rest: RestOptions | null = null;
@@ -502,6 +499,7 @@ function* operationSteps(
         operation.type === "relief_finish"
           ? reliefFinishSteps(operation, model, positions, {
               ...options,
+              stock,
               stockBottom,
               parting,
               flip,

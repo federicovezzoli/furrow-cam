@@ -1,16 +1,8 @@
-import type {
-  Model,
-  Point,
-  ReliefRoughOperation,
-  RoughingBoundary,
-  Tool,
-  TouchOffDisc,
-} from "@furrow/document";
+import type { Model, Point, ReliefRoughOperation, Tool, TouchOffDisc } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
-import { boxRect } from "../../scene/model";
-import { type Flip, type ModelView, modelView } from "../../scene/sides";
+import { type Flip, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
 import type { ToolpathMessage } from "../messages";
@@ -42,6 +34,7 @@ import {
   reliefGrid,
   remainingRuns,
   restStockSteps,
+  roughingArea,
   round3,
   simplifyHeights,
   ToolDropper,
@@ -171,7 +164,7 @@ export function* reliefRoughSteps(
   const tabsOnModel = reachModel(tabs, grid, heights);
   const area = roughingArea(params.boundary, view, stock, radius);
   if (!area) {
-    warnings.push({ code: "toolpath.roughMarginOffStock" });
+    warnings.push({ code: "toolpath.marginOffStock" });
     return { moves: [], warnings };
   }
   const restStock = rest
@@ -285,42 +278,6 @@ export function* reliefRoughSteps(
     yield progress(i);
   }
   return { moves: clearing.finish(), warnings: [...warnings, ...skipped.values()] };
-}
-
-/**
- * The rectangle the tool's centre covers when roughing within `boundary`
- * (ADR-0033, ADR-0038), in stock coordinates:
- *
- * - `model`: the model's outline, so the tool cuts a radius past it.
- * - `stock`: the whole stock, the tool overhanging its edges by its radius.
- * - `margin`: the model's outline grown by the distance, or by the radius if
- *   that is more, so finishing never meets uncut material at the model's
- *   edge. The tool stays inside it, except where it reaches the stock's
- *   edge: there the centre goes to the edge, as for the whole stock.
- *
- * Without `stock`, the whole stock is the model's outline and a margin isn't
- * clipped. `null` when the margin leaves the tool no room inside the stock:
- * the model is off the stock, or only a sliver narrower than the tool of the
- * margin is on it.
- */
-export function roughingArea(
-  boundary: RoughingBoundary,
-  model: Pick<ModelView, "box">,
-  stock: Rect | null,
-  radius: number,
-): Rect | null {
-  const rect = boxRect(model.box);
-  if (boundary.type === "model") return rect;
-  if (boundary.type === "stock") return stock ?? rect;
-  const grow = Math.max(boundary.distance, radius);
-  const side = (edge: number, direction: 1 | -1, stockEdge: number | undefined) => {
-    const cut = edge + direction * grow;
-    if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
-    return cut - direction * radius;
-  };
-  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
-  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
-  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
 }
 
 /**
