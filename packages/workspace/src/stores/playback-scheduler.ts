@@ -5,13 +5,15 @@ import type { FlipAxis, Stock } from "@furrow/document";
  * Starts a playback's heightmap in its worker (ADR-0004), from the uncut
  * stock or, with `before`, from the stock the top side's cuts leave, turned
  * over about `axis` (the bottom side of a two-sided project, ADR-0060).
+ * `before.key` changes exactly when its cuts do, so the worker keeps their
+ * result between loads.
  */
 export type PlaybackLoad = {
   type: "load";
   key: string;
   stock: Pick<Stock, "width" | "height" | "thickness">;
   cuts: SimulationCut[];
-  before?: { cuts: SimulationCut[]; axis: FlipAxis };
+  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
   /** Most cells the heightmap may have, so the device can draw it. */
   maxCells: number;
 };
