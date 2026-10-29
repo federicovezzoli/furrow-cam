@@ -9,17 +9,20 @@ import type { DocumentStore } from "../stores/document-store";
 import { renderWorkspace } from "../test-render";
 import { DrawingProperties } from "./drawing-properties";
 
+type Seen = { store: DocumentStore | null };
+
+function Probe({ seen }: { seen: Seen }) {
+  seen.store = useDocumentStoreApi();
+  return null;
+}
+
 /** Renders the fixture drawing's properties, and returns its document store. */
 function render(document: ProjectDocument = fullDocument()) {
-  const seen: { store: DocumentStore | null } = { store: null };
-  function Probe() {
-    seen.store = useDocumentStoreApi();
-    return null;
-  }
+  const seen: Seen = { store: null };
   renderWorkspace(
     <>
       <DrawingProperties drawingId={DRAWING_ID} />
-      <Probe />
+      <Probe seen={seen} />
     </>,
     createMemoryHost({ document }),
   );
