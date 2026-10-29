@@ -1,7 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  CallToolResult,
+  ServerNotification,
+  ServerRequest,
+} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
+import { checkProject, exportProject, type Progress } from "./gcode";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
 import { projectSummary } from "./summary";
 
@@ -19,6 +25,25 @@ async function respond(run: () => Promise<unknown>): Promise<CallToolResult> {
     if (!(error instanceof ToolError)) throw error;
     return { isError: true, content: [{ type: "text", text: error.message }] };
   }
+}
+
+/** Reports a computation's progress to the client, if it asked for it. */
+function progressOf({
+  _meta,
+  sendNotification,
+}: RequestHandlerExtra<ServerRequest, ServerNotification>): Progress | undefined {
+  const progressToken = _meta?.progressToken;
+  if (progressToken === undefined) return undefined;
+  return (progress, total, operation) =>
+    sendNotification({
+      method: "notifications/progress",
+      params: {
+        progressToken,
+        progress,
+        total,
+        ...(operation && { message: `Computing “${operation}”` }),
+      },
+    });
 }
 
 function summary(project: Project) {
@@ -80,6 +105,42 @@ export function createServer(projects: Projects = createProjects()) {
     },
     ({ path, saveAs }) =>
       respond(async () => ({ saved: await projects.save(await projects.get(path), saveAs) })),
+  );
+
+  server.registerTool(
+    "check_project",
+    {
+      title: "Check a project",
+      description:
+        "Computes the toolpaths of a project's enabled operations, as the app does, and returns what the app would show: operations whose tool can't cut them (toolProblems), each toolpath's warnings, and whether there is anything to export (canExport, with whyNot if not, or the G-code files an export would write). Changes nothing. Reports progress per operation; 3D operations can take a while.",
+      inputSchema: { path: projectPath },
+      annotations: { readOnlyHint: true },
+    },
+    ({ path }, extra) =>
+      respond(async () => checkProject(await projects.get(path), progressOf(extra), extra.signal)),
+  );
+
+  server.registerTool(
+    "export_gcode",
+    {
+      title: "Export G-code",
+      description:
+        "Computes a project's toolpaths and writes its G-code for the machine's post-processor, byte for byte what the app exports: one file named after the project (e.g. Sign.gcode), or one per side of a two-sided project (Sign-top.gcode, Sign-bottom.gcode). Writes next to the project's .furrow file unless given a folder. Never replaces a file unless overwrite is true. Saved or not, it exports the project as it is in this server. Returns the files written and the export's warnings. Never sends anything to a machine: the user loads and runs the G-code.",
+      inputSchema: {
+        path: projectPath,
+        folder: z.string().optional().describe("Absolute path of the folder to write into."),
+        overwrite: z.boolean().optional().describe("Replace G-code files already there."),
+      },
+    },
+    ({ path, folder, overwrite }, extra) =>
+      respond(async () =>
+        exportProject(
+          await projects.get(path),
+          { folder, overwrite },
+          progressOf(extra),
+          extra.signal,
+        ),
+      ),
   );
 
   return server;

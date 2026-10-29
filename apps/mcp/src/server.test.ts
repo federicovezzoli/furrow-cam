@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createProjectDocument } from "@furrow/document";
+import { createProjectDocument, packProjectArchive } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -42,10 +42,23 @@ async function refusal(name: string, args: Record<string, unknown>) {
 }
 
 describe("the MCP server", () => {
+  it("reports an export's progress to a client that asks", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    const progress: number[] = [];
+    const result = await client.callTool({ name: "export_gcode", arguments: { path } }, undefined, {
+      onprogress: ({ progress: done }) => progress.push(done),
+    });
+    expect(result.isError).toBeFalsy();
+    expect(progress.at(-1)).toBe(fullDocument().operations.filter((o) => o.enabled).length);
+  });
+
   it("lists its tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      "check_project",
       "create_project",
+      "export_gcode",
       "get_project",
       "open_project",
       "save_project",
