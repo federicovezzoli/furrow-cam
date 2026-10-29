@@ -8,7 +8,7 @@ import {
 } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import { setMachine } from "@furrow/workspace/stores/machine-actions";
-import { type ActionResult, setOperationTool } from "@furrow/workspace/stores/operation-actions";
+import { setOperationTool } from "@furrow/workspace/stores/operation-actions";
 import {
   addTouchOff,
   pickXYOrigin,
@@ -60,6 +60,12 @@ export function setTouchOff(
   project: Project,
   { pad, ...fields }: { pad: boolean; x?: number; y?: number; diameter?: number },
 ) {
+  const given = Object.entries(fields).filter(([, mm]) => mm !== undefined);
+  if (!pad && given.length > 0) {
+    throw new ToolError(
+      `pad: false removes the pad; ${given.map(([field]) => field).join(", ")} can't be set with it.`,
+    );
+  }
   const { width, height } = project.store.getState().document.stock;
   // Checked first, so a refused diameter changes nothing.
   if (pad && fields.diameter !== undefined && fields.diameter > Math.min(width, height)) {
@@ -80,7 +86,9 @@ export function setTouchOff(
 /** Snapshots library machine `id` into the project (ADR-0003), as choosing it in the app does. */
 export function chooseMachine(project: Project, library: Library, id: string) {
   const choice = library.machines.find((m) => m.id === id);
-  if (!choice) throw new ToolError(`The machine list has no machine ${JSON.stringify(id)}.`);
+  if (!choice) {
+    throw new ToolError(`The machine list has no machine ${JSON.stringify(id)}.${why(library)}`);
+  }
   change(project, (store) => setMachine(store, choice.machine));
 }
 
@@ -97,10 +105,15 @@ export function setToolOf(
   if (!project.store.getState().document.operations.some((operation) => operation.id === id)) {
     throw new ToolError(`The project has no operation ${JSON.stringify(id)}.`);
   }
+  if (toolId !== undefined && settings !== undefined) {
+    throw new ToolError("Give a library tool's id or the tool's settings, not both.");
+  }
   let tool: Tool;
   if (toolId !== undefined) {
     const choice = library.tools.find((choice) => choice.id === toolId);
-    if (!choice) throw new ToolError(`The tool library has no tool ${JSON.stringify(toolId)}.`);
+    if (!choice) {
+      throw new ToolError(`The tool library has no tool ${JSON.stringify(toolId)}.${why(library)}`);
+    }
     tool = choice.tool;
   } else if (settings !== undefined) {
     const parsed = Tool.safeParse(settings);
@@ -114,12 +127,13 @@ export function setToolOf(
   } else {
     throw new ToolError("Give a library tool's id or the tool's settings.");
   }
-  let result: ActionResult | undefined;
-  change(project, (store) => (result = setOperationTool(store, id, tool)));
-  check(result);
+  change(project, (store) => {
+    const result = setOperationTool(store, id, tool);
+    if (!result.ok) throw new ToolError(text(result.error));
+  });
 }
 
-/** Throws a `ToolError` with `result`'s message if the action was refused. */
-function check(result: ActionResult | undefined) {
-  if (result && !result.ok) throw new ToolError(text(result.error));
+/** What kept the library from being read, after a sentence, or nothing. */
+function why({ problems }: Library): string {
+  return problems.length > 0 ? ` ${problems.join(" ")}` : "";
 }

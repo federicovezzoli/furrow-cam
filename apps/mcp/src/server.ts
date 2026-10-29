@@ -211,11 +211,12 @@ export function createServer(projects: Projects = createProjects(), library = li
     ({ path, operationId, toolId, settings }) =>
       respond(async () => {
         const project = await projects.get(path);
-        const tools = toolId === undefined ? { tools: [], machines: [], problems: [] } : null;
-        setToolOf(project, tools ?? (await readLibrary(library)), operationId, {
-          toolId,
-          settings,
-        });
+        // Settings need no library.
+        const tools =
+          toolId === undefined
+            ? { tools: [], machines: [], problems: [] }
+            : await readLibrary(library);
+        setToolOf(project, tools, operationId, { toolId, settings });
         return summary(project);
       }),
   );

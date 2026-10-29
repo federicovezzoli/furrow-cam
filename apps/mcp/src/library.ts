@@ -31,35 +31,37 @@ export type Library = { tools: ToolChoice[]; machines: MachineChoice[]; problems
  * or entries left out, are reported in `problems`, never thrown.
  */
 export async function readLibrary(dir: string): Promise<Library> {
-  const problems: string[] = [];
+  const [tools, machines] = await Promise.all([
+    read(join(dir, "tools.json"), parseTools),
+    read(join(dir, "machines.json"), parseMachines),
+  ]);
+  const problems = [tools.problem, machines.problem].filter((problem) => problem !== null);
+  return { tools: tools.entries, machines: machines.entries, problems };
+}
 
-  async function read<T>(name: string, parse: (json: unknown) => T[]): Promise<T[]> {
-    const path = join(dir, name);
-    let json: unknown;
-    try {
-      json = JSON.parse(await readFile(path, "utf8"));
-    } catch (error) {
-      problems.push(
-        (error as NodeJS.ErrnoException).code === "ENOENT"
-          ? `${path} doesn't exist: the desktop app writes it once its library has been changed.`
-          : `${path} can't be read: ${(error as Error).message}`,
-      );
-      return [];
-    }
-    if (!Array.isArray(json)) {
-      problems.push(`${path} isn't a list: it is ignored, as the app ignores it.`);
-      return [];
-    }
-    const entries = parse(json);
-    if (entries.length < json.length) {
-      problems.push(
-        `${path}: ${json.length - entries.length} entries left out, as the app leaves them out: they don't match today's rules.`,
-      );
-    }
-    return entries;
+/** The entries of the library file at `path`, and what kept any of them from being read. */
+async function read<T>(
+  path: string,
+  parse: (json: unknown) => T[],
+): Promise<{ entries: T[]; problem: string | null }> {
+  let json: unknown;
+  try {
+    json = JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    const problem =
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+        ? `${path} doesn't exist: the desktop app writes it once its library has been changed.`
+        : `${path} can't be read: ${(error as Error).message}`;
+    return { entries: [], problem };
   }
-
-  const tools = await read("tools.json", parseTools);
-  const machines = await read("machines.json", parseMachines);
-  return { tools, machines, problems };
+  if (!Array.isArray(json)) {
+    return { entries: [], problem: `${path} isn't a list: it is ignored, as the app ignores it.` };
+  }
+  const entries = parse(json);
+  const left = json.length - entries.length;
+  const problem =
+    left > 0
+      ? `${path}: ${left} entries left out, as the app leaves them out: they don't match today's rules.`
+      : null;
+  return { entries, problem };
 }

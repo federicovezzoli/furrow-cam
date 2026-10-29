@@ -75,14 +75,24 @@ describe("setTouchOff", () => {
     );
     expect(document().stock.touchOff).toBeNull();
   });
+
+  it("refuses a centre or diameter sent to remove the pad, keeping it", () => {
+    setTouchOff(project, { pad: true });
+    expect(() => setTouchOff(project, { pad: false, x: 10 })).toThrow("x can't be set");
+    expect(document().stock.touchOff).not.toBeNull();
+  });
 });
 
+/** A library that couldn't be read. */
+const unread: Library = { tools: [], machines: [], problems: ["tools.json doesn't exist."] };
+
 describe("chooseMachine", () => {
-  it("snapshots a library machine, and refuses an unknown one", () => {
+  it("snapshots a library machine, and refuses an unknown one, saying why", () => {
     const edited = { ...library, machines: [{ id: "m1", machine: { ...machine, name: "Mine" } }] };
     chooseMachine(project, edited, "m1");
     expect(document().machine?.name).toBe("Mine");
     expect(() => chooseMachine(project, library, "nope")).toThrow("no machine");
+    expect(() => chooseMachine(project, unread, "m1")).toThrow("tools.json doesn't exist.");
   });
 });
 
@@ -105,8 +115,16 @@ describe("setToolOf", () => {
   it("refuses a tool the operation can't cut with, and unknown ids", () => {
     expect(() => setToolOf(project, library, OPERATION_ID, { settings: drill })).toThrow();
     expect(document().operations[0]?.tool).toEqual(fullDocument().operations[0]?.tool);
+    // Refused before any change, so no version was kept either.
+    expect(project.versions).toEqual([]);
     expect(() => setToolOf(project, library, OPERATION_ID, { toolId: "nope" })).toThrow("no tool");
+    expect(() => setToolOf(project, unread, OPERATION_ID, { toolId: "t1" })).toThrow(
+      "tools.json doesn't exist.",
+    );
     expect(() => setToolOf(project, library, "nope", { toolId: "t1" })).toThrow("no operation");
     expect(() => setToolOf(project, library, OPERATION_ID, {})).toThrow("Give");
+    expect(() =>
+      setToolOf(project, library, OPERATION_ID, { toolId: "t1", settings: endMill }),
+    ).toThrow("not both");
   });
 });
