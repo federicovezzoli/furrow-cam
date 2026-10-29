@@ -783,10 +783,10 @@
     },
     "finishBoundaryHints": {
       "model": "Le centre de l'outil atteint les bords du contour du modèle.",
-      "margin": "Finit aussi un cadre de cette largeur autour du contour du modèle (au moins le rayon de l'outil) jusqu'au fond du modèle, en gardant l'outil à l'intérieur, comme l'ébauche avec la même marge.",
-      "stock": "Le centre de l'outil atteint les bords du brut : tout autour du modèle est fini jusqu'à son fond."
+      "margin": "Finit aussi un cadre de cette largeur autour du contour du modèle (au moins le rayon de l'outil) jusqu'au fond du modèle, ou au plan de joint dans un projet à deux faces, en gardant l'outil à l'intérieur, comme l'ébauche avec la même marge.",
+      "stock": "Le centre de l'outil atteint les bords du brut : tout autour du modèle est fini jusqu'à son fond, ou au plan de joint dans un projet à deux faces."
     },
-    "finishBoundaryWaterline": "Les contours à Z constant suivent les parois du modèle, pas le fond plat autour : finissez le fond avec des passes parallèles ou en spirale.",
+    "finishBoundaryWaterline": "Les contours à Z constant suivent les parois du modèle et restent sur son contour : la marge et tout le brut ne s'appliquent qu'aux passes parallèles et en spirale.",
     "finishing": {
       "parallel": "Parallèle",
       "waterline": "Niveaux constants",

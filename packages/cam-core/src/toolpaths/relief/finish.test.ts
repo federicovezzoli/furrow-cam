@@ -13,6 +13,7 @@ import {
   RestDropper,
   rasterizeModelSteps,
   reachModel,
+  reliefCacheKey,
   reliefCellSize,
   reliefGrid,
   restGrid,
@@ -146,6 +147,18 @@ describe("reliefGrid", () => {
         0.1,
       ),
     ).toBeNull();
+  });
+});
+
+describe("reliefCacheKey", () => {
+  it("tells grids with the same corner and cells of different sizes apart", () => {
+    const view = modelView(placed(300.02, 200, 10));
+    const wider = modelView(placed(300.07, 200, 10));
+    const a = reliefGrid(view, 0, 0.1);
+    const b = reliefGrid(wider, 0, 0.1);
+    if (!a || !b) throw new Error("no grid");
+    expect([a.columns, a.rows, a.origin]).toEqual([b.columns, b.rows, b.origin]);
+    expect(reliefCacheKey(view, a, 0)).not.toBe(reliefCacheKey(view, b, 0));
   });
 });
 

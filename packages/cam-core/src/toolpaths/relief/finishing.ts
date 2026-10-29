@@ -21,8 +21,9 @@ export function* reliefFinishSteps(
 ): Generator<number, Toolpath> {
   const { strategy } = operation.params;
   const angle = strategy.type === "parallel" ? strategy.angle : 0;
-  const setup = yield* finishSetupSteps(operation, model, positions, angle, options);
-  if ("code" in setup) return { moves: [], warnings: [setup] };
+  const result = yield* finishSetupSteps(operation, model, positions, angle, options);
+  if ("warning" in result) return { moves: [], warnings: [result.warning] };
+  const { setup } = result;
   switch (strategy.type) {
     case "parallel":
       return yield* parallelPassesSteps(operation, setup, strategy, options);

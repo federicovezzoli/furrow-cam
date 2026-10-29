@@ -783,10 +783,10 @@
     },
     "finishBoundaryHints": {
       "model": "Il centro dell'utensile raggiunge i bordi del contorno del modello.",
-      "margin": "Rifinisce anche una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell'utensile) fino al fondo del modello, tenendo l'utensile al suo interno, come la sgrossatura con lo stesso margine.",
-      "stock": "Il centro dell'utensile raggiunge i bordi del grezzo: tutto attorno al modello viene rifinito fino al suo fondo."
+      "margin": "Rifinisce anche una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell'utensile) fino al fondo del modello, o al piano di separazione in un progetto a due lati, tenendo l'utensile al suo interno, come la sgrossatura con lo stesso margine.",
+      "stock": "Il centro dell'utensile raggiunge i bordi del grezzo: tutto attorno al modello viene rifinito fino al suo fondo, o al piano di separazione in un progetto a due lati."
     },
-    "finishBoundaryWaterline": "I contorni a Z costante seguono le pareti del modello, non il fondo piatto attorno: rifinisci il fondo con passate parallele o a spirale.",
+    "finishBoundaryWaterline": "I contorni a Z costante seguono le pareti del modello e restano sul suo contorno: il margine e tutto il grezzo valgono solo per le passate parallele e a spirale.",
     "finishing": {
       "parallel": "Parallela",
       "waterline": "Curve di livello",

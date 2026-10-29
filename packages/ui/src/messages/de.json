@@ -783,10 +783,10 @@
     },
     "finishBoundaryHints": {
       "model": "Die Werkzeugmitte erreicht die Kanten des Modellumrisses.",
-      "margin": "Schlichtet auch einen so breiten Rahmen um den Modellumriss (mindestens den Werkzeugradius) bis zum Modellboden, wobei das Werkzeug darin bleibt, wie beim Schruppen mit demselben Rand.",
-      "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: Alles um das Modell wird bis zu seinem Boden geschlichtet."
+      "margin": "Schlichtet auch einen so breiten Rahmen um den Modellumriss (mindestens den Werkzeugradius) bis zum Modellboden, bei einem zweiseitigen Projekt bis zur Trennebene, wobei das Werkzeug darin bleibt, wie beim Schruppen mit demselben Rand.",
+      "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: Alles um das Modell wird bis zu seinem Boden geschlichtet, bei einem zweiseitigen Projekt bis zur Trennebene."
     },
-    "finishBoundaryWaterline": "Z-konstante Konturen folgen den Wänden des Modells, nicht dem flachen Boden darum: Schlichte den Boden mit parallelen Bahnen oder einer Spirale.",
+    "finishBoundaryWaterline": "Z-konstante Konturen folgen den Wänden des Modells und bleiben auf seinem Umriss: Der Rand und das ganze Rohteil gelten nur für parallele Bahnen und die Spirale.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Wasserlinie",

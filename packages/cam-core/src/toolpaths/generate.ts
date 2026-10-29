@@ -23,6 +23,7 @@ import { profileToolpath } from "./profile";
 import {
   type Cache,
   createCache,
+  finishingBoundary,
   type HoldingTab,
   type ReliefCache,
   type RestOptions,
@@ -134,8 +135,9 @@ export function toolpathInputs(
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
         rest ||
-        ((operation.type === "relief_rough" || operation.type === "relief_finish") &&
-          operation.params.boundary.type !== "model") ||
+        (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
+        (operation.type === "relief_finish" &&
+          finishingBoundary(operation.params).type !== "model") ||
         (operation.type === "drill" && operation.params.pins) ||
         (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
@@ -474,7 +476,11 @@ function* operationSteps(
       if (flip && tabs && !tabs.some(({ modelId }) => modelId === model.id)) {
         warnings.push({ code: "toolpath.noHoldingTabs" });
       }
-      if (parting !== null && operation.params.boundary.type === "stock") {
+      const boundary =
+        operation.type === "relief_finish"
+          ? finishingBoundary(operation.params)
+          : operation.params.boundary;
+      if (parting !== null && boundary.type === "stock") {
         warnings.push({ code: "toolpath.stockBoundaryTwoSided" });
       }
       let rest: RestOptions | null = null;

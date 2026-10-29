@@ -1,4 +1,4 @@
-import type { Model, Point, ReliefRoughOperation, Tool, TouchOffDisc } from "@furrow/document";
+import type { Model, ReliefRoughOperation, Tool, TouchOffDisc } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
@@ -33,9 +33,11 @@ import {
   reliefFloor,
   reliefGrid,
   remainingRuns,
+  restCellSize,
+  restCoarsenedWarning,
+  restCover,
   restStockSteps,
   roughingArea,
-  round3,
   simplifyHeights,
   ToolDropper,
   tabDiscs,
@@ -278,40 +280,6 @@ export function* reliefRoughSteps(
     yield progress(i);
   }
   return { moves: clearing.finish(), warnings: [...warnings, ...skipped.values()] };
-}
-
-/**
- * Where a rest roughing's stock left is simulated, besides the model's grid:
- * the `area` grown by `margin`, wherever the tool may reach from it (its
- * radius, the rest dropper's reach of a cell's diagonal and more), on the
- * stock, where earlier operations can have cut. Without a stock, nothing
- * past the model's grid: the stock is the model's outline (`roughingArea`).
- */
-function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
-  if (!stock) return null;
-  const min: Point = [
-    Math.max(area.min[0] - margin, stock.min[0]),
-    Math.max(area.min[1] - margin, stock.min[1]),
-  ];
-  const max: Point = [
-    Math.min(area.max[0] + margin, stock.max[0]),
-    Math.min(area.max[1] + margin, stock.max[1]),
-  ];
-  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
-}
-
-/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
-function restCellSize(grid: ReliefGrid): number {
-  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
-}
-
-/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
-function restCoarsenedWarning(grid: ReliefGrid): ToolpathMessage {
-  const size = Math.max(grid.cellWidth, grid.cellHeight);
-  return {
-    code: "toolpath.restCoarsened",
-    values: { size: round3(size), width: round3(2 * size) },
-  };
 }
 
 /** A holding tab as the rectangle it covers, counter-clockwise. */

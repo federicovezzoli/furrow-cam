@@ -783,10 +783,10 @@
     },
     "finishBoundaryHints": {
       "model": "The tool's centre reaches the edges of the model's outline.",
-      "margin": "Also finishes a frame this wide around the model's outline (at least the tool's radius) down to the model's bottom, keeping the tool inside it, like roughing with the same margin.",
-      "stock": "The tool's centre reaches the edges of the stock: everything around the model is finished down to its bottom."
+      "margin": "Also finishes a frame this wide around the model's outline (at least the tool's radius) down to the model's bottom, or the parting plane on a two-sided project, keeping the tool inside it, like roughing with the same margin.",
+      "stock": "The tool's centre reaches the edges of the stock: everything around the model is finished down to its bottom, or the parting plane on a two-sided project."
     },
-    "finishBoundaryWaterline": "Waterline contours follow the model's walls, not the flat floor around it: finish the floor with parallel or spiral passes.",
+    "finishBoundaryWaterline": "Waterline contours follow the model's walls and stay on its outline: the margin and the whole stock only apply to parallel and spiral passes.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Waterline",

@@ -290,16 +290,26 @@ describe("3D finishing within a margin (#396)", () => {
     for (const [x, y] of outsideMargin) expect(at(x, y)).toBe(0);
   });
 
-  it("follows the model's walls down to the floor with waterline, inside the margin", () => {
+  it("keeps waterline on the model's outline, whatever the boundary", () => {
     const strategy = { type: "waterline", stepDown: 1 } as const;
-    const at = simulate(
-      project([rough(), finishing(strategy, { boundary: margin }, endMill)], null),
+    const doc = project([finishing(strategy), finishing(strategy, { boundary: margin })], null);
+    expect(toolpathInputs(doc)[1]?.stock).toBeNull();
+    const [a, b] = toolpaths(doc);
+    expect(b?.moves).toEqual(a?.moves);
+  });
+
+  it("finishes the whole of a large stock without coarsening the model", () => {
+    const strategy = { type: "parallel", angle: 0, direction: "zigzag" } as const;
+    const doc = project(
+      [finishing(strategy, { boundary: { type: "stock" }, stepOver: 100 })],
+      null,
     );
-    // Past the plateau's outer wall at x = 15, which the model's outline stops at.
-    expect(at(13.5, 20)).toBeCloseTo(-10);
-    for (const [x, y] of outsideMargin) expect(at(x, y)).toBe(0);
-    const model = simulate(project([rough(), finishing(strategy, {}, endMill)], null));
-    expect(model(13.5, 20)).toBeCloseTo(-9.5);
+    const large = { ...doc, stock: { ...doc.stock, width: 1500, height: 1200 } };
+    const [toolpath] = toolpaths(large);
+    expect(toolpath?.warnings.map(({ code }) => code)).not.toContain("toolpath.coarsened");
+    const xs = toolpath?.moves.filter(({ kind }) => kind === "feed").map(({ to }) => to[0]) ?? [];
+    expect(Math.max(...xs)).toBeGreaterThan(1499.9);
+    expect(Math.min(...xs)).toBeLessThan(0.1);
   });
 
   it("depends on the stock only beyond the model's outline", () => {
