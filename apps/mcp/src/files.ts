@@ -25,8 +25,14 @@ export async function writeFileAtomic(
       await link(temporary, path);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "EEXIST") throw error;
-      // Drives without hard links (exFAT): still never replaces a file.
-      await copyFile(temporary, path, constants.COPYFILE_EXCL);
+      // Drives without hard links (exFAT): still never replaces a file, but isn't atomic.
+      try {
+        await copyFile(temporary, path, constants.COPYFILE_EXCL);
+      } catch (copyError) {
+        // Only a half-written copy of ours is there.
+        if ((copyError as NodeJS.ErrnoException).code !== "EEXIST") await rm(path, { force: true });
+        throw copyError;
+      }
     }
   } finally {
     await rm(temporary, { force: true });

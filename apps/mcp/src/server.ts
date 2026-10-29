@@ -22,7 +22,11 @@ async function respond(run: () => Promise<unknown>): Promise<CallToolResult> {
 }
 
 function summary(project: Project) {
-  return { path: project.path, ...projectSummary(project.store.getState().document) };
+  return {
+    path: project.source,
+    savesTo: project.path,
+    ...projectSummary(project.store.getState().document),
+  };
 }
 
 /** The local MCP server (PRD-0012, ADR-0067), with no transport yet. */
@@ -56,7 +60,7 @@ export function createServer(projects: Projects = createProjects()) {
     {
       title: "Summarise a project",
       description:
-        "Returns a project's summary: units, stock and zero, machine, drawings with their shapes and bounds, 3D models, and operations in cutting order with all their settings. Lengths are in millimetres, feed rates in mm/min; the stock and zero are also given in the project's units.",
+        "Returns a project's summary: the path to call tools with, the .furrow file it saves to, units, stock and zero, machine, drawings with their shapes and bounds, 3D models, and operations in cutting order with all their settings. Lengths are in millimetres, feed rates in mm/min; the stock and zero are also given in the project's units.",
       inputSchema: { path: projectPath },
       annotations: { readOnlyHint: true },
     },
@@ -68,7 +72,7 @@ export function createServer(projects: Projects = createProjects()) {
     {
       title: "Save a project",
       description:
-        "Saves a project's changes to its .furrow file, which the desktop app opens; changes stay in this server until saved. With saveAs, saves it to that path instead and keeps saving there. Never replaces another file. The first change since the project was opened is preceded by an automatic version (\"Before the assistant's changes\") the user can restore in the app.",
+        "Saves a project's changes to its .furrow file, which the desktop app opens; changes stay in this server until saved. With saveAs, saves it to that path instead and keeps saving there. Never replaces another file, nor the project's own if it changed since it was opened (for example in the app).",
       inputSchema: {
         path: projectPath,
         saveAs: projectPath.optional().describe("Absolute path to save to instead, a new file."),

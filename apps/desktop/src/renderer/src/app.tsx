@@ -17,7 +17,6 @@ import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
 import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
-
 import { createProjectSession, type ProjectSession } from "./session";
 import { StartScreen } from "./start-screen";
 

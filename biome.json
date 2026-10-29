@@ -24,10 +24,14 @@
     "lineWidth": 100
   },
   "markdown": {
-    "formatter": { "enabled": false }
+    "formatter": {
+      "enabled": false
+    }
   },
   "yaml": {
-    "formatter": { "enabled": false }
+    "formatter": {
+      "enabled": false
+    }
   },
   "css": {
     "parser": {
@@ -332,10 +336,10 @@
               "level": "error",
               "options": {
                 "paths": {
-                  "next": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
-                  "react": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
-                  "react-dom": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
-                  "three": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067)."
+                  "next": "The MCP server drives the workspace's stores headless: it imports only the workspace's stores/ and lib/, and no Next.js, React, three.js or UI (ADR-0067).",
+                  "react": "The MCP server drives the workspace's stores headless: it imports only the workspace's stores/ and lib/, and no Next.js, React, three.js or UI (ADR-0067).",
+                  "react-dom": "The MCP server drives the workspace's stores headless: it imports only the workspace's stores/ and lib/, and no Next.js, React, three.js or UI (ADR-0067).",
+                  "three": "The MCP server drives the workspace's stores headless: it imports only the workspace's stores/ and lib/, and no Next.js, React, three.js or UI (ADR-0067)."
                 },
                 "patterns": [
                   {
@@ -348,14 +352,11 @@
                       "@react-three/*",
                       "@furrow/ui/components/**",
                       "@furrow/ui/hooks/**",
-                      "@furrow/workspace/components/**",
-                      "@furrow/workspace/providers/**",
-                      "@furrow/workspace/hooks/**",
-                      "@furrow/workspace/tools/**",
-                      "@furrow/workspace/machines/components/**",
-                      "@furrow/workspace/onboarding/**"
+                      "@furrow/workspace/**",
+                      "!@furrow/workspace/stores/**",
+                      "!@furrow/workspace/lib/**"
                     ],
-                    "message": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067)."
+                    "message": "The MCP server drives the workspace's stores headless: it imports only the workspace's stores/ and lib/, and no Next.js, React, three.js or UI (ADR-0067)."
                   }
                 ]
               }

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import {
   type ArchiveVersion,
   createProjectDocument,
-  PROJECT_DESKTOP_EXTENSION,
+  PROJECT_PATH,
   ProjectArchiveError,
 } from "@furrow/document";
 import { formatMessage, translator } from "@furrow/ui/lib/i18n";
@@ -26,6 +26,8 @@ export const KEPT_VERSION_LABEL = "Before the assistant's changes";
 
 /** An open project; it reaches its file only when saved. */
 export type Project = {
+  /** The path it is found by: the file it was opened from, or the one it was last saved to. */
+  source: string;
   /** The `.furrow` file it saves to. */
   path: string;
   store: DocumentStore;
@@ -36,9 +38,9 @@ export type Project = {
   kept: boolean;
   /** Whether `path` is the project's own file, which saving may replace. */
   owned: boolean;
+  /** Its own file's modification time and size when last read or written, to tell whether it changed since. */
+  stamp: string | null;
 };
-
-const PROJECT_PATH = /(\.furrow)?\.(json|zip)$|\.furrow$/i;
 
 /** The `.furrow` file a project at `path` saves to; throws a `ToolError` for other paths. */
 export function savePath(path: string): string {
@@ -48,7 +50,17 @@ export function savePath(path: string): string {
       `${JSON.stringify(path)} isn't a project file: use .furrow, .furrow.zip or .furrow.json.`,
     );
   }
-  return normalize(path).replace(PROJECT_PATH, PROJECT_DESKTOP_EXTENSION);
+  const normal = normalize(path);
+  // Keeps the extension's case, so `Part.FURROW` saves to itself.
+  return /\.furrow$/i.test(normal) ? normal : normal.replace(/\.(json|zip)$/i, "");
+}
+
+/** `path`'s modification time and size, or `null` if it doesn't exist. */
+function stampOf(path: string): Promise<string | null> {
+  return stat(path).then(
+    ({ mtimeMs, size }) => `${mtimeMs}:${size}`,
+    () => null,
+  );
 }
 
 /**
@@ -61,6 +73,7 @@ export function createProjects() {
   /** Makes `path` the only one `project` is found by. */
   function remember(path: string, project: Project) {
     for (const [key, value] of open) if (value === project) open.delete(key);
+    project.source = path;
     open.set(path, project);
   }
 
@@ -73,18 +86,28 @@ export function createProjects() {
       if (error instanceof ProjectArchiveError) throw new ToolError(formatMessage(t, error.detail));
       throw error;
     }
+    const replace = project.owned && path === project.path;
+    if (replace && (await stampOf(path)) !== project.stamp) {
+      throw new ToolError(
+        `${path} changed since it was opened, maybe in the app: open it again, dropping these changes, or save the project to another path.`,
+      );
+    }
     try {
-      await writeFileAtomic(path, bytes, project.owned && path === project.path);
+      await writeFileAtomic(path, bytes, replace);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "EEXIST") {
         throw new ToolError(`${path} already exists: ${exists}`);
       }
       throw new ToolError(`Can't write ${path}: ${(error as Error).message}`);
     }
+    project.stamp = await stampOf(path);
   }
 
   async function openProject(path: string): Promise<Project> {
     const target = savePath(path);
+    const owned = normalize(path) === target;
+    // Taken first: a change made while reading shows as one at the next save.
+    const stamp = owned ? await stampOf(path) : null;
     let bytes: Uint8Array;
     try {
       bytes = new Uint8Array(await readFile(path));
@@ -98,13 +121,15 @@ export function createProjects() {
       throw new ToolError((error as Error).message);
     }
     const project: Project = {
+      source: path,
       path: target,
       store: createDocumentStore(file.document),
       meshes: file.meshes,
       fonts: file.fonts,
       versions: file.versions,
       kept: false,
-      owned: normalize(path) === target,
+      owned,
+      stamp,
     };
     remember(normalize(path), project);
     return project;
@@ -115,6 +140,7 @@ export function createProjects() {
     async create(path: string): Promise<Project> {
       const target = savePath(path);
       const project: Project = {
+        source: target,
         path: target,
         store: createDocumentStore(createProjectDocument()),
         meshes: new Map(),
@@ -122,6 +148,7 @@ export function createProjects() {
         versions: [],
         kept: true,
         owned: false,
+        stamp: null,
       };
       await write(project, target, "open it, or choose another path.");
       project.owned = true;
@@ -139,7 +166,8 @@ export function createProjects() {
 
     /**
      * Saves `project` to its `.furrow` file, or to `to`'s, which it then
-     * saves to. Never replaces another file. Returns the path written.
+     * saves to. Never replaces another file, nor its own if it changed since
+     * it was opened or saved. Returns the path written.
      */
     async save(project: Project, to?: string): Promise<string> {
       const target = to === undefined ? project.path : savePath(to);
@@ -158,15 +186,17 @@ export type Projects = ReturnType<typeof createProjects>;
  * Runs `edit` on `project`'s document store, which tools change only through
  * the workspace's actions (ADR-0067). The first change in a session keeps the
  * document as it was as an automatic version, so the user can restore it
- * (ADR-0028); a project with no room for one is refused before any change.
+ * (ADR-0028); a change to a project with no room for one is undone and refused.
  */
 export function change(project: Project, edit: (store: DocumentStore) => void) {
-  if (!project.kept && project.versions.length >= MAX_VERSIONS) {
-    throw new ToolError(t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS }));
-  }
-  const before = project.store.getState().document;
+  const { document: before, past, future } = project.store.getState();
   edit(project.store);
   if (project.kept || project.store.getState().document === before) return;
+  if (project.versions.length >= MAX_VERSIONS) {
+    // Undone as a whole: an action may make several undo steps.
+    project.store.setState({ document: before, past, future });
+    throw new ToolError(t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS }));
+  }
   project.versions = [
     ...project.versions,
     {

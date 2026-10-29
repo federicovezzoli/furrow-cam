@@ -74,6 +74,9 @@ describe("the MCP server", () => {
     expect(await refusal("get_project", { path: join(dir, "sign.svg") })).toContain(
       "isn't a project file",
     );
+    expect(await refusal("create_project", { path: join(dir, "notes.json") })).toContain(
+      "isn't a project file",
+    );
     expect(await refusal("get_project", { path: join(dir, "missing.furrow") })).toContain(
       "Can't read",
     );
@@ -89,7 +92,7 @@ describe("the MCP server", () => {
     const path = join(dir, "Part.furrow.json");
     await writeFile(path, JSON.stringify(fullDocument()));
     const summary = await call("get_project", { path });
-    expect(summary.path).toBe(join(dir, "Part.furrow"));
+    expect(summary).toMatchObject({ path, savesTo: join(dir, "Part.furrow") });
     expect(summary.units).toBe("in");
     expect(summary.stock).toMatchObject({
       width: 300,
@@ -132,6 +135,24 @@ describe("the MCP server", () => {
     expect((await call("open_project", { path: join(dir, "Part.furrow") })).units).toBe("mm");
     expect((await call("get_project", { path: exported })).units).toBe("in");
     expect((await call("get_project", { path: join(dir, "Part.furrow") })).units).toBe("mm");
+  });
+
+  it("won't save over its own file once it changed elsewhere", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(createProjectDocument(), new Map()));
+    await call("open_project", { path });
+    expect(await call("save_project", { path })).toEqual({ saved: path });
+    // The user saves it in the app meanwhile.
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    expect(await refusal("save_project", { path })).toContain("changed since it was opened");
+    expect((await readProject(path)).document).toEqual(fullDocument());
+  });
+
+  it("saves a file with an uppercase extension to itself", async () => {
+    const path = join(dir, "Part.FURROW");
+    await writeFile(path, packProjectArchive(createProjectDocument(), new Map()));
+    expect(await call("save_project", { path })).toEqual({ saved: path });
+    expect(await readdir(dir)).toEqual(["Part.FURROW"]);
   });
 
   it("round-trips meshes and versions", async () => {
@@ -192,10 +213,14 @@ describe("change", () => {
     }));
     await writeFile(path, packProjectArchive(document, new Map(), versions));
     const project = await projects.get(path);
+    change(project, (store) => setStockDimension(store, "width", 600));
     expect(() => change(project, (store) => setStockDimension(store, "width", 321))).toThrow(
       t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS }),
     );
-    expect(project.store.getState().document.stock.width).toBe(600);
+    expect(project.store.getState()).toMatchObject({
+      document: { stock: { width: 600 } },
+      past: [],
+    });
   });
 
   it("needs no version on a new project", async () => {
