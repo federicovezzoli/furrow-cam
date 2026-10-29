@@ -69,6 +69,7 @@ It is **not** a full 3D CAM (relief only: no undercuts, 4th axis or tool tilting
 | --- | --- |
 | [docs/prd/](docs/prd/) | Product Requirements Documents: *what* we build and *why* |
 | [docs/adr/](docs/adr/) | Architecture Decision Records: *how* we build it and the reasoning behind each choice |
+| [apps/mcp/](apps/mcp/README.md) | The MCP server: setting up an AI assistant to work on your projects |
 
 ## Development
 
@@ -105,6 +106,7 @@ The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hos
 apps/web/            Next.js app: routes, accounts, server code (organised by feature, ADR-0021)
 apps/desktop/        Electron desktop app (ADR-0044)
 apps/download/       Cloudflare Worker behind download.furrow.cam (ADR-0049)
+apps/mcp/            local MCP server for AI assistants, published to npm as @furrow/mcp (ADR-0067)
 packages/workspace/  the CAM workspace UI shared by web and desktop
 packages/ui/         shadcn/ui components
 packages/document/   project document schema (Zod), migrations and machine presets
