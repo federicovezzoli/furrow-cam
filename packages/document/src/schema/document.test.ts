@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createProjectDocument, ProjectDocument, Stock, StockAnchor, XYOrigin } from "./document";
 import {
   fullDocument,
   model,
@@ -10,7 +9,8 @@ import {
   textItem,
   textShape,
   uploadedFont,
-} from "./fixtures";
+} from "../fixtures";
+import { createProjectDocument, ProjectDocument, Stock, StockAnchor, XYOrigin } from "./document";
 import type { TextSettings } from "./geometry";
 import { DrillOperation, type Operation } from "./operation";
 

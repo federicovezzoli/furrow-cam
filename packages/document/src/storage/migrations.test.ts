@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createProjectDocument } from "./document";
 import {
   CIRCLE_ID,
   fullDocument,
@@ -9,7 +8,9 @@ import {
   SQUARE_ID,
   textItem,
   textShape,
-} from "./fixtures";
+} from "../fixtures";
+import { createProjectDocument } from "../schema/document";
+import type { Operation } from "../schema/operation";
 import {
   type Migration,
   migrateProjectDocument,
@@ -17,7 +18,6 @@ import {
   parseProjectDocument,
   readProjectJson,
 } from "./migrations";
-import type { Operation } from "./operation";
 
 describe("migrateProjectDocument", () => {
   // A made-up history: v1 had `size`, v2 renamed it to `stock`, v3 added `units`.

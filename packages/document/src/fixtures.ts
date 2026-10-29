@@ -1,16 +1,13 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type {
-  Drawing,
-  Machine,
-  Model,
-  ProjectDocument,
-  ProjectFont,
-  ReliefFinishOperation,
-  ReliefRoughOperation,
-  Shape,
-  Tool,
-} from "./index";
+// Only from schema/, so schema tests can use these without reaching storage/ or presets/.
+import type { ProjectDocument } from "./schema/document";
+import type { ProjectFont } from "./schema/font";
+import type { Drawing, Shape } from "./schema/geometry";
+import type { Machine } from "./schema/machine";
+import type { Model } from "./schema/model";
+import type { ReliefFinishOperation, ReliefRoughOperation } from "./schema/operation";
+import type { Tool } from "./schema/tool";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',

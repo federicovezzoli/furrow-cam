@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { endMill, vBit } from "./fixtures";
+import { endMill, vBit } from "../fixtures";
 import { Tool } from "./tool";
 
 describe("Tool", () => {

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "./document";
-import { DEFAULT_SPIN_UP_DELAY } from "./machine";
-import { type DocumentMessage, MessageError } from "./message";
+import { CURRENT_SCHEMA_VERSION, ProjectDocument } from "../schema/document";
+import { DEFAULT_SPIN_UP_DELAY } from "../schema/machine";
+import { type DocumentMessage, MessageError } from "../schema/message";
 
 type UnknownDocument = Record<string, unknown>;
 
