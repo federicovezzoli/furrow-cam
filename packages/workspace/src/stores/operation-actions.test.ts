@@ -141,7 +141,7 @@ const missing = { shapeId: MISSING_ID, paths: null };
 function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
-    drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "", border: 10, rotation: 0 }],
     geometry: [square, circle, plate],
     models: [],
     fonts: [],

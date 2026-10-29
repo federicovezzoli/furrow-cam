@@ -1295,8 +1295,6 @@
     "rotateLeft": "Um 90° gegen den Uhrzeigersinn drehen",
     "rotateRight": "Um 90° im Uhrzeigersinn drehen",
     "angle": "Winkel",
-    "rotate": "Drehen",
-    "rotateTitle": "Die Zeichnung um den Winkel gegen den Uhrzeigersinn drehen; ein negativer Winkel dreht im Uhrzeigersinn",
     "position": "Position",
     "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} der Zeichnung liegt, vom Nullpunkt gemessen. Du kannst die Zeichnung auch in der Draufsicht ziehen.",
     "offStock": "Ein Teil der Zeichnung liegt außerhalb des Rohteils.",

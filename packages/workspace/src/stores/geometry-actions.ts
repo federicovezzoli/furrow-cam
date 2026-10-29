@@ -61,7 +61,12 @@ export function canImportModel({ geometry, models }: ProjectDocument): boolean {
 export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
   const [first] = shapes;
   if (!first) return false;
-  const drawing = { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER };
+  const drawing = {
+    id: first.drawingId,
+    name: first.source ?? "",
+    border: DRAWING_BORDER,
+    rotation: 0,
+  };
   return placeDrawing(store, name, drawing, shapes);
 }
 
@@ -87,7 +92,7 @@ export function addTextItem(
   if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const id = crypto.randomUUID();
   const shape: Shape = { id: crypto.randomUUID(), name: "", layer: "", drawingId: id, paths };
-  const drawing = { id, name: textName(text.text), border: DRAWING_BORDER, text };
+  const drawing = { id, name: textName(text.text), border: DRAWING_BORDER, rotation: 0, text };
   return placeDrawing(store, "addText", drawing, [shape])
     ? { ok: true, id }
     : { ok: false, error: DRAWINGS_OR_MODEL };
@@ -258,8 +263,15 @@ function degenerate(shapes: Shape[]): boolean {
 
 const TOO_SMALL: Message = { code: "workspace.drawingTooSmall" };
 
-/** A rewrite of a drawing's points: its shapes, and each of its tabs' positions. */
-type Transform = { shapes: (shapes: Shape[]) => Shape[]; point: (point: Point) => Point };
+/**
+ * A rewrite of a drawing's points: its shapes, and each of its tabs'
+ * positions, and of its rotation if it turns or mirrors it.
+ */
+type Transform = {
+  shapes: (shapes: Shape[]) => Shape[];
+  point: (point: Point) => Point;
+  rotation?: (degrees: number) => number;
+};
 
 /**
  * Rewrites drawing `id` with `transform`, as one undo step, and the profile
@@ -284,7 +296,11 @@ function transformDrawing(
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
     const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing) moveTextWithOutlines(drawing, transform.point);
+    if (drawing) {
+      moveTextWithOutlines(drawing, transform.point);
+      if (transform.rotation)
+        drawing.rotation = normalizeDegrees(transform.rotation(drawing.rotation));
+    }
     for (const operation of draft.operations) {
       const moved = tabs.get(operation.id);
       if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
@@ -313,16 +329,26 @@ function scaleDrawing(
   });
 }
 
+/** `degrees` as an angle from above -180 up to 180, as a drawing's rotation. */
+export function normalizeDegrees(degrees: number): number {
+  // + 0 turns -0, as from mirroring 0 or turning by -360, into 0.
+  const turned = (degrees % 360) + 0;
+  if (turned > 180) return turned - 360;
+  return turned <= -180 ? turned + 360 : turned;
+}
+
 /**
  * Turns drawing `id` with `move` about the centre of its box, then moves it
- * back so its point at the zero's anchor (`modelAnchor`) stays where it was.
- * A `mirrored` move flips arcs' direction (`mapShapes`).
+ * back so its point at the zero's anchor (`modelAnchor`) stays where it was,
+ * and updates its rotation with `rotation`. A `mirrored` move flips arcs'
+ * direction (`mapShapes`).
  */
 function orientDrawing(
   store: DocumentStore,
   name: string,
   id: string,
   move: (point: Point, centre: Point) => Point,
+  rotation: (degrees: number) => number,
   mirrored: boolean,
 ): ActionResult {
   const { document } = store.getState();
@@ -340,31 +366,62 @@ function orientDrawing(
   return transformDrawing(store, name, id, {
     shapes: () => translateShapes(turned, back),
     point: (point) => translatePoint(move(point, centre), back),
+    rotation,
   });
 }
 
-/** Mirrors drawing `id` left to right (`"x"`) or top to bottom (`"y"`), in place (PRD-0009 D6). */
+/**
+ * Mirrors drawing `id` left to right (`"x"`) or top to bottom (`"y"`), in
+ * place (PRD-0009 D6), negating its rotation: a turn then a mirror is the
+ * mirror then the opposite turn.
+ */
 export function mirrorDrawing(store: DocumentStore, id: string, axis: "x" | "y"): ActionResult {
   return orientDrawing(
     store,
     `mirrorDrawing.${axis}`,
     id,
     (point, centre) => mirrorPoint(point, axis, centre),
+    (rotation) => -rotation,
     true,
   );
 }
 
 /**
  * Turns drawing `id` by `degrees`, counter-clockwise for positive ones,
- * keeping its point at the zero's anchor in place (PRD-0009 D7).
+ * keeping its point at the zero's anchor in place (PRD-0009 D7), and adds
+ * them to its rotation.
  */
 export function rotateDrawing(store: DocumentStore, id: string, degrees: number): ActionResult {
+  return turnDrawing(store, id, degrees, (rotation) => rotation + degrees);
+}
+
+/** Turns drawing `id` until its rotation is `degrees` (ADR-0066). */
+export function setDrawingRotation(
+  store: DocumentStore,
+  id: string,
+  degrees: number,
+): ActionResult {
+  const drawing = store.getState().document.drawings.find((d) => d.id === id);
+  if (!drawing) return { ok: true };
+  const target = normalizeDegrees(degrees);
+  // The target itself, not the sum, so the field shows what was typed.
+  return turnDrawing(store, id, target - drawing.rotation, () => target);
+}
+
+/** Turns drawing `id` by `degrees`, setting its rotation with `rotation`. */
+function turnDrawing(
+  store: DocumentStore,
+  id: string,
+  degrees: number,
+  rotation: (degrees: number) => number,
+): ActionResult {
   if (degrees % 360 === 0) return { ok: true };
   return orientDrawing(
     store,
     "rotateDrawing",
     id,
     (point, centre) => rotatePoint(point, degrees, centre),
+    rotation,
     false,
   );
 }

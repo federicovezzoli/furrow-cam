@@ -1295,8 +1295,6 @@
     "rotateLeft": "Turn 90° counter-clockwise",
     "rotateRight": "Turn 90° clockwise",
     "angle": "Angle",
-    "rotate": "Rotate",
-    "rotateTitle": "Turn the drawing by the angle, counter-clockwise; a negative angle turns it clockwise",
     "position": "Position",
     "positionHint": "Where the drawing's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Drag the drawing in the top view to move it too.",
     "offStock": "Part of the drawing lies outside the stock.",

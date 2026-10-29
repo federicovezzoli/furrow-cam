@@ -87,7 +87,7 @@ function cut(
 ) {
   const store = createDocumentStore({
     ...createProjectDocument(),
-    drawings: [{ id: DRAWING_ID, name: "part.svg", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "part.svg", border: 10, rotation: 0 }],
     geometry: shapes(flip),
   });
   const targets = [OUTLINE, HOLE].map((shapeId) => ({ shapeId, paths: null }));
