@@ -99,6 +99,34 @@ describe("playbackMoves", () => {
     expect(a?.key).toBe(b?.key);
     expect(a?.key).not.toBe(c?.key);
   });
+
+  describe("per side", () => {
+    const flipped: Operation = { ...vcarve, stockSide: "bottom" };
+    const entries = { [profile.id]: ready(10), [flipped.id]: ready(20, { clearing: lines(30) }) };
+
+    it("plays the top side alone, without waiting for the bottom side's", () => {
+      const top = playbackMoves([profile, flipped], {
+        ...entries,
+        [flipped.id]: { status: "computing", inputHash: "h" },
+      });
+      expect(top?.parts.map((part) => part.name)).toEqual(["Holes"]);
+      expect(top?.before).toBeUndefined();
+    });
+
+    it("plays the bottom side after the top side's cuts", () => {
+      const bottom = playbackMoves([profile, flipped], entries, "bottom");
+      expect(bottom?.parts.map((part) => part.name)).toEqual(["Sign, clearing", "Sign"]);
+      expect(bottom?.cuts).toHaveLength(2);
+      expect(bottom?.before?.map((cut) => cut.tool.type)).toEqual(["flat_end_mill"]);
+      expect(bottom?.key).not.toBe(playbackMoves([profile, flipped], entries)?.key);
+      const edited = playbackMoves(
+        [profile, flipped],
+        { ...entries, [profile.id]: ready(11) },
+        "bottom",
+      );
+      expect(edited?.key).not.toBe(bottom?.key);
+    });
+  });
 });
 
 describe("partProgress", () => {

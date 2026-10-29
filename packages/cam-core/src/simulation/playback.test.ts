@@ -9,6 +9,7 @@ import {
 import {
   type CutterShape,
   heightmapGrid,
+  joinSides,
   type SimulationCut,
   simulateCuts,
   smallestCutWidth,
@@ -170,6 +171,41 @@ describe("heightmapPlayback", () => {
     ];
     const playback = heightmapPlayback(stock, playbackPath(above), grid);
     expect(playback.seek(1, 0)).toBeNull();
+  });
+
+  describe("from the stock the top side left", () => {
+    // The top side's cuts, flipped: cut through on the first rows, 4 mm deep below the middle.
+    const cells = grid.columns * grid.rows;
+    const flippedTop = new Float32Array(cells).map((_, i) =>
+      i < grid.columns ? -stock.thickness : i < cells / 2 ? -4 : 0,
+    );
+
+    it("starts with the cells the top side cut through", () => {
+      const playback = heightmapPlayback(stock, playbackPath(cuts), grid, 1, flippedTop);
+      const { heights } = playback.heightmap;
+      expect(heights[0]).toBe(-stock.thickness);
+      expect(heights[cells - 1]).toBe(0);
+      expect(playback.seek(0, 0)).toBeNull();
+    });
+
+    it("ends with the stock the simulation leaves, cut through where the sides meet", () => {
+      const path = playbackPath(cuts);
+      const playback = heightmapPlayback(stock, path, grid, 1, flippedTop);
+      playback.seek(path.ends.length, 0);
+      const expected = simulateCuts(stock, cuts, grid).heights;
+      joinSides(expected, flippedTop, stock.thickness);
+      expect(playback.heightmap.heights).toEqual(expected);
+      expect(expected.filter((h) => h === -stock.thickness).length).toBeGreaterThan(grid.columns);
+    });
+
+    it("goes back to where it started", () => {
+      const path = playbackPath(cuts);
+      const playback = heightmapPlayback(stock, path, grid, 1, flippedTop);
+      const start = playback.heightmap.heights.slice();
+      playback.seek(path.ends.length, 0);
+      playback.seek(0, 0);
+      expect(playback.heightmap.heights).toEqual(start);
+    });
   });
 
   it("pads the buffer like simulateCuts", () => {
