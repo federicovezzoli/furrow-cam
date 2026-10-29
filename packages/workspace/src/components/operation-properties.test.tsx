@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ProjectDocument } from "@furrow/document";
-import { fullDocument, OPERATION_ID } from "@furrow/document/fixtures";
+import { fullDocument, model, OPERATION_ID, reliefFinish } from "@furrow/document/fixtures";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
@@ -41,5 +41,23 @@ describe("OperationProperties", () => {
     fireEvent.change(screen.getByLabelText("Side"), { target: { value: "outside" } });
     const [pocket] = store.getState().document.operations;
     expect(pocket?.type === "pocket" && pocket.params.side).toBe("outside");
+  });
+
+  it("sets what 3D finishing covers, with a margin (#396)", () => {
+    const doc = { ...fullDocument(), models: [model], operations: [reliefFinish] };
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={reliefFinish.id} />
+      </>,
+      createMemoryHost({ document: doc }),
+    );
+    fireEvent.change(screen.getByLabelText("Cover"), { target: { value: "margin" } });
+    const [finish] = store.getState().document.operations;
+    expect(finish?.type === "relief_finish" && finish.params.boundary).toEqual({
+      type: "margin",
+      distance: 5,
+    });
+    expect(screen.getByText("Margin")).toBeTruthy();
   });
 });
