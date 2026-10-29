@@ -4,28 +4,44 @@
   "private": true,
   "description": "Furrow CAM's local MCP server: AI assistants work on .furrow projects over stdio (PRD-0012, ADR-0067)",
   "license": "MIT",
+  "homepage": "https://github.com/federicovezzoli/furrow-cam/tree/main/apps/mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/federicovezzoli/furrow-cam.git",
+    "directory": "apps/mcp"
+  },
   "type": "module",
   "bin": {
     "furrow-mcp": "./dist/main.js"
   },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js --metafile=dist/meta.json && node scripts/notices.mjs",
+    "prepack": "pnpm run build && cp ../../LICENSE LICENSE",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
+  "devDependencies": {
     "@furrow/cam-core": "workspace:*",
     "@furrow/document": "workspace:*",
     "@furrow/ui": "workspace:*",
     "@furrow/workspace": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
     "@types/node": "^24",
     "esbuild": "^0.28.2",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

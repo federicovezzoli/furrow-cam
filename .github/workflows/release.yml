@@ -16,6 +16,11 @@ jobs:
   release:
     name: Version PR or release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      # npm trusted publishing (OIDC) for @furrow/mcp.
+      id-token: write
     outputs:
       desktop-version: ${{ steps.desktop.outputs.version }}
       web-version: ${{ steps.web.outputs.version }}
@@ -35,7 +40,8 @@ jobs:
 
       # With pending changesets: opens/updates the "Version Packages" PR.
       # After that PR is merged: tags each bumped package and creates GitHub Releases.
-      # All packages are private, so nothing is published to npm.
+      # All packages are private, so nothing is published to npm here; the
+      # MCP server is published by its own step below.
       # v2 is required for Changesets CLI v3.
       - uses: changesets/action@v2
         id: changesets
@@ -61,6 +67,25 @@ jobs:
         run: |
           tag=$(git tag --points-at HEAD --list '@furrow/web@*' | head -n 1)
           echo "version=${tag#@furrow/web@}" >> "$GITHUB_OUTPUT"
+
+      # @furrow/mcp is the one package on npm (ADR-0067). It stays private for
+      # `changeset publish`, which only tags it, and is published here, last and
+      # allowed to fail, so a problem on npm can't hold up the desktop and web
+      # releases. npm trusted publishing (OIDC) authenticates and adds
+      # provenance: no token. Its prepack bundles the private packages it uses.
+      - name: Publish the MCP server to npm
+        id: mcp
+        continue-on-error: true
+        working-directory: apps/mcp
+        run: |
+          tag=$(git tag --points-at HEAD --list '@furrow/mcp@*' | head -n 1)
+          if [ -z "$tag" ]; then echo "No new @furrow/mcp version to publish"; exit 0; fi
+          npm pkg delete private devDependencies
+          npm publish
+
+      - name: MCP server not published
+        if: steps.mcp.outcome == 'failure'
+        run: echo "::warning::@furrow/mcp was not published to npm; ADR-0067 says how to publish it by hand"
 
   desktop:
     name: Desktop installers
