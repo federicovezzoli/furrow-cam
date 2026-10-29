@@ -1,5 +1,6 @@
 import type { SimulationCut, ToolpathLines } from "@furrow/cam-core";
-import { clearingTool, type Operation, type StockSide, type Tool } from "@furrow/document";
+import type { FlipAxis, Operation, StockSide, Tool } from "@furrow/document";
+import { toolpathsBySide } from "../stores/simulation-scheduler";
 import type { ToolpathState } from "../stores/toolpath-store";
 
 /**
@@ -26,49 +27,41 @@ export type PlaybackPart = {
  * simulation (ADR-0019), clearing moves come first with the clearing tool,
  * operations whose toolpath failed are left out, hidden toolpaths still cut,
  * and nothing is played back while any toolpath is computing (`null`). `key`
- * changes exactly when the moves may. They are `side`'s operations; on the
- * bottom side of a two-sided project, `before` holds the top side's cuts,
- * which leave the stock the bottom side's start from (ADR-0060).
+ * changes exactly when the moves may. They are the operations of `side`, the
+ * one played back: the top side unless a two-sided project, turned over
+ * about `flipAxis`, shows its bottom side. There, `before` holds the top
+ * side's cuts, which leave the stock the bottom side's start from (ADR-0060),
+ * and `before.key` changes exactly when they may.
  */
 export function playbackMoves(
   operations: readonly Operation[],
   entries: ToolpathState["entries"],
-  side: StockSide = "top",
+  shown: StockSide = "top",
+  flipAxis: FlipAxis | null = null,
 ): {
   key: string;
+  side: StockSide;
   cuts: SimulationCut[];
   parts: PlaybackPart[];
-  before?: SimulationCut[];
+  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
 } | null {
+  const side = flipAxis ? shown : "top";
+  const sides = toolpathsBySide(operations, entries, side);
+  if (!sides) return null;
   const cuts: SimulationCut[] = [];
   const parts: PlaybackPart[] = [];
-  const before: SimulationCut[] = [];
-  const hashes: Record<StockSide, string[]> = { top: [], bottom: [] };
   let firstMove = 0;
-  function add(
-    operationId: string,
-    name: string,
-    tool: Tool,
-    lines: ToolpathLines,
-    clearing: boolean,
-    otherSide: boolean,
-  ) {
+  for (const { operation, tool, lines, clearing } of sides[side].runs) {
     const moves = lines.kinds.length;
-    if (moves === 0) return;
-    const { type, diameter, vAngle, tipDiameter } = tool;
-    const cut = { tool: { type, diameter, vAngle, tipDiameter }, segments: orderedSegments(lines) };
-    if (otherSide) {
-      before.push(cut);
-      return;
-    }
-    cuts.push(cut);
+    if (moves === 0) continue;
+    cuts.push(toolCut(tool, lines));
     const rapidsBefore = new Uint32Array(moves + 1);
     for (let i = 0; i < moves; i++) {
       rapidsBefore[i + 1] = (rapidsBefore[i] as number) + (lines.kinds[i] as number);
     }
     parts.push({
-      operationId,
-      name,
+      operationId: operation.id,
+      name: clearing ? `${operation.name}, clearing` : operation.name,
       clearing,
       color: tool.color,
       lines,
@@ -78,24 +71,28 @@ export function playbackMoves(
     });
     firstMove += moves;
   }
-  for (const operation of operations) {
-    if (!operation.enabled) continue;
-    // The top side's cut first, so the bottom side's start from them.
-    if (operation.stockSide === "bottom" && side === "top") continue;
-    const entry = entries[operation.id];
-    if (!entry || entry.status === "computing") return null;
-    if (entry.status === "error") continue;
-    hashes[operation.stockSide].push(entry.inputHash);
-    const otherSide = operation.stockSide !== side;
-    const clearing = clearingTool(operation);
-    if (clearing && entry.clearing) {
-      add(operation.id, `${operation.name}, clearing`, clearing, entry.clearing, true, otherSide);
-    }
-    add(operation.id, operation.name, operation.tool, entry.lines, false, otherSide);
-  }
-  return side === "top"
-    ? { key: JSON.stringify(hashes.top), cuts, parts }
-    : { key: JSON.stringify([hashes.top, side, hashes.bottom]), cuts, parts, before };
+  const topKey = JSON.stringify(sides.top.hashes);
+  if (!flipAxis || side === "top") return { key: topKey, side, cuts, parts };
+  const before = {
+    key: topKey,
+    cuts: sides.top.runs.map(({ tool, lines }) => toolCut(tool, lines)),
+    axis: flipAxis,
+  };
+  return {
+    key: JSON.stringify([topKey, flipAxis, sides.bottom.hashes]),
+    side,
+    cuts,
+    parts,
+    before,
+  };
+}
+
+/** The moves of `lines` made with `tool`, in the order the tool makes them. */
+function toolCut(
+  { type, diameter, vAngle, tipDiameter }: Tool,
+  lines: ToolpathLines,
+): SimulationCut {
+  return { tool: { type, diameter, vAngle, tipDiameter }, segments: orderedSegments(lines) };
 }
 
 /** The segments of `lines`, feeds and rapids together, in the order the tool makes them. */

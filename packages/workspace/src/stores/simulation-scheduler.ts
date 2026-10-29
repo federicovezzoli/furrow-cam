@@ -2,6 +2,7 @@ import type { Heightmap, SimulationCut, ToolpathLines } from "@furrow/cam-core";
 import {
   clearingTool,
   type FlipAxis,
+  type Operation,
   type ProjectDocument,
   type Stock,
   type StockSide,
@@ -50,30 +51,69 @@ export function simulationRequest(
   side: StockSide = "top",
 ): SimulationRequest | null {
   const { width, height, thickness, twoSided } = document.stock;
-  const cuts: Record<StockSide, SimulationCut[]> = { top: [], bottom: [] };
-  const hashes: Record<StockSide, string[]> = { top: [], bottom: [] };
-  for (const operation of document.operations) {
+  const sides = toolpathsBySide(document.operations, entries, side);
+  if (!sides) return null;
+  const cuts = (stockSide: StockSide) =>
+    sides[stockSide].runs.flatMap(({ tool, lines }) => lineCuts(tool, lines));
+  const stock = { width, height, thickness };
+  const flip = side === "bottom" && twoSided ? twoSided.flipAxis : null;
+  const topKey = JSON.stringify([width, height, thickness, sides.top.hashes]);
+  return {
+    key: JSON.stringify([
+      width,
+      height,
+      thickness,
+      sides.top.hashes,
+      side,
+      flip,
+      sides.bottom.hashes,
+    ]),
+    input: flip
+      ? {
+          stock,
+          cuts: cuts("bottom"),
+          before: { key: topKey, cuts: cuts("top"), axis: flip },
+          maxCells,
+        }
+      : { stock, cuts: cuts("top"), maxCells },
+  };
+}
+
+/** One tool's moves of an operation: its clearing moves (ADR-0026) or its own. */
+export type ToolRun = { operation: Operation; tool: Tool; lines: ToolpathLines; clearing: boolean };
+
+/**
+ * The tool runs that cut the stock `side` shows, by side, in the order they
+ * are cut, clearing moves first, and the input hashes of each side's
+ * toolpaths: the top side's alone for the top side, both sides' for the
+ * bottom side, whose stock the top side's cuts leave (ADR-0060). Disabled
+ * operations and failed toolpaths are left out; `null` while any is computing.
+ */
+export function toolpathsBySide(
+  operations: readonly Operation[],
+  entries: ToolpathState["entries"],
+  side: StockSide,
+): Record<StockSide, { runs: ToolRun[]; hashes: string[] }> | null {
+  const sides: Record<StockSide, { runs: ToolRun[]; hashes: string[] }> = {
+    top: { runs: [], hashes: [] },
+    bottom: { runs: [], hashes: [] },
+  };
+  for (const operation of operations) {
     if (!operation.enabled) continue;
     // The top side's cut first, so the bottom side's start from them.
     if (operation.stockSide === "bottom" && side === "top") continue;
     const entry = entries[operation.id];
     if (!entry || entry.status === "computing") return null;
     if (entry.status === "error") continue;
-    const sideCuts = cuts[operation.stockSide];
+    const { runs, hashes } = sides[operation.stockSide];
     const clearing = clearingTool(operation);
-    if (clearing && entry.clearing) sideCuts.push(...lineCuts(clearing, entry.clearing));
-    sideCuts.push(...lineCuts(operation.tool, entry.lines));
-    hashes[operation.stockSide].push(entry.inputHash);
+    if (clearing && entry.clearing) {
+      runs.push({ operation, tool: clearing, lines: entry.clearing, clearing: true });
+    }
+    runs.push({ operation, tool: operation.tool, lines: entry.lines, clearing: false });
+    hashes.push(entry.inputHash);
   }
-  const stock = { width, height, thickness };
-  const flip = side === "bottom" && twoSided ? twoSided.flipAxis : null;
-  const topKey = JSON.stringify([width, height, thickness, hashes.top]);
-  return {
-    key: JSON.stringify([width, height, thickness, hashes.top, side, flip, hashes.bottom]),
-    input: flip
-      ? { stock, cuts: cuts.bottom, before: { key: topKey, cuts: cuts.top, axis: flip }, maxCells }
-      : { stock, cuts: cuts.top, maxCells },
-  };
+  return sides;
 }
 
 /** The cuts of `lines`, feeds and rapids alike, made with `tool`. */

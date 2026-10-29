@@ -102,29 +102,42 @@ describe("playbackMoves", () => {
 
   describe("per side", () => {
     const flipped: Operation = { ...vcarve, stockSide: "bottom" };
+    const operations = [profile, flipped];
     const entries = { [profile.id]: ready(10), [flipped.id]: ready(20, { clearing: lines(30) }) };
 
     it("plays the top side alone, without waiting for the bottom side's", () => {
-      const top = playbackMoves([profile, flipped], {
-        ...entries,
-        [flipped.id]: { status: "computing", inputHash: "h" },
-      });
+      const top = playbackMoves(
+        operations,
+        { ...entries, [flipped.id]: { status: "computing", inputHash: "h" } },
+        "top",
+        "x",
+      );
+      expect(top?.side).toBe("top");
       expect(top?.parts.map((part) => part.name)).toEqual(["Holes"]);
       expect(top?.before).toBeUndefined();
     });
 
-    it("plays the bottom side after the top side's cuts", () => {
-      const bottom = playbackMoves([profile, flipped], entries, "bottom");
+    it("plays the bottom side after the top side's cuts, turned over", () => {
+      const bottom = playbackMoves(operations, entries, "bottom", "x");
+      expect(bottom?.side).toBe("bottom");
       expect(bottom?.parts.map((part) => part.name)).toEqual(["Sign, clearing", "Sign"]);
       expect(bottom?.cuts).toHaveLength(2);
-      expect(bottom?.before?.map((cut) => cut.tool.type)).toEqual(["flat_end_mill"]);
-      expect(bottom?.key).not.toBe(playbackMoves([profile, flipped], entries)?.key);
+      expect(bottom?.before?.cuts.map((cut) => cut.tool.type)).toEqual(["flat_end_mill"]);
+      expect(bottom?.before?.axis).toBe("x");
+      expect(bottom?.key).not.toBe(playbackMoves(operations, entries, "top", "x")?.key);
+      expect(bottom?.key).not.toBe(playbackMoves(operations, entries, "bottom", "y")?.key);
       const edited = playbackMoves(
-        [profile, flipped],
+        operations,
         { ...entries, [profile.id]: ready(11) },
         "bottom",
+        "x",
       );
       expect(edited?.key).not.toBe(bottom?.key);
+      expect(edited?.before?.key).not.toBe(bottom?.before?.key);
+    });
+
+    it("plays the top side of a project that isn't two-sided", () => {
+      expect(playbackMoves(operations, entries, "bottom")?.side).toBe("top");
     });
   });
 });
