@@ -9,6 +9,7 @@ import { setStockDimension } from "@furrow/workspace/stores/stock-actions";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { writeFileAtomic } from "./files";
 import { change, createProjects, KEPT_VERSION_LABEL, type Projects, t } from "./projects";
 import { createServer } from "./server";
 
@@ -121,6 +122,18 @@ describe("the MCP server", () => {
     expect((await readdir(dir)).sort()).toEqual(["Copy.furrow", "Part.furrow", "Part.furrow.json"]);
   });
 
+  it("keeps a project apart from its export of the same name", async () => {
+    const exported = join(dir, "Part.furrow.json");
+    await writeFile(exported, JSON.stringify(fullDocument()));
+    await writeFile(
+      join(dir, "Part.furrow"),
+      packProjectArchive(createProjectDocument(), new Map()),
+    );
+    expect((await call("open_project", { path: join(dir, "Part.furrow") })).units).toBe("mm");
+    expect((await call("get_project", { path: exported })).units).toBe("in");
+    expect((await call("get_project", { path: join(dir, "Part.furrow") })).units).toBe("mm");
+  });
+
   it("round-trips meshes and versions", async () => {
     const path = join(dir, "Relief.furrow");
     const document = { ...createProjectDocument(), models: [model] };
@@ -189,5 +202,19 @@ describe("change", () => {
     const project = await projects.create(join(dir, "New.furrow"));
     change(project, (store) => setStockDimension(store, "width", 321));
     expect(project.versions).toEqual([]);
+  });
+});
+
+describe("writeFileAtomic", () => {
+  it("never replaces a file unless asked, and leaves no temporary file", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFileAtomic(path, new TextEncoder().encode("first"), false);
+    await expect(
+      writeFileAtomic(path, new TextEncoder().encode("second"), false),
+    ).rejects.toMatchObject({ code: "EEXIST" });
+    expect(await readFile(path, "utf8")).toBe("first");
+    await writeFileAtomic(path, new TextEncoder().encode("third"));
+    expect(await readFile(path, "utf8")).toBe("third");
+    expect(await readdir(dir)).toEqual(["Part.furrow"]);
   });
 });

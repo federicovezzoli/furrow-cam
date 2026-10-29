@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
-import { isAbsolute } from "node:path";
+import { readFile } from "node:fs/promises";
+import { isAbsolute, normalize } from "node:path";
 import {
   type ArchiveVersion,
   createProjectDocument,
@@ -48,18 +48,23 @@ export function savePath(path: string): string {
       `${JSON.stringify(path)} isn't a project file: use .furrow, .furrow.zip or .furrow.json.`,
     );
   }
-  return path.replace(PROJECT_PATH, PROJECT_DESKTOP_EXTENSION);
+  return normalize(path).replace(PROJECT_PATH, PROJECT_DESKTOP_EXTENSION);
 }
 
-/** The projects open in this server session, by the `.furrow` file each saves to. */
+/**
+ * The projects open in this server session, by the file each was opened
+ * from, or, once saved, the `.furrow` file it saves to.
+ */
 export function createProjects() {
   const open = new Map<string, Project>();
 
-  async function write(project: Project, path: string) {
-    const ownFile = project.owned && path === project.path;
-    if (!ownFile && (await exists(path))) {
-      throw new ToolError(`${path} already exists: save the project to another path.`);
-    }
+  /** Makes `path` the only one `project` is found by. */
+  function remember(path: string, project: Project) {
+    for (const [key, value] of open) if (value === project) open.delete(key);
+    open.set(path, project);
+  }
+
+  async function write(project: Project, path: string, exists: string) {
     let bytes: Uint8Array;
     const document = project.store.getState().document;
     try {
@@ -69,8 +74,11 @@ export function createProjects() {
       throw error;
     }
     try {
-      await writeFileAtomic(path, bytes);
+      await writeFileAtomic(path, bytes, project.owned && path === project.path);
     } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new ToolError(`${path} already exists: ${exists}`);
+      }
       throw new ToolError(`Can't write ${path}: ${(error as Error).message}`);
     }
   }
@@ -96,9 +104,9 @@ export function createProjects() {
       fonts: file.fonts,
       versions: file.versions,
       kept: false,
-      owned: path === target,
+      owned: normalize(path) === target,
     };
-    open.set(target, project);
+    remember(normalize(path), project);
     return project;
   }
 
@@ -106,9 +114,6 @@ export function createProjects() {
     /** Creates an empty project at `path`, a new `.furrow` file. */
     async create(path: string): Promise<Project> {
       const target = savePath(path);
-      if (await exists(target)) {
-        throw new ToolError(`${target} already exists: open it, or choose another path.`);
-      }
       const project: Project = {
         path: target,
         store: createDocumentStore(createProjectDocument()),
@@ -118,9 +123,9 @@ export function createProjects() {
         kept: true,
         owned: false,
       };
-      await write(project, target);
+      await write(project, target, "open it, or choose another path.");
       project.owned = true;
-      open.set(target, project);
+      remember(target, project);
       return project;
     },
 
@@ -129,7 +134,7 @@ export function createProjects() {
 
     /** The open project at `path`, opened from its file if it isn't yet. */
     async get(path: string): Promise<Project> {
-      return open.get(savePath(path)) ?? openProject(path);
+      return open.get(normalize(path)) ?? openProject(path);
     },
 
     /**
@@ -138,23 +143,13 @@ export function createProjects() {
      */
     async save(project: Project, to?: string): Promise<string> {
       const target = to === undefined ? project.path : savePath(to);
-      await write(project, target);
-      if (target !== project.path) {
-        open.delete(project.path);
-        project.path = target;
-        open.set(target, project);
-      }
+      await write(project, target, "save the project to another path.");
+      project.path = target;
       project.owned = true;
+      remember(target, project);
       return target;
     },
   };
-}
-
-function exists(path: string): Promise<boolean> {
-  return stat(path).then(
-    () => true,
-    () => false,
-  );
 }
 
 export type Projects = ReturnType<typeof createProjects>;
