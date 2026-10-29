@@ -18,3 +18,8 @@ updates:
       # Types must match the Node.js runtime major (see .nvmrc).
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]
+      # R3F 9 creates a THREE.Clock, deprecated in r183 (see AGENTS.md); lift with R3F 10.
+      - dependency-name: "three"
+        versions: [">0.182.0"]
+      - dependency-name: "@types/three"
+        versions: [">0.182.0"]
