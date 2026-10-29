@@ -1,5 +1,12 @@
 # @furrow/post
 
+## 0.11.1
+
+### Patch Changes
+
+- Profiles, pockets, drilling, engraving and V-carving can cut the bottom side of a two-sided project, on the drawing as seen from below, and export with the bottom side's G-code. ([#380](https://github.com/federicovezzoli/furrow-cam/pull/380))
+- Updated dependencies: @furrow/cam-core@0.14.0, @furrow/document@0.15.0
+
 ## 0.11.0
 
 ### Minor Changes

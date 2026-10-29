@@ -1,5 +1,17 @@
 # @furrow/cam-core
 
+## 0.14.0
+
+### Minor Changes
+
+- Profiles, pockets, drilling, engraving and V-carving can cut the bottom side of a two-sided project, on the drawing as seen from below, and export with the bottom side's G-code. ([#380](https://github.com/federicovezzoli/furrow-cam/pull/380))
+- Text can run over several lines, each aligned on its own, with a line spacing and a letter spacing you can set. Projects saved by this release can't be opened by older ones. ([#381](https://github.com/federicovezzoli/furrow-cam/pull/381))
+- Upload your own TTF, OTF or WOFF font into a project from the text panel, marking it single-stroke for engraving if it is, and use it for any text in the project. ([#389](https://github.com/federicovezzoli/furrow-cam/pull/389))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.15.0
+
 ## 0.13.0
 
 ### Minor Changes

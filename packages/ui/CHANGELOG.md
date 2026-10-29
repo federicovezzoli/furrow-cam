@@ -1,5 +1,14 @@
 # @furrow/ui
 
+## 0.3.5
+
+### Patch Changes
+
+- Profiles, pockets, drilling, engraving and V-carving can cut the bottom side of a two-sided project, on the drawing as seen from below, and export with the bottom side's G-code. ([#380](https://github.com/federicovezzoli/furrow-cam/pull/380))
+- *Convert to drawing* turns a text item into a plain drawing that keeps its letters and the operations that machine them, but can no longer be edited as text. ([#384](https://github.com/federicovezzoli/furrow-cam/pull/384))
+- Upload your own TTF, OTF or WOFF font into a project from the text panel, marking it single-stroke for engraving if it is, and use it for any text in the project. ([#389](https://github.com/federicovezzoli/furrow-cam/pull/389))
+- Updated dependencies: @furrow/cam-core@0.14.0, @furrow/document@0.15.0
+
 ## 0.3.4
 
 ### Patch Changes

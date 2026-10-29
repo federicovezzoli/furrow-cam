@@ -1,5 +1,16 @@
 # @furrow/document
 
+## 0.15.0
+
+### Minor Changes
+
+- Projects can now hold uploaded fonts as files of their own, stored, exported and imported with the project like 3D models, in the web app, for guests and in the desktop app. Projects saved by this release can't be opened by older ones. ([#388](https://github.com/federicovezzoli/furrow-cam/pull/388))
+- Text can run over several lines, each aligned on its own, with a line spacing and a letter spacing you can set. Projects saved by this release can't be opened by older ones. ([#381](https://github.com/federicovezzoli/furrow-cam/pull/381))
+
+### Patch Changes
+
+- Profiles, pockets, drilling, engraving and V-carving can cut the bottom side of a two-sided project, on the drawing as seen from below, and export with the bottom side's G-code. ([#380](https://github.com/federicovezzoli/furrow-cam/pull/380))
+
 ## 0.14.0
 
 ### Minor Changes
