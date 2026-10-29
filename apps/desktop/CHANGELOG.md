@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.11.1
+
+### Patch Changes
+
+- Opening a project no longer logs a `THREE.Clock` deprecation warning in the browser console. ([#407](https://github.com/federicovezzoli/furrow-cam/pull/407))
+
 ## 0.11.0
 
 ### Minor Changes

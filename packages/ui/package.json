@@ -1,6 +1,6 @@
 {
   "name": "@furrow/ui",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "private": true,
   "description": "Shared React UI: shadcn/ui components and the app's common components",
   "type": "module",

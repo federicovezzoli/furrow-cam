@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.12.0
+
+### Minor Changes
+
+- Two-sided projects without a spoilboard to drill into can line the turned-over stock up by a corner pushed into a fence corner instead of on pins. The G-code says which corner to push into the fences and the stock size the two sides depend on, so it can be measured first. ([#391](https://github.com/federicovezzoli/furrow-cam/pull/391))
+- Two-sided projects can have locating pins: set their diameter, their positions along the flip axis and whether their holes go through into the spoilboard or only into the stock, then drill them on the top side. The viewport shows the pins on both sides, and the bottom side's G-code says to turn the stock over onto them. ([#390](https://github.com/federicovezzoli/furrow-cam/pull/390))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.16.0, @furrow/cam-core@0.15.0
+
 ## 0.11.1
 
 ### Patch Changes
