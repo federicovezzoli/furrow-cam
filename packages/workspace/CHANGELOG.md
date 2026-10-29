@@ -1,5 +1,19 @@
 # @furrow/workspace
 
+## 0.14.0
+
+### Minor Changes
+
+- *Convert to drawing* turns a text item into a plain drawing that keeps its letters and the operations that machine them, but can no longer be edited as text. ([#384](https://github.com/federicovezzoli/furrow-cam/pull/384))
+- Projects can now hold uploaded fonts as files of their own, stored, exported and imported with the project like 3D models, in the web app, for guests and in the desktop app. Projects saved by this release can't be opened by older ones. ([#388](https://github.com/federicovezzoli/furrow-cam/pull/388))
+- Text can run over several lines, each aligned on its own, with a line spacing and a letter spacing you can set. Projects saved by this release can't be opened by older ones. ([#381](https://github.com/federicovezzoli/furrow-cam/pull/381))
+- Upload your own TTF, OTF or WOFF font into a project from the text panel, marking it single-stroke for engraving if it is, and use it for any text in the project. ([#389](https://github.com/federicovezzoli/furrow-cam/pull/389))
+
+### Patch Changes
+
+- Profiles, pockets, drilling, engraving and V-carving can cut the bottom side of a two-sided project, on the drawing as seen from below, and export with the bottom side's G-code. ([#380](https://github.com/federicovezzoli/furrow-cam/pull/380))
+- Updated dependencies: @furrow/cam-core@0.14.0, @furrow/document@0.15.0, @furrow/post@0.11.1, @furrow/ui@0.3.5
+
 ## 0.13.0
 
 ### Minor Changes
