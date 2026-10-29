@@ -74,7 +74,7 @@ function withShapes(doc: ProjectDocument, shapes: Shape[]): ProjectDocument {
   return {
     ...doc,
     drawings: first
-      ? [{ id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER }]
+      ? [{ id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER, rotation: 0 }]
       : [],
     geometry: alignShapes(doc.stock, shapes, anchor === "custom" ? "bottom_left" : anchor),
   };
@@ -164,7 +164,7 @@ function plate(): ProjectDocument {
       },
       shapeoko,
     ),
-    drawings: [{ id: DRAWING_ID, name: "Plate", border: DRAWING_BORDER }],
+    drawings: [{ id: DRAWING_ID, name: "Plate", border: DRAWING_BORDER, rotation: 0 }],
     geometry: [outline, holes, recess],
     operations: [
       {

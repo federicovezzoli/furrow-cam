@@ -285,6 +285,16 @@ describe("migrations", () => {
     expect(parseProjectDocument(v26)).toEqual(current);
   });
 
+  it("gives v27 drawings no rotation", () => {
+    const current = fullDocument();
+    const v27 = {
+      ...current,
+      schemaVersion: 27,
+      drawings: current.drawings.map(({ rotation: _, ...drawing }) => drawing),
+    };
+    expect(parseProjectDocument(v27)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());
@@ -403,7 +413,9 @@ describe("migrations", () => {
     const migrated = parseProjectDocument(v16);
     const [drawing] = migrated.drawings;
     // The first shape's id, so every read gives the same one.
-    expect(migrated.drawings).toEqual([{ id: SQUARE_ID, name: "part.dxf", border: 10 }]);
+    expect(migrated.drawings).toEqual([
+      { id: SQUARE_ID, name: "part.dxf", border: 10, rotation: 0 },
+    ]);
     expect(migrated.geometry.map((shape) => shape.drawingId)).toEqual([drawing?.id, drawing?.id]);
     expect({ ...migrated, drawings: doc.drawings, geometry: doc.geometry }).toEqual(doc);
   });

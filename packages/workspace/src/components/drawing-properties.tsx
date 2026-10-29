@@ -36,6 +36,7 @@ import {
   rotateDrawing,
   setDrawingBorder,
   setDrawingOffset,
+  setDrawingRotation,
   setDrawingSize,
 } from "../stores/geometry-actions";
 import { gestureHandlers } from "../stores/gesture-handlers";
@@ -45,9 +46,6 @@ import { TextProperties } from "./text-properties";
 
 /** Keeps sizes positive when stepping or scrubbing down. */
 const MIN_LENGTH = 0.01;
-
-/** The angle the rotate field starts at, in degrees. */
-const DEFAULT_ANGLE = 15;
 
 /**
  * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):
@@ -68,8 +66,6 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const operationCount = useDocumentStore((s) => drawingOperations(s.document, drawingId).length);
   /** Why the last size change was refused, and on which field. */
   const [error, setError] = useState<{ field: string; message: Translatable } | null>(null);
-  /** The angle *Rotate* turns by, counter-clockwise for positive ones. */
-  const [angle, setAngle] = useState(DEFAULT_ANGLE);
   const t = useTranslations("Drawing");
   const format = useFormatMessage();
   const locale = useLocale();
@@ -205,26 +201,19 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
             </Button>
           ))}
         </div>
-        <div className="flex items-end gap-1">
-          <NumberField
-            id="drawing-angle"
-            label={t("angle")}
-            layout="inline"
-            quantity="number"
-            suffix="°"
-            value={angle}
-            onValueChange={setAngle}
-            className="flex-1"
-          />
-          <Button
-            variant="outline"
-            size="compact"
-            onClick={() => apply("orientation", rotateDrawing(store, drawing.id, angle))}
-            title={t("rotateTitle")}
-          >
-            {t("rotate")}
-          </Button>
-        </div>
+        {/* Its rotation since import (ADR-0066): a new value turns it by the difference. */}
+        <NumberField
+          id="drawing-angle"
+          label={t("angle")}
+          layout="inline"
+          quantity="number"
+          suffix="°"
+          value={drawing.rotation}
+          onValueChange={(value) =>
+            apply("orientation", setDrawingRotation(store, drawing.id, value))
+          }
+          {...gestures}
+        />
         {error?.field === "orientation" && (
           <p role="alert" className="text-destructive">
             {format(error.message)}

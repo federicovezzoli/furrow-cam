@@ -114,7 +114,11 @@ describe("packProjectArchive and readProjectArchive", () => {
     const base = fullDocument();
     const document: ProjectDocument = {
       ...base,
-      drawings: [...base.drawings, { id: other, name: "hole.svg", border: 5 }, textItem],
+      drawings: [
+        ...base.drawings,
+        { id: other, name: "hole.svg", border: 5, rotation: 0 },
+        textItem,
+      ],
       geometry: [square, { ...circle, drawingId: other }, textShape],
     };
     const archive = await readProjectArchive(

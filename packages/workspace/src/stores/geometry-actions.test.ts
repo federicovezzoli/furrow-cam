@@ -44,10 +44,12 @@ import {
   fitDrawingToStock,
   mirrorDrawing,
   moveDrawing,
+  normalizeDegrees,
   removeDrawing,
   rotateDrawing,
   setDrawingBorder,
   setDrawingOffset,
+  setDrawingRotation,
   setDrawingSize,
   setTextItem,
 } from "./geometry-actions";
@@ -170,7 +172,7 @@ describe("removeDrawing", () => {
     const line = { ...square, id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", drawingId: other };
     const profile = doc.operations[0];
     if (!profile) throw new Error("fixture");
-    doc.drawings.push({ id: other, name: "other.svg", border: 10 });
+    doc.drawings.push({ id: other, name: "other.svg", border: 10, rotation: 0 });
     doc.geometry.push(line);
     doc.models = [model];
     doc.operations = [
@@ -228,7 +230,7 @@ describe("duplicateDrawing", () => {
     const doc = store.getState().document;
     expect(copyId).not.toBeNull();
     expect(copyId).not.toBe(DRAWING_ID);
-    expect(doc.drawings[1]).toEqual({ id: copyId, name: "part.dxf", border: 10 });
+    expect(doc.drawings[1]).toEqual({ id: copyId, name: "part.dxf", border: 10, rotation: 0 });
 
     const copies = drawingShapes(doc.geometry, copyId as string);
     const [copySquare, copyCircle] = copies;
@@ -294,7 +296,7 @@ describe("duplicateDrawing", () => {
   it("copies a tab that lies on an uncut path of another drawing", () => {
     const doc = fullDocument();
     const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
-    doc.drawings.push({ id: other, name: "other.svg", border: 10 });
+    doc.drawings.push({ id: other, name: "other.svg", border: 10, rotation: 0 });
     // Its first path, the one cut, is the circle; its second lies on the square, under the tab.
     doc.geometry.push({
       ...square,
@@ -327,7 +329,7 @@ describe("drawing size", () => {
     const doc = fullDocument();
     doc.stock.xyOrigin = { anchor: "bottom_left" };
     const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
-    doc.drawings.push({ id: other, name: "other.svg", border: 10 });
+    doc.drawings.push({ id: other, name: "other.svg", border: 10, rotation: 0 });
     // The same square, 150 mm to the right.
     const copy = translateShape({ ...square, id: OTHER_SQUARE, drawingId: other }, [150, 0]);
     doc.geometry.push(copy);
@@ -532,6 +534,47 @@ describe("drawing size", () => {
     expect(s.getState().past).toHaveLength(2);
   });
 
+  it("keeps its rotation through turns, mirrors and undo (ADR-0066)", () => {
+    const s = store();
+    const rotation = () => s.getState().document.drawings[0]?.rotation;
+    expect(rotation()).toBe(0);
+    for (const expected of [90, 180, -90, 0]) {
+      rotateDrawing(s, DRAWING_ID, 90);
+      expect(rotation()).toBe(expected);
+    }
+    rotateDrawing(s, DRAWING_ID, -90);
+    mirrorDrawing(s, DRAWING_ID, "y");
+    expect(rotation()).toBe(90);
+    s.getState().undo();
+    expect(rotation()).toBe(-90);
+    s.getState().redo();
+    expect(rotation()).toBe(90);
+  });
+
+  it("turns to a rotation, as one undo step, and back to where it was imported", () => {
+    const s = store();
+    const rotation = () => s.getState().document.drawings[0]?.rotation;
+    const { geometry } = s.getState().document;
+    expect(setDrawingRotation(s, DRAWING_ID, 30)).toEqual({ ok: true });
+    expect(setDrawingRotation(s, DRAWING_ID, 270)).toEqual({ ok: true });
+    expect(rotation()).toBe(-90);
+    expect(s.getState().past).toHaveLength(2);
+    setDrawingRotation(s, DRAWING_ID, 0);
+    expect(rotation()).toBe(0);
+    const start = geometry[0]?.paths[0]?.start;
+    const now = s.getState().document.geometry[0]?.paths[0]?.start;
+    expect(now?.[0]).toBeCloseTo(start?.[0] as number, 6);
+    expect(now?.[1]).toBeCloseTo(start?.[1] as number, 6);
+    setDrawingRotation(s, DRAWING_ID, 360);
+    expect(s.getState().past).toHaveLength(3);
+  });
+
+  it("normalizes angles to above -180 up to 180", () => {
+    expect([0, -0, 180, -180, 190, -190, 360, -360, 540].map(normalizeDegrees)).toEqual([
+      0, 0, 180, 180, -170, 170, 0, 0, 180,
+    ]);
+  });
+
   it("counts the operations that only machine it", () => {
     const doc = store().getState().document;
     expect(drawingOperations(doc, DRAWING_ID).map((operation) => operation.id)).toEqual([
@@ -641,6 +684,7 @@ describe("addTextItem", () => {
         id,
         name: "Hi",
         border: 10,
+        rotation: 0,
         text: { ...settings, placement: { ...settings.placement, position: [10, 10] } },
       },
     ]);

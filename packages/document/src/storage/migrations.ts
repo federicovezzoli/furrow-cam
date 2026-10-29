@@ -267,6 +267,15 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #387: drawings keep their rotation. Existing ones count from where they are.
+  27: (doc) => {
+    if (Array.isArray(doc.drawings)) {
+      for (const drawing of doc.drawings) {
+        if (isObject(drawing)) drawing.rotation ??= 0;
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

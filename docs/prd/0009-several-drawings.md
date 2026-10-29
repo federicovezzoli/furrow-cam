@@ -37,7 +37,7 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 | D4 | Remove a drawing, with the operations that only machine it, in one undo step | Must |
 | D5 | Move a drawing: X and Y fields for its anchor point's distance from the zero, and dragging it in the viewport | Should |
 | D6 | Mirror a drawing horizontally or vertically | Should |
-| D7 | Rotate a drawing by 90° steps and by any angle | Should |
+| D7 | Rotate a drawing by 90° steps and by any angle; the panel shows and sets its angle (ADR-0066) | Should |
 | D8 | Duplicate a drawing, placing the copy next to the original | Should |
 | D9 | Move and rotate (90° steps about Z) a model with the same controls | Could |
 

@@ -80,3 +80,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Proposed |
 | [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Proposed |
 | [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Proposed |
+| [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |
