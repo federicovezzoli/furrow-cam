@@ -120,7 +120,7 @@ See [ADR-0011](docs/adr/0011-monorepo-structure-and-tooling.md) for the reasonin
 The most useful contributions right now:
 
 - **Try it on your machine** and [open an issue](https://github.com/federicovezzoli/furrow-cam/issues) for anything that cuts wrong or is confusing.
-- **Machine presets**: add your router to `packages/document/src/machine-presets.ts`, with a source for every value.
+- **Machine presets**: add your router to `packages/document/src/presets/machine-presets.ts`, with a source for every value.
 - **Feedback on the docs**: [PRDs](docs/prd/) say what we build and why, [ADRs](docs/adr/) how and why we build it that way.
 
 Work is tracked in [GitHub issues](https://github.com/federicovezzoli/furrow-cam/issues), grouped into the [MVP](https://github.com/federicovezzoli/furrow-cam/milestone/1) and [Post-MVP](https://github.com/federicovezzoli/furrow-cam/milestone/2) milestones. For code changes:

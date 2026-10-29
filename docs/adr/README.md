@@ -51,7 +51,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
 | [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Proposed |
 | [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Proposed |
-| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed |
+| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed; superseded in part by ADR-0065 |
 | [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed; superseded in part by ADR-0064 |
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Proposed |
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Proposed |
@@ -79,3 +79,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0062](0062-uploaded-fonts-are-project-assets.md) | Uploaded fonts are project assets, listed in the document like models | Proposed |
 | [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Proposed |
 | [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Proposed |
+| [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Proposed |
