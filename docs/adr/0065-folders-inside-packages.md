@@ -41,10 +41,10 @@ storage/                migrations, archive, file
 
 `presets/` and `storage/` may import from `schema/`; `schema/` imports from neither. `migrations.ts` stays one file: its short functions read best together.
 
-`packages/post/src` keeps the shared writer, export and touch-off modules at the top level and puts each post-processor dialect in its own folder (`grbl/`).
+`packages/post/src` keeps the shared, dialect-agnostic modules at the top level and puts each post-processor dialect in its own folder (`grbl/`). `e2e/` holds end-to-end tests, not a dialect.
 
 ## Consequences
 
 - A new document module has an obvious home: a Zod type goes in `schema/`, a preset in `presets/`, anything that reads or writes a document in `storage/`.
 - New post-processor dialects get their own folder beside `grbl/` instead of more files at the top level.
-- As in ADR-0037, the layer order is a convention checked in review; Biome `noRestrictedImports` overrides per folder could enforce it later.
+- A Biome `noRestrictedImports` override on `packages/document/src/schema/**` enforces that `schema/` imports neither `storage/` nor `presets/`. The `cam-core` layers (ADR-0037) remain a convention checked in review.
