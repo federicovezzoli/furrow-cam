@@ -1,21 +1,33 @@
-import { touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
-import { createProjectDocument, ProjectDocument, StockAnchor } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { autoHoldingTabPositions, touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
+import { createProjectDocument, ProjectDocument, StockAnchor, stockPins } from "@furrow/document";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
+import { setModelOffset } from "./model-actions";
 import {
+  addLocatingPin,
   addTouchOff,
+  autoPlaceHoldingTabs,
+  moveHoldingTab,
   pickXYOrigin,
   removeTouchOff,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFenceCorner,
+  setFlipAxis,
+  setHoldingTabSize,
+  setHoldingTabs,
+  setLineUp,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
   setTouchOffToolChange,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
+  updateLocatingPins,
 } from "./stock-actions";
 
 /** 600 × 400 mm stock, zeroed at its bottom-left corner. */
@@ -421,5 +433,192 @@ describe("touch-off pad", () => {
     const store = newStore();
     expect(setTouchOffField(store, "x", 100)).toBe(false);
     expect(stock(store).touchOff).toBeNull();
+  });
+});
+
+describe("holding tabs (#357)", () => {
+  /** A two-sided 18 mm stock with `model`, parting 9 mm down. */
+  function tabbedStore() {
+    const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    setTwoSided(store, true);
+    setPartingDepth(store, 9);
+    return store;
+  }
+
+  it("start four round each model, 6 mm wide and 2 mm thick, and turn off", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    expect(stock(store).twoSided?.tabs).toEqual({
+      width: 6,
+      thickness: 2,
+      positions: autoHoldingTabPositions([model], 4),
+    });
+    setHoldingTabs(store, false);
+    expect(stock(store).twoSided?.tabs).toBeNull();
+    // A one-sided project has none to turn on.
+    const oneSided = newStore();
+    setHoldingTabs(oneSided, true);
+    expect(stock(oneSided).twoSided).toBeNull();
+  });
+
+  it("stay thinner than the bottom side's depth", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    expect(setHoldingTabSize(store, "thickness", 9)).toBe(false);
+    expect(setHoldingTabSize(store, "width", 0)).toBe(false);
+    expect(setHoldingTabSize(store, "thickness", 8)).toBe(true);
+    expect(setHoldingTabSize(store, "width", 10)).toBe(true);
+    expect(stock(store).twoSided?.tabs).toMatchObject({ width: 10, thickness: 8 });
+    // A deeper parting plane leaves the bottom side 4 mm: the tabs take half.
+    setPartingDepth(store, 14);
+    expect(stock(store).twoSided?.tabs?.thickness).toBe(2);
+    setStockDimension(store, "thickness", 15);
+    expect(stock(store).twoSided?.tabs?.thickness).toBe(0.5);
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+  });
+
+  it("are placed again by a count and moved one by one", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    autoPlaceHoldingTabs(store, 2);
+    expect(stock(store).twoSided?.tabs?.positions).toEqual(autoHoldingTabPositions([model], 2));
+    moveHoldingTab(store, 1, [1, 2]);
+    moveHoldingTab(store, 5, [3, 4]);
+    expect(stock(store).twoSided?.tabs?.positions[1]).toEqual([1, 2]);
+    expect(stock(store).twoSided?.tabs?.positions).toHaveLength(2);
+  });
+
+  it("keep their place on the model when it or the design moves", () => {
+    const store = tabbedStore();
+    setHoldingTabs(store, true);
+    const at = () => stock(store).twoSided?.tabs?.positions ?? [];
+    const before = at();
+    const placed = () => store.getState().document.models[0]?.placement.position ?? [0, 0];
+    const [x, y] = placed();
+    setModelOffset(store, model.id, "x", 25);
+    const dx = (placed()[0] as number) - x;
+    expect(dx).not.toBe(0);
+    for (const [i, [px, py]] of at().entries()) {
+      expectClose([px, py], [(before[i]?.[0] as number) + dx, before[i]?.[1] as number]);
+    }
+    // The zero's anchor moves the design, the tabs with it.
+    const moved = at();
+    setXYAnchor(store, "center");
+    const shift = [(placed()[0] as number) - x - dx, (placed()[1] as number) - y];
+    expect(shift).not.toEqual([0, 0]);
+    for (const [i, [px, py]] of at().entries()) {
+      expectClose(
+        [px, py],
+        [
+          (moved[i]?.[0] as number) + (shift[0] as number),
+          (moved[i]?.[1] as number) + (shift[1] as number),
+        ],
+      );
+    }
+  });
+});
+
+describe("two-sided projects (ADR-0060)", () => {
+  it("part at half the stock's thickness without a model, flipped about X", () => {
+    const store = newStore();
+    setTwoSided(store, true);
+    expect(stock(store).twoSided).toEqual({
+      flipAxis: "x",
+      partingDepth: 9,
+      tabs: null,
+      lineUp: null,
+    });
+    setFlipAxis(store, "y");
+    setPartingDepth(store, 6);
+    expect(stock(store).twoSided).toEqual({
+      flipAxis: "y",
+      partingDepth: 6,
+      tabs: null,
+      lineUp: null,
+    });
+    // Outside the stock: refused.
+    for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
+    expect(stock(store).twoSided?.partingDepth).toBe(6);
+  });
+
+  it("part at half the deepest model's depth, within the stock", () => {
+    const document = createProjectDocument();
+    const deep = { ...model, placement: { ...model.placement, depth: 12 } };
+    const store = createDocumentStore({ ...document, models: [model, deep] });
+    setTwoSided(store, true);
+    expect(stock(store).twoSided?.partingDepth).toBe(6);
+
+    const deeper = { ...model, placement: { ...model.placement, depth: 40 } };
+    const thin = createDocumentStore({ ...document, models: [deeper] });
+    setTwoSided(thin, true);
+    expect(thin.getState().document.stock.twoSided?.partingDepth).toBe(9);
+    // A shallow model's half depth is below the field's least: clamped to it.
+    const shallow = { ...model, placement: { ...model.placement, depth: 0.1 } };
+    const flat = createDocumentStore({ ...document, models: [shallow] });
+    setTwoSided(flat, true);
+    expect(flat.getState().document.stock.twoSided?.partingDepth).toBe(0.1);
+  });
+
+  it("move the bottom side's operations to the top when turned off, in one undo step", () => {
+    const document = fullDocument();
+    const operations = document.operations.map((op) => ({ ...op, stockSide: "bottom" as const }));
+    const store = createDocumentStore({ ...document, operations });
+    setTwoSided(store, false);
+    const after = store.getState().document;
+    expect(after.stock.twoSided).toBeNull();
+    expect(after.operations.every((op) => op.stockSide === "top")).toBe(true);
+    expect(ProjectDocument.safeParse(after).success).toBe(true);
+    store.getState().undo();
+    expect(store.getState().document).toEqual({ ...document, operations });
+  });
+
+  it("add a symmetric pair of locating pins, and take valid changes to them only", () => {
+    const store = newStore();
+    setLineUp(store, "pins");
+    expect(stock(store).twoSided).toBeNull();
+    setTwoSided(store, true);
+    setLineUp(store, "pins");
+    // 600 mm along X: two fifths of it either side of the centre.
+    expect(stock(store).twoSided?.lineUp).toEqual({
+      type: "pins",
+      diameter: 6,
+      positions: [-240, 240],
+      holes: { type: "through", spoilboardDepth: 5 },
+    });
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 8 } })).toBe(true);
+    expect(updateLocatingPins(store, { positions: [0] })).toBe(false);
+    expect(updateLocatingPins(store, { diameter: 0 })).toBe(false);
+    expect(stock(store).twoSided?.lineUp).toMatchObject({
+      diameter: 6,
+      positions: [-240, 240],
+      holes: { type: "blind", depth: 8 },
+    });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    // A new pin goes opposite the last, else halfway from it to the stock's edge.
+    updateLocatingPins(store, { positions: [-240, 100] });
+    addLocatingPin(store);
+    expect(stockPins(stock(store))?.positions).toEqual([-240, 100, -100]);
+    addLocatingPin(store);
+    expect(stockPins(stock(store))?.positions).toEqual([-240, 100, -100, -198.5]);
+    // Turned over about Y instead, they keep their place along the 400 mm side.
+    setFlipAxis(store, "y");
+    const turned = stockPins(stock(store))?.positions ?? [];
+    for (const [i, position] of [-160, 200 / 3, -200 / 3, -397 / 3].entries()) {
+      expect(turned[i]).toBeCloseTo(position);
+    }
+    updateLocatingPins(store, { positions: [-240, 240] });
+    // Blind holes stay inside the stock, also when it gets thinner.
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 18 } })).toBe(false);
+    expect(updateLocatingPins(store, { holes: { type: "blind", depth: 15 } })).toBe(true);
+    setStockDimension(store, "thickness", 10);
+    expect(stockPins(stock(store))?.holes).toEqual({ type: "blind", depth: 15 * (10 / 18) });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
+    setLineUp(store, "edges");
+    setFenceCorner(store, "top_left");
+    expect(stock(store).twoSided?.lineUp).toEqual({ type: "edges", corner: "top_left" });
+    // Pin settings apply only to pins.
+    expect(updateLocatingPins(store, { diameter: 8 })).toBe(false);
+    setLineUp(store, null);
+    expect(stock(store).twoSided?.lineUp).toBeNull();
   });
 });

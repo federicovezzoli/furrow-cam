@@ -5,16 +5,18 @@ import {
   type Box3,
   type Heightmap,
   pathKey,
+  pinCenters,
   stockBounds,
   stockOffset,
 } from "@furrow/cam-core";
-import type { Point } from "@furrow/document";
+import { type Point, stockPins } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
+  concatPositions,
   gridLinePositions,
   pathsLinePositions,
   shapesLinePositions,
@@ -31,9 +33,10 @@ import { DashedLines, Lines, useLineGeometry, WideLines } from "./lines";
 import { Models } from "./models";
 import { PathPick } from "./path-pick";
 import { type Palette, RENDER_ORDER } from "./scene-style";
+import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
-import { Tabs } from "./tabs";
+import { HoldingTabs, Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
 
@@ -56,23 +59,33 @@ export function Scene({
   heightmap: Heightmap | null;
   modelPreviews: ReadonlyMap<string, ModelPreview>;
 }) {
+  const topSide = useWorkspaceStore((s) => s.side === "top");
   return (
     <>
       <WorkOrigin palette={palette} />
       <TouchOffPad color={palette.touchOff} />
+      <LocatingPins color={palette.pin} />
+      {/* The simulation is of the side in view; the stock looks the same from either. */}
       {heightmap ? (
         <SimulatedStock heightmap={heightmap} thickness={-box.min[2]} color={palette.stock} />
       ) : (
+        <Stock box={box} palette={palette} />
+      )}
+      {/* In the top side's coordinates: turned over in the bottom side's view (ADR-0060). */}
+      <SideFrame side="top">
+        {!heightmap && <Models previews={modelPreviews} palette={palette} />}
+        <Shapes palette={palette} />
+        <Tabs color={palette.tab} />
+        <HoldingTabs color={palette.tab} />
+      </SideFrame>
+      <Toolpaths palette={palette} />
+      {/* Picking works on the top side only, which the drawing is in. */}
+      {topSide && (
         <>
-          <Stock box={box} palette={palette} />
-          <Models previews={modelPreviews} palette={palette} />
+          <ZeroPick color={palette.snap} />
+          <PathPick />
         </>
       )}
-      <Shapes palette={palette} />
-      <Toolpaths palette={palette} />
-      <Tabs color={palette.tab} />
-      <ZeroPick color={palette.snap} />
-      <PathPick />
     </>
   );
 }
@@ -137,6 +150,25 @@ function TouchOffPad({ color }: { color: string }) {
   );
 }
 
+/**
+ * The locating pins (#356): a ring at their diameter and a cross at each
+ * centre, on the face in view. They are on the line the stock turns about,
+ * so in the same place from either side.
+ */
+function LocatingPins({ color }: { color: string }) {
+  const stock = useDocumentStore((s) => s.document.stock);
+  const positions = useMemo(() => {
+    const diameter = stockPins(stock)?.diameter ?? 0;
+    return concatPositions(
+      pinCenters(stock).flatMap(([x, y]) => {
+        const { ring, cross } = touchOffLinePositions({ x, y, diameter });
+        return [ring, cross];
+      }),
+    );
+  }, [stock]);
+  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
+}
+
 export function Stock({ box, palette }: { box: Box3; palette: Palette }) {
   const { min, max } = box;
   return (
@@ -187,7 +219,9 @@ function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
   const geometry = useDocumentStore((s) => s.document.geometry);
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
-  const draggable = useWorkspaceStore((s) => s.view === "top" && !s.editingTabs && !s.pickingZero);
+  const draggable = useWorkspaceStore(
+    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+  );
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);
   const press = useRef<DrawingPress | null>(null);

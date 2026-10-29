@@ -1,12 +1,19 @@
 import type { HeightmapGrid, SimulationCut } from "@furrow/cam-core";
-import type { Stock } from "@furrow/document";
+import type { FlipAxis, Stock } from "@furrow/document";
 
-/** Starts a playback's heightmap in its worker (ADR-0004), from the uncut stock. */
+/**
+ * Starts a playback's heightmap in its worker (ADR-0004), from the uncut
+ * stock or, with `before`, from the stock the top side's cuts leave, turned
+ * over about `axis` (the bottom side of a two-sided project, ADR-0060).
+ * `before.key` changes exactly when its cuts do, so the worker keeps their
+ * result between loads.
+ */
 export type PlaybackLoad = {
   type: "load";
   key: string;
   stock: Pick<Stock, "width" | "height" | "thickness">;
   cuts: SimulationCut[];
+  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
   /** Most cells the heightmap may have, so the device can draw it. */
   maxCells: number;
 };
@@ -17,11 +24,12 @@ export type PlaybackSeek = { type: "seek"; key: string; move: number; fraction: 
 export type PlaybackRequest = PlaybackLoad | PlaybackSeek;
 
 /**
- * `loaded` gives the grid, all cells at the stock top; each `frame` the
- * cells from `start` that a seek changed (none when `values` is empty).
+ * `loaded` gives the grid and the heights the playback starts from (all cells
+ * at the stock top when `heights` is missing); each `frame` the cells from
+ * `start` that a seek changed (none when `values` is empty).
  */
 export type PlaybackResponse = { key: string } & (
-  | { type: "loaded"; grid: HeightmapGrid }
+  | { type: "loaded"; grid: HeightmapGrid; heights?: Float32Array }
   | { type: "frame"; start: number; values: Float32Array }
   | { type: "error"; error: string }
 );
@@ -35,7 +43,7 @@ export type PlaybackResponse = { key: string } & (
 export function schedulePlayback(
   post: (request: PlaybackRequest) => void,
   handlers: {
-    onLoaded: (grid: HeightmapGrid) => void;
+    onLoaded: (grid: HeightmapGrid, heights?: Float32Array) => void;
     onFrame: (start: number, values: Float32Array) => void;
     onError: (error: string) => void;
   },
@@ -79,7 +87,7 @@ export function schedulePlayback(
       inFlight = false;
       if (response.type === "loaded") {
         loaded = true;
-        handlers.onLoaded(response.grid);
+        handlers.onLoaded(response.grid, response.heights);
       } else if (response.type === "frame") {
         handlers.onFrame(response.start, response.values);
       } else {

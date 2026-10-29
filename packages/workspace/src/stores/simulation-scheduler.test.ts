@@ -46,7 +46,7 @@ function documentWithOperations(): ProjectDocument {
         type: "drill",
         targets: [],
         tool: drill,
-        params: { depth: 6, peck: false, stepOver: 40 },
+        params: { depth: 6, peck: false, stepOver: 40, pins: false },
       },
     ],
   };
@@ -143,11 +143,14 @@ describe("simulationRequest", () => {
     );
   });
 
-  it("leaves out the bottom side of a two-sided project, cut from below", () => {
+  it("simulates each side of a two-sided project, the bottom from the top's cuts (ADR-0060)", () => {
     const document = documentWithOperations();
     const twoSided = {
       ...document,
-      stock: { ...document.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } },
+      stock: {
+        ...document.stock,
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, tabs: null, lineUp: null },
+      },
       operations: document.operations.map((op) =>
         op.id === DRILL_ID ? { ...op, stockSide: "bottom" as const } : op,
       ),
@@ -155,9 +158,23 @@ describe("simulationRequest", () => {
     const toolpaths = createToolpathStore();
     ready(toolpaths, PROFILE_ID, "a");
     ready(toolpaths, DRILL_ID, "b");
-    // The profile's feeds and rapids only.
-    const request = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS);
-    expect(request?.input.cuts).toHaveLength(2);
+    // The top side: the profile's feeds and rapids only.
+    const top = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS);
+    expect(top?.input.cuts).toHaveLength(2);
+    expect(top?.input.before).toBeUndefined();
+    // The bottom side: the drill's, from the stock the profile leaves, turned over about X.
+    const bottom = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS, "bottom");
+    expect(bottom?.input.cuts).toHaveLength(2);
+    expect(bottom?.input.before).toMatchObject({ cuts: top?.input.cuts, axis: "x" });
+    expect(bottom?.key).not.toBe(top?.key);
+    // The top side's key changes only with its own cuts, so the worker keeps their result.
+    const topKey = bottom?.input.before?.key;
+    ready(toolpaths, DRILL_ID, "c");
+    const edited = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS, "bottom");
+    expect(edited?.input.before?.key).toBe(topKey);
+    ready(toolpaths, PROFILE_ID, "d");
+    const moved = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS, "bottom");
+    expect(moved?.input.before?.key).not.toBe(topKey);
   });
 });
 
@@ -223,6 +240,20 @@ describe("scheduleSimulation", () => {
     expect(requests[1]?.key).toContain('"e"');
     schedule.receive({ key: requests[1]?.key ?? "", heightmap, stock });
     expect(requests).toHaveLength(2);
+  });
+
+  it("switches side without a new worker, dropping the other side's response", () => {
+    const { toolpaths, requests, results, schedule } = setup();
+    ready(toolpaths, PROFILE_ID, "a");
+    ready(toolpaths, DRILL_ID, "b");
+    schedule.setSide("bottom");
+    expect(requests).toHaveLength(1);
+    // The top side's answer comes back after the switch: dropped, and the bottom side's sent.
+    schedule.receive({ key: requests[0]?.key ?? "", heightmap, stock });
+    expect(results).toHaveLength(0);
+    expect(requests).toHaveLength(2);
+    schedule.receive({ key: requests[1]?.key ?? "", heightmap, stock });
+    expect(results).toEqual([{ key: requests[1]?.key, heightmap, stock }]);
   });
 
   it("sends the waiting request after a failure, and ignores failures while idle", () => {

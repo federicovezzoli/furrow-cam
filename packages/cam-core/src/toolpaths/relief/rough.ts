@@ -1,16 +1,8 @@
-import type {
-  Model,
-  Point,
-  ReliefRoughOperation,
-  RoughingBoundary,
-  Tool,
-  TouchOffDisc,
-} from "@furrow/document";
+import type { Model, ReliefRoughOperation, Tool, TouchOffDisc } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
 import { difference, intersection, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE } from "../../geometry/flatten";
-import { boxRect } from "../../scene/model";
-import { type Flip, type ModelView, modelView } from "../../scene/sides";
+import { type Flip, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import { cutterProfile } from "../../simulation/simulation";
 import type { ToolpathMessage } from "../messages";
@@ -21,6 +13,7 @@ import { heightContours, simplifyContour } from "./contours";
 import {
   coarsenedWarning,
   type FlatDisc,
+  type HoldingTab,
   liftHeight,
   MAX_RELIEF_CELLS,
   modelHeightsSteps,
@@ -35,14 +28,19 @@ import {
   RestDropper,
   type RestOptions,
   type RestStock,
+  reachModel,
   reliefCellSize,
   reliefFloor,
   reliefGrid,
   remainingRuns,
+  restCellSize,
+  restCoarsenedWarning,
+  restCover,
   restStockSteps,
-  round3,
+  roughingArea,
   simplifyHeights,
   ToolDropper,
+  tabDiscs,
   toPassFrame,
   toStock,
   widened,
@@ -62,7 +60,7 @@ export type ReliefRoughOptions = {
   stock: Rect | null;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
-  /** A two-sided project's parting plane, below which this side cuts nothing (ADR-0060); `null` for none. */
+  /** A two-sided project's parting plane, below which this side cuts nothing around the model (ADR-0063); `null` for none. */
   parting?: number | null;
   /** On the bottom side, the flip to its stock coordinates; `null` on the top. */
   flip?: Flip | null;
@@ -74,6 +72,8 @@ export type ReliefRoughOptions = {
   rest?: RestOptions | null;
   /** The touch-off pad, an island at every level (#147); `null` for none. */
   touchOff?: TouchOffDisc | null;
+  /** In a two-sided project, the holding tabs to leave, islands below their top (#357). */
+  tabs?: readonly HoldingTab[];
 };
 
 /** Share of the progress the model heightmap takes; the levels take the rest. */
@@ -126,6 +126,7 @@ export function* reliefRoughSteps(
     cache,
     rest = null,
     touchOff = null,
+    tabs = [],
   }: ReliefRoughOptions,
 ): Generator<number, Toolpath> {
   const { params } = operation;
@@ -144,12 +145,14 @@ export function* reliefRoughSteps(
     return { moves: [], warnings: [NO_AREA_WARNING] };
   }
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
-  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings, parting);
+  const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   if (!(floor < 0)) {
     warnings.push({ code: "toolpath.roughNothing" });
     return { moves: [], warnings };
   }
   if (-floor > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
+  // Past the grid, no part of the model: the tool goes no lower than its cells there.
+  const outsideFloor = Math.max(floor, grid.outside + params.stockToLeave);
 
   const heightsSteps = modelHeightsSteps(view, positions, grid, params.stockToLeave, cache);
   let heights: Float32Array;
@@ -160,9 +163,10 @@ export function* reliefRoughSteps(
     }
     yield (rest ? HEIGHTMAP_SHARE - REST_SHARE : HEIGHTMAP_SHARE) * step.value;
   }
+  const tabsOnModel = reachModel(tabs, grid, heights);
   const area = roughingArea(params.boundary, view, stock, radius);
   if (!area) {
-    warnings.push({ code: "toolpath.roughMarginOffStock" });
+    warnings.push({ code: "toolpath.marginOffStock" });
     return { moves: [], warnings };
   }
   const restStock = rest
@@ -176,14 +180,21 @@ export function* reliefRoughSteps(
       )
     : null;
   if (restStock?.grid.coarsened) warnings.push(restCoarsenedWarning(restStock.grid));
-  const levels = depthLevels(-floor, tool.stepDown);
+  // Down to the cells outside the model first, so a level clears them flat (ADR-0063).
+  const levels =
+    outsideFloor > floor && outsideFloor < 0
+      ? [
+          ...depthLevels(-outsideFloor, tool.stepDown),
+          ...depthLevels(outsideFloor - floor, tool.stepDown).map((z) => z + outsideFloor),
+        ]
+      : depthLevels(-floor, tool.stepDown);
   const progress = (i: number) =>
     HEIGHTMAP_SHARE + ((1 - HEIGHTMAP_SHARE) * (i + 1)) / levels.length;
 
   if (strategy.type === "linear") {
-    const moves = yield* rasterLevels(tool, grid, heights, area, levels, floor, {
+    const moves = yield* rasterLevels(tool, grid, heights, area, levels, floor, outsideFloor, {
       restStock,
-      discs: padDiscs(touchOff, grid),
+      discs: [...padDiscs(touchOff, grid), ...tabDiscs(tabsOnModel, grid)],
       safeZ,
       entryClearance,
       ramp: params.ramp,
@@ -217,6 +228,17 @@ export function* reliefRoughSteps(
   // hold every cell above the level: offsetting each step of a staircase
   // along the cells is slow.
   const simplification = Math.max(grid.cellWidth, grid.cellHeight);
+  // Below `outsideFloor`, the tool's centre stays over the model (ADR-0063).
+  const overModel =
+    outsideFloor > floor
+      ? offset(
+          heightContours(heights, grid, -Infinity, grid.origin).map((ring) =>
+            simplifyContour(ring, simplification),
+          ),
+          radius + 2 * simplification,
+          { join: "miter", arcTolerance: tolerance },
+        )
+      : [];
   // The same warning from many levels is said once.
   const skipped = new Map<string, ToolpathMessage>();
   for (const [i, z] of levels.entries()) {
@@ -228,8 +250,10 @@ export function* reliefRoughSteps(
       arcTolerance: tolerance,
     });
     if (pad) islands.push(pad);
+    for (const tab of tabsOnModel) if (z < tab.top) islands.push(tabPolygon(tab));
     // Islands may reach past the boundary; the pits inside them are cleared too.
-    let cleared = difference([boundary], islands);
+    const within = z < outsideFloor ? intersection([boundary], overModel) : [boundary];
+    let cleared = difference(within, islands);
     if (restStock) {
       // Only within reach of what is left that the tool can reach (the
       // pocket keeps its centre a radius inside), slivers narrower than
@@ -258,74 +282,18 @@ export function* reliefRoughSteps(
   return { moves: clearing.finish(), warnings: [...warnings, ...skipped.values()] };
 }
 
-/**
- * The rectangle the tool's centre covers when roughing within `boundary`
- * (ADR-0033, ADR-0038), in stock coordinates:
- *
- * - `model`: the model's outline, so the tool cuts a radius past it.
- * - `stock`: the whole stock, the tool overhanging its edges by its radius.
- * - `margin`: the model's outline grown by the distance, or by the radius if
- *   that is more, so finishing never meets uncut material at the model's
- *   edge. The tool stays inside it, except where it reaches the stock's
- *   edge: there the centre goes to the edge, as for the whole stock.
- *
- * Without `stock`, the whole stock is the model's outline and a margin isn't
- * clipped. `null` when the margin leaves the tool no room inside the stock:
- * the model is off the stock, or only a sliver narrower than the tool of the
- * margin is on it.
- */
-export function roughingArea(
-  boundary: RoughingBoundary,
-  model: Pick<ModelView, "box">,
-  stock: Rect | null,
-  radius: number,
-): Rect | null {
-  const rect = boxRect(model.box);
-  if (boundary.type === "model") return rect;
-  if (boundary.type === "stock") return stock ?? rect;
-  const grow = Math.max(boundary.distance, radius);
-  const side = (edge: number, direction: 1 | -1, stockEdge: number | undefined) => {
-    const cut = edge + direction * grow;
-    if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
-    return cut - direction * radius;
-  };
-  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
-  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
-  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
-}
-
-/**
- * Where a rest roughing's stock left is simulated, besides the model's grid:
- * the `area` grown by `margin`, wherever the tool may reach from it (its
- * radius, the rest dropper's reach of a cell's diagonal and more), on the
- * stock, where earlier operations can have cut. Without a stock, nothing
- * past the model's grid: the stock is the model's outline (`roughingArea`).
- */
-function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
-  if (!stock) return null;
-  const min: Point = [
-    Math.max(area.min[0] - margin, stock.min[0]),
-    Math.max(area.min[1] - margin, stock.min[1]),
+/** A holding tab as the rectangle it covers, counter-clockwise. */
+function tabPolygon({ from, to, width }: HoldingTab): Polygon {
+  const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
+  // Half the width across the strip.
+  const nx = (-(to[1] - from[1]) / length) * (width / 2);
+  const ny = ((to[0] - from[0]) / length) * (width / 2);
+  return [
+    [from[0] - nx, from[1] - ny],
+    [to[0] - nx, to[1] - ny],
+    [to[0] + nx, to[1] + ny],
+    [from[0] + nx, from[1] + ny],
   ];
-  const max: Point = [
-    Math.min(area.max[0] + margin, stock.max[0]),
-    Math.min(area.max[1] + margin, stock.max[1]),
-  ];
-  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
-}
-
-/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
-function restCellSize(grid: ReliefGrid): number {
-  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
-}
-
-/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
-function restCoarsenedWarning(grid: ReliefGrid): ToolpathMessage {
-  const size = Math.max(grid.cellWidth, grid.cellHeight);
-  return {
-    code: "toolpath.restCoarsened",
-    values: { size: round3(size), width: round3(2 * size) },
-  };
 }
 
 /**
@@ -393,13 +361,20 @@ function* rasterLevels(
   area: Rect,
   levels: number[],
   floor: number,
+  outsideFloor: number,
   { restStock, discs, safeZ, entryClearance, ramp, stepOver, progress }: RasterOptions,
 ): Generator<number, ToolpathMove[]> {
   const { columns, rows, cellWidth, cellHeight } = grid;
   // Samples are a cell apart, and links no further: between two of them the
   // tool mustn't meet what neither saw.
   const step = Math.max(cellWidth, cellHeight);
-  const dropper = new ToolDropper(heights, grid, widened(cutterProfile(tool), step), discs);
+  const dropper = new ToolDropper(
+    heights,
+    grid,
+    widened(cutterProfile(tool), step),
+    discs,
+    outsideFloor,
+  );
   const restDropper = restStock ? new RestDropper(restStock, grid, cutterProfile(tool)) : null;
   const rect: [number, number][] = [
     [area.min[0], area.min[1]],
@@ -420,7 +395,7 @@ function* rasterLevels(
   const count = Math.ceil((lastRow - firstRow) / rowsApart) + 1;
 
   // Where the tool may go doesn't depend on the level: dropped once per pass.
-  // Past the grid, only cells at the model's bottom are in reach (its margin).
+  // Past the grid, no part of the model is in reach (its margin).
   const passes: RasterPass[] = [];
   let lastLine: number | null = null;
   for (let line = 0; line < count; line++) {
@@ -434,11 +409,12 @@ function* rasterLevels(
     const first = Math.ceil(span[0] / cellWidth - 0.5 - 1e-9);
     const last = Math.floor(span[1] / cellWidth - 0.5 + 1e-9);
     if (first > last) continue;
-    const tips = new Float64Array(last - first + 1).fill(floor);
+    const tips = new Float64Array(last - first + 1).fill(outsideFloor);
     const from = Math.max(first, 0);
     const to = Math.min(last, columns - 1);
     if (row >= 0 && row < rows && from <= to) {
-      dropper.dropLine(v, from, to, tips.subarray(from - first, to - first + 1));
+      const inside = tips.subarray(from - first, to - first + 1).fill(floor);
+      dropper.dropLine(v, from, to, inside);
     }
     // The pad may be past the grid, where the pass still goes.
     dropper.dropDiscs(v, first, last, tips);
@@ -532,7 +508,7 @@ function* rasterLevels(
           for (let k = 1; k < steps; k++) {
             const u = from.u + (du * k) / steps;
             const w = from.v + (dv * k) / steps;
-            // Past the grid, only the model's bottom and the pad are in reach.
+            // Past the grid, only the pad is in reach.
             link[k] = Math.max(z, dropper.dropPoint(u, w, floor));
           }
           link[steps] = startZ;

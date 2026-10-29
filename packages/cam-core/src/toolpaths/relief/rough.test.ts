@@ -13,8 +13,8 @@ import { simulateCuts } from "../../simulation/simulation";
 import { generateToolpath, toolpathInputs, toolpathKey } from "../generate";
 import type { Toolpath } from "../toolpath";
 import { heightContours, simplifyContour } from "./contours";
-import { modelHeightsSteps, reliefGrid, runSteps } from "./finish";
-import { type ReliefRoughOptions, reliefRoughSteps, roughingArea } from "./rough";
+import { modelHeightsSteps, reliefGrid, roughingArea, runSteps } from "./finish";
+import { type ReliefRoughOptions, reliefRoughSteps } from "./rough";
 
 /** A horizontal rectangle at height `z`, as two triangles. */
 function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
@@ -145,7 +145,7 @@ describe("roughingArea", () => {
       ),
     );
     expect(toolpath.moves).toEqual([]);
-    expect(toolpath.warnings).toEqual([{ code: "toolpath.roughMarginOffStock" }]);
+    expect(toolpath.warnings).toEqual([{ code: "toolpath.marginOffStock" }]);
   });
 
   it("brings the tool's centre to the stock's edges the margin reaches", () => {

@@ -1,16 +1,13 @@
 // Reference data for tests, here and in the packages that depend on this one
 // (`@furrow/document/fixtures`). Not part of the app.
-import type {
-  Drawing,
-  Machine,
-  Model,
-  ProjectDocument,
-  ProjectFont,
-  ReliefFinishOperation,
-  ReliefRoughOperation,
-  Shape,
-  Tool,
-} from "./index";
+// Only from schema/, so schema tests can use these without reaching storage/ or presets/.
+import type { ProjectDocument } from "./schema/document";
+import type { ProjectFont } from "./schema/font";
+import type { Drawing, Shape } from "./schema/geometry";
+import type { Machine } from "./schema/machine";
+import type { Model } from "./schema/model";
+import type { ReliefFinishOperation, ReliefRoughOperation } from "./schema/operation";
+import type { Tool } from "./schema/tool";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -150,6 +147,7 @@ export const textItem: Drawing = {
   id: TEXT_ID,
   name: "I",
   border: 10,
+  rotation: 0,
   text: {
     text: "I",
     font: "sans",
@@ -217,6 +215,7 @@ export const reliefFinish: ReliefFinishOperation = {
     strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: 10,
     stockToLeave: 0,
+    boundary: { type: "model" },
     rest: false,
   },
 };
@@ -246,7 +245,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 22,
+    schemaVersion: 28,
     units: "in",
     stock: {
       width: 300,
@@ -255,10 +254,20 @@ export function fullDocument(): ProjectDocument {
       xyOrigin: { anchor: "center" },
       zOrigin: "machine_bed",
       touchOff: { x: 10, y: 10, diameter: 15, toolChange: null },
-      twoSided: { flipAxis: "x", partingDepth: 9 },
+      twoSided: {
+        flipAxis: "x",
+        partingDepth: 9,
+        lineUp: {
+          type: "pins",
+          diameter: 6,
+          positions: [-120, 120],
+          holes: { type: "through", spoilboardDepth: 5 },
+        },
+        tabs: { width: 6, thickness: 2, positions: [[0, 50]] },
+      },
     },
     machine,
-    drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10, rotation: 0 }],
     geometry: [square, circle],
     models: [],
     fonts: [],

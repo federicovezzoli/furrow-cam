@@ -15,3 +15,11 @@ export function addFont(store: DocumentStore, font: ProjectFont): boolean {
   });
   return true;
 }
+
+/** Says whether uploaded font `sha256` is single-stroke, as one undo step; nothing if it already says so. */
+export function setFontSingleStroke(store: DocumentStore, sha256: string, singleStroke: boolean) {
+  store.getState().change("setFont.singleStroke", (draft) => {
+    const font = draft.fonts.find((listed) => listed.sha256 === sha256);
+    if (font && font.singleStroke !== singleStroke) font.singleStroke = singleStroke;
+  });
+}

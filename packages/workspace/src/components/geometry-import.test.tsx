@@ -13,7 +13,7 @@ describe("ImportDrawingButton", () => {
     const host = createMemoryHost({
       document: {
         ...createProjectDocument(),
-        drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
+        drawings: [{ id: DRAWING_ID, name: "", border: 10, rotation: 0 }],
         geometry: [
           {
             id: "4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b",

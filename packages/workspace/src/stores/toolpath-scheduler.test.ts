@@ -213,7 +213,10 @@ describe("scheduleToolpaths", () => {
     const bottom = { ...reliefFinish, stockSide: "bottom" as const };
     const { documents, requests, schedule } = setup({
       ...document,
-      stock: { ...document.stock, twoSided: { flipAxis: "x", partingDepth: 9 } },
+      stock: {
+        ...document.stock,
+        twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null },
+      },
       models: [model],
       operations: [bottom],
     });
@@ -237,6 +240,15 @@ describe("scheduleToolpaths", () => {
     });
     expect(requests).toHaveLength(3);
     expect(requests[2]?.input.flip).toMatchObject({ axis: "y" });
+    answer();
+    // The holding tabs alone (#357).
+    documents.getState().change("Tabs", (draft) => {
+      if (draft.stock.twoSided) {
+        draft.stock.twoSided.tabs = { width: 6, thickness: 2, positions: [[0, 0]] };
+      }
+    });
+    expect(requests).toHaveLength(4);
+    expect(requests[3]?.input.tabs).toHaveLength(1);
   });
 
   it("recomputes a rest operation when an enabled operation before it changes", () => {

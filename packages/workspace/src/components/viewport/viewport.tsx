@@ -1,6 +1,7 @@
 "use client";
 
 import { stockBox, xyOriginPosition } from "@furrow/cam-core";
+import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { Canvas, useThree } from "@react-three/fiber";
@@ -37,10 +38,12 @@ export function Viewport() {
   const editingTabs = useWorkspaceStore((s) => s.editingTabs);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
   const simulating = useWorkspaceStore((s) => s.simulating);
+  const side = useWorkspaceStore((s) => s.side);
   // Known once the renderer is up, inside the canvas.
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const simulation = useSimulation(
     simulating && maxTextureSize !== null ? heightmapCellLimit(maxTextureSize) : null,
+    side,
   );
   const modelPreviews = useModelPreviews();
   const overPath = useWorkspaceStore((s) => s.hovered !== null);
@@ -68,7 +71,12 @@ export function Viewport() {
       ? simulation.heightmap
       : null;
   const t = useTranslations("Viewport");
-  const status = simulating ? simulationStatus(t, simulation) : [];
+  const status = [
+    ...(side === "bottom" ? [t("bottomSideHint")] : []),
+    // The top side is simulated as it is cut, before the stock is turned over.
+    ...(simulating && side === "top" && stock.twoSided ? [t("topSideSimulationHint")] : []),
+    ...(simulating ? simulationStatus(t, simulation) : []),
+  ];
 
   return (
     <div
@@ -179,6 +187,7 @@ function ViewToolbar({ view, onFit }: { view: ViewMode; onFit: () => void }) {
   return (
     <div className="absolute top-2 left-2 flex items-center gap-2">
       <ViewButtons view={view} onFit={onFit} />
+      <SideButtons />
       <CutToolbar />
     </div>
   );
@@ -212,6 +221,31 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
       >
         <ScanIcon />
       </Button>
+    </div>
+  );
+}
+
+/** In a two-sided project, which side the viewport shows (ADR-0060). */
+export function SideButtons() {
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const side = useWorkspaceStore((s) => s.side);
+  const setSide = useWorkspaceStore((s) => s.setSide);
+  const t = useTranslations("Viewport");
+  if (!twoSided) return null;
+  return (
+    <div role="toolbar" aria-label={t("side")} className={TOOLBAR_GROUP}>
+      {StockSide.options.map((value) => (
+        <Button
+          key={value}
+          variant={side === value ? "secondary" : "ghost"}
+          size="compact"
+          aria-pressed={side === value}
+          title={t(`sideHints.${value}`)}
+          onClick={() => setSide(value)}
+        >
+          {t(`sides.${value}`)}
+        </Button>
+      ))}
     </div>
   );
 }

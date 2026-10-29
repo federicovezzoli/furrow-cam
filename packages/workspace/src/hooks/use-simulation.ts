@@ -1,8 +1,9 @@
 "use client";
 
 import type { Heightmap } from "@furrow/cam-core";
+import type { StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -29,19 +30,23 @@ const EMPTY: Result = { heightmap: null, stock: null, error: null };
  * The open project's stock as simulated after cutting (ADR-0019), from the
  * toolpaths of its enabled operations, computed in a Web Worker while
  * `maxCells` is set (ADR-0004) and redone whenever they change. `maxCells`
- * caps the heightmap at what the viewport's renderer can draw. Derived data:
+ * caps the heightmap at what the viewport's renderer can draw; `side` is the
+ * side of a two-sided project it shows (ADR-0060). Derived data:
  * it lives here, never in the document.
  *
  * While toolpaths recompute or a new simulation runs, `heightmap` keeps the
  * last one and `pending` is true. `skipped` names the enabled operations left
  * out because their toolpath failed.
  */
-export function useSimulation(maxCells: number | null) {
+export function useSimulation(maxCells: number | null, side: StockSide = "top") {
   const documents = useDocumentStoreApi();
   const toolpaths = useToolpathStoreApi();
   const [result, setResult] = useState<Result>(EMPTY);
   const [sentKey, setSentKey] = useState<string | null>(null);
   const [receivedKey, setReceivedKey] = useState<string | null>(null);
+  const schedule = useRef<ReturnType<typeof scheduleSimulation> | null>(null);
+  // The side simulated; a new one goes through `setSide`, keeping the worker.
+  const shownSide = useRef(side);
   const operations = useDocumentStore((s) => s.document.operations);
   const entries = useToolpathStore((s) => s.entries);
   const skipped = useMemo(
@@ -64,15 +69,15 @@ export function useSimulation(maxCells: number | null) {
           type: "module",
         }),
       {
-        onMessage: (response) => schedule.receive(response),
-        onFail: (error) => schedule.fail(error),
+        onMessage: (response) => scheduler.receive(response),
+        onFail: (error) => scheduler.fail(error),
         failures: {
           stopped: "The simulation worker stopped",
           unreadable: "The simulation couldn't be read from the worker",
         },
       },
     );
-    const schedule = scheduleSimulation(
+    const scheduler = scheduleSimulation(
       documents,
       toolpaths,
       (request) => {
@@ -88,9 +93,12 @@ export function useSimulation(maxCells: number | null) {
         );
       },
       maxCells,
+      shownSide.current,
     );
+    schedule.current = scheduler;
     return () => {
-      schedule.stop();
+      schedule.current = null;
+      scheduler.stop();
       worker.terminate();
       // Turned on again, it simulates afresh rather than showing an old stock.
       setResult(EMPTY);
@@ -98,6 +106,16 @@ export function useSimulation(maxCells: number | null) {
       setReceivedKey(null);
     };
   }, [maxCells, documents, toolpaths]);
+
+  useEffect(() => {
+    if (side === shownSide.current) return;
+    shownSide.current = side;
+    // The other side's stock would show turned over until this side's arrives.
+    setResult(EMPTY);
+    setSentKey(null);
+    setReceivedKey(null);
+    schedule.current?.setSide(side);
+  }, [side]);
 
   const enabled = maxCells !== null;
   return {

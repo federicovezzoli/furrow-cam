@@ -13,7 +13,7 @@ import {
   projectFileName,
   toolProblem,
 } from "@furrow/document";
-import { grbl } from "./grbl";
+import { grbl } from "./grbl/grbl";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
@@ -127,9 +127,13 @@ export function postToolpaths(
     const fileName = `${projectFileName(name, "")}-${side}${processor.extension}`;
     return operations.length > 0 ? [{ side, operations, fileName }] : [];
   });
+  const pins = toPost.some(
+    ({ operation }) =>
+      operation.stockSide === "top" && operation.type === "drill" && operation.params.pins,
+  );
   const files = sides.map(({ side, operations, fileName }) => {
     const other = sides.some((each) => each.side !== side);
-    return post(operations, { side, other }, fileName);
+    return post(operations, { side, other, pins }, fileName);
   });
   return { files, warnings };
 }

@@ -23,13 +23,19 @@ import { Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
-import { simulationStatus, TextureLimit, TOOLBAR_GROUP, ViewButtons } from "./viewport";
+import {
+  SideButtons,
+  simulationStatus,
+  TextureLimit,
+  TOOLBAR_GROUP,
+  ViewButtons,
+} from "./viewport";
 
 /**
  * The simulator's viewport (#100, ADR-0042): the stock cut move by move as
  * the playback advances, the tool drawn where it is, the toolpaths trailing
- * behind it (unless hidden), and the timeline under the scene. Cameras and
- * views work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
+ * behind it (unless hidden), and the timeline under the scene. Cameras,
+ * views and, in a two-sided project, sides work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
 export function SimulatorViewport() {
   const view = useWorkspaceStore((s) => s.view);
@@ -39,12 +45,19 @@ export function SimulatorViewport() {
   const units = useDocumentStore((s) => s.document.units);
   const operations = useDocumentStore((s) => s.document.operations);
   const entries = useToolpathStore((s) => s.entries);
+  const { side } = playback;
+  // The bottom side is played back over the top side's cuts, so its failures count too.
   const skipped = useMemo(
     () =>
       operations
-        .filter((op) => op.enabled && entries[op.id]?.status === "error")
+        .filter(
+          (op) =>
+            op.enabled &&
+            (side === "bottom" || op.stockSide === "top") &&
+            entries[op.id]?.status === "error",
+        )
         .map((op) => op.name),
-    [operations, entries],
+    [operations, entries, side],
   );
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
@@ -64,10 +77,15 @@ export function SimulatorViewport() {
       ? playback.heightmap
       : null;
   const t = useTranslations("Viewport");
-  const status = simulationStatus(t, { ...playback, skipped });
+  const status = [
+    ...(side === "bottom" ? [t("bottomSideHint")] : []),
+    // The top side is played back as it is cut, before the stock is turned over.
+    ...(side === "top" && stock.twoSided ? [t("topSideSimulationHint")] : []),
+    ...simulationStatus(t, { ...playback, skipped }),
+  ];
   const { store, path, parts } = playback;
   const scene = useMemo(() => path && { store, path, parts }, [store, path, parts]);
-  const nothing = !operations.some((op) => op.enabled);
+  const nothing = !operations.some((op) => op.enabled && op.stockSide === side);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -92,6 +110,7 @@ export function SimulatorViewport() {
         </Canvas>
         <div className="absolute top-2 left-2 flex items-center gap-2">
           <ViewButtons view={view} onFit={() => setFits((n) => n + 1)} />
+          <SideButtons />
           <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
             <Button
               variant={showToolpaths ? "secondary" : "ghost"}

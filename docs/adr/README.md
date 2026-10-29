@@ -51,8 +51,8 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Proposed |
 | [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Proposed |
 | [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Proposed |
-| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed |
-| [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed |
+| [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed; superseded in part by ADR-0065 |
+| [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed; superseded in part by ADR-0064 |
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Proposed |
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Proposed |
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
@@ -74,6 +74,10 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0057](0057-server-results-carry-message-keys.md) | What the server returns to the browser carries message keys, not text | Proposed |
 | [0058](0058-step-over-per-operation.md) | Each operation sets its own step-over; tools have none | Proposed |
 | [0059](0059-text-items-are-drawings-with-settings.md) | A text item is a drawing that keeps its settings and stores its outlines as one shape | Proposed |
-| [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Proposed |
+| [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Proposed; superseded in part by ADR-0063 |
 | [0061](0061-fonts-parsed-with-opentype-js.md) | Fonts are parsed and laid out with opentype.js, behind one adapter | Proposed |
 | [0062](0062-uploaded-fonts-are-project-assets.md) | Uploaded fonts are project assets, listed in the document like models | Proposed |
+| [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Proposed |
+| [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Proposed |
+| [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Proposed |
+| [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |

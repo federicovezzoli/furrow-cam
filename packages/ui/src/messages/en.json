@@ -511,7 +511,9 @@
       "unknownFont": "The text uses a font the project doesn't hold",
       "tooManyFonts": "A project holds at most {max} fonts",
       "unknownShape": "Unknown shape id",
-      "unknownPath": "Unknown path"
+      "unknownPath": "Unknown path",
+      "pinHolesThrough": "Blind pin holes must end inside the stock",
+      "tabsThickerThanSide": "Holding tabs must be thinner than the bottom side's depth"
     },
     "operation": {
       "pathIndices": "Path indices must be ascending, each once",
@@ -523,7 +525,8 @@
       "onlyVBitsVCarve": "Only V-bits V-carve",
       "modelNotShapes": "Machines a model, not shapes",
       "peelStart": "Peeling starts from the centre or the outer wall",
-      "drillsCantCutSideways": "Drill bits can't cut sideways: pick an end mill or a V-bit."
+      "drillsCantCutSideways": "Drill bits can't cut sideways: pick an end mill or a V-bit.",
+      "pinsTopOnly": "Only a top-side drill with no shapes can drill the locating pins"
     },
     "archive": {
       "notAProject": "This file isn't a Furrow CAM project.",
@@ -633,6 +636,7 @@
       "flatAreasNarrow": "Some flat areas are too narrow for the flat-bottom tool and stay uncut.",
       "engraveConeWide": "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
       "pathsTooSmall": "The closed paths are too small for the tool.",
+      "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
       "tabsLeftOut": "Left out {count, plural, one {# tab} other {# tabs}} too far from every closed contour.",
       "leadInMisfits": "The lead-in didn't fit {count, plural, one {# contour} other {# contours}} and was shortened or left out.",
@@ -644,8 +648,12 @@
       "coarsened": "The model is too large to machine at full resolution with this tool: it is cut with cells of {size, number} mm instead of {wanted, number} mm.",
       "restCoarsened": "The area is too large to simulate the stock left at full resolution: it is simulated with cells of {size, number} mm, so material narrower than {width, number} mm the operations before left may be cut at full depth.",
       "roughNothing": "The stock to leave covers the whole model: there is nothing to rough out.",
-      "roughMarginOffStock": "The margin around the model isn't on the stock: there is nothing to rough out.",
-      "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left."
+      "marginOffStock": "The margin around the model isn't on the stock: there is nothing to machine.",
+      "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
+      "noLocatingPins": "The project has no locating pins to drill.",
+      "pinsOffStock": "A locating pin is off the stock.",
+      "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
+      "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },
     "export": {
       "noEnabled": "There are no enabled operations to export.",
@@ -725,6 +733,8 @@
       "unknownFont": "The font “{font}” isn't available in this version of the app.",
       "textLayoutFailed": "The text couldn't be laid out. Try again.",
       "fontUnavailable": "This font couldn't be loaded. Check your connection and try again.",
+      "fontRemoved": "This font is no longer in the project.",
+      "fontUploadFailed": "The font couldn't be uploaded. Pick it again and try once more.",
       "fontUnreadable": "This file isn't a font that can be read: use a TTF, OTF or WOFF file.",
       "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
       "tooManyFonts": "A project holds at most {max} fonts.",
@@ -771,6 +781,12 @@
       "margin": "Clears a frame this wide around the model's outline (at least the tool's radius), keeping the tool inside it: the stock top beyond is left for zeroing Z after a tool change.",
       "stock": "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom."
     },
+    "finishBoundaryHints": {
+      "model": "The tool's centre reaches the edges of the model's outline.",
+      "margin": "Also finishes a frame this wide around the model's outline (at least the tool's radius) down to the model's bottom, or the parting plane on a two-sided project, keeping the tool inside it, like roughing with the same margin.",
+      "stock": "The tool's centre reaches the edges of the stock: everything around the model is finished down to its bottom, or the parting plane on a two-sided project."
+    },
+    "finishBoundaryWaterline": "Waterline contours follow the model's walls and stay on its outline: the margin and the whole stock only apply to parallel and spiral passes.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Waterline",
@@ -852,6 +868,7 @@
     "stepOver": "Step-over",
     "stockToLeave": "Stock to leave",
     "clear": "Clear",
+    "cover": "Cover",
     "margin": "Margin",
     "rest": "Only cut remaining material",
     "restHint": "Skips what the enabled operations above this one already cut, so a smaller tool only works where the last one couldn't reach.",
@@ -879,7 +896,10 @@
     "computeAgain": "Compute again",
     "cancelled": "Cancelled before it finished.",
     "failed": "The toolpath couldn't be computed: {error}",
-    "warnings": "Toolpath warnings"
+    "warnings": "Toolpath warnings",
+    "usePins": "Use pins",
+    "locatingPins": "The locating pins",
+    "pinDepth": "As deep as the pin settings say: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# selected shape} other {# selected shapes}}",
@@ -913,7 +933,7 @@
     "selectModel": "Select a model in the viewport first",
     "selectPaths": "Select paths in the viewport first",
     "addLabel": "Add {operation}",
-    "selectHint": "Click paths in the top view to select what to cut; Ctrl/Cmd/Shift+click to select more.",
+    "selectHint": "Click paths in the top view to select what to cut; Shift+click to add more.",
     "addToolLibrary": "Add a tool to your <link>tool library</link> to create operations.",
     "inCuttingOrder": "Operations in cutting order",
     "selectInsideTitle": "Also select the closed paths inside the selected ones, such as a pocket's islands",
@@ -936,7 +956,15 @@
     "cancelled": "Toolpath cancelled",
     "cancelledDetail": "Cancelled before it finished.",
     "failed": "Toolpath failed: {error}",
-    "warnings": "Toolpath warnings: {warnings}"
+    "warnings": "Toolpath warnings: {warnings}",
+    "sides": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "sideHints": {
+      "top": "Cut on the top side, first",
+      "bottom": "Cut on the bottom side, once the stock is turned over"
+    }
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
@@ -1178,6 +1206,12 @@
     "pickHint": "Click a point in the viewport; it snaps to stock anchors, vertices, centres and bounding boxes nearby. Esc or right-click cancels.",
     "touchOff": "Touch-off pad",
     "touchOffHint": "A spot of the stock top no operation cuts, so Z can be zeroed on it after a tool change.",
+    "twoSided": "Two-sided",
+    "twoSidedHint": "Cut the stock from the top, turn it over, and cut it from below.",
+    "flipAxis": "Turned over about",
+    "partingDepth": "Parting depth",
+    "partingDepthHint": "Below the stock top, where the two sides meet around the models: each side cuts down to it there, and all of the model it can see.",
+    "twoSidedOff": "{count, plural, one {# operation is} other {# operations are}} on the bottom side. Turning two-sided off moves {count, plural, one {it} other {them}} to the top side.",
     "padAxis": "Pad {axis}",
     "padDiameter": "Pad diameter",
     "padTooWide": "Must fit on the stock: at most {size}",
@@ -1185,7 +1219,39 @@
     "padOff": "Part of the pad is off the stock, so there may be nothing to zero Z on there.",
     "padToolChange": "Tool change on the pad",
     "padToolChangeHint": "Runs at each tool change.",
-    "reset": "Reset"
+    "reset": "Reset",
+    "pins": "Locating pins",
+    "pinsHint": "Pins on the flip axis line the turned-over stock up with the top side.",
+    "pinDiameter": "Pin diameter",
+    "pinPosition": "Pin {n}",
+    "pinPositionHint": "Each pin's distance along the flip axis from the stock's centre.",
+    "addPin": "Add pin",
+    "removePin": "Remove pin",
+    "pinHoles": "Holes",
+    "pinHoleTypes": {
+      "through": "Through, into the spoilboard",
+      "blind": "Into the stock only"
+    },
+    "spoilboardDepth": "Into the spoilboard",
+    "pinHoleDepth": "Hole depth",
+    "pinOff": "A pin is off the stock.",
+    "addPinDrill": "Drill the pins",
+    "pinDrill": "Locating pins",
+    "noPinBit": "Add a drill bit of the pins' size, or a smaller end mill, to drill them.",
+    "lineUp": "Lined up on",
+    "lineUpNone": "Nothing",
+    "edges": "A fence corner",
+    "edgeCorner": "Corner",
+    "edgesHint": "Push this corner of the stock into a fence corner for both sides. The sides only meet if the stock is exactly {size} along {axis}: measure it.",
+    "idlePinDrills": "{count, plural, one {# drill of the pins cuts} other {# drills of the pins cut}} nothing without pins.",
+    "holdingTabs": "Holding tabs",
+    "holdingTabsHint": "Strips of stock the bottom side leaves at the parting depth, so the part stays held until the last pass. Drag them along the models' outlines in the top view.",
+    "holdingTabWidth": "Tab width",
+    "holdingTabThickness": "Tab thickness",
+    "holdingTabTooThick": "Must be thinner than the bottom side's depth: less than {size}",
+    "holdingTabsPerModel": "Tabs per model",
+    "placeHoldingTabs": "Place",
+    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}"
   },
   "Model": {
     "closeLabel": "Close model properties",
@@ -1229,8 +1295,6 @@
     "rotateLeft": "Turn 90° counter-clockwise",
     "rotateRight": "Turn 90° clockwise",
     "angle": "Angle",
-    "rotate": "Rotate",
-    "rotateTitle": "Turn the drawing by the angle, counter-clockwise; a negative angle turns it clockwise",
     "position": "Position",
     "positionHint": "Where the drawing's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Drag the drawing in the top view to move it too.",
     "offStock": "Part of the drawing lies outside the stock.",
@@ -1319,7 +1383,18 @@
     "nextTitle": "Forward to the next operation",
     "position": "Position along the toolpaths",
     "jumpTo": "Jump to {name}",
-    "speed": "Playback speed"
+    "speed": "Playback speed",
+    "side": "Side",
+    "sides": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "sideHints": {
+      "top": "Show the top side, cut first",
+      "bottom": "Show the bottom side, seen from below once the stock is turned over"
+    },
+    "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side.",
+    "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts."
   },
   "Dialog": {
     "close": "Close",

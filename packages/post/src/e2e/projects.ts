@@ -74,7 +74,7 @@ function withShapes(doc: ProjectDocument, shapes: Shape[]): ProjectDocument {
   return {
     ...doc,
     drawings: first
-      ? [{ id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER }]
+      ? [{ id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER, rotation: 0 }]
       : [],
     geometry: alignShapes(doc.stock, shapes, anchor === "custom" ? "bottom_left" : anchor),
   };
@@ -164,7 +164,7 @@ function plate(): ProjectDocument {
       },
       shapeoko,
     ),
-    drawings: [{ id: DRAWING_ID, name: "Plate", border: DRAWING_BORDER }],
+    drawings: [{ id: DRAWING_ID, name: "Plate", border: DRAWING_BORDER, rotation: 0 }],
     geometry: [outline, holes, recess],
     operations: [
       {
@@ -175,7 +175,7 @@ function plate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40 },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false },
       },
       {
         id: id(),
@@ -186,6 +186,7 @@ function plate(): ProjectDocument {
         targets: [{ shapeId: recess.id, paths: null }],
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "offset" },
           direction: "climb",
           stepOver: 40,
@@ -255,6 +256,7 @@ function svgPart(): ProjectDocument {
         targets: targets(doc, byLayer("Pocket")),
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "linear", angle: 45 },
           direction: "conventional",
           stepOver: 40,
@@ -348,7 +350,7 @@ function svgSign(): ProjectDocument {
         targets: targets(doc, byName("Hole A")),
         // An end mill smaller than the hole bores it in a helix.
         tool: endMill,
-        params: { depth: 10, peck: false, stepOver: 40 },
+        params: { depth: 10, peck: false, stepOver: 40, pins: false },
       },
     ],
   };
@@ -404,6 +406,7 @@ function inchPanel(): ProjectDocument {
         targets: targets(doc, (shape) => shape.name === "Window" || shape.name === "Knob"),
         tool: endMill,
         params: {
+          side: "inside",
           strategy: { type: "peel", start: "inside" },
           direction: "climb",
           stepOver: 40,
@@ -485,6 +488,7 @@ function relief(): { document: ProjectDocument; context: ToolpathContext } {
       strategy: { type: "parallel", angle: 45, direction: "zigzag" },
       stepOver: 50,
       stockToLeave: 0,
+      boundary: { type: "model" },
       rest,
     },
   });
@@ -669,7 +673,7 @@ function strutPlate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: plates.id, paths: holes }],
         tool: spiral3,
-        params: { depth: 5, peck: false, stepOver: 75 },
+        params: { depth: 5, peck: false, stepOver: 75, pins: false },
       },
       outsideProfile(id, "Plate", [{ shapeId: plates.id, paths: [0] }], spiral6, 5, null),
     ],
@@ -708,6 +712,7 @@ function pcShelf(): ProjectDocument {
     targets: targets(doc, byName(shape)),
     tool,
     params: {
+      side: "inside",
       strategy: { type: "linear", angle: 90 },
       direction: "climb",
       stepOver: 75,

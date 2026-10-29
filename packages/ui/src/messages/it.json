@@ -511,7 +511,9 @@
       "unknownFont": "Il testo usa un font che il progetto non contiene",
       "tooManyFonts": "Un progetto contiene al massimo {max} font",
       "unknownShape": "Id di forma sconosciuto",
-      "unknownPath": "Percorso sconosciuto"
+      "unknownPath": "Percorso sconosciuto",
+      "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo",
+      "tabsThickerThanSide": "I ponticelli devono essere più sottili della profondità del lato inferiore"
     },
     "operation": {
       "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
@@ -523,7 +525,8 @@
       "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
       "modelNotShapes": "Lavora un modello, non forme",
       "peelStart": "La spirale parte dal centro o dalla parete esterna",
-      "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V."
+      "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V.",
+      "pinsTopOnly": "Solo una foratura sul lato superiore, senza forme, può forare i perni di riferimento"
     },
     "archive": {
       "notAProject": "Questo file non è un progetto Furrow CAM.",
@@ -633,6 +636,7 @@
       "flatAreasNarrow": "Alcune zone piatte sono troppo strette per la fresa del fondo piatto e restano non lavorate.",
       "engraveConeWide": "La profondità supera il cono della fresa a V, quindi la linea è larga quanto la fresa.",
       "pathsTooSmall": "I percorsi chiusi sono troppo piccoli per l'utensile.",
+      "nothingOutside": "I percorsi chiusi non lasciano grezzo da svuotare all'esterno.",
       "tabsTooTall": "I ponticelli sono alti quanto la profondità del taglio, quindi sotto di essi non si taglia nulla.",
       "tabsLeftOut": "{count, plural, one {Escluso # ponticello troppo lontano} other {Esclusi # ponticelli troppo lontani}} da ogni contorno chiuso.",
       "leadInMisfits": "L'attacco non entrava in {count, plural, one {# contorno} other {# contorni}} ed è stato accorciato o omesso.",
@@ -644,8 +648,12 @@
       "coarsened": "Il modello è troppo grande da lavorare alla risoluzione piena con questo utensile: viene tagliato con celle di {size, number} mm invece di {wanted, number} mm.",
       "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size, number} mm, quindi il materiale più stretto di {width, number} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
       "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
-      "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
-      "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto."
+      "marginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da lavorare.",
+      "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
+      "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
+      "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
+      "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
     "export": {
       "noEnabled": "Non ci sono operazioni attive da esportare.",
@@ -725,6 +733,8 @@
       "unknownFont": "Il font “{font}” non è disponibile in questa versione dell'app.",
       "textLayoutFailed": "Non è stato possibile comporre il testo. Riprova.",
       "fontUnavailable": "Non è stato possibile caricare questo font. Controlla la connessione e riprova.",
+      "fontRemoved": "Questo font non è più nel progetto.",
+      "fontUploadFailed": "Non è stato possibile caricare il font. Sceglilo di nuovo e riprova.",
       "fontUnreadable": "Questo file non è un font leggibile: usa un file TTF, OTF o WOFF.",
       "fontTooLarge": "Questo font supera {mb, number} MB, il massimo consentito.",
       "tooManyFonts": "Un progetto contiene al massimo {max} font.",
@@ -771,6 +781,12 @@
       "margin": "Svuota una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell’utensile), tenendovi dentro l’utensile: la superficie del grezzo oltre resta per azzerare Z dopo un cambio utensile.",
       "stock": "Il centro dell’utensile arriva ai bordi del grezzo: tutto attorno al modello viene svuotato fino al fondo."
     },
+    "finishBoundaryHints": {
+      "model": "Il centro dell'utensile raggiunge i bordi del contorno del modello.",
+      "margin": "Rifinisce anche una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell'utensile) fino al fondo del modello, o al piano di separazione in un progetto a due lati, tenendo l'utensile al suo interno, come la sgrossatura con lo stesso margine.",
+      "stock": "Il centro dell'utensile raggiunge i bordi del grezzo: tutto attorno al modello viene rifinito fino al suo fondo, o al piano di separazione in un progetto a due lati."
+    },
+    "finishBoundaryWaterline": "I contorni a Z costante seguono le pareti del modello e restano sul suo contorno: il margine e tutto il grezzo valgono solo per le passate parallele e a spirale.",
     "finishing": {
       "parallel": "Parallela",
       "waterline": "Curve di livello",
@@ -852,6 +868,7 @@
     "stepOver": "Sovrapposizione",
     "stockToLeave": "Sovrametallo da lasciare",
     "clear": "Svuota",
+    "cover": "Copri",
     "margin": "Margine",
     "rest": "Taglia solo il materiale rimasto",
     "restHint": "Salta quello che le operazioni attive sopra questa hanno già tagliato, così un utensile più piccolo lavora solo dove il precedente non arrivava.",
@@ -879,7 +896,10 @@
     "computeAgain": "Calcola di nuovo",
     "cancelled": "Annullato prima della fine.",
     "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
-    "warnings": "Avvisi del percorso utensile"
+    "warnings": "Avvisi del percorso utensile",
+    "usePins": "Usa i perni",
+    "locatingPins": "I perni di riferimento",
+    "pinDepth": "Profondo quanto dicono le impostazioni dei perni: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# forma selezionata} other {# forme selezionate}}",
@@ -913,7 +933,7 @@
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
     "addLabel": "Aggiungi {operation}",
-    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Ctrl/Cmd/Maiusc+clic per selezionarne altri.",
+    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Maiusc+clic per aggiungerne altri.",
     "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
     "inCuttingOrder": "Operazioni in ordine di taglio",
     "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
@@ -936,7 +956,15 @@
     "cancelled": "Percorso utensile annullato",
     "cancelledDetail": "Annullato prima della fine.",
     "failed": "Percorso utensile non riuscito: {error}",
-    "warnings": "Avvisi del percorso utensile: {warnings}"
+    "warnings": "Avvisi del percorso utensile: {warnings}",
+    "sides": {
+      "top": "Sopra",
+      "bottom": "Sotto"
+    },
+    "sideHints": {
+      "top": "Lavorata sul lato superiore, per prima",
+      "bottom": "Lavorata sul lato inferiore, una volta girato il grezzo"
+    }
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -1178,6 +1206,12 @@
     "pickHint": "Clicca un punto nella vista; si aggancia ai punti del grezzo, ai vertici, ai centri e ai riquadri vicini. Esc o clic destro annulla.",
     "touchOff": "Tampone di azzeramento",
     "touchOffHint": "Un punto della superficie del grezzo che nessuna operazione taglia, così Z può essere azzerata lì dopo un cambio utensile.",
+    "twoSided": "Due lati",
+    "twoSidedHint": "Lavora il grezzo dall'alto, giralo e lavoralo da sotto.",
+    "flipAxis": "Girato attorno a",
+    "partingDepth": "Profondità di separazione",
+    "partingDepthHint": "Sotto la superficie del grezzo, dove i due lati si incontrano attorno ai modelli: lì ogni lato taglia fin lì, e tutto ciò che vede del modello.",
+    "twoSidedOff": "{count, plural, one {# operazione è} other {# operazioni sono}} sul lato inferiore. Disattivando i due lati, {count, plural, one {passa} other {passano}} sul lato superiore.",
     "padAxis": "Tampone {axis}",
     "padDiameter": "Diametro del tampone",
     "padTooWide": "Deve stare sul grezzo: al massimo {size}",
@@ -1185,7 +1219,39 @@
     "padOff": "Una parte del tampone è fuori dal grezzo, quindi lì potrebbe non esserci niente su cui azzerare Z.",
     "padToolChange": "Cambio utensile sul tampone",
     "padToolChangeHint": "Viene eseguito a ogni cambio utensile.",
-    "reset": "Ripristina"
+    "reset": "Ripristina",
+    "pins": "Perni di riferimento",
+    "pinsHint": "Perni sull'asse di ribaltamento allineano il grezzo ribaltato al lato superiore.",
+    "pinDiameter": "Diametro dei perni",
+    "pinPosition": "Perno {n}",
+    "pinPositionHint": "La distanza di ogni perno dal centro del grezzo, lungo l'asse di ribaltamento.",
+    "addPin": "Aggiungi perno",
+    "removePin": "Rimuovi perno",
+    "pinHoles": "Fori",
+    "pinHoleTypes": {
+      "through": "Passanti, fino nel piano sacrificale",
+      "blind": "Solo nel grezzo"
+    },
+    "spoilboardDepth": "Nel piano sacrificale",
+    "pinHoleDepth": "Profondità dei fori",
+    "pinOff": "Un perno è fuori dal grezzo.",
+    "addPinDrill": "Fora i perni",
+    "pinDrill": "Perni di riferimento",
+    "noPinBit": "Aggiungi una punta della misura dei perni, o una fresa più piccola, per forarli.",
+    "lineUp": "Allineato su",
+    "lineUpNone": "Niente",
+    "edges": "Un angolo di battuta",
+    "edgeCorner": "Angolo",
+    "edgesHint": "Spingi questo angolo del grezzo in un angolo di battuta per entrambi i lati. I lati combaciano solo se il grezzo misura esattamente {size} lungo {axis}: misuralo.",
+    "idlePinDrills": "{count, plural, one {# foratura dei perni non fora} other {# forature dei perni non forano}} nulla senza perni.",
+    "holdingTabs": "Ponticelli",
+    "holdingTabsHint": "Strisce di grezzo che il lato inferiore lascia alla profondità di separazione, così il pezzo resta fermo fino all'ultima passata. Trascinali lungo i contorni dei modelli nella vista dall'alto.",
+    "holdingTabWidth": "Larghezza ponticelli",
+    "holdingTabThickness": "Spessore ponticelli",
+    "holdingTabTooThick": "Deve essere più sottile della profondità del lato inferiore: meno di {size}",
+    "holdingTabsPerModel": "Ponticelli per modello",
+    "placeHoldingTabs": "Posiziona",
+    "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}"
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",
@@ -1229,8 +1295,6 @@
     "rotateLeft": "Ruota di 90° in senso antiorario",
     "rotateRight": "Ruota di 90° in senso orario",
     "angle": "Angolo",
-    "rotate": "Ruota",
-    "rotateTitle": "Ruota il disegno dell’angolo indicato, in senso antiorario; un angolo negativo lo ruota in senso orario",
     "position": "Posizione",
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del disegno, misurato dallo zero. Puoi anche trascinare il disegno nella vista dall’alto.",
     "offStock": "Una parte del disegno è fuori dal grezzo.",
@@ -1319,7 +1383,18 @@
     "nextTitle": "Vai all’operazione successiva",
     "position": "Posizione lungo i percorsi utensile",
     "jumpTo": "Vai a {name}",
-    "speed": "Velocità di riproduzione"
+    "speed": "Velocità di riproduzione",
+    "side": "Lato",
+    "sides": {
+      "top": "Sopra",
+      "bottom": "Sotto"
+    },
+    "sideHints": {
+      "top": "Mostra il lato superiore, lavorato per primo",
+      "bottom": "Mostra il lato inferiore, visto da sotto una volta girato il grezzo"
+    },
+    "bottomSideHint": "Lato inferiore, visto da sotto. Scegli lo zero, seleziona i percorsi e modifica i ponticelli sul lato superiore.",
+    "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore."
   },
   "Dialog": {
     "close": "Chiudi",

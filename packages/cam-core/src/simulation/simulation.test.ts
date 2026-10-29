@@ -6,9 +6,11 @@ import { toolpathLines } from "./preview";
 import {
   type CutterShape,
   cutterProfile,
+  flipHeightmap,
   type Heightmap,
   type HeightmapGrid,
   heightmapGrid,
+  joinSides,
   MAX_HEIGHTMAP_CELLS,
   type SimulationCut,
   simulateCuts,
@@ -297,5 +299,34 @@ describe("simulateCuts", () => {
   it("ignores moves above the stock", () => {
     const map = simulateCuts(stock, [moves(flat, [10, 10, 5], [100, 50, 0])], grid);
     expect(map.heights.every((h) => h === 0)).toBe(true);
+  });
+});
+
+describe("flipHeightmap", () => {
+  // 3 × 2 cells: one cut through, one cut 5 mm deep, the rest uncut.
+  const heightmap = {
+    columns: 3,
+    rows: 2,
+    cellWidth: 1,
+    cellHeight: 1,
+    heights: new Float32Array([-18, -5, 0, 0, 0, 0]),
+  };
+
+  it("mirrors the heights about X: rows swap", () => {
+    expect([...flipHeightmap(heightmap, "x")]).toEqual([0, 0, 0, -18, -5, 0]);
+  });
+
+  it("mirrors the heights about Y: columns swap", () => {
+    expect([...flipHeightmap(heightmap, "y")]).toEqual([0, -5, -18, 0, 0, 0]);
+  });
+});
+
+describe("joinSides", () => {
+  it("cuts through where the two sides' cuts together reach through the stock", () => {
+    // In 18 mm stock: 6 mm from the top and 12 mm from below meet; 6 and 6 don't.
+    const bottom = new Float32Array([-12, -6, 0, -3]);
+    const top = new Float32Array([-6, -6, -18, 0]);
+    joinSides(bottom, top, 18);
+    expect([...bottom]).toEqual([-18, -6, -18, -3]);
   });
 });

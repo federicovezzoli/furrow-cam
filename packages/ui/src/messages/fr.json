@@ -511,7 +511,9 @@
       "unknownFont": "Le texte utilise une police que le projet ne contient pas",
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
-      "unknownPath": "Tracé inconnu"
+      "unknownPath": "Tracé inconnu",
+      "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut",
+      "tabsThickerThanSide": "Les attaches doivent être plus fines que la profondeur de la face du dessous"
     },
     "operation": {
       "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
@@ -523,7 +525,8 @@
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",
       "modelNotShapes": "Usine un modèle, pas des formes",
       "peelStart": "L'usinage en spirale part du centre ou de la paroi extérieure",
-      "drillsCantCutSideways": "Les forets ne coupent pas latéralement : choisissez une fraise droite ou une fraise en V."
+      "drillsCantCutSideways": "Les forets ne coupent pas latéralement : choisissez une fraise droite ou une fraise en V.",
+      "pinsTopOnly": "Seul un perçage de la face du dessus, sans formes, peut percer les pions de centrage"
     },
     "archive": {
       "notAProject": "Ce fichier n'est pas un projet Furrow CAM.",
@@ -633,6 +636,7 @@
       "flatAreasNarrow": "Certaines zones plates sont trop étroites pour la fraise du fond plat et restent non usinées.",
       "engraveConeWide": "La profondeur dépasse le cône de la fraise en V, donc la ligne est aussi large que la fraise.",
       "pathsTooSmall": "Les tracés fermés sont trop petits pour l'outil.",
+      "nothingOutside": "Les tracés fermés ne laissent aucun brut à évider à l'extérieur.",
       "tabsTooTall": "Les attaches sont aussi hautes que la coupe est profonde, donc rien n'est coupé sous elles.",
       "tabsLeftOut": "{count, plural, one {# attache omise, trop éloignée} other {# attaches omises, trop éloignées}} de tout contour fermé.",
       "leadInMisfits": "L'entrée ne tenait pas sur {count, plural, one {# contour} other {# contours}} et a été raccourcie ou omise.",
@@ -644,8 +648,12 @@
       "coarsened": "Le modèle est trop grand pour être usiné à pleine résolution avec cet outil : il est coupé avec des cellules de {size, number} mm au lieu de {wanted, number} mm.",
       "restCoarsened": "La zone est trop grande pour simuler la matière restante à pleine résolution : elle est simulée avec des cellules de {size, number} mm, donc la matière plus étroite que {width, number} mm laissée par les opérations précédentes peut être coupée à pleine profondeur.",
       "roughNothing": "La surépaisseur à laisser couvre tout le modèle : il n'y a rien à ébaucher.",
-      "roughMarginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à ébaucher.",
-      "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante."
+      "marginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à usiner.",
+      "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
+      "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
+      "pinsOffStock": "Un pion de centrage est hors du brut.",
+      "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
+      "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
     },
     "export": {
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
@@ -725,6 +733,8 @@
       "unknownFont": "La police « {font} » n'est pas disponible dans cette version de l'application.",
       "textLayoutFailed": "Le texte n'a pas pu être composé. Réessayez.",
       "fontUnavailable": "Cette police n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+      "fontRemoved": "Cette police n'est plus dans le projet.",
+      "fontUploadFailed": "La police n'a pas pu être importée. Choisissez-la à nouveau et réessayez.",
       "fontUnreadable": "Ce fichier n'est pas une police lisible : utilisez un fichier TTF, OTF ou WOFF.",
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",
@@ -771,6 +781,12 @@
       "margin": "Dégage un cadre de cette largeur autour du contour du modèle (au moins le rayon de l’outil), en gardant l’outil à l’intérieur : le dessus du brut au-delà reste pour la mise à zéro de Z après un changement d’outil.",
       "stock": "Le centre de l’outil atteint les bords du brut : tout ce qui entoure le modèle est dégagé jusqu’au fond."
     },
+    "finishBoundaryHints": {
+      "model": "Le centre de l'outil atteint les bords du contour du modèle.",
+      "margin": "Finit aussi un cadre de cette largeur autour du contour du modèle (au moins le rayon de l'outil) jusqu'au fond du modèle, ou au plan de joint dans un projet à deux faces, en gardant l'outil à l'intérieur, comme l'ébauche avec la même marge.",
+      "stock": "Le centre de l'outil atteint les bords du brut : tout autour du modèle est fini jusqu'à son fond, ou au plan de joint dans un projet à deux faces."
+    },
+    "finishBoundaryWaterline": "Les contours à Z constant suivent les parois du modèle et restent sur son contour : la marge et tout le brut ne s'appliquent qu'aux passes parallèles et en spirale.",
     "finishing": {
       "parallel": "Parallèle",
       "waterline": "Niveaux constants",
@@ -852,6 +868,7 @@
     "stepOver": "Recouvrement",
     "stockToLeave": "Surépaisseur à laisser",
     "clear": "Dégager",
+    "cover": "Couvrir",
     "margin": "Marge",
     "rest": "Couper seulement la matière restante",
     "restHint": "Saute ce que les opérations activées au-dessus de celle-ci ont déjà coupé, pour qu’un outil plus petit ne travaille que là où le précédent n’allait pas.",
@@ -879,7 +896,10 @@
     "computeAgain": "Recalculer",
     "cancelled": "Annulé avant la fin.",
     "failed": "La trajectoire n’a pas pu être calculée : {error}",
-    "warnings": "Avertissements de la trajectoire"
+    "warnings": "Avertissements de la trajectoire",
+    "usePins": "Utiliser les pions",
+    "locatingPins": "Les pions de centrage",
+    "pinDepth": "Aussi profond que le disent les réglages des pions : {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# forme sélectionnée} other {# formes sélectionnées}}",
@@ -913,7 +933,7 @@
     "selectModel": "Sélectionnez d’abord un modèle dans la vue",
     "selectPaths": "Sélectionnez d’abord des tracés dans la vue",
     "addLabel": "Ajouter : {operation}",
-    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Ctrl/Cmd/Maj+clic pour en sélectionner d’autres.",
+    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Maj+clic pour en ajouter d’autres.",
     "addToolLibrary": "Ajoutez un outil à votre <link>bibliothèque d’outils</link> pour créer des opérations.",
     "inCuttingOrder": "Opérations dans l’ordre de coupe",
     "selectInsideTitle": "Sélectionner aussi les tracés fermés à l’intérieur de ceux sélectionnés, comme les îlots d’une poche",
@@ -936,7 +956,15 @@
     "cancelled": "Trajectoire annulée",
     "cancelledDetail": "Annulé avant la fin.",
     "failed": "Échec de la trajectoire : {error}",
-    "warnings": "Avertissements de la trajectoire : {warnings}"
+    "warnings": "Avertissements de la trajectoire : {warnings}",
+    "sides": {
+      "top": "Dessus",
+      "bottom": "Dessous"
+    },
+    "sideHints": {
+      "top": "Usinée sur la face supérieure, en premier",
+      "bottom": "Usinée sur la face inférieure, une fois le brut retourné"
+    }
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",
@@ -1178,6 +1206,12 @@
     "pickHint": "Cliquez sur un point dans la vue ; il s’accroche aux points du brut, aux sommets, aux centres et aux encombrements proches. Échap ou clic droit annule.",
     "touchOff": "Pastille de mise à zéro",
     "touchOffHint": "Un endroit du dessus du brut qu’aucune opération ne coupe, pour y remettre Z à zéro après un changement d’outil.",
+    "twoSided": "Double face",
+    "twoSidedHint": "Usiner le brut par le dessus, le retourner, puis l'usiner par le dessous.",
+    "flipAxis": "Retourné autour de",
+    "partingDepth": "Profondeur de joint",
+    "partingDepthHint": "Sous le dessus du brut, là où les deux faces se rejoignent autour des modèles : chaque face y coupe jusque-là, et tout ce qu'elle voit du modèle.",
+    "twoSidedOff": "{count, plural, one {# opération est} other {# opérations sont}} sur la face inférieure. Désactiver le double face {count, plural, one {la place} other {les place}} sur la face supérieure.",
     "padAxis": "Pastille {axis}",
     "padDiameter": "Diamètre de la pastille",
     "padTooWide": "Doit tenir sur le brut : au plus {size}",
@@ -1185,7 +1219,39 @@
     "padOff": "Une partie de la pastille dépasse du brut : il n’y a peut-être rien pour y remettre Z à zéro.",
     "padToolChange": "Changement d’outil sur la pastille",
     "padToolChangeHint": "S’exécute à chaque changement d’outil.",
-    "reset": "Réinitialiser"
+    "reset": "Réinitialiser",
+    "pins": "Pions de centrage",
+    "pinsHint": "Des pions sur l'axe de retournement alignent le brut retourné sur la face du dessus.",
+    "pinDiameter": "Diamètre des pions",
+    "pinPosition": "Pion {n}",
+    "pinPositionHint": "La distance de chaque pion au centre du brut, le long de l'axe de retournement.",
+    "addPin": "Ajouter un pion",
+    "removePin": "Retirer un pion",
+    "pinHoles": "Trous",
+    "pinHoleTypes": {
+      "through": "Traversants, jusque dans le martyr",
+      "blind": "Dans le brut seulement"
+    },
+    "spoilboardDepth": "Dans le martyr",
+    "pinHoleDepth": "Profondeur des trous",
+    "pinOff": "Un pion est hors du brut.",
+    "addPinDrill": "Percer les pions",
+    "pinDrill": "Pions de centrage",
+    "noPinBit": "Ajoutez un foret de la taille des pions, ou une fraise plus petite, pour les percer.",
+    "lineUp": "Aligné sur",
+    "lineUpNone": "Rien",
+    "edges": "Un coin de butée",
+    "edgeCorner": "Coin",
+    "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le.",
+    "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions.",
+    "holdingTabs": "Attaches",
+    "holdingTabsHint": "Bandes de brut que la face du dessous laisse à la profondeur de séparation, pour que la pièce tienne jusqu'à la dernière passe. Faites-les glisser le long des contours des modèles en vue de dessus.",
+    "holdingTabWidth": "Largeur des attaches",
+    "holdingTabThickness": "Épaisseur des attaches",
+    "holdingTabTooThick": "Doit être plus fine que la profondeur de la face du dessous : moins de {size}",
+    "holdingTabsPerModel": "Attaches par modèle",
+    "placeHoldingTabs": "Placer",
+    "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}"
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",
@@ -1229,8 +1295,6 @@
     "rotateLeft": "Tourner de 90° dans le sens antihoraire",
     "rotateRight": "Tourner de 90° dans le sens horaire",
     "angle": "Angle",
-    "rotate": "Tourner",
-    "rotateTitle": "Tourner le dessin de l’angle, dans le sens antihoraire ; un angle négatif le tourne dans le sens horaire",
     "position": "Position",
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du dessin, mesuré depuis le zéro. Vous pouvez aussi faire glisser le dessin dans la vue de dessus.",
     "offStock": "Une partie du dessin dépasse du brut.",
@@ -1319,7 +1383,18 @@
     "nextTitle": "Avancer à l’opération suivante",
     "position": "Position le long des trajectoires",
     "jumpTo": "Aller à {name}",
-    "speed": "Vitesse de lecture"
+    "speed": "Vitesse de lecture",
+    "side": "Face",
+    "sides": {
+      "top": "Dessus",
+      "bottom": "Dessous"
+    },
+    "sideHints": {
+      "top": "Afficher la face supérieure, usinée en premier",
+      "bottom": "Afficher la face inférieure, vue de dessous une fois le brut retourné"
+    },
+    "bottomSideHint": "Face inférieure, vue de dessous. Choisissez le zéro, sélectionnez les tracés et modifiez les attaches sur la face supérieure.",
+    "topSideSimulationHint": "Face supérieure seule : le brut avant retournement, sans les coupes de la face inférieure."
   },
   "Dialog": {
     "close": "Fermer",

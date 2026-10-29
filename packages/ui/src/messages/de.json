@@ -511,7 +511,9 @@
       "unknownFont": "Der Text nutzt eine Schrift, die das Projekt nicht enthält",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
-      "unknownPath": "Unbekannter Pfad"
+      "unknownPath": "Unbekannter Pfad",
+      "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden",
+      "tabsThickerThanSide": "Haltestege müssen dünner sein als die Tiefe der Unterseite"
     },
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
@@ -523,7 +525,8 @@
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
       "modelNotShapes": "Bearbeitet ein Modell, keine Formen",
       "peelStart": "Das Ausräumen in Spiralbahnen beginnt in der Mitte oder an der Außenwand",
-      "drillsCantCutSideways": "Bohrer schneiden nicht seitlich: Wähle einen Schaftfräser oder einen V-Fräser."
+      "drillsCantCutSideways": "Bohrer schneiden nicht seitlich: Wähle einen Schaftfräser oder einen V-Fräser.",
+      "pinsTopOnly": "Nur eine Bohrung auf der Oberseite ohne Formen kann die Passstifte bohren"
     },
     "archive": {
       "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
@@ -633,6 +636,7 @@
       "flatAreasNarrow": "Manche flachen Bereiche sind zu schmal für den Fräser des flachen Bodens und bleiben unbearbeitet.",
       "engraveConeWide": "Die Tiefe überschreitet den Kegel des V-Fräsers, daher ist die Linie so breit wie der Fräser.",
       "pathsTooSmall": "Die geschlossenen Pfade sind zu klein für das Werkzeug.",
+      "nothingOutside": "Die geschlossenen Pfade lassen außerhalb keinen Rohling zum Ausräumen übrig.",
       "tabsTooTall": "Die Haltestege sind so hoch wie der Schnitt tief ist, daher wird unter ihnen nichts geschnitten.",
       "tabsLeftOut": "{count, plural, one {# Haltesteg ausgelassen, der} other {# Haltestege ausgelassen, die}} zu weit von jeder geschlossenen Kontur entfernt {count, plural, one {ist} other {sind}}.",
       "leadInMisfits": "Der Einlauf passte bei {count, plural, one {# Kontur} other {# Konturen}} nicht und wurde gekürzt oder ausgelassen.",
@@ -644,8 +648,12 @@
       "coarsened": "Das Modell ist zu groß, um es mit diesem Werkzeug in voller Auflösung zu bearbeiten: Es wird mit Zellen von {size, number} mm statt {wanted, number} mm geschnitten.",
       "restCoarsened": "Der Bereich ist zu groß, um das verbleibende Material in voller Auflösung zu simulieren: Er wird mit Zellen von {size, number} mm simuliert, daher kann Material, das schmaler als {width, number} mm ist und von den vorherigen Operationen übrig gelassen wurde, in voller Tiefe geschnitten werden.",
       "roughNothing": "Das stehen zu lassende Aufmaß bedeckt das ganze Modell: Es gibt nichts zu schruppen.",
-      "roughMarginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu schruppen.",
-      "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
+      "marginOffStock": "Der Rand um das Modell liegt nicht auf dem Rohteil: Es gibt nichts zu bearbeiten.",
+      "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
+      "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
+      "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
+      "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
+      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
     "export": {
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
@@ -725,6 +733,8 @@
       "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
       "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut.",
       "fontUnavailable": "Diese Schrift konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+      "fontRemoved": "Diese Schrift ist nicht mehr im Projekt.",
+      "fontUploadFailed": "Die Schrift konnte nicht hochgeladen werden. Wähle sie erneut aus und versuche es noch einmal.",
       "fontUnreadable": "Diese Datei ist keine lesbare Schrift: Verwende eine TTF-, OTF- oder WOFF-Datei.",
       "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",
@@ -771,6 +781,12 @@
       "margin": "Räumt einen Rahmen dieser Breite um den Modellumriss aus (mindestens den Werkzeugradius) und hält das Werkzeug darin: die Rohteiloberseite außerhalb bleibt für das Nullen von Z nach einem Werkzeugwechsel.",
       "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: alles um das Modell wird bis zum Boden ausgeräumt."
     },
+    "finishBoundaryHints": {
+      "model": "Die Werkzeugmitte erreicht die Kanten des Modellumrisses.",
+      "margin": "Schlichtet auch einen so breiten Rahmen um den Modellumriss (mindestens den Werkzeugradius) bis zum Modellboden, bei einem zweiseitigen Projekt bis zur Trennebene, wobei das Werkzeug darin bleibt, wie beim Schruppen mit demselben Rand.",
+      "stock": "Die Werkzeugmitte erreicht die Kanten des Rohteils: Alles um das Modell wird bis zu seinem Boden geschlichtet, bei einem zweiseitigen Projekt bis zur Trennebene."
+    },
+    "finishBoundaryWaterline": "Z-konstante Konturen folgen den Wänden des Modells und bleiben auf seinem Umriss: Der Rand und das ganze Rohteil gelten nur für parallele Bahnen und die Spirale.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Wasserlinie",
@@ -852,6 +868,7 @@
     "stepOver": "Bahnabstand",
     "stockToLeave": "Aufmaß stehen lassen",
     "clear": "Ausräumen",
+    "cover": "Abdecken",
     "margin": "Rand",
     "rest": "Nur Restmaterial schneiden",
     "restHint": "Überspringt, was die aktivierten Operationen darüber schon geschnitten haben, sodass ein kleineres Werkzeug nur dort arbeitet, wo das vorige nicht hinkam.",
@@ -879,7 +896,10 @@
     "computeAgain": "Neu berechnen",
     "cancelled": "Vor dem Ende abgebrochen.",
     "failed": "Die Werkzeugbahn konnte nicht berechnet werden: {error}",
-    "warnings": "Warnungen zur Werkzeugbahn"
+    "warnings": "Warnungen zur Werkzeugbahn",
+    "usePins": "Stifte verwenden",
+    "locatingPins": "Die Passstifte",
+    "pinDepth": "So tief, wie die Stifteinstellungen sagen: {depth}."
   },
   "Selection": {
     "shapes": "{count, plural, one {# Form ausgewählt} other {# Formen ausgewählt}}",
@@ -913,7 +933,7 @@
     "selectModel": "Wähle zuerst ein Modell in der Ansicht aus",
     "selectPaths": "Wähle zuerst Pfade in der Ansicht aus",
     "addLabel": "Hinzufügen: {operation}",
-    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Strg/Cmd/Umschalt+Klick wählt weitere aus.",
+    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Umschalt+Klick, um weitere hinzuzufügen.",
     "addToolLibrary": "Füge deiner <link>Werkzeugbibliothek</link> ein Werkzeug hinzu, um Operationen zu erstellen.",
     "inCuttingOrder": "Operationen in Schnittreihenfolge",
     "selectInsideTitle": "Auch geschlossene Pfade innerhalb der ausgewählten auswählen, wie die Inseln einer Tasche",
@@ -936,7 +956,15 @@
     "cancelled": "Werkzeugbahn abgebrochen",
     "cancelledDetail": "Vor dem Ende abgebrochen.",
     "failed": "Werkzeugbahn fehlgeschlagen: {error}",
-    "warnings": "Warnungen zur Werkzeugbahn: {warnings}"
+    "warnings": "Warnungen zur Werkzeugbahn: {warnings}",
+    "sides": {
+      "top": "Oben",
+      "bottom": "Unten"
+    },
+    "sideHints": {
+      "top": "Auf der Oberseite geschnitten, zuerst",
+      "bottom": "Auf der Unterseite geschnitten, wenn das Rohteil umgedreht ist"
+    }
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
@@ -1178,6 +1206,12 @@
     "pickHint": "Klicke auf einen Punkt in der Ansicht; er rastet an Rohteilpunkten, Eckpunkten, Mittelpunkten und Begrenzungsrahmen in der Nähe ein. Esc oder Rechtsklick bricht ab.",
     "touchOff": "Antastplatz",
     "touchOffHint": "Eine Stelle der Rohteiloberseite, die keine Operation schneidet, um dort Z nach einem Werkzeugwechsel neu zu nullen.",
+    "twoSided": "Zweiseitig",
+    "twoSidedHint": "Das Rohteil von oben bearbeiten, umdrehen und von unten bearbeiten.",
+    "flipAxis": "Umgedreht um",
+    "partingDepth": "Trenntiefe",
+    "partingDepthHint": "Unter der Rohteiloberseite, wo sich beide Seiten um die Modelle treffen: Jede Seite schneidet dort bis dorthin, und alles vom Modell, was sie sieht.",
+    "twoSidedOff": "{count, plural, one {# Operation liegt} other {# Operationen liegen}} auf der Unterseite. Wird zweiseitig ausgeschaltet, {count, plural, one {wandert sie} other {wandern sie}} auf die Oberseite.",
     "padAxis": "Platz {axis}",
     "padDiameter": "Platzdurchmesser",
     "padTooWide": "Muss auf das Rohteil passen: höchstens {size}",
@@ -1185,7 +1219,39 @@
     "padOff": "Ein Teil des Platzes liegt außerhalb des Rohteils: dort gibt es vielleicht nichts, um Z neu zu nullen.",
     "padToolChange": "Werkzeugwechsel am Platz",
     "padToolChangeHint": "Läuft bei jedem Werkzeugwechsel.",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "pins": "Passstifte",
+    "pinsHint": "Stifte auf der Wendeachse richten das gewendete Rohteil an der Oberseite aus.",
+    "pinDiameter": "Stiftdurchmesser",
+    "pinPosition": "Stift {n}",
+    "pinPositionHint": "Der Abstand jedes Stifts von der Mitte des Rohteils entlang der Wendeachse.",
+    "addPin": "Stift hinzufügen",
+    "removePin": "Stift entfernen",
+    "pinHoles": "Bohrungen",
+    "pinHoleTypes": {
+      "through": "Durchgehend, bis in die Opferplatte",
+      "blind": "Nur ins Rohteil"
+    },
+    "spoilboardDepth": "In die Opferplatte",
+    "pinHoleDepth": "Bohrtiefe",
+    "pinOff": "Ein Stift liegt außerhalb des Rohteils.",
+    "addPinDrill": "Stifte bohren",
+    "pinDrill": "Passstifte",
+    "noPinBit": "Fügen Sie einen Bohrer in Stiftgröße oder einen kleineren Fräser hinzu, um sie zu bohren.",
+    "lineUp": "Ausgerichtet an",
+    "lineUpNone": "Nichts",
+    "edges": "Einer Anschlagecke",
+    "edgeCorner": "Ecke",
+    "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach.",
+    "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts.",
+    "holdingTabs": "Haltestege",
+    "holdingTabsHint": "Streifen des Rohteils, die die Unterseite auf der Trenntiefe stehen lässt, damit das Teil bis zum letzten Durchgang hält. In der Draufsicht entlang der Modellumrisse ziehen.",
+    "holdingTabWidth": "Stegbreite",
+    "holdingTabThickness": "Stegdicke",
+    "holdingTabTooThick": "Muss dünner sein als die Tiefe der Unterseite: weniger als {size}",
+    "holdingTabsPerModel": "Stege pro Modell",
+    "placeHoldingTabs": "Verteilen",
+    "holdingTabCount": "{count, plural, =0 {Keine Stege} one {# Steg} other {# Stege}}"
   },
   "Model": {
     "closeLabel": "Modelleigenschaften schließen",
@@ -1229,8 +1295,6 @@
     "rotateLeft": "Um 90° gegen den Uhrzeigersinn drehen",
     "rotateRight": "Um 90° im Uhrzeigersinn drehen",
     "angle": "Winkel",
-    "rotate": "Drehen",
-    "rotateTitle": "Die Zeichnung um den Winkel gegen den Uhrzeigersinn drehen; ein negativer Winkel dreht im Uhrzeigersinn",
     "position": "Position",
     "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} der Zeichnung liegt, vom Nullpunkt gemessen. Du kannst die Zeichnung auch in der Draufsicht ziehen.",
     "offStock": "Ein Teil der Zeichnung liegt außerhalb des Rohteils.",
@@ -1319,7 +1383,18 @@
     "nextTitle": "Zur nächsten Operation springen",
     "position": "Position entlang der Werkzeugbahnen",
     "jumpTo": "Zu {name} springen",
-    "speed": "Wiedergabegeschwindigkeit"
+    "speed": "Wiedergabegeschwindigkeit",
+    "side": "Seite",
+    "sides": {
+      "top": "Oben",
+      "bottom": "Unten"
+    },
+    "sideHints": {
+      "top": "Die Oberseite zeigen, die zuerst bearbeitet wird",
+      "bottom": "Die Unterseite zeigen, von unten gesehen, wenn das Rohteil umgedreht ist"
+    },
+    "bottomSideHint": "Unterseite, von unten gesehen. Nullpunkt wählen, Pfade auswählen und Stege bearbeiten geht auf der Oberseite.",
+    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite."
   },
   "Dialog": {
     "close": "Schließen",

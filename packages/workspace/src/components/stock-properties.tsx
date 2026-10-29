@@ -1,15 +1,23 @@
 "use client";
 
-import { touchOffOutsideStock } from "@furrow/cam-core";
-import { Units, ZOrigin } from "@furrow/document";
+import { edgeSetup, touchOffOutsideStock } from "@furrow/cam-core";
+import {
+  FlipAxis,
+  type HoldingTabs,
+  StockCorner,
+  stockPins,
+  Units,
+  ZOrigin,
+} from "@furrow/document";
 import { suggestTouchOffToolChange } from "@furrow/post";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import { Textarea } from "@furrow/ui/components/ui/textarea";
 import { cn } from "@furrow/ui/lib/utils";
-import { CircleAlertIcon, CrosshairIcon } from "lucide-react";
+import { CircleAlertIcon, CrosshairIcon, PlusIcon } from "lucide-react";
 import type * as React from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -21,23 +29,39 @@ import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
+  useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { gestureHandlers } from "../stores/gesture-handlers";
 import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
+import { addPinDrillOperation } from "../stores/operation-actions";
 import {
+  addLocatingPin,
   addTouchOff,
+  autoPlaceHoldingTabs,
+  HOLDING_TABS_PER_MODEL,
+  partingDepthLimits,
   removeTouchOff,
   type StockDimension,
   setCustomOrigin,
   setCustomXYOrigin,
+  setFenceCorner,
+  setFlipAxis,
+  setHoldingTabSize,
+  setHoldingTabs,
+  setLineUp,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
   setTouchOffToolChange,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
+  updateLocatingPins,
 } from "../stores/stock-actions";
+import { Checkbox } from "./checkbox";
 import { PlaceholderList } from "./placeholder-list";
+import { pinDrillToolChoice, useToolLibrary } from "./tool-library";
 
 const DIMENSIONS = ["width", "height", "thickness"] as const satisfies StockDimension[];
 
@@ -96,8 +120,379 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
         ))}
       </section>
 
+      <TwoSidedSection />
+
       <ZeroSection />
     </div>
+  );
+}
+
+/**
+ * Two-sided machining (PRD-0011, ADR-0060): the axis the stock is turned
+ * over about and the depth the sides part at. Turning it off moves the
+ * bottom side's operations to the top side, once the user agrees.
+ */
+function TwoSidedSection() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const bottom = useDocumentStore(
+    (s) => s.document.operations.filter((operation) => operation.stockSide === "bottom").length,
+  );
+  const { confirm } = useDialogs();
+  const t = useTranslations("Stock");
+  const { twoSided } = stock;
+
+  async function toggle(on: boolean) {
+    if (!on && bottom > 0 && !(await confirm(t("twoSidedOff", { count: bottom })))) return;
+    setTwoSided(store, on);
+  }
+
+  return (
+    <section aria-labelledby="two-sided-heading" className="grid gap-2">
+      <Checkbox
+        id="two-sided"
+        label={t("twoSided")}
+        heading
+        hint={t("twoSidedHint")}
+        checked={twoSided !== null}
+        onChange={(on) => void toggle(on)}
+      />
+      {twoSided && (
+        <>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="flip-axis" className="text-ui font-normal">
+              {t("flipAxis")}
+            </Label>
+            <NativeSelect
+              id="flip-axis"
+              size="sm"
+              value={twoSided.flipAxis}
+              onChange={(event) => setFlipAxis(store, FlipAxis.parse(event.target.value))}
+              className="h-control px-2 pr-7 text-ui"
+            >
+              {FlipAxis.options.map((axis) => (
+                <NativeSelectOption key={axis} value={axis}>
+                  {axis.toUpperCase()}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <NumberField
+            id="parting-depth"
+            label={t("partingDepth")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            // Within the stock, however thin.
+            min={partingDepthLimits(stock.thickness)[0]}
+            max={partingDepthLimits(stock.thickness)[1]}
+            value={twoSided.partingDepth}
+            onValueChange={(value) => setPartingDepth(store, value)}
+            {...gestureHandlers(store)}
+          />
+          <p className="text-muted-foreground">{t("partingDepthHint")}</p>
+          <PinFields />
+          <HoldingTabFields />
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Holding tabs (PRD-0011 B5, ADR-0063), which the bottom side's 3D
+ * operations leave between the part and the stock: their width and
+ * thickness, and a number of them to spread round each model. The tabs are
+ * dragged along the models' outlines in the top view.
+ */
+function HoldingTabFields() {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const [count, setCount] = useState(HOLDING_TABS_PER_MODEL);
+  // What a thickness was refused against: once either changes, it may fit.
+  const [refused, setRefused] = useState<{ depth: number; tabs: HoldingTabs } | null>(null);
+  const t = useTranslations("Stock");
+  const length = useLength(units);
+  const tabs = stock.twoSided?.tabs ?? null;
+  const depth = stock.thickness - (stock.twoSided?.partingDepth ?? 0);
+  const tooThick = refused !== null && refused.depth === depth && refused.tabs === tabs;
+
+  return (
+    <>
+      <Checkbox
+        id="holding-tabs"
+        label={t("holdingTabs")}
+        hint={t("holdingTabsHint")}
+        checked={tabs !== null}
+        onChange={(on) => setHoldingTabs(store, on)}
+      />
+      {tabs && (
+        <div className="grid gap-2 border-l-2 pl-2">
+          <NumberField
+            id="holding-tab-width"
+            label={t("holdingTabWidth")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={tabs.width}
+            onValueChange={(width) => setHoldingTabSize(store, "width", width)}
+            {...gestureHandlers(store)}
+          />
+          <NumberField
+            id="holding-tab-thickness"
+            label={t("holdingTabThickness")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={tabs.thickness}
+            onValueChange={(thickness) =>
+              setRefused(setHoldingTabSize(store, "thickness", thickness) ? null : { depth, tabs })
+            }
+            error={tooThick ? t("holdingTabTooThick", { size: length(depth) }) : undefined}
+            {...gestureHandlers(store)}
+          />
+          <div className="flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <NumberField
+                id="holding-tab-count"
+                label={t("holdingTabsPerModel")}
+                layout="inline"
+                integer
+                min={1}
+                value={count}
+                onValueChange={setCount}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="compact"
+              onClick={() => autoPlaceHoldingTabs(store, count)}
+            >
+              {t("placeHoldingTabs")}
+            </Button>
+          </div>
+          <p className="text-muted-foreground">
+            {t("holdingTabCount", { count: tabs.positions.length })}
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * How the turned-over stock is lined up: on locating pins (#356) on the flip
+ * axis, with their diameter, each one's distance from the stock's centre,
+ * how deep their holes go and a button adding a drill of them on the top
+ * side; or by a corner in a fence corner (#361), which relies on the stock's
+ * size across the flip axis.
+ */
+function PinFields() {
+  const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const stock = useDocumentStore((s) => s.document.stock);
+  const tools = useToolLibrary();
+  const t = useTranslations("Stock");
+  const anchors = useTranslations("Anchors");
+  const length = useLength(units);
+  // Drills of the pins with no pins to drill cut nothing (#356).
+  const idleDrills = useDocumentStore(
+    (s) =>
+      s.document.operations.filter(
+        (operation) => operation.type === "drill" && operation.params.pins,
+      ).length,
+  );
+  const pins = stockPins(stock);
+  const edges = edgeSetup(stock);
+  if (!stock.twoSided) return null;
+  const [along, across] =
+    stock.twoSided.flipAxis === "x" ? [stock.width, stock.height] : [stock.height, stock.width];
+  const off =
+    pins &&
+    (pins.diameter > across ||
+      pins.positions.some((p) => Math.abs(p) + pins.diameter / 2 > along / 2));
+  const drill = pins && pinDrillToolChoice(tools, pins.diameter);
+
+  function addDrill() {
+    if (!drill) return;
+    const id = addPinDrillOperation(store, { tool: drill.tool, name: t("pinDrill") });
+    if (id) workspace.getState().selectOperation(id);
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+        <Label htmlFor="line-up" className="text-ui font-normal">
+          {t("lineUp")}
+        </Label>
+        <NativeSelect
+          id="line-up"
+          size="sm"
+          value={stock.twoSided.lineUp?.type ?? "none"}
+          onChange={(event) => {
+            const { value } = event.target;
+            setLineUp(store, value === "pins" || value === "edges" ? value : null);
+          }}
+          className="h-control px-2 pr-7 text-ui"
+        >
+          <NativeSelectOption value="none">{t("lineUpNone")}</NativeSelectOption>
+          <NativeSelectOption value="pins">{t("pins")}</NativeSelectOption>
+          <NativeSelectOption value="edges">{t("edges")}</NativeSelectOption>
+        </NativeSelect>
+      </div>
+      {pins && <p className="text-muted-foreground">{t("pinsHint")}</p>}
+      {!pins && idleDrills > 0 && (
+        <p role="alert" className="flex gap-1.5 text-destructive">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+          {t("idlePinDrills", { count: idleDrills })}
+        </p>
+      )}
+      {edges && (
+        <>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="edge-corner" className="text-ui font-normal">
+              {t("edgeCorner")}
+            </Label>
+            <NativeSelect
+              id="edge-corner"
+              size="sm"
+              value={edges.corner}
+              onChange={(event) => setFenceCorner(store, StockCorner.parse(event.target.value))}
+              className="h-control px-2 pr-7 text-ui"
+            >
+              {StockCorner.options.map((corner) => (
+                <NativeSelectOption key={corner} value={corner}>
+                  {anchors(corner)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <p className="text-muted-foreground">
+            {t("edgesHint", {
+              size: length(edges.measure.size),
+              axis: edges.measure.axis.toUpperCase(),
+            })}
+          </p>
+        </>
+      )}
+      {pins && (
+        <>
+          <NumberField
+            id="pin-diameter"
+            label={t("pinDiameter")}
+            layout="inline"
+            quantity="length"
+            units={units}
+            min={MIN_STOCK}
+            value={pins.diameter}
+            onValueChange={(diameter) => updateLocatingPins(store, { diameter })}
+            {...gestureHandlers(store)}
+          />
+          {pins.positions.map((position, i) => (
+            <NumberField
+              // Pins are only added and removed at the end.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              key={i}
+              id={`pin-${i}`}
+              label={t("pinPosition", { n: i + 1 })}
+              layout="inline"
+              quantity="length"
+              units={units}
+              value={position}
+              onValueChange={(value) =>
+                updateLocatingPins(store, { positions: pins.positions.with(i, value) })
+              }
+              {...gestureHandlers(store)}
+            />
+          ))}
+          <p className="text-muted-foreground">{t("pinPositionHint")}</p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="compact"
+              disabled={pins.positions.length <= 2}
+              onClick={() => updateLocatingPins(store, { positions: pins.positions.slice(0, -1) })}
+            >
+              {t("removePin")}
+            </Button>
+            <Button variant="outline" size="compact" onClick={() => addLocatingPin(store)}>
+              <PlusIcon />
+              {t("addPin")}
+            </Button>
+          </div>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-2">
+            <Label htmlFor="pin-holes" className="text-ui font-normal">
+              {t("pinHoles")}
+            </Label>
+            <NativeSelect
+              id="pin-holes"
+              size="sm"
+              value={pins.holes.type}
+              onChange={(event) =>
+                updateLocatingPins(store, {
+                  holes:
+                    event.target.value === "blind"
+                      ? { type: "blind", depth: Math.min(10, stock.thickness / 2) }
+                      : { type: "through", spoilboardDepth: 5 },
+                })
+              }
+              className="h-control px-2 pr-7 text-ui"
+            >
+              <NativeSelectOption value="through">{t("pinHoleTypes.through")}</NativeSelectOption>
+              <NativeSelectOption value="blind">{t("pinHoleTypes.blind")}</NativeSelectOption>
+            </NativeSelect>
+          </div>
+          {pins.holes.type === "through" ? (
+            <NumberField
+              id="pin-spoilboard-depth"
+              label={t("spoilboardDepth")}
+              layout="inline"
+              quantity="length"
+              units={units}
+              min={MIN_STOCK}
+              value={pins.holes.spoilboardDepth}
+              onValueChange={(spoilboardDepth) =>
+                updateLocatingPins(store, { holes: { type: "through", spoilboardDepth } })
+              }
+              {...gestureHandlers(store)}
+            />
+          ) : (
+            <NumberField
+              id="pin-hole-depth"
+              label={t("pinHoleDepth")}
+              layout="inline"
+              quantity="length"
+              units={units}
+              min={MIN_STOCK}
+              max={stock.thickness - MIN_STOCK}
+              value={pins.holes.depth}
+              onValueChange={(depth) =>
+                updateLocatingPins(store, { holes: { type: "blind", depth } })
+              }
+              {...gestureHandlers(store)}
+            />
+          )}
+          {off && (
+            <p role="alert" className="flex gap-1.5 text-destructive">
+              <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              {t("pinOff")}
+            </p>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" size="compact" disabled={!drill} onClick={addDrill}>
+              <PlusIcon />
+              {t("addPinDrill")}
+            </Button>
+          </div>
+          {!drill && <p className="text-muted-foreground">{t("noPinBit")}</p>}
+        </>
+      )}
+    </>
   );
 }
 
@@ -365,22 +760,13 @@ function TouchOffFields() {
 
   return (
     <>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-        <input
-          type="checkbox"
-          id="touch-off"
-          checked={pad !== null}
-          onChange={(event) => (event.target.checked ? addTouchOff(store) : removeTouchOff(store))}
-          aria-describedby="touch-off-hint"
-          className="size-3.5 accent-primary"
-        />
-        <Label htmlFor="touch-off" className="text-ui font-normal">
-          {t("touchOff")}
-        </Label>
-        <p id="touch-off-hint" className="col-start-2 text-muted-foreground">
-          {t("touchOffHint")}
-        </p>
-      </div>
+      <Checkbox
+        id="touch-off"
+        label={t("touchOff")}
+        hint={t("touchOffHint")}
+        checked={pad !== null}
+        onChange={(on) => (on ? addTouchOff(store) : removeTouchOff(store))}
+      />
       {pad && (
         <>
           {(["x", "y"] as const).map((axis) => (

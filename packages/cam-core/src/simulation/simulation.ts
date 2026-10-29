@@ -1,4 +1,4 @@
-import type { Stock, Tool } from "@furrow/document";
+import type { FlipAxis, Stock, Tool } from "@furrow/document";
 
 /**
  * Cells across the narrowest cut: enough for a slot that narrow to show its
@@ -389,3 +389,38 @@ function lowestAlong(
 export function heightmapBuffers({ heights }: Heightmap): ArrayBuffer[] {
   return [heights.buffer as ArrayBuffer];
 }
+
+/**
+ * The heights of `heightmap`, the stock one side's cuts leave, mirrored onto
+ * the same grid as the other side of a two-sided project sees it once the
+ * stock is turned over about `axis` (ADR-0060). Still measured from that
+ * side's own face: `joinSides` uses them to open what both sides cut through.
+ */
+export function flipHeightmap({ columns, rows, heights }: Heightmap, axis: FlipAxis): Float32Array {
+  const flipped = new Float32Array(columns * rows);
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const [c, r] = axis === "x" ? [column, rows - 1 - row] : [columns - 1 - column, row];
+      flipped[row * columns + column] = heights[r * columns + c] as number;
+    }
+  }
+  return flipped;
+}
+
+/**
+ * Cuts through `heights`, the bottom side's stock, wherever it and the top
+ * side's cuts, `flippedTop` (`flipHeightmap`), together reach through the
+ * stock's `thickness`: a heightmap holds only the face in view, so a cut
+ * from each side that meets the other's shows only here.
+ */
+export function joinSides(heights: Float32Array, flippedTop: Float32Array, thickness: number) {
+  for (let i = 0; i < heights.length; i++) {
+    // Each height is minus the depth cut from its face.
+    if ((heights[i] as number) + (flippedTop[i] as number) <= -thickness + THROUGH_TOLERANCE) {
+      heights[i] = -thickness;
+    }
+  }
+}
+
+/** How close to the stock's full thickness the two sides' cuts count as meeting, in millimetres. */
+const THROUGH_TOLERANCE = 1e-3;

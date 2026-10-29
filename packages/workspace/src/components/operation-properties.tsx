@@ -3,6 +3,7 @@
 import {
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
+  pinDepth,
   vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
@@ -28,6 +29,7 @@ import {
   type RoughingBoundary,
   type RoughingBoundaryType,
   SpiralStart,
+  stockPins,
   type Tool,
   toolProblem,
   type VCarveOperation,
@@ -64,6 +66,7 @@ import {
   DEFAULT_TAB_COUNT,
   defaultTabs,
   renameOperation,
+  setDrillPins,
   setOperationTargets,
   setOperationTool,
   toolError,
@@ -75,6 +78,7 @@ import {
   updateReliefRoughParams,
   updateVCarveParams,
 } from "../stores/operation-actions";
+import { Checkbox } from "./checkbox";
 import { EditBitButton } from "./edit-bit-dialog";
 import { NewBitDialog } from "./new-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
@@ -113,7 +117,17 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const t = useTranslations("Operation");
+  const hasPins = useDocumentStore((s) => !!stockPins(s.document.stock));
   if (!operation) return null;
+  // A drill on the top side may cut the locating pins (#356) instead of shapes.
+  const pins =
+    operation.type !== "drill"
+      ? null
+      : operation.params.pins
+        ? "on"
+        : hasPins && operation.stockSide === "top"
+          ? "available"
+          : null;
 
   return (
     <div className="grid gap-4 p-3 text-ui">
@@ -141,7 +155,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
-        <TargetsField operationId={operation.id} targets={operation.targets} />
+        <TargetsField operationId={operation.id} targets={operation.targets} pins={pins} />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -284,9 +298,12 @@ function ToolPicker({ operation }: { operation: Operation }) {
 function TargetsField({
   operationId,
   targets,
+  pins,
 }: {
   operationId: string;
   targets: OperationTarget[];
+  /** For a drill: whether it cuts the locating pins, or may. */
+  pins: "on" | "available" | null;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
@@ -324,7 +341,13 @@ function TargetsField({
         >
           {t("useSelected")}
         </Button>
+        {pins === "available" && (
+          <Button variant="outline" size="compact" onClick={() => setDrillPins(store, operationId)}>
+            {t("usePins")}
+          </Button>
+        )}
       </div>
+      {pins === "on" && <p>{t("locatingPins")}</p>}
       <ul className="grid gap-0.5">
         {rows.map(({ shape, paths }) => (
           <li key={shape.id} className="flex min-w-0 items-center gap-1">
@@ -397,6 +420,64 @@ function useParamsUpdate<P extends object>(
   }
 
   return { errors, update };
+}
+
+/** What a 3D operation covers (ADR-0038, ADR-0064): the model, a margin around it, or the whole stock. */
+function BoundaryFields({
+  id,
+  label,
+  hint,
+  boundary,
+  error,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  boundary: RoughingBoundary;
+  error: string | undefined;
+  onChange: (boundary: RoughingBoundary) => void;
+}) {
+  const store = useDocumentStoreApi();
+  const units = useDocumentStore((s) => s.document.units);
+  const t = useTranslations("Operation");
+  return (
+    <>
+      <Row id={`${id}-boundary`} label={label}>
+        <NativeSelect
+          id={`${id}-boundary`}
+          size="sm"
+          value={boundary.type}
+          onChange={(event) => {
+            const type = event.target.value as RoughingBoundaryType;
+            if (type !== boundary.type) onChange(DEFAULT_BOUNDARIES[type]);
+          }}
+          className={SELECT_CLASS}
+        >
+          {(["model", "margin", "stock"] as const).map((type) => (
+            <NativeSelectOption key={type} value={type}>
+              {t(`boundaries.${type}`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
+      {boundary.type === "margin" && (
+        <NumberField
+          id={`${id}-margin`}
+          label={t("margin")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={MIN_LENGTH}
+          value={boundary.distance}
+          onValueChange={(distance) => onChange({ type: "margin", distance })}
+          error={error}
+          {...gestureHandlers(store)}
+        />
+      )}
+      <p className="text-muted-foreground">{hint}</p>
+    </>
+  );
 }
 
 /** The "Ramp in" checkbox, disabled for a tool that plunges straight down whatever it says. */
@@ -631,6 +712,21 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
       <h4 id="pocket-heading" className="font-medium">
         {t("pocket")}
       </h4>
+      <Row id="pocket-side" label={t("side")}>
+        <NativeSelect
+          id="pocket-side"
+          size="sm"
+          value={params.side}
+          onChange={(event) => update("side", { side: ProfileSide.parse(event.target.value) })}
+          className={SELECT_CLASS}
+        >
+          {ProfileSide.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {t(`sides.${option}`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Row>
       <Row id="pocket-strategy" label={t("strategy")}>
         <NativeSelect
           id="pocket-strategy"
@@ -756,9 +852,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
-      {(errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
+      {(errors.side ?? errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
-          {errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp}
+          {errors.side ?? errors.strategy ?? errors.direction ?? errors.finishPass ?? errors.ramp}
         </p>
       )}
     </section>
@@ -768,6 +864,9 @@ function PocketFields({ operation }: { operation: PocketOperation }) {
 function DrillFields({ operation }: { operation: DrillOperation }) {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
+  const thickness = useDocumentStore((s) => s.document.stock.thickness);
+  const format = useFormatMessage();
+  const pins = useDocumentStore((s) => stockPins(s.document.stock));
   const { params, tool } = operation;
   const { errors, update } = useParamsUpdate(params, (changes) =>
     updateDrillParams(store, operation.id, changes),
@@ -786,18 +885,26 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
           bore: tool.type === "drill" ? "no" : "yes",
         })}
       </p>
-      <NumberField
-        id="drill-depth"
-        label={t("depth")}
-        min={MIN_LENGTH}
-        value={params.depth}
-        onValueChange={(depth) => update("depth", { depth })}
-        error={errors.depth}
-        layout="inline"
-        quantity="length"
-        units={units}
-        {...gestureHandlers(store)}
-      />
+      {params.pins ? (
+        <p>
+          {pins
+            ? t("pinDepth", { depth: length(pinDepth(thickness, pins)) })
+            : format({ code: "toolpath.noLocatingPins" })}
+        </p>
+      ) : (
+        <NumberField
+          id="drill-depth"
+          label={t("depth")}
+          min={MIN_LENGTH}
+          value={params.depth}
+          onValueChange={(depth) => update("depth", { depth })}
+          error={errors.depth}
+          layout="inline"
+          quantity="length"
+          units={units}
+          {...gestureHandlers(store)}
+        />
+      )}
       <Checkbox
         id="drill-peck"
         label={t("peck")}
@@ -1146,43 +1253,14 @@ function ReliefRoughFields({ operation }: { operation: ReliefRoughOperation }) {
         error={errors.stockToLeave}
         {...gestureHandlers(store)}
       />
-      <Row id="relief-rough-boundary" label={t("clear")}>
-        <NativeSelect
-          id="relief-rough-boundary"
-          size="sm"
-          value={params.boundary.type}
-          onChange={(event) => {
-            const type = event.target.value as RoughingBoundaryType;
-            if (type !== params.boundary.type) {
-              update("boundary", { boundary: DEFAULT_BOUNDARIES[type] });
-            }
-          }}
-          className={SELECT_CLASS}
-        >
-          {(["model", "margin", "stock"] as const).map((type) => (
-            <NativeSelectOption key={type} value={type}>
-              {t(`boundaries.${type}`)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Row>
-      {params.boundary.type === "margin" && (
-        <NumberField
-          id="relief-rough-margin"
-          label={t("margin")}
-          layout="inline"
-          quantity="length"
-          units={units}
-          min={MIN_LENGTH}
-          value={params.boundary.distance}
-          onValueChange={(distance) =>
-            update("boundary", { boundary: { type: "margin", distance } })
-          }
-          error={errors.boundary}
-          {...gestureHandlers(store)}
-        />
-      )}
-      <p className="text-muted-foreground">{t(`boundaryHints.${params.boundary.type}`)}</p>
+      <BoundaryFields
+        id="relief-rough"
+        label={t("clear")}
+        hint={t(`boundaryHints.${params.boundary.type}`)}
+        boundary={params.boundary}
+        error={errors.boundary}
+        onChange={(boundary) => update("boundary", { boundary })}
+      />
       <RampCheckbox
         id="relief-rough-ramp"
         tool={tool}
@@ -1373,6 +1451,17 @@ function ReliefFinishFields({ operation }: { operation: ReliefFinishOperation })
         error={errors.stockToLeave}
         {...gestures}
       />
+      <BoundaryFields
+        id="relief-finish"
+        label={t("cover")}
+        hint={t(`finishBoundaryHints.${params.boundary.type}`)}
+        boundary={params.boundary}
+        error={errors.boundary}
+        onChange={(boundary) => update("boundary", { boundary })}
+      />
+      {strategy.type === "waterline" && params.boundary.type !== "model" && (
+        <p className="text-muted-foreground">{t("finishBoundaryWaterline")}</p>
+      )}
       <RestCheckbox
         id="relief-finish-rest"
         checked={params.rest}
@@ -1497,44 +1586,6 @@ function TabsFields({
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
-    </div>
-  );
-}
-
-function Checkbox({
-  id,
-  label,
-  hint,
-  checked,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        className="size-3.5 accent-primary"
-      />
-      <Label htmlFor={id} className="text-ui font-normal">
-        {label}
-      </Label>
-      {hint && (
-        <p id={`${id}-hint`} className="col-start-2 text-muted-foreground">
-          {hint}
-        </p>
-      )}
     </div>
   );
 }

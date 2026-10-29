@@ -344,7 +344,7 @@ function densify(points: [number, number][], spacing: number): [number, number][
  */
 export function* waterlineSteps(
   operation: ReliefFinishOperation,
-  { grid, heights, profile, discs, dropper, floor, restDropper, warnings }: FinishSetup,
+  { grid, heights, profile, discs, dropper, floor, outside, restDropper, warnings }: FinishSetup,
   strategy: Extract<FinishingStrategy, { type: "waterline" }>,
   { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
 ): Generator<number, Toolpath> {
@@ -355,7 +355,7 @@ export function* waterlineSteps(
     FINISH_SETUP_SHARE,
     FINISH_SETUP_SHARE + TIPS_SHARE * share,
   );
-  const checker = new ToolDropper(heights, grid, widened(profile, CLEARANCE), discs);
+  const checker = new ToolDropper(heights, grid, widened(profile, CLEARANCE), discs, outside);
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const step = Math.min(grid.cellWidth, grid.cellHeight);
   const maxLink = 2 * tool.diameter;

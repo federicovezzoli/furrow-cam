@@ -241,3 +241,82 @@ describe("2D operations and the touch-off pad", () => {
     expect(toolpath.moves).toEqual(generateToolpath(clear[0] as never).moves);
   });
 });
+
+describe("3D finishing within a margin (#396)", () => {
+  // The margin runs from (5, 5) to (45, 35); the roughing leaves 0.5 mm on its floor.
+  const margin = { type: "margin", distance: 10 } as const;
+  const rough = () =>
+    roughing({ type: "offset" }, { boundary: margin, stockToLeave: 0.5 }, endMill);
+  const outsideMargin = [
+    [4.8, 20],
+    [45.2, 20],
+    [25, 4.8],
+    [25, 35.2],
+    [55, 45],
+  ] as const;
+  const band = [
+    [5.5, 20],
+    [44.5, 20],
+    [25, 34.5],
+    [40, 30],
+    [25, 5.5],
+  ] as const;
+
+  const finishes: FinishingStrategy[] = [
+    { type: "parallel", angle: 0, direction: "zigzag" },
+    { type: "parallel", angle: 30, direction: "one_way" },
+    { type: "spiral", start: "outside" },
+    { type: "spiral", start: "centre" },
+  ];
+  for (const strategy of finishes) {
+    it(`finishes the margin's floor and leaves the stock top beyond, with ${strategy.type}`, () => {
+      const operations = [rough(), finishing(strategy, { boundary: margin }, endMill)];
+      const at = simulate(project(operations, CORNER));
+      for (const [x, y] of band) expect(at(x, y)).toBeCloseTo(-10);
+      for (const [x, y] of outsideMargin) expect(at(x, y)).toBe(0);
+      expectPadUncut(at, CORNER);
+      // Within the model's outline, the margin finishes as the model boundary does.
+      const model = simulate(project([rough(), finishing(strategy, {}, endMill)], CORNER));
+      expect(at(30, 20)).toBeCloseTo(model(30, 20));
+      expect(model(5.5, 20)).toBeCloseTo(-9.5);
+    });
+  }
+
+  it("finishes the margin's floor with rest machining", () => {
+    const strategy = { type: "parallel", angle: 0, direction: "zigzag" } as const;
+    const operations = [rough(), finishing(strategy, { boundary: margin, rest: true }, endMill)];
+    const at = simulate(project(operations, null));
+    for (const [x, y] of band) expect(at(x, y)).toBeCloseTo(-10);
+    for (const [x, y] of outsideMargin) expect(at(x, y)).toBe(0);
+  });
+
+  it("keeps waterline on the model's outline, whatever the boundary", () => {
+    const strategy = { type: "waterline", stepDown: 1 } as const;
+    const doc = project([finishing(strategy), finishing(strategy, { boundary: margin })], null);
+    expect(toolpathInputs(doc)[1]?.stock).toBeNull();
+    const [a, b] = toolpaths(doc);
+    expect(b?.moves).toEqual(a?.moves);
+  });
+
+  it("finishes the whole of a large stock without coarsening the model", () => {
+    const strategy = { type: "parallel", angle: 0, direction: "zigzag" } as const;
+    const doc = project(
+      [finishing(strategy, { boundary: { type: "stock" }, stepOver: 100 })],
+      null,
+    );
+    const large = { ...doc, stock: { ...doc.stock, width: 1500, height: 1200 } };
+    const [toolpath] = toolpaths(large);
+    expect(toolpath?.warnings.map(({ code }) => code)).not.toContain("toolpath.coarsened");
+    const xs = toolpath?.moves.filter(({ kind }) => kind === "feed").map(({ to }) => to[0]) ?? [];
+    expect(Math.max(...xs)).toBeGreaterThan(1499.9);
+    expect(Math.min(...xs)).toBeLessThan(0.1);
+  });
+
+  it("depends on the stock only beyond the model's outline", () => {
+    const strategy = { type: "spiral", start: "outside" } as const;
+    const doc = project([finishing(strategy), finishing(strategy, { boundary: margin })], null);
+    const [model, withMargin] = toolpathInputs(doc);
+    expect(model?.stock).toBeNull();
+    expect(withMargin?.stock).toEqual({ min: [0, 0], max: [60, 50] });
+  });
+});

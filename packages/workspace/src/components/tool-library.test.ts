@@ -6,6 +6,7 @@ import {
   defaultToolChoice,
   matchingToolChoice,
   newBitType,
+  pinDrillToolChoice,
   withAddedTool,
   withCatalog,
   withUpdatedTool,
@@ -127,5 +128,23 @@ describe("cuttingToolChoice", () => {
     expect(defaultToolChoice([drillBit, ...library])?.id).toBe("d");
     expect(cuttingToolChoice([drillBit, ...library])?.id).toBe("a");
     expect(cuttingToolChoice([drillBit])).toBeUndefined();
+  });
+});
+
+describe("pinDrillToolChoice", () => {
+  const tool = (id: string, type: Tool["type"], diameter: number, isDefault = false) => ({
+    id,
+    isDefault,
+    tool: { ...endMill, type, diameter },
+  });
+
+  it("prefers a drill bit of the pins' size, then an end mill that bores them, over the default", () => {
+    const smallDrill = tool("d3", "drill", 3, true);
+    const mill = tool("m4", "flat_end_mill", 4);
+    const pinDrill = tool("d6", "drill", 6);
+    expect(pinDrillToolChoice([smallDrill, mill, pinDrill], 6)).toBe(pinDrill);
+    expect(pinDrillToolChoice([smallDrill, mill], 6)).toBe(mill);
+    // Nothing fits: no bit, rather than one that skips every hole.
+    expect(pinDrillToolChoice([smallDrill, tool("m8", "flat_end_mill", 8)], 6)).toBeUndefined();
   });
 });

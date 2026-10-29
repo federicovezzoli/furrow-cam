@@ -13,6 +13,7 @@ import { createDocumentStore } from "./document-store";
 import {
   addDrillOperation,
   addEngraveOperation,
+  addPinDrillOperation,
   addPocketOperation,
   addProfileOperation,
   addReliefFinishOperation,
@@ -27,6 +28,7 @@ import {
   removeTab,
   renameOperation,
   replaceToolSnapshots,
+  setDrillPins,
   setOperationEnabled,
   setOperationTargets,
   setOperationTool,
@@ -39,6 +41,7 @@ import {
   updateReliefRoughParams,
   updateVCarveParams,
 } from "./operation-actions";
+import { setLineUp, setTwoSided } from "./stock-actions";
 
 const MISSING_ID = "11111111-2222-4333-8444-555555555555";
 
@@ -138,7 +141,7 @@ const missing = { shapeId: MISSING_ID, paths: null };
 function setup() {
   const store = createDocumentStore({
     ...createProjectDocument(),
-    drawings: [{ id: DRAWING_ID, name: "", border: 10 }],
+    drawings: [{ id: DRAWING_ID, name: "", border: 10, rotation: 0 }],
     geometry: [square, circle, plate],
     models: [],
     fonts: [],
@@ -185,6 +188,16 @@ describe("addProfileOperation", () => {
       "Profile 2",
       "Profile 1",
     ]);
+  });
+
+  it("puts the profile on the side it is given, the top by default (ADR-0060)", () => {
+    const { store, profile } = setup();
+    const id = addProfileOperation(store, {
+      targets: [whole(square)],
+      tool: endMill,
+      stockSide: "bottom",
+    });
+    expect(profile(id as string).stockSide).toBe("bottom");
   });
 
   it("adds nothing without shapes that exist", () => {
@@ -393,8 +406,49 @@ describe("addDrillOperation", () => {
       depth: 5,
       peck: false,
       stepOver: 40,
+      pins: false,
     });
     expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
+  });
+});
+
+describe("addPinDrillOperation", () => {
+  it("drills the locating pins on the top side, switching to shapes and back", () => {
+    const { store, document, operations } = setup();
+    setTwoSided(store, true);
+    setLineUp(store, "pins");
+    const id = addPinDrillOperation(store, { tool: endMill });
+    if (!id) throw new Error("not added");
+    const pinDrill = () => operations().find((operation) => operation.id === id);
+    expect(pinDrill()).toMatchObject({
+      type: "drill",
+      name: "Locating pins 1",
+      stockSide: "top",
+      targets: [],
+      params: { pins: true },
+    });
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    setOperationTargets(store, id, [whole(circle)]);
+    expect(pinDrill()).toMatchObject({ targets: [whole(circle)], params: { pins: false } });
+    setDrillPins(store, id);
+    expect(pinDrill()).toMatchObject({ targets: [], params: { pins: true } });
+    // Not from the bottom side, which sits on the pins.
+    const bottom = addDrillOperation(store, {
+      targets: [whole(circle)],
+      tool: endMill,
+      stockSide: "bottom",
+    });
+    setDrillPins(store, bottom ?? "");
+    const bottomDrill = operations().find((operation) => operation.id === bottom);
+    expect(bottomDrill).toMatchObject({ targets: [whole(circle)], params: { pins: false } });
+  });
+
+  it("refuses projects without pins and V-bits", () => {
+    const { store } = setup();
+    setTwoSided(store, true);
+    expect(addPinDrillOperation(store, { tool: endMill })).toBeNull();
+    setLineUp(store, "pins");
+    expect(addPinDrillOperation(store, { tool: vBit })).toBeNull();
   });
 });
 

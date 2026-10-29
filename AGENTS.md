@@ -41,6 +41,7 @@ packages/workspace/   the CAM workspace: components, stores, hooks, providers, w
 - All packages are consumed as TypeScript source (`transpilePackages` in `next.config.ts`); Tailwind scans the UI packages through `@source` in `globals.css`. Run `shadcn add` in `packages/ui`.
 - **Component tests** are `*.test.tsx` files beside the component in `packages/workspace`, starting with `// @vitest-environment jsdom` and rendering through `renderWorkspace` (`src/test-render.tsx`: English messages, dialogs, the stores, an in-memory `WorkspaceHost`). `pnpm test` runs them with the other tests; `pnpm --filter @furrow/workspace exec vitest run <file>` runs one.
 - `cam-core/src` is grouped by layer (ADR-0037): `units/` and `geometry/` (the Clipper2 and Delaunator adapters, pure helpers) import no other folder; `import/`, `scene/`, `simulation/`, `text/` (fonts, ADR-0061) and `toolpaths/` build on them. `index.ts` is the only barrel and the public API.
+- Other packages follow the same rule once they outgrow a flat list (ADR-0065): folders by layer or by implementation, no barrel but `index.ts`. `document/src` has `schema/` (imports neither of the others), `presets/` and `storage/` (migrations, archives, file names); `post/src` has one folder per dialect (`grbl/`).
 
 Inside `apps/web/src` (ADR-0021):
 
@@ -80,7 +81,7 @@ components/       shared web-only UI; lib/, hooks/: shared, feature-agnostic cod
 ## Gotchas
 
 - **Prisma is pinned to 7.x**: Better Auth does not support Prisma 8 yet, and npm's `latest` tag may point at a Prisma 8 release candidate.
-- **three.js is pinned to 0.182** (with `@types/three`): React Three Fiber 9 creates a `THREE.Clock`, which r183 deprecated, so newer releases log a warning on every page load. Lift the pin with R3F 10.
+- **three.js is pinned to 0.182** (`three` and `@types/three` in the `pnpm-workspace.yaml` catalog): React Three Fiber 9 creates a `THREE.Clock`, which r183 deprecated, so newer releases log a warning on every page load. Lift the pin with R3F 10, and remove the two `three` ignore entries in `.github/dependabot.yml` with it.
 - **Next.js 16**: `proxy.ts` replaces `middleware.ts`; with `cacheComponents` enabled, request data (`headers()`, `cookies()`, sessions) must be read inside `<Suspense>`. Read `apps/web/node_modules/next/dist/docs/` for current APIs (see `apps/web/AGENTS.md`).
 - **Turborepo strict env mode** hides undeclared environment variables from tasks.
 - `prisma init` and similar CLIs may drop AI-agent skill folders (`.agents/`, `.claude/`, `.windsurf/`) into a package; delete them.

@@ -1,4 +1,5 @@
 import {
+  autoHoldingTabPositions,
   clampTouchOff,
   defaultTouchOff,
   designAlignment,
@@ -8,13 +9,19 @@ import {
   xyOriginPosition,
   xyOriginShift,
 } from "@furrow/cam-core";
-import type {
-  Point,
-  ProjectDocument,
-  StockAnchor,
-  TouchOffDisc,
-  Units,
-  ZOrigin,
+import {
+  type FlipAxis,
+  HoldingTabs,
+  type LineUp,
+  LocatingPins,
+  type Point,
+  type ProjectDocument,
+  type StockAnchor,
+  type StockCorner,
+  stockPins,
+  type TouchOffDisc,
+  type Units,
+  type ZOrigin,
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
@@ -61,6 +68,8 @@ function moveDrawing(
     const { tabs } = operation.params;
     tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
   }
+  const holding = draft.stock.twoSided?.tabs;
+  if (holding) holding.positions = holding.positions.map((p) => translatePoint(p, offset));
   const pad = draft.stock.touchOff;
   if (pad) [pad.x, pad.y] = translatePoint([pad.x, pad.y], offset);
 }
@@ -103,6 +112,12 @@ export function setStockDimension(store: DocumentStore, dimension: StockDimensio
     if (twoSided && twoSided.partingDepth >= draft.stock.thickness) {
       twoSided.partingDepth = (twoSided.partingDepth * draft.stock.thickness) / stock.thickness;
     }
+    // So must blind pin holes, kept the same way.
+    const holes = twoSided?.lineUp?.type === "pins" ? twoSided.lineUp.holes : null;
+    if (holes?.type === "blind" && holes.depth >= draft.stock.thickness) {
+      holes.depth = (holes.depth * draft.stock.thickness) / stock.thickness;
+    }
+    keepTabsInBottomSide(draft);
   });
 }
 
@@ -220,4 +235,206 @@ export function setTouchOffToolChange(store: DocumentStore, block: string | null
     const pad = draft.stock.touchOff;
     if (pad && pad.toolChange !== toolChange) pad.toolChange = toolChange;
   });
+}
+
+/**
+ * Makes the project two-sided (PRD-0011, ADR-0060), flipped about X, the
+ * sides parting at half the deepest model's depth, or at half the stock's
+ * thickness without a model; or one-sided again, moving every bottom-side
+ * operation to the top side in the same undo step.
+ */
+export function setTwoSided(store: DocumentStore, twoSided: boolean) {
+  const { stock, models } = store.getState().document;
+  if (twoSided === (stock.twoSided !== null)) return;
+  const deepest = Math.max(0, ...models.map(({ placement }) => placement.depth));
+  // Within the parting depth field's limits, whatever the models' depth.
+  const [min, max] = partingDepthLimits(stock.thickness);
+  const half = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  const partingDepth = Math.min(Math.max(half, min), max);
+  store.getState().change("setStock.twoSided", (draft) => {
+    if (!twoSided) {
+      draft.stock.twoSided = null;
+      for (const operation of draft.operations) operation.stockSide = "top";
+      return;
+    }
+    draft.stock.twoSided = { flipAxis: "x", partingDepth, lineUp: null, tabs: null };
+  });
+}
+
+/**
+ * Sets the axis a two-sided project's stock is turned over about. The
+ * locating pins keep their place along it, as a share of its length.
+ */
+export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
+  store.getState().change("setStock.flipAxis", (draft) => {
+    const { twoSided, width, height } = draft.stock;
+    if (!twoSided || twoSided.flipAxis === flipAxis) return;
+    twoSided.flipAxis = flipAxis;
+    const scale = flipAxis === "x" ? width / height : height / width;
+    if (twoSided.lineUp?.type === "pins") {
+      const pins = twoSided.lineUp;
+      pins.positions = pins.positions.map((position) => position * scale);
+    }
+  });
+}
+
+/**
+ * Sets how far below the stock top a two-sided project's sides part, in
+ * millimetres; a depth outside the stock is refused.
+ */
+/** The parting depth's field limits: a tenth of a millimetre from either face, or the middle of thinner stock. */
+export function partingDepthLimits(thickness: number): [min: number, max: number] {
+  const margin = Math.min(0.1, thickness / 2);
+  return [margin, thickness - margin];
+}
+
+export function setPartingDepth(store: DocumentStore, partingDepth: number) {
+  const { thickness } = store.getState().document.stock;
+  if (!(partingDepth > 0 && partingDepth < thickness)) return;
+  store.getState().change("setStock.partingDepth", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
+    keepTabsInBottomSide(draft);
+  });
+}
+
+/** How deep the bottom side cuts up to the parting plane, which holding tabs must be thinner than. */
+function bottomSideDepth({ thickness, twoSided }: ProjectDocument["stock"]): number {
+  return twoSided ? thickness - twoSided.partingDepth : 0;
+}
+
+/** Holding tabs too thick for the bottom side (#357) take half its depth, as the document requires. */
+function keepTabsInBottomSide(draft: Draft<ProjectDocument>) {
+  const tabs = draft.stock.twoSided?.tabs;
+  const depth = bottomSideDepth(draft.stock);
+  if (tabs && tabs.thickness >= depth) tabs.thickness = depth / 2;
+}
+
+/** Holding tabs round each model when they're turned on, or auto-placed without a count. */
+export const HOLDING_TABS_PER_MODEL = 4;
+
+/**
+ * Turns a two-sided project's holding tabs (PRD-0011 B5, ADR-0063) on, 6 mm
+ * wide, 2 mm thick but no more than half the bottom side's depth, and
+ * `HOLDING_TABS_PER_MODEL` round each model; or off.
+ */
+export function setHoldingTabs(store: DocumentStore, on: boolean) {
+  const { stock, models } = store.getState().document;
+  if (!stock.twoSided || on === (stock.twoSided.tabs !== null)) return;
+  const tabs: HoldingTabs | null = on
+    ? {
+        width: 6,
+        thickness: Math.min(2, bottomSideDepth(stock) / 2),
+        positions: autoHoldingTabPositions(models, HOLDING_TABS_PER_MODEL),
+      }
+    : null;
+  store.getState().change("setStock.tabs", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.tabs = tabs;
+  });
+}
+
+/**
+ * Sets the holding tabs' width or thickness; refused unless positive, and
+ * for the thickness, thinner than the bottom side's depth, as the document
+ * requires. Returns whether it was taken.
+ */
+export function setHoldingTabSize(
+  store: DocumentStore,
+  field: "width" | "thickness",
+  value: number,
+): boolean {
+  const { stock } = store.getState().document;
+  const tabs = stock.twoSided?.tabs;
+  if (!tabs || !HoldingTabs.safeParse({ ...tabs, [field]: value }).success) return false;
+  if (field === "thickness" && value >= bottomSideDepth(stock)) return false;
+  store.getState().change(`setStock.tabs.${field}`, (draft) => {
+    const draftTabs = draft.stock.twoSided?.tabs;
+    if (draftTabs) draftTabs[field] = value;
+  });
+  return true;
+}
+
+/** Replaces the holding tabs with `count` spread round each model's outline. */
+export function autoPlaceHoldingTabs(store: DocumentStore, count: number) {
+  const { models } = store.getState().document;
+  store.getState().change("setStock.tabs.positions", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs) tabs.positions = autoHoldingTabPositions(models, count);
+  });
+}
+
+/** Moves holding tab `index` to `position`, already on a model's outline. */
+export function moveHoldingTab(store: DocumentStore, index: number, position: Point) {
+  store.getState().change("setStock.tabs.positions", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs && index >= 0 && index < tabs.positions.length) tabs.positions[index] = position;
+  });
+}
+
+/**
+ * Sets how a two-sided project's turned-over stock is lined up, as one undo
+ * step: on locating pins (#356), two 6 mm pins symmetric about the stock's
+ * centre, two fifths of its length along the flip axis from it, through into
+ * the spoilboard; by its bottom-left corner in a fence corner (#361); or
+ * neither. Drills of the pins cut nothing until there are pins again.
+ */
+export function setLineUp(store: DocumentStore, type: LineUp["type"] | null) {
+  const { twoSided, width, height } = store.getState().document.stock;
+  if (!twoSided || type === (twoSided.lineUp?.type ?? null)) return;
+  const offset = Math.round(0.4 * (twoSided.flipAxis === "x" ? width : height));
+  const lineUp: LineUp | null =
+    type === "pins"
+      ? {
+          type,
+          diameter: 6,
+          positions: [-offset, offset],
+          holes: { type: "through", spoilboardDepth: 5 },
+        }
+      : type === "edges"
+        ? { type, corner: "bottom_left" }
+        : null;
+  store.getState().change("setStock.lineUp", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.lineUp = lineUp;
+  });
+}
+
+/** Sets the corner a stock lined up by a fence corner (#361) goes into it by. */
+export function setFenceCorner(store: DocumentStore, corner: StockCorner) {
+  store.getState().change("setStock.lineUp", (draft) => {
+    const lineUp = draft.stock.twoSided?.lineUp;
+    if (lineUp?.type === "edges") lineUp.corner = corner;
+  });
+}
+
+/**
+ * Adds a locating pin, as one undo step: opposite the last one if that
+ * place is free, else halfway from it to the stock's edge beyond it.
+ */
+export function addLocatingPin(store: DocumentStore) {
+  const { stock } = store.getState().document;
+  const { twoSided, width, height } = stock;
+  const pins = stockPins(stock);
+  if (!twoSided || !pins) return;
+  const last = pins.positions.at(-1) ?? 0;
+  const edge = ((twoSided.flipAxis === "x" ? width : height) - pins.diameter) / 2;
+  const position = pins.positions.includes(-last) ? (last + (last < 0 ? -edge : edge)) / 2 : -last;
+  updateLocatingPins(store, { positions: [...pins.positions, position] });
+}
+
+/**
+ * Changes some of the locating pins' settings at once; refused unless the
+ * result is valid `LocatingPins` with blind holes inside the stock. Returns whether they were taken.
+ */
+export function updateLocatingPins(store: DocumentStore, changes: Partial<LocatingPins>): boolean {
+  const { stock } = store.getState().document;
+  const pins = stockPins(stock);
+  const parsed = LocatingPins.safeParse({ ...pins, ...changes });
+  if (!pins || !parsed.success) return false;
+  // Blind holes stay inside the stock, as the document requires.
+  if (parsed.data.holes.type === "blind" && parsed.data.holes.depth >= stock.thickness) {
+    return false;
+  }
+  store.getState().change("setStock.lineUp", (draft) => {
+    if (draft.stock.twoSided) draft.stock.twoSided.lineUp = parsed.data;
+  });
+  return true;
 }

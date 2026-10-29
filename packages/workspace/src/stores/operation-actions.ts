@@ -25,6 +25,8 @@ import {
   ReliefFinishParams,
   ReliefRoughParams,
   type Shape,
+  type StockSide,
+  stockPins,
   type Tool,
   toolProblem,
   VCarveParams,
@@ -71,6 +73,7 @@ export const DEFAULT_STEP_OVER = 40;
  */
 export function defaultPocketParams(document: ProjectDocument): PocketParams {
   return {
+    side: "inside",
     strategy: { type: "offset" },
     direction: "climb",
     stepOver: DEFAULT_STEP_OVER,
@@ -86,7 +89,12 @@ export function defaultPocketParams(document: ProjectDocument): PocketParams {
  * the tool's step-down is a single plunge anyway.
  */
 export function defaultDrillParams(document: ProjectDocument): DrillParams {
-  return { depth: document.stock.thickness, peck: true, stepOver: DEFAULT_STEP_OVER };
+  return {
+    depth: document.stock.thickness,
+    peck: true,
+    stepOver: DEFAULT_STEP_OVER,
+    pins: false,
+  };
 }
 
 /** How deep new engravings go, unless the stock is thinner. */
@@ -118,8 +126,8 @@ export const DEFAULT_RELIEF_STEP_OVER = 10;
 
 /**
  * New 3D finishing operations on `modelId` run parallel zig-zag passes along
- * X at a 10% step-over (PRD-0005), leaving no stock and cutting everything
- * (no rest machining).
+ * X at a 10% step-over over the model's outline (PRD-0005), leaving no stock
+ * and cutting everything (no rest machining).
  */
 export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
   return {
@@ -127,6 +135,7 @@ export function defaultReliefFinishParams(modelId: string): ReliefFinishParams {
     strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: DEFAULT_RELIEF_STEP_OVER,
     stockToLeave: 0,
+    boundary: { type: "model" },
     rest: false,
   };
 }
@@ -198,6 +207,44 @@ export function addDrillOperation(store: DocumentStore, options: NewOperation): 
 }
 
 /**
+ * Appends a drill of a two-sided project's locating pins (#356) on the top
+ * side, named "Locating pins" in English by default. Returns its id, or
+ * `null` if the project has no pins or `tool` can't drill.
+ */
+export function addPinDrillOperation(
+  store: DocumentStore,
+  { tool, name = "Locating pins" }: { tool: Tool; name?: string },
+): string | null {
+  const { document } = store.getState();
+  if (!canDrill(tool) || !stockPins(document.stock)) return null;
+  const operation: Operation = {
+    id: crypto.randomUUID(),
+    type: "drill",
+    name: nextName(document, name),
+    enabled: true,
+    stockSide: "top",
+    targets: [],
+    tool,
+    params: { ...defaultDrillParams(document), pins: true },
+  };
+  store.getState().change("addOperation", (draft) => {
+    draft.operations.push(operation);
+  });
+  track({ event: "operation_added", type: operation.type });
+  return operation.id;
+}
+
+/** Makes the drill `id` cut the locating pins (#356) instead of its shapes. */
+export function setDrillPins(store: DocumentStore, id: string) {
+  changeOperation(store, "setOperationTargets", id, (operation) => {
+    // Top side only: turned over, the stock sits on the pins.
+    if (operation.type !== "drill" || operation.stockSide !== "top") return;
+    operation.targets = [];
+    operation.params.pins = true;
+  });
+}
+
+/**
  * Appends an engrave operation on `targets`, like `addProfileOperation`.
  * Returns `null` as well if `tool` can't engrave.
  */
@@ -249,16 +296,23 @@ export function addReliefRoughOperation(store: DocumentStore, options: NewModelO
   }));
 }
 
-type NewModelOperation = { modelId: string; tool: Tool; id?: string; name?: string };
+/** `stockSide` is the side of a two-sided project the operation cuts (ADR-0060), the top by default. */
+type NewModelOperation = {
+  modelId: string;
+  tool: Tool;
+  id?: string;
+  name?: string;
+  stockSide?: StockSide;
+};
 
 function appendModelOperation(
   store: DocumentStore,
-  { modelId, tool, id = crypto.randomUUID() }: NewModelOperation,
+  { modelId, tool, id = crypto.randomUUID(), stockSide = "top" }: NewModelOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
   if (!document.models.some((model) => model.id === modelId)) return null;
-  const operation = create(document, { id, enabled: true, stockSide: "top", targets: [], tool });
+  const operation = create(document, { id, enabled: true, stockSide, targets: [], tool });
   if (toolProblem(operation)) return null;
   store.getState().change("addOperation", (draft) => {
     draft.operations.push(operation);
@@ -267,14 +321,23 @@ function appendModelOperation(
   return id;
 }
 
-/** `name` is the base of the new operation's name, translated by the caller; English by default. */
-type NewOperation = { targets: OperationTarget[]; tool: Tool; id?: string; name?: string };
+/**
+ * `name` is the base of the new operation's name, translated by the caller;
+ * English by default. `stockSide` is as for `NewModelOperation`.
+ */
+type NewOperation = {
+  targets: OperationTarget[];
+  tool: Tool;
+  id?: string;
+  name?: string;
+  stockSide?: StockSide;
+};
 
 type OperationFields = Pick<Operation, "id" | "enabled" | "stockSide" | "targets" | "tool">;
 
 function appendOperation(
   store: DocumentStore,
-  { targets, tool, id = crypto.randomUUID() }: NewOperation,
+  { targets, tool, id = crypto.randomUUID(), stockSide = "top" }: NewOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
 ): string | null {
   const { document } = store.getState();
@@ -283,7 +346,7 @@ function appendOperation(
   const operation = create(document, {
     id,
     enabled: true,
-    stockSide: "top",
+    stockSide,
     targets: existing,
     tool,
   });
@@ -435,6 +498,8 @@ export function setOperationTargets(
   if (existing.length === 0) return { ok: false, error: { code: "workspace.needsShape" } };
   changeOperation(store, "setOperationTargets", id, (operation) => {
     operation.targets = existing;
+    // A pin drill (#356) cuts its shapes again.
+    if (operation.type === "drill") operation.params.pins = false;
   });
   return OK;
 }

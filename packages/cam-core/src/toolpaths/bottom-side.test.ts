@@ -69,6 +69,7 @@ const pocket = {
   tool: endMill,
   stockSide: "top",
   params: {
+    side: "inside",
     strategy: { type: "offset" },
     direction: "climb",
     stepOver: 40,
@@ -91,7 +92,12 @@ function bothSides(operation: Operation, flipAxis: FlipAxis): [Toolpath, Toolpat
   const doc = fullDocument();
   const document: ProjectDocument = {
     ...doc,
-    stock: { ...doc.stock, ...STOCK, touchOff: null, twoSided: { flipAxis, partingDepth: 9 } },
+    stock: {
+      ...doc.stock,
+      ...STOCK,
+      touchOff: null,
+      twoSided: { flipAxis, partingDepth: 9, tabs: null, lineUp: null },
+    },
     geometry: [ELL, HOLE],
     models: [],
     fonts: [],
@@ -177,6 +183,22 @@ describe("2D operations on the bottom side", () => {
         },
       );
 
+      it("pockets outside the drawing seen from below up to the stock edges (#386)", () => {
+        const outside = { ...pocket, params: { ...pocket.params, side: "outside" as const } };
+        const [, bottom] = bothSides(outside, axis);
+        expect(deepBox(bottom).map((value) => Number(value.toFixed(3)))).toEqual([
+          0,
+          0,
+          STOCK.width,
+          STOCK.height,
+        ]);
+        // The L stays standing where the drawing seen from below has it.
+        const [x, y] = flipPoint2(flip(axis), [30, 45]);
+        expect(
+          bottom.moves.some(({ to }) => to[2] < 0 && Math.hypot(to[0] - x, to[1] - y) < 8),
+        ).toBe(false);
+      });
+
       it("drills a hole where the drawing seen from below has it", () => {
         const drilling: Operation = {
           ...base,
@@ -185,7 +207,7 @@ describe("2D operations on the bottom side", () => {
           tool: drill,
           stockSide: "top",
           targets: [{ shapeId: HOLE.id, paths: null }],
-          params: { depth: DEPTH, peck: false, stepOver: 40 },
+          params: { depth: DEPTH, peck: false, stepOver: 40, pins: false },
         };
         const [, bottom] = bothSides(drilling, axis);
         const plunges = bottom.moves.filter(({ to }) => Math.abs(to[2] + DEPTH) < 1e-9);

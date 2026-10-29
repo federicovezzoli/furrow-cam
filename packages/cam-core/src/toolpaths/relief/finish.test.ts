@@ -9,8 +9,11 @@ import {
   createReliefCache,
   MAX_RELIEF_CELLS,
   offsetHeightsSteps,
+  type ReliefGrid,
   RestDropper,
   rasterizeModelSteps,
+  reachModel,
+  reliefCacheKey,
   reliefCellSize,
   reliefGrid,
   restGrid,
@@ -76,6 +79,7 @@ function finishing(
       strategy: { type: "parallel", angle: 0, direction: "zigzag" },
       stepOver: 50,
       stockToLeave: 0,
+      boundary: { type: "model" },
       rest: false,
       ...params,
     },
@@ -143,6 +147,18 @@ describe("reliefGrid", () => {
         0.1,
       ),
     ).toBeNull();
+  });
+});
+
+describe("reliefCacheKey", () => {
+  it("tells grids with the same corner and cells of different sizes apart", () => {
+    const view = modelView(placed(300.02, 200, 10));
+    const wider = modelView(placed(300.07, 200, 10));
+    const a = reliefGrid(view, 0, 0.1);
+    const b = reliefGrid(wider, 0, 0.1);
+    if (!a || !b) throw new Error("no grid");
+    expect([a.columns, a.rows, a.origin]).toEqual([b.columns, b.rows, b.origin]);
+    expect(reliefCacheKey(view, a, 0)).not.toBe(reliefCacheKey(view, b, 0));
   });
 });
 
@@ -519,6 +535,7 @@ describe("generateToolpath", () => {
     stockBottom: null,
     parting: null,
     flip: null,
+    tabs: null,
     before: [],
     touchOff: null,
     ...options,
@@ -541,5 +558,26 @@ describe("generateToolpath", () => {
     expect(toolpathKey({ ...input, model: { ...STEP, fileName: "renamed.stl" } })).toBe(
       toolpathKey(input),
     );
+  });
+});
+
+describe("reachModel", () => {
+  // 10 × 10 cells of 1 mm, the model over x ≥ 5 only.
+  const grid = reliefGrid({ box: { min: [0, 0, -10], max: [10, 10, 0] } }, 0, 1) as ReliefGrid;
+  const heights = new Float32Array(100).map((_, i) => (i % 10 >= 5 ? -2 : -Infinity));
+  const tab = { modelId: "m", width: 2, top: -5 };
+
+  it("carries a tab in from the outline to the model's surface, and no further", () => {
+    expect(reachModel([{ ...tab, from: [0, 5.5], to: [-20, 5.5] }], grid, heights)).toEqual([
+      { ...tab, from: [5, 5.5], to: [-20, 5.5] },
+    ]);
+  });
+
+  it("leaves a tab already on the model, or whose way in misses it", () => {
+    const on = { ...tab, from: [10, 5.5] as [number, number], to: [30, 5.5] as [number, number] };
+    const away = { ...tab, from: [5, 0] as [number, number], to: [5, -20] as [number, number] };
+    const empty = new Float32Array(100).fill(-Infinity);
+    expect(reachModel([on], grid, heights)).toEqual([on]);
+    expect(reachModel([away], grid, empty)).toEqual([away]);
   });
 });

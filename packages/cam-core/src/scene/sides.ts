@@ -1,17 +1,21 @@
-import type {
-  FlipAxis,
-  LinearAngle,
-  Model,
-  Operation,
-  Point,
-  Shape,
-  Stock,
+import {
+  type DrillOperation,
+  type FlipAxis,
+  type LinearAngle,
+  type LocatingPins,
+  type Model,
+  type Operation,
+  type Point,
+  type Shape,
+  type Stock,
+  type StockCorner,
+  stockPins,
 } from "@furrow/document";
 import { composeAffine } from "../geometry/affine";
 import { roundCoordinate } from "../geometry/round";
 import { mapShapes } from "../geometry/scale";
 import { modelTransform, type PlacedModel, placedModelBox } from "./model";
-import type { Box3, Vec3 } from "./stock";
+import { type Box3, type Vec3, xyOriginPosition } from "./stock";
 
 /**
  * The two sides of a two-sided project (PRD-0011, ADR-0060). The bottom
@@ -63,17 +67,19 @@ export function bottomModelTransform(
 export type Flip = Pick<Stock, "width" | "height" | "thickness"> & { axis: FlipAxis };
 
 /**
- * A model as one side sees it (ADR-0060): its mesh, the box it fills and the
+ * A model as one side sees it (ADR-0060): its mesh, the box it fills, the
  * transform from the mesh's file coordinates to that side's stock
- * coordinates. All a relief toolpath needs of it.
+ * coordinates and `outside`, the height a relief toolpath cuts down to where
+ * no part of the model is: its bottom, or a two-sided project's parting
+ * plane (ADR-0063). All a relief toolpath needs of it.
  */
-export type ModelView = { sha256: string; box: Box3; transform: number[] };
+export type ModelView = { sha256: string; box: Box3; transform: number[]; outside: number };
 
 /**
  * `model` as the top side sees it, or with `flip` as the bottom side does:
  * turned over, reaching up from the stock's floor. With a `parting` plane,
- * its box reaches down to it at least, so a side cuts down to the plane
- * around a model that doesn't (ADR-0060).
+ * its box reaches down to it at least, and the side cuts down to the plane
+ * around the model but all of the model it sees over it (ADR-0063).
  */
 export function modelView(
   model: PlacedModel & Pick<Model, "sha256">,
@@ -92,6 +98,7 @@ export function modelView(
   return {
     sha256: model.sha256,
     box: { min, max },
+    outside: parting ?? min[2],
     transform: flip ? composeAffine(flipTransform(flip, flip.axis), placed) : placed,
   };
 }
@@ -130,4 +137,81 @@ export function flipOperation(operation: Operation, flip: Flip): Operation {
     return { ...operation, params: { ...operation.params, strategy } };
   }
   return operation;
+}
+
+/**
+ * The centres of the locating pins (#356) in stock coordinates, none without
+ * any: on the line the stock turns about, so the same on either side and
+ * where the turned-over stock's holes land.
+ */
+export function pinCenters(stock: Stock): Point[] {
+  const { width, height, twoSided } = stock;
+  const pins = stockPins(stock);
+  if (!twoSided || !pins) return [];
+  const { flipAxis } = twoSided;
+  return pins.positions.map((position) =>
+    flipAxis === "x" ? [width / 2 + position, height / 2] : [width / 2, height / 2 + position],
+  );
+}
+
+/** How deep the pin holes go below the stock top: through it and into the spoilboard, or blind. */
+export function pinDepth(thickness: number, { holes }: LocatingPins): number {
+  return holes.type === "through" ? thickness + holes.spoilboardDepth : holes.depth;
+}
+
+/**
+ * A drill operation as it cuts: a pin drill (#356) has the pin holes for
+ * shapes, circles of the pins' diameter, and their depth; none in a project
+ * without pins. Others keep their own.
+ */
+export function drillTargets(
+  operation: DrillOperation,
+  shapes: Shape[],
+  stock: Stock,
+): { operation: DrillOperation; shapes: Shape[] } {
+  const pins = stockPins(stock);
+  if (!operation.params.pins) return { operation, shapes };
+  if (!pins) return { operation, shapes: [] };
+  const r = pins.diameter / 2;
+  const paths = pinCenters(stock).map(([x, y]) => {
+    const start: Point = [x + r, y];
+    return {
+      start,
+      segments: [{ kind: "arc" as const, to: start, center: [x, y] as Point, clockwise: false }],
+      closed: true,
+    };
+  });
+  const depth = pinDepth(stock.thickness, pins);
+  return {
+    operation: { ...operation, params: { ...operation.params, depth } },
+    // Not a drawing's: only its paths are cut.
+    shapes: [{ id: "locating-pins", name: "", layer: "", drawingId: "locating-pins", paths }],
+  };
+}
+
+/**
+ * Lining the stock up by a fence corner (#361): the corner, as each side
+ * sees it, pushed into the fence corner on both sides; the XY zero's offset
+ * from it, the same on both sides; and the stock's size the sides meet by,
+ * along the axis across the flip axis, which turning it over swaps end for
+ * end. `null` unless lined up by a fence corner.
+ */
+export function edgeSetup(
+  stock: Stock,
+): { corner: StockCorner; offset: Point; measure: { axis: "x" | "y"; size: number } } | null {
+  const lineUp = stock.twoSided?.lineUp;
+  if (lineUp?.type !== "edges") return null;
+  const { corner } = lineUp;
+  const [x, y] = xyOriginPosition(stock);
+  const cornerX = corner.endsWith("right") ? stock.width : 0;
+  const cornerY = corner.startsWith("top") ? stock.height : 0;
+  return {
+    corner,
+    // `+ 0` turns -0 into 0.
+    offset: [x - cornerX + 0, y - cornerY + 0],
+    measure:
+      stock.twoSided?.flipAxis === "x"
+        ? { axis: "y", size: stock.height }
+        : { axis: "x", size: stock.width },
+  };
 }
