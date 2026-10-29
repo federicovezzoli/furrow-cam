@@ -1,7 +1,23 @@
-import { type Message, MessageError, type Path, type TextSettings } from "@furrow/document";
+import { type Message, MessageError, type Path, Sha256, type TextSettings } from "@furrow/document";
 
-/** A text item's settings to lay out, `id` pairing the answer with it. */
-export type TextLayoutRequest = { id: number; settings: TextSettings };
+/** An uploaded font's file and whether it is single-stroke (ADR-0062). */
+export type UploadedFontFile = { bytes: ArrayBuffer; singleStroke: boolean };
+
+/**
+ * The project's uploaded fonts: whether one is single-stroke, as the document
+ * says now, or `undefined` if it isn't listed, and its file, which `read`
+ * throws if it can't read.
+ */
+export type UploadedFonts = {
+  singleStroke(sha256: string): boolean | undefined;
+  read(sha256: string): Promise<ArrayBuffer>;
+};
+
+/**
+ * A text item's settings to lay out, `id` pairing the answer with it, and the
+ * uploaded font they use the first time this worker needs it.
+ */
+export type TextLayoutRequest = { id: number; settings: TextSettings; font?: UploadedFontFile };
 
 /** Its outlines in stock coordinates, or why there are none, for the user. */
 export type TextLayoutResponse = { id: number; paths: Path[] } | { id: number; error: Message };
@@ -9,27 +25,53 @@ export type TextLayoutResponse = { id: number; paths: Path[] } | { id: number; e
 /** Why a text item couldn't be laid out, for the user (ADR-0054). */
 export class TextLayoutError extends MessageError {}
 
+/** Why text in an uploaded font couldn't be laid out: the project no longer has it, or it can't be read. */
+export const FONT_UNAVAILABLE: Message = { code: "workspace.fontUnavailable" };
+
 /** Why text couldn't be laid out, when nothing more precise is known. */
 export const TEXT_LAYOUT_FAILED: Message = { code: "workspace.textLayoutFailed" };
 
 let worker: Worker | null = null;
 const waiting = new Map<
   number,
-  { resolve: (paths: Path[]) => void; reject: (error: Error) => void }
+  { font: string; resolve: (paths: Path[]) => void; reject: (error: Error) => void }
 >();
 let nextId = 0;
+/** The uploaded fonts the running worker was sent, by hash, with the single-stroke flag sent. */
+const sent = new Map<string, boolean>();
 
 /**
  * Text item `settings`' outlines in stock coordinates (`textPaths`), laid
  * out in a Web Worker (ADR-0004) that stays for the next edit, with the fonts
- * it loaded. Throws a `TextLayoutError` if they can't be.
+ * it loaded. An uploaded font is read through `uploaded` and sent to the
+ * worker the first time it needs it, and again if the project now says
+ * otherwise of whether it is single-stroke. Throws a `TextLayoutError` if the
+ * text can't be laid out.
  */
-export function layoutText(settings: TextSettings): Promise<Path[]> {
+export async function layoutText(
+  settings: TextSettings,
+  uploaded?: UploadedFonts,
+): Promise<Path[]> {
+  let font: UploadedFontFile | undefined;
+  if (Sha256.safeParse(settings.font).success) {
+    const singleStroke = uploaded?.singleStroke(settings.font);
+    if (!uploaded || singleStroke === undefined) throw new TextLayoutError(FONT_UNAVAILABLE);
+    if (sent.get(settings.font) !== singleStroke) {
+      try {
+        font = { bytes: await uploaded.read(settings.font), singleStroke };
+      } catch (error) {
+        console.error(error);
+        throw new TextLayoutError(FONT_UNAVAILABLE);
+      }
+      sent.set(settings.font, singleStroke);
+    }
+  }
   const running = worker ?? start();
   const id = nextId++;
   return new Promise((resolve, reject) => {
-    waiting.set(id, { resolve, reject });
-    running.postMessage({ id, settings } satisfies TextLayoutRequest);
+    waiting.set(id, { font: settings.font, resolve, reject });
+    const request: TextLayoutRequest = font ? { id, settings, font } : { id, settings };
+    running.postMessage(request, font ? [font.bytes] : []);
   });
 }
 
@@ -40,14 +82,17 @@ function start(): Worker {
   started.onmessage = ({ data }: MessageEvent<TextLayoutResponse>) => {
     const request = waiting.get(data.id);
     waiting.delete(data.id);
-    if ("paths" in data) request?.resolve(data.paths);
-    else request?.reject(new TextLayoutError(data.error));
+    if ("paths" in data) return request?.resolve(data.paths);
+    // Its uploaded font may not have reached the worker: send it again next time.
+    if (request) sent.delete(request.font);
+    request?.reject(new TextLayoutError(data.error));
   };
   // A worker that fails to load fails every request; the next one starts another.
   started.onerror = (event) => {
     event.preventDefault();
     started.terminate();
     worker = null;
+    sent.clear();
     for (const request of waiting.values()) request.reject(new TextLayoutError(TEXT_LAYOUT_FAILED));
     waiting.clear();
   };

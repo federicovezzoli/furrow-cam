@@ -9,7 +9,9 @@ import {
   SQUARE_ID,
   textItem,
   textShape,
+  uploadedFont,
 } from "./fixtures";
+import type { TextSettings } from "./geometry";
 
 describe("ProjectDocument", () => {
   it("accepts a document with machine, geometry and operations", () => {
@@ -105,12 +107,49 @@ describe("ProjectDocument", () => {
       }),
     ]);
     expect(ProjectDocument.safeParse(text({ height: 0 })).success).toBe(false);
+    expect(ProjectDocument.safeParse(text({ letterSpacing: -0.5 })).success).toBe(true);
+    expect(ProjectDocument.safeParse(text({ letterSpacing: -0.6 })).success).toBe(false);
     for (const rotation of [-90, 360]) {
       const placement = { ...textItem.text?.placement, rotation };
       expect(ProjectDocument.safeParse(text({ placement })).success).toBe(false);
     }
     expect(ProjectDocument.safeParse(text({ font: "" })).success).toBe(false);
     expect(ProjectDocument.safeParse(text({ align: "justify" })).success).toBe(false);
+  });
+
+  it("accepts uploaded fonts that text uses, and rejects duplicates, unknown ones and too many", () => {
+    const doc = fullDocument();
+    const onFont = {
+      ...textItem,
+      text: { ...(textItem.text as TextSettings), font: uploadedFont.sha256 },
+    };
+    const withFont = {
+      ...doc,
+      drawings: [...doc.drawings, onFont],
+      geometry: [...doc.geometry, textShape],
+      fonts: [uploadedFont],
+    };
+    expect(ProjectDocument.parse(withFont)).toEqual(withFont);
+    expect(ProjectDocument.safeParse({ ...withFont, fonts: [] }).error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "text", "font"],
+        message: "document.unknownFont",
+      }),
+    ]);
+    expect(
+      ProjectDocument.safeParse({ ...withFont, fonts: [uploadedFont, uploadedFont] }).error?.issues,
+    ).toEqual([
+      expect.objectContaining({ path: ["fonts", 1, "sha256"], message: "document.duplicateFont" }),
+    ]);
+    const others = ["a", "b", "c", "d"].map((c) => ({ ...uploadedFont, sha256: c.repeat(64) }));
+    expect(
+      ProjectDocument.safeParse({ ...withFont, fonts: [uploadedFont, ...others] }).error?.issues,
+    ).toEqual([expect.objectContaining({ path: ["fonts"], message: "document.tooManyFonts" })]);
+    // A bundled font's id isn't a hash, and needs no upload.
+    expect(
+      ProjectDocument.safeParse({ ...withFont, fonts: [], drawings: [...doc.drawings, textItem] })
+        .success,
+    ).toBe(true);
   });
 
   it("accepts models and rejects duplicate model ids", () => {
@@ -335,6 +374,7 @@ describe("createProjectDocument", () => {
       machine: null,
       geometry: [],
       models: [],
+      fonts: [],
       operations: [],
     });
   });

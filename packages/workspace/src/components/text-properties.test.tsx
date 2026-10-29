@@ -3,6 +3,7 @@ import { createProjectDocument, type Path, type ProjectDocument } from "@furrow/
 import { fullDocument, TEXT_ID, textItem, textShape } from "@furrow/document/fixtures";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import arvo from "../fonts/Arvo-Regular.ttf?inline";
 import { createMemoryHost } from "../lib/memory-host";
 import type { TextLayoutRequest } from "../lib/text-layout";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
@@ -45,13 +46,16 @@ function Stores() {
   return null;
 }
 
-function render(ui: React.ReactElement, document: ProjectDocument) {
+function render(ui: React.ReactElement, document: ProjectDocument, fonts = false) {
   return renderWorkspace(
     <>
       <Stores />
       {ui}
     </>,
-    createMemoryHost({ document }),
+    createMemoryHost(
+      { document },
+      { limits: { meshes: null, fonts: fonts ? { maxBytes: 5_000_000 } : null } },
+    ),
   );
 }
 
@@ -84,9 +88,9 @@ describe("AddTextButton", () => {
 describe("TextProperties", () => {
   it("edits the text, font, letter height and alignment, each one undo step keeping its place", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
-    const field = screen.getByLabelText("Text", { selector: "input" });
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "Hello" } });
-    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
     await waitFor(() => expect(text()?.text).toBe("Hello"));
     expect(current().drawings.at(-1)?.name).toBe("Hello");
     const shape = current().geometry.at(-1);
@@ -116,6 +120,27 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
+  it("takes several lines, a line spacing and a letter spacing", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "Hi\nthere" } });
+    // Enter alone starts a new line; leaving the field changes the text.
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(text()?.text).toBe("I");
+    fireEvent.blur(field);
+    await waitFor(() => expect(text()?.text).toBe("Hi\nthere"));
+    expect(current().drawings.at(-1)?.name).toBe("Hi there");
+    const lineSpacing = screen.getByLabelText(/^Line spacing/);
+    fireEvent.change(lineSpacing, { target: { value: "2" } });
+    fireEvent.keyDown(lineSpacing, { key: "Enter" });
+    await waitFor(() => expect(text()?.lineSpacing).toBe(2));
+    const letterSpacing = screen.getByLabelText(/^Letter spacing/);
+    // A share of the letter height, whatever the units.
+    fireEvent.change(letterSpacing, { target: { value: "10" } });
+    fireEvent.keyDown(letterSpacing, { key: "Enter" });
+    await waitFor(() => expect(text()?.letterSpacing).toBeCloseTo(0.1, 9));
+  });
+
   it("makes a held arrow on the letter height one undo step, once its layouts land", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
     const height = screen.getByLabelText(/^Letter height/);
@@ -133,16 +158,67 @@ describe("TextProperties", () => {
     expect(current()).toEqual(withText());
   });
 
+  it("converts the text into a drawing, which has no text settings", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    await waitFor(() => expect(text()).toBeUndefined());
+    expect(current().geometry).toEqual(withText().geometry);
+    expect(screen.queryByLabelText("Text", { selector: "textarea" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove drawing" })).toBeTruthy();
+  });
+
+  it("converts what was just typed, once its edit lands", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "Hello" } });
+    // Clicking the button leaves the field first.
+    fireEvent.blur(field);
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    await waitFor(() => expect(text()).toBeUndefined());
+    expect(current().drawings.at(-1)?.name).toBe("Hello");
+    expect(current().geometry.at(-1)?.paths[0]?.segments[0]?.to).toEqual([60, 10]);
+  });
+
+  it("doesn't convert when the edit it waits for is refused, keeping what was typed", async () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });
+    fireEvent.change(field, { target: { value: "∅" } });
+    fireEvent.blur(field);
+    fireEvent.click(screen.getByRole("button", { name: "Convert to drawing" }));
+    expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
+    expect(text()?.text).toBe("I");
+    expect(field.value).toBe("∅");
+  });
+
+  it("uploads a font, single-stroke if ticked, and sets the text in it", async () => {
+    const { container } = render(<DrawingProperties drawingId={TEXT_ID} />, withText(), true);
+    fireEvent.click(screen.getByLabelText("Single-stroke (for engraving)"));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File([await (await fetch(arvo)).arrayBuffer()], "Arvo-Regular.ttf");
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+    await waitFor(() => expect(text()?.font).toBe(current().fonts[0]?.sha256));
+    expect(current().fonts[0]).toMatchObject({ name: "Arvo", singleStroke: true });
+    const uploaded = screen.getByRole("group", { name: "Uploaded" });
+    expect(uploaded.textContent).toBe("Arvo");
+  });
+
+  it("offers no upload where the host can't store fonts", () => {
+    render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    expect(screen.queryByRole("button", { name: "Upload font…" })).toBeNull();
+  });
+
   it("puts blank text back, and refuses text the font has nothing for", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
-    const field = screen.getByLabelText<HTMLInputElement>("Text", { selector: "input" });
+    const field = screen.getByLabelText<HTMLTextAreaElement>("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "  " } });
     fireEvent.blur(field);
-    expect(field.value).toBe("I");
+    await waitFor(() => expect(field.value).toBe("I"));
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.change(field, { target: { value: "∅" } });
-    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });
     expect(await screen.findByText(/nothing to cut/)).toBeTruthy();
+    // What was typed stays, to be fixed.
+    expect(field.value).toBe("∅");
     expect(current()).toEqual(withText());
   });
 });

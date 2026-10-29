@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   ARCHIVE_DOCUMENT_PATH,
   type ArchiveVersion,
+  archiveFontPath,
   archiveMeshPath,
   archiveVersionPath,
   MAX_ARCHIVE_DOCUMENT_BYTES,
   MAX_ARCHIVE_MESHES,
   MAX_ARCHIVE_VERSIONS,
   maxArchiveBytes,
+  missingArchiveFonts,
   missingArchiveMeshes,
   ProjectArchiveError,
   packProjectArchive,
@@ -16,7 +18,7 @@ import {
   sha256Hex,
 } from "./archive";
 import { createProjectDocument, type ProjectDocument } from "./document";
-import { circle, fullDocument, model, square, textItem, textShape } from "./fixtures";
+import { circle, fullDocument, model, square, textItem, textShape, uploadedFont } from "./fixtures";
 import { parseProjectDocument } from "./migrations";
 
 const MAX_MESH_BYTES = 1_000;
@@ -137,6 +139,61 @@ describe("packProjectArchive and readProjectArchive", () => {
       document.models.push({ ...(first as (typeof document.models)[number]), sha256 });
     }
     expect(() => packProjectArchive(document, meshes)).toThrow(ProjectArchiveError);
+  });
+});
+
+describe("archive fonts", () => {
+  /** `fullDocument` with `font`, an uploaded font whose file is `text`. */
+  async function withFont(text = "font bytes") {
+    const bytes = strToU8(text);
+    const sha256 = await sha256Hex(bytes);
+    const font = { ...uploadedFont, sha256, size: bytes.byteLength };
+    const document: ProjectDocument = { ...fullDocument(), fonts: [font] };
+    return { document, fonts: new Map([[sha256, bytes]]), sha256 };
+  }
+
+  it("round-trip with the document and its versions", async () => {
+    const { document, fonts, sha256 } = await withFont();
+    const versions = [version("v", document)];
+    const archive = await readProjectArchive(
+      packProjectArchive(document, new Map(), versions, fonts),
+      MAX_MESH_BYTES,
+    );
+    expect(parseProjectDocument(JSON.parse(archive.contents))).toEqual(document);
+    expect(archive.fonts).toEqual(fonts);
+    expect(archive.versions[0]?.document).toEqual(document);
+    expect(missingArchiveFonts(document, archive.fonts)).toEqual([]);
+    expect(missingArchiveFonts(document, new Map())).toEqual([sha256]);
+  });
+
+  it("refuse to pack a missing font", async () => {
+    const { document } = await withFont();
+    expect(() => packProjectArchive(document, new Map(), [], new Map())).toThrow("missing");
+  });
+
+  it("refuse a damaged font, a version missing its font and too many fonts", async () => {
+    const { document, fonts, sha256 } = await withFont();
+    const wrong = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(document)),
+      [archiveFontPath(sha256)]: strToU8("other bytes"),
+    });
+    expect(await readError(wrong)).toEqual({ code: "archive.fontDamaged" });
+    const missing = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(createProjectDocument())),
+      [archiveVersionPath("a")]: versionFile({ document }),
+    });
+    expect(await readError(missing)).toMatchObject({ code: "archive.versionMissingFont" });
+    const many = zipSync({
+      [ARCHIVE_DOCUMENT_PATH]: strToU8(JSON.stringify(document)),
+      ...Object.fromEntries(
+        // One more than an archive holds.
+        Array.from({ length: 17 }, (_, i) => [
+          archiveFontPath(i.toString(16).padStart(64, "0")),
+          fonts.get(sha256) as Uint8Array,
+        ]),
+      ),
+    });
+    expect(await readError(many)).toEqual({ code: "archive.tooManyFonts", values: { max: 16 } });
   });
 });
 

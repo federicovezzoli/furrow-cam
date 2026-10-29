@@ -12,25 +12,30 @@ import { quadraticToCubic } from "../geometry/curve";
 import { flattenPath } from "../geometry/flatten";
 import { textFrame } from "../geometry/scale";
 import { mapPath } from "../geometry/translate";
-import { type Font, type GlyphCommand, layoutLine } from "./font";
+import { emSize, type Font, type GlyphCommand, layoutLine } from "./font";
 
 /** Overlaps smaller than this, in mm², are where glyphs only touch. */
 const OVERLAP_AREA = 1e-6;
 
 /**
- * Text item `settings`' outlines in stock coordinates (PRD-0010 T2,
- * ADR-0059): one line laid out in `font` with its kerning, at the cap
- * height and alignment, then placed. Quadratics become cubics, as on SVG
- * import. Glyphs that overlap, as in script fonts, or whose own contours do,
- * are merged into one outline, flattened, so a pocket doesn't cut the
- * overlap twice. A
- * single-stroke font gives open paths that an engraving follows once. Empty
- * if no character has an outline.
+ * Text item `settings`' outlines in stock coordinates (PRD-0010 T2, T5, T6,
+ * ADR-0059): each line laid out in `font` with its kerning, at the cap
+ * height, `letterSpacing` times the height between characters, aligned on its
+ * own, `lineSpacing` times the height below the one before; then placed. Quadratics become cubics, as on
+ * SVG import. Glyphs that overlap, as in script fonts, or whose own contours
+ * do, are merged into one outline, flattened, so a pocket doesn't cut the
+ * overlap twice. A single-stroke font gives open paths that an engraving
+ * follows once. Empty if no character has an outline.
  */
 export function textPaths(font: Font, settings: TextSettings): Path[] {
-  const { glyphs, width } = layoutLine(font, settings.text, settings.height);
-  const shift = settings.align === "left" ? 0 : settings.align === "center" ? -width / 2 : -width;
-  const outlines = glyphs.map((commands) => glyphPaths(commands, font.singleStroke, shift));
+  const { height, align, lineSpacing, letterSpacing } = settings;
+  const size = emSize(font, height);
+  const outlines = settings.text.split(/\r\n|\n|\r/).flatMap((line, i) => {
+    const { glyphs, width } = layoutLine(font, line, size, letterSpacing * height);
+    const dx = align === "left" ? 0 : align === "center" ? -width / 2 : -width;
+    const dy = -i * lineSpacing * height;
+    return glyphs.map((commands) => glyphPaths(commands, font.singleStroke, [dx, dy]));
+  });
   const paths = font.singleStroke ? outlines.flat() : mergeOverlaps(outlines);
   const place = textFrame(settings.placement);
   return paths.flatMap(
@@ -39,12 +44,12 @@ export function textPaths(font: Font, settings: TextSettings): Path[] {
 }
 
 /**
- * A glyph's contours as paths, moved `shift` along the line. Outline fonts'
- * contours are closed; a single-stroke font's are open unless they end where
- * they start.
+ * A glyph's contours as paths, moved by `shift` to its line's place. Outline
+ * fonts' contours are closed; a single-stroke font's are open unless they end
+ * where they start.
  */
-function glyphPaths(commands: GlyphCommand[], singleStroke: boolean, shift: number): Path[] {
-  const at = ([x, y]: Point): Point => [x + shift, y];
+function glyphPaths(commands: GlyphCommand[], singleStroke: boolean, [dx, dy]: Point): Path[] {
+  const at = ([x, y]: Point): Point => [x + dx, y + dy];
   const paths: Path[] = [];
   let path: Path | null = null;
   let current: Point = [0, 0];

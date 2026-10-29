@@ -25,7 +25,12 @@ import { clientTranslator } from "@/lib/client-translator";
 const DB_NAME = "furrow-guest";
 const DB_VERSION = 1;
 const PROJECTS = "projects";
-/** Keyed by `[projectId, sha256]`, so deleting a project deletes its files. */
+/**
+ * The projects' files, STL meshes and uploaded fonts (ADR-0062), keyed by
+ * `[projectId, sha256]`, so deleting a project deletes its files. A hash
+ * names one file, so both kinds share the store, named before fonts were
+ * files.
+ */
 const MESHES = "meshes";
 /** Single records by name: `settings`, `tools` and `lastProjectId`. */
 const SETTINGS = "settings";
@@ -39,7 +44,7 @@ export type GuestProject = GuestProjectRow & { document: ProjectDocument };
 /** A stored project's record: the document as saved, possibly by an older release. */
 type ProjectRecord = { id: string; name: string; savedAt: Date; document: unknown };
 
-type MeshRecord = { projectId: string; sha256: string; file: Blob };
+type AssetRecord = { projectId: string; sha256: string; file: Blob };
 
 const storageUnavailable = () => clientTranslator()("Guest.storageUnavailable");
 const projectNotFound = () => clientTranslator()("Guest.projectNotFound");
@@ -237,7 +242,7 @@ export function renameGuestProject(id: string, name: string): Promise<void> {
   });
 }
 
-/** Deletes guest project `id` and its STL files. */
+/** Deletes guest project `id` and its files. */
 export function deleteGuestProject(id: string): Promise<void> {
   return transaction([PROJECTS, MESHES], "readwrite", async (tx) => {
     await result(tx.objectStore(PROJECTS).delete(id));
@@ -246,7 +251,7 @@ export function deleteGuestProject(id: string): Promise<void> {
 }
 
 /**
- * Deletes guest project `id` and its STL files only if it is still as saved
+ * Deletes guest project `id` and its files only if it is still as saved
  * at `savedAt`, e.g. the copy just imported into an account; `false` when
  * another tab saved it since, which keeps it.
  */
@@ -261,7 +266,7 @@ export function deleteGuestProjectIfSaved(id: string, savedAt: Date): Promise<bo
   });
 }
 
-/** Every mesh key of project `id`: `[id, sha256]` for any `sha256`. */
+/** Every file key of project `id`: `[id, sha256]` for any `sha256`. */
 function projectMeshes(id: string): IDBKeyRange {
   return IDBKeyRange.bound([id], [id, []]);
 }
@@ -270,7 +275,7 @@ function projectMeshes(id: string): IDBKeyRange {
  * Stores `file` for project `projectId`; `uploaded` is `false` when it
  * already had it. Refused once the project is deleted, so no file outlives it.
  */
-export function putGuestMesh(
+export function putGuestAsset(
   projectId: string,
   sha256: string,
   file: Blob,
@@ -281,22 +286,30 @@ export function putGuestMesh(
     }
     const store = tx.objectStore(MESHES);
     if ((await result(store.count([projectId, sha256]))) > 0) return { uploaded: false };
-    await result(store.add({ projectId, sha256, file } satisfies MeshRecord));
+    await result(store.add({ projectId, sha256, file } satisfies AssetRecord));
     return { uploaded: true };
   });
 }
 
-/** The bytes of project `projectId`'s file `sha256`. */
-export async function getGuestMesh(projectId: string, sha256: string): Promise<ArrayBuffer> {
+/** The bytes of project `projectId`'s file `sha256`; `kind` says what is missing if it is. */
+export async function getGuestAsset(
+  projectId: string,
+  sha256: string,
+  kind: "mesh" | "font" = "mesh",
+): Promise<ArrayBuffer> {
   const record = await transaction([MESHES], "readonly", (tx) =>
-    result<MeshRecord | undefined>(tx.objectStore(MESHES).get([projectId, sha256])),
+    result<AssetRecord | undefined>(tx.objectStore(MESHES).get([projectId, sha256])),
   );
-  if (!record) throw new Error(clientTranslator()("Guest.meshMissing"));
+  if (!record) {
+    throw new Error(
+      clientTranslator()(kind === "font" ? "Guest.fontMissing" : "Guest.meshMissing"),
+    );
+  }
   return record.file.arrayBuffer();
 }
 
 /** Drops project `projectId`'s file `sha256`; never fails. */
-export async function deleteGuestMesh(projectId: string, sha256: string): Promise<void> {
+export async function deleteGuestAsset(projectId: string, sha256: string): Promise<void> {
   try {
     await transaction([MESHES], "readwrite", (tx) =>
       result(tx.objectStore(MESHES).delete([projectId, sha256])),

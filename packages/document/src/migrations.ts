@@ -195,6 +195,26 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #351: several lines and letter spacing. Text items keep their look: one
+  // line, as they were laid out (a line break was a space), the line spacing
+  // they'd have had, and no letter spacing.
+  20: (doc) => {
+    const V20_LINE_SPACING = 1.7;
+    if (!Array.isArray(doc.drawings)) return doc;
+    for (const drawing of doc.drawings) {
+      if (!isObject(drawing) || !isObject(drawing.text)) continue;
+      const { text } = drawing;
+      if (typeof text.text === "string") text.text = text.text.replace(/\r\n|[\n\r]/g, " ");
+      text.lineSpacing ??= V20_LINE_SPACING;
+      text.letterSpacing ??= 0;
+    }
+    return doc;
+  },
+  // #352: uploaded fonts (ADR-0062). Existing projects have none.
+  21: (doc) => {
+    doc.fonts ??= [];
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

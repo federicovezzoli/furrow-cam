@@ -34,17 +34,18 @@ function isArchive(file: File) {
   return /\.(zip|furrow)$/i.test(file.name) || file.type === "application/zip";
 }
 
-/** Whether the document `contents` has 3D models; anything it can't read is left to the server. */
-function hasModels(contents: string): boolean {
+/**
+ * Whether the document `contents` has 3D models or uploaded fonts, files only
+ * the asset storage keeps; anything it can't read is left to the server.
+ */
+function hasAssets(contents: string): boolean {
   try {
     const json: unknown = JSON.parse(contents);
-    return (
-      typeof json === "object" &&
-      json !== null &&
-      "models" in json &&
-      Array.isArray(json.models) &&
-      json.models.length > 0
-    );
+    if (typeof json !== "object" || json === null) return false;
+    return ["models", "fonts"].some((list) => {
+      const entries = (json as Record<string, unknown>)[list];
+      return Array.isArray(entries) && entries.length > 0;
+    });
   } catch {
     return false;
   }
@@ -76,7 +77,7 @@ export function ImportProjectButton({
     startTransition(async () => {
       try {
         // A `.furrow.json` file opens the new project on success, so only errors come back.
-        // An archive without models imports as its document where models can't be stored.
+        // An archive without models or fonts imports as its document where they can't be stored.
         const result =
           archive && meshLimits
             ? await importArchive(archive, file.name, machineId, meshLimits)
@@ -115,7 +116,7 @@ export function ImportProjectButton({
           setError(error instanceof Error ? error.message : t("fileUnreadable"));
           return;
         }
-        if (!meshLimits && hasModels(picked.archive?.contents ?? "")) {
+        if (!meshLimits && hasAssets(picked.archive?.contents ?? "")) {
           setError(t("noModelStorage"));
           return;
         }

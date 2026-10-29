@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { MAX_PROJECT_FONTS, ProjectFont } from "./font";
 import { Drawing, Shape } from "./geometry";
 import { GcodeBlock, Machine } from "./machine";
-import { Model } from "./model";
+import { Model, Sha256 } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 20;
+export const CURRENT_SCHEMA_VERSION = 22;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -134,6 +135,8 @@ export const ProjectDocument = z
     geometry: z.array(Shape),
     /** Imported 3D models, whose meshes are project assets (ADR-0029). */
     models: z.array(Model),
+    /** Uploaded fonts, project assets as meshes are, for text items to use (ADR-0062). */
+    fonts: z.array(ProjectFont).max(MAX_PROJECT_FONTS, "document.tooManyFonts"),
     /** In cutting order. */
     operations: z.array(Operation),
   })
@@ -180,6 +183,28 @@ export const ProjectDocument = z
       } else if (drawing.text && count !== 1) {
         // Its outlines are one shape, which operations target across edits (ADR-0059).
         ctx.addIssue({ code: "custom", path: ["drawings", i], message: "document.textShapes" });
+      }
+    });
+
+    const fonts = new Set<string>();
+    doc.fonts.forEach((font, i) => {
+      if (fonts.has(font.sha256)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["fonts", i, "sha256"],
+          message: "document.duplicateFont",
+        });
+      }
+      fonts.add(font.sha256);
+    });
+    doc.drawings.forEach(({ text }, i) => {
+      // A hash names an uploaded font, which the project must hold; anything else a bundled one.
+      if (text && Sha256.safeParse(text.font).success && !fonts.has(text.font)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["drawings", i, "text", "font"],
+          message: "document.unknownFont",
+        });
       }
     });
 
@@ -253,6 +278,15 @@ export const ProjectDocument = z
   });
 export type ProjectDocument = z.infer<typeof ProjectDocument>;
 
+/**
+ * The hashes of the project assets `document` references, each once: its
+ * models' meshes and its uploaded fonts (ADR-0029, ADR-0062).
+ */
+export function documentAssetHashes(document: ProjectDocument): string[] {
+  const hashes = [...document.models, ...document.fonts].map(({ sha256 }) => sha256);
+  return [...new Set(hashes)];
+}
+
 /** A new, empty project: 600 × 400 × 18 mm stock, origin at the bottom-left corner of the stock top. */
 export function createProjectDocument(): ProjectDocument {
   return {
@@ -271,6 +305,7 @@ export function createProjectDocument(): ProjectDocument {
     drawings: [],
     geometry: [],
     models: [],
+    fonts: [],
     operations: [],
   };
 }

@@ -27,6 +27,7 @@ import {
   type Path,
   type Point,
   type ProjectDocument,
+  Sha256,
   type Shape,
   type Stock,
   segmentIssue,
@@ -63,6 +64,11 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   return placeDrawing(store, name, drawing, shapes);
 }
 
+/** A text item's name: its text on one line, its lines joined by spaces. */
+function textName(text: string): string {
+  return text.trim().replace(/\s*[\r\n]+\s*/g, " ");
+}
+
 /** Why text can't be added or changed: the font has none of its characters. */
 export const TEXT_NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
 
@@ -80,7 +86,7 @@ export function addTextItem(
   if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const id = crypto.randomUUID();
   const shape: Shape = { id: crypto.randomUUID(), name: "", layer: "", drawingId: id, paths };
-  const drawing = { id, name: text.text, border: DRAWING_BORDER, text };
+  const drawing = { id, name: textName(text.text), border: DRAWING_BORDER, text };
   return placeDrawing(store, "addText", drawing, [shape])
     ? { ok: true, id }
     : { ok: false, error: DRAWINGS_OR_MODEL };
@@ -140,6 +146,13 @@ export function setTextItem(
 ): { ok: true; removedTabs: number } | { ok: false; error: Message } {
   if (paths.length === 0) return { ok: false, error: TEXT_NO_OUTLINES };
   const { document } = store.getState();
+  // An uploaded font the project no longer lists, e.g. its upload undone meanwhile, would leave it invalid.
+  if (
+    Sha256.safeParse(text.font).success &&
+    !document.fonts.some(({ sha256 }) => sha256 === text.font)
+  ) {
+    return { ok: false, error: { code: "workspace.fontUnavailable" } };
+  }
   const [shape] = drawingShapes(document.geometry, id);
   if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
     return { ok: true, removedTabs: 0 };
@@ -161,7 +174,7 @@ export function setTextItem(
   for (const flags of gone.values()) removedTabs += flags.filter(Boolean).length;
   store.getState().change("setText", (draft) => {
     const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing) Object.assign(drawing, { name: text.text, text });
+    if (drawing) Object.assign(drawing, { name: textName(text.text), text });
     // By index: finding it through the draft would read every shape.
     const target = draft.geometry[index];
     if (target) target.paths = paths;
@@ -428,6 +441,19 @@ export function setDrawingBorder(store: DocumentStore, id: string, border: numbe
   store.getState().change("setDrawing.border", (draft) => {
     const drawing = draft.drawings.find((d) => d.id === id);
     if (drawing && drawing.border !== border) drawing.border = border;
+  });
+}
+
+/**
+ * Turns text item `id` into a plain drawing (PRD-0010 T8, ADR-0059), as one
+ * undo step: it keeps its outlines as its shape, so the operations machining
+ * it still do, and is transformed like any drawing, but no longer edited as
+ * text.
+ */
+export function convertTextToDrawing(store: DocumentStore, id: string) {
+  store.getState().change("convertText", (draft) => {
+    const drawing = draft.drawings.find((d) => d.id === id);
+    if (drawing?.text) delete drawing.text;
   });
 }
 

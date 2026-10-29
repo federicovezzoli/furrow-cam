@@ -1,6 +1,5 @@
 import {
   clearingTool,
-  cutsOnItsSide,
   DEFAULT_ENTRY_CLEARANCE,
   type Model,
   type Operation,
@@ -12,7 +11,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import type { Flip } from "../scene/sides";
+import { type Flip, flipOperation, flipShapes } from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
@@ -55,7 +54,10 @@ export type ToolpathInput = {
    * otherwise.
    */
   parting: number | null;
-  /** For a 3D operation on the bottom side, the flip to its stock coordinates; `null` otherwise. */
+  /**
+   * On the bottom side, the flip to its stock coordinates, applied to the
+   * shapes or the model before the toolpath is computed; `null` on the top.
+   */
   flip: Flip | null;
   /** Retract height above the stock top. */
   safeZ: number;
@@ -112,6 +114,7 @@ export function toolpathInputs(
     const index = doc.operations.indexOf(operation);
     const sided = twoSided && operationModelId(operation) !== null ? twoSided : null;
     const bottom = operation.stockSide === "bottom";
+    const flip: Flip | null = twoSided && bottom ? { ...size, axis: twoSided.flipAxis } : null;
     const input: ToolpathInput = {
       operation,
       shapes: targetedShapes(shapes, operation.targets),
@@ -123,7 +126,7 @@ export function toolpathInputs(
           : null,
       stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
-      flip: sided && bottom ? { ...size, axis: sided.flipAxis } : null,
+      flip,
       safeZ,
       entryClearance,
       // Each side starts from uncut stock (ADR-0060).
@@ -131,9 +134,7 @@ export function toolpathInputs(
         ? enabled
             .filter(
               (other) =>
-                doc.operations.indexOf(other) < index &&
-                other.stockSide === operation.stockSide &&
-                cutsOnItsSide(other),
+                doc.operations.indexOf(other) < index && other.stockSide === operation.stockSide,
             )
             .map(inputOf)
         : [],
@@ -381,6 +382,11 @@ function* operationSteps(
   // E.g. a drill bit on a profile saved before the tool picker refused it.
   const problem = toolProblem(operation);
   if (problem) return { moves: [], warnings: [problem] };
+  if (flip && operationModelId(operation) === null) {
+    // The drawing seen from below (ADR-0060); 3D operations flip their model.
+    shapes = flipShapes(shapes, flip);
+    operation = flipOperation(operation, flip);
+  }
   switch (operation.type) {
     case "profile":
       return checkTouchOff(operation, profileToolpath(operation, shapes, options), touchOff);

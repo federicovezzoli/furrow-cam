@@ -37,6 +37,21 @@ export function parseFont(bytes: ArrayBuffer | Uint8Array, singleStroke = false)
   };
 }
 
+/** The family name `font` gives, in English if it has one, else the first it has; empty if none. */
+export function fontName({ font }: Font): string {
+  // `@types/opentype.js` describes 1.3's flat names; 2.0 keeps a table per platform.
+  const names = font.names as unknown as Record<
+    string,
+    Record<string, Record<string, string>> | undefined
+  >;
+  for (const table of ["windows", "macintosh", "unicode"]) {
+    const family = names[table]?.fontFamily;
+    const name = family?.en ?? Object.values(family ?? {})[0];
+    if (name) return name;
+  }
+  return "";
+}
+
 /**
  * The font's cap height in font units: from its OS/2 table, else the top of
  * its "H", else its ascender, else its em.
@@ -49,24 +64,35 @@ function capHeight(font: OpentypeFont): number {
   return font.ascender > 0 ? font.ascender : font.unitsPerEm;
 }
 
+/** The font size, in millimetres per em, that gives `font` a cap height of `height` millimetres. */
+export function emSize({ font }: Font, height: number): number {
+  return (height * font.unitsPerEm) / capHeight(font);
+}
+
 /**
- * Lays `text` out on one line with the font's kerning, at a cap height of
- * `height` millimetres: each glyph's outline commands, its origin on the
- * baseline at the line's start, and the line's advance width. Characters the
- * font lacks take their space but draw nothing, rather than its
- * missing-glyph box.
+ * Lays one `line` out with the font's kerning, at `size` millimetres per em
+ * (`emSize`), `letterSpacing` millimetres added between characters: each
+ * glyph's outline commands, its origin on the baseline at the line's start,
+ * and the line's advance width. Characters the font lacks take their space
+ * but draw nothing, rather than its missing-glyph box.
  */
 export function layoutLine(
   { font, singleStroke }: Font,
-  text: string,
-  height: number,
+  line: string,
+  size: number,
+  letterSpacing = 0,
 ): { glyphs: GlyphCommand[][]; width: number } {
-  const size = (height * font.unitsPerEm) / capHeight(font);
   const missing = font.glyphs.get(0);
   const glyphs: GlyphCommand[][] = [];
-  // shortcut: a line break lays out as a space, until several lines (#351).
-  const line = text.replace(/\r\n|[\n\r]/g, " ");
-  const width = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, x, y, fontSize) => {
+  /**
+   * The spacings before this glyph: one before each glyph that advances but
+   * the first, so none after the last, and a zero-width accent stays on its
+   * letter.
+   */
+  let spacings = -1;
+  const advance = font.forEachGlyph(line, 0, 0, size, RENDER, (glyph, gx, y, fontSize) => {
+    if (glyph.advanceWidth) spacings++;
+    const x = gx + Math.max(spacings, 0) * letterSpacing;
     if (glyph === missing) return;
     if (singleStroke && font.outlinesFormat === "truetype") {
       glyphs.push(strokeCommands(glyph, x, fontSize / font.unitsPerEm));
@@ -87,7 +113,7 @@ export function layoutLine(
     });
     glyphs.push(mapped);
   });
-  return { glyphs, width };
+  return { glyphs, width: advance + Math.max(spacings, 0) * letterSpacing };
 }
 
 /** A TrueType point as opentype.js reads it; `@types/opentype.js` lists only `lastPointOfContour`. */

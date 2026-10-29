@@ -142,6 +142,23 @@ describe("simulationRequest", () => {
       failed?.key,
     );
   });
+
+  it("leaves out the bottom side of a two-sided project, cut from below", () => {
+    const document = documentWithOperations();
+    const twoSided = {
+      ...document,
+      stock: { ...document.stock, twoSided: { flipAxis: "x" as const, partingDepth: 9 } },
+      operations: document.operations.map((op) =>
+        op.id === DRILL_ID ? { ...op, stockSide: "bottom" as const } : op,
+      ),
+    };
+    const toolpaths = createToolpathStore();
+    ready(toolpaths, PROFILE_ID, "a");
+    ready(toolpaths, DRILL_ID, "b");
+    // The profile's feeds and rapids only.
+    const request = simulationRequest(twoSided, toolpaths.getState().entries, MAX_CELLS);
+    expect(request?.input.cuts).toHaveLength(2);
+  });
 });
 
 function setup() {

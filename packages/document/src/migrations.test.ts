@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createProjectDocument } from "./document";
-import { CIRCLE_ID, fullDocument, model, reliefFinish, reliefRough, SQUARE_ID } from "./fixtures";
+import {
+  CIRCLE_ID,
+  fullDocument,
+  model,
+  reliefFinish,
+  reliefRough,
+  SQUARE_ID,
+  textItem,
+  textShape,
+} from "./fixtures";
 import {
   type Migration,
   migrateProjectDocument,
@@ -149,11 +158,44 @@ describe("migrations", () => {
     ]);
   });
 
+  it("gives v20 text items the line spacing they had and no letter spacing", () => {
+    const doc = fullDocument();
+    const current = {
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+    };
+    const { lineSpacing: _, letterSpacing: __, ...v20Text } = textItem.text ?? {};
+    const v20 = {
+      ...current,
+      schemaVersion: 20,
+      drawings: [...doc.drawings, { ...textItem, text: v20Text }],
+    };
+    expect(parseProjectDocument(v20)).toEqual(current);
+  });
+
+  it("keeps v20 text on one line, its line breaks spaces as they were laid out", () => {
+    const doc = fullDocument();
+    const { lineSpacing: _, letterSpacing: __, ...v20Text } = textItem.text ?? {};
+    const v20 = {
+      ...doc,
+      schemaVersion: 20,
+      drawings: [...doc.drawings, { ...textItem, text: { ...v20Text, text: "A\nB\r\nC" } }],
+      geometry: [...doc.geometry, textShape],
+    };
+    expect(parseProjectDocument(v20).drawings.at(-1)?.text?.text).toBe("A B C");
+  });
+
   it("leaves v4, v5 and v18 documents as they are", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);
+  });
+
+  it("gives v21 documents no fonts", () => {
+    const { fonts: _, ...v21 } = { ...fullDocument(), schemaVersion: 21 };
+    expect(parseProjectDocument(v21)).toEqual(fullDocument());
   });
 
   it("gives v6 documents no models", () => {

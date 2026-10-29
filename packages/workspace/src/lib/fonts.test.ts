@@ -35,6 +35,8 @@ function settings(text: string): TextSettings {
     font: "",
     height: 10,
     align: "left",
+    lineSpacing: 1.5,
+    letterSpacing: 0,
     placement: { position: [0, 0], rotation: 0, mirrored: false },
   };
 }

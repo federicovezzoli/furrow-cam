@@ -34,6 +34,7 @@ import {
   addImportedShapes,
   addTextItem,
   canImportModel,
+  convertTextToDrawing,
   DUPLICATE_GAP,
   drawingBounds,
   drawingOffset,
@@ -572,6 +573,23 @@ describe("text items", () => {
     expect(text(store.getState().document)).toMatchObject({ rotation: 270, height: 10 });
   });
 
+  it("keep their letter spacing a share of their height when resized", () => {
+    const doc = fullDocument();
+    const spaced = {
+      ...textItem,
+      text: { ...(textItem.text as TextSettings), letterSpacing: 0.2 },
+    };
+    const store = createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, spaced],
+      geometry: [...doc.geometry, textShape],
+    });
+    // The "I" is 10 mm tall: 20 doubles it.
+    expect(setDrawingSize(store, TEXT_ID, "height", 20)).toEqual({ ok: true });
+    expect(text(store.getState().document).height).toBe(20);
+    expect(store.getState().document.drawings.at(-1)?.text?.letterSpacing).toBe(0.2);
+  });
+
   it("keep their placement on their outlines when duplicated or the design is aligned", () => {
     const store = textStore();
     const copyId = duplicateDrawing(store, TEXT_ID) as string;
@@ -607,6 +625,8 @@ describe("addTextItem", () => {
     font: "jetbrains-mono",
     height: 10,
     align: "left",
+    lineSpacing: 1.5,
+    letterSpacing: 0,
     placement: { position: [0, 0], rotation: 0, mirrored: false },
   };
 
@@ -700,6 +720,17 @@ describe("setTextItem", () => {
     expect(onText?.type === "profile" && onText.params.tabs?.positions).toEqual([[11, 10]]);
   });
 
+  it("refuses an uploaded font the project no longer lists, changing nothing", () => {
+    const text = store();
+    const before = text.getState().document;
+    const settings = { ...(textItem.text as TextSettings), font: "f".repeat(64) };
+    expect(setTextItem(text, TEXT_ID, settings, [box(10, 10, 2)])).toEqual({
+      ok: false,
+      error: { code: "workspace.fontUnavailable" },
+    });
+    expect(text.getState().document).toBe(before);
+  });
+
   it("refuses text with no outlines, changing nothing", () => {
     const text = store();
     const before = text.getState().document;
@@ -708,5 +739,33 @@ describe("setTextItem", () => {
       error: { code: "workspace.textNoOutlines" },
     });
     expect(text.getState().document).toBe(before);
+  });
+});
+
+describe("convertTextToDrawing", () => {
+  it("keeps its outlines and the operations machining them, as a plain drawing, in one undo step", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (!profile) throw new Error("fixture");
+    const onText = { ...profile, targets: [{ shapeId: textShape.id, paths: null }] };
+    const before = {
+      ...doc,
+      drawings: [...doc.drawings, textItem],
+      geometry: [...doc.geometry, textShape],
+      operations: [onText],
+    };
+    const store = createDocumentStore(before);
+    convertTextToDrawing(store, TEXT_ID);
+    const after = store.getState().document;
+    const { text: _, ...drawing } = textItem;
+    expect(after.drawings.at(-1)).toEqual(drawing);
+    expect(after.geometry).toEqual(before.geometry);
+    expect(after.operations).toEqual(before.operations);
+    expect(() => ProjectDocument.parse(after)).not.toThrow();
+    // Now a drawing: a transform no longer has a placement to keep.
+    expect(rotateDrawing(store, TEXT_ID, 90)).toEqual({ ok: true });
+    store.getState().undo();
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
   });
 });

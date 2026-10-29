@@ -92,6 +92,7 @@ function referenceProject(): ProjectDocument {
     machine: shapeoko,
     geometry: [plate, holes, recess],
     models: [],
+    fonts: [],
     operations: [
       {
         id: id(2),
@@ -227,12 +228,11 @@ describe("exportGcode", () => {
       expect(files[0]?.gcode).not.toContain("Then turn");
     });
 
-    it("refuses 2D operations on the bottom side until they are flipped", () => {
+    it("exports 2D operations on the bottom side, on the drawing seen from below", () => {
       const doc = twoSided([{ ...(plate as Operation), stockSide: "bottom" }]);
-      expect(exportDetail(() => exportGcode(doc, "Owl", context))).toEqual({
-        operation: plate?.name,
-        message: { code: "export.bottomSide2d" },
-      });
+      const { files } = exportGcode(doc, "Owl", context);
+      expect(files.map((file) => file.fileName)).toEqual(["Owl-bottom.gcode"]);
+      expect(files[0]?.gcode).toContain(`(Operation: ${plate?.name})`);
     });
   });
 

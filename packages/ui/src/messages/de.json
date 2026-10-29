@@ -121,13 +121,13 @@
     "notFound": "Dieses Projekt gibt es nicht mehr.",
     "versionNotFound": "Diese Version gibt es nicht mehr.",
     "tooManyVersions": "Dieses Projekt hat bereits {max} Versionen, mehr sind nicht möglich. Lösche zuerst eine.",
-    "meshMissing": "das Netz eines Modells wurde nicht hochgeladen.",
+    "meshMissing": "die Datei eines 3D-Modells oder einer Schrift wurde nicht hochgeladen.",
     "conflict": "Dieses Projekt wurde anderswo geändert, seit du es geöffnet hast. Lade es neu, um die neueste Version zu sehen.",
-    "modelsNeedZip": "Dieses Projekt enthält 3D-Modelle: Importiere stattdessen seinen .zip-Export.",
+    "modelsNeedZip": "Dieses Projekt enthält 3D-Modelle oder hochgeladene Schriften: Importiere stattdessen seinen .zip-Export.",
     "importedProject": "Importiertes Projekt",
     "pickFile": "Wähle eine Datei zum Importieren.",
-    "noModelStorage": "Dieses Projekt enthält 3D-Modelle, die dieser Server nicht speichern kann.",
-    "meshOfMissing": "Diese Datei kann nicht importiert werden: Das Netz von {file} fehlt.",
+    "noModelStorage": "Dieses Projekt enthält 3D-Modelle oder hochgeladene Schriften, die dieser Server nicht speichern kann.",
+    "meshOfMissing": "Diese Datei kann nicht importiert werden: Die Datei von {file} fehlt.",
     "meshTooLarge": "Diese Datei kann nicht importiert werden: {file} ist größer als {mb} MB, das erlaubte Maximum.",
     "nameError": "Name: {reason}",
     "labelError": "Bezeichnung: {reason}",
@@ -136,9 +136,9 @@
     "saveFailed": "Das Projekt konnte nicht gespeichert werden: {reason}",
     "beforeRestoringEarlier": "Vor dem Wiederherstellen einer früheren Version",
     "beforeRestoring": "Vor dem Wiederherstellen von „{label}“",
-    "versionNoModelStorage": "Diese Version enthält 3D-Modelle, die dieser Server nicht speichern kann.",
+    "versionNoModelStorage": "Diese Version enthält 3D-Modelle oder hochgeladene Schriften, die dieser Server nicht speichern kann.",
     "versionCantOpen": "Diese Version kann nicht geöffnet werden: {reason}",
-    "copyFailed": "Die 3D-Modelle konnten nicht kopiert werden. Versuche es erneut.",
+    "copyFailed": "Die 3D-Modelle und Schriften konnten nicht kopiert werden. Versuche es erneut.",
     "cantOpen": "Dieses Projekt kann nicht geöffnet werden",
     "cantRestore": "Diese Version kann nicht wiederhergestellt werden",
     "cantOpenVersion": "Diese Version kann nicht geöffnet werden",
@@ -179,19 +179,21 @@
     "fileUnreadable": "Diese Datei konnte nicht gelesen werden.",
     "modelDamaged": "Ein Modell in dieser Datei ist beschädigt.",
     "modelCantImport": "Ein Modell in dieser Datei kann nicht importiert werden: {reason}",
+    "fontCantImport": "Eine Schrift in dieser Datei kann nicht gelesen werden.",
+    "fileSizeMismatch": "Diese Datei kann nicht importiert werden: {file} hat nicht die Größe, die das Projekt angibt.",
     "unreadableReason": "Es konnte nicht gelesen werden.",
     "loading": "Wird geladen…",
     "loadingProject": "Projekt wird geladen…"
   },
   "Assets": {
-    "noStorage": "Der STL-Import ist auf diesem Server nicht verfügbar.",
-    "notUploaded": "Dieses Netz wurde nicht hochgeladen.",
+    "noStorage": "Dieser Server kann keine 3D-Modelle oder Schriften speichern.",
+    "notUploaded": "Diese Datei wurde nicht hochgeladen.",
     "mismatch": "Die hochgeladene Datei passt nicht zur ausgewählten. Versuche es erneut.",
     "invalidHash": "Ungültiger Datei-Hash.",
     "empty": "Diese Datei ist leer.",
     "tooLarge": "Diese Datei ist größer als {mb} MB, das erlaubte Maximum.",
-    "uploadFailed": "Das Modell konnte nicht hochgeladen werden. Prüfe deine Verbindung und versuche es erneut.",
-    "downloadFailed": "Das Modell konnte nicht heruntergeladen werden. Prüfe deine Verbindung und lade neu."
+    "uploadFailed": "Die Datei konnte nicht hochgeladen werden. Prüfe deine Verbindung und versuche es erneut.",
+    "downloadFailed": "Die Datei konnte nicht heruntergeladen werden. Prüfe deine Verbindung und lade neu."
   },
   "Tools": {
     "notFound": "Diesen Fräser gibt es nicht mehr.",
@@ -259,10 +261,11 @@
     "contentsInvalid": "Sein Inhalt ist ungültig.",
     "saveInvalid": "Dieses Projekt konnte nicht gespeichert werden: Sein Inhalt ist ungültig.",
     "meshMissing": "Die Datei eines 3D-Modells fehlt in diesem Browser.",
+    "fontMissing": "Diese Schrift fehlt im Projekt.",
     "fileNewer": "Diese Datei wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die Seite neu, um zu aktualisieren.",
     "fileCantImport": "Diese Datei kann nicht importiert werden: {reason}",
     "importFailed": "Es konnte nicht importiert werden. Prüfe deine Verbindung und versuche es erneut.",
-    "noModelStorage": "Es enthält 3D-Modelle, die dieser Server nicht speichern kann.",
+    "noModelStorage": "Es enthält 3D-Modelle oder hochgeladene Schriften, die dieser Server nicht speichern kann.",
     "untitledProject": "Unbenanntes Projekt",
     "somethingWrong": "Etwas ist schiefgelaufen.",
     "createFreeAccount": "Kostenloses Konto erstellen",
@@ -352,6 +355,9 @@
     "ProjectFile": {
       "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
       "modelsNeedArchive": "Dieses Projekt enthält 3D-Modelle: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
+      "fontsNeedArchive": "Dieses Projekt hat hochgeladene Schriften: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
+      "missingFont": "Diesem Projekt fehlt eine seiner Schriften.",
+      "unreadableFont": "Eine der Schriften dieses Projekts kann nicht gelesen werden.",
       "missingModel": "In diesem Projekt fehlt eines seiner 3D-Modelle.",
       "tooNew": "Dieses Projekt wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die neueste Version herunter, um es zu öffnen.",
       "invalid": "Diese Datei ist kein gültiges Furrow-CAM-Projekt."
@@ -360,6 +366,7 @@
       "tooManyVersions": "Dieses Projekt hat bereits {max} Versionen, mehr sind nicht möglich. Lösche zuerst eine.",
       "versionNotFound": "Diese Version gibt es nicht mehr.",
       "labelTooLong": "Bezeichnung: höchstens {max} Zeichen.",
+      "missingFont": "Diese Schrift fehlt im Projekt.",
       "missingModel": "Dieses Modell fehlt im Projekt.",
       "beforeRestoringEarlier": "Vor dem Wiederherstellen einer früheren Version",
       "beforeRestoring": "Vor dem Wiederherstellen von „{label}“",
@@ -500,6 +507,9 @@
       "unknownDrawing": "Unbekannte Zeichnungs-ID",
       "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
       "textShapes": "Ein Text braucht genau eine Form",
+      "duplicateFont": "Doppelte Schrift",
+      "unknownFont": "Der Text nutzt eine Schrift, die das Projekt nicht enthält",
+      "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad"
     },
@@ -522,6 +532,10 @@
       "versionTooNew": "{labelled, select, yes {Die Version „{label}“} other {Eine Version in dieser Datei}} wurde mit einer neueren Version von Furrow CAM gespeichert.",
       "versionInvalid": "{labelled, select, yes {Die Version „{label}“} other {Eine Version in dieser Datei}} ist kein gültiges Projekt.",
       "versionMissingModel": "{labelled, select, yes {Der Version „{label}“} other {Einer Version in dieser Datei}} fehlt eines ihrer 3D-Modelle.",
+      "versionMissingFont": "{labelled, select, yes {Der Version „{label}“} other {Einer Version in dieser Datei}} fehlt eine ihrer Schriften.",
+      "tooManyFonts": "Eine Projektdatei enthält höchstens {max} verschiedene Schriften.",
+      "fontTooLarge": "Eine Schrift in dieser Datei ist größer als {mb, number} MB, das erlaubte Maximum.",
+      "fontDamaged": "Eine Schrift in dieser Datei ist beschädigt: Sie passt nicht zu ihrem Hash.",
       "tooManyMeshes": "Eine Projektdatei enthält höchstens {max} verschiedene 3D-Modelle.",
       "tooManyVersions": "Eine Projektdatei enthält höchstens {max} Versionen.",
       "documentTooLarge": "Das Dokument dieses Projekts ist zu groß zum Importieren.",
@@ -634,7 +648,6 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben."
     },
     "export": {
-      "bottomSide2d": "2D-Operationen auf der Unterseite lassen sich noch nicht exportieren: Schalte diese aus oder verschiebe sie auf die Oberseite.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
@@ -710,7 +723,12 @@
       "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe.",
       "textNoOutlines": "Keines dieser Zeichen ist in der Schrift, also gibt es nichts zu fräsen.",
       "unknownFont": "Die Schrift „{font}“ ist in dieser Version der App nicht verfügbar.",
-      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut."
+      "textLayoutFailed": "Der Text konnte nicht gesetzt werden. Versuche es erneut.",
+      "fontUnavailable": "Diese Schrift konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+      "fontUnreadable": "Diese Datei ist keine lesbare Schrift: Verwende eine TTF-, OTF- oder WOFF-Datei.",
+      "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
+      "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",
+      "fontUploadOff": "Dieser Server kann keine Schriften speichern."
     }
   },
   "Operation": {
@@ -1227,6 +1245,8 @@
     "text": "Text",
     "font": "Schrift",
     "height": "Buchstabenhöhe",
+    "lineSpacing": "Zeilenabstand",
+    "letterSpacing": "Buchstabenabstand",
     "align": "Ausrichtung",
     "aligns": {
       "left": "Links",
@@ -1234,7 +1254,13 @@
       "right": "Rechts"
     },
     "heightNote": "Die Höhe ist die der Großbuchstaben. Der Text bleibt an seinem Platz, wenn du ihn änderst.",
-    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}."
+    "tabsRemoved": "{count, plural, one {# Steg entfernt, der} other {# Stege entfernt, die}} nicht mehr auf den Buchstaben {count, plural, one {lag} other {lagen}}.",
+    "convert": "In Zeichnung umwandeln",
+    "convertTitle": "Die Buchstaben als Zeichnung behalten, von denselben Operationen bearbeitet; sie lässt sich nicht mehr als Text bearbeiten",
+    "included": "Enthalten",
+    "uploaded": "Hochgeladen",
+    "upload": "Schrift hochladen…",
+    "singleStroke": "Einstrich (zum Gravieren)"
   },
   "Import": {
     "units": {

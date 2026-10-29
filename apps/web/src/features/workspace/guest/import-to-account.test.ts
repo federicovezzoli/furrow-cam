@@ -68,7 +68,7 @@ describe("importToAccount", () => {
   it("imports a project with 3D models as an archive with its STL files", async () => {
     const document = { ...createProjectDocument(), models: [model] };
     const guest = await storage.createGuestProject("Relief", document);
-    await storage.putGuestMesh(guest.id, model.sha256, new Blob([new Uint8Array([1, 2])]));
+    await storage.putGuestAsset(guest.id, model.sha256, new Blob([new Uint8Array([1, 2])]));
     importArchive.mockResolvedValue({ projectId: "p3" });
 
     expect((await importToAccount([guest.id], DEFAULT_STL_LIMITS)).imported).toEqual([

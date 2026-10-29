@@ -3,7 +3,7 @@ import {
   createProjectDocument,
   type ProjectDocument,
 } from "@furrow/document";
-import { fullDocument, model } from "@furrow/document/fixtures";
+import { fullDocument, model, uploadedFont } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@/generated/prisma/client";
 import type { VersionRow as ListedVersion } from "./server";
@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
   locked: [] as string[],
   clock: 0,
   /** Assets in the fake storage (ADR-0029). */
-  assets: [] as { projectId: string; sha256: string; verified: boolean }[],
+  assets: [] as { projectId: string; sha256: string; verified: boolean; size?: number }[],
   storage: true,
   copyFails: false,
   /** Projects whose objects were deleted. */
@@ -55,11 +55,23 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/features/assets/server", () => ({
   isStorageConfigured: () => mocks.storage,
-  missingAssets: async (userId: string, projectId: string, sha256s: string[]) =>
+  missingAssets: async (
+    userId: string,
+    projectId: string,
+    sha256s: string[],
+    _client: unknown,
+    sizes = new Map<string, number>(),
+  ) =>
     sha256s.filter(
       (sha256) =>
         !mocks.projects.some((p) => p.id === projectId && p.userId === userId) ||
-        !mocks.assets.some((a) => a.projectId === projectId && a.sha256 === sha256 && a.verified),
+        !mocks.assets.some(
+          (a) =>
+            a.projectId === projectId &&
+            a.sha256 === sha256 &&
+            a.verified &&
+            (sizes.get(sha256) ?? a.size) === a.size,
+        ),
     ),
   copyAssets: async (_userId: string, _from: string, to: string, sha256s: string[]) => {
     if (mocks.copyFails) throw new Error("Copy failed");
@@ -453,7 +465,7 @@ describe("meshes", () => {
     mocks.assets[0] = { projectId: PROJECT, sha256: model.sha256, verified: true };
     expect(await saveProject(PROJECT, withModel(), LOADED_AT)).toHaveProperty("updatedAt");
     expect(project().document).toEqual(withModel());
-    // As `discardMesh` does, so a mesh can't go between the check and the write.
+    // As `discardAsset` does, so a mesh can't go between the check and the write.
     expect(mocks.locked).toContain(PROJECT);
   });
 
@@ -469,6 +481,34 @@ describe("meshes", () => {
     const conflict = await saveProject(PROJECT, documentWithWidth(1), LOADED_AT);
     expect(conflict.error).toEqual({ key: "Projects.conflict" });
     expect(conflict).not.toHaveProperty("retryable");
+  });
+
+  it("saves a document with an uploaded font only once its file is a verified asset", async () => {
+    const withFont = { ...documentWithWidth(100), fonts: [uploadedFont] };
+    expect(await saveProject(PROJECT, withFont, LOADED_AT)).toHaveProperty("error");
+    // Uploaded under the mesh limit, larger than the font the document says it is.
+    const asset = {
+      projectId: PROJECT,
+      sha256: uploadedFont.sha256,
+      verified: true,
+      size: 6_000_000,
+    };
+    mocks.assets.push(asset);
+    expect(await saveProject(PROJECT, withFont, LOADED_AT)).toHaveProperty("error");
+    asset.size = uploadedFont.size;
+    expect(await saveProject(PROJECT, withFont, LOADED_AT)).toHaveProperty("updatedAt");
+  });
+
+  it("opens a version with fonts as a project with its own copies", async () => {
+    mocks.assets.push({ projectId: PROJECT, sha256: uploadedFont.sha256, verified: true });
+    const id = addVersion({ ...documentWithWidth(100), fonts: [uploadedFont] }, "Sign");
+    await expect(openVersionAsProject(id, "")).rejects.toThrow(/redirect/);
+    const copy = mocks.projects[1]?.id;
+    expect(mocks.assets).toContainEqual({
+      projectId: copy,
+      sha256: uploadedFont.sha256,
+      verified: true,
+    });
   });
 
   it("doesn't accept another project's mesh", async () => {

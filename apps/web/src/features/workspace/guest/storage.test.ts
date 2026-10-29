@@ -139,34 +139,34 @@ describe("guest meshes", () => {
   it("stores a project's files once and deletes them with the project", async () => {
     const project = await storage.createGuestProject("Relief", createProjectDocument());
     const file = new Blob([new Uint8Array([1, 2, 3])]);
-    expect(await storage.putGuestMesh(project.id, "abc", file)).toEqual({ uploaded: true });
-    expect(await storage.putGuestMesh(project.id, "abc", file)).toEqual({ uploaded: false });
-    expect(new Uint8Array(await storage.getGuestMesh(project.id, "abc"))).toEqual(
+    expect(await storage.putGuestAsset(project.id, "abc", file)).toEqual({ uploaded: true });
+    expect(await storage.putGuestAsset(project.id, "abc", file)).toEqual({ uploaded: false });
+    expect(new Uint8Array(await storage.getGuestAsset(project.id, "abc"))).toEqual(
       new Uint8Array([1, 2, 3]),
     );
 
     await storage.deleteGuestProject(project.id);
-    await expect(storage.getGuestMesh(project.id, "abc")).rejects.toThrow("missing");
+    await expect(storage.getGuestAsset(project.id, "abc")).rejects.toThrow("missing");
   });
 
   it("keeps each project's files apart", async () => {
     const file = new Blob([new Uint8Array([1])]);
     const a = await storage.createGuestProject("A", createProjectDocument());
     const b = await storage.createGuestProject("B", createProjectDocument());
-    await storage.putGuestMesh(a.id, "abc", file);
-    await storage.putGuestMesh(b.id, "abc", file);
-    await storage.deleteGuestMesh(a.id, "abc");
-    await expect(storage.getGuestMesh(a.id, "abc")).rejects.toThrow("missing");
-    expect((await storage.getGuestMesh(b.id, "abc")).byteLength).toBe(1);
+    await storage.putGuestAsset(a.id, "abc", file);
+    await storage.putGuestAsset(b.id, "abc", file);
+    await storage.deleteGuestAsset(a.id, "abc");
+    await expect(storage.getGuestAsset(a.id, "abc")).rejects.toThrow("missing");
+    expect((await storage.getGuestAsset(b.id, "abc")).byteLength).toBe(1);
   });
 
   it("refuses a file for a project deleted meanwhile", async () => {
     const project = await storage.createGuestProject("Relief", createProjectDocument());
     await storage.deleteGuestProject(project.id);
     await expect(
-      storage.putGuestMesh(project.id, "abc", new Blob([new Uint8Array([1])])),
+      storage.putGuestAsset(project.id, "abc", new Blob([new Uint8Array([1])])),
     ).rejects.toThrow("no longer exists");
-    await expect(storage.getGuestMesh(project.id, "abc")).rejects.toThrow("missing");
+    await expect(storage.getGuestAsset(project.id, "abc")).rejects.toThrow("missing");
   });
 });
 

@@ -79,7 +79,8 @@ const PROBE = 1000;
 /**
  * Text item `text`'s settings once `move`, which keeps shapes' proportions
  * (`mapPath`), has rewritten its outlines (ADR-0059): its origin moves, a turn
- * adds to its rotation, a mirror flips it and a scale multiplies its height.
+ * adds to its rotation, a mirror flips it and a scale multiplies its height,
+ * which its line and letter spacing are multiples of.
  */
 export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
   // The text's own axes in the stock, after the move.

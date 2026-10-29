@@ -4,7 +4,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { importGuestDocument } from "@/features/projects/actions";
 import { importArchive } from "@/features/projects/lib/archive-import";
 import { clientTranslator } from "@/lib/client-translator";
-import { deleteGuestProjectIfSaved, getGuestMesh, getGuestProject } from "./storage";
+import { deleteGuestProjectIfSaved, getGuestAsset, getGuestProject } from "./storage";
 
 /** A guest project that couldn't be imported, and why; it stays in the browser. */
 export type FailedImport = { id: string; name: string; error: Translatable };
@@ -42,7 +42,8 @@ export async function importToAccount(
       const fileName = projectFileName(project.name);
       const contents = JSON.stringify(project.document);
       let imported: { projectId: string; error?: never } | { error: Translatable };
-      if (project.document.models.length === 0) {
+      const { models, fonts } = project.document;
+      if (models.length === 0 && fonts.length === 0) {
         imported = await importGuestDocument(
           new File([contents], fileName, { type: "application/json" }),
           project.name,
@@ -51,12 +52,16 @@ export async function importToAccount(
         imported = { error: clientTranslator()("Guest.noModelStorage") };
       } else {
         const meshes = new Map<string, Uint8Array>();
-        for (const { sha256 } of project.document.models) {
+        for (const { sha256 } of models) {
           if (!meshes.has(sha256))
-            meshes.set(sha256, new Uint8Array(await getGuestMesh(id, sha256)));
+            meshes.set(sha256, new Uint8Array(await getGuestAsset(id, sha256)));
+        }
+        const files = new Map<string, Uint8Array>();
+        for (const { sha256 } of fonts) {
+          files.set(sha256, new Uint8Array(await getGuestAsset(id, sha256, "font")));
         }
         imported = await importArchive(
-          { contents, meshes, versions: [] },
+          { contents, meshes, fonts: files, versions: [] },
           fileName,
           null,
           meshLimits,
