@@ -3,7 +3,7 @@ import { drill, fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { flipPoint, pinCenters } from "../scene/sides";
 import { stockOffset } from "../scene/stock";
-import { generateToolpath, toolpathInputs } from "./generate";
+import { generateToolpath, PINS_WARNING, toolpathInputs } from "./generate";
 
 const THROUGH: PinHoles = { type: "through", spoilboardDepth: 5 };
 
@@ -94,6 +94,18 @@ describe("locating pins", () => {
     const narrow = project("x");
     narrow.stock.height = 4;
     expect(warnings(narrow)).toEqual([{ code: "toolpath.pinsOffStock" }]);
+  });
+
+  it("warns when another operation cuts into a pin's hole, but not the pin drill", () => {
+    const warnings = (positions: number[]) => {
+      const doc = project("x", THROUGH, positions);
+      // The square's outside profile, its top edge through y = 100, the flip axis.
+      doc.operations.push(fullDocument().operations[0] as Operation);
+      return toolpathInputs(doc).map((input) => generateToolpath(input).warnings);
+    };
+    // A pin at x = 30, on the square's top edge.
+    expect(warnings([-120, 60])).toEqual([[], [PINS_WARNING]]);
+    expect(warnings([100, 140])).toEqual([[], []]);
   });
 
   it("warns when the project has no pins to drill", () => {

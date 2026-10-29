@@ -424,6 +424,7 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     a.entryClearance === b.entryClearance &&
     // A new disc every time, like the stock rectangle.
     JSON.stringify(a.touchOff) === JSON.stringify(b.touchOff) &&
+    JSON.stringify(a.pins) === JSON.stringify(b.pins) &&
     a.shapes.length === b.shapes.length &&
     a.shapes.every((shape, i) => shape === b.shapes[i]) &&
     // A rest operation's inputs hold those of the operations before it.

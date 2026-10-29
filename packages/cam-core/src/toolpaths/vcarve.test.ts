@@ -310,6 +310,7 @@ describe("vcarveToolpath", () => {
         tabs: null,
         before: [],
         touchOff: null,
+        pins: [],
         safeZ: 5,
         entryClearance: 1,
       }),
