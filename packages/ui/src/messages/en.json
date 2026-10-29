@@ -648,12 +648,12 @@
       "coarsened": "The model is too large to machine at full resolution with this tool: it is cut with cells of {size, number} mm instead of {wanted, number} mm.",
       "restCoarsened": "The area is too large to simulate the stock left at full resolution: it is simulated with cells of {size, number} mm, so material narrower than {width, number} mm the operations before left may be cut at full depth.",
       "roughNothing": "The stock to leave covers the whole model: there is nothing to rough out.",
-      "roughMarginOffStock": "The margin around the model isn't on the stock: there is nothing to rough out.",
+      "marginOffStock": "The margin around the model isn't on the stock: there is nothing to machine.",
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
-      "stockBoundaryTwoSided": "Roughing the whole stock on both sides leaves no frame for the part to hang on: rough within a margin."
+      "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },
     "export": {
       "noEnabled": "There are no enabled operations to export.",
@@ -781,6 +781,12 @@
       "margin": "Clears a frame this wide around the model's outline (at least the tool's radius), keeping the tool inside it: the stock top beyond is left for zeroing Z after a tool change.",
       "stock": "The tool's centre reaches the edges of the stock: everything around the model is cleared down to its bottom."
     },
+    "finishBoundaryHints": {
+      "model": "The tool's centre reaches the edges of the model's outline.",
+      "margin": "Also finishes a frame this wide around the model's outline (at least the tool's radius) down to the model's bottom, or the parting plane on a two-sided project, keeping the tool inside it, like roughing with the same margin.",
+      "stock": "The tool's centre reaches the edges of the stock: everything around the model is finished down to its bottom, or the parting plane on a two-sided project."
+    },
+    "finishBoundaryWaterline": "Waterline contours follow the model's walls and stay on its outline: the margin and the whole stock only apply to parallel and spiral passes.",
     "finishing": {
       "parallel": "Parallel",
       "waterline": "Waterline",
@@ -862,6 +868,7 @@
     "stepOver": "Step-over",
     "stockToLeave": "Stock to leave",
     "clear": "Clear",
+    "cover": "Cover",
     "margin": "Margin",
     "rest": "Only cut remaining material",
     "restHint": "Skips what the enabled operations above this one already cut, so a smaller tool only works where the last one couldn't reach.",

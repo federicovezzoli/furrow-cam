@@ -217,6 +217,7 @@ export const reliefFinish: ReliefFinishOperation = {
     strategy: { type: "parallel", angle: 0, direction: "zigzag" },
     stepOver: 10,
     stockToLeave: 0,
+    boundary: { type: "model" },
     rest: false,
   },
 };
@@ -246,7 +247,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 26,
+    schemaVersion: 27,
     units: "in",
     stock: {
       width: 300,

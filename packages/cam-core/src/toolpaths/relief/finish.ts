@@ -3,11 +3,14 @@ import type {
   Model,
   Point,
   ReliefFinishOperation,
+  ReliefFinishParams,
+  RoughingBoundary,
   Tool,
   TouchOffDisc,
 } from "@furrow/document";
 import { composeAffine } from "../../geometry/affine";
 import type { Rect } from "../../geometry/bounds";
+import { boxRect } from "../../scene/model";
 import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
 import {
@@ -291,10 +294,26 @@ export class ToolDropper {
 
   /**
    * Raises `out[i]` to the tip height at the centre of column `first + i`
-   * on the line `y` (in grid coordinates), for columns `first` to `last`.
-   * `out` starts at the lowest the tip may go.
+   * on the line `y` (in grid coordinates), for columns `first` to `last`,
+   * inside the grid or past it. `out` starts at the lowest the tip may go.
    */
   dropLine(y: number, first: number, last: number, out: Float64Array) {
+    const { columns } = this.grid;
+    // Past the grid, only the discs are in reach: a grid has a margin round
+    // the model wherever a pass goes past it.
+    const from = Math.max(first, 0);
+    const to = Math.min(last, columns - 1);
+    if (from <= to) this.dropRows(y, from, to, out.subarray(from - first, to - first + 1));
+    this.dropDiscs(y, first, last, out);
+    if (this.outside === -Infinity) return;
+    const row = Math.floor(y / this.grid.cellHeight);
+    for (let i = 0; i <= last - first; i++) {
+      if ((out[i] as number) < this.outside && this.empty(first + i, row)) out[i] = this.outside;
+    }
+  }
+
+  /** `dropLine` over the model's cells alone, for columns `first` to `last` of the grid. */
+  private dropRows(y: number, first: number, last: number, out: Float64Array) {
     const { heights, profile, window, penalty } = this;
     const { columns, rows, cellWidth, cellHeight } = this.grid;
     const radius = profile.radius;
@@ -338,12 +357,6 @@ export class ToolDropper {
         }
         out[i] = best;
       }
-    }
-    this.dropDiscs(y, first, last, out);
-    if (this.outside === -Infinity) return;
-    const row = Math.floor(y / cellHeight);
-    for (let i = 0; i <= last - first; i++) {
-      if ((out[i] as number) < this.outside && this.empty(first + i, row)) out[i] = this.outside;
     }
   }
 
@@ -699,10 +712,20 @@ export function createCache<T>(capacity: number): Cache<T> {
 /** Everything a model heightmap depends on: the mesh, where it is, the grid and the offset. */
 export function reliefCacheKey(
   { sha256, transform }: Pick<ModelView, "sha256" | "transform">,
-  { columns, rows, angle, origin }: ReliefGrid,
+  { columns, rows, cellWidth, cellHeight, angle, origin }: ReliefGrid,
   offset: number,
 ): string {
-  return JSON.stringify([sha256, transform, angle, origin, columns, rows, offset]);
+  return JSON.stringify([
+    sha256,
+    transform,
+    angle,
+    origin,
+    columns,
+    rows,
+    cellWidth,
+    cellHeight,
+    offset,
+  ]);
 }
 
 /** The model heightmap offset by `offset`, from `cache` or computed (and cached), reporting progress. */
@@ -1067,6 +1090,8 @@ export type ReliefFinishOptions = {
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts, capped at `safeZ`. */
   entryClearance: number;
+  /** The stock seen from above, for the `stock` and `margin` boundaries (`finishingBoundary`). */
+  stock?: Rect | null;
   /** The stock's bottom, below which nothing is cut; `null` for no limit. */
   stockBottom?: number | null;
   /** A two-sided project's parting plane, below which this side cuts nothing around the model (ADR-0063); `null` for none. */
@@ -1099,6 +1124,8 @@ export const NO_AREA_WARNING: ToolpathMessage = { code: "toolpath.noArea" };
  */
 export type FinishSetup = {
   grid: ReliefGrid;
+  /** What the tool's centre covers (`roughingArea`), its four corners in the grid's coordinates, inside it or past it. */
+  area: [number, number][];
   heights: Float32Array;
   profile: CutterProfile;
   /** The touch-off pad, as a disc in the grid's coordinates, or none. */
@@ -1113,9 +1140,22 @@ export type FinishSetup = {
 };
 
 /**
+ * What a 3D finishing operation covers (ADR-0064): its boundary, but the
+ * model's outline for waterline, whose contours follow the model's walls.
+ */
+export function finishingBoundary({ strategy, boundary }: ReliefFinishParams): RoughingBoundary {
+  return strategy.type === "waterline" ? { type: "model" } : boundary;
+}
+
+/**
  * The `FinishSetup` of a 3D finishing operation, its grid along `angle`,
- * yielding the fraction done up to `FINISH_SETUP_SHARE`. `null` for a model
- * with no area seen from above.
+ * yielding the fraction done up to `FINISH_SETUP_SHARE`. A warning instead
+ * for a model with no area seen from above, or a margin off the stock.
+ *
+ * The grid covers the model's outline; past the model's outline it has
+ * roughing's margin, wide enough that a tool centred past it reaches no part
+ * of the model, so passes covering the `finishingBoundary` beyond it only
+ * meet the floor and the discs there.
  */
 export function* finishSetupSteps(
   operation: ReliefFinishOperation,
@@ -1123,6 +1163,7 @@ export function* finishSetupSteps(
   positions: Float32Array,
   angle: number,
   {
+    stock = null,
     stockBottom = null,
     parting = null,
     flip = null,
@@ -1131,13 +1172,22 @@ export function* finishSetupSteps(
     touchOff = null,
     tabs = [],
   }: ReliefFinishOptions,
-): Generator<number, FinishSetup | null> {
+): Generator<number, { setup: FinishSetup } | { warning: ToolpathMessage }> {
   const { tool, params } = operation;
   const warnings: ToolpathMessage[] = [];
   const wanted = reliefCellSize(tool);
+  const radius = tool.diameter / 2;
+  const boundary = finishingBoundary(params);
+  const margin = boundary.type === "model" ? 0 : params.stockToLeave + radius + wanted;
   const view = modelView(model, flip, parting);
-  const grid = reliefGrid(view, angle, wanted);
-  if (!grid) return null;
+  const grid = reliefGrid(view, angle, wanted, MAX_RELIEF_CELLS, margin);
+  if (!grid) return { warning: NO_AREA_WARNING };
+  const covered = roughingArea(boundary, view, stock, radius);
+  if (!covered) return { warning: { code: "toolpath.marginOffStock" } };
+  const area = rectCorners(covered).map((corner): [number, number] => {
+    const [u, v] = toPassFrame(angle, corner);
+    return [u - grid.origin[0], v - grid.origin[1]];
+  });
   if (grid.coarsened) warnings.push(coarsenedWarning(grid, wanted));
 
   const modelShare = rest ? FINISH_SETUP_SHARE - REST_SHARE : FINISH_SETUP_SHARE;
@@ -1154,24 +1204,105 @@ export function* finishSetupSteps(
   const profile = cutterProfile(tool);
   const floor = reliefFloor(grid.base + params.stockToLeave, stockBottom, warnings);
   const outside = Math.max(floor, grid.outside + params.stockToLeave);
-  const restDropper = rest
-    ? new RestDropper(
-        yield* restStockSteps(grid, rest, stockBottom ?? grid.base, modelShare, FINISH_SETUP_SHARE),
+  // Past the grid, the stock left is simulated as far as the tool reaches from the area.
+  const restStock = rest
+    ? yield* restStockSteps(
         grid,
-        profile,
+        rest,
+        stockBottom ?? grid.base,
+        modelShare,
+        FINISH_SETUP_SHARE,
+        margin > 0
+          ? restCover(covered, rest.stock, radius + wanted + 2 * restCellSize(grid))
+          : null,
       )
     : null;
+  if (restStock?.grid.coarsened) warnings.push(restCoarsenedWarning(restStock.grid));
+  const restDropper = restStock ? new RestDropper(restStock, grid, profile) : null;
   const discs = [...padDiscs(touchOff, grid), ...tabDiscs(reachModel(tabs, grid, heights), grid)];
   return {
-    grid,
-    heights,
-    profile,
-    discs,
-    dropper: new ToolDropper(heights, grid, profile, discs, outside),
-    floor,
-    outside,
-    restDropper,
-    warnings,
+    setup: {
+      grid,
+      area,
+      heights,
+      profile,
+      discs,
+      dropper: new ToolDropper(heights, grid, profile, discs, outside),
+      floor,
+      outside,
+      restDropper,
+      warnings,
+    },
+  };
+}
+
+/**
+ * The rectangle the tool's centre covers when roughing or finishing within
+ * `boundary` (ADR-0033, ADR-0038, ADR-0064), in stock coordinates:
+ *
+ * - `model`: the model's outline, so the tool cuts a radius past it.
+ * - `stock`: the whole stock, the tool overhanging its edges by its radius.
+ * - `margin`: the model's outline grown by the distance, or by the radius if
+ *   that is more, so finishing never meets uncut material at the model's
+ *   edge. The tool stays inside it, except where it reaches the stock's
+ *   edge: there the centre goes to the edge, as for the whole stock.
+ *
+ * Without `stock`, the whole stock is the model's outline and a margin isn't
+ * clipped. `null` when the margin leaves the tool no room inside the stock:
+ * the model is off the stock, or only a sliver narrower than the tool of the
+ * margin is on it.
+ */
+export function roughingArea(
+  boundary: RoughingBoundary,
+  model: Pick<ModelView, "box">,
+  stock: Rect | null,
+  radius: number,
+): Rect | null {
+  const rect = boxRect(model.box);
+  if (boundary.type === "model") return rect;
+  if (boundary.type === "stock") return stock ?? rect;
+  const grow = Math.max(boundary.distance, radius);
+  const side = (edge: number, direction: 1 | -1, stockEdge: number | undefined) => {
+    const cut = edge + direction * grow;
+    if (stockEdge !== undefined && direction * (cut - stockEdge) >= 0) return stockEdge;
+    return cut - direction * radius;
+  };
+  const min: Point = [side(rect.min[0], -1, stock?.min[0]), side(rect.min[1], -1, stock?.min[1])];
+  const max: Point = [side(rect.max[0], 1, stock?.max[0]), side(rect.max[1], 1, stock?.max[1])];
+  return min[0] <= max[0] && min[1] <= max[1] ? { min, max } : null;
+}
+
+/**
+ * Where a rest operation's stock left is simulated, besides the model's grid:
+ * the `area` grown by `margin`, wherever the tool may reach from it (its
+ * radius, the rest dropper's reach of a cell's diagonal and more), on the
+ * stock, where earlier operations can have cut. Without a stock, nothing
+ * past the model's grid: the stock is the model's outline (`roughingArea`).
+ */
+export function restCover(area: Rect, stock: Rect | null, margin: number): Rect | null {
+  if (!stock) return null;
+  const min: Point = [
+    Math.max(area.min[0] - margin, stock.min[0]),
+    Math.max(area.min[1] - margin, stock.min[1]),
+  ];
+  const max: Point = [
+    Math.min(area.max[0] + margin, stock.max[0]),
+    Math.min(area.max[1] + margin, stock.max[1]),
+  ];
+  return min[0] < max[0] && min[1] < max[1] ? { min, max } : null;
+}
+
+/** The size of the rest grid's cells over `grid`, before coarsening (`restGrid`). */
+export function restCellSize(grid: ReliefGrid): number {
+  return Math.max(grid.cellWidth, grid.cellHeight, REST_MIN_WIDTH / 2);
+}
+
+/** Says that the stock left is simulated on larger cells than `REST_MIN_WIDTH` needs. */
+export function restCoarsenedWarning(grid: ReliefGrid): ToolpathMessage {
+  const size = Math.max(grid.cellWidth, grid.cellHeight);
+  return {
+    code: "toolpath.restCoarsened",
+    values: { size: round3(size), width: round3(2 * size) },
   };
 }
 
@@ -1181,7 +1312,7 @@ export function* finishSetupSteps(
  * yielding the fraction done from `FINISH_SETUP_SHARE` on.
  *
  * Passes at the strategy's angle and the operation's step-over cover the
- * model's outline with the tool's centre, from edge to edge. Along each pass
+ * setup's area with the tool's centre, from edge to edge. Along each pass
  * the tool is dropped onto the model, offset by the stock to leave, at every
  * cell, and the points are merged into straight moves within
  * `RELIEF_TOLERANCE`. One-way passes all cut in the same direction,
@@ -1200,21 +1331,27 @@ export function* finishSetupSteps(
  */
 export function* parallelPassesSteps(
   operation: ReliefFinishOperation,
-  { grid, dropper, floor, restDropper, warnings }: FinishSetup,
+  { grid, area, dropper, floor, restDropper, warnings }: FinishSetup,
   strategy: Extract<FinishingStrategy, { type: "parallel" }>,
   { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
-  const { columns, rows, cellWidth, cellHeight } = grid;
+  const { cellWidth, cellHeight } = grid;
   // Passes run along row centres, where the heights are exact: from the
-  // first row to the last, evenly spread, no more rows apart than fit in the
-  // step-over, so rounding never spreads them further.
+  // first row whose centre is in the area to the last, inside the grid or
+  // past it, evenly spread, no more rows apart than fit in the step-over, so
+  // rounding never spreads them further.
+  const vs = area.map(([, v]) => v);
+  const us = area.map(([u]) => u);
+  const firstRow = Math.ceil(Math.min(...vs) / cellHeight - 0.5);
+  const finalRow = Math.floor(Math.max(...vs) / cellHeight - 0.5);
   const spacing = (tool.diameter * params.stepOver) / 100;
   const rowsApart = Math.max(1, Math.floor(spacing / cellHeight + 1e-9));
-  const count = Math.ceil((rows - 1) / rowsApart) + 1;
-  let lastRow = -1;
-  const tips = new Float64Array(columns);
-  const stockTips = new Float64Array(columns);
+  const count = Math.ceil((finalRow - firstRow) / rowsApart) + 1;
+  let lastRow: number | null = null;
+  const samplesAtMost = Math.ceil((Math.max(...us) - Math.min(...us)) / cellWidth) + 1;
+  const tips = new Float64Array(samplesAtMost);
+  const stockTips = new Float64Array(samplesAtMost);
   // Gaps narrower than the tool aren't worth leaving the cut for.
   const gap = Math.ceil(tool.diameter / cellWidth);
   const maxLink = 2 * tool.diameter;
@@ -1231,13 +1368,14 @@ export function* parallelPassesSteps(
   }
 
   for (let line = 0; line < count; line++) {
-    const row = count > 1 ? Math.round((line * (rows - 1)) / (count - 1)) : 0;
+    const row =
+      firstRow + (count > 1 ? Math.round((line * (finalRow - firstRow)) / (count - 1)) : 0);
     if (row === lastRow) continue;
     lastRow = row;
     const v = (row + 0.5) * cellHeight;
-    const span = outlineSpan(grid.outline, v);
-    const first = span ? Math.max(0, Math.ceil(span[0] / cellWidth - 0.5)) : 1;
-    const last = span ? Math.min(columns - 1, Math.floor(span[1] / cellWidth - 0.5)) : 0;
+    const span = outlineSpan(area, v);
+    const first = span ? Math.ceil(span[0] / cellWidth - 0.5) : 1;
+    const last = span ? Math.floor(span[1] / cellWidth - 0.5) : 0;
     if (first <= last) {
       const samples = last - first + 1;
       const pass = tips.subarray(0, samples);

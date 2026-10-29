@@ -648,12 +648,12 @@
       "coarsened": "Le modèle est trop grand pour être usiné à pleine résolution avec cet outil : il est coupé avec des cellules de {size, number} mm au lieu de {wanted, number} mm.",
       "restCoarsened": "La zone est trop grande pour simuler la matière restante à pleine résolution : elle est simulée avec des cellules de {size, number} mm, donc la matière plus étroite que {width, number} mm laissée par les opérations précédentes peut être coupée à pleine profondeur.",
       "roughNothing": "La surépaisseur à laisser couvre tout le modèle : il n'y a rien à ébaucher.",
-      "roughMarginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à ébaucher.",
+      "marginOffStock": "La marge autour du modèle n'est pas sur le brut : il n'y a rien à usiner.",
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
       "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
       "pinsOffStock": "Un pion de centrage est hors du brut.",
       "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
-      "stockBoundaryTwoSided": "Ébaucher tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : ébauchez avec une marge."
+      "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
     },
     "export": {
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
@@ -781,6 +781,12 @@
       "margin": "Dégage un cadre de cette largeur autour du contour du modèle (au moins le rayon de l’outil), en gardant l’outil à l’intérieur : le dessus du brut au-delà reste pour la mise à zéro de Z après un changement d’outil.",
       "stock": "Le centre de l’outil atteint les bords du brut : tout ce qui entoure le modèle est dégagé jusqu’au fond."
     },
+    "finishBoundaryHints": {
+      "model": "Le centre de l'outil atteint les bords du contour du modèle.",
+      "margin": "Finit aussi un cadre de cette largeur autour du contour du modèle (au moins le rayon de l'outil) jusqu'au fond du modèle, ou au plan de joint dans un projet à deux faces, en gardant l'outil à l'intérieur, comme l'ébauche avec la même marge.",
+      "stock": "Le centre de l'outil atteint les bords du brut : tout autour du modèle est fini jusqu'à son fond, ou au plan de joint dans un projet à deux faces."
+    },
+    "finishBoundaryWaterline": "Les contours à Z constant suivent les parois du modèle et restent sur son contour : la marge et tout le brut ne s'appliquent qu'aux passes parallèles et en spirale.",
     "finishing": {
       "parallel": "Parallèle",
       "waterline": "Niveaux constants",
@@ -862,6 +868,7 @@
     "stepOver": "Recouvrement",
     "stockToLeave": "Surépaisseur à laisser",
     "clear": "Dégager",
+    "cover": "Couvrir",
     "margin": "Marge",
     "rest": "Couper seulement la matière restante",
     "restHint": "Saute ce que les opérations activées au-dessus de celle-ci ont déjà coupé, pour qu’un outil plus petit ne travaille que là où le précédent n’allait pas.",

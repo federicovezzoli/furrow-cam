@@ -72,7 +72,15 @@ function finishing(
     stockSide: "top",
     targets: [],
     tool,
-    params: { modelId: STEP.id, strategy, stepOver: 20, stockToLeave: 0, rest: false, ...params },
+    params: {
+      modelId: STEP.id,
+      strategy,
+      stepOver: 20,
+      stockToLeave: 0,
+      boundary: { type: "model" },
+      rest: false,
+      ...params,
+    },
   };
 }
 

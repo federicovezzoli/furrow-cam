@@ -389,6 +389,19 @@ export const FinishingStrategy = z.discriminatedUnion("type", [
 export type FinishingStrategy = z.infer<typeof FinishingStrategy>;
 
 /**
+ * What 3D roughing clears and 3D finishing covers (ADR-0038, ADR-0064): the model's outline or the whole
+ * stock, the tool's centre reaching its edges, or the model's outline grown
+ * by `distance` millimetres, the tool staying inside it.
+ */
+export const RoughingBoundary = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("model") }),
+  z.strictObject({ type: z.literal("margin"), distance: PositiveLength }),
+  z.strictObject({ type: z.literal("stock") }),
+]);
+export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
+export type RoughingBoundaryType = RoughingBoundary["type"];
+
+/**
  * 3D finishing parameters (#115, PRD-0005 S4): passes over a model, the tool
  * dropped onto the model at every point along them (ADR-0030).
  */
@@ -403,6 +416,8 @@ export const ReliefFinishParams = z.strictObject({
   stepOver: StepOver,
   /** Material left on the model in every direction, walls included. */
   stockToLeave: z.number().nonnegative(),
+  /** What the passes cover, as for roughing (#396). */
+  boundary: RoughingBoundary,
   /** Rest machining (#118): only cut where the earlier operations left material. */
   rest: z.boolean(),
 });
@@ -423,19 +438,6 @@ export const ReliefFinishOperation = z
   })
   .superRefine(refineModelTargets);
 export type ReliefFinishOperation = z.infer<typeof ReliefFinishOperation>;
-
-/**
- * What 3D roughing clears (ADR-0038): the model's outline or the whole
- * stock, the tool's centre reaching its edges, or the model's outline grown
- * by `distance` millimetres, the tool staying inside it.
- */
-export const RoughingBoundary = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("model") }),
-  z.strictObject({ type: z.literal("margin"), distance: PositiveLength }),
-  z.strictObject({ type: z.literal("stock") }),
-]);
-export type RoughingBoundary = z.infer<typeof RoughingBoundary>;
-export type RoughingBoundaryType = RoughingBoundary["type"];
 
 /**
  * 3D roughing parameters (#116, PRD-0005 S5): the material above the model,

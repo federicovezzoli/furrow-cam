@@ -648,12 +648,12 @@
       "coarsened": "Il modello è troppo grande da lavorare alla risoluzione piena con questo utensile: viene tagliato con celle di {size, number} mm invece di {wanted, number} mm.",
       "restCoarsened": "L'area è troppo grande per simulare alla risoluzione piena il materiale rimasto: viene simulata con celle di {size, number} mm, quindi il materiale più stretto di {width, number} mm lasciato dalle operazioni precedenti potrebbe essere tagliato a profondità piena.",
       "roughNothing": "Il sovrametallo da lasciare copre tutto il modello: non c'è nulla da sgrossare.",
-      "roughMarginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da sgrossare.",
+      "marginOffStock": "Il margine attorno al modello non è sul grezzo: non c'è nulla da lavorare.",
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
       "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
       "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
-      "stockBoundaryTwoSided": "Sgrossare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: sgrossa con un margine."
+      "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
     "export": {
       "noEnabled": "Non ci sono operazioni attive da esportare.",
@@ -781,6 +781,12 @@
       "margin": "Svuota una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell’utensile), tenendovi dentro l’utensile: la superficie del grezzo oltre resta per azzerare Z dopo un cambio utensile.",
       "stock": "Il centro dell’utensile arriva ai bordi del grezzo: tutto attorno al modello viene svuotato fino al fondo."
     },
+    "finishBoundaryHints": {
+      "model": "Il centro dell'utensile raggiunge i bordi del contorno del modello.",
+      "margin": "Rifinisce anche una cornice di questa larghezza attorno al contorno del modello (almeno il raggio dell'utensile) fino al fondo del modello, o al piano di separazione in un progetto a due lati, tenendo l'utensile al suo interno, come la sgrossatura con lo stesso margine.",
+      "stock": "Il centro dell'utensile raggiunge i bordi del grezzo: tutto attorno al modello viene rifinito fino al suo fondo, o al piano di separazione in un progetto a due lati."
+    },
+    "finishBoundaryWaterline": "I contorni a Z costante seguono le pareti del modello e restano sul suo contorno: il margine e tutto il grezzo valgono solo per le passate parallele e a spirale.",
     "finishing": {
       "parallel": "Parallela",
       "waterline": "Curve di livello",
@@ -862,6 +868,7 @@
     "stepOver": "Sovrapposizione",
     "stockToLeave": "Sovrametallo da lasciare",
     "clear": "Svuota",
+    "cover": "Copri",
     "margin": "Margine",
     "rest": "Taglia solo il materiale rimasto",
     "restHint": "Salta quello che le operazioni attive sopra questa hanno già tagliato, così un utensile più piccolo lavora solo dove il precedente non arrivava.",

@@ -97,7 +97,7 @@ function transposed(heights: Float32Array, grid: HeightmapGrid) {
  * stock coordinates, yielding the fraction done from `FINISH_SETUP_SHARE`
  * on.
  *
- * The spiral (`spiralRuns`) covers the model's outline with the tool's
+ * The spiral (`spiralRuns`) covers the setup's area with the tool's
  * centre on the cells' centres, its laps as many rows and columns apart as
  * fit in the operation's step-over, starting at the outline or in the
  * middle as the strategy says. The tool is dropped onto the model at every
@@ -113,12 +113,32 @@ function transposed(heights: Float32Array, grid: HeightmapGrid) {
  */
 export function* spiralSteps(
   operation: ReliefFinishOperation,
-  { grid, heights, profile, discs, dropper, floor, outside, restDropper, warnings }: FinishSetup,
+  {
+    grid,
+    area,
+    heights,
+    profile,
+    discs,
+    dropper,
+    floor,
+    outside,
+    restDropper,
+    warnings,
+  }: FinishSetup,
   strategy: Extract<FinishingStrategy, { type: "spiral" }>,
   { safeZ, entryClearance }: Pick<ReliefFinishOptions, "safeZ" | "entryClearance">,
 ): Generator<number, Toolpath> {
   const { tool, params } = operation;
-  const { columns, rows, cellWidth, cellHeight } = grid;
+  const { cellWidth, cellHeight } = grid;
+  // The cells whose centres are in the area, inside the grid or past it; the
+  // runs number them from the first.
+  const us = area.map(([u]) => u);
+  const vs = area.map(([, v]) => v);
+  const column0 = Math.ceil(Math.min(...us) / cellWidth - 0.5);
+  const row0 = Math.ceil(Math.min(...vs) / cellHeight - 0.5);
+  const columns = Math.floor(Math.max(...us) / cellWidth - 0.5) - column0 + 1;
+  const rows = Math.floor(Math.max(...vs) / cellHeight - 0.5) - row0 + 1;
+  if (columns < 1 || rows < 1) return { moves: [], warnings };
   const spacing = (tool.diameter * params.stepOver) / 100;
   const outwards = spiralRuns(
     columns,
@@ -146,16 +166,20 @@ export function* spiralSteps(
     const count = Math.abs(to - from) + 1;
     const samples = tips.subarray(0, count);
     samples.fill(floor);
-    const low = Math.min(from, to);
-    if (along === "row") dropper.dropLine((line + 0.5) * cellHeight, low, low + count - 1, samples);
-    else columnDropper.dropLine((line + 0.5) * cellWidth, low, low + count - 1, samples);
+    const [across, along0] = along === "row" ? [row0, column0] : [column0, row0];
+    const low = Math.min(from, to) + along0;
+    if (along === "row") {
+      dropper.dropLine((line + across + 0.5) * cellHeight, low, low + count - 1, samples);
+    } else {
+      columnDropper.dropLine((line + across + 0.5) * cellWidth, low, low + count - 1, samples);
+    }
     if (to < from) samples.reverse();
     /** Sample `k` of the run (fractional between samples), in grid coordinates. */
     const position = (k: number): [number, number] => {
       const cell = from + (to < from ? -k : k);
       return along === "row"
-        ? [(cell + 0.5) * cellWidth, (line + 0.5) * cellHeight]
-        : [(line + 0.5) * cellWidth, (cell + 0.5) * cellHeight];
+        ? [(cell + column0 + 0.5) * cellWidth, (line + row0 + 0.5) * cellHeight]
+        : [(line + column0 + 0.5) * cellWidth, (cell + row0 + 0.5) * cellHeight];
     };
     const at = (k: number, z = samples[k] as number): [number, number, number] => [
       ...toStock(grid, ...position(k)),

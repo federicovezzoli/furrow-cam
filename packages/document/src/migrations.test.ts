@@ -274,6 +274,17 @@ describe("migrations", () => {
     expect(parseProjectDocument(v25)).toEqual(current);
   });
 
+  it("gives v26 3D finishing the model's outline", () => {
+    const current = { ...fullDocument(), models: [model], operations: [reliefFinish] };
+    const { boundary: _, ...v26Params } = reliefFinish.params;
+    const v26 = {
+      ...current,
+      schemaVersion: 26,
+      operations: [{ ...reliefFinish, params: v26Params }],
+    };
+    expect(parseProjectDocument(v26)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());
