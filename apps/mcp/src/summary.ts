@@ -1,4 +1,4 @@
-import { formatQuantity, shapesBounds } from "@furrow/cam-core";
+import { formatQuantity, rotatedSize, shapesBounds } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 
 /**
@@ -24,13 +24,14 @@ export function projectSummary(document: ProjectDocument) {
       },
     },
     machine,
-    drawings: document.drawings.map(({ id, name, rotation, text }) => {
+    drawings: document.drawings.map(({ id, name, rotation, border, text }) => {
       const shapes = document.geometry.filter((shape) => shape.drawingId === id);
       return {
         id,
         name,
         ...(text && { text }),
         rotation,
+        border,
         shapes: shapes.map(({ id, name, layer, paths }) => ({
           id,
           name,
@@ -41,12 +42,23 @@ export function projectSummary(document: ProjectDocument) {
         bounds: shapesBounds(shapes),
       };
     }),
-    models: document.models.map(({ id, fileName, triangles, placement }) => ({
-      id,
-      fileName,
-      triangles,
-      placement,
-    })),
+    models: document.models.map(({ id, fileName, triangles, bounds, placement, border }) => {
+      const [width, height, depth] = rotatedSize(bounds, placement.rotation);
+      return {
+        id,
+        fileName,
+        triangles,
+        /** As placed: its outline on the stock, and how far it reaches into the stock from its top. */
+        size: {
+          width: width * placement.scale,
+          height: height * placement.scale,
+          // A flat mesh keeps a depth it doesn't have.
+          depth: depth > 0 ? placement.depth : 0,
+        },
+        placement,
+        border,
+      };
+    }),
     operations: document.operations,
   };
 }
