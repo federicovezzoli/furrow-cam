@@ -1,5 +1,21 @@
 # @furrow/ui
 
+## 0.4.0
+
+### Minor Changes
+
+- Two-sided projects can hold the part with tabs that the bottom side leaves at the parting depth, spread round each model and dragged along its outline. Each side now also cuts all of the model it can see, so models that aren't widest at the parting depth are cut without a skirt. ([#392](https://github.com/federicovezzoli/furrow-cam/pull/392))
+
+### Patch Changes
+
+- A drawing's *Angle* field now shows how far the drawing is turned, follows the 90° buttons and mirroring, and turns the drawing to the angle you type; 0 brings it back to how it was imported. ([#406](https://github.com/federicovezzoli/furrow-cam/pull/406))
+- Two-sided projects without a spoilboard to drill into can line the turned-over stock up by a corner pushed into a fence corner instead of on pins. The G-code says which corner to push into the fences and the stock size the two sides depend on, so it can be measured first. ([#391](https://github.com/federicovezzoli/furrow-cam/pull/391))
+- 3D finishing can now cover a margin around the model or the whole stock, like roughing, so the floor of a roughed margin is finished down to the model's bottom and the stock top beyond it is left alone. ([#402](https://github.com/federicovezzoli/furrow-cam/pull/402))
+- Two-sided projects can have locating pins: set their diameter, their positions along the flip axis and whether their holes go through into the spoilboard or only into the stock, then drill them on the top side. The viewport shows the pins on both sides, and the bottom side's G-code says to turn the stock over onto them. ([#390](https://github.com/federicovezzoli/furrow-cam/pull/390))
+- The operations pane's selection hint now says "Shift+click to add more", matching the onboarding tour. ([#393](https://github.com/federicovezzoli/furrow-cam/pull/393))
+- Projects can be made two-sided in the project properties, choosing the axis the stock is turned over about and the parting depth. A Top / Bottom switch in the viewport shows each side, and the bottom side's simulation starts from the stock the top side leaves, turned over. Operations show their side, and new ones go on the side in view. ([#383](https://github.com/federicovezzoli/furrow-cam/pull/383))
+- Updated dependencies: @furrow/document@0.16.0, @furrow/cam-core@0.15.0
+
 ## 0.3.5
 
 ### Patch Changes

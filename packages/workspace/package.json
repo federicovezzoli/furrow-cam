@@ -1,6 +1,6 @@
 {
   "name": "@furrow/workspace",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
   "description": "The CAM workspace: viewport, panes, stores and workers, saving through a WorkspaceHost",
   "type": "module",

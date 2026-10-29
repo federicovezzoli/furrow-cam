@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.18.1
+
+### Patch Changes
+
+- Opening a project no longer logs a `THREE.Clock` deprecation warning in the browser console. ([#407](https://github.com/federicovezzoli/furrow-cam/pull/407))
+- Updated dependencies: @furrow/document@0.16.0, @furrow/workspace@0.15.0, @furrow/ui@0.4.0, @furrow/cam-core@0.15.0, @furrow/post@0.12.0
+
 ## 0.18.0
 
 ### Minor Changes
