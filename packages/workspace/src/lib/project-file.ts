@@ -9,8 +9,10 @@ import {
   readProjectArchive,
   readProjectJson,
 } from "@furrow/document";
-import { formatMessage } from "@furrow/ui/lib/i18n";
-import { t } from "./i18n";
+import { formatMessage, type Translator } from "@furrow/ui/lib/i18n";
+
+/** A translator, or a function standing for one, e.g. the desktop app's `t`. */
+type Translate = (...args: Parameters<Translator>) => string;
 
 /**
  * A project as a file holds it: the document, its meshes and uploaded fonts
@@ -31,18 +33,19 @@ function isZip(bytes: Uint8Array) {
 /**
  * Reads a `.furrow` or `.furrow.zip` archive, or a `.furrow.json` document,
  * upgrading every document to the current schema version. Throws an `Error`
- * for the user if it can't be opened.
+ * for the user, in `t`'s language, if it can't be opened.
  */
 export async function readProjectFile(
   bytes: Uint8Array,
+  t: Translate,
   maxMeshBytes: number = DEFAULT_STL_LIMITS.maxBytes,
 ): Promise<ProjectFile> {
   if (!isZip(bytes)) {
-    const document = parseDocument(new TextDecoder().decode(bytes));
+    const document = parseDocument(new TextDecoder().decode(bytes), t);
     if (document.models.length > 0) {
-      throw new Error(t("Desktop.ProjectFile.modelsNeedArchive"));
+      throw new Error(t("ProjectFile.modelsNeedArchive"));
     }
-    if (document.fonts.length > 0) throw new Error(t("Desktop.ProjectFile.fontsNeedArchive"));
+    if (document.fonts.length > 0) throw new Error(t("ProjectFile.fontsNeedArchive"));
     return { document, meshes: new Map(), fonts: new Map(), versions: [] };
   }
   let archive: Awaited<ReturnType<typeof readProjectArchive>>;
@@ -50,39 +53,39 @@ export async function readProjectFile(
     archive = await readProjectArchive(bytes, maxMeshBytes);
   } catch (error) {
     if (error instanceof ProjectArchiveError) throw new Error(formatMessage(t, error.detail));
-    throw new Error(t("Desktop.ProjectFile.notAProject"));
+    throw new Error(t("ProjectFile.notAProject"));
   }
-  const document = parseDocument(archive.contents);
+  const document = parseDocument(archive.contents, t);
   if (missingArchiveMeshes(document, archive.meshes).length > 0) {
-    throw new Error(t("Desktop.ProjectFile.missingModel"));
+    throw new Error(t("ProjectFile.missingModel"));
   }
   if (missingArchiveFonts(document, archive.fonts).length > 0) {
-    throw new Error(t("Desktop.ProjectFile.missingFont"));
+    throw new Error(t("ProjectFile.missingFont"));
   }
   // As the web app checks imported fonts: one that can't be read would fail wherever text is laid out.
   for (const bytes of archive.fonts.values()) {
     try {
       parseFont(bytes);
     } catch {
-      throw new Error(t("Desktop.ProjectFile.unreadableFont"));
+      throw new Error(t("ProjectFile.unreadableFont"));
     }
   }
   const { meshes, fonts, versions } = archive;
   return { document, meshes, fonts, versions };
 }
 
-function parseDocument(contents: string): ProjectDocument {
+function parseDocument(contents: string, t: Translate): ProjectDocument {
   const read = readProjectJson(contents);
   switch (read.reason) {
     case undefined:
       return read.document;
     case "not_a_project":
-      throw new Error(t("Desktop.ProjectFile.notAProject"));
+      throw new Error(t("ProjectFile.notAProject"));
     case "too_new":
-      throw new Error(t("Desktop.ProjectFile.tooNew"));
+      throw new Error(t("ProjectFile.tooNew"));
     case "version":
     case "invalid":
-      throw new Error(t("Desktop.ProjectFile.invalid"));
+      throw new Error(t("ProjectFile.invalid"));
   }
 }
 

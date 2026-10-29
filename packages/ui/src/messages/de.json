@@ -352,16 +352,6 @@
       "untitled": "Unbenannt",
       "loading": "Wird geladen…"
     },
-    "ProjectFile": {
-      "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
-      "modelsNeedArchive": "Dieses Projekt enthält 3D-Modelle: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
-      "fontsNeedArchive": "Dieses Projekt hat hochgeladene Schriften: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
-      "missingFont": "Diesem Projekt fehlt eine seiner Schriften.",
-      "unreadableFont": "Eine der Schriften dieses Projekts kann nicht gelesen werden.",
-      "missingModel": "In diesem Projekt fehlt eines seiner 3D-Modelle.",
-      "tooNew": "Dieses Projekt wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die neueste Version herunter, um es zu öffnen.",
-      "invalid": "Diese Datei ist kein gültiges Furrow-CAM-Projekt."
-    },
     "Session": {
       "tooManyVersions": "Dieses Projekt hat bereits {max} Versionen, mehr sind nicht möglich. Lösche zuerst eine.",
       "versionNotFound": "Diese Version gibt es nicht mehr.",
@@ -448,6 +438,16 @@
       "dontSave": "Nicht speichern",
       "cancel": "Abbrechen"
     }
+  },
+  "ProjectFile": {
+    "notAProject": "Diese Datei ist kein Furrow-CAM-Projekt.",
+    "modelsNeedArchive": "Dieses Projekt enthält 3D-Modelle: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
+    "fontsNeedArchive": "Dieses Projekt hat hochgeladene Schriften: Öffne stattdessen seine .furrow- oder .furrow.zip-Datei.",
+    "missingFont": "Diesem Projekt fehlt eine seiner Schriften.",
+    "unreadableFont": "Eine der Schriften dieses Projekts kann nicht gelesen werden.",
+    "missingModel": "In diesem Projekt fehlt eines seiner 3D-Modelle.",
+    "tooNew": "Dieses Projekt wurde mit einer neueren Version von Furrow CAM gespeichert. Lade die neueste Version herunter, um es zu öffnen.",
+    "invalid": "Diese Datei ist kein gültiges Furrow-CAM-Projekt."
   },
   "Core": {
     "withOperation": "{operation}: {message}",

@@ -322,6 +322,47 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/mcp/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "next": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
+                  "react": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
+                  "react-dom": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067).",
+                  "three": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067)."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "next/*",
+                      "@next/*",
+                      "react/*",
+                      "react-dom/*",
+                      "three/*",
+                      "@react-three/*",
+                      "@furrow/ui/components/**",
+                      "@furrow/ui/hooks/**",
+                      "@furrow/workspace/components/**",
+                      "@furrow/workspace/providers/**",
+                      "@furrow/workspace/hooks/**",
+                      "@furrow/workspace/tools/**",
+                      "@furrow/workspace/machines/components/**",
+                      "@furrow/workspace/onboarding/**"
+                    ],
+                    "message": "The MCP server drives the workspace's stores headless: no Next.js, React, three.js or workspace UI (ADR-0067)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }
