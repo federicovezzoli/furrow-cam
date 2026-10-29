@@ -5,6 +5,7 @@ import {
   cutterProfile,
   type Heightmap,
   type HeightmapGrid,
+  joinSides,
   type SimulationCut,
   sweepMoves,
 } from "./simulation";
@@ -133,6 +134,11 @@ const MAX_CHECKPOINTS = 64;
  * is swept too, after saving the cells it may change, so the next `seek`
  * puts them back first.
  *
+ * On the bottom side of a two-sided project, `flippedTop` holds the stock the
+ * top side left, turned over (`flipHeightmap`, ADR-0060): the playback starts
+ * from it and cuts through wherever the two sides' cuts meet, as the
+ * simulation does with `joinSides`.
+ *
  * `heightmap.heights` changes in place; `seek` returns the cells it changed
  * (`null` for none), for a renderer to upload only those. Its buffer is
  * padded as `simulateCuts` pads it, by `bufferMultiple`.
@@ -147,6 +153,7 @@ export function heightmapPlayback(
   path: PlaybackPath,
   grid: HeightmapGrid,
   bufferMultiple = 1,
+  flippedTop?: Float32Array,
 ): HeightmapPlayback {
   const { columns, rows, cellHeight } = grid;
   const cells = columns * rows;
@@ -159,8 +166,12 @@ export function heightmapPlayback(
   const kept = Math.max(1, Math.min(MAX_CHECKPOINTS, Math.floor(CHECKPOINT_BYTES / (cells * 4))));
   /** Moves between checkpoints. */
   const interval = Math.max(1, Math.ceil(count / kept));
-  /** Checkpoint `k` holds the heights after `k * interval` moves; the first is the uncut stock. */
+  /** Checkpoint `k` holds the heights after `k * interval` moves; the first is the stock it starts from. */
   const checkpoints: (Float32Array | undefined)[] = [];
+  if (flippedTop) {
+    joinSides(heights, flippedTop, stock.thickness);
+    checkpoints[0] = heights.slice();
+  }
   /** Whole moves swept into `heights`. */
   let done = 0;
   /** The cells part of a move changed, as they were before. */
@@ -257,6 +268,13 @@ export function heightmapPlayback(
       if (result) {
         for (let c = result.start; c < result.end; c++) {
           if ((heights[c] as number) < bottom) heights[c] = bottom;
+        }
+        if (flippedTop) {
+          joinSides(
+            heights.subarray(result.start, result.end),
+            flippedTop.subarray(result.start, result.end),
+            stock.thickness,
+          );
         }
       }
       return result;
