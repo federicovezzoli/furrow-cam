@@ -42,12 +42,6 @@ type Notice = { kind: "error" | "info"; messages: Translatable[] };
 /** What a drawing unit is in a DXF file that doesn't say. */
 const UNIT_OPTIONS = ["mm", "in"] as const;
 
-/**
- * A file waiting for the user: an SVG sized in pixels, or not at all, for its
- * DPI; a DXF with no units for them.
- */
-type PendingFile = DrawingFile;
-
 /** The file input `GeometryImport` reads drawings from, which `ImportDrawingButton` opens. */
 const DRAWING_INPUT_ID = "workspace-drawing-file";
 
@@ -140,7 +134,7 @@ export function GeometryImport() {
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
   const input = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<PendingFile | null>(null);
+  const [pending, setPending] = useState<DrawingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const format = useFormatMessage();
   const t = useTranslations("Import");

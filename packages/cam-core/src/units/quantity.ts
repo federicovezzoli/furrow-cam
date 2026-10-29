@@ -5,6 +5,12 @@ import { fromMillimetres, MM_PER_INCH, toMillimetres } from "./units";
  * What a numeric field holds: a length (mm internally), a feed rate (mm/min
  * internally) or a plain number such as a count, a speed or a percentage.
  */
+/**
+ * The smallest length, in millimetres, that size, depth and radius fields
+ * accept: keeps them positive when stepping or scrubbing down.
+ */
+export const MIN_LENGTH = 0.01;
+
 export type Quantity = "length" | "feed" | "number";
 
 /** Unit suffixes a field accepts, as the factor that converts them to the internal unit. */

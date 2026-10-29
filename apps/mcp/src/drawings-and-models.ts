@@ -3,13 +3,14 @@ import { basename, isAbsolute } from "node:path";
 import {
   DEFAULT_STL_LIMITS,
   DEFAULT_SVG_DPI,
+  drawingFit,
   parseStl,
   rotatedSize,
   StlImportError,
   type StlMesh,
 } from "@furrow/cam-core";
-import { type Message, sha256Hex, type Units } from "@furrow/document";
-import { formatMessage } from "@furrow/ui/lib/i18n";
+import { sha256Hex, type Units } from "@furrow/document";
+import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import {
   DRAWING_FILE_TOO_LARGE,
   type DrawingFile,
@@ -22,12 +23,14 @@ import {
 import {
   canImportModel,
   DRAWINGS_OR_MODEL,
+  drawingBounds,
   fitDrawingToStock,
   setDrawingSize,
 } from "@furrow/workspace/stores/geometry-actions";
 import {
   addModel,
   fitModelToStock,
+  modelAnchor,
   setModelDepth,
   setModelScale,
 } from "@furrow/workspace/stores/model-actions";
@@ -35,7 +38,7 @@ import type { ActionResult } from "@furrow/workspace/stores/operation-actions";
 import { change, type Project, ToolError, t } from "./projects";
 
 /** The app's message for the assistant. */
-const text = (message: Message) => formatMessage(t, message);
+const text = (message: Translatable) => formatMessage(t, message);
 
 /** `run`'s result; throws a `ToolError` with the app's message if a drawing file can't be imported. */
 function reading<T>(run: () => T): T {
@@ -66,23 +69,24 @@ export async function importFile(
   const kind = /\.(svg|dxf|stl)$/i.exec(path)?.[1]?.toLowerCase();
   if (!kind) throw new ToolError(`${JSON.stringify(path)} isn't an SVG, DXF or STL file.`);
   const name = basename(path);
-  let size: number;
+  const limit = kind === "stl" ? DEFAULT_STL_LIMITS.maxBytes : MAX_DRAWING_FILE_SIZE;
+  let bytes: Uint8Array;
   try {
-    size = (await stat(path)).size;
+    // Checked before reading, so a huge file isn't read in.
+    if ((await stat(path)).size > limit) {
+      throw new ToolError(
+        text(
+          kind === "stl"
+            ? { code: "stl.tooLarge", values: { mb: limit / 1_000_000 } }
+            : DRAWING_FILE_TOO_LARGE,
+        ),
+      );
+    }
+    bytes = new Uint8Array(await readFile(path));
   } catch (error) {
+    if (error instanceof ToolError) throw error;
     throw new ToolError(`Can't read ${path}: ${(error as Error).message}`);
   }
-  const limit = kind === "stl" ? DEFAULT_STL_LIMITS.maxBytes : MAX_DRAWING_FILE_SIZE;
-  if (size > limit) {
-    throw new ToolError(
-      text(
-        kind === "stl"
-          ? { code: "stl.tooLarge", values: { mb: limit / 1_000_000 } }
-          : DRAWING_FILE_TOO_LARGE,
-      ),
-    );
-  }
-  const bytes = new Uint8Array(await readFile(path));
   if (kind === "stl") return importModel(project, name, bytes);
 
   const file = reading(() => parseDrawingFile(name, bytes));
@@ -115,6 +119,7 @@ async function importModel(project: Project, fileName: string, bytes: Uint8Array
   if (!canImportModel(project.store.getState().document)) {
     throw new ToolError(text(DRAWINGS_OR_MODEL));
   }
+  // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const mesh: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
   const sha256 = await sha256Hex(bytes);
   const { triangles, bounds } = mesh;
@@ -130,21 +135,28 @@ async function importModel(project: Project, fileName: string, bytes: Uint8Array
 
 /** Throws a `ToolError` with `result`'s message if the action was refused. */
 function check(result: ActionResult | undefined) {
-  if (result && !result.ok) throw new ToolError(formatMessage(t, result.error));
+  if (result && !result.ok) throw new ToolError(text(result.error));
 }
 
-/** Throws a `ToolError` if `project` has no drawing or model `id`. */
+/** Model or drawing `id`, the drawing by its bounds; throws a `ToolError` if `project` has neither. */
 function find(project: Project, id: string) {
-  const { drawings, models } = project.store.getState().document;
+  const { drawings, geometry, models } = project.store.getState().document;
   const model = models.find((m) => m.id === id);
-  if (model) return { model };
-  if (drawings.some((d) => d.id === id)) return { model: null };
+  if (model) return { model, bounds: null };
+  const bounds = drawingBounds(geometry, id);
+  if (drawings.some((d) => d.id === id) && bounds) return { model: null, bounds };
   throw new ToolError(`The project has no drawing or model ${JSON.stringify(id)}.`);
 }
 
 /** Scales drawing or model `id` to fit inside the stock less its border, as *Fit to stock* does. */
 export function fitToStock(project: Project, id: string) {
-  const { model } = find(project, id);
+  const { model, bounds } = find(project, id);
+  const { stock, drawings } = project.store.getState().document;
+  const border = drawings.find((d) => d.id === id)?.border ?? 0;
+  // `fitDrawingToStock` does nothing, and says nothing, to a drawing that is one point.
+  if (bounds && !drawingFit(bounds, stock, modelAnchor(stock), border)) {
+    throw new ToolError("This drawing is a single point: it has no size to fit.");
+  }
   let result: ActionResult | undefined;
   change(project, (store) => {
     if (model) fitModelToStock(store, id);
@@ -163,9 +175,14 @@ export function resize(
   side: "width" | "height" | "depth",
   mm: number,
 ) {
-  const { model } = find(project, id);
+  const { model, bounds } = find(project, id);
   if (!model) {
     if (side === "depth") throw new ToolError("A drawing has no depth: give its width or height.");
+    const i = side === "width" ? 0 : 1;
+    // `setDrawingSize` does nothing, and says nothing, to a drawing with no extent that way.
+    if ((bounds.max[i] as number) - (bounds.min[i] as number) <= 0) {
+      throw new ToolError(`This drawing is a line: it has no ${side} to set.`);
+    }
     let result: ActionResult | undefined;
     change(project, (store) => (result = setDrawingSize(store, id, side, mm)));
     check(result);

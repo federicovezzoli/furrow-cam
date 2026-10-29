@@ -43,7 +43,7 @@ export function projectSummary(document: ProjectDocument) {
       };
     }),
     models: document.models.map(({ id, fileName, triangles, bounds, placement, border }) => {
-      const [width, height] = rotatedSize(bounds, placement.rotation);
+      const [width, height, depth] = rotatedSize(bounds, placement.rotation);
       return {
         id,
         fileName,
@@ -52,7 +52,8 @@ export function projectSummary(document: ProjectDocument) {
         size: {
           width: width * placement.scale,
           height: height * placement.scale,
-          depth: placement.depth,
+          // A flat mesh keeps a depth it doesn't have.
+          depth: depth > 0 ? placement.depth : 0,
         },
         placement,
         border,

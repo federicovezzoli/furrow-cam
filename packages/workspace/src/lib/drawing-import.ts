@@ -15,7 +15,7 @@ import type { Message, Units } from "@furrow/document";
 import type { DocumentStore } from "../stores/document-store";
 import { addImportedShapes, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
 
-/** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
+/** The largest SVG or DXF file any import takes: anything larger is unlikely to be a drawing worth cutting. */
 export const MAX_DRAWING_FILE_SIZE = 20_000_000;
 
 /** Why a drawing file can't be imported, for the user (ADR-0054). */

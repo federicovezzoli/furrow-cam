@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatMessage } from "@furrow/ui/lib/i18n";
@@ -130,6 +130,8 @@ describe("importFile", () => {
       "isn't an SVG, DXF or STL file",
     );
     await expect(importFile(project, join(dir, "missing.svg"), {})).rejects.toThrow("Can't read");
+    await mkdir(join(dir, "folder.svg"));
+    await expect(importFile(project, join(dir, "folder.svg"), {})).rejects.toThrow("Can't read");
     await expect(importFile(project, await file("empty.svg", "<svg"), {})).rejects.toThrow();
   });
 });
@@ -153,6 +155,21 @@ describe("fitToStock and resize", () => {
     expect(summary().models[0]?.size.depth).toBeCloseTo(5);
     fitToStock(project, id);
     expect(summary().models[0]?.size.height).toBeCloseTo(380);
+  });
+
+  it("refuses sizes a drawing or model doesn't have", async () => {
+    const line = `<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="10mm" viewBox="0 0 100 10"><path d="M0 5H100" stroke="black"/></svg>`;
+    const { id } = await importFile(project, await file("line.svg", line), {});
+    expect(() => resize(project, id, "height", 50)).toThrow("no height");
+    resize(project, id, "width", 50);
+    expect(drawingSize()[0]).toBeCloseTo(50);
+  });
+
+  it("gives a flat model no depth, and refuses to set one", async () => {
+    const flat = `solid f\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 40 0 0\nvertex 0 30 0\nendloop\nendfacet\nendsolid f\n`;
+    const { id } = await importFile(project, await file("flat.stl", flat), {});
+    expect(summary().models[0]?.size.depth).toBe(0);
+    expect(() => resize(project, id, "depth", 5)).toThrow("flat");
   });
 
   it("refuses an id the project doesn't have", () => {

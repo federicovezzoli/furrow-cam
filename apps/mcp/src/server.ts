@@ -1,3 +1,4 @@
+import { MIN_LENGTH } from "@furrow/cam-core";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
@@ -139,7 +140,7 @@ export function createServer(projects: Projects = createProjects()) {
         path: projectPath,
         id: itemId,
         side: z.enum(["width", "height", "depth"]).describe("Which size to set."),
-        mm: z.number().positive().describe("The size, in millimetres."),
+        mm: z.number().min(MIN_LENGTH).describe("The size, in millimetres."),
       },
     },
     ({ path, id, side, mm }) =>
