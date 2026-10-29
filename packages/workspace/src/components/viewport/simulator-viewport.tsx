@@ -45,12 +45,19 @@ export function SimulatorViewport() {
   const units = useDocumentStore((s) => s.document.units);
   const operations = useDocumentStore((s) => s.document.operations);
   const entries = useToolpathStore((s) => s.entries);
+  const { side } = playback;
+  // The bottom side is played back over the top side's cuts, so its failures count too.
   const skipped = useMemo(
     () =>
       operations
-        .filter((op) => op.enabled && entries[op.id]?.status === "error")
+        .filter(
+          (op) =>
+            op.enabled &&
+            (side === "bottom" || op.stockSide === "top") &&
+            entries[op.id]?.status === "error",
+        )
         .map((op) => op.name),
-    [operations, entries],
+    [operations, entries, side],
   );
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
@@ -70,10 +77,15 @@ export function SimulatorViewport() {
       ? playback.heightmap
       : null;
   const t = useTranslations("Viewport");
-  const status = simulationStatus(t, { ...playback, skipped });
+  const status = [
+    ...(side === "bottom" ? [t("bottomSideHint")] : []),
+    // The top side is played back as it is cut, before the stock is turned over.
+    ...(side === "top" && stock.twoSided ? [t("topSideSimulationHint")] : []),
+    ...simulationStatus(t, { ...playback, skipped }),
+  ];
   const { store, path, parts } = playback;
   const scene = useMemo(() => path && { store, path, parts }, [store, path, parts]);
-  const nothing = !operations.some((op) => op.enabled);
+  const nothing = !operations.some((op) => op.enabled && op.stockSide === side);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
