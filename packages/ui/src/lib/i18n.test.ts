@@ -24,7 +24,7 @@ describe("catalogs", () => {
 });
 
 describe("every message", () => {
-  it.each(LOCALES)("formats in %s, with its tags and arguments", (locale) => {
+  it.each(LOCALES)("formats in %s, with the tags and arguments English passes", (locale) => {
     const errors: string[] = [];
     const t = createTranslator({
       locale,
@@ -34,7 +34,8 @@ describe("every message", () => {
     for (const key of keys(CATALOGS[locale])) {
       const raw = key
         .split(".")
-        .reduce<Catalog | string>((node, part) => (node as Catalog)[part] ?? "", CATALOGS[locale]);
+        .reduce<Catalog | string>((node, part) => (node as Catalog)[part] ?? "", CATALOGS.en);
+      // Callers pass English's arguments and tags: a renamed one fails to format, an extra tag stays.
       // Every tag wraps its text and any argument accepts 1: what's left is broken syntax.
       const tags = [...String(raw).matchAll(/<(\w+)>/g)].map((match) => [
         match[1],
