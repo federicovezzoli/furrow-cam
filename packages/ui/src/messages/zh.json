@@ -1345,7 +1345,7 @@
     "import": "导入",
     "cancel": "取消",
     "addText": "添加文字",
-    "defaultText": "文字"
+    "defaultText": "Text"
   },
   "Viewport": {
     "scene": "毛坯、几何图形和刀具路径",
