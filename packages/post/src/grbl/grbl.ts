@@ -119,7 +119,7 @@ function writeHeader(program: Program, steps: PostStep[]) {
     0,
   );
   // Without a machine, rapids have no rate (`estimateTime`).
-  const left = machine ? "tool changes" : "rapids or tool changes";
+  const left = machine ? "acceleration or tool changes" : "rapids, acceleration or tool changes";
   out.comment(`Estimated time: about ${formatDuration(seconds)}, not counting ${left}`);
   const changesBit = steps.some((step, i) => {
     const before = steps[i - 1];

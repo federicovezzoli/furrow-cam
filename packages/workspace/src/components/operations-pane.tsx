@@ -555,25 +555,28 @@ function JobTime() {
   const operations = useDocumentStore((s) => s.document.operations);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const hasMachine = useDocumentStore((s) => s.document.machine !== null);
-  const entries = useToolpathStore((s) => s.entries);
-  const sides = twoSided ? (["top", "bottom"] as const) : [null];
-  const totals = sides.flatMap((side) => {
-    const enabled = operations.filter(
-      (operation) => operation.enabled && (side === null || operation.stockSide === side),
-    );
-    let seconds = 0;
-    for (const { id } of enabled) {
-      const entry = entries[id];
-      if (entry?.status !== "ready") return [];
-      seconds += entry.seconds;
-    }
-    if (enabled.length === 0) return [];
-    return [side === null ? formatTime(seconds) : `${t(`sides.${side}`)} ${formatTime(seconds)}`];
+  // A string, so progress reports while toolpaths compute don't re-render it.
+  const time = useToolpathStore(({ entries }) => {
+    const sides = twoSided ? (["top", "bottom"] as const) : [null];
+    const totals = sides.flatMap((side) => {
+      const enabled = operations.filter(
+        (operation) => operation.enabled && (side === null || operation.stockSide === side),
+      );
+      let seconds = 0;
+      for (const { id } of enabled) {
+        const entry = entries[id];
+        if (entry?.status !== "ready") return [];
+        seconds += entry.seconds;
+      }
+      if (enabled.length === 0) return [];
+      return [side === null ? formatTime(seconds) : `${t(`sides.${side}`)} ${formatTime(seconds)}`];
+    });
+    return totals.length === 0 ? null : totals.join(" · ");
   });
-  if (totals.length === 0) return null;
+  if (time === null) return null;
   return (
     <div className="grid gap-0.5 text-muted-foreground">
-      <p>{t("total", { time: totals.join(" · ") })}</p>
+      <p>{t("total", { time })}</p>
       <p className="text-ui-label">{hasMachine ? t("estimateNote") : t("estimateNoMachine")}</p>
     </div>
   );

@@ -6,10 +6,11 @@ import { limitFeed } from "./machine-limits";
  * How long `toolpath` takes to cut on `machine`, in seconds (#420): each
  * move's length at the feed the program writes (`limitFeed`), rapids at the
  * machine's maximum rates, and a spin-up dwell for each tool it starts, its
- * clearing tool's included (ADR-0026). Acceleration and tool changes are left
- * out, so it is a lower bound. Without a machine, rapids have no rate and
- * count for nothing. The first move of each list comes from wherever the tool
- * was, so it isn't counted.
+ * clearing tool's included (ADR-0026), even where the program keeps the
+ * spindle running from the operation before. Acceleration and tool changes
+ * are left out, so apart from those spin-ups it is a lower bound.
+ * Without a machine, rapids have no rate and count for nothing. The first
+ * move of each list comes from wherever the tool was, so it isn't counted.
  */
 export function estimateTime(toolpath: Toolpath, machine: Machine | null): number {
   return [toolpath.clearing ?? [], toolpath.moves].reduce(

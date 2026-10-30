@@ -147,11 +147,35 @@ describe("scheduleToolpaths", () => {
     documents.getState().change("Machine", (draft) => {
       draft.machine = machine;
     });
+    // Nothing the estimate reads.
+    documents.getState().change("Rename", (draft) => {
+      if (draft.machine) draft.machine.name = "Renamed";
+    });
     expect(machines).toEqual([null, machine]);
 
     schedule.receive({ operationId: OPERATION_ID, inputHash, estimate: 90 });
     expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({ seconds: 90 });
     expect(requests).toHaveLength(1);
+  });
+
+  it("tells a replaced worker the machine, and recomputes what it lost when the machine changes", () => {
+    const { documents, requests, machines, schedule } = setup();
+    const [request] = requests as [ToolpathRequest];
+    schedule.receive({ ...request, ...compute(request.input) });
+    schedule.fail("The toolpath worker stopped");
+    // A retry reaches the new worker, which must know the machine first.
+    schedule.retry(OPERATION_ID);
+    expect(machines).toEqual([null, null]);
+    expect(requests).toHaveLength(2);
+
+    const ready = requests.at(-1) as ToolpathRequest;
+    schedule.receive({ ...ready, ...compute(ready.input) });
+    schedule.fail("The toolpath worker stopped");
+    documents.getState().change("Machine", (draft) => {
+      draft.machine = machine;
+    });
+    expect(machines).toEqual([null, null, machine]);
+    expect(requests).toHaveLength(3);
   });
 
   it("shows the last toolpath while a number changes, but not after another choice", () => {
