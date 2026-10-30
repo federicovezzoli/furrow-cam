@@ -17,15 +17,15 @@ ADR-0054 offers the interface in English, Italian, French and German. We want Sp
 
 ## Decision
 
-We will use option 1, and leave Chinese and Japanese to the system's fonts.
+We will use option 1, and leave Chinese and Japanese to the system's font fallback.
 
 - **Languages:** ADR-0054's `en`, `it`, `fr`, `de`, plus `es`, `nl`, `pt`, `el`, `tr`, `zh`, `ja`, each with a catalog in `packages/ui/src/messages/<locale>.json`.
 - **Variants:** `pt` is Brazilian Portuguese and `zh` is Simplified Chinese (`简体中文` in the picker). `pt-PT` and `zh-TW` get them too.
-- **Fonts:** Chinese and Japanese text falls back to the system's sans-serif font, since JetBrains Mono has no CJK glyphs. On the web, `next/font` still serves the Greek and Latin Extended faces through `unicode-range`, and only the Latin one is preloaded.
+- **Fonts:** JetBrains Mono has no CJK glyphs, and the font stacks end in `monospace`, so Chinese and Japanese characters come from whichever font the system or browser falls back to for them. A new text item starts as `Text` in these two languages, because its default font is JetBrains Mono too. On the web, `next/font` still serves the Greek and Latin Extended faces through `unicode-range`, and only the Latin one is preloaded.
 - Decimal separators keep following `Intl`: Spanish, Dutch, Portuguese, Greek and Turkish use a comma, Chinese and Japanese a point.
 
 ## Consequences
 
-- Eleven catalogs to keep complete. The catalog test fails when one lacks a key.
+- Eleven catalogs to keep complete. The catalog tests fail when one lacks a key, or names an argument or tag differently from English.
 - European Portuguese and Traditional Chinese readers see the other variant. Adding one later means option 2 for that language.
 - Chinese and Japanese text looks different from the rest of the interface, and its width varies with the system font.
