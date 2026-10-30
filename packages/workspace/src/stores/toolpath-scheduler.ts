@@ -1,5 +1,10 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
-import type { Message, ProjectDocument } from "@furrow/document";
+import {
+  type Machine,
+  type Message,
+  machineSpinUpDelay,
+  type ProjectDocument,
+} from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
@@ -24,6 +29,12 @@ export type ToolpathCancel = { cancel: string };
 export type ToolpathRetain = { retain: string[] };
 
 /**
+ * The project's machine, which toolpath times are estimated for (#420): the
+ * worker estimates the toolpaths it holds again and every one after.
+ */
+export type ToolpathMachine = { machine: Machine | null };
+
+/**
  * Exports the G-code of `document` from the toolpaths the worker holds for
  * `inputs`, the enabled operations' (#133), computing only those it lacks.
  * It carries every STL file the worker said it lacks so far in `meshes`,
@@ -41,6 +52,7 @@ export type ToolpathMessage =
   | ToolpathRequest
   | ToolpathCancel
   | ToolpathRetain
+  | ToolpathMachine
   | GcodeExportRequest;
 
 /** How many times an export is made again for edits before it gives up (#252). */
@@ -68,10 +80,12 @@ export type GcodeExportResponse = { export: number } & (
 /**
  * The worker's answers: the toolpath, why it failed, how far it got (any
  * number of times before the others), that it was cancelled, or that it
- * needs the mesh `missingMesh` to be sent with the request.
+ * needs the mesh `missingMesh` to be sent with the request. A toolpath it
+ * holds is also estimated again when the machine changes (`estimate`).
  */
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | ToolpathPreview
+  | { estimate: number }
   | { error: Translatable }
   | { progress: number }
   | { cancelled: true }
@@ -121,11 +135,30 @@ export function scheduleToolpaths(
   const cancelled = new Set<string>();
   /** The enabled operations the worker was last told to keep toolpaths of, sorted. */
   let retained: string | null = null;
+  /** What the toolpaths were last estimated with (`estimateKey`), and whether the worker knows it. */
+  let estimatedFor: string | undefined;
+  let workerKnows = false;
+  /** Operations whose toolpaths a crashed worker took with it, still showing its estimates. */
+  const lost = new Set<string>();
+
+  /** Tells the worker the project's machine if it doesn't know it; whether the estimates change. */
+  function sendMachine(): boolean {
+    const { machine } = documents.getState().document;
+    const key = estimateKey(machine);
+    const changed = key !== estimatedFor;
+    if (changed || !workerKnows) post({ machine });
+    estimatedFor = key;
+    workerKnows = true;
+    return changed;
+  }
   /** Exports waiting for the worker, by id. */
   const exports = new Map<number, PendingExport>();
   let lastExport = 0;
 
   function send(request: ToolpathRequest) {
+    // A fresh worker after a crash knows no machine.
+    sendMachine();
+    lost.delete(request.operationId);
     inFlight.set(request.operationId, request);
     post(request);
   }
@@ -186,7 +219,7 @@ export function scheduleToolpaths(
     const enabled = document.operations.filter((operation) => operation.enabled);
     const ids = new Set(enabled.map((operation) => operation.id));
     toolpaths.getState().retain(ids);
-    for (const map of [hashed, waiting]) {
+    for (const map of [hashed, waiting, lost]) {
       for (const id of map.keys()) if (!ids.has(id)) map.delete(id);
     }
     for (const id of inFlight.keys()) if (!ids.has(id)) cancelInFlight(id);
@@ -195,10 +228,13 @@ export function scheduleToolpaths(
       retained = sorted;
       post({ retain: [...ids] });
     }
+    // The worker holds no toolpath of a lost operation to estimate again: it is computed again.
+    const machineChanged = sendMachine();
     for (const input of toolpathInputs(document, enabled)) {
       const id = input.operation.id;
       const inputHash = hashInput(input);
-      if (toolpaths.getState().entries[id]?.inputHash === inputHash) continue;
+      const current = toolpaths.getState().entries[id]?.inputHash === inputHash;
+      if (current && !(machineChanged && lost.has(id))) continue;
       toolpaths.getState().startComputing(id, inputHash, previewKey(input));
       const request = { operationId: id, inputHash, input };
       if (inFlight.has(id)) {
@@ -333,7 +369,11 @@ export function scheduleToolpaths(
       }
       const response = message;
       const { operationId, inputHash } = response;
-      const { setResult, setError, setProgress, setCancelled } = toolpaths.getState();
+      const { setResult, setError, setProgress, setEstimate, setCancelled } = toolpaths.getState();
+      if ("estimate" in response) {
+        setEstimate(operationId, inputHash, response.estimate);
+        return;
+      }
       if ("progress" in response) {
         setProgress(operationId, inputHash, response.progress);
         return;
@@ -377,16 +417,24 @@ export function scheduleToolpaths(
       inFlight.clear();
       waiting.clear();
       cancelled.clear();
-      // A fresh worker holds no toolpaths: it is told again what to keep.
+      // A fresh worker holds no toolpaths: it is told again what to keep, and the machine.
       retained = null;
+      workerKnows = false;
       for (const { resolve } of exports.values()) resolve({ error });
       exports.clear();
       const { entries, setError } = toolpaths.getState();
       for (const [id, entry] of Object.entries(entries)) {
         if (entry.status === "computing") setError(id, entry.inputHash, error);
+        if (entry.status === "ready") lost.add(id);
       }
     },
   };
+}
+
+/** What toolpath times depend on of `machine` (`estimateTime`), so other edits don't estimate again. */
+function estimateKey(machine: Machine | null): string {
+  if (machine === null) return "none";
+  return JSON.stringify([machine.maxFeedXY, machine.maxFeedZ, machineSpinUpDelay(machine)]);
 }
 
 /**

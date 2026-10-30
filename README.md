@@ -52,7 +52,7 @@ It is **not** a full 3D CAM (relief only: no undercuts, 4th axis or tool tilting
 - **Touch-off pad** on the stock top, where the machine stops at each tool change to re-zero Z
 - **G-code export** for GRBL-compatible controllers (GRBL, grblHAL, FluidNC), with optional custom start, end and tool-change blocks per machine
 - **Projects** saved to your account, with undo/redo, and export/import as a file
-- Metric and imperial units, light and dark theme, English, Italian, French and German
+- Metric and imperial units, light and dark theme, English, Italian, French, German, Spanish, Dutch, Portuguese, Greek, Turkish, Chinese and Japanese
 - **Installable** from Chrome, Edge and Safari, or as a [desktop app](#desktop-app) that works offline
 
 ## Goals

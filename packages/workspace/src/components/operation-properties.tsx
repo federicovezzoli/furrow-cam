@@ -3,6 +3,7 @@
 import {
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
+  MIN_LENGTH,
   pinDepth,
   vBitConeDepth,
   vBitDepthForWidth,
@@ -105,9 +106,6 @@ const DEFAULT_BOUNDARIES: Record<RoughingBoundaryType, RoughingBoundary> = {
 
 /** Where peeling may start in 3D roughing: its islands change from level to level. */
 const ROUGHING_PEEL_STARTS = PeelStart.options.filter((start) => start !== "inside");
-
-/** Keeps depths and radii positive, as the operation params require, when stepping or scrubbing down. */
-const MIN_LENGTH = 0.01;
 
 /** The selected operation's name, tool, shapes and params. */
 export function OperationProperties({ operationId }: { operationId: string }) {

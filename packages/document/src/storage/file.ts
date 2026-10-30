@@ -21,10 +21,20 @@ export function projectFileName(name: string, extension = PROJECT_FILE_EXTENSION
 }
 
 /**
+ * The extension a project's file name ends with, removed to name the
+ * project: `.furrow`, `.furrow.json` or `.furrow.zip`, or a plain `.json` or
+ * `.zip`, which the web app imports too.
+ */
+export const PROJECT_FILE_SUFFIX = /(\.furrow)?\.(json|zip)$|\.furrow$/i;
+
+/** Paths the desktop app and the MCP server open as projects: `.furrow`, `.furrow.json` or `.furrow.zip`. */
+export const PROJECT_PATH = /\.furrow(\.(json|zip))?$/i;
+
+/**
  * The project name to give an imported file (`.furrow.json`, `.furrow.zip`
  * or `.furrow`): its name without the extension, or `null` if nothing is left.
  */
 export function projectNameFromFileName(fileName: string): string | null {
-  const name = fileName.replace(/(\.furrow)?\.(json|zip)$|\.furrow$/i, "").trim();
+  const name = fileName.replace(PROJECT_FILE_SUFFIX, "").trim();
   return name === "" ? null : name;
 }

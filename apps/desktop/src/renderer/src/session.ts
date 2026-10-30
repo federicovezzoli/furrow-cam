@@ -1,8 +1,8 @@
 import type { ArchiveVersion, ProjectDocument } from "@furrow/document";
+import { type ProjectFile, writeProjectFile } from "@furrow/workspace/lib/project-file";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { AssetStore, VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
 import { t } from "./i18n";
-import { type ProjectFile, writeProjectFile } from "./project-file";
 
 const tooManyVersions = () => t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS });
 const versionNotFound = () => t("Desktop.Session.versionNotFound");

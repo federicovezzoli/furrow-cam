@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { PROJECT_FILE_SUFFIX, PROJECT_PATH } from "@furrow/document";
 import type { RecentFile, Recovery } from "../shared/api";
 
 /** How many recent files the start screen lists. */
@@ -8,9 +9,7 @@ export const MAX_RECENT = 10;
 
 /** The name to show for the project file at `path`: its name without the extension. */
 export function projectName(path: string): string {
-  const name = basename(path)
-    .replace(/(\.furrow)?\.(json|zip)$|\.furrow$/i, "")
-    .trim();
+  const name = basename(path).replace(PROJECT_FILE_SUFFIX, "").trim();
   return name === "" ? "Untitled" : name;
 }
 
@@ -144,5 +143,5 @@ function isRecovery(value: unknown): value is Recovery {
 
 /** The project files among command-line `args`, e.g. from a double-click on Windows or Linux. */
 export function projectPathsIn(args: readonly string[]): string[] {
-  return args.filter((arg) => !arg.startsWith("-") && /\.furrow(\.(json|zip))?$/i.test(arg));
+  return args.filter((arg) => !arg.startsWith("-") && PROJECT_PATH.test(arg));
 }

@@ -1,10 +1,13 @@
 import { createElement } from "react";
-import type { AssetStore, VersionRow, WorkspaceHost } from "./workspace-host";
+import type { AssetStore, VersionRow, WorkspaceHost, WorkspaceLinkProps } from "./workspace-host";
 
 /** A version kept by `createMemoryHost`, with its document. */
 type StoredVersion = VersionRow & { document: WorkspaceHost["project"]["document"] };
 
 const CONFLICT = "The project was changed elsewhere.";
+
+/** A link that goes nowhere. */
+const Link = ({ to: _, ...props }: WorkspaceLinkProps) => createElement("a", props);
 
 /**
  * A workspace host that keeps everything in memory (ADR-0045), for tests and
@@ -96,7 +99,7 @@ export function createMemoryHost(
       saveLayout: () => {},
     },
     app: { name: "memory", version: "0.0.0" },
-    navigation: { Link: ({ to: _, ...props }) => createElement("a", props) },
+    navigation: { Link },
     limits: { meshes: null, fonts: null },
     ...overrides,
     stored: { document: () => document, meshes, fonts, versions: () => versions },

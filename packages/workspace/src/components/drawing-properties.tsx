@@ -1,5 +1,6 @@
 "use client";
 
+import { MIN_LENGTH } from "@furrow/cam-core";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
@@ -43,9 +44,6 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import { modelAnchor } from "../stores/model-actions";
 import type { ActionResult } from "../stores/operation-actions";
 import { TextProperties } from "./text-properties";
-
-/** Keeps sizes positive when stepping or scrubbing down. */
-const MIN_LENGTH = 0.01;
 
 /**
  * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):

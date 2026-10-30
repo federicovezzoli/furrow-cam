@@ -328,6 +328,7 @@ export function OperationsPane() {
           ))}
         </ol>
       )}
+      <JobTime />
     </div>
   );
 }
@@ -495,6 +496,7 @@ function OperationRow({
       )}
       {operation.enabled && (
         <>
+          <ToolpathTime operationId={operation.id} />
           <ToolpathStatus operationId={operation.id} />
           <ToolpathVisibility operation={operation} />
         </>
@@ -512,6 +514,71 @@ function OperationRow({
         <Trash2Icon />
       </Button>
     </li>
+  );
+}
+
+/** Formats an estimated time (#420) to the minute, as approximate. */
+function useFormatTime() {
+  const t = useTranslations("Operations");
+  return (seconds: number) => {
+    if (seconds < 60) return t("time.underMinute");
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return t("time.minutes", { minutes });
+    return t("time.hours", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
+  };
+}
+
+/** How long an operation's computed toolpath takes to cut. */
+function ToolpathTime({ operationId }: { operationId: string }) {
+  const t = useTranslations("Operations");
+  const formatTime = useFormatTime();
+  const seconds = useToolpathStore((s) => {
+    const entry = s.entries[operationId];
+    return entry?.status === "ready" ? entry.seconds : undefined;
+  });
+  if (seconds === undefined) return null;
+  return (
+    <span className="shrink-0 text-muted-foreground text-ui-label" title={t("timeTitle")}>
+      {formatTime(seconds)}
+    </span>
+  );
+}
+
+/**
+ * How long the enabled operations take to cut, once every toolpath is
+ * computed: one total, or one per side in a two-sided project (ADR-0060),
+ * and what the estimate leaves out.
+ */
+function JobTime() {
+  const t = useTranslations("Operations");
+  const formatTime = useFormatTime();
+  const operations = useDocumentStore((s) => s.document.operations);
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const hasMachine = useDocumentStore((s) => s.document.machine !== null);
+  // A string, so progress reports while toolpaths compute don't re-render it.
+  const time = useToolpathStore(({ entries }) => {
+    const sides = twoSided ? (["top", "bottom"] as const) : [null];
+    const totals = sides.flatMap((side) => {
+      const enabled = operations.filter(
+        (operation) => operation.enabled && (side === null || operation.stockSide === side),
+      );
+      let seconds = 0;
+      for (const { id } of enabled) {
+        const entry = entries[id];
+        if (entry?.status !== "ready") return [];
+        seconds += entry.seconds;
+      }
+      if (enabled.length === 0) return [];
+      return [side === null ? formatTime(seconds) : `${t(`sides.${side}`)} ${formatTime(seconds)}`];
+    });
+    return totals.length === 0 ? null : totals.join(" · ");
+  });
+  if (time === null) return null;
+  return (
+    <div className="grid gap-0.5 text-muted-foreground">
+      <p>{t("total", { time })}</p>
+      <p className="text-ui-label">{hasMachine ? t("estimateNote") : t("estimateNoMachine")}</p>
+    </div>
   );
 }
 
