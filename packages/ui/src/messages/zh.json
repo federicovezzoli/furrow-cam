@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "先在顶面切削",
       "bottom": "毛坯翻面后在底面切削"
-    }
+    },
+    "time": {
+      "underMinute": "不到 1 分钟",
+      "minutes": "约 {minutes} 分钟",
+      "hours": "约 {hours} 小时 {minutes} 分钟"
+    },
+    "timeTitle": "预计加工时间",
+    "total": "总计 {time}",
+    "estimateNote": "估算值：未计入加速和换刀时间。",
+    "estimateNoMachine": "估算值：项目设置机床之前不计入快速移动，也不计入加速和换刀时间。"
   },
   "ToolpathProgress": {
     "title": "正在计算刀具路径 · 已完成{done}/{total}",

@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "Cortar no lado de cima, primeiro",
       "bottom": "Cortar no lado de baixo, depois de virar o material"
-    }
+    },
+    "time": {
+      "underMinute": "menos de 1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} h {minutes} min"
+    },
+    "timeTitle": "Tempo de usinagem estimado",
+    "total": "Total {time}",
+    "estimateNote": "Aproximado: acelerações e trocas de ferramenta não são contadas.",
+    "estimateNoMachine": "Aproximado: os movimentos rápidos só são contados quando o projeto tem uma máquina, e acelerações e trocas de ferramenta não são contadas."
   },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",

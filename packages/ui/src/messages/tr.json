@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "Önce üst yüzde kes",
       "bottom": "Ham malzeme ters çevrildikten sonra alt yüzde kes"
-    }
+    },
+    "time": {
+      "underMinute": "1 dk’dan az",
+      "minutes": "≈ {minutes} dk",
+      "hours": "≈ {hours} sa {minutes} dk"
+    },
+    "timeTitle": "Tahmini işleme süresi",
+    "total": "Toplam {time}",
+    "estimateNote": "Yaklaşık: hızlanma ve takım değişimleri hesaba katılmaz.",
+    "estimateNoMachine": "Yaklaşık: projeye bir makine atanana kadar hızlı hareketler hesaba katılmaz; hızlanma ve takım değişimleri de katılmaz."
   },
   "ToolpathProgress": {
     "title": "Takım yolları hesaplanıyor · {done}/{total} tamamlandı",

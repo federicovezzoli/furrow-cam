@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "表面を最初に切削します",
       "bottom": "素材を裏返した後、裏面を切削します"
-    }
+    },
+    "time": {
+      "underMinute": "1 分未満",
+      "minutes": "約 {minutes} 分",
+      "hours": "約 {hours} 時間 {minutes} 分"
+    },
+    "timeTitle": "推定加工時間",
+    "total": "合計 {time}",
+    "estimateNote": "概算です。加速と工具交換は含まれません。",
+    "estimateNoMachine": "概算です。プロジェクトにマシンが設定されるまで早送りは含まれません。加速と工具交換も含まれません。"
   },
   "ToolpathProgress": {
     "title": "ツールパスを計算中 · {total}件中{done}件完了",

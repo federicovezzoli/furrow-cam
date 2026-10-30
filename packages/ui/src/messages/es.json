@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "Cortar en la cara superior, primero",
       "bottom": "Cortar en la cara inferior, una vez volteado el material"
-    }
+    },
+    "time": {
+      "underMinute": "menos de 1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} h {minutes} min"
+    },
+    "timeTitle": "Tiempo de mecanizado estimado",
+    "total": "Total {time}",
+    "estimateNote": "Aproximado: no se cuentan las aceleraciones ni los cambios de herramienta.",
+    "estimateNoMachine": "Aproximado: los movimientos rápidos no se cuentan hasta que el proyecto tenga una máquina, ni tampoco las aceleraciones y los cambios de herramienta."
   },
   "ToolpathProgress": {
     "title": "Calculando trayectorias · {done} de {total} hechas",

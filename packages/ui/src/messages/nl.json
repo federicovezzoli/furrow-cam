@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "Aan de bovenkant frezen, eerst",
       "bottom": "Aan de onderkant frezen, nadat het materiaal is omgedraaid"
-    }
+    },
+    "time": {
+      "underMinute": "minder dan 1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} u {minutes} min"
+    },
+    "timeTitle": "Geschatte bewerkingstijd",
+    "total": "Totaal {time}",
+    "estimateNote": "Bij benadering: acceleratie en gereedschapswissels worden niet meegeteld.",
+    "estimateNoMachine": "Bij benadering: ijlgangen worden pas meegeteld als het project een machine heeft, acceleratie en gereedschapswissels helemaal niet."
   },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",
