@@ -82,3 +82,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Proposed |
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |
 | [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Proposed |
+| [0068](0068-more-interface-languages.md) | Seven more interface languages, with one variant each | Proposed |

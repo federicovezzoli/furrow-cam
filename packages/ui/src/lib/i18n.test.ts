@@ -73,11 +73,15 @@ describe("matchLocale", () => {
   it("matches on the primary subtag", () => {
     expect(matchLocale(["it-CH", "en"])).toBe("it");
     expect(matchLocale(["de_AT"])).toBe("de");
+    expect(matchLocale(["es-MX"])).toBe("es");
+    expect(matchLocale(["nl-BE"])).toBe("nl");
+    expect(matchLocale(["pt-PT"])).toBe("pt");
+    expect(matchLocale(["zh-TW"])).toBe("zh");
   });
 
   it("skips unsupported languages and falls back to English", () => {
-    expect(matchLocale(["es-ES", "fr"])).toBe("fr");
-    expect(matchLocale(["ja"])).toBe("en");
+    expect(matchLocale(["ko-KR", "fr"])).toBe("fr");
+    expect(matchLocale(["ru"])).toBe("en");
     expect(matchLocale([])).toBe("en");
   });
 });
