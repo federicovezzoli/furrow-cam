@@ -1,5 +1,15 @@
 # @furrow/desktop
 
+## 0.12.0
+
+### Minor Changes
+
+- Furrow CAM is now also available in Spanish, Dutch, Portuguese, Greek, Turkish, Chinese and Japanese. It picks the language from your browser or system, or you can choose one with the language button. ([#421](https://github.com/federicovezzoli/furrow-cam/pull/421))
+
+### Patch Changes
+
+- Add a local MCP server through which an AI assistant can create, open, summarise and save Furrow CAM projects on your computer. Before its first change to a project, the project is kept as a version you can restore. ([#415](https://github.com/federicovezzoli/furrow-cam/pull/415))
+
 ## 0.11.1
 
 ### Patch Changes

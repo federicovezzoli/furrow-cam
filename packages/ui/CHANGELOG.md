@@ -1,5 +1,15 @@
 # @furrow/ui
 
+## 0.5.0
+
+### Minor Changes
+
+- Furrow CAM is now also available in Spanish, Dutch, Portuguese, Greek, Turkish, Chinese and Japanese. It picks the language from your browser or system, or you can choose one with the language button. ([#421](https://github.com/federicovezzoli/furrow-cam/pull/421))
+
+### Patch Changes
+
+- The operations pane shows about how long each operation takes to cut on the project's machine, and the total for the job (per side in a two-sided project). Exported G-code states the estimate in its header. ([#422](https://github.com/federicovezzoli/furrow-cam/pull/422))
+
 ## 0.4.0
 
 ### Minor Changes

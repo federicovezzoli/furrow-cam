@@ -1,6 +1,6 @@
 {
   "name": "@furrow/mcp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Furrow CAM's local MCP server: AI assistants work on .furrow projects over stdio (PRD-0012, ADR-0067)",
   "license": "MIT",

@@ -1,5 +1,15 @@
 # @furrow/web
 
+## 0.19.0
+
+### Minor Changes
+
+- Furrow CAM is now also available in Spanish, Dutch, Portuguese, Greek, Turkish, Chinese and Japanese. It picks the language from your browser or system, or you can choose one with the language button. ([#421](https://github.com/federicovezzoli/furrow-cam/pull/421))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/post@0.13.0, @furrow/workspace@0.16.0, @furrow/ui@0.5.0
+
 ## 0.18.1
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @furrow/workspace
 
+## 0.16.0
+
+### Minor Changes
+
+- The operations pane shows about how long each operation takes to cut on the project's machine, and the total for the job (per side in a two-sided project). Exported G-code states the estimate in its header. ([#422](https://github.com/federicovezzoli/furrow-cam/pull/422))
+
+### Patch Changes
+
+- Add a local MCP server through which an AI assistant can create, open, summarise and save Furrow CAM projects on your computer. Before its first change to a project, the project is kept as a version you can restore. ([#415](https://github.com/federicovezzoli/furrow-cam/pull/415))
+- Updated dependencies: @furrow/post@0.13.0, @furrow/ui@0.5.0
+
 ## 0.15.0
 
 ### Minor Changes
