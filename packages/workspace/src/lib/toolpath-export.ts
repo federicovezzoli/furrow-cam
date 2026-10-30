@@ -39,6 +39,11 @@ export class ToolpathResults {
     for (const id of this.results.keys()) if (!this.retained.has(id)) this.results.delete(id);
   }
 
+  /** Every toolpath kept, with its operation and the hash of its inputs. */
+  *entries(): Generator<[operationId: string, inputHash: string, toolpath: Toolpath]> {
+    for (const [id, { inputHash, toolpath }] of this.results) yield [id, inputHash, toolpath];
+  }
+
   get size(): number {
     return this.results.size;
   }

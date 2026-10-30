@@ -1,5 +1,5 @@
 import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
-import type { Message, ProjectDocument } from "@furrow/document";
+import type { Machine, Message, ProjectDocument } from "@furrow/document";
 import type { GcodeExport } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
@@ -24,6 +24,12 @@ export type ToolpathCancel = { cancel: string };
 export type ToolpathRetain = { retain: string[] };
 
 /**
+ * The project's machine, which toolpath times are estimated for (#420): the
+ * worker estimates the toolpaths it holds again and every one after.
+ */
+export type ToolpathMachine = { machine: Machine | null };
+
+/**
  * Exports the G-code of `document` from the toolpaths the worker holds for
  * `inputs`, the enabled operations' (#133), computing only those it lacks.
  * It carries every STL file the worker said it lacks so far in `meshes`,
@@ -41,6 +47,7 @@ export type ToolpathMessage =
   | ToolpathRequest
   | ToolpathCancel
   | ToolpathRetain
+  | ToolpathMachine
   | GcodeExportRequest;
 
 /** How many times an export is made again for edits before it gives up (#252). */
@@ -68,10 +75,12 @@ export type GcodeExportResponse = { export: number } & (
 /**
  * The worker's answers: the toolpath, why it failed, how far it got (any
  * number of times before the others), that it was cancelled, or that it
- * needs the mesh `missingMesh` to be sent with the request.
+ * needs the mesh `missingMesh` to be sent with the request. A toolpath it
+ * holds is also estimated again when the machine changes (`estimate`).
  */
 export type ToolpathResponse = { operationId: string; inputHash: string } & (
   | ToolpathPreview
+  | { estimate: number }
   | { error: Translatable }
   | { progress: number }
   | { cancelled: true }
@@ -121,6 +130,8 @@ export function scheduleToolpaths(
   const cancelled = new Set<string>();
   /** The enabled operations the worker was last told to keep toolpaths of, sorted. */
   let retained: string | null = null;
+  /** The machine the worker was last told of; `undefined` before it was told. */
+  let machine: Machine | null | undefined;
   /** Exports waiting for the worker, by id. */
   const exports = new Map<number, PendingExport>();
   let lastExport = 0;
@@ -194,6 +205,10 @@ export function scheduleToolpaths(
     if (sorted !== retained) {
       retained = sorted;
       post({ retain: [...ids] });
+    }
+    if (document.machine !== machine) {
+      machine = document.machine;
+      post({ machine });
     }
     for (const input of toolpathInputs(document, enabled)) {
       const id = input.operation.id;
@@ -333,7 +348,11 @@ export function scheduleToolpaths(
       }
       const response = message;
       const { operationId, inputHash } = response;
-      const { setResult, setError, setProgress, setCancelled } = toolpaths.getState();
+      const { setResult, setError, setProgress, setEstimate, setCancelled } = toolpaths.getState();
+      if ("estimate" in response) {
+        setEstimate(operationId, inputHash, response.estimate);
+        return;
+      }
       if ("progress" in response) {
         setProgress(operationId, inputHash, response.progress);
         return;
@@ -377,8 +396,9 @@ export function scheduleToolpaths(
       inFlight.clear();
       waiting.clear();
       cancelled.clear();
-      // A fresh worker holds no toolpaths: it is told again what to keep.
+      // A fresh worker holds no toolpaths: it is told again what to keep, and the machine.
       retained = null;
+      machine = undefined;
       for (const { resolve } of exports.values()) resolve({ error });
       exports.clear();
       const { entries, setError } = toolpaths.getState();

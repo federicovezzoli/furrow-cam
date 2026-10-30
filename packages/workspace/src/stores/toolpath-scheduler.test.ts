@@ -1,6 +1,11 @@
 import { generateToolpath, type ToolpathInput, toolpathLines } from "@furrow/cam-core";
-import { createProjectDocument, type ProjectDocument, type Tool } from "@furrow/document";
-import { DRAWING_ID, model, reliefFinish } from "@furrow/document/fixtures";
+import {
+  createProjectDocument,
+  type Machine,
+  type ProjectDocument,
+  type Tool,
+} from "@furrow/document";
+import { DRAWING_ID, machine, model, reliefFinish } from "@furrow/document/fixtures";
 import { describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "./document-store";
 import {
@@ -86,9 +91,11 @@ function setup(document = documentWithProfile()) {
   const meshes: string[] = [];
   const retains: string[][] = [];
   const exports: GcodeExportRequest[] = [];
+  const machines: (Machine | null)[] = [];
   const post = (message: ToolpathMessage) => {
     if ("cancel" in message) cancels.push(message.cancel);
     else if ("retain" in message) retains.push(message.retain);
+    else if ("machine" in message) machines.push(message.machine);
     else if ("export" in message) exports.push(message);
     else requests.push(message);
   };
@@ -96,7 +103,7 @@ function setup(document = documentWithProfile()) {
     meshes.push(sha256);
     return new ArrayBuffer(8);
   });
-  return { documents, toolpaths, requests, cancels, meshes, retains, exports, schedule };
+  return { documents, toolpaths, requests, cancels, meshes, retains, exports, machines, schedule };
 }
 
 function deepen(documents: DocumentStore, depth: number) {
@@ -109,7 +116,7 @@ function deepen(documents: DocumentStore, depth: number) {
 /** What the worker answers for `input`. */
 function compute(input: ToolpathInput) {
   const result = generateToolpath(input);
-  return { warnings: result.warnings, lines: toolpathLines(result) };
+  return { warnings: result.warnings, lines: toolpathLines(result), seconds: 60 };
 }
 
 describe("scheduleToolpaths", () => {
@@ -127,6 +134,24 @@ describe("scheduleToolpaths", () => {
       status: "ready",
       ...preview,
     });
+  });
+
+  it("tells the worker the machine when it changes, and files the times estimated again", () => {
+    const { documents, toolpaths, requests, machines, schedule } = setup();
+    const [request] = requests as [ToolpathRequest];
+    const { inputHash } = request;
+    schedule.receive({ operationId: OPERATION_ID, inputHash, ...compute(request.input) });
+    documents.getState().change("Name", (draft) => {
+      draft.units = "in";
+    });
+    documents.getState().change("Machine", (draft) => {
+      draft.machine = machine;
+    });
+    expect(machines).toEqual([null, machine]);
+
+    schedule.receive({ operationId: OPERATION_ID, inputHash, estimate: 90 });
+    expect(toolpaths.getState().entries[OPERATION_ID]).toMatchObject({ seconds: 90 });
+    expect(requests).toHaveLength(1);
   });
 
   it("shows the last toolpath while a number changes, but not after another choice", () => {
@@ -226,6 +251,7 @@ describe("scheduleToolpaths", () => {
         ...request,
         warnings: [],
         lines: toolpathLines({ moves: [], warnings: [] }),
+        seconds: 0,
       });
     };
     answer();

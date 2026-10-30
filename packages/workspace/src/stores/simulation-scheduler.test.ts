@@ -65,7 +65,7 @@ function lines(feed: number): ToolpathLines {
 
 function ready(toolpaths: ToolpathStore, id: string, inputHash: string, preview = lines(10)) {
   toolpaths.getState().startComputing(id, inputHash);
-  toolpaths.getState().setResult(id, inputHash, { warnings: [], lines: preview });
+  toolpaths.getState().setResult(id, inputHash, { warnings: [], lines: preview, seconds: 0 });
 }
 
 describe("simulationRequest", () => {
@@ -108,7 +108,9 @@ describe("simulationRequest", () => {
     const carving = lines(10);
     const clearing = lines(20);
     toolpaths.getState().startComputing(PROFILE_ID, "a");
-    toolpaths.getState().setResult(PROFILE_ID, "a", { warnings: [], lines: carving, clearing });
+    toolpaths
+      .getState()
+      .setResult(PROFILE_ID, "a", { warnings: [], lines: carving, clearing, seconds: 0 });
     const cuts = simulationRequest(document, toolpaths.getState().entries, MAX_CELLS)?.input.cuts;
     expect(cuts?.map(({ tool, segments }) => [tool.type, segments])).toEqual([
       ["flat_end_mill", clearing.feeds],

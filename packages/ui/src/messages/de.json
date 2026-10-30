@@ -964,7 +964,16 @@
     "sideHints": {
       "top": "Auf der Oberseite geschnitten, zuerst",
       "bottom": "Auf der Unterseite geschnitten, wenn das Rohteil umgedreht ist"
-    }
+    },
+    "time": {
+      "underMinute": "unter 1 Min.",
+      "minutes": "≈ {minutes} Min.",
+      "hours": "≈ {hours} Std. {minutes} Min."
+    },
+    "timeTitle": "Geschätzte Bearbeitungszeit",
+    "total": "Gesamt {time}",
+    "estimateNote": "Ungefähr: Beschleunigung und Werkzeugwechsel sind nicht eingerechnet.",
+    "estimateNoMachine": "Ungefähr: Eilgänge werden erst eingerechnet, wenn das Projekt eine Maschine hat; Beschleunigung und Werkzeugwechsel nie."
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
