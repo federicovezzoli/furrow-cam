@@ -1,9 +1,16 @@
 import type { FlipAxis, Operation, PinHoles, ProjectDocument } from "@furrow/document";
-import { drill, fullDocument } from "@furrow/document/fixtures";
+import { drill, fullDocument, reliefRough } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { flipPoint, pinCenters } from "../scene/sides";
 import { stockOffset } from "../scene/stock";
-import { generateToolpath, PINS_WARNING, toolpathInputs } from "./generate";
+import {
+  checkPins,
+  generateToolpath,
+  PINS_WARNING,
+  type ToolpathInput,
+  toolpathInputs,
+} from "./generate";
+import type { Toolpath } from "./toolpath";
 
 const THROUGH: PinHoles = { type: "through", spoilboardDepth: 5 };
 
@@ -96,16 +103,70 @@ describe("locating pins", () => {
     expect(warnings(narrow)).toEqual([{ code: "toolpath.pinsOffStock" }]);
   });
 
-  it("warns when another operation cuts into a pin's hole, but not the pin drill", () => {
-    const warnings = (positions: number[]) => {
-      const doc = project("x", THROUGH, positions);
-      // The square's outside profile, its top edge through y = 100, the flip axis.
-      doc.operations.push(fullDocument().operations[0] as Operation);
-      return toolpathInputs(doc).map((input) => generateToolpath(input).warnings);
+  describe("warns when a bottom-side operation cuts deep enough to reach a pin", () => {
+    /** The warnings of `doc`'s pin drill and of `operation` added to it, each as the worker gives them. */
+    const warnings = (doc: ProjectDocument, operation: Operation) => {
+      doc.operations.push(operation);
+      return toolpathInputs(doc).map((input) => checkPins(input, generateToolpath(input)).warnings);
     };
-    // A pin at x = 30, on the square's top edge.
-    expect(warnings([-120, 60])).toEqual([[], [PINS_WARNING]]);
-    expect(warnings([100, 140])).toEqual([[], []]);
+    // The square's outside profile, 18 mm deep, its top edge along y = 100, the flip axis.
+    const profile = fullDocument().operations[0] as Operation;
+    const bottom = { ...profile, stockSide: "bottom" } as Operation;
+    const pocket = {
+      ...bottom,
+      type: "pocket",
+      params: {
+        side: "outside",
+        strategy: { type: "offset" },
+        direction: "climb",
+        stepOver: 40,
+        depth: 6,
+        allowance: 0,
+        finishPass: false,
+        ramp: false,
+      },
+    } as Operation;
+
+    it("through the square's edge, but not on the top side, nor for pins away from it", () => {
+      // A pin at x = 30, on the square's top edge; the others at x = 250 and 290, clear of it.
+      expect(warnings(project("x", THROUGH, [-120, 60]), bottom)).toEqual([[], [PINS_WARNING]]);
+      expect(warnings(project("x", THROUGH, [-120, 60]), profile)).toEqual([[], []]);
+      expect(warnings(project("x", THROUGH, [100, 140]), bottom)).toEqual([[], []]);
+    });
+
+    it("clearing outside the shapes, the shapes flipped", () => {
+      expect(warnings(project("x", THROUGH, [100, 140]), pocket)).toEqual([[], [PINS_WARNING]]);
+    });
+
+    it("only past the stock a blind pin leaves above it", () => {
+      const blind: PinHoles = { type: "blind", depth: 5 };
+      // The pins fill the last 5 mm of the 18 mm stock: a 6 mm pocket stays clear.
+      expect(warnings(project("x", blind, [100, 140]), pocket)).toEqual([[], []]);
+      expect(warnings(project("x", blind, [-120, 60]), bottom)).toEqual([[], [PINS_WARNING]]);
+    });
+
+    it("from a 3D toolpath's cuts, and not from moves above the stock", () => {
+      const [, input] = toolpathInputs(
+        Object.assign(project("x", THROUGH, [-120, 60]), {
+          operations: [project("x").operations[0], bottom],
+        }),
+      );
+      const relief = {
+        ...(input as ToolpathInput),
+        operation: { ...reliefRough, stockSide: "bottom" as const },
+      };
+      // Across the pin at x = 30, y = 100.
+      const across = (z: number): Toolpath => ({
+        moves: [
+          { kind: "rapid", to: [20, 100, 5] },
+          { kind: "feed", to: [20, 100, z], feedRate: 1000 },
+          { kind: "feed", to: [40, 100, z], feedRate: 1000 },
+        ],
+        warnings: [],
+      });
+      expect(checkPins(relief, across(-1)).warnings).toEqual([PINS_WARNING]);
+      expect(checkPins(relief, across(1)).warnings).toEqual([]);
+    });
   });
 
   it("warns when the project has no pins to drill", () => {

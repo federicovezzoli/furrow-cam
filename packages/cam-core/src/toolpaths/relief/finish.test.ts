@@ -538,7 +538,7 @@ describe("generateToolpath", () => {
     tabs: null,
     before: [],
     touchOff: null,
-    pins: [],
+    pins: null,
     ...options,
   };
 
