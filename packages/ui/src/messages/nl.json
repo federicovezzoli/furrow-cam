@@ -1046,6 +1046,7 @@
     "safeZ": "Veilige Z (boven materiaal)",
     "entryClearance": "Naderingsafstand (boven materiaal)",
     "limits": "Limieten",
+    "limitsHint": "Stel deze in op de maximale snelheden van je controller ($110–$112, in mm/min). Ze begrenzen de voeding en invalsnelheid van de frees. Verplaatsingen tussen sneden gaan altijd met de maximale snelheden van de controller; de tijdsinschatting gebruikt deze waarden ervoor.",
     "maxFeedXY": "Max. voeding X/Y",
     "maxFeedZ": "Max. voeding Z",
     "spindle": "Spindel",

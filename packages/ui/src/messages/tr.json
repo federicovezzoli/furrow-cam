@@ -1046,6 +1046,7 @@
     "safeZ": "Güvenli Z (ham malzeme üstünde)",
     "entryClearance": "Giriş mesafesi (ham malzeme üstünde)",
     "limits": "Limitler",
+    "limitsHint": "Bunları kontrolcünüzün azami hızlarına ($110–$112, mm/dk cinsinden) ayarlayın. Ucun ilerleme ve dalma hızlarını sınırlarlar. Kesimler arasındaki boşta hareketler her zaman kontrolcünün kendi azami hızlarıyla yapılır; süre tahmini bunlar için bu değerleri kullanır.",
     "maxFeedXY": "Maks. ilerleme X/Y",
     "maxFeedZ": "Maks. ilerleme Z",
     "spindle": "İş mili",

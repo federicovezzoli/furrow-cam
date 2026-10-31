@@ -1046,6 +1046,7 @@
     "safeZ": "Z seguro (acima do material)",
     "entryClearance": "Folga de entrada (acima do material)",
     "limits": "Limites",
+    "limitsHint": "Defina-os com as velocidades máximas do seu controlador ($110–$112, em mm/min). Eles limitam o avanço e a velocidade de mergulho da fresa. Os deslocamentos entre cortes são sempre feitos às velocidades máximas do controlador; a estimativa de tempo usa estes valores para eles.",
     "maxFeedXY": "Avanço máx. X/Y",
     "maxFeedZ": "Avanço máx. Z",
     "spindle": "Spindle",
