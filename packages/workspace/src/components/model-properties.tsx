@@ -1,6 +1,6 @@
 "use client";
 
-import { rotatedSize } from "@furrow/cam-core";
+import { MIN_LENGTH, rotatedSize } from "@furrow/cam-core";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
@@ -32,9 +32,6 @@ import {
   setModelScale,
   turnModelAbout,
 } from "../stores/model-actions";
-
-/** Keeps sizes and depths positive when stepping or scrubbing down. */
-const MIN_LENGTH = 0.01;
 
 const AXES = ["X", "Y", "Z"] as const;
 

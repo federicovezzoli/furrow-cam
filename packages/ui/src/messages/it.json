@@ -352,16 +352,6 @@
       "untitled": "Senza titolo",
       "loading": "Caricamento…"
     },
-    "ProjectFile": {
-      "notAProject": "Questo file non è un progetto Furrow CAM.",
-      "modelsNeedArchive": "Questo progetto contiene modelli 3D: apri invece il suo file .furrow o .furrow.zip.",
-      "fontsNeedArchive": "Questo progetto ha font caricati: apri invece il suo file .furrow o .furrow.zip.",
-      "missingFont": "In questo progetto manca uno dei font.",
-      "unreadableFont": "Uno dei font di questo progetto non può essere letto.",
-      "missingModel": "In questo progetto manca uno dei modelli 3D.",
-      "tooNew": "Questo progetto è stato salvato da una versione più recente di Furrow CAM. Scarica l'ultima versione per aprirlo.",
-      "invalid": "Questo file non è un progetto Furrow CAM valido."
-    },
     "Session": {
       "tooManyVersions": "Questo progetto ha già {max} versioni, il massimo consentito. Eliminane una prima.",
       "versionNotFound": "Questa versione non esiste più.",
@@ -448,6 +438,16 @@
       "dontSave": "Non salvare",
       "cancel": "Annulla"
     }
+  },
+  "ProjectFile": {
+    "notAProject": "Questo file non è un progetto Furrow CAM.",
+    "modelsNeedArchive": "Questo progetto contiene modelli 3D: apri invece il suo file .furrow o .furrow.zip.",
+    "fontsNeedArchive": "Questo progetto ha font caricati: apri invece il suo file .furrow o .furrow.zip.",
+    "missingFont": "In questo progetto manca uno dei font.",
+    "unreadableFont": "Uno dei font di questo progetto non può essere letto.",
+    "missingModel": "In questo progetto manca uno dei modelli 3D.",
+    "tooNew": "Questo progetto è stato salvato da una versione più recente di Furrow CAM. Scarica l'ultima versione per aprirlo.",
+    "invalid": "Questo file non è un progetto Furrow CAM valido."
   },
   "Core": {
     "withOperation": "{operation}: {message}",
@@ -965,7 +965,16 @@
     "sideHints": {
       "top": "Lavorata sul lato superiore, per prima",
       "bottom": "Lavorata sul lato inferiore, una volta girato il grezzo"
-    }
+    },
+    "time": {
+      "underMinute": "meno di 1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} h {minutes} min"
+    },
+    "timeTitle": "Tempo di lavorazione stimato",
+    "total": "Totale {time}",
+    "estimateNote": "Approssimativo: accelerazioni e cambi utensile non sono contati.",
+    "estimateNoMachine": "Approssimativo: i movimenti rapidi non sono contati finché il progetto non ha una macchina, né le accelerazioni e i cambi utensile."
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",

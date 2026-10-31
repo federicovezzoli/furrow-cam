@@ -14,7 +14,8 @@ import {
   toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
-import { type Message, MessageError } from "@furrow/document";
+import { type Machine, type Message, MessageError } from "@furrow/document";
+import { estimateTime } from "@furrow/post";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
 import { exportFromResults, ToolpathResults } from "../lib/toolpath-export";
 import type {
@@ -55,6 +56,8 @@ const cuts = createCache<SimulationCut[]>(8);
  * messages drop those of operations disabled or deleted.
  */
 const results = new ToolpathResults();
+/** The project's machine, which toolpath times are estimated for (#420). */
+let machine: Machine | null = null;
 
 function keep(sha256: string, mesh: StlMesh) {
   meshes.delete(sha256);
@@ -156,13 +159,14 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
   const clearing = toolpath.clearing
     ? toolpathLines({ moves: toolpath.clearing, warnings: [] })
     : undefined;
+  const seconds = estimateTime(toolpath, machine);
   // Only what the main thread shows crosses over, and the viewport's typed
   // arrays move there instead of being copied: cloning every move would cost
   // more than drawing them.
   scope.postMessage(
     clearing
-      ? { operationId, inputHash, warnings, lines, clearing }
-      : { operationId, inputHash, warnings, lines },
+      ? { operationId, inputHash, warnings, lines, clearing, seconds }
+      : { operationId, inputHash, warnings, lines, seconds },
     [...toolpathLinesBuffers(lines), ...(clearing ? toolpathLinesBuffers(clearing) : [])],
   );
 }
@@ -235,6 +239,13 @@ scope.onmessage = ({ data }) => {
   }
   if ("retain" in data) {
     results.retain(data.retain);
+    return;
+  }
+  if ("machine" in data) {
+    machine = data.machine;
+    for (const [operationId, inputHash, toolpath] of results.entries()) {
+      scope.postMessage({ operationId, inputHash, estimate: estimateTime(toolpath, machine) });
+    }
     return;
   }
   if ("export" in data) {

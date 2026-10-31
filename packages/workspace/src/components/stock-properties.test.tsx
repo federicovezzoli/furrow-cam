@@ -8,17 +8,20 @@ import { useDocumentStore } from "../providers/workspace-stores";
 import { renderWorkspace } from "../test-render";
 import { StockProperties } from "./stock-properties";
 
+type Seen = { document: ProjectDocument | null };
+
+function Probe({ seen }: { seen: Seen }) {
+  seen.document = useDocumentStore((s) => s.document);
+  return null;
+}
+
 /** Renders the stock properties of `document`, and returns the document as edited. */
 function render(document: ProjectDocument) {
-  const seen: { document: ProjectDocument | null } = { document: null };
-  function Probe() {
-    seen.document = useDocumentStore((s) => s.document);
-    return null;
-  }
+  const seen: Seen = { document: null };
   renderWorkspace(
     <>
       <StockProperties machines={[]} />
-      <Probe />
+      <Probe seen={seen} />
     </>,
     createMemoryHost({ document }),
   );

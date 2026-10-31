@@ -352,16 +352,6 @@
       "untitled": "Untitled",
       "loading": "Loading…"
     },
-    "ProjectFile": {
-      "notAProject": "This file isn't a Furrow CAM project.",
-      "modelsNeedArchive": "This project has 3D models: open its .furrow or .furrow.zip file instead.",
-      "fontsNeedArchive": "This project has uploaded fonts: open its .furrow or .furrow.zip file instead.",
-      "missingFont": "This project is missing one of its fonts.",
-      "unreadableFont": "One of this project's fonts can't be read.",
-      "missingModel": "This project is missing one of its 3D models.",
-      "tooNew": "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
-      "invalid": "This file isn't a valid Furrow CAM project."
-    },
     "Session": {
       "tooManyVersions": "This project already has {max} versions, the most it can keep. Delete one first.",
       "versionNotFound": "This version no longer exists.",
@@ -448,6 +438,16 @@
       "dontSave": "Don't Save",
       "cancel": "Cancel"
     }
+  },
+  "ProjectFile": {
+    "notAProject": "This file isn't a Furrow CAM project.",
+    "modelsNeedArchive": "This project has 3D models: open its .furrow or .furrow.zip file instead.",
+    "fontsNeedArchive": "This project has uploaded fonts: open its .furrow or .furrow.zip file instead.",
+    "missingFont": "This project is missing one of its fonts.",
+    "unreadableFont": "One of this project's fonts can't be read.",
+    "missingModel": "This project is missing one of its 3D models.",
+    "tooNew": "This project was saved by a newer version of Furrow CAM. Download the latest version to open it.",
+    "invalid": "This file isn't a valid Furrow CAM project."
   },
   "Core": {
     "withOperation": "{operation}: {message}",
@@ -965,7 +965,16 @@
     "sideHints": {
       "top": "Cut on the top side, first",
       "bottom": "Cut on the bottom side, once the stock is turned over"
-    }
+    },
+    "time": {
+      "underMinute": "under 1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} h {minutes} min"
+    },
+    "timeTitle": "Estimated machining time",
+    "total": "Total {time}",
+    "estimateNote": "Approximate: acceleration and tool changes aren't counted.",
+    "estimateNoMachine": "Approximate: rapids aren't counted until the project has a machine, nor are acceleration and tool changes."
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",

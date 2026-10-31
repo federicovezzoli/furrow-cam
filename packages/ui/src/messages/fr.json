@@ -352,16 +352,6 @@
       "untitled": "Sans titre",
       "loading": "Chargement…"
     },
-    "ProjectFile": {
-      "notAProject": "Ce fichier n'est pas un projet Furrow CAM.",
-      "modelsNeedArchive": "Ce projet contient des modèles 3D : ouvrez plutôt son fichier .furrow ou .furrow.zip.",
-      "fontsNeedArchive": "Ce projet a des polices importées : ouvrez plutôt son fichier .furrow ou .furrow.zip.",
-      "missingFont": "Il manque une de ses polices à ce projet.",
-      "unreadableFont": "Une des polices de ce projet ne peut pas être lue.",
-      "missingModel": "Il manque l'un des modèles 3D de ce projet.",
-      "tooNew": "Ce projet a été enregistré par une version plus récente de Furrow CAM. Téléchargez la dernière version pour l'ouvrir.",
-      "invalid": "Ce fichier n'est pas un projet Furrow CAM valide."
-    },
     "Session": {
       "tooManyVersions": "Ce projet a déjà {max} versions, le maximum possible. Supprimez-en une d'abord.",
       "versionNotFound": "Cette version n'existe plus.",
@@ -448,6 +438,16 @@
       "dontSave": "Ne pas enregistrer",
       "cancel": "Annuler"
     }
+  },
+  "ProjectFile": {
+    "notAProject": "Ce fichier n'est pas un projet Furrow CAM.",
+    "modelsNeedArchive": "Ce projet contient des modèles 3D : ouvrez plutôt son fichier .furrow ou .furrow.zip.",
+    "fontsNeedArchive": "Ce projet a des polices importées : ouvrez plutôt son fichier .furrow ou .furrow.zip.",
+    "missingFont": "Il manque une de ses polices à ce projet.",
+    "unreadableFont": "Une des polices de ce projet ne peut pas être lue.",
+    "missingModel": "Il manque l'un des modèles 3D de ce projet.",
+    "tooNew": "Ce projet a été enregistré par une version plus récente de Furrow CAM. Téléchargez la dernière version pour l'ouvrir.",
+    "invalid": "Ce fichier n'est pas un projet Furrow CAM valide."
   },
   "Core": {
     "withOperation": "{operation} : {message}",
@@ -965,7 +965,16 @@
     "sideHints": {
       "top": "Usinée sur la face supérieure, en premier",
       "bottom": "Usinée sur la face inférieure, une fois le brut retourné"
-    }
+    },
+    "time": {
+      "underMinute": "moins d’1 min",
+      "minutes": "≈ {minutes} min",
+      "hours": "≈ {hours} h {minutes} min"
+    },
+    "timeTitle": "Temps d’usinage estimé",
+    "total": "Total {time}",
+    "estimateNote": "Approximatif : l’accélération et les changements d’outil ne sont pas comptés.",
+    "estimateNoMachine": "Approximatif : les déplacements rapides ne sont comptés qu’une fois une machine choisie pour le projet, l’accélération et les changements d’outil jamais."
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",

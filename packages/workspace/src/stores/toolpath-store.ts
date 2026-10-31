@@ -6,14 +6,17 @@ import { createStore } from "zustand/vanilla";
 import type { GcodeExportResult } from "./toolpath-scheduler";
 
 /**
- * What the workspace shows of a toolpath: its warnings and its lines in the
- * viewport, with those of its clearing moves (ADR-0026) if it has any. The
+ * What the workspace shows of a toolpath: its warnings, its lines in the
+ * viewport, with those of its clearing moves (ADR-0026) if it has any, and
+ * how long it takes on the project's machine (`estimateTime`, #420). The
  * moves stay in the worker (ADR-0004).
  */
 export type ToolpathPreview = {
   warnings: ToolpathMessage[];
   lines: ToolpathLines;
   clearing?: ToolpathLines;
+  /** In seconds. */
+  seconds: number;
 };
 
 /**
@@ -66,6 +69,8 @@ export type ToolpathState = {
   setResult: (operationId: string, inputHash: string, preview: ToolpathPreview) => void;
   setError: (operationId: string, inputHash: string, error: Translatable) => void;
   setProgress: (operationId: string, inputHash: string, progress: number) => void;
+  /** A ready toolpath's time estimated again, for another machine. */
+  setEstimate: (operationId: string, inputHash: string, seconds: number) => void;
   setCancelled: (operationId: string, inputHash: string) => void;
   /** Drops entries of operations that are no longer in the document. */
   retain: (operationIds: Iterable<string>) => void;
@@ -163,6 +168,18 @@ export function createToolpathStore() {
             },
             false,
             "setProgress",
+          );
+        },
+
+        setEstimate(operationId, inputHash, seconds) {
+          set(
+            (state) => {
+              const entry = state.entries[operationId];
+              if (entry?.inputHash !== inputHash || entry.status !== "ready") return;
+              entry.seconds = seconds;
+            },
+            false,
+            "setEstimate",
           );
         },
 

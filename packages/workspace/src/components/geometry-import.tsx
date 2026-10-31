@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  DEFAULT_SVG_DPI,
-  type DxfDocument,
-  DxfImportError,
-  dxfNeedsUnits,
-  importDxf,
-  importSvg,
-  parseDxf,
-  parseSvg,
-  type SvgDocument,
-  SvgImportError,
-  svgNeedsDpi,
-} from "@furrow/cam-core";
+import { DEFAULT_SVG_DPI } from "@furrow/cam-core";
 import { DEFAULT_LINE_SPACING, type Units } from "@furrow/document";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -24,6 +12,15 @@ import { cn } from "@furrow/ui/lib/utils";
 import { TypeIcon, UploadIcon, XIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import {
+  DRAWING_FILE_TOO_LARGE,
+  type DrawingFile,
+  drawingFileNeeds,
+  importDrawingFile,
+  isDrawingImportError,
+  MAX_DRAWING_FILE_SIZE,
+  parseDrawingFile,
+} from "../lib/drawing-import";
 import { DEFAULT_FONT } from "../lib/fonts";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
@@ -34,16 +31,8 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import {
-  addImportedShapes,
-  canImportDrawing,
-  DRAWINGS_OR_MODEL,
-  drawingShapes,
-} from "../stores/geometry-actions";
+import { canImportDrawing, drawingShapes } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
-
-/** Files are parsed in the browser; anything larger is unlikely to be a drawing worth cutting. */
-const MAX_FILE_SIZE = 20_000_000;
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -52,23 +41,6 @@ type Notice = { kind: "error" | "info"; messages: Translatable[] };
 
 /** What a drawing unit is in a DXF file that doesn't say. */
 const UNIT_OPTIONS = ["mm", "in"] as const;
-
-/**
- * A file waiting for the user: an SVG sized in pixels, or not at all, for its
- * DPI; a DXF with no units for them.
- */
-type PendingFile =
-  | { kind: "svg"; svg: SvgDocument; name: string }
-  | { kind: "dxf"; dxf: DxfDocument; name: string };
-
-/** A parsed file and what to import it with. */
-type ImportRequest =
-  | { kind: "svg"; svg: SvgDocument; name: string; dpi: number }
-  | { kind: "dxf"; dxf: DxfDocument; name: string; units: Units };
-
-function isImportError(error: unknown): error is SvgImportError | DxfImportError {
-  return error instanceof SvgImportError || error instanceof DxfImportError;
-}
 
 /** The file input `GeometryImport` reads drawings from, which `ImportDrawingButton` opens. */
 const DRAWING_INPUT_ID = "workspace-drawing-file";
@@ -162,7 +134,7 @@ export function GeometryImport() {
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
   const input = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<PendingFile | null>(null);
+  const [pending, setPending] = useState<DrawingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const format = useFormatMessage();
   const t = useTranslations("Import");
@@ -170,27 +142,21 @@ export function GeometryImport() {
   const picks = useRef(0);
 
   function fail(error: unknown) {
-    if (!isImportError(error)) console.error(error);
-    const message = isImportError(error) ? error.detail : { code: "workspace.importFailed" };
+    if (!isDrawingImportError(error)) console.error(error);
+    const message = isDrawingImportError(error) ? error.detail : { code: "workspace.importFailed" };
     setNotice({ kind: "error", messages: [message] });
   }
 
-  function add(request: ImportRequest) {
+  function add(file: DrawingFile, { dpi = DEFAULT_SVG_DPI, units = "mm" as Units } = {}) {
     try {
-      const { shapes, warnings } =
-        request.kind === "svg"
-          ? importSvg(request.svg, { dpi: request.dpi, fileName: request.name })
-          : importDxf(request.dxf, { units: request.units, fileName: request.name });
-      if (shapes.length === 0) {
-        setNotice({ kind: "error", messages: [{ code: "workspace.noShapes" }, ...warnings] });
+      const result = importDrawingFile(store, file, { dpi, units });
+      if (!result.ok) {
+        // Also when a model was imported, or a step redone, while the file was read or the prompt open.
+        setNotice({ kind: "error", messages: result.messages });
         return;
       }
-      if (!addImportedShapes(store, request.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
-        // A model was imported, or a step redone, while the file was read or the prompt open.
-        setNotice({ kind: "error", messages: [DRAWINGS_OR_MODEL] });
-        return;
-      }
-      track({ event: "file_imported", format: request.kind });
+      track({ event: "file_imported", format: file.kind });
+      const { warnings } = result;
       setNotice(warnings.length > 0 ? { kind: "info", messages: warnings } : null);
     } catch (error) {
       fail(error);
@@ -204,36 +170,19 @@ export function GeometryImport() {
     if (!picked) return;
     const pick = ++picks.current;
     setPending(null);
-    if (picked.size > MAX_FILE_SIZE) {
-      setNotice({
-        kind: "error",
-        messages: [{ code: "workspace.fileTooLarge", values: { mb: MAX_FILE_SIZE / 1_000_000 } }],
-      });
+    if (picked.size > MAX_DRAWING_FILE_SIZE) {
+      setNotice({ kind: "error", messages: [DRAWING_FILE_TOO_LARGE] });
       return;
     }
     try {
-      const name = picked.name;
-      if (/\.dxf$/i.test(name)) {
-        // DXF files name their encoding inside, so they are decoded from bytes.
-        const bytes = new Uint8Array(await picked.arrayBuffer());
-        if (pick !== picks.current) return;
-        const dxf = parseDxf(bytes);
-        if (dxfNeedsUnits(dxf)) {
-          setNotice(null);
-          setPending({ kind: "dxf", dxf, name });
-        } else {
-          add({ kind: "dxf", dxf, name, units: "mm" });
-        }
-        return;
-      }
-      const text = await picked.text();
+      const bytes = new Uint8Array(await picked.arrayBuffer());
       if (pick !== picks.current) return;
-      const svg = parseSvg(text);
-      if (svgNeedsDpi(svg)) {
+      const file = parseDrawingFile(picked.name, bytes);
+      if (drawingFileNeeds(file)) {
         setNotice(null);
-        setPending({ kind: "svg", svg, name });
+        setPending(file);
       } else {
-        add({ kind: "svg", svg, name, dpi: DEFAULT_SVG_DPI });
+        add(file);
       }
     } catch (error) {
       if (pick === picks.current) fail(error);
@@ -303,7 +252,7 @@ export function GeometryImport() {
                 initial={DEFAULT_SVG_DPI}
                 onImport={(dpi) => {
                   setPending(null);
-                  add({ ...pending, dpi });
+                  add(pending, { dpi });
                 }}
                 onCancel={() => setPending(null)}
               />
@@ -321,7 +270,7 @@ export function GeometryImport() {
                 initial="mm"
                 onImport={(units: Units) => {
                   setPending(null);
-                  add({ ...pending, units });
+                  add(pending, { units });
                 }}
                 onCancel={() => setPending(null)}
               />
