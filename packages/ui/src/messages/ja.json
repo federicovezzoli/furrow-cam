@@ -221,6 +221,7 @@
     "edit": "編集",
     "editLabel": "{name} を編集",
     "tip": "先端 {size} mm",
+    "perSide": "片側 {angle}°",
     "deleteConfirm": "「{name}」を削除しますか？既存のプロジェクトはこのビットのコピーを保持します。"
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "エンドミル専用です",
       "vBitRequired": "V ビットでは必須です",
       "vBitOnly": "V ビット専用です",
+      "taperedRequired": "テーパーボールエンドミルでは必須です",
+      "taperedOnly": "テーパーボールエンドミル専用です",
+      "tipDiameterOnly": "V ビットとテーパーボールエンドミル専用です",
+      "taperedDiameter": "刃長での円錐の幅である必要があります",
       "drillPlunge90": "ドリルは 90° で突っ込みます",
       "exceedsFluteLength": "刃長を超えないようにしてください",
       "smallerThanDiameter": "直径より小さくしてください"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "ライン上では 0 にしてください",
       "allowanceNeeded": "削り取る取り代が必要です",
       "vBitsCantDrill": "V ビットでは穴あけできません",
+      "taperedBitsCantDrill": "テーパーボールエンドミルでは穴あけできません",
+      "taperedBitsCantClear": "テーパーボールエンドミルは彫刻と 3D 仕上げ専用です。別のビットを選んでください。",
       "drillsCantEngrave": "ドリルビットでは彫刻できません",
       "flatBottomEndMill": "平らな底を加工できるのはフラットエンドミルだけです",
       "onlyVBitsVCarve": "V カービングできるのは V ビットだけです",
@@ -986,6 +993,7 @@
     "types": {
       "flat_end_mill": "フラットエンドミル",
       "ball_end_mill": "ボールエンドミル",
+      "tapered_ball_end_mill": "テーパーボールエンドミル",
       "v_bit": "V ビット",
       "drill": "ドリル"
     },
@@ -1006,6 +1014,7 @@
     "cutDirection": "ねじれ方向",
     "vAngle": "V 角度",
     "tipDiameter": "先端径",
+    "taperAngle": "片側角度",
     "cuttingData": "切削条件",
     "spindleSpeed": "スピンドル回転数",
     "feedRate": "送り速度",

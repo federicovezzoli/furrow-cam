@@ -4,6 +4,7 @@ import { type Toolpath, ToolpathBuilder } from "../toolpath";
 import {
   FINISH_SETUP_SHARE,
   type FinishSetup,
+  finishingDiameter,
   type ReliefFinishOptions,
   remainingRuns,
   sampleMoves,
@@ -139,7 +140,7 @@ export function* spiralSteps(
   const columns = Math.floor(Math.max(...us) / cellWidth - 0.5) - column0 + 1;
   const rows = Math.floor(Math.max(...vs) / cellHeight - 0.5) - row0 + 1;
   if (columns < 1 || rows < 1) return { moves: [], warnings };
-  const spacing = (tool.diameter * params.stepOver) / 100;
+  const spacing = (finishingDiameter(tool) * params.stepOver) / 100;
   const outwards = spiralRuns(
     columns,
     rows,
@@ -158,7 +159,7 @@ export function* spiralSteps(
 
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const step = Math.min(cellWidth, cellHeight);
-  const gap = Math.ceil(tool.diameter / step);
+  const gap = Math.ceil(finishingDiameter(tool) / step);
   const tips = new Float64Array(Math.max(columns, rows));
   /** Whether the tool is down at the end of the run before. */
   let atEnd = false;

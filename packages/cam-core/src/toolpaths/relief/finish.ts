@@ -51,9 +51,19 @@ export const MAX_RELIEF_CELLS = 4096 * 4096;
  */
 export const RELIEF_TOLERANCE = 0.01;
 
+/**
+ * The diameter 3D passes and cells are sized by: a tapered ball end mill's
+ * ball, which does the finishing (#425), else the tool's.
+ */
+export function finishingDiameter(tool: Pick<Tool, "type" | "diameter" | "tipDiameter">): number {
+  return tool.type === "tapered_ball_end_mill" && tool.tipDiameter !== null
+    ? tool.tipDiameter
+    : tool.diameter;
+}
+
 /** The cell size `tool` wants: `RELIEF_CELL_SIZE`, or a twentieth of its radius if smaller. */
-export function reliefCellSize(tool: Pick<Tool, "diameter">): number {
-  return Math.min(RELIEF_CELL_SIZE, tool.diameter / 2 / RELIEF_CELLS_PER_RADIUS);
+export function reliefCellSize(tool: Pick<Tool, "type" | "diameter" | "tipDiameter">): number {
+  return Math.min(RELIEF_CELL_SIZE, finishingDiameter(tool) / 2 / RELIEF_CELLS_PER_RADIUS);
 }
 
 /**
@@ -231,6 +241,7 @@ export function* offsetHeightsSteps(
     diameter: 2 * distance,
     vAngle: null,
     tipDiameter: null,
+    taperAngle: null,
   });
   const dropper = new ToolDropper(heights, grid, sphere);
   const offset = new Float32Array(columns * rows);
@@ -1345,7 +1356,7 @@ export function* parallelPassesSteps(
   const us = area.map(([u]) => u);
   const firstRow = Math.ceil(Math.min(...vs) / cellHeight - 0.5);
   const finalRow = Math.floor(Math.max(...vs) / cellHeight - 0.5);
-  const spacing = (tool.diameter * params.stepOver) / 100;
+  const spacing = (finishingDiameter(tool) * params.stepOver) / 100;
   const rowsApart = Math.max(1, Math.floor(spacing / cellHeight + 1e-9));
   const count = Math.ceil((finalRow - firstRow) / rowsApart) + 1;
   let lastRow: number | null = null;
@@ -1353,8 +1364,8 @@ export function* parallelPassesSteps(
   const tips = new Float64Array(samplesAtMost);
   const stockTips = new Float64Array(samplesAtMost);
   // Gaps narrower than the tool aren't worth leaving the cut for.
-  const gap = Math.ceil(tool.diameter / cellWidth);
-  const maxLink = 2 * tool.diameter;
+  const gap = Math.ceil(finishingDiameter(tool) / cellWidth);
+  const maxLink = 2 * finishingDiameter(tool);
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const zigzag = strategy.direction === "zigzag";
   let previous: { u: number; v: number; z: number } | null = null;

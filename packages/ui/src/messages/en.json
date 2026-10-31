@@ -221,6 +221,7 @@
     "edit": "Edit",
     "editLabel": "Edit {name}",
     "tip": "{size} mm tip",
+    "perSide": "{angle}° per side",
     "deleteConfirm": "Delete \"{name}\"? Existing projects keep their copy of this bit."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Only for end mills",
       "vBitRequired": "Required for V-bits",
       "vBitOnly": "Only for V-bits",
+      "taperedRequired": "Required for tapered ball end mills",
+      "taperedOnly": "Only for tapered ball end mills",
+      "tipDiameterOnly": "Only for V-bits and tapered ball end mills",
+      "taperedDiameter": "Must be the cone's width at the flute length",
       "drillPlunge90": "Drills plunge at 90°",
       "exceedsFluteLength": "Must not exceed the flute length",
       "smallerThanDiameter": "Must be smaller than the diameter"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Must be 0 on the line",
       "allowanceNeeded": "Needs an allowance to remove",
       "vBitsCantDrill": "V-bits can't drill",
+      "taperedBitsCantDrill": "Tapered ball end mills can't drill",
+      "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",
@@ -986,6 +993,7 @@
     "types": {
       "flat_end_mill": "Flat end mill",
       "ball_end_mill": "Ball end mill",
+      "tapered_ball_end_mill": "Tapered ball end mill",
       "v_bit": "V-bit",
       "drill": "Drill"
     },
@@ -1006,6 +1014,7 @@
     "cutDirection": "Cut direction",
     "vAngle": "V angle",
     "tipDiameter": "Tip diameter",
+    "taperAngle": "Angle per side",
     "cuttingData": "Cutting data",
     "spindleSpeed": "Spindle speed",
     "feedRate": "Feed rate",

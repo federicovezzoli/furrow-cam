@@ -2,8 +2,8 @@
 
 import { DRILL_DIAMETER_TOLERANCE } from "@furrow/cam-core";
 import {
+  canClear,
   canClearFlatBottom,
-  canCutSideways,
   canDrill,
   canEngrave,
   canVCarve,
@@ -125,9 +125,9 @@ function toolChoiceFor(tools: ToolChoice[], test: (tool: Tool) => boolean): Tool
   return fallback && test(fallback.tool) ? fallback : tools.find((choice) => test(choice.tool));
 }
 
-/** The tool new profiles and pockets start with: the default one if it can cut sideways, else the first that can. */
+/** The tool new profiles and pockets start with: the default one if it can clear them, else the first that can. */
 export function cuttingToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  return toolChoiceFor(tools, canCutSideways);
+  return toolChoiceFor(tools, canClear);
 }
 
 /**
@@ -170,10 +170,15 @@ export function vcarveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
 
 /**
  * The tool new 3D finishing operations start with: the default one if it is
- * a ball end mill, else the first ball end mill, else as `cuttingToolChoice`.
+ * a ball end mill, else the first ball end mill, else the same for tapered
+ * ball end mills, else as `cuttingToolChoice`.
  */
 export function reliefFinishToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  return toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ?? cuttingToolChoice(tools);
+  return (
+    toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ??
+    toolChoiceFor(tools, (tool) => tool.type === "tapered_ball_end_mill") ??
+    cuttingToolChoice(tools)
+  );
 }
 
 /**

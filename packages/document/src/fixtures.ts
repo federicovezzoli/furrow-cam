@@ -7,7 +7,7 @@ import type { Drawing, Shape } from "./schema/geometry";
 import type { Machine } from "./schema/machine";
 import type { Model } from "./schema/model";
 import type { ReliefFinishOperation, ReliefRoughOperation } from "./schema/operation";
-import type { Tool } from "./schema/tool";
+import { type Tool, taperedDiameter } from "./schema/tool";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -18,6 +18,7 @@ export const endMill: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 18000,
   feedRate: 1500,
   plungeRate: 500,
@@ -45,6 +46,18 @@ export const ballEndMill: Tool = {
   fluteLength: 12,
   stepDown: 1,
   color: "#9333ea",
+};
+
+export const taperedBallEndMill: Tool = {
+  ...endMill,
+  name: "0.5 mm tip 1.5° tapered ball nose",
+  type: "tapered_ball_end_mill",
+  diameter: taperedDiameter({ tipDiameter: 0.5, taperAngle: 1.5, fluteLength: 20 }) as number,
+  fluteLength: 20,
+  tipDiameter: 0.5,
+  taperAngle: 1.5,
+  stepDown: 0.5,
+  color: "#db2777",
 };
 
 export const drill: Tool = {
@@ -245,7 +258,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 28,
+    schemaVersion: 29,
     units: "in",
     stock: {
       width: 300,

@@ -16,6 +16,7 @@ const tool: Tool = {
   cutDirection: null,
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 12000,
   feedRate: 1000,
   plungeRate: 300,

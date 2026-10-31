@@ -26,6 +26,7 @@ const tool: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 18000,
   feedRate: 1500,
   plungeRate: 500,
@@ -35,9 +36,27 @@ const tool: Tool = {
   color: "#2563eb",
 };
 
-const flat: CutterShape = { type: "flat_end_mill", diameter: 6, vAngle: null, tipDiameter: null };
-const ball: CutterShape = { type: "ball_end_mill", diameter: 6, vAngle: null, tipDiameter: null };
-const vBit: CutterShape = { type: "v_bit", diameter: 12, vAngle: 90, tipDiameter: 0 };
+const flat: CutterShape = {
+  type: "flat_end_mill",
+  diameter: 6,
+  vAngle: null,
+  tipDiameter: null,
+  taperAngle: null,
+};
+const ball: CutterShape = {
+  type: "ball_end_mill",
+  diameter: 6,
+  vAngle: null,
+  tipDiameter: null,
+  taperAngle: null,
+};
+const vBit: CutterShape = {
+  type: "v_bit",
+  diameter: 12,
+  vAngle: 90,
+  tipDiameter: 0,
+  taperAngle: null,
+};
 
 const stock = { width: 120, height: 60, thickness: 6 };
 
@@ -158,6 +177,48 @@ describe("cutterProfile", () => {
     /** 90° included angle: rises 1 mm per mm off the axis. */
     expect(cutterProfile(vBit).height(4)).toBeCloseTo(4);
     expect(cutterProfile({ ...vBit, tipDiameter: 2 }).height(4)).toBeCloseTo(3);
+  });
+});
+
+describe("cutterProfile of a tapered ball end mill (#425)", () => {
+  /** 1 mm ball, 10° per side, 6 mm at the top of the cone. */
+  const tapered: CutterShape = {
+    type: "tapered_ball_end_mill",
+    diameter: 6,
+    vAngle: null,
+    tipDiameter: 1,
+    taperAngle: 10,
+  };
+  const angle = (10 * Math.PI) / 180;
+  const r = 0.5;
+  const tangent = r * Math.cos(angle);
+  const tangentHeight = r * (1 - Math.sin(angle));
+
+  it("is the ball up to where the cone meets it", () => {
+    const profile = cutterProfile(tapered);
+    expect(profile.height(0)).toBe(0);
+    expect(profile.height(0.3)).toBeCloseTo(r - Math.sqrt(r * r - 0.3 * 0.3), 12);
+    expect(profile.height(tangent)).toBeCloseTo(tangentHeight, 12);
+  });
+
+  it("is the cone past that, out to the diameter", () => {
+    const profile = cutterProfile(tapered);
+    for (const d of [tangent, 1, 2, 3]) {
+      expect(profile.height(d)).toBeCloseTo(tangentHeight + (d - tangent) / Math.tan(angle), 12);
+    }
+    expect(profile.reach(profile.height(2))).toBeCloseTo(2, 12);
+    expect(profile.reach(profile.height(0.2))).toBeCloseTo(0.2, 12);
+    expect(profile.reach(100)).toBe(3);
+  });
+
+  it("rises with distance and is convex, as sweep needs", () => {
+    const { height } = cutterProfile(tapered);
+    let previousSlope = 0;
+    for (let d = 0.01; d <= 3; d += 0.01) {
+      const slope = (height(d) - height(d - 0.01)) / 0.01;
+      expect(slope).toBeGreaterThanOrEqual(previousSlope - 1e-9);
+      previousSlope = slope;
+    }
   });
 });
 

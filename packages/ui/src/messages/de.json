@@ -221,6 +221,7 @@
     "edit": "Bearbeiten",
     "editLabel": "{name} bearbeiten",
     "tip": "{size} mm Spitze",
+    "perSide": "{angle}° pro Seite",
     "deleteConfirm": "„{name}“ löschen? Bestehende Projekte behalten ihre Kopie dieses Fräsers."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Nur für Schaftfräser",
       "vBitRequired": "Erforderlich für V-Fräser",
       "vBitOnly": "Nur für V-Fräser",
+      "taperedRequired": "Erforderlich für konische Radiusfräser",
+      "taperedOnly": "Nur für konische Radiusfräser",
+      "tipDiameterOnly": "Nur für V-Fräser und konische Radiusfräser",
+      "taperedDiameter": "Muss die Breite des Kegels bei der Schneidenlänge sein",
       "drillPlunge90": "Bohrer tauchen mit 90° ein",
       "exceedsFluteLength": "Darf die Schneidenlänge nicht überschreiten",
       "smallerThanDiameter": "Muss kleiner als der Durchmesser sein"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
       "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
       "vBitsCantDrill": "V-Fräser können nicht bohren",
+      "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
+      "taperedBitsCantClear": "Konische Radiusfräser gravieren und schlichten nur in 3D: Wähle einen anderen Fräser.",
       "drillsCantEngrave": "Bohrer können nicht gravieren",
       "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
@@ -986,6 +993,7 @@
     "types": {
       "flat_end_mill": "Schaftfräser",
       "ball_end_mill": "Radiusfräser",
+      "tapered_ball_end_mill": "Konischer Radiusfräser",
       "v_bit": "V-Fräser",
       "drill": "Bohrer"
     },
@@ -1006,6 +1014,7 @@
     "cutDirection": "Spiralrichtung",
     "vAngle": "V-Winkel",
     "tipDiameter": "Spitzendurchmesser",
+    "taperAngle": "Winkel pro Seite",
     "cuttingData": "Schnittdaten",
     "spindleSpeed": "Spindeldrehzahl",
     "feedRate": "Vorschub",

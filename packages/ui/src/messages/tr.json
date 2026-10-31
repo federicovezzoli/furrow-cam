@@ -221,6 +221,7 @@
     "edit": "Düzenle",
     "editLabel": "Düzenle: {name}",
     "tip": "{size} mm uç",
+    "perSide": "Kenar başına {angle}°",
     "deleteConfirm": "“{name}” silinsin mi? Mevcut projeler bu ucun kopyasını korur."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Yalnızca parmak frezeler için",
       "vBitRequired": "V uçlar için zorunlu",
       "vBitOnly": "Yalnızca V uçlar için",
+      "taperedRequired": "Konik küresel uçlu frezeler için zorunlu",
+      "taperedOnly": "Yalnızca konik küresel uçlu frezeler için",
+      "tipDiameterOnly": "Yalnızca V uçlar ve konik küresel uçlu frezeler için",
+      "taperedDiameter": "Kesme uzunluğundaki koni genişliği olmalı",
       "drillPlunge90": "Matkap uçları 90° ile dalar",
       "exceedsFluteLength": "Kesme boyunu aşmamalıdır",
       "smallerThanDiameter": "Çaptan küçük olmalıdır"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Çizgi üzerinde 0 olmalıdır",
       "allowanceNeeded": "Kaldırılacak bir işleme payı gerekir",
       "vBitsCantDrill": "V uçlar delme yapamaz",
+      "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
+      "taperedBitsCantClear": "Konik küresel uçlu frezeler yalnızca gravür ve 3B finiş yapar: başka bir uç seçin.",
       "drillsCantEngrave": "Matkap uçları gravür yapamaz",
       "flatBottomEndMill": "Düz tabanı yalnızca düz uçlu parmak frezeler temizler",
       "onlyVBitsVCarve": "V oymayı yalnızca V uçlar yapar",
@@ -986,6 +993,7 @@
     "types": {
       "flat_end_mill": "Düz uçlu parmak freze",
       "ball_end_mill": "Küresel uçlu parmak freze",
+      "tapered_ball_end_mill": "Konik küresel uçlu freze",
       "v_bit": "V uç",
       "drill": "Matkap ucu"
     },
@@ -1006,6 +1014,7 @@
     "cutDirection": "Talaş yönü",
     "vAngle": "V açısı",
     "tipDiameter": "Uç çapı",
+    "taperAngle": "Kenar başına açı",
     "cuttingData": "Kesme verileri",
     "spindleSpeed": "İş mili devri",
     "feedRate": "İlerleme hızı",
