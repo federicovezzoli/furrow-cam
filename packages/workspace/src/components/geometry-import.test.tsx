@@ -34,7 +34,7 @@ describe("ImportDrawingButton", () => {
       </>,
       host,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Drawing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Import a drawing" }));
     expect(click).toHaveBeenCalledOnce();
     click.mockRestore();
   });
@@ -48,7 +48,7 @@ describe("ImportDrawingButton", () => {
       </>,
       createMemoryHost({ document: { ...createProjectDocument(), models: [model] } }),
     );
-    const button = screen.getByRole("button", { name: "Drawing" });
+    const button = screen.getByRole("button", { name: "Import a drawing" });
     expect(button.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(button);
     expect(click).not.toHaveBeenCalled();

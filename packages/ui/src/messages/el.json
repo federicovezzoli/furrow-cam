@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "Ιστορικό",
     "drawing": "Σχέδιο",
+    "importDrawing": "Εισαγάγετε ένα σχέδιο",
     "text": "Κείμενο",
     "relief_rough": "Εκχόνδριση",
     "relief_finish": "Φινίρισμα"

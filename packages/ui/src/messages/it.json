@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "Cronologia",
     "drawing": "Disegno",
+    "importDrawing": "Importa un disegno",
     "text": "Testo",
     "relief_rough": "Sgrossatura",
     "relief_finish": "Finitura"

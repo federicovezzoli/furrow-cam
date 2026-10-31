@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "历史",
     "drawing": "图纸",
+    "importDrawing": "导入图纸",
     "text": "文字",
     "relief_rough": "粗加工",
     "relief_finish": "精加工"

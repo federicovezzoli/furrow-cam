@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "Historique",
     "drawing": "Dessin",
+    "importDrawing": "Importer un dessin",
     "text": "Texte",
     "relief_rough": "Ébauche",
     "relief_finish": "Finition"

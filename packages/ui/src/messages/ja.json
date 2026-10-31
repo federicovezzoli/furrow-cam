@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "履歴",
     "drawing": "図面",
+    "importDrawing": "図面をインポート",
     "text": "テキスト",
     "relief_rough": "荒加工",
     "relief_finish": "仕上げ"

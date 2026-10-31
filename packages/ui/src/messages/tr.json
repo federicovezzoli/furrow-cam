@@ -1119,6 +1119,7 @@
   "Ribbon": {
     "history": "Geçmiş",
     "drawing": "Çizim",
+    "importDrawing": "Çizim içe aktarın",
     "text": "Metin",
     "relief_rough": "Kaba",
     "relief_finish": "İnce"

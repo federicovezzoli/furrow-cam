@@ -59,6 +59,7 @@ export function ImportDrawingButton() {
     <RibbonButton
       icon={<UploadIcon />}
       label={ribbon("drawing")}
+      aria-label={ribbon("importDrawing")}
       hint={t("importDrawing")}
       disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
       // shortcut: finds the input by id, so only one workspace per page; share a ref if that changes.
@@ -109,6 +110,7 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
       <RibbonButton
         icon={<TypeIcon />}
         label={ribbon("text")}
+        aria-label={t("addText")}
         hint={t("addText")}
         disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
         disabled={adding}
@@ -222,7 +224,6 @@ export function GeometryImport() {
           )}
         >
           <div
-            data-tour={empty ? "import" : undefined}
             className={cn(
               "pointer-events-auto grid gap-2 rounded-md border bg-background/85 text-ui shadow-xs backdrop-blur-md",
               "w-full max-w-72 p-3",

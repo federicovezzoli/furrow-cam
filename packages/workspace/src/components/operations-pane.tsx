@@ -16,10 +16,10 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
-import { selectionTargets } from "../lib/path-selection";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
@@ -49,11 +49,7 @@ export function OperationsPane() {
   const workspace = useWorkspaceStoreApi();
   const operations = useDocumentStore((s) => s.document.operations);
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const targets = useMemo(
-    () => selectionTargets(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const targets = useSelectionTargets();
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);

@@ -1,10 +1,9 @@
 "use client";
 
 import type { Operation } from "@furrow/document";
-import { useMemo } from "react";
 import { useTranslations } from "use-intl";
+import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
-import { selectionTargets } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -48,11 +47,7 @@ export function AddOperationButtons() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const targets = useMemo(
-    () => selectionTargets(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const targets = useSelectionTargets();
   const tools = useToolLibrary();
   const tool = defaultToolChoice(tools);
   const cuttingTool = cuttingToolChoice(tools);
