@@ -121,14 +121,28 @@ export function MachineForm({
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <legend className="mb-4 font-medium">{t("limits")}</legend>
-        <p className="text-sm text-muted-foreground sm:col-span-full">{t("limitsHint")}</p>
+        <legend className="mb-1 font-medium">{t("limits")}</legend>
+        <p id="limits-hint" className="text-sm text-muted-foreground sm:col-span-full">
+          {t("limitsHint")}
+        </p>
         <div className="grid content-start gap-1">
-          <NumberField label={t("maxFeedXY")} {...number("maxFeedXY")} quantity="feed" min={0} />
+          <NumberField
+            label={t("maxFeedXY")}
+            {...number("maxFeedXY")}
+            quantity="feed"
+            min={0}
+            describedBy="limits-hint"
+          />
           {ask("maxFeedXY")}
         </div>
         <div className="grid content-start gap-1">
-          <NumberField label={t("maxFeedZ")} {...number("maxFeedZ")} quantity="feed" min={0} />
+          <NumberField
+            label={t("maxFeedZ")}
+            {...number("maxFeedZ")}
+            quantity="feed"
+            min={0}
+            describedBy="limits-hint"
+          />
           {ask("maxFeedZ")}
         </div>
       </fieldset>
