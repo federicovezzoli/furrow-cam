@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}” ha fallado, así que el material que cortaría se considera restante.",
       "noLocatingPins": "El proyecto no tiene pasadores de referencia que taladrar.",
       "pinsOffStock": "Un pasador de referencia está fuera del material.",
+      "cutsPins": "Esta operación corta donde va un pasador de referencia, así que la herramienta chocaría con el pasador al dar la vuelta al material: mueve los pasadores o el corte.",
       "noHoldingTabs": "Sin puentes de sujeción: la pieza se suelta en cuanto la cara inferior corta todo su contorno.",
       "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
     },

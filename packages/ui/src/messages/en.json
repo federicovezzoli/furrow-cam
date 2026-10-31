@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
+      "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },

@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}” falhou, então o material que ela cortaria é considerado restante.",
       "noLocatingPins": "O projeto não tem pinos de posicionamento para furar.",
       "pinsOffStock": "Um pino de posicionamento está fora do material.",
+      "cutsPins": "Esta operação corta onde vai um pino de posicionamento, por isso a ferramenta bateria no pino quando o material for virado: mova os pinos ou o corte.",
       "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que o lado de baixo corta todo o seu contorno.",
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem."
     },

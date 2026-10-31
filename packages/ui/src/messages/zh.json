@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}”失败，因此视其要切削的材料为剩余材料。",
       "noLocatingPins": "项目中没有要钻的定位销孔。",
       "pinsOffStock": "有一个定位销位于毛坯之外。",
+      "cutsPins": "此操作会切到定位销所在的位置，毛坯翻面后刀具会撞到定位销：请移动定位销或切削。",
       "noHoldingTabs": "没有保留桥：底面绕工件一圈切完后，工件会松脱。",
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。"
     },

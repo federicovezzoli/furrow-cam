@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}” başarısız oldu; bu nedenle keseceği malzeme kalmış kabul edilir.",
       "noLocatingPins": "Projede delinecek konumlama pimi yok.",
       "pinsOffStock": "Bir konumlama pimi ham malzemenin dışında.",
+      "cutsPins": "Bu işlem bir konumlama piminin geldiği yeri kesiyor, bu yüzden ham malzeme çevrildiğinde takım pime çarpar: pimleri ya da kesimi taşıyın.",
       "noHoldingTabs": "Tutucu köprü yok: alt yüz parçanın çevresini tamamen kestiğinde parça serbest kalır.",
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
     },

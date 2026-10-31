@@ -652,6 +652,7 @@
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
       "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
       "pinsOffStock": "Un pion de centrage est hors du brut.",
+      "cutsPins": "Cette opération coupe là où va un pion de centrage, donc l'outil toucherait le pion une fois le brut retourné : déplacez les pions ou la coupe.",
       "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
       "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
     },

@@ -341,6 +341,7 @@ describe("drillToolpath", () => {
         tabs: null,
         before: [],
         touchOff: null,
+        pins: null,
         safeZ: 5,
         entryClearance: 1,
       }),
