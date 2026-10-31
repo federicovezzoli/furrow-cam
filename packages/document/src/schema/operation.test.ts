@@ -158,6 +158,17 @@ describe("DrillOperation", () => {
     expect(DrillOperation.safeParse({ ...drill, tool: vBit }).success).toBe(false);
   });
 
+  it("rejects tapered ball end mills", () => {
+    const tapered = {
+      ...drill.tool,
+      type: "tapered_ball_end_mill",
+      tipDiameter: 0.5,
+      taperAngle: 1.5,
+    };
+    const result = DrillOperation.safeParse({ ...drill, tool: tapered });
+    expect(result.error?.issues[0]?.message).toBe("operation.taperedBitsCantDrill");
+  });
+
   it("rejects invalid params and unknown keys", () => {
     expect(DrillParams.safeParse({ depth: 0, peck: false, stepOver: 40 }).success).toBe(false);
     expect(DrillParams.safeParse({ depth: 5, peck: "yes", stepOver: 40 }).success).toBe(false);

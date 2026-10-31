@@ -26,6 +26,7 @@ const tool: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 18000,
   feedRate: 1500,
   plungeRate: 500,

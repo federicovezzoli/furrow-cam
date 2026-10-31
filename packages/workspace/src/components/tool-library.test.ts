@@ -7,6 +7,7 @@ import {
   matchingToolChoice,
   newBitType,
   pinDrillToolChoice,
+  reliefFinishToolChoice,
   withAddedTool,
   withCatalog,
   withUpdatedTool,
@@ -21,6 +22,7 @@ const endMill: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
@@ -128,6 +130,31 @@ describe("cuttingToolChoice", () => {
     expect(defaultToolChoice([drillBit, ...library])?.id).toBe("d");
     expect(cuttingToolChoice([drillBit, ...library])?.id).toBe("a");
     expect(cuttingToolChoice([drillBit])).toBeUndefined();
+  });
+});
+
+describe("reliefFinishToolChoice", () => {
+  const tapered: ToolChoice = {
+    id: "t",
+    isDefault: false,
+    tool: {
+      ...endMill,
+      name: "Tapered ball nose",
+      type: "tapered_ball_end_mill",
+      tipDiameter: 0.5,
+      taperAngle: 1.5,
+    },
+  };
+  const ball: ToolChoice = {
+    id: "b",
+    isDefault: false,
+    tool: { ...endMill, name: "Ball nose", type: "ball_end_mill" },
+  };
+
+  it("prefers a ball end mill, then a tapered one, then any cutting bit", () => {
+    expect(reliefFinishToolChoice([...library, tapered, ball])?.id).toBe("b");
+    expect(reliefFinishToolChoice([...library, tapered])?.id).toBe("t");
+    expect(reliefFinishToolChoice(library)?.id).toBe("a");
   });
 });
 

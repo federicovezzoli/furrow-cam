@@ -1,5 +1,5 @@
 import type { EngraveOperation, EngraveParams, Shape, Tool } from "@furrow/document";
-import { DRAWING_ID, endMill, vBit } from "@furrow/document/fixtures";
+import { DRAWING_ID, endMill, taperedBallEndMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   engraveToolpath,
@@ -202,6 +202,24 @@ describe("grooveWidth", () => {
     expect(grooveWidth(ball, 1)).toBeCloseTo(2 * Math.sqrt(5), 12);
     expect(grooveWidth(ball, 3)).toBe(6);
     expect(grooveWidth(ball, 5)).toBe(6);
+  });
+
+  it("is a tapered ball end mill's ball chord, then the cone's width, then its diameter", () => {
+    const { tipDiameter, taperAngle, diameter } = taperedBallEndMill;
+    const r = (tipDiameter as number) / 2;
+    const angle = ((taperAngle as number) * Math.PI) / 180;
+    // Within the ball: its chord.
+    expect(grooveWidth(taperedBallEndMill, 0.1)).toBeCloseTo(
+      2 * Math.sqrt(r * r - (r - 0.1) ** 2),
+      12,
+    );
+    // Up the cone: widens by tan(angle) per side for every mm deeper.
+    const tangentHeight = r * (1 - Math.sin(angle));
+    expect(grooveWidth(taperedBallEndMill, 5)).toBeCloseTo(
+      2 * (r * Math.cos(angle) + (5 - tangentHeight) * Math.tan(angle)),
+      12,
+    );
+    expect(grooveWidth(taperedBallEndMill, 1000)).toBe(diameter);
   });
 
   it("is a flat end mill's diameter", () => {

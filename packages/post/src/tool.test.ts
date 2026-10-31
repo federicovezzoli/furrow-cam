@@ -1,4 +1,4 @@
-import { ballEndMill, drill, endMill, vBit } from "@furrow/document/fixtures";
+import { ballEndMill, drill, endMill, taperedBallEndMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { sameBit, toolLabel, toolShapeComment } from "./tool";
 
@@ -9,6 +9,9 @@ describe("toolShapeComment (ADR-0042)", () => {
     expect(toolShapeComment(drill)).toBe("(Furrow tool: type=drill diameter=6)");
     expect(toolShapeComment({ ...vBit, diameter: 12, tipDiameter: 0.2 })).toBe(
       "(Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)",
+    );
+    expect(toolShapeComment(taperedBallEndMill)).toBe(
+      "(Furrow tool: type=tapered_ball_end_mill diameter=3.175 tipDiameter=0.5 taperAngle=1.5)",
     );
   });
 
@@ -30,6 +33,7 @@ describe("sameBit", () => {
     expect(sameBit(endMill, { ...endMill, diameter: 3.175 })).toBe(false);
     expect(sameBit(endMill, { ...endMill, cutDirection: "downcut" })).toBe(false);
     expect(sameBit(endMill, { ...endMill, name: "Another" })).toBe(false);
+    expect(sameBit(taperedBallEndMill, { ...taperedBallEndMill, taperAngle: 3.5 })).toBe(false);
   });
 });
 

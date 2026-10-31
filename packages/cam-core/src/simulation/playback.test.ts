@@ -15,8 +15,20 @@ import {
   smallestCutWidth,
 } from "./simulation";
 
-const flat: CutterShape = { type: "flat_end_mill", diameter: 6, vAngle: null, tipDiameter: null };
-const ball: CutterShape = { type: "ball_end_mill", diameter: 3, vAngle: null, tipDiameter: null };
+const flat: CutterShape = {
+  type: "flat_end_mill",
+  diameter: 6,
+  vAngle: null,
+  tipDiameter: null,
+  taperAngle: null,
+};
+const ball: CutterShape = {
+  type: "ball_end_mill",
+  diameter: 3,
+  vAngle: null,
+  tipDiameter: null,
+  taperAngle: null,
+};
 
 const stock = { width: 120, height: 60, thickness: 6 };
 

@@ -4,7 +4,13 @@ import { cutterOutline } from "./cutter-outline";
 describe("cutterOutline", () => {
   it("draws a flat end mill square at the tip", () => {
     expect(
-      cutterOutline({ type: "flat_end_mill", diameter: 6, vAngle: null, tipDiameter: null }),
+      cutterOutline({
+        type: "flat_end_mill",
+        diameter: 6,
+        vAngle: null,
+        tipDiameter: null,
+        taperAngle: null,
+      }),
     ).toEqual([
       [0, 0],
       [3, 0],
@@ -19,6 +25,7 @@ describe("cutterOutline", () => {
       diameter: 6,
       vAngle: null,
       tipDiameter: null,
+      taperAngle: null,
     });
     expect(outline[0]).toEqual([0, 0]);
     expect(outline.at(-3)).toEqual([3, 3]);
@@ -26,7 +33,13 @@ describe("cutterOutline", () => {
   });
 
   it("draws a V-bit's cone over its flat tip", () => {
-    const outline = cutterOutline({ type: "v_bit", diameter: 12, vAngle: 90, tipDiameter: 2 });
+    const outline = cutterOutline({
+      type: "v_bit",
+      diameter: 12,
+      vAngle: 90,
+      tipDiameter: 2,
+      taperAngle: null,
+    });
     const [r, z] = outline.at(-3) ?? [];
     expect(r).toBe(6);
     // A 90° bit rises as fast as it widens past its 1 mm flat.
