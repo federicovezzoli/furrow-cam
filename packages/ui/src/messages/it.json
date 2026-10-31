@@ -1037,6 +1037,7 @@
     "safeZ": "Z di sicurezza (sopra il grezzo)",
     "entryClearance": "Distanza di ingresso (sopra il grezzo)",
     "limits": "Limiti",
+    "limitsHint": "Impostali sulle velocità massime del controller ($110–$112). I movimenti di spostamento tra un taglio e l’altro vanno a queste velocità; l’avanzamento e la velocità di affondo della fresa valgono solo durante il taglio.",
     "maxFeedXY": "Avanzamento max X/Y",
     "maxFeedZ": "Avanzamento max Z",
     "spindle": "Mandrino",

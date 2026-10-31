@@ -1037,6 +1037,7 @@
     "safeZ": "Z de sécurité (au-dessus du brut)",
     "entryClearance": "Dégagement d’entrée (au-dessus du brut)",
     "limits": "Limites",
+    "limitsHint": "Réglez-les sur les vitesses maximales de votre contrôleur ($110–$112). Les déplacements entre les coupes se font à ces vitesses ; l’avance et la vitesse de plongée de la fraise ne s’appliquent que pendant la coupe.",
     "maxFeedXY": "Avance max X/Y",
     "maxFeedZ": "Avance max Z",
     "spindle": "Broche",

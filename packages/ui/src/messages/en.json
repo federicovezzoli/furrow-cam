@@ -1037,6 +1037,7 @@
     "safeZ": "Safe Z (above stock)",
     "entryClearance": "Entry clearance (above stock)",
     "limits": "Limits",
+    "limitsHint": "Set these to your controller’s maximum rates ($110–$112). Travel moves between cuts run at these rates; the bit’s feed and plunge rates only apply while cutting.",
     "maxFeedXY": "Max feed X/Y",
     "maxFeedZ": "Max feed Z",
     "spindle": "Spindle",

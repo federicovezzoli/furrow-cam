@@ -122,6 +122,7 @@ export function MachineForm({
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">{t("limits")}</legend>
+        <p className="text-sm text-muted-foreground sm:col-span-full">{t("limitsHint")}</p>
         <div className="grid content-start gap-1">
           <NumberField label={t("maxFeedXY")} {...number("maxFeedXY")} quantity="feed" min={0} />
           {ask("maxFeedXY")}

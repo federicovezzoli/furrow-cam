@@ -1037,6 +1037,7 @@
     "safeZ": "Z segura (sobre el material)",
     "entryClearance": "Holgura de entrada (sobre el material)",
     "limits": "Límites",
+    "limitsHint": "Ajústalos a las velocidades máximas de tu controlador ($110–$112). Los desplazamientos entre cortes van a estas velocidades; el avance y la velocidad de penetración de la fresa solo se aplican al cortar.",
     "maxFeedXY": "Avance máx. X/Y",
     "maxFeedZ": "Avance máx. Z",
     "spindle": "Husillo",

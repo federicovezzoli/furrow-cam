@@ -1037,6 +1037,7 @@
     "safeZ": "Sichere Z-Höhe (über dem Rohteil)",
     "entryClearance": "Anfahrabstand (über dem Rohteil)",
     "limits": "Grenzen",
+    "limitsHint": "Setze sie auf die Höchstgeschwindigkeiten deiner Steuerung ($110–$112). Leerfahrten zwischen den Schnitten laufen mit diesen Geschwindigkeiten; Vorschub und Eintauchvorschub des Fräsers gelten nur beim Fräsen.",
     "maxFeedXY": "Max. Vorschub X/Y",
     "maxFeedZ": "Max. Vorschub Z",
     "spindle": "Spindel",
