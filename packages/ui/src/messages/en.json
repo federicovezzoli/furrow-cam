@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "under 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Estimated machining time",
     "total": "Total {time}",

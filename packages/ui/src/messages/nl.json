@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "minder dan 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} u {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}u {minutes}min"
     },
     "timeTitle": "Geschatte bewerkingstijd",
     "total": "Totaal {time}",

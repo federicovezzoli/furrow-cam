@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "menos de 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Tempo de usinagem estimado",
     "total": "Total {time}",

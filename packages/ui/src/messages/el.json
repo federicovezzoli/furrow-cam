@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "λιγότερο από 1 λεπ.",
-      "minutes": "≈ {minutes} λεπ.",
-      "hours": "≈ {hours} ώρ. {minutes} λεπ."
+      "minutes": "≈ {minutes}λεπ.",
+      "hours": "≈ {hours}ώρ. {minutes}λεπ."
     },
     "timeTitle": "Εκτιμώμενος χρόνος κατεργασίας",
     "total": "Σύνολο {time}",

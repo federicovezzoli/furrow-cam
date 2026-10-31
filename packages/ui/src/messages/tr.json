@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "1 dk’dan az",
-      "minutes": "≈ {minutes} dk",
-      "hours": "≈ {hours} sa {minutes} dk"
+      "minutes": "≈ {minutes}dk",
+      "hours": "≈ {hours}sa {minutes}dk"
     },
     "timeTitle": "Tahmini işleme süresi",
     "total": "Toplam {time}",

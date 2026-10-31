@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "meno di 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Tempo di lavorazione stimato",
     "total": "Totale {time}",

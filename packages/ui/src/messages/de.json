@@ -968,8 +968,8 @@
     },
     "time": {
       "underMinute": "unter 1 Min.",
-      "minutes": "≈ {minutes} Min.",
-      "hours": "≈ {hours} Std. {minutes} Min."
+      "minutes": "≈ {minutes}Min.",
+      "hours": "≈ {hours}Std. {minutes}Min."
     },
     "timeTitle": "Geschätzte Bearbeitungszeit",
     "total": "Gesamt {time}",
