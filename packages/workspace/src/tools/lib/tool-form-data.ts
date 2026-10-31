@@ -13,7 +13,8 @@ export const DEFAULT_TOOL: Tool = DEFAULT_TOOL_PRESET.tool;
  */
 export function parseToolForm(form: FormData) {
   const type = form.get("type");
-  const isEndMill = type === "flat_end_mill" || type === "ball_end_mill";
+  const isTapered = type === "tapered_ball_end_mill";
+  const isEndMill = type === "flat_end_mill" || type === "ball_end_mill" || isTapered;
   const isVBit = type === "v_bit";
   const notes = String(form.get("notes") ?? "").trim();
   const input = {
@@ -24,7 +25,8 @@ export function parseToolForm(form: FormData) {
     fluteLength: numberField(form, "fluteLength"),
     cutDirection: isEndMill ? (form.get("cutDirection") ?? null) : null,
     vAngle: isVBit ? numberField(form, "vAngle") : null,
-    tipDiameter: isVBit ? numberField(form, "tipDiameter") : null,
+    tipDiameter: isVBit || isTapered ? numberField(form, "tipDiameter") : null,
+    taperAngle: isTapered ? numberField(form, "taperAngle") : null,
     spindleRpm: numberField(form, "spindleRpm"),
     feedRate: numberField(form, "feedRate"),
     plungeRate: numberField(form, "plungeRate"),

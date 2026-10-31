@@ -30,6 +30,7 @@ const END_MILL = {
   fluteCount: 2,
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   plungeAngle: 3,
   notes: null,
 } as const;
@@ -55,12 +56,39 @@ function vBit(name: string, diameter: number, angle: number, tip: number, color:
     cutDirection: null,
     vAngle: angle,
     tipDiameter: tip,
+    taperAngle: null,
     spindleRpm: 18000,
     feedRate: angle < 60 ? 400 : 800,
     plungeRate: angle < 60 ? 150 : 300,
     plungeAngle: 90,
     stepDown: angle < 60 ? 0.5 : 1.5,
     notes: null,
+    color,
+  };
+}
+
+/**
+ * A 1/8" shank tapered ball nose with a `tip`-diameter ball and `angle`
+ * degrees per side, cutting `length` up the cone: its diameter is the
+ * cone's at the top of the cut.
+ */
+function taperedBit(tip: number, angle: number, length: number, color: string): Tool {
+  const radians = (angle * Math.PI) / 180;
+  const r = tip / 2;
+  const top = r * Math.cos(radians) + (length - r * (1 - Math.sin(radians))) * Math.tan(radians);
+  return {
+    ...END_MILL,
+    name: `${tip} mm tip ${angle}° tapered ball nose`,
+    type: "tapered_ball_end_mill",
+    diameter: Math.round(2 * top * 100) / 100,
+    fluteLength: length,
+    cutDirection: "upcut",
+    tipDiameter: tip,
+    taperAngle: angle,
+    spindleRpm: 18000,
+    feedRate: 400,
+    plungeRate: 150,
+    stepDown: 0.5,
     color,
   };
 }
@@ -168,6 +196,8 @@ const PRESETS: Record<string, Tool> = {
     cutDirection: "upcut",
     color: COLORS.green,
   },
+  "half-mm-tapered": taperedBit(0.5, 1.5, 20, COLORS.pink),
+  "1mm-tapered": taperedBit(1, 3.5, 15, COLORS.lime),
   v90: vBit("90° V-bit", INCH / 2, 90, 0, COLORS.amber),
   v60: vBit("60° V-bit", INCH / 2, 60, 0, COLORS.purple),
   v30: vBit("30° engraving V-bit", INCH / 8, 30, 0.2, COLORS.cyan),

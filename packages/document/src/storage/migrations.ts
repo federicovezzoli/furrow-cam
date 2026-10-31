@@ -276,6 +276,10 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #425: tapered ball end mills. Tools without a taper angle get `null` from
+  // the schema's default; the bump keeps older releases from opening
+  // documents that use them.
+  28: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

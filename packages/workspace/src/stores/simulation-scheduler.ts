@@ -117,8 +117,8 @@ export function toolpathsBySide(
 }
 
 /** The cuts of `lines`, feeds and rapids alike, made with `tool`. */
-function lineCuts({ type, diameter, vAngle, tipDiameter }: Tool, lines: ToolpathLines) {
-  const tool = { type, diameter, vAngle, tipDiameter };
+function lineCuts({ type, diameter, vAngle, tipDiameter, taperAngle }: Tool, lines: ToolpathLines) {
+  const tool = { type, diameter, vAngle, tipDiameter, taperAngle };
   return [
     { tool, segments: lines.feeds },
     { tool, segments: lines.rapids },

@@ -18,6 +18,7 @@ export const endMill: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 18000,
   feedRate: 1500,
   plungeRate: 500,
@@ -45,6 +46,18 @@ export const ballEndMill: Tool = {
   fluteLength: 12,
   stepDown: 1,
   color: "#9333ea",
+};
+
+export const taperedBallEndMill: Tool = {
+  ...endMill,
+  name: "0.5 mm tip 1.5° tapered ball nose",
+  type: "tapered_ball_end_mill",
+  diameter: 3.175,
+  fluteLength: 20,
+  tipDiameter: 0.5,
+  taperAngle: 1.5,
+  stepDown: 0.5,
+  color: "#db2777",
 };
 
 export const drill: Tool = {
@@ -245,7 +258,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 28,
+    schemaVersion: 29,
     units: "in",
     stock: {
       width: 300,

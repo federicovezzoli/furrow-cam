@@ -221,6 +221,7 @@
     "edit": "Modifier",
     "editLabel": "Modifier {name}",
     "tip": "pointe de {size} mm",
+    "perSide": "{angle}° par côté",
     "deleteConfirm": "Supprimer « {name} » ? Les projets existants gardent leur copie de cette fraise."
   },
   "Machines": {
@@ -475,6 +476,9 @@
       "cutDirectionEndMillsOnly": "Uniquement pour les fraises droites",
       "vBitRequired": "Obligatoire pour les fraises en V",
       "vBitOnly": "Uniquement pour les fraises en V",
+      "taperedRequired": "Obligatoire pour les fraises coniques hémisphériques",
+      "taperedOnly": "Uniquement pour les fraises coniques hémisphériques",
+      "tipDiameterOnly": "Uniquement pour les fraises en V et les fraises coniques hémisphériques",
       "drillPlunge90": "Les forets plongent à 90°",
       "exceedsFluteLength": "Ne doit pas dépasser la longueur de coupe",
       "smallerThanDiameter": "Doit être inférieur au diamètre"
@@ -520,6 +524,7 @@
       "allowanceZeroOnLine": "Doit être 0 sur la ligne",
       "allowanceNeeded": "Il faut une surépaisseur à enlever",
       "vBitsCantDrill": "Les fraises en V ne percent pas",
+      "taperedBitsCantDrill": "Les fraises coniques hémisphériques ne percent pas",
       "drillsCantEngrave": "Les forets ne gravent pas",
       "flatBottomEndMill": "Seules les fraises droites à bout plat dégagent un fond plat",
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",
@@ -986,6 +991,7 @@
     "types": {
       "flat_end_mill": "Fraise droite à bout plat",
       "ball_end_mill": "Fraise hémisphérique",
+      "tapered_ball_end_mill": "Fraise conique hémisphérique",
       "v_bit": "Fraise en V",
       "drill": "Foret"
     },
@@ -1006,6 +1012,7 @@
     "cutDirection": "Sens de l’hélice",
     "vAngle": "Angle du V",
     "tipDiameter": "Diamètre de la pointe",
+    "taperAngle": "Angle par côté",
     "cuttingData": "Conditions de coupe",
     "spindleSpeed": "Vitesse de broche",
     "feedRate": "Avance",

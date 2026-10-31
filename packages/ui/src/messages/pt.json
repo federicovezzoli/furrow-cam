@@ -221,6 +221,7 @@
     "edit": "Editar",
     "editLabel": "Editar {name}",
     "tip": "ponta de {size} mm",
+    "perSide": "{angle}° por lado",
     "deleteConfirm": "Excluir “{name}”? Os projetos existentes mantêm sua cópia desta fresa."
   },
   "Machines": {
@@ -475,6 +476,9 @@
       "cutDirectionEndMillsOnly": "Apenas para fresas de topo",
       "vBitRequired": "Obrigatório para fresas em V",
       "vBitOnly": "Apenas para fresas em V",
+      "taperedRequired": "Obrigatório para fresas cônicas de topo esférico",
+      "taperedOnly": "Apenas para fresas cônicas de topo esférico",
+      "tipDiameterOnly": "Apenas para fresas em V e fresas cônicas de topo esférico",
       "drillPlunge90": "Brocas mergulham a 90°",
       "exceedsFluteLength": "Não pode exceder o comprimento de corte",
       "smallerThanDiameter": "Deve ser menor que o diâmetro"
@@ -520,6 +524,7 @@
       "allowanceZeroOnLine": "Deve ser 0 sobre a linha",
       "allowanceNeeded": "Precisa de um sobremetal a remover",
       "vBitsCantDrill": "Fresas em V não furam",
+      "taperedBitsCantDrill": "Fresas cônicas de topo esférico não furam",
       "drillsCantEngrave": "Brocas não gravam",
       "flatBottomEndMill": "Só fresas de topo retas limpam um fundo plano",
       "onlyVBitsVCarve": "Só fresas em V fazem entalhe em V",
@@ -986,6 +991,7 @@
     "types": {
       "flat_end_mill": "Fresa de topo reta",
       "ball_end_mill": "Fresa de topo esférica",
+      "tapered_ball_end_mill": "Fresa cônica de topo esférico",
       "v_bit": "Fresa em V",
       "drill": "Broca"
     },
@@ -1006,6 +1012,7 @@
     "cutDirection": "Sentido de corte",
     "vAngle": "Ângulo do V",
     "tipDiameter": "Diâmetro da ponta",
+    "taperAngle": "Ângulo por lado",
     "cuttingData": "Dados de corte",
     "spindleSpeed": "Rotação do spindle",
     "feedRate": "Avanço",

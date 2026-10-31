@@ -221,6 +221,7 @@
     "edit": "编辑",
     "editLabel": "编辑{name}",
     "tip": "{size} mm刀尖",
+    "perSide": "单边 {angle}°",
     "deleteConfirm": "删除“{name}”？现有项目会保留此刀具的副本。"
   },
   "Machines": {
@@ -475,6 +476,9 @@
       "cutDirectionEndMillsOnly": "仅适用于立铣刀",
       "vBitRequired": "V形刀必填",
       "vBitOnly": "仅适用于V形刀",
+      "taperedRequired": "锥度球头立铣刀必填",
+      "taperedOnly": "仅适用于锥度球头立铣刀",
+      "tipDiameterOnly": "仅适用于V形刀和锥度球头立铣刀",
       "drillPlunge90": "钻头以90°下刀",
       "exceedsFluteLength": "不能超过刃长",
       "smallerThanDiameter": "必须小于直径"
@@ -520,6 +524,7 @@
       "allowanceZeroOnLine": "在线上加工时必须为0",
       "allowanceNeeded": "需要设置要去除的余量",
       "vBitsCantDrill": "V形刀不能钻孔",
+      "taperedBitsCantDrill": "锥度球头立铣刀不能钻孔",
       "drillsCantEngrave": "钻头不能雕刻",
       "flatBottomEndMill": "只有平底立铣刀能清出平底",
       "onlyVBitsVCarve": "只有V形刀能进行V形雕刻",
@@ -986,6 +991,7 @@
     "types": {
       "flat_end_mill": "平底立铣刀",
       "ball_end_mill": "球头立铣刀",
+      "tapered_ball_end_mill": "锥度球头立铣刀",
       "v_bit": "V形刀",
       "drill": "钻头"
     },
@@ -1006,6 +1012,7 @@
     "cutDirection": "排屑方向",
     "vAngle": "V角",
     "tipDiameter": "刀尖直径",
+    "taperAngle": "单边角度",
     "cuttingData": "切削参数",
     "spindleSpeed": "主轴转速",
     "feedRate": "进给速度",

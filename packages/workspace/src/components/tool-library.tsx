@@ -170,10 +170,15 @@ export function vcarveToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
 
 /**
  * The tool new 3D finishing operations start with: the default one if it is
- * a ball end mill, else the first ball end mill, else as `cuttingToolChoice`.
+ * a ball end mill, else the first ball end mill, else the same for tapered
+ * ball end mills, else as `cuttingToolChoice`.
  */
 export function reliefFinishToolChoice(tools: ToolChoice[]): ToolChoice | undefined {
-  return toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ?? cuttingToolChoice(tools);
+  return (
+    toolChoiceFor(tools, (tool) => tool.type === "ball_end_mill") ??
+    toolChoiceFor(tools, (tool) => tool.type === "tapered_ball_end_mill") ??
+    cuttingToolChoice(tools)
+  );
 }
 
 /**

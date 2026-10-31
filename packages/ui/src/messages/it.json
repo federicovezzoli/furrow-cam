@@ -221,6 +221,7 @@
     "edit": "Modifica",
     "editLabel": "Modifica {name}",
     "tip": "punta da {size} mm",
+    "perSide": "angolo {angle}°",
     "deleteConfirm": "Eliminare \"{name}\"? I progetti esistenti mantengono la loro copia di questa fresa."
   },
   "Machines": {
@@ -475,6 +476,9 @@
       "cutDirectionEndMillsOnly": "Solo per le frese a candela",
       "vBitRequired": "Obbligatorio per le frese a V",
       "vBitOnly": "Solo per le frese a V",
+      "taperedRequired": "Obbligatorio per le frese sferiche coniche",
+      "taperedOnly": "Solo per le frese sferiche coniche",
+      "tipDiameterOnly": "Solo per le frese a V e le frese sferiche coniche",
       "drillPlunge90": "Le punte da foratura scendono a 90°",
       "exceedsFluteLength": "Non può superare la lunghezza dei taglienti",
       "smallerThanDiameter": "Deve essere minore del diametro"
@@ -520,6 +524,7 @@
       "allowanceZeroOnLine": "Deve essere 0 sulla linea",
       "allowanceNeeded": "Serve un sovrametallo da togliere",
       "vBitsCantDrill": "Le frese a V non possono forare",
+      "taperedBitsCantDrill": "Le frese sferiche coniche non possono forare",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
       "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
@@ -986,6 +991,7 @@
     "types": {
       "flat_end_mill": "Fresa a candela piatta",
       "ball_end_mill": "Fresa sferica",
+      "tapered_ball_end_mill": "Fresa sferica conica",
       "v_bit": "Fresa a V",
       "drill": "Punta da foratura"
     },
@@ -1006,6 +1012,7 @@
     "cutDirection": "Direzione di taglio",
     "vAngle": "Angolo della V",
     "tipDiameter": "Diametro della punta",
+    "taperAngle": "Angolo",
     "cuttingData": "Dati di taglio",
     "spindleSpeed": "Velocità del mandrino",
     "feedRate": "Avanzamento",

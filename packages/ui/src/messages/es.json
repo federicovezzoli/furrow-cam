@@ -221,6 +221,7 @@
     "edit": "Editar",
     "editLabel": "Editar {name}",
     "tip": "Punta de {size} mm",
+    "perSide": "{angle}° por lado",
     "deleteConfirm": "¿Eliminar \"{name}\"? Los proyectos existentes conservan su copia de esta fresa."
   },
   "Machines": {
@@ -475,6 +476,9 @@
       "cutDirectionEndMillsOnly": "Solo para fresas planas",
       "vBitRequired": "Obligatorio para fresas en V",
       "vBitOnly": "Solo para fresas en V",
+      "taperedRequired": "Obligatorio para fresas cónicas de punta esférica",
+      "taperedOnly": "Solo para fresas cónicas de punta esférica",
+      "tipDiameterOnly": "Solo para fresas en V y fresas cónicas de punta esférica",
       "drillPlunge90": "Las brocas penetran a 90°",
       "exceedsFluteLength": "No puede superar la longitud de corte",
       "smallerThanDiameter": "Debe ser menor que el diámetro"
@@ -520,6 +524,7 @@
       "allowanceZeroOnLine": "Debe ser 0 sobre la línea",
       "allowanceNeeded": "Necesita un sobrematerial que eliminar",
       "vBitsCantDrill": "Las fresas en V no pueden taladrar",
+      "taperedBitsCantDrill": "Las fresas cónicas de punta esférica no pueden taladrar",
       "drillsCantEngrave": "Las brocas no pueden grabar",
       "flatBottomEndMill": "Solo las fresas planas vacían un fondo plano",
       "onlyVBitsVCarve": "Solo las fresas en V tallan en V",
@@ -986,6 +991,7 @@
     "types": {
       "flat_end_mill": "Fresa plana",
       "ball_end_mill": "Fresa de punta esférica",
+      "tapered_ball_end_mill": "Fresa cónica de punta esférica",
       "v_bit": "Fresa en V",
       "drill": "Broca"
     },
@@ -1006,6 +1012,7 @@
     "cutDirection": "Dirección de corte",
     "vAngle": "Ángulo de la V",
     "tipDiameter": "Diámetro de la punta",
+    "taperAngle": "Ángulo por lado",
     "cuttingData": "Datos de corte",
     "spindleSpeed": "Velocidad del husillo",
     "feedRate": "Avance",

@@ -231,6 +231,7 @@ export function* offsetHeightsSteps(
     diameter: 2 * distance,
     vAngle: null,
     tipDiameter: null,
+    taperAngle: null,
   });
   const dropper = new ToolDropper(heights, grid, sphere);
   const offset = new Float32Array(columns * rows);

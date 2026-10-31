@@ -54,7 +54,8 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
   useToolDialogBusy(pending);
-  const isEndMill = type === "flat_end_mill" || type === "ball_end_mill";
+  const isEndMill =
+    type === "flat_end_mill" || type === "ball_end_mill" || type === "tapered_ball_end_mill";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,6 +111,23 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
               label={t("tipDiameter")}
               {...number("tipDiameter")}
               defaultValue={tool.tipDiameter ?? 0}
+              quantity="length"
+              min={0}
+            />
+          </>
+        )}
+        {type === "tapered_ball_end_mill" && (
+          <>
+            <NumberField
+              label={t("taperAngle")}
+              {...number("taperAngle")}
+              suffix="°"
+              min={0}
+              max={90}
+            />
+            <NumberField
+              label={t("tipDiameter")}
+              {...number("tipDiameter")}
               quantity="length"
               min={0}
             />
@@ -181,7 +199,7 @@ function TypePicker({
       <span id="type-label" className="text-sm leading-none font-medium">
         {t("type")}
       </span>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {ToolType.options.map((type) => (
           <label
             key={type}

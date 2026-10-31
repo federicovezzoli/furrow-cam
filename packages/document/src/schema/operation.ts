@@ -237,9 +237,12 @@ export const DrillParams = z.strictObject({
 });
 export type DrillParams = z.infer<typeof DrillParams>;
 
-/** Drills and end mills can drill: a V-bit's diameter doesn't describe the hole it makes. */
+/**
+ * Drills and end mills can drill, but not V-bits and tapered ball end mills:
+ * their diameter doesn't describe the hole they make.
+ */
 export function canDrill(tool: Tool): boolean {
-  return tool.type !== "v_bit";
+  return tool.type !== "v_bit" && tool.type !== "tapered_ball_end_mill";
 }
 
 export const DrillOperation = z
@@ -250,7 +253,14 @@ export const DrillOperation = z
   })
   .superRefine((operation, ctx) => {
     if (!canDrill(operation.tool)) {
-      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "operation.vBitsCantDrill" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["tool", "type"],
+        message:
+          operation.tool.type === "v_bit"
+            ? "operation.vBitsCantDrill"
+            : "operation.taperedBitsCantDrill",
+      });
     }
     // The pins are drilled from the top; turned over, the stock sits on them.
     if (operation.params.pins && (operation.targets.length > 0 || operation.stockSide !== "top")) {
@@ -276,12 +286,12 @@ export const EngraveParams = z.strictObject({
 });
 export type EngraveParams = z.infer<typeof EngraveParams>;
 
-/** V-bits, ball and flat end mills cut sideways; a drill bit snaps under a side load. */
+/** V-bits and end mills cut sideways; a drill bit snaps under a side load. */
 export function canCutSideways(tool: Tool): boolean {
   return tool.type !== "drill";
 }
 
-/** V-bits, ball and flat end mills engrave: a drill bit can't cut sideways. */
+/** V-bits and end mills engrave: a drill bit can't cut sideways. */
 export function canEngrave(tool: Tool): boolean {
   return canCutSideways(tool);
 }
