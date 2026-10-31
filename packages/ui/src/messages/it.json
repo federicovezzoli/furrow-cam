@@ -522,7 +522,7 @@
       "vBitsCantDrill": "Le frese a V non possono forare",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
-      "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
+      "onlyVBitsVCarve": "Solo le frese a V fanno il V-carve",
       "modelNotShapes": "Lavora un modello, non forme",
       "peelStart": "La spirale parte dal centro o dalla parete esterna",
       "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V.",
@@ -625,7 +625,7 @@
       "skippedPoints": "{count, plural, one {Saltato # punto} other {Saltati # punti}}: foralo invece.",
       "skippedOpenProfile": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: i tagli interni ed esterni richiedono percorsi chiusi.",
       "skippedOpenPocket": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: le tasche richiedono percorsi chiusi.",
-      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: l'intaglio a V richiede percorsi chiusi.",
+      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: il V-carve richiede percorsi chiusi.",
       "skippedSmallCircles": "{count, plural, one {Saltato # cerchio più piccolo} other {Saltati # cerchi più piccoli}} dell'utensile.",
       "skippedLargeCircles": "{count, plural, one {Saltato # cerchio più grande} other {Saltati # cerchi più grandi}} della punta: alesali con una fresa a candela.",
       "skippedNonCircles": "{count, plural, one {Saltato # percorso} other {Saltati # percorsi}}: la foratura richiede cerchi o punti.",
@@ -853,7 +853,7 @@
     "lineTooDeep": "Più profondo del cono, quindi la linea è larga quanto la fresa.",
     "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
     "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
-    "vcarve": "Intaglio a V",
+    "vcarve": "V-carve",
     "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
     "maxDepth": "Profondità massima",
     "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
@@ -914,7 +914,7 @@
       "pocket": "Tasca",
       "drill": "Foratura",
       "engrave": "Incisione",
-      "vcarve": "Intaglio a V",
+      "vcarve": "V-carve",
       "relief_rough": "Sgrossatura 3D",
       "relief_finish": "Finitura 3D"
     },
@@ -929,7 +929,7 @@
     },
     "missingDrill": "Aggiungi una punta da foratura o una fresa a candela alla tua libreria: le frese a V non forano",
     "missingEngrave": "Aggiungi una fresa a V o una fresa a candela alla tua libreria: le punte da foratura non incidono",
-    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per l’intaglio a V",
+    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per il V-carve",
     "noTool": "Aggiungi prima un utensile alla tua libreria",
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
@@ -1448,7 +1448,7 @@
       },
       "operations": {
         "title": "Aggiungi operazioni",
-        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o intaglio a V) per i percorsi selezionati, poi scegli fresa e profondità."
+        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o V-carve) per i percorsi selezionati, poi scegli fresa e profondità."
       },
       "preview": {
         "title": "Anteprima dei percorsi utensile",
