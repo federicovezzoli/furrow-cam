@@ -1116,6 +1116,13 @@
     "leaveAnyway": "{error} Toch verlaten? Niet-opgeslagen wijzigingen gaan verloren; exporteer eerst het project om ze te bewaren.",
     "drawingProperties": "Eigenschappen van tekening"
   },
+  "Ribbon": {
+    "history": "Geschiedenis",
+    "drawing": "Tekening",
+    "text": "Tekst",
+    "relief_rough": "Voorfrezen",
+    "relief_finish": "Nafrezen"
+  },
   "BugReport": {
     "report": "Bug melden",
     "description": "Dit opent een nieuw GitHub-issue met je melding ingevuld. Er wordt niets verstuurd totdat je het daar indient, waarvoor je een GitHub-account nodig hebt.",

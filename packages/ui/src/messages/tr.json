@@ -1116,6 +1116,13 @@
     "leaveAnyway": "{error} Yine de çıkılsın mı? Kaydedilmemiş değişiklikler kaybolur; korumak için önce projeyi dışa aktarın.",
     "drawingProperties": "Çizim özellikleri"
   },
+  "Ribbon": {
+    "history": "Geçmiş",
+    "drawing": "Çizim",
+    "text": "Metin",
+    "relief_rough": "Kaba",
+    "relief_finish": "İnce"
+  },
   "BugReport": {
     "report": "Hata bildir",
     "description": "Bu, raporunuzun doldurulduğu yeni bir GitHub issue’su açar. Orada gönderene kadar hiçbir şey gönderilmez; bunun için bir GitHub hesabı gerekir.",

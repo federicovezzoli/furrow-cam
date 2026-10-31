@@ -1116,6 +1116,13 @@
     "leaveAnyway": "{error} ¿Salir de todos modos? Los cambios sin guardar se perderán; exporta antes el proyecto para conservarlos.",
     "drawingProperties": "Propiedades del dibujo"
   },
+  "Ribbon": {
+    "history": "Historial",
+    "drawing": "Dibujo",
+    "text": "Texto",
+    "relief_rough": "Desbaste",
+    "relief_finish": "Acabado"
+  },
   "BugReport": {
     "report": "Informar de un error",
     "description": "Esto abre una nueva issue de GitHub con tu informe ya rellenado. No se envía nada hasta que la envíes allí, para lo que necesitas una cuenta de GitHub.",

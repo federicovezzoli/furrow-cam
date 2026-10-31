@@ -1116,6 +1116,13 @@
     "leaveAnyway": "{error}仍要离开吗？未保存的更改将会丢失；请先导出项目以保留它们。",
     "drawingProperties": "图纸属性"
   },
+  "Ribbon": {
+    "history": "历史",
+    "drawing": "图纸",
+    "text": "文字",
+    "relief_rough": "粗加工",
+    "relief_finish": "精加工"
+  },
   "BugReport": {
     "report": "报告问题",
     "description": "这会打开一个已填好你的报告的GitHub新议题。在你于GitHub上提交之前，不会发送任何内容；提交需要GitHub账户。",

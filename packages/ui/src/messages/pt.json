@@ -1116,6 +1116,13 @@
     "leaveAnyway": "{error} Sair mesmo assim? As alterações não salvas serão perdidas; exporte o projeto antes para mantê-las.",
     "drawingProperties": "Propriedades do desenho"
   },
+  "Ribbon": {
+    "history": "Histórico",
+    "drawing": "Desenho",
+    "text": "Texto",
+    "relief_rough": "Desbaste",
+    "relief_finish": "Acabamento"
+  },
   "BugReport": {
     "report": "Relatar um erro",
     "description": "Isto abre uma nova issue no GitHub com seu relato preenchido. Nada é enviado até você enviá-la lá, o que exige uma conta no GitHub.",

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { createProjectDocument } from "@furrow/document";
+import { model } from "@furrow/document/fixtures";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
@@ -33,13 +34,24 @@ describe("ImportDrawingButton", () => {
       </>,
       host,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Import SVG/DXF…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Drawing" }));
     expect(click).toHaveBeenCalledOnce();
     click.mockRestore();
   });
 
-  it("isn't shown while the project is empty", () => {
-    renderWorkspace(<ImportDrawingButton />);
-    expect(screen.queryByRole("button", { name: "Import SVG/DXF…" })).toBeNull();
+  it("is disabled in a project holding a model", () => {
+    const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+    renderWorkspace(
+      <>
+        <ImportDrawingButton />
+        <GeometryImport />
+      </>,
+      createMemoryHost({ document: { ...createProjectDocument(), models: [model] } }),
+    );
+    const button = screen.getByRole("button", { name: "Drawing" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(button);
+    expect(click).not.toHaveBeenCalled();
+    click.mockRestore();
   });
 });

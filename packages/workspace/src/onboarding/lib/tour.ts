@@ -71,9 +71,8 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
     },
     {
       id: "operations",
-      anchor: "operations",
-      pane: "operations",
-      side: "right",
+      anchor: "add-operation",
+      side: "bottom",
     },
     {
       id: "preview",
