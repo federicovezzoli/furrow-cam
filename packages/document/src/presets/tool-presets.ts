@@ -1,4 +1,4 @@
-import { Tool } from "../schema/tool";
+import { Tool, taperedDiameter } from "../schema/tool";
 
 /**
  * A bit from the built-in catalog (PRD-0008 G4), offered next to the user's
@@ -67,20 +67,17 @@ function vBit(name: string, diameter: number, angle: number, tip: number, color:
   };
 }
 
-/**
- * A 1/8" shank tapered ball nose with a `tip`-diameter ball and `angle`
- * degrees per side, cutting `length` up the cone: its diameter is the
- * cone's at the top of the cut.
- */
+/** A tapered ball nose with a `tip`-diameter ball and `angle` degrees per side, cutting `length` up the cone. */
 function taperedBit(tip: number, angle: number, length: number, color: string): Tool {
-  const radians = (angle * Math.PI) / 180;
-  const r = tip / 2;
-  const top = r * Math.cos(radians) + (length - r * (1 - Math.sin(radians))) * Math.tan(radians);
   return {
     ...END_MILL,
     name: `${tip} mm tip ${angle}° tapered ball nose`,
     type: "tapered_ball_end_mill",
-    diameter: Math.round(2 * top * 100) / 100,
+    diameter: taperedDiameter({
+      tipDiameter: tip,
+      taperAngle: angle,
+      fluteLength: length,
+    }) as number,
     fluteLength: length,
     cutDirection: "upcut",
     tipDiameter: tip,

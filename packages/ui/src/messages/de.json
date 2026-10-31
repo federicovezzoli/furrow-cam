@@ -479,6 +479,7 @@
       "taperedRequired": "Erforderlich für konische Radiusfräser",
       "taperedOnly": "Nur für konische Radiusfräser",
       "tipDiameterOnly": "Nur für V-Fräser und konische Radiusfräser",
+      "taperedDiameter": "Muss die Breite des Kegels bei der Schneidenlänge sein",
       "drillPlunge90": "Bohrer tauchen mit 90° ein",
       "exceedsFluteLength": "Darf die Schneidenlänge nicht überschreiten",
       "smallerThanDiameter": "Muss kleiner als der Durchmesser sein"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
       "vBitsCantDrill": "V-Fräser können nicht bohren",
       "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
+      "taperedBitsCantClear": "Konische Radiusfräser gravieren und schlichten nur in 3D: Wähle einen anderen Fräser.",
       "drillsCantEngrave": "Bohrer können nicht gravieren",
       "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",

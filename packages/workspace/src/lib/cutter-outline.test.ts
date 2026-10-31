@@ -32,6 +32,18 @@ describe("cutterOutline", () => {
     expect(outline.at(-2)).toEqual([3, 15]);
   });
 
+  it("samples a tapered bit's ball on its own, so the tip shows round", () => {
+    const outline = cutterOutline({
+      type: "tapered_ball_end_mill",
+      diameter: 1.5,
+      vAngle: null,
+      tipDiameter: 0.5,
+      taperAngle: 1.5,
+    });
+    expect(outline.filter(([r]) => r < 0.25).length).toBeGreaterThanOrEqual(16);
+    expect(outline.at(-3)?.[0]).toBeCloseTo(0.75);
+  });
+
   it("draws a V-bit's cone over its flat tip", () => {
     const outline = cutterOutline({
       type: "v_bit",

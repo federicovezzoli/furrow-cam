@@ -479,6 +479,7 @@
       "taperedRequired": "Required for tapered ball end mills",
       "taperedOnly": "Only for tapered ball end mills",
       "tipDiameterOnly": "Only for V-bits and tapered ball end mills",
+      "taperedDiameter": "Must be the cone's width at the flute length",
       "drillPlunge90": "Drills plunge at 90°",
       "exceedsFluteLength": "Must not exceed the flute length",
       "smallerThanDiameter": "Must be smaller than the diameter"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Needs an allowance to remove",
       "vBitsCantDrill": "V-bits can't drill",
       "taperedBitsCantDrill": "Tapered ball end mills can't drill",
+      "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",

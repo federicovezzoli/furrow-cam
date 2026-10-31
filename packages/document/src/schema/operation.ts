@@ -291,6 +291,15 @@ export function canCutSideways(tool: Tool): boolean {
   return tool.type !== "drill";
 }
 
+/**
+ * Bits whose passes can be sized by their diameter, as profiles, pockets and
+ * 3D roughing do: not drill bits, which can't cut sideways, nor tapered ball
+ * end mills, which are that wide only at the top of their cone (#425).
+ */
+export function canClear(tool: Tool): boolean {
+  return canCutSideways(tool) && tool.type !== "tapered_ball_end_mill";
+}
+
 /** V-bits and end mills engrave: a drill bit can't cut sideways. */
 export function canEngrave(tool: Tool): boolean {
   return canCutSideways(tool);
@@ -511,15 +520,19 @@ export type Operation = z.infer<typeof Operation>;
 /**
  * Why `operation` can't cut with its tool, or `null`: a drill bit on a
  * profile, pocket or 3D operation, which all move the bit sideways through
- * the stock (#242). Projects saved before this check can hold one, so the
- * document schema still accepts it, to keep them opening; picking a tool,
- * adding operations and computing toolpaths reject it instead.
+ * the stock (#242), or a tapered ball end mill on a profile, pocket or 3D
+ * roughing, which size their passes by the diameter (#425). Projects saved
+ * before this check can hold one, so the document schema still accepts it,
+ * to keep them opening; picking a tool, adding operations and computing
+ * toolpaths reject it instead.
  */
 export function toolProblem(operation: Operation): DocumentMessage | null {
   switch (operation.type) {
     case "profile":
     case "pocket":
     case "relief_rough":
+      if (!canCutSideways(operation.tool)) return { code: "operation.drillsCantCutSideways" };
+      return canClear(operation.tool) ? null : { code: "operation.taperedBitsCantClear" };
     case "relief_finish":
       return canCutSideways(operation.tool) ? null : { code: "operation.drillsCantCutSideways" };
     default:

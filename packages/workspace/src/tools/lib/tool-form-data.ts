@@ -1,4 +1,4 @@
-import { DEFAULT_TOOL_PRESET, Tool } from "@furrow/document";
+import { DEFAULT_TOOL_PRESET, isEndMill, Tool, taperedDiameter } from "@furrow/document";
 import { issuesToFormErrors, numberField } from "../../lib/form-data";
 
 /**
@@ -14,19 +14,24 @@ export const DEFAULT_TOOL: Tool = DEFAULT_TOOL_PRESET.tool;
 export function parseToolForm(form: FormData) {
   const type = form.get("type");
   const isTapered = type === "tapered_ball_end_mill";
-  const isEndMill = type === "flat_end_mill" || type === "ball_end_mill" || isTapered;
   const isVBit = type === "v_bit";
+  const tipDiameter = isVBit || isTapered ? numberField(form, "tipDiameter") : null;
+  const taperAngle = isTapered ? numberField(form, "taperAngle") : null;
+  const fluteLength = numberField(form, "fluteLength");
   const notes = String(form.get("notes") ?? "").trim();
   const input = {
     name: String(form.get("name") ?? ""),
     type,
-    diameter: numberField(form, "diameter"),
+    // A tapered bit's comes from its tip, angle and flute length; the form has no field for it.
+    diameter: isTapered
+      ? taperedDiameter({ tipDiameter, taperAngle, fluteLength })
+      : numberField(form, "diameter"),
     fluteCount: numberField(form, "fluteCount"),
-    fluteLength: numberField(form, "fluteLength"),
-    cutDirection: isEndMill ? (form.get("cutDirection") ?? null) : null,
+    fluteLength,
+    cutDirection: isEndMill(type) ? (form.get("cutDirection") ?? null) : null,
     vAngle: isVBit ? numberField(form, "vAngle") : null,
-    tipDiameter: isVBit || isTapered ? numberField(form, "tipDiameter") : null,
-    taperAngle: isTapered ? numberField(form, "taperAngle") : null,
+    tipDiameter,
+    taperAngle,
     spindleRpm: numberField(form, "spindleRpm"),
     feedRate: numberField(form, "feedRate"),
     plungeRate: numberField(form, "plungeRate"),

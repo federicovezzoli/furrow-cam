@@ -151,6 +151,10 @@ describe("reliefFinishToolChoice", () => {
     tool: { ...endMill, name: "Ball nose", type: "ball_end_mill" },
   };
 
+  it("leaves tapered bits out of new profiles and pockets", () => {
+    expect(cuttingToolChoice([{ ...tapered, isDefault: true }, ...library])?.id).toBe("a");
+  });
+
   it("prefers a ball end mill, then a tapered one, then any cutting bit", () => {
     expect(reliefFinishToolChoice([...library, tapered, ball])?.id).toBe("b");
     expect(reliefFinishToolChoice([...library, tapered])?.id).toBe("t");

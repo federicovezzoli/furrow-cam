@@ -479,6 +479,7 @@
       "taperedRequired": "Obbligatorio per le frese sferiche coniche",
       "taperedOnly": "Solo per le frese sferiche coniche",
       "tipDiameterOnly": "Solo per le frese a V e le frese sferiche coniche",
+      "taperedDiameter": "Deve essere la larghezza del cono alla lunghezza di taglio",
       "drillPlunge90": "Le punte da foratura scendono a 90°",
       "exceedsFluteLength": "Non può superare la lunghezza dei taglienti",
       "smallerThanDiameter": "Deve essere minore del diametro"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Serve un sovrametallo da togliere",
       "vBitsCantDrill": "Le frese a V non possono forare",
       "taperedBitsCantDrill": "Le frese sferiche coniche non possono forare",
+      "taperedBitsCantClear": "Le frese sferiche coniche servono solo per incidere e per la finitura 3D: scegli un'altra fresa.",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
       "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",

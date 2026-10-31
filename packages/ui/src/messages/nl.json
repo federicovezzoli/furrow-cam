@@ -479,6 +479,7 @@
       "taperedRequired": "Verplicht voor conische bolkopfrezen",
       "taperedOnly": "Alleen voor conische bolkopfrezen",
       "tipDiameterOnly": "Alleen voor V-frezen en conische bolkopfrezen",
+      "taperedDiameter": "Moet de breedte van de kegel bij de snijlengte zijn",
       "drillPlunge90": "Boren steken in onder 90°",
       "exceedsFluteLength": "Mag niet groter zijn dan de snijlengte",
       "smallerThanDiameter": "Moet kleiner zijn dan de diameter"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Heeft een toemaat nodig om weg te nemen",
       "vBitsCantDrill": "V-frezen kunnen niet boren",
       "taperedBitsCantDrill": "Conische bolkopfrezen kunnen niet boren",
+      "taperedBitsCantClear": "Conische bolkopfrezen graveren en werken alleen 3D af: kies een andere frees.",
       "drillsCantEngrave": "Boren kunnen niet graveren",
       "flatBottomEndMill": "Alleen platte vingerfrezen maken een vlakke bodem",
       "onlyVBitsVCarve": "Alleen V-frezen kunnen V-carven",

@@ -45,6 +45,16 @@ describe("Tool", () => {
     expect(Tool.safeParse({ ...vBit, taperAngle: 1.5 }).success).toBe(false);
   });
 
+  it("works out a tapered ball end mill's diameter from its tip, angle and flute length", () => {
+    // 0.25 mm ball, 1.5° per side, 20 mm up the cone.
+    const angle = (1.5 * Math.PI) / 180;
+    const top = 0.25 * Math.cos(angle) + (20 - 0.25 * (1 - Math.sin(angle))) * Math.tan(angle);
+    expect(taperedBallEndMill.diameter).toBeCloseTo(2 * top, 12);
+    // The shank's size, a likely slip, is refused.
+    const shank = Tool.safeParse({ ...taperedBallEndMill, diameter: 3.175 });
+    expect(shank.error?.issues[0]?.message).toBe("tool.taperedDiameter");
+  });
+
   it("reads tools saved before tapered bits with no taper angle", () => {
     const { taperAngle: _, ...older } = endMill;
     expect(Tool.parse(older)).toEqual(endMill);

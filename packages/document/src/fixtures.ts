@@ -7,7 +7,7 @@ import type { Drawing, Shape } from "./schema/geometry";
 import type { Machine } from "./schema/machine";
 import type { Model } from "./schema/model";
 import type { ReliefFinishOperation, ReliefRoughOperation } from "./schema/operation";
-import type { Tool } from "./schema/tool";
+import { type Tool, taperedDiameter } from "./schema/tool";
 
 export const endMill: Tool = {
   name: '1/4" 2-flute upcut',
@@ -52,7 +52,7 @@ export const taperedBallEndMill: Tool = {
   ...endMill,
   name: "0.5 mm tip 1.5° tapered ball nose",
   type: "tapered_ball_end_mill",
-  diameter: 3.175,
+  diameter: taperedDiameter({ tipDiameter: 0.5, taperAngle: 1.5, fluteLength: 20 }) as number,
   fluteLength: 20,
   tipDiameter: 0.5,
   taperAngle: 1.5,

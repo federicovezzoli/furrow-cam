@@ -479,6 +479,7 @@
       "taperedRequired": "Obrigatório para fresas cônicas de topo esférico",
       "taperedOnly": "Apenas para fresas cônicas de topo esférico",
       "tipDiameterOnly": "Apenas para fresas em V e fresas cônicas de topo esférico",
+      "taperedDiameter": "Deve ser a largura do cone no comprimento de corte",
       "drillPlunge90": "Brocas mergulham a 90°",
       "exceedsFluteLength": "Não pode exceder o comprimento de corte",
       "smallerThanDiameter": "Deve ser menor que o diâmetro"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Precisa de um sobremetal a remover",
       "vBitsCantDrill": "Fresas em V não furam",
       "taperedBitsCantDrill": "Fresas cônicas de topo esférico não furam",
+      "taperedBitsCantClear": "Fresas cônicas de topo esférico só gravam e fazem acabamento 3D: escolha outra fresa.",
       "drillsCantEngrave": "Brocas não gravam",
       "flatBottomEndMill": "Só fresas de topo retas limpam um fundo plano",
       "onlyVBitsVCarve": "Só fresas em V fazem entalhe em V",

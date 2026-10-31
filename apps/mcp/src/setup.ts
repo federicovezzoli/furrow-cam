@@ -3,6 +3,7 @@ import {
   type Point,
   type StockAnchor,
   Tool,
+  taperedDiameter,
   type Units,
   type ZOrigin,
 } from "@furrow/document";
@@ -116,7 +117,7 @@ export function setToolOf(
     }
     tool = choice.tool;
   } else if (settings !== undefined) {
-    const parsed = Tool.safeParse(settings);
+    const parsed = Tool.safeParse(withTaperedDiameter(settings));
     if (!parsed.success) {
       const [issue] = parsed.error.issues;
       const where = issue?.path.join(".");
@@ -131,6 +132,20 @@ export function setToolOf(
     const result = setOperationTool(store, id, tool);
     if (!result.ok) throw new ToolError(text(result.error));
   });
+}
+
+/** `settings` with a tapered ball end mill's diameter worked out, as the app's bit form does. */
+function withTaperedDiameter(settings: unknown): unknown {
+  if (typeof settings !== "object" || settings === null) return settings;
+  const fields = settings as Record<string, unknown>;
+  if (fields.type !== "tapered_ball_end_mill") return settings;
+  const number = (value: unknown) => (typeof value === "number" ? value : null);
+  const diameter = taperedDiameter({
+    tipDiameter: number(fields.tipDiameter),
+    taperAngle: number(fields.taperAngle),
+    fluteLength: number(fields.fluteLength),
+  });
+  return { ...fields, diameter };
 }
 
 /** What kept the library from being read, after a sentence, or nothing. */

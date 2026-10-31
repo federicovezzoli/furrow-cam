@@ -19,6 +19,32 @@ export type HexColor = z.infer<typeof HexColor>;
 
 const EndMillType = ToolType.extract(["flat_end_mill", "ball_end_mill", "tapered_ball_end_mill"]);
 
+/** Whether `type` is an end mill's, which needs a cut direction. */
+export function isEndMill(type: unknown): boolean {
+  return EndMillType.safeParse(type).success;
+}
+
+/**
+ * A tapered ball end mill's diameter (#425): the width of its cone
+ * `fluteLength` above the tip, the cone at `taperAngle` per side and tangent
+ * to a ball of `tipDiameter`. `null` while any of them is missing.
+ */
+export function taperedDiameter({
+  tipDiameter,
+  taperAngle,
+  fluteLength,
+}: {
+  tipDiameter: number | null;
+  taperAngle: number | null;
+  fluteLength: number | null;
+}): number | null {
+  if (tipDiameter === null || taperAngle === null || fluteLength === null) return null;
+  const angle = (taperAngle * Math.PI) / 180;
+  const ball = tipDiameter / 2;
+  const tangentHeight = ball * (1 - Math.sin(angle));
+  return 2 * (ball * Math.cos(angle) + (fluteLength - tangentHeight) * Math.tan(angle));
+}
+
 /**
  * A router bit (#10). Used to validate the user's tool library and stored as a
  * snapshot in each operation, so editing the library never changes existing
@@ -64,15 +90,15 @@ export const Tool = z
     color: HexColor,
   })
   .superRefine((tool, ctx) => {
-    const isEndMill = EndMillType.safeParse(tool.type).success;
-    if (isEndMill && tool.cutDirection === null) {
+    const endMill = isEndMill(tool.type);
+    if (endMill && tool.cutDirection === null) {
       ctx.addIssue({
         code: "custom",
         path: ["cutDirection"],
         message: "tool.cutDirectionRequired",
       });
     }
-    if (!isEndMill && tool.cutDirection !== null) {
+    if (!endMill && tool.cutDirection !== null) {
       ctx.addIssue({
         code: "custom",
         path: ["cutDirection"],
@@ -113,6 +139,11 @@ export const Tool = z
         input: tool.tipDiameter,
         path: ["tipDiameter"],
       });
+    }
+    // The cone's top, worked out from the rest so the shank's size can't be entered by mistake.
+    const derived = isTapered ? taperedDiameter(tool) : null;
+    if (derived !== null && Math.abs(tool.diameter - derived) > 1e-9 * derived) {
+      ctx.addIssue({ code: "custom", path: ["diameter"], message: "tool.taperedDiameter" });
     }
     if (tool.type === "drill" && tool.plungeAngle !== 90) {
       ctx.addIssue({ code: "custom", path: ["plungeAngle"], message: "tool.drillPlunge90" });

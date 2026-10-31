@@ -1,5 +1,11 @@
 import type { Model, ReliefFinishOperation, Tool } from "@furrow/document";
-import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
+import {
+  ballEndMill,
+  endMill,
+  model as modelFixture,
+  taperedBallEndMill,
+  vBit,
+} from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { modelView } from "../../scene/sides";
 import { cutterProfile } from "../../simulation/simulation";
@@ -7,6 +13,7 @@ import { generateToolpath, MissingMeshError, type ToolpathInput, toolpathKey } f
 import type { Toolpath, ToolpathMove } from "../toolpath";
 import {
   createReliefCache,
+  finishingDiameter,
   MAX_RELIEF_CELLS,
   offsetHeightsSteps,
   type ReliefGrid,
@@ -107,8 +114,14 @@ const feeds = ({ moves }: Toolpath) =>
 
 describe("reliefCellSize", () => {
   it("is 0.1 mm, or a twentieth of the tool's radius if smaller", () => {
-    expect(reliefCellSize({ diameter: 6 })).toBe(0.1);
-    expect(reliefCellSize({ diameter: 3 })).toBeCloseTo(0.075);
+    expect(reliefCellSize({ ...ballEndMill, diameter: 6 })).toBe(0.1);
+    expect(reliefCellSize({ ...ballEndMill, diameter: 3 })).toBeCloseTo(0.075);
+  });
+
+  it("sizes a tapered ball end mill by its ball, which does the finishing", () => {
+    expect(finishingDiameter(taperedBallEndMill)).toBe(0.5);
+    expect(finishingDiameter(ballEndMill)).toBe(3);
+    expect(reliefCellSize(taperedBallEndMill)).toBeCloseTo(0.25 / 20);
   });
 });
 

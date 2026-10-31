@@ -479,6 +479,7 @@
       "taperedRequired": "Konik küresel uçlu frezeler için zorunlu",
       "taperedOnly": "Yalnızca konik küresel uçlu frezeler için",
       "tipDiameterOnly": "Yalnızca V uçlar ve konik küresel uçlu frezeler için",
+      "taperedDiameter": "Kesme uzunluğundaki koni genişliği olmalı",
       "drillPlunge90": "Matkap uçları 90° ile dalar",
       "exceedsFluteLength": "Kesme boyunu aşmamalıdır",
       "smallerThanDiameter": "Çaptan küçük olmalıdır"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Kaldırılacak bir işleme payı gerekir",
       "vBitsCantDrill": "V uçlar delme yapamaz",
       "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
+      "taperedBitsCantClear": "Konik küresel uçlu frezeler yalnızca gravür ve 3B finiş yapar: başka bir uç seçin.",
       "drillsCantEngrave": "Matkap uçları gravür yapamaz",
       "flatBottomEndMill": "Düz tabanı yalnızca düz uçlu parmak frezeler temizler",
       "onlyVBitsVCarve": "V oymayı yalnızca V uçlar yapar",

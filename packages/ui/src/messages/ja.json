@@ -479,6 +479,7 @@
       "taperedRequired": "テーパーボールエンドミルでは必須です",
       "taperedOnly": "テーパーボールエンドミル専用です",
       "tipDiameterOnly": "V ビットとテーパーボールエンドミル専用です",
+      "taperedDiameter": "刃長での円錐の幅である必要があります",
       "drillPlunge90": "ドリルは 90° で突っ込みます",
       "exceedsFluteLength": "刃長を超えないようにしてください",
       "smallerThanDiameter": "直径より小さくしてください"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "削り取る取り代が必要です",
       "vBitsCantDrill": "V ビットでは穴あけできません",
       "taperedBitsCantDrill": "テーパーボールエンドミルでは穴あけできません",
+      "taperedBitsCantClear": "テーパーボールエンドミルは彫刻と 3D 仕上げ専用です。別のビットを選んでください。",
       "drillsCantEngrave": "ドリルビットでは彫刻できません",
       "flatBottomEndMill": "平らな底を加工できるのはフラットエンドミルだけです",
       "onlyVBitsVCarve": "V カービングできるのは V ビットだけです",

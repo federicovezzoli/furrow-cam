@@ -11,7 +11,7 @@ describe("toolShapeComment (ADR-0042)", () => {
       "(Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)",
     );
     expect(toolShapeComment(taperedBallEndMill)).toBe(
-      "(Furrow tool: type=tapered_ball_end_mill diameter=3.175 tipDiameter=0.5 taperAngle=1.5)",
+      "(Furrow tool: type=tapered_ball_end_mill diameter=1.535 tipDiameter=0.5 taperAngle=1.5)",
     );
   });
 

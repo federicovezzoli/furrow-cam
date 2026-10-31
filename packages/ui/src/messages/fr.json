@@ -479,6 +479,7 @@
       "taperedRequired": "Obligatoire pour les fraises coniques hémisphériques",
       "taperedOnly": "Uniquement pour les fraises coniques hémisphériques",
       "tipDiameterOnly": "Uniquement pour les fraises en V et les fraises coniques hémisphériques",
+      "taperedDiameter": "Doit être la largeur du cône à la longueur de coupe",
       "drillPlunge90": "Les forets plongent à 90°",
       "exceedsFluteLength": "Ne doit pas dépasser la longueur de coupe",
       "smallerThanDiameter": "Doit être inférieur au diamètre"
@@ -525,6 +526,7 @@
       "allowanceNeeded": "Il faut une surépaisseur à enlever",
       "vBitsCantDrill": "Les fraises en V ne percent pas",
       "taperedBitsCantDrill": "Les fraises coniques hémisphériques ne percent pas",
+      "taperedBitsCantClear": "Les fraises coniques hémisphériques ne font que graver et finir en 3D : choisissez une autre fraise.",
       "drillsCantEngrave": "Les forets ne gravent pas",
       "flatBottomEndMill": "Seules les fraises droites à bout plat dégagent un fond plat",
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",

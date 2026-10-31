@@ -1,6 +1,6 @@
 "use client";
 
-import { type Tool, ToolType } from "@furrow/document";
+import { isEndMill, type Tool, ToolType } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Field, FieldError, fieldProps, SelectField } from "@furrow/ui/components/form-fields";
 import { NumberField } from "@furrow/ui/components/number-field";
@@ -54,8 +54,6 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
   const [errors, setErrors] = useState<ToolFormErrors>({});
   const [pending, startTransition] = useTransition();
   useToolDialogBusy(pending);
-  const isEndMill =
-    type === "flat_end_mill" || type === "ball_end_mill" || type === "tapered_ball_end_mill";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,7 +81,9 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <legend className="mb-4 font-medium">{t("geometry")}</legend>
-        <NumberField label={t("diameter")} {...number("diameter")} quantity="length" min={0} />
+        {type !== "tapered_ball_end_mill" && (
+          <NumberField label={t("diameter")} {...number("diameter")} quantity="length" min={0} />
+        )}
         <NumberField label={t("flutes")} {...number("fluteCount")} integer min={1} />
         <NumberField
           label={t("fluteLength")}
@@ -91,7 +91,7 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
           quantity="length"
           min={0}
         />
-        {isEndMill && (
+        {isEndMill(type) && (
           <SelectField
             label={t("cutDirection")}
             id="cutDirection"

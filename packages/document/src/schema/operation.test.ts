@@ -9,6 +9,7 @@ import {
   reliefRough,
   SQUARE_ID,
   square,
+  taperedBallEndMill,
   vBit,
 } from "../fixtures";
 import { ProjectDocument } from "./document";
@@ -159,13 +160,7 @@ describe("DrillOperation", () => {
   });
 
   it("rejects tapered ball end mills", () => {
-    const tapered = {
-      ...drill.tool,
-      type: "tapered_ball_end_mill",
-      tipDiameter: 0.5,
-      taperAngle: 1.5,
-    };
-    const result = DrillOperation.safeParse({ ...drill, tool: tapered });
+    const result = DrillOperation.safeParse({ ...drill, tool: taperedBallEndMill });
     expect(result.error?.issues[0]?.message).toBe("operation.taperedBitsCantDrill");
   });
 
@@ -438,6 +433,15 @@ describe("toolProblem", () => {
       expect(toolProblem({ ...operation, tool: endMill } as Operation)).toBeNull();
       expect(toolProblem({ ...operation, tool: vBit } as Operation)).toBeNull();
     }
+  });
+
+  it("leaves tapered ball end mills to engraving and 3D finishing (#425)", () => {
+    for (const operation of [profile, pocket, reliefRough]) {
+      expect(toolProblem({ ...operation, tool: taperedBallEndMill } as Operation)).toEqual({
+        code: "operation.taperedBitsCantClear",
+      });
+    }
+    expect(toolProblem({ ...reliefFinish, tool: taperedBallEndMill } as Operation)).toBeNull();
   });
 
   it("leaves drilling to drill bits", () => {
