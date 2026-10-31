@@ -652,6 +652,7 @@
       "restOperationFailed": "“{operation}” is mislukt, dus het materiaal dat deze bewerking zou wegnemen, wordt als resterend beschouwd.",
       "noLocatingPins": "Het project heeft geen paspennen om te boren.",
       "pinsOffStock": "Een paspen ligt buiten het materiaal.",
+      "cutsPins": "Deze bewerking snijdt waar een paspen komt, dus het gereedschap zou de pen raken als het materiaal is omgedraaid: verplaats de pennen of de snede.",
       "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra de onderkant er helemaal omheen is gefreesd.",
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
     },
