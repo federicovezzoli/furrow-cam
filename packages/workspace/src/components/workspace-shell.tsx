@@ -26,6 +26,7 @@ import {
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "../providers/workspace-stores";
+import { AddOperationButtons } from "./add-operation-buttons";
 import { BrowserOnly } from "./browser-only";
 import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
@@ -34,6 +35,7 @@ import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-i
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
+import { Ribbon, RibbonGroup } from "./ribbon";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
 import { ToolpathProgressToast } from "./toolpath-progress-toast";
@@ -48,15 +50,18 @@ const Viewport = lazy(() =>
 );
 
 /**
- * The CAM workspace (ADR-0009): a top bar, with the project's versions
- * (ADR-0028), over two resizable columns: the operations and the project's
- * properties in tabs on the left, the viewport on the right, with the
+ * The CAM workspace (ADR-0009): a top bar and a ribbon of commands (import,
+ * add operations, the project's versions, ADR-0028) over two resizable
+ * columns: the operations and the project's properties in tabs on the left,
+ * the viewport on the right, with the
  * selected operation's properties floating over it. Column sizes are
  * remembered by the host (`settings.layout`). The project and its
  * stores come from `ProjectShell`, so they outlive this page.
  */
 export function WorkspaceShell() {
   const t = useTranslations("Shell");
+  const importT = useTranslations("Import");
+  const ribbon = useTranslations("Ribbon");
   const { project, library, settings, account } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
@@ -89,11 +94,19 @@ export function WorkspaceShell() {
         saveStatus={saveStatus}
         machineName={machineName}
         onTakeTour={(from) => tour.start(from)}
-      >
-        <ImportDrawingButton />
-        <AddTextButton />
-        <VersionsButton />
-      </TopBar>
+      />
+      <Ribbon>
+        <RibbonGroup caption={importT("import")} tour="import">
+          <ImportDrawingButton />
+          <AddTextButton />
+        </RibbonGroup>
+        <RibbonGroup caption={t("operations")} tour="add-operation">
+          <AddOperationButtons />
+        </RibbonGroup>
+        <RibbonGroup caption={ribbon("history")} tour="versions">
+          <VersionsButton />
+        </RibbonGroup>
+      </Ribbon>
       <Tour
         id="workspace"
         running={tour.running}

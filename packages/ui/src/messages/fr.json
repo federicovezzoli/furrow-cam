@@ -1125,6 +1125,14 @@
     "leaveAnyway": "{error} Quitter quand même ? Les modifications non enregistrées seront perdues ; exportez d’abord le projet pour les garder.",
     "drawingProperties": "Propriétés du dessin"
   },
+  "Ribbon": {
+    "history": "Historique",
+    "drawing": "Dessin",
+    "importDrawing": "Importer un dessin",
+    "text": "Texte",
+    "relief_rough": "Ébauche",
+    "relief_finish": "Finition"
+  },
   "BugReport": {
     "report": "Signaler un bug",
     "description": "Ceci ouvre un nouveau ticket GitHub avec votre rapport pré-rempli. Rien n’est envoyé avant que vous ne le soumettiez là-bas, ce qui demande un compte GitHub.",

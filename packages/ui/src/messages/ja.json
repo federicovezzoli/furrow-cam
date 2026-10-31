@@ -1125,6 +1125,14 @@
     "leaveAnyway": "{error} それでも移動しますか？保存されていない変更は失われます。残すには先にプロジェクトをエクスポートしてください。",
     "drawingProperties": "図面のプロパティ"
   },
+  "Ribbon": {
+    "history": "履歴",
+    "drawing": "図面",
+    "importDrawing": "図面をインポート",
+    "text": "テキスト",
+    "relief_rough": "荒加工",
+    "relief_finish": "仕上げ"
+  },
   "BugReport": {
     "report": "バグを報告",
     "description": "レポートが入力された新しい GitHub Issue が開きます。そこで送信するまで何も送られません。送信には GitHub アカウントが必要です。",

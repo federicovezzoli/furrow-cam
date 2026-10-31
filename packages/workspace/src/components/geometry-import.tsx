@@ -31,8 +31,9 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { canImportDrawing, drawingShapes } from "../stores/geometry-actions";
+import { canImportDrawing, DRAWINGS_OR_MODEL, drawingShapes } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
+import { RibbonButton } from "./ribbon";
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -46,27 +47,24 @@ const UNIT_OPTIONS = ["mm", "in"] as const;
 const DRAWING_INPUT_ID = "workspace-drawing-file";
 
 /**
- * The top bar's button importing another drawing once the project holds some
- * (the empty project's card has its own). It opens `GeometryImport`'s file
- * input, which handles the file.
+ * The ribbon's button importing a drawing, disabled in a model project. It
+ * opens `GeometryImport`'s file input, which handles the file.
  */
 export function ImportDrawingButton() {
-  const shown = useDocumentStore(
-    (s) => s.document.geometry.length > 0 && canImportDrawing(s.document),
-  );
+  const allowed = useDocumentStore((s) => canImportDrawing(s.document));
   const t = useTranslations("Import");
-  if (!shown) return null;
+  const ribbon = useTranslations("Ribbon");
+  const format = useFormatMessage();
   return (
-    <Button
-      variant="ghost"
-      size="compact"
-      data-tour="import"
+    <RibbonButton
+      icon={<UploadIcon />}
+      label={ribbon("drawing")}
+      aria-label={ribbon("importDrawing")}
+      hint={t("importDrawing")}
+      disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
       // shortcut: finds the input by id, so only one workspace per page; share a ref if that changes.
       onClick={() => document.getElementById(DRAWING_INPUT_ID)?.click()}
-    >
-      <UploadIcon />
-      {t("importDrawing")}
-    </Button>
+    />
   );
 }
 
@@ -75,21 +73,19 @@ const DEFAULT_TEXT_HEIGHT = 20;
 
 /**
  * Adds a text item (PRD-0010 T1), placed like an imported drawing, and
- * selects it so its properties open. In the top bar once the project holds
- * drawings, as `ImportDrawingButton`, or in the empty project's card
+ * selects it so its properties open. In the ribbon, disabled in a model
+ * project like `ImportDrawingButton`, or in the empty project's card
  * (`inCard`).
  */
 export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
-  const shown = useDocumentStore(
-    (s) => inCard || (s.document.geometry.length > 0 && canImportDrawing(s.document)),
-  );
+  const allowed = useDocumentStore((s) => canImportDrawing(s.document));
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const { alert } = useDialogs();
   const format = useFormatMessage();
   const [adding, setAdding] = useState(false);
   const t = useTranslations("Import");
-  if (!shown) return null;
+  const ribbon = useTranslations("Ribbon");
 
   async function add() {
     setAdding(true);
@@ -109,8 +105,20 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
       workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
   }
 
+  if (!inCard)
+    return (
+      <RibbonButton
+        icon={<TypeIcon />}
+        label={ribbon("text")}
+        aria-label={t("addText")}
+        hint={t("addText")}
+        disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
+        disabled={adding}
+        onClick={add}
+      />
+    );
   return (
-    <Button variant={inCard ? "outline" : "ghost"} size="compact" disabled={adding} onClick={add}>
+    <Button variant="outline" size="compact" disabled={adding} onClick={add}>
       <TypeIcon />
       {t("addText")}
     </Button>
@@ -119,7 +127,7 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
 
 /**
  * Imports SVG and DXF files and STL models, over the viewport: a card in its
- * centre while the project is empty; then the top bar's `ImportDrawingButton`
+ * centre while the project is empty; then the ribbon's `ImportDrawingButton`
  * adds a drawing per file while the project holds drawings; a project holds
  * drawings or one model (ADR-0055). Prompts, import warnings (until
  * dismissed) and how an STL import is going show in the viewport's corner.
@@ -189,7 +197,7 @@ export function GeometryImport() {
     }
   }
 
-  /** Nothing to show over the viewport: the top bar has the import button. */
+  /** Nothing to show over the viewport: the ribbon has the import button. */
   const bare = !empty && !pending && !notice && !modelImport;
 
   return (
@@ -216,7 +224,6 @@ export function GeometryImport() {
           )}
         >
           <div
-            data-tour={empty ? "import" : undefined}
             className={cn(
               "pointer-events-auto grid gap-2 rounded-md border bg-background/85 text-ui shadow-xs backdrop-blur-md",
               "w-full max-w-72 p-3",

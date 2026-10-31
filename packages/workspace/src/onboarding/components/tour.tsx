@@ -156,6 +156,8 @@ export function Tour({
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
         const element = findAnchor(step.anchor);
+        // Inside a scrolled container (the ribbon on a narrow window), bring it into view first.
+        element?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
         if (onScreen(element)) {
           seen.current = true;
           setShown({ step, element, number: state.index + 1, count: state.steps.length });

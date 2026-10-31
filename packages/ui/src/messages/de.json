@@ -1125,6 +1125,14 @@
     "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten.",
     "drawingProperties": "Zeichnungseigenschaften"
   },
+  "Ribbon": {
+    "history": "Verlauf",
+    "drawing": "Zeichnung",
+    "importDrawing": "Eine Zeichnung importieren",
+    "text": "Text",
+    "relief_rough": "Schruppen",
+    "relief_finish": "Schlichten"
+  },
   "BugReport": {
     "report": "Fehler melden",
     "description": "Dies öffnet ein neues GitHub-Issue mit deinem vorausgefüllten Bericht. Nichts wird gesendet, bis du es dort absendest, wofür ein GitHub-Konto nötig ist.",

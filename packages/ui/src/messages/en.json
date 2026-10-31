@@ -1125,6 +1125,14 @@
     "leaveAnyway": "{error} Leave it anyway? Changes not saved will be lost; export the project first to keep them.",
     "drawingProperties": "Drawing properties"
   },
+  "Ribbon": {
+    "history": "History",
+    "drawing": "Drawing",
+    "importDrawing": "Import a drawing",
+    "text": "Text",
+    "relief_rough": "Rough",
+    "relief_finish": "Finish"
+  },
   "BugReport": {
     "report": "Report a bug",
     "description": "This opens a new GitHub issue with your report filled in. Nothing is sent until you submit it there, which needs a GitHub account.",
