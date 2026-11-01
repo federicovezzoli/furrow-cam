@@ -11,11 +11,12 @@ Where a pass can't go straight between two points the tool is dropped at (ADR-00
 
 ## Decision
 
-- **Over no lower than the tool anywhere between the two points** (`sampleMoves` in `@furrow/cam-core`): the level move is also no lower than the tool dropped halfway between them with its profile widened by half the distance between them, as ADR-0033's roughing widens its profile. That height is at least the tool's anywhere along the move.
-- `ToolDropper.dropPoint` takes the widening, so finishing passes, links and spirals pass it through the `between` callback they already give `sampleMoves`.
+- **Over no lower than the tool anywhere between the two points** (`sampleMoves` in `@furrow/cam-core`): the level move is also no lower than the tool dropped halfway between them with its profile widened by half the distance between them, as ADR-0033's roughing widens its profile. That height is at least the tool's anywhere along the move. The widening is the same in every direction, so it also counts what lies within that distance beside the pass: the move may sit a little higher than it needs to, by no more than the tool rises over that distance.
+- `ToolDropper.dropPoint` takes the widening, applied to the distance to each cell, so finishing passes, links and spirals pass it through the `between` callback they already give `sampleMoves`.
 
 ## Consequences
 
 - No level move over a wall cuts below the model as the heightmap holds it; ADR-0070's micrometre below the tool on smooth steep faces is unchanged.
+- Between two samples less than a cell apart in height the tool still isn't dropped in between, so a straight move there can pass below it where it rises and falls back within the cell, such as over a fin narrower than a cell. ADR-0040's "no straight move cuts below the model" doesn't hold there; it is left to its own issue.
 - One more drop only where a pass goes over a wall; on ADR-0070's pyramid the moves are unchanged (5,493, none straight up or down).
 - Where the tool was already clear, passes may go over a wall slightly higher than before, so G-code changes there.
