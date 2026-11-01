@@ -30,7 +30,7 @@ import { AddOperationButtons } from "./add-operation-buttons";
 import { BrowserOnly } from "./browser-only";
 import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
-import { GcodeExportButton } from "./gcode-export-button";
+import { ProjectGcodeExportButton } from "./gcode-export-button";
 import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-import";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
@@ -62,7 +62,7 @@ export function WorkspaceShell() {
   const t = useTranslations("Shell");
   const importT = useTranslations("Import");
   const ribbon = useTranslations("Ribbon");
-  const { project, library, settings, account } = useWorkspaceHost();
+  const { library, settings } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
   const hasEnabledOperations = useDocumentStore((s) =>
@@ -142,18 +142,7 @@ export function WorkspaceShell() {
                 footer={
                   <div className="flex gap-2">
                     <div data-tour="export-gcode" className="min-w-0 flex-1">
-                      <GcodeExportButton
-                        name={project.name}
-                        disabledReason={
-                          // Without an account, the button explains what it needs instead.
-                          machineName === null && !account
-                            ? t("chooseMachine")
-                            : !hasEnabledOperations
-                              ? t("addOperation")
-                              : undefined
-                        }
-                        className="w-full"
-                      />
+                      <ProjectGcodeExportButton className="w-full" />
                     </div>
                     <SimulateButton
                       disabledReason={hasEnabledOperations ? undefined : t("addOperation")}

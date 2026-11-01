@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import { useSaveStatus } from "../hooks/use-autosave";
 import { useDocumentStore } from "../providers/workspace-stores";
 import { BrowserOnly } from "./browser-only";
+import { ProjectGcodeExportButton } from "./gcode-export-button";
 import { TopBar } from "./top-bar";
 
 /** WebGL needs the browser (ADR-0008), so the viewport never renders on the server. */
@@ -31,7 +32,9 @@ export function SimulatorShell() {
         saveStatus={saveStatus}
         machineName={machineName}
         back={{ to: "workspace", label: t("backToWorkspace") }}
-      />
+      >
+        <ProjectGcodeExportButton />
+      </TopBar>
       <main className="flex min-h-0 flex-1 flex-col">
         <BrowserOnly
           fallback={

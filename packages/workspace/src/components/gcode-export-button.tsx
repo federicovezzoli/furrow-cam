@@ -10,11 +10,43 @@ import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
-import { useDocumentStoreApi, useToolpathStoreApi } from "../providers/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useToolpathStoreApi,
+} from "../providers/workspace-stores";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 
 /** Milliseconds between the downloads of one export's files. */
 const DOWNLOAD_GAP = 500;
+
+/**
+ * The open project's G-code export button, as the workspace and the
+ * simulator show it: named after the project, disabled without a machine or
+ * enabled operations.
+ */
+export function ProjectGcodeExportButton({ className }: { className?: string }) {
+  const t = useTranslations("Shell");
+  const { project, account } = useWorkspaceHost();
+  const hasMachine = useDocumentStore((s) => s.document.machine !== null);
+  const hasEnabledOperations = useDocumentStore((s) =>
+    s.document.operations.some((operation) => operation.enabled),
+  );
+  return (
+    <GcodeExportButton
+      name={project.name}
+      disabledReason={
+        // Without an account, the button explains what it needs instead.
+        !hasMachine && !account
+          ? t("chooseMachine")
+          : !hasEnabledOperations
+            ? t("addOperation")
+            : undefined
+      }
+      className={className}
+    />
+  );
+}
 
 /**
  * Downloads the open project's G-code for its machine's post-processor
