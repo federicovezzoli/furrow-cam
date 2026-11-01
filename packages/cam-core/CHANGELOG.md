@@ -1,5 +1,19 @@
 # @furrow/cam-core
 
+## 0.16.0
+
+### Minor Changes
+
+- A model can now sit below the stock top: set *Top below stock* in its properties to machine the whole relief deeper without stretching it, for example to recover a part or to leave a raised border. ([#436](https://github.com/federicovezzoli/furrow-cam/pull/436))
+- 3D finishing goes straight down steep faces instead of in tiny steps, and 3D finishing and roughing merge their moves within 0.02 mm, so G-code for steep reliefs is much smaller and runs smoothly at the programmed feed. ([#438](https://github.com/federicovezzoli/furrow-cam/pull/438))
+- Tapered ball-nose bits are a new bit type, described by their angle per side, tip diameter and flute length: 3D finishing and engraving cut with their real shape, ball tip and cone, so steep walls are no longer gouged in the preview. Projects that use them need this release to open. ([#430](https://github.com/federicovezzoli/furrow-cam/pull/430))
+- Operations that cut where a locating pin goes now warn, so the end mill doesn't run into the pins once the stock is turned over. ([#414](https://github.com/federicovezzoli/furrow-cam/pull/414))
+
+### Patch Changes
+
+- 3D finishing no longer cuts slightly into a steep face that rises right up to the edge of a wall the tool then drops off. ([#441](https://github.com/federicovezzoli/furrow-cam/pull/441))
+- Updated dependencies: @furrow/document@0.17.0
+
 ## 0.15.0
 
 ### Minor Changes

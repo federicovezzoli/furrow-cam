@@ -1,5 +1,15 @@
 # @furrow/post
 
+## 0.14.0
+
+### Minor Changes
+
+- Tapered ball-nose bits are a new bit type, described by their angle per side, tip diameter and flute length: 3D finishing and engraving cut with their real shape, ball tip and cone, so steep walls are no longer gouged in the preview. Projects that use them need this release to open. ([#430](https://github.com/federicovezzoli/furrow-cam/pull/430))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.17.0, @furrow/cam-core@0.16.0
+
 ## 0.13.0
 
 ### Minor Changes
