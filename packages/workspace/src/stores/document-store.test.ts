@@ -1,6 +1,6 @@
 import { createProjectDocument } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { createDocumentStore, MAX_HISTORY } from "./document-store";
+import { createDocumentStore, MAX_HISTORY, versionLabel } from "./document-store";
 
 function setup() {
   const store = createDocumentStore(createProjectDocument());
@@ -202,5 +202,26 @@ describe("load", () => {
     expect(store.getState().past).toHaveLength(0);
     store.getState().undo();
     expect(width()).toBe(42);
+  });
+});
+
+describe("versionLabel", () => {
+  it("names the version the document is until it changes", () => {
+    const { store, setWidth } = setup();
+    expect(versionLabel(store.getState())).toBeNull();
+    store.getState().markVersion("Final");
+    expect(versionLabel(store.getState())).toBe("Final");
+    setWidth(100);
+    expect(versionLabel(store.getState())).toBeNull();
+    // Undoing back to the same contents is still a change since.
+    store.getState().undo();
+    expect(versionLabel(store.getState())).toBeNull();
+  });
+
+  it("drops the label when another document is loaded", () => {
+    const { store } = setup();
+    store.getState().markVersion("Final");
+    store.getState().load(createProjectDocument());
+    expect(versionLabel(store.getState())).toBeNull();
   });
 });

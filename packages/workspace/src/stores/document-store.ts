@@ -45,7 +45,20 @@ export type DocumentState = {
    * open transaction dropped.
    */
   load: (document: ProjectDocument) => void;
+  /**
+   * The version last saved or restored in this session, with the document it
+   * was, or `null`. The live document isn't linked to a version (ADR-0028),
+   * so `versionLabel` checks the document is still that one.
+   */
+  version: { label: string | null; document: ProjectDocument } | null;
+  /** Records the document as it is now as the version labelled `label`. */
+  markVersion: (label: string | null) => void;
 };
+
+/** The label of the version the document is, `null` once changed since or if unlabelled. */
+export function versionLabel({ version, document }: DocumentState): string | null {
+  return version?.document === document ? version.label : null;
+}
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
 
@@ -83,6 +96,7 @@ export function createDocumentStore(document: ProjectDocument) {
         past: [],
         future: [],
         inTransaction: false,
+        version: null,
 
         change(name, recipe) {
           const { document, past } = get();
@@ -175,6 +189,10 @@ export function createDocumentStore(document: ProjectDocument) {
         load(document) {
           transaction = null;
           set({ document, past: [], future: [], inTransaction: false }, false, "load");
+        },
+
+        markVersion(label) {
+          set({ version: { label, document: get().document } }, false, "markVersion");
         },
       }),
       { name: "document", enabled: process.env.NODE_ENV !== "production" },

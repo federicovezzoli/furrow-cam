@@ -133,8 +133,15 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     run(async () => {
       const status = await autosave.settle();
       if (status.state !== "saved") return { error: notSaved(status) };
+      // The document saved, to name exports after the version until it changes.
+      const saved = documentStore.getState().document;
       const result = await host.create(label, status.savedAt);
-      if (result.error === undefined) setLabel("");
+      if (result.error === undefined) {
+        setLabel("");
+        if (documentStore.getState().document === saved) {
+          documentStore.getState().markVersion(label.trim() || null);
+        }
+      }
       return result;
     });
   }
@@ -162,6 +169,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
       // document, replacing any change made while it ran.
       autosave.release({ document: result.document, savedAt: result.updatedAt });
       documentStore.getState().load(result.document);
+      documentStore.getState().markVersion(version.label);
       return result;
     });
   }
