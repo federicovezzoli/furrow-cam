@@ -980,7 +980,8 @@
     },
     "timeTitle": "Geschätzte Bearbeitungszeit",
     "total": "Gesamt {time}",
-    "estimateNote": "Ungefähr: Beschleunigung und Werkzeugwechsel sind nicht eingerechnet.",
+    "estimateNote": "Eine Untergrenze: Beschleunigung und Werkzeugwechsel sind nicht eingerechnet. Gib die Beschleunigungen der Maschine an, um genauer zu schätzen.",
+    "estimateWithAcceleration": "Ungefähr: Werkzeugwechsel sind nicht eingerechnet.",
     "estimateNoMachine": "Ungefähr: Eilgänge werden erst eingerechnet, wenn das Projekt eine Maschine hat; Beschleunigung und Werkzeugwechsel nie."
   },
   "ToolpathProgress": {
@@ -1049,6 +1050,9 @@
     "limitsHint": "Setze sie auf die Höchstgeschwindigkeiten deiner Steuerung ($110–$112, in mm/min). Sie begrenzen Vorschub und Eintauchvorschub des Fräsers. Leerfahrten zwischen den Schnitten laufen immer mit den Höchstgeschwindigkeiten der Steuerung; die Zeitschätzung nimmt für sie diese Werte.",
     "maxFeedXY": "Max. Vorschub X/Y",
     "maxFeedZ": "Max. Vorschub Z",
+    "accelerationXY": "Beschleunigung X/Y",
+    "accelerationZ": "Beschleunigung Z",
+    "accelerationHint": "Optional: die Beschleunigungen deiner Steuerung ($120–$122, in mm/s²). Nur die Zeitschätzung nutzt sie, für Anfahren, Abbremsen und Ecken; leer gelassen, rechnet sie ohne Beschleunigung und schätzt zu kurz.",
     "spindle": "Spindel",
     "manualSpindle": "Manuelle Spindel",
     "manualSpindleHint": "Drehzahl von Hand eingestellt (z. B. am Rad einer Oberfräse); der G-Code setzt keine Spindeldrehzahl.",

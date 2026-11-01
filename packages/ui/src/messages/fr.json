@@ -980,7 +980,8 @@
     },
     "timeTitle": "Temps d’usinage estimé",
     "total": "Total {time}",
-    "estimateNote": "Approximatif : l’accélération et les changements d’outil ne sont pas comptés.",
+    "estimateNote": "Un minimum : l’accélération et les changements d’outil ne sont pas comptés. Indiquez les accélérations de la machine pour une estimation plus juste.",
+    "estimateWithAcceleration": "Approximatif : les changements d’outil ne sont pas comptés.",
     "estimateNoMachine": "Approximatif : les déplacements rapides ne sont comptés qu’une fois une machine choisie pour le projet, l’accélération et les changements d’outil jamais."
   },
   "ToolpathProgress": {
@@ -1049,6 +1050,9 @@
     "limitsHint": "Réglez-les sur les vitesses maximales de votre contrôleur ($110–$112, en mm/min). Elles plafonnent l’avance et la vitesse de plongée de la fraise. Les déplacements entre les coupes se font toujours aux vitesses maximales du contrôleur ; l’estimation du temps utilise ces valeurs pour eux.",
     "maxFeedXY": "Avance max X/Y",
     "maxFeedZ": "Avance max Z",
+    "accelerationXY": "Accélération X/Y",
+    "accelerationZ": "Accélération Z",
+    "accelerationHint": "Facultatif : les accélérations de votre contrôleur ($120–$122, en mm/s²). Seule l’estimation du temps les utilise, pour accélérer, freiner et prendre les angles ; laissées vides, elle ignore l’accélération et sous-estime.",
     "spindle": "Broche",
     "manualSpindle": "Broche manuelle",
     "manualSpindleHint": "Vitesse réglée à la main (par ex. la molette d’une affleureuse) ; le G-code ne règle aucune vitesse de broche.",
