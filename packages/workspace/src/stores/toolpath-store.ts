@@ -76,6 +76,9 @@ export type ToolpathState = {
   retain: (operationIds: Iterable<string>) => void;
   /** No-ops until the scheduler sets them (`setControls`). */
   controls: ToolpathControls;
+  /** Whether a G-code export is running, so no page starts another meanwhile. */
+  exporting: boolean;
+  setExporting: (exporting: boolean) => void;
   setControls: (controls: ToolpathControls | null) => void;
 };
 
@@ -200,6 +203,12 @@ export function createToolpathStore() {
         },
 
         controls: NO_CONTROLS,
+
+        exporting: false,
+
+        setExporting(exporting) {
+          set({ exporting }, false, "setExporting");
+        },
 
         setControls(controls) {
           set({ controls: controls ?? NO_CONTROLS }, false, "setControls");

@@ -49,6 +49,11 @@ export type DocumentState = {
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
 
+/** Whether the document has an operation to cut, which exporting and simulating need. */
+export function hasEnabledOperations({ document }: DocumentState): boolean {
+  return document.operations.some((operation) => operation.enabled);
+}
+
 /**
  * The open transaction: only the document it started from. A gesture makes a
  * change per pointer move or scrub step, and keeping each one's patches would
