@@ -191,9 +191,14 @@ describe("parallel", () => {
     const strategy = { type: "parallel", angle: 0, direction: "zigzag" } as const;
     const toolpath = finish(ballEndMill, strategy, {}, steep, mesh);
     const feeds = cuts(toolpath, ballEndMill);
-    const vertical = feeds.filter((move) => {
-      const before = toolpath.moves[toolpath.moves.indexOf(move) - 1]?.to ?? move.to;
-      return Math.hypot(move.to[0] - before[0], move.to[1] - before[1]) < 1e-9;
+    const { moves } = toolpath;
+    const vertical = moves.filter((move, i) => {
+      const before = moves[i - 1]?.to ?? move.to;
+      return (
+        move.kind === "feed" &&
+        move.feedRate === ballEndMill.feedRate &&
+        Math.hypot(move.to[0] - before[0], move.to[1] - before[1]) < 1e-9
+      );
     });
     // Stepping down every face took 17,796 moves, 8,285 of them straight up or down.
     expect(feeds.length).toBeLessThan(6000);
