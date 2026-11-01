@@ -221,6 +221,7 @@
     "edit": "Modifica",
     "editLabel": "Modifica {name}",
     "tip": "punta da {size} mm",
+    "perSide": "angolo {angle}°",
     "deleteConfirm": "Eliminare \"{name}\"? I progetti esistenti mantengono la loro copia di questa fresa."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Solo per le frese a candela",
       "vBitRequired": "Obbligatorio per le frese a V",
       "vBitOnly": "Solo per le frese a V",
+      "taperedRequired": "Obbligatorio per le frese sferiche coniche",
+      "taperedOnly": "Solo per le frese sferiche coniche",
+      "tipDiameterOnly": "Solo per le frese a V e le frese sferiche coniche",
+      "taperedDiameter": "Deve essere la larghezza del cono alla lunghezza di taglio",
       "drillPlunge90": "Le punte da foratura scendono a 90°",
       "exceedsFluteLength": "Non può superare la lunghezza dei taglienti",
       "smallerThanDiameter": "Deve essere minore del diametro"
@@ -520,9 +525,11 @@
       "allowanceZeroOnLine": "Deve essere 0 sulla linea",
       "allowanceNeeded": "Serve un sovrametallo da togliere",
       "vBitsCantDrill": "Le frese a V non possono forare",
+      "taperedBitsCantDrill": "Le frese sferiche coniche non possono forare",
+      "taperedBitsCantClear": "Le frese sferiche coniche servono solo per incidere e per la finitura 3D: scegli un'altra fresa.",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
-      "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
+      "onlyVBitsVCarve": "Solo le frese a V fanno il V-carve",
       "modelNotShapes": "Lavora un modello, non forme",
       "peelStart": "La spirale parte dal centro o dalla parete esterna",
       "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V.",
@@ -625,7 +632,7 @@
       "skippedPoints": "{count, plural, one {Saltato # punto} other {Saltati # punti}}: foralo invece.",
       "skippedOpenProfile": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: i tagli interni ed esterni richiedono percorsi chiusi.",
       "skippedOpenPocket": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: le tasche richiedono percorsi chiusi.",
-      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: l'intaglio a V richiede percorsi chiusi.",
+      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: il V-carve richiede percorsi chiusi.",
       "skippedSmallCircles": "{count, plural, one {Saltato # cerchio più piccolo} other {Saltati # cerchi più piccoli}} dell'utensile.",
       "skippedLargeCircles": "{count, plural, one {Saltato # cerchio più grande} other {Saltati # cerchi più grandi}} della punta: alesali con una fresa a candela.",
       "skippedNonCircles": "{count, plural, one {Saltato # percorso} other {Saltati # percorsi}}: la foratura richiede cerchi o punti.",
@@ -652,6 +659,7 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
       "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "cutsPins": "Questa operazione taglia dove va un perno di riferimento, quindi l'utensile colpirebbe il perno quando il grezzo è girato: sposta i perni o il taglio.",
       "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
@@ -852,7 +860,7 @@
     "lineTooDeep": "Più profondo del cono, quindi la linea è larga quanto la fresa.",
     "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
     "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
-    "vcarve": "Intaglio a V",
+    "vcarve": "V-carve",
     "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
     "maxDepth": "Profondità massima",
     "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
@@ -913,7 +921,7 @@
       "pocket": "Tasca",
       "drill": "Foratura",
       "engrave": "Incisione",
-      "vcarve": "Intaglio a V",
+      "vcarve": "V-carve",
       "relief_rough": "Sgrossatura 3D",
       "relief_finish": "Finitura 3D"
     },
@@ -928,7 +936,7 @@
     },
     "missingDrill": "Aggiungi una punta da foratura o una fresa a candela alla tua libreria: le frese a V non forano",
     "missingEngrave": "Aggiungi una fresa a V o una fresa a candela alla tua libreria: le punte da foratura non incidono",
-    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per l’intaglio a V",
+    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per il V-carve",
     "noTool": "Aggiungi prima un utensile alla tua libreria",
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
@@ -967,8 +975,8 @@
     },
     "time": {
       "underMinute": "meno di 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Tempo di lavorazione stimato",
     "total": "Totale {time}",
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "Fresa a candela piatta",
       "ball_end_mill": "Fresa sferica",
+      "tapered_ball_end_mill": "Fresa sferica conica",
       "v_bit": "Fresa a V",
       "drill": "Punta da foratura"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "Direzione di taglio",
     "vAngle": "Angolo della V",
     "tipDiameter": "Diametro della punta",
+    "taperAngle": "Angolo",
     "cuttingData": "Dati di taglio",
     "spindleSpeed": "Velocità del mandrino",
     "feedRate": "Avanzamento",
@@ -1036,6 +1046,7 @@
     "safeZ": "Z di sicurezza (sopra il grezzo)",
     "entryClearance": "Distanza di ingresso (sopra il grezzo)",
     "limits": "Limiti",
+    "limitsHint": "Impostali sulle velocità massime del controller ($110–$112, espresse in mm/min). Limitano l’avanzamento e la velocità di affondo della fresa. I movimenti di spostamento tra un taglio e l’altro vanno sempre alle velocità massime del controller; la stima dei tempi usa questi valori per calcolarli.",
     "maxFeedXY": "Avanzamento max X/Y",
     "maxFeedZ": "Avanzamento max Z",
     "spindle": "Mandrino",
@@ -1114,6 +1125,14 @@
     "allProjects": "Tutti i progetti",
     "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle.",
     "drawingProperties": "Proprietà del disegno"
+  },
+  "Ribbon": {
+    "history": "Cronologia",
+    "drawing": "Disegno",
+    "importDrawing": "Importa un disegno",
+    "text": "Testo",
+    "relief_rough": "Sgrossatura",
+    "relief_finish": "Finitura"
   },
   "BugReport": {
     "report": "Segnala un bug",
@@ -1272,7 +1291,10 @@
     "width": "Larghezza",
     "height": "Altezza",
     "depth": "Profondità",
+    "top": "Sommità sotto il grezzo",
     "tooDeep": "Il modello è più profondo dello spessore del grezzo: non viene tagliato oltre il fondo del grezzo.",
+    "belowStock": "La sommità del modello è al fondo del grezzo o più in basso: non ne viene tagliato nulla e le operazioni attraversano il grezzo sopra di esso.",
+    "belowParting": "La sommità del modello è sotto la profondità di separazione: il lato superiore lascia intatto il grezzo sopra di esso. Imposta la profondità di separazione dentro il modello.",
     "original": "Originale: {size} (scala {scale}%)",
     "border": "Bordo",
     "borderNote": "Lo spazio che “Adatta al grezzo” lascerà su ogni lato. Modificarlo non sposta il modello.",
@@ -1440,7 +1462,7 @@
       },
       "operations": {
         "title": "Aggiungi operazioni",
-        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o intaglio a V) per i percorsi selezionati, poi scegli fresa e profondità."
+        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o V-carve) per i percorsi selezionati, poi scegli fresa e profondità."
       },
       "preview": {
         "title": "Anteprima dei percorsi utensile",

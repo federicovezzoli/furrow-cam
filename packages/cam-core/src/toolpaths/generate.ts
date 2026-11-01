@@ -7,11 +7,21 @@ import {
   operationModelId,
   type ProjectDocument,
   type Shape,
+  stockPins,
   type TouchOffDisc,
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
-import { drillTargets, type Flip, flipOperation, flipPoint2, flipShapes } from "../scene/sides";
+import {
+  drillTargets,
+  type Flip,
+  flipOperation,
+  flipPoint2,
+  flipShapes,
+  isPinDrill,
+  pinCenters,
+  pinDepth,
+} from "../scene/sides";
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
@@ -83,6 +93,13 @@ export type ToolpathInput = {
    * uncut, 2D ones warn when they reach it. `null` for none.
    */
   touchOff: TouchOffDisc | null;
+  /**
+   * The locating pins (#356) a bottom-side operation warns when it reaches
+   * (#395): their discs, the same on either side, and how far below the
+   * stock top they start. `null` on the top side, for the pin drill and
+   * without pins. Left out of `toolpathKey`, since only `checkPins` reads it.
+   */
+  pins: { discs: TouchOffDisc[]; below: number } | null;
 };
 
 /** Whether `operation` only cuts the material the operations before it left (PRD-0005 S8). */
@@ -113,6 +130,12 @@ export function toolpathInputs(
   const pad = activeTouchOff(doc.stock);
   // The disc alone, so editing the pad's tool change recomputes nothing.
   const touchOff: TouchOffDisc | null = pad && { x: pad.x, y: pad.y, diameter: pad.diameter };
+  const lineUp = stockPins(doc.stock);
+  // The turned-over stock sits on the pins, which fill its last `pinDepth`.
+  const pins = lineUp && {
+    discs: pinCenters(doc.stock).map(([x, y]) => ({ x, y, diameter: lineUp.diameter })),
+    below: Math.max(0, doc.stock.thickness - pinDepth(doc.stock.thickness, lineUp)),
+  };
   const enabled = doc.operations.filter((operation) => operation.enabled);
   const { twoSided, width, height, thickness } = doc.stock;
   const size = { width, height, thickness };
@@ -138,7 +161,7 @@ export function toolpathInputs(
         (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
         (operation.type === "relief_finish" &&
           finishingBoundary(operation.params).type !== "model") ||
-        (operation.type === "drill" && operation.params.pins) ||
+        isPinDrill(operation) ||
         (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
           : null,
@@ -170,6 +193,7 @@ export function toolpathInputs(
             .map(inputOf)
         : [],
       touchOff,
+      pins: bottom && !isPinDrill(operation) ? pins : null,
     };
     inputs.set(operation, input);
     return input;
@@ -354,23 +378,30 @@ function* restCuts(
 export const TOUCH_OFF_WARNING: ToolpathMessage = { code: "toolpath.touchOffPad" };
 
 /**
- * Whether any cut of `operation`'s toolpath, below the stock top, reaches
- * into `pad`: the tool's reach at the cut's depth comes within the pad.
+ * Whether any cut of `operation`'s toolpath deeper than `below` the stock
+ * top reaches into one of `discs`: the tool's reach at the cut's depth comes
+ * within the disc.
  */
-export function cutsTouchOff(operation: Operation, toolpath: Toolpath, pad: TouchOffDisc): boolean {
-  const r = pad.diameter / 2;
+export function cutsInto(
+  operation: Operation,
+  toolpath: Toolpath,
+  discs: readonly TouchOffDisc[],
+  below = 0,
+): boolean {
   return toolpathCuts(operation, toolpath).some(({ tool, segments }) => {
     const profile = cutterProfile(tool);
     for (let i = 0; i + 5 < segments.length; i += 6) {
       const [ax, ay, az, bx, by, bz] = segments.subarray(i, i + 6) as unknown as number[];
       const depth = -Math.min(az as number, bz as number);
-      if (!(depth > 1e-6)) continue;
+      if (!(depth > below + 1e-6)) continue;
       const reach = Math.min(profile.radius, profile.reach(depth));
-      if (
-        segmentDistance(pad.x, pad.y, ax as number, ay as number, bx as number, by as number) <
-        r + reach
-      ) {
-        return true;
+      for (const { x, y, diameter } of discs) {
+        if (
+          segmentDistance(x, y, ax as number, ay as number, bx as number, by as number) <
+          diameter / 2 + reach
+        ) {
+          return true;
+        }
       }
     }
     return false;
@@ -392,8 +423,21 @@ function checkTouchOff(
   toolpath: Toolpath,
   pad: TouchOffDisc | null,
 ): Toolpath {
-  if (!pad || !cutsTouchOff(operation, toolpath, pad)) return toolpath;
+  if (!pad || !cutsInto(operation, toolpath, [pad])) return toolpath;
   return { ...toolpath, warnings: [...toolpath.warnings, TOUCH_OFF_WARNING] };
+}
+
+/** Said when an operation cuts where a locating pin goes. */
+export const PINS_WARNING: ToolpathMessage = { code: "toolpath.cutsPins" };
+
+/**
+ * A bottom-side toolpath, warning when it cuts deep enough to reach a
+ * locating pin (#395). Applied after the toolpath, not in `toolpathSteps`, so
+ * moving a pin rechecks it without computing it again.
+ */
+export function checkPins({ operation, pins }: ToolpathInput, toolpath: Toolpath): Toolpath {
+  if (!pins || !cutsInto(operation, toolpath, pins.discs, pins.below)) return toolpath;
+  return { ...toolpath, warnings: [...toolpath.warnings, PINS_WARNING] };
 }
 
 /** A pin drill's toolpath (#356), warning when a pin hole reaches past the stock's edges. */
@@ -403,7 +447,7 @@ function checkPinsOnStock(
   stock: Rect | null,
   toolpath: Toolpath,
 ): Toolpath {
-  if (operation.type !== "drill" || !operation.params.pins || !stock) return toolpath;
+  if (!isPinDrill(operation) || !stock) return toolpath;
   const tolerance = 1e-9;
   const off = shapes.some(({ paths }) =>
     paths.some(({ start: [x, y], segments }) => {

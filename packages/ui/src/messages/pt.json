@@ -221,6 +221,7 @@
     "edit": "Editar",
     "editLabel": "Editar {name}",
     "tip": "ponta de {size} mm",
+    "perSide": "{angle}° por lado",
     "deleteConfirm": "Excluir “{name}”? Os projetos existentes mantêm sua cópia desta fresa."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Apenas para fresas de topo",
       "vBitRequired": "Obrigatório para fresas em V",
       "vBitOnly": "Apenas para fresas em V",
+      "taperedRequired": "Obrigatório para fresas cônicas de topo esférico",
+      "taperedOnly": "Apenas para fresas cônicas de topo esférico",
+      "tipDiameterOnly": "Apenas para fresas em V e fresas cônicas de topo esférico",
+      "taperedDiameter": "Deve ser a largura do cone no comprimento de corte",
       "drillPlunge90": "Brocas mergulham a 90°",
       "exceedsFluteLength": "Não pode exceder o comprimento de corte",
       "smallerThanDiameter": "Deve ser menor que o diâmetro"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Deve ser 0 sobre a linha",
       "allowanceNeeded": "Precisa de um sobremetal a remover",
       "vBitsCantDrill": "Fresas em V não furam",
+      "taperedBitsCantDrill": "Fresas cônicas de topo esférico não furam",
+      "taperedBitsCantClear": "Fresas cônicas de topo esférico só gravam e fazem acabamento 3D: escolha outra fresa.",
       "drillsCantEngrave": "Brocas não gravam",
       "flatBottomEndMill": "Só fresas de topo retas limpam um fundo plano",
       "onlyVBitsVCarve": "Só fresas em V fazem entalhe em V",
@@ -652,6 +659,7 @@
       "restOperationFailed": "“{operation}” falhou, então o material que ela cortaria é considerado restante.",
       "noLocatingPins": "O projeto não tem pinos de posicionamento para furar.",
       "pinsOffStock": "Um pino de posicionamento está fora do material.",
+      "cutsPins": "Esta operação corta onde vai um pino de posicionamento, por isso a ferramenta bateria no pino quando o material for virado: mova os pinos ou o corte.",
       "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que o lado de baixo corta todo o seu contorno.",
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem."
     },
@@ -967,8 +975,8 @@
     },
     "time": {
       "underMinute": "menos de 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Tempo de usinagem estimado",
     "total": "Total {time}",
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "Fresa de topo reta",
       "ball_end_mill": "Fresa de topo esférica",
+      "tapered_ball_end_mill": "Fresa cônica de topo esférico",
       "v_bit": "Fresa em V",
       "drill": "Broca"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "Sentido de corte",
     "vAngle": "Ângulo do V",
     "tipDiameter": "Diâmetro da ponta",
+    "taperAngle": "Ângulo por lado",
     "cuttingData": "Dados de corte",
     "spindleSpeed": "Rotação do spindle",
     "feedRate": "Avanço",
@@ -1036,6 +1046,7 @@
     "safeZ": "Z seguro (acima do material)",
     "entryClearance": "Folga de entrada (acima do material)",
     "limits": "Limites",
+    "limitsHint": "Defina-os com as velocidades máximas do seu controlador ($110–$112, em mm/min). Eles limitam o avanço e a velocidade de mergulho da fresa. Os deslocamentos entre cortes são sempre feitos às velocidades máximas do controlador; a estimativa de tempo usa estes valores para eles.",
     "maxFeedXY": "Avanço máx. X/Y",
     "maxFeedZ": "Avanço máx. Z",
     "spindle": "Spindle",
@@ -1114,6 +1125,14 @@
     "allProjects": "Todos os projetos",
     "leaveAnyway": "{error} Sair mesmo assim? As alterações não salvas serão perdidas; exporte o projeto antes para mantê-las.",
     "drawingProperties": "Propriedades do desenho"
+  },
+  "Ribbon": {
+    "history": "Histórico",
+    "drawing": "Desenho",
+    "importDrawing": "Importe um desenho",
+    "text": "Texto",
+    "relief_rough": "Desbaste",
+    "relief_finish": "Acabamento"
   },
   "BugReport": {
     "report": "Relatar um erro",
@@ -1272,7 +1291,10 @@
     "width": "Largura",
     "height": "Altura",
     "depth": "Profundidade",
+    "top": "Topo abaixo do material",
     "tooDeep": "O modelo vai mais fundo que a espessura do material: não é cortado mais fundo que o fundo do material.",
+    "belowStock": "O topo do modelo está no fundo do material ou abaixo dele: nada dele é cortado, e as operações atravessam o material por cima.",
+    "belowParting": "O topo do modelo está abaixo da profundidade de separação: o lado de cima deixa o material acima dele por cortar. Coloque a profundidade de separação dentro do modelo.",
     "original": "Original: {size} (escala {scale}%)",
     "border": "Borda",
     "borderNote": "Deixada em cada lado pelo próximo Ajustar ao material; editá-la não move o modelo.",

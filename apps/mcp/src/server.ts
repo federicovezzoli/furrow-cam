@@ -9,7 +9,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
 import { checkProject, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
@@ -218,6 +218,26 @@ export function createServer(projects: Projects = createProjects(), library = li
       }),
   );
 
+  server.registerTool(
+    "set_model_top",
+    {
+      title: "Sink a model below the stock top",
+      description:
+        "Sets how far a model's top sits below the stock top, in millimetres (0 puts it at the stock top), keeping its size, as the app's Top below stock field does: the whole relief is machined that much lower, for example to recover a part roughed too deep or to leave a border standing proud. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        mm: z.number().min(0).describe("How far below the stock top, in millimetres."),
+      },
+    },
+    ({ path, id, mm }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTop(project, id, mm);
+        return summary(project);
+      }),
+  );
+
   const mm = (what: string) => z.number().positive().describe(`${what}, in millimetres.`);
 
   server.registerTool(
@@ -327,7 +347,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Set an operation's tool",
       description:
-        "Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: name; type (flat_end_mill, ball_end_mill, v_bit or drill); diameter, fluteLength, stepDown (depth per pass) and tipDiameter (V-bits, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb). A tool that can't cut the operation is refused with the app's message. Returns the project summary.",
+        "Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb). A tool that can't cut the operation is refused with the app's message. Returns the project summary.",
       inputSchema: {
         path: projectPath,
         operationId: z.string().describe("The operation's id, from the project summary."),

@@ -45,8 +45,8 @@ describe("OperationsPane", () => {
         toolpaths?.getState().setResult(id, "h", { warnings: [], lines, seconds });
       }
     });
-    expect(screen.getByTitle("Estimated machining time").textContent).toBe("≈ 12 min");
-    expect(screen.getByText("Total ≈ 12 min")).toBeTruthy();
+    expect(screen.getByTitle("Estimated machining time").textContent).toBe("≈ 12min");
+    expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
     // The project has no machine.
     expect(screen.getByText(/rapids aren't counted/)).toBeTruthy();
   });

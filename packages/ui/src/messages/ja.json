@@ -221,6 +221,7 @@
     "edit": "編集",
     "editLabel": "{name} を編集",
     "tip": "先端 {size} mm",
+    "perSide": "片側 {angle}°",
     "deleteConfirm": "「{name}」を削除しますか？既存のプロジェクトはこのビットのコピーを保持します。"
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "エンドミル専用です",
       "vBitRequired": "V ビットでは必須です",
       "vBitOnly": "V ビット専用です",
+      "taperedRequired": "テーパーボールエンドミルでは必須です",
+      "taperedOnly": "テーパーボールエンドミル専用です",
+      "tipDiameterOnly": "V ビットとテーパーボールエンドミル専用です",
+      "taperedDiameter": "刃長での円錐の幅である必要があります",
       "drillPlunge90": "ドリルは 90° で突っ込みます",
       "exceedsFluteLength": "刃長を超えないようにしてください",
       "smallerThanDiameter": "直径より小さくしてください"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "ライン上では 0 にしてください",
       "allowanceNeeded": "削り取る取り代が必要です",
       "vBitsCantDrill": "V ビットでは穴あけできません",
+      "taperedBitsCantDrill": "テーパーボールエンドミルでは穴あけできません",
+      "taperedBitsCantClear": "テーパーボールエンドミルは彫刻と 3D 仕上げ専用です。別のビットを選んでください。",
       "drillsCantEngrave": "ドリルビットでは彫刻できません",
       "flatBottomEndMill": "平らな底を加工できるのはフラットエンドミルだけです",
       "onlyVBitsVCarve": "V カービングできるのは V ビットだけです",
@@ -652,6 +659,7 @@
       "restOperationFailed": "「{operation}」が失敗したため、その加工で削るはずの素材は残っているものとみなします。",
       "noLocatingPins": "プロジェクトに穴あけする位置決めピンがありません。",
       "pinsOffStock": "位置決めピンが素材の外にあります。",
+      "cutsPins": "この加工は位置決めピンの位置を削るため、素材を裏返したときに工具がピンに当たります。ピンか加工を移動してください。",
       "noHoldingTabs": "保持タブがありません。裏面で周囲をすべて切削すると、部品が外れます。",
       "stockBoundaryTwoSided": "両面で素材全体を加工すると、部品を保持する枠が残りません。マージンを使用してください。"
     },
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "フラットエンドミル",
       "ball_end_mill": "ボールエンドミル",
+      "tapered_ball_end_mill": "テーパーボールエンドミル",
       "v_bit": "V ビット",
       "drill": "ドリル"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "ねじれ方向",
     "vAngle": "V 角度",
     "tipDiameter": "先端径",
+    "taperAngle": "片側角度",
     "cuttingData": "切削条件",
     "spindleSpeed": "スピンドル回転数",
     "feedRate": "送り速度",
@@ -1036,6 +1046,7 @@
     "safeZ": "安全 Z（素材上面から）",
     "entryClearance": "進入クリアランス（素材上面から）",
     "limits": "制限",
+    "limitsHint": "コントローラーの最大速度（$110〜$112、単位は mm/min）に合わせてください。ビットの送り速度と突っ込み速度はこの値で制限されます。切削と切削の間の移動は常にコントローラー自身の最大速度で行われ、所要時間の見積もりではこの値が使われます。",
     "maxFeedXY": "最大送り X/Y",
     "maxFeedZ": "最大送り Z",
     "spindle": "スピンドル",
@@ -1114,6 +1125,14 @@
     "allProjects": "すべてのプロジェクト",
     "leaveAnyway": "{error} それでも移動しますか？保存されていない変更は失われます。残すには先にプロジェクトをエクスポートしてください。",
     "drawingProperties": "図面のプロパティ"
+  },
+  "Ribbon": {
+    "history": "履歴",
+    "drawing": "図面",
+    "importDrawing": "図面をインポート",
+    "text": "テキスト",
+    "relief_rough": "荒加工",
+    "relief_finish": "仕上げ"
   },
   "BugReport": {
     "report": "バグを報告",
@@ -1272,7 +1291,10 @@
     "width": "幅",
     "height": "高さ",
     "depth": "深さ",
+    "top": "素材上面からの下げ量",
     "tooDeep": "モデルが素材の厚さより深くまであります。素材の底より深くは切削しません。",
+    "belowStock": "モデルの上面が素材の底以下にあります。モデルは何も切削されず、その上の素材は貫通して切削されます。",
+    "belowParting": "モデルの上面が分割深さより下にあります。表面側はその上の素材を削り残します。分割深さをモデルの内側に設定してください。",
     "original": "元のサイズ：{size}（尺度 {scale}%）",
     "border": "余白",
     "borderNote": "次回の「素材に合わせる」で各辺に残されます。編集してもモデルは移動しません。",

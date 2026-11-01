@@ -18,6 +18,13 @@ const PROFILES: Record<ToolType, ReactNode> = {
       <path d="M7 23l10 6M7 30l10 6" />
     </>
   ),
+  tapered_ball_end_mill: (
+    <>
+      <rect x="9" y="2" width="6" height="18" rx="1" />
+      <path d="M7 20h10l-3.5 22a1.5 1.5 0 0 1-3 0z" />
+      <path d="M7.5 24l9 5M8.5 31l6.5 4" />
+    </>
+  ),
   v_bit: (
     <>
       <rect x="9" y="2" width="6" height="22" rx="1" />

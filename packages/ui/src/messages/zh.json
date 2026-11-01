@@ -221,6 +221,7 @@
     "edit": "编辑",
     "editLabel": "编辑{name}",
     "tip": "{size} mm刀尖",
+    "perSide": "单边 {angle}°",
     "deleteConfirm": "删除“{name}”？现有项目会保留此刀具的副本。"
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "仅适用于立铣刀",
       "vBitRequired": "V形刀必填",
       "vBitOnly": "仅适用于V形刀",
+      "taperedRequired": "锥度球头立铣刀必填",
+      "taperedOnly": "仅适用于锥度球头立铣刀",
+      "tipDiameterOnly": "仅适用于V形刀和锥度球头立铣刀",
+      "taperedDiameter": "必须等于刃长处的锥体宽度",
       "drillPlunge90": "钻头以90°下刀",
       "exceedsFluteLength": "不能超过刃长",
       "smallerThanDiameter": "必须小于直径"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "在线上加工时必须为0",
       "allowanceNeeded": "需要设置要去除的余量",
       "vBitsCantDrill": "V形刀不能钻孔",
+      "taperedBitsCantDrill": "锥度球头立铣刀不能钻孔",
+      "taperedBitsCantClear": "锥度球头立铣刀仅用于雕刻和3D精加工：请选择其他刀具。",
       "drillsCantEngrave": "钻头不能雕刻",
       "flatBottomEndMill": "只有平底立铣刀能清出平底",
       "onlyVBitsVCarve": "只有V形刀能进行V形雕刻",
@@ -652,6 +659,7 @@
       "restOperationFailed": "“{operation}”失败，因此视其要切削的材料为剩余材料。",
       "noLocatingPins": "项目中没有要钻的定位销孔。",
       "pinsOffStock": "有一个定位销位于毛坯之外。",
+      "cutsPins": "此操作会切到定位销所在的位置，毛坯翻面后刀具会撞到定位销：请移动定位销或切削。",
       "noHoldingTabs": "没有保留桥：底面绕工件一圈切完后，工件会松脱。",
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。"
     },
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "平底立铣刀",
       "ball_end_mill": "球头立铣刀",
+      "tapered_ball_end_mill": "锥度球头立铣刀",
       "v_bit": "V形刀",
       "drill": "钻头"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "排屑方向",
     "vAngle": "V角",
     "tipDiameter": "刀尖直径",
+    "taperAngle": "单边角度",
     "cuttingData": "切削参数",
     "spindleSpeed": "主轴转速",
     "feedRate": "进给速度",
@@ -1036,6 +1046,7 @@
     "safeZ": "安全高度Z（毛坯上方）",
     "entryClearance": "进刀间隙（毛坯上方）",
     "limits": "限制",
+    "limitsHint": "请设置为控制器的最大速率（$110–$112，单位为 mm/min）。它们会限制刀具的进给速度和下刀速度。切削之间的空程移动始终以控制器自身的最大速率运行；时间估算对其使用这些数值。",
     "maxFeedXY": "X/Y最大进给",
     "maxFeedZ": "Z最大进给",
     "spindle": "主轴",
@@ -1114,6 +1125,14 @@
     "allProjects": "所有项目",
     "leaveAnyway": "{error}仍要离开吗？未保存的更改将会丢失；请先导出项目以保留它们。",
     "drawingProperties": "图纸属性"
+  },
+  "Ribbon": {
+    "history": "历史",
+    "drawing": "图纸",
+    "importDrawing": "导入图纸",
+    "text": "文字",
+    "relief_rough": "粗加工",
+    "relief_finish": "精加工"
   },
   "BugReport": {
     "report": "报告问题",
@@ -1272,7 +1291,10 @@
     "width": "宽度",
     "height": "高度",
     "depth": "深度",
+    "top": "顶面低于毛坯顶面",
     "tooDeep": "模型深度超过了毛坯厚度：切削深度不会超过毛坯底面。",
+    "belowStock": "模型顶面位于毛坯底面或更低：模型不会被切削，而其上方的毛坯会被切穿。",
+    "belowParting": "模型顶面低于分模深度：顶面一侧会留下其上方的毛坯不切削。请把分模深度设在模型内部。",
     "original": "原始尺寸：{size}（缩放{scale}%）",
     "border": "边距",
     "borderNote": "下次“适配毛坯”时在每一侧保留的距离；编辑它不会移动模型。",

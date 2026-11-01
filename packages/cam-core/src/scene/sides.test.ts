@@ -45,7 +45,13 @@ describe("bottomModelTransform", () => {
   it.each(AXES)("turns, scales and moves the model before flipping it, about %s", (axis) => {
     const turned = {
       ...model,
-      placement: { rotation: [90, 0, 270] as const, scale: 1.5, depth: 15, position: [30, 20] },
+      placement: {
+        rotation: [90, 0, 270] as const,
+        scale: 1.5,
+        depth: 15,
+        top: 0,
+        position: [30, 20],
+      },
     } as PlacedModel;
     const transform = bottomModelTransform(turned, stock, axis);
     for (const point of [top, bottom, [50, 40, 6] as Vec3, [-10, 25, 3] as Vec3]) {

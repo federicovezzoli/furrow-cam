@@ -1,6 +1,6 @@
 import { type CutterShape, cutterProfile } from "@furrow/cam-core";
 
-/** Points along a ball end mill's or a V-bit's edge, from its axis out. */
+/** Points along a ball end mill's or a V-bit's edge, from its axis out, and along a tapered bit's ball. */
 const EDGE_STEPS = 16;
 
 /**
@@ -13,8 +13,14 @@ export function cutterOutline(tool: CutterShape): [number, number][] {
   const { radius, flat, height } = cutterProfile(tool);
   const points: [number, number][] = [];
   const steps = flat ? 1 : EDGE_STEPS;
+  // A tapered bit's ball is narrow next to its cone: sampled on its own, so it shows.
+  const ball = tool.type === "tapered_ball_end_mill" ? (tool.tipDiameter ?? 0) / 2 : 0;
+  for (let i = 0; i < steps && ball > 0; i++) {
+    const r = (ball * i) / steps;
+    points.push([r, height(r)]);
+  }
   for (let i = 0; i <= steps; i++) {
-    const r = (radius * i) / steps;
+    const r = ball + ((radius - ball) * i) / steps;
     points.push([r, height(r)]);
   }
   const top = height(radius) + 2 * tool.diameter;

@@ -276,6 +276,19 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #425: tapered ball end mills. Tools without a taper angle get `null` from
+  // the schema's default; the bump keeps older releases from opening
+  // documents that use them.
+  28: (doc) => doc,
+  // #434: models can sit below the stock top. Existing ones keep their top at it.
+  29: (doc) => {
+    if (Array.isArray(doc.models)) {
+      for (const model of doc.models) {
+        if (isObject(model) && isObject(model.placement)) model.placement.top ??= 0;
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

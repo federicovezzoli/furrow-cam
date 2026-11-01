@@ -159,6 +159,11 @@ export function pinDepth(thickness: number, { holes }: LocatingPins): number {
   return holes.type === "through" ? thickness + holes.spoilboardDepth : holes.depth;
 }
 
+/** Whether `operation` drills the locating pins' holes (#356). */
+export function isPinDrill(operation: Operation): operation is DrillOperation {
+  return operation.type === "drill" && operation.params.pins;
+}
+
 /**
  * A drill operation as it cuts: a pin drill (#356) has the pin holes for
  * shapes, circles of the pins' diameter, and their depth; none in a project

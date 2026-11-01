@@ -54,6 +54,7 @@ const endMill: Tool = {
   cutDirection: "upcut",
   vAngle: null,
   tipDiameter: null,
+  taperAngle: null,
   spindleRpm: 24000,
   feedRate: 600,
   plungeRate: 300,
@@ -70,6 +71,7 @@ const vBit: Tool = {
   cutDirection: null,
   vAngle: 60,
   tipDiameter: 0,
+  taperAngle: null,
 };
 
 const square: Shape = {

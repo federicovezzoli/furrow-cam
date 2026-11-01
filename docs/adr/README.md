@@ -54,7 +54,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Proposed; superseded in part by ADR-0065 |
 | [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Proposed; superseded in part by ADR-0064 |
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Proposed |
-| [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Proposed |
+| [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Superseded in part by [0070](0070-diagonal-moves-on-steep-faces.md) |
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Proposed; superseded in part by ADR-0043 |
 | [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Proposed |
 | [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Proposed; superseded in part by ADR-0053 |
@@ -83,3 +83,6 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |
 | [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Proposed |
 | [0068](0068-more-interface-languages.md) | Seven more interface languages, with one variant each | Proposed |
+| [0069](0069-model-sits-below-stock-top.md) | A model's top can sit below the stock top | Proposed |
+| [0070](0070-diagonal-moves-on-steep-faces.md) | Relief passes go straight down steep faces and merge within 0.02 mm | Proposed |
+| [0071](0071-going-over-clears-the-whole-sub-step.md) | Relief passes go over a wall no lower than the tool anywhere along the level move | Proposed |

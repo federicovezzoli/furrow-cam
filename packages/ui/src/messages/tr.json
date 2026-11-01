@@ -221,6 +221,7 @@
     "edit": "Düzenle",
     "editLabel": "Düzenle: {name}",
     "tip": "{size} mm uç",
+    "perSide": "Kenar başına {angle}°",
     "deleteConfirm": "“{name}” silinsin mi? Mevcut projeler bu ucun kopyasını korur."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Yalnızca parmak frezeler için",
       "vBitRequired": "V uçlar için zorunlu",
       "vBitOnly": "Yalnızca V uçlar için",
+      "taperedRequired": "Konik küresel uçlu frezeler için zorunlu",
+      "taperedOnly": "Yalnızca konik küresel uçlu frezeler için",
+      "tipDiameterOnly": "Yalnızca V uçlar ve konik küresel uçlu frezeler için",
+      "taperedDiameter": "Kesme uzunluğundaki koni genişliği olmalı",
       "drillPlunge90": "Matkap uçları 90° ile dalar",
       "exceedsFluteLength": "Kesme boyunu aşmamalıdır",
       "smallerThanDiameter": "Çaptan küçük olmalıdır"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Çizgi üzerinde 0 olmalıdır",
       "allowanceNeeded": "Kaldırılacak bir işleme payı gerekir",
       "vBitsCantDrill": "V uçlar delme yapamaz",
+      "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
+      "taperedBitsCantClear": "Konik küresel uçlu frezeler yalnızca gravür ve 3B finiş yapar: başka bir uç seçin.",
       "drillsCantEngrave": "Matkap uçları gravür yapamaz",
       "flatBottomEndMill": "Düz tabanı yalnızca düz uçlu parmak frezeler temizler",
       "onlyVBitsVCarve": "V oymayı yalnızca V uçlar yapar",
@@ -652,6 +659,7 @@
       "restOperationFailed": "“{operation}” başarısız oldu; bu nedenle keseceği malzeme kalmış kabul edilir.",
       "noLocatingPins": "Projede delinecek konumlama pimi yok.",
       "pinsOffStock": "Bir konumlama pimi ham malzemenin dışında.",
+      "cutsPins": "Bu işlem bir konumlama piminin geldiği yeri kesiyor, bu yüzden ham malzeme çevrildiğinde takım pime çarpar: pimleri ya da kesimi taşıyın.",
       "noHoldingTabs": "Tutucu köprü yok: alt yüz parçanın çevresini tamamen kestiğinde parça serbest kalır.",
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
     },
@@ -967,8 +975,8 @@
     },
     "time": {
       "underMinute": "1 dk’dan az",
-      "minutes": "≈ {minutes} dk",
-      "hours": "≈ {hours} sa {minutes} dk"
+      "minutes": "≈ {minutes}dk",
+      "hours": "≈ {hours}sa {minutes}dk"
     },
     "timeTitle": "Tahmini işleme süresi",
     "total": "Toplam {time}",
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "Düz uçlu parmak freze",
       "ball_end_mill": "Küresel uçlu parmak freze",
+      "tapered_ball_end_mill": "Konik küresel uçlu freze",
       "v_bit": "V uç",
       "drill": "Matkap ucu"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "Talaş yönü",
     "vAngle": "V açısı",
     "tipDiameter": "Uç çapı",
+    "taperAngle": "Kenar başına açı",
     "cuttingData": "Kesme verileri",
     "spindleSpeed": "İş mili devri",
     "feedRate": "İlerleme hızı",
@@ -1036,6 +1046,7 @@
     "safeZ": "Güvenli Z (ham malzeme üstünde)",
     "entryClearance": "Giriş mesafesi (ham malzeme üstünde)",
     "limits": "Limitler",
+    "limitsHint": "Bunları kontrolcünüzün azami hızlarına ($110–$112, mm/dk cinsinden) ayarlayın. Ucun ilerleme ve dalma hızlarını sınırlarlar. Kesimler arasındaki boşta hareketler her zaman kontrolcünün kendi azami hızlarıyla yapılır; süre tahmini bunlar için bu değerleri kullanır.",
     "maxFeedXY": "Maks. ilerleme X/Y",
     "maxFeedZ": "Maks. ilerleme Z",
     "spindle": "İş mili",
@@ -1114,6 +1125,14 @@
     "allProjects": "Tüm projeler",
     "leaveAnyway": "{error} Yine de çıkılsın mı? Kaydedilmemiş değişiklikler kaybolur; korumak için önce projeyi dışa aktarın.",
     "drawingProperties": "Çizim özellikleri"
+  },
+  "Ribbon": {
+    "history": "Geçmiş",
+    "drawing": "Çizim",
+    "importDrawing": "Çizim içe aktarın",
+    "text": "Metin",
+    "relief_rough": "Kaba",
+    "relief_finish": "İnce"
   },
   "BugReport": {
     "report": "Hata bildir",
@@ -1272,7 +1291,10 @@
     "width": "Genişlik",
     "height": "Yükseklik",
     "depth": "Derinlik",
+    "top": "Üst kısım ham malzemenin altında",
     "tooDeep": "Model ham malzemenin kalınlığından daha derine uzanıyor: en fazla ham malzemenin tabanına kadar kesilir.",
+    "belowStock": "Modelin üstü ham malzemenin tabanında ya da altında: hiçbir kısmı kesilmez ve işlemler üstündeki ham malzemeyi baştan sona keser.",
+    "belowParting": "Modelin üstü ayırma derinliğinin altında: üst yüz, üstündeki ham malzemeyi kesmeden bırakır. Ayırma derinliğini modelin içine ayarlayın.",
     "original": "Orijinal: {size} (ölçek %{scale})",
     "border": "Kenar boşluğu",
     "borderNote": "Bir sonraki Ham malzemeye sığdır işleminin her kenarda bıraktığı boşluk; düzenlemek modeli taşımaz.",

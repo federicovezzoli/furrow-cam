@@ -7,6 +7,7 @@ import {
   fullDocument,
   machine,
   OPERATION_ID,
+  taperedBallEndMill,
   vBit,
 } from "@furrow/document/fixtures";
 import { formatMessage } from "@furrow/ui/lib/i18n";
@@ -114,6 +115,11 @@ describe("setToolOf", () => {
 
   it("refuses a tool the operation can't cut with, and unknown ids", () => {
     expect(() => setToolOf(project, library, OPERATION_ID, { settings: drill })).toThrow();
+    // A tapered bit's diameter is worked out, so only the profile refuses it.
+    const { diameter: _, ...tapered } = taperedBallEndMill;
+    expect(() => setToolOf(project, library, OPERATION_ID, { settings: tapered })).toThrow(
+      formatMessage(t, { code: "operation.taperedBitsCantClear" }),
+    );
     expect(document().operations[0]?.tool).toEqual(fullDocument().operations[0]?.tool);
     // Refused before any change, so no version was kept either.
     expect(project.versions).toEqual([]);

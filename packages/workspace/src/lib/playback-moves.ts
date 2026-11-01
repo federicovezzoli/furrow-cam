@@ -89,10 +89,13 @@ export function playbackMoves(
 
 /** The moves of `lines` made with `tool`, in the order the tool makes them. */
 function toolCut(
-  { type, diameter, vAngle, tipDiameter }: Tool,
+  { type, diameter, vAngle, tipDiameter, taperAngle }: Tool,
   lines: ToolpathLines,
 ): SimulationCut {
-  return { tool: { type, diameter, vAngle, tipDiameter }, segments: orderedSegments(lines) };
+  return {
+    tool: { type, diameter, vAngle, tipDiameter, taperAngle },
+    segments: orderedSegments(lines),
+  };
 }
 
 /** The segments of `lines`, feeds and rapids together, in the order the tool makes them. */

@@ -41,17 +41,15 @@ import type {
 import { useWorkspaceHost } from "../providers/workspace-host";
 import { useAutosaveApi, useDocumentStoreApi } from "../providers/workspace-stores";
 import type { AutosaveStatus } from "../stores/autosave";
+import { RibbonButton } from "./ribbon";
 
-/** The top bar's button opening the project's versions in a dialog. */
+/** The ribbon's button opening the project's versions in a dialog. */
 export function VersionsButton() {
   const t = useTranslations("Shell");
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="compact" data-tour="versions">
-          <HistoryIcon />
-          {t("versions")}
-        </Button>
+        <RibbonButton icon={<HistoryIcon />} label={t("versions")} />
       </DialogTrigger>
       <DialogContent
         aria-describedby={undefined}

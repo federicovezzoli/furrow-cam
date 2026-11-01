@@ -1,4 +1,5 @@
 import type { EngraveOperation, Shape, Tool } from "@furrow/document";
+import { cutterProfile } from "../simulation/simulation";
 import { contourToolpath, type ProfileOptions } from "./profile";
 import type { Toolpath } from "./toolpath";
 
@@ -43,17 +44,14 @@ export function engraveToolpath(
 
 /**
  * The width of the groove `tool` cuts at `depth`, at the stock top: a V-bit's
- * line width, a ball end mill's chord at that depth (its diameter once past
- * its radius), the diameter of any other tool.
+ * line width, the width of a ball or tapered end mill's profile at that depth
+ * (the ball's chord, then the cone's, up to the diameter), the diameter of
+ * any other tool.
  */
 export function grooveWidth(tool: Tool, depth: number): number {
   const vBit = vBitLineWidth(tool, depth);
   if (vBit !== null) return vBit;
-  const radius = tool.diameter / 2;
-  if (tool.type === "ball_end_mill" && depth < radius) {
-    return 2 * Math.sqrt(radius * radius - (radius - depth) ** 2);
-  }
-  return tool.diameter;
+  return 2 * cutterProfile(tool).reach(depth);
 }
 
 /** Half the included angle of a V-bit, in radians. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { endMill, vBit } from "../fixtures";
+import { endMill, taperedBallEndMill, vBit } from "../fixtures";
 import { Tool } from "./tool";
 
 describe("Tool", () => {
@@ -30,6 +30,34 @@ describe("Tool", () => {
     expect(Tool.safeParse({ ...vBit, tipDiameter: null }).success).toBe(false);
     expect(Tool.safeParse({ ...endMill, vAngle: 90 }).success).toBe(false);
     expect(Tool.safeParse({ ...vBit, tipDiameter: vBit.diameter }).success).toBe(false);
+  });
+
+  it("requires a taper angle and a ball tip on tapered ball end mills only (#425)", () => {
+    expect(Tool.parse(taperedBallEndMill)).toEqual(taperedBallEndMill);
+    expect(Tool.safeParse({ ...taperedBallEndMill, taperAngle: null }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, tipDiameter: null }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, tipDiameter: 0 }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, tipDiameter: 3.175 }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, taperAngle: 90 }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, cutDirection: null }).success).toBe(false);
+    expect(Tool.safeParse({ ...taperedBallEndMill, vAngle: 30 }).success).toBe(false);
+    expect(Tool.safeParse({ ...endMill, taperAngle: 1.5 }).success).toBe(false);
+    expect(Tool.safeParse({ ...vBit, taperAngle: 1.5 }).success).toBe(false);
+  });
+
+  it("works out a tapered ball end mill's diameter from its tip, angle and flute length", () => {
+    // 0.25 mm ball, 1.5° per side, 20 mm up the cone.
+    const angle = (1.5 * Math.PI) / 180;
+    const top = 0.25 * Math.cos(angle) + (20 - 0.25 * (1 - Math.sin(angle))) * Math.tan(angle);
+    expect(taperedBallEndMill.diameter).toBeCloseTo(2 * top, 12);
+    // The shank's size, a likely slip, is refused.
+    const shank = Tool.safeParse({ ...taperedBallEndMill, diameter: 3.175 });
+    expect(shank.error?.issues[0]?.message).toBe("tool.taperedDiameter");
+  });
+
+  it("reads tools saved before tapered bits with no taper angle", () => {
+    const { taperAngle: _, ...older } = endMill;
+    expect(Tool.parse(older)).toEqual(endMill);
   });
 
   it("rejects out-of-range values", () => {

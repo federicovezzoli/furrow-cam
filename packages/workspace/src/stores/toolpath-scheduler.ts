@@ -209,7 +209,8 @@ export function scheduleToolpaths(
     const id = input.operation.id;
     const last = hashed.get(id);
     if (last && sameInput(last.input, input)) return last.inputHash;
-    const inputHash = hash(toolpathKey(input));
+    // The pins too, which only the worker's check reads (#395).
+    const inputHash = hash(JSON.stringify([toolpathKey(input), input.pins]));
     hashed.set(id, { input, inputHash });
     return inputHash;
   }
@@ -472,6 +473,7 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     a.entryClearance === b.entryClearance &&
     // A new disc every time, like the stock rectangle.
     JSON.stringify(a.touchOff) === JSON.stringify(b.touchOff) &&
+    JSON.stringify(a.pins) === JSON.stringify(b.pins) &&
     a.shapes.length === b.shapes.length &&
     a.shapes.every((shape, i) => shape === b.shapes[i]) &&
     // A rest operation's inputs hold those of the operations before it.

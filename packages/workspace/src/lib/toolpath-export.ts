@@ -1,4 +1,4 @@
-import type { Toolpath, ToolpathInput } from "@furrow/cam-core";
+import { type Toolpath, type ToolpathInput, toolpathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { type GcodeExport, postToolpaths } from "@furrow/post";
 
@@ -13,7 +13,10 @@ export type ExportInput = { operationId: string; inputHash: string; input: Toolp
  * disabled or deleted (`retain`).
  */
 export class ToolpathResults {
-  private readonly results = new Map<string, { inputHash: string; toolpath: Toolpath }>();
+  private readonly results = new Map<
+    string,
+    { inputHash: string; key: string; toolpath: Toolpath }
+  >();
   /** The operations last retained, or `null` before the first `retain`. */
   private retained: Set<string> | null = null;
 
@@ -22,15 +25,24 @@ export class ToolpathResults {
    * unless the operation was left out of the last `retain`: an export queued
    * before it was disabled or deleted mustn't bring it back.
    */
-  keep(operationId: string, inputHash: string, toolpath: Toolpath) {
+  keep(operationId: string, inputHash: string, key: string, toolpath: Toolpath) {
     if (this.retained && !this.retained.has(operationId)) return;
-    this.results.set(operationId, { inputHash, toolpath });
+    this.results.set(operationId, { inputHash, key, toolpath });
   }
 
   /** The operation's toolpath if it was computed from inputs with `inputHash`. */
   get(operationId: string, inputHash: string): Toolpath | undefined {
     const result = this.results.get(operationId);
     return result?.inputHash === inputHash ? result.toolpath : undefined;
+  }
+
+  /**
+   * The operation's toolpath if it was computed from inputs with `toolpathKey`
+   * `key`, whatever the pins it was checked against (#395).
+   */
+  computed(operationId: string, key: string): Toolpath | undefined {
+    const result = this.results.get(operationId);
+    return result?.key === key ? result.toolpath : undefined;
   }
 
   /** Drops the toolpaths of operations other than `operationIds`, and keeps no others from now on. */
@@ -66,7 +78,7 @@ export function exportFromResults(
     let toolpath = results.get(operationId, inputHash);
     if (!toolpath) {
       toolpath = compute(input);
-      results.keep(operationId, inputHash, toolpath);
+      results.keep(operationId, inputHash, toolpathKey(input), toolpath);
     }
     return { input, toolpath };
   });

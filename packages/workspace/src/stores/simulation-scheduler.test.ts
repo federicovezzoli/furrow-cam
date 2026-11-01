@@ -82,7 +82,7 @@ describe("simulationRequest", () => {
     expect(request?.input.stock).toEqual({ width: 600, height: 400, thickness: 18 });
     expect(request?.input.cuts).toHaveLength(4);
     expect(request?.input.cuts[2]).toEqual({
-      tool: { type: "drill", diameter: 6, vAngle: null, tipDiameter: null },
+      tool: { type: "drill", diameter: 6, vAngle: null, tipDiameter: null, taperAngle: null },
       segments: preview.feeds,
     });
     expect(request?.input.cuts[3]?.segments).toBe(preview.rapids);

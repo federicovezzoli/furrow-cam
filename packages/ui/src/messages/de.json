@@ -221,6 +221,7 @@
     "edit": "Bearbeiten",
     "editLabel": "{name} bearbeiten",
     "tip": "{size} mm Spitze",
+    "perSide": "{angle}° pro Seite",
     "deleteConfirm": "„{name}“ löschen? Bestehende Projekte behalten ihre Kopie dieses Fräsers."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Nur für Schaftfräser",
       "vBitRequired": "Erforderlich für V-Fräser",
       "vBitOnly": "Nur für V-Fräser",
+      "taperedRequired": "Erforderlich für konische Radiusfräser",
+      "taperedOnly": "Nur für konische Radiusfräser",
+      "tipDiameterOnly": "Nur für V-Fräser und konische Radiusfräser",
+      "taperedDiameter": "Muss die Breite des Kegels bei der Schneidenlänge sein",
       "drillPlunge90": "Bohrer tauchen mit 90° ein",
       "exceedsFluteLength": "Darf die Schneidenlänge nicht überschreiten",
       "smallerThanDiameter": "Muss kleiner als der Durchmesser sein"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
       "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
       "vBitsCantDrill": "V-Fräser können nicht bohren",
+      "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
+      "taperedBitsCantClear": "Konische Radiusfräser gravieren und schlichten nur in 3D: Wähle einen anderen Fräser.",
       "drillsCantEngrave": "Bohrer können nicht gravieren",
       "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
@@ -652,6 +659,7 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
       "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
       "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
+      "cutsPins": "Diese Operation schneidet dort, wo ein Passstift sitzt, daher würde das Werkzeug den Stift treffen, wenn das Rohteil gewendet ist: Verschiebe die Stifte oder den Schnitt.",
       "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
@@ -967,8 +975,8 @@
     },
     "time": {
       "underMinute": "unter 1 Min.",
-      "minutes": "≈ {minutes} Min.",
-      "hours": "≈ {hours} Std. {minutes} Min."
+      "minutes": "≈ {minutes}Min.",
+      "hours": "≈ {hours}Std. {minutes}Min."
     },
     "timeTitle": "Geschätzte Bearbeitungszeit",
     "total": "Gesamt {time}",
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "Schaftfräser",
       "ball_end_mill": "Radiusfräser",
+      "tapered_ball_end_mill": "Konischer Radiusfräser",
       "v_bit": "V-Fräser",
       "drill": "Bohrer"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "Spiralrichtung",
     "vAngle": "V-Winkel",
     "tipDiameter": "Spitzendurchmesser",
+    "taperAngle": "Winkel pro Seite",
     "cuttingData": "Schnittdaten",
     "spindleSpeed": "Spindeldrehzahl",
     "feedRate": "Vorschub",
@@ -1036,6 +1046,7 @@
     "safeZ": "Sichere Z-Höhe (über dem Rohteil)",
     "entryClearance": "Anfahrabstand (über dem Rohteil)",
     "limits": "Grenzen",
+    "limitsHint": "Setze sie auf die Höchstgeschwindigkeiten deiner Steuerung ($110–$112, in mm/min). Sie begrenzen Vorschub und Eintauchvorschub des Fräsers. Leerfahrten zwischen den Schnitten laufen immer mit den Höchstgeschwindigkeiten der Steuerung; die Zeitschätzung nimmt für sie diese Werte.",
     "maxFeedXY": "Max. Vorschub X/Y",
     "maxFeedZ": "Max. Vorschub Z",
     "spindle": "Spindel",
@@ -1114,6 +1125,14 @@
     "allProjects": "Alle Projekte",
     "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten.",
     "drawingProperties": "Zeichnungseigenschaften"
+  },
+  "Ribbon": {
+    "history": "Verlauf",
+    "drawing": "Zeichnung",
+    "importDrawing": "Eine Zeichnung importieren",
+    "text": "Text",
+    "relief_rough": "Schruppen",
+    "relief_finish": "Schlichten"
   },
   "BugReport": {
     "report": "Fehler melden",
@@ -1272,7 +1291,10 @@
     "width": "Breite",
     "height": "Höhe",
     "depth": "Tiefe",
+    "top": "Oberseite unter Rohteil",
     "tooDeep": "Das Modell ist tiefer als das Rohteil dick ist: es wird nicht tiefer als der Rohteilboden geschnitten.",
+    "belowStock": "Die Oberseite des Modells liegt auf oder unter dem Rohteilboden: davon wird nichts geschnitten, und die Bearbeitungen schneiden durch das Rohteil darüber.",
+    "belowParting": "Die Oberseite des Modells liegt unter der Trenntiefe: die Oberseite lässt das Rohteil darüber stehen. Lege die Trenntiefe in das Modell.",
     "original": "Original: {size} (Maßstab {scale} %)",
     "border": "Rand",
     "borderNote": "Wird beim nächsten An Rohteil anpassen auf jeder Seite gelassen; eine Änderung verschiebt das Modell nicht.",

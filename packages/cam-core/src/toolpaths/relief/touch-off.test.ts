@@ -37,7 +37,7 @@ function wall(x: number, y0: number, y1: number, z0: number, z1: number): number
 const STEP: Model = {
   ...modelFixture,
   bounds: { min: [0, 0, -10], max: [20, 10, 0] },
-  placement: { rotation: [0, 0, 0], scale: 1, depth: 10, position: [15, 15] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 10, top: 0, position: [15, 15] },
 };
 const stepMesh = new Float32Array([
   ...rect(0, 0, 20, 10, -10),

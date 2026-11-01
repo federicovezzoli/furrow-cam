@@ -1,4 +1,5 @@
 import {
+  checkPins,
   createCache,
   createReliefCache,
   generateToolpath,
@@ -6,7 +7,6 @@ import {
   parseStl,
   type SimulationCut,
   type StlMesh,
-  type Toolpath,
   toolpathCuts,
   toolpathKey,
   toolpathLines,
@@ -117,11 +117,13 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     await keepMesh(bytes, toolpathMeshes(input));
   }
 
+  // Held already when only the pins moved (#395), which just rechecks it.
+  const key = toolpathKey(input);
+  let toolpath = results.computed(operationId, key);
   const steps = toolpathSteps(input, { mesh, cache: reliefCache, cuts });
-  let toolpath: Toolpath;
   let slice = performance.now();
   let reported = slice;
-  for (;;) {
+  while (!toolpath) {
     const step = steps.next();
     if (step.done) {
       toolpath = step.value;
@@ -142,9 +144,9 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     }
   }
 
-  results.keep(operationId, inputHash, toolpath);
+  results.keep(operationId, inputHash, key, toolpath);
   const { operation } = input;
-  const { warnings } = toolpath;
+  const { warnings } = checkPins(input, toolpath);
   // Only drills make holes; other straight plunges enter a cut that shows.
   const holeRadius = operation.type === "drill" ? operation.tool.diameter / 2 : null;
   // A V-carve's or a relief's depth varies along each pass, and 3D roughing's

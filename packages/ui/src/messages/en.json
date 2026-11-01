@@ -221,6 +221,7 @@
     "edit": "Edit",
     "editLabel": "Edit {name}",
     "tip": "{size} mm tip",
+    "perSide": "{angle}° per side",
     "deleteConfirm": "Delete \"{name}\"? Existing projects keep their copy of this bit."
   },
   "Machines": {
@@ -475,6 +476,10 @@
       "cutDirectionEndMillsOnly": "Only for end mills",
       "vBitRequired": "Required for V-bits",
       "vBitOnly": "Only for V-bits",
+      "taperedRequired": "Required for tapered ball end mills",
+      "taperedOnly": "Only for tapered ball end mills",
+      "tipDiameterOnly": "Only for V-bits and tapered ball end mills",
+      "taperedDiameter": "Must be the cone's width at the flute length",
       "drillPlunge90": "Drills plunge at 90°",
       "exceedsFluteLength": "Must not exceed the flute length",
       "smallerThanDiameter": "Must be smaller than the diameter"
@@ -520,6 +525,8 @@
       "allowanceZeroOnLine": "Must be 0 on the line",
       "allowanceNeeded": "Needs an allowance to remove",
       "vBitsCantDrill": "V-bits can't drill",
+      "taperedBitsCantDrill": "Tapered ball end mills can't drill",
+      "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",
@@ -652,6 +659,7 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
+      "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },
@@ -967,8 +975,8 @@
     },
     "time": {
       "underMinute": "under 1 min",
-      "minutes": "≈ {minutes} min",
-      "hours": "≈ {hours} h {minutes} min"
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
     },
     "timeTitle": "Estimated machining time",
     "total": "Total {time}",
@@ -985,6 +993,7 @@
     "types": {
       "flat_end_mill": "Flat end mill",
       "ball_end_mill": "Ball end mill",
+      "tapered_ball_end_mill": "Tapered ball end mill",
       "v_bit": "V-bit",
       "drill": "Drill"
     },
@@ -1005,6 +1014,7 @@
     "cutDirection": "Cut direction",
     "vAngle": "V angle",
     "tipDiameter": "Tip diameter",
+    "taperAngle": "Angle per side",
     "cuttingData": "Cutting data",
     "spindleSpeed": "Spindle speed",
     "feedRate": "Feed rate",
@@ -1036,6 +1046,7 @@
     "safeZ": "Safe Z (above stock)",
     "entryClearance": "Entry clearance (above stock)",
     "limits": "Limits",
+    "limitsHint": "Set these to your controller’s maximum rates ($110–$112, which are in mm/min). They cap the bit’s feed and plunge rates. Travel moves between cuts always run at the controller’s own maximum rates; the time estimate uses these values for them.",
     "maxFeedXY": "Max feed X/Y",
     "maxFeedZ": "Max feed Z",
     "spindle": "Spindle",
@@ -1114,6 +1125,14 @@
     "allProjects": "All projects",
     "leaveAnyway": "{error} Leave it anyway? Changes not saved will be lost; export the project first to keep them.",
     "drawingProperties": "Drawing properties"
+  },
+  "Ribbon": {
+    "history": "History",
+    "drawing": "Drawing",
+    "importDrawing": "Import a drawing",
+    "text": "Text",
+    "relief_rough": "Rough",
+    "relief_finish": "Finish"
   },
   "BugReport": {
     "report": "Report a bug",
@@ -1272,7 +1291,10 @@
     "width": "Width",
     "height": "Height",
     "depth": "Depth",
+    "top": "Top below stock",
     "tooDeep": "The model reaches deeper than the stock is thick: it is cut no deeper than the stock's bottom.",
+    "belowStock": "The model's top is at or below the stock's bottom: none of it is cut, and operations cut through the stock over it.",
+    "belowParting": "The model's top is below the parting depth: the top side leaves the stock above it uncut. Set the parting depth inside the model.",
     "original": "Original: {size} (scale {scale}%)",
     "border": "Border",
     "borderNote": "Left on every side by the next Fit to stock; editing it doesn't move the model.",

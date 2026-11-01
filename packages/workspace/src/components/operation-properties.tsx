@@ -50,8 +50,8 @@ import type * as React from "react";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 import { useLength } from "../hooks/use-length";
+import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
-import { selectionTargets } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -307,11 +307,7 @@ function TargetsField({
   const targetsLabel = useTargetsLabel();
   const store = useDocumentStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const selected = useMemo(
-    () => selectionTargets(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const selected = useSelectionTargets();
   const rows = useMemo(() => {
     const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
     return targets.flatMap((target) => {
