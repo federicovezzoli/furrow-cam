@@ -7,7 +7,7 @@ import { autoHoldingTabPositions, holdingTabStrips, modelOutlines } from "./hold
 const BLOCK: Model = {
   ...model,
   bounds: { min: [0, 0, 0], max: [20, 10, 18] },
-  placement: { rotation: [0, 0, 0], scale: 1, depth: 18, position: [20, 20] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 18, top: 0, position: [20, 20] },
 };
 const STOCK = { width: 60, height: 50 };
 

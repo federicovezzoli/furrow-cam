@@ -81,6 +81,7 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
   }
   if (draft.scale !== placement.scale) draft.scale = placement.scale;
   if (draft.depth !== placement.depth) draft.depth = placement.depth;
+  if (draft.top !== placement.top) draft.top = placement.top;
   if (draft.position[0] !== placement.position[0] || draft.position[1] !== placement.position[1]) {
     draft.position = placement.position;
   }
@@ -185,6 +186,13 @@ export function setModelDepth(store: DocumentStore, id: string, depth: number) {
     if (height === null) return;
     const scale = depth / height;
     assignPlacement(model, replacePlacement(current, { scale }, modelAnchor(stock)));
+  });
+}
+
+/** Sinks a model's top `top` millimetres below the stock top (ADR-0069), keeping its depth. */
+export function setModelTop(store: DocumentStore, id: string, top: number) {
+  changeModel(store, "setModel.top", id, (model) => {
+    if (model.placement.top !== top) model.placement.top = top;
   });
 }
 

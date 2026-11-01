@@ -83,4 +83,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |
 | [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Proposed |
 | [0068](0068-more-interface-languages.md) | Seven more interface languages, with one variant each | Proposed |
+| [0069](0069-model-sits-below-stock-top.md) | A model's top can sit below the stock top | Proposed |
 | [0070](0070-diagonal-moves-on-steep-faces.md) | Relief passes go straight down steep faces and merge within 0.02 mm | Proposed |

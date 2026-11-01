@@ -208,7 +208,7 @@ export const model: Model = {
   size: 684,
   triangles: 12,
   bounds: { min: [-50, -40, 0], max: [50, 40, 12] },
-  placement: { rotation: [0, 0, 0], scale: 1, depth: 12, position: [0, 0] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 12, top: 0, position: [0, 0] },
   border: 10,
 };
 
@@ -258,7 +258,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 29,
+    schemaVersion: 30,
     units: "in",
     stock: {
       width: 300,

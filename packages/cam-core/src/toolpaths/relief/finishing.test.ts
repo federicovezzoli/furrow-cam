@@ -37,7 +37,7 @@ function placed(width: number, length: number, depth: number): Model {
   return {
     ...modelFixture,
     bounds: { min: [0, 0, -depth], max: [width, length, 0] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth, position: [0, 0] },
+    placement: { rotation: [0, 0, 0], scale: 1, depth, top: 0, position: [0, 0] },
   };
 }
 

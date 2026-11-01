@@ -1,6 +1,6 @@
 # ADR-0031: Models are placed by quarter turns, a scale and a depth, and aligned with the drawing
 
-- **Status:** Proposed; superseded in part by [ADR-0034](0034-model-keeps-proportions.md) (one scale for X, Y and Z; no cap on import), [ADR-0038](0038-roughing-margin-and-model-border.md) (import and *Fit to stock* leave a border), [ADR-0055](0055-several-drawings-transformed-in-place.md) (several imported files per project) and [ADR-0060](0060-two-sided-projects.md) (two-sided projects machine a model from below too)
+- **Status:** Proposed; superseded in part by [ADR-0034](0034-model-keeps-proportions.md) (one scale for X, Y and Z; no cap on import), [ADR-0038](0038-roughing-margin-and-model-border.md) (import and *Fit to stock* leave a border), [ADR-0055](0055-several-drawings-transformed-in-place.md) (several imported files per project), [ADR-0060](0060-two-sided-projects.md) (two-sided projects machine a model from below too) and [ADR-0069](0069-model-sits-below-stock-top.md) (the model's top can sit below the stock top)
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S2, S3), ADR-0014, ADR-0016, ADR-0022, ADR-0029, ADR-0030; issue #114
