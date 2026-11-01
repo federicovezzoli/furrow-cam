@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { binaryStlSize } from "@furrow/cam-core";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { DRAWINGS_OR_MODEL } from "@furrow/workspace/stores/geometry-actions";
@@ -129,7 +130,7 @@ describe("importFile", () => {
     expect(stored?.bounds).toEqual({ min: [0, 0, 0], max: [40, 20, 10] });
     const stl = project.meshes.get(stored?.sha256 ?? "");
     expect(stl?.byteLength).toBe(stored?.size);
-    expect(stl?.byteLength).toBe(84 + 50 * (stored?.triangles ?? 0));
+    expect(stl?.byteLength).toBe(binaryStlSize(stored?.triangles ?? 0));
   }, 30_000);
 
   it("refuses a STEP file it can't read with the app's message", async () => {

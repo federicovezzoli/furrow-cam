@@ -1,6 +1,6 @@
 import { DEFAULT_STL_LIMITS, parseStl } from "@furrow/cam-core";
 import wasmUrl from "occt-import-js/dist/occt-import-js.wasm?url&inline";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import boxWithHole from "./fixtures/box-with-hole.step?raw";
 import boxWithHoleInch from "./fixtures/box-with-hole-inch.step?raw";
 import { isStepFile, OCCT_LICENCES, stepToStl } from "./step";
@@ -40,6 +40,19 @@ describe("isStepFile", () => {
 });
 
 describe("stepToStl", () => {
+  it("says STEP import couldn't be loaded when the kernel fails to load, and tries again", async () => {
+    vi.resetModules();
+    const step = await import("./step");
+    const offline = () => Promise.reject(new TypeError("Failed to fetch"));
+    await expect(
+      step.stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, offline),
+    ).rejects.toMatchObject({
+      detail: { code: "workspace.stepImportUnavailable" },
+    });
+    const stl = await step.stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm);
+    expect(parseStl(stl).bounds.max).toEqual([40, 20, 10]);
+  }, 30_000);
+
   it("turns a solid into a closed STL mesh in millimetres", async () => {
     const mesh = parseStl(await stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm));
     expect(mesh.bounds).toEqual({ min: [0, 0, 0], max: [40, 20, 10] });
