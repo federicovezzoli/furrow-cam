@@ -634,7 +634,9 @@ const STRAIGHT_SLACK = 1e-3;
  * two: along at that height, then straight down or up. With `between`, no
  * lower than the tool dropped halfway with its profile widened by half the
  * way (`between`'s `by`, in the units of `spacing`), which keeps the move
- * clear of a face still rising into the wall (#439).
+ * clear of a face still rising into the wall (#439). Between samples
+ * closer in height, a feature narrower than a cell can rise above the
+ * straight move unseen (ADR-0073).
  */
 export function sampleMoves(
   heights: ArrayLike<number>,
