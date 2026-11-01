@@ -57,6 +57,7 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
     leadIn: null,
     ramp: false,
     tabs: null,
+    startPoints: [],
   };
 }
 
@@ -109,6 +110,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
     side: "on",
     depth: Math.min(DEFAULT_ENGRAVE_DEPTH, document.stock.thickness),
     ramp: false,
+    startPoints: [],
   };
 }
 
@@ -690,5 +692,37 @@ export function moveTab(store: DocumentStore, id: string, index: number, positio
 export function removeTab(store: DocumentStore, id: string, index: number) {
   changeTabPositions(store, "removeTab", id, (positions) => {
     if (index >= 0 && index < positions.length) positions.splice(index, 1);
+  });
+}
+
+/** Applies `recipe` to the start points of the profile or engraving `id`. */
+function changeStartPoints(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  recipe: (startPoints: Point[]) => void,
+) {
+  changeOperation(store, name, id, (operation) => {
+    if (operation.type === "profile" || operation.type === "engrave") {
+      recipe(operation.params.startPoints);
+    }
+  });
+}
+
+export function addStartPoint(store: DocumentStore, id: string, position: Point) {
+  changeStartPoints(store, "addStartPoint", id, (startPoints) => {
+    startPoints.push(position);
+  });
+}
+
+export function moveStartPoint(store: DocumentStore, id: string, index: number, position: Point) {
+  changeStartPoints(store, "moveStartPoint", id, (startPoints) => {
+    if (index >= 0 && index < startPoints.length) startPoints[index] = position;
+  });
+}
+
+export function removeStartPoint(store: DocumentStore, id: string, index: number) {
+  changeStartPoints(store, "removeStartPoint", id, (startPoints) => {
+    if (index >= 0 && index < startPoints.length) startPoints.splice(index, 1);
   });
 }

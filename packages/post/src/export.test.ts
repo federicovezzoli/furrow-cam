@@ -79,6 +79,7 @@ function referenceProject(): ProjectDocument {
       leadIn: null,
       ramp: false,
       tabs: { width: 6, height: 2, positions: [[80, 20]] },
+      startPoints: [],
     },
   };
   return {
@@ -253,6 +254,7 @@ describe("exportGcode", () => {
             flipAxis,
             partingDepth: 9,
             tabs: null,
+            startPoints: [],
             lineUp: { type: "edges" as const, corner: "bottom_right" as const },
           },
         };

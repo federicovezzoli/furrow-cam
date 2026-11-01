@@ -260,6 +260,10 @@ describe("duplicateDrawing", () => {
       [50, 0],
       [50 + dx, 0],
     ]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([
+      [0, 50],
+      [dx, 50],
+    ]);
     expect(ProjectDocument.parse(doc)).toEqual(doc);
     expect(store.getState().past).toHaveLength(1);
     store.getState().undo();
@@ -348,6 +352,8 @@ describe("drawing size", () => {
     const [profile] = s.getState().document.operations;
     expect(profile?.targets).toEqual([{ shapeId: OTHER_SQUARE, paths: null }]);
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[200, 0]]);
+    // The start point on the removed square goes with it.
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([]);
   });
   const size = (s: ReturnType<typeof store>) => {
     const bounds = drawingBounds(s.getState().document.geometry, DRAWING_ID);
@@ -368,6 +374,7 @@ describe("drawing size", () => {
     // The tab at (50, 0) on the square's bottom edge doubles its distance from the corner.
     const [profile] = s.getState().document.operations;
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[100, 0]]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[0, 100]]);
     expect(s.getState().document.geometry[2]).toBe(otherBefore);
     expect(ProjectDocument.parse(s.getState().document)).toEqual(s.getState().document);
   });
@@ -476,6 +483,8 @@ describe("drawing size", () => {
     expect(after.min[0]).toBeCloseTo(before.min[0] + 12.5, 9);
     expect(after.min[1]).toBeCloseTo(before.min[1] - 3, 9);
     expect(tabsOf(s)).toEqual([[62.5, -3]]);
+    const [profile] = s.getState().document.operations;
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[12.5, 47]]);
     expect(s.getState().document.geometry[2]).toBe(other);
     expect(s.getState().past).toHaveLength(1);
     moveDrawing(s, DRAWING_ID, [0, 0]);

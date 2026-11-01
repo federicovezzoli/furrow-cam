@@ -12,6 +12,7 @@ import {
   scalePoint,
   scaleShapes,
   shapesBounds,
+  startPointPaths,
   stockInset,
   targetedShapes,
   translatePoint,
@@ -169,7 +170,7 @@ export function setTextItem(
     (nearestOnLoops(loops, position)?.distance ?? Infinity) <= TAB_ON_OUTLINE;
   /** Which tabs of each profile go: those on the old paths and off the new ones. */
   const gone = new Map(
-    [...drawingTabs(document, id)].map(([operationId, own]) => {
+    [...drawingMarkers(document, id)].map(([operationId, { tabs: own }]) => {
       const operation = document.operations.find((candidate) => candidate.id === operationId);
       const positions =
         operation?.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
@@ -214,33 +215,43 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
   );
 }
 
+/** Which of an operation's tab positions and start points (#426) belong to a drawing. */
+type OwnMarkers = { tabs: boolean[]; startPoints: boolean[] };
+
 /**
- * Which tab positions of each profile targeting drawing `id` belong to it,
- * by operation id: those nearer its paths than the profile's other targets'
- * (ADR-0055). Tabs are placed on the paths, but a tolerance can't tell after
- * a scale moves them off the new flattening; a tie, coincident shapes of two
- * drawings, stays with the other drawing.
+ * Which tab positions and start points of each profile or engraving
+ * targeting drawing `id` belong to it, by operation id: those nearer its
+ * paths than the operation's other targets' (ADR-0055), closed paths for
+ * tabs and any path for start points. They are placed on the paths, but a
+ * tolerance can't tell after a scale moves them off the new flattening; a
+ * tie, coincident shapes of two drawings, stays with the other drawing.
  */
-function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean[]> {
+function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnMarkers> {
   const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
-  const tabs = new Map<string, boolean[]>();
+  const markers = new Map<string, OwnMarkers>();
+  const allPaths = (of: Shape[]) => startPointPaths(of, "on").map(({ points }) => points);
   for (const operation of document.operations) {
-    if (operation.type !== "profile" || !operation.params.tabs) continue;
-    // Only the paths it cuts: a tab on an uncut path of another drawing doesn't take it.
+    if (operation.type !== "profile" && operation.type !== "engrave") continue;
+    // Only the paths it cuts: a marker on an uncut path of another drawing doesn't take it.
     const targeted = targetedShapes(shapes, operation.targets);
-    const mine = closedLoops(targeted.filter((shape) => shape.drawingId === id));
+    const mine = targeted.filter((shape) => shape.drawingId === id);
     if (mine.length === 0) continue;
-    const others = closedLoops(targeted.filter((shape) => shape.drawingId !== id));
-    tabs.set(
-      operation.id,
-      operation.params.tabs.positions.map((position) => {
-        const near = nearestOnLoops(mine, position);
-        const other = nearestOnLoops(others, position);
-        return near !== null && (other === null || near.distance < other.distance);
-      }),
-    );
+    const others = targeted.filter((shape) => shape.drawingId !== id);
+    const own = (positions: Point[], lines: (of: Shape[]) => Point[][]) => {
+      const [near, far] = [lines(mine), lines(others)];
+      return positions.map((position) => {
+        const ours = nearestOnLoops(near, position);
+        const theirs = nearestOnLoops(far, position);
+        return ours !== null && (theirs === null || ours.distance < theirs.distance);
+      });
+    };
+    const tabs = operation.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
+    markers.set(operation.id, {
+      tabs: own(tabs, (of) => closedLoops(of)),
+      startPoints: own(operation.params.startPoints, allPaths),
+    });
   }
-  return tabs;
+  return markers;
 }
 
 /**
@@ -292,7 +303,7 @@ function transformDrawing(
   const byId = new Map(rewritten.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
-  const tabs = drawingTabs(document, id);
+  const markers = drawingMarkers(document, id);
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
     const drawing = draft.drawings.find((d) => d.id === id);
@@ -302,12 +313,16 @@ function transformDrawing(
         drawing.rotation = normalizeDegrees(transform.rotation(drawing.rotation));
     }
     for (const operation of draft.operations) {
-      const moved = tabs.get(operation.id);
-      if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
-      const { positions } = operation.params.tabs;
-      positions.forEach((position, i) => {
-        if (moved[i]) positions[i] = transform.point(position);
-      });
+      const moved = markers.get(operation.id);
+      if (!moved || (operation.type !== "profile" && operation.type !== "engrave")) continue;
+      const move = (positions: Point[], own: boolean[]) =>
+        positions.forEach((position, i) => {
+          if (own[i]) positions[i] = transform.point(position);
+        });
+      if (operation.type === "profile" && operation.params.tabs) {
+        move(operation.params.tabs.positions, moved.tabs);
+      }
+      move(operation.params.startPoints, moved.startPoints);
     }
   });
   return { ok: true };
@@ -541,7 +556,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   }));
   // One assignment, not a spread push, as on import.
   const geometry = document.geometry.concat(copies);
-  const tabs = drawingTabs(document, id);
+  const markers = drawingMarkers(document, id);
   store.getState().change("duplicateDrawing", (draft) => {
     const copy = { ...drawing, id: copyId };
     moveTextWithOutlines(copy, (point) => translatePoint(point, offset));
@@ -555,13 +570,19 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       });
       // One assignment, not a spread push: a drawing may hold more shapes than a call takes arguments.
       if (extra.length > 0) operation.targets = operation.targets.concat(extra);
-      const own = tabs.get(operation.id);
-      if (!own || operation.type !== "profile" || !operation.params.tabs) continue;
-      const { positions } = operation.params.tabs;
+      const own = markers.get(operation.id);
+      if (!own || (operation.type !== "profile" && operation.type !== "engrave")) continue;
       // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
-      operation.params.tabs.positions = positions.concat(
-        positions.filter((_, i) => own[i]).map((position) => translatePoint(position, offset)),
-      );
+      const copied = (positions: Point[], mine: boolean[]) =>
+        positions.concat(
+          positions.filter((_, i) => mine[i]).map((position) => translatePoint(position, offset)),
+        );
+      if (operation.type === "profile" && operation.params.tabs) {
+        operation.params.tabs.positions = copied(operation.params.tabs.positions, own.tabs);
+      }
+      if (own.startPoints.some(Boolean)) {
+        operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);
+      }
     }
   });
   return copyId;
@@ -574,7 +595,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
  * (ADR-0055).
  */
 export function removeDrawing(store: DocumentStore, id: string) {
-  const ownTabs = drawingTabs(store.getState().document, id);
+  const owned = drawingMarkers(store.getState().document, id);
   store.getState().change("removeDrawing", (draft) => {
     const index = draft.drawings.findIndex((drawing) => drawing.id === id);
     if (index === -1) return;
@@ -587,9 +608,16 @@ export function removeDrawing(store: DocumentStore, id: string) {
       const targets = operation.targets.filter(({ shapeId }) => !removed.has(shapeId));
       if (targets.length === operation.targets.length) return true;
       operation.targets = targets;
-      const gone = ownTabs.get(operation.id);
+      const gone = owned.get(operation.id);
       const tabs = operation.type === "profile" ? operation.params.tabs : null;
-      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone[i]);
+      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone.tabs[i]);
+      if (
+        gone?.startPoints.some(Boolean) &&
+        (operation.type === "profile" || operation.type === "engrave")
+      ) {
+        const { startPoints } = operation.params;
+        operation.params.startPoints = startPoints.filter((_, i) => !gone.startPoints[i]);
+      }
       return targets.length > 0;
     });
   });

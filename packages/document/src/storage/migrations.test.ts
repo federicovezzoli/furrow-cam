@@ -310,6 +310,34 @@ describe("migrations", () => {
     expect(parseProjectDocument(v30)).toEqual(current);
   });
 
+  it("gives v31 profiles and engravings no start points", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const engrave: Operation = {
+      ...profile,
+      id: "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+      type: "engrave",
+      tool: { ...profile.tool },
+      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
+    };
+    const withNone = {
+      ...current,
+      operations: [{ ...profile, params: { ...profile.params, startPoints: [] } }, engrave],
+    };
+    const v31 = {
+      ...withNone,
+      schemaVersion: 31,
+      operations: withNone.operations.map(
+        ({ params: { startPoints: _, ...params }, ...operation }) => ({
+          ...operation,
+          params,
+        }),
+      ),
+    };
+    expect(parseProjectDocument(v31)).toEqual(withNone);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

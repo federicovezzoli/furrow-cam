@@ -55,7 +55,7 @@ function engraving(
     type: "engrave",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool,
-    params: { side: "on", depth: 1, ramp: false, ...params },
+    params: { side: "on", depth: 1, ramp: false, startPoints: [], ...params },
   };
 }
 
@@ -105,7 +105,7 @@ describe("engraveToolpath", () => {
   });
 
   it("is the profile on the line", () => {
-    const operation = engraving([square, line], { depth: 3, ramp: true });
+    const operation = engraving([square, line], { depth: 3, ramp: true, startPoints: [[90, 10]] });
     expect(operation.params.side).toBe("on");
     expect(engraveToolpath(operation, [square, line], options)).toEqual(
       profileToolpath(
@@ -121,6 +121,7 @@ describe("engraveToolpath", () => {
             leadIn: null,
             ramp: true,
             tabs: null,
+            startPoints: [[90, 10]],
           },
         },
         [square, line],

@@ -3,7 +3,7 @@ import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { applyAffine } from "../geometry/affine";
 import { modelTransform, type PlacedModel } from "./model";
-import { bottomModelTransform, flipOperation, flipPoint } from "./sides";
+import { bottomModelTransform, flipOperation, flipPoint, flipPoint2 } from "./sides";
 import type { Vec3 } from "./stock";
 
 const stock = { width: 400, height: 200, thickness: 18 };
@@ -100,5 +100,20 @@ describe("flipOperation", () => {
     const flip = { ...stock, axis: "x" as const };
     expect(angle(flipOperation(pocket, flip))).toBe(-45);
     expect(angle(flipOperation(flipOperation(pocket, flip), flip))).toBe(45);
+  });
+
+  it("mirrors a profile's tabs and start points with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("a profile with tabs");
+    const flip = { ...stock, axis: "x" as const };
+    const flipped = flipOperation(profile, flip);
+    if (flipped.type !== "profile") throw new Error("still a profile");
+    expect(flipped.params.tabs?.positions).toEqual(
+      profile.params.tabs.positions.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipped.params.startPoints).toEqual(
+      profile.params.startPoints.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipOperation(flipped, flip)).toEqual(profile);
   });
 });

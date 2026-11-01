@@ -2,25 +2,36 @@
 
 import {
   closedLoops,
+  grooveWidth,
   holdingTabStrips,
   modelOutlines,
   nearestOnLoops,
+  snapStartPoint,
+  startPointCentres,
+  startPointPaths,
   type TabFrame,
   tabFrame,
   targetedShapes,
   type Vec3,
 } from "@furrow/cam-core";
-import type { Point, ProfileOperation } from "@furrow/document";
+import type { Operation, Point } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import type { Mesh } from "three";
 import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "../../providers/workspace-stores";
-import { addTab, moveTab, removeTab } from "../../stores/operation-actions";
+import {
+  addStartPoint,
+  addTab,
+  moveStartPoint,
+  moveTab,
+  removeStartPoint,
+  removeTab,
+} from "../../stores/operation-actions";
 import { moveHoldingTab } from "../../stores/stock-actions";
 import { RENDER_ORDER } from "./scene-style";
 import { onStockTop, StockTopCatcher } from "./stock-top";
@@ -32,13 +43,10 @@ const TAB_PICK_DISTANCE = 10;
 /** Pointer travel, in pixels, before a press on a tab becomes a drag rather than a click. */
 const TAB_DRAG_THRESHOLD = 3;
 
-/** The selected profile, if it has tabs. */
-function useSelectedTabbedProfile(): ProfileOperation | null {
+/** The selected operation, if any. */
+function useSelectedOperation(): Operation | undefined {
   const id = useWorkspaceStore((s) => s.selectedOperationId);
-  const operation = useDocumentStore((s) =>
-    s.document.operations.find((candidate) => candidate.id === id),
-  );
-  return operation?.type === "profile" && operation.params.tabs ? operation : null;
+  return useDocumentStore((s) => s.document.operations.find((candidate) => candidate.id === id));
 }
 
 /**
@@ -49,8 +57,9 @@ function useSelectedTabbedProfile(): ProfileOperation | null {
  * moves it along the contours and clicking it removes it.
  */
 export function Tabs({ color }: { color: string }) {
-  const operation = useSelectedTabbedProfile();
-  const editing = useWorkspaceStore((s) => s.editingTabs);
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "profile" && selected.params.tabs ? selected : null;
+  const editing = useWorkspaceStore((s) => s.editing === "tabs");
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
   const targets = operation?.targets;
@@ -98,16 +107,16 @@ export function Tabs({ color }: { color: string }) {
           // biome-ignore lint/suspicious/noArrayIndexKey: see above
           key={index}
           frame={frame ?? { center: tabs.positions[index] as Point, angle: 0 }}
-          size={[tabs.width, operation.tool.diameter, height]}
-          bottom={-depth}
-          color={color}
+          z={height / 2 - depth}
           editing={editing}
           onMove={(point) => {
             const nearest = nearestOnLoops(loops, point);
             if (nearest) moveTab(store, operation.id, index, nearest.point);
           }}
           onRemove={() => removeTab(store, operation.id, index)}
-        />
+        >
+          <TabBox size={[tabs.width, operation.tool.diameter, height]} color={color} />
+        </TabMarker>
       ))}
     </>
   );
@@ -123,7 +132,7 @@ export function HoldingTabs({ color }: { color: string }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const models = useDocumentStore((s) => s.document.models);
   const editing = useWorkspaceStore(
-    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+    (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
   );
   const store = useDocumentStoreApi();
   const loops = useMemo(() => modelOutlines(models), [models]);
@@ -144,40 +153,144 @@ export function HoldingTabs({ color }: { color: string }) {
         center: [(at[0] + to[0]) / 2, (at[1] + to[1]) / 2],
         angle: Math.atan2(to[1] - at[1], to[0] - at[0]),
       }}
-      size={[Math.hypot(to[0] - at[0], to[1] - at[1]), tabs.width, tabs.thickness]}
-      bottom={-partingDepth - tabs.thickness}
-      color={color}
+      z={-partingDepth - tabs.thickness / 2}
       editing={editing}
       onMove={(point) => {
         const nearest = nearestOnLoops(loops, point);
         if (nearest) moveHoldingTab(store, index, nearest.point);
       }}
-    />
+    >
+      <TabBox
+        size={[Math.hypot(to[0] - at[0], to[1] - at[1]), tabs.width, tabs.thickness]}
+        color={color}
+      />
+    </TabMarker>
   ));
 }
 
-/** A press on a tab marker, which becomes a drag once the pointer moves far enough. */
+/**
+ * The selected profile's or engraving's start points (#426), each a disc as
+ * wide as the tool at the stock top, where the tool centre enters the cut.
+ * While the workspace edits them (top view only), a click near one of the
+ * operation's paths adds a start point there (at the nearer end of an open
+ * path), dragging one moves it along the paths and clicking it removes it.
+ */
+export function StartPoints({ color }: { color: string }) {
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "profile" || selected?.type === "engrave" ? selected : null;
+  const editing = useWorkspaceStore((s) => s.editing === "startPoints");
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const store = useDocumentStoreApi();
+  const targets = operation?.targets;
+  const side = operation?.params.side;
+  const startPoints = operation?.params.startPoints;
+  // How far the tool centre is off the closed paths, on the finished cut.
+  const offset =
+    operation &&
+    (operation.type === "profile"
+      ? operation.tool.diameter / 2
+      : grooveWidth(operation.tool, operation.params.depth) / 2);
+  const shapes = useMemo(
+    () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
+    [geometry, targets],
+  );
+  const paths = useMemo(() => (side ? startPointPaths(shapes, side) : []), [shapes, side]);
+  const centres = useMemo(
+    () =>
+      side && offset !== null && offset !== undefined && startPoints
+        ? startPointCentres(shapes, side, offset, startPoints)
+        : [],
+    [shapes, side, offset, startPoints],
+  );
+  if (!operation || !startPoints) return null;
+  const { depth } = operation.params;
+  const radius = operation.tool.diameter / 2;
+
+  function add(event: ThreeEvent<MouseEvent>) {
+    if (!operation || event.delta > TAB_DRAG_THRESHOLD) return;
+    const point = onStockTop(event.ray);
+    const snapped = point && snapStartPoint(paths, point);
+    if (snapped && snapped.distance <= TAB_PICK_DISTANCE / event.camera.zoom) {
+      addStartPoint(store, operation.id, snapped.point);
+    }
+  }
+
+  return (
+    <>
+      {editing && <StockTopCatcher z={-depth - 1} onClick={add} />}
+      {centres.map((center, index) => (
+        <TabMarker
+          // Positions have no ids; a marker keeps its index while dragged.
+          // biome-ignore lint/suspicious/noArrayIndexKey: see above
+          key={index}
+          frame={{ center, angle: 0 }}
+          z={0}
+          editing={editing}
+          onMove={(point) => {
+            const snapped = snapStartPoint(paths, point);
+            if (snapped) moveStartPoint(store, operation.id, index, snapped.point);
+          }}
+          onRemove={() => removeStartPoint(store, operation.id, index)}
+        >
+          <MarkerMesh color={color}>
+            <circleGeometry args={[radius, 32]} />
+          </MarkerMesh>
+        </TabMarker>
+      ))}
+    </>
+  );
+}
+
+/** A tab's material as a translucent box, `size` along the contour, across it and up. */
+function TabBox({ size, color }: { size: Vec3; color: string }) {
+  return (
+    <MarkerMesh color={color}>
+      <boxGeometry args={size} />
+    </MarkerMesh>
+  );
+}
+
+/** A marker's `children` geometry, translucent and outlined. */
+function MarkerMesh({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    // Drawn over the stock and the shapes, which would otherwise hide it from above.
+    <mesh renderOrder={RENDER_ORDER.tabs}>
+      {children}
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.35}
+        depthTest={false}
+        depthWrite={false}
+      />
+      <Edges color={color} transparent depthTest={false} renderOrder={RENDER_ORDER.tabs} />
+    </mesh>
+  );
+}
+
+/** A press on a marker, which becomes a drag once the pointer moves far enough. */
 type TabPress = { pointerId: number; x: number; y: number; dragging: boolean };
 
+/**
+ * A tab or start point drawn as `children`, which a drag moves and a click
+ * removes while `editing`, showing the grab cursor over it and while dragging.
+ */
 function TabMarker({
   frame,
-  size,
-  bottom,
-  color,
+  z,
   editing,
   onMove,
   onRemove,
+  children,
 }: {
   frame: TabFrame;
-  /** Along the contour, across it and up. */
-  size: Vec3;
-  /** Height of the tab's base: a profile's final depth, or a holding tab's below the parting plane. */
-  bottom: number;
-  color: string;
+  /** Height of the marker's middle. */
+  z: number;
   editing: boolean;
   onMove: (point: Point) => void;
-  /** Without it, a click on the tab does nothing. */
+  /** Without it, a click on the marker does nothing. */
   onRemove?: () => void;
+  children: ReactNode;
 }) {
   const store = useDocumentStoreApi();
   const grab = useRef<Mesh>(null);
@@ -189,12 +302,28 @@ function TabMarker({
     grab.current?.scale.setScalar(Math.max(radius, 1e-6));
   });
 
+  const setMarkerCursor = useWorkspaceStore((s) => s.setMarkerCursor);
+  const hovered = useRef(false);
+
+  function showCursor() {
+    setMarkerCursor(
+      press.current?.dragging ? "grabbing" : editing && hovered.current ? "grab" : null,
+    );
+  }
+
+  // Editing turned off under a still pointer drops the grab cursor; other markers leave it be.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: showCursor reads `editing`
+  useEffect(() => {
+    if (hovered.current || press.current) showCursor();
+  }, [editing]);
+
   // A drag cut short by unmounting (an undo, a deselection) is cancelled.
   useEffect(
     () => () => {
       if (press.current?.dragging) store.getState().cancelTransaction();
+      if (hovered.current || press.current) setMarkerCursor(null);
     },
-    [store],
+    [store, setMarkerCursor],
   );
 
   function end(event: ThreeEvent<PointerEvent>, cancelled: boolean) {
@@ -203,6 +332,7 @@ function TabMarker({
     event.stopPropagation();
     (event.target as Element).releasePointerCapture(event.pointerId);
     press.current = null;
+    showCursor();
     if (!current.dragging) return;
     const state = store.getState();
     if (cancelled) state.cancelTransaction();
@@ -212,7 +342,15 @@ function TabMarker({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: a three.js object, not a DOM element
     <group
-      position={[frame.center[0], frame.center[1], bottom + size[2] / 2]}
+      position={[frame.center[0], frame.center[1], z]}
+      onPointerOver={() => {
+        hovered.current = true;
+        showCursor();
+      }}
+      onPointerOut={() => {
+        hovered.current = false;
+        showCursor();
+      }}
       rotation={[0, 0, frame.angle]}
       onPointerDown={(event) => {
         if (!editing || event.button !== 0) return;
@@ -234,6 +372,7 @@ function TabMarker({
           if (travel < TAB_DRAG_THRESHOLD) return;
           current.dragging = true;
           store.getState().beginTransaction();
+          showCursor();
         }
         const point = onStockTop(event.ray);
         if (point) onMove(point);
@@ -242,23 +381,12 @@ function TabMarker({
       onPointerCancel={(event) => end(event, true)}
       onClick={(event) => {
         if (!editing) return;
-        // Keeps the click from adding a tab underneath, whether it removes this one or ends a drag.
+        // Keeps the click from adding a marker underneath, whether it removes this one or ends a drag.
         event.stopPropagation();
         if (event.delta <= TAB_DRAG_THRESHOLD) onRemove?.();
       }}
     >
-      {/* Drawn over the stock and the shapes, which would otherwise hide it from above. */}
-      <mesh renderOrder={RENDER_ORDER.tabs}>
-        <boxGeometry args={size} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.35}
-          depthTest={false}
-          depthWrite={false}
-        />
-        <Edges color={color} transparent depthTest={false} renderOrder={RENDER_ORDER.tabs} />
-      </mesh>
+      {children}
       <mesh ref={grab}>
         <circleGeometry args={[1, 16]} />
         <meshBasicMaterial visible={false} />

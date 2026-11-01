@@ -292,6 +292,21 @@ export const migrations: Readonly<Record<number, Migration>> = {
   // #437: machine accelerations. Snapshots without them get `null` from the
   // schema's defaults, as for #425.
   30: (doc) => doc,
+  // #426: start points on profiles and engravings. Existing ones have none.
+  31: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          (operation.type === "profile" || operation.type === "engrave") &&
+          isObject(operation.params)
+        ) {
+          operation.params.startPoints ??= [];
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

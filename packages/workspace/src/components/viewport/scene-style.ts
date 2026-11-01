@@ -10,6 +10,8 @@ export type Palette = {
   /** Fills the selected drawing's box, faintly: unlike the stock, so the box shows on it. */
   selectedDrawing: string;
   tab: string;
+  /** Start points (#426), where the selected operation's cuts begin. */
+  startPoint: string;
   /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
   touchOff: string;
   /** The locating pins (#356). */
@@ -33,6 +35,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedHalo: "#ffffff",
     selectedDrawing: "#27272a",
     tab: "#16a34a",
+    startPoint: "#dc2626",
     touchOff: "#0891b2",
     pin: "#4f46e5",
     snap: "#c026d3",
@@ -50,6 +53,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedHalo: "#18181b",
     selectedDrawing: "#ffffff",
     tab: "#4ade80",
+    startPoint: "#f87171",
     touchOff: "#22d3ee",
     pin: "#818cf8",
     snap: "#e879f9",

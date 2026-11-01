@@ -262,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 31,
+    schemaVersion: 32,
     units: "in",
     stock: {
       width: 300,
@@ -309,6 +309,7 @@ export function fullDocument(): ProjectDocument {
           leadIn: { radius: 3 },
           ramp: true,
           tabs: { width: 8, height: 3, positions: [[50, 0]] },
+          startPoints: [[0, 50]],
         },
       },
     ],
