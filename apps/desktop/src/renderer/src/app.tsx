@@ -256,7 +256,7 @@ export function App() {
         else api.closeWindow();
         break;
       case "licences":
-        setPage({ name: "licences" });
+        setPage((shown) => (shown.name === "licences" ? shown : { name: "licences", back: shown }));
         break;
     }
   });
@@ -309,7 +309,13 @@ export function App() {
           library={library}
           updateLibrary={updateLibrary}
           navigate={navigate}
-          back={session ? { name: "workspace" } : { name: "start" }}
+          back={
+            page.name === "licences"
+              ? page.back
+              : session
+                ? { name: "workspace" }
+                : { name: "start" }
+          }
         />
       </AppFrame>
     ) : null;

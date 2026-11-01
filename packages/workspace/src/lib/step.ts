@@ -20,18 +20,6 @@ const TESSELLATION = {
   angularDeflection: 0.5,
 } as const;
 
-/**
- * The licences of occt-import-js and OpenCascade (LGPL-2.1), shipped beside
- * the WebAssembly as the LGPL asks (ADR-0072).
- */
-export const OCCT_LICENCES = [
-  { name: "OpenCascade", url: new URL("occt-import-js/dist/license.occt.txt", import.meta.url) },
-  {
-    name: "occt-import-js",
-    url: new URL("occt-import-js/dist/license.occt-import-js.txt", import.meta.url),
-  },
-];
-
 /** Whether `bytes` are a STEP file: every one starts with this, after any blanks. */
 export function isStepFile(bytes: Uint8Array): boolean {
   const head = new TextDecoder().decode(bytes.subarray(0, 64)).trimStart();

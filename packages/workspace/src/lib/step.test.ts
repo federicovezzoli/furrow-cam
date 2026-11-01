@@ -3,7 +3,8 @@ import wasmUrl from "occt-import-js/dist/occt-import-js.wasm?url&inline";
 import { describe, expect, it, vi } from "vitest";
 import boxWithHole from "./fixtures/box-with-hole.step?raw";
 import boxWithHoleInch from "./fixtures/box-with-hole-inch.step?raw";
-import { isStepFile, OCCT_LICENCES, stepToStl } from "./step";
+import { OCCT_LICENCES } from "./occt-licences";
+import { isStepFile, stepToStl } from "./step";
 
 const wasm = async () => (await fetch(wasmUrl)).arrayBuffer();
 const bytes = (text: string) => new TextEncoder().encode(text);

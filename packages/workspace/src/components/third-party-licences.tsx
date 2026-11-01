@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "use-intl";
-import packageJson from "../../package.json";
-import { FONTS } from "../lib/fonts";
-import { OCCT_LICENCES } from "../lib/step";
+import { FONTS } from "../lib/font-files";
+import { OCCT_LICENCES, OCCT_VERSION } from "../lib/occt-licences";
 
 /** What the apps ship whose licence asks for a notice: built from what ships, so none goes missing. */
 const ENTRIES = [
   {
     name: "OpenCascade (occt-import-js)",
-    version: packageJson.dependencies["occt-import-js"],
+    version: OCCT_VERSION,
     licence: "LGPL-2.1",
     texts: OCCT_LICENCES,
     sources: [
@@ -73,22 +72,28 @@ export function ThirdPartyLicences() {
   );
 }
 
-/** A shipped licence file, read when opened. */
+/** A shipped licence file, read when first opened; opening it again after a failure retries. */
 function LicenceText({ name, url }: { name: string; url: URL }) {
   const t = useTranslations("Licences");
-  const [text, setText] = useState<string | null>(null);
+  const [text, setText] = useState<{ text: string } | "loading" | "error" | null>(null);
   return (
     <details
       onToggle={(event) => {
-        if (!event.currentTarget.open || text !== null) return;
+        if (!event.currentTarget.open || (text !== null && text !== "error")) return;
+        setText("loading");
         fetch(url)
           .then((response) => (response.ok ? response.text() : Promise.reject(response)))
-          .then(setText, () => setText(t("unavailable")));
+          .then(
+            (loaded) => setText({ text: loaded }),
+            () => setText("error"),
+          );
       }}
     >
       <summary className="cursor-pointer">{t("text", { name })}</summary>
       <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
-        {text ?? t("loading")}
+        {typeof text === "object" && text
+          ? text.text
+          : t(text === "error" ? "unavailable" : "loading")}
       </pre>
     </details>
   );
