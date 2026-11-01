@@ -6,6 +6,12 @@ import { limitFeed } from "./machine-limits";
 const JUNCTION_DEVIATION = 0.01;
 
 /**
+ * Moves GRBL plans ahead (its block buffer): the newest one must always be
+ * able to stop, which caps the speed of many short moves even in a line.
+ */
+const PLANNER_BLOCKS = 16;
+
+/**
  * How long `toolpath` takes to cut on `machine`, in seconds (#420): each
  * move's length at the feed the program writes (`limitFeed`), rapids at the
  * machine's maximum rates, and a spin-up dwell for each tool it starts, its
@@ -13,7 +19,9 @@ const JUNCTION_DEVIATION = 0.01;
  * spindle running from the operation before. With the machine's
  * accelerations, the moves go through a simplified GRBL planner (#437):
  * each one speeds up and slows down at the acceleration of the axes it
- * moves, through corners no faster than GRBL's junction deviation allows.
+ * moves, through corners no faster than GRBL's junction deviation allows,
+ * planning `PLANNER_BLOCKS` moves ahead. It approximates GRBL, which limits
+ * X and Y separately where this takes the machine's one X/Y acceleration.
  * Without them, and always for tool changes, it is a lower bound.
  * Without a machine, rapids have no rate and count for nothing. The first
  * move of each list comes from wherever the tool was, so it isn't counted.
@@ -28,10 +36,11 @@ export function estimateTime(toolpath: Toolpath, machine: Machine | null): numbe
 
 /**
  * GRBL's planner in two passes over the moves, from rest to rest: the
- * fastest each move may enter at, from its corner and both feeds, lowered
- * backwards so every move can still slow down for the next, then forwards
- * so it can speed up from the last. Linear in the moves. A missing
- * acceleration is infinite, which leaves each move its length at its feed.
+ * fastest each move may enter at, from its corner, both feeds and the moves
+ * planned ahead, lowered backwards so every move can still slow down for
+ * the next, then forwards so it can speed up from the last. Linear in the
+ * moves. A missing acceleration is infinite, which leaves each move its
+ * length at its feed.
  */
 function movesTime(moves: ToolpathMove[], machine: Machine | null): number {
   // Per counted move: length (mm), feed and fastest entry (mm/s), acceleration (mm/s²).
@@ -41,30 +50,40 @@ function movesTime(moves: ToolpathMove[], machine: Machine | null): number {
   const accelerations = new Float64Array(moves.length);
   let count = 0;
   let from: Vec3 | null = null;
-  let unit: Vec3 = [0, 0, 0];
+  // The last counted move's direction.
+  let ux = 0;
+  let uy = 0;
+  let uz = 0;
   for (const move of moves) {
     if (from !== null && (move.kind === "feed" || machine !== null)) {
-      const [dx, dy, dz] = [move.to[0] - from[0], move.to[1] - from[1], move.to[2] - from[2]];
+      const dx = move.to[0] - from[0];
+      const dy = move.to[1] - from[1];
+      const dz = move.to[2] - from[2];
       const length = Math.hypot(dx, dy, dz);
       if (length > 0) {
         // GRBL runs rapids at the machine's maximum rates.
         const feed = move.kind === "feed" ? move.feedRate : Infinity;
         const speed = limitFeed(from, move.to, feed, machine) / 60;
-        const acceleration = limitAcceleration(Math.hypot(dx, dy), Math.abs(dz), length, machine);
-        const next: Vec3 = [dx / length, dy / length, dz / length];
+        const vx = dx / length;
+        const vy = dy / length;
+        const vz = dz / length;
         if (count > 0) {
           const before = count - 1;
           const junction = junctionSpeed(
-            unit,
-            next,
-            Math.min(acceleration, accelerations[before] as number),
+            ux * vx + uy * vy + uz * vz,
+            vx - ux,
+            vy - uy,
+            vz - uz,
+            machine,
           );
           entries[count] = Math.min(junction, speed, speeds[before] as number);
         }
         lengths[count] = length;
         speeds[count] = speed;
-        accelerations[count] = acceleration;
-        unit = next;
+        accelerations[count] = limitAcceleration(dx, dy, dz, machine);
+        ux = vx;
+        uy = vy;
+        uz = vz;
         count++;
       }
     }
@@ -73,7 +92,12 @@ function movesTime(moves: ToolpathMove[], machine: Machine | null): number {
 
   for (let i = count - 1, exit = 0; i >= 0; i--) {
     const reach = Math.sqrt(exit ** 2 + 2 * (accelerations[i] as number) * (lengths[i] as number));
-    entries[i] = Math.min(entries[i] as number, reach);
+    // Enough room to stop within the moves planned ahead.
+    let room = 0;
+    for (let k = i; k < Math.min(i + PLANNER_BLOCKS, count); k++) {
+      room += 2 * (accelerations[k] as number) * (lengths[k] as number);
+    }
+    entries[i] = Math.min(entries[i] as number, reach, Math.sqrt(room));
     exit = entries[i] as number;
   }
   let seconds = 0;
@@ -88,8 +112,11 @@ function movesTime(moves: ToolpathMove[], machine: Machine | null): number {
   return seconds;
 }
 
-/** The acceleration of a move `xy` long in XY and `z` in Z: neither axis may exceed its own. */
-function limitAcceleration(xy: number, z: number, length: number, machine: Machine | null) {
+/** The acceleration along `(dx, dy, dz)`: neither X/Y nor Z may exceed its own. */
+function limitAcceleration(dx: number, dy: number, dz: number, machine: Machine | null) {
+  const length = Math.hypot(dx, dy, dz);
+  const xy = Math.hypot(dx, dy);
+  const z = Math.abs(dz);
   let limit = Infinity;
   if (machine?.accelerationXY != null && xy > 0) {
     limit = Math.min(limit, (machine.accelerationXY * length) / xy);
@@ -100,12 +127,17 @@ function limitAcceleration(xy: number, z: number, length: number, machine: Machi
   return limit;
 }
 
-/** The fastest GRBL takes the corner between unit vectors `before` and `after`, in mm/s. */
-function junctionSpeed(before: Vec3, after: Vec3, acceleration: number): number {
-  const cos = -(before[0] * after[0] + before[1] * after[1] + before[2] * after[2]);
+/**
+ * The fastest GRBL takes a corner, in mm/s: `dot` is the product of the
+ * moves' directions, `(jx, jy, jz)` their difference, along which the
+ * machine accelerates through the corner.
+ */
+function junctionSpeed(dot: number, jx: number, jy: number, jz: number, machine: Machine | null) {
+  const cos = -dot;
   if (cos > 0.999999) return 0; // A reversal.
   if (cos < -0.999999) return Infinity; // Straight on.
   const sinHalf = Math.sqrt(0.5 * (1 - cos));
+  const acceleration = limitAcceleration(jx, jy, jz, machine);
   return Math.sqrt((acceleration * JUNCTION_DEVIATION * sinHalf) / (1 - sinHalf));
 }
 

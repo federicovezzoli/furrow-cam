@@ -127,9 +127,9 @@ export function machineSpinUpDelay(machine: Machine | null): number {
   return Math.round((machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY) * 1000) / 1000;
 }
 
-/** Whether the time estimate can account for `machine`'s acceleration: it has either axis's. */
+/** Whether the time estimate accounts for `machine`'s acceleration on every axis. */
 export function hasAccelerations(machine: Machine): boolean {
-  return machine.accelerationXY !== null || machine.accelerationZ !== null;
+  return machine.accelerationXY !== null && machine.accelerationZ !== null;
 }
 
 /**

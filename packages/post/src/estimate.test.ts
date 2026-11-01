@@ -69,6 +69,20 @@ describe("estimateTime with accelerations", () => {
     expect(time(moves, accelerating)).toBeGreaterThan(5 * lowerBound);
   });
 
+  it("plans only so many moves ahead, so short moves in a line stay slow", () => {
+    const moves: ToolpathMove[] = [start];
+    for (let i = 1; i <= 1000; i++) moves.push(feed(i * 0.1, 0));
+    // Stopping within 16 moves of 0.1 mm caps the speed at √(2 · 200 · 1.6) ≈ 25 mm/s, not 100.
+    expect(time(moves, accelerating)).toBeGreaterThan(100 / 25.3);
+  });
+
+  it("takes a corner at the acceleration of the axes its direction changes on", () => {
+    const corner = (accelerationZ: number) =>
+      time([start, feed(10, 0, 6), feed(20, 0, 5)], { ...accelerating, accelerationZ });
+    // Mostly X moves, but the corner turns in Z only.
+    expect(corner(80)).toBeGreaterThan(corner(8000) + 0.01);
+  });
+
   it("slows nearly to a stop at a square corner", () => {
     const straight = time([start, feed(100, 0), feed(200, 0)], accelerating);
     const corner = time([start, feed(100, 0), feed(100, 100)], accelerating);
