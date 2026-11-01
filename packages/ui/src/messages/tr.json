@@ -1291,6 +1291,7 @@
     "width": "Genişlik",
     "height": "Yükseklik",
     "depth": "Derinlik",
+    "top": "Üst kısım ham malzemenin altında",
     "tooDeep": "Model ham malzemenin kalınlığından daha derine uzanıyor: en fazla ham malzemenin tabanına kadar kesilir.",
     "original": "Orijinal: {size} (ölçek %{scale})",
     "border": "Kenar boşluğu",

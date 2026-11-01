@@ -1291,6 +1291,7 @@
     "width": "Largeur",
     "height": "Hauteur",
     "depth": "Profondeur",
+    "top": "Dessus sous le brut",
     "tooDeep": "Le modèle est plus profond que l’épaisseur du brut : il n’est pas coupé plus profond que le fond du brut.",
     "original": "Original : {size} (échelle {scale} %)",
     "border": "Bordure",

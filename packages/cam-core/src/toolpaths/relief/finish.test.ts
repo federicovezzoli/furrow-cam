@@ -55,7 +55,7 @@ function placed(width: number, length: number, depth: number): Model {
   return {
     ...modelFixture,
     bounds: { min: [0, 0, -depth], max: [width, length, 0] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth, position: [0, 0] },
+    placement: { rotation: [0, 0, 0], scale: 1, depth, top: 0, position: [0, 0] },
   };
 }
 
@@ -593,5 +593,19 @@ describe("reachModel", () => {
     const empty = new Float32Array(100).fill(-Infinity);
     expect(reachModel([on], grid, heights)).toEqual([on]);
     expect(reachModel([away], grid, empty)).toEqual([away]);
+  });
+});
+
+describe("a model sunk below the stock top", () => {
+  it("is finished as at the top, shifted down by how far it is sunk", () => {
+    const sunk = { ...STEP, placement: { ...STEP.placement, top: 3 } };
+    const atTop = feeds(finish(ballEndMill)).map(({ to: [x, y, z] }) => [x, y, z - 3]);
+    const below = feeds(finish(ballEndMill, {}, sunk)).map(({ to }) => to);
+    expect(below).toHaveLength(atTop.length);
+    below.forEach((point, i) => {
+      point.forEach((value, k) => {
+        expect(value).toBeCloseTo(atTop[i]?.[k] as number, 6);
+      });
+    });
   });
 });

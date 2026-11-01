@@ -239,17 +239,23 @@ export function setTouchOffToolChange(store: DocumentStore, block: string | null
 
 /**
  * Makes the project two-sided (PRD-0011, ADR-0060), flipped about X, the
- * sides parting at half the deepest model's depth, or at half the stock's
+ * sides parting halfway down the deepest model, or at half the stock's
  * thickness without a model; or one-sided again, moving every bottom-side
  * operation to the top side in the same undo step.
  */
 export function setTwoSided(store: DocumentStore, twoSided: boolean) {
   const { stock, models } = store.getState().document;
   if (twoSided === (stock.twoSided !== null)) return;
-  const deepest = Math.max(0, ...models.map(({ placement }) => placement.depth));
+  // Halfway down the deepest model, as much of it as the stock holds.
+  const middle = Math.max(
+    0,
+    ...models.map(
+      ({ placement: { top, depth } }) => (top + Math.min(top + depth, stock.thickness)) / 2,
+    ),
+  );
   // Within the parting depth field's limits, whatever the models' depth.
   const [min, max] = partingDepthLimits(stock.thickness);
-  const half = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  const half = middle > 0 ? middle : stock.thickness / 2;
   const partingDepth = Math.min(Math.max(half, min), max);
   store.getState().change("setStock.twoSided", (draft) => {
     if (!twoSided) {

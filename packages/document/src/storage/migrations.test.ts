@@ -295,6 +295,13 @@ describe("migrations", () => {
     expect(parseProjectDocument(v27)).toEqual(current);
   });
 
+  it("keeps v29 models at the stock top", () => {
+    const current = { ...fullDocument(), models: [model] };
+    const { top: _, ...placement } = model.placement;
+    const v29 = { ...current, schemaVersion: 29, models: [{ ...model, placement }] };
+    expect(parseProjectDocument(v29)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

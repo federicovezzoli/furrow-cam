@@ -30,6 +30,7 @@ import {
   setModelDepth,
   setModelOffset,
   setModelScale,
+  setModelTop,
   turnModelAbout,
 } from "../stores/model-actions";
 
@@ -37,8 +38,9 @@ const AXES = ["X", "Y", "Z"] as const;
 
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
- * quarter turns, size (with the size in the file), depth, the border *Fit to
- * stock* leaves and position from the zero, each an undoable edit. Says that
+ * quarter turns, size (with the size in the file), depth, how far its top
+ * sits below the stock top, the border *Fit to stock* leaves and position
+ * from the zero, each an undoable edit. Says that
  * it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
@@ -134,7 +136,18 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelDepth(store, model.id, value)}
           {...gestures}
         />
-        {depth > 0 && placement.depth > stock.thickness && (
+        <NumberField
+          id="model-top"
+          label={t("top")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={0}
+          value={placement.top}
+          onValueChange={(value) => setModelTop(store, model.id, value)}
+          {...gestures}
+        />
+        {placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
           <p role="status" className="flex gap-1.5 text-destructive">
             <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>{t("tooDeep")}</span>

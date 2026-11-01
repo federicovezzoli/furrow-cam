@@ -1291,6 +1291,7 @@
     "width": "Ancho",
     "height": "Alto",
     "depth": "Profundidad",
+    "top": "Parte superior bajo el material",
     "tooDeep": "El modelo es más profundo que el grosor del material: no se corta más hondo que el fondo del material.",
     "original": "Original: {size} (escala {scale} %)",
     "border": "Borde",

@@ -5,7 +5,7 @@ import { cappedBorder, originalSize } from "./model-size";
 function model(placement: Partial<Model["placement"]>): Pick<Model, "bounds" | "placement"> {
   return {
     bounds: { min: [-60, 0, -5], max: [60, 80, 10] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth: 15, position: [0, 0], ...placement },
+    placement: { rotation: [0, 0, 0], scale: 1, depth: 15, top: 0, position: [0, 0], ...placement },
   };
 }
 

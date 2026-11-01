@@ -1291,6 +1291,7 @@
     "width": "Largura",
     "height": "Altura",
     "depth": "Profundidade",
+    "top": "Topo abaixo do material",
     "tooDeep": "O modelo vai mais fundo que a espessura do material: não é cortado mais fundo que o fundo do material.",
     "original": "Original: {size} (escala {scale}%)",
     "border": "Borda",

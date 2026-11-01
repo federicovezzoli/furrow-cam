@@ -1291,6 +1291,7 @@
     "width": "Breedte",
     "height": "Hoogte",
     "depth": "Diepte",
+    "top": "Bovenkant onder materiaal",
     "tooDeep": "Het model reikt dieper dan het materiaal dik is: er wordt niet dieper gefreesd dan de onderkant van het materiaal.",
     "original": "Origineel: {size} (schaal {scale}%)",
     "border": "Rand",

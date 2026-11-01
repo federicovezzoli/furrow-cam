@@ -41,7 +41,7 @@ function rect(x0: number, y0: number, x1: number, y1: number, z: number): number
 const POCKET: Model = {
   ...modelFixture,
   bounds: { min: [0, 0, -6], max: [30, 30, 0] },
-  placement: { rotation: [0, 0, 0], scale: 1, depth: 6, position: [0, 0] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 6, top: 0, position: [0, 0] },
 };
 const pocketMesh = new Float32Array([
   ...rect(5, 5, 25, 25, -6),

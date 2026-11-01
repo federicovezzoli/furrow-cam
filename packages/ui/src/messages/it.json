@@ -1291,6 +1291,7 @@
     "width": "Larghezza",
     "height": "Altezza",
     "depth": "Profondità",
+    "top": "Sommità sotto il grezzo",
     "tooDeep": "Il modello è più profondo dello spessore del grezzo: non viene tagliato oltre il fondo del grezzo.",
     "original": "Originale: {size} (scala {scale}%)",
     "border": "Bordo",

@@ -1291,6 +1291,7 @@
     "width": "Breite",
     "height": "Höhe",
     "depth": "Tiefe",
+    "top": "Oberseite unter Rohteil",
     "tooDeep": "Das Modell ist tiefer als das Rohteil dick ist: es wird nicht tiefer als der Rohteilboden geschnitten.",
     "original": "Original: {size} (Maßstab {scale} %)",
     "border": "Rand",
