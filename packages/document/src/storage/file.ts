@@ -3,7 +3,7 @@ export const PROJECT_FILE_EXTENSION = ".furrow.json";
 
 // Reserved on Windows or macOS, or control characters.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
-const UNSAFE_FILE_NAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f\u007f]/g;
+export const UNSAFE_FILE_NAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f\u007f]/g;
 
 /**
  * The file name to export the project `name` as, e.g. `Cutting board.furrow.json`,

@@ -46,18 +46,18 @@ export type DocumentState = {
    */
   load: (document: ProjectDocument) => void;
   /**
-   * The version last saved or restored in this session, with the document it
-   * was, or `null`. The live document isn't linked to a version (ADR-0028),
-   * so `versionLabel` checks the document is still that one.
+   * The version last saved or restored in this session while the document
+   * is still that version, or `null`: the live document isn't linked to a
+   * version (ADR-0028), so any change, undo, redo or load drops it.
    */
-  version: { label: string | null; document: ProjectDocument } | null;
-  /** Records the document as it is now as the version labelled `label`. */
-  markVersion: (label: string | null) => void;
+  version: { id: string; label: string | null } | null;
+  /** Records the document as it is now as `version`, or that it is none. */
+  markVersion: (version: { id: string; label: string | null } | null) => void;
 };
 
 /** The label of the version the document is, `null` once changed since or if unlabelled. */
-export function versionLabel({ version, document }: DocumentState): string | null {
-  return version?.document === document ? version.label : null;
+export function versionLabel({ version }: DocumentState): string | null {
+  return version?.label ?? null;
 }
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
@@ -103,13 +103,14 @@ export function createDocumentStore(document: ProjectDocument) {
           const [next, patches, inversePatches] = produceWithPatches(document, recipe);
           if (patches.length === 0) return;
           if (transaction) {
-            set({ document: next }, false, name);
+            set({ document: next, version: null }, false, name);
           } else {
             set(
               {
                 document: next,
                 past: [...past, { patches, inversePatches }].slice(-MAX_HISTORY),
                 future: [],
+                version: null,
               },
               false,
               name,
@@ -165,6 +166,7 @@ export function createDocumentStore(document: ProjectDocument) {
               document: applyPatches(document, entry.inversePatches),
               past: past.slice(0, -1),
               future: [...future, entry],
+              version: null,
             },
             false,
             "undo",
@@ -180,6 +182,7 @@ export function createDocumentStore(document: ProjectDocument) {
               document: applyPatches(document, entry.patches),
               past: [...past, entry],
               future: future.slice(0, -1),
+              version: null,
             },
             false,
             "redo",
@@ -188,11 +191,15 @@ export function createDocumentStore(document: ProjectDocument) {
 
         load(document) {
           transaction = null;
-          set({ document, past: [], future: [], inTransaction: false }, false, "load");
+          set(
+            { document, past: [], future: [], inTransaction: false, version: null },
+            false,
+            "load",
+          );
         },
 
-        markVersion(label) {
-          set({ version: { label, document: get().document } }, false, "markVersion");
+        markVersion(version) {
+          set({ version }, false, "markVersion");
         },
       }),
       { name: "document", enabled: process.env.NODE_ENV !== "production" },

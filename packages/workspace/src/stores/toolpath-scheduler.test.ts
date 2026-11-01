@@ -508,7 +508,7 @@ describe("scheduleToolpaths", () => {
 
   it("names the files after the version the document is, if unchanged since", () => {
     const { documents, exports, schedule } = setup();
-    documents.getState().markVersion("Final");
+    documents.getState().markVersion({ id: "1", label: "Final" });
     void schedule.exportGcode(() => "Plate");
     expect((exports[0] as GcodeExportRequest).version).toBe("Final");
     deepen(documents, 6);

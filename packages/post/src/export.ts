@@ -7,7 +7,12 @@ import {
   type ToolpathInput,
   toolpathInputs,
 } from "@furrow/cam-core";
-import { type PostProcessorId, type ProjectDocument, toolProblem } from "@furrow/document";
+import {
+  type PostProcessorId,
+  type ProjectDocument,
+  toolProblem,
+  UNSAFE_FILE_NAME_CHARACTERS,
+} from "@furrow/document";
 import { grbl } from "./grbl/grbl";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
@@ -33,19 +38,27 @@ export type GcodeExport = { files: GcodeFile[]; warnings: PostWarning[] };
  */
 export type GcodeNaming = { version?: string | null; date?: Date };
 
-// Spaces, dashes, characters reserved on Windows or macOS, and control characters.
-// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
-const FILE_NAME_SEPARATORS = /[\s<>:"/\\|?*\u0000-\u001f\u007f-]+/g;
+/** Spaces, dashes, and the characters no file name may hold. */
+const FILE_NAME_SEPARATORS = new RegExp(`(?:[\\s-]|${UNSAFE_FILE_NAME_CHARACTERS.source})+`, "g");
+
+/** UTF-8 bytes the project and version parts may take, so the whole name stays under 255. */
+const NAME_BYTES = 100;
+const VERSION_BYTES = 60;
 
 /**
- * `text` lowercased, each run of separators made one dash, with no dash or
- * dot at either end (a leading dot hides a file, Windows drops trailing ones).
+ * `text` lowercased, each run of separators made one dash, cut to `bytes`
+ * of UTF-8 between characters, with no dash or dot at either end (a leading
+ * dot hides a file, Windows drops trailing ones).
  */
-function slug(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(FILE_NAME_SEPARATORS, "-")
-    .replace(/^[-.]+|[-.]+$/g, "");
+function slug(text: string, bytes: number): string {
+  let cut = "";
+  let size = 0;
+  for (const character of text.toLowerCase().replace(FILE_NAME_SEPARATORS, "-")) {
+    size += new TextEncoder().encode(character).length;
+    if (size > bytes) break;
+    cut += character;
+  }
+  return cut.replace(/^[-.]+|[-.]+$/g, "");
 }
 
 /**
@@ -63,7 +76,12 @@ export function gcodeFileName(
   const day = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
     .map((part) => String(part).padStart(2, "0"))
     .join("-");
-  const parts = [slug(name) || "project", version === null ? "" : slug(version), day, side ?? ""];
+  const parts = [
+    slug(name, NAME_BYTES) || "project",
+    version === null ? "" : slug(version, VERSION_BYTES),
+    day,
+    side ?? "",
+  ];
   return `${parts.filter((part) => part !== "").join("-")}${extension}`;
 }
 
@@ -145,7 +163,7 @@ export function postToolpaths(
 
   const processor = POST_PROCESSORS[doc.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR];
   // One date for every file of the export, even across midnight.
-  const fileNaming = { date: new Date(), ...naming };
+  const fileNaming = { ...naming, date: naming.date ?? new Date() };
   const fileName = (side: "top" | "bottom" | null) =>
     gcodeFileName(name, fileNaming, side, processor.extension);
   const post = (operations: typeof toPost, side: SideSetup | null, fileName: string) => {

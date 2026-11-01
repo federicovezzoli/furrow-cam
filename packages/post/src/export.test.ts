@@ -540,4 +540,15 @@ describe("gcodeFileName", () => {
       "project-a-b-2026-11-01-bottom.gcode",
     );
   });
+
+  it("keeps the name under 255 bytes, cutting between characters", () => {
+    const name = gcodeFileName(
+      "木".repeat(100),
+      { version: "版".repeat(100), date: new Date(2026, 10, 1) },
+      "bottom",
+      ".gcode",
+    );
+    expect(new TextEncoder().encode(name).length).toBeLessThan(255);
+    expect(name).toBe(`${"木".repeat(33)}-${"版".repeat(20)}-2026-11-01-bottom.gcode`);
+  });
 });

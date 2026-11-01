@@ -50,4 +50,25 @@ describe("VersionsPane", () => {
     });
     expect(versionLabel(state())).toBeNull();
   });
+
+  it("names exports after the version's new label when it is renamed", async () => {
+    renderWorkspace(
+      <>
+        <Probe />
+        <VersionsPane />
+      </>,
+      createMemoryHost({ document: createProjectDocument() }),
+    );
+    fireEvent.change(screen.getByLabelText("Version label"), { target: { value: "Draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save version" }));
+    const state = () => (store as DocumentStore).getState();
+    await waitFor(() => expect(versionLabel(state())).toBe("Draft"));
+    const actions = screen.getByRole("button", { name: "Actions for Draft" });
+    fireEvent.pointerDown(actions, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename…" }));
+    const field = await screen.findByRole("textbox", { name: /Rename version/ });
+    fireEvent.change(field, { target: { value: "Final" } });
+    fireEvent.submit(field.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(versionLabel(state())).toBe("Final"));
+  });
 });

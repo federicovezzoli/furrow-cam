@@ -209,18 +209,20 @@ describe("versionLabel", () => {
   it("names the version the document is until it changes", () => {
     const { store, setWidth } = setup();
     expect(versionLabel(store.getState())).toBeNull();
-    store.getState().markVersion("Final");
+    store.getState().markVersion({ id: "1", label: "Final" });
     expect(versionLabel(store.getState())).toBe("Final");
     setWidth(100);
     expect(versionLabel(store.getState())).toBeNull();
     // Undoing back to the same contents is still a change since.
     store.getState().undo();
     expect(versionLabel(store.getState())).toBeNull();
+    // Nor does it keep the marked document: the store holds an id and a label only.
+    expect(store.getState().version).toBeNull();
   });
 
   it("drops the label when another document is loaded", () => {
     const { store } = setup();
-    store.getState().markVersion("Final");
+    store.getState().markVersion({ id: "1", label: "Final" });
     store.getState().load(createProjectDocument());
     expect(versionLabel(store.getState())).toBeNull();
   });

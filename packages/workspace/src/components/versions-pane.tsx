@@ -81,6 +81,14 @@ export function VersionsPane() {
   return <Versions host={versions} />;
 }
 
+/** The version created last of `versions`: the one a save just made. */
+function newest(versions: readonly VersionRow[]): VersionRow | undefined {
+  return versions.reduce<VersionRow | undefined>(
+    (latest, v) => (latest && latest.createdAt >= v.createdAt ? latest : v),
+    undefined,
+  );
+}
+
 function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
   const t = useTranslations("Versions");
   const locale = useLocale();
@@ -138,8 +146,9 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
       const result = await host.create(label, status.savedAt);
       if (result.error === undefined) {
         setLabel("");
-        if (documentStore.getState().document === saved) {
-          documentStore.getState().markVersion(label.trim() || null);
+        const created = newest(result.versions);
+        if (created && documentStore.getState().document === saved) {
+          documentStore.getState().markVersion({ id: created.id, label: created.label });
         }
       }
       return result;
@@ -169,7 +178,7 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
       // document, replacing any change made while it ran.
       autosave.release({ document: result.document, savedAt: result.updatedAt });
       documentStore.getState().load(result.document);
-      documentStore.getState().markVersion(version.label);
+      documentStore.getState().markVersion({ id: version.id, label: version.label });
       return result;
     });
   }
@@ -182,6 +191,9 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
       setError(result?.error);
       if (result) return;
       const renamed = newLabel.trim() || null;
+      if (documentStore.getState().version?.id === version.id) {
+        documentStore.getState().markVersion({ id: version.id, label: renamed });
+      }
       setVersions(
         (list) => list?.map((v) => (v.id === version.id ? { ...v, label: renamed } : v)) ?? null,
       );
@@ -194,7 +206,11 @@ function Versions({ host }: { host: NonNullable<WorkspaceHost["versions"]> }) {
     startTransition(async () => {
       const result = await host.delete(version.id);
       setError(result?.error);
-      if (!result) setVersions((list) => list?.filter((v) => v.id !== version.id) ?? null);
+      if (result) return;
+      if (documentStore.getState().version?.id === version.id) {
+        documentStore.getState().markVersion(null);
+      }
+      setVersions((list) => list?.filter((v) => v.id !== version.id) ?? null);
     });
   }
 
