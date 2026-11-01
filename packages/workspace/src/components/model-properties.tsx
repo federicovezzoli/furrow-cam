@@ -38,10 +38,9 @@ const AXES = ["X", "Y", "Z"] as const;
 
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
- * quarter turns, size (with the size in the file), depth, how far its top
- * sits below the stock top, the border *Fit to stock* leaves and position
- * from the zero, each an undoable edit. Says that
- * it is cut from the top only (S3).
+ * quarter turns, size (with the size in the file), depth, the border *Fit to
+ * stock* leaves, position from the zero and how far its top sits below the
+ * stock top, each an undoable edit. Says that it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -136,27 +135,6 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelDepth(store, model.id, value)}
           {...gestures}
         />
-        <NumberField
-          id="model-top"
-          label={t("top")}
-          layout="inline"
-          quantity="length"
-          units={units}
-          min={0}
-          value={placement.top}
-          onValueChange={(value) => setModelTop(store, model.id, value)}
-          {...gestures}
-        />
-        {placement.top >= stock.thickness ? (
-          <Warning>{t("belowStock")}</Warning>
-        ) : (
-          placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
-            <Warning>{t("tooDeep")}</Warning>
-          )
-        )}
-        {stock.twoSided && placement.top >= stock.twoSided.partingDepth && (
-          <Warning>{t("belowParting")}</Warning>
-        )}
         <p className="text-muted-foreground">
           {t("original", {
             size: localizeDecimal(original.size, locale),
@@ -225,6 +203,27 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             {...gestures}
           />
         ))}
+        <NumberField
+          id="model-top"
+          label={t("top")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={0}
+          value={placement.top}
+          onValueChange={(value) => setModelTop(store, model.id, value)}
+          {...gestures}
+        />
+        {placement.top >= stock.thickness ? (
+          <Warning>{t("belowStock")}</Warning>
+        ) : (
+          placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
+            <Warning>{t("tooDeep")}</Warning>
+          )
+        )}
+        {stock.twoSided && placement.top >= stock.twoSided.partingDepth && (
+          <Warning>{t("belowParting")}</Warning>
+        )}
       </section>
 
       <div className="flex justify-end">
