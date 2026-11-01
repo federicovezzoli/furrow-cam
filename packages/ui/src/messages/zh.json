@@ -980,7 +980,8 @@
     },
     "timeTitle": "预计加工时间",
     "total": "总计 {time}",
-    "estimateNote": "估算值：未计入加速和换刀时间。",
+    "estimateNote": "下限值：未计入加速和换刀时间。设置机床的加速度可得到更接近的估算。",
+    "estimateWithAcceleration": "估算值：未计入换刀时间。",
     "estimateNoMachine": "估算值：项目设置机床之前不计入快速移动，也不计入加速和换刀时间。"
   },
   "ToolpathProgress": {
@@ -1049,6 +1050,9 @@
     "limitsHint": "请设置为控制器的最大速率（$110–$112，单位为 mm/min）。它们会限制刀具的进给速度和下刀速度。切削之间的空程移动始终以控制器自身的最大速率运行；时间估算对其使用这些数值。",
     "maxFeedXY": "X/Y最大进给",
     "maxFeedZ": "Z最大进给",
+    "accelerationXY": "X/Y加速度",
+    "accelerationZ": "Z加速度",
+    "accelerationHint": "可选：控制器的加速度（$120–$122，单位为 mm/s²）。仅用于时间估算中的加速、减速和拐角；留空则不计入加速，估算偏短。",
     "spindle": "主轴",
     "manualSpindle": "手动主轴",
     "manualSpindleHint": "手动设置转速（例如修边机的旋钮）；G-code不设置主轴转速。",

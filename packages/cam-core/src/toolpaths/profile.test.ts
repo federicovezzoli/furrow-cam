@@ -700,6 +700,8 @@ describe("generateToolpath", () => {
             workAreaZ: 80,
             maxFeedXY: 5000,
             maxFeedZ: 1000,
+            accelerationXY: null,
+            accelerationZ: null,
             spindleRpmMin: null,
             spindleRpmMax: null,
             spinUpDelay: 5,

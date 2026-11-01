@@ -435,7 +435,13 @@ export function scheduleToolpaths(
 /** What toolpath times depend on of `machine` (`estimateTime`), so other edits don't estimate again. */
 function estimateKey(machine: Machine | null): string {
   if (machine === null) return "none";
-  return JSON.stringify([machine.maxFeedXY, machine.maxFeedZ, machineSpinUpDelay(machine)]);
+  return JSON.stringify([
+    machine.maxFeedXY,
+    machine.maxFeedZ,
+    machine.accelerationXY,
+    machine.accelerationZ,
+    machineSpinUpDelay(machine),
+  ]);
 }
 
 /**
