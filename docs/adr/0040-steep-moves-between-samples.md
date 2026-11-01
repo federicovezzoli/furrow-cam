@@ -1,6 +1,6 @@
 # ADR-0040: Relief passes go over steep jumps between samples instead of cutting across them
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0070](0070-diagonal-moves-on-steep-faces.md) (steep faces get diagonal moves)
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4, S10), ADR-0030, ADR-0032, ADR-0033, ADR-0039; issue #151. Supersedes ADR-0032's *Merging* in part.
