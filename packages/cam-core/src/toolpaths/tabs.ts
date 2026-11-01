@@ -89,6 +89,44 @@ export function tabFrame(
   return { center: [point[0] + left[0] * offset, point[1] + left[1] * offset], angle };
 }
 
+/** A flattened path start points can go on; a closed one ends on its first point. */
+export type StartPath = { points: Point[]; closed: boolean };
+
+/**
+ * The paths of `shapes` a profile or engraving on `side` takes start points
+ * on (#426), flattened: every closed path, and the open ones on the line.
+ */
+export function startPointPaths(
+  shapes: Shape[],
+  side: ProfileSide,
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): StartPath[] {
+  return shapes.flatMap((shape) =>
+    shape.paths
+      .filter((path) => path.segments.length > 0 && (path.closed || side === "on"))
+      .map((path) => ({ points: flattenPath(path, tolerance), closed: path.closed })),
+  );
+}
+
+/**
+ * Where a start point placed at `point` goes on the nearest of `paths`: the
+ * nearest point of a closed path, the nearer end of an open one. `distance`
+ * is to the path, not to that end. `null` without paths.
+ */
+export function snapStartPoint(
+  paths: StartPath[],
+  point: Point,
+): { point: Point; distance: number } | null {
+  let best: { point: Point; distance: number } | null = null;
+  for (const { points, closed } of paths) {
+    const projection = projectOnLoop(points, point);
+    if (best && projection.distance >= best.distance) continue;
+    const end = projection.at > loopLength(points) / 2 ? points.at(-1) : points[0];
+    best = { point: closed ? projection.point : (end as Point), distance: projection.distance };
+  }
+  return best;
+}
+
 /** The closed paths of `shapes`, flattened, each ending on its first point. */
 export function closedLoops(shapes: Shape[], tolerance = DEFAULT_CHORD_TOLERANCE): Point[][] {
   return shapes.flatMap((shape) =>

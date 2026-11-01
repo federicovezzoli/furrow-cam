@@ -8,6 +8,8 @@ import {
   freeSpans,
   inSpans,
   nearestOnLoops,
+  snapStartPoint,
+  startPointPaths,
   tabFrame,
 } from "./tabs";
 
@@ -98,6 +100,28 @@ describe("closedLoops", () => {
       [0, 100],
       [0, 0],
     ]);
+  });
+});
+
+describe("snapStartPoint", () => {
+  const line: Shape = {
+    ...square,
+    id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
+    paths: [{ start: [10, -20], segments: [{ kind: "line", to: [90, -20] }], closed: false }],
+  };
+
+  it("goes on the nearest closed path, or the nearer end of an open one on the line", () => {
+    const paths = startPointPaths([square, line], "on");
+    expect(snapStartPoint(paths, [30, 2])).toEqual({ point: [30, 0], distance: 2 });
+    expect(snapStartPoint(paths, [70, -21])).toEqual({ point: [90, -20], distance: 1 });
+    expect(snapStartPoint(paths, [30, -19])?.point).toEqual([10, -20]);
+  });
+
+  it("leaves open paths out off the line", () => {
+    const paths = startPointPaths([square, line], "outside");
+    expect(paths).toHaveLength(1);
+    expect(snapStartPoint(paths, [70, -21])?.point).toEqual([70, 0]);
+    expect(snapStartPoint([], [0, 0])).toBeNull();
   });
 });
 

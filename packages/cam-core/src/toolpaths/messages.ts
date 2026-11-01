@@ -22,6 +22,8 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.nothingOutside",
   "toolpath.tabsTooTall",
   "toolpath.tabsLeftOut",
+  "toolpath.startPointsLeftOut",
+  "toolpath.startPointsOnTabs",
   "toolpath.leadInMisfits",
   "toolpath.peelIsland",
   "toolpath.touchOffPad",

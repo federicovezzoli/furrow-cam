@@ -45,6 +45,7 @@ const params: ProfileParams = {
   leadIn: null,
   ramp: false,
   tabs: null,
+  startPoints: [],
 };
 
 /** 100 × 100 mm, counter-clockwise. */
@@ -674,6 +675,91 @@ describe("profileToolpath with tabs", () => {
 
   it("cuts all the way round without positions", () => {
     expect(profile({ tabs: tabs([]) })).toEqual(profile());
+  });
+});
+
+describe("profileToolpath with start points", () => {
+  /** Where the tool first reaches the stock top. */
+  const entry = (toolpath: Toolpath) => toolpath.moves.find((move) => move.to[2] === 0)?.to;
+
+  it("starts a closed contour at its start point, plunging, ramping or leading in", () => {
+    for (const ramp of [false, true]) {
+      const toolpath = profile({ ramp, startPoints: [[0, 30]] });
+      expect(entry(toolpath)?.[0]).toBeCloseTo(-3, 6);
+      expect(entry(toolpath)?.[1]).toBeCloseTo(30, 6);
+      expect(toolpath.warnings).toEqual([]);
+    }
+    const led = profile({ leadIn: { radius: 3 }, startPoints: [[0, 30]] });
+    const arcEnd = led.moves.find(
+      (move) => move.to[2] === -2 && Math.abs(move.to[0] + 3) < 1e-6,
+    )?.to;
+    expect(arcEnd?.[1]).toBeCloseTo(30, 6);
+  });
+
+  it("starts the finish lap at the matching point of the exact contour", () => {
+    const toolpath = profile({ allowance: 0.5, finishPass: true, startPoints: [[0, 30]] });
+    expect(entry(toolpath)?.[0]).toBeCloseTo(-3.5, 6);
+    // Across from the slot to the exact contour at full depth.
+    const across = steps(toolpath).find(
+      ([from, move]) =>
+        from[2] === -6 &&
+        move.to[2] === -6 &&
+        Math.abs(from[0] + 3.5) < 1e-6 &&
+        Math.abs(move.to[0] + 3) < 1e-6,
+    );
+    expect(across?.[0][1]).toBeCloseTo(30, 6);
+    expect(across?.[1].to[1]).toBeCloseTo(30, 6);
+  });
+
+  it("cuts an open path from its start point's end on every pass, back above the stock between", () => {
+    const toolpath = profile({ side: "on", startPoints: [[88, 11]] }, [line]);
+    expect(toolpath.warnings).toEqual([]);
+    expect(entry(toolpath)?.slice(0, 2)).toEqual([90, 10]);
+    const ends = [-2, -4, -6].map((z) => cutsAt(toolpath, z).at(-1)?.[0]);
+    expect(ends).toEqual([10, 10, 10]);
+    // A retract and a rapid back to the start before each pass after the first.
+    const backs = toolpath.moves.filter(
+      (move) => move.kind === "rapid" && move.to[0] === 90 && move.to[2] === 5,
+    );
+    expect(backs).toHaveLength(3);
+  });
+
+  it("moves a start point on a tab to the nearer end of the tab", () => {
+    const tabs = { width: 4, height: 3, positions: [[0, 50]] as [number, number][] };
+    const toolpath = profile({ tabs, startPoints: [[0, 52]] });
+    // Outside, climbing, the left side is cut upwards; the tab spans 45 to 55 there.
+    expect(entry(toolpath)?.[0]).toBeCloseTo(-3, 6);
+    expect(entry(toolpath)?.[1]).toBeCloseTo(55, 6);
+    expect(toolpath.warnings).toEqual([
+      { code: "toolpath.startPointsOnTabs", values: { count: 1 } },
+    ]);
+    const below = steps(toolpath).filter(
+      ([from, move]) =>
+        move.kind === "feed" &&
+        Math.min(from[2], move.to[2]) < -3 &&
+        Math.abs(move.to[0] + 3) < 1e-6 &&
+        move.to[1] > 45 + 1e-6 &&
+        move.to[1] < 55 - 1e-6,
+    );
+    expect(below).toEqual([]);
+  });
+
+  it("leaves out start points too far from every path or extra on a path", () => {
+    const far = profile({ startPoints: [[500, 500]] });
+    expect(far.warnings).toEqual([{ code: "toolpath.startPointsLeftOut", values: { count: 1 } }]);
+    const { warnings, ...moves } = far;
+    expect(moves).toEqual((({ warnings: _, ...rest }) => rest)(profile()));
+    const extra = profile({
+      startPoints: [
+        [0, 30],
+        [0, 60],
+      ],
+    });
+    expect(extra.warnings).toEqual([{ code: "toolpath.startPointsLeftOut", values: { count: 1 } }]);
+    expect(entry(extra)?.[1]).toBeCloseTo(30, 6);
+    // Just beyond the reach of the outside contour, 3 mm out plus the chord tolerance.
+    expect(profile({ startPoints: [[-6.1, 30]] }).warnings).toHaveLength(1);
+    expect(profile({ startPoints: [[-5.9, 30]] }).warnings).toEqual([]);
   });
 });
 
