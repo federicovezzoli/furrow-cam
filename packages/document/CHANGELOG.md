@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.19.0
+
+### Minor Changes
+
+- Place start points on profiles and engravings in the viewport: a closed contour starts its cut there, and an open path is cut from that end on every pass instead of back and forth. ([#456](https://github.com/federicovezzoli/furrow-cam/pull/456))
+
 ## 0.18.0
 
 ### Minor Changes

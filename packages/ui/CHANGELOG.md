@@ -1,5 +1,16 @@
 # @furrow/ui
 
+## 0.8.0
+
+### Minor Changes
+
+- A new Third-party licences page, linked from the web footer and the desktop Help menu, lists OpenCascade and the bundled fonts with their licences and shipped licence texts, which open offline in the desktop app. ([#455](https://github.com/federicovezzoli/furrow-cam/pull/455))
+
+### Patch Changes
+
+- Place start points on profiles and engravings in the viewport: a closed contour starts its cut there, and an open path is cut from that end on every pass instead of back and forth. ([#456](https://github.com/federicovezzoli/furrow-cam/pull/456))
+- Updated dependencies: @furrow/document@0.19.0, @furrow/cam-core@0.17.0
+
 ## 0.7.0
 
 ### Minor Changes

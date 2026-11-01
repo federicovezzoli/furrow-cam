@@ -1,5 +1,15 @@
 # @furrow/web
 
+## 0.22.0
+
+### Minor Changes
+
+- A new Third-party licences page, linked from the web footer and the desktop Help menu, lists OpenCascade and the bundled fonts with their licences and shipped licence texts, which open offline in the desktop app. ([#455](https://github.com/federicovezzoli/furrow-cam/pull/455))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.19.0, @furrow/document@0.19.0, @furrow/cam-core@0.17.0, @furrow/ui@0.8.0, @furrow/post@0.15.1
+
 ## 0.21.0
 
 ### Minor Changes

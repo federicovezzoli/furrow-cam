@@ -1,5 +1,17 @@
 # @furrow/workspace
 
+## 0.19.0
+
+### Minor Changes
+
+- Place start points on profiles and engravings in the viewport: a closed contour starts its cut there, and an open path is cut from that end on every pass instead of back and forth. ([#456](https://github.com/federicovezzoli/furrow-cam/pull/456))
+- A new Third-party licences page, linked from the web footer and the desktop Help menu, lists OpenCascade and the bundled fonts with their licences and shipped licence texts, which open offline in the desktop app. ([#455](https://github.com/federicovezzoli/furrow-cam/pull/455))
+
+### Patch Changes
+
+- The simulator's Export G-code button now sits at the bottom left, at the start of the playback timeline, as it does in the workspace. ([`ed2386e`](https://github.com/federicovezzoli/furrow-cam/commit/ed2386e1f6acf526b2f730e8bad3b8d77c0b2f5c))
+- Updated dependencies: @furrow/document@0.19.0, @furrow/cam-core@0.17.0, @furrow/ui@0.8.0, @furrow/post@0.15.1
+
 ## 0.18.0
 
 ### Minor Changes
