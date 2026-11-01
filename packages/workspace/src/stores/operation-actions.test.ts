@@ -18,13 +18,16 @@ import {
   addProfileOperation,
   addReliefFinishOperation,
   addReliefRoughOperation,
+  addStartPoint,
   addTab,
   addVCarveOperation,
   autoPlaceTabs,
   defaultTabs,
   deleteOperation,
   moveOperation,
+  moveStartPoint,
   moveTab,
+  removeStartPoint,
   removeTab,
   renameOperation,
   replaceToolSnapshots,
@@ -471,7 +474,7 @@ describe("addEngraveOperation", () => {
       stockSide: "top",
       targets: [whole(square)],
       tool: vBit,
-      params: { side: "on", depth: 1, ramp: false },
+      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
   });
@@ -498,6 +501,7 @@ describe("addEngraveOperation", () => {
       side: "inside",
       depth: 0.4,
       ramp: true,
+      startPoints: [],
     });
     expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
   });
@@ -837,6 +841,28 @@ describe("tabs", () => {
     removeTab(store, id, 3);
     expect(store.getState().document).toBe(withEmpty);
     expect(profile(id).params.tabs?.positions).toEqual([]);
+  });
+});
+
+describe("start points", () => {
+  it("are added, moved and removed one at a time, out of range doing nothing", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    addStartPoint(store, id, [0, 30]);
+    addStartPoint(store, id, [100, 30]);
+    moveStartPoint(store, id, 1, [100, 40]);
+    expect(profile(id).params.startPoints).toEqual([
+      [0, 30],
+      [100, 40],
+    ]);
+    removeStartPoint(store, id, 0);
+    expect(profile(id).params.startPoints).toEqual([[100, 40]]);
+    store.getState().undo();
+    expect(profile(id).params.startPoints).toHaveLength(2);
+    const before = store.getState().document;
+    moveStartPoint(store, id, 2, [1, 1]);
+    removeStartPoint(store, id, -1);
+    expect(store.getState().document).toBe(before);
   });
 });
 

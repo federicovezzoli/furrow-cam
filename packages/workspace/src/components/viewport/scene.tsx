@@ -36,7 +36,7 @@ import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
-import { HoldingTabs, Tabs } from "./tabs";
+import { HoldingTabs, StartPoints, Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
 
@@ -76,6 +76,7 @@ export function Scene({
         {!heightmap && <Models previews={modelPreviews} palette={palette} />}
         <Shapes palette={palette} />
         <Tabs color={palette.tab} />
+        <StartPoints color={palette.startPoint} />
         <HoldingTabs color={palette.tab} />
       </SideFrame>
       <Toolpaths palette={palette} />
@@ -220,7 +221,7 @@ function SelectedDrawing({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
   const draggable = useWorkspaceStore(
-    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+    (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
   );
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);

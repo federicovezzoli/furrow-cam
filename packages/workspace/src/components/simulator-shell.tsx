@@ -32,16 +32,16 @@ export function SimulatorShell() {
         saveStatus={saveStatus}
         machineName={machineName}
         back={{ to: "workspace", label: t("backToWorkspace") }}
-      >
-        <GcodeExportButton />
-      </TopBar>
+      />
       <main className="flex min-h-0 flex-1 flex-col">
         <BrowserOnly
           fallback={
             <p className="m-auto p-3 text-ui text-muted-foreground">{t("loadingSimulator")}</p>
           }
         >
-          <SimulatorViewport />
+          <SimulatorViewport>
+            <GcodeExportButton />
+          </SimulatorViewport>
         </BrowserOnly>
       </main>
     </>

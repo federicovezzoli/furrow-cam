@@ -78,6 +78,7 @@ function documentWithProfile(): ProjectDocument {
           leadIn: null,
           ramp: true,
           tabs: null,
+          startPoints: [],
         },
       },
     ],

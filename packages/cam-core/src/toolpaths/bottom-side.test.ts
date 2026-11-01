@@ -47,6 +47,7 @@ const profile = (side: "inside" | "outside", direction: "climb" | "conventional"
       leadIn: null,
       ramp: false,
       tabs: tabs ? { width: 8, height: 2, positions: [[45, 10]] } : null,
+      startPoints: [],
     },
   }) satisfies Operation;
 /** A 6 mm hole centred at (150, 30), for the 6 mm drill. */
@@ -226,7 +227,7 @@ describe("2D operations on the bottom side", () => {
           type: "engrave",
           tool: endMill,
           stockSide: "top",
-          params: { side: "on", depth: DEPTH, ramp: false },
+          params: { side: "on", depth: DEPTH, ramp: false, startPoints: [] },
         };
         const [top, bottom] = bothSides(engraving, axis);
         expect(bottom.moves).toHaveLength(top.moves.length);

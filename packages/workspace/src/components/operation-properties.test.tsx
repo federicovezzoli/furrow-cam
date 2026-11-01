@@ -4,16 +4,19 @@ import { fullDocument, model, OPERATION_ID, reliefFinish } from "@furrow/documen
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
-import { useDocumentStoreApi } from "../providers/workspace-stores";
+import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
 import { defaultPocketParams } from "../stores/operation-actions";
+import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
 import { OperationProperties } from "./operation-properties";
 
 let store: DocumentStore;
+let workspace: WorkspaceStore;
 
 function Store() {
   store = useDocumentStoreApi();
+  workspace = useWorkspaceStoreApi();
   return null;
 }
 
@@ -59,5 +62,27 @@ describe("OperationProperties", () => {
       distance: 5,
     });
     expect(screen.getByText("Margin")).toBeTruthy();
+  });
+
+  it("edits start points in the viewport, ending tab editing (#426)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: fullDocument() }),
+    );
+    workspace.getState().selectOperation(OPERATION_ID);
+    workspace.getState().setView("orbit");
+    expect(screen.getByText("1 start point")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Edit start points" }));
+    expect(workspace.getState()).toMatchObject({ editing: "startPoints", view: "top" });
+    expect(screen.getByText(/Click a path to add a start point/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Edit in viewport" }));
+    expect(workspace.getState().editing).toBe("tabs");
+    expect(screen.queryByText(/Click a path to add a start point/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Edit start points" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(workspace.getState().editing).toBeNull();
   });
 });

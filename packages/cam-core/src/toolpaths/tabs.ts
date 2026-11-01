@@ -1,5 +1,5 @@
 import { distance, type Point, type ProfileSide, type Shape } from "@furrow/document";
-import { containment } from "../geometry/clipper";
+import { containment, offset } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type Projection, projectOnLoop } from "../geometry/loop";
 
@@ -87,6 +87,65 @@ export function tabFrame(
   const towards = enclosed === (side === "inside") ? 1 : -1;
   const offset = (towards * toolDiameter) / 2;
   return { center: [point[0] + left[0] * offset, point[1] + left[1] * offset], angle };
+}
+
+/** A flattened path start points can go on; a closed one ends on its first point. */
+export type StartPath = { points: Point[]; closed: boolean };
+
+/**
+ * The paths of `shapes` a profile or engraving on `side` takes start points
+ * on (#426), flattened: every closed path, and the open ones on the line.
+ */
+export function startPointPaths(
+  shapes: Shape[],
+  side: ProfileSide,
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): StartPath[] {
+  return shapes.flatMap((shape) =>
+    shape.paths
+      .filter((path) => path.segments.length > 0 && (path.closed || side === "on"))
+      .map((path) => ({ points: flattenPath(path, tolerance), closed: path.closed })),
+  );
+}
+
+/**
+ * Where a start point placed at `point` goes on the nearest of `paths`: the
+ * nearest point of a closed path, the nearer end of an open one. `distance`
+ * is to the path, not to that end. `null` without paths.
+ */
+export function snapStartPoint(
+  paths: StartPath[],
+  point: Point,
+): { point: Point; distance: number } | null {
+  let best: { point: Point; distance: number } | null = null;
+  for (const { points, closed } of paths) {
+    const projection = projectOnLoop(points, point);
+    if (best && projection.distance >= best.distance) continue;
+    const end = projection.at > loopLength(points) / 2 ? points.at(-1) : points[0];
+    best = { point: closed ? projection.point : (end as Point), distance: projection.distance };
+  }
+  return best;
+}
+
+/**
+ * Where the tool centre enters for each start point at `points`: the point
+ * itself on the line, otherwise the nearest point of the rings `distance`
+ * inside or outside the closed paths of `shapes` (even-odd), or the point
+ * itself when there are none.
+ */
+export function startPointCentres(
+  shapes: Shape[],
+  side: ProfileSide,
+  distance: number,
+  points: Point[],
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): Point[] {
+  if (side === "on" || points.length === 0) return points;
+  const closed = closedLoops(shapes, tolerance).map((loop) => loop.slice(0, -1));
+  const rings = offset(closed, side === "outside" ? distance : -distance, {
+    fillRule: "evenOdd",
+  }).map((ring) => [...ring, ring[0] as Point]);
+  return points.map((point) => nearestOnLoops(rings, point)?.point ?? point);
 }
 
 /** The closed paths of `shapes`, flattened, each ending on its first point. */

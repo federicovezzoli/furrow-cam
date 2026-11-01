@@ -3,7 +3,8 @@ import wasmUrl from "occt-import-js/dist/occt-import-js.wasm?url&inline";
 import { describe, expect, it, vi } from "vitest";
 import boxWithHole from "./fixtures/box-with-hole.step?raw";
 import boxWithHoleInch from "./fixtures/box-with-hole-inch.step?raw";
-import { isStepFile, OCCT_LICENCES, stepToStl } from "./step";
+import { OCCT_LICENCES } from "./occt-licences";
+import { isStepFile, stepToStl } from "./step";
 
 const wasm = async () => (await fetch(wasmUrl)).arrayBuffer();
 const bytes = (text: string) => new TextEncoder().encode(text);
@@ -23,7 +24,7 @@ function volume(positions: Float32Array) {
 
 describe("OCCT_LICENCES", () => {
   it("ships occt-import-js's and OpenCascade's licences", () => {
-    expect(OCCT_LICENCES.map((url) => url.pathname.split("/").pop())).toEqual([
+    expect(OCCT_LICENCES.map(({ url }) => url.pathname.split("/").pop())).toEqual([
       "license.occt.txt",
       "license.occt-import-js.txt",
     ]);

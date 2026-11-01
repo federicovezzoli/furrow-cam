@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Report a bug",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "licences": "Third-party licences"
+  },
+  "Licences": {
+    "title": "Third-party licences",
+    "intro": "Furrow CAM ships these libraries and fonts, under their own licences. Open a licence text to read it as shipped with the app.",
+    "licence": "Licence: {licence}",
+    "source": "Source:",
+    "loading": "Loading…",
+    "unavailable": "This licence text couldn't be loaded.",
+    "text": "{name} licence text"
   },
   "Meta": {
     "description": "Open source, web-based 2.5D CAM for CNC routers.",
-    "privacyTitle": "Privacy policy · Furrow CAM"
+    "privacyTitle": "Privacy policy · Furrow CAM",
+    "licencesTitle": "Third-party licences · Furrow CAM"
   },
   "Projects": {
     "notFound": "This project no longer exists.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Check for Updates…",
       "reportBug": "Report a Bug…",
       "checkAtStartup": "Check for Updates at Start-up",
-      "sendUsage": "Send Usage Statistics and Error Reports"
+      "sendUsage": "Send Usage Statistics and Error Reports",
+      "licences": "Third-Party Licences"
     },
     "telemetry": {
       "question": "Send anonymous usage statistics and error reports?",
@@ -646,6 +658,8 @@
       "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
       "tabsLeftOut": "Left out {count, plural, one {# tab} other {# tabs}} too far from every closed contour.",
+      "startPointsLeftOut": "Left out {count, plural, one {# start point} other {# start points}} too far from every path, or on a path that already has one.",
+      "startPointsOnTabs": "Moved {count, plural, one {# start point} other {# start points}} off a tab, to its nearer end.",
       "leadInMisfits": "The lead-in didn't fit {count, plural, one {# contour} other {# contours}} and was shortened or left out.",
       "peelIsland": "Peel from the island needs exactly one island.",
       "touchOffPad": "This operation cuts into the touch-off pad, so Z can't be zeroed on it after a tool change: move the pad or the cut.",
@@ -902,6 +916,9 @@
     "done": "Done",
     "editInViewport": "Edit in viewport",
     "editHint": "Click a contour to add a tab, drag a tab to move it, click it to remove it.",
+    "startPointCount": "{count, plural, =0 {No start points} one {# start point} other {# start points}}",
+    "editStartPoints": "Edit start points",
+    "startPointsHint": "Click a path to add a start point (an open path takes its nearer end), drag one to move it, click it to remove it. Each path takes one.",
     "computing": "Computing toolpath…",
     "cancel": "Cancel",
     "computeAgain": "Compute again",

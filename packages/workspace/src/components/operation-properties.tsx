@@ -675,6 +675,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           onChange={(tabs) => update("tabs", { tabs })}
         />
       )}
+      <StartPointsFields count={params.startPoints.length} />
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp}
@@ -1003,6 +1004,7 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
+      <StartPointsFields count={params.startPoints.length} />
       {(errors.side ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.ramp}
@@ -1484,8 +1486,8 @@ function TabsFields({
   const t = useTranslations("Operation");
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
-  const editing = useWorkspaceStore((s) => s.editingTabs);
-  const setEditing = useWorkspaceStore((s) => s.setEditingTabs);
+  const editing = useWorkspaceStore((s) => s.editing === "tabs");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
   const [mode, setMode] = useState<PlacementMode>("count");
   const [count, setCount] = useState(DEFAULT_TAB_COUNT);
   const [spacing, setSpacing] = useState(100);
@@ -1574,13 +1576,36 @@ function TabsFields({
           variant={editing ? "secondary" : "outline"}
           size="compact"
           aria-pressed={editing}
-          onClick={() => setEditing(!editing)}
+          onClick={() => setEditing(editing ? null : "tabs")}
         >
           {editing ? t("done") : t("editInViewport")}
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
     </div>
+  );
+}
+
+/** How many start points (#426) an operation has, and a toggle for editing them in the viewport. */
+function StartPointsFields({ count }: { count: number }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "startPoints");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("startPointCount", { count })}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "startPoints")}
+        >
+          {editing ? t("done") : t("editStartPoints")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+    </>
   );
 }
 

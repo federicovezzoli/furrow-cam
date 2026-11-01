@@ -2,6 +2,7 @@ import type { Tool } from "@furrow/document";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { formatMessage } from "@furrow/ui/lib/i18n";
+import { ThirdPartyLicences } from "@furrow/workspace/components/third-party-licences";
 import {
   deleteMachine,
   deleteTool,
@@ -40,13 +41,13 @@ type LibraryProps = {
 
 /**
  * The bits library and the machines (PRD-0007 D9), kept on this computer.
- * With a project open, `back` returns to it.
+ * With a project open, `back` returns to it (or to the simulator).
  */
 export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Page; back: Page }) {
   const t = useTranslations("Desktop.Library");
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-6 p-8">
-      {back.name === "workspace" && (
+      {(back.name === "workspace" || back.name === "simulator") && (
         <Button
           variant="ghost"
           size="sm"
@@ -60,6 +61,7 @@ export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Pag
       {page.name === "tools" && <Tools {...props} />}
       {page.name === "machines" && <Machines {...props} />}
       {page.name === "machine" && <MachinePage id={page.id} {...props} />}
+      {page.name === "licences" && <ThirdPartyLicences />}
     </main>
   );
 }

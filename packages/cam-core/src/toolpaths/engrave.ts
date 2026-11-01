@@ -32,6 +32,7 @@ export function engraveToolpath(
       direction: "climb",
       depth: params.depth,
       ramp: params.ramp,
+      startPoints: params.startPoints,
       offset: grooveWidth(tool, params.depth) / 2,
     },
     options,

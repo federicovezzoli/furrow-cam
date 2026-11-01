@@ -121,6 +121,8 @@ export const ProfileParams = z
     ramp: z.boolean(),
     /** Holding tabs, or `null` to cut the closed contours all the way round. */
     tabs: ProfileTabs.nullable(),
+    /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
+    startPoints: z.array(Point),
   })
   .superRefine((params, ctx) => {
     if (params.side === "on" && params.allowance !== 0) {
@@ -283,6 +285,8 @@ export const EngraveParams = z.strictObject({
   depth: PositiveLength,
   /** Ramp in at the tool's plunge angle instead of plunging straight down. */
   ramp: z.boolean(),
+  /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
+  startPoints: z.array(Point),
 });
 export type EngraveParams = z.infer<typeof EngraveParams>;
 

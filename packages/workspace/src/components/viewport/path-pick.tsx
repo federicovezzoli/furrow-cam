@@ -26,7 +26,7 @@ const CLICK_THRESHOLD = 3;
  * selection.
  */
 export function PathPick() {
-  const active = useWorkspaceStore((s) => s.view === "top" && !s.editingTabs && !s.pickingZero);
+  const active = useWorkspaceStore((s) => s.view === "top" && s.editing === null && !s.pickingZero);
   return active ? <PathPicker /> : null;
 }
 

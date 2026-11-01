@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "报告问题",
-    "privacy": "隐私"
+    "privacy": "隐私",
+    "licences": "第三方许可"
+  },
+  "Licences": {
+    "title": "第三方许可",
+    "intro": "Furrow CAM 包含以下库和字体，它们遵循各自的许可。打开一个许可即可阅读随应用附带的文本。",
+    "licence": "许可：{licence}",
+    "source": "源代码：",
+    "loading": "正在加载…",
+    "unavailable": "无法加载此许可文本。",
+    "text": "{name} 的许可文本"
   },
   "Meta": {
     "description": "开源的网页版2.5D CNC雕刻机CAM软件。",
-    "privacyTitle": "隐私政策 · Furrow CAM"
+    "privacyTitle": "隐私政策 · Furrow CAM",
+    "licencesTitle": "第三方许可 · Furrow CAM"
   },
   "Projects": {
     "notFound": "此项目已不存在。",
@@ -397,7 +408,8 @@
       "checkUpdates": "检查更新…",
       "reportBug": "报告问题…",
       "checkAtStartup": "启动时检查更新",
-      "sendUsage": "发送使用统计和错误报告"
+      "sendUsage": "发送使用统计和错误报告",
+      "licences": "第三方许可"
     },
     "telemetry": {
       "question": "发送匿名使用统计和错误报告？",
@@ -646,6 +658,8 @@
       "nothingOutside": "闭合路径之外没有需要清除的毛坯。",
       "tabsTooTall": "连接桥高度等于切削深度，因此其下方不会被切削。",
       "tabsLeftOut": "省略了{count, plural, other {#个}}离所有闭合轮廓都太远的连接桥。",
+      "startPointsLeftOut": "省略了{count, plural, other {#个}}离所有路径都太远或位于已有起点的路径上的起点。",
+      "startPointsOnTabs": "已将{count, plural, other {#个}}起点从连接桥移到其较近的一端。",
       "leadInMisfits": "进刀圆弧无法放入{count, plural, other {#个轮廓}}，已缩短或省略。",
       "peelIsland": "从岛屿开始剥层需要恰好一个岛屿。",
       "touchOffPad": "此加工操作会切入对刀区，换刀后将无法在其上对Z零点：请移动对刀区或切削区域。",
@@ -902,6 +916,9 @@
     "done": "完成",
     "editInViewport": "在视图中编辑",
     "editHint": "点击轮廓添加连接桥，拖动连接桥移动它，点击连接桥删除它。",
+    "startPointCount": "{count, plural, =0 {没有起点} other {#个起点}}",
+    "editStartPoints": "编辑起点",
+    "startPointsHint": "点击路径添加起点(开放路径取较近的一端),拖动以移动,点击以删除。每条路径一个。",
     "computing": "正在计算刀具路径…",
     "cancel": "取消",
     "computeAgain": "重新计算",
