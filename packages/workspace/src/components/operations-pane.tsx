@@ -1,7 +1,7 @@
 "use client";
 
 import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
-import type { Operation } from "@furrow/document";
+import { hasAccelerations, type Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
@@ -354,7 +354,13 @@ function JobTime() {
   const formatTime = useFormatTime();
   const operations = useDocumentStore((s) => s.document.operations);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
-  const hasMachine = useDocumentStore((s) => s.document.machine !== null);
+  const note = useDocumentStore(({ document: { machine } }) =>
+    machine === null
+      ? "estimateNoMachine"
+      : hasAccelerations(machine)
+        ? "estimateWithAcceleration"
+        : "estimateNote",
+  );
   // A string, so progress reports while toolpaths compute don't re-render it.
   const time = useToolpathStore(({ entries }) => {
     const sides = twoSided ? (["top", "bottom"] as const) : [null];
@@ -377,7 +383,7 @@ function JobTime() {
   return (
     <div className="grid gap-0.5 text-muted-foreground">
       <p>{t("total", { time })}</p>
-      <p className="text-ui-label">{hasMachine ? t("estimateNote") : t("estimateNoMachine")}</p>
+      <p className="text-ui-label">{t(note)}</p>
     </div>
   );
 }
