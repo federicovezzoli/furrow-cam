@@ -7,7 +7,8 @@ import type { Message } from "@furrow/document";
  * request.
  *
  * - `parse` reads and checks a picked file (PRD-0005 S1) and hashes it
- *   (ADR-0029); the worker keeps the mesh for previews.
+ *   (ADR-0029); the worker keeps the mesh for previews. A STEP file is first
+ *   turned into an STL, sent back as `stl` to be stored instead (ADR-0072).
  * - `preview` draws the mesh `sha256`, rotated, as seen from above
  *   (`modelHeightmap`). The worker answers `missing` when it doesn't hold the
  *   mesh; the request is then sent again with the file's `bytes`, which the
@@ -28,7 +29,7 @@ export type MeshRequest =
 export type MeshSummary = { sha256: string; triangles: number; bounds: Box3 };
 
 export type MeshResponse =
-  | ({ kind: "parsed"; id: number } & MeshSummary)
+  | ({ kind: "parsed"; id: number; stl?: ArrayBuffer } & MeshSummary)
   | { kind: "preview"; id: number; heightmap: Heightmap | null }
   | { kind: "missing"; id: number }
   /** `error` is for the user. */

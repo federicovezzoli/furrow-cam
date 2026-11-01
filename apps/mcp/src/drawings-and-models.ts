@@ -1,4 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { basename, isAbsolute } from "node:path";
 import {
   DEFAULT_STL_LIMITS,
@@ -9,7 +10,7 @@ import {
   StlImportError,
   type StlMesh,
 } from "@furrow/cam-core";
-import { sha256Hex, type Units } from "@furrow/document";
+import { MessageError, sha256Hex, type Units } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import {
   DRAWING_FILE_TOO_LARGE,
@@ -20,6 +21,7 @@ import {
   MAX_DRAWING_FILE_SIZE,
   parseDrawingFile,
 } from "@furrow/workspace/lib/drawing-import";
+import { stepToStl } from "@furrow/workspace/lib/step";
 import {
   canImportModel,
   DRAWINGS_OR_MODEL,
@@ -53,8 +55,22 @@ function reading<T>(run: () => T): T {
   }
 }
 
+/** OpenCascade's WebAssembly, read from the package (kept out of the bundle) for a STEP file. */
+const occtWasm = () =>
+  readFile(createRequire(import.meta.url).resolve("occt-import-js/dist/occt-import-js.wasm"));
+
+/** A STEP file as the STL made from it (ADR-0072); throws a `ToolError` with the app's message. */
+async function stepMesh(bytes: Uint8Array) {
+  try {
+    return await stepToStl(bytes, DEFAULT_STL_LIMITS, occtWasm);
+  } catch (error) {
+    if (error instanceof MessageError) throw new ToolError(text(error.detail));
+    throw error;
+  }
+}
+
 /**
- * Imports the SVG, DXF or STL file at `path` into `project` as the app does
+ * Imports the SVG, DXF, STL or STEP file at `path` into `project` as the app does
  * (PRD-0012 M3): a drawing is added beside the others, a model alone, each
  * placed at the zero's anchor. An SVG sized in pixels or not at all needs
  * `dpi`, a DXF that doesn't say its units needs `units`; without them, the
@@ -67,17 +83,18 @@ export async function importFile(
   { dpi, units }: { dpi?: number; units?: Units },
 ): Promise<{ id: string; warnings: string[] }> {
   if (!isAbsolute(path)) throw new ToolError(`Give an absolute path, not ${JSON.stringify(path)}.`);
-  const kind = /\.(svg|dxf|stl)$/i.exec(path)?.[1]?.toLowerCase();
-  if (!kind) throw new ToolError(`${JSON.stringify(path)} isn't an SVG, DXF or STL file.`);
+  const kind = /\.(svg|dxf|stl|step|stp)$/i.exec(path)?.[1]?.toLowerCase().replace("stp", "step");
+  if (!kind) throw new ToolError(`${JSON.stringify(path)} isn't an SVG, DXF, STL or STEP file.`);
   const name = basename(path);
-  const limit = kind === "stl" ? DEFAULT_STL_LIMITS.maxBytes : MAX_DRAWING_FILE_SIZE;
+  const model = kind === "stl" || kind === "step";
+  const limit = model ? DEFAULT_STL_LIMITS.maxBytes : MAX_DRAWING_FILE_SIZE;
   let bytes: Uint8Array;
   try {
     // Checked before reading, so a huge file isn't read in.
     if ((await stat(path)).size > limit) {
       throw new ToolError(
         text(
-          kind === "stl"
+          model
             ? { code: "stl.tooLarge", values: { mb: limit / 1_000_000 } }
             : DRAWING_FILE_TOO_LARGE,
         ),
@@ -89,6 +106,7 @@ export async function importFile(
     throw new ToolError(`Can't read ${path}: ${(error as Error).message}`);
   }
   if (kind === "stl") return importModel(project, name, bytes);
+  if (kind === "step") return importModel(project, name, await stepMesh(bytes));
 
   const file = reading(() => parseDrawingFile(name, bytes));
   const needs = drawingFileNeeds(file);

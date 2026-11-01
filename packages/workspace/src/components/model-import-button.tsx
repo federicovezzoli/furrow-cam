@@ -18,7 +18,7 @@ import {
 export const STL_IMPORT_OFF: Message = { code: "workspace.stlImportOff" };
 
 /**
- * Picks an STL file and imports it as a model (PRD-0005 S1), from the empty
+ * Picks an STL or STEP file and imports it as a model (PRD-0005 S1), from the empty
  * project's import card. Disabled while a file imports and, saying why, when
  * the server can't store meshes.
  */
@@ -47,7 +47,7 @@ export function ModelImportButton() {
       <input
         ref={input}
         type="file"
-        accept=".stl,model/stl"
+        accept=".stl,.step,.stp,model/stl,model/step"
         onChange={onChange}
         className="sr-only"
         tabIndex={-1}
@@ -62,7 +62,7 @@ export function ModelImportButton() {
         className="justify-self-start"
       >
         <FileBoxIcon />
-        {t("importStl")}
+        {t("importModel")}
       </Button>
     </>
   );
