@@ -1,5 +1,11 @@
 # @furrow/mcp
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.19.0, @furrow/document@0.19.0, @furrow/cam-core@0.17.0, @furrow/ui@0.8.0, @furrow/post@0.15.1
+
 ## 0.3.0
 
 ### Minor Changes
