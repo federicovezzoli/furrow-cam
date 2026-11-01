@@ -1,5 +1,5 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
-import { machineSpinUpDelay, type Tool, type TouchOff } from "@furrow/document";
+import { hasAccelerations, machineSpinUpDelay, type Tool, type TouchOff } from "@furrow/document";
 import { estimateTime, formatDuration } from "../estimate";
 import { formatNumber } from "../format";
 import { comment, GcodeWriter } from "../gcode-writer";
@@ -118,8 +118,12 @@ function writeHeader(program: Program, steps: PostStep[]) {
     (total, { toolpath }) => total + estimateTime(toolpath, machine),
     0,
   );
-  // Without a machine, rapids have no rate (`estimateTime`).
-  const left = machine ? "acceleration or tool changes" : "rapids, acceleration or tool changes";
+  // Without a machine, rapids have no rate; without accelerations, acceleration is left out (`estimateTime`).
+  const left = !machine
+    ? "rapids, acceleration or tool changes"
+    : hasAccelerations(machine)
+      ? "tool changes"
+      : "acceleration or tool changes";
   out.comment(`Estimated time: about ${formatDuration(seconds)}, not counting ${left}`);
   const changesBit = steps.some((step, i) => {
     const before = steps[i - 1];

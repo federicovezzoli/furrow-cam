@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-15
-- **Related:** PRD-0001, PRD-0003, ADR-0003, ADR-0004, ADR-0016, ADR-0019, ADR-0029, ADR-0030
+- **Related:** PRD-0001, PRD-0003, ADR-0003, ADR-0004, ADR-0016, ADR-0019, ADR-0029, ADR-0030, ADR-0072
 
 ## Problem
 
@@ -23,7 +23,8 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 ## Non-goals
 
 - Undercuts, overhangs, 4th axis. Flipping the stock to machine both sides is PRD-0011.
-- STEP, OBJ, 3MF or other mesh and solid formats.
+- OBJ, 3MF or other mesh and solid formats besides STL and STEP.
+- Turning a STEP part's faces and holes into 2D drawings and operations.
 - Editing the mesh (sculpting, repairing, boolean operations).
 - Converting images or 2D drawings into reliefs (heightmap from a picture).
 - A per-user storage quota under the freemium limits (PRD-0003); only the per-file limits below apply for now.
@@ -33,6 +34,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | S1 | Import STL files, binary and ASCII, into a project. Files above **50 MB** or **2,000,000 triangles** are refused with a clear message; the operator can change both limits | Must |
+| S1b | Import STEP files (`.step`, `.stp`) as models: the solids are turned into triangles in millimetres, within 0.05 mm of their surfaces, whatever unit the file uses, and the model then works like an STL. S1's limits apply to the file and to the mesh made from it (ADR-0072) | Should |
 | S2 | Place the model on the stock: rotate it in 90° steps about each axis, scale it uniformly or fit it inside the stock less a border the user sets (10 mm by default, 0 for edge to edge), and set its depth into the stock and how far its top sits below the stock top (at it by default, ADR-0069). It is positioned relative to the zero point (ADR-0016) like the 2D drawing | Must |
 | S3 | The model is machined from the top only. The UI says that undercuts and overhangs are filled in, and shows the model as it will be cut | Must |
 | S4 | **3D finishing:** parallel (raster) passes over the model with angle, stepover, cut direction (one-way or zig-zag) and stock to leave, covering the model's outline, a margin around it or the whole stock, as roughing does (ADR-0064). Works with every tool shape; ball end mills are the usual choice | Must |
@@ -71,3 +73,4 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-10-19: S2's border is set by the user per model (#183, ADR-0038)
 - 2026-10-23: flipping the stock moves to PRD-0011 (two-sided machining)
 - 2026-11-01: S2 can sink the model below the stock top (#434, ADR-0069)
+- 2026-11-01: S1b, STEP import, no longer a non-goal (#442, ADR-0072)

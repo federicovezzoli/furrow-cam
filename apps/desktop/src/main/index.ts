@@ -63,11 +63,12 @@ const APP_ORIGIN = "app://furrow";
 
 /**
  * The renderer only loads its own files: no connections leave the app
- * (ADR-0044, PRD-0007 D2). Workers and the viewport's textures use blobs.
+ * (ADR-0044, PRD-0007 D2). Workers and the viewport's textures use blobs;
+ * STEP import compiles OpenCascade's bundled WebAssembly (ADR-0072).
  */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",

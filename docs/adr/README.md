@@ -86,3 +86,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0069](0069-model-sits-below-stock-top.md) | A model's top can sit below the stock top | Proposed |
 | [0070](0070-diagonal-moves-on-steep-faces.md) | Relief passes go straight down steep faces and merge within 0.02 mm | Proposed |
 | [0071](0071-going-over-clears-the-whole-sub-step.md) | Relief passes go over a wall no lower than the tool anywhere along the level move | Proposed |
+| [0072](0072-step-files-imported-as-stl.md) | STEP files are turned into STL on import, with OpenCascade in WebAssembly | Proposed |

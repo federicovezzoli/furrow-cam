@@ -30,6 +30,47 @@ const Decoder = (
 const HEADER_BYTES = 84;
 const TRIANGLE_BYTES = 50;
 
+/** The size of a binary STL file holding `triangles` triangles. */
+export function binaryStlSize(triangles: number): number {
+  return HEADER_BYTES + triangles * TRIANGLE_BYTES;
+}
+
+/** The most triangles a binary STL file of at most `bytes` bytes holds. */
+export function binaryStlTriangles(bytes: number): number {
+  return Math.max(0, Math.floor((bytes - HEADER_BYTES) / TRIANGLE_BYTES));
+}
+
+/** A triangle mesh by vertex: `positions` holds `[x, y, z]` per vertex, `indices` three per triangle. */
+export type IndexedMesh = { positions: ArrayLike<number>; indices: ArrayLike<number> };
+
+/**
+ * Writes `meshes` as one binary STL file. Normals stay zero: `parseStl`
+ * ignores them.
+ */
+export function writeBinaryStl(meshes: readonly IndexedMesh[]): Uint8Array<ArrayBuffer> {
+  const triangles = meshes.reduce((sum, mesh) => sum + mesh.indices.length / 3, 0);
+  const bytes = new Uint8Array(binaryStlSize(triangles));
+  const view = new DataView(bytes.buffer);
+  view.setUint32(80, triangles, true);
+  let offset = HEADER_BYTES;
+  for (const { positions, indices } of meshes) {
+    for (let i = 0; i < indices.length; i += 3) {
+      // Past the normal.
+      offset += 12;
+      for (let k = 0; k < 3; k++) {
+        const vertex = indices[i + k] as number;
+        for (let axis = 0; axis < 3; axis++) {
+          view.setFloat32(offset, positions[vertex * 3 + axis] as number, true);
+          offset += 4;
+        }
+      }
+      // Past the attribute byte count, zero.
+      offset += 2;
+    }
+  }
+  return bytes;
+}
+
 /**
  * Reads a binary or ASCII STL file (PRD-0005 S1). Refuses files larger than
  * `limits` before reading their triangles, and malformed ones, with a

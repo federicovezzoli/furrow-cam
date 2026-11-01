@@ -45,9 +45,27 @@ export type DocumentState = {
    * open transaction dropped.
    */
   load: (document: ProjectDocument) => void;
+  /**
+   * The version last saved or restored in this session while the document
+   * is still that version, or `null`: the live document isn't linked to a
+   * version (ADR-0028), so any change, undo, redo or load drops it.
+   */
+  version: { id: string; label: string | null } | null;
+  /** Records the document as it is now as `version`, or that it is none. */
+  markVersion: (version: { id: string; label: string | null } | null) => void;
 };
 
+/** The label of the version the document is, `null` once changed since or if unlabelled. */
+export function versionLabel({ version }: DocumentState): string | null {
+  return version?.label ?? null;
+}
+
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
+
+/** Whether the document has an operation to cut, which exporting and simulating need. */
+export function hasEnabledOperations({ document }: DocumentState): boolean {
+  return document.operations.some((operation) => operation.enabled);
+}
 
 /**
  * The open transaction: only the document it started from. A gesture makes a
@@ -83,19 +101,21 @@ export function createDocumentStore(document: ProjectDocument) {
         past: [],
         future: [],
         inTransaction: false,
+        version: null,
 
         change(name, recipe) {
           const { document, past } = get();
           const [next, patches, inversePatches] = produceWithPatches(document, recipe);
           if (patches.length === 0) return;
           if (transaction) {
-            set({ document: next }, false, name);
+            set({ document: next, version: null }, false, name);
           } else {
             set(
               {
                 document: next,
                 past: [...past, { patches, inversePatches }].slice(-MAX_HISTORY),
                 future: [],
+                version: null,
               },
               false,
               name,
@@ -151,6 +171,7 @@ export function createDocumentStore(document: ProjectDocument) {
               document: applyPatches(document, entry.inversePatches),
               past: past.slice(0, -1),
               future: [...future, entry],
+              version: null,
             },
             false,
             "undo",
@@ -166,6 +187,7 @@ export function createDocumentStore(document: ProjectDocument) {
               document: applyPatches(document, entry.patches),
               past: [...past, entry],
               future: future.slice(0, -1),
+              version: null,
             },
             false,
             "redo",
@@ -174,7 +196,15 @@ export function createDocumentStore(document: ProjectDocument) {
 
         load(document) {
           transaction = null;
-          set({ document, past: [], future: [], inTransaction: false }, false, "load");
+          set(
+            { document, past: [], future: [], inTransaction: false, version: null },
+            false,
+            "load",
+          );
+        },
+
+        markVersion(version) {
+          set({ version }, false, "markVersion");
         },
       }),
       { name: "document", enabled: process.env.NODE_ENV !== "production" },

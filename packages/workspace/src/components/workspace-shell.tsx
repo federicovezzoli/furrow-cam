@@ -62,12 +62,9 @@ export function WorkspaceShell() {
   const t = useTranslations("Shell");
   const importT = useTranslations("Import");
   const ribbon = useTranslations("Ribbon");
-  const { project, library, settings, account } = useWorkspaceHost();
+  const { library, settings } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
-  const hasEnabledOperations = useDocumentStore((s) =>
-    s.document.operations.some((operation) => operation.enabled),
-  );
   useUndoShortcuts();
   const tour = useTour("workspace", {
     userId: settings.account,
@@ -142,22 +139,9 @@ export function WorkspaceShell() {
                 footer={
                   <div className="flex gap-2">
                     <div data-tour="export-gcode" className="min-w-0 flex-1">
-                      <GcodeExportButton
-                        name={project.name}
-                        disabledReason={
-                          // Without an account, the button explains what it needs instead.
-                          machineName === null && !account
-                            ? t("chooseMachine")
-                            : !hasEnabledOperations
-                              ? t("addOperation")
-                              : undefined
-                        }
-                        className="w-full"
-                      />
+                      <GcodeExportButton className="w-full" />
                     </div>
-                    <SimulateButton
-                      disabledReason={hasEnabledOperations ? undefined : t("addOperation")}
-                    />
+                    <SimulateButton />
                   </div>
                 }
               >

@@ -28,6 +28,8 @@ export function parseMachineForm(form: FormData) {
     workAreaZ: numberField(form, "workAreaZ"),
     maxFeedXY: numberField(form, "maxFeedXY"),
     maxFeedZ: numberField(form, "maxFeedZ"),
+    accelerationXY: numberField(form, "accelerationXY"),
+    accelerationZ: numberField(form, "accelerationZ"),
     spindleRpmMin: manualSpindle ? null : numberField(form, "spindleRpmMin"),
     spindleRpmMax: manualSpindle ? null : numberField(form, "spindleRpmMax"),
     spinUpDelay:

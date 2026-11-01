@@ -302,6 +302,14 @@ describe("migrations", () => {
     expect(parseProjectDocument(v29)).toEqual(current);
   });
 
+  it("gives v30 machine snapshots no accelerations", () => {
+    const current = fullDocument();
+    if (current.machine === null) throw new Error("fullDocument has a machine");
+    const { accelerationXY: _, accelerationZ: __, ...machine } = current.machine;
+    const v30 = { ...current, schemaVersion: 30, machine };
+    expect(parseProjectDocument(v30)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

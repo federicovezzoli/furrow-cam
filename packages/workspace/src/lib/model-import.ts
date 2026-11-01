@@ -9,17 +9,21 @@ import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
-/** Why an STL file can't be imported, for the user (ADR-0054). */
+/** Why an STL or STEP file can't be imported, for the user (ADR-0054). */
 export class MeshImportError extends MessageError {}
 
 const UNREADABLE: Message = { code: "workspace.unreadableFile" };
 
 /**
  * Reads and checks an STL file in a Web Worker of its own (ADR-0004), which
- * then goes away with the mesh. Throws a `MeshImportError` if the file can't
- * be imported.
+ * then goes away with the mesh. A STEP file comes back as the STL made from
+ * it, `stl` (ADR-0072). Throws a `MeshImportError` if the file can't be
+ * imported.
  */
-export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSummary> {
+export function parseMesh(
+  bytes: ArrayBuffer,
+  limits: StlLimits,
+): Promise<MeshSummary & { stl?: ArrayBuffer }> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../workers/mesh.worker.ts", import.meta.url), {
       type: "module",
@@ -27,8 +31,8 @@ export function parseMesh(bytes: ArrayBuffer, limits: StlLimits): Promise<MeshSu
     worker.onmessage = ({ data }: MessageEvent<MeshResponse>) => {
       worker.terminate();
       if (data.kind === "parsed") {
-        const { sha256, triangles, bounds } = data;
-        resolve({ sha256, triangles, bounds });
+        const { sha256, triangles, bounds, stl } = data;
+        resolve({ sha256, triangles, bounds, ...(stl && { stl }) });
       } else {
         reject(new MeshImportError(data.kind === "failed" ? data.error : UNREADABLE));
       }
@@ -55,8 +59,9 @@ export function usesMesh({ document, past, future }: DocumentState, sha256: stri
 }
 
 /**
- * Imports an STL file into the open project (PRD-0005 S1, ADR-0029): reads
- * and checks it, stores it in the project's `meshes`, then adds it to the
+ * Imports an STL or STEP file into the open project (PRD-0005 S1, ADR-0029,
+ * ADR-0072): reads and checks it, stores it (a STEP file as the STL made
+ * from it) in the project's `meshes`, then adds it to the
  * document as one undo step and selects it. A project holds drawings
  * or one model (ADR-0055), so nothing is stored into one that has either.
  * The workspace's `modelImport` says how it is going.
@@ -88,20 +93,22 @@ export async function importModel(
     fail({ code: "stl.tooLarge", values: { mb: limits.maxBytes / 1_000_000 } });
     return;
   }
-  let mesh: MeshSummary;
+  let mesh: MeshSummary & { stl?: ArrayBuffer };
   try {
     mesh = await parseMesh(await file.arrayBuffer(), limits);
   } catch (error) {
     fail(error instanceof MeshImportError ? error.detail : UNREADABLE);
     return;
   }
-  const upload = await meshes.put(mesh.sha256, file);
+  const stored = mesh.stl ? new Blob([mesh.stl]) : file;
+  const upload = await meshes.put(mesh.sha256, stored);
   if (upload.error !== undefined) {
     fail(upload.error);
     return;
   }
   // A drawing may have been imported, or a step redone, while this one uploaded.
-  const id = addModel(document, { ...mesh, fileName, size: file.size });
+  const { sha256, triangles, bounds } = mesh;
+  const id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size });
   if (id === null) {
     // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
@@ -112,5 +119,5 @@ export async function importModel(
   }
   workspace.getState().selectModel(id);
   setModelImport(null);
-  track({ event: "file_imported", format: "stl" });
+  track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
 }

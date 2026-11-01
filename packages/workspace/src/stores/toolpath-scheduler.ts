@@ -8,7 +8,7 @@ import {
 import type { GcodeExport } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
-import type { DocumentStore } from "./document-store";
+import { type DocumentStore, versionLabel } from "./document-store";
 import type { ToolpathPreview, ToolpathStore } from "./toolpath-store";
 
 /**
@@ -44,6 +44,8 @@ export type GcodeExportRequest = {
   export: number;
   document: ProjectDocument;
   name: string;
+  /** The label of the version the document is, to name the files (`versionLabel`). */
+  version: string | null;
   inputs: ExportInput[];
   meshes?: ArrayBuffer[];
 };
@@ -316,7 +318,8 @@ export function scheduleToolpaths(
    * toolpaths were requested with and the meshes they use of those sent.
    */
   function exportRequest(pending: PendingExport): GcodeExportRequest {
-    const { document } = documents.getState();
+    const state = documents.getState();
+    const { document } = state;
     const enabled = document.operations.filter((operation) => operation.enabled);
     const inputs = toolpathInputs(document, enabled).map((input) => ({
       operationId: input.operation.id,
@@ -331,6 +334,7 @@ export function scheduleToolpaths(
       export: pending.request.export,
       document,
       name: pending.name(),
+      version: versionLabel(state),
       inputs,
       ...(meshes.length > 0 && { meshes }),
     };
@@ -352,6 +356,7 @@ export function scheduleToolpaths(
             export: ++lastExport,
             document: documents.getState().document,
             name: "",
+            version: null,
             inputs: [],
           },
           name,
@@ -435,7 +440,13 @@ export function scheduleToolpaths(
 /** What toolpath times depend on of `machine` (`estimateTime`), so other edits don't estimate again. */
 function estimateKey(machine: Machine | null): string {
   if (machine === null) return "none";
-  return JSON.stringify([machine.maxFeedXY, machine.maxFeedZ, machineSpinUpDelay(machine)]);
+  return JSON.stringify([
+    machine.maxFeedXY,
+    machine.maxFeedZ,
+    machine.accelerationXY,
+    machine.accelerationZ,
+    machineSpinUpDelay(machine),
+  ]);
 }
 
 /**
