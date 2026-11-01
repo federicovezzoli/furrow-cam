@@ -405,10 +405,9 @@ export class ToolDropper {
    * with the profile `widened` by `by`.
    */
   dropPoint(x: number, y: number, floor: number, by = 0): number {
-    const { heights } = this;
-    const profile = by > 0 ? widened(this.profile, by) : this.profile;
+    const { heights, profile } = this;
     const { columns, rows, cellWidth, cellHeight } = this.grid;
-    const radius = profile.radius;
+    const radius = profile.radius + by;
     let best = floor;
     const firstRow = Math.max(0, Math.ceil((y - radius) / cellHeight - 0.5));
     const lastRow = Math.min(rows - 1, Math.floor((y + radius) / cellHeight - 0.5));
@@ -427,14 +426,14 @@ export class ToolDropper {
         const dx = (column + 0.5) * cellWidth - x;
         const d2 = dx * dx + dy2;
         if (d2 > radius2) continue;
-        const value = cell - profile.height(Math.sqrt(d2));
+        const value = cell - profile.height(Math.max(0, Math.sqrt(d2) - by));
         if (value > best) best = value;
       }
     }
     for (const disc of this.discs) {
       const distance = discDistance(disc, x, y);
       if (distance > radius) continue;
-      best = Math.max(best, disc.top - profile.height(Math.max(0, distance)));
+      best = Math.max(best, disc.top - profile.height(Math.max(0, distance - by)));
     }
     if (best < this.outside && this.empty(Math.floor(x / cellWidth), Math.floor(y / cellHeight))) {
       return this.outside;

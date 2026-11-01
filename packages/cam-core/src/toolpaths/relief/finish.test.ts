@@ -442,9 +442,38 @@ describe("sampleMoves", () => {
       const [b, zb] = moves[m] as [number, number];
       for (let t = 0; t <= 64; t++) {
         const x = (a + ((b - a) * t) / 64) * spacing;
-        // The tool's top edge is only known within the micrometre a straight move may pass below.
-        if (Math.abs(x - 0.237) < 1e-9) continue;
         expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(x) - 0.001);
+      }
+    }
+  });
+
+  it("drops the tool widened between samples with ToolDropper (#439)", () => {
+    // Rising 4.8 in 1 up to a wall at column 40, on 0.1 mm cells, five rows across.
+    const columns = 60;
+    const grid = { columns, rows: 5, cellWidth: 0.1, cellHeight: 0.1 };
+    const heights = new Float32Array(columns * 5).map((_, i) =>
+      i % columns < 40 ? 0.48 * (i % columns) : -10,
+    );
+    const dropper = new ToolDropper(heights, grid, cutterProfile({ ...ballEndMill, diameter: 3 }));
+    // Along the middle row and just off it, so cells in other rows bound the tool too.
+    for (const y of [0.25, 0.27]) {
+      const tool = (u: number, by = 0) => dropper.dropPoint((u + 0.5) * 0.1, y, -20, by);
+      const pass = Array.from({ length: columns }, (_, i) => tool(i));
+      const moves = sampleMoves(pass, 0.1, (i, f, by) => tool(i + f, by));
+      for (let m = 1; m < moves.length; m++) {
+        const [a, za] = moves[m - 1] as [number, number];
+        const [b, zb] = moves[m] as [number, number];
+        for (let t = 0; t <= 64; t++) {
+          const u = a + ((b - a) * t) / 64;
+          // Moves between samples cut across the tool's rounded top by a few micrometres, as before.
+          expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(u) - 0.005);
+        }
+      }
+      // Widened by `by`, the tool is no lower than anywhere within `by` of the point.
+      for (let u = 35; u < 45; u += 0.13) {
+        for (let t = -8; t <= 8; t++) {
+          expect(tool(u, 0.05)).toBeGreaterThanOrEqual(tool(u + (t / 8) * 0.5) - 1e-9);
+        }
       }
     }
   });
