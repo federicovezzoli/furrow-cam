@@ -33,6 +33,7 @@ import {
   modelAnchor,
   setModelDepth,
   setModelScale,
+  setModelTop,
 } from "@furrow/workspace/stores/model-actions";
 import type { ActionResult } from "@furrow/workspace/stores/operation-actions";
 import { change, type Project, ToolError, t } from "./projects";
@@ -194,4 +195,11 @@ export function resize(
   change(project, (store) =>
     side === "depth" ? setModelDepth(store, id, mm) : setModelScale(store, id, mm / extent),
   );
+}
+
+/** Sinks model `id`'s top `mm` millimetres below the stock top (ADR-0069), keeping its size. */
+export function setTop(project: Project, id: string, mm: number) {
+  if (!find(project, id).model)
+    throw new ToolError("A drawing has no top: only a model sits below the stock top.");
+  change(project, (store) => setModelTop(store, id, mm));
 }

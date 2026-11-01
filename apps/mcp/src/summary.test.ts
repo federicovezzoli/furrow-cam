@@ -1,5 +1,5 @@
 import { createProjectDocument } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { projectSummary } from "./summary";
 
@@ -33,5 +33,11 @@ describe("projectSummary", () => {
       paths: expect.any(Number),
     });
     expect(drawing?.bounds).toEqual({ min: expect.any(Array), max: expect.any(Array) });
+  });
+
+  it("says how far each model's top sits below the stock top", () => {
+    const sunk = { ...model, placement: { ...model.placement, top: 2.5 } };
+    const [summary] = projectSummary({ ...fullDocument(), models: [sunk] }).models;
+    expect(summary?.size).toEqual({ width: 100, height: 80, top: 2.5, depth: 12 });
   });
 });

@@ -31,7 +31,7 @@ function placed(width: number, length: number, depth: number): Model {
   return {
     ...modelFixture,
     bounds: { min: [0, 0, -depth], max: [width, length, 0] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth, position: [0, 0] },
+    placement: { rotation: [0, 0, 0], scale: 1, depth, top: 0, position: [0, 0] },
   };
 }
 
@@ -472,6 +472,18 @@ describe("reliefRoughSteps", () => {
     expect(toolpath.warnings).toEqual([{ code: "toolpath.belowStock" }]);
     // A stock deep enough changes nothing.
     expect(rough(endMill, {}, { stockBottom: -20 })).toEqual(rough(endMill));
+  });
+
+  it("clears the stock above a model sunk below the stock top", () => {
+    const sunk = { ...STEP, placement: { ...STEP.placement, top: 3 } };
+    const operation = roughing(endMill, { stockToLeave: 0.5 });
+    const toolpath = runSteps(reliefRoughSteps(operation, sunk, stepMesh, options));
+    const stock = simulate(toolpath, endMill);
+    // The plateau's offset top, now at -6.5, is cut down to the level above it.
+    expect(stock.at([5, 5])).toBeLessThan(-3);
+    expect(stock.at([5, 5])).toBeGreaterThanOrEqual(-6.5 - 1e-4);
+    // The floor is 3 mm lower too.
+    expect(stock.at([15, 5])).toBeCloseTo(-12.5);
   });
 
   it("has nothing to rough when the stock to leave covers the model", () => {

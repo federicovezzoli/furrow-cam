@@ -48,10 +48,14 @@ export function projectSummary(document: ProjectDocument) {
         id,
         fileName,
         triangles,
-        /** As placed: its outline on the stock, and how far it reaches into the stock from its top. */
+        /**
+         * As placed: its outline on the stock, how far its top sits below the
+         * stock top, and how far it reaches into the stock from its top.
+         */
         size: {
           width: width * placement.scale,
           height: height * placement.scale,
+          top: placement.top,
           // A flat mesh keeps a depth it doesn't have.
           depth: depth > 0 ? placement.depth : 0,
         },

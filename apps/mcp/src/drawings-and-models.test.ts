@@ -5,7 +5,7 @@ import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { DRAWINGS_OR_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { fitToStock, importFile, resize } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
 import { projectSummary } from "./summary";
 
@@ -155,6 +155,19 @@ describe("fitToStock and resize", () => {
     expect(summary().models[0]?.size.depth).toBeCloseTo(5);
     fitToStock(project, id);
     expect(summary().models[0]?.size.height).toBeCloseTo(380);
+  });
+
+  it("sinks a model below the stock top, keeping its size", async () => {
+    const { id } = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
+    const before = summary().models[0]?.size;
+    setTop(project, id, 2.5);
+    expect(summary().models[0]?.size).toEqual({ ...before, top: 2.5 });
+  });
+
+  it("refuses to sink a drawing", async () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="10mm" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>`;
+    const drawing = await importFile(project, await file("square.svg", svg), {});
+    expect(() => setTop(project, drawing.id, 1)).toThrow("no top");
   });
 
   it("refuses sizes a drawing or model doesn't have", async () => {

@@ -26,7 +26,7 @@ function rect(x0: number, y0: number, x1: number, y1: number, z: number): number
 const BLOCK: Model = {
   ...modelFixture,
   bounds: { min: [0, 0, 0], max: [20, 10, 18] },
-  placement: { rotation: [0, 0, 0], scale: 1, depth: 18, position: [20, 20] },
+  placement: { rotation: [0, 0, 0], scale: 1, depth: 18, top: 0, position: [20, 20] },
 };
 const blockMesh = new Float32Array([
   ...rect(0, 0, 20, 5, 18),

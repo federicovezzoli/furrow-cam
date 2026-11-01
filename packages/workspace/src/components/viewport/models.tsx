@@ -78,7 +78,7 @@ function PlacedModel({
     <>
       {heightmap && (
         // The preview is in the rotated mesh's frame: its outline from (0, 0), its top at 0.
-        <group position={[box.min[0], box.min[1], 0]} scale={scale}>
+        <group position={[box.min[0], box.min[1], box.max[2]]} scale={scale}>
           <SimulatedStock
             heightmap={heightmap}
             thickness={Math.max(height, MIN_OUTLINE)}

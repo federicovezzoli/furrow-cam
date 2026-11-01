@@ -16,8 +16,8 @@ import { anchorPoint, type Box3, rectAlignment, type Vec3 } from "./stock";
  * Placing imported 3D models on the stock (PRD-0005 S2, ADR-0031, ADR-0034).
  * A model's mesh is rotated in quarter turns, scaled the same in X and Y, its
  * Z scaled to its depth (in proportion, as edits keep it), and moved so its
- * top is at the stock top and its bounding box's bottom-left corner at its
- * position, all in stock coordinates.
+ * top is its `top` below the stock top (ADR-0069) and its bounding box's
+ * bottom-left corner at its position, all in stock coordinates.
  */
 
 /** A model's mesh bounds and placement: all its placement depends on. */
@@ -120,13 +120,14 @@ export function proportionalDepth(bounds: Box3, rotation: Rotation, scale: numbe
   return height > 0 ? height * scale : null;
 }
 
-/** Where a placed model sits in the stock. A flat model sits on the stock top, with no depth. */
+/** Where a placed model sits in the stock. A flat model sits at its top, with no depth. */
 export function placedModelBox({ bounds, placement }: PlacedModel): Box3 {
   const [width, length, height] = rotatedSize(bounds, placement.rotation);
   const [x, y] = placement.position;
+  const top = 0 - placement.top;
   return {
-    min: [x, y, height > 0 ? -placement.depth : 0],
-    max: [x + width * placement.scale, y + length * placement.scale, 0],
+    min: [x, y, height > 0 ? top - placement.depth : top],
+    max: [x + width * placement.scale, y + length * placement.scale, top],
   };
 }
 
@@ -146,13 +147,13 @@ export function boxRect({ min, max }: Box3): Rect {
  * `x`, `y` and `z`, then the offset.
  */
 export function modelTransform({ bounds, placement }: PlacedModel): number[] {
-  const { rotation, scale, depth, position } = placement;
+  const { rotation, scale, depth, top, position } = placement;
   const rotated = rotatedBounds(bounds, rotation);
   const scales: Vec3 = [scale, scale, depthScale(rotated.max[2] - rotated.min[2], depth)];
   const offset: Vec3 = [
     position[0] - scale * rotated.min[0],
     position[1] - scale * rotated.min[1],
-    -scales[2] * rotated.max[2],
+    -scales[2] * rotated.max[2] - top,
   ];
   return affine(rotationMatrix(rotation), scales, offset);
 }
@@ -161,7 +162,7 @@ export function modelTransform({ bounds, placement }: PlacedModel): number[] {
  * The transform to a rotated mesh's own frame, before it is scaled and
  * moved: its bounding box's bottom-left corner at `(0, 0)` and its top at
  * `z = 0`. Scaling it by the placement's scale in X and Y and its depth
- * scale in Z, then moving it by the position, places it.
+ * scale in Z, then moving it by the position and down by its top, places it.
  */
 export function rotatedFrameTransform(bounds: Box3, rotation: Rotation): number[] {
   const { min, max } = rotatedBounds(bounds, rotation);
@@ -297,7 +298,7 @@ export function initialPlacement(
   const rotation: Rotation = [0, 0, 0];
   const { scale, position } = stockFit(bounds, rotation, stock, anchor, border);
   const depth = proportionalDepth(bounds, rotation, scale) ?? stock.thickness;
-  return { rotation, scale, depth, position };
+  return { rotation, scale, depth, top: 0, position };
 }
 
 /**
