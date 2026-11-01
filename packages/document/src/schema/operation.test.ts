@@ -178,7 +178,11 @@ describe("DrillOperation", () => {
 describe("EngraveOperation", () => {
   const profile = fullDocument().operations[0];
   if (!profile) throw new Error("The fixture has an operation");
-  const engrave = { ...profile, type: "engrave", params: { side: "on", depth: 0.5, ramp: false } };
+  const engrave = {
+    ...profile,
+    type: "engrave",
+    params: { side: "on", depth: 0.5, ramp: false, startPoints: [] },
+  };
   const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
 
   it("accepts V-bits, ball and flat end mills, as an operation too", () => {
@@ -195,7 +199,7 @@ describe("EngraveOperation", () => {
   });
 
   it("rejects invalid params and the profile's options", () => {
-    const valid = { side: "outside", depth: 1, ramp: false };
+    const valid = { side: "outside", depth: 1, ramp: false, startPoints: [] };
     expect(EngraveParams.safeParse(valid).success).toBe(true);
     expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
     expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);
