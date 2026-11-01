@@ -14,6 +14,7 @@ import {
   HoldingTabs,
   type LineUp,
   LocatingPins,
+  type ModelPlacement,
   type Point,
   type ProjectDocument,
   type StockAnchor,
@@ -246,16 +247,18 @@ export function setTouchOffToolChange(store: DocumentStore, block: string | null
 export function setTwoSided(store: DocumentStore, twoSided: boolean) {
   const { stock, models } = store.getState().document;
   if (twoSided === (stock.twoSided !== null)) return;
-  // Halfway down the deepest model, as much of it as the stock holds.
-  const middle = Math.max(
-    0,
-    ...models.map(
-      ({ placement: { top, depth } }) => (top + Math.min(top + depth, stock.thickness)) / 2,
-    ),
-  );
+  const deepest = models
+    .map(({ placement }) => placement)
+    .reduce<ModelPlacement | null>(
+      (lowest, p) => (lowest && lowest.top + lowest.depth >= p.top + p.depth ? lowest : p),
+      null,
+    );
   // Within the parting depth field's limits, whatever the models' depth.
   const [min, max] = partingDepthLimits(stock.thickness);
-  const half = middle > 0 ? middle : stock.thickness / 2;
+  // Halfway down the deepest model, as much of it as the stock holds.
+  const half = deepest
+    ? (deepest.top + Math.min(deepest.top + deepest.depth, stock.thickness)) / 2
+    : stock.thickness / 2;
   const partingDepth = Math.min(Math.max(half, min), max);
   store.getState().change("setStock.twoSided", (draft) => {
     if (!twoSided) {

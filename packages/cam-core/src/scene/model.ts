@@ -124,8 +124,7 @@ export function proportionalDepth(bounds: Box3, rotation: Rotation, scale: numbe
 export function placedModelBox({ bounds, placement }: PlacedModel): Box3 {
   const [width, length, height] = rotatedSize(bounds, placement.rotation);
   const [x, y] = placement.position;
-  // `+ 0` turns -0 into 0.
-  const top = -placement.top + 0;
+  const top = 0 - placement.top;
   return {
     min: [x, y, height > 0 ? top - placement.depth : top],
     max: [x + width * placement.scale, y + length * placement.scale, top],

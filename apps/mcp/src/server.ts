@@ -9,7 +9,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
 import { checkProject, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
@@ -214,6 +214,26 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         resize(project, id, side, mm);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_model_top",
+    {
+      title: "Sink a model below the stock top",
+      description:
+        "Sets how far a model's top sits below the stock top, in millimetres (0 puts it at the stock top), keeping its size, as the app's Top below stock field does: the whole relief is machined that much lower, for example to recover a part roughed too deep or to leave a border standing proud. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        mm: z.number().min(0).describe("How far below the stock top, in millimetres."),
+      },
+    },
+    ({ path, id, mm }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTop(project, id, mm);
         return summary(project);
       }),
   );

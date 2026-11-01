@@ -67,6 +67,7 @@ describe("the MCP server", () => {
       "resize",
       "save_project",
       "set_machine",
+      "set_model_top",
       "set_operation_tool",
       "set_stock",
       "set_touch_off_pad",

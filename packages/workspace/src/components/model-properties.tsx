@@ -147,11 +147,15 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelTop(store, model.id, value)}
           {...gestures}
         />
-        {placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
-          <p role="status" className="flex gap-1.5 text-destructive">
-            <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>{t("tooDeep")}</span>
-          </p>
+        {placement.top >= stock.thickness ? (
+          <Warning>{t("belowStock")}</Warning>
+        ) : (
+          placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
+            <Warning>{t("tooDeep")}</Warning>
+          )
+        )}
+        {stock.twoSided && placement.top >= stock.twoSided.partingDepth && (
+          <Warning>{t("belowParting")}</Warning>
         )}
         <p className="text-muted-foreground">
           {t("original", {
@@ -235,5 +239,14 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+function Warning({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" className="flex gap-1.5 text-destructive">
+      <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
   );
 }

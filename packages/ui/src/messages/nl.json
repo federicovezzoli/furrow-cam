@@ -1293,6 +1293,8 @@
     "depth": "Diepte",
     "top": "Bovenkant onder materiaal",
     "tooDeep": "Het model reikt dieper dan het materiaal dik is: er wordt niet dieper gefreesd dan de onderkant van het materiaal.",
+    "belowStock": "De bovenkant van het model ligt op of onder de onderkant van het materiaal: er wordt niets van gefreesd, en de bewerkingen frezen door het materiaal erboven.",
+    "belowParting": "De bovenkant van het model ligt onder de scheidingsdiepte: de bovenzijde laat het materiaal erboven staan. Leg de scheidingsdiepte in het model.",
     "original": "Origineel: {size} (schaal {scale}%)",
     "border": "Rand",
     "borderNote": "Wordt aan elke kant vrijgelaten bij de volgende keer Passend maken; wijzigen verplaatst het model niet.",

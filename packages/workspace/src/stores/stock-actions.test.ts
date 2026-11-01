@@ -559,6 +559,20 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(flat.getState().document.stock.twoSided?.partingDepth).toBe(0.1);
   });
 
+  it("part halfway down the deepest model, from its top below the stock top", () => {
+    const document = createProjectDocument();
+    const sunk = { ...model, placement: { ...model.placement, top: 3, depth: 8 } };
+    const store = createDocumentStore({ ...document, models: [sunk] });
+    setTwoSided(store, true);
+    expect(stock(store).twoSided?.partingDepth).toBe(7);
+    // The deepest model, not the one whose middle is lowest.
+    const full = { ...model, placement: { ...model.placement, top: 0, depth: 18 } };
+    const low = { ...model, placement: { ...model.placement, top: 10, depth: 2 } };
+    const both = createDocumentStore({ ...document, models: [full, low] });
+    setTwoSided(both, true);
+    expect(both.getState().document.stock.twoSided?.partingDepth).toBe(9);
+  });
+
   it("move the bottom side's operations to the top when turned off, in one undo step", () => {
     const document = fullDocument();
     const operations = document.operations.map((op) => ({ ...op, stockSide: "bottom" as const }));
