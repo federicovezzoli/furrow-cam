@@ -20,6 +20,7 @@ import {
  * path (its length, not machining time) and a mark at the start of each
  * operation, with buttons to jump between them. `status` says what the
  * simulation is doing, if anything worth saying. Distances show in `units`.
+ * `children` come first, at the left end.
  */
 export function PlaybackTimeline({
   store,
@@ -27,12 +28,14 @@ export function PlaybackTimeline({
   parts,
   units,
   status,
+  children,
 }: {
   store: PlaybackStore;
   path: PlaybackPath | null;
   parts: PlaybackPart[];
   units: Units;
   status: string[];
+  children?: React.ReactNode;
 }) {
   const distance = useStore(store, (s) => s.distance);
   const playing = useStore(store, (s) => s.playing);
@@ -60,6 +63,7 @@ export function PlaybackTimeline({
       aria-label={t("playback")}
       className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-t bg-background px-2 py-1.5"
     >
+      {children}
       <div className="flex items-center gap-0.5">
         <Button
           variant="ghost"

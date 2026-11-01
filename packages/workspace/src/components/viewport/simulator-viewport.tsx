@@ -35,9 +35,10 @@ import {
  * The simulator's viewport (#100, ADR-0042): the stock cut move by move as
  * the playback advances, the tool drawn where it is, the toolpaths trailing
  * behind it (unless hidden), and the timeline under the scene. Cameras,
- * views and, in a two-sided project, sides work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
+ * views and, in a two-sided project, sides work as in the workspace.
+ * `children` lead the timeline. Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
-export function SimulatorViewport() {
+export function SimulatorViewport({ children }: { children?: React.ReactNode }) {
   const view = useWorkspaceStore((s) => s.view);
   // Known once the renderer is up, inside the canvas.
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
@@ -130,7 +131,9 @@ export function SimulatorViewport() {
           </p>
         )}
       </section>
-      <PlaybackTimeline store={store} path={path} parts={parts} units={units} status={status} />
+      <PlaybackTimeline store={store} path={path} parts={parts} units={units} status={status}>
+        {children}
+      </PlaybackTimeline>
     </div>
   );
 }
