@@ -117,6 +117,27 @@ describe("importFile", () => {
     expect(saved.meshes.get(stored?.sha256 ?? "")).toEqual(new TextEncoder().encode(TETRAHEDRON));
   });
 
+  it("imports a STEP model, stored as the STL made from it", async () => {
+    const step = await readFile(
+      new URL("../../../packages/workspace/src/lib/fixtures/box-with-hole.step", import.meta.url),
+      "utf8",
+    );
+    const { id } = await importFile(project, await file("bracket.stp", step), {});
+    const [model] = summary().models;
+    expect(model).toMatchObject({ id, fileName: "bracket.stp" });
+    const stored = project.store.getState().document.models[0];
+    expect(stored?.bounds).toEqual({ min: [0, 0, 0], max: [40, 20, 10] });
+    const stl = project.meshes.get(stored?.sha256 ?? "");
+    expect(stl?.byteLength).toBe(stored?.size);
+    expect(stl?.byteLength).toBe(84 + 50 * (stored?.triangles ?? 0));
+  }, 30_000);
+
+  it("refuses a STEP file it can't read with the app's message", async () => {
+    await expect(
+      importFile(project, await file("broken.step", "ISO-10303-21;\nnonsense"), {}),
+    ).rejects.toThrow(formatMessage(t, { code: "workspace.stepUnreadable" }));
+  }, 30_000);
+
   it("refuses drawings and a model in one project with the app's message", async () => {
     await importFile(project, await file("sign.svg", svg(100, 50, "mm")), {});
     await expect(importFile(project, await file("emblem.stl", TETRAHEDRON), {})).rejects.toThrow(
@@ -127,7 +148,7 @@ describe("importFile", () => {
   it("refuses other files with a message", async () => {
     await expect(importFile(project, "sign.svg", {})).rejects.toThrow("absolute path");
     await expect(importFile(project, await file("a.png", ""), {})).rejects.toThrow(
-      "isn't an SVG, DXF or STL file",
+      "isn't an SVG, DXF, STL or STEP file",
     );
     await expect(importFile(project, join(dir, "missing.svg"), {})).rejects.toThrow("Can't read");
     await mkdir(join(dir, "folder.svg"));

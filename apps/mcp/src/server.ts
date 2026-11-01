@@ -158,10 +158,10 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Import a drawing or 3D model",
       description:
-        "Imports an SVG or DXF drawing, or an STL 3D model, into a project, as the app does. A project holds drawings (several, each its own) or one model, not both. Drawings keep their size in the file and models are fitted inside the stock; both are placed at the zero's corner or centre, which fit_to_stock and resize can change. An SVG sized in pixels or not at all needs dpi, and a DXF that doesn't say its units needs units: without them the import is refused, saying so; ask the user rather than guessing. Returns the new drawing's or model's id, the import's warnings and the project summary.",
+        "Imports an SVG or DXF drawing, or an STL or STEP 3D model, into a project, as the app does. A project holds drawings (several, each its own) or one model, not both. Drawings keep their size in the file; a STEP solid is turned into a triangle mesh, as in the app, and models are fitted inside the stock; both are placed at the zero's corner or centre, which fit_to_stock and resize can change. An SVG sized in pixels or not at all needs dpi, and a DXF that doesn't say its units needs units: without them the import is refused, saying so; ask the user rather than guessing. Returns the new drawing's or model's id, the import's warnings and the project summary.",
       inputSchema: {
         path: projectPath,
-        file: z.string().describe("Absolute path of the .svg, .dxf or .stl file."),
+        file: z.string().describe("Absolute path of the .svg, .dxf, .stl or .step (.stp) file."),
         dpi: z
           .number()
           .positive()

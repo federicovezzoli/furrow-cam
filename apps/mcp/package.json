@@ -9,7 +9,7 @@
     "furrow-mcp": "./dist/main.js"
   },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --external:occt-import-js --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -21,6 +21,7 @@
     "@furrow/ui": "workspace:*",
     "@furrow/workspace": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "occt-import-js": "0.0.23",
     "zod": "catalog:"
   },
   "devDependencies": {
