@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Relatar um erro",
-    "privacy": "Privacidade"
+    "privacy": "Privacidade",
+    "licences": "Licenças de terceiros"
+  },
+  "Licences": {
+    "title": "Licenças de terceiros",
+    "intro": "O Furrow CAM inclui estas bibliotecas e fontes, sob as suas próprias licenças. Abra uma licença para ler o texto distribuído com a aplicação.",
+    "licence": "Licença: {licence}",
+    "source": "Código-fonte:",
+    "loading": "A carregar…",
+    "unavailable": "Não foi possível carregar o texto desta licença.",
+    "text": "Texto da licença de {name}"
   },
   "Meta": {
     "description": "CAM 2.5D de código aberto, na web, para fresadoras CNC.",
-    "privacyTitle": "Política de privacidade · Furrow CAM"
+    "privacyTitle": "Política de privacidade · Furrow CAM",
+    "licencesTitle": "Licenças de terceiros · Furrow CAM"
   },
   "Projects": {
     "notFound": "Este projeto não existe mais.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Verificar Atualizações…",
       "reportBug": "Relatar um Erro…",
       "checkAtStartup": "Verificar Atualizações ao Iniciar",
-      "sendUsage": "Enviar Estatísticas de Uso e Relatórios de Erros"
+      "sendUsage": "Enviar Estatísticas de Uso e Relatórios de Erros",
+      "licences": "Licenças de terceiros"
     },
     "telemetry": {
       "question": "Enviar estatísticas de uso e relatórios de erros anônimos?",

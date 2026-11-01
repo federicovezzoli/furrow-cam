@@ -578,6 +578,7 @@ function buildMenu() {
               ]),
             ),
         },
+        { label: t("DesktopMain.menu.licences"), click: send("licences") },
         { type: "separator" },
         {
           label: t("DesktopMain.menu.checkAtStartup"),

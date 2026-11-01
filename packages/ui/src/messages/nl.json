@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Bug melden",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "licences": "Licenties van derden"
+  },
+  "Licences": {
+    "title": "Licenties van derden",
+    "intro": "Furrow CAM bevat deze bibliotheken en lettertypen, onder hun eigen licenties. Open een licentie om de tekst te lezen zoals die met de app wordt meegeleverd.",
+    "licence": "Licentie: {licence}",
+    "source": "Broncode:",
+    "loading": "Laden…",
+    "unavailable": "Deze licentietekst kon niet worden geladen.",
+    "text": "Licentietekst van {name}"
   },
   "Meta": {
     "description": "Open source, webgebaseerde 2.5D-CAM voor CNC-freesmachines.",
-    "privacyTitle": "Privacybeleid · Furrow CAM"
+    "privacyTitle": "Privacybeleid · Furrow CAM",
+    "licencesTitle": "Licenties van derden · Furrow CAM"
   },
   "Projects": {
     "notFound": "Dit project bestaat niet meer.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Zoek naar updates…",
       "reportBug": "Meld een bug…",
       "checkAtStartup": "Zoek bij opstarten naar updates",
-      "sendUsage": "Stuur gebruiksstatistieken en foutrapporten"
+      "sendUsage": "Stuur gebruiksstatistieken en foutrapporten",
+      "licences": "Licenties van derden"
     },
     "telemetry": {
       "question": "Anonieme gebruiksstatistieken en foutrapporten versturen?",

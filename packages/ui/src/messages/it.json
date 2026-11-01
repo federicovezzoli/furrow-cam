@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Segnala un bug",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "licences": "Licenze di terze parti"
+  },
+  "Licences": {
+    "title": "Licenze di terze parti",
+    "intro": "Furrow CAM include queste librerie e questi font, con le loro licenze. Apri una licenza per leggerne il testo distribuito con l'app.",
+    "licence": "Licenza: {licence}",
+    "source": "Sorgente:",
+    "loading": "Caricamento…",
+    "unavailable": "Non è stato possibile caricare il testo di questa licenza.",
+    "text": "Testo della licenza di {name}"
   },
   "Meta": {
     "description": "CAM 2.5D open source e web per router CNC.",
-    "privacyTitle": "Informativa sulla privacy · Furrow CAM"
+    "privacyTitle": "Informativa sulla privacy · Furrow CAM",
+    "licencesTitle": "Licenze di terze parti · Furrow CAM"
   },
   "Projects": {
     "notFound": "Questo progetto non esiste più.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Verifica aggiornamenti…",
       "reportBug": "Segnala un bug…",
       "checkAtStartup": "Verifica aggiornamenti all'avvio",
-      "sendUsage": "Invia statistiche d'uso e segnalazioni di errore"
+      "sendUsage": "Invia statistiche d'uso e segnalazioni di errore",
+      "licences": "Licenze di terze parti"
     },
     "telemetry": {
       "question": "Inviare statistiche d'uso e segnalazioni di errore anonime?",

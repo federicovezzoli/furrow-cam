@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Informar de un error",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "licences": "Licencias de terceros"
+  },
+  "Licences": {
+    "title": "Licencias de terceros",
+    "intro": "Furrow CAM incluye estas bibliotecas y fuentes, con sus propias licencias. Abre una licencia para leer su texto tal como se distribuye con la app.",
+    "licence": "Licencia: {licence}",
+    "source": "Código fuente:",
+    "loading": "Cargando…",
+    "unavailable": "No se pudo cargar el texto de esta licencia.",
+    "text": "Texto de la licencia de {name}"
   },
   "Meta": {
     "description": "CAM 2.5D de código abierto y basado en web para routers CNC.",
-    "privacyTitle": "Política de privacidad · Furrow CAM"
+    "privacyTitle": "Política de privacidad · Furrow CAM",
+    "licencesTitle": "Licencias de terceros · Furrow CAM"
   },
   "Projects": {
     "notFound": "Este proyecto ya no existe.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Buscar actualizaciones…",
       "reportBug": "Informar de un error…",
       "checkAtStartup": "Buscar actualizaciones al iniciar",
-      "sendUsage": "Enviar estadísticas de uso e informes de errores"
+      "sendUsage": "Enviar estadísticas de uso e informes de errores",
+      "licences": "Licencias de terceros"
     },
     "telemetry": {
       "question": "¿Enviar estadísticas de uso anónimas e informes de errores?",
