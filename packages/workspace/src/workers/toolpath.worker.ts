@@ -184,6 +184,7 @@ async function exportProgram({
   export: id,
   document,
   name,
+  version,
   inputs,
   meshes: files = [],
 }: GcodeExportRequest) {
@@ -210,8 +211,13 @@ async function exportProgram({
       cache: reliefCache,
       cuts: exportCuts,
     };
-    const program = exportFromResults(document, name, inputs, results, (input) =>
-      generateToolpath(input, context),
+    const program = exportFromResults(
+      document,
+      name,
+      inputs,
+      results,
+      (input) => generateToolpath(input, context),
+      { version },
     );
     scope.postMessage({ export: id, ...program });
   } catch (error) {

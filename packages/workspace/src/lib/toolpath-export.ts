@@ -1,6 +1,6 @@
 import { type Toolpath, type ToolpathInput, toolpathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
-import { type GcodeExport, postToolpaths } from "@furrow/post";
+import { type GcodeExport, type GcodeNaming, postToolpaths } from "@furrow/post";
 
 /** An enabled operation's inputs, as the toolpath scheduler hashed them. */
 export type ExportInput = { operationId: string; inputHash: string; input: ToolpathInput };
@@ -73,6 +73,7 @@ export function exportFromResults(
   inputs: readonly ExportInput[],
   results: ToolpathResults,
   compute: (input: ToolpathInput) => Toolpath,
+  naming: GcodeNaming = {},
 ): GcodeExport {
   const computed = inputs.map(({ operationId, inputHash, input }) => {
     let toolpath = results.get(operationId, inputHash);
@@ -82,5 +83,5 @@ export function exportFromResults(
     }
     return { input, toolpath };
   });
-  return postToolpaths(document, name, computed);
+  return postToolpaths(document, name, computed, naming);
 }

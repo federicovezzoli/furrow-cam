@@ -190,7 +190,8 @@ async function checkTarget(path: string, overwrite: boolean) {
 
 /**
  * Writes the project's G-code into `folder` (beside the project by default),
- * named as the app names its export: one file, or one per side of a
+ * named as the app names its export, without the version the app adds
+ * after a version is saved or restored: one file, or one per side of a
  * two-sided project (PRD-0012 M7). Byte for byte the app's program. Refuses
  * to replace a file unless `overwrite`. Returns the files written and the
  * export's warnings.
