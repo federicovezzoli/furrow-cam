@@ -1,5 +1,16 @@
 # @furrow/mcp
 
+## 0.3.0
+
+### Minor Changes
+
+- Exported G-code files are named after the project, the version you last saved or restored (until you change the project) and the date, e.g. `cutting-board-final-2026-11-01-top.gcode`, so exports no longer collide and are easy to tell apart on the machine. ([#452](https://github.com/federicovezzoli/furrow-cam/pull/452))
+- STEP files (`.step`, `.stp`) from CAD programs such as Fusion, FreeCAD or Onshape can now be imported as 3D models, in their true size whatever unit they were drawn in, and machined like STL reliefs. ([#446](https://github.com/federicovezzoli/furrow-cam/pull/446))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/post@0.15.0, @furrow/workspace@0.18.0, @furrow/document@0.18.0, @furrow/ui@0.7.0, @furrow/cam-core@0.16.1
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @furrow/web
 
+## 0.21.0
+
+### Minor Changes
+
+- Machines can hold their X/Y and Z accelerations, and with them the machining time estimate accounts for speeding up, slowing down and corners, so relief finishing and other jobs with many short moves are no longer badly underestimated. Without them, the estimate says it is a lower bound. ([#440](https://github.com/federicovezzoli/furrow-cam/pull/440))
+- STEP files (`.step`, `.stp`) from CAD programs such as Fusion, FreeCAD or Onshape can now be imported as 3D models, in their true size whatever unit they were drawn in, and machined like STL reliefs. ([#446](https://github.com/federicovezzoli/furrow-cam/pull/446))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/post@0.15.0, @furrow/workspace@0.18.0, @furrow/document@0.18.0, @furrow/ui@0.7.0, @furrow/cam-core@0.16.1
+
 ## 0.20.0
 
 ### Minor Changes
