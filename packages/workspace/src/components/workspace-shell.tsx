@@ -30,7 +30,7 @@ import { AddOperationButtons } from "./add-operation-buttons";
 import { BrowserOnly } from "./browser-only";
 import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
-import { ProjectGcodeExportButton } from "./gcode-export-button";
+import { GcodeExportButton } from "./gcode-export-button";
 import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-import";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
@@ -65,9 +65,6 @@ export function WorkspaceShell() {
   const { library, settings } = useWorkspaceHost();
   const saveStatus = useSaveStatus();
   const machineName = useDocumentStore((s) => s.document.machine?.name ?? null);
-  const hasEnabledOperations = useDocumentStore((s) =>
-    s.document.operations.some((operation) => operation.enabled),
-  );
   useUndoShortcuts();
   const tour = useTour("workspace", {
     userId: settings.account,
@@ -142,11 +139,9 @@ export function WorkspaceShell() {
                 footer={
                   <div className="flex gap-2">
                     <div data-tour="export-gcode" className="min-w-0 flex-1">
-                      <ProjectGcodeExportButton className="w-full" />
+                      <GcodeExportButton className="w-full" />
                     </div>
-                    <SimulateButton
-                      disabledReason={hasEnabledOperations ? undefined : t("addOperation")}
-                    />
+                    <SimulateButton />
                   </div>
                 }
               >
