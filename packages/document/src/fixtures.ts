@@ -82,6 +82,8 @@ export const machine: Machine = {
   workAreaZ: 95,
   maxFeedXY: 10000,
   maxFeedZ: 2500,
+  accelerationXY: null,
+  accelerationZ: null,
   spindleRpmMin: 10000,
   spindleRpmMax: 30000,
   spinUpDelay: 5,
@@ -102,6 +104,8 @@ export const lowRider: Machine = {
   workAreaZ: 85,
   maxFeedXY: 4800,
   maxFeedZ: 900,
+  accelerationXY: null,
+  accelerationZ: null,
   spindleRpmMin: null,
   spindleRpmMax: null,
   spinUpDelay: 2,
@@ -258,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 30,
+    schemaVersion: 31,
     units: "in",
     stock: {
       width: 300,

@@ -983,7 +983,8 @@
     },
     "timeTitle": "Tempo de usinagem estimado",
     "total": "Total {time}",
-    "estimateNote": "Aproximado: acelerações e trocas de ferramenta não são contadas.",
+    "estimateNote": "Um mínimo: acelerações e trocas de ferramenta não são contadas. Informe as acelerações da máquina para uma estimativa mais precisa.",
+    "estimateWithAcceleration": "Aproximado: trocas de ferramenta não são contadas.",
     "estimateNoMachine": "Aproximado: os movimentos rápidos só são contados quando o projeto tem uma máquina, e acelerações e trocas de ferramenta não são contadas."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Defina-os com as velocidades máximas do seu controlador ($110–$112, em mm/min). Eles limitam o avanço e a velocidade de mergulho da fresa. Os deslocamentos entre cortes são sempre feitos às velocidades máximas do controlador; a estimativa de tempo usa estes valores para eles.",
     "maxFeedXY": "Avanço máx. X/Y",
     "maxFeedZ": "Avanço máx. Z",
+    "accelerationXY": "Aceleração X/Y",
+    "accelerationZ": "Aceleração Z",
+    "accelerationHint": "Opcional: as acelerações do seu controlador ($120–$122, em mm/s²). Só a estimativa de tempo as usa, para acelerar, frear e fazer cantos; em branco, ela não conta as acelerações e fica curta.",
     "spindle": "Spindle",
     "manualSpindle": "Spindle manual",
     "manualSpindleHint": "Rotação ajustada à mão (por exemplo, no seletor de uma tupia); o G-code não define a rotação do spindle.",

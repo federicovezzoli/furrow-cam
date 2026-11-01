@@ -145,6 +145,23 @@ export function MachineForm({
           />
           {ask("maxFeedZ")}
         </div>
+        <p id="acceleration-hint" className="text-sm text-muted-foreground sm:col-span-full">
+          {t("accelerationHint")}
+        </p>
+        <NumberField
+          label={t("accelerationXY")}
+          {...number("accelerationXY")}
+          suffix="mm/s²"
+          min={0}
+          describedBy="acceleration-hint"
+        />
+        <NumberField
+          label={t("accelerationZ")}
+          {...number("accelerationZ")}
+          suffix="mm/s²"
+          min={0}
+          describedBy="acceleration-hint"
+        />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

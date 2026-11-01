@@ -983,7 +983,8 @@
     },
     "timeTitle": "Geschatte bewerkingstijd",
     "total": "Totaal {time}",
-    "estimateNote": "Bij benadering: acceleratie en gereedschapswissels worden niet meegeteld.",
+    "estimateNote": "Een ondergrens: acceleratie en gereedschapswissels worden niet meegeteld. Vul de acceleraties van de machine in voor een betere inschatting.",
+    "estimateWithAcceleration": "Bij benadering: gereedschapswissels worden niet meegeteld.",
     "estimateNoMachine": "Bij benadering: ijlgangen worden pas meegeteld als het project een machine heeft, acceleratie en gereedschapswissels helemaal niet."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Stel deze in op de maximale snelheden van je controller ($110–$112, in mm/min). Ze begrenzen de voeding en invalsnelheid van de frees. Verplaatsingen tussen sneden gaan altijd met de maximale snelheden van de controller; de tijdsinschatting gebruikt deze waarden ervoor.",
     "maxFeedXY": "Max. voeding X/Y",
     "maxFeedZ": "Max. voeding Z",
+    "accelerationXY": "Acceleratie X/Y",
+    "accelerationZ": "Acceleratie Z",
+    "accelerationHint": "Optioneel: de acceleraties van je controller ($120–$122, in mm/s²). Alleen de tijdsinschatting gebruikt ze, voor optrekken, afremmen en hoeken; leeg gelaten telt ze geen acceleratie mee en valt ze te kort uit.",
     "spindle": "Spindel",
     "manualSpindle": "Handmatige spindel",
     "manualSpindleHint": "Toerental met de hand ingesteld (bijv. de draaiknop van een kantenfrees); de G-code stelt geen spindeltoerental in.",

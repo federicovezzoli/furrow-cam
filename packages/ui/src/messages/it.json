@@ -983,7 +983,8 @@
     },
     "timeTitle": "Tempo di lavorazione stimato",
     "total": "Totale {time}",
-    "estimateNote": "Approssimativo: accelerazioni e cambi utensile non sono contati.",
+    "estimateNote": "Un minimo: accelerazioni e cambi utensile non sono contati. Imposta le accelerazioni della macchina per una stima più precisa.",
+    "estimateWithAcceleration": "Approssimativo: i cambi utensile non sono contati.",
     "estimateNoMachine": "Approssimativo: i movimenti rapidi non sono contati finché il progetto non ha una macchina, né le accelerazioni e i cambi utensile."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Impostali sulle velocità massime del controller ($110–$112, espresse in mm/min). Limitano l’avanzamento e la velocità di affondo della fresa. I movimenti di spostamento tra un taglio e l’altro vanno sempre alle velocità massime del controller; la stima dei tempi usa questi valori per calcolarli.",
     "maxFeedXY": "Avanzamento max X/Y",
     "maxFeedZ": "Avanzamento max Z",
+    "accelerationXY": "Accelerazione X/Y",
+    "accelerationZ": "Accelerazione Z",
+    "accelerationHint": "Facoltativo: le accelerazioni del controller ($120–$122, in mm/s²). Le usa solo la stima dei tempi, per accelerare, frenare e affrontare gli angoli; se vuote, non conta le accelerazioni e sottostima.",
     "spindle": "Mandrino",
     "manualSpindle": "Mandrino manuale",
     "manualSpindleHint": "Velocità impostata a mano (es. la ghiera di una rifilatrice); il G-code non imposta la velocità del mandrino.",

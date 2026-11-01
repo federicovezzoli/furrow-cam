@@ -983,7 +983,8 @@
     },
     "timeTitle": "Tahmini işleme süresi",
     "total": "Toplam {time}",
-    "estimateNote": "Yaklaşık: hızlanma ve takım değişimleri hesaba katılmaz.",
+    "estimateNote": "Bir alt sınır: hızlanma ve takım değişimleri hesaba katılmaz. Daha yakın bir tahmin için makinenin ivmelerini girin.",
+    "estimateWithAcceleration": "Yaklaşık: takım değişimleri hesaba katılmaz.",
     "estimateNoMachine": "Yaklaşık: projeye bir makine atanana kadar hızlı hareketler hesaba katılmaz; hızlanma ve takım değişimleri de katılmaz."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Bunları kontrolcünüzün azami hızlarına ($110–$112, mm/dk cinsinden) ayarlayın. Ucun ilerleme ve dalma hızlarını sınırlarlar. Kesimler arasındaki boşta hareketler her zaman kontrolcünün kendi azami hızlarıyla yapılır; süre tahmini bunlar için bu değerleri kullanır.",
     "maxFeedXY": "Maks. ilerleme X/Y",
     "maxFeedZ": "Maks. ilerleme Z",
+    "accelerationXY": "İvme X/Y",
+    "accelerationZ": "İvme Z",
+    "accelerationHint": "İsteğe bağlı: kontrolcünüzün ivmeleri ($120–$122, mm/s² cinsinden). Yalnızca süre tahmini bunları hızlanma, yavaşlama ve köşeler için kullanır; boş bırakılırsa hızlanmayı hesaba katmaz ve kısa tahmin eder.",
     "spindle": "İş mili",
     "manualSpindle": "Manuel iş mili",
     "manualSpindleHint": "Devir elle ayarlanır (ör. bir trimer frezenin kadranından); G-code iş mili devri ayarlamaz.",

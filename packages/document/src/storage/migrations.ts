@@ -289,6 +289,9 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #437: machine accelerations. Snapshots without them get `null` from the
+  // schema's defaults, as for #425.
+  30: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

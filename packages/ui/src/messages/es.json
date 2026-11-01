@@ -983,7 +983,8 @@
     },
     "timeTitle": "Tiempo de mecanizado estimado",
     "total": "Total {time}",
-    "estimateNote": "Aproximado: no se cuentan las aceleraciones ni los cambios de herramienta.",
+    "estimateNote": "Un mínimo: no se cuentan las aceleraciones ni los cambios de herramienta. Indica las aceleraciones de la máquina para una estimación más precisa.",
+    "estimateWithAcceleration": "Aproximado: no se cuentan los cambios de herramienta.",
     "estimateNoMachine": "Aproximado: los movimientos rápidos no se cuentan hasta que el proyecto tenga una máquina, ni tampoco las aceleraciones y los cambios de herramienta."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Ajústalos a las velocidades máximas de tu controlador ($110–$112, en mm/min). Limitan el avance y la velocidad de penetración de la fresa. Los desplazamientos entre cortes van siempre a las velocidades máximas del controlador; la estimación de tiempo usa estos valores para ellos.",
     "maxFeedXY": "Avance máx. X/Y",
     "maxFeedZ": "Avance máx. Z",
+    "accelerationXY": "Aceleración X/Y",
+    "accelerationZ": "Aceleración Z",
+    "accelerationHint": "Opcional: las aceleraciones de tu controlador ($120–$122, en mm/s²). Solo las usa la estimación de tiempo, para acelerar, frenar y tomar esquinas; si las dejas vacías, no cuenta las aceleraciones y se queda corta.",
     "spindle": "Husillo",
     "manualSpindle": "Husillo manual",
     "manualSpindleHint": "Velocidad ajustada a mano (p. ej. la rueda de una fresadora de mano); el G-code no fija la velocidad del husillo.",

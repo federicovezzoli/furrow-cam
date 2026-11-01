@@ -983,7 +983,8 @@
     },
     "timeTitle": "Estimated machining time",
     "total": "Total {time}",
-    "estimateNote": "Approximate: acceleration and tool changes aren't counted.",
+    "estimateNote": "A lower bound: acceleration and tool changes aren't counted. Set the machine's accelerations for a closer estimate.",
+    "estimateWithAcceleration": "Approximate: tool changes aren't counted.",
     "estimateNoMachine": "Approximate: rapids aren't counted until the project has a machine, nor are acceleration and tool changes."
   },
   "ToolpathProgress": {
@@ -1052,6 +1053,9 @@
     "limitsHint": "Set these to your controller’s maximum rates ($110–$112, which are in mm/min). They cap the bit’s feed and plunge rates. Travel moves between cuts always run at the controller’s own maximum rates; the time estimate uses these values for them.",
     "maxFeedXY": "Max feed X/Y",
     "maxFeedZ": "Max feed Z",
+    "accelerationXY": "Acceleration X/Y",
+    "accelerationZ": "Acceleration Z",
+    "accelerationHint": "Optional: your controller’s accelerations ($120–$122, in mm/s²). Only the time estimate uses them, for speeding up, slowing down and corners; left blank, it leaves acceleration out and runs short.",
     "spindle": "Spindle",
     "manualSpindle": "Manual spindle",
     "manualSpindleHint": "Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.",

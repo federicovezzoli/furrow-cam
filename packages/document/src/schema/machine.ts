@@ -32,6 +32,9 @@ export const NEW_MACHINE_DEFAULTS = {
   safeZ: 5,
   entryClearance: DEFAULT_ENTRY_CLEARANCE,
   spinUpDelay: DEFAULT_SPIN_UP_DELAY,
+  // Typical of hobby routers, on the low side so the estimate errs long.
+  accelerationXY: 200,
+  accelerationZ: 80,
   postProcessor: "grbl",
 } as const satisfies Partial<Machine>;
 
@@ -48,6 +51,13 @@ export const Machine = z
     workAreaZ: PositiveLength,
     maxFeedXY: FeedRate,
     maxFeedZ: FeedRate,
+    /**
+     * Accelerations in mm/s², as GRBL's `$120`–`$122` (#437), for the time
+     * estimate only. `null` leaves acceleration out of it. Missing in
+     * documents and libraries saved before them, hence the defaults.
+     */
+    accelerationXY: z.number().positive().nullable().default(null),
+    accelerationZ: z.number().positive().nullable().default(null),
     /** Both `null` for a manual spindle: the post-processor omits the `S` word. */
     spindleRpmMin: SpindleRpm.nullable(),
     spindleRpmMax: SpindleRpm.nullable(),
@@ -115,6 +125,11 @@ const MACHINE_FIELDS = Object.keys(Machine.shape) as (keyof Machine)[];
 export function machineSpinUpDelay(machine: Machine | null): number {
   if (machine !== null && machine.spindleRpmMin === null) return 0;
   return Math.round((machine?.spinUpDelay ?? DEFAULT_SPIN_UP_DELAY) * 1000) / 1000;
+}
+
+/** Whether the time estimate accounts for `machine`'s acceleration on every axis. */
+export function hasAccelerations(machine: Machine): boolean {
+  return machine.accelerationXY !== null && machine.accelerationZ !== null;
 }
 
 /**
