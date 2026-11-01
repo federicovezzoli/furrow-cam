@@ -400,9 +400,13 @@ export class ToolDropper {
     }
   }
 
-  /** The tip height at `[x, y]` (in grid coordinates), no lower than `floor`. */
-  dropPoint(x: number, y: number, floor: number): number {
-    const { heights, profile } = this;
+  /**
+   * The tip height at `[x, y]` (in grid coordinates), no lower than `floor`,
+   * with the profile `widened` by `by`.
+   */
+  dropPoint(x: number, y: number, floor: number, by = 0): number {
+    const { heights } = this;
+    const profile = by > 0 ? widened(this.profile, by) : this.profile;
     const { columns, rows, cellWidth, cellHeight } = this.grid;
     const radius = profile.radius;
     let best = floor;
@@ -628,12 +632,15 @@ const STRAIGHT_SLACK = 1e-3;
  * one to the next where the move passes halfway between them no lower than
  * the tool, nor more than half the tolerance above it: a steep face, not a
  * wall. Elsewhere, or without `between`, it goes over at the higher of the
- * two: along at that height, then straight down or up.
+ * two: along at that height, then straight down or up. With `between`, no
+ * lower than the tool dropped halfway with its profile widened by half the
+ * way (`between`'s `by`, in the units of `spacing`), which keeps the move
+ * clear of a face still rising into the wall (#439).
  */
 export function sampleMoves(
   heights: ArrayLike<number>,
   spacing: number,
-  between: ((sample: number, fraction: number) => number) | null = null,
+  between: ((sample: number, fraction: number, by?: number) => number) | null = null,
   tolerance = RELIEF_TOLERANCE,
 ): [number, number][] {
   // Points in flat arrays, in runs from `starts` between straight-up or
@@ -650,9 +657,9 @@ export function sampleMoves(
     at.push(sample);
     zs.push(height);
   };
-  /** Over at the higher of two points `a` and `b`. */
-  const over = (a: number, za: number, b: number, zb: number) => {
-    const high = Math.max(za, zb);
+  /** Over at the higher of two points `a` and `b`, and of `clear`. */
+  const over = (a: number, za: number, b: number, zb: number, clear = -Infinity) => {
+    const high = Math.max(za, zb, clear);
     push(a, high);
     push(b, high);
     push(b, zb);
@@ -678,7 +685,7 @@ export function sampleMoves(
         straight = above >= -STRAIGHT_SLACK && above <= tolerance / 2;
       }
       if (straight) push(b, z);
-      else over(a, previous, b, z);
+      else over(a, previous, b, z, between(k, (j - 0.5) / parts, spacing / parts / 2));
       previous = z;
     }
   }
@@ -1486,7 +1493,8 @@ export function* parallelPassesSteps(
           link[0] = from.z;
           for (let k = 1; k < steps; k++) link[k] = dropper.dropPoint(...linkAt(k), floor);
           link[steps] = pass[a] as number;
-          const linkBetween = (k: number, f: number) => dropper.dropPoint(...linkAt(k + f), floor);
+          const linkBetween = (k: number, f: number, by?: number) =>
+            dropper.dropPoint(...linkAt(k + f), floor, by);
           for (const [k, z] of sampleMoves(link, Math.hypot(du, dv) / steps, linkBetween)) {
             // The first may climb straight up from where the tool is; the
             // builder drops a move that goes nowhere.
@@ -1496,7 +1504,8 @@ export function* parallelPassesSteps(
           builder.travel(start[0], start[1]);
           enter(start, entryAt(a));
         }
-        const passBetween = (i: number, f: number) => dropper.dropPoint(u(a + i + f), v, floor);
+        const passBetween = (i: number, f: number, by?: number) =>
+          dropper.dropPoint(u(a + i + f), v, floor, by);
         for (const [i, z] of sampleMoves(pass.subarray(a, b + 1), cellWidth, passBetween)) {
           builder.feed(at(u(a + i), v, z), tool.feedRate);
         }

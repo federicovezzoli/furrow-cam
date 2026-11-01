@@ -205,9 +205,9 @@ export function* spiralSteps(
       }
       continues = false;
       const spacing = along === "row" ? cellWidth : cellHeight;
-      const between = (i: number, f: number) => {
+      const between = (i: number, f: number, by?: number) => {
         const [x, y] = position(a + i + f);
-        return dropper.dropPoint(x, y, floor);
+        return dropper.dropPoint(x, y, floor, by);
       };
       for (const [i, z] of sampleMoves(samples.subarray(a, b + 1), spacing, between)) {
         // The first may climb straight up from where the tool is; the

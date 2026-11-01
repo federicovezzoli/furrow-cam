@@ -425,6 +425,30 @@ describe("sampleMoves", () => {
     }
   });
 
+  it("goes over a face still rising into a wall within a sub-step (#439)", () => {
+    // Rising 4.8 in 1 up to a wall at 0.237, inside the last but two of 16 sub-steps.
+    const tool = (x: number) => (x < 0.237 ? 4.8 * x : -10);
+    const spacing = 0.1;
+    const heights = [0, 1, 2, 3].map((i) => tool(i * spacing));
+    // The highest the tool is within `by` of a point, as a widened profile drops it.
+    const between = (sample: number, fraction: number, by = 0) => {
+      const x = (sample + fraction) * spacing;
+      const ends = Math.max(tool(x - by), tool(x + by));
+      return x - by < 0.237 && 0.237 <= x + by ? Math.max(ends, 4.8 * 0.237) : ends;
+    };
+    const moves = sampleMoves(heights, spacing, between);
+    for (let m = 1; m < moves.length; m++) {
+      const [a, za] = moves[m - 1] as [number, number];
+      const [b, zb] = moves[m] as [number, number];
+      for (let t = 0; t <= 64; t++) {
+        const x = (a + ((b - a) * t) / 64) * spacing;
+        // The tool's top edge is only known within the micrometre a straight move may pass below.
+        if (Math.abs(x - 0.237) < 1e-9) continue;
+        expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(x) - 0.001);
+      }
+    }
+  });
+
   it("goes straight down a steep face in one move", () => {
     // 60° down, then level.
     const slope = Math.tan(Math.PI / 3);
