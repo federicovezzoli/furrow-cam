@@ -1,5 +1,16 @@
 # @furrow/post
 
+## 0.15.0
+
+### Minor Changes
+
+- Exported G-code files are named after the project, the version you last saved or restored (until you change the project) and the date, e.g. `cutting-board-final-2026-11-01-top.gcode`, so exports no longer collide and are easy to tell apart on the machine. ([#452](https://github.com/federicovezzoli/furrow-cam/pull/452))
+- Machines can hold their X/Y and Z accelerations, and with them the machining time estimate accounts for speeding up, slowing down and corners, so relief finishing and other jobs with many short moves are no longer badly underestimated. Without them, the estimate says it is a lower bound. ([#440](https://github.com/federicovezzoli/furrow-cam/pull/440))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.18.0, @furrow/cam-core@0.16.1
+
 ## 0.14.0
 
 ### Minor Changes

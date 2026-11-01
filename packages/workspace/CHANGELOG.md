@@ -1,5 +1,19 @@
 # @furrow/workspace
 
+## 0.18.0
+
+### Minor Changes
+
+- Exported G-code files are named after the project, the version you last saved or restored (until you change the project) and the date, e.g. `cutting-board-final-2026-11-01-top.gcode`, so exports no longer collide and are easy to tell apart on the machine. ([#452](https://github.com/federicovezzoli/furrow-cam/pull/452))
+- Machines can hold their X/Y and Z accelerations, and with them the machining time estimate accounts for speeding up, slowing down and corners, so relief finishing and other jobs with many short moves are no longer badly underestimated. Without them, the estimate says it is a lower bound. ([#440](https://github.com/federicovezzoli/furrow-cam/pull/440))
+- The simulator page has an Export G-code button, so you can download the program right after checking it. ([#451](https://github.com/federicovezzoli/furrow-cam/pull/451))
+- STEP files (`.step`, `.stp`) from CAD programs such as Fusion, FreeCAD or Onshape can now be imported as 3D models, in their true size whatever unit they were drawn in, and machined like STL reliefs. ([#446](https://github.com/federicovezzoli/furrow-cam/pull/446))
+
+### Patch Changes
+
+- The model panel now shows "Top below stock" in the Position section, next to X and Y, since it moves the model rather than resizing it. ([#450](https://github.com/federicovezzoli/furrow-cam/pull/450))
+- Updated dependencies: @furrow/post@0.15.0, @furrow/document@0.18.0, @furrow/ui@0.7.0, @furrow/cam-core@0.16.1
+
 ## 0.17.0
 
 ### Minor Changes
