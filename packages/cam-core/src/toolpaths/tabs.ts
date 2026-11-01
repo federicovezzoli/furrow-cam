@@ -1,5 +1,5 @@
 import { distance, type Point, type ProfileSide, type Shape } from "@furrow/document";
-import { containment } from "../geometry/clipper";
+import { containment, offset } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type Projection, projectOnLoop } from "../geometry/loop";
 
@@ -125,6 +125,27 @@ export function snapStartPoint(
     best = { point: closed ? projection.point : (end as Point), distance: projection.distance };
   }
   return best;
+}
+
+/**
+ * Where the tool centre enters for each start point at `points`: the point
+ * itself on the line, otherwise the nearest point of the rings `distance`
+ * inside or outside the closed paths of `shapes` (even-odd), or the point
+ * itself when there are none.
+ */
+export function startPointCentres(
+  shapes: Shape[],
+  side: ProfileSide,
+  distance: number,
+  points: Point[],
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): Point[] {
+  if (side === "on" || points.length === 0) return points;
+  const closed = closedLoops(shapes, tolerance).map((loop) => loop.slice(0, -1));
+  const rings = offset(closed, side === "outside" ? distance : -distance, {
+    fillRule: "evenOdd",
+  }).map((ring) => [...ring, ring[0] as Point]);
+  return points.map((point) => nearestOnLoops(rings, point)?.point ?? point);
 }
 
 /** The closed paths of `shapes`, flattened, each ending on its first point. */

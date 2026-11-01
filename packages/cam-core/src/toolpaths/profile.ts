@@ -1,5 +1,6 @@
 import {
   distance,
+  GEOMETRY_TOLERANCE,
   type MillingDirection,
   type Point,
   type ProfileOperation,
@@ -10,7 +11,7 @@ import {
 } from "@furrow/document";
 import { containment, difference, offset, type Polygon, signedArea } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
-import { projectOnLoop } from "../geometry/loop";
+import { type Projection, projectOnLoop } from "../geometry/loop";
 import type { ToolpathMessage } from "./messages";
 import {
   type Box,
@@ -94,8 +95,8 @@ type Cut = Descent & {
  *   plus the tool diameter: it rises straight up at the tab's edge, crosses it
  *   flat and goes straight back down. Passes above the tab top are untouched,
  *   and no contour starts on a tab.
- * - Each start point (#426) goes to the nearest contour or open path, one per
- *   path. A closed contour starts there instead of halfway along its longest
+ * - Each start point (#426) on a path goes to the contour or open path that
+ *   path makes, one per path. A closed contour starts there instead of halfway along its longest
  *   edge, or at the nearer end of a tab it falls on; an open path is cut from
  *   its nearer end on every pass, instead of back and forth.
  */
@@ -195,14 +196,17 @@ export function contourToolpath(
   if (params.startPoints.length > 0) {
     // Open paths are only cut on the line.
     const paths = params.side === "on" ? open : [];
-    const left = placeStarts(
-      roughing.contours,
-      paths,
-      params.startPoints,
-      offset + params.allowance + tolerance,
-    );
+    const drawn = {
+      lines: [
+        ...closed.map((ring) => [...ring, ring[0] as Point]),
+        ...paths.map(({ path }) => path),
+      ],
+      // The paths are flattened as the viewport flattens them, give or take the chords and float noise.
+      within: tolerance + GEOMETRY_TOLERANCE,
+    };
+    const left = placeStarts(roughing.contours, paths, params.startPoints, drawn);
     const leftFinishing = finishing
-      ? placeStarts(finishing.contours, [], params.startPoints, offset + tolerance)
+      ? placeStarts(finishing.contours, [], params.startPoints, drawn)
       : left;
     const count = roughing.contours.length === 0 ? leftFinishing : Math.max(left, leftFinishing);
     if (count > 0) warnings.push({ code: "toolpath.startPointsLeftOut", values: { count } });
@@ -642,33 +646,39 @@ function feedTrack(
 
 /**
  * Restarts each of `contours`, or turns each of the open `paths` one way from
- * its nearer end, at the start point of `positions` nearest to it, if no
- * further than `reach`. Returns how many positions were too far from every
- * path or went to a path that already had one.
+ * its nearer end, at the start point of `positions` nearest to it. A start
+ * point counts on one of the `drawn` lines it lies on, within `within`, and
+ * goes to the nearest point of the contour that line makes: one nearest to
+ * that line of all of them, at any corner. Returns how many positions were
+ * off every line, on one that makes no contour, or went to a path that
+ * already had one.
  */
 function placeStarts(
   contours: Contour[],
   paths: OpenPath[],
   positions: Point[],
-  reach: number,
+  drawn: { lines: Point[][]; within: number },
 ): number {
   const lines = [
     ...contours.map((contour) => [...contour.ring, contour.ring[0] as Point]),
     ...paths.map(({ path }) => path),
   ];
   const boxes = lines.map(bounds);
+  const drawnBoxes = drawn.lines.map(bounds);
   let left = 0;
   const taken = new Set<number>();
   for (const position of positions) {
-    let best: { index: number; at: number; distance: number } | null = null;
-    for (let index = 0; index < lines.length; index++) {
-      if (!inBox(position, boxes[index] as Box, reach)) continue;
-      const projection = projectOnLoop(lines[index] as Point[], position);
-      if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
-        best = { index, at: projection.at, distance: projection.distance };
-      }
-    }
-    if (!best || taken.has(best.index)) {
+    const own = nearestLine(drawn.lines, drawnBoxes, position, drawn.within);
+    const best = own && nearestLine(lines, boxes, position);
+    const from = best && nearestLine(drawn.lines, drawnBoxes, best.point);
+    const ownLine = own && (drawn.lines[own.index] as Point[]);
+    if (
+      !own ||
+      !best ||
+      !from ||
+      projectOnLoop(ownLine as Point[], best.point).distance > from.distance + drawn.within ||
+      taken.has(best.index)
+    ) {
       left++;
       continue;
     }
@@ -707,14 +717,7 @@ function placeTabs(
   let missed = 0;
   let startsMoved = 0;
   for (const position of positions) {
-    let best: { index: number; at: number; distance: number } | null = null;
-    for (let index = 0; index < loops.length; index++) {
-      if (!inBox(position, boxes[index] as Box, reach)) continue;
-      const projection = projectOnLoop(loops[index] as Point[], position);
-      if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
-        best = { index, at: projection.at, distance: projection.distance };
-      }
-    }
+    const best = nearestLine(loops, boxes, position, reach);
     if (best) centres[best.index]?.push(best.at);
     else missed++;
   }
@@ -747,6 +750,27 @@ function placeTabs(
     contour.tabs = tabs;
   });
   return { missed, startsMoved };
+}
+
+/**
+ * The point of `lines` nearest to `point`, with its line's index, if one is
+ * within `reach`. `boxes` are the lines' bounds.
+ */
+function nearestLine(
+  lines: Point[][],
+  boxes: Box[],
+  point: Point,
+  reach = Number.POSITIVE_INFINITY,
+): (Projection & { index: number }) | null {
+  let best: (Projection & { index: number }) | null = null;
+  for (let index = 0; index < lines.length; index++) {
+    if (!inBox(point, boxes[index] as Box, reach)) continue;
+    const projection = projectOnLoop(lines[index] as Point[], point);
+    if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
+      best = { ...projection, index };
+    }
+  }
+  return best;
 }
 
 /** The middle of the longest piece of an edge of closed `loop` that none of `tabs` covers. */

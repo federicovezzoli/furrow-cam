@@ -14,6 +14,9 @@ export type HoveredGeometry = { shapeId: string; path: number };
 /** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
 export type ModelImport = { fileName: string; error: Translatable | null };
 
+/** What the viewport edits on the selected operation. */
+export type EditMode = "tabs" | "startPoints";
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
  * The camera pose stays inside the viewport, which its controls change on
@@ -28,9 +31,6 @@ export type ModelImport = { fileName: string; error: Translatable | null };
  * once it isn't custom; the workspace calls it on every document change, and
  * readers can trust the ids.
  */
-/** What the viewport edits on the selected operation. */
-export type EditMode = "tabs" | "startPoints";
-
 export type WorkspaceState = {
   view: ViewMode;
   /**

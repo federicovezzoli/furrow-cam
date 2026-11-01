@@ -54,18 +54,29 @@ function unalignedStore() {
   return createDocumentStore(document);
 }
 
-/** How far the drawing (the square's first point) and the first tab are from where they were. */
+/**
+ * How far the drawing (the square's first point), the first tab and the
+ * first start point are from where they were.
+ */
 function moved(before: ProjectDocument, after: ProjectDocument) {
   const first = (document: ProjectDocument) => document.geometry[0]?.paths[0]?.start ?? [0, 0];
   const tab = (document: ProjectDocument) => {
     const operation = document.operations[0];
     return (operation?.type === "profile" && operation.params.tabs?.positions[0]) || [0, 0];
   };
+  const start = (document: ProjectDocument) => {
+    const operation = document.operations[0];
+    return (operation?.type === "profile" && operation.params.startPoints[0]) || [0, 0];
+  };
   const delta = (a: number[], b: number[]) => [
     (b[0] ?? 0) - (a[0] ?? 0),
     (b[1] ?? 0) - (a[1] ?? 0),
   ];
-  return { drawing: delta(first(before), first(after)), tab: delta(tab(before), tab(after)) };
+  return {
+    drawing: delta(first(before), first(after)),
+    tab: delta(tab(before), tab(after)),
+    start: delta(start(before), start(after)),
+  };
 }
 
 describe("setUnits", () => {
@@ -117,8 +128,9 @@ describe("setStockDimension", () => {
     setStockDimension(store, "height", 300);
     const after = store.getState().document;
     expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
-    const { drawing, tab } = moved(before, after);
+    const { drawing, tab, start } = moved(before, after);
     expectClose(tab, drawing);
+    expectClose(start, drawing);
     store.getState().undo();
     store.getState().undo();
     expect(store.getState().document).toEqual(before);

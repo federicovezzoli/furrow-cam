@@ -2,17 +2,19 @@
 
 import {
   closedLoops,
+  grooveWidth,
   holdingTabStrips,
   modelOutlines,
   nearestOnLoops,
   snapStartPoint,
+  startPointCentres,
   startPointPaths,
   type TabFrame,
   tabFrame,
   targetedShapes,
   type Vec3,
 } from "@furrow/cam-core";
-import type { EngraveOperation, Point, ProfileOperation } from "@furrow/document";
+import type { Operation, Point } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
@@ -41,13 +43,10 @@ const TAB_PICK_DISTANCE = 10;
 /** Pointer travel, in pixels, before a press on a tab becomes a drag rather than a click. */
 const TAB_DRAG_THRESHOLD = 3;
 
-/** The selected profile, if it has tabs. */
-function useSelectedTabbedProfile(): ProfileOperation | null {
+/** The selected operation, if any. */
+function useSelectedOperation(): Operation | undefined {
   const id = useWorkspaceStore((s) => s.selectedOperationId);
-  const operation = useDocumentStore((s) =>
-    s.document.operations.find((candidate) => candidate.id === id),
-  );
-  return operation?.type === "profile" && operation.params.tabs ? operation : null;
+  return useDocumentStore((s) => s.document.operations.find((candidate) => candidate.id === id));
 }
 
 /**
@@ -58,7 +57,8 @@ function useSelectedTabbedProfile(): ProfileOperation | null {
  * moves it along the contours and clicking it removes it.
  */
 export function Tabs({ color }: { color: string }) {
-  const operation = useSelectedTabbedProfile();
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "profile" && selected.params.tabs ? selected : null;
   const editing = useWorkspaceStore((s) => s.editing === "tabs");
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
@@ -168,41 +168,42 @@ export function HoldingTabs({ color }: { color: string }) {
   ));
 }
 
-/** The selected profile or engraving, if any. */
-function useSelectedContourOperation(): ProfileOperation | EngraveOperation | null {
-  const id = useWorkspaceStore((s) => s.selectedOperationId);
-  const operation = useDocumentStore((s) =>
-    s.document.operations.find((candidate) => candidate.id === id),
-  );
-  return operation?.type === "profile" || operation?.type === "engrave" ? operation : null;
-}
-
 /**
  * The selected profile's or engraving's start points (#426), each a disc as
- * wide as the tool at the stock top. While the workspace edits them (top view
- * only), a click near one of the operation's paths adds a start point there
- * (at the nearer end of an open path), dragging one moves it along the paths
- * and clicking it removes it.
+ * wide as the tool at the stock top, where the tool centre enters the cut.
+ * While the workspace edits them (top view only), a click near one of the
+ * operation's paths adds a start point there (at the nearer end of an open
+ * path), dragging one moves it along the paths and clicking it removes it.
  */
 export function StartPoints({ color }: { color: string }) {
-  const operation = useSelectedContourOperation();
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "profile" || selected?.type === "engrave" ? selected : null;
   const editing = useWorkspaceStore((s) => s.editing === "startPoints");
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
   const targets = operation?.targets;
   const side = operation?.params.side;
-  const paths = useMemo(
-    () =>
-      side
-        ? startPointPaths(
-            targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
-            side,
-          )
-        : [],
-    [geometry, targets, side],
+  const startPoints = operation?.params.startPoints;
+  // How far the tool centre is off the closed paths, on the finished cut.
+  const offset =
+    operation &&
+    (operation.type === "profile"
+      ? operation.tool.diameter / 2
+      : grooveWidth(operation.tool, operation.params.depth) / 2);
+  const shapes = useMemo(
+    () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
+    [geometry, targets],
   );
-  if (!operation) return null;
-  const { depth, startPoints } = operation.params;
+  const paths = useMemo(() => (side ? startPointPaths(shapes, side) : []), [shapes, side]);
+  const centres = useMemo(
+    () =>
+      side && offset !== null && offset !== undefined && startPoints
+        ? startPointCentres(shapes, side, offset, startPoints)
+        : [],
+    [shapes, side, offset, startPoints],
+  );
+  if (!operation || !startPoints) return null;
+  const { depth } = operation.params;
   const radius = operation.tool.diameter / 2;
 
   function add(event: ThreeEvent<MouseEvent>) {
@@ -217,7 +218,7 @@ export function StartPoints({ color }: { color: string }) {
   return (
     <>
       {editing && <StockTopCatcher z={-depth - 1} onClick={add} />}
-      {startPoints.map((center, index) => (
+      {centres.map((center, index) => (
         <TabMarker
           // Positions have no ids; a marker keeps its index while dragged.
           // biome-ignore lint/suspicious/noArrayIndexKey: see above
@@ -231,18 +232,9 @@ export function StartPoints({ color }: { color: string }) {
           }}
           onRemove={() => removeStartPoint(store, operation.id, index)}
         >
-          {/* Drawn over the stock and the shapes, which would otherwise hide it from above. */}
-          <mesh renderOrder={RENDER_ORDER.tabs}>
+          <MarkerMesh color={color}>
             <circleGeometry args={[radius, 32]} />
-            <meshBasicMaterial
-              color={color}
-              transparent
-              opacity={0.35}
-              depthTest={false}
-              depthWrite={false}
-            />
-            <Edges color={color} transparent depthTest={false} renderOrder={RENDER_ORDER.tabs} />
-          </mesh>
+          </MarkerMesh>
         </TabMarker>
       ))}
     </>
@@ -252,9 +244,18 @@ export function StartPoints({ color }: { color: string }) {
 /** A tab's material as a translucent box, `size` along the contour, across it and up. */
 function TabBox({ size, color }: { size: Vec3; color: string }) {
   return (
+    <MarkerMesh color={color}>
+      <boxGeometry args={size} />
+    </MarkerMesh>
+  );
+}
+
+/** A marker's `children` geometry, translucent and outlined. */
+function MarkerMesh({ color, children }: { color: string; children: ReactNode }) {
+  return (
     // Drawn over the stock and the shapes, which would otherwise hide it from above.
     <mesh renderOrder={RENDER_ORDER.tabs}>
-      <boxGeometry args={size} />
+      {children}
       <meshBasicMaterial
         color={color}
         transparent

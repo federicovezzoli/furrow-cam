@@ -9,6 +9,7 @@ import {
   inSpans,
   nearestOnLoops,
   snapStartPoint,
+  startPointCentres,
   startPointPaths,
   tabFrame,
 } from "./tabs";
@@ -122,6 +123,18 @@ describe("snapStartPoint", () => {
     expect(paths).toHaveLength(1);
     expect(snapStartPoint(paths, [70, -21])?.point).toEqual([70, 0]);
     expect(snapStartPoint([], [0, 0])).toBeNull();
+  });
+});
+
+describe("startPointCentres", () => {
+  it("puts the tool centre on the ring it follows, the point itself on the line", () => {
+    const [outside] = startPointCentres([square], "outside", 3, [[0, 30]]);
+    expect(outside?.[0]).toBeCloseTo(-3, 6);
+    expect(outside?.[1]).toBeCloseTo(30, 6);
+    const [corner] = startPointCentres([square], "inside", 3, [[0, 0]]);
+    expect(corner?.[0]).toBeCloseTo(3, 6);
+    expect(corner?.[1]).toBeCloseTo(3, 6);
+    expect(startPointCentres([square], "on", 3, [[0, 30]])).toEqual([[0, 30]]);
   });
 });
 

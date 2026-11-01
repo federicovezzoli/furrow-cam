@@ -712,7 +712,7 @@ describe("profileToolpath with start points", () => {
   });
 
   it("cuts an open path from its start point's end on every pass, back above the stock between", () => {
-    const toolpath = profile({ side: "on", startPoints: [[88, 11]] }, [line]);
+    const toolpath = profile({ side: "on", startPoints: [[88, 10]] }, [line]);
     expect(toolpath.warnings).toEqual([]);
     expect(entry(toolpath)?.slice(0, 2)).toEqual([90, 10]);
     const ends = [-2, -4, -6].map((z) => cutsAt(toolpath, z).at(-1)?.[0]);
@@ -757,9 +757,39 @@ describe("profileToolpath with start points", () => {
     });
     expect(extra.warnings).toEqual([{ code: "toolpath.startPointsLeftOut", values: { count: 1 } }]);
     expect(entry(extra)?.[1]).toBeCloseTo(30, 6);
-    // Just beyond the reach of the outside contour, 3 mm out plus the chord tolerance.
-    expect(profile({ startPoints: [[-6.1, 30]] }).warnings).toHaveLength(1);
-    expect(profile({ startPoints: [[-5.9, 30]] }).warnings).toEqual([]);
+    // Off the drawn path, even within a tool radius of it.
+    expect(profile({ startPoints: [[-1, 30]] }).warnings).toHaveLength(1);
+  });
+
+  it("starts at a sharp corner, where the contour is further than the offset", () => {
+    // Inside, the 3 mm offset of the corner at (0, 0) is (3, 3), 4.24 mm away.
+    const toolpath = profile({ side: "inside", startPoints: [[0, 0]] });
+    expect(toolpath.warnings).toEqual([]);
+    expect(entry(toolpath)?.[0]).toBeCloseTo(3, 6);
+    expect(entry(toolpath)?.[1]).toBeCloseTo(3, 6);
+  });
+
+  it("leaves out a start point on a path too small for a contour of its own", () => {
+    const small: Shape = {
+      ...line,
+      paths: [
+        {
+          start: [45, 45],
+          segments: [
+            { kind: "line", to: [49, 45] },
+            { kind: "line", to: [49, 49] },
+            { kind: "line", to: [45, 49] },
+          ],
+          closed: true,
+        },
+      ],
+    };
+    // Outside the part, the 4 mm hole closes up: the outline's contour is the only one.
+    const toolpath = profile({ side: "outside", startPoints: [[45, 47]] }, [square, small]);
+    expect(toolpath.warnings).toContainEqual({
+      code: "toolpath.startPointsLeftOut",
+      values: { count: 1 },
+    });
   });
 });
 
