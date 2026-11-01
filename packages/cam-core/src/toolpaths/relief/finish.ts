@@ -49,7 +49,7 @@ export const MAX_RELIEF_CELLS = 4096 * 4096;
  * passes are merged into straight moves that never go below the surface the
  * tool may reach, and leave at most this much more.
  */
-export const RELIEF_TOLERANCE = 0.01;
+export const RELIEF_TOLERANCE = 0.02;
 
 /**
  * The diameter 3D passes and cells are sized by: a tapered ball end mill's
@@ -569,12 +569,16 @@ export function widened(profile: CutterProfile, by: number): CutterProfile {
 }
 
 /**
- * Of heights sampled at equal steps along a line, the indices to keep so the
- * straight moves between them never go below a sample and pass no more than
- * `tolerance` above any: each move runs as far as one slope fits every
- * sample on the way.
+ * Of heights sampled along a line, at equal steps or at positions `at`, the
+ * indices to keep so the straight moves between them never go below a sample
+ * and pass no more than `tolerance` above any: each move runs as far as one
+ * slope fits every sample on the way.
  */
-export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): number[] {
+export function simplifyHeights(
+  heights: ArrayLike<number>,
+  tolerance: number,
+  at: (index: number) => number = (index) => index,
+): number[] {
   const count = heights.length;
   if (count <= 2) return Array.from({ length: count }, (_, i) => i);
   const kept = [0];
@@ -583,9 +587,9 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
   let high = Infinity;
   for (let i = 1; i < count; i++) {
     const za = heights[anchor] as number;
-    const steps = i - anchor;
-    const slope = ((heights[i] as number) - za) / steps;
-    if (steps > 1 && (slope < low - 1e-12 || slope > high + 1e-12)) {
+    const run = at(i) - at(anchor);
+    const slope = ((heights[i] as number) - za) / run;
+    if (i - anchor > 1 && (slope < low - 1e-12 || slope > high + 1e-12)) {
       anchor = i - 1;
       kept.push(anchor);
       low = -Infinity;
@@ -594,7 +598,7 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
       continue;
     }
     low = Math.max(low, slope);
-    high = Math.min(high, ((heights[i] as number) + tolerance - za) / steps);
+    high = Math.min(high, ((heights[i] as number) + tolerance - za) / run);
   }
   kept.push(count - 1);
   return kept;
@@ -606,17 +610,18 @@ const MAX_SUBSAMPLES = 16;
 /**
  * The moves along heights sampled `spacing` apart on a straight line, as
  * `[sample, height]` pairs from the first sample, `sample` fractional
- * between samples: merged with `simplifyHeights`, except where the tool
- * rises or drops more than `spacing` between two samples (#151). The model
- * may rise above a straight move there, such as a wall a flat end mill drops
- * off anywhere between the samples, whose top edge the move would nick.
+ * between samples, merged with `simplifyHeights` (ADR-0070).
  *
- * With `between` (the tool's height at a fraction of the way from one sample
- * to the next), the tool is dropped at points between such samples, about
- * as many as the samples are steep, and follows them. Wherever the tool
- * still rises or drops more than their spacing between two of them, or
- * without `between`, it goes over at the higher of the two instead: along
- * at that height, then straight down or up.
+ * Where the tool rises or drops more than `spacing` between two samples,
+ * the model may rise above a straight move, such as a wall a flat end mill
+ * drops off anywhere between them, whose top edge the move would nick
+ * (#151). With `between` (the tool's height at a fraction of the way from
+ * one sample to the next), the tool is dropped at points between such
+ * samples, about as many as the samples are steep, and goes straight from
+ * one to the next where the tool halfway between them is within half the
+ * tolerance of that move: a steep face, not a wall. Elsewhere, or without
+ * `between`, it goes over at the higher of the two: along at that height,
+ * then straight down or up.
  */
 export function sampleMoves(
   heights: ArrayLike<number>,
@@ -624,10 +629,14 @@ export function sampleMoves(
   between: ((sample: number, fraction: number) => number) | null = null,
   tolerance = RELIEF_TOLERANCE,
 ): [number, number][] {
-  const moves: [number, number][] = [];
+  // Runs of points between straight-up or straight-down moves, each merged on its own.
+  const runs: [number, number][][] = [[]];
   const push = (sample: number, height: number) => {
-    const last = moves.at(-1);
-    if (!last || last[0] !== sample || last[1] !== height) moves.push([sample, height]);
+    const run = runs.at(-1) as [number, number][];
+    const last = run.at(-1);
+    if (last?.[0] === sample && last[1] === height) return;
+    if (last?.[0] === sample) runs.push([[sample, height]]);
+    else run.push([sample, height]);
   };
   /** Over at the higher of two points `a` and `b`. */
   const over = (a: number, za: number, b: number, zb: number) => {
@@ -637,28 +646,35 @@ export function sampleMoves(
     push(b, zb);
   };
   const count = heights.length;
-  let from = 0;
   for (let k = 0; k < count; k++) {
     const za = heights[k] as number;
+    push(k, za);
     const zb = heights[k + 1] as number;
-    const steep = k + 1 < count && Math.abs(zb - za) > spacing;
-    if (k + 1 < count && !steep) continue;
-    const run = Array.from({ length: k - from + 1 }, (_, i) => heights[from + i] as number);
-    for (const i of simplifyHeights(run, tolerance)) push(from + i, run[i] as number);
-    if (steep) {
-      const parts = between ? Math.min(MAX_SUBSAMPLES, Math.ceil(Math.abs(zb - za) / spacing)) : 1;
-      let previous = za;
-      for (let j = 1; j <= parts; j++) {
-        const z = j === parts ? zb : (between as (s: number, f: number) => number)(k, j / parts);
-        const [a, b] = [k + (j - 1) / parts, k + j / parts];
-        if (Math.abs(z - previous) > spacing / parts) over(a, previous, b, z);
-        else push(b, z);
-        previous = z;
-      }
+    if (k + 1 >= count || Math.abs(zb - za) <= spacing) continue;
+    if (!between) {
+      over(k, za, k + 1, zb);
+      continue;
     }
-    from = k + 1;
+    const parts = Math.min(MAX_SUBSAMPLES, Math.ceil(Math.abs(zb - za) / spacing));
+    let previous = za;
+    for (let j = 1; j <= parts; j++) {
+      const z = j === parts ? zb : between(k, j / parts);
+      const [a, b] = [k + (j - 1) / parts, k + j / parts];
+      const straight =
+        Math.abs(z - previous) <= spacing / parts ||
+        Math.abs(between(k, (j - 0.5) / parts) - (previous + z) / 2) <= tolerance / 2;
+      if (straight) push(b, z);
+      else over(a, previous, b, z);
+      previous = z;
+    }
   }
-  return moves;
+  return runs.flatMap((run) =>
+    simplifyHeights(
+      run.map(([, z]) => z),
+      tolerance,
+      (i) => run[i]?.[0] as number,
+    ).map((i) => run[i] as [number, number]),
+  );
 }
 
 /** Where a pass at `v` crosses `outline`, as the range of `u` inside it, or `null`. */

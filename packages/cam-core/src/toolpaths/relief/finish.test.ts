@@ -367,7 +367,6 @@ describe("sampleMoves", () => {
   it("goes over at the higher sample where the tool drops off a wall", () => {
     expect(sampleMoves([-4, -4, -10, -10], 0.1)).toEqual([
       [0, -4],
-      [1, -4],
       [2, -4],
       [2, -10],
       [3, -10],
@@ -382,10 +381,10 @@ describe("sampleMoves", () => {
 
   it("climbs straight up from the first sample", () => {
     // The tool is at the first sample: the climb starts there, before any move along.
-    expect(sampleMoves([-10, -4, -4], 0.1).slice(0, 3)).toEqual([
+    expect(sampleMoves([-10, -4, -4], 0.1)).toEqual([
       [0, -10],
       [0, -4],
-      [1, -4],
+      [2, -4],
     ]);
   });
 
@@ -396,6 +395,19 @@ describe("sampleMoves", () => {
     // Along at -4 only to the wall, not to the next sample.
     expect(moves.filter(([, z]) => z === -4).at(-1)?.[0]).toBeLessThanOrEqual(0.25 + 1 / 16);
     expect(moves.at(-1)).toEqual([1, -10]);
+  });
+
+  it("goes straight down a steep face in one move", () => {
+    // 60° down, then level.
+    const slope = Math.tan(Math.PI / 3);
+    const heights = [0, 1, 2, 3, 3, 3].map((i) => -slope * Math.min(i, 3) * 0.1);
+    const between = (sample: number, fraction: number) =>
+      -slope * Math.min(sample + fraction, 3) * 0.1;
+    expect(sampleMoves(heights, 0.1, between)).toEqual([
+      [0, -0],
+      [3, expect.closeTo(-0.3 * slope)],
+      [5, expect.closeTo(-0.3 * slope)],
+    ]);
   });
 });
 

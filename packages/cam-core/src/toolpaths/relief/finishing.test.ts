@@ -179,6 +179,28 @@ describe("parallel", () => {
     });
   }
 
+  it("goes down steep faces in a few diagonal moves, not in steps", () => {
+    // Faces rising 1.6 in 1: steeper than 45° everywhere.
+    const steep = placed(20, 20, 16);
+    const mesh = new Float32Array([
+      ...[0, 0, -16, 20, 0, -16, 10, 10, 0],
+      ...[20, 0, -16, 20, 20, -16, 10, 10, 0],
+      ...[20, 20, -16, 0, 20, -16, 10, 10, 0],
+      ...[0, 20, -16, 0, 0, -16, 10, 10, 0],
+    ]);
+    const strategy = { type: "parallel", angle: 0, direction: "zigzag" } as const;
+    const toolpath = finish(ballEndMill, strategy, {}, steep, mesh);
+    const feeds = cuts(toolpath, ballEndMill);
+    const vertical = feeds.filter((move) => {
+      const before = toolpath.moves[toolpath.moves.indexOf(move) - 1]?.to ?? move.to;
+      return Math.hypot(move.to[0] - before[0], move.to[1] - before[1]) < 1e-9;
+    });
+    // Stepping down every face took 17,796 moves, 8,285 of them straight up or down.
+    expect(feeds.length).toBeLessThan(6000);
+    expect(vertical.length).toBeLessThanOrEqual(1);
+    expectNoGouge(toolpath, ballEndMill, steep, mesh, { tolerance: 1.6 * 0.1 + 0.005 });
+  });
+
   it("never cuts below the model with a ball end mill", () => {
     const strategy = { type: "parallel", angle: 30, direction: "zigzag" } as const;
     const toolpath = finish(ballEndMill, strategy, {}, PYRAMID, pyramidMesh);
