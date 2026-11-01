@@ -7,12 +7,7 @@ import {
   type ToolpathInput,
   toolpathInputs,
 } from "@furrow/cam-core";
-import {
-  type PostProcessorId,
-  type ProjectDocument,
-  projectFileName,
-  toolProblem,
-} from "@furrow/document";
+import { type PostProcessorId, type ProjectDocument, toolProblem } from "@furrow/document";
 import { grbl } from "./grbl/grbl";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
@@ -31,6 +26,47 @@ export type GcodeFile = { fileName: string; gcode: string };
  */
 export type GcodeExport = { files: GcodeFile[]; warnings: PostWarning[] };
 
+/**
+ * What names an exported program besides the project: the label of the
+ * version the document is (`null` for none) and the day it is exported,
+ * today by default.
+ */
+export type GcodeNaming = { version?: string | null; date?: Date };
+
+// Spaces, dashes, characters reserved on Windows or macOS, and control characters.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
+const FILE_NAME_SEPARATORS = /[\s<>:"/\\|?*\u0000-\u001f\u007f-]+/g;
+
+/**
+ * `text` lowercased, each run of separators made one dash, with no dash or
+ * dot at either end (a leading dot hides a file, Windows drops trailing ones).
+ */
+function slug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(FILE_NAME_SEPARATORS, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+}
+
+/**
+ * The file name of the project `name`'s program, e.g.
+ * `cutting-board-final-2026-11-01-top.gcode`: the project, the version
+ * (when there is one), the local date and the stock side of a two-sided
+ * project's program.
+ */
+export function gcodeFileName(
+  name: string,
+  { version = null, date = new Date() }: GcodeNaming,
+  side: "top" | "bottom" | null,
+  extension: string,
+): string {
+  const day = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part) => String(part).padStart(2, "0"))
+    .join("-");
+  const parts = [slug(name) || "project", version === null ? "" : slug(version), day, side ?? ""];
+  return `${parts.filter((part) => part !== "").join("-")}${extension}`;
+}
+
 /** An operation's inputs and the toolpath computed from them. */
 export type ComputedToolpath = { input: ToolpathInput; toolpath: Toolpath };
 
@@ -39,12 +75,14 @@ export type ComputedToolpath = { input: ToolpathInput; toolpath: Toolpath };
  * enabled operations in order, toolpath warnings included. Computes every
  * toolpath, so it runs in a Web Worker (ADR-0004); 3D operations take their
  * models' meshes from `context`. Rest operations take the toolpaths before
- * them from the ones computed here. Throws when there is nothing to cut.
+ * them from the ones computed here. The files are named by `gcodeFileName`.
+ * Throws when there is nothing to cut.
  */
 export function exportGcode(
   doc: ProjectDocument,
   name: string,
   context?: ToolpathContext,
+  naming: GcodeNaming = {},
 ): GcodeExport {
   const inputs = enabledInputs(doc);
   const toolpathContext: ToolpathContext = {
@@ -55,6 +93,7 @@ export function exportGcode(
     doc,
     name,
     inputs.map((input) => ({ input, toolpath: generateToolpath(input, toolpathContext) })),
+    naming,
   );
 }
 
@@ -77,6 +116,7 @@ export function postToolpaths(
   doc: ProjectDocument,
   name: string,
   computed: readonly ComputedToolpath[],
+  naming: GcodeNaming = {},
 ): GcodeExport {
   const first = computed[0];
   if (first === undefined) {
@@ -104,6 +144,10 @@ export function postToolpaths(
   }
 
   const processor = POST_PROCESSORS[doc.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR];
+  // One date for every file of the export, even across midnight.
+  const fileNaming = { date: new Date(), ...naming };
+  const fileName = (side: "top" | "bottom" | null) =>
+    gcodeFileName(name, fileNaming, side, processor.extension);
   const post = (operations: typeof toPost, side: SideSetup | null, fileName: string) => {
     const output = processor.post({
       name,
@@ -119,13 +163,11 @@ export function postToolpaths(
     return { fileName, gcode: output.gcode };
   };
   if (!doc.stock.twoSided) {
-    return { files: [post(toPost, null, projectFileName(name, processor.extension))], warnings };
+    return { files: [post(toPost, null, fileName(null))], warnings };
   }
   const sides = (["top", "bottom"] as const).flatMap((side) => {
     const operations = toPost.filter(({ operation }) => operation.stockSide === side);
-    // The name is made safe first, so an untitled project's are `project-top`…
-    const fileName = `${projectFileName(name, "")}-${side}${processor.extension}`;
-    return operations.length > 0 ? [{ side, operations, fileName }] : [];
+    return operations.length > 0 ? [{ side, operations, fileName: fileName(side) }] : [];
   });
   const pins = toPost.some(
     ({ operation }) =>

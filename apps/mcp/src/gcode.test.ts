@@ -8,6 +8,7 @@ import {
   sha256Hex,
 } from "@furrow/document";
 import { drill, fullDocument } from "@furrow/document/fixtures";
+import { gcodeFileName } from "@furrow/post";
 import { setStockDimension } from "@furrow/workspace/stores/stock-actions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import pyramidStl from "../../../packages/post/src/e2e/fixtures/pyramid.stl?raw";
@@ -52,11 +53,17 @@ async function project(document: ProjectDocument, name = "Part.furrow") {
 
 let dir: string;
 
+// A fixed day, so the programs' file names don't change with the date the tests run.
+const PART_TOP = "part-2026-11-01-top.gcode";
+const PART_BOTTOM = "part-2026-11-01-bottom.gcode";
+
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 10, 1) });
   dir = await mkdtemp(join(tmpdir(), "furrow-mcp-"));
 });
 
 afterEach(async () => {
+  vi.useRealTimers();
   failingWrite = 0;
   await rm(dir, { recursive: true, force: true });
 });
@@ -83,7 +90,7 @@ describe("exportProject", () => {
       const { files } = await exportProject(project, {}, (done) => {
         progress.push(done);
       });
-      expect(files).toEqual([join(folder, `${title}.gcode`)]);
+      expect(files).toEqual([join(folder, gcodeFileName(title, {}, null, ".gcode"))]);
       expect(await readFile(files[0] ?? "", "utf8")).toBe(
         await readFile(new URL(`${name}.gcode`, PROGRAMS), "utf8"),
       );
@@ -97,12 +104,12 @@ describe("exportProject", () => {
     const path = join(dir, "Part.furrow");
     await writeFile(path, packProjectArchive(fullDocument(), new Map()));
     const project = await createProjects().get(path);
-    await writeFile(join(dir, "Part-top.gcode"), "mine");
+    await writeFile(join(dir, PART_TOP), "mine");
     await expect(exportProject(project, {})).rejects.toThrow("already exists");
-    expect(await readFile(join(dir, "Part-top.gcode"), "utf8")).toBe("mine");
+    expect(await readFile(join(dir, PART_TOP), "utf8")).toBe("mine");
     const { files } = await exportProject(project, { overwrite: true });
-    expect(files).toContain(join(dir, "Part-top.gcode"));
-    expect(await readFile(join(dir, "Part-top.gcode"), "utf8")).not.toBe("mine");
+    expect(files).toContain(join(dir, PART_TOP));
+    expect(await readFile(join(dir, PART_TOP), "utf8")).not.toBe("mine");
   });
 
   it("writes into another folder, named after the project", async () => {
@@ -138,11 +145,11 @@ describe("exportProject", () => {
   it("won't replace what isn't a file", async () => {
     const path = join(dir, "Part.furrow");
     await writeFile(path, packProjectArchive(fullDocument(), new Map()));
-    await mkdir(join(dir, "Part-top.gcode"));
+    await mkdir(join(dir, PART_TOP));
     await expect(
       exportProject(await createProjects().get(path), { overwrite: true }),
     ).rejects.toThrow("isn't a file");
-    expect((await readdir(dir)).sort()).toEqual(["Part-top.gcode", "Part.furrow"]);
+    expect((await readdir(dir)).sort()).toEqual(["Part.furrow", PART_TOP]);
   });
 
   it("exports the document as it was when asked, whatever changes meanwhile", async () => {
@@ -183,25 +190,25 @@ describe("exportProject", () => {
     expect(await readdir(dir)).toEqual(["Part.furrow"]);
     failingWrite = 0;
     const { files } = await exportProject(await createProjects().get(path), {});
-    expect(files).toEqual([join(dir, "Part-top.gcode"), join(dir, "Part-bottom.gcode")]);
+    expect(files).toEqual([join(dir, PART_TOP), join(dir, PART_BOTTOM)]);
   });
 
   it("replaces a link to a file when asked, leaving the file it pointed to", async () => {
     const path = await project(fullDocument());
     await writeFile(join(dir, "elsewhere.gcode"), "mine");
-    await symlink(join(dir, "elsewhere.gcode"), join(dir, "Part-top.gcode"));
+    await symlink(join(dir, "elsewhere.gcode"), join(dir, PART_TOP));
     await expect(exportProject(await createProjects().get(path), {})).rejects.toThrow(
       "already exists",
     );
     await exportProject(await createProjects().get(path), { overwrite: true });
-    expect((await lstat(join(dir, "Part-top.gcode"))).isFile()).toBe(true);
+    expect((await lstat(join(dir, PART_TOP))).isFile()).toBe(true);
     expect(await readFile(join(dir, "elsewhere.gcode"), "utf8")).toBe("mine");
   });
 
   it("won't replace a link to a folder", async () => {
     const path = await project(fullDocument());
     await mkdir(join(dir, "folder"));
-    await symlink(join(dir, "folder"), join(dir, "Part-top.gcode"));
+    await symlink(join(dir, "folder"), join(dir, PART_TOP));
     await expect(
       exportProject(await createProjects().get(path), { overwrite: true }),
     ).rejects.toThrow("isn't a file");
@@ -288,6 +295,6 @@ describe("checkProject", () => {
     await writeFile(path, packProjectArchive(fullDocument(), new Map()));
     const result = await checkProject(await createProjects().get(path));
     expect(result).toMatchObject({ canExport: true, toolProblems: [] });
-    expect(result.files).toContain("Part-top.gcode");
+    expect(result.files).toContain(PART_TOP);
   });
 });

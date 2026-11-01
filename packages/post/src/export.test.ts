@@ -18,7 +18,7 @@ import {
   vBit,
 } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { exportGcode } from "./export";
+import { exportGcode, gcodeFileName } from "./export";
 import { oneFile } from "./export-test-utils";
 import { GcodeExportError } from "./post";
 
@@ -52,6 +52,9 @@ function shape(n: number, name: string, ...paths: Path[]): Shape {
 function id(n: number): string {
   return `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
+
+/** A fixed export day, so file names don't change with the date the tests run. */
+const NAMING = { date: new Date(2026, 10, 1) };
 
 const plate = shape(1, "Plate", rectangle([20, 20], 120, 80));
 const holes = shape(2, "Holes", circle([40, 40], 3), circle([120, 40], 3), circle([80, 80], 3));
@@ -132,8 +135,10 @@ function referenceProject(): ProjectDocument {
 describe("exportGcode", () => {
   // Whole programs are checked in by the corpus (e2e/corpus.test.ts).
   it("posts the enabled operations, in a file named after the project", () => {
-    const { gcode, warnings, fileName } = oneFile(exportGcode(referenceProject(), "Plate"));
-    expect(fileName).toBe("Plate.gcode");
+    const { gcode, warnings, fileName } = oneFile(
+      exportGcode(referenceProject(), "Plate", undefined, NAMING),
+    );
+    expect(fileName).toBe("plate-2026-11-01.gcode");
     expect(warnings).toEqual([]);
     expect(gcode).toContain("(Operation: Cut out)");
     expect(gcode).not.toContain("Disabled");
@@ -176,8 +181,11 @@ describe("exportGcode", () => {
         rough("top", "Top rough"),
         rough("bottom", "Bottom rough"),
       ]);
-      const { files } = exportGcode(doc, "Owl", context);
-      expect(files.map((file) => file.fileName)).toEqual(["Owl-top.gcode", "Owl-bottom.gcode"]);
+      const { files } = exportGcode(doc, "Owl", context, NAMING);
+      expect(files.map((file) => file.fileName)).toEqual([
+        "owl-2026-11-01-top.gcode",
+        "owl-2026-11-01-bottom.gcode",
+      ]);
       const [top, bottom] = files.map((file) => file.gcode);
       expect(top).toContain("(Two-sided: top side, cut first)");
       expect(top).toContain(
@@ -275,8 +283,8 @@ describe("exportGcode", () => {
     );
 
     it("names an untitled project's files after its sides", () => {
-      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), " ", context);
-      expect(files.map((file) => file.fileName)).toEqual(["project-top.gcode"]);
+      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), " ", context, NAMING);
+      expect(files.map((file) => file.fileName)).toEqual(["project-2026-11-01-top.gcode"]);
     });
 
     it("says what both sides' programs say once", () => {
@@ -300,15 +308,15 @@ describe("exportGcode", () => {
     });
 
     it("exports only the side that has something to cut", () => {
-      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), "Owl", context);
-      expect(files.map((file) => file.fileName)).toEqual(["Owl-top.gcode"]);
+      const { files } = exportGcode(twoSided([rough("top", "Top rough")]), "Owl", context, NAMING);
+      expect(files.map((file) => file.fileName)).toEqual(["owl-2026-11-01-top.gcode"]);
       expect(files[0]?.gcode).not.toContain("Then turn");
     });
 
     it("exports 2D operations on the bottom side, on the drawing seen from below", () => {
       const doc = twoSided([{ ...(plate as Operation), stockSide: "bottom" }]);
-      const { files } = exportGcode(doc, "Owl", context);
-      expect(files.map((file) => file.fileName)).toEqual(["Owl-bottom.gcode"]);
+      const { files } = exportGcode(doc, "Owl", context, NAMING);
+      expect(files.map((file) => file.fileName)).toEqual(["owl-2026-11-01-bottom.gcode"]);
       expect(files[0]?.gcode).toContain(`(Operation: ${plate?.name})`);
     });
   });
@@ -508,3 +516,28 @@ function exportDetail(run: () => unknown) {
   }
   throw new Error("Nothing was thrown");
 }
+
+describe("gcodeFileName", () => {
+  it("names a program after the project, the version, the local date and the side", () => {
+    const naming = { version: "Final", date: new Date(2026, 10, 1, 23, 59) };
+    expect(gcodeFileName("Cutting board", naming, "top", ".gcode")).toBe(
+      "cutting-board-final-2026-11-01-top.gcode",
+    );
+    expect(gcodeFileName("Cutting board", { date: new Date(2026, 0, 5) }, null, ".nc")).toBe(
+      "cutting-board-2026-01-05.nc",
+    );
+  });
+
+  it("makes the name safe: one dash per run of spaces or reserved characters, none at the ends", () => {
+    const date = new Date(2026, 10, 1);
+    expect(gcodeFileName(" -My  Sign: v2/3?- ", { date }, null, ".gcode")).toBe(
+      "my-sign-v2-3-2026-11-01.gcode",
+    );
+    expect(gcodeFileName("..Plate 1.5 mm.", { version: "  ", date }, null, ".gcode")).toBe(
+      "plate-1.5-mm-2026-11-01.gcode",
+    );
+    expect(gcodeFileName("***", { version: "A/B", date }, "bottom", ".gcode")).toBe(
+      "project-a-b-2026-11-01-bottom.gcode",
+    );
+  });
+});

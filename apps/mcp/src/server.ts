@@ -133,7 +133,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Export G-code",
       description:
-        "Computes a project's toolpaths and writes its G-code for the machine's post-processor, byte for byte what the app exports: one file named after the project (e.g. Sign.gcode), or one per side of a two-sided project (Sign-top.gcode, Sign-bottom.gcode). Writes next to the project's .furrow file unless given a folder. Never replaces a file unless overwrite is true. Saved or not, it exports the project as it is in this server. Returns the files written and the export's warnings. Never sends anything to a machine: the user loads and runs the G-code.",
+        "Computes a project's toolpaths and writes its G-code for the machine's post-processor, byte for byte what the app exports: one file named after the project and today's date (e.g. sign-2026-11-01.gcode), or one per side of a two-sided project (sign-2026-11-01-top.gcode, sign-2026-11-01-bottom.gcode). Writes next to the project's .furrow file unless given a folder. Never replaces a file unless overwrite is true. Saved or not, it exports the project as it is in this server. Returns the files written and the export's warnings. Never sends anything to a machine: the user loads and runs the G-code.",
       inputSchema: {
         path: projectPath,
         folder: z.string().optional().describe("Absolute path of the folder to write into."),
