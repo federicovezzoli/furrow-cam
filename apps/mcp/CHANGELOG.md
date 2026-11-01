@@ -1,5 +1,16 @@
 # @furrow/mcp
 
+## 0.2.0
+
+### Minor Changes
+
+- A model can now sit below the stock top: set *Top below stock* in its properties to machine the whole relief deeper without stretching it, for example to recover a part or to leave a raised border. ([#436](https://github.com/federicovezzoli/furrow-cam/pull/436))
+- Tapered ball-nose bits are a new bit type, described by their angle per side, tip diameter and flute length: 3D finishing and engraving cut with their real shape, ball tip and cone, so steep walls are no longer gouged in the preview. Projects that use them need this release to open. ([#430](https://github.com/federicovezzoli/furrow-cam/pull/430))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/ui@0.6.0, @furrow/workspace@0.17.0, @furrow/document@0.17.0, @furrow/cam-core@0.16.0, @furrow/post@0.14.0
+
 ## 0.1.0
 
 ### Minor Changes

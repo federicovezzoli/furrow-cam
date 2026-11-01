@@ -1,5 +1,20 @@
 # @furrow/ui
 
+## 0.6.0
+
+### Minor Changes
+
+- Tapered ball-nose bits are a new bit type, described by their angle per side, tip diameter and flute length: 3D finishing and engraving cut with their real shape, ball tip and cone, so steep walls are no longer gouged in the preview. Projects that use them need this release to open. ([#430](https://github.com/federicovezzoli/furrow-cam/pull/430))
+- The workspace has a ribbon under the top bar: import a drawing or add text, add operations and open versions from one place. Buttons that can't act yet say why in a tooltip. ([#433](https://github.com/federicovezzoli/furrow-cam/pull/433))
+
+### Patch Changes
+
+- In Italian, the V-carve operation is now called "V-carve", the term CNC users already know, instead of "Intaglio a V". ([#433](https://github.com/federicovezzoli/furrow-cam/pull/433))
+- The machine form now explains that the max feeds should match your controller's maximum rates ($110–$112, in mm/min), that they cap the bit's cutting feeds, and that the time estimate uses them for travel moves. ([#431](https://github.com/federicovezzoli/furrow-cam/pull/431))
+- A model can now sit below the stock top: set *Top below stock* in its properties to machine the whole relief deeper without stretching it, for example to recover a part or to leave a raised border. ([#436](https://github.com/federicovezzoli/furrow-cam/pull/436))
+- Operations that cut where a locating pin goes now warn, so the end mill doesn't run into the pins once the stock is turned over. ([#414](https://github.com/federicovezzoli/furrow-cam/pull/414))
+- Updated dependencies: @furrow/document@0.17.0, @furrow/cam-core@0.16.0
+
 ## 0.5.0
 
 ### Minor Changes
