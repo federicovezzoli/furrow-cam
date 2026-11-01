@@ -36,6 +36,7 @@ function documentWithOperations(): ProjectDocument {
           leadIn: null,
           ramp: false,
           tabs: null,
+          startPoints: [],
         },
       },
       {

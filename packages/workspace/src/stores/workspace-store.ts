@@ -28,6 +28,9 @@ export type ModelImport = { fileName: string; error: Translatable | null };
  * once it isn't custom; the workspace calls it on every document change, and
  * readers can trust the ids.
  */
+/** What the viewport edits on the selected operation. */
+export type EditMode = "tabs" | "startPoints";
+
 export type WorkspaceState = {
   view: ViewMode;
   /**
@@ -47,10 +50,13 @@ export type WorkspaceState = {
   selectedOperationId: string | null;
   hovered: HoveredGeometry | null;
   /**
-   * Editing the selected profile's tabs in the viewport. Only in the top
-   * view, and ends when the selection or the view changes.
+   * Editing the selected profile's tabs, or the selected profile's or
+   * engraving's start points (#426), in the viewport. Only in the top view,
+   * and ends when the selection or the view changes.
    */
-  editingTabs: boolean;
+  editing: EditMode | null;
+  /** A tab or start point marker under the pointer (`grab`) or being dragged (`grabbing`). */
+  markerCursor: "grab" | "grabbing" | null;
   /**
    * Picking the XY zero in the viewport (PRD-0002 Z5), from the stock
    * properties. Only in the top view and while nothing is selected (the stock
@@ -80,7 +86,8 @@ export type WorkspaceState = {
   selectOperation: (id: string | null) => void;
   setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
-  setEditingTabs: (editing: boolean) => void;
+  setEditing: (editing: EditMode | null) => void;
+  setMarkerCursor: (cursor: "grab" | "grabbing" | null) => void;
   /** Switches to the top view when turned on. */
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
@@ -91,7 +98,7 @@ export type WorkspaceState = {
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
-   * editing without tabs, picking the zero without a custom zero and the
+   * editing without tabs, start point editing without a profile or engraving, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;
@@ -109,7 +116,8 @@ export function createWorkspaceStore() {
         selectedModelId: null,
         selectedOperationId: null,
         hovered: null,
-        editingTabs: false,
+        editing: null,
+        markerCursor: null,
         pickingZero: false,
         hiddenToolpathIds: [],
         simulating: false,
@@ -120,7 +128,7 @@ export function createWorkspaceStore() {
             (state) => {
               state.view = view;
               if (view !== "top") {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
@@ -134,7 +142,7 @@ export function createWorkspaceStore() {
             (state) => {
               state.side = side;
               if (side === "bottom") {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
@@ -174,7 +182,7 @@ export function createWorkspaceStore() {
                 state.selectedPaths = [];
                 state.pickingZero = false;
                 state.selectedOperationId = null;
-                state.editingTabs = false;
+                state.editing = null;
               }
             },
             false,
@@ -185,7 +193,7 @@ export function createWorkspaceStore() {
         selectOperation(id) {
           set(
             (state) => {
-              if (state.selectedOperationId !== id) state.editingTabs = false;
+              if (state.selectedOperationId !== id) state.editing = null;
               if (id !== null) {
                 state.pickingZero = false;
                 state.selectedModelId = null;
@@ -207,10 +215,10 @@ export function createWorkspaceStore() {
           );
         },
 
-        setEditingTabs(editing) {
+        setEditing(editing) {
           set(
             (state) => {
-              state.editingTabs = editing;
+              state.editing = editing;
               if (editing) {
                 state.view = "top";
                 state.side = "top";
@@ -219,7 +227,17 @@ export function createWorkspaceStore() {
               }
             },
             false,
-            "setEditingTabs",
+            "setEditing",
+          );
+        },
+
+        setMarkerCursor(cursor) {
+          set(
+            (state) => {
+              state.markerCursor = cursor;
+            },
+            false,
+            "setMarkerCursor",
           );
         },
 
@@ -230,7 +248,7 @@ export function createWorkspaceStore() {
               if (picking) {
                 state.view = "top";
                 state.side = "top";
-                state.editingTabs = false;
+                state.editing = null;
                 state.simulating = false;
               }
             },
@@ -273,7 +291,7 @@ export function createWorkspaceStore() {
             (state) => {
               state.simulating = simulating;
               if (simulating) {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
@@ -298,7 +316,7 @@ export function createWorkspaceStore() {
               state.selectedPaths = [];
               state.selectedModelId = null;
               state.selectedOperationId = null;
-              state.editingTabs = false;
+              state.editing = null;
             },
             false,
             "clearSelection",
@@ -339,8 +357,18 @@ export function createWorkspaceStore() {
               }
               if (state.side === "bottom" && !document.stock.twoSided) state.side = "top";
               // Nothing left to edit once the profile's tabs are turned off (or undone).
-              if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
-                state.editingTabs = false;
+              if (
+                state.editing === "tabs" &&
+                !(operation?.type === "profile" && operation.params.tabs)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "startPoints" &&
+                operation?.type !== "profile" &&
+                operation?.type !== "engrave"
+              ) {
+                state.editing = null;
               }
             },
             false,

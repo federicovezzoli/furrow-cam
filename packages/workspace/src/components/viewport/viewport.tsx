@@ -35,8 +35,9 @@ import { PALETTES } from "./scene-style";
  */
 export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
-  const editingTabs = useWorkspaceStore((s) => s.editingTabs);
+  const editing = useWorkspaceStore((s) => s.editing !== null);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
+  const markerCursor = useWorkspaceStore((s) => s.markerCursor);
   const simulating = useWorkspaceStore((s) => s.simulating);
   const side = useWorkspaceStore((s) => s.side);
   // Known once the renderer is up, inside the canvas.
@@ -82,7 +83,13 @@ export function Viewport() {
     <div
       className={cn(
         "relative h-full",
-        editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
+        markerCursor === "grabbing"
+          ? "cursor-grabbing"
+          : markerCursor === "grab"
+            ? "cursor-grab"
+            : editing || pickingZero
+              ? "cursor-crosshair"
+              : overPath && "cursor-pointer",
       )}
       {...cancelPick}
     >
