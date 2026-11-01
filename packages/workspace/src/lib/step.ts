@@ -25,8 +25,11 @@ const TESSELLATION = {
  * the WebAssembly as the LGPL asks (ADR-0072).
  */
 export const OCCT_LICENCES = [
-  new URL("occt-import-js/dist/license.occt.txt", import.meta.url),
-  new URL("occt-import-js/dist/license.occt-import-js.txt", import.meta.url),
+  { name: "OpenCascade", url: new URL("occt-import-js/dist/license.occt.txt", import.meta.url) },
+  {
+    name: "occt-import-js",
+    url: new URL("occt-import-js/dist/license.occt-import-js.txt", import.meta.url),
+  },
 ];
 
 /** Whether `bytes` are a STEP file: every one starts with this, after any blanks. */

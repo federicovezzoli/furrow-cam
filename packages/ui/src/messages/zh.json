@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "报告问题",
-    "privacy": "隐私"
+    "privacy": "隐私",
+    "licences": "第三方许可"
+  },
+  "Licences": {
+    "title": "第三方许可",
+    "intro": "Furrow CAM 包含以下库和字体，它们遵循各自的许可。打开一个许可即可阅读随应用附带的文本。",
+    "licence": "许可：{licence}",
+    "source": "源代码：",
+    "loading": "正在加载…",
+    "unavailable": "无法加载此许可文本。",
+    "text": "{name} 的许可文本"
   },
   "Meta": {
     "description": "开源的网页版2.5D CNC雕刻机CAM软件。",
-    "privacyTitle": "隐私政策 · Furrow CAM"
+    "privacyTitle": "隐私政策 · Furrow CAM",
+    "licencesTitle": "第三方许可 · Furrow CAM"
   },
   "Projects": {
     "notFound": "此项目已不存在。",
@@ -397,7 +408,8 @@
       "checkUpdates": "检查更新…",
       "reportBug": "报告问题…",
       "checkAtStartup": "启动时检查更新",
-      "sendUsage": "发送使用统计和错误报告"
+      "sendUsage": "发送使用统计和错误报告",
+      "licences": "第三方许可"
     },
     "telemetry": {
       "question": "发送匿名使用统计和错误报告？",

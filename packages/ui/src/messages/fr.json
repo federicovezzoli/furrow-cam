@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Signaler un bug",
-    "privacy": "Confidentialité"
+    "privacy": "Confidentialité",
+    "licences": "Licences tierces"
+  },
+  "Licences": {
+    "title": "Licences tierces",
+    "intro": "Furrow CAM inclut ces bibliothèques et polices, sous leurs propres licences. Ouvrez une licence pour lire son texte tel que fourni avec l'application.",
+    "licence": "Licence : {licence}",
+    "source": "Code source :",
+    "loading": "Chargement…",
+    "unavailable": "Le texte de cette licence n'a pas pu être chargé.",
+    "text": "Texte de la licence de {name}"
   },
   "Meta": {
     "description": "FAO 2.5D open source et web pour défonceuses CNC.",
-    "privacyTitle": "Politique de confidentialité · Furrow CAM"
+    "privacyTitle": "Politique de confidentialité · Furrow CAM",
+    "licencesTitle": "Licences tierces · Furrow CAM"
   },
   "Projects": {
     "notFound": "Ce projet n'existe plus.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Rechercher des mises à jour…",
       "reportBug": "Signaler un bug…",
       "checkAtStartup": "Rechercher des mises à jour au démarrage",
-      "sendUsage": "Envoyer les statistiques d'utilisation et les rapports d'erreur"
+      "sendUsage": "Envoyer les statistiques d'utilisation et les rapports d'erreur",
+      "licences": "Licences tierces"
     },
     "telemetry": {
       "question": "Envoyer des statistiques d'utilisation et des rapports d'erreur anonymes ?",

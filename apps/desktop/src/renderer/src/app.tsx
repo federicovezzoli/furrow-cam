@@ -255,6 +255,9 @@ export function App() {
         if (current.current) void replaceWith(() => setPage({ name: "start" }));
         else api.closeWindow();
         break;
+      case "licences":
+        setPage({ name: "licences" });
+        break;
     }
   });
   const onOpenPath = useEffectEvent((path: string) => void openPath(path));
@@ -296,7 +299,10 @@ export function App() {
   }
 
   const libraryPage =
-    page.name === "tools" || page.name === "machines" || page.name === "machine" ? (
+    page.name === "tools" ||
+    page.name === "machines" ||
+    page.name === "machine" ||
+    page.name === "licences" ? (
       <AppFrame page={page} navigate={navigate}>
         <LibraryPage
           page={page}

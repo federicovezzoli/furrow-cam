@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Fehler melden",
-    "privacy": "Datenschutz"
+    "privacy": "Datenschutz",
+    "licences": "Lizenzen von Drittanbietern"
+  },
+  "Licences": {
+    "title": "Lizenzen von Drittanbietern",
+    "intro": "Furrow CAM enthält diese Bibliotheken und Schriften unter ihren eigenen Lizenzen. Öffne eine Lizenz, um ihren mit der App ausgelieferten Text zu lesen.",
+    "licence": "Lizenz: {licence}",
+    "source": "Quellcode:",
+    "loading": "Wird geladen…",
+    "unavailable": "Dieser Lizenztext konnte nicht geladen werden.",
+    "text": "Lizenztext von {name}"
   },
   "Meta": {
     "description": "Open-Source-2.5D-CAM im Browser für CNC-Fräsen.",
-    "privacyTitle": "Datenschutzerklärung · Furrow CAM"
+    "privacyTitle": "Datenschutzerklärung · Furrow CAM",
+    "licencesTitle": "Lizenzen von Drittanbietern · Furrow CAM"
   },
   "Projects": {
     "notFound": "Dieses Projekt gibt es nicht mehr.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Nach Updates suchen…",
       "reportBug": "Fehler melden…",
       "checkAtStartup": "Beim Start nach Updates suchen",
-      "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden"
+      "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden",
+      "licences": "Lizenzen von Drittanbietern"
     },
     "telemetry": {
       "question": "Anonyme Nutzungsstatistiken und Fehlerberichte senden?",

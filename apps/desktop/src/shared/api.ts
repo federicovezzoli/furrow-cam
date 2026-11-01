@@ -29,7 +29,7 @@ export type DataFile = "tools" | "machines" | "settings";
 export type UnsavedChoice = "save" | "discard" | "cancel";
 
 /** A command from the application menu. */
-export type MenuCommand = "new" | "open" | "save" | "save-as" | "close";
+export type MenuCommand = "new" | "open" | "save" | "save-as" | "close" | "licences";
 
 export type FileResult<T> = T | { error: string };
 

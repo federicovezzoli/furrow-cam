@@ -23,7 +23,7 @@ function volume(positions: Float32Array) {
 
 describe("OCCT_LICENCES", () => {
   it("ships occt-import-js's and OpenCascade's licences", () => {
-    expect(OCCT_LICENCES.map((url) => url.pathname.split("/").pop())).toEqual([
+    expect(OCCT_LICENCES.map(({ url }) => url.pathname.split("/").pop())).toEqual([
       "license.occt.txt",
       "license.occt-import-js.txt",
     ]);

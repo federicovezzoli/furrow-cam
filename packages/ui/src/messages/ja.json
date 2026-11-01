@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "バグを報告",
-    "privacy": "プライバシー"
+    "privacy": "プライバシー",
+    "licences": "サードパーティのライセンス"
+  },
+  "Licences": {
+    "title": "サードパーティのライセンス",
+    "intro": "Furrow CAM には、それぞれのライセンスに基づくこれらのライブラリとフォントが含まれています。ライセンスを開くと、アプリに同梱されたテキストを読めます。",
+    "licence": "ライセンス: {licence}",
+    "source": "ソースコード:",
+    "loading": "読み込み中…",
+    "unavailable": "このライセンステキストを読み込めませんでした。",
+    "text": "{name} のライセンステキスト"
   },
   "Meta": {
     "description": "CNC ルーター向けの、オープンソースの Web ベース 2.5D CAM。",
-    "privacyTitle": "プライバシーポリシー · Furrow CAM"
+    "privacyTitle": "プライバシーポリシー · Furrow CAM",
+    "licencesTitle": "サードパーティのライセンス · Furrow CAM"
   },
   "Projects": {
     "notFound": "このプロジェクトはもう存在しません。",
@@ -397,7 +408,8 @@
       "checkUpdates": "アップデートを確認…",
       "reportBug": "バグを報告…",
       "checkAtStartup": "起動時にアップデートを確認",
-      "sendUsage": "使用状況の統計とエラーレポートを送信"
+      "sendUsage": "使用状況の統計とエラーレポートを送信",
+      "licences": "サードパーティのライセンス"
     },
     "telemetry": {
       "question": "匿名の使用状況の統計とエラーレポートを送信しますか？",

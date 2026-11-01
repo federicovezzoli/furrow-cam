@@ -45,6 +45,9 @@ export async function SiteFooter() {
         <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
           {t("Footer.privacy")}
         </Link>
+        <Link href="/licences" className="underline-offset-4 hover:text-foreground hover:underline">
+          {t("Footer.licences")}
+        </Link>
         {/* The project's start year, deliberately not computed at runtime. */}
         <span>
           © 2026 <ExternalLink href={AUTHOR_URL}>Federico Vezzoli</ExternalLink>

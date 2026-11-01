@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Hata bildir",
-    "privacy": "Gizlilik"
+    "privacy": "Gizlilik",
+    "licences": "Üçüncü taraf lisansları"
+  },
+  "Licences": {
+    "title": "Üçüncü taraf lisansları",
+    "intro": "Furrow CAM bu kitaplıkları ve yazı tiplerini kendi lisanslarıyla birlikte içerir. Uygulamayla birlikte gelen metnini okumak için bir lisansı açın.",
+    "licence": "Lisans: {licence}",
+    "source": "Kaynak kodu:",
+    "loading": "Yükleniyor…",
+    "unavailable": "Bu lisans metni yüklenemedi.",
+    "text": "{name} lisans metni"
   },
   "Meta": {
     "description": "CNC freze makineleri için açık kaynaklı, web tabanlı 2.5D CAM.",
-    "privacyTitle": "Gizlilik politikası · Furrow CAM"
+    "privacyTitle": "Gizlilik politikası · Furrow CAM",
+    "licencesTitle": "Üçüncü taraf lisansları · Furrow CAM"
   },
   "Projects": {
     "notFound": "Bu proje artık mevcut değil.",
@@ -397,7 +408,8 @@
       "checkUpdates": "Güncellemeleri Denetle…",
       "reportBug": "Hata Bildir…",
       "checkAtStartup": "Başlangıçta Güncellemeleri Denetle",
-      "sendUsage": "Kullanım İstatistiklerini ve Hata Raporlarını Gönder"
+      "sendUsage": "Kullanım İstatistiklerini ve Hata Raporlarını Gönder",
+      "licences": "Üçüncü Taraf Lisansları"
     },
     "telemetry": {
       "question": "Anonim kullanım istatistikleri ve hata raporları gönderilsin mi?",

@@ -2,6 +2,7 @@ import type { Tool } from "@furrow/document";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
 import { formatMessage } from "@furrow/ui/lib/i18n";
+import { ThirdPartyLicences } from "@furrow/workspace/components/third-party-licences";
 import {
   deleteMachine,
   deleteTool,
@@ -60,6 +61,7 @@ export function LibraryPage({ page, back, ...props }: LibraryProps & { page: Pag
       {page.name === "tools" && <Tools {...props} />}
       {page.name === "machines" && <Machines {...props} />}
       {page.name === "machine" && <MachinePage id={page.id} {...props} />}
+      {page.name === "licences" && <ThirdPartyLicences />}
     </main>
   );
 }

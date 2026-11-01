@@ -23,6 +23,7 @@ export type Page =
   | { name: "simulator" }
   | { name: "tools" }
   | { name: "machines" }
+  | { name: "licences" }
   /** A machine's form; `id` is `null` for a new one. */
   | { name: "machine"; id: string | null };
 
