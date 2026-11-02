@@ -25,6 +25,9 @@ import {
   session,
   shell,
 } from "electron";
+import { autoUpdater } from "electron-updater";
+// The session electron-updater makes its requests in; not exported from the package root.
+import { getNetSession } from "electron-updater/out/electronHttpExecutor";
 import { PostHog } from "posthog-node";
 import {
   CHANNELS,
@@ -47,11 +50,13 @@ import {
 } from "./files";
 import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import {
+  isUpdateRequest,
   latestDesktopRelease,
   newerRelease,
   parseUpdatePrefs,
   RELEASES_URL,
   type Release,
+  releasePage,
   type UpdatePrefs,
 } from "./updates";
 
@@ -113,6 +118,10 @@ let closeAllowed = false;
 let quitting = false;
 /** The close the renderer is handling started as a quit, which goes on once it's done. */
 let quitAfterClose = false;
+/** The quit under way is *Restart Now*: install this downloaded release, then start again. */
+let installOnQuit: Release | null = null;
+/** As `quitAfterClose`, for `installOnQuit`. */
+let installAfterClose: Release | null = null;
 /** Files to open that arrived before the renderer asked for them. */
 let pendingPaths: string[] = projectPathsIn(process.argv.slice(1));
 let updatePrefs: UpdatePrefs = {};
@@ -156,13 +165,20 @@ if (!app.requestSingleInstanceLock()) {
   app.on("before-quit", () => {
     quitting = true;
   });
-  // Sends what's queued, for at most two seconds, before the app quits.
+  // Sends what's queued, for at most two seconds, before the app quits; then installs the
+  // update if the user chose Restart Now.
   app.on("will-quit", (event) => {
     const client = posthog;
-    if (!client) return;
-    posthog = null;
-    event.preventDefault();
-    void client.shutdown(2_000).finally(() => app.quit());
+    if (client) {
+      posthog = null;
+      event.preventDefault();
+      void client.shutdown(2_000).finally(() => app.quit());
+    } else if (installOnQuit) {
+      const release = installOnQuit;
+      installOnQuit = null;
+      event.preventDefault();
+      void installAndRestart(release);
+    }
   });
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin" || quitting) app.quit();
@@ -179,6 +195,11 @@ if (!app.requestSingleInstanceLock()) {
     const saved = (await readJson(localePath())) as { picked?: unknown } | null;
     pickedLocale = isLocale(saved?.picked) ? saved.picked : null;
     applyTelemetry();
+    if (installsUpdates()) {
+      // Nothing downloads until the user agrees to the update.
+      autoUpdater.autoDownload = false;
+      autoUpdater.on("download-progress", ({ percent }) => window?.setProgressBar(percent / 100));
+    }
     Menu.setApplicationMenu(buildMenu());
     createWindow();
     window?.once("ready-to-show", async () => {
@@ -216,8 +237,9 @@ function serveRenderer() {
 /**
  * Cancels every request to the network: the app works offline (PRD-0007 D2).
  * The only exceptions are the update check's own session, which reaches the
- * releases list and nothing else (ADR-0048), and telemetry's, which reaches
- * only PostHog (ADR-0052).
+ * releases list and nothing else (ADR-0048), electron-updater's, which reaches
+ * the update endpoint and the release files (ADR-0074), and telemetry's, which
+ * reaches only PostHog (ADR-0052).
  */
 function blockNetwork() {
   if (DEV_URL) return;
@@ -231,6 +253,18 @@ function blockNetwork() {
     .webRequest.onBeforeRequest(filter, (details, callback) =>
       callback({ cancel: details.url !== RELEASES_URL }),
     );
+  const updater = getNetSession();
+  updater.webRequest.onBeforeRequest(filter, (details, callback) =>
+    callback({ cancel: !isUpdateRequest(details.url) }),
+  );
+  // electron-updater sends an ID it keeps on disk with every check; nothing may identify the
+  // user (ADR-0013).
+  updater.webRequest.onBeforeSendHeaders(filter, ({ requestHeaders }, callback) => {
+    for (const name of Object.keys(requestHeaders)) {
+      if (name.toLowerCase() === "x-user-staging-id") delete requestHeaders[name];
+    }
+    callback({ requestHeaders });
+  });
   session
     .fromPartition(TELEMETRY_PARTITION)
     .webRequest.onBeforeRequest(filter, (details, callback) =>
@@ -316,13 +350,32 @@ async function fetchLatestRelease() {
   return latestDesktopRelease(await response.json());
 }
 
-/** A newer release than the running app, or `null`; throws when GitHub can't be reached. */
+/**
+ * Windows and Linux download and install updates themselves; macOS only opens the release
+ * page, as Squirrel.Mac refuses an unsigned app (ADR-0074). Also false when not packaged,
+ * and for an AppImage's unpacked files.
+ */
+function installsUpdates() {
+  return process.platform !== "darwin" && autoUpdater.isUpdaterActive();
+}
+
+/** A newer release from the update endpoint; throws when it can't be reached. */
+async function checkUpdater(): Promise<Release | null> {
+  const result = await autoUpdater.checkForUpdates();
+  if (!result?.isUpdateAvailable) return null;
+  const { version } = result.updateInfo;
+  return { version, url: releasePage(version) };
+}
+
+/** A newer release than the running app, or `null`; throws when it can't be reached. */
 function checkForRelease() {
-  releaseCheck ??= fetchLatestRelease()
-    .then((latest) => newerRelease(app.getVersion(), latest))
-    .finally(() => {
-      releaseCheck = null;
-    });
+  releaseCheck ??= (
+    installsUpdates()
+      ? checkUpdater()
+      : fetchLatestRelease().then((latest) => newerRelease(app.getVersion(), latest))
+  ).finally(() => {
+    releaseCheck = null;
+  });
   return releaseCheck;
 }
 
@@ -404,23 +457,90 @@ function checkForUpdatesNow() {
   });
 }
 
-/** Offers to open the release page; the user downloads and installs it themselves. */
+/**
+ * Offers to download and install the release, or on macOS to open its release page, where
+ * the user downloads and installs it themselves.
+ */
 async function offerRelease(release: Release) {
   const t = tr();
+  const install = installsUpdates();
+  const current = app.getVersion();
   const { response } = await dialog.showMessageBox({
     type: "info",
     message: t("DesktopMain.updates.available", { version: release.version }),
-    detail: t("DesktopMain.updates.availableDetail", { current: app.getVersion() }),
+    detail: install
+      ? t("DesktopMain.updates.installDetail", { current })
+      : t("DesktopMain.updates.availableDetail", { current }),
     buttons: [
-      t("DesktopMain.updates.download"),
+      install ? t("DesktopMain.updates.downloadAndInstall") : t("DesktopMain.updates.download"),
       t("DesktopMain.updates.skip"),
       t("DesktopMain.updates.later"),
     ],
     defaultId: 0,
     cancelId: 2,
   });
-  if (response === 0) void shell.openExternal(release.url);
+  if (response === 0 && install) await downloadRelease(release);
+  else if (response === 0) void shell.openExternal(release.url);
   else if (response === 1) await saveUpdatePrefs({ skippedVersion: release.version });
+}
+
+/** Downloads the update, with its progress on the window, then offers to restart into it. */
+async function downloadRelease(release: Release) {
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch (error) {
+    await installFailed(release, error);
+    return;
+  } finally {
+    window?.setProgressBar(-1);
+  }
+  const t = tr();
+  const { response } = await dialog.showMessageBox({
+    type: "info",
+    message: t("DesktopMain.updates.ready", { version: release.version }),
+    detail: t("DesktopMain.updates.readyDetail"),
+    buttons: [t("DesktopMain.updates.restart"), t("DesktopMain.updates.later")],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response === 0) {
+    // Quits as the Quit command does, asking about unsaved projects; `will-quit` installs.
+    installOnQuit = release;
+    app.quit();
+  }
+}
+
+/** Installs the downloaded update and starts the new version; if that fails, just quits. */
+async function installAndRestart(release: Release) {
+  let failure: Error | undefined;
+  const onError = (error: Error) => {
+    failure = error;
+  };
+  autoUpdater.on("error", onError);
+  // Silent, then runs the new version; electron-updater quits on success.
+  autoUpdater.quitAndInstall(true, true);
+  autoUpdater.off("error", onError);
+  if (!failure) return;
+  // Otherwise the quit would try again, asking for a password a second time on Linux.
+  autoUpdater.autoInstallOnAppQuit = false;
+  await installFailed(release, failure);
+  app.quit();
+}
+
+/** Says the update couldn't be installed and offers its release page instead. */
+async function installFailed(release: Release, error: unknown) {
+  const t = tr();
+  const detail = t("DesktopMain.updates.installFailedDetail", { version: release.version });
+  const { response } = await dialog.showMessageBox({
+    type: "warning",
+    message: t("DesktopMain.updates.installFailed"),
+    detail: error instanceof Error ? `${detail}\n\n${error.message}` : detail,
+    buttons: [t("DesktopMain.updates.download"), t("DesktopMain.updates.ok")],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  // Awaited: after a failed restart the app quits next.
+  if (response === 0) await shell.openExternal(release.url);
 }
 
 function createWindow() {
@@ -448,6 +568,8 @@ function createWindow() {
     // If the user cancels, a later close mustn't quit.
     quitAfterClose = quitting;
     quitting = false;
+    installAfterClose = installOnQuit;
+    installOnQuit = null;
     current.webContents.send(CHANNELS.closeRequest);
   });
   current.on("closed", () => {
@@ -715,8 +837,10 @@ function registerIpc() {
 
   ipcMain.on(CHANNELS.closeWindow, () => {
     closeAllowed = true;
-    if (quitAfterClose) app.quit();
-    else window?.close();
+    if (quitAfterClose) {
+      installOnQuit = installAfterClose;
+      app.quit();
+    } else window?.close();
   });
 
   ipcMain.on(CHANNELS.trackEvent, (_event, data: unknown) => {

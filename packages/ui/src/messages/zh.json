@@ -433,9 +433,16 @@
       "upToDateDetail": "{version}是最新版本。",
       "available": "Furrow CAM {version}已发布",
       "availableDetail": "你当前的版本是{current}。请从发布页面下载新版本，并覆盖安装当前版本。",
+      "installDetail": "你当前的版本是{current}。Furrow CAM 可以为你下载并安装新版本。",
       "download": "下载",
+      "downloadAndInstall": "下载并安装",
       "skip": "跳过此版本",
       "later": "稍后",
+      "ready": "Furrow CAM {version} 已可安装",
+      "readyDetail": "立即重启以完成安装。否则将在你退出 Furrow CAM 时安装。",
+      "restart": "立即重启",
+      "installFailed": "无法安装更新",
+      "installFailedDetail": "请从发布页面下载 Furrow CAM {version}，并覆盖安装当前版本。",
       "ok": "好"
     },
     "files": {

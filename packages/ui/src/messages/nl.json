@@ -433,9 +433,16 @@
       "upToDateDetail": "Versie {version} is de nieuwste.",
       "available": "Furrow CAM {version} is beschikbaar",
       "availableDetail": "Je hebt {current}. Download de nieuwe versie van de releasepagina en installeer hem over deze heen.",
+      "installDetail": "Je hebt {current}. Furrow CAM kan de nieuwe versie downloaden en voor je installeren.",
       "download": "Download",
+      "downloadAndInstall": "Downloaden en installeren",
       "skip": "Sla deze versie over",
       "later": "Later",
+      "ready": "Furrow CAM {version} is klaar om te installeren",
+      "readyDetail": "Start nu opnieuw om af te ronden. Anders wordt het geïnstalleerd wanneer je Furrow CAM afsluit.",
+      "restart": "Nu opnieuw starten",
+      "installFailed": "Kan de update niet installeren",
+      "installFailedDetail": "Download Furrow CAM {version} van de releasepagina en installeer het over deze versie heen.",
       "ok": "OK"
     },
     "files": {

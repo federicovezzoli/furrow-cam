@@ -76,4 +76,8 @@ pacman:
     - pango
     - systemd-libs
     - xdg-utils
-publish: null
+# Writes the update metadata (latest.yml, latest-linux.yml) and the app's app-update.yml; CI
+# attaches the metadata to the release and the download Worker serves it here (ADR-0074).
+publish:
+  provider: generic
+  url: https://download.furrow.cam/update
