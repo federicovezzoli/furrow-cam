@@ -264,6 +264,10 @@ describe("duplicateDrawing", () => {
       [0, 50],
       [dx, 50],
     ]);
+    expect(profile?.type === "profile" && profile.params.cornerOvercuts?.excluded).toEqual([
+      [0, 0],
+      [dx, 0],
+    ]);
     expect(ProjectDocument.parse(doc)).toEqual(doc);
     expect(store.getState().past).toHaveLength(1);
     store.getState().undo();
@@ -352,8 +356,9 @@ describe("drawing size", () => {
     const [profile] = s.getState().document.operations;
     expect(profile?.targets).toEqual([{ shapeId: OTHER_SQUARE, paths: null }]);
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[200, 0]]);
-    // The start point on the removed square goes with it.
+    // The start point and excluded overcut on the removed square go with it.
     expect(profile?.type === "profile" && profile.params.startPoints).toEqual([]);
+    expect(profile?.type === "profile" && profile.params.cornerOvercuts?.excluded).toEqual([]);
   });
   const size = (s: ReturnType<typeof store>) => {
     const bounds = drawingBounds(s.getState().document.geometry, DRAWING_ID);

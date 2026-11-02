@@ -10,6 +10,7 @@ import {
   vBitLineWidth,
 } from "@furrow/cam-core";
 import {
+  type CornerOvercuts,
   canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
@@ -192,6 +193,9 @@ export function Row({
 }
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
+
+/** Corner overcuts (#428) start on right angles and anything sharper. */
+const DEFAULT_OVERCUT_ANGLE = 90;
 
 /** The tool select's last option, which opens the form for a new bit instead of picking one. */
 const NEW_BIT = "__new";
@@ -573,8 +577,13 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           value={params.side}
           onChange={(event) => {
             const side = ProfileSide.parse(event.target.value);
-            // On the line leaves no wall for an allowance to stay on.
-            update("side", side === "on" ? { side, allowance: 0, finishPass: false } : { side });
+            // On the line leaves no wall for an allowance to stay on, and no corner to overcut.
+            update(
+              "side",
+              side === "on"
+                ? { side, allowance: 0, finishPass: false, cornerOvercuts: null }
+                : { side },
+            );
           }}
           className={SELECT_CLASS}
         >
@@ -676,6 +685,39 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
         />
       )}
       <StartPointsFields count={params.startPoints.length} />
+      <Checkbox
+        id="profile-corner-overcuts"
+        label={t("cornerOvercuts")}
+        hint={params.side === "on" ? t("overcutsNeedSide") : undefined}
+        checked={params.cornerOvercuts !== null}
+        disabled={params.side === "on"}
+        onChange={(checked) =>
+          update("cornerOvercuts", {
+            cornerOvercuts: checked ? { maxAngle: DEFAULT_OVERCUT_ANGLE, excluded: [] } : null,
+          })
+        }
+      />
+      {params.cornerOvercuts && (
+        <div className="grid gap-2 border-l-2 pl-2">
+          <NumberField
+            id="profile-overcut-angle"
+            label={t("maxCornerAngle")}
+            layout="inline"
+            suffix="°"
+            min={0}
+            max={180}
+            value={params.cornerOvercuts.maxAngle}
+            onValueChange={(maxAngle) =>
+              update("cornerOvercuts", {
+                cornerOvercuts: { ...(params.cornerOvercuts as CornerOvercuts), maxAngle },
+              })
+            }
+            error={errors.cornerOvercuts}
+            {...gestureHandlers(store)}
+          />
+          <p className="text-muted-foreground">{t("overcutsHint")}</p>
+        </div>
+      )}
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp}

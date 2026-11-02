@@ -12,6 +12,8 @@ export type Palette = {
   tab: string;
   /** Start points (#426), where the selected operation's cuts begin. */
   startPoint: string;
+  /** Corner overcuts (#428) of the selected profile. */
+  overcut: string;
   /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
   touchOff: string;
   /** The locating pins (#356). */
@@ -36,6 +38,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedDrawing: "#27272a",
     tab: "#16a34a",
     startPoint: "#dc2626",
+    overcut: "#ea580c",
     touchOff: "#0891b2",
     pin: "#4f46e5",
     snap: "#c026d3",
@@ -54,6 +57,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedDrawing: "#ffffff",
     tab: "#4ade80",
     startPoint: "#f87171",
+    overcut: "#fb923c",
     touchOff: "#22d3ee",
     pin: "#818cf8",
     snap: "#e879f9",

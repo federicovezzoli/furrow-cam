@@ -85,4 +85,26 @@ describe("OperationProperties", () => {
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(workspace.getState().editing).toBeNull();
   });
+
+  it("turns corner overcuts off and on, and off on the line (#428)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: fullDocument() }),
+    );
+    const overcuts = () => {
+      const [profile] = store.getState().document.operations;
+      return profile?.type === "profile" ? profile.params.cornerOvercuts : undefined;
+    };
+    expect(screen.getByText(/Click one in the top view to leave it out/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Corner overcuts"));
+    expect(overcuts()).toBeNull();
+    fireEvent.click(screen.getByLabelText("Corner overcuts"));
+    expect(overcuts()).toEqual({ maxAngle: 90, excluded: [] });
+    fireEvent.change(screen.getByLabelText("Side"), { target: { value: "on" } });
+    expect(overcuts()).toBeNull();
+    expect(screen.getByText("Needs an inside or outside profile.")).toBeTruthy();
+  });
 });

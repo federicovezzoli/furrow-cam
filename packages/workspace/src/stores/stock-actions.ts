@@ -74,6 +74,10 @@ function moveDrawing(
       const { tabs } = operation.params;
       tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
     }
+    if (operation.type === "profile" && operation.params.cornerOvercuts) {
+      const overcuts = operation.params.cornerOvercuts;
+      overcuts.excluded = overcuts.excluded.map((point) => translatePoint(point, offset));
+    }
   }
   const holding = draft.stock.twoSided?.tabs;
   if (holding) holding.positions = holding.positions.map((p) => translatePoint(p, offset));
