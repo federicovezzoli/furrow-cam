@@ -66,10 +66,27 @@ describe("ProfileParams", () => {
     expect(ProfileParams.safeParse({ ...params, tabs: { ...tabs, count: 4 } }).success).toBe(false);
   });
 
-  it("allows no allowance on the line", () => {
-    const onLine = { ...params, side: "on", allowance: 0, finishPass: false };
+  it("allows no allowance and no corner overcuts on the line", () => {
+    const onLine = {
+      ...params,
+      side: "on",
+      allowance: 0,
+      finishPass: false,
+      cornerOvercuts: null,
+    };
     expect(ProfileParams.safeParse(onLine).success).toBe(true);
     expect(ProfileParams.safeParse({ ...onLine, allowance: 0.5 }).success).toBe(false);
+    const overcuts = { maxAngle: 90, excluded: [] };
+    expect(ProfileParams.safeParse({ ...onLine, cornerOvercuts: overcuts }).success).toBe(false);
+  });
+
+  it("accepts corner overcuts with an angle between 0° and 180°", () => {
+    const at = (maxAngle: number) =>
+      ProfileParams.safeParse({ ...params, cornerOvercuts: { maxAngle, excluded: [[0, 0]] } })
+        .success;
+    expect(at(90)).toBe(true);
+    expect(at(0)).toBe(false);
+    expect(at(180)).toBe(false);
   });
 
   it("needs an allowance for a finish pass", () => {

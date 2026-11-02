@@ -37,6 +37,7 @@ function documentWithOperations(): ProjectDocument {
           ramp: false,
           tabs: null,
           startPoints: [],
+          cornerOvercuts: null,
         },
       },
       {

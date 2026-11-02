@@ -338,6 +338,18 @@ describe("migrations", () => {
     expect(parseProjectDocument(v31)).toEqual(withNone);
   });
 
+  it("gives v32 profiles no corner overcuts", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const { cornerOvercuts: _, ...params } = profile.params;
+    const v32 = { ...current, schemaVersion: 32, operations: [{ ...profile, params }] };
+    expect(parseProjectDocument(v32)).toEqual({
+      ...current,
+      operations: [{ ...profile, params: { ...params, cornerOvercuts: null } }],
+    });
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

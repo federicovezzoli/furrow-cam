@@ -79,6 +79,7 @@ function documentWithProfile(): ProjectDocument {
           ramp: true,
           tabs: null,
           startPoints: [],
+          cornerOvercuts: null,
         },
       },
     ],

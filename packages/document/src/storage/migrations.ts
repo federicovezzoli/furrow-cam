@@ -307,6 +307,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #428: corner overcuts on profiles. Existing ones have none.
+  32: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "profile" && isObject(operation.params)) {
+          operation.params.cornerOvercuts ??= null;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

@@ -80,6 +80,7 @@ function referenceProject(): ProjectDocument {
       ramp: false,
       tabs: { width: 6, height: 2, positions: [[80, 20]] },
       startPoints: [],
+      cornerOvercuts: null,
     },
   };
   return {

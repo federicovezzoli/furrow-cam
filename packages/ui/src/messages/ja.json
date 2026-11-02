@@ -543,6 +543,7 @@
     "operation": {
       "pathIndices": "パスのインデックスは昇順で、それぞれ 1 回だけにしてください",
       "allowanceZeroOnLine": "ライン上では 0 にしてください",
+      "overcutsOnLine": "ライン上では使えません",
       "allowanceNeeded": "削り取る取り代が必要です",
       "vBitsCantDrill": "V ビットでは穴あけできません",
       "taperedBitsCantDrill": "テーパーボールエンドミルでは穴あけできません",
@@ -867,6 +868,10 @@
     "leadIn": "リードイン円弧",
     "leadInRadius": "リードイン半径",
     "holdingTabs": "保持タブ",
+    "cornerOvercuts": "コーナー逃がし",
+    "maxCornerAngle": "この角度以下の角",
+    "overcutsHint": "工具が届かない鋭い角に逃がしを入れ、角のある相手部品がはまるようにします。上面ビューでクリックすると除外し、もう一度クリックすると元に戻します。",
+    "overcutsNeedSide": "内側または外側のプロファイルが必要です。",
     "pocket": "ポケット",
     "strategy": "方式",
     "angle": "角度",

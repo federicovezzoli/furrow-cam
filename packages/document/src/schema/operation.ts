@@ -104,6 +104,19 @@ export const ProfileTabs = z.strictObject({
 });
 export type ProfileTabs = z.infer<typeof ProfileTabs>;
 
+/**
+ * Corner overcuts (#428), or dogbones: at each sharp corner the tool can't
+ * reach, it runs along the bisector until its edge touches the drawn corner
+ * and comes back, so a sharp-edged counterpart fits.
+ */
+export const CornerOvercuts = z.strictObject({
+  /** A corner gets an overcut when its angle on the side the tool cuts is at most this, in degrees. */
+  maxAngle: z.number().gt(0).lt(180),
+  /** In stock coordinates; each removes the overcut nearest to it. */
+  excluded: z.array(Point),
+});
+export type CornerOvercuts = z.infer<typeof CornerOvercuts>;
+
 /** Profile parameters (#21). The step-down and the ramp angle come from the tool. */
 export const ProfileParams = z
   .strictObject({
@@ -123,6 +136,8 @@ export const ProfileParams = z
     tabs: ProfileTabs.nullable(),
     /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
     startPoints: z.array(Point),
+    /** Overcuts at sharp corners, or `null` for none; never on the line. */
+    cornerOvercuts: CornerOvercuts.nullable(),
   })
   .superRefine((params, ctx) => {
     if (params.side === "on" && params.allowance !== 0) {
@@ -130,6 +145,13 @@ export const ProfileParams = z
         code: "custom",
         path: ["allowance"],
         message: "operation.allowanceZeroOnLine",
+      });
+    }
+    if (params.side === "on" && params.cornerOvercuts !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cornerOvercuts"],
+        message: "operation.overcutsOnLine",
       });
     }
     if (params.finishPass && params.allowance === 0) {

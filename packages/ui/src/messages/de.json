@@ -543,6 +543,7 @@
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
       "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
+      "overcutsOnLine": "Nicht auf der Linie",
       "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
       "vBitsCantDrill": "V-Fräser können nicht bohren",
       "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
@@ -867,6 +868,10 @@
     "leadIn": "Bogenanfahrt",
     "leadInRadius": "Anfahrradius",
     "holdingTabs": "Haltestege",
+    "cornerOvercuts": "Eckenfreischnitte",
+    "maxCornerAngle": "Ecken bis",
+    "overcutsHint": "Schneidet die scharfen Ecken frei, die das Werkzeug nicht erreicht, damit ein eckiges Gegenstück passt. Klicke in der Draufsicht auf einen, um ihn auszulassen, und erneut, um ihn wiederherzustellen.",
+    "overcutsNeedSide": "Braucht ein Innen- oder Außenprofil.",
     "pocket": "Tasche",
     "strategy": "Strategie",
     "angle": "Winkel",

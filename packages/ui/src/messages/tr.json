@@ -543,6 +543,7 @@
     "operation": {
       "pathIndices": "Yol indeksleri artan sırada olmalı ve her biri bir kez geçmelidir",
       "allowanceZeroOnLine": "Çizgi üzerinde 0 olmalıdır",
+      "overcutsOnLine": "Çizgi üzerinde olamaz",
       "allowanceNeeded": "Kaldırılacak bir işleme payı gerekir",
       "vBitsCantDrill": "V uçlar delme yapamaz",
       "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
@@ -867,6 +868,10 @@
     "leadIn": "Giriş yayı",
     "leadInRadius": "Giriş yarıçapı",
     "holdingTabs": "Tutucu köprüler",
+    "cornerOvercuts": "Köşe taşırma kesimleri",
+    "maxCornerAngle": "En fazla şu açıdaki köşeler",
+    "overcutsHint": "Takımın ulaşamadığı keskin köşeleri taşırarak keser, böylece köşeli bir karşı parça oturur. Atlamak için üst görünümde birine tıklayın, geri almak için yeniden tıklayın.",
+    "overcutsNeedSide": "İç veya dış profil gerektirir.",
     "pocket": "Cep",
     "strategy": "Strateji",
     "angle": "Açı",
