@@ -8,6 +8,8 @@ directories:
   buildResources: build
 files:
   - out/**
+  # The @furrow/* packages are dependencies so Changesets releases the app with them.
+  - "!node_modules/**"
 # Everything is bundled into out/, so the app ships no node_modules.
 npmRebuild: false
 fileAssociations:
