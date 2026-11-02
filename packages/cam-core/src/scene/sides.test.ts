@@ -102,7 +102,7 @@ describe("flipOperation", () => {
     expect(angle(flipOperation(flipOperation(pocket, flip), flip))).toBe(45);
   });
 
-  it("mirrors a profile's tabs and start points with the drawing", () => {
+  it("mirrors a profile's tabs, start points and excluded overcuts with the drawing", () => {
     const [profile] = fullDocument().operations;
     if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("a profile with tabs");
     const flip = { ...stock, axis: "x" as const };
@@ -113,6 +113,9 @@ describe("flipOperation", () => {
     );
     expect(flipped.params.startPoints).toEqual(
       profile.params.startPoints.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipped.params.cornerOvercuts?.excluded).toEqual(
+      profile.params.cornerOvercuts?.excluded.map((point) => flipPoint2(flip, point)),
     );
     expect(flipOperation(flipped, flip)).toEqual(profile);
   });

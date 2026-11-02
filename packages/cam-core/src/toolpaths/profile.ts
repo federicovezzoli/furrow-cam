@@ -1,4 +1,5 @@
 import {
+  type CornerOvercuts,
   distance,
   GEOMETRY_TOLERANCE,
   type MillingDirection,
@@ -13,6 +14,7 @@ import { containment, difference, offset, type Polygon, signedArea } from "../ge
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type Projection, projectOnLoop } from "../geometry/loop";
 import type { ToolpathMessage } from "./messages";
+import { findOvercuts, type Overcut, withOvercuts } from "./overcuts";
 import {
   type Box,
   bounds,
@@ -23,7 +25,15 @@ import {
   rampZ,
   Track,
 } from "./passes";
-import { coveredSpans, freeSpans, inSpans, loopLength, pointAlong, type Span } from "./tabs";
+import {
+  closedLoops,
+  coveredSpans,
+  freeSpans,
+  inSpans,
+  loopLength,
+  pointAlong,
+  type Span,
+} from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type ProfileOptions = {
@@ -99,6 +109,9 @@ type Cut = Descent & {
  *   path makes, one per path. A closed contour starts there instead of halfway along its longest
  *   edge, or at the nearer end of a tab it falls on; an open path is cut from
  *   its nearer end on every pass, instead of back and forth.
+ * - Corner overcuts (#428), `inside` or `outside`: at each corner of a
+ *   contour sharp enough, the tool runs along the bisector until its edge
+ *   reaches the drawn corner, less the allowance, and back, on every pass.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -133,6 +146,7 @@ export type ContourCut = {
   tabs?: ProfileTabs | null;
   /** Where cuts start, in stock coordinates. */
   startPoints?: Point[];
+  cornerOvercuts?: CornerOvercuts | null;
 };
 
 /** The toolpath of `settings` along `shapes` with `tool`, as `profileToolpath` describes. */
@@ -148,6 +162,7 @@ export function contourToolpath(
     leadIn: null,
     tabs: null,
     startPoints: [],
+    cornerOvercuts: null,
     ...settings,
   };
   const { offset } = params;
@@ -304,12 +319,29 @@ export function contourToolpath(
 }
 
 /**
+ * The corner overcuts (#428) of `cornerOvercuts` that a profile with a tool
+ * of `radius` cuts along `shapes` on `side`, at the finished contour.
+ */
+export function profileOvercuts(
+  shapes: Shape[],
+  side: ProfileSide,
+  radius: number,
+  cornerOvercuts: CornerOvercuts,
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): Overcut[] {
+  if (side === "on") return [];
+  const closed = closedLoops(shapes, tolerance).map((loop) => loop.slice(0, -1));
+  const { contours: found } = contours(closed, { side, direction: "climb" }, radius);
+  return findOvercuts(found, radius, cornerOvercuts);
+}
+
+/**
  * The rings the tool centre follows, `distance` away from the closed paths on
- * `side`, in cutting direction and cutting order.
+ * `side`, in cutting direction and cutting order, with their corner overcuts.
  */
 function contours(
   closed: Polygon[],
-  { side, direction }: Pick<ContourCut, "side" | "direction">,
+  { side, direction, cornerOvercuts }: Pick<ContourCut, "side" | "direction" | "cornerOvercuts">,
   distance: number,
 ): Contours {
   // Every ring here has the area it bounds on its left: the kept material for
@@ -329,6 +361,15 @@ function contours(
       startPoint: false,
     }))
     .sort((a, b) => a.area - b.area);
+  if (cornerOvercuts && side !== "on") {
+    const overcuts = findOvercuts(contours, distance, cornerOvercuts);
+    contours.forEach((contour, i) => {
+      contour.ring = withOvercuts(
+        contour.ring,
+        overcuts.filter((overcut) => overcut.ring === i),
+      );
+    });
+  }
 
   // The rings nest without crossing, so even-odd containment gives the area they bound.
   const boxes = rings.map(bounds);
