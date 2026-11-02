@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.22.1
+
+### Patch Changes
+
+- The privacy policy now covers where the desktop app checks for and downloads updates. ([#461](https://github.com/federicovezzoli/furrow-cam/pull/461))
+- Updated dependencies: @furrow/document@0.20.0, @furrow/cam-core@0.18.0, @furrow/workspace@0.20.0, @furrow/ui@0.8.1, @furrow/post@0.15.2
+
 ## 0.22.0
 
 ### Minor Changes
