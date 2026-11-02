@@ -1,5 +1,13 @@
 # @furrow/ui
 
+## 0.8.1
+
+### Patch Changes
+
+- Inside and outside profiles can overcut their sharp inside corners (dogbones), so a square tenon or insert fits without filing. Turn on *Corner overcuts*, choose the sharpest angle that gets one, and with *Edit overcuts* click one to leave that corner out. ([#462](https://github.com/federicovezzoli/furrow-cam/pull/462))
+- On Windows and Linux the desktop app now downloads and installs a new version itself when you choose Download and Install, then restarts into it. On macOS it still links to the release page. ([#461](https://github.com/federicovezzoli/furrow-cam/pull/461))
+- Updated dependencies: @furrow/document@0.20.0, @furrow/cam-core@0.18.0
+
 ## 0.8.0
 
 ### Minor Changes
