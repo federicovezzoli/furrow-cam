@@ -1,17 +1,24 @@
 // download.furrow.cam: redirects /<platform> to the newest desktop installer on GitHub
-// Releases and counts the download (ADR-0049).
+// Releases and counts the download (ADR-0049). Under /update/ it is the desktop app's
+// update endpoint (ADR-0074).
 
 import {
   findInstallers,
-  hasEveryPlatform,
+  hasEveryFile,
   type Installers,
   isPlatform,
+  isUpdateFile,
   PLATFORMS,
   type Release,
 } from "./installers";
 
 const REPO = "federicovezzoli/furrow-cam";
 export const DESKTOP_RELEASES_URL = `https://github.com/${REPO}/releases?q=%40furrow%2Fdesktop&expanded=true`;
+
+/** A file of one desktop release, named for its version: an installer or its blockmap. */
+const RELEASE_FILE = /^furrow-cam-(\d+\.\d+\.\d+)-[\w.-]+$/;
+const releaseFileUrl = (version: string, name: string) =>
+  `https://github.com/${REPO}/releases/download/%40furrow/desktop%40${version}/${name}`;
 
 // The newest installers, kept in the data centre's cache so GitHub is asked at most
 // once every few minutes per location.
@@ -49,7 +56,7 @@ async function fetchReleases(deps: Deps, token: string | undefined): Promise<Rel
     if (!response.ok) throw new Error(`GitHub releases: HTTP ${response.status}`);
     const batch = (await response.json()) as Release[];
     releases.push(...batch);
-    if (batch.length < PER_PAGE || hasEveryPlatform(findInstallers(releases))) break;
+    if (batch.length < PER_PAGE || hasEveryFile(findInstallers(releases))) break;
   }
   return releases;
 }
@@ -99,6 +106,25 @@ export function createWorker(deps: Deps) {
 
       const path = new URL(request.url).pathname.replace(/^\/+|\/+$/g, "");
       if (path === "") return redirect(DESKTOP_RELEASES_URL);
+
+      // electron-updater's requests, not counted as downloads. The update metadata names
+      // its installer relative to it, so that lands here too, as does the previous
+      // version's blockmap for a differential download.
+      if (path.startsWith("update/")) {
+        const name = path.slice("update/".length);
+        const version = RELEASE_FILE.exec(name)?.[1];
+        if (version) return redirect(releaseFileUrl(version, name));
+        if (!isUpdateFile(name)) return new Response("Not found\n", { status: 404 });
+        let installers: Installers = {};
+        try {
+          installers = await sharedLoad(env);
+        } catch (error) {
+          console.error(error);
+        }
+        const file = installers[name];
+        return file ? redirect(file.url) : new Response("Not found\n", { status: 404 });
+      }
+
       if (!isPlatform(path)) return new Response(NOT_FOUND, { status: 404 });
 
       let installers: Installers = {};

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findInstallers, hasEveryPlatform, isPlatform } from "./installers";
-import { desktopRelease, FILES } from "./test-releases";
+import { findInstallers, hasEveryFile, isPlatform } from "./installers";
+import { desktopRelease, FILES, INSTALLERS } from "./test-releases";
 
 describe("findInstallers", () => {
   it("picks the highest desktop version, ignoring other packages", () => {
@@ -15,7 +15,8 @@ describe("findInstallers", () => {
       url: "https://example.com/0.10.0/win-x64.exe",
     });
     expect(installers["linux-pacman"]?.url).toBe("https://example.com/0.10.0/linux-x64.pacman");
-    expect(hasEveryPlatform(installers)).toBe(true);
+    expect(installers["latest-linux.yml"]?.url).toBe("https://example.com/0.10.0/latest-linux.yml");
+    expect(hasEveryFile(installers)).toBe(true);
   });
 
   it("falls back per platform while a release's files are still being attached", () => {
@@ -25,16 +26,20 @@ describe("findInstallers", () => {
     ]);
     expect(installers["mac-arm64"]?.version).toBe("0.4.0");
     expect(installers["linux-deb"]?.version).toBe("0.3.0");
+    expect(installers["latest.yml"]?.version).toBe("0.3.0");
   });
 
   it("skips drafts, prereleases and files named for another version", () => {
     const installers = findInstallers([
       desktopRelease("0.5.0", FILES, { draft: true }),
       desktopRelease("0.4.0", FILES, { prerelease: true }),
-      { ...desktopRelease("0.3.1"), assets: desktopRelease("0.3.0").assets },
+      {
+        ...desktopRelease("0.3.1"),
+        assets: desktopRelease("0.3.0", INSTALLERS).assets,
+      },
     ]);
     expect(installers).toEqual({});
-    expect(hasEveryPlatform(installers)).toBe(false);
+    expect(hasEveryFile(installers)).toBe(false);
   });
 });
 
