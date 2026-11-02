@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createWorker, DESKTOP_RELEASES_URL, type Deps } from "./index";
-import { desktopRelease } from "./test-releases";
+import { desktopRelease, INSTALLERS } from "./test-releases";
 
 function setup(pages: unknown[][] | Error, { cacheFails = false } = {}) {
   const store = new Map<string, Response>();
@@ -76,6 +76,12 @@ describe("download worker", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it("stops reading pages once every installer is found, metadata or not", async () => {
+    const { get, fetch } = setup([[desktopRelease("0.3.0", INSTALLERS)], []]);
+    expect((await get("/update/latest.yml")).status).toBe(404);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("does not count HEAD requests", async () => {
     const { get, writeDataPoint } = setup([[desktopRelease("0.3.0")]]);
     expect((await get("/win", "HEAD")).status).toBe(302);
@@ -88,6 +94,31 @@ describe("download worker", () => {
     const response = await get("/win");
     expect(response.headers.get("Location")).toBe(DESKTOP_RELEASES_URL);
     expect(writeDataPoint).not.toHaveBeenCalled();
+  });
+
+  it("serves the newest update metadata without counting it", async () => {
+    const { get, writeDataPoint } = setup([
+      [desktopRelease("0.4.0", ["win-x64.exe"]), desktopRelease("0.3.0")],
+    ]);
+    const response = await get("/update/latest.yml?noCache=1abc");
+    expect(response.headers.get("Location")).toBe("https://example.com/0.3.0/latest.yml");
+    expect(writeDataPoint).not.toHaveBeenCalled();
+  });
+
+  it("sends the files named in the update metadata to their release", async () => {
+    const { get, fetch } = setup([]);
+    const response = await get("/update/furrow-cam-0.3.0-win-x64.exe.blockmap");
+    expect(response.headers.get("Location")).toBe(
+      "https://github.com/federicovezzoli/furrow-cam/releases/download/%40furrow/desktop%400.3.0/furrow-cam-0.3.0-win-x64.exe.blockmap",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for unknown update files, and for metadata no release has", async () => {
+    const { get } = setup([[desktopRelease("0.3.0", ["win-x64.exe"])]]);
+    expect((await get("/update/latest.yml")).status).toBe(404);
+    expect((await get("/update/latest-mac.yml")).status).toBe(404);
+    expect((await get("/update/furrow-cam-latest-win-x64.exe")).status).toBe(404);
   });
 
   it("sends / to the release list and rejects unknown paths and methods", async () => {

@@ -13,8 +13,9 @@ import { signedArea } from "../geometry/clipper";
 import { translatePath } from "../geometry/translate";
 import type { Vec3 } from "../scene/stock";
 import { DEFAULT_SAFE_Z, generateToolpath, toolpathInput } from "./generate";
+import { excludeOvercuts } from "./overcuts";
 import { depthLevels } from "./passes";
-import { profileToolpath } from "./profile";
+import { profileOvercuts, profileToolpath } from "./profile";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 
 const tool: Tool = {
@@ -46,6 +47,7 @@ const params: ProfileParams = {
   ramp: false,
   tabs: null,
   startPoints: [],
+  cornerOvercuts: null,
 };
 
 /** 100 × 100 mm, counter-clockwise. */
@@ -790,6 +792,176 @@ describe("profileToolpath with start points", () => {
       code: "toolpath.startPointsLeftOut",
       values: { count: 1 },
     });
+  });
+});
+
+describe("profileToolpath with corner overcuts", () => {
+  const overcuts = { maxAngle: 90, excluded: [] };
+  /** 100 × 100 mm with a 50 × 50 mm notch out of its top right, counter-clockwise. */
+  const lShape: Shape = {
+    ...square,
+    id: "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b",
+    paths: [
+      {
+        start: [0, 0],
+        segments: [
+          { kind: "line", to: [100, 0] },
+          { kind: "line", to: [100, 50] },
+          { kind: "line", to: [50, 50] },
+          { kind: "line", to: [50, 100] },
+          { kind: "line", to: [0, 100] },
+        ],
+        closed: true,
+      },
+    ],
+  };
+  const corners: [number, number][] = [
+    [0, 0],
+    [100, 0],
+    [100, 100],
+    [0, 100],
+  ];
+  /** The closest the tool centre comes to `corner` in XY, on the moves `at` heights it allows. */
+  const nearest = (toolpath: Toolpath, corner: [number, number], at = (_z: number) => true) =>
+    Math.min(
+      ...toolpath.moves
+        .filter((move) => move.kind === "feed" && at(move.to[2]))
+        .map(({ to }) => Math.hypot(to[0] - corner[0], to[1] - corner[1])),
+    );
+
+  it("overcuts each corner of a cutout until the tool's edge touches it, on every pass", () => {
+    const toolpath = profile({ side: "inside", cornerOvercuts: overcuts });
+    for (const corner of corners) {
+      for (const level of depthLevels(params.depth, tool.stepDown)) {
+        expect(nearest(toolpath, corner, (z) => Math.abs(z - level) < 1e-9)).toBeCloseTo(3, 3);
+      }
+    }
+    // Without them the tool stays r√2 off each corner.
+    expect(nearest(profile({ side: "inside" }), [0, 0])).toBeCloseTo(3 * Math.SQRT2, 3);
+  });
+
+  it("overcuts only the inside corners of a part", () => {
+    expect(profile({ cornerOvercuts: overcuts })).toEqual(profile());
+    const toolpath = profile({ cornerOvercuts: overcuts }, [lShape]);
+    expect(nearest(toolpath, [50, 50])).toBeCloseTo(3, 3);
+    expect(nearest(profile({}, [lShape]), [50, 50])).toBeCloseTo(3 * Math.SQRT2, 3);
+    const without = profile({}, [lShape]);
+    // One overcut, out and back: two more moves per pass.
+    expect(toolpath.moves.length - without.moves.length).toBe(
+      2 * depthLevels(params.depth, tool.stepDown).length,
+    );
+  });
+
+  it("leaves out corners wider than the angle, curves and smooth joins", () => {
+    expect(profile({ cornerOvercuts: { ...overcuts, maxAngle: 89 } }, [lShape])).toEqual(
+      profile({}, [lShape]),
+    );
+    // A slot: two straights joined by half circles, each tangent to them.
+    const slot: Shape = {
+      ...square,
+      paths: [
+        {
+          start: [0, 0],
+          segments: [
+            { kind: "line", to: [100, 0] },
+            { kind: "arc", to: [100, 20], center: [100, 10], clockwise: false },
+            { kind: "line", to: [0, 20] },
+            { kind: "arc", to: [0, 0], center: [0, 10], clockwise: false },
+          ],
+          closed: true,
+        },
+      ],
+    };
+    for (const shape of [hole, slot]) {
+      expect(
+        profile({ side: "inside", cornerOvercuts: { ...overcuts, maxAngle: 180 } }, [shape]),
+      ).toEqual(profile({ side: "inside" }, [shape]));
+    }
+  });
+
+  it("stops the depth passes the allowance short, and reaches the corner on the finish lap", () => {
+    const toolpath = profile({
+      side: "inside",
+      allowance: 0.5,
+      finishPass: true,
+      cornerOvercuts: overcuts,
+    });
+    expect(nearest(toolpath, [0, 0], (z) => z > -params.depth)).toBeCloseTo(3.5, 3);
+    expect(nearest(toolpath, [0, 0])).toBeCloseTo(3, 3);
+  });
+
+  it("leaves out the overcut whose corner each excluded point is on, and none for others", () => {
+    const toolpath = profile({
+      side: "inside",
+      cornerOvercuts: {
+        ...overcuts,
+        excluded: [
+          [0, 100],
+          [5, 90],
+        ],
+      },
+    });
+    expect(nearest(toolpath, [0, 100])).toBeCloseTo(3 * Math.SQRT2, 3);
+    for (const corner of corners.slice(0, 3)) expect(nearest(toolpath, corner)).toBeCloseTo(3, 3);
+  });
+
+  it("starts on the contour's corner, not out on its overcut, for a start point there", () => {
+    const toolpath = profile({ side: "inside", startPoints: [[0, 0]], cornerOvercuts: overcuts });
+    const first = toolpath.moves.find((move) => move.kind === "feed");
+    expect(first?.to[0]).toBeCloseTo(3, 6);
+    expect(first?.to[1]).toBeCloseTo(3, 6);
+    expect(nearest(toolpath, [0, 0])).toBeCloseTo(3, 3);
+  });
+
+  it("keeps tabs where they are, and the tool at the tab top over an overcut a tab covers", () => {
+    const tabs = (positions: [number, number][]) => ({ width: 4, height: 3, positions });
+    const midSides: [number, number][] = [
+      [50, 0],
+      [100, 50],
+      [50, 100],
+      [0, 50],
+    ];
+    expect(
+      cutsAt(profile({ side: "inside", tabs: tabs(midSides), cornerOvercuts: overcuts }), -3),
+    ).toEqual(cutsAt(profile({ side: "inside", tabs: tabs(midSides) }), -3));
+    const covered = profile({ side: "inside", tabs: tabs([[3, 0]]), cornerOvercuts: overcuts });
+    const tip = 3 / Math.SQRT2;
+    expect(cutsAt(covered, -3).some(([x, y]) => Math.hypot(x - tip, y - tip) < 1e-6)).toBe(true);
+    expect(nearest(covered, [0, 0], (z) => z < -3)).toBeGreaterThan(3 * Math.SQRT2 - 1e-6);
+  });
+
+  it("lists the overcuts of the finished contour at the drawn corners", () => {
+    const found = excludeOvercuts(profileOvercuts([square], "inside", 3, 90), [[0, 100]]);
+    expect(found).toHaveLength(4);
+    for (const { corner, tip, excludedBy } of found) {
+      const drawn = corners.find(([x, y]) => Math.hypot(corner[0] - x, corner[1] - y) < 1e-3);
+      expect(drawn).toBeDefined();
+      expect(Math.hypot(tip[0] - corner[0], tip[1] - corner[1])).toBeCloseTo(3, 3);
+      expect(excludedBy).toEqual(drawn?.[0] === 0 && drawn[1] === 100 ? [0] : []);
+    }
+    expect(profileOvercuts([square], "outside", 3, 90)).toEqual([]);
+  });
+
+  it("leaves out one more of the overcuts at a corner two cutouts share for each point on it", () => {
+    const touching: Shape = {
+      ...square,
+      id: "6f7a8b9c-0d1e-4f2a-8b3c-4d5e6f7a8b9c",
+      paths: square.paths.map((path) => translatePath(path, [100, 100])),
+    };
+    const found = profileOvercuts([square, touching], "inside", 3, 90);
+    const shared = (excluded: [number, number][]) =>
+      excludeOvercuts(found, excluded)
+        .filter(({ corner }) => Math.hypot(corner[0] - 100, corner[1] - 100) < 1e-3)
+        .map(({ excludedBy }) => excludedBy.length)
+        .sort();
+    expect(shared([])).toEqual([0, 0]);
+    expect(shared([[100, 100]])).toEqual([0, 1]);
+    expect(
+      shared([
+        [100, 100],
+        [100, 100],
+      ]),
+    ).toEqual([1, 1]);
   });
 });
 

@@ -120,13 +120,13 @@ export function flipShapes(shapes: Shape[], flip: Flip): Shape[] {
 
 /**
  * `operation` as the bottom side sees it, mirrored with its drawing so it
- * cuts the same on the part: a profile's tabs and a profile's or engraving's
- * start points at their mirrored places, and a linear pocket's passes at the
+ * cuts the same on the part: a profile's tabs and excluded corner overcuts
+ * and a profile's or engraving's start points at their mirrored places, and a linear pocket's passes at the
  * mirrored angle (45° and −45° swap).
  */
 export function flipOperation(operation: Operation, flip: Flip): Operation {
   if (operation.type === "profile") {
-    const { tabs, startPoints } = operation.params;
+    const { tabs, startPoints, cornerOvercuts } = operation.params;
     const mirrored = tabs && {
       ...tabs,
       positions: tabs.positions.map((point) => flipPoint2(flip, point)),
@@ -137,6 +137,10 @@ export function flipOperation(operation: Operation, flip: Flip): Operation {
         ...operation.params,
         tabs: mirrored,
         startPoints: startPoints.map((point) => flipPoint2(flip, point)),
+        cornerOvercuts: cornerOvercuts && {
+          ...cornerOvercuts,
+          excluded: cornerOvercuts.excluded.map((point) => flipPoint2(flip, point)),
+        },
       },
     };
   }

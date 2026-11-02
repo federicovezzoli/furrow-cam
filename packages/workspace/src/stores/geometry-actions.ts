@@ -215,14 +215,17 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
   );
 }
 
-/** Which of an operation's tab positions and start points (#426) belong to a drawing. */
-type OwnMarkers = { tabs: boolean[]; startPoints: boolean[] };
+/**
+ * Which of an operation's tab positions, start points (#426) and excluded
+ * corner overcuts (#428) belong to a drawing.
+ */
+type OwnMarkers = { tabs: boolean[]; startPoints: boolean[]; overcuts: boolean[] };
 
 /**
- * Which tab positions and start points of each profile or engraving
- * targeting drawing `id` belong to it, by operation id: those nearer its
- * paths than the operation's other targets' (ADR-0055), closed paths for
- * tabs and any path for start points. They are placed on the paths, but a
+ * Which tab positions, start points and excluded overcuts of each profile or
+ * engraving targeting drawing `id` belong to it, by operation id: those
+ * nearer its paths than the operation's other targets' (ADR-0055), closed
+ * paths for tabs and overcuts and any path for start points. They are placed on the paths, but a
  * tolerance can't tell after a scale moves them off the new flattening; a
  * tie, coincident shapes of two drawings, stays with the other drawing.
  */
@@ -238,6 +241,7 @@ function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnM
     if (mine.length === 0) continue;
     const others = targeted.filter((shape) => shape.drawingId !== id);
     const own = (positions: Point[], lines: (of: Shape[]) => Point[][]) => {
+      if (positions.length === 0) return [];
       const [near, far] = [lines(mine), lines(others)];
       return positions.map((position) => {
         const ours = nearestOnLoops(near, position);
@@ -245,10 +249,11 @@ function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnM
         return ours !== null && (theirs === null || ours.distance < theirs.distance);
       });
     };
-    const tabs = operation.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
+    const profile = operation.type === "profile" ? operation.params : null;
     markers.set(operation.id, {
-      tabs: own(tabs, (of) => closedLoops(of)),
+      tabs: own(profile?.tabs?.positions ?? [], (of) => closedLoops(of)),
       startPoints: own(operation.params.startPoints, allPaths),
+      overcuts: own(profile?.cornerOvercuts?.excluded ?? [], (of) => closedLoops(of)),
     });
   }
   return markers;
@@ -321,6 +326,9 @@ function transformDrawing(
         });
       if (operation.type === "profile" && operation.params.tabs) {
         move(operation.params.tabs.positions, moved.tabs);
+      }
+      if (operation.type === "profile" && operation.params.cornerOvercuts) {
+        move(operation.params.cornerOvercuts.excluded, moved.overcuts);
       }
       move(operation.params.startPoints, moved.startPoints);
     }
@@ -580,6 +588,10 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       if (operation.type === "profile" && operation.params.tabs) {
         operation.params.tabs.positions = copied(operation.params.tabs.positions, own.tabs);
       }
+      const overcuts = operation.type === "profile" ? operation.params.cornerOvercuts : null;
+      if (overcuts && own.overcuts.some(Boolean)) {
+        overcuts.excluded = copied(overcuts.excluded, own.overcuts);
+      }
       if (own.startPoints.some(Boolean)) {
         operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);
       }
@@ -611,6 +623,10 @@ export function removeDrawing(store: DocumentStore, id: string) {
       const gone = owned.get(operation.id);
       const tabs = operation.type === "profile" ? operation.params.tabs : null;
       if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone.tabs[i]);
+      const overcuts = operation.type === "profile" ? operation.params.cornerOvercuts : null;
+      if (gone && overcuts) {
+        overcuts.excluded = overcuts.excluded.filter((_, i) => !gone.overcuts[i]);
+      }
       if (
         gone?.startPoints.some(Boolean) &&
         (operation.type === "profile" || operation.type === "engrave")

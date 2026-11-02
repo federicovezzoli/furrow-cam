@@ -2,10 +2,12 @@
 
 import {
   closedLoops,
+  excludeOvercuts,
   grooveWidth,
   holdingTabStrips,
   modelOutlines,
   nearestOnLoops,
+  profileOvercuts,
   snapStartPoint,
   startPointCentres,
   startPointPaths,
@@ -27,10 +29,12 @@ import {
 import {
   addStartPoint,
   addTab,
+  excludeOvercut,
   moveStartPoint,
   moveTab,
   removeStartPoint,
   removeTab,
+  restoreOvercut,
 } from "../../stores/operation-actions";
 import { moveHoldingTab } from "../../stores/stock-actions";
 import { RENDER_ORDER } from "./scene-style";
@@ -241,6 +245,57 @@ export function StartPoints({ color }: { color: string }) {
   );
 }
 
+/**
+ * The selected profile's corner overcuts (#428), each a disc as wide as the
+ * tool at the end of the overcut, at the final depth; a left-out one only
+ * outlined. While editing them, clicking one leaves it out or puts it back.
+ */
+export function Overcuts({ color }: { color: string }) {
+  const selected = useSelectedOperation();
+  const operation =
+    selected?.type === "profile" && selected.params.cornerOvercuts ? selected : null;
+  const editing = useWorkspaceStore((s) => s.editing === "overcuts");
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const store = useDocumentStoreApi();
+  const targets = operation?.targets;
+  const side = operation?.params.side;
+  const radius = operation && operation.tool.diameter / 2;
+  const maxAngle = operation?.params.cornerOvercuts?.maxAngle;
+  const excluded = operation?.params.cornerOvercuts?.excluded;
+  const shapes = useMemo(
+    () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
+    [geometry, targets],
+  );
+  // Leaving one out only matches the excluded points again, without offsetting the shapes.
+  const found = useMemo(
+    () =>
+      side && radius && maxAngle !== undefined
+        ? profileOvercuts(shapes, side, radius, maxAngle)
+        : [],
+    [shapes, side, radius, maxAngle],
+  );
+  const overcuts = useMemo(() => excludeOvercuts(found, excluded ?? []), [found, excluded]);
+  if (!operation || !radius) return null;
+
+  return overcuts.map(({ ring, vertex, tip, corner, excludedBy }) => (
+    <TabMarker
+      key={`${ring}:${vertex}`}
+      frame={{ center: tip, angle: 0 }}
+      z={-operation.params.depth}
+      editing={editing}
+      onRemove={() =>
+        excludedBy.length > 0
+          ? restoreOvercut(store, operation.id, excludedBy)
+          : excludeOvercut(store, operation.id, corner)
+      }
+    >
+      <MarkerMesh color={color} faded={excludedBy.length > 0}>
+        <circleGeometry args={[radius, 32]} />
+      </MarkerMesh>
+    </TabMarker>
+  ));
+}
+
 /** A tab's material as a translucent box, `size` along the contour, across it and up. */
 function TabBox({ size, color }: { size: Vec3; color: string }) {
   return (
@@ -250,8 +305,16 @@ function TabBox({ size, color }: { size: Vec3; color: string }) {
   );
 }
 
-/** A marker's `children` geometry, translucent and outlined. */
-function MarkerMesh({ color, children }: { color: string; children: ReactNode }) {
+/** A marker's `children` geometry, translucent and outlined, or only outlined when `faded`. */
+function MarkerMesh({
+  color,
+  faded = false,
+  children,
+}: {
+  color: string;
+  faded?: boolean;
+  children: ReactNode;
+}) {
   return (
     // Drawn over the stock and the shapes, which would otherwise hide it from above.
     <mesh renderOrder={RENDER_ORDER.tabs}>
@@ -259,7 +322,7 @@ function MarkerMesh({ color, children }: { color: string; children: ReactNode })
       <meshBasicMaterial
         color={color}
         transparent
-        opacity={0.35}
+        opacity={faded ? 0 : 0.35}
         depthTest={false}
         depthWrite={false}
       />
@@ -272,8 +335,9 @@ function MarkerMesh({ color, children }: { color: string; children: ReactNode })
 type TabPress = { pointerId: number; x: number; y: number; dragging: boolean };
 
 /**
- * A tab or start point drawn as `children`, which a drag moves and a click
- * removes while `editing`, showing the grab cursor over it and while dragging.
+ * A tab, start point or overcut drawn as `children`, which a drag moves and
+ * a click removes while `editing`, showing the grab cursor over it and while
+ * dragging, or the pointer one when it can't be dragged.
  */
 function TabMarker({
   frame,
@@ -287,7 +351,8 @@ function TabMarker({
   /** Height of the marker's middle. */
   z: number;
   editing: boolean;
-  onMove: (point: Point) => void;
+  /** Without it, the marker can't be dragged. */
+  onMove?: (point: Point) => void;
   /** Without it, a click on the marker does nothing. */
   onRemove?: () => void;
   children: ReactNode;
@@ -307,7 +372,13 @@ function TabMarker({
 
   function showCursor() {
     setMarkerCursor(
-      press.current?.dragging ? "grabbing" : editing && hovered.current ? "grab" : null,
+      press.current?.dragging
+        ? "grabbing"
+        : editing && hovered.current
+          ? onMove
+            ? "grab"
+            : "pointer"
+          : null,
     );
   }
 
@@ -365,7 +436,7 @@ function TabMarker({
       }}
       onPointerMove={(event) => {
         const current = press.current;
-        if (!current || current.pointerId !== event.pointerId) return;
+        if (!current || current.pointerId !== event.pointerId || !onMove) return;
         event.stopPropagation();
         if (!current.dragging) {
           const travel = Math.hypot(event.clientX - current.x, event.clientY - current.y);

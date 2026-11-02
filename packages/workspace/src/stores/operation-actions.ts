@@ -58,6 +58,7 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
     ramp: false,
     tabs: null,
     startPoints: [],
+    cornerOvercuts: null,
   };
 }
 
@@ -724,5 +725,35 @@ export function moveStartPoint(store: DocumentStore, id: string, index: number, 
 export function removeStartPoint(store: DocumentStore, id: string, index: number) {
   changeStartPoints(store, "removeStartPoint", id, (startPoints) => {
     if (index >= 0 && index < startPoints.length) startPoints.splice(index, 1);
+  });
+}
+
+/** Applies `recipe` to the excluded corner overcuts of profile `id`, if it has overcuts. */
+function changeExcludedOvercuts(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  recipe: (excluded: Point[]) => void,
+) {
+  changeOperation(store, name, id, (operation) => {
+    if (operation.type === "profile" && operation.params.cornerOvercuts) {
+      recipe(operation.params.cornerOvercuts.excluded);
+    }
+  });
+}
+
+/** Leaves out the corner overcut (#428) of profile `id` at drawn corner `corner`. */
+export function excludeOvercut(store: DocumentStore, id: string, corner: Point) {
+  changeExcludedOvercuts(store, "excludeOvercut", id, (excluded) => {
+    excluded.push(corner);
+  });
+}
+
+/** Puts back a corner overcut of profile `id` by dropping the excluded points at `indices`. */
+export function restoreOvercut(store: DocumentStore, id: string, indices: number[]) {
+  changeExcludedOvercuts(store, "restoreOvercut", id, (excluded) => {
+    for (const index of [...indices].sort((a, b) => b - a)) {
+      if (index >= 0 && index < excluded.length) excluded.splice(index, 1);
+    }
   });
 }

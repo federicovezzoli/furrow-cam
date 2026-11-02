@@ -88,3 +88,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0071](0071-going-over-clears-the-whole-sub-step.md) | Relief passes go over a wall no lower than the tool anywhere along the level move | Proposed |
 | [0072](0072-step-files-imported-as-stl.md) | STEP files are turned into STL on import, with OpenCascade in WebAssembly | Proposed |
 | [0073](0073-no-look-between-close-samples.md) | Relief passes don't look between samples close in height | Proposed |
+| [0074](0074-desktop-installs-updates.md) | The desktop app installs updates itself on Windows and Linux, through the download Worker | Proposed |

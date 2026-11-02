@@ -87,6 +87,7 @@ const params: ProfileParams = {
   ramp: false,
   tabs: null,
   startPoints: [],
+  cornerOvercuts: null,
 };
 
 function profileCut(shape: Shape, overrides: Partial<ProfileParams>): SimulationCut {
