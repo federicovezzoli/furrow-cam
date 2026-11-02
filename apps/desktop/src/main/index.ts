@@ -131,6 +131,8 @@ let prefsWrite = Promise.resolve();
 let releaseCheck: Promise<Release | null> | null = null;
 /** An update dialog is open: another would repeat it. */
 let updateDialogOpen = false;
+/** The release being downloaded, outside the dialogs (ADR-0074). */
+let downloading: Release | null = null;
 let telemetryPrefs: TelemetryPrefs = {};
 /** Writes of `telemetry.json`, in order, as `prefsWrite`. */
 let telemetryWrite = Promise.resolve();
@@ -177,7 +179,7 @@ if (!app.requestSingleInstanceLock()) {
       const release = installOnQuit;
       installOnQuit = null;
       event.preventDefault();
-      void installAndRestart(release);
+      installAndRestart(release);
     }
   });
   app.on("window-all-closed", () => {
@@ -433,6 +435,14 @@ async function startupUpdateCheck() {
 function checkForUpdatesNow() {
   return withUpdateDialog(async () => {
     const t = tr();
+    if (downloading) {
+      await dialog.showMessageBox({
+        type: "info",
+        message: t("DesktopMain.updates.downloading", { version: downloading.version }),
+        buttons: [t("DesktopMain.updates.ok")],
+      });
+      return;
+    }
     let release: Release | null;
     try {
       release = await checkForRelease();
@@ -479,20 +489,26 @@ async function offerRelease(release: Release) {
     defaultId: 0,
     cancelId: 2,
   });
-  if (response === 0 && install) await downloadRelease(release);
+  // Not awaited: the download takes minutes, and Check for Updates… says it's under way.
+  if (response === 0 && install) void downloadRelease(release);
   else if (response === 0) void shell.openExternal(release.url);
   else if (response === 1) await saveUpdatePrefs({ skippedVersion: release.version });
 }
 
 /** Downloads the update, with its progress on the window, then offers to restart into it. */
 async function downloadRelease(release: Release) {
+  downloading = release;
+  let failure: { error: unknown } | null = null;
   try {
     await autoUpdater.downloadUpdate();
   } catch (error) {
-    await installFailed(release, error);
+    failure = { error };
+  }
+  downloading = null;
+  window?.setProgressBar(-1);
+  if (failure) {
+    await installFailed(release, failure.error);
     return;
-  } finally {
-    window?.setProgressBar(-1);
   }
   const t = tr();
   const { response } = await dialog.showMessageBox({
@@ -511,20 +527,20 @@ async function downloadRelease(release: Release) {
 }
 
 /** Installs the downloaded update and starts the new version; if that fails, just quits. */
-async function installAndRestart(release: Release) {
-  let failure: Error | undefined;
-  const onError = (error: Error) => {
-    failure = error;
-  };
-  autoUpdater.on("error", onError);
+function installAndRestart(release: Release) {
+  // Kept until the app exits: on Windows a failure to start the installer comes after
+  // `quitAndInstall` has returned, and without a listener it would be an unhandled rejection.
+  autoUpdater.once("error", async (error) => {
+    // Otherwise the quit would try again, asking for a password a second time on Linux.
+    autoUpdater.autoInstallOnAppQuit = false;
+    await installFailed(release, error);
+    app.quit();
+  });
+  // The new version may start before this one exits (an AppImage does at once): it mustn't
+  // find the lock taken and quit.
+  app.releaseSingleInstanceLock();
   // Silent, then runs the new version; electron-updater quits on success.
   autoUpdater.quitAndInstall(true, true);
-  autoUpdater.off("error", onError);
-  if (!failure) return;
-  // Otherwise the quit would try again, asking for a password a second time on Linux.
-  autoUpdater.autoInstallOnAppQuit = false;
-  await installFailed(release, failure);
-  app.quit();
 }
 
 /** Says the update couldn't be installed and offers its release page instead. */

@@ -1,5 +1,7 @@
 // Which file each platform downloads, and how to find the newest one among the releases.
 
+export const REPO = "federicovezzoli/furrow-cam";
+
 /** The path on download.furrow.cam → the end of the installer's file name. */
 export const PLATFORMS = {
   "mac-arm64": "mac-arm64.dmg",
@@ -27,6 +29,9 @@ const FILES = [...(Object.keys(PLATFORMS) as Platform[]), ...UPDATE_FILES];
 
 const assetName = (file: Platform | UpdateFile, version: string) =>
   isUpdateFile(file) ? file : `furrow-cam-${version}-${PLATFORMS[file]}`;
+
+/** A file `assetName` names for its version: an installer, or its blockmap. */
+const RELEASE_FILE = /^furrow-cam-(\d+\.\d+\.\d+)-[\w.-]+$/;
 
 /** The fields we read from GitHub's releases API. */
 export interface Release {
@@ -87,4 +92,17 @@ export function findInstallers(releases: Release[]): Installers {
   return installers;
 }
 
-export const hasEveryFile = (installers: Installers) => FILES.every((file) => file in installers);
+/**
+ * Where GitHub serves `name` from the desktop release of the version in it, or `undefined`
+ * for a name `assetName` wouldn't give.
+ */
+export function releaseFileUrl(name: string) {
+  const version = RELEASE_FILE.exec(name)?.[1];
+  if (!version) return undefined;
+  const tag = TAG_PREFIX.replaceAll("@", "%40") + version;
+  return `https://github.com/${REPO}/releases/download/${tag}/${name}`;
+}
+
+/** The update metadata comes with the installers, so finding those is enough. */
+export const hasEveryPlatform = (installers: Installers) =>
+  Object.keys(PLATFORMS).every((platform) => platform in installers);

@@ -4,21 +4,17 @@
 
 import {
   findInstallers,
-  hasEveryFile,
+  hasEveryPlatform,
   type Installers,
   isPlatform,
   isUpdateFile,
   PLATFORMS,
+  REPO,
   type Release,
+  releaseFileUrl,
 } from "./installers";
 
-const REPO = "federicovezzoli/furrow-cam";
 export const DESKTOP_RELEASES_URL = `https://github.com/${REPO}/releases?q=%40furrow%2Fdesktop&expanded=true`;
-
-/** A file of one desktop release, named for its version: an installer or its blockmap. */
-const RELEASE_FILE = /^furrow-cam-(\d+\.\d+\.\d+)-[\w.-]+$/;
-const releaseFileUrl = (version: string, name: string) =>
-  `https://github.com/${REPO}/releases/download/%40furrow/desktop%40${version}/${name}`;
 
 // The newest installers, kept in the data centre's cache so GitHub is asked at most
 // once every few minutes per location.
@@ -56,7 +52,7 @@ async function fetchReleases(deps: Deps, token: string | undefined): Promise<Rel
     if (!response.ok) throw new Error(`GitHub releases: HTTP ${response.status}`);
     const batch = (await response.json()) as Release[];
     releases.push(...batch);
-    if (batch.length < PER_PAGE || hasEveryFile(findInstallers(releases))) break;
+    if (batch.length < PER_PAGE || hasEveryPlatform(findInstallers(releases))) break;
   }
   return releases;
 }
@@ -94,6 +90,12 @@ export function createWorker(deps: Deps) {
     });
     return pending;
   };
+  // GitHub unreachable: no file is found, and each route falls back.
+  const installersOrNone = (env: Env) =>
+    sharedLoad(env).catch((error: unknown): Installers => {
+      console.error(error);
+      return {};
+    });
 
   return {
     async fetch(request: Request, env: Env): Promise<Response> {
@@ -112,28 +114,16 @@ export function createWorker(deps: Deps) {
       // version's blockmap for a differential download.
       if (path.startsWith("update/")) {
         const name = path.slice("update/".length);
-        const version = RELEASE_FILE.exec(name)?.[1];
-        if (version) return redirect(releaseFileUrl(version, name));
+        const url = releaseFileUrl(name);
+        if (url) return redirect(url);
         if (!isUpdateFile(name)) return new Response("Not found\n", { status: 404 });
-        let installers: Installers = {};
-        try {
-          installers = await sharedLoad(env);
-        } catch (error) {
-          console.error(error);
-        }
-        const file = installers[name];
+        const file = (await installersOrNone(env))[name];
         return file ? redirect(file.url) : new Response("Not found\n", { status: 404 });
       }
 
       if (!isPlatform(path)) return new Response(NOT_FOUND, { status: 404 });
 
-      let installers: Installers = {};
-      try {
-        installers = await sharedLoad(env);
-      } catch (error) {
-        console.error(error);
-      }
-      const installer = installers[path];
+      const installer = (await installersOrNone(env))[path];
       // GitHub unreachable, or no release has this file yet: the release list still works.
       if (!installer) return redirect(DESKTOP_RELEASES_URL);
 

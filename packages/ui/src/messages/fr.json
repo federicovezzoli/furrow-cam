@@ -436,6 +436,7 @@
       "installDetail": "Vous avez la version {current}. Furrow CAM peut télécharger la nouvelle version et l'installer pour vous.",
       "download": "Télécharger",
       "downloadAndInstall": "Télécharger et installer",
+      "downloading": "Téléchargement de Furrow CAM {version} en cours",
       "skip": "Ignorer cette version",
       "later": "Plus tard",
       "ready": "Furrow CAM {version} est prêt à être installé",

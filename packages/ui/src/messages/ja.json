@@ -436,6 +436,7 @@
       "installDetail": "現在のバージョンは {current} です。Furrow CAM が新しいバージョンをダウンロードしてインストールできます。",
       "download": "ダウンロード",
       "downloadAndInstall": "ダウンロードしてインストール",
+      "downloading": "Furrow CAM {version} をダウンロードしています",
       "skip": "このバージョンをスキップ",
       "later": "後で",
       "ready": "Furrow CAM {version} をインストールする準備ができました",

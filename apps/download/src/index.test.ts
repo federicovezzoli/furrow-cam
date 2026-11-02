@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createWorker, DESKTOP_RELEASES_URL, type Deps } from "./index";
-import { desktopRelease } from "./test-releases";
+import { desktopRelease, INSTALLERS } from "./test-releases";
 
 function setup(pages: unknown[][] | Error, { cacheFails = false } = {}) {
   const store = new Map<string, Response>();
@@ -74,6 +74,12 @@ describe("download worker", () => {
       "https://example.com/0.3.0/linux-x86_64.AppImage",
     );
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops reading pages once every installer is found, metadata or not", async () => {
+    const { get, fetch } = setup([[desktopRelease("0.3.0", INSTALLERS)], []]);
+    expect((await get("/update/latest.yml")).status).toBe(404);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("does not count HEAD requests", async () => {

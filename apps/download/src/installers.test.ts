@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findInstallers, hasEveryFile, isPlatform } from "./installers";
+import { findInstallers, hasEveryPlatform, isPlatform } from "./installers";
 import { desktopRelease, FILES, INSTALLERS } from "./test-releases";
 
 describe("findInstallers", () => {
@@ -16,7 +16,7 @@ describe("findInstallers", () => {
     });
     expect(installers["linux-pacman"]?.url).toBe("https://example.com/0.10.0/linux-x64.pacman");
     expect(installers["latest-linux.yml"]?.url).toBe("https://example.com/0.10.0/latest-linux.yml");
-    expect(hasEveryFile(installers)).toBe(true);
+    expect(hasEveryPlatform(installers)).toBe(true);
   });
 
   it("falls back per platform while a release's files are still being attached", () => {
@@ -39,7 +39,7 @@ describe("findInstallers", () => {
       },
     ]);
     expect(installers).toEqual({});
-    expect(hasEveryFile(installers)).toBe(false);
+    expect(hasEveryPlatform(installers)).toBe(false);
   });
 });
 

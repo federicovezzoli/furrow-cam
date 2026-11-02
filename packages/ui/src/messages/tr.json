@@ -436,6 +436,7 @@
       "installDetail": "Sizdeki sürüm: {current}. Furrow CAM yeni sürümü sizin için indirip kurabilir.",
       "download": "İndir",
       "downloadAndInstall": "İndir ve Kur",
+      "downloading": "Furrow CAM {version} indiriliyor",
       "skip": "Bu Sürümü Atla",
       "later": "Daha Sonra",
       "ready": "Furrow CAM {version} kurulmaya hazır",

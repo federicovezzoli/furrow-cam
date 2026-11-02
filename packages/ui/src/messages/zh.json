@@ -436,6 +436,7 @@
       "installDetail": "你当前的版本是{current}。Furrow CAM 可以为你下载并安装新版本。",
       "download": "下载",
       "downloadAndInstall": "下载并安装",
+      "downloading": "正在下载 Furrow CAM {version}",
       "skip": "跳过此版本",
       "later": "稍后",
       "ready": "Furrow CAM {version} 已可安装",

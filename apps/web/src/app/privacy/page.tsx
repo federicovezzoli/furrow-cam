@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslator())("Meta.privacyTitle") };
 }
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052).
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
 const LAST_UPDATED = "2 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
