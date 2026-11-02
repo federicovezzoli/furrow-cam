@@ -295,6 +295,7 @@ describe("duplicateDrawing", () => {
     if (profile?.type !== "profile") throw new Error("fixture");
     profile.targets = doc.geometry.map(({ id }) => ({ shapeId: id, paths: null }));
     profile.params.tabs = null;
+    profile.params.cornerOvercuts = null;
     const store = createDocumentStore(doc);
     expect(duplicateDrawing(store, DRAWING_ID)).not.toBeNull();
     expect(store.getState().document.operations[0]?.targets).toHaveLength(300_000);

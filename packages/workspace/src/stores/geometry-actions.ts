@@ -241,6 +241,7 @@ function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnM
     if (mine.length === 0) continue;
     const others = targeted.filter((shape) => shape.drawingId !== id);
     const own = (positions: Point[], lines: (of: Shape[]) => Point[][]) => {
+      if (positions.length === 0) return [];
       const [near, far] = [lines(mine), lines(others)];
       return positions.map((position) => {
         const ours = nearestOnLoops(near, position);
