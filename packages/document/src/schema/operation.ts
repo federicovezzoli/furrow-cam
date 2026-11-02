@@ -111,8 +111,8 @@ export type ProfileTabs = z.infer<typeof ProfileTabs>;
  */
 export const CornerOvercuts = z.strictObject({
   /** A corner gets an overcut when its angle on the side the tool cuts is at most this, in degrees. */
-  maxAngle: z.number().gt(0).lt(180),
-  /** In stock coordinates; each removes the overcut nearest to it. */
+  maxAngle: z.number().min(0).max(180),
+  /** In stock coordinates; each leaves out an overcut at the drawn corner it is on. */
   excluded: z.array(Point),
 });
 export type CornerOvercuts = z.infer<typeof CornerOvercuts>;

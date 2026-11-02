@@ -80,13 +80,14 @@ describe("ProfileParams", () => {
     expect(ProfileParams.safeParse({ ...onLine, cornerOvercuts: overcuts }).success).toBe(false);
   });
 
-  it("accepts corner overcuts with an angle between 0° and 180°", () => {
+  it("accepts corner overcuts with an angle from 0° to 180°", () => {
     const at = (maxAngle: number) =>
       ProfileParams.safeParse({ ...params, cornerOvercuts: { maxAngle, excluded: [[0, 0]] } })
         .success;
-    expect(at(90)).toBe(true);
-    expect(at(0)).toBe(false);
-    expect(at(180)).toBe(false);
+    expect(at(0)).toBe(true);
+    expect(at(180)).toBe(true);
+    expect(at(-1)).toBe(false);
+    expect(at(181)).toBe(false);
   });
 
   it("needs an allowance for a finish pass", () => {

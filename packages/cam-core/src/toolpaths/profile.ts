@@ -14,7 +14,13 @@ import { containment, difference, offset, type Polygon, signedArea } from "../ge
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type Projection, projectOnLoop } from "../geometry/loop";
 import type { ToolpathMessage } from "./messages";
-import { findOvercuts, type Overcut, withOvercuts } from "./overcuts";
+import {
+  drawnCorners,
+  excludeOvercuts,
+  findOvercuts,
+  type Overcut,
+  withOvercuts,
+} from "./overcuts";
 import {
   type Box,
   bounds,
@@ -110,8 +116,10 @@ type Cut = Descent & {
  *   edge, or at the nearer end of a tab it falls on; an open path is cut from
  *   its nearer end on every pass, instead of back and forth.
  * - Corner overcuts (#428), `inside` or `outside`: at each corner of a
- *   contour sharp enough, the tool runs along the bisector until its edge
- *   reaches the drawn corner, less the allowance, and back, on every pass.
+ *   contour sharp enough, where drawn segments meet, the tool runs along the
+ *   bisector until its edge reaches the drawn corner, less the allowance, and
+ *   back, on every pass; above a tab it stays at the tab top. An excluded
+ *   point on a drawn corner leaves out an overcut there.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -255,6 +263,25 @@ export function contourToolpath(
     }
   }
 
+  const { cornerOvercuts } = params;
+  if (cornerOvercuts && params.side !== "on") {
+    // After the start points and tabs, so neither lands on an overcut.
+    const corners = drawnCorners(shapes, cornerOvercuts.maxAngle);
+    const addOvercuts = ({ contours: found }: Contours, distance: number) => {
+      const overcuts = excludeOvercuts(
+        findOvercuts(found, distance, corners, tolerance),
+        cornerOvercuts.excluded,
+        tolerance,
+      );
+      found.forEach((contour, i) => {
+        const own = overcuts.filter((overcut) => overcut.ring === i);
+        Object.assign(contour, withOvercuts(contour.ring, contour.tabs, own));
+      });
+    };
+    addOvercuts(roughing, offset + params.allowance);
+    if (finishing) addOvercuts(finishing, offset);
+  }
+
   // Open paths never free the part, so they go before any closed contour.
   if (params.side === "on") {
     for (const { path, oneWay } of open) cutOpenPath(cut, path, levels, oneWay);
@@ -319,29 +346,30 @@ export function contourToolpath(
 }
 
 /**
- * The corner overcuts (#428) of `cornerOvercuts` that a profile with a tool
- * of `radius` cuts along `shapes` on `side`, at the finished contour.
+ * The corner overcuts (#428) up to `maxAngle` that a profile with a tool of
+ * `radius` cuts along `shapes` on `side`, at the finished contour, none
+ * excluded yet (`excludeOvercuts`).
  */
 export function profileOvercuts(
   shapes: Shape[],
   side: ProfileSide,
   radius: number,
-  cornerOvercuts: CornerOvercuts,
+  maxAngle: number,
   tolerance = DEFAULT_CHORD_TOLERANCE,
 ): Overcut[] {
   if (side === "on") return [];
   const closed = closedLoops(shapes, tolerance).map((loop) => loop.slice(0, -1));
   const { contours: found } = contours(closed, { side, direction: "climb" }, radius);
-  return findOvercuts(found, radius, cornerOvercuts);
+  return findOvercuts(found, radius, drawnCorners(shapes, maxAngle), tolerance);
 }
 
 /**
  * The rings the tool centre follows, `distance` away from the closed paths on
- * `side`, in cutting direction and cutting order, with their corner overcuts.
+ * `side`, in cutting direction and cutting order.
  */
 function contours(
   closed: Polygon[],
-  { side, direction, cornerOvercuts }: Pick<ContourCut, "side" | "direction" | "cornerOvercuts">,
+  { side, direction }: Pick<ContourCut, "side" | "direction">,
   distance: number,
 ): Contours {
   // Every ring here has the area it bounds on its left: the kept material for
@@ -361,15 +389,6 @@ function contours(
       startPoint: false,
     }))
     .sort((a, b) => a.area - b.area);
-  if (cornerOvercuts && side !== "on") {
-    const overcuts = findOvercuts(contours, distance, cornerOvercuts);
-    contours.forEach((contour, i) => {
-      contour.ring = withOvercuts(
-        contour.ring,
-        overcuts.filter((overcut) => overcut.ring === i),
-      );
-    });
-  }
 
   // The rings nest without crossing, so even-odd containment gives the area they bound.
   const boxes = rings.map(bounds);
