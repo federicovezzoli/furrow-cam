@@ -98,8 +98,12 @@ describe("OperationProperties", () => {
       const [profile] = store.getState().document.operations;
       return profile?.type === "profile" ? profile.params.cornerOvercuts : undefined;
     };
-    expect(screen.getByText(/Click one in the top view to leave it out/)).toBeTruthy();
+    workspace.getState().selectOperation(OPERATION_ID);
+    fireEvent.click(screen.getByRole("button", { name: "Edit overcuts" }));
+    expect(workspace.getState()).toMatchObject({ editing: "overcuts", view: "top" });
+    expect(screen.getByText(/Click an overcut to leave it out/)).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Corner overcuts"));
+    expect(workspace.getState().editing).toBeNull();
     expect(overcuts()).toBeNull();
     fireEvent.click(screen.getByLabelText("Corner overcuts"));
     expect(overcuts()).toEqual({ maxAngle: 90, excluded: [] });

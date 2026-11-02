@@ -715,7 +715,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
             error={errors.cornerOvercuts}
             {...gestureHandlers(store)}
           />
-          <p className="text-muted-foreground">{t("overcutsHint")}</p>
+          <OvercutsEditing />
         </div>
       )}
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
@@ -1625,6 +1625,29 @@ function TabsFields({
       </div>
       {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
     </div>
+  );
+}
+
+/** What corner overcuts (#428) do, and a toggle for leaving them out in the viewport. */
+function OvercutsEditing() {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "overcuts");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("overcutsHint")}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "overcuts")}
+        >
+          {editing ? t("done") : t("editOvercuts")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("overcutsEditHint")}</p>}
+    </>
   );
 }
 

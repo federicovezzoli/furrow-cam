@@ -2,6 +2,7 @@
 
 import {
   closedLoops,
+  excludeOvercuts,
   grooveWidth,
   holdingTabStrips,
   modelOutlines,
@@ -247,36 +248,38 @@ export function StartPoints({ color }: { color: string }) {
 /**
  * The selected profile's corner overcuts (#428), each a disc as wide as the
  * tool at the end of the overcut, at the final depth; a left-out one only
- * outlined. In the top view of the top side, clicking one leaves it out or
- * puts it back.
+ * outlined. While editing them, clicking one leaves it out or puts it back.
  */
 export function Overcuts({ color }: { color: string }) {
   const selected = useSelectedOperation();
   const operation =
     selected?.type === "profile" && selected.params.cornerOvercuts ? selected : null;
-  const editing = useWorkspaceStore(
-    (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
-  );
+  const editing = useWorkspaceStore((s) => s.editing === "overcuts");
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
   const targets = operation?.targets;
   const side = operation?.params.side;
   const radius = operation && operation.tool.diameter / 2;
-  const cornerOvercuts = operation?.params.cornerOvercuts;
+  const maxAngle = operation?.params.cornerOvercuts?.maxAngle;
+  const excluded = operation?.params.cornerOvercuts?.excluded;
   const shapes = useMemo(
     () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
     [geometry, targets],
   );
-  const overcuts = useMemo(
+  // Leaving one out only matches the excluded points again, without offsetting the shapes.
+  const found = useMemo(
     () =>
-      side && radius && cornerOvercuts ? profileOvercuts(shapes, side, radius, cornerOvercuts) : [],
-    [shapes, side, radius, cornerOvercuts],
+      side && radius && maxAngle !== undefined
+        ? profileOvercuts(shapes, side, radius, maxAngle)
+        : [],
+    [shapes, side, radius, maxAngle],
   );
+  const overcuts = useMemo(() => excludeOvercuts(found, excluded ?? []), [found, excluded]);
   if (!operation || !radius) return null;
 
-  return overcuts.map(({ tip, corner, excludedBy }) => (
+  return overcuts.map(({ ring, vertex, tip, corner, excludedBy }) => (
     <TabMarker
-      key={`${corner[0]},${corner[1]}`}
+      key={`${ring}:${vertex}`}
       frame={{ center: tip, angle: 0 }}
       z={-operation.params.depth}
       editing={editing}
@@ -334,7 +337,7 @@ type TabPress = { pointerId: number; x: number; y: number; dragging: boolean };
 /**
  * A tab, start point or overcut drawn as `children`, which a drag moves and
  * a click removes while `editing`, showing the grab cursor over it and while
- * dragging.
+ * dragging, or the pointer one when it can't be dragged.
  */
 function TabMarker({
   frame,
@@ -369,7 +372,13 @@ function TabMarker({
 
   function showCursor() {
     setMarkerCursor(
-      press.current?.dragging ? "grabbing" : editing && hovered.current ? "grab" : null,
+      press.current?.dragging
+        ? "grabbing"
+        : editing && hovered.current
+          ? onMove
+            ? "grab"
+            : "pointer"
+          : null,
     );
   }
 
