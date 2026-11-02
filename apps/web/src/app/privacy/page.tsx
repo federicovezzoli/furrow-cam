@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052).
-const LAST_UPDATED = "20 October 2026";
+const LAST_UPDATED = "2 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -101,10 +101,12 @@ export default async function PrivacyPage() {
           <p>
             The desktop app keeps your projects, bits and machines in files on your computer and
             never sends them to us. It makes no network requests except two you are asked about on
-            first start and can turn off in its Help menu: checking GitHub for a newer version,
-            which sends GitHub only your IP address and the app&apos;s user agent, and sending
+            first start and can turn off in its Help menu: checking for a newer version, and sending
             PostHog the anonymous usage statistics and error reports described below, with a new
-            random ID each time the app starts.
+            random ID each time the app starts. The update check sends only your IP address and the
+            app&apos;s user agent: to GitHub on macOS, and to download.furrow.cam and then GitHub on
+            Windows and Linux, where the app also downloads the update from GitHub if you choose to
+            install it.
           </p>
         </Section>
 
@@ -139,9 +141,10 @@ export default async function PrivacyPage() {
               <External href="https://www.cloudflare.com/privacypolicy/">Cloudflare</External>{" "}
               stores the 3D model files you import (Cloudflare R2), in a bucket restricted to the
               European Union. They are only reachable through short-lived links the app gives you.
-              It also runs the desktop app&apos;s download links (download.furrow.cam): it receives
-              your IP address and user agent with the request, and we keep only a count per system
-              and version, for three months. The installer itself is downloaded from GitHub.
+              It also runs the desktop app&apos;s download links and update checks
+              (download.furrow.cam): it receives your IP address and user agent with the request,
+              and we keep only a count of downloads per system and version, for three months. The
+              installer itself is downloaded from GitHub.
             </li>
             <li>
               <External href="https://resend.com/legal/privacy-policy">Resend</External> sends our

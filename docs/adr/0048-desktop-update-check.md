@@ -1,6 +1,6 @@
 # ADR-0048: The desktop app checks GitHub for newer versions and links to them
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0074](0074-desktop-installs-updates.md) (Windows and Linux download and install updates themselves)
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007, ADR-0012, ADR-0013, ADR-0044; #201, #212

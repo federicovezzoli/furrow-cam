@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-18
-- **Related:** PRD-0001, PRD-0005, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048
+- **Related:** PRD-0001, PRD-0005, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0074
 
 ## Problem
 
@@ -22,7 +22,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 ## Non-goals
 
 - **Syncing** between the desktop app and a web account.
-- **Code signing and automatic installs.** The app tells users about a new version (D12), but they download and install it themselves.
+- **Code signing**, and with it automatic installs on macOS: there the app tells users about a new version (D12), but they download and install it themselves.
 - **Usage limits** (PRD-0003) and analytics.
 - **Mobile or tablet apps.**
 
@@ -41,7 +41,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 | D9 | A tool library and machine list are kept on the computer and used for new projects, as in the web app | Must |
 | D10 | The web app imports `.furrow` files | Must |
 | D11 | The download page explains how to open the app the first time despite the operating system's warning for unsigned apps | Should |
-| D12 | If the user agrees on first start, the app checks for a newer version at start-up and offers to open its release page; the user can check by hand from the Help menu and turn the start-up check off | Should |
+| D12 | If the user agrees on first start, the app checks for a newer version at start-up; on Windows and Linux it offers to download and install it, on macOS to open its release page. The user can check by hand from the Help menu and turn the start-up check off | Should |
 | D13 | If the user agrees on first start, the app sends anonymous usage statistics and error reports (ADR-0052); the user can turn them on or off from the Help menu | Should |
 
 ## User flow
@@ -66,3 +66,4 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 - 2026-10-18: created (#184, ADR-0044, ADR-0045, ADR-0046, ADR-0047)
 - 2026-10-18: D12, an opt-in update check; D2 allows it (#212, ADR-0048)
 - 2026-10-20: D13, opt-in usage statistics and error reports; D2 allows them (#283, ADR-0052)
+- 2026-11-02: D12, the app installs updates itself on Windows and Linux (#457, ADR-0074)
