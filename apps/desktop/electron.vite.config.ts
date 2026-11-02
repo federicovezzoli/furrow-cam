@@ -10,9 +10,11 @@ import { defineConfig } from "electron-vite";
 /**
  * CommonJS: as an ES module, `import … from "electron"` would find the npm
  * package (the binary's path) instead of Electron's API, and a sandboxed
- * preload can't load ES modules at all.
+ * preload can't load ES modules at all. The @furrow/* dependencies are
+ * TypeScript source and the app ships no node_modules, so they are bundled.
  */
 const commonJs = {
+  externalizeDeps: false,
   rollupOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } },
 } as const;
 
