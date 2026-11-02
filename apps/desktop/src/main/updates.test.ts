@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { latestDesktopRelease, newerRelease, parseUpdatePrefs, parseVersion } from "./updates";
+import {
+  isUpdateRequest,
+  latestDesktopRelease,
+  newerRelease,
+  parseUpdatePrefs,
+  parseVersion,
+} from "./updates";
 
 const release = (tag: string, extra: Record<string, unknown> = {}) => ({
   tag_name: tag,
@@ -79,5 +85,28 @@ describe("parseUpdatePrefs", () => {
     });
     expect(parseUpdatePrefs({ checkAtStartup: "yes" })).toEqual({});
     expect(parseUpdatePrefs(null)).toEqual({});
+  });
+});
+
+describe("isUpdateRequest", () => {
+  it("lets through the update endpoint and the desktop release files", () => {
+    expect(isUpdateRequest("https://download.furrow.cam/update/latest.yml?noCache=1a")).toBe(true);
+    expect(
+      isUpdateRequest(
+        "https://github.com/federicovezzoli/furrow-cam/releases/download/%40furrow/desktop%400.3.0/furrow-cam-0.3.0-win-x64.exe",
+      ),
+    ).toBe(true);
+    expect(isUpdateRequest("https://release-assets.githubusercontent.com/abc")).toBe(true);
+  });
+
+  it("refuses everything else", () => {
+    expect(isUpdateRequest("https://download.furrow.cam/win")).toBe(false);
+    expect(isUpdateRequest("https://download.furrow.cam.example.com/update/")).toBe(false);
+    expect(
+      isUpdateRequest(
+        "https://github.com/federicovezzoli/furrow-cam/releases/download/%40furrow/web%401.0.0/x",
+      ),
+    ).toBe(false);
+    expect(isUpdateRequest("https://api.github.com/")).toBe(false);
   });
 });

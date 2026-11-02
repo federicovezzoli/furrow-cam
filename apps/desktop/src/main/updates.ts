@@ -1,11 +1,33 @@
 /**
- * Finding a newer desktop release on GitHub (ADR-0048). Pure helpers: the
- * request and the dialogs are in `index.ts`.
+ * Finding a newer desktop release on GitHub (ADR-0048), and the requests that
+ * install it on Windows and Linux (ADR-0074). Pure helpers: the requests and
+ * the dialogs are in `index.ts`.
  */
 
-/** The one URL the update check requests: every release of the repository. */
+const REPO = "https://github.com/federicovezzoli/furrow-cam";
+
+/** The one URL the macOS update check requests: every release of the repository. */
 export const RELEASES_URL =
   "https://api.github.com/repos/federicovezzoli/furrow-cam/releases?per_page=100";
+
+/**
+ * What electron-updater may request: the update endpoint (`publish` in
+ * `electron-builder.yml`), the desktop release files it redirects to, and
+ * GitHub's storage, where those redirect in turn.
+ */
+const UPDATE_PREFIXES = [
+  "https://download.furrow.cam/update/",
+  `${REPO}/releases/download/%40furrow/desktop%40`,
+  "https://release-assets.githubusercontent.com/",
+  "https://objects.githubusercontent.com/",
+];
+
+export const isUpdateRequest = (url: string) =>
+  UPDATE_PREFIXES.some((prefix) => url.startsWith(prefix));
+
+/** A desktop version's release page. */
+export const releasePage = (version: string) =>
+  `${REPO}/releases/tag/%40furrow/desktop%40${version}`;
 
 /** Desktop releases are tagged per package by Changesets (ADR-0012). */
 const TAG_PREFIX = "@furrow/desktop@";

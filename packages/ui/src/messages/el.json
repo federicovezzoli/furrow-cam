@@ -433,9 +433,17 @@
       "upToDateDetail": "Η έκδοση {version} είναι η πιο πρόσφατη.",
       "available": "Το Furrow CAM {version} είναι διαθέσιμο",
       "availableDetail": "Έχετε την {current}. Κατεβάστε τη νέα έκδοση από τη σελίδα της και εγκαταστήστε την πάνω από αυτήν.",
+      "installDetail": "Έχετε την {current}. Το Furrow CAM μπορεί να κατεβάσει τη νέα έκδοση και να την εγκαταστήσει για εσάς.",
       "download": "Λήψη",
+      "downloadAndInstall": "Λήψη και εγκατάσταση",
+      "downloading": "Γίνεται λήψη του Furrow CAM {version}",
       "skip": "Παράλειψη αυτής της έκδοσης",
       "later": "Αργότερα",
+      "ready": "Το Furrow CAM {version} είναι έτοιμο για εγκατάσταση",
+      "readyDetail": "Κάντε επανεκκίνηση τώρα για να ολοκληρωθεί. Διαφορετικά θα εγκατασταθεί όταν κλείσετε το Furrow CAM.",
+      "restart": "Επανεκκίνηση τώρα",
+      "installFailed": "Δεν ήταν δυνατή η εγκατάσταση της ενημέρωσης",
+      "installFailedDetail": "Κατεβάστε το Furrow CAM {version} από τη σελίδα του και εγκαταστήστε το πάνω από αυτήν την έκδοση.",
       "ok": "OK"
     },
     "files": {

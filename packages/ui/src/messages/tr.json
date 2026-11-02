@@ -433,9 +433,17 @@
       "upToDateDetail": "{version} sürümü en yenisidir.",
       "available": "Furrow CAM {version} kullanıma sunuldu",
       "availableDetail": "Sizdeki sürüm: {current}. Yeni sürümü sürüm sayfasından indirin ve bu sürümün üzerine kurun.",
+      "installDetail": "Sizdeki sürüm: {current}. Furrow CAM yeni sürümü sizin için indirip kurabilir.",
       "download": "İndir",
+      "downloadAndInstall": "İndir ve Kur",
+      "downloading": "Furrow CAM {version} indiriliyor",
       "skip": "Bu Sürümü Atla",
       "later": "Daha Sonra",
+      "ready": "Furrow CAM {version} kurulmaya hazır",
+      "readyDetail": "Tamamlamak için şimdi yeniden başlatın. Aksi halde Furrow CAM'den çıktığınızda kurulur.",
+      "restart": "Şimdi Yeniden Başlat",
+      "installFailed": "Güncelleme kurulamadı",
+      "installFailedDetail": "Furrow CAM {version} sürümünü sürüm sayfasından indirin ve bu sürümün üzerine kurun.",
       "ok": "Tamam"
     },
     "files": {

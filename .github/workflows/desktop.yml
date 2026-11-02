@@ -88,14 +88,19 @@ jobs:
             apps/desktop/dist/*.AppImage
             apps/desktop/dist/*.deb
             apps/desktop/dist/*.pacman
+            apps/desktop/dist/latest*.yml
+            apps/desktop/dist/*.blockmap
           if-no-files-found: error
 
+      # With electron-updater's metadata and blockmaps (ADR-0074). macOS's are attached too,
+      # though the app doesn't install updates there and the Worker doesn't serve them.
       - name: Attach to the release
         if: inputs.tag != ''
         shell: bash
         run: |
           shopt -s nullglob
-          gh release upload "$TAG" apps/desktop/dist/*.{dmg,exe,AppImage,deb,pacman} --clobber
+          gh release upload "$TAG" apps/desktop/dist/*.{dmg,exe,AppImage,deb,pacman,blockmap} \
+            apps/desktop/dist/latest*.yml --clobber
         env:
           TAG: ${{ inputs.tag }}
           GH_TOKEN: ${{ github.token }}
