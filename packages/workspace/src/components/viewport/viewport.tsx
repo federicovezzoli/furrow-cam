@@ -87,9 +87,11 @@ export function Viewport() {
           ? "cursor-grabbing"
           : markerCursor === "grab"
             ? "cursor-grab"
-            : editing || pickingZero
-              ? "cursor-crosshair"
-              : overPath && "cursor-pointer",
+            : markerCursor === "pointer"
+              ? "cursor-pointer"
+              : editing || pickingZero
+                ? "cursor-crosshair"
+                : overPath && "cursor-pointer",
       )}
       {...cancelPick}
     >

@@ -24,6 +24,7 @@ import {
   autoPlaceTabs,
   defaultTabs,
   deleteOperation,
+  excludeOvercut,
   moveOperation,
   moveStartPoint,
   moveTab,
@@ -31,6 +32,7 @@ import {
   removeTab,
   renameOperation,
   replaceToolSnapshots,
+  restoreOvercut,
   setDrillPins,
   setOperationEnabled,
   setOperationTargets,
@@ -863,6 +865,24 @@ describe("start points", () => {
     moveStartPoint(store, id, 2, [1, 1]);
     removeStartPoint(store, id, -1);
     expect(store.getState().document).toBe(before);
+  });
+});
+
+describe("corner overcuts", () => {
+  it("are left out and put back, only on a profile with overcuts", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    const before = store.getState().document;
+    excludeOvercut(store, id, [0, 0]);
+    expect(store.getState().document).toBe(before);
+    updateProfileParams(store, id, { cornerOvercuts: { maxAngle: 90, excluded: [] } });
+    excludeOvercut(store, id, [0, 0]);
+    excludeOvercut(store, id, [100, 0]);
+    excludeOvercut(store, id, [0, 1]);
+    restoreOvercut(store, id, [2, 0, 5]);
+    expect(profile(id).params.cornerOvercuts?.excluded).toEqual([[100, 0]]);
+    store.getState().undo();
+    expect(profile(id).params.cornerOvercuts?.excluded).toHaveLength(3);
   });
 });
 

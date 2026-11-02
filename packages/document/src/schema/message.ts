@@ -86,6 +86,7 @@ export const DOCUMENT_MESSAGES = [
   "document.unknownPath",
   "operation.pathIndices",
   "operation.allowanceZeroOnLine",
+  "operation.overcutsOnLine",
   "operation.allowanceNeeded",
   "operation.vBitsCantDrill",
   "operation.taperedBitsCantDrill",

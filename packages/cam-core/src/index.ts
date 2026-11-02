@@ -31,6 +31,7 @@ export * from "./toolpaths/engrave";
 export * from "./toolpaths/generate";
 export * from "./toolpaths/holding-tabs";
 export * from "./toolpaths/messages";
+export { excludeOvercuts, type Overcut } from "./toolpaths/overcuts";
 export { depthLevels } from "./toolpaths/passes";
 export * from "./toolpaths/pocket/pocket";
 export * from "./toolpaths/profile";

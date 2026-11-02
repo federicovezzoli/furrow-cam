@@ -15,7 +15,7 @@ export type HoveredGeometry = { shapeId: string; path: number };
 export type ModelImport = { fileName: string; error: Translatable | null };
 
 /** What the viewport edits on the selected operation. */
-export type EditMode = "tabs" | "startPoints";
+export type EditMode = "tabs" | "startPoints" | "overcuts";
 
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
@@ -50,13 +50,16 @@ export type WorkspaceState = {
   selectedOperationId: string | null;
   hovered: HoveredGeometry | null;
   /**
-   * Editing the selected profile's tabs, or the selected profile's or
-   * engraving's start points (#426), in the viewport. Only in the top view,
+   * Editing the selected profile's tabs or corner overcuts (#428), or the
+   * selected profile's or engraving's start points (#426), in the viewport. Only in the top view,
    * and ends when the selection or the view changes.
    */
   editing: EditMode | null;
-  /** A tab or start point marker under the pointer (`grab`) or being dragged (`grabbing`). */
-  markerCursor: "grab" | "grabbing" | null;
+  /**
+   * A tab or start point marker under the pointer (`grab`) or being dragged
+   * (`grabbing`), or an overcut marker, which only takes clicks (`pointer`).
+   */
+  markerCursor: "grab" | "grabbing" | "pointer" | null;
   /**
    * Picking the XY zero in the viewport (PRD-0002 Z5), from the stock
    * properties. Only in the top view and while nothing is selected (the stock
@@ -87,7 +90,7 @@ export type WorkspaceState = {
   setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
   setEditing: (editing: EditMode | null) => void;
-  setMarkerCursor: (cursor: "grab" | "grabbing" | null) => void;
+  setMarkerCursor: (cursor: WorkspaceState["markerCursor"]) => void;
   /** Switches to the top view when turned on. */
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
@@ -98,7 +101,8 @@ export type WorkspaceState = {
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
-   * editing without tabs, start point editing without a profile or engraving, picking the zero without a custom zero and the
+   * editing without tabs, start point editing without a profile or engraving, overcut
+   * editing without overcuts, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;
@@ -360,6 +364,12 @@ export function createWorkspaceStore() {
               if (
                 state.editing === "tabs" &&
                 !(operation?.type === "profile" && operation.params.tabs)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "overcuts" &&
+                !(operation?.type === "profile" && operation.params.cornerOvercuts)
               ) {
                 state.editing = null;
               }

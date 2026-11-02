@@ -55,8 +55,8 @@ function unalignedStore() {
 }
 
 /**
- * How far the drawing (the square's first point), the first tab and the
- * first start point are from where they were.
+ * How far the drawing (the square's first point), the first tab, the first
+ * start point and the first excluded overcut are from where they were.
  */
 function moved(before: ProjectDocument, after: ProjectDocument) {
   const first = (document: ProjectDocument) => document.geometry[0]?.paths[0]?.start ?? [0, 0];
@@ -68,6 +68,12 @@ function moved(before: ProjectDocument, after: ProjectDocument) {
     const operation = document.operations[0];
     return (operation?.type === "profile" && operation.params.startPoints[0]) || [0, 0];
   };
+  const overcut = (document: ProjectDocument) => {
+    const operation = document.operations[0];
+    return (
+      (operation?.type === "profile" && operation.params.cornerOvercuts?.excluded[0]) || [0, 0]
+    );
+  };
   const delta = (a: number[], b: number[]) => [
     (b[0] ?? 0) - (a[0] ?? 0),
     (b[1] ?? 0) - (a[1] ?? 0),
@@ -76,6 +82,7 @@ function moved(before: ProjectDocument, after: ProjectDocument) {
     drawing: delta(first(before), first(after)),
     tab: delta(tab(before), tab(after)),
     start: delta(start(before), start(after)),
+    overcut: delta(overcut(before), overcut(after)),
   };
 }
 
@@ -128,9 +135,10 @@ describe("setStockDimension", () => {
     setStockDimension(store, "height", 300);
     const after = store.getState().document;
     expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
-    const { drawing, tab, start } = moved(before, after);
+    const { drawing, tab, start, overcut } = moved(before, after);
     expectClose(tab, drawing);
     expectClose(start, drawing);
+    expectClose(overcut, drawing);
     store.getState().undo();
     store.getState().undo();
     expect(store.getState().document).toEqual(before);

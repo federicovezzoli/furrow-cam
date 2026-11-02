@@ -199,6 +199,23 @@ describe("workspace store", () => {
     expect(store.getState().editing).toBe("startPoints");
     store.getState().prune(createProjectDocument());
     expect(store.getState().editing).toBeNull();
+    // Overcut editing ends with the overcuts.
+    const withOvercuts = (cornerOvercuts: unknown) => ({
+      ...createProjectDocument(),
+      operations: [
+        {
+          id: "op",
+          type: "profile",
+          params: { cornerOvercuts },
+        } as ProjectDocument["operations"][number],
+      ],
+    });
+    store.getState().selectOperation("op");
+    store.getState().setEditing("overcuts");
+    store.getState().prune(withOvercuts({ maxAngle: 90, excluded: [] }));
+    expect(store.getState().editing).toBe("overcuts");
+    store.getState().prune(withOvercuts(null));
+    expect(store.getState().editing).toBeNull();
   });
 
   it("prunes ids and paths that are no longer in the document, keeping an unchanged selection", () => {

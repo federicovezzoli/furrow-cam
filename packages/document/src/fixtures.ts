@@ -262,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 32,
+    schemaVersion: 33,
     units: "in",
     stock: {
       width: 300,
@@ -310,6 +310,7 @@ export function fullDocument(): ProjectDocument {
           ramp: true,
           tabs: { width: 8, height: 3, positions: [[50, 0]] },
           startPoints: [[0, 50]],
+          cornerOvercuts: { maxAngle: 90, excluded: [[0, 0]] },
         },
       },
     ],

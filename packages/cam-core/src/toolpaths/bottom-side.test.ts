@@ -48,6 +48,7 @@ const profile = (side: "inside" | "outside", direction: "climb" | "conventional"
       ramp: false,
       tabs: tabs ? { width: 8, height: 2, positions: [[45, 10]] } : null,
       startPoints: [],
+      cornerOvercuts: null,
     },
   }) satisfies Operation;
 /** A 6 mm hole centred at (150, 30), for the 6 mm drill. */
