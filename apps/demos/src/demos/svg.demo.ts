@@ -17,10 +17,6 @@ const PATHS = {
     [505, 448],
   ],
   pad: [329, 489],
-  holes: [
-    [258, 604],
-    [407, 604],
-  ],
   // Bare stock: a click there clears the selection.
   empty: [1200, 760],
 } as const;
@@ -56,14 +52,6 @@ export default async function svg(r: Recorder) {
   await r.click("add-pocket", { waitFor: "job-time" });
   // Small enough for the gaps between the toes.
   await r.select("operation-tool", "3 mm 2-flute upcut", { waitFor: "job-time" });
-  await r.click("close-operation");
-  await r.hold(1);
-
-  // The mounting holes, bored by the end mill.
-  await r.clickIn("viewport", PATHS.holes[0]);
-  await r.clickIn("viewport", PATHS.holes[1], { shift: true });
-  await r.expectSelected(2);
-  await r.click("add-drill", { waitFor: "job-time" });
   await r.click("close-operation");
   await r.hold(1);
 
