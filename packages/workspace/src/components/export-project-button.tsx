@@ -47,6 +47,7 @@ export function ExportProjectButton({
       onClick={onClick}
       disabled={pending}
       title={t("Shell.exportFile")}
+      data-demo="export-project"
     >
       <DownloadIcon />
       {t("Shell.exportProject")}

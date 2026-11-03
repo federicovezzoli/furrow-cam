@@ -388,9 +388,13 @@ function JobTime() {
     });
     return totals.length === 0 ? null : totals.join(" · ");
   });
+  // A side's total shows while the other side computes; the demo videos wait for both (ADR-0075).
+  const ready = useToolpathStore(({ entries }) =>
+    operations.every(({ id, enabled }) => !enabled || entries[id]?.status === "ready"),
+  );
   if (time === null) return null;
   return (
-    <div className="grid gap-0.5 text-muted-foreground" data-demo="job-time">
+    <div className="grid gap-0.5 text-muted-foreground" data-demo={ready ? "job-time" : undefined}>
       <p>{t("total", { time })}</p>
       <p className="text-ui-label">{t(note)}</p>
     </div>

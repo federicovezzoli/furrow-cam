@@ -240,7 +240,10 @@ export class Recorder {
 
   /** Glides the cursor to the middle of the anchor `name`. */
   async moveTo(name: string, seconds?: number) {
-    const box = await (await this.anchor(name)).boundingBox();
+    const anchor = await this.anchor(name);
+    // Inside a scrolled pane, the anchor can be out of sight: the pane scrolls to it, as for a user.
+    await anchor.scrollIntoViewIfNeeded();
+    const box = await anchor.boundingBox();
     if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
     await this.moveToPoint(box.x + box.width / 2, box.y + box.height / 2, seconds);
     return box;
@@ -293,6 +296,19 @@ export class Recorder {
     await field.selectOption({ label });
     if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.5);
+  }
+
+  /**
+   * Clicks the anchor `name`, which downloads a file, and saves it in the
+   * output folder as `<video name>` with the download's extension (e.g.
+   * `.furrow.zip`), for a later video to open. Returns its path.
+   */
+  async saveDownload(name: string) {
+    const [download] = await Promise.all([this.page.waitForEvent("download"), this.click(name)]);
+    const suggested = download.suggestedFilename();
+    const file = join(this.#output, this.#name + suggested.slice(suggested.indexOf(".")));
+    await download.saveAs(file);
+    return file;
   }
 
   /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */

@@ -484,7 +484,13 @@ function PinFields() {
             </p>
           )}
           <div className="flex justify-end">
-            <Button variant="outline" size="compact" disabled={!drill} onClick={addDrill}>
+            <Button
+              variant="outline"
+              size="compact"
+              disabled={!drill}
+              onClick={addDrill}
+              data-demo="add-pin-drill"
+            >
               <PlusIcon />
               {t("addPinDrill")}
             </Button>

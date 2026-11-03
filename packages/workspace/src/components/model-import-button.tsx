@@ -58,6 +58,7 @@ export function ModelImportButton() {
         size="compact"
         disabled={!limits || importing}
         title={limits ? undefined : format(STL_IMPORT_OFF)}
+        data-demo="import-model"
         onClick={() => input.current?.click()}
         className="justify-self-start"
       >
