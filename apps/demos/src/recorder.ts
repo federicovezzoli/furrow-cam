@@ -1,10 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
-import { writeFile } from "node:fs/promises";
+import { rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser, Locator, Page } from "playwright";
 
-export const FPS = 60;
+const FPS = 60;
 const WIDTH = 1920;
 const HEIGHT = 1080;
 /** The page's clock starts here on every run, so dates and timers match between runs. */
@@ -94,7 +94,8 @@ export class Recorder {
         "yuv420p",
         "-movflags",
         "+faststart",
-        join(output, `${name}.mp4`),
+        // Renamed once finished, so a failed run never leaves a cut-off video.
+        join(output, `${name}.part.mp4`),
       ],
       { stdio: ["pipe", "inherit", "inherit"] },
     );
@@ -129,8 +130,7 @@ export class Recorder {
     await this.waitForWork(this.page.locator('[data-tour="viewport"] canvas'));
     // WebGL starts up in real time: give the 3D view frames to draw its first one.
     for (let i = 0; i < FPS; i++) await this.#step();
-    // Setup took a varying number of steps: start recording at a fixed time, so animation frames fall alike.
-    await this.page.clock.pauseAt(START.getTime() + 60_000);
+    await this.#align();
   }
 
   /** Advances the page clock by one frame and records it. */
@@ -162,7 +162,7 @@ export class Recorder {
     for (let i = 0; i < Math.round(seconds * FPS); i++) await this.frame();
   }
 
-  /** Glides the cursor to (`x`, `y`) over `seconds`, easing in and out; `down` drags. */
+  /** Glides the cursor to (`x`, `y`) over `seconds`, easing in and out. */
   async moveToPoint(x: number, y: number, seconds = 0.6) {
     const from = { ...this.#mouse };
     const frames = Math.max(1, Math.round(seconds * FPS));
@@ -242,6 +242,17 @@ export class Recorder {
         throw new Error(`Demo "${this.#name}": timed out waiting for ${locator}`);
       await this.#step();
     }
+    await this.#align();
+  }
+
+  /**
+   * Waiting took a varying number of steps: jump to the next whole second, so
+   * the fake animation frames (every 16 ms) fall alike against the video's
+   * frames on every run, and the camera's damping moves alike (ADR-0075).
+   */
+  async #align() {
+    const now = await this.page.evaluate(() => Date.now());
+    await this.page.clock.pauseAt(Math.ceil(now / 1000) * 1000 + 1000);
   }
 
   /** Advances the page clock by one frame without recording it, and lets real time pass. */
@@ -256,8 +267,9 @@ export class Recorder {
     const [code] = await once(this.#ffmpeg, "exit");
     await this.page.context().close();
     if (code !== 0) throw new Error(`ffmpeg exited with ${code} for ${this.#name}`);
-    if (this.#last) await writeFile(join(this.#output, `${this.#name}.jpg`), this.#last);
     const mp4 = join(this.#output, `${this.#name}.mp4`);
+    await rename(join(this.#output, `${this.#name}.part.mp4`), mp4);
+    if (this.#last) await writeFile(join(this.#output, `${this.#name}.jpg`), this.#last);
     // shortcut: one-pass constant quality; switch to two-pass with a bitrate if a video goes over 10 MB.
     await run("ffmpeg", [
       "-y",

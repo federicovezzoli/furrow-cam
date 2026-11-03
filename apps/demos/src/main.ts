@@ -58,6 +58,17 @@ async function waitForServer(server: ChildProcess) {
   throw new Error(`The web app didn't start on ${origin}`);
 }
 
+// Another server on the port (say, one a crashed run left behind) would pass the start-up check with an old build.
+if (
+  await fetch(origin).then(
+    () => true,
+    () => false,
+  )
+) {
+  console.error(`Port ${port} is in use: stop whatever runs on ${origin} first.`);
+  process.exit(1);
+}
+
 await mkdir(output, { recursive: true });
 const [code] = await once(next(["build"]), "exit");
 if (code !== 0) process.exit(code ?? 1);
