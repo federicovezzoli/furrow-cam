@@ -226,6 +226,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
         variant="ghost"
         size="icon-compact"
         aria-label={t("fitStock")}
+        data-demo="fit-stock"
         title={t("fitStock")}
         onClick={onFit}
       >

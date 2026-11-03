@@ -149,7 +149,7 @@ function Selection({
   const t = useTranslations("Operations");
   if (!target) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-1">
+    <div className="flex flex-wrap items-center gap-x-1" data-demo="selection">
       <p className="flex-[1_1_7rem] first-letter:uppercase">{target}</p>
       <div className="ml-auto flex">
         <Button
@@ -381,7 +381,7 @@ function JobTime() {
   });
   if (time === null) return null;
   return (
-    <div className="grid gap-0.5 text-muted-foreground">
+    <div className="grid gap-0.5 text-muted-foreground" data-demo="job-time">
       <p>{t("total", { time })}</p>
       <p className="text-ui-label">{t(note)}</p>
     </div>
