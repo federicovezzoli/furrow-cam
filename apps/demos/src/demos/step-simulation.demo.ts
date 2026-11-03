@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Recorder } from "../recorder.ts";
 
-/** The project V2 saved (PRD-0013 D7); `step` sorts, and so records, first. */
+/** The project V2 saved (PRD-0013 D7); `step` sorts, and so records, first (`main.ts`). */
 const project = join(import.meta.dirname, "../../output/step.furrow.zip");
 
 /** Plays the side the simulator shows at full speed, the camera orbiting slowly meanwhile. */
