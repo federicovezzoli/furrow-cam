@@ -56,6 +56,7 @@ export default async function step(r: Recorder) {
 
   await cutSide(r, "top");
   await cutSide(r, "bottom");
+  await r.expectNoWarnings();
 
   // Both sides in 3D.
   await r.click("view-orbit");

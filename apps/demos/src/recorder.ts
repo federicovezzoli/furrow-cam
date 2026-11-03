@@ -138,6 +138,15 @@ export class Recorder {
     }
   }
 
+  /** Stops the run if an operation in the list shows toolpath warnings. */
+  async expectNoWarnings() {
+    const shown = await this.page
+      .locator('[data-demo="toolpath-warning"]')
+      .filter({ visible: true })
+      .count();
+    if (shown > 0) throw new Error(`Demo "${this.#name}": ${shown} operations show warnings`);
+  }
+
   /**
    * Opens a new project in the workspace without an account (PRD-0008) and
    * skips the guided tour, whose overlay would catch the mouse. Records nothing.
@@ -299,14 +308,16 @@ export class Recorder {
   }
 
   /**
-   * Clicks the anchor `name`, which downloads a file, and saves it in the
-   * output folder as `<video name>` with the download's extension (e.g.
-   * `.furrow.zip`), for a later video to open. Returns its path.
+   * Clicks the anchor `name`, which downloads a project file, and saves it in
+   * the output folder as `<video name>.furrow.zip` (or `.furrow.json`), for a
+   * later video to open. Returns its path.
    */
   async saveDownload(name: string) {
     const [download] = await Promise.all([this.page.waitForEvent("download"), this.click(name)]);
     const suggested = download.suggestedFilename();
-    const file = join(this.#output, this.#name + suggested.slice(suggested.indexOf(".")));
+    const extension = [".furrow.zip", ".furrow.json"].find((end) => suggested.endsWith(end));
+    if (!extension) throw new Error(`Demo "${this.#name}": unexpected download ${suggested}`);
+    const file = join(this.#output, this.#name + extension);
     await download.saveAs(file);
     return file;
   }
@@ -353,7 +364,11 @@ export class Recorder {
   async waitForWork(target: Locator | string, timeout = 120_000) {
     const locator = typeof target === "string" ? this.#locate(target) : target;
     const end = Date.now() + timeout;
+    const failed = this.page.locator('[data-demo="toolpath-failed"]').filter({ visible: true });
     while (!(await locator.isVisible())) {
+      if ((await failed.count()) > 0) {
+        throw new Error(`Demo "${this.#name}": a toolpath failed while waiting for ${target}`);
+      }
       if (Date.now() > end)
         throw new Error(`Demo "${this.#name}": timed out waiting for ${locator}`);
       await this.#step();
