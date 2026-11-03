@@ -64,6 +64,11 @@ export default async function step(r: Recorder) {
   await r.moveToPoint(view.x + view.width * 0.15, view.y + view.height * 0.85, 0.5);
   await r.drag(100, -20, 3);
   await r.hold(1.5);
+  // The parting plane, where the two sides meet: hidden, then shown again.
+  await r.click("parting-plane");
+  await r.hold(1);
+  await r.click("parting-plane");
+  await r.hold(1.5);
   r.poster();
 
   // The project file V3 opens, then G-code: without an account, the workspace explains what it needs (#469).

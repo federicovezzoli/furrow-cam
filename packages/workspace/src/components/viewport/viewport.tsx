@@ -289,6 +289,7 @@ export function PartingButton() {
       aria-label={t("showParting")}
       aria-pressed={shown}
       title={topView ? t("showPartingIn3d") : shown ? t("hideParting") : t("showParting")}
+      data-demo="parting-plane"
       onClick={() => {
         const state = workspace.getState();
         if (topView) state.setView("orbit");

@@ -32,7 +32,7 @@ The website needs short videos that show what Furrow CAM does. Screen recordings
 | ID | Video | Shows |
 | --- | --- | --- |
 | V1 | **2D from an SVG** | Import an SVG of a dog paw (`apps/demos/fixtures/dog-paw.svg`), set the stock and zero, add a profile with tabs and a pocket, add a line of text and V-carve or engrave it (PRD-0010), preview the toolpaths, click **Export G-code** |
-| V2 | **3D from a STEP file, both sides** | Import a STEP model of a windsurf board (`tavola3.step`, ADR-0072), place it in the stock, make the project two-sided (PRD-0011) with locating pins and holding tabs, add 3D roughing and finishing on the top and bottom sides, click **Export G-code** |
+| V2 | **3D from a STEP file, both sides** | Import a STEP model of a windsurf board (`tavola3.step`, ADR-0072), place it in the stock, make the project two-sided (PRD-0011) with locating pins and holding tabs, add 3D roughing and finishing on the top and bottom sides, show and hide the parting plane in the 3D view, click **Export G-code** |
 | V3 | **Simulation** | The V2 project in the simulation (ADR-0042): the top side cut, then the bottom side from the flipped stock the top left |
 
 Without an account, **Export G-code** explains that G-code needs a machine, kept in a free account or the desktop app (PRD-0008 G6), so V1 and V2 end on that dialog. Once guests can export G-code (#469), they end on the files.
@@ -90,3 +90,4 @@ What a spike on an M1 Pro (2026-11-02) found:
 - 2026-11-03: videos are recorded in the dark theme
 - 2026-11-03: V1 uses the paw as drawn, with no mounting holes or drill
 - 2026-11-03: V3 (`step-simulation`, recorded after `step`) opens V2's project from the guest project list, off camera, and plays both sides at 100× with the toolpaths hidden
+- 2026-11-03: V2 toggles the parting plane (#473) in the 3D view
