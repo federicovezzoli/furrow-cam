@@ -55,15 +55,18 @@ export function schedulePlayback(
   let inFlight = false;
   let waiting: { move: number; fraction: number } | null = null;
   let sent: { move: number; fraction: number } | null = null;
+  let reported = false;
 
-  function setInFlight(value: boolean) {
-    inFlight = value;
-    handlers.onBusy?.(value);
+  /** Tells `onBusy` when `inFlight` changed since it last did. */
+  function report() {
+    if (inFlight === reported) return;
+    reported = inFlight;
+    handlers.onBusy?.(inFlight);
   }
 
   function send(at: { move: number; fraction: number }) {
     if (key === null) return;
-    setInFlight(true);
+    inFlight = true;
     sent = at;
     post({ type: "seek", key, ...at });
   }
@@ -78,20 +81,22 @@ export function schedulePlayback(
     load(request: Omit<PlaybackLoad, "type">) {
       key = request.key;
       loaded = false;
-      setInFlight(true);
+      inFlight = true;
       // A seek queued for the last path would land elsewhere on this one.
       waiting = null;
       sent = { move: 0, fraction: 0 };
       post({ type: "load", ...request });
+      report();
     },
     seek(move: number, fraction: number) {
       if (key === null) return;
       if (!loaded || inFlight) waiting = { move, fraction };
       else if (move !== sent?.move || fraction !== sent?.fraction) send({ move, fraction });
+      report();
     },
     receive(response: PlaybackResponse) {
       if (response.key !== key) return;
-      setInFlight(false);
+      inFlight = false;
       if (response.type === "loaded") {
         loaded = true;
         handlers.onLoaded(response.grid, response.heights);
@@ -99,14 +104,17 @@ export function schedulePlayback(
         handlers.onFrame(response.start, response.values);
       } else {
         handlers.onError(response.error);
+        report();
         return;
       }
       next();
+      report();
     },
     fail(error: string) {
       if (key === null) return;
       key = null;
-      setInFlight(false);
+      inFlight = false;
+      report();
       handlers.onError(error);
     },
   };

@@ -81,7 +81,7 @@ describe("schedulePlayback", () => {
     ]);
   });
 
-  it("is busy from each request until the worker answers the last", () => {
+  it("is busy from the first request until the worker answers the last, telling only changes", () => {
     const busy: boolean[] = [];
     const schedule = schedulePlayback(() => {}, {
       onLoaded: () => {},
@@ -94,7 +94,7 @@ describe("schedulePlayback", () => {
     schedule.receive({ key: "a", type: "loaded", grid });
     expect(busy.at(-1)).toBe(true);
     schedule.receive({ key: "a", type: "frame", start: 0, values: new Float32Array() });
-    expect(busy.at(-1)).toBe(false);
+    expect(busy).toEqual([true, false]);
   });
 
   it("reports errors and a stopped worker", () => {

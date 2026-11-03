@@ -136,6 +136,8 @@ export function usePlayback(maxCells: number | null) {
     return () => {
       stop();
       worker.terminate();
+      // A load or seek in flight never answers now.
+      store.setState({ sweeping: false });
       schedule.current = null;
       setLoaded(null);
       setError(null);
