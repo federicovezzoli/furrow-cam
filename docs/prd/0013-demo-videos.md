@@ -31,7 +31,7 @@ The website needs short videos that show what Furrow CAM does. Screen recordings
 
 | ID | Video | Shows |
 | --- | --- | --- |
-| V1 | **2D from an SVG** | Import an SVG of a dog paw (`dog-paw-50x50.svg`), set the stock and zero, add a profile with tabs, a pocket, a drill on mounting holes added to the sample, add a line of text and V-carve or engrave it (PRD-0010), preview the toolpaths, click **Export G-code** |
+| V1 | **2D from an SVG** | Import an SVG of a dog paw (`apps/demos/fixtures/dog-paw.svg`), set the stock and zero, add a profile with tabs, a pocket, a drill on mounting holes added to the sample, add a line of text and V-carve or engrave it (PRD-0010), preview the toolpaths, click **Export G-code** |
 | V2 | **3D from a STEP file, both sides** | Import a STEP model of a windsurf board (`tavola3.step`, ADR-0072), place it in the stock, make the project two-sided (PRD-0011) with locating pins and holding tabs, add 3D roughing and finishing on the top and bottom sides, click **Export G-code** |
 | V3 | **Simulation** | The V2 project in the simulation (ADR-0042): the top side cut, then the bottom side from the flipped stock the top left |
 
