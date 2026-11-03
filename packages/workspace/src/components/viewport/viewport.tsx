@@ -213,6 +213,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
           key={value}
           variant={view === value ? "secondary" : "ghost"}
           size="icon-compact"
+          data-demo={`view-${value}`}
           aria-label={t(`views.${value}`)}
           aria-pressed={view === value}
           title={t("viewHint", { view: t(`views.${value}`), hint: t(`viewHints.${value}`) })}
