@@ -17,6 +17,7 @@ pnpm test                     # Vitest in packages/* and apps/web (src/**/*.test
 pnpm build
 pnpm changeset                # add a changeset for behaviour changes
 pnpm demos [name…]            # record the website demo videos into apps/demos/output (needs ffmpeg)
+pnpm demos --no-build <name>  # the same, reusing the last web build (while writing a script)
 ```
 
 All four checks (`check`, `typecheck`, `test`, `build`) must pass before work is done; CI runs the same.
