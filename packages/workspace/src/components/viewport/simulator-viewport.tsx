@@ -90,7 +90,11 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section aria-label={t("simulation")} className="relative min-h-0 flex-1 bg-muted/40">
+      <section
+        aria-label={t("simulation")}
+        className="relative min-h-0 flex-1 bg-muted/40"
+        data-demo="simulation"
+      >
         <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
           <ReportCapture />
           {view === "top" ? (
@@ -120,6 +124,7 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
               aria-pressed={showToolpaths}
               title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
               onClick={() => setShowToolpaths(!showToolpaths)}
+              data-demo="show-toolpaths"
             >
               <ToolpathsIcon />
             </Button>
@@ -131,7 +136,14 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
           </p>
         )}
       </section>
-      <PlaybackTimeline store={store} path={path} parts={parts} units={units} status={status}>
+      <PlaybackTimeline
+        store={store}
+        path={path}
+        parts={parts}
+        units={units}
+        status={status}
+        pending={playback.pending}
+      >
         {children}
       </PlaybackTimeline>
     </div>

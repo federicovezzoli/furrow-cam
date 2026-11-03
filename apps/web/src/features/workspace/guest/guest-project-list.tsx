@@ -163,7 +163,12 @@ export function GuestProjectList({
             tabIndex={-1}
             aria-hidden
           />
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={pending}>
+          <Button
+            variant="outline"
+            onClick={() => input.current?.click()}
+            disabled={pending}
+            data-demo="import-project"
+          >
             <UploadIcon />
             {projectsT("importFile")}
           </Button>

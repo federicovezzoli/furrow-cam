@@ -29,7 +29,7 @@ export function SimulateButton({ className }: { className?: string }) {
   }
   return (
     <Button variant="outline" size="compact" asChild className={className}>
-      <Link to="simulator" title={t("simulateTitle")}>
+      <Link to="simulator" title={t("simulateTitle")} data-demo="simulate">
         <FilmIcon />
         {t("simulate")}
       </Link>

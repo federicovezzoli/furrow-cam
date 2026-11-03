@@ -38,7 +38,8 @@ export type PlaybackResponse = { key: string } & (
  * Talks to a playback's worker, one seek at a time: while it sweeps, only the
  * latest seek waits, and it is sent when the worker answers, so scrubbing
  * never queues up work. Responses to an earlier `load` are dropped. `fail`
- * reports the worker as stopped, e.g. when it crashed.
+ * reports the worker as stopped, e.g. when it crashed. `onBusy` says when the
+ * worker starts and stops working.
  */
 export function schedulePlayback(
   post: (request: PlaybackRequest) => void,
@@ -46,6 +47,7 @@ export function schedulePlayback(
     onLoaded: (grid: HeightmapGrid, heights?: Float32Array) => void;
     onFrame: (start: number, values: Float32Array) => void;
     onError: (error: string) => void;
+    onBusy?: (busy: boolean) => void;
   },
 ) {
   let key: string | null = null;
@@ -54,9 +56,14 @@ export function schedulePlayback(
   let waiting: { move: number; fraction: number } | null = null;
   let sent: { move: number; fraction: number } | null = null;
 
+  function setInFlight(value: boolean) {
+    inFlight = value;
+    handlers.onBusy?.(value);
+  }
+
   function send(at: { move: number; fraction: number }) {
     if (key === null) return;
-    inFlight = true;
+    setInFlight(true);
     sent = at;
     post({ type: "seek", key, ...at });
   }
@@ -71,7 +78,7 @@ export function schedulePlayback(
     load(request: Omit<PlaybackLoad, "type">) {
       key = request.key;
       loaded = false;
-      inFlight = true;
+      setInFlight(true);
       // A seek queued for the last path would land elsewhere on this one.
       waiting = null;
       sent = { move: 0, fraction: 0 };
@@ -84,7 +91,7 @@ export function schedulePlayback(
     },
     receive(response: PlaybackResponse) {
       if (response.key !== key) return;
-      inFlight = false;
+      setInFlight(false);
       if (response.type === "loaded") {
         loaded = true;
         handlers.onLoaded(response.grid, response.heights);
@@ -99,6 +106,7 @@ export function schedulePlayback(
     fail(error: string) {
       if (key === null) return;
       key = null;
+      setInFlight(false);
       handlers.onError(error);
     },
   };
