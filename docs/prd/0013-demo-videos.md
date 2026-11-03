@@ -76,10 +76,11 @@ What a spike on an M1 Pro (2026-11-02) found:
 
 ## Open questions
 
-- Does every animation in the app (simulation playback, camera transitions) follow the page clock, or do some need the script to wait in real time?
+- ~~Does every animation in the app (simulation playback, camera transitions) follow the page clock?~~ Rendering, the camera and simulation playback run on `requestAnimationFrame`, which the page clock drives; CSS animations are finished in each screenshot, and workers are waited for (ADR-0075).
 
 ## Changelog
 
 - 2026-11-02: initial draft
 - 2026-11-02: recording approach from a spike: headless, frozen clock, one screenshot per frame
 - 2026-11-02: the record command starts the app itself; V1 drills mounting holes added to the sample
+- 2026-11-02: open question on animations answered by ADR-0075
