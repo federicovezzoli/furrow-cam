@@ -244,16 +244,11 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
   );
 }
 
-/**
- * In a two-sided project, which side the viewport shows (ADR-0060), and
- * whether it shows the parting plane (#473).
- */
+/** In a two-sided project, which side the viewport shows (ADR-0060). */
 export function SideButtons() {
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const side = useWorkspaceStore((s) => s.side);
   const setSide = useWorkspaceStore((s) => s.setSide);
-  const showParting = useWorkspaceStore((s) => s.showParting);
-  const setShowParting = useWorkspaceStore((s) => s.setShowParting);
   const t = useTranslations("Viewport");
   if (!twoSided) return null;
   return (
@@ -271,17 +266,37 @@ export function SideButtons() {
           {t(`sides.${value}`)}
         </Button>
       ))}
-      <Button
-        variant={showParting ? "secondary" : "ghost"}
-        size="icon-compact"
-        aria-label={t("showParting")}
-        aria-pressed={showParting}
-        title={showParting ? t("hideParting") : t("showParting")}
-        onClick={() => setShowParting(!showParting)}
-      >
-        <SeparatorHorizontalIcon />
-      </Button>
     </div>
+  );
+}
+
+/**
+ * In a two-sided project, shows or hides the parting plane (#473). Only the
+ * 3D view draws it, so from the top view this switches to the 3D view and
+ * shows it.
+ */
+export function PartingButton() {
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const topView = useWorkspaceStore((s) => s.view === "top");
+  const shown = useWorkspaceStore((s) => s.showParting && s.view !== "top");
+  const workspace = useWorkspaceStoreApi();
+  const t = useTranslations("Viewport");
+  if (!twoSided) return null;
+  return (
+    <Button
+      variant={shown ? "secondary" : "ghost"}
+      size="icon-compact"
+      aria-label={t("showParting")}
+      aria-pressed={shown}
+      title={topView ? t("showPartingIn3d") : shown ? t("hideParting") : t("showParting")}
+      onClick={() => {
+        const state = workspace.getState();
+        if (topView) state.setView("orbit");
+        state.setShowParting(!shown);
+      }}
+    >
+      <SeparatorHorizontalIcon />
+    </Button>
   );
 }
 
@@ -329,6 +344,7 @@ function CutToolbar() {
       >
         <LayersIcon />
       </Button>
+      <PartingButton />
     </div>
   );
 }

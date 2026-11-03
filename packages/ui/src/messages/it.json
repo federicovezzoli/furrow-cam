@@ -1466,6 +1466,7 @@
     "bottomSideHint": "Lato inferiore, visto da sotto. Scegli lo zero, seleziona i percorsi e modifica i ponticelli sul lato superiore.",
     "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore.",
     "showParting": "Mostra il piano di separazione",
+    "showPartingIn3d": "Mostra il piano di separazione nella vista 3D",
     "hideParting": "Nascondi il piano di separazione"
   },
   "Dialog": {

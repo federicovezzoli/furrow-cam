@@ -25,6 +25,7 @@ import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
 import {
+  PartingButton,
   SideButtons,
   simulationStatus,
   TextureLimit,
@@ -129,6 +130,7 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
             >
               <ToolpathsIcon />
             </Button>
+            <PartingButton />
           </div>
         </div>
         {nothing && (

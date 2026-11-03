@@ -1466,6 +1466,7 @@
     "bottomSideHint": "裏面（下から見た状態）。原点の指定、パスの選択、タブの編集は表面で行ってください。",
     "topSideSimulationHint": "表面のみ：裏返す前の素材で、裏面の切削は含みません。",
     "showParting": "分割面を表示",
+    "showPartingIn3d": "3D ビューで分割面を表示",
     "hideParting": "分割面を非表示"
   },
   "Dialog": {

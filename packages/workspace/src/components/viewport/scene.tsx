@@ -14,6 +14,7 @@ import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { DoubleSide } from "three";
+import { useShallow } from "zustand/react/shallow";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -175,20 +176,26 @@ function LocatingPins({ color }: { color: string }) {
 
 /**
  * A two-sided project's parting plane (#473), where the two sides meet around
- * the models: a faint fill over the stock's footprint, outlined, in the top
- * side's coordinates. Not writing depth, so what lies behind it shows, and
- * drawn in front of a simulated floor cut exactly to it.
+ * the models, in the top side's coordinates; in the 3D view only, since from
+ * above it would just tint the stock. A faint fill not writing depth, so what
+ * lies behind it shows, drawn in front of a simulated floor cut exactly to
+ * it; and its outline round the stock's sides, drawn over everything so
+ * uncut stock never hides it.
  */
 export function PartingPlane({ color }: { color: string }) {
-  const stock = useDocumentStore((s) => s.document.stock);
-  const shown = useWorkspaceStore((s) => s.showParting);
-  if (!stock.twoSided || !shown) return null;
+  // Only what the plane depends on, so moving the zero, the pad or a tab redraws nothing.
+  const { width, height, partingDepth } = useDocumentStore(
+    useShallow(({ document: { stock } }) => ({
+      width: stock.width,
+      height: stock.height,
+      partingDepth: stock.twoSided?.partingDepth,
+    })),
+  );
+  const shown = useWorkspaceStore((s) => s.showParting && s.view === "orbit");
+  if (partingDepth === undefined || !shown) return null;
   return (
-    <mesh
-      position={[stock.width / 2, stock.height / 2, -stock.twoSided.partingDepth]}
-      renderOrder={RENDER_ORDER.parting}
-    >
-      <planeGeometry args={[stock.width, stock.height]} />
+    <mesh position={[width / 2, height / 2, -partingDepth]} renderOrder={RENDER_ORDER.parting}>
+      <planeGeometry args={[width, height]} />
       <meshBasicMaterial
         color={color}
         transparent
@@ -199,7 +206,7 @@ export function PartingPlane({ color }: { color: string }) {
         polygonOffsetFactor={-1}
         polygonOffsetUnits={-1}
       />
-      <Edges color={color} />
+      <Edges color={color} depthTest={false} renderOrder={RENDER_ORDER.origin} />
     </mesh>
   );
 }

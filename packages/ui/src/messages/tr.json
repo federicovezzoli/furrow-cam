@@ -1466,6 +1466,7 @@
     "bottomSideHint": "Alt yüz, alttan görünüm. Sıfırı seçmeyi, yol seçmeyi ve köprü düzenlemeyi üst yüzde yapın.",
     "topSideSimulationHint": "Yalnızca üst yüz: ters çevrilmeden önceki ham malzeme, alt yüzün kesimleri olmadan.",
     "showParting": "Ayırma düzlemini göster",
+    "showPartingIn3d": "Ayırma düzlemini 3B görünümde göster",
     "hideParting": "Ayırma düzlemini gizle"
   },
   "Dialog": {

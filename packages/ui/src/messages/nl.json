@@ -1466,6 +1466,7 @@
     "bottomSideHint": "Onderkant, van onderen gezien. Kies het nulpunt, selecteer paden en bewerk bruggen aan de bovenkant.",
     "topSideSimulationHint": "Alleen bovenkant: het materiaal voordat het wordt omgedraaid, zonder de sneden van de onderkant.",
     "showParting": "Scheidingsvlak tonen",
+    "showPartingIn3d": "Scheidingsvlak tonen in de 3D-weergave",
     "hideParting": "Scheidingsvlak verbergen"
   },
   "Dialog": {

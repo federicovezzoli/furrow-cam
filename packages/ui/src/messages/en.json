@@ -1466,6 +1466,7 @@
     "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side.",
     "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts.",
     "showParting": "Show the parting plane",
+    "showPartingIn3d": "Show the parting plane in the 3D view",
     "hideParting": "Hide the parting plane"
   },
   "Dialog": {
