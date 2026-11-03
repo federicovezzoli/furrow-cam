@@ -18,6 +18,8 @@ export type Palette = {
   touchOff: string;
   /** The locating pins (#356). */
   pin: string;
+  /** A two-sided project's parting plane (#473). */
+  parting: string;
   /** The snap target while picking the zero. */
   snap: string;
   /** Rapid moves; cutting moves take their tool's colour. */
@@ -41,6 +43,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     overcut: "#ea580c",
     touchOff: "#0891b2",
     pin: "#4f46e5",
+    parting: "#e11d48",
     snap: "#c026d3",
     rapid: "#71717a",
     stock: "#d4a373",
@@ -60,6 +63,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     overcut: "#fb923c",
     touchOff: "#22d3ee",
     pin: "#818cf8",
+    parting: "#fb7185",
     snap: "#e879f9",
     rapid: "#a1a1aa",
     stock: "#a47148",
@@ -76,14 +80,15 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
  */
 export const RENDER_ORDER = {
   stock: 0,
-  selectedDrawing: 1,
-  shapes: 2,
-  selected: 3,
-  hovered: 4,
-  rapids: 5,
-  feeds: 6,
-  holes: 7,
-  origin: 8,
-  tabs: 9,
-  snap: 10,
+  parting: 1,
+  selectedDrawing: 2,
+  shapes: 3,
+  selected: 4,
+  hovered: 5,
+  rapids: 6,
+  feeds: 7,
+  holes: 8,
+  origin: 9,
+  tabs: 10,
+  snap: 11,
 } as const;

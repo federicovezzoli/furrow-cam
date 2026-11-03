@@ -13,6 +13,8 @@ import { type Point, stockPins } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import { DoubleSide } from "three";
+import { useShallow } from "zustand/react/shallow";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -79,6 +81,7 @@ export function Scene({
         <StartPoints color={palette.startPoint} />
         <Overcuts color={palette.overcut} />
         <HoldingTabs color={palette.tab} />
+        <PartingPlane color={palette.parting} />
       </SideFrame>
       <Toolpaths palette={palette} />
       {/* Picking works on the top side only, which the drawing is in. */}
@@ -169,6 +172,43 @@ function LocatingPins({ color }: { color: string }) {
     );
   }, [stock]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
+}
+
+/**
+ * A two-sided project's parting plane (#473), where the two sides meet around
+ * the models, in the top side's coordinates; in the 3D view only, since from
+ * above it would just tint the stock. A faint fill not writing depth, so what
+ * lies behind it shows, drawn in front of a simulated floor cut exactly to
+ * it; and its outline round the stock's sides, drawn over everything so
+ * uncut stock never hides it.
+ */
+export function PartingPlane({ color }: { color: string }) {
+  // Only what the plane depends on, so moving the zero, the pad or a tab redraws nothing.
+  const { width, height, partingDepth } = useDocumentStore(
+    useShallow(({ document: { stock } }) => ({
+      width: stock.width,
+      height: stock.height,
+      partingDepth: stock.twoSided?.partingDepth,
+    })),
+  );
+  const shown = useWorkspaceStore((s) => s.showParting && s.view === "orbit");
+  if (partingDepth === undefined || !shown) return null;
+  return (
+    <mesh position={[width / 2, height / 2, -partingDepth]} renderOrder={RENDER_ORDER.parting}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.2}
+        depthWrite={false}
+        side={DoubleSide}
+        polygonOffset
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={-1}
+      />
+      <Edges color={color} depthTest={false} renderOrder={RENDER_ORDER.origin} />
+    </mesh>
+  );
 }
 
 export function Stock({ box, palette }: { box: Box3; palette: Palette }) {

@@ -1464,7 +1464,10 @@
       "bottom": "显示底面，即毛坯翻面后从下方看到的样子"
     },
     "bottomSideHint": "底面，从下方看。请在顶面拾取零点、选择路径和编辑连接桥。",
-    "topSideSimulationHint": "仅顶面：毛坯翻面之前的状态，不含底面的切削。"
+    "topSideSimulationHint": "仅顶面：毛坯翻面之前的状态，不含底面的切削。",
+    "showParting": "显示分模面",
+    "showPartingIn3d": "在3D视图中显示分模面",
+    "hideParting": "隐藏分模面"
   },
   "Dialog": {
     "close": "关闭",

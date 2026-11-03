@@ -1464,7 +1464,10 @@
       "bottom": "Die Unterseite zeigen, von unten gesehen, wenn das Rohteil umgedreht ist"
     },
     "bottomSideHint": "Unterseite, von unten gesehen. Nullpunkt wählen, Pfade auswählen und Stege bearbeiten geht auf der Oberseite.",
-    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite."
+    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite.",
+    "showParting": "Trennebene anzeigen",
+    "showPartingIn3d": "Trennebene in der 3D-Ansicht anzeigen",
+    "hideParting": "Trennebene ausblenden"
   },
   "Dialog": {
     "close": "Schließen",

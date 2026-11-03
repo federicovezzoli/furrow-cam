@@ -5,7 +5,15 @@ import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { Canvas, useThree } from "@react-three/fiber";
-import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
+import {
+  BoxIcon,
+  LayersIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ScanIcon,
+  SeparatorHorizontalIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -262,6 +270,37 @@ export function SideButtons() {
   );
 }
 
+/**
+ * In a two-sided project, shows or hides the parting plane (#473). Only the
+ * 3D view draws it, so from the top view this switches to the 3D view and
+ * shows it.
+ */
+export function PartingButton() {
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const topView = useWorkspaceStore((s) => s.view === "top");
+  const shown = useWorkspaceStore((s) => s.showParting && s.view !== "top");
+  const workspace = useWorkspaceStoreApi();
+  const t = useTranslations("Viewport");
+  if (!twoSided) return null;
+  return (
+    <Button
+      variant={shown ? "secondary" : "ghost"}
+      size="icon-compact"
+      aria-label={t("showParting")}
+      aria-pressed={shown}
+      title={topView ? t("showPartingIn3d") : shown ? t("hideParting") : t("showParting")}
+      data-demo="parting-plane"
+      onClick={() => {
+        const state = workspace.getState();
+        if (topView) state.setView("orbit");
+        state.setShowParting(!shown);
+      }}
+    >
+      <SeparatorHorizontalIcon />
+    </Button>
+  );
+}
+
 export const TOOLBAR_GROUP =
   "flex items-center gap-0.5 rounded-md border bg-background/85 p-0.5 shadow-xs backdrop-blur-md";
 
@@ -306,6 +345,7 @@ function CutToolbar() {
       >
         <LayersIcon />
       </Button>
+      <PartingButton />
     </div>
   );
 }

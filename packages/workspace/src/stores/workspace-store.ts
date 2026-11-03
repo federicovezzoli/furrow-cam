@@ -75,6 +75,8 @@ export type WorkspaceState = {
    * and picking the zero work on the uncut stock top, so each ends the other.
    */
   simulating: boolean;
+  /** The viewport shows a two-sided project's parting plane (#473). */
+  showParting: boolean;
   /** The STL import under way or the last one that failed, `null` once done or dismissed. */
   modelImport: ModelImport | null;
 
@@ -97,6 +99,7 @@ export type WorkspaceState = {
   /** Shows or hides the toolpaths of all of `operationIds` at once. */
   setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
   setSimulating: (simulating: boolean) => void;
+  setShowParting: (show: boolean) => void;
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
@@ -125,6 +128,7 @@ export function createWorkspaceStore() {
         pickingZero: false,
         hiddenToolpathIds: [],
         simulating: false,
+        showParting: true,
         modelImport: null,
 
         setView(view) {
@@ -301,6 +305,16 @@ export function createWorkspaceStore() {
             },
             false,
             "setSimulating",
+          );
+        },
+
+        setShowParting(show) {
+          set(
+            (state) => {
+              state.showParting = show;
+            },
+            false,
+            "setShowParting",
           );
         },
 
