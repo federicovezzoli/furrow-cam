@@ -55,14 +55,14 @@ export class Recorder {
   }
 
   /**
-   * Opens a fresh light, English, 1920 × 1080 page on a frozen clock (ADR-0075).
+   * Opens a fresh dark, English, 1920 × 1080 page on a frozen clock (ADR-0075).
    * Requests leave only for `origin`, so nothing (such as telemetry) depends on the network.
    */
   static async start(browser: Browser, origin: string, name: string, output: string) {
     const context = await browser.newContext({
       baseURL: origin,
       viewport: { width: WIDTH, height: HEIGHT },
-      colorScheme: "light",
+      colorScheme: "dark",
       locale: "en-US",
     });
     await context.route(
@@ -280,6 +280,19 @@ export class Recorder {
     await this.#press("up");
     if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.4);
+  }
+
+  /**
+   * Moves to the select `name` and picks the option labelled `label`. The
+   * native list isn't in screenshots, so the choice just appears.
+   */
+  async select(name: string, label: string, { waitFor }: { waitFor?: string } = {}) {
+    await this.moveTo(name);
+    const field = await this.anchor(name);
+    await this.hold(0.3);
+    await field.selectOption({ label });
+    if (waitFor) await this.waitForWork(waitFor);
+    await this.hold(0.5);
   }
 
   /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */

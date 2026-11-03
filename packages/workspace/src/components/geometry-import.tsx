@@ -235,7 +235,12 @@ export function GeometryImport() {
             {empty && (
               <div className="flex flex-wrap gap-2">
                 {drawings && (
-                  <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+                  <Button
+                    variant="outline"
+                    size="compact"
+                    data-demo="start-import-drawing"
+                    onClick={() => input.current?.click()}
+                  >
                     <UploadIcon />
                     {t("importDrawing")}
                   </Button>

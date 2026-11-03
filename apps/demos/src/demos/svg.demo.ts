@@ -29,7 +29,7 @@ const PATHS = {
 export default async function svg(r: Recorder) {
   await r.openWorkspace();
   await r.hold(0.5);
-  await r.chooseFile("import-drawing", paw);
+  await r.chooseFile("start-import-drawing", paw);
   await r.hold(1);
 
   // Stock and zero.
@@ -54,6 +54,8 @@ export default async function svg(r: Recorder) {
   for (const toe of PATHS.toes) await r.clickIn("viewport", toe, { shift: true });
   await r.expectSelected(5);
   await r.click("add-pocket", { waitFor: "job-time" });
+  // Small enough for the gaps between the toes.
+  await r.select("operation-tool", "3 mm 2-flute upcut", { waitFor: "job-time" });
   await r.click("close-operation");
   await r.hold(1);
 
