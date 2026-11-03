@@ -45,6 +45,7 @@ export class Recorder {
   readonly #ffmpeg: ChildProcess;
   readonly #mouse = { x: WIDTH / 2, y: HEIGHT / 2 };
   #last: Buffer | null = null;
+  #poster: Buffer | null = null;
 
   private constructor(name: string, output: string, page: Page, ffmpeg: ChildProcess) {
     this.#name = name;
@@ -54,14 +55,14 @@ export class Recorder {
   }
 
   /**
-   * Opens a fresh light, English, 1920 × 1080 page on a frozen clock (ADR-0075).
+   * Opens a fresh dark, English, 1920 × 1080 page on a frozen clock (ADR-0075).
    * Requests leave only for `origin`, so nothing (such as telemetry) depends on the network.
    */
   static async start(browser: Browser, origin: string, name: string, output: string) {
     const context = await browser.newContext({
       baseURL: origin,
       viewport: { width: WIDTH, height: HEIGHT },
-      colorScheme: "light",
+      colorScheme: "dark",
       locale: "en-US",
     });
     await context.route(
@@ -105,20 +106,36 @@ export class Recorder {
   }
 
   /**
-   * The element marked `data-tour` or `data-demo` with `name`. A missing anchor
-   * stops the run, naming the video and the anchor (PRD-0013 D2).
+   * The element marked `data-tour` or `data-demo` with `name`, or a form field
+   * with that id. A missing anchor stops the run, naming the video and the
+   * anchor (PRD-0013 D2).
    */
   async anchor(name: string): Promise<Locator> {
-    const locator = this.page
-      .locator(`[data-tour="${name}"], [data-demo="${name}"]`)
-      .filter({ visible: true })
-      .first();
+    const locator = this.#locate(name);
     try {
       await locator.waitFor({ state: "visible", timeout: 10_000 });
     } catch {
       throw new Error(`Demo "${this.#name}": anchor "${name}" not found`);
     }
     return locator;
+  }
+
+  #locate(name: string) {
+    return this.page
+      .locator(`[data-tour="${name}"], [data-demo="${name}"], [id="${name}"]`)
+      .filter({ visible: true })
+      .first();
+  }
+
+  /**
+   * Stops the run unless `count` paths are selected: a click that missed its
+   * path would otherwise record a wrong video.
+   */
+  async expectSelected(count: number) {
+    const selected = Number(await (await this.anchor("selection")).getAttribute("data-count"));
+    if (selected !== count) {
+      throw new Error(`Demo "${this.#name}": expected ${count} selected paths, got ${selected}`);
+    }
   }
 
   /**
@@ -165,6 +182,11 @@ export class Recorder {
       if (attempt >= 3) throw error;
       return this.#screenshot(attempt + 1);
     }
+  }
+
+  /** Makes the last frame recorded the poster, instead of the video's last frame. */
+  poster() {
+    this.#poster = this.#last;
   }
 
   /** Records `seconds` of the page as it is. */
@@ -224,14 +246,80 @@ export class Recorder {
     return box;
   }
 
-  /** Moves to the anchor `name` and clicks it, with a short pause either side. */
-  async click(name: string) {
+  /**
+   * Moves to the anchor `name` and clicks it, with a short pause either side.
+   * With `waitFor`, the work the click starts is waited for before the pause
+   * after it, until that anchor shows (see `waitForWork`).
+   */
+  async click(name: string, { waitFor }: { waitFor?: string } = {}) {
     await this.moveTo(name);
+    await this.#clickHere(waitFor);
+  }
+
+  /**
+   * Clicks `[x, y]` pixels from the anchor `name`'s top left corner: for
+   * what has no anchor of its own, such as a path in the viewport (measure it
+   * on a recorded frame). With `shift`, adds to the selection.
+   */
+  async clickIn(name: string, [x, y]: readonly [number, number], { shift = false } = {}) {
+    const box = await (await this.anchor(name)).boundingBox();
+    if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
+    await this.moveToPoint(box.x + x, box.y + y);
+    if (shift) await this.page.keyboard.down("Shift");
+    try {
+      await this.#clickHere();
+    } finally {
+      if (shift) await this.page.keyboard.up("Shift");
+    }
+  }
+
+  async #clickHere(waitFor?: string) {
     await this.hold(0.2);
     await this.#press("down");
     await this.frame();
     await this.#press("up");
+    if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.4);
+  }
+
+  /**
+   * Moves to the select `name` and picks the option labelled `label`. The
+   * native list isn't in screenshots, so the choice just appears.
+   */
+  async select(name: string, label: string, { waitFor }: { waitFor?: string } = {}) {
+    await this.moveTo(name);
+    const field = await this.anchor(name);
+    await this.hold(0.3);
+    await field.selectOption({ label });
+    if (waitFor) await this.waitForWork(waitFor);
+    await this.hold(0.5);
+  }
+
+  /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */
+  async chooseFile(name: string, file: string) {
+    const [chooser] = await Promise.all([this.page.waitForEvent("filechooser"), this.click(name)]);
+    await chooser.setFiles(file);
+  }
+
+  /**
+   * Clicks the field `name`, selects what it holds, types `text` a letter at
+   * a time and presses `press`; `waitFor` as for `click`.
+   */
+  async type(
+    name: string,
+    text: string,
+    { press = "Enter", waitFor }: { press?: string; waitFor?: string } = {},
+  ) {
+    await this.click(name);
+    await this.page.keyboard.press("ControlOrMeta+A");
+    await this.frame();
+    for (const letter of text) {
+      await this.page.keyboard.type(letter);
+      await this.hold(0.06);
+    }
+    await this.page.keyboard.press(press);
+    if (waitFor) await this.waitForWork(waitFor);
+    await this.hold(0.3);
   }
 
   /** Drags from the cursor's position by (`dx`, `dy`) over `seconds`, e.g. to orbit the 3D view. */
@@ -242,10 +330,12 @@ export class Recorder {
   }
 
   /**
-   * Runs the page clock, recording nothing, until `locator` is visible: for
+   * Runs the page clock, recording nothing, until `target` (a locator or an
+   * anchor's name) is visible: for
    * workers to finish, so the video cuts straight to the result (PRD-0013).
    */
-  async waitForWork(locator: Locator, timeout = 120_000) {
+  async waitForWork(target: Locator | string, timeout = 120_000) {
+    const locator = typeof target === "string" ? this.#locate(target) : target;
     const end = Date.now() + timeout;
     while (!(await locator.isVisible())) {
       if (Date.now() > end)
@@ -271,7 +361,7 @@ export class Recorder {
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
 
-  /** Finishes the MP4, then writes the WebM (VP9) and the poster (the last frame). */
+  /** Finishes the MP4, then writes the WebM (VP9) and the poster (see `poster`). */
   async finish() {
     this.#ffmpeg.stdin?.end();
     const code = this.#ffmpeg.exitCode ?? (await once(this.#ffmpeg, "exit"))[0];
@@ -279,7 +369,8 @@ export class Recorder {
     if (code !== 0) throw new Error(`ffmpeg exited with ${code} for ${this.#name}`);
     const mp4 = join(this.#output, `${this.#name}.mp4`);
     await rename(join(this.#output, `${this.#name}.part.mp4`), mp4);
-    if (this.#last) await writeFile(join(this.#output, `${this.#name}.jpg`), this.#last);
+    const poster = this.#poster ?? this.#last;
+    if (poster) await writeFile(join(this.#output, `${this.#name}.jpg`), poster);
     // shortcut: one-pass constant quality; switch to two-pass with a bitrate if a video goes over 10 MB.
     await run("ffmpeg", [
       "-y",

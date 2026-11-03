@@ -131,8 +131,12 @@ export function WorkspaceShell() {
           >
             <Tabs value={tab} onValueChange={setTab} className="h-full">
               <TabsList>
-                <TabsTrigger value="operations">{t("operations")}</TabsTrigger>
-                <TabsTrigger value="properties">{t("properties")}</TabsTrigger>
+                <TabsTrigger value="operations" data-demo="tab-operations">
+                  {t("operations")}
+                </TabsTrigger>
+                <TabsTrigger value="properties" data-demo="tab-properties">
+                  {t("properties")}
+                </TabsTrigger>
               </TabsList>
               <SidebarTab
                 id="operations"

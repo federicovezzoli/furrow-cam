@@ -30,7 +30,14 @@ const env = {
 const available = (await readdir(join(root, "src", "demos")))
   .filter((file) => file.endsWith(".demo.ts"))
   .map((file) => file.slice(0, -".demo.ts".length));
-const names = process.argv.slice(2);
+const args = process.argv.slice(2);
+// `--no-build` reuses the last build, while working on a script.
+const build = !args.includes("--no-build");
+const names = args.filter((arg) => !arg.startsWith("--"));
+for (const flag of args.filter((arg) => arg.startsWith("--") && arg !== "--no-build")) {
+  console.error(`Unknown option ${flag}. Options: --no-build`);
+  process.exit(1);
+}
 for (const name of names) {
   if (!available.includes(name)) {
     console.error(`No demo "${name}". Demos: ${available.join(", ")}`);
@@ -92,8 +99,10 @@ if (
 }
 
 await mkdir(output, { recursive: true });
-const [code] = await once(next(["build"]), "exit");
-if (code !== 0) process.exit(code ?? 1);
+if (build) {
+  const [code] = await once(next(["build"]), "exit");
+  if (code !== 0) process.exit(code ?? 1);
+}
 const server = next(["start", "--port", String(port)]);
 const browser = await chromium.launch();
 try {
