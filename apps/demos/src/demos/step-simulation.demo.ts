@@ -5,14 +5,18 @@ import type { Recorder } from "../recorder.ts";
 /** The project V2 saved (PRD-0013 D7); `step` sorts, and so records, first (`main.ts`). */
 const project = join(import.meta.dirname, "../../output/step.furrow.zip");
 
-/** Plays the side the simulator shows at full speed, the camera orbiting slowly meanwhile. */
-async function playSide(r: Recorder, side: "top" | "bottom", seconds: number) {
+/** Millimetres of path played each second at 100× (`PLAYBACK_MM_PER_SECOND` × 100). */
+const SPEED = 2500;
+
+/** Plays `side` to its end at 100×, the camera orbiting slowly meanwhile. */
+async function playSide(r: Recorder, side: "top" | "bottom") {
   await r.click(`side-${side}`);
   await r.waitForWork("playback-ready");
+  const length = Number(await (await r.anchor("playback-position")).getAttribute("max"));
   await r.click("play");
   const view = await r.moveTo("simulation", 0.5);
   await r.moveToPoint(view.x + view.width * 0.35, view.y + view.height * 0.6, 0.3);
-  await r.drag(240, 0, seconds);
+  await r.drag(240, 0, length / SPEED);
   await r.hold(1);
 }
 
@@ -29,10 +33,10 @@ export default async function stepSimulation(r: Recorder) {
   await r.click("view-orbit");
   // The stock as it is cut, not the lines over it.
   await r.click("show-toolpaths");
-  // 50 m of top side and 61 m of bottom side play in about 20 s and 24 s.
   await r.select("playback-speed", "100×");
-  await playSide(r, "top", 20);
-  await playSide(r, "bottom", 24);
+  // 50 m of top side and 61 m of bottom side: about 20 s and 24 s.
+  await playSide(r, "top");
+  await playSide(r, "bottom");
   r.poster();
   await r.hold(1.5);
 }

@@ -161,16 +161,19 @@ export class Recorder {
       );
       const box = await (await this.anchor("import-project")).boundingBox();
       if (!box) throw new Error(`Demo "${this.#name}": anchor "import-project" not found`);
-      const [chooser] = await Promise.all([
-        this.page.waitForEvent("filechooser"),
+      await this.#pickFile(project, () =>
         this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2),
-      ]);
-      await chooser.setFiles(project);
+      );
     } else {
       await this.page.goto("/new");
     }
     const tour = this.page.getByRole("dialog");
-    await this.waitForWork(tour);
+    // An import the list refuses shows its error (`FormError`; Next.js's route announcer is a `role="alert"` too).
+    const refused = this.page.locator('[data-slot="alert"]');
+    await this.waitForWork(project ? tour.or(refused) : tour);
+    if (project && (await refused.isVisible())) {
+      throw new Error(`Demo "${this.#name}": ${await refused.textContent()}`);
+    }
     await this.page.keyboard.press("Escape");
     await this.page.clock.runFor(500);
     await tour.waitFor({ state: "hidden" });
@@ -199,11 +202,23 @@ export class Recorder {
    * Waits, in real time, for the simulator's worker to sweep the stock up to
    * the playback, so every run records it alike (ADR-0075).
    */
-  async #swept() {
+  async #swept(timeout = 120_000) {
     const sweeping = this.page.locator('[data-demo="playback-sweeping"]');
-    const end = Date.now() + 10_000;
+    const end = Date.now() + timeout;
+    // React commits the flag on its own scheduler (a MessageChannel, which the
+    // page clock doesn't fake): a message posted now arrives after that commit.
+    await this.page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = () => resolve();
+          channel.port2.postMessage(null);
+        }),
+    );
     while ((await sweeping.count()) > 0) {
-      if (Date.now() > end) throw new Error(`Demo "${this.#name}": the simulation stopped`);
+      if (Date.now() > end) {
+        throw new Error(`Demo "${this.#name}": timed out waiting for the simulation's worker`);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
   }
@@ -354,7 +369,12 @@ export class Recorder {
 
   /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */
   async chooseFile(name: string, file: string) {
-    const [chooser] = await Promise.all([this.page.waitForEvent("filechooser"), this.click(name)]);
+    await this.#pickFile(file, () => this.click(name));
+  }
+
+  /** Picks `file` in the file picker that `click` opens. */
+  async #pickFile(file: string, click: () => Promise<unknown>) {
+    const [chooser] = await Promise.all([this.page.waitForEvent("filechooser"), click()]);
     await chooser.setFiles(file);
   }
 
