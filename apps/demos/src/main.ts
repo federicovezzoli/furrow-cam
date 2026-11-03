@@ -29,7 +29,9 @@ const env = {
 
 const available = (await readdir(join(root, "src", "demos")))
   .filter((file) => file.endsWith(".demo.ts"))
-  .map((file) => file.slice(0, -".demo.ts".length));
+  .map((file) => file.slice(0, -".demo.ts".length))
+  // By name, so a demo runs after the one whose output it opens (`step`, then `step-simulation`).
+  .sort();
 const args = process.argv.slice(2);
 // `--no-build` reuses the last build, while working on a script.
 const build = !args.includes("--no-build");
@@ -108,7 +110,7 @@ const server = next(["start", "--port", String(port)]);
 const browser = await chromium.launch({ channel: "chromium" });
 try {
   await waitForServer(server);
-  for (const name of names.length > 0 ? names : available) {
+  for (const name of names.length > 0 ? available.filter((n) => names.includes(n)) : available) {
     console.log(`Recording ${name}…`);
     const demo: { default: (r: Recorder) => Promise<void> } = await import(
       `./demos/${name}.demo.ts`
