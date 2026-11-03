@@ -1464,7 +1464,9 @@
       "bottom": "素材を裏返した後、下から見た裏面を表示"
     },
     "bottomSideHint": "裏面（下から見た状態）。原点の指定、パスの選択、タブの編集は表面で行ってください。",
-    "topSideSimulationHint": "表面のみ：裏返す前の素材で、裏面の切削は含みません。"
+    "topSideSimulationHint": "表面のみ：裏返す前の素材で、裏面の切削は含みません。",
+    "showParting": "分割面を表示",
+    "hideParting": "分割面を非表示"
   },
   "Dialog": {
     "close": "閉じる",

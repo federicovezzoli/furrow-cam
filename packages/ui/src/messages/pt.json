@@ -1464,7 +1464,9 @@
       "bottom": "Mostrar o lado de baixo, visto por baixo depois de virar o material"
     },
     "bottomSideHint": "Lado de baixo, visto por baixo. Escolha o zero, selecione caminhos e edite pontes no lado de cima.",
-    "topSideSimulationHint": "Só o lado de cima: o material antes de ser virado, sem os cortes do lado de baixo."
+    "topSideSimulationHint": "Só o lado de cima: o material antes de ser virado, sem os cortes do lado de baixo.",
+    "showParting": "Mostrar o plano de separação",
+    "hideParting": "Ocultar o plano de separação"
   },
   "Dialog": {
     "close": "Fechar",

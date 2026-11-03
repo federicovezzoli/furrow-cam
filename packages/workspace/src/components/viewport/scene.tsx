@@ -13,6 +13,7 @@ import { type Point, stockPins } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import { DoubleSide } from "three";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -79,6 +80,7 @@ export function Scene({
         <StartPoints color={palette.startPoint} />
         <Overcuts color={palette.overcut} />
         <HoldingTabs color={palette.tab} />
+        <PartingPlane color={palette.parting} />
       </SideFrame>
       <Toolpaths palette={palette} />
       {/* Picking works on the top side only, which the drawing is in. */}
@@ -169,6 +171,37 @@ function LocatingPins({ color }: { color: string }) {
     );
   }, [stock]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
+}
+
+/**
+ * A two-sided project's parting plane (#473), where the two sides meet around
+ * the models: a faint fill over the stock's footprint, outlined, in the top
+ * side's coordinates. Not writing depth, so what lies behind it shows, and
+ * drawn in front of a simulated floor cut exactly to it.
+ */
+export function PartingPlane({ color }: { color: string }) {
+  const stock = useDocumentStore((s) => s.document.stock);
+  const shown = useWorkspaceStore((s) => s.showParting);
+  if (!stock.twoSided || !shown) return null;
+  return (
+    <mesh
+      position={[stock.width / 2, stock.height / 2, -stock.twoSided.partingDepth]}
+      renderOrder={RENDER_ORDER.parting}
+    >
+      <planeGeometry args={[stock.width, stock.height]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.2}
+        depthWrite={false}
+        side={DoubleSide}
+        polygonOffset
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={-1}
+      />
+      <Edges color={color} />
+    </mesh>
+  );
 }
 
 export function Stock({ box, palette }: { box: Box3; palette: Palette }) {

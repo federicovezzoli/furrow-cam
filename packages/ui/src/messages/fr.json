@@ -1464,7 +1464,9 @@
       "bottom": "Afficher la face inférieure, vue de dessous une fois le brut retourné"
     },
     "bottomSideHint": "Face inférieure, vue de dessous. Choisissez le zéro, sélectionnez les tracés et modifiez les attaches sur la face supérieure.",
-    "topSideSimulationHint": "Face supérieure seule : le brut avant retournement, sans les coupes de la face inférieure."
+    "topSideSimulationHint": "Face supérieure seule : le brut avant retournement, sans les coupes de la face inférieure.",
+    "showParting": "Afficher le plan de séparation",
+    "hideParting": "Masquer le plan de séparation"
   },
   "Dialog": {
     "close": "Fermer",

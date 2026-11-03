@@ -1464,7 +1464,9 @@
       "bottom": "Mostra il lato inferiore, visto da sotto una volta girato il grezzo"
     },
     "bottomSideHint": "Lato inferiore, visto da sotto. Scegli lo zero, seleziona i percorsi e modifica i ponticelli sul lato superiore.",
-    "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore."
+    "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore.",
+    "showParting": "Mostra il piano di separazione",
+    "hideParting": "Nascondi il piano di separazione"
   },
   "Dialog": {
     "close": "Chiudi",

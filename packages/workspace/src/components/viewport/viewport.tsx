@@ -5,7 +5,15 @@ import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { Canvas, useThree } from "@react-three/fiber";
-import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
+import {
+  BoxIcon,
+  LayersIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ScanIcon,
+  SeparatorHorizontalIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -236,11 +244,16 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
   );
 }
 
-/** In a two-sided project, which side the viewport shows (ADR-0060). */
+/**
+ * In a two-sided project, which side the viewport shows (ADR-0060), and
+ * whether it shows the parting plane (#473).
+ */
 export function SideButtons() {
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const side = useWorkspaceStore((s) => s.side);
   const setSide = useWorkspaceStore((s) => s.setSide);
+  const showParting = useWorkspaceStore((s) => s.showParting);
+  const setShowParting = useWorkspaceStore((s) => s.setShowParting);
   const t = useTranslations("Viewport");
   if (!twoSided) return null;
   return (
@@ -258,6 +271,16 @@ export function SideButtons() {
           {t(`sides.${value}`)}
         </Button>
       ))}
+      <Button
+        variant={showParting ? "secondary" : "ghost"}
+        size="icon-compact"
+        aria-label={t("showParting")}
+        aria-pressed={showParting}
+        title={showParting ? t("hideParting") : t("showParting")}
+        onClick={() => setShowParting(!showParting)}
+      >
+        <SeparatorHorizontalIcon />
+      </Button>
     </div>
   );
 }

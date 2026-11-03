@@ -19,8 +19,9 @@ import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
 import { ReportCapture } from "./report-capture";
-import { Stock, WorkOrigin } from "./scene";
+import { PartingPlane, Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
+import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
 import {
@@ -180,6 +181,9 @@ function SimulatorScene({
       ) : (
         <Stock box={box} palette={palette} />
       )}
+      <SideFrame side="top">
+        <PartingPlane color={palette.parting} />
+      </SideFrame>
       {/* Its own toggle decides, whatever the Operations pane hides. */}
       {showToolpaths && <Toolpaths palette={palette} showHidden />}
       <PlaybackTool />
