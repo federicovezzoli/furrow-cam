@@ -31,13 +31,16 @@ export default async function step(r: Recorder) {
   await r.waitForWork("model-width");
   await r.hold(1);
 
-  // A model of the board, no thicker than the bits cut (22 mm), with room at the ends for the pins.
+  // A model of the board, no thicker than the bits cut (22 mm). Fitted with the
+  // 10 mm border, the stock's height sets its size (about 181 × 50 mm), leaving
+  // room at the ends for the pins.
   await r.click("tab-properties");
   await r.type("stock-width", "240");
-  await r.type("stock-height", "100");
+  await r.type("stock-height", "70");
   await r.type("stock-thickness", "22");
-  await r.type("model-border", "30");
   await r.click("fit-model");
+  // Fit to stock places it at the border, bottom left: centre it along the length.
+  await r.type("model-x", "29.5");
   await r.click("close-model");
   await r.click("fit-stock");
 
