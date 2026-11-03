@@ -43,6 +43,7 @@ export default async function svg(r: Recorder) {
 
   // A profile around the paw, with holding tabs.
   await r.clickIn("viewport", PATHS.outline);
+  await r.expectSelected(1);
   await r.click("add-profile", { waitFor: "job-time" });
   await r.click("profile-tabs", { waitFor: "job-time" });
   await r.click("close-operation");
@@ -51,6 +52,7 @@ export default async function svg(r: Recorder) {
   // A pocket for the pads.
   await r.clickIn("viewport", PATHS.pad);
   for (const toe of PATHS.toes) await r.clickIn("viewport", toe, { shift: true });
+  await r.expectSelected(5);
   await r.click("add-pocket", { waitFor: "job-time" });
   await r.click("close-operation");
   await r.hold(1);
@@ -58,6 +60,7 @@ export default async function svg(r: Recorder) {
   // The mounting holes, bored by the end mill.
   await r.clickIn("viewport", PATHS.holes[0]);
   await r.clickIn("viewport", PATHS.holes[1], { shift: true });
+  await r.expectSelected(2);
   await r.click("add-drill", { waitFor: "job-time" });
   await r.click("close-operation");
   await r.hold(1);

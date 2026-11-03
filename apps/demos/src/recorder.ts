@@ -111,16 +111,31 @@ export class Recorder {
    * anchor (PRD-0013 D2).
    */
   async anchor(name: string): Promise<Locator> {
-    const locator = this.page
-      .locator(`[data-tour="${name}"], [data-demo="${name}"], [id="${name}"]`)
-      .filter({ visible: true })
-      .first();
+    const locator = this.#locate(name);
     try {
       await locator.waitFor({ state: "visible", timeout: 10_000 });
     } catch {
       throw new Error(`Demo "${this.#name}": anchor "${name}" not found`);
     }
     return locator;
+  }
+
+  #locate(name: string) {
+    return this.page
+      .locator(`[data-tour="${name}"], [data-demo="${name}"], [id="${name}"]`)
+      .filter({ visible: true })
+      .first();
+  }
+
+  /**
+   * Stops the run unless `count` paths are selected: a click that missed its
+   * path would otherwise record a wrong video.
+   */
+  async expectSelected(count: number) {
+    const selected = Number(await (await this.anchor("selection")).getAttribute("data-count"));
+    if (selected !== count) {
+      throw new Error(`Demo "${this.#name}": expected ${count} selected paths, got ${selected}`);
+    }
   }
 
   /**
@@ -305,10 +320,7 @@ export class Recorder {
    * workers to finish, so the video cuts straight to the result (PRD-0013).
    */
   async waitForWork(target: Locator | string, timeout = 120_000) {
-    const locator =
-      typeof target === "string"
-        ? this.page.locator(`[data-tour="${target}"], [data-demo="${target}"]`).first()
-        : target;
+    const locator = typeof target === "string" ? this.#locate(target) : target;
     const end = Date.now() + timeout;
     while (!(await locator.isVisible())) {
       if (Date.now() > end)

@@ -50,6 +50,7 @@ export function OperationsPane() {
   const operations = useDocumentStore((s) => s.document.operations);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const targets = useSelectionTargets();
+  const pathCount = useWorkspaceStore((s) => s.selectedPaths.length);
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
@@ -65,6 +66,7 @@ export function OperationsPane() {
     <div className="grid gap-2 p-3 text-ui">
       <Selection
         target={target}
+        pathCount={pathCount}
         onClear={() => workspace.getState().selectPaths([])}
         onSelectInside={() => {
           const { selectedPaths, selectPaths } = workspace.getState();
@@ -134,22 +136,29 @@ export function OperationsPane() {
 }
 
 /**
- * What is selected (`target`), if anything, with a way to add the closed
- * paths inside it (a pocket's islands) and a way to clear it.
+ * What is selected (`target`, `pathCount` paths), if anything, with a way to
+ * add the closed paths inside it (a pocket's islands) and a way to clear it.
  */
 function Selection({
   target,
+  pathCount,
   onClear,
   onSelectInside,
 }: {
   target: string | undefined;
+  pathCount: number;
   onClear: () => void;
   onSelectInside: () => void;
 }) {
   const t = useTranslations("Operations");
   if (!target) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-1" data-demo="selection">
+    <div
+      className="flex flex-wrap items-center gap-x-1"
+      // The demo videos check what their clicks selected (ADR-0075).
+      data-demo="selection"
+      data-count={pathCount}
+    >
       <p className="flex-[1_1_7rem] first-letter:uppercase">{target}</p>
       <div className="ml-auto flex">
         <Button
