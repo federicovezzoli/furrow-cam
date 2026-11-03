@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -16,7 +16,8 @@ const output = join(root, "output");
 const port = 3100;
 const origin = `http://localhost:${port}`;
 
-// Placeholders so the build passes env validation without an apps/web/.env: the guest workspace needs no database.
+// Placeholders for what env.ts requires: the guest workspace needs no database or email. They
+// win over apps/web/.env (Next doesn't override variables already set), but not over the shell.
 const env = {
   DATABASE_URL: "postgresql://demos:demos@localhost:5432/demos",
   BETTER_AUTH_SECRET: "demos-placeholder-secret-at-least-32-chars",
@@ -37,14 +38,35 @@ for (const name of names) {
   }
 }
 
+if (spawnSync("ffmpeg", ["-version"]).error) {
+  console.error("Recording needs ffmpeg on the PATH (https://ffmpeg.org/download.html).");
+  process.exit(1);
+}
+
+/** The process groups of `next build` and `next start`, stopped however this script ends. */
+const groups = new Set<number>();
+function stop() {
+  for (const group of groups) {
+    try {
+      process.kill(-group);
+    } catch {} // Already stopped.
+  }
+  groups.clear();
+}
+process.on("exit", stop);
+// Ctrl-C would otherwise end the script without its `exit` event.
+for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => process.exit(130));
+
 function next(args: string[]) {
   // Its own process group, so stopping it stops the server pnpm starts too.
-  return spawn("pnpm", ["exec", "next", ...args], {
+  const child = spawn("pnpm", ["exec", "next", ...args], {
     cwd: web,
     env,
     stdio: "inherit",
     detached: true,
   });
+  if (child.pid) groups.add(child.pid);
+  return child;
 }
 
 async function waitForServer(server: ChildProcess) {
@@ -88,5 +110,5 @@ try {
   }
 } finally {
   await browser.close();
-  if (server.pid) process.kill(-server.pid);
+  stop();
 }

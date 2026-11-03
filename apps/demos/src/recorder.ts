@@ -99,6 +99,8 @@ export class Recorder {
       ],
       { stdio: ["pipe", "inherit", "inherit"] },
     );
+    // If ffmpeg dies, writing to it fails; the next frame() reports that it stopped.
+    ffmpeg.stdin?.on("error", () => {});
     return new Recorder(name, output, page, ffmpeg);
   }
 
@@ -107,7 +109,10 @@ export class Recorder {
    * stops the run, naming the video and the anchor (PRD-0013 D2).
    */
   async anchor(name: string): Promise<Locator> {
-    const locator = this.page.locator(`[data-tour="${name}"], [data-demo="${name}"]`).first();
+    const locator = this.page
+      .locator(`[data-tour="${name}"], [data-demo="${name}"]`)
+      .filter({ visible: true })
+      .first();
     try {
       await locator.waitFor({ state: "visible", timeout: 10_000 });
     } catch {
@@ -130,6 +135,9 @@ export class Recorder {
     await this.waitForWork(this.page.locator('[data-tour="viewport"] canvas'));
     // WebGL starts up in real time: give the 3D view frames to draw its first one.
     for (let i = 0; i < FPS; i++) await this.#step();
+    // The page's mouse starts at the corner: bring it, and the drawn cursor, to where #mouse says.
+    await this.page.mouse.move(this.#mouse.x, this.#mouse.y);
+    await this.#handled("pointermove");
     await this.#align();
   }
 
@@ -138,7 +146,9 @@ export class Recorder {
     await this.page.clock.runFor(1000 / FPS);
     this.#last = await this.#screenshot();
     const stdin = this.#ffmpeg.stdin;
-    if (!stdin) throw new Error("ffmpeg has no input");
+    if (!stdin || this.#ffmpeg.exitCode !== null) {
+      throw new Error(`ffmpeg stopped while recording ${this.#name}`);
+    }
     if (!stdin.write(this.#last)) await once(stdin, "drain");
   }
 
@@ -264,7 +274,7 @@ export class Recorder {
   /** Finishes the MP4, then writes the WebM (VP9) and the poster (the last frame). */
   async finish() {
     this.#ffmpeg.stdin?.end();
-    const [code] = await once(this.#ffmpeg, "exit");
+    const code = this.#ffmpeg.exitCode ?? (await once(this.#ffmpeg, "exit"))[0];
     await this.page.context().close();
     if (code !== 0) throw new Error(`ffmpeg exited with ${code} for ${this.#name}`);
     const mp4 = join(this.#output, `${this.#name}.mp4`);
