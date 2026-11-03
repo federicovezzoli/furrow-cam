@@ -104,7 +104,8 @@ if (build) {
   if (code !== 0) process.exit(code ?? 1);
 }
 const server = next(["start", "--port", String(port)]);
-const browser = await chromium.launch();
+// The full Chromium draws WebGL on the GPU; the default headless shell uses SwiftShader, on the CPU.
+const browser = await chromium.launch({ channel: "chromium" });
 try {
   await waitForServer(server);
   for (const name of names.length > 0 ? names : available) {

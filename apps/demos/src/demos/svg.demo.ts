@@ -62,6 +62,7 @@ export default async function svg(r: Recorder) {
   await r.click("add-vcarve", { waitFor: "job-time" });
   // Letters this size need no more than 3 mm, within the 90° bit's flutes.
   await r.type("vcarve-max-depth", "3", { waitFor: "job-time" });
+  await r.expectNoWarnings();
   await r.click("close-operation");
   await r.clickIn("viewport", PATHS.empty);
   await r.hold(1);

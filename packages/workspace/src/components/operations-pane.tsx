@@ -388,9 +388,13 @@ function JobTime() {
     });
     return totals.length === 0 ? null : totals.join(" · ");
   });
+  // A side's total shows while the other side computes; the demo videos wait for both (ADR-0075).
+  const ready = useToolpathStore(({ entries }) =>
+    operations.every(({ id, enabled }) => !enabled || entries[id]?.status === "ready"),
+  );
   if (time === null) return null;
   return (
-    <div className="grid gap-0.5 text-muted-foreground" data-demo="job-time">
+    <div className="grid gap-0.5 text-muted-foreground" data-demo={ready ? "job-time" : undefined}>
       <p>{t("total", { time })}</p>
       <p className="text-ui-label">{t(note)}</p>
     </div>
@@ -445,6 +449,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("cancelled")}
         className="size-3.5 shrink-0 text-muted-foreground"
+        data-demo="toolpath-failed"
       >
         <title>{t("cancelledDetail")}</title>
       </CircleSlashIcon>
@@ -456,6 +461,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("failed", { error: format(entry.error) })}
         className="size-3.5 shrink-0 text-destructive"
+        // The demo videos stop at a failed toolpath instead of waiting for it (ADR-0075).
+        data-demo="toolpath-failed"
       >
         <title>{format(entry.error)}</title>
       </CircleAlertIcon>
@@ -469,6 +476,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
       role="img"
       aria-label={t("warnings", { warnings: warnings.join(" ") })}
       className="size-3.5 shrink-0 text-amber-600 dark:text-amber-500"
+      // The demo videos stop rather than record a job with warnings (ADR-0075).
+      data-demo="toolpath-warning"
     >
       <title>{warnings.join("\n")}</title>
     </TriangleAlertIcon>

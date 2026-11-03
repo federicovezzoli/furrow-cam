@@ -252,6 +252,7 @@ export function SideButtons() {
           size="compact"
           aria-pressed={side === value}
           title={t(`sideHints.${value}`)}
+          data-demo={`side-${value}`}
           onClick={() => setSide(value)}
         >
           {t(`sides.${value}`)}

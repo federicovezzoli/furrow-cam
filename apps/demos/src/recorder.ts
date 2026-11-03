@@ -138,6 +138,15 @@ export class Recorder {
     }
   }
 
+  /** Stops the run if an operation in the list shows toolpath warnings. */
+  async expectNoWarnings() {
+    const shown = await this.page
+      .locator('[data-demo="toolpath-warning"]')
+      .filter({ visible: true })
+      .count();
+    if (shown > 0) throw new Error(`Demo "${this.#name}": ${shown} operations show warnings`);
+  }
+
   /**
    * Opens a new project in the workspace without an account (PRD-0008) and
    * skips the guided tour, whose overlay would catch the mouse. Records nothing.
@@ -240,7 +249,10 @@ export class Recorder {
 
   /** Glides the cursor to the middle of the anchor `name`. */
   async moveTo(name: string, seconds?: number) {
-    const box = await (await this.anchor(name)).boundingBox();
+    const anchor = await this.anchor(name);
+    // Inside a scrolled pane, the anchor can be out of sight: the pane scrolls to it, as for a user.
+    await anchor.scrollIntoViewIfNeeded();
+    const box = await anchor.boundingBox();
     if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
     await this.moveToPoint(box.x + box.width / 2, box.y + box.height / 2, seconds);
     return box;
@@ -295,6 +307,21 @@ export class Recorder {
     await this.hold(0.5);
   }
 
+  /**
+   * Clicks the anchor `name`, which downloads a project file, and saves it in
+   * the output folder as `<video name>.furrow.zip` (or `.furrow.json`), for a
+   * later video to open. Returns its path.
+   */
+  async saveDownload(name: string) {
+    const [download] = await Promise.all([this.page.waitForEvent("download"), this.click(name)]);
+    const suggested = download.suggestedFilename();
+    const extension = [".furrow.zip", ".furrow.json"].find((end) => suggested.endsWith(end));
+    if (!extension) throw new Error(`Demo "${this.#name}": unexpected download ${suggested}`);
+    const file = join(this.#output, this.#name + extension);
+    await download.saveAs(file);
+    return file;
+  }
+
   /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */
   async chooseFile(name: string, file: string) {
     const [chooser] = await Promise.all([this.page.waitForEvent("filechooser"), this.click(name)]);
@@ -337,7 +364,11 @@ export class Recorder {
   async waitForWork(target: Locator | string, timeout = 120_000) {
     const locator = typeof target === "string" ? this.#locate(target) : target;
     const end = Date.now() + timeout;
+    const failed = this.page.locator('[data-demo="toolpath-failed"]').filter({ visible: true });
     while (!(await locator.isVisible())) {
+      if ((await failed.count()) > 0) {
+        throw new Error(`Demo "${this.#name}": a toolpath failed while waiting for ${target}`);
+      }
       if (Date.now() > end)
         throw new Error(`Demo "${this.#name}": timed out waiting for ${locator}`);
       await this.#step();
