@@ -122,6 +122,7 @@ export function usePlayback(maxCells: number | null) {
         for (const listener of listeners) listener(range);
       },
       onError: setError,
+      onBusy: (sweeping) => store.setState({ sweeping }),
     });
     schedule.current = scheduler;
     function seekTo(distance: number) {
@@ -135,6 +136,8 @@ export function usePlayback(maxCells: number | null) {
     return () => {
       stop();
       worker.terminate();
+      // A load or seek in flight never answers now.
+      store.setState({ sweeping: false });
       schedule.current = null;
       setLoaded(null);
       setError(null);

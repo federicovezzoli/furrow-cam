@@ -19,11 +19,13 @@ import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
 import { ReportCapture } from "./report-capture";
-import { Stock, WorkOrigin } from "./scene";
+import { PartingPlane, Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
+import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
 import {
+  PartingButton,
   SideButtons,
   simulationStatus,
   TextureLimit,
@@ -90,7 +92,11 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section aria-label={t("simulation")} className="relative min-h-0 flex-1 bg-muted/40">
+      <section
+        aria-label={t("simulation")}
+        className="relative min-h-0 flex-1 bg-muted/40"
+        data-demo="simulation"
+      >
         <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
           <ReportCapture />
           {view === "top" ? (
@@ -120,9 +126,11 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
               aria-pressed={showToolpaths}
               title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
               onClick={() => setShowToolpaths(!showToolpaths)}
+              data-demo="show-toolpaths"
             >
               <ToolpathsIcon />
             </Button>
+            <PartingButton />
           </div>
         </div>
         {nothing && (
@@ -131,7 +139,14 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
           </p>
         )}
       </section>
-      <PlaybackTimeline store={store} path={path} parts={parts} units={units} status={status}>
+      <PlaybackTimeline
+        store={store}
+        path={path}
+        parts={parts}
+        units={units}
+        status={status}
+        pending={playback.pending}
+      >
         {children}
       </PlaybackTimeline>
     </div>
@@ -168,6 +183,9 @@ function SimulatorScene({
       ) : (
         <Stock box={box} palette={palette} />
       )}
+      <SideFrame side="top">
+        <PartingPlane color={palette.parting} />
+      </SideFrame>
       {/* Its own toggle decides, whatever the Operations pane hides. */}
       {showToolpaths && <Toolpaths palette={palette} showHidden />}
       <PlaybackTool />

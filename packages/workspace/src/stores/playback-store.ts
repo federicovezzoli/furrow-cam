@@ -21,6 +21,8 @@ export type PlaybackState = {
   distance: number;
   playing: boolean;
   speed: PlaybackSpeed;
+  /** Whether the worker is loading or sweeping the stock, which may lag `distance` meanwhile. */
+  sweeping: boolean;
   setDistance: (distance: number) => void;
   setPlaying: (playing: boolean) => void;
   setSpeed: (speed: PlaybackSpeed) => void;
@@ -33,6 +35,7 @@ export function createPlaybackStore() {
     distance: 0,
     playing: false,
     speed: 10,
+    sweeping: false,
     setDistance: (distance) => set({ distance: Math.max(0, distance) }),
     setPlaying: (playing) => set({ playing }),
     setSpeed: (speed) => set({ speed }),

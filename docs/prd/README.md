@@ -27,3 +27,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0010](0010-text.md) | Text | Draft |
 | [0011](0011-two-sided-machining.md) | Two-sided machining | Draft |
 | [0012](0012-mcp-server.md) | MCP server | Draft |
+| [0013](0013-demo-videos.md) | Automated demo videos | Draft |

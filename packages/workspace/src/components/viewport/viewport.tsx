@@ -5,7 +5,15 @@ import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { Canvas, useThree } from "@react-three/fiber";
-import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
+import {
+  BoxIcon,
+  LayersIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ScanIcon,
+  SeparatorHorizontalIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -213,6 +221,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
           key={value}
           variant={view === value ? "secondary" : "ghost"}
           size="icon-compact"
+          data-demo={`view-${value}`}
           aria-label={t(`views.${value}`)}
           aria-pressed={view === value}
           title={t("viewHint", { view: t(`views.${value}`), hint: t(`viewHints.${value}`) })}
@@ -225,6 +234,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
         variant="ghost"
         size="icon-compact"
         aria-label={t("fitStock")}
+        data-demo="fit-stock"
         title={t("fitStock")}
         onClick={onFit}
       >
@@ -250,12 +260,44 @@ export function SideButtons() {
           size="compact"
           aria-pressed={side === value}
           title={t(`sideHints.${value}`)}
+          data-demo={`side-${value}`}
           onClick={() => setSide(value)}
         >
           {t(`sides.${value}`)}
         </Button>
       ))}
     </div>
+  );
+}
+
+/**
+ * In a two-sided project, shows or hides the parting plane (#473). Only the
+ * 3D view draws it, so from the top view this switches to the 3D view and
+ * shows it.
+ */
+export function PartingButton() {
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const topView = useWorkspaceStore((s) => s.view === "top");
+  const shown = useWorkspaceStore((s) => s.showParting && s.view !== "top");
+  const workspace = useWorkspaceStoreApi();
+  const t = useTranslations("Viewport");
+  if (!twoSided) return null;
+  return (
+    <Button
+      variant={shown ? "secondary" : "ghost"}
+      size="icon-compact"
+      aria-label={t("showParting")}
+      aria-pressed={shown}
+      title={topView ? t("showPartingIn3d") : shown ? t("hideParting") : t("showParting")}
+      data-demo="parting-plane"
+      onClick={() => {
+        const state = workspace.getState();
+        if (topView) state.setView("orbit");
+        state.setShowParting(!shown);
+      }}
+    >
+      <SeparatorHorizontalIcon />
+    </Button>
   );
 }
 
@@ -303,6 +345,7 @@ function CutToolbar() {
       >
         <LayersIcon />
       </Button>
+      <PartingButton />
     </div>
   );
 }

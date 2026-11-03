@@ -1464,7 +1464,10 @@
       "bottom": "Mostrar la cara inferior, vista desde abajo una vez volteado el material"
     },
     "bottomSideHint": "Cara inferior, vista desde abajo. Elige el cero, selecciona trazados y edita puentes en la cara superior.",
-    "topSideSimulationHint": "Solo la cara superior: el material antes de voltearlo, sin los cortes de la cara inferior."
+    "topSideSimulationHint": "Solo la cara superior: el material antes de voltearlo, sin los cortes de la cara inferior.",
+    "showParting": "Mostrar el plano de separación",
+    "showPartingIn3d": "Mostrar el plano de separación en la vista 3D",
+    "hideParting": "Ocultar el plano de separación"
   },
   "Dialog": {
     "close": "Cerrar",

@@ -38,7 +38,8 @@ export type PlaybackResponse = { key: string } & (
  * Talks to a playback's worker, one seek at a time: while it sweeps, only the
  * latest seek waits, and it is sent when the worker answers, so scrubbing
  * never queues up work. Responses to an earlier `load` are dropped. `fail`
- * reports the worker as stopped, e.g. when it crashed.
+ * reports the worker as stopped, e.g. when it crashed. `onBusy` says when the
+ * worker starts and stops working.
  */
 export function schedulePlayback(
   post: (request: PlaybackRequest) => void,
@@ -46,6 +47,7 @@ export function schedulePlayback(
     onLoaded: (grid: HeightmapGrid, heights?: Float32Array) => void;
     onFrame: (start: number, values: Float32Array) => void;
     onError: (error: string) => void;
+    onBusy?: (busy: boolean) => void;
   },
 ) {
   let key: string | null = null;
@@ -53,6 +55,14 @@ export function schedulePlayback(
   let inFlight = false;
   let waiting: { move: number; fraction: number } | null = null;
   let sent: { move: number; fraction: number } | null = null;
+  let reported = false;
+
+  /** Tells `onBusy` when `inFlight` changed since it last did. */
+  function report() {
+    if (inFlight === reported) return;
+    reported = inFlight;
+    handlers.onBusy?.(inFlight);
+  }
 
   function send(at: { move: number; fraction: number }) {
     if (key === null) return;
@@ -76,11 +86,13 @@ export function schedulePlayback(
       waiting = null;
       sent = { move: 0, fraction: 0 };
       post({ type: "load", ...request });
+      report();
     },
     seek(move: number, fraction: number) {
       if (key === null) return;
       if (!loaded || inFlight) waiting = { move, fraction };
       else if (move !== sent?.move || fraction !== sent?.fraction) send({ move, fraction });
+      report();
     },
     receive(response: PlaybackResponse) {
       if (response.key !== key) return;
@@ -92,13 +104,17 @@ export function schedulePlayback(
         handlers.onFrame(response.start, response.values);
       } else {
         handlers.onError(response.error);
+        report();
         return;
       }
       next();
+      report();
     },
     fail(error: string) {
       if (key === null) return;
       key = null;
+      inFlight = false;
+      report();
       handlers.onError(error);
     },
   };

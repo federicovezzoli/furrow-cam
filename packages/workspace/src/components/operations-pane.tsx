@@ -50,6 +50,7 @@ export function OperationsPane() {
   const operations = useDocumentStore((s) => s.document.operations);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const targets = useSelectionTargets();
+  const pathCount = useWorkspaceStore((s) => s.selectedPaths.length);
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
@@ -65,6 +66,7 @@ export function OperationsPane() {
     <div className="grid gap-2 p-3 text-ui">
       <Selection
         target={target}
+        pathCount={pathCount}
         onClear={() => workspace.getState().selectPaths([])}
         onSelectInside={() => {
           const { selectedPaths, selectPaths } = workspace.getState();
@@ -134,22 +136,29 @@ export function OperationsPane() {
 }
 
 /**
- * What is selected (`target`), if anything, with a way to add the closed
- * paths inside it (a pocket's islands) and a way to clear it.
+ * What is selected (`target`, `pathCount` paths), if anything, with a way to
+ * add the closed paths inside it (a pocket's islands) and a way to clear it.
  */
 function Selection({
   target,
+  pathCount,
   onClear,
   onSelectInside,
 }: {
   target: string | undefined;
+  pathCount: number;
   onClear: () => void;
   onSelectInside: () => void;
 }) {
   const t = useTranslations("Operations");
   if (!target) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-1">
+    <div
+      className="flex flex-wrap items-center gap-x-1"
+      // The demo videos check what their clicks selected (ADR-0075).
+      data-demo="selection"
+      data-count={pathCount}
+    >
       <p className="flex-[1_1_7rem] first-letter:uppercase">{target}</p>
       <div className="ml-auto flex">
         <Button
@@ -379,9 +388,13 @@ function JobTime() {
     });
     return totals.length === 0 ? null : totals.join(" · ");
   });
+  // A side's total shows while the other side computes; the demo videos wait for both (ADR-0075).
+  const ready = useToolpathStore(({ entries }) =>
+    operations.every(({ id, enabled }) => !enabled || entries[id]?.status === "ready"),
+  );
   if (time === null) return null;
   return (
-    <div className="grid gap-0.5 text-muted-foreground">
+    <div className="grid gap-0.5 text-muted-foreground" data-demo={ready ? "job-time" : undefined}>
       <p>{t("total", { time })}</p>
       <p className="text-ui-label">{t(note)}</p>
     </div>
@@ -436,6 +449,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("cancelled")}
         className="size-3.5 shrink-0 text-muted-foreground"
+        data-demo="toolpath-failed"
       >
         <title>{t("cancelledDetail")}</title>
       </CircleSlashIcon>
@@ -447,6 +461,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("failed", { error: format(entry.error) })}
         className="size-3.5 shrink-0 text-destructive"
+        // The demo videos stop at a failed toolpath instead of waiting for it (ADR-0075).
+        data-demo="toolpath-failed"
       >
         <title>{format(entry.error)}</title>
       </CircleAlertIcon>
@@ -460,6 +476,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
       role="img"
       aria-label={t("warnings", { warnings: warnings.join(" ") })}
       className="size-3.5 shrink-0 text-amber-600 dark:text-amber-500"
+      // The demo videos stop rather than record a job with warnings (ADR-0075).
+      data-demo="toolpath-warning"
     >
       <title>{warnings.join("\n")}</title>
     </TriangleAlertIcon>

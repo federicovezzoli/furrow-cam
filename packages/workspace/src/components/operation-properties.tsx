@@ -137,6 +137,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           size="icon-compact"
           onClick={() => workspace.getState().selectOperation(null)}
           aria-label={t("closeLabel")}
+          data-demo="close-operation"
           title={t("close")}
         >
           <XIcon />

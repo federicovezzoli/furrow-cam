@@ -81,6 +81,22 @@ describe("schedulePlayback", () => {
     ]);
   });
 
+  it("is busy from the first request until the worker answers the last, telling only changes", () => {
+    const busy: boolean[] = [];
+    const schedule = schedulePlayback(() => {}, {
+      onLoaded: () => {},
+      onFrame: () => {},
+      onError: () => {},
+      onBusy: (value) => busy.push(value),
+    });
+    schedule.load(load);
+    schedule.seek(3, 0);
+    schedule.receive({ key: "a", type: "loaded", grid });
+    expect(busy.at(-1)).toBe(true);
+    schedule.receive({ key: "a", type: "frame", start: 0, values: new Float32Array() });
+    expect(busy).toEqual([true, false]);
+  });
+
   it("reports errors and a stopped worker", () => {
     const { schedule, errors } = setup();
     schedule.load(load);

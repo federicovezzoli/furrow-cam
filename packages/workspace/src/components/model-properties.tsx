@@ -71,6 +71,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           size="icon-compact"
           onClick={() => workspace.getState().selectModel(null)}
           aria-label={t("closeLabel")}
+          data-demo="close-model"
           title={t("close")}
         >
           <XIcon />
@@ -173,6 +174,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             size="compact"
             onClick={() => fitModelToStock(store, model.id)}
             title={t("fitTitle")}
+            data-demo="fit-model"
           >
             <Maximize2Icon />
             {t("fit")}

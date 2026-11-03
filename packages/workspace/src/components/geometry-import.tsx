@@ -60,6 +60,7 @@ export function ImportDrawingButton() {
       icon={<UploadIcon />}
       label={ribbon("drawing")}
       aria-label={ribbon("importDrawing")}
+      data-demo="import-drawing"
       hint={t("importDrawing")}
       disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
       // shortcut: finds the input by id, so only one workspace per page; share a ref if that changes.
@@ -111,6 +112,7 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
         icon={<TypeIcon />}
         label={ribbon("text")}
         aria-label={t("addText")}
+        data-demo="add-text"
         hint={t("addText")}
         disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
         disabled={adding}
@@ -233,7 +235,12 @@ export function GeometryImport() {
             {empty && (
               <div className="flex flex-wrap gap-2">
                 {drawings && (
-                  <Button variant="outline" size="compact" onClick={() => input.current?.click()}>
+                  <Button
+                    variant="outline"
+                    size="compact"
+                    data-demo="start-import-drawing"
+                    onClick={() => input.current?.click()}
+                  >
                     <UploadIcon />
                     {t("importDrawing")}
                   </Button>

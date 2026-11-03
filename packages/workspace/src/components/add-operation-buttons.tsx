@@ -140,6 +140,7 @@ export function AddOperationButtons() {
       icon={<OperationTypeIcon type={type} />}
       label={short}
       aria-label={t("addLabel", { operation: label })}
+      data-demo={`add-${type}`}
       hint={hint}
       disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
       onClick={() => choice && added(add(choice))}
