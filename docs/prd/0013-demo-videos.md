@@ -87,3 +87,4 @@ What a spike on an M1 Pro (2026-11-02) found:
 - 2026-11-02: the record command starts the app itself; V1 drills mounting holes added to the sample
 - 2026-11-02: open question on animations answered by ADR-0075
 - 2026-11-03: V1 and V2 end on the guest export dialog until guests can export G-code (#469)
+- 2026-11-03: videos are recorded in the dark theme
