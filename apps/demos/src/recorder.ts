@@ -266,8 +266,11 @@ export class Recorder {
     if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
     await this.moveToPoint(box.x + x, box.y + y);
     if (shift) await this.page.keyboard.down("Shift");
-    await this.#clickHere();
-    if (shift) await this.page.keyboard.up("Shift");
+    try {
+      await this.#clickHere();
+    } finally {
+      if (shift) await this.page.keyboard.up("Shift");
+    }
   }
 
   async #clickHere(waitFor?: string) {
@@ -281,9 +284,8 @@ export class Recorder {
 
   /** Clicks the anchor `name`, which opens a file picker, and picks `file`. */
   async chooseFile(name: string, file: string) {
-    const chooser = this.page.waitForEvent("filechooser");
-    await this.click(name);
-    await (await chooser).setFiles(file);
+    const [chooser] = await Promise.all([this.page.waitForEvent("filechooser"), this.click(name)]);
+    await chooser.setFiles(file);
   }
 
   /**
