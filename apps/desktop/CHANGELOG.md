@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.16.1
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.21.0, @furrow/ui@0.8.2
+
 ## 0.16.0
 
 ### Minor Changes

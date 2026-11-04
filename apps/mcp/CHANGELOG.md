@@ -1,5 +1,11 @@
 # @furrow/mcp
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.21.0, @furrow/ui@0.8.2
+
 ## 0.3.2
 
 ### Patch Changes

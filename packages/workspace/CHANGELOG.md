@@ -1,5 +1,15 @@
 # @furrow/workspace
 
+## 0.21.0
+
+### Minor Changes
+
+- Two-sided projects now show the parting plane in the 3D view of the viewport and the simulator, so you can see where the two sides meet. A button next to the toolpath toggle shows or hides it. ([#474](https://github.com/federicovezzoli/furrow-cam/pull/474))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/ui@0.8.2
+
 ## 0.20.0
 
 ### Minor Changes
