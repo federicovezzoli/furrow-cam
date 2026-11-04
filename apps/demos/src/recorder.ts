@@ -58,7 +58,7 @@ export class Recorder {
    * Opens a fresh dark, English, 1920 × 1080 page on a frozen clock (ADR-0075).
    * Requests leave only for `origin`, so nothing (such as telemetry) depends on the network.
    */
-  static async start(browser: Browser, origin: string, name: string, output: string) {
+  static async start(browser: Browser, origin: string, name: string, output: string, speed = 1) {
     const context = await browser.newContext({
       baseURL: origin,
       viewport: { width: WIDTH, height: HEIGHT },
@@ -81,10 +81,13 @@ export class Recorder {
         "error",
         "-f",
         "image2pipe",
+        // Read faster than recorded, and dropped back to FPS, to play the video at `speed`.
         "-framerate",
-        String(FPS),
+        String(FPS * speed),
         "-i",
         "-",
+        "-r",
+        String(FPS),
         "-c:v",
         "libx264",
         "-crf",

@@ -35,9 +35,18 @@ const available = (await readdir(join(root, "src", "demos")))
 const args = process.argv.slice(2);
 // `--no-build` reuses the last build, while working on a script.
 const build = !args.includes("--no-build");
+// `--speed <factor>` plays the videos faster (or slower), without changing the scripts. Whole
+// numbers play smoothest: at 1.5, ffmpeg keeps 2 frames in 3, so motion steps unevenly.
+const speedAt = args.indexOf("--speed");
+const speed = speedAt === -1 ? 1 : Number(args[speedAt + 1]);
+if (!(speed > 0 && Number.isFinite(speed))) {
+  console.error(`--speed needs a positive number, such as --speed 2`);
+  process.exit(1);
+}
+if (speedAt !== -1) args.splice(speedAt, 2);
 const names = args.filter((arg) => !arg.startsWith("--"));
 for (const flag of args.filter((arg) => arg.startsWith("--") && arg !== "--no-build")) {
-  console.error(`Unknown option ${flag}. Options: --no-build`);
+  console.error(`Unknown option ${flag}. Options: --no-build, --speed <factor>`);
   process.exit(1);
 }
 for (const name of names) {
@@ -115,7 +124,7 @@ try {
     const demo: { default: (r: Recorder) => Promise<void> } = await import(
       `./demos/${name}.demo.ts`
     );
-    const recorder = await Recorder.start(browser, origin, name, output);
+    const recorder = await Recorder.start(browser, origin, name, output, speed);
     await demo.default(recorder);
     await recorder.finish();
     console.log(`Wrote ${join(output, name)}.mp4, .webm and .jpg`);
