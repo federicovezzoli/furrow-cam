@@ -71,10 +71,8 @@ export default async function step(r: Recorder) {
   await r.hold(1.5);
   r.poster();
 
-  // The project file V3 opens, then G-code: without an account, the workspace explains what it needs (#469).
+  // The project file V3 opens.
   await r.click("tab-properties");
   await r.saveDownload("export-project");
-  await r.click("tab-operations");
-  await r.click("export-gcode");
-  await r.hold(3);
+  await r.hold(1);
 }

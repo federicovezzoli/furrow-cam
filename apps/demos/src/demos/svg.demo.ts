@@ -74,8 +74,4 @@ export default async function svg(r: Recorder) {
   await r.drag(100, -20, 3);
   await r.hold(1.5);
   r.poster();
-
-  // Export: without an account, the workspace explains what G-code needs (#469).
-  await r.click("export-gcode");
-  await r.hold(3);
 }
