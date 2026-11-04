@@ -44,11 +44,21 @@ export class Recorder {
   readonly #output: string;
   readonly #ffmpeg: ChildProcess;
   readonly #mouse = { x: WIDTH / 2, y: HEIGHT / 2 };
+  readonly #speed: number;
+  /** Frames the page clock has advanced, recorded or not (see `frame`). */
+  #ticks = 0;
   #last: Buffer | null = null;
   #poster: Buffer | null = null;
 
-  private constructor(name: string, output: string, page: Page, ffmpeg: ChildProcess) {
+  private constructor(
+    name: string,
+    output: string,
+    page: Page,
+    ffmpeg: ChildProcess,
+    speed: number,
+  ) {
     this.#name = name;
+    this.#speed = speed;
     this.#output = output;
     this.page = page;
     this.#ffmpeg = ffmpeg;
@@ -81,13 +91,10 @@ export class Recorder {
         "error",
         "-f",
         "image2pipe",
-        // Read faster than recorded, and dropped back to FPS, to play the video at `speed`.
         "-framerate",
-        String(FPS * speed),
+        String(FPS),
         "-i",
         "-",
-        "-r",
-        String(FPS),
         "-c:v",
         "libx264",
         "-crf",
@@ -105,7 +112,7 @@ export class Recorder {
     );
     // If ffmpeg dies, writing to it fails; the next frame() reports that it stopped.
     ffmpeg.stdin?.on("error", () => {});
-    return new Recorder(name, output, page, ffmpeg);
+    return new Recorder(name, output, page, ffmpeg, speed);
   }
 
   /**
@@ -189,16 +196,26 @@ export class Recorder {
     await this.#align();
   }
 
-  /** Advances the page clock by one frame and records it. */
+  /**
+   * Advances the page clock by one frame and records it as many times as
+   * `speed` asks: at 2, every other frame isn't recorded (nor screenshotted);
+   * at 0.5, each is recorded twice.
+   */
   async frame() {
     await this.page.clock.runFor(1000 / FPS);
+    this.#ticks++;
+    const copies =
+      Math.floor(this.#ticks / this.#speed) - Math.floor((this.#ticks - 1) / this.#speed);
+    if (copies === 0) return;
     await this.#swept();
     this.#last = await this.#screenshot();
     const stdin = this.#ffmpeg.stdin;
     if (!stdin || this.#ffmpeg.exitCode !== null) {
       throw new Error(`ffmpeg stopped while recording ${this.#name}`);
     }
-    if (!stdin.write(this.#last)) await once(stdin, "drain");
+    for (let i = 0; i < copies; i++) {
+      if (!stdin.write(this.#last)) await once(stdin, "drain");
+    }
   }
 
   /**
