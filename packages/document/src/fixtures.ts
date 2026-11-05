@@ -262,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 33,
+    schemaVersion: 34,
     units: "in",
     stock: {
       width: 300,

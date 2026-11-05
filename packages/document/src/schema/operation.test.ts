@@ -163,7 +163,7 @@ describe("DrillOperation", () => {
   const drill = {
     ...profile,
     type: "drill",
-    params: { depth: 10, peck: true, stepOver: 40, pins: false },
+    params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
   };
 
   it("accepts drills and end mills", () => {

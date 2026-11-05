@@ -96,6 +96,7 @@ export function defaultDrillParams(document: ProjectDocument): DrillParams {
     peck: true,
     stepOver: DEFAULT_STEP_OVER,
     pins: false,
+    points: [],
   };
 }
 

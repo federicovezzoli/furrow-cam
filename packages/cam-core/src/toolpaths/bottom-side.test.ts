@@ -209,7 +209,7 @@ describe("2D operations on the bottom side", () => {
           tool: drill,
           stockSide: "top",
           targets: [{ shapeId: HOLE.id, paths: null }],
-          params: { depth: DEPTH, peck: false, stepOver: 40, pins: false },
+          params: { depth: DEPTH, peck: false, stepOver: 40, pins: false, points: [] },
         };
         const [, bottom] = bothSides(drilling, axis);
         const plunges = bottom.moves.filter(({ to }) => Math.abs(to[2] + DEPTH) < 1e-9);

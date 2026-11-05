@@ -24,7 +24,7 @@ function operation(name: string, tool: Tool = endMill): Operation {
     stockSide: "top",
     targets: [],
     tool,
-    params: { depth: 5, peck: false, stepOver: 40, pins: false },
+    params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [] },
   };
 }
 
