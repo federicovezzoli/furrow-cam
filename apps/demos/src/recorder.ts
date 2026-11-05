@@ -26,6 +26,9 @@ addEventListener("DOMContentLoaded", () => {
       window.demoMouse = type + " " + event.clientX + "," + event.clientY;
     }, true);
   }
+  // Wheel events the page handled, which the recorder waits for.
+  window.demoWheels = 0;
+  addEventListener("wheel", () => window.demoWheels++, true);
   document.body.append(cursor);
 });
 `;
@@ -424,6 +427,30 @@ export class Recorder {
     await this.#press("down");
     await this.moveToPoint(this.#mouse.x + dx, this.#mouse.y + dy, seconds);
     await this.#press("up");
+  }
+
+  /**
+   * Turns the mouse wheel `notches` at the cursor, spread over `seconds`, e.g.
+   * to zoom the 3D view (negative zooms in). Its controls zoom a fixed step a
+   * wheel event, whatever the delta, so the count sets how far. Each is
+   * handled before the frame is recorded.
+   */
+  async wheel(notches: number, seconds: number) {
+    const frames = Math.max(1, Math.round(seconds * FPS));
+    const count = Math.abs(notches);
+    const handled = () => this.page.evaluate(() => (window as { demoWheels?: number }).demoWheels);
+    for (let i = 0; i < frames; i++) {
+      if (Math.floor(((i + 1) * count) / frames) > Math.floor((i * count) / frames)) {
+        const before = await handled();
+        await this.page.mouse.wheel(0, Math.sign(notches) * 100);
+        const end = Date.now() + 5_000;
+        while ((await handled()) === before) {
+          if (Date.now() > end) throw new Error(`Demo "${this.#name}": the page missed a wheel`);
+          await new Promise((resolve) => setTimeout(resolve, 2));
+        }
+      }
+      await this.frame();
+    }
   }
 
   /**
