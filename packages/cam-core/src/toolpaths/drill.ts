@@ -29,7 +29,8 @@ export type DrillOptions = {
  *   no guess at what is meant as a circle: a coarse polygon has no circle
  *   that fits it. The
  *   hole's size is the circle through its farthest points, so the hole
- *   contains the drawn outline. Other paths are skipped.
+ *   contains the drawn outline. Other paths are skipped. The operation's
+ *   placed holes (`params.points`, #429) are drilled like single points.
  * - A point, or a circle the tool fits within that tolerance, is drilled:
  *   without pecking the tool feeds straight to `depth` at its plunge rate;
  *   pecking splits the depth into equal pecks no deeper than the tool's
@@ -56,7 +57,7 @@ export function drillToolpath(
 
   const radius = tool.diameter / 2;
   const slack = DRILL_DIAMETER_TOLERANCE / 2 + 1e-9;
-  const found: Hole[] = [];
+  const found: Hole[] = params.points.map((center) => ({ center, bore: null }));
   let tooSmall = 0;
   let tooBig = 0;
   let other = 0;

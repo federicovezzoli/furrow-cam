@@ -1,5 +1,6 @@
 import {
   distance,
+  type Path,
   type Point,
   pointsCoincide,
   type Shape,
@@ -9,13 +10,15 @@ import {
 import { shapesBounds } from "../geometry/bounds";
 import { circleCenter } from "../geometry/circle";
 import { flattenPath } from "../geometry/flatten";
+import { projectOnLoop } from "../geometry/loop";
 import { xyOriginPosition } from "./stock";
 
 /**
  * What a snap target is (PRD-0002 Z5): a stock anchor, a vertex of a shape (a
  * segment end, or a single-point path), the centre of an arc or of a circle
  * (a closed path drilling would take as one, see `circleCenter`), or a corner
- * or the centre of a shape's bounding box.
+ * or the centre of a shape's bounding box. Placed drill holes (#429) also
+ * snap to the middle of a segment and to the nearest point of an edge.
  */
 export type SnapKind =
   | "stock_anchor"
@@ -23,7 +26,9 @@ export type SnapKind =
   | "arc_center"
   | "circle_center"
   | "bounds_corner"
-  | "bounds_center";
+  | "bounds_center"
+  | "midpoint"
+  | "edge";
 
 /** A point the cursor snaps to, in stock coordinates (ADR-0014). */
 export type SnapTarget =
@@ -91,4 +96,87 @@ export function nearestSnapTarget(
     bestDistance = d;
   }
   return best;
+}
+
+/**
+ * Every point a placed drill hole (#429) can snap to: `snapTargets`, then
+ * the middle of every segment (along the curve for an arc, at half its
+ * parameter for a Bézier), a closed path's closing line included.
+ */
+export function holeSnapTargets(
+  stock: Pick<Stock, "width" | "height">,
+  shapes: Shape[],
+): SnapTarget[] {
+  const midpoints = shapes.flatMap((shape) => shape.paths.flatMap(segmentMidpoints));
+  return [
+    ...snapTargets(stock, shapes),
+    ...midpoints.map((point): SnapTarget => ({ kind: "midpoint", point })),
+  ];
+}
+
+/** The paths of `shapes` with segments, flattened, for `nearestHoleSnap`. */
+export function snapEdges(shapes: Shape[]): Point[][] {
+  return shapes.flatMap((shape) =>
+    shape.paths.filter((path) => path.segments.length > 0).map((path) => flattenPath(path)),
+  );
+}
+
+/**
+ * Where a placed drill hole snaps near `point`: the nearest of `targets`
+ * within `radius`, or else the nearest point of `edges` (from `snapEdges`)
+ * within it, or `null`.
+ */
+export function nearestHoleSnap(
+  targets: SnapTarget[],
+  edges: Point[][],
+  point: Point,
+  radius: number,
+): SnapTarget | null {
+  const target = nearestSnapTarget(targets, point, radius);
+  if (target) return target;
+  let best: SnapTarget | null = null;
+  let bestDistance = radius;
+  for (const edge of edges) {
+    const projection = projectOnLoop(edge, point);
+    if (projection.distance > bestDistance) continue;
+    best = { kind: "edge", point: projection.point };
+    bestDistance = projection.distance;
+  }
+  return best;
+}
+
+function segmentMidpoints(path: Path): Point[] {
+  const points: Point[] = [];
+  let from = path.start;
+  for (const segment of path.segments) {
+    const { to } = segment;
+    if (segment.kind === "line") points.push(middle(from, to));
+    else if (segment.kind === "cubic") {
+      const { c1, c2 } = segment;
+      points.push([
+        (from[0] + 3 * c1[0] + 3 * c2[0] + to[0]) / 8,
+        (from[1] + 3 * c1[1] + 3 * c2[1] + to[1]) / 8,
+      ]);
+    } else {
+      const { center, clockwise } = segment;
+      const TAU = 2 * Math.PI;
+      const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
+      const end = Math.atan2(to[1] - center[1], to[0] - center[0]);
+      const turn = pointsCoincide(from, to)
+        ? TAU
+        : (((clockwise ? start - end : end - start) % TAU) + TAU) % TAU;
+      const angle = start + ((clockwise ? -1 : 1) * turn) / 2;
+      const radius = distance(center, from);
+      points.push([center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle)]);
+    }
+    from = to;
+  }
+  if (path.closed && path.segments.length > 0 && !pointsCoincide(from, path.start)) {
+    points.push(middle(from, path.start));
+  }
+  return points;
+}
+
+function middle(a: Point, b: Point): Point {
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 }

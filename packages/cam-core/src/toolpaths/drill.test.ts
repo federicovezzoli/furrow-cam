@@ -26,7 +26,7 @@ const tool: Tool = {
   color: "#2563eb",
 };
 
-const params: DrillParams = { depth: 10, peck: false, stepOver: 40, pins: false };
+const params: DrillParams = { depth: 10, peck: false, stepOver: 40, pins: false, points: [] };
 
 function circle(center: Point, radius: number): Path {
   const start: Point = [center[0] + radius, center[1]];
@@ -296,6 +296,21 @@ describe("drillToolpath", () => {
   it("drills holes at the same centre once", () => {
     const toolpath = drill([shape(circle([10, 10], 3)), shape(point([10, 10.0001]))]);
     expect(holeOrder(toolpath)).toHaveLength(1);
+  });
+
+  it("drills placed holes like points, once per centre and on the same route (#429)", () => {
+    const toolpath = drill([shape(point([20, 30]))], {
+      points: [
+        [50, 0],
+        [20, 30],
+      ],
+    });
+    expect(toolpath.warnings).toEqual([]);
+    expect(holeOrder(toolpath)).toEqual([
+      [20, 30],
+      [50, 0],
+    ]);
+    expect(holeOrder(drill([], { points: [[5, 5]] }))).toEqual([[5, 5]]);
   });
 
   it("warns when the depth exceeds the flute length", () => {

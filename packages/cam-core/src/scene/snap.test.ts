@@ -2,7 +2,14 @@ import type { Path, Point, Shape } from "@furrow/document";
 import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { circleCenter } from "../geometry/circle";
-import { nearestSnapTarget, type SnapTarget, snapTargets } from "./snap";
+import {
+  holeSnapTargets,
+  nearestHoleSnap,
+  nearestSnapTarget,
+  type SnapTarget,
+  snapEdges,
+  snapTargets,
+} from "./snap";
 
 const stock = { width: 600, height: 400 };
 
@@ -179,5 +186,92 @@ describe("nearestSnapTarget", () => {
     });
     expect(nearestSnapTarget(targets, [40, 0.5], 3)?.kind).toBe("vertex");
     expect(nearestSnapTarget(targets, [20, 10], 3)?.kind).toBe("bounds_center");
+  });
+});
+
+describe("holeSnapTargets", () => {
+  it("adds the middle of every line, closing lines included, after the zero's targets", () => {
+    const shapes = [
+      shape(
+        polyline(
+          [
+            [0, 0],
+            [10, 0],
+            [10, 20],
+          ],
+          true,
+        ),
+      ),
+    ];
+    const targets = holeSnapTargets(stock, shapes);
+    expect(targets.slice(0, -3)).toEqual(snapTargets(stock, shapes));
+    expect(kinds(targets, "midpoint")).toEqual([
+      [5, 0],
+      [10, 10],
+      [5, 10],
+    ]);
+  });
+
+  it("takes the middle of an arc along it, either way round, and of a full circle", () => {
+    const arc = (clockwise: boolean): Path => ({
+      start: [10, 0],
+      segments: [{ kind: "arc", to: [0, 10], center: [0, 0], clockwise }],
+      closed: false,
+    });
+    const [ccw] = kinds(holeSnapTargets(stock, [shape(arc(false))]), "midpoint");
+    const [cw] = kinds(holeSnapTargets(stock, [shape(arc(true))]), "midpoint");
+    const [full] = kinds(holeSnapTargets(stock, [shape(circle([0, 0], 10))]), "midpoint");
+    const h = 10 * Math.SQRT1_2;
+    expect(ccw?.[0]).toBeCloseTo(h);
+    expect(ccw?.[1]).toBeCloseTo(h);
+    expect(cw?.[0]).toBeCloseTo(-h);
+    expect(cw?.[1]).toBeCloseTo(-h);
+    expect(full?.[0]).toBeCloseTo(-10);
+    expect(full?.[1]).toBeCloseTo(0);
+  });
+
+  it("takes a Bézier's point at half its parameter", () => {
+    const curve: Path = {
+      start: [0, 0],
+      segments: [{ kind: "cubic", c1: [0, 8], c2: [8, 8], to: [8, 0] }],
+      closed: false,
+    };
+    expect(kinds(holeSnapTargets(stock, [shape(curve)]), "midpoint")).toEqual([[4, 6]]);
+  });
+});
+
+describe("nearestHoleSnap", () => {
+  const shapes = [
+    shape(
+      polyline(
+        [
+          [0, 0],
+          [100, 0],
+          [100, 100],
+        ],
+        false,
+      ),
+    ),
+  ];
+  const targets = holeSnapTargets(stock, shapes);
+  const edges = snapEdges(shapes);
+
+  it("snaps to a target in range before the edge", () => {
+    expect(nearestHoleSnap(targets, edges, [48, 1], 3)).toEqual({
+      kind: "midpoint",
+      point: [50, 0],
+    });
+  });
+
+  it("snaps onto the nearest edge when no target is in range", () => {
+    expect(nearestHoleSnap(targets, edges, [30, 2], 3)).toEqual({ kind: "edge", point: [30, 0] });
+  });
+
+  it("finds nothing out of range", () => {
+    expect(nearestHoleSnap(targets, edges, [30, 5], 3)).toBeNull();
+  });
+
+  it("has no edges for single-point paths", () => {
+    expect(snapEdges([shape({ start: [1, 1], segments: [], closed: false })])).toEqual([]);
   });
 });
