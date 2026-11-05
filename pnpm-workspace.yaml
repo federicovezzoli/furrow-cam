@@ -20,6 +20,6 @@ allowBuilds:
 catalog:
   "@types/three": 0.182.0
   three: 0.182.0
-  typescript: ^5
+  typescript: ^7
   vitest: ^5
   zod: ^4.6.7
