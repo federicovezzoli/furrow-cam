@@ -86,6 +86,34 @@ describe("OperationProperties", () => {
     expect(workspace.getState().editing).toBeNull();
   });
 
+  it("places a drill's holes in the viewport (#429)", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (profile?.type !== "profile") throw new Error("The fixture has no profile");
+    const { params: _, ...rest } = profile;
+    doc.operations = [
+      {
+        ...rest,
+        type: "drill",
+        params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[10, 20]] },
+      },
+    ];
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: doc }),
+    );
+    workspace.getState().selectOperation(OPERATION_ID);
+    expect(screen.getByText("1 placed hole")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Place holes" }));
+    expect(workspace.getState()).toMatchObject({ editing: "holes", view: "top" });
+    expect(screen.getByText(/Click to place a hole/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(workspace.getState().editing).toBeNull();
+  });
+
   it("turns corner overcuts off and on, and off on the line (#428)", () => {
     renderWorkspace(
       <>

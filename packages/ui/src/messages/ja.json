@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {開始点なし} other {#個の開始点}}",
     "editStartPoints": "開始点を編集",
     "startPointsHint": "パスをクリックして開始点を追加し(開いたパスでは近い方の端)、ドラッグで移動、クリックで削除します。各パスに1つまでです。",
+    "holeCount": "{count, plural, =0 {配置した穴なし} other {#個の配置した穴}}",
+    "placeHoles": "穴を配置",
+    "placeHolesHint": "クリックでカーソルがスナップした位置に穴を配置し、穴をクリックで削除します。Esc または右クリックで終了します。",
     "computing": "ツールパスを計算中…",
     "cancel": "キャンセル",
     "computeAgain": "再計算",
@@ -1232,6 +1235,8 @@
     "circle_center": "円の中心",
     "bounds_corner": "バウンディングボックスの角",
     "bounds_center": "バウンディングボックスの中心",
+    "midpoint": "中点",
+    "edge": "エッジ",
     "anchors": {
       "top_left": "素材の左上",
       "top_center": "素材の上中央",

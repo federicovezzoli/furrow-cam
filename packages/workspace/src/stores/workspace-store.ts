@@ -15,7 +15,7 @@ export type HoveredGeometry = { shapeId: string; path: number };
 export type ModelImport = { fileName: string; error: Translatable | null };
 
 /** What the viewport edits on the selected operation. */
-export type EditMode = "tabs" | "startPoints" | "overcuts";
+export type EditMode = "tabs" | "startPoints" | "overcuts" | "holes";
 
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
@@ -51,7 +51,8 @@ export type WorkspaceState = {
   hovered: HoveredGeometry | null;
   /**
    * Editing the selected profile's tabs or corner overcuts (#428), or the
-   * selected profile's or engraving's start points (#426), in the viewport. Only in the top view,
+   * selected profile's or engraving's start points (#426), or placing the
+   * selected drill's holes (#429), in the viewport. Only in the top view,
    * and ends when the selection or the view changes.
    */
   editing: EditMode | null;
@@ -105,7 +106,7 @@ export type WorkspaceState = {
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs, start point editing without a profile or engraving, overcut
-   * editing without overcuts, picking the zero without a custom zero and the
+   * editing without overcuts, placing holes without a drill of shapes, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;
@@ -384,6 +385,12 @@ export function createWorkspaceStore() {
               if (
                 state.editing === "overcuts" &&
                 !(operation?.type === "profile" && operation.params.cornerOvercuts)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "holes" &&
+                !(operation?.type === "drill" && !operation.params.pins)
               ) {
                 state.editing = null;
               }

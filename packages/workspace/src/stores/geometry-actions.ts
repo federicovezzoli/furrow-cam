@@ -207,12 +207,22 @@ export function drawingBounds(geometry: Shape[], id: string): Rect | null {
   return shapesBounds(drawingShapes(geometry, id));
 }
 
-/** The operations that machine only drawing `id`, which go with it. */
+/**
+ * The operations that machine only drawing `id`, which go with it; a drill
+ * with placed holes (#429) stays.
+ */
 export function drawingOperations(document: ProjectDocument, id: string): Operation[] {
   const shapeIds = new Set(drawingShapes(document.geometry, id).map((shape) => shape.id));
   return document.operations.filter(
-    ({ targets }) => targets.length > 0 && targets.every(({ shapeId }) => shapeIds.has(shapeId)),
+    (operation) =>
+      operation.targets.length > 0 &&
+      operation.targets.every(({ shapeId }) => shapeIds.has(shapeId)) &&
+      !hasPlacedHoles(operation),
   );
+}
+
+function hasPlacedHoles(operation: Operation): boolean {
+  return operation.type === "drill" && operation.params.points.length > 0;
 }
 
 /**
@@ -634,7 +644,7 @@ export function removeDrawing(store: DocumentStore, id: string) {
         const { startPoints } = operation.params;
         operation.params.startPoints = startPoints.filter((_, i) => !gone.startPoints[i]);
       }
-      return targets.length > 0;
+      return targets.length > 0 || hasPlacedHoles(operation);
     });
   });
 }

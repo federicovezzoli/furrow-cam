@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Nenhum ponto de início} one {# ponto de início} other {# pontos de início}}",
     "editStartPoints": "Editar pontos de início",
     "startPointsHint": "Clique num caminho para adicionar um ponto de início (num caminho aberto, na extremidade mais próxima), arraste-o para o mover, clique nele para o remover. Um por caminho.",
+    "holeCount": "{count, plural, =0 {Nenhum furo colocado} one {# furo colocado} other {# furos colocados}}",
+    "placeHoles": "Colocar furos",
+    "placeHolesHint": "Clique para colocar um furo onde o cursor se ajusta, clique num furo para o remover. Esc ou clique direito para terminar.",
     "computing": "Calculando percurso…",
     "cancel": "Cancelar",
     "computeAgain": "Calcular de novo",
@@ -1232,6 +1235,8 @@
     "circle_center": "Centro do círculo",
     "bounds_corner": "Canto da caixa delimitadora",
     "bounds_center": "Centro da caixa delimitadora",
+    "midpoint": "Ponto médio",
+    "edge": "Aresta",
     "anchors": {
       "top_left": "Material: superior esquerdo",
       "top_center": "Material: superior central",

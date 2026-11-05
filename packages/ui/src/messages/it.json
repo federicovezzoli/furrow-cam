@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Nessun punto di partenza} one {# punto di partenza} other {# punti di partenza}}",
     "editStartPoints": "Modifica punti di partenza",
     "startPointsHint": "Fai clic su un percorso per aggiungere un punto di partenza (su un percorso aperto va all'estremità più vicina), trascinalo per spostarlo, fai clic su di esso per rimuoverlo. Ogni percorso ne accetta uno.",
+    "holeCount": "{count, plural, =0 {Nessun foro posizionato} one {# foro posizionato} other {# fori posizionati}}",
+    "placeHoles": "Posiziona fori",
+    "placeHolesHint": "Fai clic per posizionare un foro dove si aggancia il cursore, fai clic su un foro per rimuoverlo. Esc o clic destro per finire.",
     "computing": "Calcolo del percorso utensile…",
     "cancel": "Annulla",
     "computeAgain": "Calcola di nuovo",
@@ -1232,6 +1235,8 @@
     "circle_center": "Centro del cerchio",
     "bounds_corner": "Angolo del riquadro",
     "bounds_center": "Centro del riquadro",
+    "midpoint": "Punto medio",
+    "edge": "Bordo",
     "anchors": {
       "top_left": "Grezzo, in alto a sinistra",
       "top_center": "Grezzo, in alto al centro",

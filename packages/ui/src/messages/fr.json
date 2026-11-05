@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Aucun point de départ} one {# point de départ} other {# points de départ}}",
     "editStartPoints": "Modifier les points de départ",
     "startPointsHint": "Cliquez sur un tracé pour ajouter un point de départ (à l'extrémité la plus proche d'un tracé ouvert), faites-le glisser pour le déplacer, cliquez dessus pour le supprimer. Un par tracé.",
+    "holeCount": "{count, plural, =0 {Aucun trou placé} one {# trou placé} other {# trous placés}}",
+    "placeHoles": "Placer des trous",
+    "placeHolesHint": "Cliquez pour placer un trou là où le curseur s'accroche, cliquez sur un trou pour le supprimer. Échap ou un clic droit pour terminer.",
     "computing": "Calcul de la trajectoire…",
     "cancel": "Annuler",
     "computeAgain": "Recalculer",
@@ -1232,6 +1235,8 @@
     "circle_center": "Centre du cercle",
     "bounds_corner": "Coin de l’encombrement",
     "bounds_center": "Centre de l’encombrement",
+    "midpoint": "Milieu",
+    "edge": "Bord",
     "anchors": {
       "top_left": "Brut, en haut à gauche",
       "top_center": "Brut, en haut au centre",

@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Geen startpunten} one {# startpunt} other {# startpunten}}",
     "editStartPoints": "Startpunten bewerken",
     "startPointsHint": "Klik op een pad om een startpunt toe te voegen (bij een open pad op het dichtstbijzijnde uiteinde), sleep het om het te verplaatsen, klik erop om het te verwijderen. Eén per pad.",
+    "holeCount": "{count, plural, =0 {Geen geplaatste gaten} one {# geplaatst gat} other {# geplaatste gaten}}",
+    "placeHoles": "Gaten plaatsen",
+    "placeHolesHint": "Klik om een gat te plaatsen waar de cursor snapt, klik op een gat om het te verwijderen. Esc of rechtsklik om te stoppen.",
     "computing": "Gereedschapsbaan berekenen…",
     "cancel": "Annuleren",
     "computeAgain": "Opnieuw berekenen",
@@ -1232,6 +1235,8 @@
     "circle_center": "Middelpunt cirkel",
     "bounds_corner": "Hoek omhullend kader",
     "bounds_center": "Midden omhullend kader",
+    "midpoint": "Middelpunt",
+    "edge": "Rand",
     "anchors": {
       "top_left": "Materiaal linksboven",
       "top_center": "Materiaal midden boven",

@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Keine Startpunkte} one {# Startpunkt} other {# Startpunkte}}",
     "editStartPoints": "Startpunkte bearbeiten",
     "startPointsHint": "Klicke auf einen Pfad, um einen Startpunkt hinzuzufügen (bei einem offenen Pfad am näheren Ende), ziehe ihn zum Verschieben, klicke darauf zum Entfernen. Jeder Pfad nimmt einen auf.",
+    "holeCount": "{count, plural, =0 {Keine gesetzten Bohrungen} one {# gesetzte Bohrung} other {# gesetzte Bohrungen}}",
+    "placeHoles": "Bohrungen setzen",
+    "placeHolesHint": "Klicke, um eine Bohrung am Fangpunkt zu setzen, klicke auf eine Bohrung, um sie zu entfernen. Esc oder Rechtsklick beendet.",
     "computing": "Werkzeugbahn wird berechnet…",
     "cancel": "Abbrechen",
     "computeAgain": "Neu berechnen",
@@ -1232,6 +1235,8 @@
     "circle_center": "Kreismittelpunkt",
     "bounds_corner": "Ecke des Begrenzungsrahmens",
     "bounds_center": "Mitte des Begrenzungsrahmens",
+    "midpoint": "Mittelpunkt",
+    "edge": "Kante",
     "anchors": {
       "top_left": "Rohteil, oben links",
       "top_center": "Rohteil, oben Mitte",

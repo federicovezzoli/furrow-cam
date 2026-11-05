@@ -238,12 +238,13 @@ export function addPinDrillOperation(
   return operation.id;
 }
 
-/** Makes the drill `id` cut the locating pins (#356) instead of its shapes. */
+/** Makes the drill `id` cut the locating pins (#356) instead of its shapes and placed holes. */
 export function setDrillPins(store: DocumentStore, id: string) {
   changeOperation(store, "setOperationTargets", id, (operation) => {
     // Top side only: turned over, the stock sits on the pins.
     if (operation.type !== "drill" || operation.stockSide !== "top") return;
     operation.targets = [];
+    operation.params.points = [];
     operation.params.pins = true;
   });
 }
@@ -726,6 +727,20 @@ export function moveStartPoint(store: DocumentStore, id: string, index: number, 
 export function removeStartPoint(store: DocumentStore, id: string, index: number) {
   changeStartPoints(store, "removeStartPoint", id, (startPoints) => {
     if (index >= 0 && index < startPoints.length) startPoints.splice(index, 1);
+  });
+}
+
+/** Places a hole (#429) on drill `id` at `position`. */
+export function addHole(store: DocumentStore, id: string, position: Point) {
+  changeOperation(store, "addHole", id, (operation) => {
+    if (operation.type === "drill") operation.params.points.push(position);
+  });
+}
+
+export function removeHole(store: DocumentStore, id: string, index: number) {
+  changeOperation(store, "removeHole", id, (operation) => {
+    const points = operation.type === "drill" ? operation.params.points : [];
+    if (index >= 0 && index < points.length) points.splice(index, 1);
   });
 }
 

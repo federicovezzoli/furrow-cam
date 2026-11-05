@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Sin puntos de inicio} one {# punto de inicio} other {# puntos de inicio}}",
     "editStartPoints": "Editar puntos de inicio",
     "startPointsHint": "Haz clic en una trayectoria para añadir un punto de inicio (en una abierta, en su extremo más cercano), arrástralo para moverlo, haz clic en él para quitarlo. Uno por trayectoria.",
+    "holeCount": "{count, plural, =0 {Sin agujeros colocados} one {# agujero colocado} other {# agujeros colocados}}",
+    "placeHoles": "Colocar agujeros",
+    "placeHolesHint": "Haz clic para colocar un agujero donde se ajusta el cursor, haz clic en un agujero para quitarlo. Esc o clic derecho para terminar.",
     "computing": "Calculando trayectoria…",
     "cancel": "Cancelar",
     "computeAgain": "Volver a calcular",
@@ -1232,6 +1235,8 @@
     "circle_center": "Centro del círculo",
     "bounds_corner": "Esquina del rectángulo envolvente",
     "bounds_center": "Centro del rectángulo envolvente",
+    "midpoint": "Punto medio",
+    "edge": "Borde",
     "anchors": {
       "top_left": "Material, arriba a la izquierda",
       "top_center": "Material, arriba al centro",

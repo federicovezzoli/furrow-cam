@@ -5,9 +5,12 @@ import {
   excludeOvercuts,
   grooveWidth,
   holdingTabStrips,
+  holeSnapTargets,
   modelOutlines,
+  nearestHoleSnap,
   nearestOnLoops,
   profileOvercuts,
+  snapEdges,
   snapStartPoint,
   startPointCentres,
   startPointPaths,
@@ -16,29 +19,34 @@ import {
   targetedShapes,
   type Vec3,
 } from "@furrow/cam-core";
-import type { Operation, Point } from "@furrow/document";
+import type { DrillOperation, Operation, Point } from "@furrow/document";
 import { Edges } from "@react-three/drei";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { Mesh } from "three";
+import { touchOffLinePositions } from "../../lib/viewport-scene";
 import {
   useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
 } from "../../providers/workspace-stores";
 import {
+  addHole,
   addStartPoint,
   addTab,
   excludeOvercut,
   moveStartPoint,
   moveTab,
+  removeHole,
   removeStartPoint,
   removeTab,
   restoreOvercut,
 } from "../../stores/operation-actions";
 import { moveHoldingTab } from "../../stores/stock-actions";
+import { DashedLines } from "./lines";
 import { RENDER_ORDER } from "./scene-style";
-import { onStockTop, StockTopCatcher } from "./stock-top";
+import { onStockTop, StockTopCatcher, useStockTopHover } from "./stock-top";
+import { CLICK_THRESHOLD, SNAP_RADIUS, SnapHover, type SnapPick, samePick } from "./zero-pick";
 
 /** Radius in pixels of the area around a tab that grabs it, however far zoomed out. */
 const TAB_GRAB_RADIUS = 6;
@@ -246,6 +254,90 @@ export function StartPoints({ color }: { color: string }) {
 }
 
 /**
+ * The selected drill's placed holes (#429), each a disc as wide as the tool
+ * at the stock top. While the workspace places them (top view only), the
+ * cursor snaps like the zero picker's, and to segment midpoints and edges;
+ * a click adds a hole where shown and clicking a hole removes it.
+ */
+export function Holes({ color, snapColor }: { color: string; snapColor: string }) {
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "drill" && !selected.params.pins ? selected : null;
+  const editing = useWorkspaceStore((s) => s.editing === "holes");
+  const store = useDocumentStoreApi();
+  if (!operation) return null;
+  const radius = operation.tool.diameter / 2;
+
+  return (
+    <>
+      {editing && <HolePicker operation={operation} color={snapColor} />}
+      {operation.params.points.map((center, index) => (
+        <TabMarker
+          // Positions have no ids.
+          // biome-ignore lint/suspicious/noArrayIndexKey: see above
+          key={index}
+          frame={{ center, angle: 0 }}
+          z={0}
+          editing={editing}
+          onRemove={() => removeHole(store, operation.id, index)}
+        >
+          <MarkerMesh color={color}>
+            <circleGeometry args={[radius, 32]} />
+          </MarkerMesh>
+        </TabMarker>
+      ))}
+    </>
+  );
+}
+
+/** The snapping cursor of `Holes`, with a dashed circle the size of the tool. */
+function HolePicker({ operation, color }: { operation: DrillOperation; color: string }) {
+  const store = useDocumentStoreApi();
+  const width = useDocumentStore((s) => s.document.stock.width);
+  const height = useDocumentStore((s) => s.document.stock.height);
+  const thickness = useDocumentStore((s) => s.document.stock.thickness);
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const targets = useMemo(
+    () => holeSnapTargets({ width, height }, geometry),
+    [width, height, geometry],
+  );
+  const edges = useMemo(() => snapEdges(geometry), [geometry]);
+  const { diameter } = operation.tool;
+  const ring = useMemo(() => touchOffLinePositions({ x: 0, y: 0, diameter }), [diameter]);
+  const [hover, setHover] = useState<SnapPick | null>(null);
+  const hoverHandlers = useStockTopHover((cursor, millimetresPerPixel) => {
+    const target =
+      cursor && nearestHoleSnap(targets, edges, cursor, SNAP_RADIUS * millimetresPerPixel);
+    const next = cursor && { point: target?.point ?? cursor, target };
+    setHover((previous) => (samePick(previous, next) ? previous : next));
+  });
+
+  return (
+    <>
+      <StockTopCatcher
+        // Below the holes, so a click on one reaches it first and stops here.
+        z={-thickness - 1}
+        {...hoverHandlers}
+        onClick={(event) => {
+          if (event.delta > CLICK_THRESHOLD || !hover) return;
+          addHole(store, operation.id, hover.point);
+        }}
+      />
+      {hover && (
+        <SnapHover pick={hover} color={color}>
+          <DashedLines
+            positions={ring.ring}
+            distances={ring.distances}
+            color={color}
+            renderOrder={RENDER_ORDER.snap}
+            overlay
+          />
+        </SnapHover>
+      )}
+    </>
+  );
+}
+
+/**
  * The selected profile's corner overcuts (#428), each a disc as wide as the
  * tool at the end of the overcut, at the final depth; a left-out one only
  * outlined. While editing them, clicking one leaves it out or puts it back.
@@ -335,7 +427,7 @@ function MarkerMesh({
 type TabPress = { pointerId: number; x: number; y: number; dragging: boolean };
 
 /**
- * A tab, start point or overcut drawn as `children`, which a drag moves and
+ * A tab, start point, overcut or placed hole drawn as `children`, which a drag moves and
  * a click removes while `editing`, showing the grab cursor over it and while
  * dragging, or the pointer one when it can't be dragged.
  */

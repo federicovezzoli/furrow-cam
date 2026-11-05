@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {Başlangıç noktası yok} one {# başlangıç noktası} other {# başlangıç noktası}}",
     "editStartPoints": "Başlangıç noktalarını düzenle",
     "startPointsHint": "Başlangıç noktası eklemek için bir yola tıklayın (açık bir yolda en yakın uca gider), taşımak için sürükleyin, kaldırmak için üzerine tıklayın. Her yol bir tane alır.",
+    "holeCount": "{count, plural, =0 {Yerleştirilmiş delik yok} one {# yerleştirilmiş delik} other {# yerleştirilmiş delik}}",
+    "placeHoles": "Delik yerleştir",
+    "placeHolesHint": "İmlecin yakalandığı yere delik yerleştirmek için tıklayın, kaldırmak için bir deliğe tıklayın. Bitirmek için Esc veya sağ tıklama.",
     "computing": "Takım yolu hesaplanıyor…",
     "cancel": "İptal",
     "computeAgain": "Yeniden hesapla",
@@ -1232,6 +1235,8 @@
     "circle_center": "Çember merkezi",
     "bounds_corner": "Sınır kutusu köşesi",
     "bounds_center": "Sınır kutusu merkezi",
+    "midpoint": "Orta nokta",
+    "edge": "Kenar",
     "anchors": {
       "top_left": "Ham malzeme sol üst",
       "top_center": "Ham malzeme üst orta",

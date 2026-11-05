@@ -8,6 +8,7 @@ import {
 } from "@furrow/cam-core";
 import {
   createProjectDocument,
+  type Operation,
   type Path,
   type Point,
   ProjectDocument,
@@ -210,6 +211,22 @@ describe("removeDrawing", () => {
     expect(ProjectDocument.parse(doc)).toEqual(doc);
     store.getState().undo();
     expect(store.getState().document).toEqual(document());
+  });
+
+  it("keeps a drill with placed holes, which isn't the drawing's own (#429)", () => {
+    const doc = document();
+    const drill: Operation = {
+      ...(doc.operations[0] as Operation),
+      id: "4d5e6f7a-8b9c-4dae-8f1a-3b4c5d6e7f8a",
+      type: "drill",
+      targets: [{ shapeId: SQUARE_ID, paths: null }],
+      params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[1, 2]] },
+    };
+    doc.operations.push(drill);
+    expect(drawingOperations(doc, DRAWING_ID).map(({ id }) => id)).not.toContain(drill.id);
+    const store = createDocumentStore(doc);
+    removeDrawing(store, DRAWING_ID);
+    expect(store.getState().document.operations.at(-1)).toEqual({ ...drill, targets: [] });
   });
 
   it("does nothing for an unknown drawing", () => {

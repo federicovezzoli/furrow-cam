@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {No start points} one {# start point} other {# start points}}",
     "editStartPoints": "Edit start points",
     "startPointsHint": "Click a path to add a start point (an open path takes its nearer end), drag one to move it, click it to remove it. Each path takes one.",
+    "holeCount": "{count, plural, =0 {No placed holes} one {# placed hole} other {# placed holes}}",
+    "placeHoles": "Place holes",
+    "placeHolesHint": "Click to place a hole where the cursor snaps, click a hole to remove it. Esc or a right-click finishes.",
     "computing": "Computing toolpath…",
     "cancel": "Cancel",
     "computeAgain": "Compute again",
@@ -1232,6 +1235,8 @@
     "circle_center": "Circle centre",
     "bounds_corner": "Bounding box corner",
     "bounds_center": "Bounding box centre",
+    "midpoint": "Midpoint",
+    "edge": "Edge",
     "anchors": {
       "top_left": "Stock top left",
       "top_center": "Stock top centre",

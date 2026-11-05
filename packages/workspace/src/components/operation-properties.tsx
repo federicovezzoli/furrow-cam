@@ -964,6 +964,7 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
           {errors.peck}
         </p>
       )}
+      {!params.pins && <HolesFields count={params.points.length} />}
     </section>
   );
 }
@@ -1671,6 +1672,29 @@ function StartPointsFields({ count }: { count: number }) {
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+    </>
+  );
+}
+
+/** How many holes a drill has placed (#429), and a toggle for placing them in the viewport. */
+function HolesFields({ count }: { count: number }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "holes");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("holeCount", { count })}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "holes")}
+        >
+          {editing ? t("done") : t("placeHoles")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("placeHolesHint")}</p>}
     </>
   );
 }

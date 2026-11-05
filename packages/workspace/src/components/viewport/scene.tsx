@@ -38,7 +38,7 @@ import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
-import { HoldingTabs, Overcuts, StartPoints, Tabs } from "./tabs";
+import { HoldingTabs, Holes, Overcuts, StartPoints, Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
 
@@ -80,6 +80,7 @@ export function Scene({
         <Tabs color={palette.tab} />
         <StartPoints color={palette.startPoint} />
         <Overcuts color={palette.overcut} />
+        <Holes color={palette.hole} snapColor={palette.snap} />
         <HoldingTabs color={palette.tab} />
         <PartingPlane color={palette.parting} />
       </SideFrame>

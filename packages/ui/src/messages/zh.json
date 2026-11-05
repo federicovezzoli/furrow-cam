@@ -934,6 +934,9 @@
     "startPointCount": "{count, plural, =0 {没有起点} other {#个起点}}",
     "editStartPoints": "编辑起点",
     "startPointsHint": "点击路径添加起点(开放路径取较近的一端),拖动以移动,点击以删除。每条路径一个。",
+    "holeCount": "{count, plural, =0 {没有放置的孔} other {#个放置的孔}}",
+    "placeHoles": "放置孔",
+    "placeHolesHint": "点击在光标吸附处放置孔,点击孔以删除。按 Esc 或右键结束。",
     "computing": "正在计算刀具路径…",
     "cancel": "取消",
     "computeAgain": "重新计算",
@@ -1232,6 +1235,8 @@
     "circle_center": "圆心",
     "bounds_corner": "包围盒角点",
     "bounds_center": "包围盒中心",
+    "midpoint": "中点",
+    "edge": "边",
     "anchors": {
       "top_left": "毛坯左上",
       "top_center": "毛坯上中",
