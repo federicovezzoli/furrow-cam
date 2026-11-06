@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.21.2
+
+### Patch Changes
+
+- The parting plane of a two-sided project is now drawn solid in the 3D view, so it is easy to see where the two sides meet; hide it from the viewport toolbar to see what lies beyond it. ([`7b75569`](https://github.com/federicovezzoli/furrow-cam/commit/7b75569262c0d9c2c3ed86f0cb3873b9a5aad7b1))
+
 ## 0.21.1
 
 ### Patch Changes
