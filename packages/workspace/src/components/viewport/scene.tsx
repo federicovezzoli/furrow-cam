@@ -177,10 +177,10 @@ function LocatingPins({ color }: { color: string }) {
 /**
  * A two-sided project's parting plane (#473), where the two sides meet around
  * the models, in the top side's coordinates; in the 3D view only, since from
- * above it would just tint the stock. A faint fill not writing depth, so what
- * lies behind it shows, drawn in front of a simulated floor cut exactly to
- * it; and its outline round the stock's sides, drawn over everything so
- * uncut stock never hides it.
+ * above it would just tint the stock. An opaque fill hiding what lies beyond
+ * it (the toolbar toggle shows that again), drawn in front of a simulated
+ * floor cut exactly to it; and its outline round the stock's sides, drawn
+ * over everything so uncut stock never hides it.
  */
 export function PartingPlane({ color }: { color: string }) {
   // Only what the plane depends on, so moving the zero, the pad or a tab redraws nothing.
@@ -198,9 +198,6 @@ export function PartingPlane({ color }: { color: string }) {
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial
         color={color}
-        transparent
-        opacity={0.2}
-        depthWrite={false}
         side={DoubleSide}
         polygonOffset
         polygonOffsetFactor={-1}
