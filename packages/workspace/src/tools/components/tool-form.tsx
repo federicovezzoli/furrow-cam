@@ -167,7 +167,7 @@ export function ToolForm({ id, values, save, onSaved, onCancel }: ToolFormProps)
 
       <FormError message={errors.form ?? null} />
       <div className="flex gap-2">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending} data-demo="save-bit">
           {pending ? t("saving") : id ? t("saveChanges") : t("add")}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
