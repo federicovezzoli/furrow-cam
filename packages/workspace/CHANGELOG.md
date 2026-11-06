@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.21.1
+
+### Patch Changes
+
+- The machine's post-processor is now labelled "GRBL / grblHAL / FluidNC", since its G-code runs unchanged on all three. ([`f4f7fc7`](https://github.com/federicovezzoli/furrow-cam/commit/f4f7fc73c5fe993192c168102be8a9f817e9f743))
+
 ## 0.21.0
 
 ### Minor Changes
