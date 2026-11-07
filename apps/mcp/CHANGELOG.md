@@ -1,5 +1,11 @@
 # @furrow/mcp
 
+## 0.4.0
+
+### Minor Changes
+
+- The MCP server is published to npm: add it to Claude Desktop, Claude Code, VS Code or another MCP client with `npx -y @furrow-cam/mcp`, following the setup guide in its README. ([#417](https://github.com/federicovezzoli/furrow-cam/pull/417))
+
 ## 0.3.6
 
 ### Patch Changes
