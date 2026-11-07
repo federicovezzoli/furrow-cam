@@ -4,17 +4,22 @@ import { ProjectShell } from "@furrow/workspace/components/project-shell";
 import { SimulatorShell } from "@furrow/workspace/components/simulator-shell";
 import { WorkspaceShell } from "@furrow/workspace/components/workspace-shell";
 import { messageOf, saveTool } from "@furrow/workspace/lib/local-library";
+import type { ProjectFile } from "@furrow/workspace/lib/project-file";
 import type {
   WorkspaceDestination,
   WorkspaceHost,
   WorkspaceLinkProps,
 } from "@furrow/workspace/lib/workspace-host";
-import { useAutosaveApi } from "@furrow/workspace/providers/workspace-stores";
+import { useAutosaveApi, useDocumentStoreApi } from "@furrow/workspace/providers/workspace-stores";
 import type * as React from "react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
 import packageJson from "../../../package.json";
+import type { FileStamp } from "../../shared/api";
 import type { LibraryState } from "./app";
 import type { ProjectSession } from "./session";
+
+/** Loads a project file another program saved into the open workspace (#492). */
+export type Reload = (file: ProjectFile, stamp: FileStamp) => Promise<void>;
 
 /** What the window shows: navigation is view state, not routes (ADR-0045). */
 export type Page =
@@ -67,6 +72,7 @@ export function ProjectView({
   updateLibrary,
   navigate,
   flush,
+  reload,
   children,
 }: {
   session: ProjectSession;
@@ -75,6 +81,8 @@ export function ProjectView({
   updateLibrary: (change: (state: LibraryState) => LibraryState) => Promise<void>;
   navigate: (page: Page) => void;
   flush: RefObject<() => Promise<unknown>>;
+  /** Set to load a file another program saved into the open workspace. */
+  reload: RefObject<Reload | null>;
   children: React.ReactNode;
 }) {
   /** The library as last rendered, for saves that finish after another render. */
@@ -150,6 +158,7 @@ export function ProjectView({
       <div className="relative flex h-dvh flex-col overflow-hidden">
         <ProjectShell host={host}>
           <AutosaveFlush flush={flush} />
+          <ExternalReload session={session} reload={reload} />
           {simulating ? (
             <SimulatorShell />
           ) : (
@@ -176,5 +185,40 @@ function AutosaveFlush({ flush }: { flush: RefObject<() => Promise<unknown>> }) 
       flush.current = async () => {};
     };
   }, [autosave, flush]);
+  return null;
+}
+
+/**
+ * Lets the app load the project's file into the workspace after another
+ * program saved it (#492), as restoring a version does: autosave holds, the
+ * session takes the file, and the store starts over from its document. It
+ * isn't an undo step.
+ */
+function ExternalReload({
+  session,
+  reload,
+}: {
+  session: ProjectSession;
+  reload: RefObject<Reload | null>;
+}) {
+  const autosave = useAutosaveApi();
+  const documentStore = useDocumentStoreApi();
+  useEffect(() => {
+    reload.current = async (file, stamp) => {
+      await autosave.hold();
+      let savedAt: Date;
+      try {
+        savedAt = session.replace(file, stamp);
+      } catch (error) {
+        autosave.release();
+        throw error;
+      }
+      autosave.release({ document: file.document, savedAt });
+      documentStore.getState().load(file.document);
+    };
+    return () => {
+      reload.current = null;
+    };
+  }, [autosave, documentStore, session, reload]);
   return null;
 }

@@ -248,6 +248,28 @@ export function createProjectSession({
       changed();
       onChange?.();
     },
+    /**
+     * Takes `file` as the project, read from its file with `stamp` after
+     * another program saved it (#492): its document, models, fonts and
+     * versions, with nothing left unsaved. Returns the new save time, for the
+     * workspace to load the document at.
+     */
+    replace(file: ProjectFile, stamp: FileStamp): Date {
+      document = file.document;
+      // The same maps the workspace's asset stores read.
+      meshes.clear();
+      for (const [sha256, bytes] of file.meshes) meshes.set(sha256, bytes);
+      fonts.clear();
+      for (const [sha256, bytes] of file.fonts) fonts.set(sha256, bytes);
+      versions = [...file.versions];
+      versionsChanged = false;
+      savedDocument = JSON.stringify(document);
+      currentStamp = stamp;
+      // Taken as modified, so `changed` deletes a recovery copy of what was replaced.
+      modified = true;
+      changed();
+      return tick();
+    },
     /** The project is closed without saving: its recovery copy goes. Resolves once it has. */
     discard(): Promise<unknown> {
       closed = true;

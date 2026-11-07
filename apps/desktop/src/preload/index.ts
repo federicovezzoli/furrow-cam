@@ -23,6 +23,7 @@ const api: DesktopApi = {
   listRecoveries: () => ipcRenderer.invoke(CHANNELS.listRecoveries),
   readRecovery: (id) => ipcRenderer.invoke(CHANNELS.readRecovery, id),
   askUnsaved: (name) => ipcRenderer.invoke(CHANNELS.askUnsaved, name),
+  askReload: (name) => ipcRenderer.invoke(CHANNELS.askReload, name),
   setWindowState: (state) => ipcRenderer.send(CHANNELS.setWindowState, state),
   closeWindow: () => ipcRenderer.send(CHANNELS.closeWindow),
   takePendingPaths: () => ipcRenderer.invoke(CHANNELS.takePendingPaths),
@@ -32,6 +33,7 @@ const api: DesktopApi = {
   setLocale: (locale) => ipcRenderer.invoke(CHANNELS.setLocale, locale),
   onMenu: (listener) => listen<[MenuCommand]>(CHANNELS.menu, listener),
   onOpenPath: (listener) => listen<[string]>(CHANNELS.openPath, listener),
+  onFileChanged: (listener) => listen<[string]>(CHANNELS.fileChanged, listener),
   onCloseRequest: (listener) => listen<[]>(CHANNELS.closeRequest, listener),
 };
 

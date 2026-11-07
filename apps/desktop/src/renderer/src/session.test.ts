@@ -277,4 +277,20 @@ describe("readProjectFile", () => {
       readProjectFile(new TextEncoder().encode(JSON.stringify(newer)), t),
     ).rejects.toThrow(/newer version of Furrow CAM/);
   });
+
+  it("takes a file another program saved as the project, with nothing unsaved", async () => {
+    const { session, deleteRecovery } = setup();
+    await session.host.save(widened(session.document, 321), session.savedAt);
+    await settled();
+    expect(session.modified).toBe(true);
+    const before = session.savedAt;
+    const saved = file();
+    const savedAt = session.replace(saved, "9:9:9:9");
+    await settled();
+    expect(session).toMatchObject({ modified: false, stamp: "9:9:9:9" });
+    expect(session.document).toBe(saved.document);
+    expect(savedAt.getTime()).toBeGreaterThan(before.getTime());
+    // The unsaved changes it replaced leave no recovery copy behind.
+    expect(deleteRecovery).toHaveBeenCalled();
+  });
 });
