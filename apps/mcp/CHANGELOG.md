@@ -1,5 +1,15 @@
 # @furrow/mcp
 
+## 0.6.0
+
+### Minor Changes
+
+- The MCP server saves each change to a project's .furrow file as it's made, so the desktop app shows it live, and picks up changes you saved in the app before its next one. ([#496](https://github.com/federicovezzoli/furrow-cam/pull/496))
+
+### Patch Changes
+
+- The MCP server now notices when a project file was saved by another program within the same second, even if its size didn't change, and won't save over it. ([#493](https://github.com/federicovezzoli/furrow-cam/pull/493))
+
 ## 0.5.0
 
 ### Minor Changes

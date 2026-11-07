@@ -1,5 +1,17 @@
 # @furrow/workspace
 
+## 0.23.0
+
+### Minor Changes
+
+- A drawing's or model's properties now have a *Center on stock* button that moves it to the middle of the stock in X and Y, whatever the zero point; a model keeps its height. ([#498](https://github.com/federicovezzoli/furrow-cam/pull/498))
+  
+  The properties panes keep their header in view while scrolling, Remove buttons are red, and the model pane no longer scrolls sideways in longer languages.
+
+### Patch Changes
+
+- Updated dependencies: @furrow/ui@0.8.4
+
 ## 0.22.0
 
 ### Minor Changes

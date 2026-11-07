@@ -1,5 +1,17 @@
 # @furrow/desktop
 
+## 0.18.0
+
+### Minor Changes
+
+- When another program, such as an AI assistant using the MCP server, saves the project you have open, the app shows its changes at once, or asks first if you have unsaved changes. ([#496](https://github.com/federicovezzoli/furrow-cam/pull/496))
+
+### Patch Changes
+
+- Saving a project that another program, such as an AI assistant, saved since you opened it now asks whether to replace it or save a copy next to it, instead of silently overwriting its changes. This also covers a project restored after a crash. ([#493](https://github.com/federicovezzoli/furrow-cam/pull/493))
+- The desktop start screen no longer lists files that failed to open, and any recent file can now be removed from the list. ([#497](https://github.com/federicovezzoli/furrow-cam/pull/497))
+- Updated dependencies: @furrow/workspace@0.23.0, @furrow/ui@0.8.4
+
 ## 0.17.0
 
 ### Minor Changes
