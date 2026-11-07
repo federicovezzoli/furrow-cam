@@ -1,5 +1,11 @@
 # @furrow/web
 
+## 0.22.5
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.22.0, @furrow/document@0.21.0, @furrow/cam-core@0.19.0, @furrow/ui@0.8.3, @furrow/post@0.15.3
+
 ## 0.22.4
 
 ### Patch Changes
