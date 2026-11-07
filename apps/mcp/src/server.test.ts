@@ -2,7 +2,14 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createProjectDocument, packProjectArchive } from "@furrow/document";
-import { fullDocument } from "@furrow/document/fixtures";
+import {
+  DRAWING_ID,
+  endMill,
+  fullDocument,
+  OPERATION_ID,
+  SQUARE_ID,
+  vBit,
+} from "@furrow/document/fixtures";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -56,14 +63,24 @@ describe("the MCP server", () => {
   it("lists its tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      "add_drill",
+      "add_engrave",
+      "add_pocket",
+      "add_profile",
+      "add_relief_finish",
+      "add_relief_rough",
+      "add_vcarve",
       "check_project",
       "create_project",
+      "edit_operation",
       "export_gcode",
       "fit_to_stock",
       "get_library",
       "get_project",
       "import_file",
+      "move_operation",
       "open_project",
+      "remove_operation",
       "resize",
       "save_project",
       "set_machine",
@@ -128,5 +145,46 @@ describe("the MCP server", () => {
     await call("create_project", { path });
     expect((await call("set_stock", { path, width: 300 })).stock.width).toBe(300);
     expect(await refusal("set_stock", { path, width: 0 })).toBeTruthy();
+  });
+
+  it("adds, edits, moves and removes operations through its tools", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    const added = await call("add_pocket", {
+      path,
+      targets: [{ drawingId: DRAWING_ID }],
+      tool: endMill,
+      settings: { depth: 4 },
+    });
+    expect(added.operations.at(-1)).toMatchObject({
+      id: added.id,
+      type: "pocket",
+      params: { depth: 4 },
+    });
+    await call("edit_operation", { path, operationId: added.id, enabled: false });
+    await call("move_operation", { path, operationId: added.id, index: 0 });
+    const removed = await call("remove_operation", { path, operationId: OPERATION_ID });
+    expect(removed.operations).toEqual([expect.objectContaining({ id: added.id, enabled: false })]);
+    expect(
+      await refusal("edit_operation", { path, operationId: added.id, settings: { speed: 1 } }),
+    ).toMatch(/no setting "speed"/);
+  });
+
+  it("finds a flat bottom's library end mill for a V-bit given by its settings", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    await writeFile(
+      join(dir, "tools.json"),
+      JSON.stringify([{ id: "mill", isDefault: true, tool: endMill }]),
+    );
+    const added = await call("add_vcarve", {
+      path,
+      targets: [{ shapeId: SQUARE_ID }],
+      tool: vBit,
+      settings: { flatBottom: { toolId: "mill" } },
+    });
+    expect(added.operations.at(-1)).toMatchObject({
+      params: { flatBottom: { tool: endMill } },
+    });
   });
 });

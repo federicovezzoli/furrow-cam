@@ -187,10 +187,22 @@ export type Projects = ReturnType<typeof createProjects>;
  * the workspace's actions (ADR-0067). The first change in a session keeps the
  * document as it was as an automatic version, so the user can restore it
  * (ADR-0028); a change to a project with no room for one is undone and refused.
+ * If `edit` throws, everything it changed is undone: a tool call changes all
+ * it was asked to, or nothing. That runs `edit` in a store transaction, so the
+ * actions it calls must not open their own (`lib/text-items.ts` does): their
+ * commit would end this one early, and a later refusal would undo nothing.
  */
 export function change(project: Project, edit: (store: DocumentStore) => void) {
   const { document: before, past, future } = project.store.getState();
-  edit(project.store);
+  const { beginTransaction, commitTransaction, cancelTransaction } = project.store.getState();
+  beginTransaction();
+  try {
+    edit(project.store);
+  } catch (error) {
+    cancelTransaction();
+    throw error;
+  }
+  commitTransaction();
   if (project.kept || project.store.getState().document === before) return;
   if (project.versions.length >= MAX_VERSIONS) {
     // Undone as a whole: an action may make several undo steps.
