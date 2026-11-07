@@ -6,6 +6,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
   CircleAlertIcon,
+  LocateFixedIcon,
   Maximize2Icon,
   RotateCwIcon,
   Trash2Icon,
@@ -21,6 +22,7 @@ import {
 } from "../providers/workspace-stores";
 import { gestureHandlers } from "../stores/gesture-handlers";
 import {
+  centerModelOnStock,
   fitModelToStock,
   modelAnchor,
   modelOffset,
@@ -33,6 +35,7 @@ import {
   setModelTop,
   turnModelAbout,
 } from "../stores/model-actions";
+import { PROPERTIES_HEADER } from "./properties-header";
 
 const AXES = ["X", "Y", "Z"] as const;
 
@@ -62,7 +65,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
 
   return (
     <div className="grid gap-4 p-3 text-ui">
-      <div className="flex items-center gap-2">
+      <div className={PROPERTIES_HEADER}>
         <h3 className="min-w-0 flex-1 truncate font-medium" title={model.fileName}>
           {model.fileName}
         </h3>
@@ -158,7 +161,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             ? t("borderNote")
             : t("borderCapped", { size: localizeDecimal(capped, locale) })}
         </p>
-        <div className="flex justify-end gap-1">
+        <div className="flex flex-wrap justify-end gap-1">
           <Button
             variant="outline"
             size="compact"
@@ -216,6 +219,16 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelTop(store, model.id, value)}
           {...gestures}
         />
+        <Button
+          variant="outline"
+          size="compact"
+          className="justify-self-end"
+          onClick={() => centerModelOnStock(store, model.id)}
+          title={t("centerTitle")}
+        >
+          <LocateFixedIcon />
+          {t("center")}
+        </Button>
         {placement.top >= stock.thickness ? (
           <Warning>{t("belowStock")}</Warning>
         ) : (
@@ -230,7 +243,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
 
       <div className="flex justify-end">
         <Button
-          variant="outline"
+          variant="destructive"
           size="compact"
           onClick={() => removeModel(store, model.id)}
           title={operationCount > 0 ? t("removeTitle", { count: operationCount }) : undefined}
