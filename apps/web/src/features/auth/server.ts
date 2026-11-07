@@ -1,13 +1,16 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import { auth, type Session } from "./auth";
 
 /** The current session, or `null` when signed out; looked up once per request. Read it inside `<Suspense>`. */
-export const getSession = cache(
-  async (): Promise<Session | null> => auth.api.getSession({ headers: await headers() }),
-);
+export const getSession = cache(async (): Promise<Session | null> => {
+  // Better Auth compares the expiry with `new Date()`, which Next.js only allows at request time.
+  await connection();
+  return auth.api.getSession({ headers: await headers() });
+});
 
 /** The current session; redirects to sign-in otherwise. Read it inside `<Suspense>`. */
 export async function requireSession(): Promise<Session> {
