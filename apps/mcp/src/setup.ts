@@ -21,6 +21,7 @@ import {
   setXYAnchor,
   setZOrigin,
 } from "@furrow/workspace/stores/stock-actions";
+import type { z } from "zod";
 import type { Library } from "./library";
 import { change, type Project, ToolError, t } from "./projects";
 
@@ -119,14 +120,20 @@ export function resolveTool(
   if (settings === undefined) {
     throw new ToolError(`Give a library tool's id or the ${what}'s settings.`);
   }
-  const parsed = Tool.safeParse(withTaperedDiameter(settings));
-  if (!parsed.success) {
-    const [issue] = parsed.error.issues;
-    const where = issue?.path.join(".");
-    const message = text(issue ? issueMessage(issue) : { code: "validation.invalid" });
-    throw new ToolError(where ? `${where}: ${message}` : message);
-  }
-  return parsed.data;
+  return parsed(Tool, withTaperedDiameter(settings));
+}
+
+/**
+ * `input` parsed by `schema`; else throws a `ToolError` with the app's message
+ * for the first problem, after where it is (`prefix`, then the issue's path).
+ */
+export function parsed<T>(schema: z.ZodType<T>, input: unknown, prefix?: string): T {
+  const result = schema.safeParse(input);
+  if (result.success) return result.data;
+  const [issue] = result.error.issues;
+  const where = [...(prefix ? [prefix] : []), ...(issue?.path ?? [])].join(".");
+  const message = text(issue ? issueMessage(issue) : { code: "validation.invalid" });
+  throw new ToolError(where ? `${where}: ${message}` : message);
 }
 
 /** Gives operation `id` a snapshot of a library tool or of a tool's settings, as picking a bit in the app does. */

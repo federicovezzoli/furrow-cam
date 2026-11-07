@@ -24,10 +24,6 @@ import { createProjects, type Project, type Projects, ToolError } from "./projec
 import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
 import { projectSummary } from "./summary";
 
-/** A tool's settings, as the tools that take them describe them. */
-const TOOL_SETTINGS =
-  "name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb).";
-
 const projectPath = z
   .string()
   .describe(
@@ -358,7 +354,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     "set_operation_tool",
     {
       title: "Set an operation's tool",
-      description: `Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: ${TOOL_SETTINGS} A tool that can't cut the operation is refused with the app's message. Returns the project summary.`,
+      description: `Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb). A tool that can't cut the operation is refused with the app's message. Returns the project summary.`,
       inputSchema: {
         path: projectPath,
         operationId: z.string().describe("The operation's id, from the project summary."),
@@ -402,7 +398,9 @@ export function createServer(projects: Projects = createProjects(), library = li
     tool: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe(`The tool's settings, instead of toolId: ${TOOL_SETTINGS}`),
+      .describe(
+        "The tool's settings, instead of toolId: the settings set_operation_tool describes.",
+      ),
   };
   const common = {
     path: projectPath,
@@ -522,11 +520,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     "edit_operation",
     {
       title: "Edit an operation",
-      description: `Renames an operation, enables or disables it (a disabled one isn't cut or exported), changes what it cuts, and changes some of its settings, as the app's properties do: all of it, or, if the app refuses any of it, nothing, with the app's message. Settings by type, lengths in millimetres: ${Object.entries(
-        OPERATION_SETTINGS,
-      )
-        .map(([type, doc]) => `${type}: ${doc}`)
-        .join(" ")} Its tool is changed with set_operation_tool. Returns the project summary.`,
+      description: `Renames an operation, enables or disables it (a disabled one isn't cut or exported), changes what it cuts, and changes some of its settings, as the app's properties do: all of it, or, if the app refuses any of it, nothing, with the app's message. Settings have the names and meanings the add tool of the operation's type gives them (add_profile, add_pocket, add_drill, add_engrave, add_vcarve, add_relief_rough, add_relief_finish). Its tool is changed with set_operation_tool. Returns the project summary.`,
       inputSchema: {
         path: projectPath,
         operationId,

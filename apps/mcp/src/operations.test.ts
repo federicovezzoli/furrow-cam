@@ -113,7 +113,6 @@ describe("addOperation", () => {
       params: { points: [[20, 30]], peck: false, pins: false, depth: 18 },
     });
     const pins = addOperation(project, library, "drill", {
-      targets: [{ shapeId: CIRCLE_ID }],
       tool: { settings: { ...drill } },
       settings: { pins: true },
     });
@@ -221,6 +220,24 @@ describe("addOperation", () => {
         }),
       /top-side drill/,
     );
+    // Pins would drop shapes or holes asked for in the same call.
+    expectRefused(
+      () =>
+        addOperation(project, library, "drill", {
+          targets: [{ shapeId: CIRCLE_ID }],
+          tool: { settings: { ...drill } },
+          settings: { pins: true },
+        }),
+      /top-side drill/,
+    );
+    expectRefused(
+      () =>
+        addOperation(project, library, "drill", {
+          tool: { settings: { ...drill } },
+          settings: { pins: true, points: [[10, 10]] },
+        }),
+      /top-side drill/,
+    );
     expectRefused(
       () => addOperation(project, library, "relief_rough", { modelId: "nope", tool }),
       /no model "nope"/,
@@ -286,10 +303,31 @@ describe("editOperation", () => {
         }),
       /only one/,
     );
+    // The app's message, not Zod's.
+    expectRefused(
+      () => editOperation(project, library, OPERATION_ID, { settings: { tabs: { count: 0 } } }),
+      /^tabs\.count: (?!Too small)/,
+    );
     expectRefused(
       () => editOperation(project, library, "nope", { enabled: false }),
       /no operation "nope"/,
     );
+  });
+});
+
+describe("editOperation on drills", () => {
+  it("turns a drill into a pin drill, as the app does, but not into one that drills nothing", () => {
+    const id = addOperation(project, library, "drill", {
+      targets: [{ shapeId: CIRCLE_ID }],
+      tool: { settings: { ...drill } },
+    });
+    editOperation(project, library, id, { settings: { pins: true } });
+    expect(operation(id)).toMatchObject({ targets: [], params: { pins: true, points: [] } });
+    const before = document();
+    expect(() => editOperation(project, library, id, { settings: { pins: false } })).toThrow(
+      /placed holes \(points\) or pins: true/,
+    );
+    expect(document()).toBe(before);
   });
 });
 

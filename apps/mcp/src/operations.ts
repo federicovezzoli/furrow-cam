@@ -38,6 +38,7 @@ import {
   defaultTabs,
   defaultVCarveParams,
   deleteOperation,
+  hasPlacedHoles,
   moveOperation,
   renameOperation,
   setDrillPins,
@@ -55,7 +56,7 @@ import {
 import { z } from "zod";
 import type { Library } from "./library";
 import { change, type Project, ToolError, t } from "./projects";
-import { resolveTool, type ToolChoice } from "./setup";
+import { parsed, resolveTool, type ToolChoice } from "./setup";
 
 /** The app's message for the assistant. */
 const text = (message: Translatable) => formatMessage(t, message);
@@ -146,15 +147,6 @@ const FlatBottomInput = z
   })
   .nullable();
 
-/** `input` parsed by `schema`; throws a `ToolError` naming `what` if it doesn't fit. */
-function parse<T>(schema: z.ZodType<T>, input: unknown, what: string): T {
-  const parsed = schema.safeParse(input);
-  if (parsed.success) return parsed.data;
-  const [issue] = parsed.error.issues;
-  const where = [what, ...(issue?.path ?? [])].join(".");
-  throw new ToolError(`${where}: ${issue?.message ?? "invalid"}`);
-}
-
 /** Throws a `ToolError` with `result`'s message if the action was refused. */
 function check(result: ActionResult) {
   if (!result.ok) throw new ToolError(text(result.error));
@@ -193,7 +185,7 @@ function targetsOf(document: ProjectDocument, inputs: TargetInput[]): OperationT
 
 /** The profile `id`'s tabs set from `input`: off, spread along its contours, or at positions. */
 function setTabs(store: DocumentStore, id: string, input: unknown) {
-  const tabs = parse(TabsInput, input, "tabs");
+  const tabs = parsed(TabsInput, input, "tabs");
   if (tabs === null) {
     check(updateProfileParams(store, id, { tabs: null }));
     return;
@@ -222,7 +214,7 @@ function setTabs(store: DocumentStore, id: string, input: unknown) {
 
 /** A V-carve's flat bottom from `input`, keeping its end mill and step-over unless given. */
 function flatBottomOf(library: Library, operation: Operation, input: unknown) {
-  const flatBottom = parse(FlatBottomInput, input, "flatBottom");
+  const flatBottom = parsed(FlatBottomInput, input, "flatBottom");
   if (flatBottom === null) return null;
   const current = operation.type === "vcarve" ? operation.params.flatBottom : null;
   const { toolId, tool: settings, stepOver } = flatBottom;
@@ -244,6 +236,8 @@ function configure(
   library: Library,
   id: string,
   settings: Record<string, unknown>,
+  /** Whether the same call gives the operation targets, which pins would discard. */
+  retargeted = false,
 ) {
   const operation = findOperation(store.getState().document, id);
   if ("modelId" in settings) {
@@ -272,7 +266,11 @@ function configure(
     check(UPDATE[operation.type](store, id, changes as never));
   }
   if (operation.type === "drill" && pins === true) {
-    // `setDrillPins` would quietly do nothing on the bottom side, and drill nothing without pins.
+    // `setDrillPins` would quietly drop shapes and holes asked for in the same call, do
+    // nothing on the bottom side, and drill nothing without pins.
+    if (retargeted || "points" in settings) {
+      throw new ToolError(text({ code: "operation.pinsTopOnly" }));
+    }
     if (!stockPins(store.getState().document.stock)) {
       throw new ToolError("pins: this project has no locating pins to drill.");
     }
@@ -287,6 +285,17 @@ function validate(store: DocumentStore, id: string) {
   const operation = findOperation(store.getState().document, id);
   const error = toolError(operation, operation.tool);
   if (error) throw new ToolError(text(error));
+  // The schema allows a drill with nothing to drill; the app only adds one for holes placed next.
+  if (
+    operation.type === "drill" &&
+    operation.targets.length === 0 &&
+    !hasPlacedHoles(operation) &&
+    !operation.params.pins
+  ) {
+    throw new ToolError(
+      `${text({ code: "workspace.needsShape" })}: give a drill shapes, placed holes (points) or pins: true.`,
+    );
+  }
 }
 
 export type NewOperation = {
@@ -334,15 +343,9 @@ export function addOperation(
       throw new ToolError("A 2D operation cuts shapes: give targets, not a modelId.");
     }
     targets = targetsOf(document, inputs ?? []);
-    const holes =
-      type === "drill" &&
-      (settings?.pins === true || (Array.isArray(settings?.points) && settings.points.length > 0));
-    if (targets.length === 0 && !holes) {
-      throw new ToolError(
-        type === "drill"
-          ? `${text({ code: "workspace.needsShape" })}, placed holes (points) or pins: true.`
-          : text({ code: "workspace.needsShape" }),
-      );
+    // A drill may start with no shapes; `validate` checks it ends with something to drill.
+    if (targets.length === 0 && type !== "drill") {
+      throw new ToolError(text({ code: "workspace.needsShape" }));
     }
   }
   const id = randomUUID();
@@ -358,7 +361,7 @@ export function addOperation(
       throw new ToolError(error ? text(error) : `This tool can't cut a ${type} operation.`);
     }
     if (name !== undefined) check(renameOperation(store, id, name));
-    if (settings) configure(store, library, id, settings);
+    if (settings) configure(store, library, id, settings, targets.length > 0);
     validate(store, id);
   });
   return id;
@@ -388,7 +391,7 @@ export function editOperation(
     if (targets !== undefined) {
       check(setOperationTargets(store, id, targetsOf(store.getState().document, targets)));
     }
-    if (settings) configure(store, library, id, settings);
+    if (settings) configure(store, library, id, settings, targets !== undefined);
     validate(store, id);
   });
 }
