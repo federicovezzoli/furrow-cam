@@ -204,4 +204,12 @@ describe("the MCP server", () => {
       operations: [{ id: OPERATION_ID, color: endMill.color }],
     });
   });
+
+  it("saves each change to the project's own file as it's made", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    await call("set_stock", { path, width: 321 });
+    const saved = await readProjectFile(new Uint8Array(await readFile(path)), t);
+    expect(saved.document.stock.width).toBe(321);
+  });
 });

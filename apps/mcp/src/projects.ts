@@ -40,6 +40,8 @@ export type Project = {
   owned: boolean;
   /** Its own file's stamp (`stampOf`) when last read or written, to tell whether it changed since. */
   stamp: string | null;
+  /** Whether it has changes its file hasn't. */
+  unsaved: boolean;
 };
 
 /** The `.furrow` file a project at `path` saves to; throws a `ToolError` for other paths. */
@@ -136,6 +138,7 @@ export function createProjects() {
       kept: false,
       owned,
       stamp,
+      unsaved: false,
     };
     remember(normalize(path), project);
     return project;
@@ -155,6 +158,7 @@ export function createProjects() {
         kept: true,
         owned: false,
         stamp: null,
+        unsaved: false,
       };
       await write(project, target, "open it, or choose another path.");
       project.owned = true;
@@ -165,9 +169,24 @@ export function createProjects() {
     /** Opens the project at `path` from its file, dropping changes to it that weren't saved. */
     open: openProject,
 
-    /** The open project at `path`, opened from its file if it isn't yet. */
+    /**
+     * The open project at `path`, opened from its file if it isn't yet, or
+     * read again if its own file changed (the user saved it in the app) and
+     * nothing here would be lost (#492).
+     */
     async get(path: string): Promise<Project> {
-      return open.get(normalize(path)) ?? openProject(path);
+      const project = open.get(normalize(path));
+      if (!project) return openProject(path);
+      if (project.owned && !project.unsaved) {
+        const now = await stampOf(project.path);
+        if (now !== null && now !== project.stamp) {
+          const reread = await openProject(project.path);
+          // Its file holds the version kept before the assistant's changes: not kept twice.
+          reread.kept = project.kept;
+          return reread;
+        }
+      }
+      return project;
     },
 
     /**
@@ -178,10 +197,31 @@ export function createProjects() {
     async save(project: Project, to?: string): Promise<string> {
       const target = to === undefined ? project.path : savePath(to);
       await write(project, target, "save the project to another path.");
+      project.unsaved = false;
       project.path = target;
       project.owned = true;
       remember(target, project);
       return target;
+    },
+
+    /**
+     * Saves each open project with changes to its own `.furrow` file, so the
+     * desktop app shows them as they're made (#492). A project opened from a
+     * `.furrow.zip` or `.furrow.json` waits for `save`. Returns why any
+     * couldn't be saved, e.g. its file changed since; they stay unsaved here.
+     */
+    async saveChanges(): Promise<string[]> {
+      const problems: string[] = [];
+      for (const project of new Set(open.values())) {
+        if (!project.owned || !project.unsaved) continue;
+        try {
+          await this.save(project);
+        } catch (error) {
+          if (!(error instanceof ToolError)) throw error;
+          problems.push(error.message);
+        }
+      }
+      return problems;
     },
   };
 }
@@ -209,7 +249,11 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
     throw error;
   }
   commitTransaction();
-  if (project.kept || project.store.getState().document === before) return;
+  if (project.store.getState().document === before) return;
+  if (project.kept) {
+    project.unsaved = true;
+    return;
+  }
   if (project.versions.length >= MAX_VERSIONS) {
     // Undone as a whole: an action may make several undo steps.
     project.store.setState({ document: before, past, future });
@@ -226,4 +270,5 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
     },
   ];
   project.kept = true;
+  project.unsaved = true;
 }

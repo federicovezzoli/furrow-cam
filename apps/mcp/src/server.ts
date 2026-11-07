@@ -32,7 +32,7 @@ const projectPath = z
   );
 
 /** `run`'s result for the assistant, as JSON unless `content` says how, or its `ToolError` as a tool error. */
-async function respond<T>(
+async function reply<T>(
   run: () => Promise<T>,
   content: (result: T) => CallToolResult["content"] = (result) => [
     { type: "text", text: JSON.stringify(result, null, 2) },
@@ -80,6 +80,18 @@ function summary(project: Project) {
 export function createServer(projects: Projects = createProjects(), library = libraryDir()) {
   const server = new McpServer({ name: "furrow-cam", version: packageJson.version });
 
+  /**
+   * `reply`, once the projects `run` changed are saved to their own files,
+   * so the desktop app shows each change (#492). A project that couldn't be
+   * saved is reported with the result, its changes kept here.
+   */
+  const respond = <T>(run: () => Promise<T>, content?: (result: T) => CallToolResult["content"]) =>
+    reply(async () => {
+      const result = await run();
+      const notSaved = await projects.saveChanges();
+      return notSaved.length === 0 ? result : ({ ...result, notSaved } as T);
+    }, content);
+
   server.registerTool(
     "create_project",
     {
@@ -119,7 +131,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Save a project",
       description:
-        "Saves a project's changes to its .furrow file, which the desktop app opens; changes stay in this server until saved. With saveAs, saves it to that path instead and keeps saving there. Never replaces another file, nor the project's own if it changed since it was opened (for example in the app). The first change since the project was opened is preceded by an automatic version (\"Before the assistant's changes\") the user can restore in the app.",
+        "Every change to a project opened from its own .furrow file is saved to that file as it's made, so the desktop app, if it has the project open, shows it at once; a tool's result lists any project that couldn't be (notSaved), e.g. because its file changed meanwhile. This tool saves a project opened from a .furrow.zip or .furrow.json as .furrow next to it, which is then saved as it changes; with saveAs, it saves the project to that path instead and keeps saving there. Never replaces another file, nor the project's own if it changed since it was read (for example saved in the app with changes this server hasn't saved). Changes the user saved in the app are read before the project's next change. The first change since the project was opened is preceded by an automatic version (\"Before the assistant's changes\") the user can restore in the app.",
       inputSchema: {
         path: projectPath,
         saveAs: projectPath.optional().describe("Absolute path to save to instead, a new file."),

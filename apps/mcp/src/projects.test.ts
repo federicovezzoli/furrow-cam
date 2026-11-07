@@ -175,3 +175,59 @@ describe("change", () => {
     expect(project.versions).toEqual([]);
   });
 });
+
+describe("saving as changes are made (#492)", () => {
+  const widen = (width: number) => (store: Parameters<typeof setStockDimension>[0]) =>
+    setStockDimension(store, "width", width);
+
+  it("saves a project opened from its .furrow file after each change, but not an export", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeProject(path);
+    const project = await projects.get(path);
+    change(project, widen(321));
+    expect(await projects.saveChanges()).toEqual([]);
+    const saved = await readProject(path);
+    expect(saved.document.stock.width).toBe(321);
+    expect(saved.versions.map((v) => v.label)).toEqual([KEPT_VERSION_LABEL]);
+
+    const exported = join(dir, "Other.furrow.json");
+    await writeFile(exported, JSON.stringify(createProjectDocument()));
+    change(await projects.get(exported), widen(222));
+    await projects.saveChanges();
+    expect(await readdir(dir)).not.toContain("Other.furrow");
+  });
+
+  it("reads the file again once the user saved it in the app, with nothing unsaved here", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeProject(path);
+    change(await projects.get(path), widen(321));
+    await projects.saveChanges();
+    // The app saves the project with another width.
+    const inApp = await readProject(path);
+    await writeFile(
+      path,
+      packProjectArchive(
+        { ...inApp.document, stock: { ...inApp.document.stock, width: 400 } },
+        new Map(),
+        inApp.versions,
+      ),
+    );
+    const reread = await projects.get(path);
+    expect(reread.store.getState().document.stock.width).toBe(400);
+    // Its version before the assistant's changes is in the file already: not kept again.
+    change(reread, widen(450));
+    await projects.saveChanges();
+    expect((await readProject(path)).versions).toHaveLength(1);
+  });
+
+  it("keeps its changes and says so when the file changed under them", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeProject(path);
+    const project = await projects.get(path);
+    change(project, widen(321));
+    await writeProject(path);
+    const [problem] = await projects.saveChanges();
+    expect(problem).toMatch(/changed since it was opened/);
+    expect((await projects.get(path)).store.getState().document.stock.width).toBe(321);
+  });
+});
