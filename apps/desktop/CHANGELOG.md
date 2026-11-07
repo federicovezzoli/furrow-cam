@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.17.0
+
+### Minor Changes
+
+- Help → Set Up AI Assistants… adds Furrow CAM's MCP server to Claude Desktop and VS Code after asking, and copies the command that adds it to Claude Code, so you don't have to edit their settings by hand. ([#489](https://github.com/federicovezzoli/furrow-cam/pull/489))
+
 ## 0.16.4
 
 ### Patch Changes
