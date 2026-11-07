@@ -16,6 +16,8 @@ const api: DesktopApi = {
   saveFile: (path, suggestedName, bytes, stamp) =>
     ipcRenderer.invoke(CHANNELS.saveFile, path, suggestedName, bytes, stamp),
   recentFiles: () => ipcRenderer.invoke(CHANNELS.recentFiles),
+  addRecent: (path) => ipcRenderer.invoke(CHANNELS.addRecent, path),
+  removeRecent: (path) => ipcRenderer.invoke(CHANNELS.removeRecent, path),
   readData: (file) => ipcRenderer.invoke(CHANNELS.readData, file),
   writeData: (file, data) => ipcRenderer.invoke(CHANNELS.writeData, file, data),
   writeRecovery: (recovery, bytes) => ipcRenderer.invoke(CHANNELS.writeRecovery, recovery, bytes),

@@ -325,6 +325,7 @@
       "open": "Apri…",
       "recent": "Recenti",
       "recentEmpty": "Qui compaiono i progetti che apri o salvi.",
+      "removeRecent": "Rimuovi {name} dai recenti",
       "chooseMachine": "Scegli la macchina per questo progetto.",
       "addMachineFirst": "Aggiungi prima la tua macchina: le dimensioni e il G-code vengono da lei.",
       "cancel": "Annulla",

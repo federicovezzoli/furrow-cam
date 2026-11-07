@@ -43,12 +43,14 @@ export async function writeJson(path: string, data: unknown): Promise<void> {
   await writeFileAtomic(path, `${JSON.stringify(data, null, 2)}\n`);
 }
 
+/** `recent` without `path`. */
+export function withoutRecent(recent: readonly RecentFile[], path: string): RecentFile[] {
+  return recent.filter((file) => file.path !== path);
+}
+
 /** `recent` with `path` moved to the top, at most `MAX_RECENT` long. */
 export function withRecent(recent: readonly RecentFile[], path: string): RecentFile[] {
-  return [{ path, name: projectName(path) }, ...recent.filter((file) => file.path !== path)].slice(
-    0,
-    MAX_RECENT,
-  );
+  return [{ path, name: projectName(path) }, ...withoutRecent(recent, path)].slice(0, MAX_RECENT);
 }
 
 /** The recent files stored as `json`, leaving out malformed entries. */

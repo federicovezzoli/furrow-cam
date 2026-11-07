@@ -325,6 +325,7 @@
       "open": "Open…",
       "recent": "Recent",
       "recentEmpty": "Projects you open or save appear here.",
+      "removeRecent": "Remove {name} from recent",
       "chooseMachine": "Choose the machine this project is for.",
       "addMachineFirst": "Add your machine first: its size and G-code come from it.",
       "cancel": "Cancel",

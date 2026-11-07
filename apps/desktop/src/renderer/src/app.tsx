@@ -17,6 +17,7 @@ import { AppFrame } from "./app-frame";
 import { type Page, ProjectView, type Reload } from "./desktop-host";
 import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
+import { openProjectBytes } from "./open-project";
 import { createProjectSession, type ProjectSession } from "./session";
 import { StartScreen } from "./start-screen";
 
@@ -204,17 +205,16 @@ export function App() {
   }
 
   async function openBytes(bytes: Uint8Array, path: string, name: string, stamp: FileStamp) {
-    let file: ProjectFile;
-    try {
-      file = await readProjectFile(bytes, t);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : t("Desktop.App.unreadable");
-      report(t("Desktop.App.openFailed", { name, reason }));
-      return;
-    }
     // Only `.furrow` files are saved over; others are saved as a new `.furrow` file.
     const savable = /\.furrow$/i.test(path);
-    await replaceWith(() => open(file, savable ? { path, name, stamp } : { path: null, name }));
+    await openProjectBytes(bytes, name, {
+      report,
+      replaceWith,
+      open: (file) => {
+        open(file, savable ? { path, name, stamp } : { path: null, name });
+        void api.addRecent(path);
+      },
+    });
   }
 
   async function openDialog() {

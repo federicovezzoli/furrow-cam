@@ -65,6 +65,10 @@ export interface DesktopApi {
     stamp?: FileStamp,
   ): Promise<FileResult<RecentFile & { stamp: FileStamp }> | null>;
   recentFiles(): Promise<RecentFile[]>;
+  /** Lists `path` first among the recent files, once the renderer has opened it as a project (#494). */
+  addRecent(path: string): Promise<void>;
+  /** Takes `path` off the recent files, leaving the file itself; returns the new list. */
+  removeRecent(path: string): Promise<RecentFile[]>;
   /** A data file's JSON, or `null` if it doesn't exist yet. */
   readData(file: DataFile): Promise<unknown>;
   writeData(file: DataFile, data: unknown): Promise<void>;
@@ -107,6 +111,8 @@ export const CHANNELS = {
   readFile: "file:read",
   saveFile: "file:save",
   recentFiles: "file:recent",
+  addRecent: "file:recent-add",
+  removeRecent: "file:recent-remove",
   readData: "data:read",
   writeData: "data:write",
   writeRecovery: "recovery:write",
