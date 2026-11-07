@@ -682,6 +682,8 @@
       "restOperationFailed": "「{operation}」が失敗したため、その加工で削るはずの素材は残っているものとみなします。",
       "noLocatingPins": "プロジェクトに穴あけする位置決めピンがありません。",
       "pinsOffStock": "位置決めピンが素材の外にあります。",
+      "holesOffStock": "配置した穴が素材の外にあります。",
+      "noHoles": "穴あけするものがありません。ビューポートで穴を配置するか、選択した形状を使用してください。",
       "cutsPins": "この加工は位置決めピンの位置を削るため、素材を裏返したときに工具がピンに当たります。ピンか加工を移動してください。",
       "noHoldingTabs": "保持タブがありません。裏面で周囲をすべて切削すると、部品が外れます。",
       "stockBoundaryTwoSided": "両面で素材全体を加工すると、部品を保持する枠が残りません。マージンを使用してください。"
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {開始点なし} other {#個の開始点}}",
     "editStartPoints": "開始点を編集",
     "startPointsHint": "パスをクリックして開始点を追加し(開いたパスでは近い方の端)、ドラッグで移動、クリックで削除します。各パスに1つまでです。",
+    "holeCount": "{count, plural, =0 {配置した穴なし} other {#個の配置した穴}}",
+    "placeHoles": "穴を配置",
+    "placeHolesHint": "クリックでカーソルがスナップした位置に穴を配置し、穴をクリックで削除します。Esc または右クリックで終了します。",
     "computing": "ツールパスを計算中…",
     "cancel": "キャンセル",
     "computeAgain": "再計算",
@@ -941,6 +946,7 @@
     "failed": "ツールパスを計算できませんでした：{error}",
     "warnings": "ツールパスの警告",
     "usePins": "ピンを使用",
+    "pinsWithoutHoles": "先に配置した穴を削除してください。ピン穴あけは位置決めピンだけに穴をあけます。",
     "locatingPins": "位置決めピン",
     "pinDepth": "ピン設定の深さ：{depth}。"
   },
@@ -964,6 +970,7 @@
       "profile": "{target}の周囲を切削します",
       "pocket": "{target}の内側の領域を除去します",
       "drill": "{target}の点と円に穴をあけます",
+      "drillPlaced": "ビューポートをクリックして穴を配置するか、先にパスを選択してその点と円に穴をあけます",
       "engrave": "{target}の線に沿って彫刻します",
       "vcarve": "{target}の内側を V ビットで、幅の広い所ほど深く彫ります",
       "relief_rough": "{model}より上の素材を層ごとに除去します。通常はフラットエンドミルを使います",
@@ -1232,6 +1239,8 @@
     "circle_center": "円の中心",
     "bounds_corner": "バウンディングボックスの角",
     "bounds_center": "バウンディングボックスの中心",
+    "midpoint": "中点",
+    "edge": "エッジ",
     "anchors": {
       "top_left": "素材の左上",
       "top_center": "素材の上中央",

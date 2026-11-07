@@ -682,6 +682,8 @@
       "restOperationFailed": "« {operation} » a échoué, donc la matière qu'elle aurait coupée est considérée comme restante.",
       "noLocatingPins": "Le projet n'a pas de pions de centrage à percer.",
       "pinsOffStock": "Un pion de centrage est hors du brut.",
+      "holesOffStock": "Un trou placé est hors du brut.",
+      "noHoles": "Rien à percer : placez des trous dans la vue ou utilisez les formes sélectionnées.",
       "cutsPins": "Cette opération coupe là où va un pion de centrage, donc l'outil toucherait le pion une fois le brut retourné : déplacez les pions ou la coupe.",
       "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
       "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Aucun point de départ} one {# point de départ} other {# points de départ}}",
     "editStartPoints": "Modifier les points de départ",
     "startPointsHint": "Cliquez sur un tracé pour ajouter un point de départ (à l'extrémité la plus proche d'un tracé ouvert), faites-le glisser pour le déplacer, cliquez dessus pour le supprimer. Un par tracé.",
+    "holeCount": "{count, plural, =0 {Aucun trou placé} one {# trou placé} other {# trous placés}}",
+    "placeHoles": "Placer des trous",
+    "placeHolesHint": "Cliquez pour placer un trou là où le curseur s'accroche, cliquez sur un trou pour le supprimer. Échap ou un clic droit pour terminer.",
     "computing": "Calcul de la trajectoire…",
     "cancel": "Annuler",
     "computeAgain": "Recalculer",
@@ -941,6 +946,7 @@
     "failed": "La trajectoire n’a pas pu être calculée : {error}",
     "warnings": "Avertissements de la trajectoire",
     "usePins": "Utiliser les pions",
+    "pinsWithoutHoles": "Supprimez d'abord les trous placés : un perçage de pions ne perce que les pions de centrage.",
     "locatingPins": "Les pions de centrage",
     "pinDepth": "Aussi profond que le disent les réglages des pions : {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Couper autour de : {target}",
       "pocket": "Dégager l’intérieur de : {target}",
       "drill": "Percer les points et les cercles de : {target}",
+      "drillPlaced": "Placez des trous en cliquant dans la vue, ou sélectionnez d'abord des tracés pour percer leurs points et cercles",
       "engrave": "Graver le long des traits de : {target}",
       "vcarve": "Graver l’intérieur de {target} avec une fraise en V, plus profond là où c’est plus large",
       "relief_rough": "Enlever la matière au-dessus de {model} par niveaux, en général avec une fraise droite à bout plat",
@@ -1232,6 +1239,8 @@
     "circle_center": "Centre du cercle",
     "bounds_corner": "Coin de l’encombrement",
     "bounds_center": "Centre de l’encombrement",
+    "midpoint": "Milieu",
+    "edge": "Bord",
     "anchors": {
       "top_left": "Brut, en haut à gauche",
       "top_center": "Brut, en haut au centre",

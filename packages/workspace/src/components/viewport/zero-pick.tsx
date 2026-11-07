@@ -4,7 +4,7 @@ import { nearestSnapTarget, type SnapTarget, snapTargets } from "@furrow/cam-cor
 import type { Point } from "@furrow/document";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { useLocale, useTranslations } from "use-intl";
 import { pointLabel, snapKey } from "../../lib/snap-label";
@@ -19,14 +19,14 @@ import { RENDER_ORDER } from "./scene-style";
 import { StockTopCatcher, useStockTopHover } from "./stock-top";
 
 /** How near to a snap target, in pixels, the cursor snaps to it, however far zoomed. */
-const SNAP_RADIUS = 10;
+export const SNAP_RADIUS = 10;
 /** Radius in pixels of the ring drawn on the snap target. */
 const SNAP_MARKER_RADIUS = 6;
 /** Pointer travel, in pixels, past which a press is a drag rather than a click. */
-const CLICK_THRESHOLD = 3;
+export const CLICK_THRESHOLD = 3;
 
-/** Where a click would put the zero: on a snap target, or on the cursor (`target` null). */
-type Pick = { point: Point; target: SnapTarget | null };
+/** Where a click would pick: on a snap target, or on the cursor (`target` null). */
+export type SnapPick = { point: Point; target: SnapTarget | null };
 
 /**
  * Picking the XY zero in the viewport (PRD-0002 Z5), while the workspace is
@@ -44,11 +44,8 @@ export function ZeroPick({ color }: { color: string }) {
 }
 
 function ZeroPicker({ color }: { color: string }) {
-  const t = useTranslations("Snap");
-  const locale = useLocale();
   const workspace = useWorkspaceStoreApi();
   const store = useDocumentStoreApi();
-  const units = useDocumentStore((s) => s.document.units);
   const width = useDocumentStore((s) => s.document.stock.width);
   const height = useDocumentStore((s) => s.document.stock.height);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
@@ -58,7 +55,7 @@ function ZeroPicker({ color }: { color: string }) {
     () => snapTargets({ width, height }, geometry),
     [width, height, geometry],
   );
-  const [hover, setHover] = useState<Pick | null>(null);
+  const [hover, setHover] = useState<SnapPick | null>(null);
   // Shows what a click would pick, re-rendering only when that changes.
   const hoverHandlers = useStockTopHover((cursor, millimetresPerPixel) => {
     const target = cursor && nearestSnapTarget(targets, cursor, SNAP_RADIUS * millimetresPerPixel);
@@ -78,24 +75,48 @@ function ZeroPicker({ color }: { color: string }) {
           workspace.getState().setPickingZero(false);
         }}
       />
-      {hover && (
-        <group position={[hover.point[0], hover.point[1], 0]}>
-          {hover.target && <SnapMarker color={color} />}
-          <Html style={{ pointerEvents: "none" }}>
-            <div className="ml-3 -translate-y-full rounded-md border bg-popover px-1.5 py-0.5 text-popover-foreground text-xs whitespace-nowrap shadow-xs">
-              <div className="font-medium">{t(snapKey(hover.target))}</div>
-              <div className="tabular-nums">{pointLabel(hover.point, units, locale)}</div>
-            </div>
-          </Html>
-        </group>
-      )}
+      {hover && <SnapHover pick={hover} color={color} />}
     </>
   );
 }
 
-function samePick(a: Pick | null, b: Pick | null): boolean {
+/**
+ * What a click would pick: a ring on the snap target, if any, `children`
+ * (in coordinates around the point) and a label with the target's kind and
+ * position in the project's units.
+ */
+export function SnapHover({
+  pick,
+  color,
+  children,
+}: {
+  pick: SnapPick;
+  color: string;
+  children?: ReactNode;
+}) {
+  const t = useTranslations("Snap");
+  const locale = useLocale();
+  const units = useDocumentStore((s) => s.document.units);
+  return (
+    <group position={[pick.point[0], pick.point[1], 0]}>
+      {pick.target && <SnapMarker color={color} />}
+      {children}
+      <Html style={{ pointerEvents: "none" }}>
+        <div className="ml-3 -translate-y-full rounded-md border bg-popover px-1.5 py-0.5 text-popover-foreground text-xs whitespace-nowrap shadow-xs">
+          <div className="font-medium">{t(snapKey(pick.target))}</div>
+          <div className="tabular-nums">{pointLabel(pick.point, units, locale)}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+export function samePick(a: SnapPick | null, b: SnapPick | null): boolean {
   if (!a || !b) return a === b;
-  return a.target === b.target && a.point[0] === b.point[0] && a.point[1] === b.point[1];
+  // By kind, not identity: edge snaps are new objects on every pointer move.
+  return (
+    a.target?.kind === b.target?.kind && a.point[0] === b.point[0] && a.point[1] === b.point[1]
+  );
 }
 
 /** A ring a few pixels across whatever the zoom, drawn over everything. */

@@ -318,6 +318,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #429: holes placed in the viewport on drill operations. Existing ones have none.
+  33: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "drill" && isObject(operation.params)) {
+          operation.params.points ??= [];
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

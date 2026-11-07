@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” ha fallado, así que el material que cortaría se considera restante.",
       "noLocatingPins": "El proyecto no tiene pasadores de referencia que taladrar.",
       "pinsOffStock": "Un pasador de referencia está fuera del material.",
+      "holesOffStock": "Un agujero colocado está fuera del material.",
+      "noHoles": "Nada que taladrar: coloca agujeros en la vista o usa las formas seleccionadas.",
       "cutsPins": "Esta operación corta donde va un pasador de referencia, así que la herramienta chocaría con el pasador al dar la vuelta al material: mueve los pasadores o el corte.",
       "noHoldingTabs": "Sin puentes de sujeción: la pieza se suelta en cuanto la cara inferior corta todo su contorno.",
       "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Sin puntos de inicio} one {# punto de inicio} other {# puntos de inicio}}",
     "editStartPoints": "Editar puntos de inicio",
     "startPointsHint": "Haz clic en una trayectoria para añadir un punto de inicio (en una abierta, en su extremo más cercano), arrástralo para moverlo, haz clic en él para quitarlo. Uno por trayectoria.",
+    "holeCount": "{count, plural, =0 {Sin agujeros colocados} one {# agujero colocado} other {# agujeros colocados}}",
+    "placeHoles": "Colocar agujeros",
+    "placeHolesHint": "Haz clic para colocar un agujero donde se ajusta el cursor, haz clic en un agujero para quitarlo. Esc o clic derecho para terminar.",
     "computing": "Calculando trayectoria…",
     "cancel": "Cancelar",
     "computeAgain": "Volver a calcular",
@@ -941,6 +946,7 @@
     "failed": "No se ha podido calcular la trayectoria: {error}",
     "warnings": "Avisos de la trayectoria",
     "usePins": "Usar pasadores",
+    "pinsWithoutHoles": "Quita primero los agujeros colocados: un taladrado de pasadores solo taladra los pasadores de referencia.",
     "locatingPins": "Los pasadores de referencia",
     "pinDepth": "Tan profundo como indican los ajustes de los pasadores: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Cortar alrededor de {target}",
       "pocket": "Vaciar el área dentro de {target}",
       "drill": "Taladrar los puntos y círculos de {target}",
+      "drillPlaced": "Coloca agujeros haciendo clic en la vista, o selecciona antes trayectorias para taladrar sus puntos y círculos",
       "engrave": "Grabar a lo largo de las líneas de {target}",
       "vcarve": "Tallar dentro de {target} con una fresa en V, más hondo en las zonas más anchas",
       "relief_rough": "Retirar por niveles el material sobre {model}, normalmente con una fresa plana",
@@ -1232,6 +1239,8 @@
     "circle_center": "Centro del círculo",
     "bounds_corner": "Esquina del rectángulo envolvente",
     "bounds_center": "Centro del rectángulo envolvente",
+    "midpoint": "Punto medio",
+    "edge": "Borde",
     "anchors": {
       "top_left": "Material, arriba a la izquierda",
       "top_center": "Material, arriba al centro",

@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
+      "holesOffStock": "A placed hole is off the stock.",
+      "noHoles": "Nothing to drill: place holes in the viewport or use selected shapes.",
       "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {No start points} one {# start point} other {# start points}}",
     "editStartPoints": "Edit start points",
     "startPointsHint": "Click a path to add a start point (an open path takes its nearer end), drag one to move it, click it to remove it. Each path takes one.",
+    "holeCount": "{count, plural, =0 {No placed holes} one {# placed hole} other {# placed holes}}",
+    "placeHoles": "Place holes",
+    "placeHolesHint": "Click to place a hole where the cursor snaps, click a hole to remove it. Esc or a right-click finishes.",
     "computing": "Computing toolpath…",
     "cancel": "Cancel",
     "computeAgain": "Compute again",
@@ -941,6 +946,7 @@
     "failed": "The toolpath couldn't be computed: {error}",
     "warnings": "Toolpath warnings",
     "usePins": "Use pins",
+    "pinsWithoutHoles": "Remove the placed holes first: a pin drill drills only the locating pins.",
     "locatingPins": "The locating pins",
     "pinDepth": "As deep as the pin settings say: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Cut around the {target}",
       "pocket": "Clear the area inside the {target}",
       "drill": "Drill the points and circles of the {target}",
+      "drillPlaced": "Place holes by clicking in the viewport, or select paths first to drill their points and circles",
       "engrave": "Engrave along the lines of the {target}",
       "vcarve": "Carve inside the {target} with a V-bit, deeper where they are wider",
       "relief_rough": "Clear the material above {model} in levels, a flat end mill being the usual choice",
@@ -1232,6 +1239,8 @@
     "circle_center": "Circle centre",
     "bounds_corner": "Bounding box corner",
     "bounds_center": "Bounding box centre",
+    "midpoint": "Midpoint",
+    "edge": "Edge",
     "anchors": {
       "top_left": "Stock top left",
       "top_center": "Stock top centre",

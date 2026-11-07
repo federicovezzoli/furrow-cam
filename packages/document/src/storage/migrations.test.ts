@@ -10,6 +10,7 @@ import {
   textShape,
 } from "../fixtures";
 import { createProjectDocument } from "../schema/document";
+import type { Point } from "../schema/geometry";
 import type { Operation } from "../schema/operation";
 import {
   type Migration,
@@ -205,7 +206,7 @@ describe("migrations", () => {
       ...(current.operations[0] as Operation),
       id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
       type: "drill" as const,
-      params: { depth: 10, peck: true, stepOver: 40, pins: false },
+      params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
     };
     current.stock.twoSided = { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null };
     current.operations.push(drill);
@@ -348,6 +349,24 @@ describe("migrations", () => {
       ...current,
       operations: [{ ...profile, params: { ...params, cornerOvercuts: null } }],
     });
+  });
+
+  it("gives v33 drills no placed holes", () => {
+    const current = fullDocument();
+    const drill = {
+      ...(current.operations[0] as Operation),
+      id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      type: "drill" as const,
+      params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
+    };
+    current.operations.push(drill);
+    const { points: _, ...params } = drill.params;
+    const v33 = {
+      ...current,
+      schemaVersion: 33,
+      operations: [current.operations[0], { ...drill, params }],
+    };
+    expect(parseProjectDocument(v33)).toEqual(current);
   });
 
   it("gives v6 documents no models", () => {
@@ -523,7 +542,7 @@ describe("migrations", () => {
       ...profile,
       id: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
       type: "drill",
-      params: { depth: 5, peck: false, stepOver: 35, pins: false },
+      params: { depth: 5, peck: false, stepOver: 35, pins: false, points: [] as Point[] },
     } as const;
     const vcarve = {
       ...profile,

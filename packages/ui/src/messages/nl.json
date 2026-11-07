@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” is mislukt, dus het materiaal dat deze bewerking zou wegnemen, wordt als resterend beschouwd.",
       "noLocatingPins": "Het project heeft geen paspennen om te boren.",
       "pinsOffStock": "Een paspen ligt buiten het materiaal.",
+      "holesOffStock": "Een geplaatst gat ligt buiten het materiaal.",
+      "noHoles": "Niets te boren: plaats gaten in de weergave of gebruik geselecteerde vormen.",
       "cutsPins": "Deze bewerking snijdt waar een paspen komt, dus het gereedschap zou de pen raken als het materiaal is omgedraaid: verplaats de pennen of de snede.",
       "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra de onderkant er helemaal omheen is gefreesd.",
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Geen startpunten} one {# startpunt} other {# startpunten}}",
     "editStartPoints": "Startpunten bewerken",
     "startPointsHint": "Klik op een pad om een startpunt toe te voegen (bij een open pad op het dichtstbijzijnde uiteinde), sleep het om het te verplaatsen, klik erop om het te verwijderen. Eén per pad.",
+    "holeCount": "{count, plural, =0 {Geen geplaatste gaten} one {# geplaatst gat} other {# geplaatste gaten}}",
+    "placeHoles": "Gaten plaatsen",
+    "placeHolesHint": "Klik om een gat te plaatsen waar de cursor snapt, klik op een gat om het te verwijderen. Esc of rechtsklik om te stoppen.",
     "computing": "Gereedschapsbaan berekenen…",
     "cancel": "Annuleren",
     "computeAgain": "Opnieuw berekenen",
@@ -941,6 +946,7 @@
     "failed": "De gereedschapsbaan kon niet worden berekend: {error}",
     "warnings": "Waarschuwingen bij gereedschapsbaan",
     "usePins": "Pennen gebruiken",
+    "pinsWithoutHoles": "Verwijder eerst de geplaatste gaten: een paspenboring boort alleen de paspennen.",
     "locatingPins": "De paspennen",
     "pinDepth": "Zo diep als de peninstellingen aangeven: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Rond de {target} frezen",
       "pocket": "Het gebied binnen de {target} vrijfrezen",
       "drill": "De punten en cirkels van de {target} boren",
+      "drillPlaced": "Plaats gaten door in de weergave te klikken, of selecteer eerst paden om hun punten en cirkels te boren",
       "engrave": "Langs de lijnen van de {target} graveren",
       "vcarve": "Binnen de {target} frezen met een V-frees, dieper waar ze breder zijn",
       "relief_rough": "Het materiaal boven {model} in lagen wegfrezen, meestal met een platte vingerfrees",
@@ -1232,6 +1239,8 @@
     "circle_center": "Middelpunt cirkel",
     "bounds_corner": "Hoek omhullend kader",
     "bounds_center": "Midden omhullend kader",
+    "midpoint": "Middelpunt",
+    "edge": "Rand",
     "anchors": {
       "top_left": "Materiaal linksboven",
       "top_center": "Materiaal midden boven",

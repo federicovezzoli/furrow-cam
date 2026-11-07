@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
       "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "holesOffStock": "Un foro posizionato è fuori dal grezzo.",
+      "noHoles": "Niente da forare: posiziona fori nella vista o usa le forme selezionate.",
       "cutsPins": "Questa operazione taglia dove va un perno di riferimento, quindi l'utensile colpirebbe il perno quando il grezzo è girato: sposta i perni o il taglio.",
       "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Nessun punto di partenza} one {# punto di partenza} other {# punti di partenza}}",
     "editStartPoints": "Modifica punti di partenza",
     "startPointsHint": "Fai clic su un percorso per aggiungere un punto di partenza (su un percorso aperto va all'estremità più vicina), trascinalo per spostarlo, fai clic su di esso per rimuoverlo. Ogni percorso ne accetta uno.",
+    "holeCount": "{count, plural, =0 {Nessun foro posizionato} one {# foro posizionato} other {# fori posizionati}}",
+    "placeHoles": "Posiziona fori",
+    "placeHolesHint": "Fai clic per posizionare un foro dove si aggancia il cursore, fai clic su un foro per rimuoverlo. Esc o clic destro per finire.",
     "computing": "Calcolo del percorso utensile…",
     "cancel": "Annulla",
     "computeAgain": "Calcola di nuovo",
@@ -941,6 +946,7 @@
     "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
     "warnings": "Avvisi del percorso utensile",
     "usePins": "Usa i perni",
+    "pinsWithoutHoles": "Rimuovi prima i fori posizionati: una foratura dei perni fora solo i perni di riferimento.",
     "locatingPins": "I perni di riferimento",
     "pinDepth": "Profondo quanto dicono le impostazioni dei perni: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Taglia attorno a: {target}",
       "pocket": "Svuota l’area all’interno di: {target}",
       "drill": "Fora i punti e i cerchi di: {target}",
+      "drillPlaced": "Posiziona i fori facendo clic nella vista, oppure seleziona prima dei percorsi per forarne punti e cerchi",
       "engrave": "Incidi lungo le linee di: {target}",
       "vcarve": "Intaglia all’interno di {target} con una fresa a V, più a fondo dove sono più larghe",
       "relief_rough": "Togli il materiale sopra {model} a livelli, di solito con una fresa a candela piatta",
@@ -1232,6 +1239,8 @@
     "circle_center": "Centro del cerchio",
     "bounds_corner": "Angolo del riquadro",
     "bounds_center": "Centro del riquadro",
+    "midpoint": "Punto medio",
+    "edge": "Bordo",
     "anchors": {
       "top_left": "Grezzo, in alto a sinistra",
       "top_center": "Grezzo, in alto al centro",

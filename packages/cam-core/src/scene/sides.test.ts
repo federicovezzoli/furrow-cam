@@ -119,4 +119,15 @@ describe("flipOperation", () => {
     );
     expect(flipOperation(flipped, flip)).toEqual(profile);
   });
+
+  it("mirrors a drill's placed holes with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    const drill = {
+      ...(profile as Operation),
+      type: "drill",
+      params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[10, 20]] },
+    } as Operation;
+    const flipped = flipOperation(drill, { ...stock, axis: "x" });
+    expect(flipped.type === "drill" && flipped.params.points).toEqual([[10, 180]]);
+  });
 });

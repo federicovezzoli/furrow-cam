@@ -27,7 +27,7 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../../providers/workspace-stores";
-import type { ViewMode } from "../../stores/workspace-store";
+import type { ViewMode, WorkspaceState } from "../../stores/workspace-store";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { ReportCapture } from "./report-capture";
 import { Scene } from "./scene";
@@ -56,7 +56,8 @@ export function Viewport() {
   );
   const modelPreviews = useModelPreviews();
   const overPath = useWorkspaceStore((s) => s.hovered !== null);
-  const cancelPick = useCancelZeroPick(pickingZero);
+  const placingHoles = useWorkspaceStore((s) => s.editing === "holes");
+  const cancelPick = useCancelPick(pickingZero || placingHoles);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
   const stock = useDocumentStore((s) => s.document.stock);
@@ -159,12 +160,12 @@ export function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) =>
 const RIGHT_CLICK_THRESHOLD = 3;
 
 /**
- * Esc or a right-click ends picking the zero. The right button also pans the
+ * Esc or a right-click ends picking the zero or placing holes. The right button also pans the
  * top view, so only a press released where it started counts as a click.
  * Returns the viewport's pointer handlers, which see presses before the
  * camera controls do.
  */
-function useCancelZeroPick(picking: boolean) {
+function useCancelPick(picking: boolean) {
   const workspace = useWorkspaceStoreApi();
   const press = useRef<{ x: number; y: number } | null>(null);
 
@@ -175,7 +176,7 @@ function useCancelZeroPick(picking: boolean) {
       if (event.key !== "Escape" || event.defaultPrevented || belongsElsewhere(event.target)) {
         return;
       }
-      workspace.getState().setPickingZero(false);
+      endPick(workspace.getState());
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -190,9 +191,14 @@ function useCancelZeroPick(picking: boolean) {
       press.current = null;
       if (!picking || !start || event.button !== 2) return;
       const travel = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-      if (travel <= RIGHT_CLICK_THRESHOLD) workspace.getState().setPickingZero(false);
+      if (travel <= RIGHT_CLICK_THRESHOLD) endPick(workspace.getState());
     },
   };
+}
+
+function endPick({ editing, setEditing, setPickingZero }: WorkspaceState) {
+  setPickingZero(false);
+  if (editing === "holes") setEditing(null);
 }
 
 const VIEWS: { value: ViewMode; Icon: typeof SquareIcon }[] = [

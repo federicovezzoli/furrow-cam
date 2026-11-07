@@ -48,7 +48,7 @@ function documentWithOperations(): ProjectDocument {
         type: "drill",
         targets: [],
         tool: drill,
-        params: { depth: 6, peck: false, stepOver: 40, pins: false },
+        params: { depth: 6, peck: false, stepOver: 40, pins: false, points: [] },
       },
     ],
   };
