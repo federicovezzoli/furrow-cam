@@ -14,7 +14,7 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import type { FileStamp, Recovery } from "../../shared/api";
 import { api } from "./api";
 import { AppFrame } from "./app-frame";
-import { type Page, ProjectView } from "./desktop-host";
+import { type Page, ProjectView, type Reload } from "./desktop-host";
 import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
 import { createProjectSession, type ProjectSession } from "./session";
@@ -48,6 +48,10 @@ export function App() {
   const current = useRef(session);
   /** The save running, if any; the next one waits for it. */
   const saving = useRef<Promise<unknown>>(Promise.resolve());
+  /** Set by the open workspace to load a file another program saved (#492). */
+  const reload = useRef<Reload | null>(null);
+  /** The reload running, if any; changes to the file are handled one at a time. */
+  const reloading = useRef<Promise<unknown>>(Promise.resolve());
   current.current = session;
 
   useEffect(() => {
@@ -226,6 +230,35 @@ export function App() {
     else await openBytes(result.bytes, result.path, result.name, result.stamp);
   }
 
+  /**
+   * Shows the open project's file as another program, e.g. an assistant
+   * through the MCP server, saved it (#492): at once, or after asking if
+   * there are unsaved changes. Keeping them leaves the session's stamp, so
+   * Save then asks before replacing that version (#491).
+   */
+  async function reloadChanged(path: string, stamp: FileStamp) {
+    const session = current.current;
+    if (!session || session.path !== path) return;
+    // A save running writes the file itself, and gives the session its stamp.
+    await saving.current;
+    if (stamp === session.stamp) return;
+    const read = await api.readFile(path);
+    if ("error" in read || read.stamp === session.stamp) return;
+    let file: ProjectFile;
+    try {
+      file = await readProjectFile(read.bytes, t);
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+    if (current.current !== session) return;
+    await reload.current?.(
+      file,
+      read.stamp,
+      async () => (await api.askReload(session.name)) === "reload",
+    );
+  }
+
   async function restore(recovery: Recovery) {
     const bytes = await api.readRecovery(recovery.id);
     if (!bytes) {
@@ -292,6 +325,11 @@ export function App() {
     }
   });
   const onOpenPath = useEffectEvent((path: string) => void openPath(path));
+  const onFileChanged = useEffectEvent((path: string, stamp: FileStamp) => {
+    reloading.current = reloading.current
+      .then(() => reloadChanged(path, stamp))
+      .catch((error: unknown) => console.error(error));
+  });
   const onCloseRequest = useEffectEvent(() => {
     void closeOpen().then((closed) => closed && api.closeWindow());
   });
@@ -300,6 +338,7 @@ export function App() {
     const unsubscribe = [
       api.onMenu((command) => onMenu(command)),
       api.onOpenPath((path) => onOpenPath(path)),
+      api.onFileChanged((path, stamp) => onFileChanged(path, stamp)),
       api.onCloseRequest(() => onCloseRequest()),
     ];
     void api.takePendingPaths().then((paths) => {
@@ -360,6 +399,7 @@ export function App() {
         updateLibrary={updateLibrary}
         navigate={navigate}
         flush={flush}
+        reload={reload}
       >
         {libraryPage}
       </ProjectView>

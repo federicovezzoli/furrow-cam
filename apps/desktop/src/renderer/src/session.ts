@@ -53,6 +53,8 @@ export function createProjectSession({
 }) {
   let currentPath = path;
   let currentStamp = stamp;
+  /** How many times `replace` took the file another program saved. */
+  let reloads = 0;
   let currentName = name;
   let document = file.document;
   const meshes = new Map(file.meshes);
@@ -213,6 +215,10 @@ export function createProjectSession({
     get name() {
       return currentName;
     },
+    /** Counts `replace`s, so what lists the project's versions lists them again. */
+    get reloads() {
+      return reloads;
+    },
     /** `path`'s stamp as last read or written here. */
     get stamp() {
       return currentStamp;
@@ -247,6 +253,29 @@ export function createProjectSession({
       modified = true;
       changed();
       onChange?.();
+    },
+    /**
+     * Takes `file` as the project, read from its file with `stamp` after
+     * another program saved it (#492): its document, models, fonts and
+     * versions, with nothing left unsaved. Returns the new save time, for the
+     * workspace to load the document at.
+     */
+    replace(file: ProjectFile, stamp: FileStamp): Date {
+      document = file.document;
+      // The same maps the workspace's asset stores read.
+      meshes.clear();
+      for (const [sha256, bytes] of file.meshes) meshes.set(sha256, bytes);
+      fonts.clear();
+      for (const [sha256, bytes] of file.fonts) fonts.set(sha256, bytes);
+      versions = [...file.versions];
+      versionsChanged = false;
+      savedDocument = JSON.stringify(document);
+      currentStamp = stamp;
+      reloads += 1;
+      // Taken as modified, so `changed` deletes a recovery copy of what was replaced.
+      modified = true;
+      changed();
+      return tick();
     },
     /** The project is closed without saving: its recovery copy goes. Resolves once it has. */
     discard(): Promise<unknown> {

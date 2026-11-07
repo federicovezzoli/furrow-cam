@@ -38,6 +38,7 @@ import {
   type MenuCommand,
   OPEN_EXTENSIONS,
   type Recovery,
+  type ReloadChoice,
   type UnsavedChoice,
 } from "../shared/api";
 import {
@@ -48,6 +49,7 @@ import {
   projectPathsIn,
   readJson,
   recoveryStore,
+  watchFile,
   withRecent,
   writeFileAtomic,
   writeJson,
@@ -703,7 +705,10 @@ function createWindow() {
     current.webContents.send(CHANNELS.closeRequest);
   });
   current.on("closed", () => {
-    if (window === current) window = null;
+    if (window === current) {
+      window = null;
+      watchProject(null);
+    }
   });
 
   // Links out of the app (docs, the website) open in the system browser.
@@ -856,6 +861,22 @@ function buildMenu() {
   return Menu.buildFromTemplate(template);
 }
 
+/** The watch on the open project's file (#492), and which file it is. */
+let watched: { path: string; stop: () => void } | null = null;
+
+/** Watches `path`, the open project's file, telling the renderer when another program changes it. */
+function watchProject(path: string | null) {
+  if (watched?.path === path) return;
+  watched?.stop();
+  watched = null;
+  if (path === null) return;
+  // The renderer skips the app's own saves: their stamp is the session's.
+  const stop = watchFile(path, (stamp) => {
+    if (stamp !== null) window?.webContents.send(CHANNELS.fileChanged, path, stamp);
+  });
+  watched = { path, stop };
+}
+
 async function readProject(path: string) {
   try {
     // Taken before reading, so a change while reading shows at the next save.
@@ -901,7 +922,10 @@ async function confirmReplace(path: string, stamp: FileStamp): Promise<string | 
 }
 
 async function addRecent(path: string) {
-  const recent = withRecent(parseRecent(await readJson(recentPath())), path);
+  const stored = parseRecent(await readJson(recentPath()));
+  // Already first, e.g. read again after an assistant saved it (#492): nothing to write.
+  if (stored[0]?.path === path) return;
+  const recent = withRecent(stored, path);
   await writeJson(recentPath(), recent);
   app.addRecentDocument(path);
 }
@@ -977,6 +1001,19 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.listRecoveries, () => recoveries().list());
   ipcMain.handle(CHANNELS.readRecovery, (_event, id: string) => recoveries().read(id));
 
+  ipcMain.handle(CHANNELS.askReload, async (_event, name: unknown): Promise<ReloadChoice> => {
+    const t = tr();
+    const { response } = await dialog.showMessageBox({
+      type: "warning",
+      message: t("DesktopMain.files.askReload", { name: String(name) }),
+      detail: t("DesktopMain.files.askReloadDetail"),
+      buttons: [t("DesktopMain.files.reload"), t("DesktopMain.files.keep")],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    return response === 0 ? "reload" : "keep";
+  });
+
   ipcMain.handle(CHANNELS.askUnsaved, async (_event, name: unknown): Promise<UnsavedChoice> => {
     const t = tr();
     const { response } = await dialog.showMessageBox({
@@ -999,6 +1036,7 @@ function registerIpc() {
     (_event, state: { title: string; path: string | null; modified: boolean }) => {
       if (!window) return;
       modified = state.modified;
+      watchProject(state.path);
       const mac = process.platform === "darwin";
       window.setTitle(!mac && state.modified ? `• ${state.title}` : state.title);
       if (mac) {

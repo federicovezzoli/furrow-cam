@@ -37,6 +37,9 @@ export type DataFile = "tools" | "machines" | "settings";
 /** What the user chose when asked about unsaved changes. */
 export type UnsavedChoice = "save" | "discard" | "cancel";
 
+/** What the user chose when the open project's file changed while they had unsaved changes. */
+export type ReloadChoice = "reload" | "keep";
+
 /** A command from the application menu. */
 export type MenuCommand = "new" | "open" | "save" | "save-as" | "close" | "licences";
 
@@ -71,6 +74,8 @@ export interface DesktopApi {
   readRecovery(id: string): Promise<Uint8Array | null>;
   /** Asks whether to save the changes to `name` before they're lost. */
   askUnsaved(name: string): Promise<UnsavedChoice>;
+  /** Asks whether to load `name`'s file, which another program changed, over the unsaved changes. */
+  askReload(name: string): Promise<ReloadChoice>;
   /** Shows the open project in the window title, marked when it has unsaved changes. */
   setWindowState(state: { title: string; path: string | null; modified: boolean }): void;
   /** Closes the window (or quits, when quitting) after the renderer handled unsaved changes. */
@@ -79,6 +84,11 @@ export interface DesktopApi {
   takePendingPaths(): Promise<string[]>;
   onMenu(listener: (command: MenuCommand) => void): () => void;
   onOpenPath(listener: (path: string) => void): () => void;
+  /**
+   * The open project's file (the `path` given to `setWindowState`) changed
+   * and is now `stamp`, e.g. an assistant saved it (#492), or this app did.
+   */
+  onFileChanged(listener: (path: string, stamp: FileStamp) => void): () => void;
   /** Hands a usage event to the main process, which sends it if the user agreed (ADR-0052). */
   trackEvent(event: TelemetryEvent): void;
   /** Hands an error report (from `reportableError`) to the main process, as `trackEvent`. */
@@ -104,6 +114,7 @@ export const CHANNELS = {
   listRecoveries: "recovery:list",
   readRecovery: "recovery:read",
   askUnsaved: "window:ask-unsaved",
+  askReload: "window:ask-reload",
   setWindowState: "window:state",
   closeWindow: "window:close",
   takePendingPaths: "app:pending-paths",
@@ -113,6 +124,7 @@ export const CHANNELS = {
   setLocale: "locale:set",
   menu: "menu",
   openPath: "app:open-path",
+  fileChanged: "file:changed",
   closeRequest: "window:close-request",
 } as const;
 

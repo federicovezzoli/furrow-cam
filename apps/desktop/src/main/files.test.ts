@@ -10,6 +10,7 @@ import {
   projectName,
   projectPathsIn,
   recoveryStore,
+  watchFile,
   withRecent,
   writeFileAtomic,
 } from "./files";
@@ -115,5 +116,23 @@ describe("fileStamp", () => {
     expect(await fileStamp(path)).not.toBe(read);
     await rm(path);
     expect(await fileStamp(path)).toBeNull();
+  });
+});
+
+describe("watchFile", () => {
+  it("reports a save over the file with its new stamp", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, "one");
+    const stamps: (string | null)[] = [];
+    const stop = watchFile(path, (stamp) => stamps.push(stamp), 20);
+    try {
+      // Saved as the MCP server saves: a new file renamed over it.
+      await writeFileAtomic(path, "two");
+      const saved = await fileStamp(path);
+      // macOS may also report a change from just before the watch started.
+      await expect.poll(() => stamps.at(-1), { timeout: 5000 }).toBe(saved);
+    } finally {
+      stop();
+    }
   });
 });

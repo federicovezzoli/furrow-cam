@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { PROJECT_FILE_SUFFIX, PROJECT_PATH } from "@furrow/document";
@@ -72,6 +73,44 @@ export function fileStamp(path: string): Promise<FileStamp> {
     ({ ino, ctimeMs, mtimeMs, size }) => `${ino}:${ctimeMs}:${mtimeMs}:${size}`,
     () => null,
   );
+}
+
+/**
+ * Calls `onChange` with `path`'s stamp each time the file changes, once
+ * things settle for `delay` ms (#492). Watches its folder, since a save that
+ * renames a new file over it replaces the file a watch would follow.
+ * Returns a function that stops it; does nothing if the folder can't be watched.
+ */
+export function watchFile(
+  path: string,
+  onChange: (stamp: FileStamp) => void,
+  delay = 200,
+): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let last: FileStamp | undefined;
+  let watcher: FSWatcher;
+  try {
+    watcher = watch(dirname(path), (_event, file) => {
+      // Some platforms don't say which file changed.
+      if (file !== null && file !== basename(path)) return;
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const stamp = await fileStamp(path);
+        if (stamp === last) return;
+        last = stamp;
+        onChange(stamp);
+      }, delay);
+    });
+  } catch {
+    return () => {};
+  }
+  // E.g. the folder deleted (EPERM on Windows) or its drive unplugged: stop, as if it
+  // couldn't be watched. Unhandled, the error would crash the main process.
+  watcher.on("error", () => watcher.close());
+  return () => {
+    clearTimeout(timer);
+    watcher.close();
+  };
 }
 
 /** `recent` without the files that no longer exist. */
