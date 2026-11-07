@@ -35,7 +35,7 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 | D2 | Each imported drawing is one item, named after its file. Clicking one of its shapes in the viewport, when not picking an operation's targets, selects it and shows its properties over the viewport, as a model's are | Must |
 | D3 | Set a drawing's width or height in the current units: it keeps its proportions, and its point at the zero's anchor stays put. *Fit to stock* fits it inside the stock less a border the user sets (10 mm by default), as for models (PRD-0005 S2) | Must |
 | D4 | Remove a drawing, with the operations that only machine it, in one undo step | Must |
-| D5 | Move a drawing: X and Y fields for its anchor point's distance from the zero, and dragging it in the viewport | Should |
+| D5 | Move a drawing: X and Y fields for its anchor point's distance from the zero, dragging it in the viewport, and *Center on stock*, which centres its box on the stock whatever the zero | Should |
 | D6 | Mirror a drawing horizontally or vertically | Should |
 | D7 | Rotate a drawing by 90° steps and by any angle; the panel shows and sets its angle (ADR-0066) | Should |
 | D8 | Duplicate a drawing, placing the copy next to the original | Should |
@@ -62,3 +62,4 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 - 2026-10-21: D1 a project holds drawings or one model, never both, so D9 no longer duplicates models (#308)
 - 2026-10-21: D1 an imported drawing lands its border in from the anchor (#309)
 - 2026-10-22: D8 a duplicate lands 10 mm to the right of the original's bounding box, machined by the same operations; open question closed (#312)
+- 2026-11-07: D5 adds *Center on stock* (#495)
