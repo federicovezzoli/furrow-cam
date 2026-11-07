@@ -110,23 +110,30 @@ function png({ width, height, pixels }: Canvas): Uint8Array {
   ]);
 }
 
-/** The XY of each move that plunges straight down, once each: a drill's holes. */
-function plunges(moves: ToolpathMove[]): Point[] {
+/**
+ * The holes drilled straight down, once each: the XY of every cut (the feed
+ * moves between two rapids) that never leaves it, like a peck. A hole an end
+ * mill bores wider than itself moves around it, so its rings show it instead.
+ */
+export function straightHoles(moves: ToolpathMove[]): Point[] {
   const holes = new Map<string, Point>();
-  let previous: ToolpathMove["to"] | null = null;
+  // Where the current cut starts, a rapid's end (a toolpath starts with a rapid), and what it did.
+  let start: ToolpathMove["to"] | null = null;
+  let down = false;
+  let moved = false;
+  const finish = () => {
+    if (start && down && !moved) holes.set(`${start[0]},${start[1]}`, [start[0], start[1]]);
+  };
   for (const move of moves) {
-    const [x, y, z] = move.to;
-    if (
-      move.kind === "feed" &&
-      previous &&
-      previous[0] === x &&
-      previous[1] === y &&
-      z < previous[2]
-    ) {
-      holes.set(`${x},${y}`, [x, y]);
-    }
-    previous = move.to;
+    if (move.kind === "rapid") {
+      finish();
+      start = move.to;
+      down = false;
+      moved = false;
+    } else if (!start || move.to[0] !== start[0] || move.to[1] !== start[1]) moved = true;
+    else if (move.to[2] < start[2]) down = true;
   }
+  finish();
   return [...holes.values()];
 }
 
@@ -144,7 +151,7 @@ export type TopViewLegend = {
  * DOM: the stock, the drawings' shapes, and the cutting moves of `computed`
  * on that side, each operation in its tool's colour as the app's viewport
  * draws them, a V-carve's flat bottom in its end mill's, with a circle the
- * size of the tool at each drilled hole. Rapids are left out.
+ * size of the tool at each hole drilled straight down. Rapids are left out.
  */
 export function topView(
   document: ProjectDocument,
@@ -172,14 +179,16 @@ export function topView(
     box.maxY = Math.max(box.maxY, (y ?? 0) + margin);
   };
   for (const points of lines) for (const point of points) extend(point);
-  for (const { input, toolpath } of drawn) {
-    for (const move of [...(toolpath.clearing ?? []), ...toolpath.moves]) {
-      if (move.kind === "feed") extend(move.to);
+  // Each drill's straight holes, found once for the box and the drawing.
+  const holes = drawn.map(({ input, toolpath }) =>
+    input.operation.type === "drill" ? straightHoles(toolpath.moves) : [],
+  );
+  drawn.forEach(({ input, toolpath }, i) => {
+    for (const moves of [toolpath.clearing ?? [], toolpath.moves]) {
+      for (const move of moves) if (move.kind === "feed") extend(move.to);
     }
-    if (input.operation.type === "drill") {
-      for (const hole of plunges(toolpath.moves)) extend(hole, input.operation.tool.diameter / 2);
-    }
-  }
+    for (const hole of holes[i] ?? []) extend(hole, input.operation.tool.diameter / 2);
+  });
 
   const scale = (MAX_SIZE - 2 * MARGIN) / Math.max(box.maxX - box.minX, box.maxY - box.minY);
   const width = Math.round((box.maxX - box.minX) * scale) + 2 * MARGIN;
@@ -218,27 +227,25 @@ export function topView(
       previous = point;
     }
   };
-  for (const { input, toolpath } of drawn) {
+  drawn.forEach(({ input, toolpath }, index) => {
     const { operation } = input;
     const clearing = clearingTool(operation);
     if (clearing && toolpath.clearing) drawMoves(toolpath.clearing, rgb(clearing.color));
     const color = rgb(operation.tool.color);
     drawMoves(toolpath.moves, color);
-    if (operation.type === "drill") {
-      const radius = (operation.tool.diameter / 2) * scale * SUPERSAMPLE;
-      const segments = Math.max(12, Math.ceil(radius));
-      for (const [x, y] of plunges(toolpath.moves)) {
-        const [cx, cy] = px([x, y]);
-        for (let i = 0; i < segments; i++) {
-          const at = (j: number): Point => [
-            cx + radius * Math.cos((2 * Math.PI * j) / segments),
-            cy + radius * Math.sin((2 * Math.PI * j) / segments),
-          ];
-          canvas.line(at(i), at(i + 1), color, SUPERSAMPLE);
-        }
+    const radius = (operation.tool.diameter / 2) * scale * SUPERSAMPLE;
+    const segments = Math.max(12, Math.ceil(radius));
+    for (const [x, y] of holes[index] ?? []) {
+      const [cx, cy] = px([x, y]);
+      for (let i = 0; i < segments; i++) {
+        const at = (j: number): Point => [
+          cx + radius * Math.cos((2 * Math.PI * j) / segments),
+          cy + radius * Math.sin((2 * Math.PI * j) / segments),
+        ];
+        canvas.line(at(i), at(i + 1), color, SUPERSAMPLE);
       }
     }
-  }
+  });
 
   return {
     png: png(canvas.shrink(SUPERSAMPLE)),

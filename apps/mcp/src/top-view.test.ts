@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { computeToolpaths } from "./gcode";
 import { addOperation } from "./operations";
 import { createProjects, type Project } from "./projects";
-import { topView } from "./top-view";
+import { straightHoles, topView } from "./top-view";
 
 let dir: string;
 let project: Project;
@@ -88,5 +88,28 @@ describe("topView", () => {
     expect(legend.operations).toEqual([]);
     const { width, pixels } = decode(png);
     expect(where(width, pixels, endMill.color)).toEqual([]);
+  });
+});
+
+describe("straightHoles", () => {
+  it("finds holes drilled straight down, once however many pecks, and not bored ones", () => {
+    const feed = (to: [number, number, number]) => ({ kind: "feed" as const, to, feedRate: 100 });
+    const rapid = (to: [number, number, number]) => ({ kind: "rapid" as const, to });
+    expect(
+      straightHoles([
+        // Pecked at (10, 10).
+        rapid([10, 10, 5]),
+        feed([10, 10, -3]),
+        rapid([10, 10, 5]),
+        feed([10, 10, -6]),
+        rapid([10, 10, 5]),
+        // Bored around (50, 50): plunges, then moves round in a ring.
+        rapid([55, 50, 5]),
+        feed([55, 50, -3]),
+        feed([50, 55, -3]),
+        feed([45, 50, -3]),
+        rapid([45, 50, 5]),
+      ]),
+    ).toEqual([[10, 10]]);
   });
 });

@@ -170,7 +170,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Show the toolpaths from above",
       description:
-        "Computes a project's toolpaths, as check_project does, and returns a top view of one side as a PNG image: the stock (light, with its edge), the drawings' shapes (dark grey), and each enabled operation's cutting moves in its tool's colour (a V-carve's flat bottom in its end mill's), with a circle the size of the tool at each drilled hole; rapids are left out. X runs right and Y up, as seen from above; the image fits the stock and anything cut past its edges. A legend in JSON follows: the operation each colour is, the millimetres per pixel, and the area shown in stock coordinates (millimetres from the stock's bottom-left corner). Show it to the user, or look at it to check what was built. Changes nothing.",
+        "Computes a project's toolpaths, as check_project does, and returns a top view of one side as a PNG image: the stock (light, with its edge), the drawings' shapes (dark grey), and each enabled operation's cutting moves in its tool's colour (a V-carve's flat bottom in its end mill's), with a circle the size of the tool at each hole drilled straight down (a hole bored wider than the tool shows its rings instead); rapids are left out. X runs right and Y up, as seen from above; the image fits the stock and anything cut past its edges. A legend in JSON follows: the operation each colour is, the millimetres per pixel, and the area shown in stock coordinates (millimetres from the stock's bottom-left corner). Show it to the user, or look at it to check what was built. Changes nothing.",
       inputSchema: {
         path: projectPath,
         side: z
