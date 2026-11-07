@@ -96,7 +96,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
 
   return (
     <div className="grid gap-4 p-3 text-ui">
-      <div className="flex items-center gap-2">
+      <div className="sticky top-0 z-10 -mx-3 -mt-3 flex items-center gap-2 bg-background/85 px-3 pt-3 pb-2 backdrop-blur-md">
         <h3 className="min-w-0 flex-1 truncate font-medium" title={drawing.name}>
           {drawing.name || t("untitled")}
         </h3>
