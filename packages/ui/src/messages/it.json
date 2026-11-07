@@ -967,6 +967,7 @@
       "profile": "Taglia attorno a: {target}",
       "pocket": "Svuota l’area all’interno di: {target}",
       "drill": "Fora i punti e i cerchi di: {target}",
+      "drillPlaced": "Posiziona i fori facendo clic nella vista, oppure seleziona prima dei percorsi per forarne punti e cerchi",
       "engrave": "Incidi lungo le linee di: {target}",
       "vcarve": "Intaglia all’interno di {target} con una fresa a V, più a fondo dove sono più larghe",
       "relief_rough": "Togli il materiale sopra {model} a livelli, di solito con una fresa a candela piatta",

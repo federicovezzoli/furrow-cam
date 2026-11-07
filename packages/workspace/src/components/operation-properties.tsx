@@ -67,6 +67,7 @@ import {
   DEFAULT_STEP_OVER,
   DEFAULT_TAB_COUNT,
   defaultTabs,
+  hasPlacedHoles,
   renameOperation,
   setDrillPins,
   setOperationTargets,
@@ -155,7 +156,12 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
-        <TargetsField operationId={operation.id} targets={operation.targets} pins={pins} />
+        <TargetsField
+          operationId={operation.id}
+          targets={operation.targets}
+          pins={pins}
+          optional={hasPlacedHoles(operation)}
+        />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -302,11 +308,14 @@ function TargetsField({
   operationId,
   targets,
   pins,
+  optional,
 }: {
   operationId: string;
   targets: OperationTarget[];
   /** For a drill: whether it cuts the locating pins, or may. */
   pins: "on" | "available" | null;
+  /** Whether the last shape can go too: a drill with placed holes (#429). */
+  optional: boolean;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
@@ -359,7 +368,7 @@ function TargetsField({
             <Button
               variant="ghost"
               size="icon-compact"
-              disabled={rows.length === 1}
+              disabled={rows.length === 1 && !optional}
               onClick={() =>
                 setOperationTargets(
                   store,
@@ -368,7 +377,7 @@ function TargetsField({
                 )
               }
               aria-label={t("removeLabel", { name: shape.name || t("unnamedShape") })}
-              title={rows.length === 1 ? t("needsShape") : t("remove")}
+              title={rows.length === 1 && !optional ? t("needsShape") : t("remove")}
             >
               <XIcon />
             </Button>

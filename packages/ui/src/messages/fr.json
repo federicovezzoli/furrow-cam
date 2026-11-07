@@ -967,6 +967,7 @@
       "profile": "Couper autour de : {target}",
       "pocket": "Dégager l’intérieur de : {target}",
       "drill": "Percer les points et les cercles de : {target}",
+      "drillPlaced": "Placez des trous en cliquant dans la vue, ou sélectionnez d'abord des tracés pour percer leurs points et cercles",
       "engrave": "Graver le long des traits de : {target}",
       "vcarve": "Graver l’intérieur de {target} avec une fraise en V, plus profond là où c’est plus large",
       "relief_rough": "Enlever la matière au-dessus de {model} par niveaux, en général avec une fraise droite à bout plat",

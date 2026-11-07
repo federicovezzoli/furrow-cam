@@ -396,6 +396,15 @@ describe("addDrillOperation", () => {
     expect(ProjectDocument.parse(document())).toEqual(document());
   });
 
+  it("adds a drill of no targets for placed holes, but not of missing ones (#429)", () => {
+    const { store, document, operations } = setup();
+    const id = addDrillOperation(store, { targets: [], tool: endMill });
+    expect(operations().find((operation) => operation.id === id)?.targets).toEqual([]);
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    expect(addDrillOperation(store, { targets: [missing], tool: endMill })).toBeNull();
+    expect(addProfileOperation(store, { targets: [], tool: endMill })).toBeNull();
+  });
+
   it("refuses V-bits, adding or switching tools", () => {
     const { store, operations } = setup();
     expect(addDrillOperation(store, { targets: [whole(circle)], tool: vBit })).toBeNull();
@@ -440,6 +449,14 @@ describe("addDrillOperation", () => {
     const before = store.getState().document;
     removeHole(store, id, 2);
     expect(store.getState().document).toBe(before);
+    // Placed holes let the drill drop its shapes, which it needs otherwise (#429).
+    expect(setOperationTargets(store, id, [])).toEqual({ ok: true });
+    expect(operations().find((operation) => operation.id === id)?.targets).toEqual([]);
+    const other = addDrill(store);
+    expect(setOperationTargets(store, other, [])).toEqual({
+      ok: false,
+      error: { code: "workspace.needsShape" },
+    });
   });
 });
 

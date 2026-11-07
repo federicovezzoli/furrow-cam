@@ -967,6 +967,7 @@
       "profile": "Cut around the {target}",
       "pocket": "Clear the area inside the {target}",
       "drill": "Drill the points and circles of the {target}",
+      "drillPlaced": "Place holes by clicking in the viewport, or select paths first to drill their points and circles",
       "engrave": "Engrave along the lines of the {target}",
       "vcarve": "Carve inside the {target} with a V-bit, deeper where they are wider",
       "relief_rough": "Clear the material above {model} in levels, a flat end mill being the usual choice",

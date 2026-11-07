@@ -967,6 +967,7 @@
       "profile": "沿{target}切削",
       "pocket": "清除{target}内部的区域",
       "drill": "在{target}的点和圆处钻孔",
+      "drillPlaced": "在视图中点击放置孔,或先选择路径以钻其点和圆",
       "engrave": "沿{target}的线条雕刻",
       "vcarve": "用V形刀在{target}内部雕刻，越宽处越深",
       "relief_rough": "分层清除{model}上方的材料，通常使用平底立铣刀",

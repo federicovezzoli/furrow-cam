@@ -37,7 +37,7 @@ import {
 import { FONT_REMOVED } from "../lib/text-layout";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
-import type { ActionResult } from "./operation-actions";
+import { type ActionResult, hasPlacedHoles } from "./operation-actions";
 
 /** Why a file can't be imported: a project holds SVG and DXF drawings or one STL model (ADR-0055). */
 export const DRAWINGS_OR_MODEL: Message = { code: "workspace.drawingsOrModel" };
@@ -219,10 +219,6 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
       operation.targets.every(({ shapeId }) => shapeIds.has(shapeId)) &&
       !hasPlacedHoles(operation),
   );
-}
-
-function hasPlacedHoles(operation: Operation): boolean {
-  return operation.type === "drill" && operation.params.points.length > 0;
 }
 
 /**

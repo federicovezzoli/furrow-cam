@@ -967,6 +967,7 @@
       "profile": "Rond de {target} frezen",
       "pocket": "Het gebied binnen de {target} vrijfrezen",
       "drill": "De punten en cirkels van de {target} boren",
+      "drillPlaced": "Plaats gaten door in de weergave te klikken, of selecteer eerst paden om hun punten en cirkels te boren",
       "engrave": "Langs de lijnen van de {target} graveren",
       "vcarve": "Binnen de {target} frezen met een V-frees, dieper waar ze breder zijn",
       "relief_rough": "Het materiaal boven {model} in lagen wegfrezen, meestal met een platte vingerfrees",

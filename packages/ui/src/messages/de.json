@@ -967,6 +967,7 @@
       "profile": "Ausschneiden: {target}",
       "pocket": "Innen ausräumen: {target}",
       "drill": "Punkte und Kreise bohren: {target}",
+      "drillPlaced": "Bohrungen durch Klicken im Ansichtsfenster setzen, oder zuerst Pfade auswählen, um ihre Punkte und Kreise zu bohren",
       "engrave": "Entlang der Linien gravieren: {target}",
       "vcarve": "{target} innen mit einem V-Fräser schnitzen, tiefer, wo es breiter ist",
       "relief_rough": "Material über {model} in Ebenen abtragen, meist mit einem Schaftfräser",

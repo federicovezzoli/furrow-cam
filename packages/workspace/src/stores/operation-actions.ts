@@ -197,17 +197,23 @@ export function addPocketOperation(store: DocumentStore, options: NewOperation):
 }
 
 /**
- * Appends a drill operation on `targets`, like `addProfileOperation`.
- * Returns `null` as well if `tool` can't drill.
+ * Appends a drill operation on `targets`, like `addProfileOperation`, or on
+ * none, for holes placed in the viewport (#429). Returns `null` as well if
+ * `tool` can't drill.
  */
 export function addDrillOperation(store: DocumentStore, options: NewOperation): string | null {
   if (!canDrill(options.tool)) return null;
-  return appendOperation(store, options, (document, fields) => ({
-    ...fields,
-    type: "drill",
-    name: nextName(document, options.name ?? "Drill"),
-    params: defaultDrillParams(document),
-  }));
+  return appendOperation(
+    store,
+    options,
+    (document, fields) => ({
+      ...fields,
+      type: "drill",
+      name: nextName(document, options.name ?? "Drill"),
+      params: defaultDrillParams(document),
+    }),
+    true,
+  );
 }
 
 /**
@@ -344,10 +350,12 @@ function appendOperation(
   store: DocumentStore,
   { targets, tool, id = crypto.randomUUID(), stockSide = "top" }: NewOperation,
   create: (document: ProjectDocument, fields: OperationFields) => Operation,
+  /** Whether no targets at all are allowed, rather than none of them existing. */
+  untargeted = false,
 ): string | null {
   const { document } = store.getState();
   const existing = normalizeTargets(document.geometry, targets);
-  if (existing.length === 0) return null;
+  if (existing.length === 0 && !(untargeted && targets.length === 0)) return null;
   const operation = create(document, {
     id,
     enabled: true,
@@ -499,14 +507,23 @@ export function setOperationTargets(
   id: string,
   targets: OperationTarget[],
 ): ActionResult {
-  const existing = normalizeTargets(store.getState().document.geometry, targets);
-  if (existing.length === 0) return { ok: false, error: { code: "workspace.needsShape" } };
+  const { document } = store.getState();
+  const existing = normalizeTargets(document.geometry, targets);
+  const operation = document.operations.find((candidate) => candidate.id === id);
+  if (existing.length === 0 && !(operation && hasPlacedHoles(operation))) {
+    return { ok: false, error: { code: "workspace.needsShape" } };
+  }
   changeOperation(store, "setOperationTargets", id, (operation) => {
     operation.targets = existing;
     // A pin drill (#356) cuts its shapes again.
     if (operation.type === "drill") operation.params.pins = false;
   });
   return OK;
+}
+
+/** Whether `operation` is a drill with placed holes (#429), which needs no shapes. */
+export function hasPlacedHoles(operation: Operation): boolean {
+  return operation.type === "drill" && operation.params.points.length > 0;
 }
 
 /**

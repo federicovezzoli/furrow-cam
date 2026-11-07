@@ -967,6 +967,7 @@
       "profile": "Cortar alrededor de {target}",
       "pocket": "Vaciar el área dentro de {target}",
       "drill": "Taladrar los puntos y círculos de {target}",
+      "drillPlaced": "Coloca agujeros haciendo clic en la vista, o selecciona antes trayectorias para taladrar sus puntos y círculos",
       "engrave": "Grabar a lo largo de las líneas de {target}",
       "vcarve": "Tallar dentro de {target} con una fresa en V, más hondo en las zonas más anchas",
       "relief_rough": "Retirar por niveles el material sobre {model}, normalmente con una fresa plana",

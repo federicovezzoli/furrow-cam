@@ -967,6 +967,7 @@
       "profile": "{target} için çevresinden kes",
       "pocket": "{target} için iç alanı temizle",
       "drill": "{target} için noktaları ve çemberleri del",
+      "drillPlaced": "Görünümde tıklayarak delik yerleştirin veya noktalarını ve dairelerini delmek için önce yolları seçin",
       "engrave": "{target} için çizgiler boyunca gravür yap",
       "vcarve": "{target} için V uçla içini oy, geniş yerlerde daha derin",
       "relief_rough": "{model} üzerindeki malzemeyi katmanlar halinde temizle; genellikle düz uçlu parmak freze tercih edilir",

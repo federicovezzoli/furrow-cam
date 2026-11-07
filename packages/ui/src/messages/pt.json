@@ -967,6 +967,7 @@
       "profile": "Cortar em volta de: {target}",
       "pocket": "Limpar a área dentro de: {target}",
       "drill": "Furar os pontos e círculos de: {target}",
+      "drillPlaced": "Coloque furos clicando na vista, ou selecione primeiro caminhos para furar os seus pontos e círculos",
       "engrave": "Gravar ao longo das linhas de: {target}",
       "vcarve": "Entalhar dentro de {target} com uma fresa em V, mais fundo onde forem mais largas",
       "relief_rough": "Remover o material acima de {model} em níveis, normalmente com uma fresa de topo reta",
