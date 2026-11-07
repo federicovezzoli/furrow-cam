@@ -14,6 +14,8 @@ export type Palette = {
   startPoint: string;
   /** Corner overcuts (#428) of the selected profile. */
   overcut: string;
+  /** Holes placed on the selected drill (#429). */
+  hole: string;
   /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
   touchOff: string;
   /** The locating pins (#356). */
@@ -41,6 +43,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     tab: "#16a34a",
     startPoint: "#dc2626",
     overcut: "#ea580c",
+    hole: "#0891b2",
     touchOff: "#0891b2",
     pin: "#4f46e5",
     parting: "#e11d48",
@@ -61,6 +64,7 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     tab: "#4ade80",
     startPoint: "#f87171",
     overcut: "#fb923c",
+    hole: "#22d3ee",
     touchOff: "#22d3ee",
     pin: "#818cf8",
     parting: "#fb7185",

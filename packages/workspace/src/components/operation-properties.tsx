@@ -67,6 +67,7 @@ import {
   DEFAULT_STEP_OVER,
   DEFAULT_TAB_COUNT,
   defaultTabs,
+  hasPlacedHoles,
   renameOperation,
   setDrillPins,
   setOperationTargets,
@@ -155,7 +156,12 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
-        <TargetsField operationId={operation.id} targets={operation.targets} pins={pins} />
+        <TargetsField
+          operationId={operation.id}
+          targets={operation.targets}
+          pins={pins}
+          placedHoles={hasPlacedHoles(operation)}
+        />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -302,11 +308,17 @@ function TargetsField({
   operationId,
   targets,
   pins,
+  placedHoles,
 }: {
   operationId: string;
   targets: OperationTarget[];
   /** For a drill: whether it cuts the locating pins, or may. */
   pins: "on" | "available" | null;
+  /**
+   * For a drill with placed holes (#429): the last shape can go too, and the
+   * holes are removed before it can cut the locating pins.
+   */
+  placedHoles: boolean;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
@@ -341,7 +353,13 @@ function TargetsField({
           {t("useSelected")}
         </Button>
         {pins === "available" && (
-          <Button variant="outline" size="compact" onClick={() => setDrillPins(store, operationId)}>
+          <Button
+            variant="outline"
+            size="compact"
+            disabled={placedHoles}
+            title={placedHoles ? t("pinsWithoutHoles") : undefined}
+            onClick={() => setDrillPins(store, operationId)}
+          >
             {t("usePins")}
           </Button>
         )}
@@ -359,7 +377,7 @@ function TargetsField({
             <Button
               variant="ghost"
               size="icon-compact"
-              disabled={rows.length === 1}
+              disabled={rows.length === 1 && !placedHoles}
               onClick={() =>
                 setOperationTargets(
                   store,
@@ -368,7 +386,7 @@ function TargetsField({
                 )
               }
               aria-label={t("removeLabel", { name: shape.name || t("unnamedShape") })}
-              title={rows.length === 1 ? t("needsShape") : t("remove")}
+              title={rows.length === 1 && !placedHoles ? t("needsShape") : t("remove")}
             >
               <XIcon />
             </Button>
@@ -964,6 +982,7 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
           {errors.peck}
         </p>
       )}
+      {!params.pins && <HolesFields count={params.points.length} />}
     </section>
   );
 }
@@ -1671,6 +1690,29 @@ function StartPointsFields({ count }: { count: number }) {
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+    </>
+  );
+}
+
+/** How many holes a drill has placed (#429), and a toggle for placing them in the viewport. */
+function HolesFields({ count }: { count: number }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "holes");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("holeCount", { count })}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "holes")}
+        >
+          {editing ? t("done") : t("placeHoles")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("placeHolesHint")}</p>}
     </>
   );
 }

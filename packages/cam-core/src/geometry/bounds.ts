@@ -1,4 +1,5 @@
-import { distance, type Path, type Point, pointsCoincide, type Shape } from "@furrow/document";
+import { distance, type Path, type Point, type Shape } from "@furrow/document";
+import { arcSweep } from "./flatten";
 
 /** An axis-aligned rectangle. */
 export type Rect = { min: Point; max: Point };
@@ -59,8 +60,7 @@ function arcExtremes(from: Point, to: Point, center: Point, clockwise: boolean):
     const turn = clockwise ? angle(from) - theta : theta - angle(from);
     return ((turn % TURN) + TURN) % TURN;
   };
-  const full = pointsCoincide(from, to);
-  const sweep = along(angle(to));
+  const sweep = Math.abs(arcSweep(from, to, center, clockwise));
   const extremes: Point[] = [];
   for (const [dx, dy] of [
     [1, 0],
@@ -68,7 +68,7 @@ function arcExtremes(from: Point, to: Point, center: Point, clockwise: boolean):
     [-1, 0],
     [0, -1],
   ] as const) {
-    if (full || along(Math.atan2(dy, dx)) <= sweep) {
+    if (along(Math.atan2(dy, dx)) <= sweep) {
       extremes.push([center[0] + dx * radius, center[1] + dy * radius]);
     }
   }

@@ -243,7 +243,8 @@ export type PocketOperation = z.infer<typeof PocketOperation>;
 
 /**
  * Drill parameters (#24): holes at points and at circles of the tool's
- * diameter. The peck depth comes from the tool's step-down.
+ * diameter, and at holes placed in the viewport (#429). The peck depth comes
+ * from the tool's step-down.
  */
 export const DrillParams = z.strictObject({
   /** Depth of the tool tip below the stock top. */
@@ -258,6 +259,11 @@ export const DrillParams = z.strictObject({
    * side only.
    */
   pins: z.boolean(),
+  /**
+   * Holes placed by clicking in the viewport (#429), drilled like
+   * single-point paths. In the top side's coordinates, like tab positions.
+   */
+  points: z.array(Point),
 });
 export type DrillParams = z.infer<typeof DrillParams>;
 
@@ -287,7 +293,11 @@ export const DrillOperation = z
       });
     }
     // The pins are drilled from the top; turned over, the stock sits on them.
-    if (operation.params.pins && (operation.targets.length > 0 || operation.stockSide !== "top")) {
+    const { pins, points } = operation.params;
+    if (
+      pins &&
+      (operation.targets.length > 0 || points.length > 0 || operation.stockSide !== "top")
+    ) {
       ctx.addIssue({ code: "custom", path: ["params", "pins"], message: "operation.pinsTopOnly" });
     }
   });

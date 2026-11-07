@@ -1,6 +1,7 @@
 import {
   clearingTool,
   DEFAULT_ENTRY_CLEARANCE,
+  type DrillOperation,
   type Model,
   type Operation,
   type OperationTarget,
@@ -161,7 +162,9 @@ export function toolpathInputs(
         (operation.type === "relief_rough" && operation.params.boundary.type !== "model") ||
         (operation.type === "relief_finish" &&
           finishingBoundary(operation.params).type !== "model") ||
-        isPinDrill(operation) ||
+        // Pin drills and placed holes (#429) are checked against the stock edges.
+        (operation.type === "drill" &&
+          (operation.params.pins || operation.params.points.length > 0)) ||
         (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
           : null,
@@ -466,6 +469,22 @@ function checkPinsOnStock(
   return { ...toolpath, warnings: [...toolpath.warnings, { code: "toolpath.pinsOffStock" }] };
 }
 
+/** Warns when a hole placed in the viewport (#429) is not wholly on the stock. */
+function checkHolesOnStock(
+  operation: DrillOperation,
+  stock: Rect | null,
+  toolpath: Toolpath,
+): Toolpath {
+  if (!stock) return toolpath;
+  const r = operation.tool.diameter / 2 - 1e-9;
+  const off = operation.params.points.some(
+    ([x, y]) =>
+      x - r < stock.min[0] || x + r > stock.max[0] || y - r < stock.min[1] || y + r > stock.max[1],
+  );
+  if (!off) return toolpath;
+  return { ...toolpath, warnings: [...toolpath.warnings, { code: "toolpath.holesOffStock" }] };
+}
+
 function* operationSteps(
   {
     operation,
@@ -500,11 +519,15 @@ function* operationSteps(
       if (operation.params.pins && shapes.length === 0) {
         return { moves: [], warnings: [{ code: "toolpath.noLocatingPins" }] };
       }
-      return checkPinsOnStock(
+      return checkHolesOnStock(
         operation,
-        shapes,
         stock,
-        checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff),
+        checkPinsOnStock(
+          operation,
+          shapes,
+          stock,
+          checkTouchOff(operation, drillToolpath(operation, shapes, options), touchOff),
+        ),
       );
     case "engrave":
       return checkTouchOff(operation, engraveToolpath(operation, shapes, options), touchOff);

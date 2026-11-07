@@ -13,6 +13,7 @@ import { createDocumentStore } from "./document-store";
 import {
   addDrillOperation,
   addEngraveOperation,
+  addHole,
   addPinDrillOperation,
   addPocketOperation,
   addProfileOperation,
@@ -28,6 +29,7 @@ import {
   moveOperation,
   moveStartPoint,
   moveTab,
+  removeHole,
   removeStartPoint,
   removeTab,
   renameOperation,
@@ -394,6 +396,15 @@ describe("addDrillOperation", () => {
     expect(ProjectDocument.parse(document())).toEqual(document());
   });
 
+  it("adds a drill of no targets for placed holes, but not of missing ones (#429)", () => {
+    const { store, document, operations } = setup();
+    const id = addDrillOperation(store, { targets: [], tool: endMill });
+    expect(operations().find((operation) => operation.id === id)?.targets).toEqual([]);
+    expect(ProjectDocument.parse(document())).toEqual(document());
+    expect(addDrillOperation(store, { targets: [missing], tool: endMill })).toBeNull();
+    expect(addProfileOperation(store, { targets: [], tool: endMill })).toBeNull();
+  });
+
   it("refuses V-bits, adding or switching tools", () => {
     const { store, operations } = setup();
     expect(addDrillOperation(store, { targets: [whole(circle)], tool: vBit })).toBeNull();
@@ -414,8 +425,38 @@ describe("addDrillOperation", () => {
       peck: false,
       stepOver: 40,
       pins: false,
+      points: [],
     });
     expect(updateDrillParams(store, id, { depth: -1 })).toMatchObject({ ok: false });
+  });
+
+  it("places and removes holes one undo step each, out of range doing nothing (#429)", () => {
+    const { store, operations } = setup();
+    const id = addDrill(store);
+    const points = () => {
+      const drill = operations().find((operation) => operation.id === id);
+      return drill?.type === "drill" ? drill.params.points : null;
+    };
+    addHole(store, id, [10, 20]);
+    addHole(store, id, [30, 40]);
+    removeHole(store, id, 0);
+    expect(points()).toEqual([[30, 40]]);
+    store.getState().undo();
+    expect(points()).toEqual([
+      [10, 20],
+      [30, 40],
+    ]);
+    const before = store.getState().document;
+    removeHole(store, id, 2);
+    expect(store.getState().document).toBe(before);
+    // Placed holes let the drill drop its shapes, which it needs otherwise (#429).
+    expect(setOperationTargets(store, id, [])).toEqual({ ok: true });
+    expect(operations().find((operation) => operation.id === id)?.targets).toEqual([]);
+    const other = addDrill(store);
+    expect(setOperationTargets(store, other, [])).toEqual({
+      ok: false,
+      error: { code: "workspace.needsShape" },
+    });
   });
 });
 
@@ -437,8 +478,9 @@ describe("addPinDrillOperation", () => {
     expect(ProjectDocument.parse(document())).toEqual(document());
     setOperationTargets(store, id, [whole(circle)]);
     expect(pinDrill()).toMatchObject({ targets: [whole(circle)], params: { pins: false } });
+    addHole(store, id, [10, 20]);
     setDrillPins(store, id);
-    expect(pinDrill()).toMatchObject({ targets: [], params: { pins: true } });
+    expect(pinDrill()).toMatchObject({ targets: [], params: { pins: true, points: [] } });
     // Not from the bottom side, which sits on the pins.
     const bottom = addDrillOperation(store, {
       targets: [whole(circle)],

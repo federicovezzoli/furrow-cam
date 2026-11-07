@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” falhou, então o material que ela cortaria é considerado restante.",
       "noLocatingPins": "O projeto não tem pinos de posicionamento para furar.",
       "pinsOffStock": "Um pino de posicionamento está fora do material.",
+      "holesOffStock": "Um furo colocado está fora do material.",
+      "noHoles": "Nada para furar: coloque furos na vista ou use as formas selecionadas.",
       "cutsPins": "Esta operação corta onde vai um pino de posicionamento, por isso a ferramenta bateria no pino quando o material for virado: mova os pinos ou o corte.",
       "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que o lado de baixo corta todo o seu contorno.",
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Nenhum ponto de início} one {# ponto de início} other {# pontos de início}}",
     "editStartPoints": "Editar pontos de início",
     "startPointsHint": "Clique num caminho para adicionar um ponto de início (num caminho aberto, na extremidade mais próxima), arraste-o para o mover, clique nele para o remover. Um por caminho.",
+    "holeCount": "{count, plural, =0 {Nenhum furo colocado} one {# furo colocado} other {# furos colocados}}",
+    "placeHoles": "Colocar furos",
+    "placeHolesHint": "Clique para colocar um furo onde o cursor se ajusta, clique num furo para o remover. Esc ou clique direito para terminar.",
     "computing": "Calculando percurso…",
     "cancel": "Cancelar",
     "computeAgain": "Calcular de novo",
@@ -941,6 +946,7 @@
     "failed": "Não foi possível calcular o percurso: {error}",
     "warnings": "Avisos do percurso",
     "usePins": "Usar pinos",
+    "pinsWithoutHoles": "Remova primeiro os furos colocados: uma furação de pinos fura apenas os pinos de posicionamento.",
     "locatingPins": "Os pinos de posicionamento",
     "pinDepth": "Tão fundo quanto dizem as configurações dos pinos: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Cortar em volta de: {target}",
       "pocket": "Limpar a área dentro de: {target}",
       "drill": "Furar os pontos e círculos de: {target}",
+      "drillPlaced": "Coloque furos clicando na vista, ou selecione primeiro caminhos para furar os seus pontos e círculos",
       "engrave": "Gravar ao longo das linhas de: {target}",
       "vcarve": "Entalhar dentro de {target} com uma fresa em V, mais fundo onde forem mais largas",
       "relief_rough": "Remover o material acima de {model} em níveis, normalmente com uma fresa de topo reta",
@@ -1232,6 +1239,8 @@
     "circle_center": "Centro do círculo",
     "bounds_corner": "Canto da caixa delimitadora",
     "bounds_center": "Centro da caixa delimitadora",
+    "midpoint": "Ponto médio",
+    "edge": "Aresta",
     "anchors": {
       "top_left": "Material: superior esquerdo",
       "top_center": "Material: superior central",

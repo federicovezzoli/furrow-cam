@@ -107,7 +107,7 @@ function referenceProject(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40, pins: false },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false, points: [] },
       },
       {
         id: id(3),
@@ -215,7 +215,7 @@ describe("exportGcode", () => {
         type: "drill",
         tool: drill,
         targets: [],
-        params: { depth: 1, peck: false, stepOver: 40, pins: true },
+        params: { depth: 1, peck: false, stepOver: 40, pins: true, points: [] },
       };
       const holes = { type: "through" as const, spoilboardDepth: 5 };
       const pins = { type: "pins" as const, diameter: 6, positions: [-120, 120], holes };
@@ -469,6 +469,7 @@ describe("exportGcode", () => {
     const [holes, ...rest] = doc.operations as [Operation, ...Operation[]];
     doc.operations = [{ ...holes, targets: [] }, ...rest];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
+      { operation: "Holes", message: { code: "toolpath.noHoles" } },
       { operation: "Holes", message: { code: "export.noToolpath" } },
     ]);
   });

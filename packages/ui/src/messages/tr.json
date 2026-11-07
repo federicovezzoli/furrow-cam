@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” başarısız oldu; bu nedenle keseceği malzeme kalmış kabul edilir.",
       "noLocatingPins": "Projede delinecek konumlama pimi yok.",
       "pinsOffStock": "Bir konumlama pimi ham malzemenin dışında.",
+      "holesOffStock": "Yerleştirilmiş bir delik ham malzemenin dışında.",
+      "noHoles": "Delinecek bir şey yok: görünümde delik yerleştirin veya seçili şekilleri kullanın.",
       "cutsPins": "Bu işlem bir konumlama piminin geldiği yeri kesiyor, bu yüzden ham malzeme çevrildiğinde takım pime çarpar: pimleri ya da kesimi taşıyın.",
       "noHoldingTabs": "Tutucu köprü yok: alt yüz parçanın çevresini tamamen kestiğinde parça serbest kalır.",
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Başlangıç noktası yok} one {# başlangıç noktası} other {# başlangıç noktası}}",
     "editStartPoints": "Başlangıç noktalarını düzenle",
     "startPointsHint": "Başlangıç noktası eklemek için bir yola tıklayın (açık bir yolda en yakın uca gider), taşımak için sürükleyin, kaldırmak için üzerine tıklayın. Her yol bir tane alır.",
+    "holeCount": "{count, plural, =0 {Yerleştirilmiş delik yok} one {# yerleştirilmiş delik} other {# yerleştirilmiş delik}}",
+    "placeHoles": "Delik yerleştir",
+    "placeHolesHint": "İmlecin yakalandığı yere delik yerleştirmek için tıklayın, kaldırmak için bir deliğe tıklayın. Bitirmek için Esc veya sağ tıklama.",
     "computing": "Takım yolu hesaplanıyor…",
     "cancel": "İptal",
     "computeAgain": "Yeniden hesapla",
@@ -941,6 +946,7 @@
     "failed": "Takım yolu hesaplanamadı: {error}",
     "warnings": "Takım yolu uyarıları",
     "usePins": "Pimleri kullan",
+    "pinsWithoutHoles": "Önce yerleştirilmiş delikleri kaldırın: pim delme yalnızca konumlama pimlerini deler.",
     "locatingPins": "Konumlama pimleri",
     "pinDepth": "Pim ayarlarında belirtilen derinlikte: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "{target} için çevresinden kes",
       "pocket": "{target} için iç alanı temizle",
       "drill": "{target} için noktaları ve çemberleri del",
+      "drillPlaced": "Görünümde tıklayarak delik yerleştirin veya noktalarını ve dairelerini delmek için önce yolları seçin",
       "engrave": "{target} için çizgiler boyunca gravür yap",
       "vcarve": "{target} için V uçla içini oy, geniş yerlerde daha derin",
       "relief_rough": "{model} üzerindeki malzemeyi katmanlar halinde temizle; genellikle düz uçlu parmak freze tercih edilir",
@@ -1232,6 +1239,8 @@
     "circle_center": "Çember merkezi",
     "bounds_corner": "Sınır kutusu köşesi",
     "bounds_center": "Sınır kutusu merkezi",
+    "midpoint": "Orta nokta",
+    "edge": "Kenar",
     "anchors": {
       "top_left": "Ham malzeme sol üst",
       "top_center": "Ham malzeme üst orta",

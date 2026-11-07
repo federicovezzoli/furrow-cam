@@ -43,6 +43,21 @@ export function arcStep(radius: number, tolerance = DEFAULT_CHORD_TOLERANCE): nu
     : Math.min(2 * Math.acos(1 - tolerance / radius), MAX_ARC_STEP);
 }
 
+/**
+ * The angle an arc from `from` to `to` around `center` turns through, in
+ * radians: positive counter-clockwise, negative clockwise, a full turn when
+ * its ends coincide (see `pointsCoincide`).
+ */
+export function arcSweep(from: Point, to: Point, center: Point, clockwise: boolean): number {
+  const TAU = 2 * Math.PI;
+  const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
+  const end = Math.atan2(to[1] - center[1], to[0] - center[0]);
+  const turn = pointsCoincide(from, to)
+    ? TAU
+    : (((clockwise ? start - end : end - start) % TAU) + TAU) % TAU;
+  return clockwise ? -turn : turn;
+}
+
 /** Pushes the inner points of an arc; the caller pushes `to`. */
 function flattenArc(
   points: Point[],
@@ -54,12 +69,7 @@ function flattenArc(
 ) {
   const radius = distance(center, from);
   const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
-  const end = Math.atan2(to[1] - center[1], to[0] - center[0]);
-  const TAU = 2 * Math.PI;
-  let sweep = pointsCoincide(from, to)
-    ? TAU
-    : (((clockwise ? start - end : end - start) % TAU) + TAU) % TAU;
-  if (clockwise) sweep = -sweep;
+  const sweep = arcSweep(from, to, center, clockwise);
 
   const step = arcStep(radius, tolerance);
   const count = Math.max(1, Math.ceil(Math.abs(sweep) / step));

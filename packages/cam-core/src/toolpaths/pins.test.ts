@@ -37,7 +37,7 @@ function project(
         tool: drill,
         stockSide: "top",
         targets: [],
-        params: { depth: 1, peck: false, stepOver: 40, pins: true },
+        params: { depth: 1, peck: false, stepOver: 40, pins: true, points: [] },
       },
     ],
   };

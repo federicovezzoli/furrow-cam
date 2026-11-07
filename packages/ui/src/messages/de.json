@@ -682,6 +682,8 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
       "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
       "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
+      "holesOffStock": "Eine gesetzte Bohrung liegt außerhalb des Rohteils.",
+      "noHoles": "Nichts zu bohren: Bohrungen im Ansichtsfenster setzen oder ausgewählte Formen verwenden.",
       "cutsPins": "Diese Operation schneidet dort, wo ein Passstift sitzt, daher würde das Werkzeug den Stift treffen, wenn das Rohteil gewendet ist: Verschiebe die Stifte oder den Schnitt.",
       "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {Keine Startpunkte} one {# Startpunkt} other {# Startpunkte}}",
     "editStartPoints": "Startpunkte bearbeiten",
     "startPointsHint": "Klicke auf einen Pfad, um einen Startpunkt hinzuzufügen (bei einem offenen Pfad am näheren Ende), ziehe ihn zum Verschieben, klicke darauf zum Entfernen. Jeder Pfad nimmt einen auf.",
+    "holeCount": "{count, plural, =0 {Keine gesetzten Bohrungen} one {# gesetzte Bohrung} other {# gesetzte Bohrungen}}",
+    "placeHoles": "Bohrungen setzen",
+    "placeHolesHint": "Klicke, um eine Bohrung am Fangpunkt zu setzen, klicke auf eine Bohrung, um sie zu entfernen. Esc oder Rechtsklick beendet.",
     "computing": "Werkzeugbahn wird berechnet…",
     "cancel": "Abbrechen",
     "computeAgain": "Neu berechnen",
@@ -941,6 +946,7 @@
     "failed": "Die Werkzeugbahn konnte nicht berechnet werden: {error}",
     "warnings": "Warnungen zur Werkzeugbahn",
     "usePins": "Stifte verwenden",
+    "pinsWithoutHoles": "Entferne zuerst die gesetzten Bohrungen: Eine Passstiftbohrung bohrt nur die Passstifte.",
     "locatingPins": "Die Passstifte",
     "pinDepth": "So tief, wie die Stifteinstellungen sagen: {depth}."
   },
@@ -964,6 +970,7 @@
       "profile": "Ausschneiden: {target}",
       "pocket": "Innen ausräumen: {target}",
       "drill": "Punkte und Kreise bohren: {target}",
+      "drillPlaced": "Bohrungen durch Klicken im Ansichtsfenster setzen, oder zuerst Pfade auswählen, um ihre Punkte und Kreise zu bohren",
       "engrave": "Entlang der Linien gravieren: {target}",
       "vcarve": "{target} innen mit einem V-Fräser schnitzen, tiefer, wo es breiter ist",
       "relief_rough": "Material über {model} in Ebenen abtragen, meist mit einem Schaftfräser",
@@ -1232,6 +1239,8 @@
     "circle_center": "Kreismittelpunkt",
     "bounds_corner": "Ecke des Begrenzungsrahmens",
     "bounds_center": "Mitte des Begrenzungsrahmens",
+    "midpoint": "Mittelpunkt",
+    "edge": "Kante",
     "anchors": {
       "top_left": "Rohteil, oben links",
       "top_center": "Rohteil, oben Mitte",

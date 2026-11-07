@@ -216,6 +216,18 @@ describe("workspace store", () => {
     expect(store.getState().editing).toBe("overcuts");
     store.getState().prune(withOvercuts(null));
     expect(store.getState().editing).toBeNull();
+    // Placing holes needs a drill of shapes, not of the locating pins.
+    const withDrill = (pins: boolean) => ({
+      ...createProjectDocument(),
+      operations: [
+        { id: "op", type: "drill", params: { pins } } as ProjectDocument["operations"][number],
+      ],
+    });
+    store.getState().setEditing("holes");
+    store.getState().prune(withDrill(false));
+    expect(store.getState().editing).toBe("holes");
+    store.getState().prune(withDrill(true));
+    expect(store.getState().editing).toBeNull();
   });
 
   it("prunes ids and paths that are no longer in the document, keeping an unchanged selection", () => {

@@ -62,4 +62,17 @@ describe("AddOperationButtons", () => {
     expect(operation?.type).toBe("profile");
     expect(stores.workspace.getState().selectedOperationId).toBe(operation?.id);
   });
+
+  it("adds a drill of nothing selected and starts placing its holes (#429)", () => {
+    render();
+    const drill = screen.getByRole("button", { name: "Add Drill" });
+    expect(drill.getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(drill);
+    const [operation] = stores.document.getState().document.operations;
+    expect(operation).toMatchObject({ type: "drill", targets: [] });
+    expect(stores.workspace.getState()).toMatchObject({
+      selectedOperationId: operation?.id,
+      editing: "holes",
+    });
+  });
 });

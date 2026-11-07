@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}”失败，因此视其要切削的材料为剩余材料。",
       "noLocatingPins": "项目中没有要钻的定位销孔。",
       "pinsOffStock": "有一个定位销位于毛坯之外。",
+      "holesOffStock": "有一个放置的孔位于毛坯之外。",
+      "noHoles": "没有可钻的内容:在视图中放置孔或使用所选形状。",
       "cutsPins": "此操作会切到定位销所在的位置，毛坯翻面后刀具会撞到定位销：请移动定位销或切削。",
       "noHoldingTabs": "没有保留桥：底面绕工件一圈切完后，工件会松脱。",
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。"
@@ -934,6 +936,9 @@
     "startPointCount": "{count, plural, =0 {没有起点} other {#个起点}}",
     "editStartPoints": "编辑起点",
     "startPointsHint": "点击路径添加起点(开放路径取较近的一端),拖动以移动,点击以删除。每条路径一个。",
+    "holeCount": "{count, plural, =0 {没有放置的孔} other {#个放置的孔}}",
+    "placeHoles": "放置孔",
+    "placeHolesHint": "点击在光标吸附处放置孔,点击孔以删除。按 Esc 或右键结束。",
     "computing": "正在计算刀具路径…",
     "cancel": "取消",
     "computeAgain": "重新计算",
@@ -941,6 +946,7 @@
     "failed": "无法计算刀具路径：{error}",
     "warnings": "刀具路径警告",
     "usePins": "使用定位销",
+    "pinsWithoutHoles": "请先删除放置的孔:定位销钻孔只钻定位销。",
     "locatingPins": "定位销",
     "pinDepth": "按定位销设置的深度：{depth}。"
   },
@@ -964,6 +970,7 @@
       "profile": "沿{target}切削",
       "pocket": "清除{target}内部的区域",
       "drill": "在{target}的点和圆处钻孔",
+      "drillPlaced": "在视图中点击放置孔,或先选择路径以钻其点和圆",
       "engrave": "沿{target}的线条雕刻",
       "vcarve": "用V形刀在{target}内部雕刻，越宽处越深",
       "relief_rough": "分层清除{model}上方的材料，通常使用平底立铣刀",
@@ -1232,6 +1239,8 @@
     "circle_center": "圆心",
     "bounds_corner": "包围盒角点",
     "bounds_center": "包围盒中心",
+    "midpoint": "中点",
+    "edge": "边",
     "anchors": {
       "top_left": "毛坯左上",
       "top_center": "毛坯上中",

@@ -58,8 +58,11 @@ export function AddOperationButtons() {
     models.find(({ id }) => id === selectedModelId) ?? (models.length === 1 ? models[0] : null);
   const target = targets.length === 0 ? undefined : targetsLabel(targets);
 
-  function added(id: string | null) {
-    if (id) workspace.getState().selectOperation(id);
+  function added(id: string | null, placeHoles: boolean) {
+    if (!id) return;
+    workspace.getState().selectOperation(id);
+    // A drill of nothing selected starts with placing its holes (#429).
+    if (placeHoles) workspace.getState().setEditing("holes");
   }
 
   const kinds: {
@@ -100,9 +103,12 @@ export function AddOperationButtons() {
             stockSide: workspace.getState().side,
           }),
         choice,
-        hint: t(`hints.${type}`, { target: target ?? "" }),
+        hint:
+          type === "drill" && !target
+            ? t("hints.drillPlaced")
+            : t(`hints.${type}`, { target: target ?? "" }),
         missingTool,
-        needs: target ? undefined : t("selectPaths"),
+        needs: target || type === "drill" ? undefined : t("selectPaths"),
       });
     }
   }
@@ -143,7 +149,7 @@ export function AddOperationButtons() {
       data-demo={`add-${type}`}
       hint={hint}
       disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
-      onClick={() => choice && added(add(choice))}
+      onClick={() => choice && added(add(choice), type === "drill" && !target)}
     />
   ));
 }

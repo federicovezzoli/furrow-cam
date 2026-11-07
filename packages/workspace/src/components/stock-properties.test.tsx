@@ -122,7 +122,7 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
       ...(full.operations[0] as (typeof full.operations)[number]),
       type: "drill" as const,
       targets: [],
-      params: { depth: 5, peck: false, stepOver: 40, pins: true },
+      params: { depth: 5, peck: false, stepOver: 40, pins: true, points: [] },
     };
     render({ ...full, operations: [pinDrill] });
     expect(screen.queryByText(/drill of the pins cuts nothing/)).toBeNull();

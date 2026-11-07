@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import type { ProjectDocument } from "@furrow/document";
-import { fullDocument, model, OPERATION_ID, reliefFinish } from "@furrow/document/fixtures";
+import {
+  fullDocument,
+  model,
+  OPERATION_ID,
+  reliefFinish,
+  SQUARE_ID,
+} from "@furrow/document/fixtures";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
@@ -84,6 +90,38 @@ describe("OperationProperties", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit start points" }));
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(workspace.getState().editing).toBeNull();
+  });
+
+  it("places a drill's holes in the viewport (#429)", () => {
+    const doc = fullDocument();
+    const [profile] = doc.operations;
+    if (profile?.type !== "profile") throw new Error("The fixture has no profile");
+    const { params: _, ...rest } = profile;
+    doc.operations = [
+      {
+        ...rest,
+        type: "drill",
+        targets: [{ shapeId: SQUARE_ID, paths: null }],
+        params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[10, 20]] },
+      },
+    ];
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: doc }),
+    );
+    workspace.getState().selectOperation(OPERATION_ID);
+    expect(screen.getByText("1 placed hole")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Place holes" }));
+    expect(workspace.getState()).toMatchObject({ editing: "holes", view: "top" });
+    expect(screen.getByText(/Click to place a hole/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(workspace.getState().editing).toBeNull();
+    // With placed holes, the drill's last shape can go too.
+    fireEvent.click(screen.getByRole("button", { name: /^Remove / }));
+    expect(store.getState().document.operations[0]?.targets).toEqual([]);
   });
 
   it("turns corner overcuts off and on, and off on the line (#428)", () => {
