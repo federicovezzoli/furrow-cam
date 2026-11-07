@@ -114,35 +114,65 @@ export function holeSnapTargets(
   ];
 }
 
-/** The paths of `shapes` with segments, flattened, for `nearestHoleSnap`. */
-export function snapEdges(shapes: Shape[]): Point[][] {
-  return shapes.flatMap((shape) =>
-    shape.paths.filter((path) => path.segments.length > 0).map((path) => flattenPath(path)),
-  );
+/** A segment of a path, flattened, and the circle it lies on if it is an arc. */
+export type SnapEdge = { points: Point[]; circle: { center: Point; radius: number } | null };
+
+/** The segments of `shapes`, closing lines included, for `nearestHoleSnap`. */
+export function snapEdges(shapes: Shape[]): SnapEdge[] {
+  const edges: SnapEdge[] = [];
+  for (const shape of shapes) {
+    for (const path of shape.paths) {
+      let from = path.start;
+      for (const segment of path.segments) {
+        edges.push({
+          points: flattenPath({ start: from, segments: [segment], closed: false }),
+          circle:
+            segment.kind === "arc"
+              ? { center: segment.center, radius: distance(segment.center, from) }
+              : null,
+        });
+        from = segment.to;
+      }
+      if (path.closed && path.segments.length > 0 && !pointsCoincide(from, path.start)) {
+        edges.push({ points: [from, path.start], circle: null });
+      }
+    }
+  }
+  return edges;
 }
 
 /**
  * Where a placed drill hole snaps near `point`: the nearest of `targets`
  * within `radius`, or else the nearest point of `edges` (from `snapEdges`)
- * within it, or `null`.
+ * within it, or `null`. A point on an arc is put on its circle, not its
+ * flattening, so scaling the drawing up later doesn't carry it off the arc.
  */
 export function nearestHoleSnap(
   targets: SnapTarget[],
-  edges: Point[][],
+  edges: SnapEdge[],
   point: Point,
   radius: number,
 ): SnapTarget | null {
   const target = nearestSnapTarget(targets, point, radius);
   if (target) return target;
-  let best: SnapTarget | null = null;
+  let best: { point: Point; edge: SnapEdge } | null = null;
   let bestDistance = radius;
   for (const edge of edges) {
-    const projection = projectOnLoop(edge, point);
+    const projection = projectOnLoop(edge.points, point);
     if (projection.distance > bestDistance) continue;
-    best = { kind: "edge", point: projection.point };
+    best = { point: projection.point, edge };
     bestDistance = projection.distance;
   }
-  return best;
+  if (!best) return null;
+  const { circle } = best.edge;
+  const away = circle && distance(circle.center, best.point);
+  if (!circle || !away) return { kind: "edge", point: best.point };
+  const [cx, cy] = circle.center;
+  const scale = circle.radius / away;
+  return {
+    kind: "edge",
+    point: [cx + (best.point[0] - cx) * scale, cy + (best.point[1] - cy) * scale],
+  };
 }
 
 function segmentMidpoints(path: Path): Point[] {

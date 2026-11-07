@@ -275,6 +275,23 @@ describe("placed holes (#429)", () => {
     ]);
   });
 
+  it("stay with another drawing they lie on", () => {
+    const s = withHoles();
+    const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    s.getState().change("setup", (draft) => {
+      draft.drawings.push({ id: other, name: "other.svg", border: 10, rotation: 0 });
+      draft.geometry.push(
+        translateShape({ ...square, id: OTHER_SQUARE, drawingId: other }, [150, 0]),
+      );
+      const drill = draft.operations.at(-1);
+      if (drill?.type === "drill") drill.params.points = [[250, 0]];
+    });
+    moveDrawing(s, DRAWING_ID, [10, 5]);
+    expect(points(s)).toEqual([[250, 0]]);
+    moveDrawing(s, other, [0, 5]);
+    expect(points(s)).toEqual([[250, 5]]);
+  });
+
   it("are copied with the drawing they lie on", () => {
     const s = withHoles();
     const before = drawingBounds(fullDocument().geometry, DRAWING_ID);

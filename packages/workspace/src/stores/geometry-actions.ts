@@ -11,6 +11,7 @@ import {
   nearestOnLoops,
   type Rect,
   rotatePoint,
+  type SnapEdge,
   type SnapTarget,
   scalePoint,
   scaleShapes,
@@ -251,13 +252,20 @@ const HOLE_ON_DRAWING = 0.05;
  * tolerance can't tell after a scale moves them off the new flattening; a
  * tie, coincident shapes of two drawings, stays with the other drawing.
  */
-function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnMarkers> {
+function drawingMarkers(
+  document: ProjectDocument,
+  id: string,
+  /** Whether to find the placed holes on it too, which only moving or copying it needs. */
+  withHoles = false,
+): Map<string, OwnMarkers> {
   const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
   const markers = new Map<string, OwnMarkers>();
   const allPaths = (of: Shape[]) => startPointPaths(of, "on").map(({ points }) => points);
-  const ownHoles = drawingHoles(document, id);
+  // Built on the first drill with placed holes: most projects have none.
+  let ownHoles: ((point: Point) => boolean) | null = null;
   for (const operation of document.operations) {
-    if (operation.type === "drill" && operation.params.points.length > 0) {
+    if (withHoles && operation.type === "drill" && operation.params.points.length > 0) {
+      ownHoles ??= drawingHoles(document, id);
       const holes = operation.params.points.map(ownHoles);
       markers.set(operation.id, { tabs: [], startPoints: [], overcuts: [], holes });
       continue;
@@ -292,36 +300,55 @@ function drawingMarkers(document: ProjectDocument, id: string): Map<string, OwnM
  * Whether a placed hole (#429) belongs to drawing `id`: within
  * `HOLE_ON_DRAWING` of one of its snap targets or edges (stock anchors
  * aside), and nearer them than any other drawing's. A hole placed elsewhere
- * belongs to none and stays put, like the zero.
+ * belongs to none and stays put, like the zero. Other drawings are only
+ * looked at for a hole on this one, and only near their boxes, so dragging a
+ * drawing doesn't flatten the whole project on every move.
  */
 function drawingHoles(document: ProjectDocument, id: string): (point: Point) => boolean {
-  // Built on first use: most transforms find no placed holes.
-  let lookups: { id: string; targets: SnapTarget[]; edges: Point[][] }[] | null = null;
-  return (point) => {
-    if (!lookups) {
-      const drawings = new Map<string, Shape[]>();
-      for (const shape of document.geometry) {
-        const shapes = drawings.get(shape.drawingId);
-        if (shapes) shapes.push(shape);
-        else drawings.set(shape.drawingId, [shape]);
-      }
-      lookups = [...drawings].map(([drawingId, shapes]) => ({
-        id: drawingId,
+  const drawings = new Map<string, Shape[]>();
+  for (const shape of document.geometry) {
+    const shapes = drawings.get(shape.drawingId);
+    if (shapes) shapes.push(shape);
+    else drawings.set(shape.drawingId, [shape]);
+  }
+  const lookups = new Map<string, { targets: SnapTarget[]; edges: SnapEdge[] }>();
+  const near = (drawingId: string, point: Point): number => {
+    const shapes = drawings.get(drawingId) ?? [];
+    let lookup = lookups.get(drawingId);
+    if (!lookup) {
+      lookup = {
         targets: holeSnapTargets(document.stock, shapes).filter(
           ({ kind }) => kind !== "stock_anchor",
         ),
         edges: snapEdges(shapes),
-      }));
+      };
+      lookups.set(drawingId, lookup);
     }
-    let ours = Infinity;
-    let theirs = Infinity;
-    for (const lookup of lookups) {
-      const snap = nearestHoleSnap(lookup.targets, lookup.edges, point, HOLE_ON_DRAWING);
-      const d = snap ? distance(snap.point, point) : Infinity;
-      if (lookup.id === id) ours = d;
-      else theirs = Math.min(theirs, d);
+    const snap = nearestHoleSnap(lookup.targets, lookup.edges, point, HOLE_ON_DRAWING);
+    return snap ? distance(snap.point, point) : Infinity;
+  };
+  const boxes = new Map(
+    [...drawings].map(([drawingId, shapes]) => [drawingId, shapesBounds(shapes)]),
+  );
+  const nearBox = (drawingId: string, [x, y]: Point) => {
+    const box = boxes.get(drawingId);
+    const t = HOLE_ON_DRAWING;
+    return (
+      !!box &&
+      x >= box.min[0] - t &&
+      x <= box.max[0] + t &&
+      y >= box.min[1] - t &&
+      y <= box.max[1] + t
+    );
+  };
+  return (point) => {
+    if (!nearBox(id, point)) return false;
+    const ours = near(id, point);
+    if (ours > HOLE_ON_DRAWING) return false;
+    for (const other of drawings.keys()) {
+      if (other !== id && nearBox(other, point) && near(other, point) <= ours) return false;
     }
-    return ours <= HOLE_ON_DRAWING && ours < theirs;
+    return true;
   };
 }
 
@@ -375,7 +402,7 @@ function transformDrawing(
   const byId = new Map(rewritten.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
-  const markers = drawingMarkers(document, id);
+  const markers = drawingMarkers(document, id, true);
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
     const drawing = draft.drawings.find((d) => d.id === id);
@@ -632,7 +659,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   }));
   // One assignment, not a spread push, as on import.
   const geometry = document.geometry.concat(copies);
-  const markers = drawingMarkers(document, id);
+  const markers = drawingMarkers(document, id, true);
   store.getState().change("duplicateDrawing", (draft) => {
     const copy = { ...drawing, id: copyId };
     moveTextWithOutlines(copy, (point) => translatePoint(point, offset));

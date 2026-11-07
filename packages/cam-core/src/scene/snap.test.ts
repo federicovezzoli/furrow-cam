@@ -271,6 +271,13 @@ describe("nearestHoleSnap", () => {
     expect(nearestHoleSnap(targets, edges, [30, 5], 3)).toBeNull();
   });
 
+  it("snaps onto an arc's circle, not its flattening", () => {
+    const round = [shape(circle([0, 0], 10))];
+    const snap = nearestHoleSnap([], snapEdges(round), [7.2, 7.2], 1);
+    expect(snap?.kind).toBe("edge");
+    expect(Math.hypot(...(snap?.point ?? [0, 0]))).toBeCloseTo(10, 12);
+  });
+
   it("has no edges for single-point paths", () => {
     expect(snapEdges([shape({ start: [1, 1], segments: [], closed: false })])).toEqual([]);
   });
