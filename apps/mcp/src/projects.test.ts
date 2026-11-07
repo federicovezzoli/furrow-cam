@@ -246,6 +246,10 @@ describe("saving as changes are made (#492)", () => {
     await writeProject(path);
     const [problem] = await projects.saveChanges();
     expect(problem).toMatch(/changed since it was opened/);
-    expect((await projects.get(path)).store.getState().document.stock.width).toBe(321);
+    // Reported once, and again only after the next change.
+    expect(await projects.saveChanges()).toEqual([]);
+    change(project, widen(330));
+    expect(await projects.saveChanges()).toHaveLength(1);
+    expect((await projects.get(path)).store.getState().document.stock.width).toBe(330);
   });
 });

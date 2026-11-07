@@ -44,6 +44,8 @@ export type Project = {
   stamp: string | null;
   /** Whether it has changes its file hasn't. */
   unsaved: boolean;
+  /** Whether saving them failed and was reported; tried and reported again after the next change. */
+  reported: boolean;
 };
 
 /** The `.furrow` file a project at `path` saves to; throws a `ToolError` for other paths. */
@@ -142,6 +144,7 @@ export function createProjects() {
       owned,
       stamp,
       unsaved: false,
+      reported: false,
     };
     remember(normalize(path), project);
     return project;
@@ -163,6 +166,7 @@ export function createProjects() {
         owned: false,
         stamp: null,
         unsaved: false,
+        reported: false,
       };
       await write(project, target, "open it, or choose another path.");
       project.owned = true;
@@ -220,12 +224,13 @@ export function createProjects() {
     async saveChanges(): Promise<string[]> {
       const problems: string[] = [];
       for (const project of new Set(open.values())) {
-        if (!project.owned || !project.unsaved) continue;
+        if (!project.owned || !project.unsaved || project.reported) continue;
         try {
           await this.save(project);
         } catch (error) {
           if (!(error instanceof ToolError)) throw error;
           problems.push(error.message);
+          project.reported = true;
         }
       }
       return problems;
@@ -259,6 +264,7 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
   if (project.store.getState().document === before) return;
   if (project.kept) {
     project.unsaved = true;
+    project.reported = false;
     return;
   }
   if (project.versions.length >= MAX_VERSIONS) {
@@ -280,4 +286,5 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
   project.kept = true;
   project.keptId = id;
   project.unsaved = true;
+  project.reported = false;
 }

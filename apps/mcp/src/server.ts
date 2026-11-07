@@ -31,12 +31,15 @@ const projectPath = z
     "Absolute path of the project file: .furrow, or .furrow.zip or .furrow.json to open one exported from the web app. It saves as .furrow next to it.",
   );
 
-/** `run`'s result for the assistant, as JSON unless `content` says how, or its `ToolError` as a tool error. */
+/** A tool's result as JSON for the assistant. */
+const asJson = (result: unknown): CallToolResult["content"] => [
+  { type: "text", text: JSON.stringify(result, null, 2) },
+];
+
+/** `run`'s result for the assistant, as `content` says, or its `ToolError` as a tool error. */
 async function reply<T>(
   run: () => Promise<T>,
-  content: (result: T) => CallToolResult["content"] = (result) => [
-    { type: "text", text: JSON.stringify(result, null, 2) },
-  ],
+  content: (result: T) => CallToolResult["content"],
 ): Promise<CallToolResult> {
   try {
     return { content: content(await run()) };
@@ -83,14 +86,22 @@ export function createServer(projects: Projects = createProjects(), library = li
   /**
    * `reply`, once the projects `run` changed are saved to their own files,
    * so the desktop app shows each change (#492). A project that couldn't be
-   * saved is reported with the result, its changes kept here.
+   * saved is reported after the result, as text of its own, its changes kept here.
    */
-  const respond = <T>(run: () => Promise<T>, content?: (result: T) => CallToolResult["content"]) =>
-    reply(async () => {
-      const result = await run();
-      const notSaved = await projects.saveChanges();
-      return notSaved.length === 0 ? result : ({ ...result, notSaved } as T);
-    }, content);
+  const respond = <T>(
+    run: () => Promise<T>,
+    content: (result: T) => CallToolResult["content"] = asJson,
+  ) =>
+    reply(
+      async () => ({ result: await run(), notSaved: await projects.saveChanges() }),
+      ({ result, notSaved }) => [
+        ...content(result),
+        ...notSaved.map((problem) => ({
+          type: "text" as const,
+          text: `Not saved to the project file, the change is kept in this server: ${problem}`,
+        })),
+      ],
+    );
 
   server.registerTool(
     "create_project",
@@ -131,7 +142,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Save a project",
       description:
-        "Every change to a project opened from its own .furrow file is saved to that file as it's made, so the desktop app, if it has the project open, shows it at once; a tool's result lists any project that couldn't be (notSaved), e.g. because its file changed meanwhile. This tool saves a project opened from a .furrow.zip or .furrow.json as .furrow next to it, which is then saved as it changes; with saveAs, it saves the project to that path instead and keeps saving there. Never replaces another file, nor the project's own if it changed since it was read (for example saved in the app with changes this server hasn't saved). Changes the user saved in the app are read before the project's next change. The first change since the project was opened is preceded by an automatic version (\"Before the assistant's changes\") the user can restore in the app.",
+        "Every change to a project opened from its own .furrow file is saved to that file as it's made, so the desktop app, if it has the project open, shows it at once; a tool's result ends with a note for any project that couldn't be, e.g. because its file changed meanwhile, once, until its next change. This tool saves a project opened from a .furrow.zip or .furrow.json as .furrow next to it, which is then saved as it changes; with saveAs, it saves the project to that path instead and keeps saving there. Never replaces another file, nor the project's own if it changed since it was read (for example saved in the app with changes this server hasn't saved). Changes the user saved in the app are read before the project's next change. The first change since the project was opened is preceded by an automatic version (\"Before the assistant's changes\") the user can restore in the app.",
       inputSchema: {
         path: projectPath,
         saveAs: projectPath.optional().describe("Absolute path to save to instead, a new file."),
