@@ -407,6 +407,7 @@
       "help": "Help",
       "checkUpdates": "Zoek naar updates…",
       "reportBug": "Meld een bug…",
+      "setUpAssistants": "AI-assistenten instellen…",
       "checkAtStartup": "Zoek bij opstarten naar updates",
       "sendUsage": "Stuur gebruiksstatistieken en foutrapporten",
       "licences": "Licenties van derden"
@@ -445,6 +446,22 @@
       "installFailed": "Kan de update niet installeren",
       "installFailedDetail": "Download Furrow CAM {version} van de releasepagina en installeer het over deze versie heen.",
       "ok": "OK"
+    },
+    "assistants": {
+      "question": "Furrow CAM toevoegen aan {clients}?",
+      "detail": "Je AI-assistent kan dan je Furrow CAM-projecten maken, wijzigen en exporteren via de MCP-server van Furrow CAM, die op deze computer draait en nooit met je machine praat. Wat hij uit een project leest, gaat naar je assistent, die het meestal naar een cloudmodel stuurt. De assistent start de server met npx, waarvoor Node.js 22.2 of nieuwer nodig is.",
+      "add": "Toevoegen",
+      "cancel": "Annuleren",
+      "ok": "OK",
+      "guide": "Handleiding openen",
+      "already": "Al ingesteld in {clients}.",
+      "unreadable": "De instellingen van {clients} konden niet worden gelezen en zijn ongewijzigd gelaten. Voeg Furrow CAM er met de hand aan toe volgens de handleiding.",
+      "none": "Geen AI-assistenten gevonden",
+      "nothingToAdd": "Niets in te stellen",
+      "others": "Furrow CAM kan zichzelf instellen in Claude Desktop, Claude Code en VS Code. Volg voor andere assistenten de handleiding.",
+      "done": "Furrow CAM is toegevoegd aan {clients}",
+      "restart": "Start ze opnieuw om het te gebruiken.",
+      "failed": "De instellingen van {clients} konden niet worden gewijzigd."
     },
     "files": {
       "projects": "Furrow CAM-projecten",

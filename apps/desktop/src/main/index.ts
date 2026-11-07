@@ -48,6 +48,7 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
+import { addServer, clientStatus, type McpClient, mcpClients } from "./mcp-setup";
 import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import {
   isUpdateRequest,
@@ -431,6 +432,86 @@ async function startupUpdateCheck() {
   }
 }
 
+/** The MCP server's setup guide, for clients the app can't set up itself. */
+const MCP_GUIDE = "https://github.com/federicovezzoli/furrow-cam/tree/main/apps/mcp#readme";
+
+/**
+ * Help → Set Up AI Assistants… (PRD-0012 M12): finds the MCP clients on this
+ * computer, asks, and adds the local MCP server to the ones that don't have
+ * it. Only this process touches their files (ADR-0044).
+ */
+async function setUpAssistants() {
+  const t = tr();
+  const list = (clients: McpClient[]) =>
+    new Intl.ListFormat(currentLocale(), { type: "conjunction" }).format(
+      clients.map((client) => client.name),
+    );
+  const found = await Promise.all(
+    mcpClients().map(async (client) => ({ client, status: await clientStatus(client) })),
+  );
+  const having = (status: string) =>
+    found.filter((each) => each.status === status).map(({ client }) => client);
+  const ready = having("ready");
+  const added = having("added");
+  const unreadable = having("unreadable");
+  const notes = [
+    added.length > 0 ? t("DesktopMain.assistants.already", { clients: list(added) }) : "",
+    unreadable.length > 0
+      ? t("DesktopMain.assistants.unreadable", { clients: list(unreadable) })
+      : "",
+  ].filter(Boolean);
+
+  if (ready.length === 0) {
+    const { response } = await dialog.showMessageBox({
+      type: "info",
+      message:
+        added.length > 0 || unreadable.length > 0
+          ? t("DesktopMain.assistants.nothingToAdd")
+          : t("DesktopMain.assistants.none"),
+      detail: [...notes, t("DesktopMain.assistants.others")].join("\n\n"),
+      buttons: [t("DesktopMain.assistants.ok"), t("DesktopMain.assistants.guide")],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    if (response === 1) void shell.openExternal(MCP_GUIDE);
+    return;
+  }
+
+  const { response } = await dialog.showMessageBox({
+    type: "question",
+    message: t("DesktopMain.assistants.question", { clients: list(ready) }),
+    detail: [t("DesktopMain.assistants.detail"), ...notes].join("\n\n"),
+    buttons: [t("DesktopMain.assistants.add"), t("DesktopMain.assistants.cancel")],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response !== 0) return;
+  const failed: McpClient[] = [];
+  for (const client of ready) {
+    try {
+      await addServer(client);
+    } catch (error) {
+      console.warn(`Couldn't add the MCP server to ${client.name}:`, error);
+      failed.push(client);
+    }
+  }
+  const done = ready.filter((client) => !failed.includes(client));
+  await dialog.showMessageBox({
+    type: failed.length > 0 ? "warning" : "info",
+    message:
+      done.length > 0
+        ? t("DesktopMain.assistants.done", { clients: list(done) })
+        : t("DesktopMain.assistants.failed", { clients: list(failed) }),
+    detail: [
+      ...(done.length > 0 ? [t("DesktopMain.assistants.restart")] : []),
+      ...(done.length > 0 && failed.length > 0
+        ? [t("DesktopMain.assistants.failed", { clients: list(failed) })]
+        : []),
+    ].join("\n\n"),
+    buttons: [t("DesktopMain.assistants.ok")],
+  });
+}
+
 /** Help → Check for Updates…: always reports what it found. */
 function checkForUpdatesNow() {
   return withUpdateDialog(async () => {
@@ -716,6 +797,7 @@ function buildMenu() {
               ]),
             ),
         },
+        { label: t("DesktopMain.menu.setUpAssistants"), click: () => void setUpAssistants() },
         { label: t("DesktopMain.menu.licences"), click: send("licences") },
         { type: "separator" },
         {

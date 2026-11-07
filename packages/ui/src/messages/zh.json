@@ -407,6 +407,7 @@
       "help": "帮助",
       "checkUpdates": "检查更新…",
       "reportBug": "报告问题…",
+      "setUpAssistants": "设置 AI 助手…",
       "checkAtStartup": "启动时检查更新",
       "sendUsage": "发送使用统计和错误报告",
       "licences": "第三方许可"
@@ -445,6 +446,22 @@
       "installFailed": "无法安装更新",
       "installFailedDetail": "请从发布页面下载 Furrow CAM {version}，并覆盖安装当前版本。",
       "ok": "好"
+    },
+    "assistants": {
+      "question": "要将 Furrow CAM 添加到 {clients} 吗？",
+      "detail": "你的 AI 助手将能通过 Furrow CAM 的 MCP 服务器创建、修改和导出你的 Furrow CAM 项目。该服务器在这台电脑上运行，从不与你的机床通信。它从项目中读取的内容会交给你的助手，助手通常会把它发送到云端模型。助手用 npx 启动服务器，需要 Node.js 22.2 或更高版本。",
+      "add": "添加",
+      "cancel": "取消",
+      "ok": "好",
+      "guide": "打开设置指南",
+      "already": "已在 {clients} 中设置。",
+      "unreadable": "无法读取 {clients} 的设置，因此未作更改。请按照设置指南手动添加 Furrow CAM。",
+      "none": "未找到 AI 助手",
+      "nothingToAdd": "没有需要设置的内容",
+      "others": "Furrow CAM 可以在 Claude Desktop、Claude Code 和 VS Code 中自动设置。其他助手请按照设置指南操作。",
+      "done": "已将 Furrow CAM 添加到 {clients}",
+      "restart": "重新启动它们即可开始使用。",
+      "failed": "无法更改 {clients} 的设置。"
     },
     "files": {
       "projects": "Furrow CAM项目",

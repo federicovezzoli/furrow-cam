@@ -407,6 +407,7 @@
       "help": "Hilfe",
       "checkUpdates": "Nach Updates suchen…",
       "reportBug": "Fehler melden…",
+      "setUpAssistants": "KI-Assistenten einrichten…",
       "checkAtStartup": "Beim Start nach Updates suchen",
       "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden",
       "licences": "Lizenzen von Drittanbietern"
@@ -445,6 +446,22 @@
       "installFailed": "Update konnte nicht installiert werden",
       "installFailedDetail": "Lade Furrow CAM {version} von seiner Release-Seite herunter und installiere es über diese Version.",
       "ok": "OK"
+    },
+    "assistants": {
+      "question": "Furrow CAM zu {clients} hinzufügen?",
+      "detail": "Dein KI-Assistent kann dann deine Furrow-CAM-Projekte über den MCP-Server von Furrow CAM erstellen, ändern und exportieren. Der Server läuft auf diesem Computer und spricht nie mit deiner Maschine. Was er aus einem Projekt liest, geht an deinen Assistenten, der es meist an ein Cloud-Modell sendet. Der Assistent startet den Server mit npx, das Node.js 22.2 oder neuer braucht.",
+      "add": "Hinzufügen",
+      "cancel": "Abbrechen",
+      "ok": "OK",
+      "guide": "Anleitung öffnen",
+      "already": "Bereits eingerichtet in {clients}.",
+      "unreadable": "Die Einstellungen von {clients} konnten nicht gelesen werden und bleiben unverändert. Füge Furrow CAM dort von Hand hinzu, wie die Anleitung zeigt.",
+      "none": "Keine KI-Assistenten gefunden",
+      "nothingToAdd": "Nichts einzurichten",
+      "others": "Furrow CAM kann sich selbst in Claude Desktop, Claude Code und VS Code einrichten. Für andere Assistenten folge der Anleitung.",
+      "done": "Furrow CAM wurde zu {clients} hinzugefügt",
+      "restart": "Starte sie neu, um es zu verwenden.",
+      "failed": "Die Einstellungen von {clients} konnten nicht geändert werden."
     },
     "files": {
       "projects": "Furrow-CAM-Projekte",

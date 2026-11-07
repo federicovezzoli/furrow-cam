@@ -407,6 +407,7 @@
       "help": "ヘルプ",
       "checkUpdates": "アップデートを確認…",
       "reportBug": "バグを報告…",
+      "setUpAssistants": "AI アシスタントを設定…",
       "checkAtStartup": "起動時にアップデートを確認",
       "sendUsage": "使用状況の統計とエラーレポートを送信",
       "licences": "サードパーティのライセンス"
@@ -445,6 +446,22 @@
       "installFailed": "アップデートをインストールできませんでした",
       "installFailedDetail": "リリースページから Furrow CAM {version} をダウンロードし、上書きインストールしてください。",
       "ok": "OK"
+    },
+    "assistants": {
+      "question": "{clients} に Furrow CAM を追加しますか？",
+      "detail": "AI アシスタントが Furrow CAM の MCP サーバーを通じて Furrow CAM のプロジェクトを作成、変更、書き出しできるようになります。サーバーはこのコンピューター上で動作し、加工機とは一切通信しません。プロジェクトから読み取った内容はアシスタントに渡り、通常はクラウドのモデルに送られます。アシスタントは npx でサーバーを起動するため、Node.js 22.2 以降が必要です。",
+      "add": "追加",
+      "cancel": "キャンセル",
+      "ok": "OK",
+      "guide": "設定ガイドを開く",
+      "already": "{clients} には設定済みです。",
+      "unreadable": "{clients} の設定を読み取れなかったため、変更していません。設定ガイドに従って Furrow CAM を手動で追加してください。",
+      "none": "AI アシスタントが見つかりません",
+      "nothingToAdd": "設定するものはありません",
+      "others": "Furrow CAM は Claude Desktop、Claude Code、VS Code に自動で設定できます。その他のアシスタントは設定ガイドに従ってください。",
+      "done": "{clients} に Furrow CAM を追加しました",
+      "restart": "使い始めるには再起動してください。",
+      "failed": "{clients} の設定を変更できませんでした。"
     },
     "files": {
       "projects": "Furrow CAM プロジェクト",
