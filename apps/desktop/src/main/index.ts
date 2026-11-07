@@ -37,6 +37,7 @@ import {
   type FileStamp,
   type MenuCommand,
   OPEN_EXTENSIONS,
+  type RecentFile,
   type Recovery,
   type ReloadChoice,
   type UnsavedChoice,
@@ -878,11 +879,15 @@ function watchProject(path: string | null) {
   watched = { path, stop };
 }
 
+/** The files read this session: the only ones the renderer may list as recent (#494). */
+const readPaths = new Set<string>();
+
 async function readProject(path: string) {
   try {
     // Taken before reading, so a change while reading shows at the next save.
     const stamp = await fileStamp(path);
     const bytes = new Uint8Array(await readFile(path));
+    readPaths.add(path);
     return { path, name: projectName(path), bytes, stamp };
   } catch {
     return { error: tr()("DesktopMain.files.openFailed", { name: projectName(path) }) };
@@ -921,13 +926,35 @@ async function confirmReplace(path: string, stamp: FileStamp): Promise<string | 
   }
 }
 
+/** The recent-list update running; the next waits, so none writes back a list another changed. */
+let recentUpdate: Promise<unknown> = Promise.resolve();
+
+/**
+ * Applies `change` to the stored recent files and returns the list kept.
+ * Never fails: if it can't be written (e.g. a full disk), it stays as it was.
+ */
+function updateRecent(change: (recent: RecentFile[]) => RecentFile[]): Promise<RecentFile[]> {
+  const next = recentUpdate.then(async () => {
+    const stored = parseRecent(await readJson(recentPath()));
+    const recent = change(stored);
+    if (recent === stored) return stored;
+    try {
+      await writeJson(recentPath(), recent);
+      return recent;
+    } catch {
+      return stored;
+    }
+  });
+  recentUpdate = next;
+  return next;
+}
+
 async function addRecent(path: string) {
-  const stored = parseRecent(await readJson(recentPath()));
   // Already first, e.g. read again after an assistant saved it (#492): nothing to write.
-  if (stored[0]?.path === path) return;
-  const recent = withRecent(stored, path);
-  await writeJson(recentPath(), recent);
-  app.addRecentDocument(path);
+  const recent = await updateRecent((stored) =>
+    stored[0]?.path === path ? stored : withRecent(stored, path),
+  );
+  if (recent[0]?.path === path) app.addRecentDocument(path);
 }
 
 function registerIpc() {
@@ -984,14 +1011,15 @@ function registerIpc() {
     return existingRecent(recent);
   });
   ipcMain.handle(CHANNELS.addRecent, async (_event, path: unknown) => {
-    if (typeof path === "string") await addRecent(path);
+    if (typeof path === "string" && readPaths.has(path)) await addRecent(path);
   });
   ipcMain.handle(CHANNELS.removeRecent, async (_event, path: unknown) => {
-    let recent = parseRecent(await readJson(recentPath()));
-    if (typeof path === "string") {
-      recent = withoutRecent(recent, path);
-      await writeJson(recentPath(), recent);
-    }
+    const recent = await updateRecent((stored) =>
+      typeof path === "string" ? withoutRecent(stored, path) : stored,
+    );
+    // The OS list (Dock, Jump List) can't drop one file: rebuild it, oldest first.
+    app.clearRecentDocuments();
+    for (const file of [...recent].reverse()) app.addRecentDocument(file.path);
     return existingRecent(recent);
   });
 
