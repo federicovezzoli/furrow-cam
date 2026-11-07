@@ -6,7 +6,7 @@ Lets an AI assistant work on your [Furrow CAM](https://github.com/federicovezzol
 npx -y @furrow-cam/mcp
 ```
 
-It needs [Node.js](https://nodejs.org) 22 or later.
+It needs [Node.js](https://nodejs.org) 22.2 or later.
 
 ## What it can do
 
@@ -15,12 +15,25 @@ It needs [Node.js](https://nodejs.org) 22 or later.
 | `create_project` | Creates an empty `.furrow` project at a path |
 | `open_project` | Opens a `.furrow`, `.furrow.zip` or `.furrow.json` project, dropping changes the server hasn't saved |
 | `get_project` | Summarises a project: units, stock and zero, machine, drawings, 3D models and operations with their settings |
-| `import_file` | Imports an SVG or DXF drawing, or an STL 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
+| `save_project` | Saves the project as `.furrow`, which the desktop app opens; never replaces another file, nor a project changed since it was opened (for example in the app) |
+| `import_file` | Imports an SVG or DXF drawing, or an STL or STEP 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
-| `save_project` | Saves the project as `.furrow`, which the desktop app opens; never replaces another file, nor a project changed since it was opened (for example in the app) |
+| `set_model_top` | Sinks a model's top below the stock top |
+| `set_stock` | Sets the stock's size and the units the app shows |
+| `set_zero` | Sets the XY zero (a stock corner, edge or centre, or a custom point) and the Z zero |
+| `set_touch_off_pad` | Adds, moves or removes the touch-off pad |
+| `get_library` | Lists the desktop app's tool library and machines |
+| `set_machine` | Copies a machine from the desktop app's list into the project |
+| `add_profile`, `add_pocket`, `add_drill`, `add_engrave`, `add_vcarve`, `add_relief_rough`, `add_relief_finish` | Adds an operation with the app's defaults and a tool from the library or given by its settings, then changes any settings given (depth, side, tabs, strategy, …) |
+| `edit_operation` | Renames an operation, enables or disables it, changes what it cuts and its settings |
+| `set_operation_tool` | Gives an operation another tool |
+| `move_operation`, `remove_operation` | Reorders or removes operations |
+| `check_project` | Computes the toolpaths and reports what the app would show: tool problems, warnings, and whether there is anything to export |
+| `get_top_view` | Draws one side from above as a PNG image (the stock, the drawings and each operation's toolpath in its tool's colour), so the assistant can show you what it built or check it |
+| `export_gcode` | Writes the project's G-code, byte for byte what the app exports |
 
-Setting up the stock and tools, adding operations, checking a project and exporting G-code come with the next releases.
+An operation the app wouldn't accept (a drill bit in a pocket, a finishing pass with no allowance) is refused with the app's message, and nothing changes.
 
 The server changes projects with the same code as the app. Before its first change to a project you opened, it keeps the project as it was as a version (*Before the assistant's changes*), which you can restore from the app's versions.
 
@@ -31,6 +44,8 @@ The server changes projects with the same code as the app. Before its first chan
 - **It never talks to your machine.** The server only works on project files. You load and run the G-code yourself, after checking the toolpaths and the simulation in the app.
 
 ## Setup
+
+Using the Furrow CAM desktop app? *Help → Set Up AI Assistants…* adds the server to Claude Desktop and VS Code for you, after asking, and gives you the command for Claude Code. Otherwise, add it by hand:
 
 ### Claude Desktop
 

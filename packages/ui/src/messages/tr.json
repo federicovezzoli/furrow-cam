@@ -407,6 +407,7 @@
       "help": "Yardım",
       "checkUpdates": "Güncellemeleri Denetle…",
       "reportBug": "Hata Bildir…",
+      "setUpAssistants": "Yapay Zekâ Asistanlarını Kur…",
       "checkAtStartup": "Başlangıçta Güncellemeleri Denetle",
       "sendUsage": "Kullanım İstatistiklerini ve Hata Raporlarını Gönder",
       "licences": "Üçüncü Taraf Lisansları"
@@ -445,6 +446,24 @@
       "installFailed": "Güncelleme kurulamadı",
       "installFailedDetail": "Furrow CAM {version} sürümünü sürüm sayfasından indirin ve bu sürümün üzerine kurun.",
       "ok": "Tamam"
+    },
+    "assistants": {
+      "question": "Furrow CAM şunlara eklensin mi: {clients}?",
+      "detail": "Yapay zekâ asistanınız, bu bilgisayarda çalışan ve makinenizle asla iletişim kurmayan Furrow CAM MCP sunucusu aracılığıyla Furrow CAM projelerinizi oluşturabilecek, değiştirebilecek ve dışa aktarabilecek. Bir projeden okuduğu her şey asistanınıza gider; asistan da bunu genellikle bir bulut modeline gönderir. Asistan sunucuyu npx ile başlatır; bunun için Node.js 22.2 veya üstü gerekir.",
+      "add": "Ekle",
+      "cancel": "İptal",
+      "ok": "Tamam",
+      "guide": "Kurulum Kılavuzunu Aç",
+      "copyCommand": "Komutu Kopyala",
+      "already": "Zaten kurulu: {clients}.",
+      "unreadable": "Şunların ayarları okunamadı, bu yüzden olduğu gibi bırakıldı: {clients}. Furrow CAM'i kılavuzu izleyerek elle ekleyin.",
+      "none": "Yapay zekâ asistanı bulunamadı",
+      "nothingToAdd": "Kurulacak bir şey yok",
+      "others": "Furrow CAM kendini Claude Desktop ve VS Code içinde kurabilir ve Claude Code için komutu verir. Diğer asistanlar için kurulum kılavuzunu izleyin.",
+      "claudeCode": "Claude Code için bunu bir terminalde çalıştırın:\n{command}",
+      "done": "Furrow CAM şunlara eklendi: {clients}",
+      "restart": "Kullanmaya başlamak için onları yeniden başlatın.",
+      "failed": "Şunların ayarları değiştirilemedi: {clients}."
     },
     "files": {
       "projects": "Furrow CAM projeleri",
