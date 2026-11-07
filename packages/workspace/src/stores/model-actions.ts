@@ -196,6 +196,21 @@ export function setModelTop(store: DocumentStore, id: string, top: number) {
   });
 }
 
+/** Moves a model so that the centre of its box seen from above is the stock's centre, whatever the zero. */
+export function centerModelOnStock(store: DocumentStore, id: string) {
+  const { stock } = store.getState().document;
+  changeModel(store, "centerModel", id, (model, current) => {
+    const [cx, cy] = anchorPoint(modelRect(current), "center");
+    assignPlacement(model, {
+      ...current.placement,
+      position: translatePoint(current.placement.position, [
+        stock.width / 2 - cx,
+        stock.height / 2 - cy,
+      ]),
+    });
+  });
+}
+
 /**
  * Moves a model along one axis so that its anchor point is `value`
  * millimetres from the XY zero (`modelOffset`).

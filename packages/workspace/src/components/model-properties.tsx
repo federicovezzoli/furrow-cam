@@ -6,6 +6,7 @@ import { Button } from "@furrow/ui/components/ui/button";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
   CircleAlertIcon,
+  LocateFixedIcon,
   Maximize2Icon,
   RotateCwIcon,
   Trash2Icon,
@@ -21,6 +22,7 @@ import {
 } from "../providers/workspace-stores";
 import { gestureHandlers } from "../stores/gesture-handlers";
 import {
+  centerModelOnStock,
   fitModelToStock,
   modelAnchor,
   modelOffset,
@@ -216,6 +218,16 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelTop(store, model.id, value)}
           {...gestures}
         />
+        <Button
+          variant="outline"
+          size="compact"
+          className="justify-self-end"
+          onClick={() => centerModelOnStock(store, model.id)}
+          title={t("centerTitle")}
+        >
+          <LocateFixedIcon />
+          {t("center")}
+        </Button>
         {placement.top >= stock.thickness ? (
           <Warning>{t("belowStock")}</Warning>
         ) : (
@@ -230,7 +242,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
 
       <div className="flex justify-end">
         <Button
-          variant="outline"
+          variant="destructive"
           size="compact"
           onClick={() => removeModel(store, model.id)}
           title={operationCount > 0 ? t("removeTitle", { count: operationCount }) : undefined}

@@ -11,6 +11,7 @@ import {
   CopyIcon,
   FlipHorizontal2Icon,
   FlipVertical2Icon,
+  LocateFixedIcon,
   Maximize2Icon,
   RotateCcwIcon,
   RotateCwIcon,
@@ -26,6 +27,7 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import {
+  centerDrawingOnStock,
   drawingBounds,
   drawingOffset,
   drawingOperations,
@@ -243,6 +245,16 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
             {...gestures}
           />
         ))}
+        <Button
+          variant="outline"
+          size="compact"
+          className="justify-self-end"
+          onClick={() => centerDrawingOnStock(store, drawing.id)}
+          title={t("centerTitle")}
+        >
+          <LocateFixedIcon />
+          {t("center")}
+        </Button>
       </section>
 
       <div className="flex justify-end gap-1">

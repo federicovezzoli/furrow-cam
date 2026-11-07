@@ -577,6 +577,15 @@ export function setDrawingOffset(store: DocumentStore, id: string, axis: "x" | "
   moveDrawing(store, id, offset);
 }
 
+/** Moves drawing `id` so that the centre of its box is the stock's centre, whatever the zero. */
+export function centerDrawingOnStock(store: DocumentStore, id: string) {
+  const { document } = store.getState();
+  const bounds = drawingBounds(document.geometry, id);
+  if (!bounds) return;
+  const [cx, cy] = anchorPoint(bounds, "center");
+  moveDrawing(store, id, [document.stock.width / 2 - cx, document.stock.height / 2 - cy]);
+}
+
 /**
  * Sets drawing `id`'s width or height to `value` millimetres, scaling it the
  * same both ways so it keeps its proportions, about its point at the zero's

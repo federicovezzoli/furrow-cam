@@ -35,6 +35,7 @@ import {
   addImportedShapes,
   addTextItem,
   canImportModel,
+  centerDrawingOnStock,
   convertTextToDrawing,
   DUPLICATE_GAP,
   drawingBounds,
@@ -597,6 +598,24 @@ describe("drawing size", () => {
     setDrawingOffset(s, DRAWING_ID, "x", 0);
     const { bounds } = size(s);
     expect((bounds.min[0] + bounds.max[0]) / 2).toBeCloseTo(150, 6);
+  });
+
+  it("centres its box on the stock, with its tabs, whatever the zero, in one undo step", () => {
+    const s = store();
+    setXYAnchor(s, "top_right");
+    const steps = s.getState().past.length;
+    const before = size(s).bounds;
+    const [tab] = tabsOf(s) as [Point];
+    centerDrawingOnStock(s, DRAWING_ID);
+    const { stock } = s.getState().document;
+    const after = size(s).bounds;
+    expect((after.min[0] + after.max[0]) / 2).toBeCloseTo(stock.width / 2, 9);
+    expect((after.min[1] + after.max[1]) / 2).toBeCloseTo(stock.height / 2, 9);
+    expect(after.max[0] - after.min[0]).toBeCloseTo(before.max[0] - before.min[0], 9);
+    const [moved] = tabsOf(s) as [Point];
+    expect(moved[0] - tab[0]).toBeCloseTo(after.min[0] - before.min[0], 9);
+    expect(moved[1] - tab[1]).toBeCloseTo(after.min[1] - before.min[1], 9);
+    expect(s.getState().past).toHaveLength(steps + 1);
   });
 
   it("mirrors in place, flipping arcs, with its tabs, in one undo step; twice restores it", () => {
