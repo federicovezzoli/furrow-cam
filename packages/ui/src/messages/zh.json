@@ -476,6 +476,10 @@
       "askSaveDetail": "如果不保存，你的更改将会丢失。",
       "save": "保存",
       "dontSave": "不保存",
+      "changed": "{name} 在打开后已被更改",
+      "changedDetail": "另一个程序（例如通过 Furrow CAM 的 MCP 服务器工作的 AI 助手）在此期间保存了它。替换会丢失这些更改；“另存为”可以保留两者。",
+      "replace": "替换",
+      "saveAs": "另存为…",
       "cancel": "取消"
     }
   },

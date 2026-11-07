@@ -476,6 +476,10 @@
       "askSaveDetail": "Se non le salvi, le modifiche andranno perse.",
       "save": "Salva",
       "dontSave": "Non salvare",
+      "changed": "{name} è cambiato da quando è stato aperto",
+      "changedDetail": "Un altro programma, ad esempio un assistente IA tramite il server MCP di Furrow CAM, lo ha salvato nel frattempo. Sostituendolo, quelle modifiche andranno perse; Salva con nome le conserva entrambe.",
+      "replace": "Sostituisci",
+      "saveAs": "Salva con nome…",
       "cancel": "Annulla"
     }
   },

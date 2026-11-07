@@ -476,6 +476,10 @@
       "askSaveDetail": "Your changes will be lost if you don't save them.",
       "save": "Save",
       "dontSave": "Don't Save",
+      "changed": "{name} changed since it was opened",
+      "changedDetail": "Another program, such as an AI assistant using Furrow CAM's MCP server, saved it meanwhile. Replacing it loses those changes; Save As keeps both.",
+      "replace": "Replace",
+      "saveAs": "Save As…",
       "cancel": "Cancel"
     }
   },

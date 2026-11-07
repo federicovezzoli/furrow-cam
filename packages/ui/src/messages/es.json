@@ -476,6 +476,10 @@
       "askSaveDetail": "Si no los guardas, perderás los cambios.",
       "save": "Guardar",
       "dontSave": "No guardar",
+      "changed": "{name} ha cambiado desde que se abrió",
+      "changedDetail": "Otro programa, como un asistente de IA a través del servidor MCP de Furrow CAM, lo ha guardado mientras tanto. Si lo reemplazas, esos cambios se pierden; Guardar como conserva ambos.",
+      "replace": "Reemplazar",
+      "saveAs": "Guardar como…",
       "cancel": "Cancelar"
     }
   },

@@ -38,7 +38,7 @@ export type Project = {
   kept: boolean;
   /** Whether `path` is the project's own file, which saving may replace. */
   owned: boolean;
-  /** Its own file's modification time and size when last read or written, to tell whether it changed since. */
+  /** Its own file's stamp (`stampOf`) when last read or written, to tell whether it changed since. */
   stamp: string | null;
 };
 
@@ -55,10 +55,16 @@ export function savePath(path: string): string {
   return /\.furrow$/i.test(normal) ? normal : normal.replace(/\.(json|zip)$/i, "");
 }
 
-/** `path`'s modification time and size, or `null` if it doesn't exist. */
+/**
+ * `path`'s inode, change and modification times and size, or `null` if it
+ * doesn't exist. A save by renaming a new file over it, as the desktop app
+ * and this server save, gives it a new inode, so even a same-size save
+ * within a filesystem's time resolution is seen. The desktop app's
+ * `fileStamp` (apps/desktop/src/main/files.ts) is the same: keep them alike.
+ */
 function stampOf(path: string): Promise<string | null> {
   return stat(path).then(
-    ({ mtimeMs, size }) => `${mtimeMs}:${size}`,
+    ({ ino, ctimeMs, mtimeMs, size }) => `${ino}:${ctimeMs}:${mtimeMs}:${size}`,
     () => null,
   );
 }

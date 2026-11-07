@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   existingRecent,
+  fileStamp,
   MAX_RECENT,
   parseRecent,
   projectName,
@@ -73,10 +74,15 @@ describe("projectName and projectPathsIn", () => {
 describe("recoveryStore", () => {
   it("writes, lists newest first, reads and deletes copies", async () => {
     const store = recoveryStore(join(dir, "recovery"));
-    await store.write({ id: "a", path: "/p/A.furrow", name: "A" }, new Uint8Array([1]));
+    await store.write(
+      { id: "a", path: "/p/A.furrow", name: "A", stamp: "1:2:3:4" },
+      new Uint8Array([1]),
+    );
     await store.write({ id: "b", path: null, name: "Untitled" }, new Uint8Array([2]));
     const list = await store.list();
     expect(list.map((r) => r.id).sort()).toEqual(["a", "b"]);
+    // The file's stamp comes back, so a restored project checks it before saving over it.
+    expect(list.find((r) => r.id === "a")?.stamp).toBe("1:2:3:4");
     expect((list[0]?.savedAt ?? "") >= (list[1]?.savedAt ?? "")).toBe(true);
     expect(await store.read("b")).toEqual(new Uint8Array([2]));
     await store.delete("a");
@@ -95,5 +101,19 @@ describe("recoveryStore", () => {
   it("refuses ids that would name files elsewhere", async () => {
     const store = recoveryStore(join(dir, "recovery"));
     await expect(store.delete("../tools")).rejects.toThrow(/Invalid recovery id/);
+  });
+});
+
+describe("fileStamp", () => {
+  it("changes whenever another program saves the file, even to the same size", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, "one");
+    const read = await fileStamp(path);
+    expect(await fileStamp(path)).toBe(read);
+    // Another program saves it as the MCP server does: a new file renamed over it, the same size.
+    await writeFileAtomic(path, "two");
+    expect(await fileStamp(path)).not.toBe(read);
+    await rm(path);
+    expect(await fileStamp(path)).toBeNull();
   });
 });

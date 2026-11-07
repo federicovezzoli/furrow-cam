@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
-import { extname, join, normalize, relative, sep } from "node:path";
+import { dirname, extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { translator } from "@furrow/ui/lib/i18n";
 import { isLocale, type Locale, matchLocale } from "@furrow/ui/lib/locales";
@@ -34,6 +34,7 @@ import { PostHog } from "posthog-node";
 import {
   CHANNELS,
   type DataFile,
+  type FileStamp,
   type MenuCommand,
   OPEN_EXTENSIONS,
   type Recovery,
@@ -41,6 +42,7 @@ import {
 } from "../shared/api";
 import {
   existingRecent,
+  fileStamp,
   parseRecent,
   projectName,
   projectPathsIn,
@@ -856,11 +858,45 @@ function buildMenu() {
 
 async function readProject(path: string) {
   try {
+    // Taken before reading, so a change while reading shows at the next save.
+    const stamp = await fileStamp(path);
     const bytes = new Uint8Array(await readFile(path));
     await addRecent(path);
-    return { path, name: projectName(path), bytes };
+    return { path, name: projectName(path), bytes, stamp };
   } catch {
     return { error: tr()("DesktopMain.files.openFailed", { name: projectName(path) }) };
+  }
+}
+
+/**
+ * Whether to save over `path`, which the open project last read or wrote as
+ * `stamp` (#491): `path` if it is still that, or deleted (nothing to lose),
+ * or the user chose to replace it; `null` to save elsewhere; `undefined` to
+ * cancel. Asks again if it changes while the question is open.
+ */
+async function confirmReplace(path: string, stamp: FileStamp): Promise<string | null | undefined> {
+  const t = tr();
+  let seen = stamp;
+  for (;;) {
+    const now = await fileStamp(path);
+    if (now === seen || now === null) return path;
+    // E.g. an assistant saved it through the MCP server.
+    const { response } = await dialog.showMessageBox({
+      type: "warning",
+      message: t("DesktopMain.files.changed", { name: projectName(path) }),
+      detail: t("DesktopMain.files.changedDetail"),
+      buttons: [
+        t("DesktopMain.files.replace"),
+        t("DesktopMain.files.saveAs"),
+        t("DesktopMain.files.cancel"),
+      ],
+      defaultId: 1,
+      cancelId: 2,
+    });
+    if (response === 2) return undefined;
+    if (response === 1) return null;
+    // Replaces what the user was warned about, not a later save.
+    seen = now;
   }
 }
 
@@ -886,13 +922,19 @@ function registerIpc() {
 
   ipcMain.handle(
     CHANNELS.saveFile,
-    async (_event, path: unknown, suggestedName: unknown, bytes: unknown) => {
+    async (_event, path: unknown, suggestedName: unknown, bytes: unknown, stamp: unknown) => {
       const t = tr();
       if (!(bytes instanceof Uint8Array)) return { error: t("DesktopMain.files.nothingToSave") };
       let target = typeof path === "string" ? path : null;
+      if (target !== null && (typeof stamp === "string" || stamp === null)) {
+        const confirmed = await confirmReplace(target, stamp);
+        if (confirmed === undefined) return null;
+        target = confirmed;
+      }
       if (target === null) {
+        const folder = typeof path === "string" ? dirname(path) : app.getPath("documents");
         const result = await dialog.showSaveDialog({
-          defaultPath: join(app.getPath("documents"), `${String(suggestedName)}.furrow`),
+          defaultPath: join(folder, `${String(suggestedName)}.furrow`),
           filters: [{ name: t("DesktopMain.files.project"), extensions: ["furrow"] }],
         });
         if (result.canceled || !result.filePath) return null;
@@ -900,14 +942,16 @@ function registerIpc() {
           ? result.filePath
           : `${result.filePath}.furrow`;
       }
+      let saved: FileStamp;
       try {
         await writeFileAtomic(target, bytes);
+        saved = await fileStamp(target);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         return { error: t("DesktopMain.files.saveFailed", { reason }) };
       }
       await addRecent(target);
-      return { path: target, name: projectName(target) };
+      return { path: target, name: projectName(target), stamp: saved };
     },
   );
 

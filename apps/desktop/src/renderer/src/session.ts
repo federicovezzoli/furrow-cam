@@ -2,6 +2,7 @@ import type { ArchiveVersion, ProjectDocument } from "@furrow/document";
 import { type ProjectFile, writeProjectFile } from "@furrow/workspace/lib/project-file";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { AssetStore, VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import type { FileStamp } from "../../shared/api";
 import { t } from "./i18n";
 
 const tooManyVersions = () => t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS });
@@ -27,6 +28,7 @@ export function createProjectSession({
   path,
   name,
   file,
+  stamp,
   modified: startModified = false,
   onChange,
   writeRecovery,
@@ -38,6 +40,8 @@ export function createProjectSession({
   path: string | null;
   name: string;
   file: ProjectFile;
+  /** `path`'s stamp as read, to check before saving over it (#491); `undefined` when unknown. */
+  stamp?: FileStamp;
   /** The contents aren't what the file has, e.g. a recovered copy. */
   modified?: boolean;
   /** Called when `path`, `name` or `modified` change. */
@@ -48,6 +52,7 @@ export function createProjectSession({
   openAsProject?: (file: ProjectFile, name: string) => void;
 }) {
   let currentPath = path;
+  let currentStamp = stamp;
   let currentName = name;
   let document = file.document;
   const meshes = new Map(file.meshes);
@@ -208,6 +213,10 @@ export function createProjectSession({
     get name() {
       return currentName;
     },
+    /** `path`'s stamp as last read or written here. */
+    get stamp() {
+      return currentStamp;
+    },
     get modified() {
       return modified;
     },
@@ -227,8 +236,9 @@ export function createProjectSession({
      * The project was written to `path` with `contents`. Changes made since
      * `prepareSave` stay unsaved, with their recovery copy.
      */
-    markSaved(path: string, name: string, contents: SavedContents) {
+    markSaved(path: string, name: string, contents: SavedContents, stamp?: FileStamp) {
       currentPath = path;
+      currentStamp = stamp;
       currentName = name;
       savedDocument = contents.document;
       // Version changes always replace the list, so the same list means none since.
