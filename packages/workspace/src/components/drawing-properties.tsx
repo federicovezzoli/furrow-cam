@@ -45,6 +45,7 @@ import {
 import { gestureHandlers } from "../stores/gesture-handlers";
 import { modelAnchor } from "../stores/model-actions";
 import type { ActionResult } from "../stores/operation-actions";
+import { PROPERTIES_HEADER } from "./properties-header";
 import { TextProperties } from "./text-properties";
 
 /**
@@ -96,7 +97,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
 
   return (
     <div className="grid gap-4 p-3 text-ui">
-      <div className="sticky top-0 z-10 -mx-3 -mt-3 flex items-center gap-2 bg-background/85 px-3 pt-3 pb-2 backdrop-blur-md">
+      <div className={PROPERTIES_HEADER}>
         <h3 className="min-w-0 flex-1 truncate font-medium" title={drawing.name}>
           {drawing.name || t("untitled")}
         </h3>
@@ -263,7 +264,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
           {t("duplicate")}
         </Button>
         <Button
-          variant="outline"
+          variant="destructive"
           size="compact"
           onClick={() => removeDrawing(store, drawing.id)}
           title={operationCount > 0 ? t("removeTitle", { count: operationCount }) : undefined}
