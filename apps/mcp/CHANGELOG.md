@@ -1,5 +1,12 @@
 # @furrow/mcp
 
+## 0.5.0
+
+### Minor Changes
+
+- An assistant can now add, edit, reorder, disable and remove operations of every type through the MCP server, with the app's defaults, and anything the app wouldn't accept is refused with its message. ([#487](https://github.com/federicovezzoli/furrow-cam/pull/487))
+- An assistant can now ask the MCP server for a picture of the project from above, with each operation's toolpath in its tool's colour, to show you what it built or to check it. ([#488](https://github.com/federicovezzoli/furrow-cam/pull/488))
+
 ## 0.4.0
 
 ### Minor Changes
