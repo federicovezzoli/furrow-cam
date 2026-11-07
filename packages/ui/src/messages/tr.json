@@ -325,6 +325,7 @@
       "open": "Aç…",
       "recent": "Son kullanılanlar",
       "recentEmpty": "Açtığınız veya kaydettiğiniz projeler burada görünür.",
+      "removeRecent": "{name} öğesini son kullanılanlardan kaldır",
       "chooseMachine": "Bu projenin hangi makine için olduğunu seçin.",
       "addMachineFirst": "Önce makinenizi ekleyin: boyutu ve G-code’u ondan gelir.",
       "cancel": "İptal",

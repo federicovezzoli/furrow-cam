@@ -325,6 +325,7 @@
       "open": "開く…",
       "recent": "最近使用したもの",
       "recentEmpty": "開いたり保存したりしたプロジェクトがここに表示されます。",
+      "removeRecent": "{name} を最近の項目から削除",
       "chooseMachine": "このプロジェクトに使うマシンを選んでください。",
       "addMachineFirst": "先にマシンを追加してください。サイズと G-code はマシンの設定から決まります。",
       "cancel": "キャンセル",

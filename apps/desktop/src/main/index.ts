@@ -50,6 +50,7 @@ import {
   readJson,
   recoveryStore,
   watchFile,
+  withoutRecent,
   withRecent,
   writeFileAtomic,
   writeJson,
@@ -882,7 +883,6 @@ async function readProject(path: string) {
     // Taken before reading, so a change while reading shows at the next save.
     const stamp = await fileStamp(path);
     const bytes = new Uint8Array(await readFile(path));
-    await addRecent(path);
     return { path, name: projectName(path), bytes, stamp };
   } catch {
     return { error: tr()("DesktopMain.files.openFailed", { name: projectName(path) }) };
@@ -981,6 +981,17 @@ function registerIpc() {
 
   ipcMain.handle(CHANNELS.recentFiles, async () => {
     const recent = parseRecent(await readJson(recentPath()));
+    return existingRecent(recent);
+  });
+  ipcMain.handle(CHANNELS.addRecent, async (_event, path: unknown) => {
+    if (typeof path === "string") await addRecent(path);
+  });
+  ipcMain.handle(CHANNELS.removeRecent, async (_event, path: unknown) => {
+    let recent = parseRecent(await readJson(recentPath()));
+    if (typeof path === "string") {
+      recent = withoutRecent(recent, path);
+      await writeJson(recentPath(), recent);
+    }
     return existingRecent(recent);
   });
 

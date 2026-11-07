@@ -325,6 +325,7 @@
       "open": "打开…",
       "recent": "最近",
       "recentEmpty": "你打开或保存的项目会显示在这里。",
+      "removeRecent": "从最近中移除 {name}",
       "chooseMachine": "选择此项目所用的机床。",
       "addMachineFirst": "请先添加你的机床：项目的尺寸和G-code都取决于它。",
       "cancel": "取消",

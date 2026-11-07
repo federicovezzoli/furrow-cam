@@ -212,6 +212,7 @@ export function App() {
       report(t("Desktop.App.openFailed", { name, reason }));
       return;
     }
+    void api.addRecent(path);
     // Only `.furrow` files are saved over; others are saved as a new `.furrow` file.
     const savable = /\.furrow$/i.test(path);
     await replaceWith(() => open(file, savable ? { path, name, stamp } : { path: null, name }));

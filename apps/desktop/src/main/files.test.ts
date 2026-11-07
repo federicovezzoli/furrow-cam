@@ -11,6 +11,7 @@ import {
   projectPathsIn,
   recoveryStore,
   watchFile,
+  withoutRecent,
   withRecent,
   writeFileAtomic,
 } from "./files";
@@ -48,6 +49,17 @@ describe("recent files", () => {
     expect(recent).toHaveLength(MAX_RECENT);
     expect(recent[0]).toEqual({ path: "/p/5.furrow", name: "5" });
     expect(recent.filter((file) => file.path === "/p/5.furrow")).toHaveLength(1);
+  });
+
+  it("takes a file off the list, leaving the others in order", () => {
+    const recent = ["/p/a.furrow", "/p/b.zip", "/p/c.furrow"].reduceRight(
+      withRecent,
+      parseRecent(null),
+    );
+    expect(withoutRecent(recent, "/p/b.zip").map((file) => file.path)).toEqual([
+      "/p/a.furrow",
+      "/p/c.furrow",
+    ]);
   });
 
   it("reads stored lists leniently and drops files that are gone", async () => {

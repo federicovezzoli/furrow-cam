@@ -325,6 +325,7 @@
       "open": "Openen…",
       "recent": "Recent",
       "recentEmpty": "Projecten die je opent of opslaat, verschijnen hier.",
+      "removeRecent": "{name} uit recent verwijderen",
       "chooseMachine": "Kies de machine waarvoor dit project is.",
       "addMachineFirst": "Voeg eerst je machine toe: de afmetingen en de G-code komen daarvandaan.",
       "cancel": "Annuleren",
