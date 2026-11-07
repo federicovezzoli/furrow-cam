@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      # npm trusted publishing (OIDC) for @furrow/mcp.
+      # npm trusted publishing (OIDC) for the MCP server.
       id-token: write
     outputs:
       desktop-version: ${{ steps.desktop.outputs.version }}
@@ -68,7 +68,8 @@ jobs:
           tag=$(git tag --points-at HEAD --list '@furrow/web@*' | head -n 1)
           echo "version=${tag#@furrow/web@}" >> "$GITHUB_OUTPUT"
 
-      # @furrow/mcp is the one package on npm (ADR-0067). It stays private for
+      # @furrow/mcp is the one package on npm (ADR-0067), published as
+      # @furrow-cam/mcp since the npm org is furrow-cam. It stays private for
       # `changeset publish`, which only tags it, and is published here, last and
       # allowed to fail, so a problem on npm can't hold up the desktop and web
       # releases. npm trusted publishing (OIDC) authenticates and adds
@@ -81,11 +82,12 @@ jobs:
           tag=$(git tag --points-at HEAD --list '@furrow/mcp@*' | head -n 1)
           if [ -z "$tag" ]; then echo "No new @furrow/mcp version to publish"; exit 0; fi
           npm pkg delete private devDependencies
+          npm pkg set name=@furrow-cam/mcp
           npm publish
 
       - name: MCP server not published
         if: steps.mcp.outcome == 'failure'
-        run: echo "::warning::@furrow/mcp was not published to npm; ADR-0067 says how to publish it by hand"
+        run: echo "::warning::@furrow-cam/mcp was not published to npm; ADR-0067 says how to publish it by hand"
 
   desktop:
     name: Desktop installers

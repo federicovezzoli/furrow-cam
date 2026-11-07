@@ -109,7 +109,7 @@ The web app deploys to Vercel with Neon PostgreSQL ([ADR-0005](docs/adr/0005-hos
 apps/web/            Next.js app: routes, accounts, server code (organised by feature, ADR-0021)
 apps/desktop/        Electron desktop app (ADR-0044)
 apps/download/       Cloudflare Worker behind download.furrow.cam (ADR-0049)
-apps/mcp/            local MCP server for AI assistants, published to npm as @furrow/mcp (ADR-0067)
+apps/mcp/            local MCP server for AI assistants, published to npm as @furrow-cam/mcp (ADR-0067)
 apps/demos/          Playwright scripts that record the website demo videos (ADR-0075)
 packages/workspace/  the CAM workspace UI shared by web and desktop
 packages/ui/         shadcn/ui components

@@ -3,7 +3,7 @@
 Lets an AI assistant work on your [Furrow CAM](https://github.com/federicovezzoli/furrow-cam) projects: the `.furrow` files the desktop app opens. It runs on your computer and speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so any MCP client can start it with one command:
 
 ```sh
-npx -y @furrow/mcp
+npx -y @furrow-cam/mcp
 ```
 
 It needs [Node.js](https://nodejs.org) 22 or later.
@@ -41,18 +41,18 @@ Open *Settings → Developer → Edit Config* and add the server to `claude_desk
   "mcpServers": {
     "furrow-cam": {
       "command": "npx",
-      "args": ["-y", "@furrow/mcp"]
+      "args": ["-y", "@furrow-cam/mcp"]
     }
   }
 }
 ```
 
-On Windows, if Claude Desktop can't find `npx`, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "@furrow/mcp"]`.
+On Windows, if Claude Desktop can't find `npx`, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "@furrow-cam/mcp"]`.
 
 ### Claude Code
 
 ```sh
-claude mcp add furrow-cam --scope user -- npx -y @furrow/mcp
+claude mcp add furrow-cam --scope user -- npx -y @furrow-cam/mcp
 ```
 
 `--scope user` makes it available in every project; leave it out to add it to the current one only.
@@ -67,7 +67,7 @@ Add the server to `.vscode/mcp.json` in your workspace, or run *MCP: Open User C
     "furrow-cam": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@furrow/mcp"]
+      "args": ["-y", "@furrow-cam/mcp"]
     }
   }
 }
@@ -77,7 +77,7 @@ Then start it from the file's *Start* link, and use it in Copilot Chat's agent m
 
 ### Other clients
 
-Any MCP client that starts stdio servers works: the command is `npx`, the arguments `-y @furrow/mcp`.
+Any MCP client that starts stdio servers works: the command is `npx`, the arguments `-y @furrow-cam/mcp`.
 
 ## Using it
 
