@@ -30,6 +30,7 @@ It needs [Node.js](https://nodejs.org) 22 or later.
 | `set_operation_tool` | Gives an operation another tool |
 | `move_operation`, `remove_operation` | Reorders or removes operations |
 | `check_project` | Computes the toolpaths and reports what the app would show: tool problems, warnings, and whether there is anything to export |
+| `get_top_view` | Draws one side from above as a PNG image (the stock, the drawings and each operation's toolpath in its tool's colour), so the assistant can show you what it built or check it |
 | `export_gcode` | Writes the project's G-code, byte for byte what the app exports |
 
 An operation the app wouldn't accept (a drill bit in a pocket, a finishing pass with no allowance) is refused with the app's message, and nothing changes.
