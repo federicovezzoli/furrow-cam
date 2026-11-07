@@ -36,6 +36,8 @@ function documentWithOperations(): ProjectDocument {
           leadIn: null,
           ramp: false,
           tabs: null,
+          startPoints: [],
+          cornerOvercuts: null,
         },
       },
       {
@@ -46,7 +48,7 @@ function documentWithOperations(): ProjectDocument {
         type: "drill",
         targets: [],
         tool: drill,
-        params: { depth: 6, peck: false, stepOver: 40, pins: false },
+        params: { depth: 6, peck: false, stepOver: 40, pins: false, points: [] },
       },
     ],
   };
@@ -65,7 +67,7 @@ function lines(feed: number): ToolpathLines {
 
 function ready(toolpaths: ToolpathStore, id: string, inputHash: string, preview = lines(10)) {
   toolpaths.getState().startComputing(id, inputHash);
-  toolpaths.getState().setResult(id, inputHash, { warnings: [], lines: preview });
+  toolpaths.getState().setResult(id, inputHash, { warnings: [], lines: preview, seconds: 0 });
 }
 
 describe("simulationRequest", () => {
@@ -82,7 +84,7 @@ describe("simulationRequest", () => {
     expect(request?.input.stock).toEqual({ width: 600, height: 400, thickness: 18 });
     expect(request?.input.cuts).toHaveLength(4);
     expect(request?.input.cuts[2]).toEqual({
-      tool: { type: "drill", diameter: 6, vAngle: null, tipDiameter: null },
+      tool: { type: "drill", diameter: 6, vAngle: null, tipDiameter: null, taperAngle: null },
       segments: preview.feeds,
     });
     expect(request?.input.cuts[3]?.segments).toBe(preview.rapids);
@@ -108,7 +110,9 @@ describe("simulationRequest", () => {
     const carving = lines(10);
     const clearing = lines(20);
     toolpaths.getState().startComputing(PROFILE_ID, "a");
-    toolpaths.getState().setResult(PROFILE_ID, "a", { warnings: [], lines: carving, clearing });
+    toolpaths
+      .getState()
+      .setResult(PROFILE_ID, "a", { warnings: [], lines: carving, clearing, seconds: 0 });
     const cuts = simulationRequest(document, toolpaths.getState().entries, MAX_CELLS)?.input.cuts;
     expect(cuts?.map(({ tool, segments }) => [tool.type, segments])).toEqual([
       ["flat_end_mill", clearing.feeds],

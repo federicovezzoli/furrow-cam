@@ -8,6 +8,7 @@ import {
 } from "@furrow/cam-core";
 import {
   createProjectDocument,
+  type Operation,
   type Path,
   type Point,
   ProjectDocument,
@@ -212,10 +213,98 @@ describe("removeDrawing", () => {
     expect(store.getState().document).toEqual(document());
   });
 
+  it("keeps a drill with placed holes, which isn't the drawing's own (#429)", () => {
+    const doc = document();
+    const drill: Operation = {
+      ...(doc.operations[0] as Operation),
+      id: "4d5e6f7a-8b9c-4dae-8f1a-3b4c5d6e7f8a",
+      type: "drill",
+      targets: [{ shapeId: SQUARE_ID, paths: null }],
+      params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[1, 2]] },
+    };
+    doc.operations.push(drill);
+    expect(drawingOperations(doc, DRAWING_ID).map(({ id }) => id)).not.toContain(drill.id);
+    const store = createDocumentStore(doc);
+    removeDrawing(store, DRAWING_ID);
+    expect(store.getState().document.operations.at(-1)).toEqual({ ...drill, targets: [] });
+  });
+
   it("does nothing for an unknown drawing", () => {
     const store = createDocumentStore(document());
     removeDrawing(store, CIRCLE_ID);
     expect(store.getState().past).toHaveLength(0);
+  });
+});
+
+describe("placed holes (#429)", () => {
+  /** `fullDocument` with a drill of no shapes: holes on a corner and an edge of the square, and one off the drawing. */
+  function withHoles() {
+    const doc = fullDocument();
+    const drill: Operation = {
+      ...(doc.operations[0] as Operation),
+      id: "4d5e6f7a-8b9c-4dae-8f1a-3b4c5d6e7f8a",
+      type: "drill",
+      targets: [],
+      params: {
+        depth: 5,
+        peck: false,
+        stepOver: 40,
+        pins: false,
+        points: [
+          [100, 0],
+          [100, 50],
+          [290, 190],
+        ],
+      },
+    };
+    doc.operations.push(drill);
+    return createDocumentStore(doc);
+  }
+  const points = (s: ReturnType<typeof withHoles>) => {
+    const drill = s.getState().document.operations.at(-1);
+    return drill?.type === "drill" ? drill.params.points : [];
+  };
+
+  it("move with the drawing they lie on, while a hole off it stays", () => {
+    const s = withHoles();
+    moveDrawing(s, DRAWING_ID, [10, 5]);
+    expect(points(s)).toEqual([
+      [110, 5],
+      [110, 55],
+      [290, 190],
+    ]);
+  });
+
+  it("stay with another drawing they lie on", () => {
+    const s = withHoles();
+    const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    s.getState().change("setup", (draft) => {
+      draft.drawings.push({ id: other, name: "other.svg", border: 10, rotation: 0 });
+      draft.geometry.push(
+        translateShape({ ...square, id: OTHER_SQUARE, drawingId: other }, [150, 0]),
+      );
+      const drill = draft.operations.at(-1);
+      if (drill?.type === "drill") drill.params.points = [[250, 0]];
+    });
+    moveDrawing(s, DRAWING_ID, [10, 5]);
+    expect(points(s)).toEqual([[250, 0]]);
+    moveDrawing(s, other, [0, 5]);
+    expect(points(s)).toEqual([[250, 5]]);
+  });
+
+  it("are copied with the drawing they lie on", () => {
+    const s = withHoles();
+    const before = drawingBounds(fullDocument().geometry, DRAWING_ID);
+    if (!before) throw new Error("fixture");
+    duplicateDrawing(s, DRAWING_ID);
+    const dx = before.max[0] - before.min[0] + DUPLICATE_GAP;
+    expect(points(s)).toEqual([
+      [100, 0],
+      [100, 50],
+      [290, 190],
+      [100 + dx, 0],
+      [100 + dx, 50],
+    ]);
   });
 });
 
@@ -260,6 +349,14 @@ describe("duplicateDrawing", () => {
       [50, 0],
       [50 + dx, 0],
     ]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([
+      [0, 50],
+      [dx, 50],
+    ]);
+    expect(profile?.type === "profile" && profile.params.cornerOvercuts?.excluded).toEqual([
+      [0, 0],
+      [dx, 0],
+    ]);
     expect(ProjectDocument.parse(doc)).toEqual(doc);
     expect(store.getState().past).toHaveLength(1);
     store.getState().undo();
@@ -287,6 +384,7 @@ describe("duplicateDrawing", () => {
     if (profile?.type !== "profile") throw new Error("fixture");
     profile.targets = doc.geometry.map(({ id }) => ({ shapeId: id, paths: null }));
     profile.params.tabs = null;
+    profile.params.cornerOvercuts = null;
     const store = createDocumentStore(doc);
     expect(duplicateDrawing(store, DRAWING_ID)).not.toBeNull();
     expect(store.getState().document.operations[0]?.targets).toHaveLength(300_000);
@@ -348,6 +446,9 @@ describe("drawing size", () => {
     const [profile] = s.getState().document.operations;
     expect(profile?.targets).toEqual([{ shapeId: OTHER_SQUARE, paths: null }]);
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[200, 0]]);
+    // The start point and excluded overcut on the removed square go with it.
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([]);
+    expect(profile?.type === "profile" && profile.params.cornerOvercuts?.excluded).toEqual([]);
   });
   const size = (s: ReturnType<typeof store>) => {
     const bounds = drawingBounds(s.getState().document.geometry, DRAWING_ID);
@@ -368,6 +469,7 @@ describe("drawing size", () => {
     // The tab at (50, 0) on the square's bottom edge doubles its distance from the corner.
     const [profile] = s.getState().document.operations;
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[100, 0]]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[0, 100]]);
     expect(s.getState().document.geometry[2]).toBe(otherBefore);
     expect(ProjectDocument.parse(s.getState().document)).toEqual(s.getState().document);
   });
@@ -476,6 +578,8 @@ describe("drawing size", () => {
     expect(after.min[0]).toBeCloseTo(before.min[0] + 12.5, 9);
     expect(after.min[1]).toBeCloseTo(before.min[1] - 3, 9);
     expect(tabsOf(s)).toEqual([[62.5, -3]]);
+    const [profile] = s.getState().document.operations;
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[12.5, 47]]);
     expect(s.getState().document.geometry[2]).toBe(other);
     expect(s.getState().past).toHaveLength(1);
     moveDrawing(s, DRAWING_ID, [0, 0]);

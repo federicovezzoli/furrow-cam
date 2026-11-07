@@ -14,6 +14,7 @@ import {
   HoldingTabs,
   type LineUp,
   LocatingPins,
+  type ModelPlacement,
   type Point,
   type ProjectDocument,
   type StockAnchor,
@@ -45,7 +46,7 @@ export function setUnits(store: DocumentStore, units: Units) {
  * Moves the design on the stock by `offset`: its shapes, the text items'
  * placements (ADR-0059), the models placed with them (ADR-0031) and
  * everything else stored in stock coordinates with them, the profiles' tab
- * positions and the touch-off pad (ADR-0043), which was placed on the zero
+ * positions, the profiles' and engravings' start points and the touch-off pad (ADR-0043), which was placed on the zero
  * the design follows. `geometry` is the document's,
  * read outside the draft: reading every point through it would be slow.
  */
@@ -64,9 +65,19 @@ function moveDrawing(
     placement.position = translatePoint(placement.position, offset);
   }
   for (const operation of draft.operations) {
-    if (operation.type !== "profile" || !operation.params.tabs) continue;
-    const { tabs } = operation.params;
-    tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
+    if (operation.type !== "profile" && operation.type !== "engrave") continue;
+    const { params } = operation;
+    if (params.startPoints.length > 0) {
+      params.startPoints = params.startPoints.map((point) => translatePoint(point, offset));
+    }
+    if (operation.type === "profile" && operation.params.tabs) {
+      const { tabs } = operation.params;
+      tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
+    }
+    if (operation.type === "profile" && operation.params.cornerOvercuts) {
+      const overcuts = operation.params.cornerOvercuts;
+      overcuts.excluded = overcuts.excluded.map((point) => translatePoint(point, offset));
+    }
   }
   const holding = draft.stock.twoSided?.tabs;
   if (holding) holding.positions = holding.positions.map((p) => translatePoint(p, offset));
@@ -239,17 +250,25 @@ export function setTouchOffToolChange(store: DocumentStore, block: string | null
 
 /**
  * Makes the project two-sided (PRD-0011, ADR-0060), flipped about X, the
- * sides parting at half the deepest model's depth, or at half the stock's
+ * sides parting halfway down the deepest model, or at half the stock's
  * thickness without a model; or one-sided again, moving every bottom-side
  * operation to the top side in the same undo step.
  */
 export function setTwoSided(store: DocumentStore, twoSided: boolean) {
   const { stock, models } = store.getState().document;
   if (twoSided === (stock.twoSided !== null)) return;
-  const deepest = Math.max(0, ...models.map(({ placement }) => placement.depth));
+  const deepest = models
+    .map(({ placement }) => placement)
+    .reduce<ModelPlacement | null>(
+      (lowest, p) => (lowest && lowest.top + lowest.depth >= p.top + p.depth ? lowest : p),
+      null,
+    );
   // Within the parting depth field's limits, whatever the models' depth.
   const [min, max] = partingDepthLimits(stock.thickness);
-  const half = Math.min(deepest > 0 ? deepest : stock.thickness, stock.thickness) / 2;
+  // Halfway down the deepest model, as much of it as the stock holds.
+  const half = deepest
+    ? (deepest.top + Math.min(deepest.top + deepest.depth, stock.thickness)) / 2
+    : stock.thickness / 2;
   const partingDepth = Math.min(Math.max(half, min), max);
   store.getState().change("setStock.twoSided", (draft) => {
     if (!twoSided) {

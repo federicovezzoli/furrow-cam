@@ -9,6 +9,7 @@
     "typecheck": "turbo run typecheck",
     "check": "biome check",
     "check:fix": "biome check --write",
+    "demos": "pnpm --filter @furrow/demos demos",
     "check:ci": "biome ci",
     "db:up": "docker compose up -d --wait && pnpm storage:init",
     "db:migrate": "pnpm --filter @furrow/web db:migrate",
@@ -19,7 +20,7 @@
     "release": "changeset publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.3",
+    "@biomejs/biome": "2.6.4",
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
     "turbo": "^2",

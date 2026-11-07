@@ -3,15 +3,21 @@ import {
   closedLoops,
   DEFAULT_CHORD_TOLERANCE,
   drawingFit,
+  holeSnapTargets,
   mapShapes,
   mapText,
   mirrorPoint,
+  nearestHoleSnap,
   nearestOnLoops,
   type Rect,
   rotatePoint,
+  type SnapEdge,
+  type SnapTarget,
   scalePoint,
   scaleShapes,
   shapesBounds,
+  snapEdges,
+  startPointPaths,
   stockInset,
   targetedShapes,
   translatePoint,
@@ -21,6 +27,7 @@ import {
 import {
   DRAWING_BORDER,
   type Drawing,
+  distance,
   GEOMETRY_TOLERANCE,
   type Message,
   type Operation,
@@ -36,7 +43,7 @@ import {
 import { FONT_REMOVED } from "../lib/text-layout";
 import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
-import type { ActionResult } from "./operation-actions";
+import { type ActionResult, hasPlacedHoles } from "./operation-actions";
 
 /** Why a file can't be imported: a project holds SVG and DXF drawings or one STL model (ADR-0055). */
 export const DRAWINGS_OR_MODEL: Message = { code: "workspace.drawingsOrModel" };
@@ -169,7 +176,7 @@ export function setTextItem(
     (nearestOnLoops(loops, position)?.distance ?? Infinity) <= TAB_ON_OUTLINE;
   /** Which tabs of each profile go: those on the old paths and off the new ones. */
   const gone = new Map(
-    [...drawingTabs(document, id)].map(([operationId, own]) => {
+    [...drawingMarkers(document, id)].map(([operationId, { tabs: own }]) => {
       const operation = document.operations.find((candidate) => candidate.id === operationId);
       const positions =
         operation?.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
@@ -206,41 +213,143 @@ export function drawingBounds(geometry: Shape[], id: string): Rect | null {
   return shapesBounds(drawingShapes(geometry, id));
 }
 
-/** The operations that machine only drawing `id`, which go with it. */
+/**
+ * The operations that machine only drawing `id`, which go with it; a drill
+ * with placed holes (#429) stays.
+ */
 export function drawingOperations(document: ProjectDocument, id: string): Operation[] {
   const shapeIds = new Set(drawingShapes(document.geometry, id).map((shape) => shape.id));
   return document.operations.filter(
-    ({ targets }) => targets.length > 0 && targets.every(({ shapeId }) => shapeIds.has(shapeId)),
+    (operation) =>
+      operation.targets.length > 0 &&
+      operation.targets.every(({ shapeId }) => shapeIds.has(shapeId)) &&
+      !hasPlacedHoles(operation),
   );
 }
 
 /**
- * Which tab positions of each profile targeting drawing `id` belong to it,
- * by operation id: those nearer its paths than the profile's other targets'
- * (ADR-0055). Tabs are placed on the paths, but a tolerance can't tell after
- * a scale moves them off the new flattening; a tie, coincident shapes of two
- * drawings, stays with the other drawing.
+ * Which of an operation's tab positions, start points (#426), excluded
+ * corner overcuts (#428) and placed holes (#429) belong to a drawing.
  */
-function drawingTabs(document: ProjectDocument, id: string): Map<string, boolean[]> {
+type OwnMarkers = {
+  tabs: boolean[];
+  startPoints: boolean[];
+  overcuts: boolean[];
+  holes: boolean[];
+};
+
+/**
+ * How far off a drawing's snap targets and edges a placed hole still lies on
+ * it: holes are snapped onto them exactly, but a scaled arc flattens anew.
+ */
+const HOLE_ON_DRAWING = 0.05;
+
+/**
+ * Which tab positions, start points and excluded overcuts of each profile or
+ * engraving targeting drawing `id` belong to it, by operation id: those
+ * nearer its paths than the operation's other targets' (ADR-0055), closed
+ * paths for tabs and overcuts and any path for start points. They are placed on the paths, but a
+ * tolerance can't tell after a scale moves them off the new flattening; a
+ * tie, coincident shapes of two drawings, stays with the other drawing.
+ */
+function drawingMarkers(
+  document: ProjectDocument,
+  id: string,
+  /** Whether to find the placed holes on it too, which only moving or copying it needs. */
+  withHoles = false,
+): Map<string, OwnMarkers> {
   const shapes = new Map(document.geometry.map((shape) => [shape.id, shape]));
-  const tabs = new Map<string, boolean[]>();
+  const markers = new Map<string, OwnMarkers>();
+  const allPaths = (of: Shape[]) => startPointPaths(of, "on").map(({ points }) => points);
+  // Built on the first drill with placed holes: most projects have none.
+  let ownHoles: ((point: Point) => boolean) | null = null;
   for (const operation of document.operations) {
-    if (operation.type !== "profile" || !operation.params.tabs) continue;
-    // Only the paths it cuts: a tab on an uncut path of another drawing doesn't take it.
+    if (withHoles && operation.type === "drill" && operation.params.points.length > 0) {
+      ownHoles ??= drawingHoles(document, id);
+      const holes = operation.params.points.map(ownHoles);
+      markers.set(operation.id, { tabs: [], startPoints: [], overcuts: [], holes });
+      continue;
+    }
+    if (operation.type !== "profile" && operation.type !== "engrave") continue;
+    // Only the paths it cuts: a marker on an uncut path of another drawing doesn't take it.
     const targeted = targetedShapes(shapes, operation.targets);
-    const mine = closedLoops(targeted.filter((shape) => shape.drawingId === id));
+    const mine = targeted.filter((shape) => shape.drawingId === id);
     if (mine.length === 0) continue;
-    const others = closedLoops(targeted.filter((shape) => shape.drawingId !== id));
-    tabs.set(
-      operation.id,
-      operation.params.tabs.positions.map((position) => {
-        const near = nearestOnLoops(mine, position);
-        const other = nearestOnLoops(others, position);
-        return near !== null && (other === null || near.distance < other.distance);
-      }),
-    );
+    const others = targeted.filter((shape) => shape.drawingId !== id);
+    const own = (positions: Point[], lines: (of: Shape[]) => Point[][]) => {
+      if (positions.length === 0) return [];
+      const [near, far] = [lines(mine), lines(others)];
+      return positions.map((position) => {
+        const ours = nearestOnLoops(near, position);
+        const theirs = nearestOnLoops(far, position);
+        return ours !== null && (theirs === null || ours.distance < theirs.distance);
+      });
+    };
+    const profile = operation.type === "profile" ? operation.params : null;
+    markers.set(operation.id, {
+      tabs: own(profile?.tabs?.positions ?? [], (of) => closedLoops(of)),
+      startPoints: own(operation.params.startPoints, allPaths),
+      overcuts: own(profile?.cornerOvercuts?.excluded ?? [], (of) => closedLoops(of)),
+      holes: [],
+    });
   }
-  return tabs;
+  return markers;
+}
+
+/**
+ * Whether a placed hole (#429) belongs to drawing `id`: within
+ * `HOLE_ON_DRAWING` of one of its snap targets or edges (stock anchors
+ * aside), and nearer them than any other drawing's. A hole placed elsewhere
+ * belongs to none and stays put, like the zero. Other drawings are only
+ * looked at for a hole on this one, and only near their boxes, so dragging a
+ * drawing doesn't flatten the whole project on every move.
+ */
+function drawingHoles(document: ProjectDocument, id: string): (point: Point) => boolean {
+  const drawings = new Map<string, Shape[]>();
+  for (const shape of document.geometry) {
+    const shapes = drawings.get(shape.drawingId);
+    if (shapes) shapes.push(shape);
+    else drawings.set(shape.drawingId, [shape]);
+  }
+  const lookups = new Map<string, { targets: SnapTarget[]; edges: SnapEdge[] }>();
+  const near = (drawingId: string, point: Point): number => {
+    const shapes = drawings.get(drawingId) ?? [];
+    let lookup = lookups.get(drawingId);
+    if (!lookup) {
+      lookup = {
+        targets: holeSnapTargets(document.stock, shapes).filter(
+          ({ kind }) => kind !== "stock_anchor",
+        ),
+        edges: snapEdges(shapes),
+      };
+      lookups.set(drawingId, lookup);
+    }
+    const snap = nearestHoleSnap(lookup.targets, lookup.edges, point, HOLE_ON_DRAWING);
+    return snap ? distance(snap.point, point) : Infinity;
+  };
+  const boxes = new Map(
+    [...drawings].map(([drawingId, shapes]) => [drawingId, shapesBounds(shapes)]),
+  );
+  const nearBox = (drawingId: string, [x, y]: Point) => {
+    const box = boxes.get(drawingId);
+    const t = HOLE_ON_DRAWING;
+    return (
+      !!box &&
+      x >= box.min[0] - t &&
+      x <= box.max[0] + t &&
+      y >= box.min[1] - t &&
+      y <= box.max[1] + t
+    );
+  };
+  return (point) => {
+    if (!nearBox(id, point)) return false;
+    const ours = near(id, point);
+    if (ours > HOLE_ON_DRAWING) return false;
+    for (const other of drawings.keys()) {
+      if (other !== id && nearBox(other, point) && near(other, point) <= ours) return false;
+    }
+    return true;
+  };
 }
 
 /**
@@ -275,7 +384,8 @@ type Transform = {
 
 /**
  * Rewrites drawing `id` with `transform`, as one undo step, and the profile
- * tabs lying on its paths with it (ADR-0055). Refuses, changing nothing, a
+ * tabs lying on its paths and the placed holes on it with it (ADR-0055).
+ * Refuses, changing nothing, a
  * result with a segment shrunk to nothing: the document would be invalid.
  */
 function transformDrawing(
@@ -292,7 +402,7 @@ function transformDrawing(
   const byId = new Map(rewritten.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
-  const tabs = drawingTabs(document, id);
+  const markers = drawingMarkers(document, id, true);
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
     const drawing = draft.drawings.find((d) => d.id === id);
@@ -302,12 +412,20 @@ function transformDrawing(
         drawing.rotation = normalizeDegrees(transform.rotation(drawing.rotation));
     }
     for (const operation of draft.operations) {
-      const moved = tabs.get(operation.id);
-      if (!moved || operation.type !== "profile" || !operation.params.tabs) continue;
-      const { positions } = operation.params.tabs;
-      positions.forEach((position, i) => {
-        if (moved[i]) positions[i] = transform.point(position);
-      });
+      const moved = markers.get(operation.id);
+      const move = (positions: Point[], own: boolean[]) =>
+        positions.forEach((position, i) => {
+          if (own[i]) positions[i] = transform.point(position);
+        });
+      if (moved && operation.type === "drill") move(operation.params.points, moved.holes);
+      if (!moved || (operation.type !== "profile" && operation.type !== "engrave")) continue;
+      if (operation.type === "profile" && operation.params.tabs) {
+        move(operation.params.tabs.positions, moved.tabs);
+      }
+      if (operation.type === "profile" && operation.params.cornerOvercuts) {
+        move(operation.params.cornerOvercuts.excluded, moved.overcuts);
+      }
+      move(operation.params.startPoints, moved.startPoints);
     }
   });
   return { ok: true };
@@ -521,9 +639,9 @@ export const DUPLICATE_GAP = 10;
 /**
  * Copies drawing `id` to the right of its box, `DUPLICATE_GAP` away, as one
  * undo step (PRD-0009 D8): every operation targeting its shapes targets the
- * copy's too, with the same paths, and the tabs on its paths are copied
- * with it. The copy may run off the stock. Returns the copy's id, or `null`
- * for an unknown drawing.
+ * copy's too, with the same paths, and the tabs on its paths and the placed
+ * holes on it are copied with it. The copy may run off the stock. Returns
+ * the copy's id, or `null` for an unknown drawing.
  */
 export function duplicateDrawing(store: DocumentStore, id: string): string | null {
   const { document } = store.getState();
@@ -541,7 +659,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   }));
   // One assignment, not a spread push, as on import.
   const geometry = document.geometry.concat(copies);
-  const tabs = drawingTabs(document, id);
+  const markers = drawingMarkers(document, id, true);
   store.getState().change("duplicateDrawing", (draft) => {
     const copy = { ...drawing, id: copyId };
     moveTextWithOutlines(copy, (point) => translatePoint(point, offset));
@@ -555,13 +673,26 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       });
       // One assignment, not a spread push: a drawing may hold more shapes than a call takes arguments.
       if (extra.length > 0) operation.targets = operation.targets.concat(extra);
-      const own = tabs.get(operation.id);
-      if (!own || operation.type !== "profile" || !operation.params.tabs) continue;
-      const { positions } = operation.params.tabs;
+      const own = markers.get(operation.id);
       // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
-      operation.params.tabs.positions = positions.concat(
-        positions.filter((_, i) => own[i]).map((position) => translatePoint(position, offset)),
-      );
+      const copied = (positions: Point[], mine: boolean[]) =>
+        positions.concat(
+          positions.filter((_, i) => mine[i]).map((position) => translatePoint(position, offset)),
+        );
+      if (own?.holes.some(Boolean) && operation.type === "drill") {
+        operation.params.points = copied(operation.params.points, own.holes);
+      }
+      if (!own || (operation.type !== "profile" && operation.type !== "engrave")) continue;
+      if (operation.type === "profile" && operation.params.tabs) {
+        operation.params.tabs.positions = copied(operation.params.tabs.positions, own.tabs);
+      }
+      const overcuts = operation.type === "profile" ? operation.params.cornerOvercuts : null;
+      if (overcuts && own.overcuts.some(Boolean)) {
+        overcuts.excluded = copied(overcuts.excluded, own.overcuts);
+      }
+      if (own.startPoints.some(Boolean)) {
+        operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);
+      }
     }
   });
   return copyId;
@@ -574,7 +705,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
  * (ADR-0055).
  */
 export function removeDrawing(store: DocumentStore, id: string) {
-  const ownTabs = drawingTabs(store.getState().document, id);
+  const owned = drawingMarkers(store.getState().document, id);
   store.getState().change("removeDrawing", (draft) => {
     const index = draft.drawings.findIndex((drawing) => drawing.id === id);
     if (index === -1) return;
@@ -587,10 +718,21 @@ export function removeDrawing(store: DocumentStore, id: string) {
       const targets = operation.targets.filter(({ shapeId }) => !removed.has(shapeId));
       if (targets.length === operation.targets.length) return true;
       operation.targets = targets;
-      const gone = ownTabs.get(operation.id);
+      const gone = owned.get(operation.id);
       const tabs = operation.type === "profile" ? operation.params.tabs : null;
-      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone[i]);
-      return targets.length > 0;
+      if (gone && tabs) tabs.positions = tabs.positions.filter((_, i) => !gone.tabs[i]);
+      const overcuts = operation.type === "profile" ? operation.params.cornerOvercuts : null;
+      if (gone && overcuts) {
+        overcuts.excluded = overcuts.excluded.filter((_, i) => !gone.overcuts[i]);
+      }
+      if (
+        gone?.startPoints.some(Boolean) &&
+        (operation.type === "profile" || operation.type === "engrave")
+      ) {
+        const { startPoints } = operation.params;
+        operation.params.startPoints = startPoints.filter((_, i) => !gone.startPoints[i]);
+      }
+      return targets.length > 0 || hasPlacedHoles(operation);
     });
   });
 }

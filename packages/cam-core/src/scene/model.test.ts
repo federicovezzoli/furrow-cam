@@ -70,7 +70,7 @@ describe("turnModel", () => {
 
 describe("placedModelBox and modelTransform", () => {
   it("scales X and Y, stretches Z to the depth and puts the top at the stock top", () => {
-    const m = placed({ scale: 2, depth: 6, position: [10, 20] });
+    const m = placed({ scale: 2, depth: 6, top: 0, position: [10, 20] });
     expect(placedModelBox(m)).toEqual({ min: [10, 20, -6], max: [210, 180, 0] });
     expect(modelRect(m)).toEqual({ min: [10, 20], max: [210, 180] });
     const transform = modelTransform(m);
@@ -78,8 +78,16 @@ describe("placedModelBox and modelTransform", () => {
     expect(apply(transform, [50, 40, 12])).toEqual([210, 180, 0]);
   });
 
+  it("sinks the model's top below the stock top by its top", () => {
+    const m = placed({ scale: 2, depth: 6, top: 3, position: [10, 20] });
+    expect(placedModelBox(m)).toEqual({ min: [10, 20, -9], max: [210, 180, -3] });
+    const transform = modelTransform(m);
+    expect(apply(transform, [-50, -40, 0])).toEqual([10, 20, -9]);
+    expect(apply(transform, [50, 40, 12])).toEqual([210, 180, -3]);
+  });
+
   it("rotates before scaling", () => {
-    const m = placed({ rotation: [0, 0, 90], scale: 1, depth: 12, position: [0, 0] });
+    const m = placed({ rotation: [0, 0, 90], scale: 1, depth: 12, top: 0, position: [0, 0] });
     expect(placedModelBox(m)).toEqual({ min: [0, 0, -12], max: [80, 100, 0] });
     // The mesh's +X end is its +Y end once turned.
     expect(apply(modelTransform(m), [50, 0, 12])).toEqual([40, 100, 0]);
@@ -102,6 +110,7 @@ describe("initialPlacement", () => {
       scale: 2.25,
       // 12 mm scaled by 2.25, deeper than the 18 mm stock: never squashed to fit.
       depth: 27,
+      top: 0,
       position: [10, 10],
     });
     // 225 × 180 placed.

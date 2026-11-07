@@ -143,12 +143,19 @@ export async function ToolList({ tools }: { tools: ToolRow[] }) {
   );
 }
 
-/** Cut direction for end mills, angle and tip for V-bits, nothing for drills. */
+/**
+ * Cut direction for end mills, angle and tip for V-bits, both for tapered
+ * ball end mills, nothing for drills.
+ */
 function describeCut(tool: Tool, formatNumber: (value: number) => string, t: Translator): string {
-  if (tool.cutDirection) return t(`Bit.cutDirections.${tool.cutDirection}`);
-  if (tool.vAngle === null) return "—";
   const tip = tool.tipDiameter
     ? ` · ${t("Tools.tip", { size: formatNumber(tool.tipDiameter) })}`
     : "";
+  if (tool.taperAngle !== null && tool.cutDirection) {
+    const angle = t("Tools.perSide", { angle: formatNumber(tool.taperAngle) });
+    return `${t(`Bit.cutDirections.${tool.cutDirection}`)} · ${angle}${tip}`;
+  }
+  if (tool.cutDirection) return t(`Bit.cutDirections.${tool.cutDirection}`);
+  if (tool.vAngle === null) return "—";
   return `${formatNumber(tool.vAngle)}°${tip}`;
 }

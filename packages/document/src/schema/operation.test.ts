@@ -9,6 +9,7 @@ import {
   reliefRough,
   SQUARE_ID,
   square,
+  taperedBallEndMill,
   vBit,
 } from "../fixtures";
 import { ProjectDocument } from "./document";
@@ -65,10 +66,28 @@ describe("ProfileParams", () => {
     expect(ProfileParams.safeParse({ ...params, tabs: { ...tabs, count: 4 } }).success).toBe(false);
   });
 
-  it("allows no allowance on the line", () => {
-    const onLine = { ...params, side: "on", allowance: 0, finishPass: false };
+  it("allows no allowance and no corner overcuts on the line", () => {
+    const onLine = {
+      ...params,
+      side: "on",
+      allowance: 0,
+      finishPass: false,
+      cornerOvercuts: null,
+    };
     expect(ProfileParams.safeParse(onLine).success).toBe(true);
     expect(ProfileParams.safeParse({ ...onLine, allowance: 0.5 }).success).toBe(false);
+    const overcuts = { maxAngle: 90, excluded: [] };
+    expect(ProfileParams.safeParse({ ...onLine, cornerOvercuts: overcuts }).success).toBe(false);
+  });
+
+  it("accepts corner overcuts with an angle from 0° to 180°", () => {
+    const at = (maxAngle: number) =>
+      ProfileParams.safeParse({ ...params, cornerOvercuts: { maxAngle, excluded: [[0, 0]] } })
+        .success;
+    expect(at(0)).toBe(true);
+    expect(at(180)).toBe(true);
+    expect(at(-1)).toBe(false);
+    expect(at(181)).toBe(false);
   });
 
   it("needs an allowance for a finish pass", () => {
@@ -144,7 +163,7 @@ describe("DrillOperation", () => {
   const drill = {
     ...profile,
     type: "drill",
-    params: { depth: 10, peck: true, stepOver: 40, pins: false },
+    params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
   };
 
   it("accepts drills and end mills", () => {
@@ -156,6 +175,11 @@ describe("DrillOperation", () => {
   it("rejects V-bits", () => {
     const vBit = { ...drill.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
     expect(DrillOperation.safeParse({ ...drill, tool: vBit }).success).toBe(false);
+  });
+
+  it("rejects tapered ball end mills", () => {
+    const result = DrillOperation.safeParse({ ...drill, tool: taperedBallEndMill });
+    expect(result.error?.issues[0]?.message).toBe("operation.taperedBitsCantDrill");
   });
 
   it("rejects invalid params and unknown keys", () => {
@@ -172,7 +196,11 @@ describe("DrillOperation", () => {
 describe("EngraveOperation", () => {
   const profile = fullDocument().operations[0];
   if (!profile) throw new Error("The fixture has an operation");
-  const engrave = { ...profile, type: "engrave", params: { side: "on", depth: 0.5, ramp: false } };
+  const engrave = {
+    ...profile,
+    type: "engrave",
+    params: { side: "on", depth: 0.5, ramp: false, startPoints: [] },
+  };
   const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
 
   it("accepts V-bits, ball and flat end mills, as an operation too", () => {
@@ -189,7 +217,7 @@ describe("EngraveOperation", () => {
   });
 
   it("rejects invalid params and the profile's options", () => {
-    const valid = { side: "outside", depth: 1, ramp: false };
+    const valid = { side: "outside", depth: 1, ramp: false, startPoints: [] };
     expect(EngraveParams.safeParse(valid).success).toBe(true);
     expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
     expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);
@@ -427,6 +455,15 @@ describe("toolProblem", () => {
       expect(toolProblem({ ...operation, tool: endMill } as Operation)).toBeNull();
       expect(toolProblem({ ...operation, tool: vBit } as Operation)).toBeNull();
     }
+  });
+
+  it("leaves tapered ball end mills to engraving and 3D finishing (#425)", () => {
+    for (const operation of [profile, pocket, reliefRough]) {
+      expect(toolProblem({ ...operation, tool: taperedBallEndMill } as Operation)).toEqual({
+        code: "operation.taperedBitsCantClear",
+      });
+    }
+    expect(toolProblem({ ...reliefFinish, tool: taperedBallEndMill } as Operation)).toBeNull();
   });
 
   it("leaves drilling to drill bits", () => {

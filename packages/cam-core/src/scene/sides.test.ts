@@ -3,7 +3,7 @@ import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { applyAffine } from "../geometry/affine";
 import { modelTransform, type PlacedModel } from "./model";
-import { bottomModelTransform, flipOperation, flipPoint } from "./sides";
+import { bottomModelTransform, flipOperation, flipPoint, flipPoint2 } from "./sides";
 import type { Vec3 } from "./stock";
 
 const stock = { width: 400, height: 200, thickness: 18 };
@@ -45,7 +45,13 @@ describe("bottomModelTransform", () => {
   it.each(AXES)("turns, scales and moves the model before flipping it, about %s", (axis) => {
     const turned = {
       ...model,
-      placement: { rotation: [90, 0, 270] as const, scale: 1.5, depth: 15, position: [30, 20] },
+      placement: {
+        rotation: [90, 0, 270] as const,
+        scale: 1.5,
+        depth: 15,
+        top: 0,
+        position: [30, 20],
+      },
     } as PlacedModel;
     const transform = bottomModelTransform(turned, stock, axis);
     for (const point of [top, bottom, [50, 40, 6] as Vec3, [-10, 25, 3] as Vec3]) {
@@ -94,5 +100,34 @@ describe("flipOperation", () => {
     const flip = { ...stock, axis: "x" as const };
     expect(angle(flipOperation(pocket, flip))).toBe(-45);
     expect(angle(flipOperation(flipOperation(pocket, flip), flip))).toBe(45);
+  });
+
+  it("mirrors a profile's tabs, start points and excluded overcuts with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    if (profile?.type !== "profile" || !profile.params.tabs) throw new Error("a profile with tabs");
+    const flip = { ...stock, axis: "x" as const };
+    const flipped = flipOperation(profile, flip);
+    if (flipped.type !== "profile") throw new Error("still a profile");
+    expect(flipped.params.tabs?.positions).toEqual(
+      profile.params.tabs.positions.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipped.params.startPoints).toEqual(
+      profile.params.startPoints.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipped.params.cornerOvercuts?.excluded).toEqual(
+      profile.params.cornerOvercuts?.excluded.map((point) => flipPoint2(flip, point)),
+    );
+    expect(flipOperation(flipped, flip)).toEqual(profile);
+  });
+
+  it("mirrors a drill's placed holes with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    const drill = {
+      ...(profile as Operation),
+      type: "drill",
+      params: { depth: 5, peck: false, stepOver: 40, pins: false, points: [[10, 20]] },
+    } as Operation;
+    const flipped = flipOperation(drill, { ...stock, axis: "x" });
+    expect(flipped.type === "drill" && flipped.params.points).toEqual([[10, 180]]);
   });
 });

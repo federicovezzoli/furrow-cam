@@ -1,6 +1,7 @@
-import { modelHeightmap, parseStl, StlImportError, type StlMesh } from "@furrow/cam-core";
-import type { Message } from "@furrow/document";
+import { modelHeightmap, parseStl, type StlMesh } from "@furrow/cam-core";
+import { type Message, MessageError } from "@furrow/document";
 import { type MeshRequest, type MeshResponse, sha256Hex } from "../lib/mesh-worker-protocol";
+import { isStepFile, stepToStl } from "../lib/step";
 
 /** The worker's global scope; the app's TypeScript lib describes a window instead. */
 const scope = self as unknown as {
@@ -27,13 +28,26 @@ function keep(sha256: string, mesh: StlMesh) {
 /** A stored mesh was checked when it was imported; limits lowered since don't refuse it. */
 const NO_LIMITS = { maxBytes: Infinity, maxTriangles: Infinity };
 
+/** OpenCascade's WebAssembly, bundled with the app and fetched only for a STEP file (ADR-0072). */
+async function occtWasm() {
+  const url = new URL("occt-import-js/dist/occt-import-js.wasm", import.meta.url);
+  const response = await fetch(url).catch(() => null);
+  if (!response?.ok) throw new MessageError({ code: "workspace.stepImportUnavailable" });
+  return response.arrayBuffer();
+}
+
 async function handle(request: MeshRequest): Promise<MeshResponse> {
   const { id } = request;
   if (request.kind === "parse") {
-    const mesh = parseStl(new Uint8Array(request.bytes), request.limits);
-    const sha256 = await sha256Hex(request.bytes);
+    const step = isStepFile(new Uint8Array(request.bytes));
+    const bytes = step
+      ? (await stepToStl(new Uint8Array(request.bytes), request.limits, occtWasm)).buffer
+      : request.bytes;
+    const mesh = parseStl(new Uint8Array(bytes), request.limits);
+    const sha256 = await sha256Hex(bytes);
     keep(sha256, mesh);
-    return { kind: "parsed", id, sha256, triangles: mesh.triangles, bounds: mesh.bounds };
+    const { triangles, bounds } = mesh;
+    return { kind: "parsed", id, sha256, triangles, bounds, ...(step && { stl: bytes }) };
   }
 
   let mesh = meshes.get(request.sha256);
@@ -59,12 +73,14 @@ scope.onmessage = ({ data }) => {
       const transfer =
         response.kind === "preview" && response.heightmap
           ? [response.heightmap.heights.buffer]
-          : [];
+          : response.kind === "parsed" && response.stl
+            ? [response.stl]
+            : [];
       scope.postMessage(response, transfer);
     } catch (error) {
-      if (!(error instanceof StlImportError)) console.error(error);
+      if (!(error instanceof MessageError)) console.error(error);
       const message: Message =
-        error instanceof StlImportError ? error.detail : { code: "workspace.unreadableFile" };
+        error instanceof MessageError ? error.detail : { code: "workspace.unreadableFile" };
       scope.postMessage({ kind: "failed", id: data.id, error: message });
     }
   });

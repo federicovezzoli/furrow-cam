@@ -23,6 +23,8 @@ export type Page =
   | { name: "simulator" }
   | { name: "tools" }
   | { name: "machines" }
+  /** Opened from the Help menu over any page; `back` returns to it. */
+  | { name: "licences"; back: Page }
   /** A machine's form; `id` is `null` for a new one. */
   | { name: "machine"; id: string | null };
 
@@ -140,12 +142,15 @@ export function ProjectView({
   );
 
   const onWorkspace = page.name === "workspace" || page.name === "simulator";
+  // The licences page opens over the simulator without ending the simulation.
+  const simulating =
+    page.name === "simulator" || (page.name === "licences" && page.back.name === "simulator");
   return (
     <NavigateContext value={navigate}>
       <div className="relative flex h-dvh flex-col overflow-hidden">
         <ProjectShell host={host}>
           <AutosaveFlush flush={flush} />
-          {page.name === "simulator" ? (
+          {simulating ? (
             <SimulatorShell />
           ) : (
             // Hidden rather than unmounted on the library pages, keeping the viewport's state.

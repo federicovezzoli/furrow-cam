@@ -67,7 +67,7 @@ async function LocalizedApp({ children }: { children: React.ReactNode }) {
   return (
     <>
       <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed statement; `locale` is one of four codes.
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed statement; `locale` is one of `LOCALES`.
         dangerouslySetInnerHTML={{
           __html: `document.documentElement.lang=${JSON.stringify(locale)}`,
         }}

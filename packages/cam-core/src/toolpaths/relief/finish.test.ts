@@ -1,5 +1,11 @@
 import type { Model, ReliefFinishOperation, Tool } from "@furrow/document";
-import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
+import {
+  ballEndMill,
+  endMill,
+  model as modelFixture,
+  taperedBallEndMill,
+  vBit,
+} from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { modelView } from "../../scene/sides";
 import { cutterProfile } from "../../simulation/simulation";
@@ -7,6 +13,7 @@ import { generateToolpath, MissingMeshError, type ToolpathInput, toolpathKey } f
 import type { Toolpath, ToolpathMove } from "../toolpath";
 import {
   createReliefCache,
+  finishingDiameter,
   MAX_RELIEF_CELLS,
   offsetHeightsSteps,
   type ReliefGrid,
@@ -48,7 +55,7 @@ function placed(width: number, length: number, depth: number): Model {
   return {
     ...modelFixture,
     bounds: { min: [0, 0, -depth], max: [width, length, 0] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth, position: [0, 0] },
+    placement: { rotation: [0, 0, 0], scale: 1, depth, top: 0, position: [0, 0] },
   };
 }
 
@@ -107,8 +114,14 @@ const feeds = ({ moves }: Toolpath) =>
 
 describe("reliefCellSize", () => {
   it("is 0.1 mm, or a twentieth of the tool's radius if smaller", () => {
-    expect(reliefCellSize({ diameter: 6 })).toBe(0.1);
-    expect(reliefCellSize({ diameter: 3 })).toBeCloseTo(0.075);
+    expect(reliefCellSize({ ...ballEndMill, diameter: 6 })).toBe(0.1);
+    expect(reliefCellSize({ ...ballEndMill, diameter: 3 })).toBeCloseTo(0.075);
+  });
+
+  it("sizes a tapered ball end mill by its ball, which does the finishing", () => {
+    expect(finishingDiameter(taperedBallEndMill)).toBe(0.5);
+    expect(finishingDiameter(ballEndMill)).toBe(3);
+    expect(reliefCellSize(taperedBallEndMill)).toBeCloseTo(0.25 / 20);
   });
 });
 
@@ -341,6 +354,12 @@ describe("simplifyHeights", () => {
       }
     }
   });
+
+  it("keeps a point the slope changes at, between uneven positions", () => {
+    const positions = [0, 0.1, 1];
+    expect(simplifyHeights([0, 1, 2], 0.01, (i) => positions[i] as number)).toEqual([0, 1, 2]);
+    expect(simplifyHeights([0, 0.1, 1], 0.01, (i) => positions[i] as number)).toEqual([0, 2]);
+  });
 });
 
 describe("sampleMoves", () => {
@@ -354,7 +373,6 @@ describe("sampleMoves", () => {
   it("goes over at the higher sample where the tool drops off a wall", () => {
     expect(sampleMoves([-4, -4, -10, -10], 0.1)).toEqual([
       [0, -4],
-      [1, -4],
       [2, -4],
       [2, -10],
       [3, -10],
@@ -369,10 +387,10 @@ describe("sampleMoves", () => {
 
   it("climbs straight up from the first sample", () => {
     // The tool is at the first sample: the climb starts there, before any move along.
-    expect(sampleMoves([-10, -4, -4], 0.1).slice(0, 3)).toEqual([
+    expect(sampleMoves([-10, -4, -4], 0.1)).toEqual([
       [0, -10],
       [0, -4],
-      [1, -4],
+      [2, -4],
     ]);
   });
 
@@ -383,6 +401,94 @@ describe("sampleMoves", () => {
     // Along at -4 only to the wall, not to the next sample.
     expect(moves.filter(([, z]) => z === -4).at(-1)?.[0]).toBeLessThanOrEqual(0.25 + 1 / 16);
     expect(moves.at(-1)).toEqual([1, -10]);
+  });
+
+  it("never passes below the tool, on steep faces or off walls", () => {
+    // A steep sine, a wall at 3.9 where it levels off, and a steep ridge, sampled a cell apart.
+    const tool = (x: number) =>
+      x < 3.9 ? -12 * Math.sin(x * 0.4) : x < 12 ? -20 : -20 + 8 * Math.abs(Math.sin((x - 12) / 2));
+    const spacing = 0.1;
+    const heights = Array.from({ length: 200 }, (_, i) => tool(i * spacing));
+    const between = (sample: number, fraction: number) => tool((sample + fraction) * spacing);
+    const moves = sampleMoves(heights, spacing, between);
+    for (let m = 1; m < moves.length; m++) {
+      const [a, za] = moves[m - 1] as [number, number];
+      const [b, zb] = moves[m] as [number, number];
+      // Straight down only off the wall, between samples 38 and 39.
+      if (a === b) expect(a).toBeGreaterThan(38);
+      if (a === b) expect(a).toBeLessThanOrEqual(39);
+      for (let t = 0; t <= 64; t++) {
+        const x = a + ((b - a) * t) / 64;
+        // Moves merged between samples cut across curves by a few micrometres, as before.
+        expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(x * spacing) - 0.005);
+      }
+    }
+  });
+
+  it("goes over a face still rising into a wall within a sub-step (#439)", () => {
+    // Rising 4.8 in 1 up to a wall at 0.237, inside the last but two of 16 sub-steps.
+    const tool = (x: number) => (x < 0.237 ? 4.8 * x : -10);
+    const spacing = 0.1;
+    const heights = [0, 1, 2, 3].map((i) => tool(i * spacing));
+    // The highest the tool is within `by` of a point, as a widened profile drops it.
+    const between = (sample: number, fraction: number, by = 0) => {
+      const x = (sample + fraction) * spacing;
+      const ends = Math.max(tool(x - by), tool(x + by));
+      return x - by < 0.237 && 0.237 <= x + by ? Math.max(ends, 4.8 * 0.237) : ends;
+    };
+    const moves = sampleMoves(heights, spacing, between);
+    for (let m = 1; m < moves.length; m++) {
+      const [a, za] = moves[m - 1] as [number, number];
+      const [b, zb] = moves[m] as [number, number];
+      for (let t = 0; t <= 64; t++) {
+        const x = (a + ((b - a) * t) / 64) * spacing;
+        expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(x) - 0.001);
+      }
+    }
+  });
+
+  it("drops the tool widened between samples with ToolDropper (#439)", () => {
+    // Rising 4.8 in 1 up to a wall at column 40, on 0.1 mm cells, five rows across.
+    const columns = 60;
+    const grid = { columns, rows: 5, cellWidth: 0.1, cellHeight: 0.1 };
+    const heights = new Float32Array(columns * 5).map((_, i) =>
+      i % columns < 40 ? 0.48 * (i % columns) : -10,
+    );
+    const dropper = new ToolDropper(heights, grid, cutterProfile({ ...ballEndMill, diameter: 3 }));
+    // Along the middle row and just off it, so cells in other rows bound the tool too.
+    for (const y of [0.25, 0.27]) {
+      const tool = (u: number, by = 0) => dropper.dropPoint((u + 0.5) * 0.1, y, -20, by);
+      const pass = Array.from({ length: columns }, (_, i) => tool(i));
+      const moves = sampleMoves(pass, 0.1, (i, f, by) => tool(i + f, by));
+      for (let m = 1; m < moves.length; m++) {
+        const [a, za] = moves[m - 1] as [number, number];
+        const [b, zb] = moves[m] as [number, number];
+        for (let t = 0; t <= 64; t++) {
+          const u = a + ((b - a) * t) / 64;
+          // Moves between samples cut across the tool's rounded top by a few micrometres, as before.
+          expect(za + ((zb - za) * t) / 64).toBeGreaterThanOrEqual(tool(u) - 0.005);
+        }
+      }
+      // Widened by `by`, the tool is no lower than anywhere within `by` of the point.
+      for (let u = 35; u < 45; u += 0.13) {
+        for (let t = -8; t <= 8; t++) {
+          expect(tool(u, 0.05)).toBeGreaterThanOrEqual(tool(u + (t / 8) * 0.5) - 1e-9);
+        }
+      }
+    }
+  });
+
+  it("goes straight down a steep face in one move", () => {
+    // 60° down, then level.
+    const slope = Math.tan(Math.PI / 3);
+    const heights = [0, 1, 2, 3, 3, 3].map((i) => -slope * Math.min(i, 3) * 0.1);
+    const between = (sample: number, fraction: number) =>
+      -slope * Math.min(sample + fraction, 3) * 0.1;
+    expect(sampleMoves(heights, 0.1, between)).toEqual([
+      [0, -0],
+      [3, expect.closeTo(-0.3 * slope)],
+      [5, expect.closeTo(-0.3 * slope)],
+    ]);
   });
 });
 
@@ -538,6 +644,7 @@ describe("generateToolpath", () => {
     tabs: null,
     before: [],
     touchOff: null,
+    pins: null,
     ...options,
   };
 
@@ -579,5 +686,19 @@ describe("reachModel", () => {
     const empty = new Float32Array(100).fill(-Infinity);
     expect(reachModel([on], grid, heights)).toEqual([on]);
     expect(reachModel([away], grid, empty)).toEqual([away]);
+  });
+});
+
+describe("a model sunk below the stock top", () => {
+  it("is finished as at the top, shifted down by how far it is sunk", () => {
+    const sunk = { ...STEP, placement: { ...STEP.placement, top: 3 } };
+    const atTop = feeds(finish(ballEndMill)).map(({ to: [x, y, z] }) => [x, y, z - 3]);
+    const below = feeds(finish(ballEndMill, {}, sunk)).map(({ to }) => to);
+    expect(below).toHaveLength(atTop.length);
+    below.forEach((point, i) => {
+      point.forEach((value, k) => {
+        expect(value).toBeCloseTo(atTop[i]?.[k] as number, 6);
+      });
+    });
   });
 });

@@ -656,6 +656,7 @@ function ZeroSection() {
                 <label
                   key={anchor}
                   title={anchors(anchor)}
+                  data-demo={`zero-${anchor}`}
                   className={cn(
                     "flex cursor-pointer p-0.5",
                     ["items-start", "items-center", "items-end"][r],

@@ -7,9 +7,16 @@ import {
   type NestedKeyOf,
 } from "use-intl/core";
 import de from "../messages/de.json";
+import el from "../messages/el.json";
 import en from "../messages/en.json";
+import es from "../messages/es.json";
 import fr from "../messages/fr.json";
 import it from "../messages/it.json";
+import ja from "../messages/ja.json";
+import nl from "../messages/nl.json";
+import pt from "../messages/pt.json";
+import tr from "../messages/tr.json";
+import zh from "../messages/zh.json";
 import type { Locale } from "./locales";
 
 /** The messages, keyed as English has them: every key starts there. */
@@ -18,7 +25,7 @@ export type Messages = typeof en;
 export type Catalog = { [key: string]: string | Catalog };
 
 /** The message catalogs (ADR-0054). */
-export const CATALOGS: Record<Locale, Catalog> = { en, it, fr, de };
+export const CATALOGS: Record<Locale, Catalog> = { en, it, fr, de, es, nl, pt, el, tr, zh, ja };
 
 const merged = new Map<Locale, Messages>();
 

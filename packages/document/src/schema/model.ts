@@ -17,8 +17,9 @@ export type QuarterTurn = z.infer<typeof QuarterTurn>;
 /**
  * Where a model sits in the stock (PRD-0005 S2), in stock coordinates
  * (ADR-0014). The mesh is rotated first, then scaled, then moved so that its
- * top is at the stock top and its bounding box's bottom-left corner at
- * `position`. A two-sided project also machines it from below (ADR-0060).
+ * top is `top` below the stock top and its bounding box's bottom-left corner
+ * at `position` (ADR-0069). A two-sided project also machines it from below
+ * (ADR-0060).
  */
 export const ModelPlacement = z.strictObject({
   /** Turns about the stock's X, then Y, then Z axis. */
@@ -32,6 +33,8 @@ export const ModelPlacement = z.strictObject({
    * before then may still be stretched or squashed by it.
    */
   depth: PositiveLength,
+  /** How far the model's top sits below the stock top: it reaches `top + depth` into the stock. */
+  top: z.number().nonnegative(),
   /** Bottom-left corner of the placed model's bounding box. */
   position: Point,
 });

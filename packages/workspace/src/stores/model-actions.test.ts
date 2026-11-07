@@ -14,6 +14,7 @@ import {
   setModelDepth,
   setModelOffset,
   setModelScale,
+  setModelTop,
   turnModelAbout,
 } from "./model-actions";
 import { addReliefFinishOperation } from "./operation-actions";
@@ -41,6 +42,7 @@ describe("addModel", () => {
       scale: 4.75,
       // The mesh's 12 mm, scaled like its outline, deeper than the stock.
       depth: 57,
+      top: 0,
       position: [62.5, 10],
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
@@ -85,14 +87,25 @@ describe("placement edits", () => {
   it("scales in all three directions, so the mesh is never stretched", () => {
     const { store, id, get } = storeWithModel();
     setModelScale(store, id, 2);
-    expect(get().placement).toMatchObject({ scale: 2, depth: 24, position: [10, 10] });
+    expect(get().placement).toMatchObject({ scale: 2, depth: 24, top: 0, position: [10, 10] });
     setModelDepth(store, id, 6);
-    expect(get().placement).toMatchObject({ scale: 0.5, depth: 6, position: [10, 10] });
+    expect(get().placement).toMatchObject({ scale: 0.5, depth: 6, top: 0, position: [10, 10] });
     // Unchanged values add no undo step.
     const steps = store.getState().past.length;
     setModelScale(store, id, 0.5);
     setModelDepth(store, id, 6);
     expect(store.getState().past).toHaveLength(steps);
+  });
+
+  it("sinks below the stock top, and a fit leaves it there", () => {
+    const { store, id, get } = storeWithModel();
+    setModelTop(store, id, 2.5);
+    expect(get().placement).toMatchObject({ scale: 4.75, depth: 57, top: 2.5 });
+    fitModelToStock(store, id);
+    expect(get().placement.top).toBe(2.5);
+    // The fit changed nothing, so one undo takes the top back.
+    store.getState().undo();
+    expect(get().placement.top).toBe(0);
   });
 
   it("fits inside the stock's border again after turning", () => {

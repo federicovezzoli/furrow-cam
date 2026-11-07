@@ -1,10 +1,19 @@
 import { MIN_LENGTH } from "@furrow/cam-core";
+import { StockAnchor } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  CallToolResult,
+  ServerNotification,
+  ServerRequest,
+} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
+import { checkProject, exportProject, type Progress } from "./gcode";
+import { libraryDir, readLibrary } from "./library";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
+import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
 import { projectSummary } from "./summary";
 
 const projectPath = z
@@ -23,6 +32,25 @@ async function respond(run: () => Promise<unknown>): Promise<CallToolResult> {
   }
 }
 
+/** Reports a computation's progress to the client, if it asked for it. */
+function progressOf({
+  _meta,
+  sendNotification,
+}: RequestHandlerExtra<ServerRequest, ServerNotification>): Progress | undefined {
+  const progressToken = _meta?.progressToken;
+  if (progressToken === undefined) return undefined;
+  return (progress, total, operation) =>
+    sendNotification({
+      method: "notifications/progress",
+      params: {
+        progressToken,
+        progress,
+        total,
+        ...(operation && { message: `Computing “${operation}”` }),
+      },
+    });
+}
+
 function summary(project: Project) {
   return {
     path: project.source,
@@ -31,8 +59,11 @@ function summary(project: Project) {
   };
 }
 
-/** The local MCP server (PRD-0012, ADR-0067), with no transport yet. */
-export function createServer(projects: Projects = createProjects()) {
+/**
+ * The local MCP server (PRD-0012, ADR-0067), with no transport yet, reading
+ * the desktop app's tool library and machine list from `library`.
+ */
+export function createServer(projects: Projects = createProjects(), library = libraryDir()) {
   const server = new McpServer({ name: "furrow-cam", version: packageJson.version });
 
   server.registerTool(
@@ -84,6 +115,42 @@ export function createServer(projects: Projects = createProjects()) {
       respond(async () => ({ saved: await projects.save(await projects.get(path), saveAs) })),
   );
 
+  server.registerTool(
+    "check_project",
+    {
+      title: "Check a project",
+      description:
+        "Computes the toolpaths of a project's enabled operations, as the app does, and returns what the app would show for them: enabled operations whose tool can't cut them (toolProblems), the toolpath and program warnings, and whether there is anything to export (canExport, with whyNot if not, or the G-code files an export would write). Changes nothing. Reports progress as it computes; 3D operations can take a while.",
+      inputSchema: { path: projectPath },
+      annotations: { readOnlyHint: true },
+    },
+    ({ path }, extra) =>
+      respond(async () => checkProject(await projects.get(path), progressOf(extra), extra.signal)),
+  );
+
+  server.registerTool(
+    "export_gcode",
+    {
+      title: "Export G-code",
+      description:
+        "Computes a project's toolpaths and writes its G-code for the machine's post-processor, byte for byte what the app exports: one file named after the project and today's date (the app may also add the label of the version last saved or restored; this server never does) (e.g. sign-2026-11-01.gcode), or one per side of a two-sided project (sign-2026-11-01-top.gcode, sign-2026-11-01-bottom.gcode). Writes next to the project's .furrow file unless given a folder. Never replaces a file unless overwrite is true. Saved or not, it exports the project as it is in this server. Returns the files written and the export's warnings. Never sends anything to a machine: the user loads and runs the G-code.",
+      inputSchema: {
+        path: projectPath,
+        folder: z.string().optional().describe("Absolute path of the folder to write into."),
+        overwrite: z.boolean().optional().describe("Replace G-code files already there."),
+      },
+    },
+    ({ path, folder, overwrite }, extra) =>
+      respond(async () =>
+        exportProject(
+          await projects.get(path),
+          { folder, overwrite },
+          progressOf(extra),
+          extra.signal,
+        ),
+      ),
+  );
+
   const itemId = z.string().describe("The drawing's or model's id, from the project summary.");
 
   server.registerTool(
@@ -91,10 +158,10 @@ export function createServer(projects: Projects = createProjects()) {
     {
       title: "Import a drawing or 3D model",
       description:
-        "Imports an SVG or DXF drawing, or an STL 3D model, into a project, as the app does. A project holds drawings (several, each its own) or one model, not both. Drawings keep their size in the file and models are fitted inside the stock; both are placed at the zero's corner or centre, which fit_to_stock and resize can change. An SVG sized in pixels or not at all needs dpi, and a DXF that doesn't say its units needs units: without them the import is refused, saying so; ask the user rather than guessing. Returns the new drawing's or model's id, the import's warnings and the project summary.",
+        "Imports an SVG or DXF drawing, or an STL or STEP 3D model, into a project, as the app does. A project holds drawings (several, each its own) or one model, not both. Drawings keep their size in the file; a STEP solid is turned into a triangle mesh, as in the app, and models are fitted inside the stock; both are placed at the zero's corner or centre, which fit_to_stock and resize can change. An SVG sized in pixels or not at all needs dpi, and a DXF that doesn't say its units needs units: without them the import is refused, saying so; ask the user rather than guessing. Returns the new drawing's or model's id, the import's warnings and the project summary.",
       inputSchema: {
         path: projectPath,
-        file: z.string().describe("Absolute path of the .svg, .dxf or .stl file."),
+        file: z.string().describe("Absolute path of the .svg, .dxf, .stl or .step (.stp) file."),
         dpi: z
           .number()
           .positive()
@@ -147,6 +214,159 @@ export function createServer(projects: Projects = createProjects()) {
       respond(async () => {
         const project = await projects.get(path);
         resize(project, id, side, mm);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_model_top",
+    {
+      title: "Sink a model below the stock top",
+      description:
+        "Sets how far a model's top sits below the stock top, in millimetres (0 puts it at the stock top), keeping its size, as the app's Top below stock field does: the whole relief is machined that much lower, for example to recover a part roughed too deep or to leave a border standing proud. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        mm: z.number().min(0).describe("How far below the stock top, in millimetres."),
+      },
+    },
+    ({ path, id, mm }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTop(project, id, mm);
+        return summary(project);
+      }),
+  );
+
+  const mm = (what: string) => z.number().positive().describe(`${what}, in millimetres.`);
+
+  server.registerTool(
+    "set_stock",
+    {
+      title: "Set the stock and units",
+      description:
+        "Sets the stock's width (X), height (Y) and thickness (Z) in millimetres, and the units the app shows (mm or in; lengths are given in millimetres either way), as the app's stock fields do. An anchored zero follows the stock, and the design stays aligned to it. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        units: z.enum(["mm", "in"]).optional().describe("The units the app shows."),
+        width: mm("The stock's size along X").optional(),
+        height: mm("The stock's size along Y").optional(),
+        thickness: mm("The stock's thickness").optional(),
+      },
+    },
+    ({ path, ...stock }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setStock(project, stock);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_zero",
+    {
+      title: "Set the zero",
+      description:
+        "Sets where the machine's zero is. XY: a stock anchor (a corner, an edge's middle or the centre), which follows the stock and aligns the design to the stock there; or a custom point in millimetres from the stock's bottom-left corner, which may lie off the stock (a fence corner), where the design stays put. Z: the stock top or the machine bed. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        xy: z
+          .union([
+            StockAnchor,
+            z
+              .tuple([z.number(), z.number()])
+              .describe("[x, y] in millimetres from the stock's bottom-left corner."),
+          ])
+          .optional(),
+        z: z.enum(["stock_top", "machine_bed"]).optional(),
+      },
+    },
+    ({ path, xy, z }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setZero(project, { xy, z });
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_touch_off_pad",
+    {
+      title: "Add, move or remove the touch-off pad",
+      description:
+        "The touch-off pad is a spot of the stock top no operation cuts, for zeroing Z on after a tool change. pad: true adds it (centred on the XY zero, unless x and y are given) and sets its centre and diameter; pad: false removes it. Lengths in millimetres, the centre from the stock's bottom-left corner; the diameter can't be wider than the stock's smaller side. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        pad: z.boolean(),
+        x: z.number().optional().describe("The pad's centre along X, in millimetres."),
+        y: z.number().optional().describe("The pad's centre along Y, in millimetres."),
+        diameter: mm("The pad's diameter").optional(),
+      },
+    },
+    ({ path, ...pad }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTouchOff(project, pad);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "get_library",
+    {
+      title: "List the tool library and machines",
+      description:
+        "Lists the desktop app's tool library (bits, with all their settings: lengths in millimetres, feed and plunge rates in mm/min, spindle speed in rpm, angles in degrees) and its machines, each with the id other tools take, and any problem reading them. Files the app hasn't written yet are reported, not an error.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    () => respond(() => readLibrary(library)),
+  );
+
+  server.registerTool(
+    "set_machine",
+    {
+      title: "Choose the project's machine",
+      description:
+        "Copies a machine from the desktop app's machine list into the project, as choosing it in the app does: the project keeps its copy if the list changes. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        machineId: z.string().describe("The machine's id, from get_library."),
+      },
+    },
+    ({ path, machineId }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        chooseMachine(project, await readLibrary(library), machineId);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_operation_tool",
+    {
+      title: "Set an operation's tool",
+      description:
+        "Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb). A tool that can't cut the operation is refused with the app's message. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        operationId: z.string().describe("The operation's id, from the project summary."),
+        toolId: z.string().optional().describe("A library tool's id, from get_library."),
+        settings: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("The tool's settings, instead of toolId."),
+      },
+    },
+    ({ path, operationId, toolId, settings }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        // Settings need no library.
+        const tools =
+          toolId === undefined
+            ? { tools: [], machines: [], problems: [] }
+            : await readLibrary(library);
+        setToolOf(project, tools, operationId, { toolId, settings });
         return summary(project);
       }),
   );

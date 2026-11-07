@@ -19,7 +19,9 @@ import {
  * The playback's timeline (#100): play and pause, speed, scrubbing along the
  * path (its length, not machining time) and a mark at the start of each
  * operation, with buttons to jump between them. `status` says what the
- * simulation is doing, if anything worth saying. Distances show in `units`.
+ * simulation is doing, if anything worth saying, and `pending` whether it
+ * waits for toolpaths or the stock. Distances show in `units`.
+ * `children` come first, at the left end.
  */
 export function PlaybackTimeline({
   store,
@@ -27,16 +29,21 @@ export function PlaybackTimeline({
   parts,
   units,
   status,
+  pending,
+  children,
 }: {
   store: PlaybackStore;
   path: PlaybackPath | null;
   parts: PlaybackPart[];
   units: Units;
   status: string[];
+  pending: boolean;
+  children?: React.ReactNode;
 }) {
   const distance = useStore(store, (s) => s.distance);
   const playing = useStore(store, (s) => s.playing);
   const speed = useStore(store, (s) => s.speed);
+  const sweeping = useStore(store, (s) => s.sweeping);
   const length = path?.length ?? 0;
   const starts = path ? parts.map((part) => moveStartDistance(path, part.firstMove)) : [];
   // The part under way: the last one started.
@@ -58,8 +65,11 @@ export function PlaybackTimeline({
   return (
     <section
       aria-label={t("playback")}
+      // The demo videos wait on these (ADR-0075).
+      data-demo={sweeping ? "playback-sweeping" : empty || pending ? undefined : "playback-ready"}
       className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-t bg-background px-2 py-1.5"
     >
+      {children}
       <div className="flex items-center gap-0.5">
         <Button
           variant="ghost"
@@ -78,6 +88,7 @@ export function PlaybackTimeline({
           title={playing ? t("pause") : t("play")}
           disabled={empty}
           onClick={() => setPlaying(!playing)}
+          data-demo="play"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </Button>
@@ -103,6 +114,7 @@ export function PlaybackTimeline({
           value={Math.min(distance, length)}
           disabled={empty}
           onChange={(event) => setDistance(Number(event.currentTarget.value))}
+          data-demo="playback-position"
         />
         {length > 0 &&
           parts.map((part, i) => (
@@ -119,6 +131,7 @@ export function PlaybackTimeline({
       </div>
       <NativeSelect
         aria-label={t("speed")}
+        data-demo="playback-speed"
         size="sm"
         className="h-control px-2 pr-7 text-ui"
         value={speed}

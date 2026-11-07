@@ -15,8 +15,8 @@ import { SaveStatus } from "./save-status";
 /**
  * The top bar of an open project's pages, with a way `back` (to all
  * projects unless given). `machineName` is `null` for a project without a
- * machine; `onTakeTour` replays the workspace tour. `children` go after the
- * save status.
+ * machine; `onTakeTour` replays the workspace tour; `children` are the
+ * page's own actions.
  */
 export function TopBar({
   saveStatus,
@@ -25,11 +25,11 @@ export function TopBar({
   back,
   children,
 }: {
+  children?: React.ReactNode;
   back?: { to: WorkspaceDestination; label: string };
   saveStatus: AutosaveStatus;
   machineName: string | null;
   onTakeTour?: (from: HTMLElement) => void;
-  children?: React.ReactNode;
 }) {
   const t = useTranslations("TopBar");
   const shell = useTranslations("Shell");
@@ -53,8 +53,8 @@ export function TopBar({
         {machineName ?? t("noMachine")}
       </span>
       {project.autosaves && <SaveStatus status={saveStatus} />}
-      {children}
       <div className="ml-auto flex items-center gap-1">
+        {children}
         {onTakeTour && (
           <Button
             variant="ghost"

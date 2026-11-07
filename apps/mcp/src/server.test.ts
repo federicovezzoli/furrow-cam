@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createProjectDocument } from "@furrow/document";
+import { createProjectDocument, packProjectArchive } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -16,7 +16,7 @@ let client: Client;
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "furrow-mcp-"));
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await createServer().connect(serverTransport);
+  await createServer(undefined, dir).connect(serverTransport);
   client = new Client({ name: "test", version: "0" });
   await client.connect(clientTransport);
 });
@@ -42,16 +42,36 @@ async function refusal(name: string, args: Record<string, unknown>) {
 }
 
 describe("the MCP server", () => {
+  it("reports an export's progress to a client that asks", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    const progress: number[] = [];
+    const result = await client.callTool({ name: "export_gcode", arguments: { path } }, undefined, {
+      onprogress: ({ progress: done }) => progress.push(done),
+    });
+    expect(result.isError).toBeFalsy();
+    expect(progress.at(-1)).toBe(fullDocument().operations.filter((o) => o.enabled).length);
+  });
+
   it("lists its tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      "check_project",
       "create_project",
+      "export_gcode",
       "fit_to_stock",
+      "get_library",
       "get_project",
       "import_file",
       "open_project",
       "resize",
       "save_project",
+      "set_machine",
+      "set_model_top",
+      "set_operation_tool",
+      "set_stock",
+      "set_touch_off_pad",
+      "set_zero",
     ]);
   });
 
@@ -92,5 +112,21 @@ describe("the MCP server", () => {
         saveAs: join(dir, "Copy.furrow"),
       }),
     ).toEqual({ saved: join(dir, "Copy.furrow") });
+  });
+
+  it("lists the library, reporting files the app hasn't written", async () => {
+    const library = await call("get_library", {});
+    expect(library).toMatchObject({ tools: [], machines: [] });
+    expect(library.problems).toEqual([
+      expect.stringContaining("tools.json doesn't exist"),
+      expect.stringContaining("machines.json doesn't exist"),
+    ]);
+  });
+
+  it("sets the stock through its tool, refusing a size that isn't positive", async () => {
+    const path = join(dir, "Sign.furrow");
+    await call("create_project", { path });
+    expect((await call("set_stock", { path, width: 300 })).stock.width).toBe(300);
+    expect(await refusal("set_stock", { path, width: 0 })).toBeTruthy();
   });
 });

@@ -255,6 +255,9 @@ export function App() {
         if (current.current) void replaceWith(() => setPage({ name: "start" }));
         else api.closeWindow();
         break;
+      case "licences":
+        setPage((shown) => (shown.name === "licences" ? shown : { name: "licences", back: shown }));
+        break;
     }
   });
   const onOpenPath = useEffectEvent((path: string) => void openPath(path));
@@ -296,14 +299,23 @@ export function App() {
   }
 
   const libraryPage =
-    page.name === "tools" || page.name === "machines" || page.name === "machine" ? (
+    page.name === "tools" ||
+    page.name === "machines" ||
+    page.name === "machine" ||
+    page.name === "licences" ? (
       <AppFrame page={page} navigate={navigate}>
         <LibraryPage
           page={page}
           library={library}
           updateLibrary={updateLibrary}
           navigate={navigate}
-          back={session ? { name: "workspace" } : { name: "start" }}
+          back={
+            page.name === "licences"
+              ? page.back
+              : session
+                ? { name: "workspace" }
+                : { name: "start" }
+          }
         />
       </AppFrame>
     ) : null;

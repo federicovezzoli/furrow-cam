@@ -1,3 +1,4 @@
+export { estimateTime } from "./estimate";
 export * from "./export";
 export { formatNumber } from "./format";
 export { grbl } from "./grbl/grbl";

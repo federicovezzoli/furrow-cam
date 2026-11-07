@@ -393,7 +393,7 @@ describe("two-sided projects", () => {
       ...(doc.operations[0] as Operation),
       type: "drill" as const,
       targets: [],
-      params: { depth: 5, peck: false, stepOver: 40, pins: true },
+      params: { depth: 5, peck: false, stepOver: 40, pins: true, points: [] },
     };
     expect(DrillOperation.safeParse(pinDrill).success).toBe(true);
     for (const changes of [

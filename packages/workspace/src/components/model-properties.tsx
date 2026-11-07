@@ -30,6 +30,7 @@ import {
   setModelDepth,
   setModelOffset,
   setModelScale,
+  setModelTop,
   turnModelAbout,
 } from "../stores/model-actions";
 
@@ -38,8 +39,8 @@ const AXES = ["X", "Y", "Z"] as const;
 /**
  * The selected model's placement on the stock (PRD-0005 S2, ADR-0031):
  * quarter turns, size (with the size in the file), depth, the border *Fit to
- * stock* leaves and position from the zero, each an undoable edit. Says that
- * it is cut from the top only (S3).
+ * stock* leaves, position from the zero and how far its top sits below the
+ * stock top, each an undoable edit. Says that it is cut from the top only (S3).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -70,6 +71,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           size="icon-compact"
           onClick={() => workspace.getState().selectModel(null)}
           aria-label={t("closeLabel")}
+          data-demo="close-model"
           title={t("close")}
         >
           <XIcon />
@@ -134,12 +136,6 @@ export function ModelProperties({ modelId }: { modelId: string }) {
           onValueChange={(value) => setModelDepth(store, model.id, value)}
           {...gestures}
         />
-        {depth > 0 && placement.depth > stock.thickness && (
-          <p role="status" className="flex gap-1.5 text-destructive">
-            <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>{t("tooDeep")}</span>
-          </p>
-        )}
         <p className="text-muted-foreground">
           {t("original", {
             size: localizeDecimal(original.size, locale),
@@ -178,6 +174,7 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             size="compact"
             onClick={() => fitModelToStock(store, model.id)}
             title={t("fitTitle")}
+            data-demo="fit-model"
           >
             <Maximize2Icon />
             {t("fit")}
@@ -208,6 +205,27 @@ export function ModelProperties({ modelId }: { modelId: string }) {
             {...gestures}
           />
         ))}
+        <NumberField
+          id="model-top"
+          label={t("top")}
+          layout="inline"
+          quantity="length"
+          units={units}
+          min={0}
+          value={placement.top}
+          onValueChange={(value) => setModelTop(store, model.id, value)}
+          {...gestures}
+        />
+        {placement.top >= stock.thickness ? (
+          <Warning>{t("belowStock")}</Warning>
+        ) : (
+          placement.top + (depth > 0 ? placement.depth : 0) > stock.thickness && (
+            <Warning>{t("tooDeep")}</Warning>
+          )
+        )}
+        {stock.twoSided && placement.top >= stock.twoSided.partingDepth && (
+          <Warning>{t("belowParting")}</Warning>
+        )}
       </section>
 
       <div className="flex justify-end">
@@ -222,5 +240,14 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+function Warning({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" className="flex gap-1.5 text-destructive">
+      <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
   );
 }

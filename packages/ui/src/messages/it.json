@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Segnala un bug",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "licences": "Licenze di terze parti"
+  },
+  "Licences": {
+    "title": "Licenze di terze parti",
+    "intro": "Furrow CAM include queste librerie e questi font, con le loro licenze. Apri una licenza per leggerne il testo distribuito con l'app.",
+    "licence": "Licenza: {licence}",
+    "source": "Sorgente:",
+    "loading": "Caricamento…",
+    "unavailable": "Non è stato possibile caricare il testo di questa licenza.",
+    "text": "Testo della licenza di {name}"
   },
   "Meta": {
     "description": "CAM 2.5D open source e web per router CNC.",
-    "privacyTitle": "Informativa sulla privacy · Furrow CAM"
+    "privacyTitle": "Informativa sulla privacy · Furrow CAM",
+    "licencesTitle": "Licenze di terze parti · Furrow CAM"
   },
   "Projects": {
     "notFound": "Questo progetto non esiste più.",
@@ -221,6 +232,7 @@
     "edit": "Modifica",
     "editLabel": "Modifica {name}",
     "tip": "punta da {size} mm",
+    "perSide": "angolo {angle}°",
     "deleteConfirm": "Eliminare \"{name}\"? I progetti esistenti mantengono la loro copia di questa fresa."
   },
   "Machines": {
@@ -396,7 +408,8 @@
       "checkUpdates": "Verifica aggiornamenti…",
       "reportBug": "Segnala un bug…",
       "checkAtStartup": "Verifica aggiornamenti all'avvio",
-      "sendUsage": "Invia statistiche d'uso e segnalazioni di errore"
+      "sendUsage": "Invia statistiche d'uso e segnalazioni di errore",
+      "licences": "Licenze di terze parti"
     },
     "telemetry": {
       "question": "Inviare statistiche d'uso e segnalazioni di errore anonime?",
@@ -420,9 +433,17 @@
       "upToDateDetail": "La versione {version} è la più recente.",
       "available": "Furrow CAM {version} è disponibile",
       "availableDetail": "Hai la {current}. Scarica la nuova versione dalla sua pagina di rilascio e installala sopra questa.",
+      "installDetail": "Hai la {current}. Furrow CAM può scaricare la nuova versione e installarla per te.",
       "download": "Scarica",
+      "downloadAndInstall": "Scarica e installa",
+      "downloading": "Download di Furrow CAM {version} in corso",
       "skip": "Salta questa versione",
       "later": "Più tardi",
+      "ready": "Furrow CAM {version} è pronto da installare",
+      "readyDetail": "Riavvia ora per completare. Altrimenti verrà installato quando chiudi Furrow CAM.",
+      "restart": "Riavvia ora",
+      "installFailed": "Impossibile installare l'aggiornamento",
+      "installFailedDetail": "Scarica Furrow CAM {version} dalla sua pagina di rilascio e installalo sopra questa versione.",
       "ok": "OK"
     },
     "files": {
@@ -475,6 +496,10 @@
       "cutDirectionEndMillsOnly": "Solo per le frese a candela",
       "vBitRequired": "Obbligatorio per le frese a V",
       "vBitOnly": "Solo per le frese a V",
+      "taperedRequired": "Obbligatorio per le frese sferiche coniche",
+      "taperedOnly": "Solo per le frese sferiche coniche",
+      "tipDiameterOnly": "Solo per le frese a V e le frese sferiche coniche",
+      "taperedDiameter": "Deve essere la larghezza del cono alla lunghezza di taglio",
       "drillPlunge90": "Le punte da foratura scendono a 90°",
       "exceedsFluteLength": "Non può superare la lunghezza dei taglienti",
       "smallerThanDiameter": "Deve essere minore del diametro"
@@ -518,11 +543,14 @@
     "operation": {
       "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
       "allowanceZeroOnLine": "Deve essere 0 sulla linea",
+      "overcutsOnLine": "Non sulla linea",
       "allowanceNeeded": "Serve un sovrametallo da togliere",
       "vBitsCantDrill": "Le frese a V non possono forare",
+      "taperedBitsCantDrill": "Le frese sferiche coniche non possono forare",
+      "taperedBitsCantClear": "Le frese sferiche coniche servono solo per incidere e per la finitura 3D: scegli un'altra fresa.",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
-      "onlyVBitsVCarve": "Solo le frese a V fanno l'intaglio a V",
+      "onlyVBitsVCarve": "Solo le frese a V fanno il V-carve",
       "modelNotShapes": "Lavora un modello, non forme",
       "peelStart": "La spirale parte dal centro o dalla parete esterna",
       "drillsCantCutSideways": "Le punte da foratura non tagliano lateralmente: scegli una fresa a candela o una fresa a V.",
@@ -625,7 +653,7 @@
       "skippedPoints": "{count, plural, one {Saltato # punto} other {Saltati # punti}}: foralo invece.",
       "skippedOpenProfile": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: i tagli interni ed esterni richiedono percorsi chiusi.",
       "skippedOpenPocket": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: le tasche richiedono percorsi chiusi.",
-      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: l'intaglio a V richiede percorsi chiusi.",
+      "skippedOpenVCarve": "{count, plural, one {Saltato # percorso aperto} other {Saltati # percorsi aperti}}: il V-carve richiede percorsi chiusi.",
       "skippedSmallCircles": "{count, plural, one {Saltato # cerchio più piccolo} other {Saltati # cerchi più piccoli}} dell'utensile.",
       "skippedLargeCircles": "{count, plural, one {Saltato # cerchio più grande} other {Saltati # cerchi più grandi}} della punta: alesali con una fresa a candela.",
       "skippedNonCircles": "{count, plural, one {Saltato # percorso} other {Saltati # percorsi}}: la foratura richiede cerchi o punti.",
@@ -639,6 +667,8 @@
       "nothingOutside": "I percorsi chiusi non lasciano grezzo da svuotare all'esterno.",
       "tabsTooTall": "I ponticelli sono alti quanto la profondità del taglio, quindi sotto di essi non si taglia nulla.",
       "tabsLeftOut": "{count, plural, one {Escluso # ponticello troppo lontano} other {Esclusi # ponticelli troppo lontani}} da ogni contorno chiuso.",
+      "startPointsLeftOut": "{count, plural, one {Escluso # punto di partenza troppo lontano} other {Esclusi # punti di partenza troppo lontani}} da ogni percorso, o su un percorso che ne ha già uno.",
+      "startPointsOnTabs": "{count, plural, one {Spostato # punto di partenza} other {Spostati # punti di partenza}} fuori da un ponticello, alla sua estremità più vicina.",
       "leadInMisfits": "L'attacco non entrava in {count, plural, one {# contorno} other {# contorni}} ed è stato accorciato o omesso.",
       "peelIsland": "La spirale dall'isola richiede esattamente un'isola.",
       "touchOffPad": "Questa operazione taglia nel tampone di azzeramento, quindi dopo un cambio utensile non si può azzerare Z su di esso: sposta il tampone o il taglio.",
@@ -652,6 +682,9 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
       "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "holesOffStock": "Un foro posizionato è fuori dal grezzo.",
+      "noHoles": "Niente da forare: posiziona fori nella vista o usa le forme selezionate.",
+      "cutsPins": "Questa operazione taglia dove va un perno di riferimento, quindi l'utensile colpirebbe il perno quando il grezzo è girato: sposta i perni o il taglio.",
       "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
@@ -723,9 +756,12 @@
       "unreadableFile": "Non è stato possibile leggere questo file.",
       "modelUnreadable": "Non è stato possibile leggere il modello.",
       "importFailed": "Non è stato possibile importare questo file.",
-      "drawingsOrModel": "Un progetto contiene disegni SVG e DXF o un modello STL, non entrambi.",
+      "drawingsOrModel": "Un progetto contiene disegni SVG e DXF o un modello 3D, non entrambi.",
       "noShapes": "Questo file non contiene forme da importare.",
-      "stlImportOff": "L’importazione STL non è disponibile su questo server.",
+      "stlImportOff": "L’importazione di modelli 3D non è disponibile su questo server.",
+      "stepUnreadable": "Non è stato possibile leggere questo file STEP. Esportalo di nuovo dal tuo programma CAD e riprova.",
+      "stepNoSolids": "Questo file STEP non ha solidi o superfici da importare, solo curve o punti.",
+      "stepImportUnavailable": "Non è stato possibile caricare l’importazione STEP. Controlla la connessione e riprova.",
       "fileTooLarge": "Questo file è troppo grande da importare (il limite è {mb, number} MB).",
       "storedModelMismatch": "Il modello salvato non corrisponde al suo file.",
       "drawingTooSmall": "Alcune linee del disegno si ridurrebbero a nulla. Scegli una dimensione maggiore.",
@@ -834,6 +870,12 @@
     "leadIn": "Attacco ad arco",
     "leadInRadius": "Raggio dell’attacco",
     "holdingTabs": "Ponticelli di tenuta",
+    "cornerOvercuts": "Sovrataglio negli angoli",
+    "maxCornerAngle": "Angoli fino a",
+    "overcutsHint": "Sovrataglia gli angoli vivi che l'utensile non raggiunge, così una controparte squadrata entra.",
+    "editOvercuts": "Modifica sovratagli",
+    "overcutsEditHint": "Fai clic su un sovrataglio per escluderlo, e di nuovo per ripristinarlo.",
+    "overcutsNeedSide": "Richiede un profilo interno o esterno.",
     "pocket": "Tasca",
     "strategy": "Strategia",
     "angle": "Angolo",
@@ -852,7 +894,7 @@
     "lineTooDeep": "Più profondo del cono, quindi la linea è larga quanto la fresa.",
     "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
     "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
-    "vcarve": "Intaglio a V",
+    "vcarve": "V-carve",
     "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
     "maxDepth": "Profondità massima",
     "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
@@ -891,6 +933,12 @@
     "done": "Fatto",
     "editInViewport": "Modifica nella vista",
     "editHint": "Clicca un contorno per aggiungere un ponticello, trascinalo per spostarlo, cliccalo per rimuoverlo.",
+    "startPointCount": "{count, plural, =0 {Nessun punto di partenza} one {# punto di partenza} other {# punti di partenza}}",
+    "editStartPoints": "Modifica punti di partenza",
+    "startPointsHint": "Fai clic su un percorso per aggiungere un punto di partenza (su un percorso aperto va all'estremità più vicina), trascinalo per spostarlo, fai clic su di esso per rimuoverlo. Ogni percorso ne accetta uno.",
+    "holeCount": "{count, plural, =0 {Nessun foro posizionato} one {# foro posizionato} other {# fori posizionati}}",
+    "placeHoles": "Posiziona fori",
+    "placeHolesHint": "Fai clic per posizionare un foro dove si aggancia il cursore, fai clic su un foro per rimuoverlo. Esc o clic destro per finire.",
     "computing": "Calcolo del percorso utensile…",
     "cancel": "Annulla",
     "computeAgain": "Calcola di nuovo",
@@ -898,6 +946,7 @@
     "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
     "warnings": "Avvisi del percorso utensile",
     "usePins": "Usa i perni",
+    "pinsWithoutHoles": "Rimuovi prima i fori posizionati: una foratura dei perni fora solo i perni di riferimento.",
     "locatingPins": "I perni di riferimento",
     "pinDepth": "Profondo quanto dicono le impostazioni dei perni: {depth}."
   },
@@ -913,7 +962,7 @@
       "pocket": "Tasca",
       "drill": "Foratura",
       "engrave": "Incisione",
-      "vcarve": "Intaglio a V",
+      "vcarve": "V-carve",
       "relief_rough": "Sgrossatura 3D",
       "relief_finish": "Finitura 3D"
     },
@@ -921,6 +970,7 @@
       "profile": "Taglia attorno a: {target}",
       "pocket": "Svuota l’area all’interno di: {target}",
       "drill": "Fora i punti e i cerchi di: {target}",
+      "drillPlaced": "Posiziona i fori facendo clic nella vista, oppure seleziona prima dei percorsi per forarne punti e cerchi",
       "engrave": "Incidi lungo le linee di: {target}",
       "vcarve": "Intaglia all’interno di {target} con una fresa a V, più a fondo dove sono più larghe",
       "relief_rough": "Togli il materiale sopra {model} a livelli, di solito con una fresa a candela piatta",
@@ -928,7 +978,7 @@
     },
     "missingDrill": "Aggiungi una punta da foratura o una fresa a candela alla tua libreria: le frese a V non forano",
     "missingEngrave": "Aggiungi una fresa a V o una fresa a candela alla tua libreria: le punte da foratura non incidono",
-    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per l’intaglio a V",
+    "missingVCarve": "Aggiungi una fresa a V alla tua libreria per il V-carve",
     "noTool": "Aggiungi prima un utensile alla tua libreria",
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
@@ -964,7 +1014,17 @@
     "sideHints": {
       "top": "Lavorata sul lato superiore, per prima",
       "bottom": "Lavorata sul lato inferiore, una volta girato il grezzo"
-    }
+    },
+    "time": {
+      "underMinute": "meno di 1 min",
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
+    },
+    "timeTitle": "Tempo di lavorazione stimato",
+    "total": "Totale {time}",
+    "estimateNote": "Un minimo: accelerazioni e cambi utensile non sono contati. Imposta le accelerazioni della macchina per una stima più precisa.",
+    "estimateWithAcceleration": "Approssimativo: i cambi utensile non sono contati.",
+    "estimateNoMachine": "Approssimativo: i movimenti rapidi non sono contati finché il progetto non ha una macchina, né le accelerazioni e i cambi utensile."
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -976,6 +1036,7 @@
     "types": {
       "flat_end_mill": "Fresa a candela piatta",
       "ball_end_mill": "Fresa sferica",
+      "tapered_ball_end_mill": "Fresa sferica conica",
       "v_bit": "Fresa a V",
       "drill": "Punta da foratura"
     },
@@ -996,6 +1057,7 @@
     "cutDirection": "Direzione di taglio",
     "vAngle": "Angolo della V",
     "tipDiameter": "Diametro della punta",
+    "taperAngle": "Angolo",
     "cuttingData": "Dati di taglio",
     "spindleSpeed": "Velocità del mandrino",
     "feedRate": "Avanzamento",
@@ -1027,8 +1089,12 @@
     "safeZ": "Z di sicurezza (sopra il grezzo)",
     "entryClearance": "Distanza di ingresso (sopra il grezzo)",
     "limits": "Limiti",
+    "limitsHint": "Impostali sulle velocità massime del controller ($110–$112, espresse in mm/min). Limitano l’avanzamento e la velocità di affondo della fresa. I movimenti di spostamento tra un taglio e l’altro vanno sempre alle velocità massime del controller; la stima dei tempi usa questi valori per calcolarli.",
     "maxFeedXY": "Avanzamento max X/Y",
     "maxFeedZ": "Avanzamento max Z",
+    "accelerationXY": "Accelerazione X/Y",
+    "accelerationZ": "Accelerazione Z",
+    "accelerationHint": "Facoltativo: le accelerazioni del controller ($120–$122, in mm/s²). Le usa solo la stima dei tempi, per accelerare, frenare e affrontare gli angoli; se vuote, non conta le accelerazioni e sottostima.",
     "spindle": "Mandrino",
     "manualSpindle": "Mandrino manuale",
     "manualSpindleHint": "Velocità impostata a mano (es. la ghiera di una rifilatrice); il G-code non imposta la velocità del mandrino.",
@@ -1106,6 +1172,14 @@
     "leaveAnyway": "{error} Uscire comunque? Le modifiche non salvate andranno perse; esporta prima il progetto per conservarle.",
     "drawingProperties": "Proprietà del disegno"
   },
+  "Ribbon": {
+    "history": "Cronologia",
+    "drawing": "Disegno",
+    "importDrawing": "Importa un disegno",
+    "text": "Testo",
+    "relief_rough": "Sgrossatura",
+    "relief_finish": "Finitura"
+  },
   "BugReport": {
     "report": "Segnala un bug",
     "description": "Apre una nuova issue su GitHub con la tua segnalazione già compilata. Non viene inviato nulla finché non la invii lì, il che richiede un account GitHub.",
@@ -1165,6 +1239,8 @@
     "circle_center": "Centro del cerchio",
     "bounds_corner": "Angolo del riquadro",
     "bounds_center": "Centro del riquadro",
+    "midpoint": "Punto medio",
+    "edge": "Bordo",
     "anchors": {
       "top_left": "Grezzo, in alto a sinistra",
       "top_center": "Grezzo, in alto al centro",
@@ -1263,7 +1339,10 @@
     "width": "Larghezza",
     "height": "Altezza",
     "depth": "Profondità",
+    "top": "Sommità sotto il grezzo",
     "tooDeep": "Il modello è più profondo dello spessore del grezzo: non viene tagliato oltre il fondo del grezzo.",
+    "belowStock": "La sommità del modello è al fondo del grezzo o più in basso: non ne viene tagliato nulla e le operazioni attraversano il grezzo sopra di esso.",
+    "belowParting": "La sommità del modello è sotto la profondità di separazione: il lato superiore lascia intatto il grezzo sopra di esso. Imposta la profondità di separazione dentro il modello.",
     "original": "Originale: {size} (scala {scale}%)",
     "border": "Bordo",
     "borderNote": "Lo spazio che “Adatta al grezzo” lascerà su ogni lato. Modificarlo non sposta il modello.",
@@ -1331,9 +1410,9 @@
       "mm": "Millimetri",
       "in": "Pollici"
     },
-    "start": "Importa un disegno SVG o DXF, o un modello STL, per iniziare.",
+    "start": "Importa un disegno SVG o DXF, o un modello STL o STEP, per iniziare.",
     "importDrawing": "Importa SVG/DXF…",
-    "importStl": "Importa STL…",
+    "importModel": "Importa STL o STEP…",
     "dpi": "DPI",
     "dpiTitle": "Pixel per pollice",
     "dpiQuestion": "<name>{file}</name> indica la sua dimensione in pixel, o non la indica. Quanti pixel fanno un pollice? Controlla le impostazioni di esportazione del programma che l’ha creato.",
@@ -1394,7 +1473,10 @@
       "bottom": "Mostra il lato inferiore, visto da sotto una volta girato il grezzo"
     },
     "bottomSideHint": "Lato inferiore, visto da sotto. Scegli lo zero, seleziona i percorsi e modifica i ponticelli sul lato superiore.",
-    "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore."
+    "topSideSimulationHint": "Solo lato superiore: il grezzo prima di essere girato, senza i tagli del lato inferiore.",
+    "showParting": "Mostra il piano di separazione",
+    "showPartingIn3d": "Mostra il piano di separazione nella vista 3D",
+    "hideParting": "Nascondi il piano di separazione"
   },
   "Dialog": {
     "close": "Chiudi",
@@ -1431,7 +1513,7 @@
       },
       "operations": {
         "title": "Aggiungi operazioni",
-        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o intaglio a V) per i percorsi selezionati, poi scegli fresa e profondità."
+        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o V-carve) per i percorsi selezionati, poi scegli fresa e profondità."
       },
       "preview": {
         "title": "Anteprima dei percorsi utensile",

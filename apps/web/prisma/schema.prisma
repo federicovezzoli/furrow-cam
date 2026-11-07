@@ -87,6 +87,7 @@ model Verification {
 enum ToolType {
   flat_end_mill
   ball_end_mill
+  tapered_ball_end_mill
   v_bit
   drill
 }
@@ -109,6 +110,8 @@ model Tool {
   cutDirection CutDirection?
   vAngle       Float?
   tipDiameter  Float?
+  /// Tapered ball end mills' angle per side, in degrees.
+  taperAngle   Float?
   spindleRpm   Int
   feedRate     Float
   plungeRate   Float
@@ -145,6 +148,9 @@ model Machine {
   workAreaZ      Float
   maxFeedXY      Float
   maxFeedZ       Float
+  /// mm/s², for the time estimate only; `NULL` leaves acceleration out of it.
+  accelerationXY Float?
+  accelerationZ  Float?
   /// Both `NULL` for a manual spindle: the post-processor omits the `S` word.
   spindleRpmMin  Int?
   spindleRpmMax  Int?

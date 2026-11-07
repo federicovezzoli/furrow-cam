@@ -24,7 +24,10 @@ const OPERATION_TYPES = Operation.options.map((option) => option.shape.type.valu
 /** What happened, never names, sizes or contents of the user's work. */
 const TelemetryEvent = z.discriminatedUnion("event", [
   z.strictObject({ event: z.literal("project_created") }),
-  z.strictObject({ event: z.literal("file_imported"), format: z.enum(["svg", "dxf", "stl"]) }),
+  z.strictObject({
+    event: z.literal("file_imported"),
+    format: z.enum(["svg", "dxf", "stl", "step"]),
+  }),
   z.strictObject({
     event: z.literal("operation_added"),
     type: z.enum(OPERATION_TYPES),

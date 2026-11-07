@@ -13,5 +13,9 @@ describe("delocalizeDecimal", () => {
     expect(delocalizeDecimal("1,5 + 2,25", "de")).toBe("1.5 + 2.25");
     // An English thousands separator stays, so parsing rejects it instead of reading 1.5.
     expect(delocalizeDecimal("1,500", "en")).toBe("1,500");
+    for (const locale of ["es", "nl", "pt", "el", "tr"]) {
+      expect(delocalizeDecimal("1,5", locale)).toBe("1.5");
+    }
+    expect(delocalizeDecimal("1.5", "ja")).toBe("1.5");
   });
 });

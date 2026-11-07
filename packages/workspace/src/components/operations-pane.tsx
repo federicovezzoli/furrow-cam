@@ -1,7 +1,7 @@
 "use client";
 
 import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
-import type { Operation } from "@furrow/document";
+import { hasAccelerations, type Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
@@ -16,10 +16,10 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
-import { selectionTargets } from "../lib/path-selection";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
@@ -29,71 +29,31 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import {
-  addDrillOperation,
-  addEngraveOperation,
-  addPocketOperation,
-  addProfileOperation,
-  addReliefFinishOperation,
-  addReliefRoughOperation,
-  addVCarveOperation,
   deleteOperation,
   moveOperation,
   renameOperation,
   setOperationEnabled,
 } from "../stores/operation-actions";
 import { OperationNameInput } from "./operation-name-input";
-import { OperationTypeIcon } from "./operation-type-icon";
-import {
-  cuttingToolChoice,
-  defaultToolChoice,
-  drillToolChoice,
-  engraveToolChoice,
-  reliefFinishToolChoice,
-  reliefRoughToolChoice,
-  useToolLibrary,
-  vcarveToolChoice,
-} from "./tool-library";
+import { defaultToolChoice, useToolLibrary } from "./tool-library";
 
 /**
- * The Operations pane: shows the selected paths, adds profiles, pockets,
- * drill, engrave and V-carve operations from the selected paths and 3D
- * operations on the project's model, and lists operations in cutting order.
+ * The Operations pane: shows the selected paths (the ribbon's
+ * `AddOperationButtons` add operations from them) and lists operations in
+ * cutting order.
  */
 export function OperationsPane() {
   const t = useTranslations("Operations");
   const targetsLabel = useTargetsLabel();
-  // Why profiles, pockets and 3D operations can't be added with only drill bits in the library.
-  const sideways = t("sideways");
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const operations = useDocumentStore((s) => s.document.operations);
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const targets = useMemo(
-    () => selectionTargets(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const targets = useSelectionTargets();
+  const pathCount = useWorkspaceStore((s) => s.selectedPaths.length);
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
-  const cuttingTool = cuttingToolChoice(tools);
-  const drillTool = drillToolChoice(tools);
-  const engraveTool = engraveToolChoice(tools);
-  const vcarveTool = vcarveToolChoice(tools);
-  const models = useDocumentStore((s) => s.document.models);
-  const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
-  // The selected model, or the project's only one.
-  const model =
-    models.find(({ id }) => id === selectedModelId) ?? (models.length === 1 ? models[0] : null);
-
-  function add(addOperation: typeof addProfileOperation, choice: typeof tool, name: string) {
-    if (!choice) return;
-    // On the side in view (ADR-0060), the top in a one-sided project.
-    const { side } = workspace.getState();
-    const id = addOperation(store, { targets, tool: choice.tool, name, stockSide: side });
-    if (id) workspace.getState().selectOperation(id);
-  }
-
   const target = targets.length === 0 ? undefined : targetsLabel(targets);
 
   // The operation being dragged and the gap it would drop into (0 is before the first row).
@@ -102,133 +62,11 @@ export function OperationsPane() {
   const dropIndex = drag?.gap == null ? null : drag.gap > drag.from ? drag.gap - 1 : drag.gap;
   const dropGap = dropIndex === null || dropIndex === drag?.from ? null : drag?.gap;
 
-  const kinds: {
-    type: Operation["type"];
-    label: string;
-    addOperation: typeof addProfileOperation;
-    choice: typeof tool;
-    hint: string;
-    /** Why there is no fitting tool when the library has others. */
-    missingTool: string;
-  }[] = [
-    {
-      type: "profile",
-      label: t("types.profile"),
-      addOperation: addProfileOperation,
-      choice: cuttingTool,
-      hint: t("hints.profile", { target: target ?? "" }),
-      missingTool: sideways,
-    },
-    {
-      type: "pocket",
-      label: t("types.pocket"),
-      addOperation: addPocketOperation,
-      choice: cuttingTool,
-      hint: t("hints.pocket", { target: target ?? "" }),
-      missingTool: sideways,
-    },
-    {
-      type: "drill",
-      label: t("types.drill"),
-      addOperation: addDrillOperation,
-      choice: drillTool,
-      hint: t("hints.drill", { target: target ?? "" }),
-      missingTool: t("missingDrill"),
-    },
-    {
-      type: "engrave",
-      label: t("types.engrave"),
-      addOperation: addEngraveOperation,
-      choice: engraveTool,
-      hint: t("hints.engrave", { target: target ?? "" }),
-      missingTool: t("missingEngrave"),
-    },
-    {
-      type: "vcarve",
-      label: t("types.vcarve"),
-      addOperation: addVCarveOperation,
-      choice: vcarveTool,
-      hint: t("hints.vcarve", { target: target ?? "" }),
-      missingTool: t("missingVCarve"),
-    },
-  ];
-
-  const modelKinds: {
-    type: Operation["type"];
-    label: string;
-    addOperation: typeof addReliefFinishOperation;
-    choice: typeof tool;
-    hint: string;
-    missingTool: string;
-  }[] = [
-    {
-      type: "relief_rough",
-      label: t("types.relief_rough"),
-      addOperation: addReliefRoughOperation,
-      choice: reliefRoughToolChoice(tools),
-      missingTool: sideways,
-      hint: t("hints.relief_rough", { model: model?.fileName ?? "" }),
-    },
-    {
-      type: "relief_finish",
-      label: t("types.relief_finish"),
-      addOperation: addReliefFinishOperation,
-      choice: reliefFinishToolChoice(tools),
-      missingTool: sideways,
-      hint: t("hints.relief_finish", { model: model?.fileName ?? "" }),
-    },
-  ];
-
   return (
     <div className="grid gap-2 p-3 text-ui">
-      {models.length > 0 && (
-        <div className="@container">
-          <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
-            {modelKinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
-              const disabledReason = !choice
-                ? tool
-                  ? missingTool
-                  : t("noTool")
-                : !model
-                  ? t("selectModel")
-                  : undefined;
-              const button = (
-                <Button
-                  key={type}
-                  variant="outline"
-                  disabled={disabledReason !== undefined}
-                  onClick={() => {
-                    if (!model || !choice) return;
-                    const id = addOperation(store, {
-                      modelId: model.id,
-                      tool: choice.tool,
-                      name: label,
-                      stockSide: workspace.getState().side,
-                    });
-                    if (id) workspace.getState().selectOperation(id);
-                  }}
-                  aria-label={t("addLabel", { operation: label })}
-                  title={disabledReason === undefined ? hint : undefined}
-                  className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
-                >
-                  <OperationTypeIcon type={type} />
-                  <span className="max-w-full truncate text-ui-label">{label}</span>
-                </Button>
-              );
-              return disabledReason === undefined ? (
-                button
-              ) : (
-                // A disabled button gets no pointer events, so its wrapper shows why.
-                <span key={type} title={disabledReason} className="grid min-w-0">
-                  {button}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
       <Selection
         target={target}
+        pathCount={pathCount}
         onClear={() => workspace.getState().selectPaths([])}
         onSelectInside={() => {
           const { selectedPaths, selectPaths } = workspace.getState();
@@ -238,42 +76,6 @@ export function OperationsPane() {
           ]);
         }}
       />
-      {(geometry.length > 0 || models.length === 0) && (
-        <div className="@container">
-          <div className="grid grid-cols-3 gap-1 @[17rem]:grid-cols-5">
-            {kinds.map(({ type, label, addOperation, choice, hint, missingTool }) => {
-              const disabledReason = !choice
-                ? tool
-                  ? missingTool
-                  : t("noTool")
-                : !target
-                  ? t("selectPaths")
-                  : undefined;
-              const button = (
-                <Button
-                  key={type}
-                  variant="outline"
-                  disabled={disabledReason !== undefined}
-                  onClick={() => add(addOperation, choice, label)}
-                  aria-label={t("addLabel", { operation: label })}
-                  title={disabledReason === undefined ? hint : undefined}
-                  className="h-auto min-w-0 flex-col gap-1 px-0.5 py-2 has-[>svg]:px-0.5 text-ui"
-                >
-                  <OperationTypeIcon type={type} />
-                  <span className="max-w-full truncate text-ui-label">{label}</span>
-                </Button>
-              );
-              if (disabledReason === undefined) return button;
-              // A disabled button gets no pointer events, so its wrapper shows why.
-              return (
-                <span key={type} title={disabledReason} className="grid min-w-0">
-                  {button}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
       {tool && !target && geometry.length > 0 && (
         <p className="text-muted-foreground">{t("selectHint")}</p>
       )}
@@ -328,27 +130,35 @@ export function OperationsPane() {
           ))}
         </ol>
       )}
+      <JobTime />
     </div>
   );
 }
 
 /**
- * What is selected (`target`), if anything, with a way to add the closed
- * paths inside it (a pocket's islands) and a way to clear it.
+ * What is selected (`target`, `pathCount` paths), if anything, with a way to
+ * add the closed paths inside it (a pocket's islands) and a way to clear it.
  */
 function Selection({
   target,
+  pathCount,
   onClear,
   onSelectInside,
 }: {
   target: string | undefined;
+  pathCount: number;
   onClear: () => void;
   onSelectInside: () => void;
 }) {
   const t = useTranslations("Operations");
   if (!target) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-1">
+    <div
+      className="flex flex-wrap items-center gap-x-1"
+      // The demo videos check what their clicks selected (ADR-0075).
+      data-demo="selection"
+      data-count={pathCount}
+    >
       <p className="flex-[1_1_7rem] first-letter:uppercase">{target}</p>
       <div className="ml-auto flex">
         <Button
@@ -495,6 +305,7 @@ function OperationRow({
       )}
       {operation.enabled && (
         <>
+          <ToolpathTime operationId={operation.id} />
           <ToolpathStatus operationId={operation.id} />
           <ToolpathVisibility operation={operation} />
         </>
@@ -512,6 +323,81 @@ function OperationRow({
         <Trash2Icon />
       </Button>
     </li>
+  );
+}
+
+/** Formats an estimated time (#420) to the minute, as approximate. */
+function useFormatTime() {
+  const t = useTranslations("Operations");
+  return (seconds: number) => {
+    if (seconds < 60) return t("time.underMinute");
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return t("time.minutes", { minutes });
+    return t("time.hours", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
+  };
+}
+
+/** How long an operation's computed toolpath takes to cut. */
+function ToolpathTime({ operationId }: { operationId: string }) {
+  const t = useTranslations("Operations");
+  const formatTime = useFormatTime();
+  const seconds = useToolpathStore((s) => {
+    const entry = s.entries[operationId];
+    return entry?.status === "ready" ? entry.seconds : undefined;
+  });
+  if (seconds === undefined) return null;
+  return (
+    <span className="shrink-0 text-muted-foreground text-ui-label" title={t("timeTitle")}>
+      {formatTime(seconds)}
+    </span>
+  );
+}
+
+/**
+ * How long the enabled operations take to cut, once every toolpath is
+ * computed: one total, or one per side in a two-sided project (ADR-0060),
+ * and what the estimate leaves out.
+ */
+function JobTime() {
+  const t = useTranslations("Operations");
+  const formatTime = useFormatTime();
+  const operations = useDocumentStore((s) => s.document.operations);
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const note = useDocumentStore(({ document: { machine } }) =>
+    machine === null
+      ? "estimateNoMachine"
+      : hasAccelerations(machine)
+        ? "estimateWithAcceleration"
+        : "estimateNote",
+  );
+  // A string, so progress reports while toolpaths compute don't re-render it.
+  const time = useToolpathStore(({ entries }) => {
+    const sides = twoSided ? (["top", "bottom"] as const) : [null];
+    const totals = sides.flatMap((side) => {
+      const enabled = operations.filter(
+        (operation) => operation.enabled && (side === null || operation.stockSide === side),
+      );
+      let seconds = 0;
+      for (const { id } of enabled) {
+        const entry = entries[id];
+        if (entry?.status !== "ready") return [];
+        seconds += entry.seconds;
+      }
+      if (enabled.length === 0) return [];
+      return [side === null ? formatTime(seconds) : `${t(`sides.${side}`)} ${formatTime(seconds)}`];
+    });
+    return totals.length === 0 ? null : totals.join(" · ");
+  });
+  // A side's total shows while the other side computes; the demo videos wait for both (ADR-0075).
+  const ready = useToolpathStore(({ entries }) =>
+    operations.every(({ id, enabled }) => !enabled || entries[id]?.status === "ready"),
+  );
+  if (time === null) return null;
+  return (
+    <div className="grid gap-0.5 text-muted-foreground" data-demo={ready ? "job-time" : undefined}>
+      <p>{t("total", { time })}</p>
+      <p className="text-ui-label">{t(note)}</p>
+    </div>
   );
 }
 
@@ -563,6 +449,7 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("cancelled")}
         className="size-3.5 shrink-0 text-muted-foreground"
+        data-demo="toolpath-failed"
       >
         <title>{t("cancelledDetail")}</title>
       </CircleSlashIcon>
@@ -574,6 +461,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
         role="img"
         aria-label={t("failed", { error: format(entry.error) })}
         className="size-3.5 shrink-0 text-destructive"
+        // The demo videos stop at a failed toolpath instead of waiting for it (ADR-0075).
+        data-demo="toolpath-failed"
       >
         <title>{format(entry.error)}</title>
       </CircleAlertIcon>
@@ -587,6 +476,8 @@ export function ToolpathStatus({ operationId }: { operationId: string }) {
       role="img"
       aria-label={t("warnings", { warnings: warnings.join(" ") })}
       className="size-3.5 shrink-0 text-amber-600 dark:text-amber-500"
+      // The demo videos stop rather than record a job with warnings (ADR-0075).
+      data-demo="toolpath-warning"
     >
       <title>{warnings.join("\n")}</title>
     </TriangleAlertIcon>

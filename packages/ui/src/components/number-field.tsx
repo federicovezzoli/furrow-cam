@@ -84,6 +84,8 @@ export type NumberFieldProps = {
   suffix?: string;
   /** An error from elsewhere, e.g. the server; a parse error takes its place while shown. */
   error?: Translatable;
+  /** The id of a hint elsewhere that describes this field. */
+  describedBy?: string;
   placeholder?: string;
   disabled?: boolean;
   /** `stacked` puts the label above the input (forms), `inline` beside it (workspace panels). */
@@ -114,6 +116,7 @@ export function NumberField({
   step = DEFAULT_STEPS[quantity][units],
   suffix = unitLabel(quantity, units),
   error,
+  describedBy,
   placeholder,
   disabled,
   layout = "stacked",
@@ -337,7 +340,9 @@ export function NumberField({
             if (ARROW_KEYS.has(event.key)) endGesture(false);
           }}
           aria-invalid={shownError ? true : undefined}
-          aria-describedby={shownError ? errorId : undefined}
+          aria-describedby={
+            [shownError && errorId, describedBy].filter(Boolean).join(" ") || undefined
+          }
           className={cn(
             "tabular-nums",
             layout === "inline" && "h-control px-2 text-ui md:text-ui",

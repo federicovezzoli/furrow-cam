@@ -149,6 +149,8 @@ function plate(): ProjectDocument {
       leadIn: null,
       ramp: false,
       tabs: { width: 6, height: 2, positions: [[80, 20]] },
+      startPoints: [],
+      cornerOvercuts: null,
     },
   };
   return {
@@ -175,7 +177,7 @@ function plate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: holes.id, paths: null }],
         tool: drill,
-        params: { depth: 6, peck: true, stepOver: 40, pins: false },
+        params: { depth: 6, peck: true, stepOver: 40, pins: false, points: [] },
       },
       {
         id: id(),
@@ -245,6 +247,8 @@ function svgPart(): ProjectDocument {
           leadIn: null,
           ramp: false,
           tabs: null,
+          startPoints: [],
+          cornerOvercuts: null,
         },
       },
       {
@@ -290,6 +294,8 @@ function svgPart(): ProjectDocument {
               [70, 80],
             ],
           },
+          startPoints: [],
+          cornerOvercuts: null,
         },
       },
     ],
@@ -329,7 +335,7 @@ function svgSign(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byName("rect1")),
         tool: vBit,
-        params: { side: "on", depth: 1.5, ramp: false },
+        params: { side: "on", depth: 1.5, ramp: false, startPoints: [] },
       },
       {
         id: id(),
@@ -350,7 +356,7 @@ function svgSign(): ProjectDocument {
         targets: targets(doc, byName("Hole A")),
         // An end mill smaller than the hole bores it in a helix.
         tool: endMill,
-        params: { depth: 10, peck: false, stepOver: 40, pins: false },
+        params: { depth: 10, peck: false, stepOver: 40, pins: false, points: [] },
       },
     ],
   };
@@ -395,7 +401,7 @@ function inchPanel(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byName("Label")),
         tool: endMill,
-        params: { side: "on", depth: 0.04 * inch, ramp: true },
+        params: { side: "on", depth: 0.04 * inch, ramp: true, startPoints: [] },
       },
       {
         id: id(),
@@ -433,6 +439,8 @@ function inchPanel(): ProjectDocument {
           leadIn: null,
           ramp: false,
           tabs: null,
+          startPoints: [],
+          cornerOvercuts: null,
         },
       },
     ],
@@ -631,6 +639,8 @@ function outsideProfile(
       leadIn: null,
       ramp: true,
       tabs,
+      startPoints: [],
+      cornerOvercuts: null,
     },
   };
 }
@@ -673,7 +683,7 @@ function strutPlate(): ProjectDocument {
         stockSide: "top",
         targets: [{ shapeId: plates.id, paths: holes }],
         tool: spiral3,
-        params: { depth: 5, peck: false, stepOver: 75, pins: false },
+        params: { depth: 5, peck: false, stepOver: 75, pins: false, points: [] },
       },
       outsideProfile(id, "Plate", [{ shapeId: plates.id, paths: [0] }], spiral6, 5, null),
     ],
@@ -805,7 +815,7 @@ function flutedDoors(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byLayer("cannettature")),
         tool: bowl44,
-        params: { side: "on", depth: 4, ramp: true },
+        params: { side: "on", depth: 4, ramp: true, startPoints: [] },
       },
     ],
   };

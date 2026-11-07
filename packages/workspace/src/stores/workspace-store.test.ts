@@ -9,9 +9,9 @@ describe("workspace store", () => {
 
   it("shows the bottom side for viewing only, and only in a two-sided project", () => {
     const store = createWorkspaceStore();
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     store.getState().setSide("bottom");
-    expect(store.getState()).toMatchObject({ side: "bottom", editingTabs: false });
+    expect(store.getState()).toMatchObject({ side: "bottom", editing: null });
     store.getState().setPickingZero(true);
     expect(store.getState()).toMatchObject({ side: "top", pickingZero: true });
 
@@ -104,14 +104,14 @@ describe("workspace store", () => {
   it("simulates instead of editing tabs or picking the zero", () => {
     const store = createWorkspaceStore();
     expect(store.getState().simulating).toBe(false);
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     store.getState().setSimulating(true);
-    expect(store.getState()).toMatchObject({ simulating: true, editingTabs: false });
+    expect(store.getState()).toMatchObject({ simulating: true, editing: null });
     store.getState().setPickingZero(true);
     expect(store.getState()).toMatchObject({ simulating: false, pickingZero: true });
     store.getState().setSimulating(true);
     expect(store.getState().pickingZero).toBe(false);
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     expect(store.getState().simulating).toBe(false);
   });
 
@@ -126,19 +126,19 @@ describe("workspace store", () => {
     const store = createWorkspaceStore();
     store.getState().setView("orbit");
     store.getState().selectOperation("op");
-    store.getState().setEditingTabs(true);
-    expect(store.getState()).toMatchObject({ editingTabs: true, view: "top" });
+    store.getState().setEditing("tabs");
+    expect(store.getState()).toMatchObject({ editing: "tabs", view: "top" });
     store.getState().selectOperation("op");
-    expect(store.getState().editingTabs).toBe(true);
+    expect(store.getState().editing).toBe("tabs");
     store.getState().setView("orbit");
-    expect(store.getState().editingTabs).toBe(false);
+    expect(store.getState().editing).toBeNull();
 
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     store.getState().selectOperation("other");
-    expect(store.getState().editingTabs).toBe(false);
-    store.getState().setEditingTabs(true);
+    expect(store.getState().editing).toBeNull();
+    store.getState().setEditing("tabs");
     store.getState().clearSelection();
-    expect(store.getState().editingTabs).toBe(false);
+    expect(store.getState().editing).toBeNull();
   });
 
   it("picks the zero only in the top view, until the view, the selection or tab editing changes", () => {
@@ -158,10 +158,10 @@ describe("workspace store", () => {
     expect(store.getState().pickingZero).toBe(false);
 
     store.getState().setPickingZero(true);
-    store.getState().setEditingTabs(true);
-    expect(store.getState()).toMatchObject({ pickingZero: false, editingTabs: true });
+    store.getState().setEditing("tabs");
+    expect(store.getState()).toMatchObject({ pickingZero: false, editing: "tabs" });
     store.getState().setPickingZero(true);
-    expect(store.getState()).toMatchObject({ pickingZero: true, editingTabs: false });
+    expect(store.getState()).toMatchObject({ pickingZero: true, editing: null });
     store.getState().setPickingZero(false);
     expect(store.getState().pickingZero).toBe(false);
   });
@@ -188,11 +188,46 @@ describe("workspace store", () => {
       ],
     });
     store.getState().selectOperation("op");
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     store.getState().prune(withTabs({ width: 6, height: 3, positions: [] }));
-    expect(store.getState().editingTabs).toBe(true);
+    expect(store.getState().editing).toBe("tabs");
     store.getState().prune(withTabs(null));
-    expect(store.getState()).toMatchObject({ editingTabs: false, selectedOperationId: "op" });
+    expect(store.getState()).toMatchObject({ editing: null, selectedOperationId: "op" });
+    // Start points need only a profile or an engraving.
+    store.getState().setEditing("startPoints");
+    store.getState().prune(withTabs(null));
+    expect(store.getState().editing).toBe("startPoints");
+    store.getState().prune(createProjectDocument());
+    expect(store.getState().editing).toBeNull();
+    // Overcut editing ends with the overcuts.
+    const withOvercuts = (cornerOvercuts: unknown) => ({
+      ...createProjectDocument(),
+      operations: [
+        {
+          id: "op",
+          type: "profile",
+          params: { cornerOvercuts },
+        } as ProjectDocument["operations"][number],
+      ],
+    });
+    store.getState().selectOperation("op");
+    store.getState().setEditing("overcuts");
+    store.getState().prune(withOvercuts({ maxAngle: 90, excluded: [] }));
+    expect(store.getState().editing).toBe("overcuts");
+    store.getState().prune(withOvercuts(null));
+    expect(store.getState().editing).toBeNull();
+    // Placing holes needs a drill of shapes, not of the locating pins.
+    const withDrill = (pins: boolean) => ({
+      ...createProjectDocument(),
+      operations: [
+        { id: "op", type: "drill", params: { pins } } as ProjectDocument["operations"][number],
+      ],
+    });
+    store.getState().setEditing("holes");
+    store.getState().prune(withDrill(false));
+    expect(store.getState().editing).toBe("holes");
+    store.getState().prune(withDrill(true));
+    expect(store.getState().editing).toBeNull();
   });
 
   it("prunes ids and paths that are no longer in the document, keeping an unchanged selection", () => {
@@ -208,7 +243,7 @@ describe("workspace store", () => {
     store.getState().selectPaths([a0, a1, b0]);
     store.getState().selectOperation("op");
     store.getState().setHovered({ shapeId: "b", path: 0 });
-    store.getState().setEditingTabs(true);
+    store.getState().setEditing("tabs");
     store.getState().setToolpathVisible("op", false);
 
     const selected = store.getState().selectedPaths;
@@ -221,7 +256,7 @@ describe("workspace store", () => {
       selectedPaths: [a0, a1],
       selectedOperationId: null,
       hovered: null,
-      editingTabs: false,
+      editing: null,
       hiddenToolpathIds: [],
     });
   });

@@ -54,18 +54,36 @@ function unalignedStore() {
   return createDocumentStore(document);
 }
 
-/** How far the drawing (the square's first point) and the first tab are from where they were. */
+/**
+ * How far the drawing (the square's first point), the first tab, the first
+ * start point and the first excluded overcut are from where they were.
+ */
 function moved(before: ProjectDocument, after: ProjectDocument) {
   const first = (document: ProjectDocument) => document.geometry[0]?.paths[0]?.start ?? [0, 0];
   const tab = (document: ProjectDocument) => {
     const operation = document.operations[0];
     return (operation?.type === "profile" && operation.params.tabs?.positions[0]) || [0, 0];
   };
+  const start = (document: ProjectDocument) => {
+    const operation = document.operations[0];
+    return (operation?.type === "profile" && operation.params.startPoints[0]) || [0, 0];
+  };
+  const overcut = (document: ProjectDocument) => {
+    const operation = document.operations[0];
+    return (
+      (operation?.type === "profile" && operation.params.cornerOvercuts?.excluded[0]) || [0, 0]
+    );
+  };
   const delta = (a: number[], b: number[]) => [
     (b[0] ?? 0) - (a[0] ?? 0),
     (b[1] ?? 0) - (a[1] ?? 0),
   ];
-  return { drawing: delta(first(before), first(after)), tab: delta(tab(before), tab(after)) };
+  return {
+    drawing: delta(first(before), first(after)),
+    tab: delta(tab(before), tab(after)),
+    start: delta(start(before), start(after)),
+    overcut: delta(overcut(before), overcut(after)),
+  };
 }
 
 describe("setUnits", () => {
@@ -117,8 +135,10 @@ describe("setStockDimension", () => {
     setStockDimension(store, "height", 300);
     const after = store.getState().document;
     expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
-    const { drawing, tab } = moved(before, after);
+    const { drawing, tab, start, overcut } = moved(before, after);
     expectClose(tab, drawing);
+    expectClose(start, drawing);
+    expectClose(overcut, drawing);
     store.getState().undo();
     store.getState().undo();
     expect(store.getState().document).toEqual(before);
@@ -557,6 +577,20 @@ describe("two-sided projects (ADR-0060)", () => {
     const flat = createDocumentStore({ ...document, models: [shallow] });
     setTwoSided(flat, true);
     expect(flat.getState().document.stock.twoSided?.partingDepth).toBe(0.1);
+  });
+
+  it("part halfway down the deepest model, from its top below the stock top", () => {
+    const document = createProjectDocument();
+    const sunk = { ...model, placement: { ...model.placement, top: 3, depth: 8 } };
+    const store = createDocumentStore({ ...document, models: [sunk] });
+    setTwoSided(store, true);
+    expect(stock(store).twoSided?.partingDepth).toBe(7);
+    // The deepest model, not the one whose middle is lowest.
+    const full = { ...model, placement: { ...model.placement, top: 0, depth: 18 } };
+    const low = { ...model, placement: { ...model.placement, top: 10, depth: 2 } };
+    const both = createDocumentStore({ ...document, models: [full, low] });
+    setTwoSided(both, true);
+    expect(both.getState().document.stock.twoSided?.partingDepth).toBe(9);
   });
 
   it("move the bottom side's operations to the top when turned off, in one undo step", () => {

@@ -6,11 +6,17 @@ import { downloadFile } from "@furrow/ui/lib/download";
 import { formatWarning } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import { FileCodeIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslations } from "use-intl";
 import { track } from "../lib/telemetry";
 import { useWorkspaceHost } from "../providers/workspace-host";
-import { useDocumentStoreApi, useToolpathStoreApi } from "../providers/workspace-stores";
+import {
+  useDocumentStore,
+  useDocumentStoreApi,
+  useToolpathStore,
+  useToolpathStoreApi,
+} from "../providers/workspace-stores";
+import { hasEnabledOperations } from "../stores/document-store";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 
 /** Milliseconds between the downloads of one export's files. */
@@ -20,26 +26,30 @@ const DOWNLOAD_GAP = 500;
  * Downloads the open project's G-code for its machine's post-processor
  * (PRD-0001 R11). The toolpath worker posts the program from the toolpaths
  * it already computed for the document on screen (#133, ADR-0004), computing
- * only those it lacks or that changed since. Disabled while `disabledReason`
- * says why. Without an account, it explains how to get one instead (PRD-0008 G6).
+ * only those it lacks or that changed since. The workspace and the simulator
+ * show it; disabled without a machine or an enabled operation, and while an
+ * export started on either page runs. Without an account, it explains how to
+ * get one instead (PRD-0008 G6).
  */
-export function GcodeExportButton({
-  name,
-  disabledReason,
-  className,
-}: {
-  name: string;
-  disabledReason?: string;
-  className?: string;
-}) {
-  const [pending, setPending] = useState(false);
+export function GcodeExportButton({ className }: { className?: string }) {
   const t = useTranslations();
+  const { project, account } = useWorkspaceHost();
+  const { name } = project;
+  const hasMachine = useDocumentStore((s) => s.document.machine !== null);
+  const canCut = useDocumentStore(hasEnabledOperations);
+  const pending = useToolpathStore((s) => s.exporting);
+  const disabledReason =
+    // Without an account, the button explains what it needs instead.
+    !hasMachine && !account
+      ? t("Shell.chooseMachine")
+      : !canCut
+        ? t("Shell.addOperation")
+        : undefined;
   // Read when the program is made, so a rename while it is made counts.
   const latestName = useRef(name);
   latestName.current = name;
   const toolpaths = useToolpathStoreApi();
   const documents = useDocumentStoreApi();
-  const { account } = useWorkspaceHost();
   const { alert } = useDialogs();
 
   async function onClick() {
@@ -47,14 +57,15 @@ export function GcodeExportButton({
       account.prompt("export-gcode");
       return;
     }
-    setPending(true);
+    if (toolpaths.getState().exporting) return;
+    toolpaths.getState().setExporting(true);
     let result: GcodeExportResult;
     try {
       result = await toolpaths.getState().controls.exportGcode(() => latestName.current);
     } catch (error) {
       result = { error: error instanceof Error ? error.message : String(error) };
     } finally {
-      setPending(false);
+      toolpaths.getState().setExporting(false);
     }
     if ("error" in result) {
       void alert(formatWarning(t, { operation: result.operation, message: result.error }));

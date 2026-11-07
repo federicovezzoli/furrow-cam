@@ -276,6 +276,59 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #425: tapered ball end mills. Tools without a taper angle get `null` from
+  // the schema's default; the bump keeps older releases from opening
+  // documents that use them.
+  28: (doc) => doc,
+  // #434: models can sit below the stock top. Existing ones keep their top at it.
+  29: (doc) => {
+    if (Array.isArray(doc.models)) {
+      for (const model of doc.models) {
+        if (isObject(model) && isObject(model.placement)) model.placement.top ??= 0;
+      }
+    }
+    return doc;
+  },
+  // #437: machine accelerations. Snapshots without them get `null` from the
+  // schema's defaults, as for #425.
+  30: (doc) => doc,
+  // #426: start points on profiles and engravings. Existing ones have none.
+  31: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          (operation.type === "profile" || operation.type === "engrave") &&
+          isObject(operation.params)
+        ) {
+          operation.params.startPoints ??= [];
+        }
+      }
+    }
+    return doc;
+  },
+  // #428: corner overcuts on profiles. Existing ones have none.
+  32: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "profile" && isObject(operation.params)) {
+          operation.params.cornerOvercuts ??= null;
+        }
+      }
+    }
+    return doc;
+  },
+  // #429: holes placed in the viewport on drill operations. Existing ones have none.
+  33: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "drill" && isObject(operation.params)) {
+          operation.params.points ??= [];
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

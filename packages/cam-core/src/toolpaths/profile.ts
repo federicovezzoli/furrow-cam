@@ -1,5 +1,7 @@
 import {
+  type CornerOvercuts,
   distance,
+  GEOMETRY_TOLERANCE,
   type MillingDirection,
   type Point,
   type ProfileOperation,
@@ -10,8 +12,15 @@ import {
 } from "@furrow/document";
 import { containment, difference, offset, type Polygon, signedArea } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
-import { projectOnLoop } from "../geometry/loop";
+import { type Projection, projectOnLoop } from "../geometry/loop";
 import type { ToolpathMessage } from "./messages";
+import {
+  drawnCorners,
+  excludeOvercuts,
+  findOvercuts,
+  type Overcut,
+  withOvercuts,
+} from "./overcuts";
 import {
   type Box,
   bounds,
@@ -22,7 +31,15 @@ import {
   rampZ,
   Track,
 } from "./passes";
-import { coveredSpans, freeSpans, inSpans, loopLength, pointAlong, type Span } from "./tabs";
+import {
+  closedLoops,
+  coveredSpans,
+  freeSpans,
+  inSpans,
+  loopLength,
+  pointAlong,
+  type Span,
+} from "./tabs";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type ProfileOptions = {
@@ -37,9 +54,19 @@ export type ProfileOptions = {
 /**
  * A closed ring the tool follows, in cutting direction, without its closing
  * point, and the stretches of it where tabs keep the tool up. It never starts
- * on a tab, and has a point at each end of one.
+ * on a tab, and has a point at each end of one. `startPoint` when it starts
+ * where a start point put it.
  */
-type Contour = { ring: Point[]; wasteLeft: boolean; area: number; tabs: Span[] };
+type Contour = {
+  ring: Point[];
+  wasteLeft: boolean;
+  area: number;
+  tabs: Span[];
+  startPoint: boolean;
+};
+
+/** An open path the tool follows on the line, cut one way when a start point picked its end. */
+type OpenPath = { path: Point[]; oneWay: boolean };
 
 /** The contours of one offset, and where the tool centre may go without cutting the part. */
 type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
@@ -84,6 +111,15 @@ type Cut = Descent & {
  *   plus the tool diameter: it rises straight up at the tab's edge, crosses it
  *   flat and goes straight back down. Passes above the tab top are untouched,
  *   and no contour starts on a tab.
+ * - Each start point (#426) on a path goes to the contour or open path that
+ *   path makes, one per path. A closed contour starts there instead of halfway along its longest
+ *   edge, or at the nearer end of a tab it falls on; an open path is cut from
+ *   its nearer end on every pass, instead of back and forth.
+ * - Corner overcuts (#428), `inside` or `outside`: at each corner of a
+ *   contour sharp enough, where drawn segments meet, the tool runs along the
+ *   bisector until its edge reaches the drawn corner, less the allowance, and
+ *   back, on every pass; above a tab it stays at the tab top. An excluded
+ *   point on a drawn corner leaves out an overcut there.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -116,6 +152,9 @@ export type ContourCut = {
   finishPass?: boolean;
   leadIn?: { radius: number } | null;
   tabs?: ProfileTabs | null;
+  /** Where cuts start, in stock coordinates. */
+  startPoints?: Point[];
+  cornerOvercuts?: CornerOvercuts | null;
 };
 
 /** The toolpath of `settings` along `shapes` with `tool`, as `profileToolpath` describes. */
@@ -125,20 +164,28 @@ export function contourToolpath(
   settings: ContourCut,
   options: ProfileOptions,
 ): Toolpath {
-  const params = { allowance: 0, finishPass: false, leadIn: null, tabs: null, ...settings };
+  const params = {
+    allowance: 0,
+    finishPass: false,
+    leadIn: null,
+    tabs: null,
+    startPoints: [],
+    cornerOvercuts: null,
+    ...settings,
+  };
   const { offset } = params;
   const tolerance = options.tolerance ?? DEFAULT_CHORD_TOLERANCE;
   const radius = tool.diameter / 2;
   const warnings: ToolpathMessage[] = [];
 
   const closed: Polygon[] = [];
-  const open: Point[][] = [];
+  const open: OpenPath[] = [];
   let points = 0;
   for (const shape of shapes) {
     for (const path of shape.paths) {
       if (path.segments.length === 0) points++;
       else if (path.closed) closed.push(flattenPath(path, tolerance).slice(0, -1));
-      else open.push(flattenPath(path, tolerance));
+      else open.push({ path: flattenPath(path, tolerance), oneWay: false });
     }
   }
   if (points > 0) warnings.push({ code: "toolpath.skippedPoints", values: { count: points } });
@@ -169,6 +216,25 @@ export function contourToolpath(
     warnings.push({ code: "toolpath.pathsTooSmall" });
   }
 
+  if (params.startPoints.length > 0) {
+    // Open paths are only cut on the line.
+    const paths = params.side === "on" ? open : [];
+    const drawn = {
+      lines: [
+        ...closed.map((ring) => [...ring, ring[0] as Point]),
+        ...paths.map(({ path }) => path),
+      ],
+      // The paths are flattened as the viewport flattens them, give or take the chords and float noise.
+      within: tolerance + GEOMETRY_TOLERANCE,
+    };
+    const left = placeStarts(roughing.contours, paths, params.startPoints, drawn);
+    const leftFinishing = finishing
+      ? placeStarts(finishing.contours, [], params.startPoints, drawn)
+      : left;
+    const count = roughing.contours.length === 0 ? leftFinishing : Math.max(left, leftFinishing);
+    if (count > 0) warnings.push({ code: "toolpath.startPointsLeftOut", values: { count } });
+  }
+
   const { tabs } = params;
   if (tabs && tabs.positions.length > 0) {
     if (tabs.height >= params.depth) {
@@ -177,20 +243,49 @@ export function contourToolpath(
     cut.tabTop = Math.min(0, tabs.height - params.depth);
     const span = tabs.width + tool.diameter;
     const reach = offset + params.allowance + tabs.width;
-    const missed = placeTabs(roughing.contours, tabs.positions, reach, span);
-    const missedFinishing = finishing
+    const placed = placeTabs(roughing.contours, tabs.positions, reach, span);
+    const placedFinishing = finishing
       ? placeTabs(finishing.contours, tabs.positions, offset + tabs.width, span)
-      : missed;
+      : placed;
+    const fromRoughing = roughing.contours.length > 0;
     // A tab the finish lap leaves out is cut away at full depth, so it counts as missed too.
-    const left =
-      roughing.contours.length === 0 ? missedFinishing : Math.max(missed, missedFinishing);
+    const left = fromRoughing
+      ? Math.max(placed.missed, placedFinishing.missed)
+      : placedFinishing.missed;
     if (left > 0) {
       warnings.push({ code: "toolpath.tabsLeftOut", values: { count: left } });
     }
+    const moved = fromRoughing
+      ? Math.max(placed.startsMoved, placedFinishing.startsMoved)
+      : placedFinishing.startsMoved;
+    if (moved > 0) {
+      warnings.push({ code: "toolpath.startPointsOnTabs", values: { count: moved } });
+    }
+  }
+
+  const { cornerOvercuts } = params;
+  if (cornerOvercuts && params.side !== "on") {
+    // After the start points and tabs, so neither lands on an overcut.
+    const corners = drawnCorners(shapes, cornerOvercuts.maxAngle);
+    const addOvercuts = ({ contours: found }: Contours, distance: number) => {
+      const overcuts = excludeOvercuts(
+        findOvercuts(found, distance, corners, tolerance),
+        cornerOvercuts.excluded,
+        tolerance,
+      );
+      found.forEach((contour, i) => {
+        const own = overcuts.filter((overcut) => overcut.ring === i);
+        Object.assign(contour, withOvercuts(contour.ring, contour.tabs, own));
+      });
+    };
+    addOvercuts(roughing, offset + params.allowance);
+    if (finishing) addOvercuts(finishing, offset);
   }
 
   // Open paths never free the part, so they go before any closed contour.
-  if (params.side === "on") for (const path of open) cutOpenPath(cut, path, levels);
+  if (params.side === "on") {
+    for (const { path, oneWay } of open) cutOpenPath(cut, path, levels, oneWay);
+  }
 
   // A finish lap follows the depth passes it enters from, so inner contours
   // are finished before the outline frees the part.
@@ -251,6 +346,24 @@ export function contourToolpath(
 }
 
 /**
+ * The corner overcuts (#428) up to `maxAngle` that a profile with a tool of
+ * `radius` cuts along `shapes` on `side`, at the finished contour, none
+ * excluded yet (`excludeOvercuts`).
+ */
+export function profileOvercuts(
+  shapes: Shape[],
+  side: ProfileSide,
+  radius: number,
+  maxAngle: number,
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): Overcut[] {
+  if (side === "on") return [];
+  const closed = closedLoops(shapes, tolerance).map((loop) => loop.slice(0, -1));
+  const { contours: found } = contours(closed, { side, direction: "climb" }, radius);
+  return findOvercuts(found, radius, drawnCorners(shapes, maxAngle), tolerance);
+}
+
+/**
  * The rings the tool centre follows, `distance` away from the closed paths on
  * `side`, in cutting direction and cutting order.
  */
@@ -273,6 +386,7 @@ function contours(
       wasteLeft: (side === "inside") !== reverse,
       area: Math.abs(signedArea(ring)),
       tabs: [] as Span[],
+      startPoint: false,
     }))
     .sort((a, b) => a.area - b.area);
 
@@ -357,15 +471,20 @@ function cutContour(
   }
 }
 
-/** Cuts an open path pass by pass, alternating direction so each pass starts where the last ended. */
-function cutOpenPath(cut: Cut, path: Point[], levels: number[]) {
+/**
+ * Cuts an open path pass by pass, alternating direction so each pass starts
+ * where the last ended, or `oneWay` from its start, back there above the
+ * stock between passes.
+ */
+function cutOpenPath(cut: Cut, path: Point[], levels: number[], oneWay = false) {
   const forward = path;
   const backward = [...path].reverse();
   if (new Track(path).length <= cut.tolerance) return;
   enter(cut, path[0] as Point);
   let z = 0;
   levels.forEach((level, i) => {
-    const pass = i % 2 === 0 ? forward : backward;
+    if (oneWay && i > 0) enter(cut, path[0] as Point);
+    const pass = oneWay || i % 2 === 0 ? forward : backward;
     descend(cut, pass, z, level);
     feedAlong(cut, pass, level);
     z = level;
@@ -586,26 +705,79 @@ function feedTrack(
 }
 
 /**
+ * Restarts each of `contours`, or turns each of the open `paths` one way from
+ * its nearer end, at the start point of `positions` nearest to it. A start
+ * point counts on one of the `drawn` lines it lies on, within `within`, and
+ * goes to the nearest point of the contour that line makes: one nearest to
+ * that line of all of them, at any corner. Returns how many positions were
+ * off every line, on one that makes no contour, or went to a path that
+ * already had one.
+ */
+function placeStarts(
+  contours: Contour[],
+  paths: OpenPath[],
+  positions: Point[],
+  drawn: { lines: Point[][]; within: number },
+): number {
+  const lines = [
+    ...contours.map((contour) => [...contour.ring, contour.ring[0] as Point]),
+    ...paths.map(({ path }) => path),
+  ];
+  const boxes = lines.map(bounds);
+  const drawnBoxes = drawn.lines.map(bounds);
+  let left = 0;
+  const taken = new Set<number>();
+  for (const position of positions) {
+    const own = nearestLine(drawn.lines, drawnBoxes, position, drawn.within);
+    const best = own && nearestLine(lines, boxes, position);
+    const from = best && nearestLine(drawn.lines, drawnBoxes, best.point);
+    const ownLine = own && (drawn.lines[own.index] as Point[]);
+    if (
+      !own ||
+      !best ||
+      !from ||
+      projectOnLoop(ownLine as Point[], best.point).distance > from.distance + drawn.within ||
+      taken.has(best.index)
+    ) {
+      left++;
+      continue;
+    }
+    taken.add(best.index);
+    const line = lines[best.index] as Point[];
+    const contour = contours[best.index];
+    if (contour) {
+      contour.ring = restartAt(line, best.at);
+      contour.startPoint = true;
+    } else {
+      const open = paths[best.index - contours.length] as OpenPath;
+      if (best.at > loopLength(line) / 2) open.path = [...line].reverse();
+      open.oneWay = true;
+    }
+  }
+  return left;
+}
+
+/**
  * Gives each of `contours` the tabs at `positions` it is nearest to, if no
  * further than `reach`, each covering `span` along it. Restarts a contour
  * that would start on a tab in the middle of the longest piece of an edge
- * that no tab covers, so a lead-in still meets a straight. Returns how many
- * positions were too far from every contour.
+ * that no tab covers, so a lead-in still meets a straight, or at the nearer
+ * end of that tab when a start point put the start there. Returns how many
+ * positions were too far from every contour, and how many start points moved.
  */
-function placeTabs(contours: Contour[], positions: Point[], reach: number, span: number): number {
+function placeTabs(
+  contours: Contour[],
+  positions: Point[],
+  reach: number,
+  span: number,
+): { missed: number; startsMoved: number } {
   const loops = contours.map((contour) => [...contour.ring, contour.ring[0] as Point]);
   const boxes = contours.map((contour) => bounds(contour.ring));
   const centres = contours.map((): number[] => []);
   let missed = 0;
+  let startsMoved = 0;
   for (const position of positions) {
-    let best: { index: number; at: number; distance: number } | null = null;
-    for (let index = 0; index < loops.length; index++) {
-      if (!inBox(position, boxes[index] as Box, reach)) continue;
-      const projection = projectOnLoop(loops[index] as Point[], position);
-      if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
-        best = { index, at: projection.at, distance: projection.distance };
-      }
-    }
+    const best = nearestLine(loops, boxes, position, reach);
     if (best) centres[best.index]?.push(best.at);
     else missed++;
   }
@@ -619,7 +791,16 @@ function placeTabs(contours: Contour[], positions: Point[], reach: number, span:
     const last = tabs.at(-1) as Span;
     const covered = first[0] <= 0 && first[1] >= length;
     if (!covered && (first[0] <= 0 || last[1] >= length)) {
-      const start = freeStart(loops[i] as Point[], tabs, length);
+      let start: number;
+      if (contour.startPoint) {
+        // The tab over the start ends at `first[1]` and, crossing the start, begins at `last[0]`.
+        const after = first[0] <= 0 ? first[1] : Number.POSITIVE_INFINITY;
+        const before = last[1] >= length ? length - last[0] : Number.POSITIVE_INFINITY;
+        start = after <= before ? after : last[0];
+        startsMoved++;
+      } else {
+        start = freeStart(loops[i] as Point[], tabs, length);
+      }
       contour.ring = restartAt(loops[i] as Point[], start);
       at = at.map((centre) => centre - start);
       length = loopLength([...contour.ring, contour.ring[0] as Point]);
@@ -628,7 +809,28 @@ function placeTabs(contours: Contour[], positions: Point[], reach: number, span:
     contour.ring = withStops(contour.ring, tabs.flat());
     contour.tabs = tabs;
   });
-  return missed;
+  return { missed, startsMoved };
+}
+
+/**
+ * The point of `lines` nearest to `point`, with its line's index, if one is
+ * within `reach`. `boxes` are the lines' bounds.
+ */
+function nearestLine(
+  lines: Point[][],
+  boxes: Box[],
+  point: Point,
+  reach = Number.POSITIVE_INFINITY,
+): (Projection & { index: number }) | null {
+  let best: (Projection & { index: number }) | null = null;
+  for (let index = 0; index < lines.length; index++) {
+    if (!inBox(point, boxes[index] as Box, reach)) continue;
+    const projection = projectOnLoop(lines[index] as Point[], point);
+    if (projection.distance <= reach && (!best || projection.distance < best.distance)) {
+      best = { ...projection, index };
+    }
+  }
+  return best;
 }
 
 /** The middle of the longest piece of an edge of closed `loop` that none of `tabs` covers. */

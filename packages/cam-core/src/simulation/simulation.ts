@@ -15,7 +15,7 @@ export const CELLS_PER_DIAMETER = 12;
 export const MAX_HEIGHTMAP_CELLS = 2048 * 4096;
 
 /** What of a tool decides the shape it cuts. */
-export type CutterShape = Pick<Tool, "type" | "diameter" | "vAngle" | "tipDiameter">;
+export type CutterShape = Pick<Tool, "type" | "diameter" | "vAngle" | "tipDiameter" | "taperAngle">;
 
 /**
  * The moves of one tool, as `LineSegments` positions in stock coordinates
@@ -167,10 +167,17 @@ export type CutterProfile = {
 /**
  * Flat end mills and drills cut a flat bottom (the document has no drill
  * point angle), ball end mills a hemisphere, V-bits a cone over their flat
- * tip (always narrower than the bit, the tool schema says). Each profile
- * rises with distance and is convex, which `sweep` relies on.
+ * tip (always narrower than the bit, the tool schema says), tapered ball end
+ * mills a cone of `taperAngle` per side over a ball tip, tangent to it. Each
+ * profile rises with distance and is convex, which `sweep` relies on.
  */
-export function cutterProfile({ type, diameter, vAngle, tipDiameter }: CutterShape): CutterProfile {
+export function cutterProfile({
+  type,
+  diameter,
+  vAngle,
+  tipDiameter,
+  taperAngle,
+}: CutterShape): CutterProfile {
   const radius = diameter / 2;
   switch (type) {
     case "flat_end_mill":
@@ -184,6 +191,26 @@ export function cutterProfile({ type, diameter, vAngle, tipDiameter }: CutterSha
         reach: (depth) =>
           depth >= radius ? radius : Math.sqrt(radius * radius - (radius - depth) ** 2),
       };
+    case "tapered_ball_end_mill": {
+      const ball = (tipDiameter ?? 0) / 2;
+      const angle = ((taperAngle ?? 0) * Math.PI) / 180;
+      /** Where the cone meets the ball: distance from the axis and height. */
+      const tangent = ball * Math.cos(angle);
+      const tangentHeight = ball * (1 - Math.sin(angle));
+      const slope = Math.tan(angle);
+      return {
+        radius,
+        flat: false,
+        height: (d) =>
+          d <= tangent
+            ? ball - Math.sqrt(Math.max(ball * ball - d * d, 0))
+            : tangentHeight + (d - tangent) / slope,
+        reach: (depth) =>
+          depth <= tangentHeight
+            ? Math.sqrt(Math.max(ball * ball - (ball - depth) ** 2, 0))
+            : Math.min(radius, tangent + (depth - tangentHeight) * slope),
+      };
+    }
     case "v_bit": {
       const tip = (tipDiameter ?? 0) / 2;
       const slope = 1 / Math.tan((((vAngle ?? 90) / 2) * Math.PI) / 180);

@@ -45,15 +45,25 @@ export const RELIEF_CELLS_PER_RADIUS = 20;
 export const MAX_RELIEF_CELLS = 4096 * 4096;
 
 /**
- * How far above the dropped tool a pass may cut between the points it keeps:
- * passes are merged into straight moves that never go below the surface the
- * tool may reach, and leave at most this much more.
+ * How far above the dropped tool a pass may cut between the points it keeps,
+ * in finishing and roughing: passes are merged into straight moves that never
+ * go below the tool where it was dropped, and leave at most this much more.
  */
-export const RELIEF_TOLERANCE = 0.01;
+export const RELIEF_TOLERANCE = 0.02;
+
+/**
+ * The diameter 3D passes and cells are sized by: a tapered ball end mill's
+ * ball, which does the finishing (#425), else the tool's.
+ */
+export function finishingDiameter(tool: Pick<Tool, "type" | "diameter" | "tipDiameter">): number {
+  return tool.type === "tapered_ball_end_mill" && tool.tipDiameter !== null
+    ? tool.tipDiameter
+    : tool.diameter;
+}
 
 /** The cell size `tool` wants: `RELIEF_CELL_SIZE`, or a twentieth of its radius if smaller. */
-export function reliefCellSize(tool: Pick<Tool, "diameter">): number {
-  return Math.min(RELIEF_CELL_SIZE, tool.diameter / 2 / RELIEF_CELLS_PER_RADIUS);
+export function reliefCellSize(tool: Pick<Tool, "type" | "diameter" | "tipDiameter">): number {
+  return Math.min(RELIEF_CELL_SIZE, finishingDiameter(tool) / 2 / RELIEF_CELLS_PER_RADIUS);
 }
 
 /**
@@ -231,6 +241,7 @@ export function* offsetHeightsSteps(
     diameter: 2 * distance,
     vAngle: null,
     tipDiameter: null,
+    taperAngle: null,
   });
   const dropper = new ToolDropper(heights, grid, sphere);
   const offset = new Float32Array(columns * rows);
@@ -389,11 +400,14 @@ export class ToolDropper {
     }
   }
 
-  /** The tip height at `[x, y]` (in grid coordinates), no lower than `floor`. */
-  dropPoint(x: number, y: number, floor: number): number {
+  /**
+   * The tip height at `[x, y]` (in grid coordinates), no lower than `floor`,
+   * with the profile `widened` by `by`.
+   */
+  dropPoint(x: number, y: number, floor: number, by = 0): number {
     const { heights, profile } = this;
     const { columns, rows, cellWidth, cellHeight } = this.grid;
-    const radius = profile.radius;
+    const radius = profile.radius + by;
     let best = floor;
     const firstRow = Math.max(0, Math.ceil((y - radius) / cellHeight - 0.5));
     const lastRow = Math.min(rows - 1, Math.floor((y + radius) / cellHeight - 0.5));
@@ -412,14 +426,14 @@ export class ToolDropper {
         const dx = (column + 0.5) * cellWidth - x;
         const d2 = dx * dx + dy2;
         if (d2 > radius2) continue;
-        const value = cell - profile.height(Math.sqrt(d2));
+        const value = cell - profile.height(Math.max(0, Math.sqrt(d2) - by));
         if (value > best) best = value;
       }
     }
     for (const disc of this.discs) {
       const distance = discDistance(disc, x, y);
       if (distance > radius) continue;
-      best = Math.max(best, disc.top - profile.height(Math.max(0, distance)));
+      best = Math.max(best, disc.top - profile.height(Math.max(0, distance - by)));
     }
     if (best < this.outside && this.empty(Math.floor(x / cellWidth), Math.floor(y / cellHeight))) {
       return this.outside;
@@ -558,12 +572,16 @@ export function widened(profile: CutterProfile, by: number): CutterProfile {
 }
 
 /**
- * Of heights sampled at equal steps along a line, the indices to keep so the
- * straight moves between them never go below a sample and pass no more than
- * `tolerance` above any: each move runs as far as one slope fits every
- * sample on the way.
+ * Of heights sampled along a line, at equal steps or at positions `at`, the
+ * indices to keep so the straight moves between them never go below a sample
+ * and pass no more than `tolerance` above any: each move runs as far as one
+ * slope fits every sample on the way.
  */
-export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): number[] {
+export function simplifyHeights(
+  heights: ArrayLike<number>,
+  tolerance: number,
+  at: (index: number) => number = (index) => index,
+): number[] {
   const count = heights.length;
   if (count <= 2) return Array.from({ length: count }, (_, i) => i);
   const kept = [0];
@@ -572,9 +590,9 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
   let high = Infinity;
   for (let i = 1; i < count; i++) {
     const za = heights[anchor] as number;
-    const steps = i - anchor;
-    const slope = ((heights[i] as number) - za) / steps;
-    if (steps > 1 && (slope < low - 1e-12 || slope > high + 1e-12)) {
+    const run = at(i) - at(anchor);
+    const slope = ((heights[i] as number) - za) / run;
+    if (i - anchor > 1 && (slope < low - 1e-12 || slope > high + 1e-12)) {
       anchor = i - 1;
       kept.push(anchor);
       low = -Infinity;
@@ -583,7 +601,7 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
       continue;
     }
     low = Math.max(low, slope);
-    high = Math.min(high, ((heights[i] as number) + tolerance - za) / steps);
+    high = Math.min(high, ((heights[i] as number) + tolerance - za) / run);
   }
   kept.push(count - 1);
   return kept;
@@ -593,59 +611,93 @@ export function simplifyHeights(heights: ArrayLike<number>, tolerance: number): 
 const MAX_SUBSAMPLES = 16;
 
 /**
+ * How far a straight move on a steep face may pass below the tool halfway
+ * along: a micrometre, about how much the tool dropped between cell centres
+ * bulges above a straight line, even on a flat face.
+ */
+const STRAIGHT_SLACK = 1e-3;
+
+/**
  * The moves along heights sampled `spacing` apart on a straight line, as
  * `[sample, height]` pairs from the first sample, `sample` fractional
- * between samples: merged with `simplifyHeights`, except where the tool
- * rises or drops more than `spacing` between two samples (#151). The model
- * may rise above a straight move there, such as a wall a flat end mill drops
- * off anywhere between the samples, whose top edge the move would nick.
+ * between samples, merged with `simplifyHeights` (ADR-0070).
  *
- * With `between` (the tool's height at a fraction of the way from one sample
- * to the next), the tool is dropped at points between such samples, about
- * as many as the samples are steep, and follows them. Wherever the tool
- * still rises or drops more than their spacing between two of them, or
- * without `between`, it goes over at the higher of the two instead: along
- * at that height, then straight down or up.
+ * Where the tool rises or drops more than `spacing` between two samples,
+ * the model may rise above a straight move, such as a wall a flat end mill
+ * drops off anywhere between them, whose top edge the move would nick
+ * (#151). With `between` (the tool's height at a fraction of the way from
+ * one sample to the next), the tool is dropped at points between such
+ * samples, about as many as the samples are steep, and goes straight from
+ * one to the next where the move passes halfway between them no lower than
+ * the tool, nor more than half the tolerance above it: a steep face, not a
+ * wall. Elsewhere, or without `between`, it goes over at the higher of the
+ * two: along at that height, then straight down or up. With `between`, no
+ * lower than the tool dropped halfway with its profile widened by half the
+ * way (`between`'s `by`, in the units of `spacing`), which keeps the move
+ * clear of a face still rising into the wall (#439). Between samples
+ * closer in height, a feature narrower than a cell can rise above the
+ * straight move unseen (ADR-0073).
  */
 export function sampleMoves(
   heights: ArrayLike<number>,
   spacing: number,
-  between: ((sample: number, fraction: number) => number) | null = null,
+  between: ((sample: number, fraction: number, by?: number) => number) | null = null,
   tolerance = RELIEF_TOLERANCE,
 ): [number, number][] {
-  const moves: [number, number][] = [];
+  // Points in flat arrays, in runs from `starts` between straight-up or
+  // straight-down moves, each run merged on its own.
+  const at: number[] = [];
+  const zs: number[] = [];
+  const starts = [0];
   const push = (sample: number, height: number) => {
-    const last = moves.at(-1);
-    if (!last || last[0] !== sample || last[1] !== height) moves.push([sample, height]);
+    const last = at.length - 1;
+    if (at[last] === sample) {
+      if (zs[last] === height) return;
+      starts.push(at.length);
+    }
+    at.push(sample);
+    zs.push(height);
   };
-  /** Over at the higher of two points `a` and `b`. */
-  const over = (a: number, za: number, b: number, zb: number) => {
-    const high = Math.max(za, zb);
+  /** Over at the higher of two points `a` and `b`, and of `clear`. */
+  const over = (a: number, za: number, b: number, zb: number, clear = -Infinity) => {
+    const high = Math.max(za, zb, clear);
     push(a, high);
     push(b, high);
     push(b, zb);
   };
   const count = heights.length;
-  let from = 0;
   for (let k = 0; k < count; k++) {
     const za = heights[k] as number;
+    push(k, za);
     const zb = heights[k + 1] as number;
-    const steep = k + 1 < count && Math.abs(zb - za) > spacing;
-    if (k + 1 < count && !steep) continue;
-    const run = Array.from({ length: k - from + 1 }, (_, i) => heights[from + i] as number);
-    for (const i of simplifyHeights(run, tolerance)) push(from + i, run[i] as number);
-    if (steep) {
-      const parts = between ? Math.min(MAX_SUBSAMPLES, Math.ceil(Math.abs(zb - za) / spacing)) : 1;
-      let previous = za;
-      for (let j = 1; j <= parts; j++) {
-        const z = j === parts ? zb : (between as (s: number, f: number) => number)(k, j / parts);
-        const [a, b] = [k + (j - 1) / parts, k + j / parts];
-        if (Math.abs(z - previous) > spacing / parts) over(a, previous, b, z);
-        else push(b, z);
-        previous = z;
-      }
+    if (k + 1 >= count || Math.abs(zb - za) <= spacing) continue;
+    if (!between) {
+      over(k, za, k + 1, zb);
+      continue;
     }
-    from = k + 1;
+    const parts = Math.min(MAX_SUBSAMPLES, Math.ceil(Math.abs(zb - za) / spacing));
+    let previous = za;
+    for (let j = 1; j <= parts; j++) {
+      const z = j === parts ? zb : between(k, j / parts);
+      const [a, b] = [k + (j - 1) / parts, k + j / parts];
+      let straight = Math.abs(z - previous) <= spacing / parts;
+      if (!straight) {
+        const above = (previous + z) / 2 - between(k, (j - 0.5) / parts);
+        straight = above >= -STRAIGHT_SLACK && above <= tolerance / 2;
+      }
+      if (straight) push(b, z);
+      else over(a, previous, b, z, between(k, (j - 0.5) / parts, spacing / parts / 2));
+      previous = z;
+    }
+  }
+  starts.push(at.length);
+  const moves: [number, number][] = [];
+  for (let r = 1; r < starts.length; r++) {
+    const first = starts[r - 1] as number;
+    const run = zs.slice(first, starts[r]);
+    for (const i of simplifyHeights(run, tolerance, (i) => at[first + i] as number)) {
+      moves.push([at[first + i] as number, run[i] as number]);
+    }
   }
   return moves;
 }
@@ -1345,7 +1397,7 @@ export function* parallelPassesSteps(
   const us = area.map(([u]) => u);
   const firstRow = Math.ceil(Math.min(...vs) / cellHeight - 0.5);
   const finalRow = Math.floor(Math.max(...vs) / cellHeight - 0.5);
-  const spacing = (tool.diameter * params.stepOver) / 100;
+  const spacing = (finishingDiameter(tool) * params.stepOver) / 100;
   const rowsApart = Math.max(1, Math.floor(spacing / cellHeight + 1e-9));
   const count = Math.ceil((finalRow - firstRow) / rowsApart) + 1;
   let lastRow: number | null = null;
@@ -1353,8 +1405,8 @@ export function* parallelPassesSteps(
   const tips = new Float64Array(samplesAtMost);
   const stockTips = new Float64Array(samplesAtMost);
   // Gaps narrower than the tool aren't worth leaving the cut for.
-  const gap = Math.ceil(tool.diameter / cellWidth);
-  const maxLink = 2 * tool.diameter;
+  const gap = Math.ceil(finishingDiameter(tool) / cellWidth);
+  const maxLink = 2 * finishingDiameter(tool);
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const zigzag = strategy.direction === "zigzag";
   let previous: { u: number; v: number; z: number } | null = null;
@@ -1442,7 +1494,8 @@ export function* parallelPassesSteps(
           link[0] = from.z;
           for (let k = 1; k < steps; k++) link[k] = dropper.dropPoint(...linkAt(k), floor);
           link[steps] = pass[a] as number;
-          const linkBetween = (k: number, f: number) => dropper.dropPoint(...linkAt(k + f), floor);
+          const linkBetween = (k: number, f: number, by?: number) =>
+            dropper.dropPoint(...linkAt(k + f), floor, by);
           for (const [k, z] of sampleMoves(link, Math.hypot(du, dv) / steps, linkBetween)) {
             // The first may climb straight up from where the tool is; the
             // builder drops a move that goes nowhere.
@@ -1452,7 +1505,8 @@ export function* parallelPassesSteps(
           builder.travel(start[0], start[1]);
           enter(start, entryAt(a));
         }
-        const passBetween = (i: number, f: number) => dropper.dropPoint(u(a + i + f), v, floor);
+        const passBetween = (i: number, f: number, by?: number) =>
+          dropper.dropPoint(u(a + i + f), v, floor, by);
         for (const [i, z] of sampleMoves(pass.subarray(a, b + 1), cellWidth, passBetween)) {
           builder.feed(at(u(a + i), v, z), tool.feedRate);
         }

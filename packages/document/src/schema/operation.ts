@@ -104,6 +104,19 @@ export const ProfileTabs = z.strictObject({
 });
 export type ProfileTabs = z.infer<typeof ProfileTabs>;
 
+/**
+ * Corner overcuts (#428), or dogbones: at each sharp corner the tool can't
+ * reach, it runs along the bisector until its edge touches the drawn corner
+ * and comes back, so a sharp-edged counterpart fits.
+ */
+export const CornerOvercuts = z.strictObject({
+  /** A corner gets an overcut when its angle on the side the tool cuts is at most this, in degrees. */
+  maxAngle: z.number().min(0).max(180),
+  /** In stock coordinates; each leaves out an overcut at the drawn corner it is on. */
+  excluded: z.array(Point),
+});
+export type CornerOvercuts = z.infer<typeof CornerOvercuts>;
+
 /** Profile parameters (#21). The step-down and the ramp angle come from the tool. */
 export const ProfileParams = z
   .strictObject({
@@ -121,6 +134,10 @@ export const ProfileParams = z
     ramp: z.boolean(),
     /** Holding tabs, or `null` to cut the closed contours all the way round. */
     tabs: ProfileTabs.nullable(),
+    /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
+    startPoints: z.array(Point),
+    /** Overcuts at sharp corners, or `null` for none; never on the line. */
+    cornerOvercuts: CornerOvercuts.nullable(),
   })
   .superRefine((params, ctx) => {
     if (params.side === "on" && params.allowance !== 0) {
@@ -128,6 +145,13 @@ export const ProfileParams = z
         code: "custom",
         path: ["allowance"],
         message: "operation.allowanceZeroOnLine",
+      });
+    }
+    if (params.side === "on" && params.cornerOvercuts !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cornerOvercuts"],
+        message: "operation.overcutsOnLine",
       });
     }
     if (params.finishPass && params.allowance === 0) {
@@ -219,7 +243,8 @@ export type PocketOperation = z.infer<typeof PocketOperation>;
 
 /**
  * Drill parameters (#24): holes at points and at circles of the tool's
- * diameter. The peck depth comes from the tool's step-down.
+ * diameter, and at holes placed in the viewport (#429). The peck depth comes
+ * from the tool's step-down.
  */
 export const DrillParams = z.strictObject({
   /** Depth of the tool tip below the stock top. */
@@ -234,12 +259,20 @@ export const DrillParams = z.strictObject({
    * side only.
    */
   pins: z.boolean(),
+  /**
+   * Holes placed by clicking in the viewport (#429), drilled like
+   * single-point paths. In the top side's coordinates, like tab positions.
+   */
+  points: z.array(Point),
 });
 export type DrillParams = z.infer<typeof DrillParams>;
 
-/** Drills and end mills can drill: a V-bit's diameter doesn't describe the hole it makes. */
+/**
+ * Drills and end mills can drill, but not V-bits and tapered ball end mills:
+ * their diameter doesn't describe the hole they make.
+ */
 export function canDrill(tool: Tool): boolean {
-  return tool.type !== "v_bit";
+  return tool.type !== "v_bit" && tool.type !== "tapered_ball_end_mill";
 }
 
 export const DrillOperation = z
@@ -250,10 +283,21 @@ export const DrillOperation = z
   })
   .superRefine((operation, ctx) => {
     if (!canDrill(operation.tool)) {
-      ctx.addIssue({ code: "custom", path: ["tool", "type"], message: "operation.vBitsCantDrill" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["tool", "type"],
+        message:
+          operation.tool.type === "v_bit"
+            ? "operation.vBitsCantDrill"
+            : "operation.taperedBitsCantDrill",
+      });
     }
     // The pins are drilled from the top; turned over, the stock sits on them.
-    if (operation.params.pins && (operation.targets.length > 0 || operation.stockSide !== "top")) {
+    const { pins, points } = operation.params;
+    if (
+      pins &&
+      (operation.targets.length > 0 || points.length > 0 || operation.stockSide !== "top")
+    ) {
       ctx.addIssue({ code: "custom", path: ["params", "pins"], message: "operation.pinsTopOnly" });
     }
   });
@@ -273,15 +317,26 @@ export const EngraveParams = z.strictObject({
   depth: PositiveLength,
   /** Ramp in at the tool's plunge angle instead of plunging straight down. */
   ramp: z.boolean(),
+  /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
+  startPoints: z.array(Point),
 });
 export type EngraveParams = z.infer<typeof EngraveParams>;
 
-/** V-bits, ball and flat end mills cut sideways; a drill bit snaps under a side load. */
+/** V-bits and end mills cut sideways; a drill bit snaps under a side load. */
 export function canCutSideways(tool: Tool): boolean {
   return tool.type !== "drill";
 }
 
-/** V-bits, ball and flat end mills engrave: a drill bit can't cut sideways. */
+/**
+ * Bits whose passes can be sized by their diameter, as profiles, pockets and
+ * 3D roughing do: not drill bits, which can't cut sideways, nor tapered ball
+ * end mills, which are that wide only at the top of their cone (#425).
+ */
+export function canClear(tool: Tool): boolean {
+  return canCutSideways(tool) && tool.type !== "tapered_ball_end_mill";
+}
+
+/** V-bits and end mills engrave: a drill bit can't cut sideways. */
 export function canEngrave(tool: Tool): boolean {
   return canCutSideways(tool);
 }
@@ -501,15 +556,19 @@ export type Operation = z.infer<typeof Operation>;
 /**
  * Why `operation` can't cut with its tool, or `null`: a drill bit on a
  * profile, pocket or 3D operation, which all move the bit sideways through
- * the stock (#242). Projects saved before this check can hold one, so the
- * document schema still accepts it, to keep them opening; picking a tool,
- * adding operations and computing toolpaths reject it instead.
+ * the stock (#242), or a tapered ball end mill on a profile, pocket or 3D
+ * roughing, which size their passes by the diameter (#425). Projects saved
+ * before this check can hold one, so the document schema still accepts it,
+ * to keep them opening; picking a tool, adding operations and computing
+ * toolpaths reject it instead.
  */
 export function toolProblem(operation: Operation): DocumentMessage | null {
   switch (operation.type) {
     case "profile":
     case "pocket":
     case "relief_rough":
+      if (!canCutSideways(operation.tool)) return { code: "operation.drillsCantCutSideways" };
+      return canClear(operation.tool) ? null : { code: "operation.taperedBitsCantClear" };
     case "relief_finish":
       return canCutSideways(operation.tool) ? null : { code: "operation.drillsCantCutSideways" };
     default:

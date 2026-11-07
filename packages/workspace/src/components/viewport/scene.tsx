@@ -13,6 +13,8 @@ import { type Point, stockPins } from "@furrow/document";
 import { Edges, Html } from "@react-three/drei";
 import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import { DoubleSide } from "three";
+import { useShallow } from "zustand/react/shallow";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -36,7 +38,7 @@ import { type Palette, RENDER_ORDER } from "./scene-style";
 import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { onStockTop } from "./stock-top";
-import { HoldingTabs, Tabs } from "./tabs";
+import { HoldingTabs, Holes, Overcuts, StartPoints, Tabs } from "./tabs";
 import { Toolpaths } from "./toolpaths";
 import { ZeroPick } from "./zero-pick";
 
@@ -76,7 +78,11 @@ export function Scene({
         {!heightmap && <Models previews={modelPreviews} palette={palette} />}
         <Shapes palette={palette} />
         <Tabs color={palette.tab} />
+        <StartPoints color={palette.startPoint} />
+        <Overcuts color={palette.overcut} />
+        <Holes color={palette.hole} snapColor={palette.snap} />
         <HoldingTabs color={palette.tab} />
+        <PartingPlane color={palette.parting} />
       </SideFrame>
       <Toolpaths palette={palette} />
       {/* Picking works on the top side only, which the drawing is in. */}
@@ -169,6 +175,40 @@ function LocatingPins({ color }: { color: string }) {
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.origin} overlay />;
 }
 
+/**
+ * A two-sided project's parting plane (#473), where the two sides meet around
+ * the models, in the top side's coordinates; in the 3D view only, since from
+ * above it would just tint the stock. An opaque fill hiding what lies beyond
+ * it (the toolbar toggle shows that again), drawn in front of a simulated
+ * floor cut exactly to it; and its outline round the stock's sides, drawn
+ * over everything so uncut stock never hides it.
+ */
+export function PartingPlane({ color }: { color: string }) {
+  // Only what the plane depends on, so moving the zero, the pad or a tab redraws nothing.
+  const { width, height, partingDepth } = useDocumentStore(
+    useShallow(({ document: { stock } }) => ({
+      width: stock.width,
+      height: stock.height,
+      partingDepth: stock.twoSided?.partingDepth,
+    })),
+  );
+  const shown = useWorkspaceStore((s) => s.showParting && s.view === "orbit");
+  if (partingDepth === undefined || !shown) return null;
+  return (
+    <mesh position={[width / 2, height / 2, -partingDepth]} renderOrder={RENDER_ORDER.parting}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial
+        color={color}
+        side={DoubleSide}
+        polygonOffset
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={-1}
+      />
+      <Edges color={color} depthTest={false} renderOrder={RENDER_ORDER.origin} />
+    </mesh>
+  );
+}
+
 export function Stock({ box, palette }: { box: Box3; palette: Palette }) {
   const { min, max } = box;
   return (
@@ -220,7 +260,7 @@ function SelectedDrawing({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
   const draggable = useWorkspaceStore(
-    (s) => s.view === "top" && s.side === "top" && !s.editingTabs && !s.pickingZero,
+    (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
   );
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);

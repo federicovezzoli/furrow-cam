@@ -5,6 +5,7 @@ import { type Toolpath, ToolpathBuilder } from "../toolpath";
 import {
   FINISH_SETUP_SHARE,
   type FinishSetup,
+  finishingDiameter,
   type ReliefFinishOptions,
   remainingRuns,
   ToolDropper,
@@ -358,9 +359,9 @@ export function* waterlineSteps(
   const checker = new ToolDropper(heights, grid, widened(profile, CLEARANCE), discs, outside);
   const builder = new ToolpathBuilder(safeZ, entryClearance);
   const step = Math.min(grid.cellWidth, grid.cellHeight);
-  const maxLink = 2 * tool.diameter;
+  const maxLink = 2 * finishingDiameter(tool);
   // Gaps narrower than the tool aren't worth leaving the cut for.
-  const gap = Math.ceil(tool.diameter / step);
+  const gap = Math.ceil(finishingDiameter(tool) / step);
   let previous: [number, number, number] | null = null;
 
   const toStock3 = ([u, v, z]: [number, number, number]): [number, number, number] => [

@@ -5,7 +5,15 @@ import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
 import { Canvas, useThree } from "@react-three/fiber";
-import { BoxIcon, LayersIcon, RouteIcon, RouteOffIcon, ScanIcon, SquareIcon } from "lucide-react";
+import {
+  BoxIcon,
+  LayersIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ScanIcon,
+  SeparatorHorizontalIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -19,7 +27,7 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../../providers/workspace-stores";
-import type { ViewMode } from "../../stores/workspace-store";
+import type { ViewMode, WorkspaceState } from "../../stores/workspace-store";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { ReportCapture } from "./report-capture";
 import { Scene } from "./scene";
@@ -35,8 +43,9 @@ import { PALETTES } from "./scene-style";
  */
 export function Viewport() {
   const view = useWorkspaceStore((s) => s.view);
-  const editingTabs = useWorkspaceStore((s) => s.editingTabs);
+  const editing = useWorkspaceStore((s) => s.editing !== null);
   const pickingZero = useWorkspaceStore((s) => s.pickingZero);
+  const markerCursor = useWorkspaceStore((s) => s.markerCursor);
   const simulating = useWorkspaceStore((s) => s.simulating);
   const side = useWorkspaceStore((s) => s.side);
   // Known once the renderer is up, inside the canvas.
@@ -47,7 +56,8 @@ export function Viewport() {
   );
   const modelPreviews = useModelPreviews();
   const overPath = useWorkspaceStore((s) => s.hovered !== null);
-  const cancelPick = useCancelZeroPick(pickingZero);
+  const placingHoles = useWorkspaceStore((s) => s.editing === "holes");
+  const cancelPick = useCancelPick(pickingZero || placingHoles);
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
   const stock = useDocumentStore((s) => s.document.stock);
@@ -82,7 +92,15 @@ export function Viewport() {
     <div
       className={cn(
         "relative h-full",
-        editingTabs || pickingZero ? "cursor-crosshair" : overPath && "cursor-pointer",
+        markerCursor === "grabbing"
+          ? "cursor-grabbing"
+          : markerCursor === "grab"
+            ? "cursor-grab"
+            : markerCursor === "pointer"
+              ? "cursor-pointer"
+              : editing || pickingZero
+                ? "cursor-crosshair"
+                : overPath && "cursor-pointer",
       )}
       {...cancelPick}
     >
@@ -142,12 +160,12 @@ export function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) =>
 const RIGHT_CLICK_THRESHOLD = 3;
 
 /**
- * Esc or a right-click ends picking the zero. The right button also pans the
+ * Esc or a right-click ends picking the zero or placing holes. The right button also pans the
  * top view, so only a press released where it started counts as a click.
  * Returns the viewport's pointer handlers, which see presses before the
  * camera controls do.
  */
-function useCancelZeroPick(picking: boolean) {
+function useCancelPick(picking: boolean) {
   const workspace = useWorkspaceStoreApi();
   const press = useRef<{ x: number; y: number } | null>(null);
 
@@ -158,7 +176,7 @@ function useCancelZeroPick(picking: boolean) {
       if (event.key !== "Escape" || event.defaultPrevented || belongsElsewhere(event.target)) {
         return;
       }
-      workspace.getState().setPickingZero(false);
+      endPick(workspace.getState());
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -173,9 +191,14 @@ function useCancelZeroPick(picking: boolean) {
       press.current = null;
       if (!picking || !start || event.button !== 2) return;
       const travel = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-      if (travel <= RIGHT_CLICK_THRESHOLD) workspace.getState().setPickingZero(false);
+      if (travel <= RIGHT_CLICK_THRESHOLD) endPick(workspace.getState());
     },
   };
+}
+
+function endPick({ editing, setEditing, setPickingZero }: WorkspaceState) {
+  setPickingZero(false);
+  if (editing === "holes") setEditing(null);
 }
 
 const VIEWS: { value: ViewMode; Icon: typeof SquareIcon }[] = [
@@ -204,6 +227,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
           key={value}
           variant={view === value ? "secondary" : "ghost"}
           size="icon-compact"
+          data-demo={`view-${value}`}
           aria-label={t(`views.${value}`)}
           aria-pressed={view === value}
           title={t("viewHint", { view: t(`views.${value}`), hint: t(`viewHints.${value}`) })}
@@ -216,6 +240,7 @@ export function ViewButtons({ view, onFit }: { view: ViewMode; onFit: () => void
         variant="ghost"
         size="icon-compact"
         aria-label={t("fitStock")}
+        data-demo="fit-stock"
         title={t("fitStock")}
         onClick={onFit}
       >
@@ -241,12 +266,44 @@ export function SideButtons() {
           size="compact"
           aria-pressed={side === value}
           title={t(`sideHints.${value}`)}
+          data-demo={`side-${value}`}
           onClick={() => setSide(value)}
         >
           {t(`sides.${value}`)}
         </Button>
       ))}
     </div>
+  );
+}
+
+/**
+ * In a two-sided project, shows or hides the parting plane (#473). Only the
+ * 3D view draws it, so from the top view this switches to the 3D view and
+ * shows it.
+ */
+export function PartingButton() {
+  const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
+  const topView = useWorkspaceStore((s) => s.view === "top");
+  const shown = useWorkspaceStore((s) => s.showParting && s.view !== "top");
+  const workspace = useWorkspaceStoreApi();
+  const t = useTranslations("Viewport");
+  if (!twoSided) return null;
+  return (
+    <Button
+      variant={shown ? "secondary" : "ghost"}
+      size="icon-compact"
+      aria-label={t("showParting")}
+      aria-pressed={shown}
+      title={topView ? t("showPartingIn3d") : shown ? t("hideParting") : t("showParting")}
+      data-demo="parting-plane"
+      onClick={() => {
+        const state = workspace.getState();
+        if (topView) state.setView("orbit");
+        state.setShowParting(!shown);
+      }}
+    >
+      <SeparatorHorizontalIcon />
+    </Button>
   );
 }
 
@@ -294,6 +351,7 @@ function CutToolbar() {
       >
         <LayersIcon />
       </Button>
+      <PartingButton />
     </div>
   );
 }

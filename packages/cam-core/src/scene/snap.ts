@@ -1,5 +1,6 @@
 import {
   distance,
+  type Path,
   type Point,
   pointsCoincide,
   type Shape,
@@ -8,14 +9,16 @@ import {
 } from "@furrow/document";
 import { shapesBounds } from "../geometry/bounds";
 import { circleCenter } from "../geometry/circle";
-import { flattenPath } from "../geometry/flatten";
+import { arcSweep, flattenPath } from "../geometry/flatten";
+import { projectOnLoop } from "../geometry/loop";
 import { xyOriginPosition } from "./stock";
 
 /**
  * What a snap target is (PRD-0002 Z5): a stock anchor, a vertex of a shape (a
  * segment end, or a single-point path), the centre of an arc or of a circle
  * (a closed path drilling would take as one, see `circleCenter`), or a corner
- * or the centre of a shape's bounding box.
+ * or the centre of a shape's bounding box. Placed drill holes (#429) also
+ * snap to the middle of a segment and to the nearest point of an edge.
  */
 export type SnapKind =
   | "stock_anchor"
@@ -23,7 +26,9 @@ export type SnapKind =
   | "arc_center"
   | "circle_center"
   | "bounds_corner"
-  | "bounds_center";
+  | "bounds_center"
+  | "midpoint"
+  | "edge";
 
 /** A point the cursor snaps to, in stock coordinates (ADR-0014). */
 export type SnapTarget =
@@ -91,4 +96,112 @@ export function nearestSnapTarget(
     bestDistance = d;
   }
   return best;
+}
+
+/**
+ * Every point a placed drill hole (#429) can snap to: `snapTargets`, then
+ * the middle of every segment (along the curve for an arc, at half its
+ * parameter for a Bézier), a closed path's closing line included.
+ */
+export function holeSnapTargets(
+  stock: Pick<Stock, "width" | "height">,
+  shapes: Shape[],
+): SnapTarget[] {
+  const midpoints = shapes.flatMap((shape) => shape.paths.flatMap(segmentMidpoints));
+  return [
+    ...snapTargets(stock, shapes),
+    ...midpoints.map((point): SnapTarget => ({ kind: "midpoint", point })),
+  ];
+}
+
+/** A segment of a path, flattened, and the circle it lies on if it is an arc. */
+export type SnapEdge = { points: Point[]; circle: { center: Point; radius: number } | null };
+
+/** The segments of `shapes`, closing lines included, for `nearestHoleSnap`. */
+export function snapEdges(shapes: Shape[]): SnapEdge[] {
+  const edges: SnapEdge[] = [];
+  for (const shape of shapes) {
+    for (const path of shape.paths) {
+      let from = path.start;
+      for (const segment of path.segments) {
+        edges.push({
+          points: flattenPath({ start: from, segments: [segment], closed: false }),
+          circle:
+            segment.kind === "arc"
+              ? { center: segment.center, radius: distance(segment.center, from) }
+              : null,
+        });
+        from = segment.to;
+      }
+      if (path.closed && path.segments.length > 0 && !pointsCoincide(from, path.start)) {
+        edges.push({ points: [from, path.start], circle: null });
+      }
+    }
+  }
+  return edges;
+}
+
+/**
+ * Where a placed drill hole snaps near `point`: the nearest of `targets`
+ * within `radius`, or else the nearest point of `edges` (from `snapEdges`)
+ * within it, or `null`. A point on an arc is put on its circle, not its
+ * flattening, so scaling the drawing up later doesn't carry it off the arc.
+ */
+export function nearestHoleSnap(
+  targets: SnapTarget[],
+  edges: SnapEdge[],
+  point: Point,
+  radius: number,
+): SnapTarget | null {
+  const target = nearestSnapTarget(targets, point, radius);
+  if (target) return target;
+  let best: { point: Point; edge: SnapEdge } | null = null;
+  let bestDistance = radius;
+  for (const edge of edges) {
+    const projection = projectOnLoop(edge.points, point);
+    if (projection.distance > bestDistance) continue;
+    best = { point: projection.point, edge };
+    bestDistance = projection.distance;
+  }
+  if (!best) return null;
+  const { circle } = best.edge;
+  const away = circle && distance(circle.center, best.point);
+  if (!circle || !away) return { kind: "edge", point: best.point };
+  const [cx, cy] = circle.center;
+  const scale = circle.radius / away;
+  return {
+    kind: "edge",
+    point: [cx + (best.point[0] - cx) * scale, cy + (best.point[1] - cy) * scale],
+  };
+}
+
+function segmentMidpoints(path: Path): Point[] {
+  const points: Point[] = [];
+  let from = path.start;
+  for (const segment of path.segments) {
+    const { to } = segment;
+    if (segment.kind === "line") points.push(middle(from, to));
+    else if (segment.kind === "cubic") {
+      const { c1, c2 } = segment;
+      points.push([
+        (from[0] + 3 * c1[0] + 3 * c2[0] + to[0]) / 8,
+        (from[1] + 3 * c1[1] + 3 * c2[1] + to[1]) / 8,
+      ]);
+    } else {
+      const { center, clockwise } = segment;
+      const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
+      const angle = start + arcSweep(from, to, center, clockwise) / 2;
+      const radius = distance(center, from);
+      points.push([center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle)]);
+    }
+    from = to;
+  }
+  if (path.closed && path.segments.length > 0 && !pointsCoincide(from, path.start)) {
+    points.push(middle(from, path.start));
+  }
+  return points;
+}
+
+function middle(a: Point, b: Point): Point {
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 }

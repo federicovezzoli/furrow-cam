@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Report a bug",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "licences": "Third-party licences"
+  },
+  "Licences": {
+    "title": "Third-party licences",
+    "intro": "Furrow CAM ships these libraries and fonts, under their own licences. Open a licence text to read it as shipped with the app.",
+    "licence": "Licence: {licence}",
+    "source": "Source:",
+    "loading": "Loading…",
+    "unavailable": "This licence text couldn't be loaded.",
+    "text": "{name} licence text"
   },
   "Meta": {
     "description": "Open source, web-based 2.5D CAM for CNC routers.",
-    "privacyTitle": "Privacy policy · Furrow CAM"
+    "privacyTitle": "Privacy policy · Furrow CAM",
+    "licencesTitle": "Third-party licences · Furrow CAM"
   },
   "Projects": {
     "notFound": "This project no longer exists.",
@@ -221,6 +232,7 @@
     "edit": "Edit",
     "editLabel": "Edit {name}",
     "tip": "{size} mm tip",
+    "perSide": "{angle}° per side",
     "deleteConfirm": "Delete \"{name}\"? Existing projects keep their copy of this bit."
   },
   "Machines": {
@@ -396,7 +408,8 @@
       "checkUpdates": "Check for Updates…",
       "reportBug": "Report a Bug…",
       "checkAtStartup": "Check for Updates at Start-up",
-      "sendUsage": "Send Usage Statistics and Error Reports"
+      "sendUsage": "Send Usage Statistics and Error Reports",
+      "licences": "Third-Party Licences"
     },
     "telemetry": {
       "question": "Send anonymous usage statistics and error reports?",
@@ -420,9 +433,17 @@
       "upToDateDetail": "Version {version} is the newest.",
       "available": "Furrow CAM {version} is available",
       "availableDetail": "You have {current}. Download the new version from its release page and install it over this one.",
+      "installDetail": "You have {current}. Furrow CAM can download the new version and install it for you.",
       "download": "Download",
+      "downloadAndInstall": "Download and Install",
+      "downloading": "Furrow CAM {version} is downloading",
       "skip": "Skip This Version",
       "later": "Later",
+      "ready": "Furrow CAM {version} is ready to install",
+      "readyDetail": "Restart now to finish. Otherwise it's installed when you quit Furrow CAM.",
+      "restart": "Restart Now",
+      "installFailed": "Couldn't install the update",
+      "installFailedDetail": "Download Furrow CAM {version} from its release page and install it over this one.",
       "ok": "OK"
     },
     "files": {
@@ -475,6 +496,10 @@
       "cutDirectionEndMillsOnly": "Only for end mills",
       "vBitRequired": "Required for V-bits",
       "vBitOnly": "Only for V-bits",
+      "taperedRequired": "Required for tapered ball end mills",
+      "taperedOnly": "Only for tapered ball end mills",
+      "tipDiameterOnly": "Only for V-bits and tapered ball end mills",
+      "taperedDiameter": "Must be the cone's width at the flute length",
       "drillPlunge90": "Drills plunge at 90°",
       "exceedsFluteLength": "Must not exceed the flute length",
       "smallerThanDiameter": "Must be smaller than the diameter"
@@ -518,8 +543,11 @@
     "operation": {
       "pathIndices": "Path indices must be ascending, each once",
       "allowanceZeroOnLine": "Must be 0 on the line",
+      "overcutsOnLine": "Not on the line",
       "allowanceNeeded": "Needs an allowance to remove",
       "vBitsCantDrill": "V-bits can't drill",
+      "taperedBitsCantDrill": "Tapered ball end mills can't drill",
+      "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",
@@ -639,6 +667,8 @@
       "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
       "tabsLeftOut": "Left out {count, plural, one {# tab} other {# tabs}} too far from every closed contour.",
+      "startPointsLeftOut": "Left out {count, plural, one {# start point} other {# start points}} too far from every path, or on a path that already has one.",
+      "startPointsOnTabs": "Moved {count, plural, one {# start point} other {# start points}} off a tab, to its nearer end.",
       "leadInMisfits": "The lead-in didn't fit {count, plural, one {# contour} other {# contours}} and was shortened or left out.",
       "peelIsland": "Peel from the island needs exactly one island.",
       "touchOffPad": "This operation cuts into the touch-off pad, so Z can't be zeroed on it after a tool change: move the pad or the cut.",
@@ -652,6 +682,9 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
+      "holesOffStock": "A placed hole is off the stock.",
+      "noHoles": "Nothing to drill: place holes in the viewport or use selected shapes.",
+      "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },
@@ -723,9 +756,12 @@
       "unreadableFile": "This file couldn't be read.",
       "modelUnreadable": "The model couldn't be read.",
       "importFailed": "This file couldn't be imported.",
-      "drawingsOrModel": "A project holds SVG and DXF drawings or one STL model, not both.",
+      "drawingsOrModel": "A project holds SVG and DXF drawings or one 3D model, not both.",
       "noShapes": "This file has no shapes to import.",
-      "stlImportOff": "STL import isn't available on this server.",
+      "stlImportOff": "3D model import isn't available on this server.",
+      "stepUnreadable": "This STEP file couldn't be read. Export it again from your CAD program and try once more.",
+      "stepNoSolids": "This STEP file has no solids or surfaces to import, only curves or points.",
+      "stepImportUnavailable": "STEP import couldn't be loaded. Check your connection and try again.",
       "fileTooLarge": "This file is too large to import (the limit is {mb, number} MB).",
       "storedModelMismatch": "The stored model doesn't match its file.",
       "drawingTooSmall": "That would shrink some of the drawing's lines to nothing. Choose a larger size.",
@@ -834,6 +870,12 @@
     "leadIn": "Lead-in arc",
     "leadInRadius": "Lead-in radius",
     "holdingTabs": "Holding tabs",
+    "cornerOvercuts": "Corner overcuts",
+    "maxCornerAngle": "Corners up to",
+    "overcutsHint": "Overcuts the sharp corners the tool can't reach, so a square counterpart fits.",
+    "editOvercuts": "Edit overcuts",
+    "overcutsEditHint": "Click an overcut to leave it out, and again to put it back.",
+    "overcutsNeedSide": "Needs an inside or outside profile.",
     "pocket": "Pocket",
     "strategy": "Strategy",
     "angle": "Angle",
@@ -891,6 +933,12 @@
     "done": "Done",
     "editInViewport": "Edit in viewport",
     "editHint": "Click a contour to add a tab, drag a tab to move it, click it to remove it.",
+    "startPointCount": "{count, plural, =0 {No start points} one {# start point} other {# start points}}",
+    "editStartPoints": "Edit start points",
+    "startPointsHint": "Click a path to add a start point (an open path takes its nearer end), drag one to move it, click it to remove it. Each path takes one.",
+    "holeCount": "{count, plural, =0 {No placed holes} one {# placed hole} other {# placed holes}}",
+    "placeHoles": "Place holes",
+    "placeHolesHint": "Click to place a hole where the cursor snaps, click a hole to remove it. Esc or a right-click finishes.",
     "computing": "Computing toolpath…",
     "cancel": "Cancel",
     "computeAgain": "Compute again",
@@ -898,6 +946,7 @@
     "failed": "The toolpath couldn't be computed: {error}",
     "warnings": "Toolpath warnings",
     "usePins": "Use pins",
+    "pinsWithoutHoles": "Remove the placed holes first: a pin drill drills only the locating pins.",
     "locatingPins": "The locating pins",
     "pinDepth": "As deep as the pin settings say: {depth}."
   },
@@ -921,6 +970,7 @@
       "profile": "Cut around the {target}",
       "pocket": "Clear the area inside the {target}",
       "drill": "Drill the points and circles of the {target}",
+      "drillPlaced": "Place holes by clicking in the viewport, or select paths first to drill their points and circles",
       "engrave": "Engrave along the lines of the {target}",
       "vcarve": "Carve inside the {target} with a V-bit, deeper where they are wider",
       "relief_rough": "Clear the material above {model} in levels, a flat end mill being the usual choice",
@@ -964,7 +1014,17 @@
     "sideHints": {
       "top": "Cut on the top side, first",
       "bottom": "Cut on the bottom side, once the stock is turned over"
-    }
+    },
+    "time": {
+      "underMinute": "under 1 min",
+      "minutes": "≈ {minutes}min",
+      "hours": "≈ {hours}h {minutes}min"
+    },
+    "timeTitle": "Estimated machining time",
+    "total": "Total {time}",
+    "estimateNote": "A lower bound: acceleration and tool changes aren't counted. Set the machine's accelerations for a closer estimate.",
+    "estimateWithAcceleration": "Approximate: tool changes aren't counted.",
+    "estimateNoMachine": "Approximate: rapids aren't counted until the project has a machine, nor are acceleration and tool changes."
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
@@ -976,6 +1036,7 @@
     "types": {
       "flat_end_mill": "Flat end mill",
       "ball_end_mill": "Ball end mill",
+      "tapered_ball_end_mill": "Tapered ball end mill",
       "v_bit": "V-bit",
       "drill": "Drill"
     },
@@ -996,6 +1057,7 @@
     "cutDirection": "Cut direction",
     "vAngle": "V angle",
     "tipDiameter": "Tip diameter",
+    "taperAngle": "Angle per side",
     "cuttingData": "Cutting data",
     "spindleSpeed": "Spindle speed",
     "feedRate": "Feed rate",
@@ -1027,8 +1089,12 @@
     "safeZ": "Safe Z (above stock)",
     "entryClearance": "Entry clearance (above stock)",
     "limits": "Limits",
+    "limitsHint": "Set these to your controller’s maximum rates ($110–$112, which are in mm/min). They cap the bit’s feed and plunge rates. Travel moves between cuts always run at the controller’s own maximum rates; the time estimate uses these values for them.",
     "maxFeedXY": "Max feed X/Y",
     "maxFeedZ": "Max feed Z",
+    "accelerationXY": "Acceleration X/Y",
+    "accelerationZ": "Acceleration Z",
+    "accelerationHint": "Optional: your controller’s accelerations ($120–$122, in mm/s²). Only the time estimate uses them, for speeding up, slowing down and corners; left blank, it leaves acceleration out and runs short.",
     "spindle": "Spindle",
     "manualSpindle": "Manual spindle",
     "manualSpindleHint": "Speed set by hand (e.g. a trim router dial); the G-code sets no spindle speed.",
@@ -1106,6 +1172,14 @@
     "leaveAnyway": "{error} Leave it anyway? Changes not saved will be lost; export the project first to keep them.",
     "drawingProperties": "Drawing properties"
   },
+  "Ribbon": {
+    "history": "History",
+    "drawing": "Drawing",
+    "importDrawing": "Import a drawing",
+    "text": "Text",
+    "relief_rough": "Rough",
+    "relief_finish": "Finish"
+  },
   "BugReport": {
     "report": "Report a bug",
     "description": "This opens a new GitHub issue with your report filled in. Nothing is sent until you submit it there, which needs a GitHub account.",
@@ -1165,6 +1239,8 @@
     "circle_center": "Circle centre",
     "bounds_corner": "Bounding box corner",
     "bounds_center": "Bounding box centre",
+    "midpoint": "Midpoint",
+    "edge": "Edge",
     "anchors": {
       "top_left": "Stock top left",
       "top_center": "Stock top centre",
@@ -1263,7 +1339,10 @@
     "width": "Width",
     "height": "Height",
     "depth": "Depth",
+    "top": "Top below stock",
     "tooDeep": "The model reaches deeper than the stock is thick: it is cut no deeper than the stock's bottom.",
+    "belowStock": "The model's top is at or below the stock's bottom: none of it is cut, and operations cut through the stock over it.",
+    "belowParting": "The model's top is below the parting depth: the top side leaves the stock above it uncut. Set the parting depth inside the model.",
     "original": "Original: {size} (scale {scale}%)",
     "border": "Border",
     "borderNote": "Left on every side by the next Fit to stock; editing it doesn't move the model.",
@@ -1331,9 +1410,9 @@
       "mm": "Millimetres",
       "in": "Inches"
     },
-    "start": "Import an SVG or DXF drawing, or an STL model, to start.",
+    "start": "Import an SVG or DXF drawing, or an STL or STEP model, to start.",
     "importDrawing": "Import SVG/DXF…",
-    "importStl": "Import STL…",
+    "importModel": "Import STL or STEP…",
     "dpi": "DPI",
     "dpiTitle": "Pixels per inch",
     "dpiQuestion": "<name>{file}</name> gives its size in pixels, or not at all. How many pixels make an inch? Check the export settings of the program that made it.",
@@ -1394,7 +1473,10 @@
       "bottom": "Show the bottom side, seen from below once the stock is turned over"
     },
     "bottomSideHint": "Bottom side, seen from below. Pick the zero, select paths and edit tabs on the top side.",
-    "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts."
+    "topSideSimulationHint": "Top side only: the stock before it is turned over, without the bottom side's cuts.",
+    "showParting": "Show the parting plane",
+    "showPartingIn3d": "Show the parting plane in the 3D view",
+    "hideParting": "Hide the parting plane"
   },
   "Dialog": {
     "close": "Close",

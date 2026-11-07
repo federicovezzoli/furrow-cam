@@ -21,6 +21,7 @@ describe("TOOL_PRESETS", () => {
       new Set(["upcut", "downcut", "compression", null]),
     );
     expect(tools.some((tool) => tool.type === "ball_end_mill")).toBe(true);
+    expect(tools.some((tool) => tool.type === "tapered_ball_end_mill")).toBe(true);
     expect(
       new Set(tools.filter((tool) => tool.type === "v_bit").map((tool) => tool.vAngle)),
     ).toEqual(new Set([30, 60, 90]));

@@ -111,11 +111,22 @@
   },
   "Footer": {
     "reportBug": "Fehler melden",
-    "privacy": "Datenschutz"
+    "privacy": "Datenschutz",
+    "licences": "Lizenzen von Drittanbietern"
+  },
+  "Licences": {
+    "title": "Lizenzen von Drittanbietern",
+    "intro": "Furrow CAM enthält diese Bibliotheken und Schriften unter ihren eigenen Lizenzen. Öffne eine Lizenz, um ihren mit der App ausgelieferten Text zu lesen.",
+    "licence": "Lizenz: {licence}",
+    "source": "Quellcode:",
+    "loading": "Wird geladen…",
+    "unavailable": "Dieser Lizenztext konnte nicht geladen werden.",
+    "text": "Lizenztext von {name}"
   },
   "Meta": {
     "description": "Open-Source-2.5D-CAM im Browser für CNC-Fräsen.",
-    "privacyTitle": "Datenschutzerklärung · Furrow CAM"
+    "privacyTitle": "Datenschutzerklärung · Furrow CAM",
+    "licencesTitle": "Lizenzen von Drittanbietern · Furrow CAM"
   },
   "Projects": {
     "notFound": "Dieses Projekt gibt es nicht mehr.",
@@ -221,6 +232,7 @@
     "edit": "Bearbeiten",
     "editLabel": "{name} bearbeiten",
     "tip": "{size} mm Spitze",
+    "perSide": "{angle}° pro Seite",
     "deleteConfirm": "„{name}“ löschen? Bestehende Projekte behalten ihre Kopie dieses Fräsers."
   },
   "Machines": {
@@ -396,7 +408,8 @@
       "checkUpdates": "Nach Updates suchen…",
       "reportBug": "Fehler melden…",
       "checkAtStartup": "Beim Start nach Updates suchen",
-      "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden"
+      "sendUsage": "Nutzungsstatistiken und Fehlerberichte senden",
+      "licences": "Lizenzen von Drittanbietern"
     },
     "telemetry": {
       "question": "Anonyme Nutzungsstatistiken und Fehlerberichte senden?",
@@ -420,9 +433,17 @@
       "upToDateDetail": "Version {version} ist die neueste.",
       "available": "Furrow CAM {version} ist verfügbar",
       "availableDetail": "Du hast {current}. Lade die neue Version von ihrer Release-Seite herunter und installiere sie über diese.",
+      "installDetail": "Du hast {current}. Furrow CAM kann die neue Version herunterladen und für dich installieren.",
       "download": "Herunterladen",
+      "downloadAndInstall": "Herunterladen und installieren",
+      "downloading": "Furrow CAM {version} wird heruntergeladen",
       "skip": "Diese Version überspringen",
       "later": "Später",
+      "ready": "Furrow CAM {version} ist bereit zur Installation",
+      "readyDetail": "Starte jetzt neu, um abzuschließen. Sonst wird es installiert, wenn du Furrow CAM beendest.",
+      "restart": "Jetzt neu starten",
+      "installFailed": "Update konnte nicht installiert werden",
+      "installFailedDetail": "Lade Furrow CAM {version} von seiner Release-Seite herunter und installiere es über diese Version.",
       "ok": "OK"
     },
     "files": {
@@ -475,6 +496,10 @@
       "cutDirectionEndMillsOnly": "Nur für Schaftfräser",
       "vBitRequired": "Erforderlich für V-Fräser",
       "vBitOnly": "Nur für V-Fräser",
+      "taperedRequired": "Erforderlich für konische Radiusfräser",
+      "taperedOnly": "Nur für konische Radiusfräser",
+      "tipDiameterOnly": "Nur für V-Fräser und konische Radiusfräser",
+      "taperedDiameter": "Muss die Breite des Kegels bei der Schneidenlänge sein",
       "drillPlunge90": "Bohrer tauchen mit 90° ein",
       "exceedsFluteLength": "Darf die Schneidenlänge nicht überschreiten",
       "smallerThanDiameter": "Muss kleiner als der Durchmesser sein"
@@ -518,8 +543,11 @@
     "operation": {
       "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
       "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
+      "overcutsOnLine": "Nicht auf der Linie",
       "allowanceNeeded": "Braucht ein Aufmaß zum Abtragen",
       "vBitsCantDrill": "V-Fräser können nicht bohren",
+      "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
+      "taperedBitsCantClear": "Konische Radiusfräser gravieren und schlichten nur in 3D: Wähle einen anderen Fräser.",
       "drillsCantEngrave": "Bohrer können nicht gravieren",
       "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
@@ -639,6 +667,8 @@
       "nothingOutside": "Die geschlossenen Pfade lassen außerhalb keinen Rohling zum Ausräumen übrig.",
       "tabsTooTall": "Die Haltestege sind so hoch wie der Schnitt tief ist, daher wird unter ihnen nichts geschnitten.",
       "tabsLeftOut": "{count, plural, one {# Haltesteg ausgelassen, der} other {# Haltestege ausgelassen, die}} zu weit von jeder geschlossenen Kontur entfernt {count, plural, one {ist} other {sind}}.",
+      "startPointsLeftOut": "{count, plural, one {# Startpunkt ausgelassen, der} other {# Startpunkte ausgelassen, die}} zu weit von jedem Pfad entfernt oder auf einem Pfad mit bereits einem Startpunkt {count, plural, one {liegt} other {liegen}}.",
+      "startPointsOnTabs": "{count, plural, one {# Startpunkt} other {# Startpunkte}} von einem Haltesteg an dessen näheres Ende verschoben.",
       "leadInMisfits": "Der Einlauf passte bei {count, plural, one {# Kontur} other {# Konturen}} nicht und wurde gekürzt oder ausgelassen.",
       "peelIsland": "Spiralbahnen von der Insel aus brauchen genau eine Insel.",
       "touchOffPad": "Diese Operation schneidet in die Antastplatte, daher kann Z nach einem Werkzeugwechsel nicht darauf genullt werden: Verschiebe die Platte oder den Schnitt.",
@@ -652,6 +682,9 @@
       "restOperationFailed": "„{operation}“ ist fehlgeschlagen, daher gilt das Material, das sie geschnitten hätte, als verblieben.",
       "noLocatingPins": "Das Projekt hat keine Passstifte zum Bohren.",
       "pinsOffStock": "Ein Passstift liegt außerhalb des Rohteils.",
+      "holesOffStock": "Eine gesetzte Bohrung liegt außerhalb des Rohteils.",
+      "noHoles": "Nichts zu bohren: Bohrungen im Ansichtsfenster setzen oder ausgewählte Formen verwenden.",
+      "cutsPins": "Diese Operation schneidet dort, wo ein Passstift sitzt, daher würde das Werkzeug den Stift treffen, wenn das Rohteil gewendet ist: Verschiebe die Stifte oder den Schnitt.",
       "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
@@ -723,9 +756,12 @@
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
-      "drawingsOrModel": "Ein Projekt enthält SVG- und DXF-Zeichnungen oder ein STL-Modell, nicht beides.",
+      "drawingsOrModel": "Ein Projekt enthält SVG- und DXF-Zeichnungen oder ein 3D-Modell, nicht beides.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
-      "stlImportOff": "Der STL-Import ist auf diesem Server nicht verfügbar.",
+      "stlImportOff": "Der Import von 3D-Modellen ist auf diesem Server nicht verfügbar.",
+      "stepUnreadable": "Diese STEP-Datei konnte nicht gelesen werden. Exportiere sie erneut aus deinem CAD-Programm und versuche es noch einmal.",
+      "stepNoSolids": "Diese STEP-Datei enthält keine Volumenkörper oder Flächen zum Importieren, nur Kurven oder Punkte.",
+      "stepImportUnavailable": "Der STEP-Import konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
       "fileTooLarge": "Diese Datei ist zu groß zum Importieren (die Grenze ist {mb, number} MB).",
       "storedModelMismatch": "Das gespeicherte Modell passt nicht zu seiner Datei.",
       "drawingTooSmall": "Damit würden einige Linien der Zeichnung auf nichts schrumpfen. Wähle eine größere Größe.",
@@ -834,6 +870,12 @@
     "leadIn": "Bogenanfahrt",
     "leadInRadius": "Anfahrradius",
     "holdingTabs": "Haltestege",
+    "cornerOvercuts": "Eckenfreischnitte",
+    "maxCornerAngle": "Ecken bis",
+    "overcutsHint": "Schneidet die scharfen Ecken frei, die das Werkzeug nicht erreicht, damit ein eckiges Gegenstück passt.",
+    "editOvercuts": "Freischnitte bearbeiten",
+    "overcutsEditHint": "Klicke auf einen Freischnitt, um ihn auszulassen, und erneut, um ihn wiederherzustellen.",
+    "overcutsNeedSide": "Braucht ein Innen- oder Außenprofil.",
     "pocket": "Tasche",
     "strategy": "Strategie",
     "angle": "Winkel",
@@ -891,6 +933,12 @@
     "done": "Fertig",
     "editInViewport": "In der Ansicht bearbeiten",
     "editHint": "Klicke auf eine Kontur, um einen Steg hinzuzufügen, ziehe ihn, um ihn zu verschieben, klicke darauf, um ihn zu entfernen.",
+    "startPointCount": "{count, plural, =0 {Keine Startpunkte} one {# Startpunkt} other {# Startpunkte}}",
+    "editStartPoints": "Startpunkte bearbeiten",
+    "startPointsHint": "Klicke auf einen Pfad, um einen Startpunkt hinzuzufügen (bei einem offenen Pfad am näheren Ende), ziehe ihn zum Verschieben, klicke darauf zum Entfernen. Jeder Pfad nimmt einen auf.",
+    "holeCount": "{count, plural, =0 {Keine gesetzten Bohrungen} one {# gesetzte Bohrung} other {# gesetzte Bohrungen}}",
+    "placeHoles": "Bohrungen setzen",
+    "placeHolesHint": "Klicke, um eine Bohrung am Fangpunkt zu setzen, klicke auf eine Bohrung, um sie zu entfernen. Esc oder Rechtsklick beendet.",
     "computing": "Werkzeugbahn wird berechnet…",
     "cancel": "Abbrechen",
     "computeAgain": "Neu berechnen",
@@ -898,6 +946,7 @@
     "failed": "Die Werkzeugbahn konnte nicht berechnet werden: {error}",
     "warnings": "Warnungen zur Werkzeugbahn",
     "usePins": "Stifte verwenden",
+    "pinsWithoutHoles": "Entferne zuerst die gesetzten Bohrungen: Eine Passstiftbohrung bohrt nur die Passstifte.",
     "locatingPins": "Die Passstifte",
     "pinDepth": "So tief, wie die Stifteinstellungen sagen: {depth}."
   },
@@ -921,6 +970,7 @@
       "profile": "Ausschneiden: {target}",
       "pocket": "Innen ausräumen: {target}",
       "drill": "Punkte und Kreise bohren: {target}",
+      "drillPlaced": "Bohrungen durch Klicken im Ansichtsfenster setzen, oder zuerst Pfade auswählen, um ihre Punkte und Kreise zu bohren",
       "engrave": "Entlang der Linien gravieren: {target}",
       "vcarve": "{target} innen mit einem V-Fräser schnitzen, tiefer, wo es breiter ist",
       "relief_rough": "Material über {model} in Ebenen abtragen, meist mit einem Schaftfräser",
@@ -964,7 +1014,17 @@
     "sideHints": {
       "top": "Auf der Oberseite geschnitten, zuerst",
       "bottom": "Auf der Unterseite geschnitten, wenn das Rohteil umgedreht ist"
-    }
+    },
+    "time": {
+      "underMinute": "unter 1 Min.",
+      "minutes": "≈ {minutes}Min.",
+      "hours": "≈ {hours}Std. {minutes}Min."
+    },
+    "timeTitle": "Geschätzte Bearbeitungszeit",
+    "total": "Gesamt {time}",
+    "estimateNote": "Eine Untergrenze: Beschleunigung und Werkzeugwechsel sind nicht eingerechnet. Gib die Beschleunigungen der Maschine an, um genauer zu schätzen.",
+    "estimateWithAcceleration": "Ungefähr: Werkzeugwechsel sind nicht eingerechnet.",
+    "estimateNoMachine": "Ungefähr: Eilgänge werden erst eingerechnet, wenn das Projekt eine Maschine hat; Beschleunigung und Werkzeugwechsel nie."
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
@@ -976,6 +1036,7 @@
     "types": {
       "flat_end_mill": "Schaftfräser",
       "ball_end_mill": "Radiusfräser",
+      "tapered_ball_end_mill": "Konischer Radiusfräser",
       "v_bit": "V-Fräser",
       "drill": "Bohrer"
     },
@@ -996,6 +1057,7 @@
     "cutDirection": "Spiralrichtung",
     "vAngle": "V-Winkel",
     "tipDiameter": "Spitzendurchmesser",
+    "taperAngle": "Winkel pro Seite",
     "cuttingData": "Schnittdaten",
     "spindleSpeed": "Spindeldrehzahl",
     "feedRate": "Vorschub",
@@ -1027,8 +1089,12 @@
     "safeZ": "Sichere Z-Höhe (über dem Rohteil)",
     "entryClearance": "Anfahrabstand (über dem Rohteil)",
     "limits": "Grenzen",
+    "limitsHint": "Setze sie auf die Höchstgeschwindigkeiten deiner Steuerung ($110–$112, in mm/min). Sie begrenzen Vorschub und Eintauchvorschub des Fräsers. Leerfahrten zwischen den Schnitten laufen immer mit den Höchstgeschwindigkeiten der Steuerung; die Zeitschätzung nimmt für sie diese Werte.",
     "maxFeedXY": "Max. Vorschub X/Y",
     "maxFeedZ": "Max. Vorschub Z",
+    "accelerationXY": "Beschleunigung X/Y",
+    "accelerationZ": "Beschleunigung Z",
+    "accelerationHint": "Optional: die Beschleunigungen deiner Steuerung ($120–$122, in mm/s²). Nur die Zeitschätzung nutzt sie, für Anfahren, Abbremsen und Ecken; leer gelassen, rechnet sie ohne Beschleunigung und schätzt zu kurz.",
     "spindle": "Spindel",
     "manualSpindle": "Manuelle Spindel",
     "manualSpindleHint": "Drehzahl von Hand eingestellt (z. B. am Rad einer Oberfräse); der G-Code setzt keine Spindeldrehzahl.",
@@ -1106,6 +1172,14 @@
     "leaveAnyway": "{error} Trotzdem verlassen? Ungespeicherte Änderungen gehen verloren; exportiere das Projekt zuerst, um sie zu behalten.",
     "drawingProperties": "Zeichnungseigenschaften"
   },
+  "Ribbon": {
+    "history": "Verlauf",
+    "drawing": "Zeichnung",
+    "importDrawing": "Eine Zeichnung importieren",
+    "text": "Text",
+    "relief_rough": "Schruppen",
+    "relief_finish": "Schlichten"
+  },
   "BugReport": {
     "report": "Fehler melden",
     "description": "Dies öffnet ein neues GitHub-Issue mit deinem vorausgefüllten Bericht. Nichts wird gesendet, bis du es dort absendest, wofür ein GitHub-Konto nötig ist.",
@@ -1165,6 +1239,8 @@
     "circle_center": "Kreismittelpunkt",
     "bounds_corner": "Ecke des Begrenzungsrahmens",
     "bounds_center": "Mitte des Begrenzungsrahmens",
+    "midpoint": "Mittelpunkt",
+    "edge": "Kante",
     "anchors": {
       "top_left": "Rohteil, oben links",
       "top_center": "Rohteil, oben Mitte",
@@ -1263,7 +1339,10 @@
     "width": "Breite",
     "height": "Höhe",
     "depth": "Tiefe",
+    "top": "Oberseite unter Rohteil",
     "tooDeep": "Das Modell ist tiefer als das Rohteil dick ist: es wird nicht tiefer als der Rohteilboden geschnitten.",
+    "belowStock": "Die Oberseite des Modells liegt auf oder unter dem Rohteilboden: davon wird nichts geschnitten, und die Bearbeitungen schneiden durch das Rohteil darüber.",
+    "belowParting": "Die Oberseite des Modells liegt unter der Trenntiefe: die Oberseite lässt das Rohteil darüber stehen. Lege die Trenntiefe in das Modell.",
     "original": "Original: {size} (Maßstab {scale} %)",
     "border": "Rand",
     "borderNote": "Wird beim nächsten An Rohteil anpassen auf jeder Seite gelassen; eine Änderung verschiebt das Modell nicht.",
@@ -1331,9 +1410,9 @@
       "mm": "Millimeter",
       "in": "Zoll"
     },
-    "start": "Importiere eine SVG- oder DXF-Zeichnung oder ein STL-Modell, um zu beginnen.",
+    "start": "Importiere eine SVG- oder DXF-Zeichnung oder ein STL- oder STEP-Modell, um zu beginnen.",
     "importDrawing": "SVG/DXF importieren…",
-    "importStl": "STL importieren…",
+    "importModel": "STL oder STEP importieren…",
     "dpi": "DPI",
     "dpiTitle": "Pixel pro Zoll",
     "dpiQuestion": "<name>{file}</name> gibt seine Größe in Pixeln an oder gar nicht. Wie viele Pixel ergeben einen Zoll? Prüfe die Exporteinstellungen der Software, die sie erstellt hat.",
@@ -1394,7 +1473,10 @@
       "bottom": "Die Unterseite zeigen, von unten gesehen, wenn das Rohteil umgedreht ist"
     },
     "bottomSideHint": "Unterseite, von unten gesehen. Nullpunkt wählen, Pfade auswählen und Stege bearbeiten geht auf der Oberseite.",
-    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite."
+    "topSideSimulationHint": "Nur Oberseite: das Material vor dem Wenden, ohne die Schnitte der Unterseite.",
+    "showParting": "Trennebene anzeigen",
+    "showPartingIn3d": "Trennebene in der 3D-Ansicht anzeigen",
+    "hideParting": "Trennebene ausblenden"
   },
   "Dialog": {
     "close": "Schließen",

@@ -19,11 +19,13 @@ import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
 import { ReportCapture } from "./report-capture";
-import { Stock, WorkOrigin } from "./scene";
+import { PartingPlane, Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
+import { SideFrame } from "./side-frame";
 import { SimulatedStock } from "./simulated-stock";
 import { Toolpaths } from "./toolpaths";
 import {
+  PartingButton,
   SideButtons,
   simulationStatus,
   TextureLimit,
@@ -35,9 +37,10 @@ import {
  * The simulator's viewport (#100, ADR-0042): the stock cut move by move as
  * the playback advances, the tool drawn where it is, the toolpaths trailing
  * behind it (unless hidden), and the timeline under the scene. Cameras,
- * views and, in a two-sided project, sides work as in the workspace. Browser-only: load it with `next/dynamic` and `ssr: false`.
+ * views and, in a two-sided project, sides work as in the workspace.
+ * `children` lead the timeline. Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
-export function SimulatorViewport() {
+export function SimulatorViewport({ children }: { children?: React.ReactNode }) {
   const view = useWorkspaceStore((s) => s.view);
   // Known once the renderer is up, inside the canvas.
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
@@ -89,7 +92,11 @@ export function SimulatorViewport() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section aria-label={t("simulation")} className="relative min-h-0 flex-1 bg-muted/40">
+      <section
+        aria-label={t("simulation")}
+        className="relative min-h-0 flex-1 bg-muted/40"
+        data-demo="simulation"
+      >
         <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
           <ReportCapture />
           {view === "top" ? (
@@ -119,9 +126,11 @@ export function SimulatorViewport() {
               aria-pressed={showToolpaths}
               title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
               onClick={() => setShowToolpaths(!showToolpaths)}
+              data-demo="show-toolpaths"
             >
               <ToolpathsIcon />
             </Button>
+            <PartingButton />
           </div>
         </div>
         {nothing && (
@@ -130,7 +139,16 @@ export function SimulatorViewport() {
           </p>
         )}
       </section>
-      <PlaybackTimeline store={store} path={path} parts={parts} units={units} status={status} />
+      <PlaybackTimeline
+        store={store}
+        path={path}
+        parts={parts}
+        units={units}
+        status={status}
+        pending={playback.pending}
+      >
+        {children}
+      </PlaybackTimeline>
     </div>
   );
 }
@@ -165,6 +183,9 @@ function SimulatorScene({
       ) : (
         <Stock box={box} palette={palette} />
       )}
+      <SideFrame side="top">
+        <PartingPlane color={palette.parting} />
+      </SideFrame>
       {/* Its own toggle decides, whatever the Operations pane hides. */}
       {showToolpaths && <Toolpaths palette={palette} showHidden />}
       <PlaybackTool />

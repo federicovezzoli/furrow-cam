@@ -2,7 +2,7 @@
  * The interface languages (ADR-0054). No React and no catalogs, so the
  * desktop main process can pick a language too.
  */
-export const LOCALES = ["en", "it", "fr", "de"] as const;
+export const LOCALES = ["en", "it", "fr", "de", "es", "nl", "pt", "el", "tr", "zh", "ja"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 
@@ -12,6 +12,13 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   it: "Italiano",
   fr: "Français",
   de: "Deutsch",
+  es: "Español",
+  nl: "Nederlands",
+  pt: "Português",
+  el: "Ελληνικά",
+  tr: "Türkçe",
+  zh: "简体中文",
+  ja: "日本語",
 };
 
 export function isLocale(value: unknown): value is Locale {

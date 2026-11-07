@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseStl, StlImportError } from "./import";
+import {
+  binaryStlSize,
+  binaryStlTriangles,
+  parseStl,
+  StlImportError,
+  writeBinaryStl,
+} from "./import";
 
 type Triangle = [number, number, number][];
 
@@ -170,5 +176,26 @@ describe("parseStl", () => {
       code,
       values: { line: expect.any(Number) },
     });
+  });
+});
+
+describe("writeBinaryStl", () => {
+  it("writes indexed meshes as one binary STL that parseStl reads back", () => {
+    // Two meshes: a triangle, and a square of two triangles sharing an edge.
+    const bytes = writeBinaryStl([
+      { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] },
+      { positions: [0, 0, 5, 2, 0, 5, 2, 2, 5, 0, 2, 5], indices: [0, 1, 2, 0, 2, 3] },
+    ]);
+    expect(bytes.length).toBe(binaryStlSize(3));
+    const mesh = parseStl(bytes);
+    expect(mesh.triangles).toBe(3);
+    expect(Array.from(mesh.positions.subarray(9, 18))).toEqual([0, 0, 5, 2, 0, 5, 2, 2, 5]);
+    expect(mesh.bounds).toEqual({ min: [0, 0, 0], max: [2, 2, 5] });
+  });
+
+  it("says how many triangles fit in a file size", () => {
+    expect(binaryStlTriangles(binaryStlSize(20))).toBe(20);
+    expect(binaryStlTriangles(binaryStlSize(20) - 1)).toBe(19);
+    expect(binaryStlTriangles(10)).toBe(0);
   });
 });

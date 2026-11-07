@@ -14,6 +14,9 @@ export type HoveredGeometry = { shapeId: string; path: number };
 /** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
 export type ModelImport = { fileName: string; error: Translatable | null };
 
+/** What the viewport edits on the selected operation. */
+export type EditMode = "tabs" | "startPoints" | "overcuts" | "holes";
+
 /**
  * Session state of the workspace (ADR-0010): never undoable, never saved.
  * The camera pose stays inside the viewport, which its controls change on
@@ -47,10 +50,17 @@ export type WorkspaceState = {
   selectedOperationId: string | null;
   hovered: HoveredGeometry | null;
   /**
-   * Editing the selected profile's tabs in the viewport. Only in the top
-   * view, and ends when the selection or the view changes.
+   * Editing the selected profile's tabs or corner overcuts (#428), or the
+   * selected profile's or engraving's start points (#426), or placing the
+   * selected drill's holes (#429), in the viewport. Only in the top view,
+   * and ends when the selection or the view changes.
    */
-  editingTabs: boolean;
+  editing: EditMode | null;
+  /**
+   * A tab or start point marker under the pointer (`grab`) or being dragged
+   * (`grabbing`), or an overcut marker, which only takes clicks (`pointer`).
+   */
+  markerCursor: "grab" | "grabbing" | "pointer" | null;
   /**
    * Picking the XY zero in the viewport (PRD-0002 Z5), from the stock
    * properties. Only in the top view and while nothing is selected (the stock
@@ -66,6 +76,8 @@ export type WorkspaceState = {
    * and picking the zero work on the uncut stock top, so each ends the other.
    */
   simulating: boolean;
+  /** The viewport shows a two-sided project's parting plane (#473). */
+  showParting: boolean;
   /** The STL import under way or the last one that failed, `null` once done or dismissed. */
   modelImport: ModelImport | null;
 
@@ -80,18 +92,21 @@ export type WorkspaceState = {
   selectOperation: (id: string | null) => void;
   setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
-  setEditingTabs: (editing: boolean) => void;
+  setEditing: (editing: EditMode | null) => void;
+  setMarkerCursor: (cursor: WorkspaceState["markerCursor"]) => void;
   /** Switches to the top view when turned on. */
   setPickingZero: (picking: boolean) => void;
   setToolpathVisible: (operationId: string, visible: boolean) => void;
   /** Shows or hides the toolpaths of all of `operationIds` at once. */
   setToolpathsVisible: (operationIds: string[], visible: boolean) => void;
   setSimulating: (simulating: boolean) => void;
+  setShowParting: (show: boolean) => void;
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
-   * editing without tabs, picking the zero without a custom zero and the
+   * editing without tabs, start point editing without a profile or engraving, overcut
+   * editing without overcuts, placing holes without a drill other than a pin drill, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;
@@ -109,10 +124,12 @@ export function createWorkspaceStore() {
         selectedModelId: null,
         selectedOperationId: null,
         hovered: null,
-        editingTabs: false,
+        editing: null,
+        markerCursor: null,
         pickingZero: false,
         hiddenToolpathIds: [],
         simulating: false,
+        showParting: true,
         modelImport: null,
 
         setView(view) {
@@ -120,7 +137,7 @@ export function createWorkspaceStore() {
             (state) => {
               state.view = view;
               if (view !== "top") {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
@@ -134,7 +151,7 @@ export function createWorkspaceStore() {
             (state) => {
               state.side = side;
               if (side === "bottom") {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
@@ -174,7 +191,7 @@ export function createWorkspaceStore() {
                 state.selectedPaths = [];
                 state.pickingZero = false;
                 state.selectedOperationId = null;
-                state.editingTabs = false;
+                state.editing = null;
               }
             },
             false,
@@ -185,7 +202,7 @@ export function createWorkspaceStore() {
         selectOperation(id) {
           set(
             (state) => {
-              if (state.selectedOperationId !== id) state.editingTabs = false;
+              if (state.selectedOperationId !== id) state.editing = null;
               if (id !== null) {
                 state.pickingZero = false;
                 state.selectedModelId = null;
@@ -207,10 +224,10 @@ export function createWorkspaceStore() {
           );
         },
 
-        setEditingTabs(editing) {
+        setEditing(editing) {
           set(
             (state) => {
-              state.editingTabs = editing;
+              state.editing = editing;
               if (editing) {
                 state.view = "top";
                 state.side = "top";
@@ -219,7 +236,17 @@ export function createWorkspaceStore() {
               }
             },
             false,
-            "setEditingTabs",
+            "setEditing",
+          );
+        },
+
+        setMarkerCursor(cursor) {
+          set(
+            (state) => {
+              state.markerCursor = cursor;
+            },
+            false,
+            "setMarkerCursor",
           );
         },
 
@@ -230,7 +257,7 @@ export function createWorkspaceStore() {
               if (picking) {
                 state.view = "top";
                 state.side = "top";
-                state.editingTabs = false;
+                state.editing = null;
                 state.simulating = false;
               }
             },
@@ -273,12 +300,22 @@ export function createWorkspaceStore() {
             (state) => {
               state.simulating = simulating;
               if (simulating) {
-                state.editingTabs = false;
+                state.editing = null;
                 state.pickingZero = false;
               }
             },
             false,
             "setSimulating",
+          );
+        },
+
+        setShowParting(show) {
+          set(
+            (state) => {
+              state.showParting = show;
+            },
+            false,
+            "setShowParting",
           );
         },
 
@@ -298,7 +335,7 @@ export function createWorkspaceStore() {
               state.selectedPaths = [];
               state.selectedModelId = null;
               state.selectedOperationId = null;
-              state.editingTabs = false;
+              state.editing = null;
             },
             false,
             "clearSelection",
@@ -339,8 +376,30 @@ export function createWorkspaceStore() {
               }
               if (state.side === "bottom" && !document.stock.twoSided) state.side = "top";
               // Nothing left to edit once the profile's tabs are turned off (or undone).
-              if (state.editingTabs && !(operation?.type === "profile" && operation.params.tabs)) {
-                state.editingTabs = false;
+              if (
+                state.editing === "tabs" &&
+                !(operation?.type === "profile" && operation.params.tabs)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "overcuts" &&
+                !(operation?.type === "profile" && operation.params.cornerOvercuts)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "holes" &&
+                !(operation?.type === "drill" && !operation.params.pins)
+              ) {
+                state.editing = null;
+              }
+              if (
+                state.editing === "startPoints" &&
+                operation?.type !== "profile" &&
+                operation?.type !== "engrave"
+              ) {
+                state.editing = null;
               }
             },
             false,

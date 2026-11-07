@@ -10,6 +10,7 @@ import {
   vBitLineWidth,
 } from "@furrow/cam-core";
 import {
+  type CornerOvercuts,
   canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
@@ -50,8 +51,8 @@ import type * as React from "react";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 import { useLength } from "../hooks/use-length";
+import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
-import { selectionTargets } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -66,6 +67,7 @@ import {
   DEFAULT_STEP_OVER,
   DEFAULT_TAB_COUNT,
   defaultTabs,
+  hasPlacedHoles,
   renameOperation,
   setDrillPins,
   setOperationTargets,
@@ -136,6 +138,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           size="icon-compact"
           onClick={() => workspace.getState().selectOperation(null)}
           aria-label={t("closeLabel")}
+          data-demo="close-operation"
           title={t("close")}
         >
           <XIcon />
@@ -153,7 +156,12 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_finish" || operation.type === "relief_rough" ? (
         <ModelField modelId={operation.params.modelId} />
       ) : (
-        <TargetsField operationId={operation.id} targets={operation.targets} pins={pins} />
+        <TargetsField
+          operationId={operation.id}
+          targets={operation.targets}
+          pins={pins}
+          placedHoles={hasPlacedHoles(operation)}
+        />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
       {operation.type === "pocket" && <PocketFields operation={operation} />}
@@ -192,6 +200,9 @@ export function Row({
 }
 
 const SELECT_CLASS = "h-control px-2 pr-7 text-ui";
+
+/** Corner overcuts (#428) start on right angles and anything sharper. */
+const DEFAULT_OVERCUT_ANGLE = 90;
 
 /** The tool select's last option, which opens the form for a new bit instead of picking one. */
 const NEW_BIT = "__new";
@@ -297,21 +308,23 @@ function TargetsField({
   operationId,
   targets,
   pins,
+  placedHoles,
 }: {
   operationId: string;
   targets: OperationTarget[];
   /** For a drill: whether it cuts the locating pins, or may. */
   pins: "on" | "available" | null;
+  /**
+   * For a drill with placed holes (#429): the last shape can go too, and the
+   * holes are removed before it can cut the locating pins.
+   */
+  placedHoles: boolean;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
   const store = useDocumentStoreApi();
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
-  const selected = useMemo(
-    () => selectionTargets(geometry, selectedPaths),
-    [geometry, selectedPaths],
-  );
+  const selected = useSelectionTargets();
   const rows = useMemo(() => {
     const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
     return targets.flatMap((target) => {
@@ -340,7 +353,13 @@ function TargetsField({
           {t("useSelected")}
         </Button>
         {pins === "available" && (
-          <Button variant="outline" size="compact" onClick={() => setDrillPins(store, operationId)}>
+          <Button
+            variant="outline"
+            size="compact"
+            disabled={placedHoles}
+            title={placedHoles ? t("pinsWithoutHoles") : undefined}
+            onClick={() => setDrillPins(store, operationId)}
+          >
             {t("usePins")}
           </Button>
         )}
@@ -358,7 +377,7 @@ function TargetsField({
             <Button
               variant="ghost"
               size="icon-compact"
-              disabled={rows.length === 1}
+              disabled={rows.length === 1 && !placedHoles}
               onClick={() =>
                 setOperationTargets(
                   store,
@@ -367,7 +386,7 @@ function TargetsField({
                 )
               }
               aria-label={t("removeLabel", { name: shape.name || t("unnamedShape") })}
-              title={rows.length === 1 ? t("needsShape") : t("remove")}
+              title={rows.length === 1 && !placedHoles ? t("needsShape") : t("remove")}
             >
               <XIcon />
             </Button>
@@ -577,8 +596,13 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           value={params.side}
           onChange={(event) => {
             const side = ProfileSide.parse(event.target.value);
-            // On the line leaves no wall for an allowance to stay on.
-            update("side", side === "on" ? { side, allowance: 0, finishPass: false } : { side });
+            // On the line leaves no wall for an allowance to stay on, and no corner to overcut.
+            update(
+              "side",
+              side === "on"
+                ? { side, allowance: 0, finishPass: false, cornerOvercuts: null }
+                : { side },
+            );
           }}
           className={SELECT_CLASS}
         >
@@ -678,6 +702,40 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           error={errors.tabs}
           onChange={(tabs) => update("tabs", { tabs })}
         />
+      )}
+      <StartPointsFields count={params.startPoints.length} />
+      <Checkbox
+        id="profile-corner-overcuts"
+        label={t("cornerOvercuts")}
+        hint={params.side === "on" ? t("overcutsNeedSide") : undefined}
+        checked={params.cornerOvercuts !== null}
+        disabled={params.side === "on"}
+        onChange={(checked) =>
+          update("cornerOvercuts", {
+            cornerOvercuts: checked ? { maxAngle: DEFAULT_OVERCUT_ANGLE, excluded: [] } : null,
+          })
+        }
+      />
+      {params.cornerOvercuts && (
+        <div className="grid gap-2 border-l-2 pl-2">
+          <NumberField
+            id="profile-overcut-angle"
+            label={t("maxCornerAngle")}
+            layout="inline"
+            suffix="°"
+            min={0}
+            max={180}
+            value={params.cornerOvercuts.maxAngle}
+            onValueChange={(maxAngle) =>
+              update("cornerOvercuts", {
+                cornerOvercuts: { ...(params.cornerOvercuts as CornerOvercuts), maxAngle },
+              })
+            }
+            error={errors.cornerOvercuts}
+            {...gestureHandlers(store)}
+          />
+          <OvercutsEditing />
+        </div>
       )}
       {(errors.side ?? errors.direction ?? errors.finishPass ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
@@ -924,6 +982,7 @@ function DrillFields({ operation }: { operation: DrillOperation }) {
           {errors.peck}
         </p>
       )}
+      {!params.pins && <HolesFields count={params.points.length} />}
     </section>
   );
 }
@@ -1007,6 +1066,7 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         checked={params.ramp}
         onChange={(ramp) => update("ramp", { ramp })}
       />
+      <StartPointsFields count={params.startPoints.length} />
       {(errors.side ?? errors.ramp) && (
         <p role="alert" className="text-destructive">
           {errors.side ?? errors.ramp}
@@ -1488,8 +1548,8 @@ function TabsFields({
   const t = useTranslations("Operation");
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
-  const editing = useWorkspaceStore((s) => s.editingTabs);
-  const setEditing = useWorkspaceStore((s) => s.setEditingTabs);
+  const editing = useWorkspaceStore((s) => s.editing === "tabs");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
   const [mode, setMode] = useState<PlacementMode>("count");
   const [count, setCount] = useState(DEFAULT_TAB_COUNT);
   const [spacing, setSpacing] = useState(100);
@@ -1578,13 +1638,82 @@ function TabsFields({
           variant={editing ? "secondary" : "outline"}
           size="compact"
           aria-pressed={editing}
-          onClick={() => setEditing(!editing)}
+          onClick={() => setEditing(editing ? null : "tabs")}
         >
           {editing ? t("done") : t("editInViewport")}
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("editHint")}</p>}
     </div>
+  );
+}
+
+/** What corner overcuts (#428) do, and a toggle for leaving them out in the viewport. */
+function OvercutsEditing() {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "overcuts");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("overcutsHint")}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "overcuts")}
+        >
+          {editing ? t("done") : t("editOvercuts")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("overcutsEditHint")}</p>}
+    </>
+  );
+}
+
+/** How many start points (#426) an operation has, and a toggle for editing them in the viewport. */
+function StartPointsFields({ count }: { count: number }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "startPoints");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("startPointCount", { count })}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "startPoints")}
+        >
+          {editing ? t("done") : t("editStartPoints")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+    </>
+  );
+}
+
+/** How many holes a drill has placed (#429), and a toggle for placing them in the viewport. */
+function HolesFields({ count }: { count: number }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "holes");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">{t("holeCount", { count })}</span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          onClick={() => setEditing(editing ? null : "holes")}
+        >
+          {editing ? t("done") : t("placeHoles")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("placeHolesHint")}</p>}
+    </>
   );
 }
 

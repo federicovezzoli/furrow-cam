@@ -1,4 +1,5 @@
 import {
+  checkPins,
   createCache,
   createReliefCache,
   generateToolpath,
@@ -6,7 +7,6 @@ import {
   parseStl,
   type SimulationCut,
   type StlMesh,
-  type Toolpath,
   toolpathCuts,
   toolpathKey,
   toolpathLines,
@@ -14,7 +14,8 @@ import {
   toolpathMeshes,
   toolpathSteps,
 } from "@furrow/cam-core";
-import { type Message, MessageError } from "@furrow/document";
+import { type Machine, type Message, MessageError } from "@furrow/document";
+import { estimateTime } from "@furrow/post";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
 import { exportFromResults, ToolpathResults } from "../lib/toolpath-export";
 import type {
@@ -55,6 +56,8 @@ const cuts = createCache<SimulationCut[]>(8);
  * messages drop those of operations disabled or deleted.
  */
 const results = new ToolpathResults();
+/** The project's machine, which toolpath times are estimated for (#420). */
+let machine: Machine | null = null;
 
 function keep(sha256: string, mesh: StlMesh) {
   meshes.delete(sha256);
@@ -114,11 +117,13 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     await keepMesh(bytes, toolpathMeshes(input));
   }
 
+  // Held already when only the pins moved (#395), which just rechecks it.
+  const key = toolpathKey(input);
+  let toolpath = results.computed(operationId, key);
   const steps = toolpathSteps(input, { mesh, cache: reliefCache, cuts });
-  let toolpath: Toolpath;
   let slice = performance.now();
   let reported = slice;
-  for (;;) {
+  while (!toolpath) {
     const step = steps.next();
     if (step.done) {
       toolpath = step.value;
@@ -139,9 +144,9 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
     }
   }
 
-  results.keep(operationId, inputHash, toolpath);
+  results.keep(operationId, inputHash, key, toolpath);
   const { operation } = input;
-  const { warnings } = toolpath;
+  const { warnings } = checkPins(input, toolpath);
   // Only drills make holes; other straight plunges enter a cut that shows.
   const holeRadius = operation.type === "drill" ? operation.tool.diameter / 2 : null;
   // A V-carve's or a relief's depth varies along each pass, and 3D roughing's
@@ -154,13 +159,14 @@ async function compute({ operationId, inputHash, input, mesh: bytes }: ToolpathR
   const clearing = toolpath.clearing
     ? toolpathLines({ moves: toolpath.clearing, warnings: [] })
     : undefined;
+  const seconds = estimateTime(toolpath, machine);
   // Only what the main thread shows crosses over, and the viewport's typed
   // arrays move there instead of being copied: cloning every move would cost
   // more than drawing them.
   scope.postMessage(
     clearing
-      ? { operationId, inputHash, warnings, lines, clearing }
-      : { operationId, inputHash, warnings, lines },
+      ? { operationId, inputHash, warnings, lines, clearing, seconds }
+      : { operationId, inputHash, warnings, lines, seconds },
     [...toolpathLinesBuffers(lines), ...(clearing ? toolpathLinesBuffers(clearing) : [])],
   );
 }
@@ -178,6 +184,7 @@ async function exportProgram({
   export: id,
   document,
   name,
+  version,
   inputs,
   meshes: files = [],
 }: GcodeExportRequest) {
@@ -204,8 +211,13 @@ async function exportProgram({
       cache: reliefCache,
       cuts: exportCuts,
     };
-    const program = exportFromResults(document, name, inputs, results, (input) =>
-      generateToolpath(input, context),
+    const program = exportFromResults(
+      document,
+      name,
+      inputs,
+      results,
+      (input) => generateToolpath(input, context),
+      { version },
     );
     scope.postMessage({ export: id, ...program });
   } catch (error) {
@@ -233,6 +245,13 @@ scope.onmessage = ({ data }) => {
   }
   if ("retain" in data) {
     results.retain(data.retain);
+    return;
+  }
+  if ("machine" in data) {
+    machine = data.machine;
+    for (const [operationId, inputHash, toolpath] of results.entries()) {
+      scope.postMessage({ operationId, inputHash, estimate: estimateTime(toolpath, machine) });
+    }
     return;
   }
   if ("export" in data) {

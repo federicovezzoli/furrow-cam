@@ -1,4 +1,4 @@
-import { generateToolpath, toolpathInputs } from "@furrow/cam-core";
+import { generateToolpath, toolpathInputs, toolpathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { exportGcode } from "@furrow/post";
@@ -22,7 +22,7 @@ describe("exportFromResults", () => {
     const { document, inputs } = project();
     const results = new ToolpathResults();
     for (const { operationId, inputHash, input } of inputs) {
-      results.keep(operationId, inputHash, generateToolpath(input));
+      results.keep(operationId, inputHash, toolpathKey(input), generateToolpath(input));
     }
     const compute = vi.fn(generateToolpath);
     const exported = exportFromResults(document, "Plate", inputs, results, compute);
@@ -35,7 +35,7 @@ describe("exportFromResults", () => {
     const results = new ToolpathResults();
     const [first, ...others] = inputs as [ExportInput, ...ExportInput[]];
     // The first operation's toolpath is from older inputs; the others are missing.
-    results.keep(first.operationId, "older", {
+    results.keep(first.operationId, "older", "older", {
       moves: [],
       warnings: [{ code: "toolpath.noArea" }],
     });
@@ -57,8 +57,8 @@ describe("ToolpathResults", () => {
     const toolpath = { moves: [], warnings: [] };
     results.retain(["a"]);
     // E.g. an export queued before "b" was deleted computes it.
-    results.keep("b", "1", toolpath);
-    results.keep("a", "1", toolpath);
+    results.keep("b", "1", "", toolpath);
+    results.keep("a", "1", "", toolpath);
     expect(results.size).toBe(1);
     expect(results.get("b", "1")).toBeUndefined();
   });
@@ -66,14 +66,15 @@ describe("ToolpathResults", () => {
   it("keeps one toolpath per operation, and only those retained", () => {
     const results = new ToolpathResults();
     const toolpath = { moves: [], warnings: [] };
-    results.keep("a", "1", toolpath);
-    results.keep("a", "2", toolpath);
-    results.keep("b", "1", toolpath);
+    results.keep("a", "1", "", toolpath);
+    results.keep("a", "2", "", toolpath);
+    results.keep("b", "1", "", toolpath);
     expect(results.size).toBe(2);
     expect(results.get("a", "1")).toBeUndefined();
     expect(results.get("a", "2")).toBe(toolpath);
     results.retain(["b"]);
     expect(results.size).toBe(1);
+    expect(results.computed("b", "")).toBe(toolpath);
     expect(results.get("a", "2")).toBeUndefined();
   });
 });

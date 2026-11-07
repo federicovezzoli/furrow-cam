@@ -10,10 +10,18 @@ export type Palette = {
   /** Fills the selected drawing's box, faintly: unlike the stock, so the box shows on it. */
   selectedDrawing: string;
   tab: string;
+  /** Start points (#426), where the selected operation's cuts begin. */
+  startPoint: string;
+  /** Corner overcuts (#428) of the selected profile. */
+  overcut: string;
+  /** Holes placed on the selected drill (#429). */
+  hole: string;
   /** The touch-off pad (ADR-0043), unlike anything cut or left uncut. */
   touchOff: string;
   /** The locating pins (#356). */
   pin: string;
+  /** A two-sided project's parting plane (#473). */
+  parting: string;
   /** The snap target while picking the zero. */
   snap: string;
   /** Rapid moves; cutting moves take their tool's colour. */
@@ -33,8 +41,12 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedHalo: "#ffffff",
     selectedDrawing: "#27272a",
     tab: "#16a34a",
+    startPoint: "#dc2626",
+    overcut: "#ea580c",
+    hole: "#0891b2",
     touchOff: "#0891b2",
     pin: "#4f46e5",
+    parting: "#e11d48",
     snap: "#c026d3",
     rapid: "#71717a",
     stock: "#d4a373",
@@ -50,8 +62,12 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
     selectedHalo: "#18181b",
     selectedDrawing: "#ffffff",
     tab: "#4ade80",
+    startPoint: "#f87171",
+    overcut: "#fb923c",
+    hole: "#22d3ee",
     touchOff: "#22d3ee",
     pin: "#818cf8",
+    parting: "#fb7185",
     snap: "#e879f9",
     rapid: "#a1a1aa",
     stock: "#a47148",
@@ -68,14 +84,15 @@ export const PALETTES: Record<"light" | "dark", Palette> = {
  */
 export const RENDER_ORDER = {
   stock: 0,
-  selectedDrawing: 1,
-  shapes: 2,
-  selected: 3,
-  hovered: 4,
-  rapids: 5,
-  feeds: 6,
-  holes: 7,
-  origin: 8,
-  tabs: 9,
-  snap: 10,
+  parting: 1,
+  selectedDrawing: 2,
+  shapes: 3,
+  selected: 4,
+  hovered: 5,
+  rapids: 6,
+  feeds: 7,
+  holes: 8,
+  origin: 9,
+  tabs: 10,
+  snap: 11,
 } as const;

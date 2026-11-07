@@ -13,7 +13,13 @@ const computing = (progress?: number): ToolpathEntry => ({
   status: "computing",
   ...(progress !== undefined && { progress }),
 });
-const ready: ToolpathEntry = { inputHash: "h", status: "ready", warnings: [], lines: {} as never };
+const ready: ToolpathEntry = {
+  inputHash: "h",
+  status: "ready",
+  warnings: [],
+  lines: {} as never,
+  seconds: 0,
+};
 
 describe("toolpathProgress", () => {
   it("names the first operation computing, with its progress, and counts the batch", () => {

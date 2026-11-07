@@ -15,8 +15,8 @@ const lines: ToolpathLines = {
   feedColors: new Float32Array(),
   kinds: new Uint8Array([0]),
 };
-const stale: ToolpathPreview = { warnings: [{ code: "toolpath.noArea" }], lines };
-const fresh: ToolpathPreview = { warnings: [], lines };
+const stale: ToolpathPreview = { warnings: [{ code: "toolpath.noArea" }], lines, seconds: 60 };
+const fresh: ToolpathPreview = { warnings: [], lines, seconds: 30 };
 
 describe("toolpath store", () => {
   it("keeps the result for the latest inputs only", () => {
@@ -96,6 +96,18 @@ describe("toolpath store", () => {
     store.getState().setResult("op", "2", fresh);
     store.getState().setProgress("op", "2", 0.9);
     expect(store.getState().entries.op?.status).toBe("ready");
+  });
+
+  it("estimates a ready toolpath of the latest inputs again", () => {
+    const store = createToolpathStore();
+    store.getState().startComputing("op", "1");
+    store.getState().setEstimate("op", "1", 90);
+    expect(store.getState().entries.op).not.toHaveProperty("seconds");
+    store.getState().setResult("op", "1", fresh);
+    store.getState().setEstimate("op", "0", 90);
+    expect(store.getState().entries.op).toMatchObject({ seconds: 30 });
+    store.getState().setEstimate("op", "1", 90);
+    expect(store.getState().entries.op).toMatchObject({ seconds: 90 });
   });
 
   it("marks cancelled toolpaths of the latest inputs", () => {

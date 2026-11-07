@@ -10,6 +10,7 @@ import {
   textShape,
 } from "../fixtures";
 import { createProjectDocument } from "../schema/document";
+import type { Point } from "../schema/geometry";
 import type { Operation } from "../schema/operation";
 import {
   type Migration,
@@ -205,7 +206,7 @@ describe("migrations", () => {
       ...(current.operations[0] as Operation),
       id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
       type: "drill" as const,
-      params: { depth: 10, peck: true, stepOver: 40, pins: false },
+      params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
     };
     current.stock.twoSided = { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null };
     current.operations.push(drill);
@@ -293,6 +294,79 @@ describe("migrations", () => {
       drawings: current.drawings.map(({ rotation: _, ...drawing }) => drawing),
     };
     expect(parseProjectDocument(v27)).toEqual(current);
+  });
+
+  it("keeps v29 models at the stock top", () => {
+    const current = { ...fullDocument(), models: [model] };
+    const { top: _, ...placement } = model.placement;
+    const v29 = { ...current, schemaVersion: 29, models: [{ ...model, placement }] };
+    expect(parseProjectDocument(v29)).toEqual(current);
+  });
+
+  it("gives v30 machine snapshots no accelerations", () => {
+    const current = fullDocument();
+    if (current.machine === null) throw new Error("fullDocument has a machine");
+    const { accelerationXY: _, accelerationZ: __, ...machine } = current.machine;
+    const v30 = { ...current, schemaVersion: 30, machine };
+    expect(parseProjectDocument(v30)).toEqual(current);
+  });
+
+  it("gives v31 profiles and engravings no start points", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const engrave: Operation = {
+      ...profile,
+      id: "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+      type: "engrave",
+      tool: { ...profile.tool },
+      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
+    };
+    const withNone = {
+      ...current,
+      operations: [{ ...profile, params: { ...profile.params, startPoints: [] } }, engrave],
+    };
+    const v31 = {
+      ...withNone,
+      schemaVersion: 31,
+      operations: withNone.operations.map(
+        ({ params: { startPoints: _, ...params }, ...operation }) => ({
+          ...operation,
+          params,
+        }),
+      ),
+    };
+    expect(parseProjectDocument(v31)).toEqual(withNone);
+  });
+
+  it("gives v32 profiles no corner overcuts", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const { cornerOvercuts: _, ...params } = profile.params;
+    const v32 = { ...current, schemaVersion: 32, operations: [{ ...profile, params }] };
+    expect(parseProjectDocument(v32)).toEqual({
+      ...current,
+      operations: [{ ...profile, params: { ...params, cornerOvercuts: null } }],
+    });
+  });
+
+  it("gives v33 drills no placed holes", () => {
+    const current = fullDocument();
+    const drill = {
+      ...(current.operations[0] as Operation),
+      id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      type: "drill" as const,
+      params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
+    };
+    current.operations.push(drill);
+    const { points: _, ...params } = drill.params;
+    const v33 = {
+      ...current,
+      schemaVersion: 33,
+      operations: [current.operations[0], { ...drill, params }],
+    };
+    expect(parseProjectDocument(v33)).toEqual(current);
   });
 
   it("gives v6 documents no models", () => {
@@ -468,7 +542,7 @@ describe("migrations", () => {
       ...profile,
       id: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
       type: "drill",
-      params: { depth: 5, peck: false, stepOver: 35, pins: false },
+      params: { depth: 5, peck: false, stepOver: 35, pins: false, points: [] as Point[] },
     } as const;
     const vcarve = {
       ...profile,
