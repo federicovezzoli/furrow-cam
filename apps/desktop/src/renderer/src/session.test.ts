@@ -67,12 +67,14 @@ describe("createProjectSession", () => {
     const { session, deleteRecovery } = setup();
     await session.host.save(widened(session.document, 321), session.savedAt);
     const { bytes, contents } = session.prepareSave();
-    session.markSaved("/p/Coasters 2.furrow", "Coasters 2", contents);
+    session.markSaved("/p/Coasters 2.furrow", "Coasters 2", contents, "9:9:9:9");
     await settled();
+    // The new file's stamp, given back at the next save to check it (#491).
     expect(session).toMatchObject({
       modified: false,
       path: "/p/Coasters 2.furrow",
       name: "Coasters 2",
+      stamp: "9:9:9:9",
     });
     expect(deleteRecovery).toHaveBeenCalled();
     expect((await readProjectFile(bytes, t)).document.stock.width).toBe(321);

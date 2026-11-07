@@ -13,8 +13,8 @@ function listen<T extends unknown[]>(channel: string, listener: (...args: T) => 
 const api: DesktopApi = {
   openFile: () => ipcRenderer.invoke(CHANNELS.openFile),
   readFile: (path) => ipcRenderer.invoke(CHANNELS.readFile, path),
-  saveFile: (path, suggestedName, bytes) =>
-    ipcRenderer.invoke(CHANNELS.saveFile, path, suggestedName, bytes),
+  saveFile: (path, suggestedName, bytes, stamp) =>
+    ipcRenderer.invoke(CHANNELS.saveFile, path, suggestedName, bytes, stamp),
   recentFiles: () => ipcRenderer.invoke(CHANNELS.recentFiles),
   readData: (file) => ipcRenderer.invoke(CHANNELS.readData, file),
   writeData: (file, data) => ipcRenderer.invoke(CHANNELS.writeData, file, data),

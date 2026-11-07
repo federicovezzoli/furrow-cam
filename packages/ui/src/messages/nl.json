@@ -477,9 +477,9 @@
       "save": "Bewaar",
       "dontSave": "Bewaar niet",
       "changed": "{name} is gewijzigd sinds het werd geopend",
-      "changedDetail": "Een ander programma, zoals een AI-assistent via de MCP-server van Furrow CAM, heeft het intussen opgeslagen. Vervangen gooit die wijzigingen weg; Opslaan als bewaart beide.",
+      "changedDetail": "Een ander programma, zoals een AI-assistent via de MCP-server van Furrow CAM, heeft het intussen bewaard. Vervangen gooit die wijzigingen weg; met Bewaar als blijven beide behouden.",
       "replace": "Vervangen",
-      "saveAs": "Opslaan als…",
+      "saveAs": "Bewaar als…",
       "cancel": "Annuleer"
     }
   },

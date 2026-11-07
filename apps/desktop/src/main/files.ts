@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { PROJECT_FILE_SUFFIX, PROJECT_PATH } from "@furrow/document";
-import type { RecentFile, Recovery } from "../shared/api";
+import type { FileStamp, RecentFile, Recovery } from "../shared/api";
 
 /** How many recent files the start screen lists. */
 export const MAX_RECENT = 10;
@@ -60,31 +60,18 @@ export function parseRecent(json: unknown): RecentFile[] {
   );
 }
 
-/** `path`'s modification time and size, or `null` if it doesn't exist: what tells whether it changed. */
-export function fileStamp(path: string): Promise<string | null> {
+/**
+ * `path`'s stamp: its inode, change and modification times and size, or
+ * `null` if it doesn't exist. A save by renaming a new file over it, as the
+ * MCP server and this app save, gives it a new inode, so even a same-size
+ * save within a filesystem's time resolution is seen. The MCP server's
+ * `stampOf` (apps/mcp/src/projects.ts) is the same: keep them alike.
+ */
+export function fileStamp(path: string): Promise<FileStamp> {
   return stat(path).then(
-    ({ mtimeMs, size }) => `${mtimeMs}:${size}`,
+    ({ ino, ctimeMs, mtimeMs, size }) => `${ino}:${ctimeMs}:${mtimeMs}:${size}`,
     () => null,
   );
-}
-
-/**
- * The project files the app read or wrote, each with its stamp then, to
- * tell whether something else, such as the MCP server, changed one since
- * (#491).
- */
-export function fileStamps() {
-  const known = new Map<string, string | null>();
-  return {
-    /** Records `path` as it is now; called before reading it, a change while reading shows as one. */
-    async record(path: string) {
-      known.set(path, await fileStamp(path));
-    },
-    /** Whether `path` changed since it was recorded; `false` for a file never recorded. */
-    async changed(path: string): Promise<boolean> {
-      return known.has(path) && (await fileStamp(path)) !== known.get(path);
-    },
-  };
 }
 
 /** `recent` without the files that no longer exist. */
@@ -114,12 +101,12 @@ export function recoveryStore(dir: string) {
   }
 
   return {
-    async write({ id, path, name }: Omit<Recovery, "savedAt">, bytes: Uint8Array) {
+    async write({ id, path, name, stamp }: Omit<Recovery, "savedAt">, bytes: Uint8Array) {
       const { file, meta } = paths(id);
       await mkdir(dir, { recursive: true });
       // The project first: a copy without its description is ignored, not offered half-written.
       await writeFileAtomic(file, bytes);
-      const recovery: Recovery = { id, path, name, savedAt: new Date().toISOString() };
+      const recovery: Recovery = { id, path, name, stamp, savedAt: new Date().toISOString() };
       await writeFileAtomic(meta, JSON.stringify(recovery));
     },
 
@@ -159,12 +146,13 @@ export function recoveryStore(dir: string) {
 
 function isRecovery(value: unknown): value is Recovery {
   if (typeof value !== "object" || value === null) return false;
-  const { id, path, name, savedAt } = value as Record<string, unknown>;
+  const { id, path, name, savedAt, stamp } = value as Record<string, unknown>;
   return (
     typeof id === "string" &&
     (path === null || typeof path === "string") &&
     typeof name === "string" &&
-    typeof savedAt === "string"
+    typeof savedAt === "string" &&
+    (stamp === undefined || stamp === null || typeof stamp === "string")
   );
 }
 

@@ -11,7 +11,7 @@ import { type ProjectFile, readProjectFile } from "@furrow/workspace/lib/project
 import { track } from "@furrow/workspace/lib/telemetry";
 import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-host";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Recovery } from "../../shared/api";
+import type { FileStamp, Recovery } from "../../shared/api";
 import { api } from "./api";
 import { AppFrame } from "./app-frame";
 import { type Page, ProjectView } from "./desktop-host";
@@ -46,6 +46,8 @@ export function App() {
   const flush = useRef<() => Promise<unknown>>(async () => {});
   /** The session as last rendered, for commands that outlive a render (menus, dialogs). */
   const current = useRef(session);
+  /** The save running, if any; the next one waits for it. */
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
   current.current = session;
 
   useEffect(() => {
@@ -101,10 +103,21 @@ export function App() {
 
   function open(
     file: ProjectFile,
-    options: { path: string | null; name: string; id?: string; modified?: boolean },
+    options: {
+      path: string | null;
+      name: string;
+      id?: string;
+      modified?: boolean;
+      stamp?: FileStamp;
+    },
   ) {
     let created: ProjectSession;
-    const recovery = () => ({ id: created.id, path: created.path, name: created.name });
+    const recovery = () => ({
+      id: created.id,
+      path: created.path,
+      name: created.name,
+      stamp: created.stamp,
+    });
     created = createProjectSession({
       ...options,
       file,
@@ -124,7 +137,14 @@ export function App() {
    * Saves the open project to its file, or where the user picks when it has
    * none or `as` is set. Resolves with whether it was saved.
    */
-  async function save(as = false): Promise<boolean> {
+  function save(as = false): Promise<boolean> {
+    // One at a time: a second Save sends the stamp the first one wrote.
+    const next = saving.current.then(() => saveNow(as));
+    saving.current = next.catch(() => false);
+    return next;
+  }
+
+  async function saveNow(as: boolean): Promise<boolean> {
     const session = current.current;
     if (!session) return false;
     await flush.current();
@@ -135,14 +155,19 @@ export function App() {
       void alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
       return false;
     }
-    const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);
+    const result = await api.saveFile(
+      as ? null : session.path,
+      session.name,
+      prepared.bytes,
+      as ? undefined : session.stamp,
+    );
     if (result === null) return false;
     if ("error" in result) {
       void alert(result.error);
       return false;
     }
     // Edits made while the file was written stay unsaved.
-    session.markSaved(result.path, result.name, prepared.contents);
+    session.markSaved(result.path, result.name, prepared.contents, result.stamp);
     return true;
   }
 
@@ -174,7 +199,7 @@ export function App() {
     else setError(message);
   }
 
-  async function openBytes(bytes: Uint8Array, path: string, name: string) {
+  async function openBytes(bytes: Uint8Array, path: string, name: string, stamp: FileStamp) {
     let file: ProjectFile;
     try {
       file = await readProjectFile(bytes, t);
@@ -185,20 +210,20 @@ export function App() {
     }
     // Only `.furrow` files are saved over; others are saved as a new `.furrow` file.
     const savable = /\.furrow$/i.test(path);
-    await replaceWith(() => open(file, { path: savable ? path : null, name }));
+    await replaceWith(() => open(file, savable ? { path, name, stamp } : { path: null, name }));
   }
 
   async function openDialog() {
     const result = await api.openFile();
     if (result === null) return;
     if ("error" in result) report(result.error);
-    else await openBytes(result.bytes, result.path, result.name);
+    else await openBytes(result.bytes, result.path, result.name, result.stamp);
   }
 
   async function openPath(path: string) {
     const result = await api.readFile(path);
     if ("error" in result) report(result.error);
-    else await openBytes(result.bytes, result.path, result.name);
+    else await openBytes(result.bytes, result.path, result.name, result.stamp);
   }
 
   async function restore(recovery: Recovery) {
@@ -209,7 +234,13 @@ export function App() {
     }
     try {
       const file = await readProjectFile(bytes, t);
-      open(file, { path: recovery.path, name: recovery.name, id: recovery.id, modified: true });
+      open(file, {
+        path: recovery.path,
+        name: recovery.name,
+        id: recovery.id,
+        modified: true,
+        stamp: recovery.stamp,
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : t("Desktop.App.recoveryUnreadable"));
     }
