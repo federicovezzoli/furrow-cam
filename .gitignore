@@ -8,6 +8,8 @@ build/
 # electron-builder's resources (the app icons), not build output
 !apps/desktop/build/
 dist/
+# copied from the root at prepack (ADR-0067)
+apps/mcp/LICENSE
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
