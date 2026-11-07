@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.16.3
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.21.2
+
 ## 0.16.2
 
 ### Patch Changes
