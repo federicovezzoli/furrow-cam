@@ -82,7 +82,7 @@ function toolpathError(error: unknown, operation: string): unknown {
  * computer), step by step: every `SLICE_MS` they report `progress` and let
  * other requests in, and stop if `signal` is aborted.
  */
-async function computeToolpaths(
+export async function computeToolpaths(
   project: Project,
   document: ProjectDocument,
   progress?: Progress,
