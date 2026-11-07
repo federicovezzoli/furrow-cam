@@ -31,28 +31,15 @@ const projectPath = z
     "Absolute path of the project file: .furrow, or .furrow.zip or .furrow.json to open one exported from the web app. It saves as .furrow next to it.",
   );
 
-/** `run`'s result as JSON for the assistant, or its `ToolError` as a tool error. */
-async function respond(run: () => Promise<unknown>): Promise<CallToolResult> {
-  try {
-    return { content: [{ type: "text", text: JSON.stringify(await run(), null, 2) }] };
-  } catch (error) {
-    if (!(error instanceof ToolError)) throw error;
-    return { isError: true, content: [{ type: "text", text: error.message }] };
-  }
-}
-
-/** `run`'s image and legend, or its `ToolError` as a tool error. */
-async function respondImage(
-  run: () => Promise<{ png: Uint8Array; legend: unknown }>,
+/** `run`'s result for the assistant, as JSON unless `content` says how, or its `ToolError` as a tool error. */
+async function respond<T>(
+  run: () => Promise<T>,
+  content: (result: T) => CallToolResult["content"] = (result) => [
+    { type: "text", text: JSON.stringify(result, null, 2) },
+  ],
 ): Promise<CallToolResult> {
   try {
-    const { png, legend } = await run();
-    return {
-      content: [
-        { type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" },
-        { type: "text", text: JSON.stringify(legend, null, 2) },
-      ],
-    };
+    return { content: content(await run()) };
   } catch (error) {
     if (!(error instanceof ToolError)) throw error;
     return { isError: true, content: [{ type: "text", text: error.message }] };
@@ -194,16 +181,27 @@ export function createServer(projects: Projects = createProjects(), library = li
       annotations: { readOnlyHint: true },
     },
     ({ path, side = "top" }, extra) =>
-      respondImage(async () => {
-        const project = await projects.get(path);
-        const { document } = project.store.getState();
-        if (side === "bottom" && !document.stock.twoSided) {
-          throw new ToolError("The project isn't two-sided: it has only a top side.");
-        }
-        // shortcut: computes both sides' toolpaths to draw one; compute only that side's (and the ones rest machining needs) if two-sided projects make this slow.
-        const computed = await computeToolpaths(project, document, progressOf(extra), extra.signal);
-        return topView(document, computed, side);
-      }),
+      respond(
+        async () => {
+          const project = await projects.get(path);
+          const { document } = project.store.getState();
+          if (side === "bottom" && !document.stock.twoSided) {
+            throw new ToolError("The project isn't two-sided: it has only a top side.");
+          }
+          // shortcut: computes both sides' toolpaths to draw one; compute only that side's (and the ones rest machining needs) if two-sided projects make this slow.
+          const computed = await computeToolpaths(
+            project,
+            document,
+            progressOf(extra),
+            extra.signal,
+          );
+          return topView(document, computed, side);
+        },
+        ({ png, legend }) => [
+          { type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" },
+          { type: "text", text: JSON.stringify(legend, null, 2) },
+        ],
+      ),
   );
 
   const itemId = z.string().describe("The drawing's or model's id, from the project summary.");

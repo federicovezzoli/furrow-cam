@@ -41,15 +41,17 @@ function decode(png: Uint8Array) {
   return { width, height, pixels };
 }
 
-/** How many pixels are within `tolerance` of `color` (#rrggbb) in each channel. */
-function count(pixels: Uint8Array, color: string, tolerance = 24) {
+/** The [x, y] of the pixels within `tolerance` of `color` (#rrggbb) in each channel. */
+function where(width: number, pixels: Uint8Array, color: string, tolerance = 24) {
   const value = Number.parseInt(color.slice(1), 16);
   const target = [value >> 16, (value >> 8) & 0xff, value & 0xff];
-  let n = 0;
+  const found: [number, number][] = [];
   for (let i = 0; i < pixels.length; i += 3) {
-    if (target.every((c, k) => Math.abs((pixels[i + k] as number) - c) <= tolerance)) n++;
+    if (target.every((c, k) => Math.abs((pixels[i + k] as number) - c) <= tolerance)) {
+      found.push([(i / 3) % width, Math.floor(i / 3 / width)]);
+    }
   }
-  return n;
+  return found;
 }
 
 async function view(side: "top" | "bottom" = "top") {
@@ -61,13 +63,17 @@ describe("topView", () => {
   it("draws each operation's cutting moves in its tool's colour, fitting what reaches past the stock", async () => {
     addOperation(project, { tools: [], machines: [], problems: [] }, "drill", {
       tool: { settings: { ...drill } },
-      settings: { points: [[150, 100]] },
+      // Near the stock's top-right corner, to show which way up the image is.
+      settings: { points: [[280, 180]] },
     });
     const { png, legend } = await view();
     const { width, height, pixels } = decode(png);
     expect(Math.max(width, height)).toBe(1024);
-    expect(count(pixels, endMill.color)).toBeGreaterThan(500);
-    expect(count(pixels, drill.color)).toBeGreaterThan(20);
+    expect(where(width, pixels, endMill.color).length).toBeGreaterThan(500);
+    const hole = where(width, pixels, drill.color);
+    expect(hole.length).toBeGreaterThan(20);
+    // Y up as in stock coordinates: the hole is in the image's top-right quarter.
+    expect(hole.every(([x, y]) => x > width / 2 && y < height / 2)).toBe(true);
     expect(legend.operations.map((operation) => operation.id)).toEqual([
       OPERATION_ID,
       expect.any(String),
@@ -80,6 +86,7 @@ describe("topView", () => {
   it("draws only the operations of the side asked for", async () => {
     const { png, legend } = await view("bottom");
     expect(legend.operations).toEqual([]);
-    expect(count(decode(png).pixels, endMill.color)).toBe(0);
+    const { width, pixels } = decode(png);
+    expect(where(width, pixels, endMill.color)).toEqual([]);
   });
 });

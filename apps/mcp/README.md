@@ -6,7 +6,7 @@ Lets an AI assistant work on your [Furrow CAM](https://github.com/federicovezzol
 npx -y @furrow-cam/mcp
 ```
 
-It needs [Node.js](https://nodejs.org) 22 or later.
+It needs [Node.js](https://nodejs.org) 22.2 or later.
 
 ## What it can do
 
