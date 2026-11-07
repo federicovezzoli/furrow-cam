@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” falhou, então o material que ela cortaria é considerado restante.",
       "noLocatingPins": "O projeto não tem pinos de posicionamento para furar.",
       "pinsOffStock": "Um pino de posicionamento está fora do material.",
+      "holesOffStock": "Um furo colocado está fora do material.",
+      "noHoles": "Nada para furar: coloque furos na vista ou use as formas selecionadas.",
       "cutsPins": "Esta operação corta onde vai um pino de posicionamento, por isso a ferramenta bateria no pino quando o material for virado: mova os pinos ou o corte.",
       "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que o lado de baixo corta todo o seu contorno.",
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem."
@@ -944,6 +946,7 @@
     "failed": "Não foi possível calcular o percurso: {error}",
     "warnings": "Avisos do percurso",
     "usePins": "Usar pinos",
+    "pinsWithoutHoles": "Remova primeiro os furos colocados: uma furação de pinos fura apenas os pinos de posicionamento.",
     "locatingPins": "Os pinos de posicionamento",
     "pinDepth": "Tão fundo quanto dizem as configurações dos pinos: {depth}."
   },

@@ -469,6 +469,7 @@ describe("exportGcode", () => {
     const [holes, ...rest] = doc.operations as [Operation, ...Operation[]];
     doc.operations = [{ ...holes, targets: [] }, ...rest];
     expect(exportGcode(doc, "Plate").warnings).toEqual([
+      { operation: "Holes", message: { code: "toolpath.noHoles" } },
       { operation: "Holes", message: { code: "export.noToolpath" } },
     ]);
   });

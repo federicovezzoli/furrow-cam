@@ -9,7 +9,7 @@ import {
 } from "@furrow/document";
 import { shapesBounds } from "../geometry/bounds";
 import { circleCenter } from "../geometry/circle";
-import { flattenPath } from "../geometry/flatten";
+import { arcSweep, flattenPath } from "../geometry/flatten";
 import { projectOnLoop } from "../geometry/loop";
 import { xyOriginPosition } from "./stock";
 
@@ -159,13 +159,8 @@ function segmentMidpoints(path: Path): Point[] {
       ]);
     } else {
       const { center, clockwise } = segment;
-      const TAU = 2 * Math.PI;
       const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
-      const end = Math.atan2(to[1] - center[1], to[0] - center[0]);
-      const turn = pointsCoincide(from, to)
-        ? TAU
-        : (((clockwise ? start - end : end - start) % TAU) + TAU) % TAU;
-      const angle = start + ((clockwise ? -1 : 1) * turn) / 2;
+      const angle = start + arcSweep(from, to, center, clockwise) / 2;
       const radius = distance(center, from);
       points.push([center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle)]);
     }

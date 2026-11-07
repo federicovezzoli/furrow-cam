@@ -1,10 +1,10 @@
 import type { DrillOperation, DrillParams, Path, Point, Shape, Tool } from "@furrow/document";
-import { DRAWING_ID } from "@furrow/document/fixtures";
+import { DRAWING_ID, fullDocument } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { importSvg } from "../import/svg/import";
 import type { Vec3 } from "../scene/stock";
 import { drillOrder, drillToolpath } from "./drill";
-import { generateToolpath } from "./generate";
+import { generateToolpath, toolpathInputs } from "./generate";
 import type { Toolpath } from "./toolpath";
 
 const tool: Tool = {
@@ -311,6 +311,34 @@ describe("drillToolpath", () => {
       [50, 0],
     ]);
     expect(holeOrder(drill([], { points: [[5, 5]] }))).toEqual([[5, 5]]);
+  });
+
+  it("warns when there is nothing to drill (#429)", () => {
+    expect(drill([]).warnings).toEqual([{ code: "toolpath.noHoles" }]);
+  });
+
+  it("warns when a placed hole reaches off the stock (#429)", () => {
+    const warnings = (points: Point[]) => {
+      const doc = fullDocument();
+      const [profile] = doc.operations;
+      doc.operations = [
+        {
+          ...(profile as DrillOperation),
+          type: "drill",
+          targets: [],
+          params: { ...params, points },
+        },
+      ];
+      const [input] = toolpathInputs(doc);
+      return input ? generateToolpath(input).warnings : null;
+    };
+    expect(warnings([[50, 50]])).toEqual([]);
+    expect(
+      warnings([
+        [50, 50],
+        [1, 50],
+      ]),
+    ).toEqual([{ code: "toolpath.holesOffStock" }]);
   });
 
   it("warns when the depth exceeds the flute length", () => {

@@ -30,7 +30,8 @@ export type DrillOptions = {
  *   that fits it. The
  *   hole's size is the circle through its farthest points, so the hole
  *   contains the drawn outline. Other paths are skipped. The operation's
- *   placed holes (`params.points`, #429) are drilled like single points.
+ *   placed holes (`params.points`, #429) are drilled like single points;
+ *   with neither shapes nor placed holes, it warns there is nothing to drill.
  * - A point, or a circle the tool fits within that tolerance, is drilled:
  *   without pecking the tool feeds straight to `depth` at its plunge rate;
  *   pecking splits the depth into equal pecks no deeper than the tool's
@@ -84,6 +85,8 @@ export function drillToolpath(
   if (other > 0) {
     warnings.push({ code: "toolpath.skippedNonCircles", values: { count: other } });
   }
+  // E.g. a drill of no shapes whose placed holes (#429) were all removed.
+  if (found.length === 0 && shapes.length === 0) warnings.push({ code: "toolpath.noHoles" });
   if (params.depth > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
 
   const builder = new ToolpathBuilder(options.safeZ, options.entryClearance);

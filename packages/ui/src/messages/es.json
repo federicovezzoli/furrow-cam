@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” ha fallado, así que el material que cortaría se considera restante.",
       "noLocatingPins": "El proyecto no tiene pasadores de referencia que taladrar.",
       "pinsOffStock": "Un pasador de referencia está fuera del material.",
+      "holesOffStock": "Un agujero colocado está fuera del material.",
+      "noHoles": "Nada que taladrar: coloca agujeros en la vista o usa las formas seleccionadas.",
       "cutsPins": "Esta operación corta donde va un pasador de referencia, así que la herramienta chocaría con el pasador al dar la vuelta al material: mueve los pasadores o el corte.",
       "noHoldingTabs": "Sin puentes de sujeción: la pieza se suelta en cuanto la cara inferior corta todo su contorno.",
       "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
@@ -944,6 +946,7 @@
     "failed": "No se ha podido calcular la trayectoria: {error}",
     "warnings": "Avisos de la trayectoria",
     "usePins": "Usar pasadores",
+    "pinsWithoutHoles": "Quita primero los agujeros colocados: un taladrado de pasadores solo taladra los pasadores de referencia.",
     "locatingPins": "Los pasadores de referencia",
     "pinDepth": "Tan profundo como indican los ajustes de los pasadores: {depth}."
   },

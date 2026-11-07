@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” non è riuscita, quindi il materiale che avrebbe tagliato si considera rimasto.",
       "noLocatingPins": "Il progetto non ha perni di riferimento da forare.",
       "pinsOffStock": "Un perno di riferimento è fuori dal grezzo.",
+      "holesOffStock": "Un foro posizionato è fuori dal grezzo.",
+      "noHoles": "Niente da forare: posiziona fori nella vista o usa le forme selezionate.",
       "cutsPins": "Questa operazione taglia dove va un perno di riferimento, quindi l'utensile colpirebbe il perno quando il grezzo è girato: sposta i perni o il taglio.",
       "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
@@ -944,6 +946,7 @@
     "failed": "Non è stato possibile calcolare il percorso utensile: {error}",
     "warnings": "Avvisi del percorso utensile",
     "usePins": "Usa i perni",
+    "pinsWithoutHoles": "Rimuovi prima i fori posizionati: una foratura dei perni fora solo i perni di riferimento.",
     "locatingPins": "I perni di riferimento",
     "pinDepth": "Profondo quanto dicono le impostazioni dei perni: {depth}."
   },

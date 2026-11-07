@@ -113,7 +113,10 @@ export function SnapHover({
 
 export function samePick(a: SnapPick | null, b: SnapPick | null): boolean {
   if (!a || !b) return a === b;
-  return a.target === b.target && a.point[0] === b.point[0] && a.point[1] === b.point[1];
+  // By kind, not identity: edge snaps are new objects on every pointer move.
+  return (
+    a.target?.kind === b.target?.kind && a.point[0] === b.point[0] && a.point[1] === b.point[1]
+  );
 }
 
 /** A ring a few pixels across whatever the zoom, drawn over everything. */

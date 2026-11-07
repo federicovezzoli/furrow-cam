@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” failed, so the material it would cut is taken as left.",
       "noLocatingPins": "The project has no locating pins to drill.",
       "pinsOffStock": "A locating pin is off the stock.",
+      "holesOffStock": "A placed hole is off the stock.",
+      "noHoles": "Nothing to drill: place holes in the viewport or use selected shapes.",
       "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
@@ -944,6 +946,7 @@
     "failed": "The toolpath couldn't be computed: {error}",
     "warnings": "Toolpath warnings",
     "usePins": "Use pins",
+    "pinsWithoutHoles": "Remove the placed holes first: a pin drill drills only the locating pins.",
     "locatingPins": "The locating pins",
     "pinDepth": "As deep as the pin settings say: {depth}."
   },

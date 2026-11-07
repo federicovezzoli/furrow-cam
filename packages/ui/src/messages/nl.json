@@ -682,6 +682,8 @@
       "restOperationFailed": "“{operation}” is mislukt, dus het materiaal dat deze bewerking zou wegnemen, wordt als resterend beschouwd.",
       "noLocatingPins": "Het project heeft geen paspennen om te boren.",
       "pinsOffStock": "Een paspen ligt buiten het materiaal.",
+      "holesOffStock": "Een geplaatst gat ligt buiten het materiaal.",
+      "noHoles": "Niets te boren: plaats gaten in de weergave of gebruik geselecteerde vormen.",
       "cutsPins": "Deze bewerking snijdt waar een paspen komt, dus het gereedschap zou de pen raken als het materiaal is omgedraaid: verplaats de pennen of de snede.",
       "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra de onderkant er helemaal omheen is gefreesd.",
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
@@ -944,6 +946,7 @@
     "failed": "De gereedschapsbaan kon niet worden berekend: {error}",
     "warnings": "Waarschuwingen bij gereedschapsbaan",
     "usePins": "Pennen gebruiken",
+    "pinsWithoutHoles": "Verwijder eerst de geplaatste gaten: een paspenboring boort alleen de paspennen.",
     "locatingPins": "De paspennen",
     "pinDepth": "Zo diep als de peninstellingen aangeven: {depth}."
   },

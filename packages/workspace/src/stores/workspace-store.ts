@@ -106,7 +106,7 @@ export type WorkspaceState = {
   /**
    * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs, start point editing without a profile or engraving, overcut
-   * editing without overcuts, placing holes without a drill of shapes, picking the zero without a custom zero and the
+   * editing without overcuts, placing holes without a drill other than a pin drill, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
    */
   prune: (document: ProjectDocument) => void;

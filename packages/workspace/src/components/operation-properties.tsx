@@ -160,7 +160,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
           operationId={operation.id}
           targets={operation.targets}
           pins={pins}
-          optional={hasPlacedHoles(operation)}
+          placedHoles={hasPlacedHoles(operation)}
         />
       )}
       {operation.type === "profile" && <ProfileFields operation={operation} />}
@@ -308,14 +308,17 @@ function TargetsField({
   operationId,
   targets,
   pins,
-  optional,
+  placedHoles,
 }: {
   operationId: string;
   targets: OperationTarget[];
   /** For a drill: whether it cuts the locating pins, or may. */
   pins: "on" | "available" | null;
-  /** Whether the last shape can go too: a drill with placed holes (#429). */
-  optional: boolean;
+  /**
+   * For a drill with placed holes (#429): the last shape can go too, and the
+   * holes are removed before it can cut the locating pins.
+   */
+  placedHoles: boolean;
 }) {
   const t = useTranslations("Operation");
   const targetsLabel = useTargetsLabel();
@@ -350,7 +353,13 @@ function TargetsField({
           {t("useSelected")}
         </Button>
         {pins === "available" && (
-          <Button variant="outline" size="compact" onClick={() => setDrillPins(store, operationId)}>
+          <Button
+            variant="outline"
+            size="compact"
+            disabled={placedHoles}
+            title={placedHoles ? t("pinsWithoutHoles") : undefined}
+            onClick={() => setDrillPins(store, operationId)}
+          >
             {t("usePins")}
           </Button>
         )}
@@ -368,7 +377,7 @@ function TargetsField({
             <Button
               variant="ghost"
               size="icon-compact"
-              disabled={rows.length === 1 && !optional}
+              disabled={rows.length === 1 && !placedHoles}
               onClick={() =>
                 setOperationTargets(
                   store,
@@ -377,7 +386,7 @@ function TargetsField({
                 )
               }
               aria-label={t("removeLabel", { name: shape.name || t("unnamedShape") })}
-              title={rows.length === 1 && !optional ? t("needsShape") : t("remove")}
+              title={rows.length === 1 && !placedHoles ? t("needsShape") : t("remove")}
             >
               <XIcon />
             </Button>
