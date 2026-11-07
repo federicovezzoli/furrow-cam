@@ -220,6 +220,24 @@ describe("saving as changes are made (#492)", () => {
     expect((await readProject(path)).versions).toHaveLength(1);
   });
 
+  it("keeps a version again once the user's save dropped the one it kept", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeProject(path);
+    change(await projects.get(path), widen(321));
+    await projects.saveChanges();
+    // The user kept their own version in the app and saved it: no kept version in it.
+    await writeProject(path, {
+      ...createProjectDocument(),
+      stock: { ...createProjectDocument().stock, width: 400 },
+    });
+    const reread = await projects.get(path);
+    change(reread, widen(450));
+    await projects.saveChanges();
+    const saved = await readProject(path);
+    expect(saved.versions.map((v) => v.label)).toEqual([KEPT_VERSION_LABEL]);
+    expect(saved.versions[0]?.document.stock.width).toBe(400);
+  });
+
   it("keeps its changes and says so when the file changed under them", async () => {
     const path = join(dir, "Part.furrow");
     await writeProject(path);

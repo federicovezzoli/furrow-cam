@@ -36,6 +36,8 @@ export type Project = {
   versions: ArchiveVersion[];
   /** Whether nothing is left to keep before a change: the version was kept, or the project is new. */
   kept: boolean;
+  /** The id of the version kept before the first change, or `null` if none was. */
+  keptId: string | null;
   /** Whether `path` is the project's own file, which saving may replace. */
   owned: boolean;
   /** Its own file's stamp (`stampOf`) when last read or written, to tell whether it changed since. */
@@ -136,6 +138,7 @@ export function createProjects() {
       fonts: file.fonts,
       versions: file.versions,
       kept: false,
+      keptId: null,
       owned,
       stamp,
       unsaved: false,
@@ -156,6 +159,7 @@ export function createProjects() {
         fonts: new Map(),
         versions: [],
         kept: true,
+        keptId: null,
         owned: false,
         stamp: null,
         unsaved: false,
@@ -181,8 +185,11 @@ export function createProjects() {
         const now = await stampOf(project.path);
         if (now !== null && now !== project.stamp) {
           const reread = await openProject(project.path);
-          // Its file holds the version kept before the assistant's changes: not kept twice.
-          reread.kept = project.kept;
+          // Kept again only if the user's save dropped it, e.g. kept their own version over it.
+          if (reread.versions.some((version) => version.id === project.keptId)) {
+            reread.kept = true;
+            reread.keptId = project.keptId;
+          }
           return reread;
         }
       }
@@ -259,10 +266,11 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
     project.store.setState({ document: before, past, future });
     throw new ToolError(t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS }));
   }
+  const id = randomUUID();
   project.versions = [
     ...project.versions,
     {
-      id: randomUUID(),
+      id,
       label: KEPT_VERSION_LABEL,
       createdAt: new Date(),
       automatic: true,
@@ -270,5 +278,6 @@ export function change(project: Project, edit: (store: DocumentStore) => void) {
     },
   ];
   project.kept = true;
+  project.keptId = id;
   project.unsaved = true;
 }
