@@ -407,6 +407,7 @@
       "help": "Help",
       "checkUpdates": "Check for Updates…",
       "reportBug": "Report a Bug…",
+      "setUpAssistants": "Set Up AI Assistants…",
       "checkAtStartup": "Check for Updates at Start-up",
       "sendUsage": "Send Usage Statistics and Error Reports",
       "licences": "Third-Party Licences"
@@ -445,6 +446,24 @@
       "installFailed": "Couldn't install the update",
       "installFailedDetail": "Download Furrow CAM {version} from its release page and install it over this one.",
       "ok": "OK"
+    },
+    "assistants": {
+      "question": "Add Furrow CAM to {clients}?",
+      "detail": "Your AI assistant will be able to create, change and export your Furrow CAM projects through Furrow CAM's MCP server, which runs on this computer and never talks to your machine. What it reads from a project goes to your assistant, which usually sends it to a cloud model. The assistant starts the server with npx, which needs Node.js 22.2 or later.",
+      "add": "Add",
+      "cancel": "Cancel",
+      "ok": "OK",
+      "guide": "Open Setup Guide",
+      "copyCommand": "Copy Command",
+      "already": "Already set up in {clients}.",
+      "unreadable": "The settings of {clients} couldn't be read, so they were left as they are. Add Furrow CAM to them by hand, following the setup guide.",
+      "none": "No AI assistants found",
+      "nothingToAdd": "Nothing to set up",
+      "others": "Furrow CAM can set itself up in Claude Desktop and VS Code, and gives you the command for Claude Code. For other assistants, follow the setup guide.",
+      "claudeCode": "For Claude Code, run this in a terminal:\n{command}",
+      "done": "Furrow CAM was added to {clients}",
+      "restart": "Restart them to start using it.",
+      "failed": "The settings of {clients} couldn't be changed."
     },
     "files": {
       "projects": "Furrow CAM projects",

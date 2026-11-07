@@ -45,6 +45,8 @@ The server changes projects with the same code as the app. Before its first chan
 
 ## Setup
 
+Using the Furrow CAM desktop app? *Help → Set Up AI Assistants…* adds the server to Claude Desktop and VS Code for you, after asking, and gives you the command for Claude Code. Otherwise, add it by hand:
+
 ### Claude Desktop
 
 Open *Settings → Developer → Edit Config* and add the server to `claude_desktop_config.json`, then restart Claude Desktop:

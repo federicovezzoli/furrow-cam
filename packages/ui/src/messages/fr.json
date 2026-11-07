@@ -407,6 +407,7 @@
       "help": "Aide",
       "checkUpdates": "Rechercher des mises à jour…",
       "reportBug": "Signaler un bug…",
+      "setUpAssistants": "Configurer les assistants IA…",
       "checkAtStartup": "Rechercher des mises à jour au démarrage",
       "sendUsage": "Envoyer les statistiques d'utilisation et les rapports d'erreur",
       "licences": "Licences tierces"
@@ -445,6 +446,24 @@
       "installFailed": "Impossible d'installer la mise à jour",
       "installFailedDetail": "Téléchargez Furrow CAM {version} depuis sa page de publication et installez-le par-dessus cette version.",
       "ok": "OK"
+    },
+    "assistants": {
+      "question": "Ajouter Furrow CAM à {clients} ?",
+      "detail": "Votre assistant IA pourra créer, modifier et exporter vos projets Furrow CAM grâce au serveur MCP de Furrow CAM, qui tourne sur cet ordinateur et ne communique jamais avec votre machine. Ce qu’il lit d’un projet va à votre assistant, qui l’envoie en général à un modèle dans le cloud. L’assistant lance le serveur avec npx, qui demande Node.js 22.2 ou plus récent.",
+      "add": "Ajouter",
+      "cancel": "Annuler",
+      "ok": "OK",
+      "guide": "Ouvrir le guide",
+      "copyCommand": "Copier la commande",
+      "already": "Déjà configuré dans {clients}.",
+      "unreadable": "Les réglages de {clients} n’ont pas pu être lus et restent inchangés. Ajoutez-y Furrow CAM à la main en suivant le guide.",
+      "none": "Aucun assistant IA trouvé",
+      "nothingToAdd": "Rien à configurer",
+      "others": "Furrow CAM peut se configurer seul dans Claude Desktop et VS Code, et vous donne la commande pour Claude Code. Pour les autres assistants, suivez le guide.",
+      "claudeCode": "Pour Claude Code, lancez ceci dans un terminal :\n{command}",
+      "done": "Furrow CAM a été ajouté à {clients}",
+      "restart": "Redémarrez-les pour commencer à l’utiliser.",
+      "failed": "Les réglages de {clients} n’ont pas pu être modifiés."
     },
     "files": {
       "projects": "Projets Furrow CAM",
