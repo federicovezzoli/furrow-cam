@@ -93,41 +93,48 @@ export function chooseMachine(project: Project, library: Library, id: string) {
   change(project, (store) => setMachine(store, choice.machine));
 }
 
+/** A library tool's or a tool's settings, as the tools that take a tool are given it. */
+export type ToolChoice = { toolId?: string; settings?: unknown };
+
 /**
- * Gives operation `id` a snapshot of library tool `toolId`, or of `settings`
- * checked by the tool schema (ADR-0003), as picking a bit in the app does.
+ * A snapshot of library tool `toolId`, or of `settings` checked by the tool
+ * schema (ADR-0003), as picking a bit in the app makes one; `what` names the
+ * tool in messages.
  */
-export function setToolOf(
-  project: Project,
+export function resolveTool(
   library: Library,
-  id: string,
-  { toolId, settings }: { toolId?: string; settings?: unknown },
-) {
-  if (!project.store.getState().document.operations.some((operation) => operation.id === id)) {
-    throw new ToolError(`The project has no operation ${JSON.stringify(id)}.`);
-  }
+  { toolId, settings }: ToolChoice,
+  what = "tool",
+): Tool {
   if (toolId !== undefined && settings !== undefined) {
-    throw new ToolError("Give a library tool's id or the tool's settings, not both.");
+    throw new ToolError(`Give a library tool's id or the ${what}'s settings, not both.`);
   }
-  let tool: Tool;
   if (toolId !== undefined) {
     const choice = library.tools.find((choice) => choice.id === toolId);
     if (!choice) {
       throw new ToolError(`The tool library has no tool ${JSON.stringify(toolId)}.${why(library)}`);
     }
-    tool = choice.tool;
-  } else if (settings !== undefined) {
-    const parsed = Tool.safeParse(withTaperedDiameter(settings));
-    if (!parsed.success) {
-      const [issue] = parsed.error.issues;
-      const where = issue?.path.join(".");
-      const message = text(issue ? issueMessage(issue) : { code: "validation.invalid" });
-      throw new ToolError(where ? `${where}: ${message}` : message);
-    }
-    tool = parsed.data;
-  } else {
-    throw new ToolError("Give a library tool's id or the tool's settings.");
+    return choice.tool;
   }
+  if (settings === undefined) {
+    throw new ToolError(`Give a library tool's id or the ${what}'s settings.`);
+  }
+  const parsed = Tool.safeParse(withTaperedDiameter(settings));
+  if (!parsed.success) {
+    const [issue] = parsed.error.issues;
+    const where = issue?.path.join(".");
+    const message = text(issue ? issueMessage(issue) : { code: "validation.invalid" });
+    throw new ToolError(where ? `${where}: ${message}` : message);
+  }
+  return parsed.data;
+}
+
+/** Gives operation `id` a snapshot of a library tool or of a tool's settings, as picking a bit in the app does. */
+export function setToolOf(project: Project, library: Library, id: string, choice: ToolChoice) {
+  if (!project.store.getState().document.operations.some((operation) => operation.id === id)) {
+    throw new ToolError(`The project has no operation ${JSON.stringify(id)}.`);
+  }
+  const tool = resolveTool(library, choice);
   change(project, (store) => {
     const result = setOperationTool(store, id, tool);
     if (!result.ok) throw new ToolError(text(result.error));

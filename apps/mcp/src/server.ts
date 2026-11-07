@@ -12,9 +12,21 @@ import packageJson from "../package.json" with { type: "json" };
 import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
 import { checkProject, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
+import {
+  addOperation,
+  editOperation,
+  moveTo,
+  type NewOperation,
+  type OperationType,
+  removeOperation,
+} from "./operations";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
 import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
 import { projectSummary } from "./summary";
+
+/** A tool's settings, as the tools that take them describe them. */
+const TOOL_SETTINGS =
+  "name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb).";
 
 const projectPath = z
   .string()
@@ -346,8 +358,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     "set_operation_tool",
     {
       title: "Set an operation's tool",
-      description:
-        "Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: name; type (flat_end_mill, ball_end_mill, tapered_ball_end_mill, v_bit or drill); diameter (left out for tapered ball end mills: worked out from tipDiameter, taperAngle and fluteLength), fluteLength, stepDown (depth per pass) and tipDiameter (V-bits' flat, tapered ball end mills' ball, else null) in millimetres; fluteCount; cutDirection (upcut, downcut or compression for end mills, else null); vAngle (V-bits' included angle in degrees, else null); taperAngle (tapered ball end mills' angle per side in degrees, else null or left out); spindleRpm; feedRate and plungeRate in mm/min; plungeAngle in degrees (1 to 90, 90 plunges straight down, drills always 90); notes (or null); color (#rrggbb). A tool that can't cut the operation is refused with the app's message. Returns the project summary.",
+      description: `Gives an operation a copy of a tool, as picking a bit in the app does: from the desktop app's library by toolId, or from settings, which are checked as the app checks a tool. Settings: ${TOOL_SETTINGS} A tool that can't cut the operation is refused with the app's message. Returns the project summary.`,
       inputSchema: {
         path: projectPath,
         operationId: z.string().describe("The operation's id, from the project summary."),
@@ -367,6 +378,218 @@ export function createServer(projects: Projects = createProjects(), library = li
             ? { tools: [], machines: [], problems: [] }
             : await readLibrary(library);
         setToolOf(project, tools, operationId, { toolId, settings });
+        return summary(project);
+      }),
+  );
+
+  const operationId = z.string().describe("The operation's id, from the project summary.");
+  const targets = z
+    .array(
+      z.union([
+        z.strictObject({ drawingId: z.string().describe("A drawing's id: all its shapes.") }),
+        z.strictObject({
+          shapeId: z.string().describe("A shape's id, from the project summary."),
+          paths: z
+            .array(z.int().nonnegative())
+            .optional()
+            .describe("Indices of the shape's paths to cut; all of them if left out."),
+        }),
+      ]),
+    )
+    .describe("What it cuts: whole drawings, shapes, or some of a shape's paths.");
+  const toolInput = {
+    toolId: z.string().optional().describe("A library tool's id, from get_library."),
+    tool: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(`The tool's settings, instead of toolId: ${TOOL_SETTINGS}`),
+  };
+  const common = {
+    path: projectPath,
+    ...toolInput,
+    name: z.string().optional().describe('Its name; the app\'s, e.g. "Profile 2", if left out.'),
+    stockSide: z
+      .enum(["top", "bottom"])
+      .optional()
+      .describe("The side of a two-sided project it cuts; the top if left out."),
+  };
+  const settings = (what: string) =>
+    z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(`Settings to change from the defaults, any of: ${what}`);
+
+  const POINTS =
+    "[[x, y], …] in millimetres in stock coordinates ((0, 0) is the stock's bottom-left corner, as in the summary's bounds)";
+  const DEPTH = "millimetres below the stock top";
+  const DIRECTION = "direction: climb or conventional milling";
+  const STEP_OVER =
+    "stepOver: the distance between passes, as a percentage of the tool's diameter (over 0, up to 100)";
+  const RAMP =
+    "ramp: true to ramp into the cut at the tool's plunge angle, false to plunge straight down";
+  const BOUNDARY =
+    'boundary: what it covers: {type: "model"} (the model\'s outline), {type: "margin", distance} (the outline grown by distance millimetres) or {type: "stock"} (the whole stock)';
+  const REST = "rest: true to cut only where earlier operations left material (rest machining)";
+
+  const OPERATION_SETTINGS: Record<OperationType, string> = {
+    profile: `side: outside, inside or on (follows the line); ${DIRECTION}; depth: final depth, ${DEPTH} (default: the stock's thickness, cutting through); allowance: millimetres the depth passes leave on the wall (0 when side is on); finishPass: true for one more lap at full depth removing the allowance (needs an allowance); leadIn: {radius} in millimetres, a tangent arc into each closed contour, or null; ${RAMP}; tabs: holding tabs that keep the part attached, null for none, or {count} per closed contour (or {spacing} in millimetres, or positions as ${POINTS}), with width (along the contour, default 6) and height (up from the final depth, default 3 but at most half the depth) in millimetres; startPoints: where cuts start, ${POINTS}, each moved to the nearest path; cornerOvercuts: dogbones at sharp inside corners so a square-edged part fits, {maxAngle: corners up to this many degrees get one (the app starts at 90), excluded: []}, or null (not with side on).`,
+    pocket: `side: inside (clears inside the closed paths, leaving any islands), outside (clears the stock outside them up to its edge) or on (inside, the tool's centre reaching the paths); strategy: {type: "offset"} (rings from the centre out), {type: "linear", angle} (zig-zag passes at 0, 90, 45 or -45 degrees from X) or {type: "peel", start} (engagement-limited, from centre, inside or outside); ${DIRECTION}; ${STEP_OVER} (default 40); depth: final depth, ${DEPTH} (default half the stock); allowance: millimetres left on the walls and islands; finishPass: true for one more lap on each wall removing the allowance (needs an allowance); ${RAMP} (default true).`,
+    drill: `depth: of the tool tip, ${DEPTH} (default: the stock's thickness); peck: true (default) to drill in pecks of the tool's step-down, retracting to clear chips; ${STEP_OVER}, for an end mill boring a hole wider than itself in rings (default 40); points: holes placed at ${POINTS}, which need no shapes; pins: true to drill a two-sided project's locating pins instead of shapes and points (top side only). It drills single-point paths and circles; a drill bit drills circles of its own diameter.`,
+    engrave: `side: on (default, the groove centred on the line), inside or outside (an edge of the groove on the line, for closed paths); depth: of the tool tip, ${DEPTH} (default 1, or the stock's thickness if thinner; with a V-bit it sets the line's width); ${RAMP}; startPoints: where cuts start, ${POINTS}.`,
+    vcarve: `maxDepth: the deepest the V-bit goes, ${DEPTH} (default: the bit's cone depth, at most half the stock); flatBottom: where the shape is wider than the bit reaches at maxDepth, a flat end mill clears the floor flat first: {toolId} or {tool: settings as for tool}, with stepOver (percentage of its diameter, default 40), or null for none (default).`,
+    relief_rough: `strategy: {type: "offset"}, {type: "linear", angle} (0, 90, 45 or -45 degrees from X) or {type: "peel", start} (centre or outside); ${DIRECTION}; ${STEP_OVER} (default 40); stockToLeave: millimetres left on the model everywhere for finishing (default 0.5); ${BOUNDARY} (default model); ${RAMP} (default true); ${REST}.`,
+    relief_finish: `strategy: {type: "parallel", angle, direction} (straight passes at angle degrees from X, 0 up to but not 180, direction one_way or zigzag; the default, 0 and zigzag), {type: "waterline", stepDown} (contours at constant height, stepDown millimetres apart) or {type: "spiral", start} (outside or centre); ${STEP_OVER}, between parallel passes or spiral laps (default 10); stockToLeave: millimetres left on the model (default 0); ${BOUNDARY} (default model); ${REST}.`,
+  };
+
+  const ADD_TOOLS: [OperationType, string, string, "targets" | "model"][] = [
+    [
+      "profile",
+      "Add a profile",
+      "Cuts along the shapes' lines, outside, inside or on them: to cut parts out or trim them to size.",
+      "targets",
+    ],
+    [
+      "pocket",
+      "Add a pocket",
+      "Clears the area inside the shapes' closed paths to a depth, leaving islands standing, or the stock around them.",
+      "targets",
+    ],
+    [
+      "drill",
+      "Add a drill operation",
+      "Drills holes at the shapes' points and circles, at placed points, or the locating pins of a two-sided project.",
+      "targets",
+    ],
+    [
+      "engrave",
+      "Add an engraving",
+      "Follows the shapes' paths at a shallow depth: lettering, lines and decoration, with an end mill or a V-bit.",
+      "targets",
+    ],
+    [
+      "vcarve",
+      "Add a V-carve",
+      "Carves the inside of the shapes' closed paths with a V-bit, as deep as the bit needs to reach the edges: sharp-cornered lettering and signs. Only V-bits V-carve.",
+      "targets",
+    ],
+    [
+      "relief_rough",
+      "Add 3D roughing",
+      "Clears the material above a 3D model in levels, leaving stock for finishing.",
+      "model",
+    ],
+    [
+      "relief_finish",
+      "Add 3D finishing",
+      "Runs the tool over a 3D model's surface, usually a ball end mill after roughing.",
+      "model",
+    ],
+  ];
+
+  type AddInput = { path: string; toolId?: string; tool?: Record<string, unknown> } & Omit<
+    NewOperation,
+    "tool"
+  >;
+
+  for (const [type, title, what, on] of ADD_TOOLS) {
+    server.registerTool(
+      `add_${type}`,
+      {
+        title,
+        description: `${what} Adds it at the end of the cutting order with the app's defaults and a copy of the tool (from the library by toolId, or from its settings), then changes any settings given; anything the app refuses is refused, with its message, and nothing changes. Lengths in millimetres. Returns the new operation's id and the project summary.`,
+        inputSchema: {
+          ...common,
+          ...(on === "targets"
+            ? { targets: type === "drill" ? targets.optional() : targets }
+            : { modelId: z.string().describe("The model's id, from the project summary.") }),
+          settings: settings(OPERATION_SETTINGS[type]),
+        },
+      },
+      ({ path, toolId, tool, ...input }: AddInput) =>
+        respond(async () => {
+          const project = await projects.get(path);
+          // The library only for a library tool, as in set_operation_tool.
+          const tools =
+            toolId === undefined
+              ? { tools: [], machines: [], problems: [] }
+              : await readLibrary(library);
+          const id = addOperation(project, tools, type, {
+            ...input,
+            tool: { toolId, settings: tool },
+          });
+          return { id, ...summary(project) };
+        }),
+    );
+  }
+
+  server.registerTool(
+    "edit_operation",
+    {
+      title: "Edit an operation",
+      description: `Renames an operation, enables or disables it (a disabled one isn't cut or exported), changes what it cuts, and changes some of its settings, as the app's properties do: all of it, or, if the app refuses any of it, nothing, with the app's message. Settings by type, lengths in millimetres: ${Object.entries(
+        OPERATION_SETTINGS,
+      )
+        .map(([type, doc]) => `${type}: ${doc}`)
+        .join(" ")} Its tool is changed with set_operation_tool. Returns the project summary.`,
+      inputSchema: {
+        path: projectPath,
+        operationId,
+        name: z.string().optional(),
+        enabled: z.boolean().optional(),
+        targets: targets.optional().describe("What a 2D operation cuts, replacing its targets."),
+        settings: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("Settings to change, by the names above for the operation's type."),
+      },
+    },
+    ({ path, operationId, ...edit }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        const flatBottom = edit.settings?.flatBottom;
+        const needsLibrary =
+          typeof flatBottom === "object" && flatBottom !== null && "toolId" in flatBottom;
+        const tools = needsLibrary
+          ? await readLibrary(library)
+          : { tools: [], machines: [], problems: [] };
+        editOperation(project, tools, operationId, edit);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "move_operation",
+    {
+      title: "Move an operation in the cutting order",
+      description:
+        "Moves an operation to another place in the cutting order, as dragging it in the app's list does: index 0 cuts first; an index past the end moves it last. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        operationId,
+        index: z.int().nonnegative().describe("Its new place, from 0."),
+      },
+    },
+    ({ path, operationId, index }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        moveTo(project, operationId, index);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "remove_operation",
+    {
+      title: "Remove an operation",
+      description:
+        "Removes an operation from the project. The user can restore it from the automatic version kept before the assistant's first change. Returns the project summary.",
+      inputSchema: { path: projectPath, operationId },
+      annotations: { destructiveHint: true },
+    },
+    ({ path, operationId }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        removeOperation(project, operationId);
         return summary(project);
       }),
   );
