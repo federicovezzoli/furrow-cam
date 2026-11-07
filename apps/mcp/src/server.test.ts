@@ -77,6 +77,7 @@ describe("the MCP server", () => {
       "fit_to_stock",
       "get_library",
       "get_project",
+      "get_top_view",
       "import_file",
       "move_operation",
       "open_project",
@@ -185,6 +186,22 @@ describe("the MCP server", () => {
     });
     expect(added.operations.at(-1)).toMatchObject({
       params: { flatBottom: { tool: endMill } },
+    });
+  });
+
+  it("returns a top view as a PNG image with its legend", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    const result = await client.callTool({ name: "get_top_view", arguments: { path } });
+    const [image, legend] = result.content as [
+      { type: string; mimeType: string; data: string },
+      { text: string },
+    ];
+    expect(image).toMatchObject({ type: "image", mimeType: "image/png" });
+    expect(Buffer.from(image.data, "base64").subarray(1, 4).toString()).toBe("PNG");
+    expect(JSON.parse(legend.text)).toMatchObject({
+      side: "top",
+      operations: [{ id: OPERATION_ID, color: endMill.color }],
     });
   });
 });

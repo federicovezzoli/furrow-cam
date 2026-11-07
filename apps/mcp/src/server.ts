@@ -10,7 +10,7 @@ import type {
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
-import { checkProject, exportProject, type Progress } from "./gcode";
+import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
 import {
   addOperation,
@@ -23,6 +23,7 @@ import {
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
 import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
 import { projectSummary } from "./summary";
+import { topView } from "./top-view";
 
 const projectPath = z
   .string()
@@ -34,6 +35,24 @@ const projectPath = z
 async function respond(run: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     return { content: [{ type: "text", text: JSON.stringify(await run(), null, 2) }] };
+  } catch (error) {
+    if (!(error instanceof ToolError)) throw error;
+    return { isError: true, content: [{ type: "text", text: error.message }] };
+  }
+}
+
+/** `run`'s image and legend, or its `ToolError` as a tool error. */
+async function respondImage(
+  run: () => Promise<{ png: Uint8Array; legend: unknown }>,
+): Promise<CallToolResult> {
+  try {
+    const { png, legend } = await run();
+    return {
+      content: [
+        { type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" },
+        { type: "text", text: JSON.stringify(legend, null, 2) },
+      ],
+    };
   } catch (error) {
     if (!(error instanceof ToolError)) throw error;
     return { isError: true, content: [{ type: "text", text: error.message }] };
@@ -157,6 +176,34 @@ export function createServer(projects: Projects = createProjects(), library = li
           extra.signal,
         ),
       ),
+  );
+
+  server.registerTool(
+    "get_top_view",
+    {
+      title: "Show the toolpaths from above",
+      description:
+        "Computes a project's toolpaths, as check_project does, and returns a top view of one side as a PNG image: the stock (light, with its edge), the drawings' shapes (dark grey), and each enabled operation's cutting moves in its tool's colour (a V-carve's flat bottom in its end mill's), with a circle the size of the tool at each drilled hole; rapids are left out. X runs right and Y up, as seen from above; the image fits the stock and anything cut past its edges. A legend in JSON follows: the operation each colour is, the millimetres per pixel, and the area shown in stock coordinates (millimetres from the stock's bottom-left corner). Show it to the user, or look at it to check what was built. Changes nothing.",
+      inputSchema: {
+        path: projectPath,
+        side: z
+          .enum(["top", "bottom"])
+          .optional()
+          .describe("Which side of a two-sided project; the top if left out."),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    ({ path, side = "top" }, extra) =>
+      respondImage(async () => {
+        const project = await projects.get(path);
+        const { document } = project.store.getState();
+        if (side === "bottom" && !document.stock.twoSided) {
+          throw new ToolError("The project isn't two-sided: it has only a top side.");
+        }
+        // shortcut: computes both sides' toolpaths to draw one; compute only that side's (and the ones rest machining needs) if two-sided projects make this slow.
+        const computed = await computeToolpaths(project, document, progressOf(extra), extra.signal);
+        return topView(document, computed, side);
+      }),
   );
 
   const itemId = z.string().describe("The drawing's or model's id, from the project summary.");
