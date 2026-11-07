@@ -60,6 +60,33 @@ export function parseRecent(json: unknown): RecentFile[] {
   );
 }
 
+/** `path`'s modification time and size, or `null` if it doesn't exist: what tells whether it changed. */
+export function fileStamp(path: string): Promise<string | null> {
+  return stat(path).then(
+    ({ mtimeMs, size }) => `${mtimeMs}:${size}`,
+    () => null,
+  );
+}
+
+/**
+ * The project files the app read or wrote, each with its stamp then, to
+ * tell whether something else, such as the MCP server, changed one since
+ * (#491).
+ */
+export function fileStamps() {
+  const known = new Map<string, string | null>();
+  return {
+    /** Records `path` as it is now; called before reading it, a change while reading shows as one. */
+    async record(path: string) {
+      known.set(path, await fileStamp(path));
+    },
+    /** Whether `path` changed since it was recorded; `false` for a file never recorded. */
+    async changed(path: string): Promise<boolean> {
+      return known.has(path) && (await fileStamp(path)) !== known.get(path);
+    },
+  };
+}
+
 /** `recent` without the files that no longer exist. */
 export async function existingRecent(recent: readonly RecentFile[]): Promise<RecentFile[]> {
   const exists = await Promise.all(

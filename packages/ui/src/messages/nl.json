@@ -476,6 +476,10 @@
       "askSaveDetail": "Je wijzigingen gaan verloren als je ze niet bewaart.",
       "save": "Bewaar",
       "dontSave": "Bewaar niet",
+      "changed": "{name} is gewijzigd sinds het werd geopend",
+      "changedDetail": "Een ander programma, zoals een AI-assistent via de MCP-server van Furrow CAM, heeft het intussen opgeslagen. Vervangen gooit die wijzigingen weg; Opslaan als bewaart beide.",
+      "replace": "Vervangen",
+      "saveAs": "Opslaan als…",
       "cancel": "Annuleer"
     }
   },

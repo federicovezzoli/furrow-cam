@@ -41,6 +41,7 @@ import {
 } from "../shared/api";
 import {
   existingRecent,
+  fileStamps,
   parseRecent,
   projectName,
   projectPathsIn,
@@ -854,8 +855,12 @@ function buildMenu() {
   return Menu.buildFromTemplate(template);
 }
 
+/** The stamps of the project files read and written, to save over none another program changed. */
+const stamps = fileStamps();
+
 async function readProject(path: string) {
   try {
+    await stamps.record(path);
     const bytes = new Uint8Array(await readFile(path));
     await addRecent(path);
     return { path, name: projectName(path), bytes };
@@ -890,6 +895,23 @@ function registerIpc() {
       const t = tr();
       if (!(bytes instanceof Uint8Array)) return { error: t("DesktopMain.files.nothingToSave") };
       let target = typeof path === "string" ? path : null;
+      if (target !== null && (await stamps.changed(target))) {
+        // E.g. an assistant saved it through the MCP server (#491).
+        const { response } = await dialog.showMessageBox({
+          type: "warning",
+          message: t("DesktopMain.files.changed", { name: projectName(target) }),
+          detail: t("DesktopMain.files.changedDetail"),
+          buttons: [
+            t("DesktopMain.files.replace"),
+            t("DesktopMain.files.saveAs"),
+            t("DesktopMain.files.cancel"),
+          ],
+          defaultId: 1,
+          cancelId: 2,
+        });
+        if (response === 2) return null;
+        if (response === 1) target = null;
+      }
       if (target === null) {
         const result = await dialog.showSaveDialog({
           defaultPath: join(app.getPath("documents"), `${String(suggestedName)}.furrow`),
@@ -902,6 +924,7 @@ function registerIpc() {
       }
       try {
         await writeFileAtomic(target, bytes);
+        await stamps.record(target);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         return { error: t("DesktopMain.files.saveFailed", { reason }) };

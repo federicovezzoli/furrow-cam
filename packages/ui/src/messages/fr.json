@@ -476,6 +476,10 @@
       "askSaveDetail": "Vos modifications seront perdues si vous ne les enregistrez pas.",
       "save": "Enregistrer",
       "dontSave": "Ne pas enregistrer",
+      "changed": "{name} a changé depuis son ouverture",
+      "changedDetail": "Un autre programme, comme un assistant IA passant par le serveur MCP de Furrow CAM, l’a enregistré entre-temps. Le remplacer fait perdre ces modifications ; Enregistrer sous garde les deux.",
+      "replace": "Remplacer",
+      "saveAs": "Enregistrer sous…",
       "cancel": "Annuler"
     }
   },

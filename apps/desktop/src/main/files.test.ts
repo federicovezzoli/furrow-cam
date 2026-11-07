@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   existingRecent,
+  fileStamps,
   MAX_RECENT,
   parseRecent,
   projectName,
@@ -95,5 +96,26 @@ describe("recoveryStore", () => {
   it("refuses ids that would name files elsewhere", async () => {
     const store = recoveryStore(join(dir, "recovery"));
     await expect(store.delete("../tools")).rejects.toThrow(/Invalid recovery id/);
+  });
+});
+
+describe("fileStamps", () => {
+  it("tells whether a file changed since the app read or wrote it", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, "one");
+    const stamps = fileStamps();
+    // Never read: nothing to compare with, so saving goes ahead.
+    expect(await stamps.changed(path)).toBe(false);
+    await stamps.record(path);
+    expect(await stamps.changed(path)).toBe(false);
+    // Another program saves it, as the MCP server does: a new file renamed over it.
+    await writeFileAtomic(path, "another program's");
+    expect(await stamps.changed(path)).toBe(true);
+    // The app saves over it and records it again.
+    await writeFileAtomic(path, "the app's");
+    await stamps.record(path);
+    expect(await stamps.changed(path)).toBe(false);
+    await rm(path);
+    expect(await stamps.changed(path)).toBe(true);
   });
 });

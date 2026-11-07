@@ -476,6 +476,10 @@
       "askSaveDetail": "Suas alterações serão perdidas se você não salvá-las.",
       "save": "Salvar",
       "dontSave": "Não Salvar",
+      "changed": "{name} foi alterado desde que foi aberto",
+      "changedDetail": "Outro programa, como um assistente de IA através do servidor MCP do Furrow CAM, guardou-o entretanto. Substituí-lo perde essas alterações; Guardar como mantém ambos.",
+      "replace": "Substituir",
+      "saveAs": "Guardar como…",
       "cancel": "Cancelar"
     }
   },

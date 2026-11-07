@@ -476,6 +476,10 @@
       "askSaveDetail": "Kaydetmezseniz değişiklikleriniz kaybolur.",
       "save": "Kaydet",
       "dontSave": "Kaydetme",
+      "changed": "{name} açıldığından beri değişti",
+      "changedDetail": "Başka bir program, örneğin Furrow CAM MCP sunucusunu kullanan bir yapay zekâ asistanı, onu bu arada kaydetti. Değiştirirseniz bu değişiklikler kaybolur; Farklı Kaydet ikisini de korur.",
+      "replace": "Değiştir",
+      "saveAs": "Farklı Kaydet…",
       "cancel": "İptal"
     }
   },
