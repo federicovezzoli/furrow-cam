@@ -1,5 +1,12 @@
 # @furrow/ui
 
+## 0.8.3
+
+### Patch Changes
+
+- Place drill holes by clicking in the viewport, with the cursor snapping to corners, centres, segment midpoints and edges, so a hole no longer needs a point in the drawing. ([#483](https://github.com/federicovezzoli/furrow-cam/pull/483))
+- Updated dependencies: @furrow/document@0.21.0, @furrow/cam-core@0.19.0
+
 ## 0.8.2
 
 ### Patch Changes

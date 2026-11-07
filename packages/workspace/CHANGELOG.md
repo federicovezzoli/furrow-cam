@@ -1,5 +1,16 @@
 # @furrow/workspace
 
+## 0.22.0
+
+### Minor Changes
+
+- Place drill holes by clicking in the viewport, with the cursor snapping to corners, centres, segment midpoints and edges, so a hole no longer needs a point in the drawing. ([#483](https://github.com/federicovezzoli/furrow-cam/pull/483))
+
+### Patch Changes
+
+- The parting plane of a two-sided project is now drawn solid in the 3D view, so it is easy to see where the two sides meet; hide it from the viewport toolbar to see what lies beyond it. ([`7b75569`](https://github.com/federicovezzoli/furrow-cam/commit/7b75569262c0d9c2c3ed86f0cb3873b9a5aad7b1))
+- Updated dependencies: @furrow/document@0.21.0, @furrow/cam-core@0.19.0, @furrow/ui@0.8.3, @furrow/post@0.15.3
+
 ## 0.21.2
 
 ### Patch Changes
