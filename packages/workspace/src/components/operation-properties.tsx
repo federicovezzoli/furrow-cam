@@ -85,6 +85,7 @@ import { Checkbox } from "./checkbox";
 import { EditBitButton } from "./edit-bit-dialog";
 import { NewBitDialog } from "./new-bit-dialog";
 import { OperationNameInput } from "./operation-name-input";
+import { PROPERTIES_HEADER } from "./properties-header";
 import { flatBottomToolChoice, matchingToolChoice, useToolLibrary } from "./tool-library";
 
 /** The pocket strategies, in the order the select lists them. */
@@ -131,7 +132,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
 
   return (
     <div className="grid gap-4 p-3 text-ui">
-      <div className="flex items-center gap-2">
+      <div className={PROPERTIES_HEADER}>
         <h3 className="min-w-0 flex-1 truncate font-medium">{operation.name}</h3>
         <Button
           variant="ghost"

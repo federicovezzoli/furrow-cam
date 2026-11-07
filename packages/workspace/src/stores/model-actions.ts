@@ -11,6 +11,7 @@ import {
   xyOriginPosition,
 } from "@furrow/cam-core";
 import {
+  GEOMETRY_TOLERANCE,
   MODEL_BORDER,
   type Model,
   type ModelPlacement,
@@ -193,6 +194,22 @@ export function setModelDepth(store: DocumentStore, id: string, depth: number) {
 export function setModelTop(store: DocumentStore, id: string, top: number) {
   changeModel(store, "setModel.top", id, (model) => {
     if (model.placement.top !== top) model.placement.top = top;
+  });
+}
+
+/** Moves a model so that the centre of its box seen from above is the stock's centre, whatever the zero. */
+export function centerModelOnStock(store: DocumentStore, id: string) {
+  const { stock } = store.getState().document;
+  changeModel(store, "centerModel", id, (model, current) => {
+    const [cx, cy] = anchorPoint(modelRect(current), "center");
+    const offset: Point = [stock.width / 2 - cx, stock.height / 2 - cy];
+    // Already centred but for float noise: no undo step.
+    if (Math.abs(offset[0]) < GEOMETRY_TOLERANCE && Math.abs(offset[1]) < GEOMETRY_TOLERANCE)
+      return;
+    assignPlacement(model, {
+      ...current.placement,
+      position: translatePoint(current.placement.position, offset),
+    });
   });
 }
 

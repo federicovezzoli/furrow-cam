@@ -6,6 +6,7 @@ import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
 import {
   addModel,
+  centerModelOnStock,
   fitModelToStock,
   modelOffset,
   modelOperations,
@@ -149,6 +150,25 @@ describe("placement edits", () => {
     setModelOffset(store, id, "y", -10);
     expect(modelOffset(stock(), get())).toEqual([25, -10]);
     expect(get().placement.position).toEqual([87.5, 0]);
+  });
+
+  it("centres the model's box on the stock, whatever the zero, keeping its size and top", () => {
+    const { store, id, get } = storeWithModel();
+    setModelTop(store, id, 2);
+    const before = get().placement;
+    const steps = store.getState().past.length;
+    centerModelOnStock(store, id);
+    const { min, max } = modelRect(get());
+    expect([(min[0] + max[0]) / 2, (min[1] + max[1]) / 2]).toEqual([300, 200]);
+    expect(get().placement).toEqual({ ...before, position: get().placement.position });
+    expect(store.getState().past).toHaveLength(steps + 1);
+    // Already centred: no undo step.
+    centerModelOnStock(store, id);
+    expect(store.getState().past).toHaveLength(steps + 1);
+    // Off centre by float noise only: still no undo step.
+    setModelOffset(store, id, "x", modelOffset(store.getState().document.stock, get())[0] + 1e-7);
+    centerModelOnStock(store, id);
+    expect(store.getState().past).toHaveLength(steps + 2);
   });
 
   it("removes a model, undoably", () => {

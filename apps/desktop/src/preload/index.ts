@@ -1,5 +1,5 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
-import { CHANNELS, type DesktopApi, type MenuCommand } from "../shared/api";
+import { CHANNELS, type DesktopApi, type FileStamp, type MenuCommand } from "../shared/api";
 
 /** Subscribes `listener` to `channel`; the returned function unsubscribes. */
 function listen<T extends unknown[]>(channel: string, listener: (...args: T) => void) {
@@ -13,9 +13,11 @@ function listen<T extends unknown[]>(channel: string, listener: (...args: T) => 
 const api: DesktopApi = {
   openFile: () => ipcRenderer.invoke(CHANNELS.openFile),
   readFile: (path) => ipcRenderer.invoke(CHANNELS.readFile, path),
-  saveFile: (path, suggestedName, bytes) =>
-    ipcRenderer.invoke(CHANNELS.saveFile, path, suggestedName, bytes),
+  saveFile: (path, suggestedName, bytes, stamp) =>
+    ipcRenderer.invoke(CHANNELS.saveFile, path, suggestedName, bytes, stamp),
   recentFiles: () => ipcRenderer.invoke(CHANNELS.recentFiles),
+  addRecent: (path) => ipcRenderer.invoke(CHANNELS.addRecent, path),
+  removeRecent: (path) => ipcRenderer.invoke(CHANNELS.removeRecent, path),
   readData: (file) => ipcRenderer.invoke(CHANNELS.readData, file),
   writeData: (file, data) => ipcRenderer.invoke(CHANNELS.writeData, file, data),
   writeRecovery: (recovery, bytes) => ipcRenderer.invoke(CHANNELS.writeRecovery, recovery, bytes),
@@ -23,6 +25,7 @@ const api: DesktopApi = {
   listRecoveries: () => ipcRenderer.invoke(CHANNELS.listRecoveries),
   readRecovery: (id) => ipcRenderer.invoke(CHANNELS.readRecovery, id),
   askUnsaved: (name) => ipcRenderer.invoke(CHANNELS.askUnsaved, name),
+  askReload: (name) => ipcRenderer.invoke(CHANNELS.askReload, name),
   setWindowState: (state) => ipcRenderer.send(CHANNELS.setWindowState, state),
   closeWindow: () => ipcRenderer.send(CHANNELS.closeWindow),
   takePendingPaths: () => ipcRenderer.invoke(CHANNELS.takePendingPaths),
@@ -32,6 +35,7 @@ const api: DesktopApi = {
   setLocale: (locale) => ipcRenderer.invoke(CHANNELS.setLocale, locale),
   onMenu: (listener) => listen<[MenuCommand]>(CHANNELS.menu, listener),
   onOpenPath: (listener) => listen<[string]>(CHANNELS.openPath, listener),
+  onFileChanged: (listener) => listen<[string, FileStamp]>(CHANNELS.fileChanged, listener),
   onCloseRequest: (listener) => listen<[]>(CHANNELS.closeRequest, listener),
 };
 

@@ -2,6 +2,7 @@ import type { ArchiveVersion, ProjectDocument } from "@furrow/document";
 import { type ProjectFile, writeProjectFile } from "@furrow/workspace/lib/project-file";
 import { MAX_VERSIONS, VERSION_LABEL_MAX } from "@furrow/workspace/lib/versions";
 import type { AssetStore, VersionRow, WorkspaceHost } from "@furrow/workspace/lib/workspace-host";
+import type { FileStamp } from "../../shared/api";
 import { t } from "./i18n";
 
 const tooManyVersions = () => t("Desktop.Session.tooManyVersions", { max: MAX_VERSIONS });
@@ -27,6 +28,7 @@ export function createProjectSession({
   path,
   name,
   file,
+  stamp,
   modified: startModified = false,
   onChange,
   writeRecovery,
@@ -38,6 +40,8 @@ export function createProjectSession({
   path: string | null;
   name: string;
   file: ProjectFile;
+  /** `path`'s stamp as read, to check before saving over it (#491); `undefined` when unknown. */
+  stamp?: FileStamp;
   /** The contents aren't what the file has, e.g. a recovered copy. */
   modified?: boolean;
   /** Called when `path`, `name` or `modified` change. */
@@ -48,6 +52,9 @@ export function createProjectSession({
   openAsProject?: (file: ProjectFile, name: string) => void;
 }) {
   let currentPath = path;
+  let currentStamp = stamp;
+  /** How many times `replace` took the file another program saved. */
+  let reloads = 0;
   let currentName = name;
   let document = file.document;
   const meshes = new Map(file.meshes);
@@ -208,6 +215,14 @@ export function createProjectSession({
     get name() {
       return currentName;
     },
+    /** Counts `replace`s, so what lists the project's versions lists them again. */
+    get reloads() {
+      return reloads;
+    },
+    /** `path`'s stamp as last read or written here. */
+    get stamp() {
+      return currentStamp;
+    },
     get modified() {
       return modified;
     },
@@ -227,8 +242,9 @@ export function createProjectSession({
      * The project was written to `path` with `contents`. Changes made since
      * `prepareSave` stay unsaved, with their recovery copy.
      */
-    markSaved(path: string, name: string, contents: SavedContents) {
+    markSaved(path: string, name: string, contents: SavedContents, stamp?: FileStamp) {
       currentPath = path;
+      currentStamp = stamp;
       currentName = name;
       savedDocument = contents.document;
       // Version changes always replace the list, so the same list means none since.
@@ -237,6 +253,29 @@ export function createProjectSession({
       modified = true;
       changed();
       onChange?.();
+    },
+    /**
+     * Takes `file` as the project, read from its file with `stamp` after
+     * another program saved it (#492): its document, models, fonts and
+     * versions, with nothing left unsaved. Returns the new save time, for the
+     * workspace to load the document at.
+     */
+    replace(file: ProjectFile, stamp: FileStamp): Date {
+      document = file.document;
+      // The same maps the workspace's asset stores read.
+      meshes.clear();
+      for (const [sha256, bytes] of file.meshes) meshes.set(sha256, bytes);
+      fonts.clear();
+      for (const [sha256, bytes] of file.fonts) fonts.set(sha256, bytes);
+      versions = [...file.versions];
+      versionsChanged = false;
+      savedDocument = JSON.stringify(document);
+      currentStamp = stamp;
+      reloads += 1;
+      // Taken as modified, so `changed` deletes a recovery copy of what was replaced.
+      modified = true;
+      changed();
+      return tick();
     },
     /** The project is closed without saving: its recovery copy goes. Resolves once it has. */
     discard(): Promise<unknown> {

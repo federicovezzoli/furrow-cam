@@ -12,7 +12,7 @@ import {
 import { Label } from "@furrow/ui/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
 import type { MachineChoice } from "@furrow/workspace/lib/workspace-host";
-import { FileIcon, FolderOpenIcon, HistoryIcon, PlusIcon } from "lucide-react";
+import { FileIcon, FolderOpenIcon, HistoryIcon, PlusIcon, XIcon } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "use-intl";
 import type { RecentFile, Recovery } from "../../shared/api";
@@ -116,11 +116,11 @@ export function StartScreen({
         ) : (
           <ul className="grid">
             {recent.map((file) => (
-              <li key={file.path}>
+              <li key={file.path} className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => onOpenPath(file.path)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                   title={file.path}
                 >
                   <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -129,6 +129,15 @@ export function StartScreen({
                     {file.path}
                   </span>
                 </button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("removeRecent", { name: file.name })}
+                  title={t("removeRecent", { name: file.name })}
+                  onClick={() => void api.removeRecent(file.path).then(setRecent)}
+                >
+                  <XIcon />
+                </Button>
               </li>
             ))}
           </ul>

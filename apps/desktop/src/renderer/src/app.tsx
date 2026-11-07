@@ -11,12 +11,13 @@ import { type ProjectFile, readProjectFile } from "@furrow/workspace/lib/project
 import { track } from "@furrow/workspace/lib/telemetry";
 import type { MachineChoice, ToolChoice } from "@furrow/workspace/lib/workspace-host";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Recovery } from "../../shared/api";
+import type { FileStamp, Recovery } from "../../shared/api";
 import { api } from "./api";
 import { AppFrame } from "./app-frame";
-import { type Page, ProjectView } from "./desktop-host";
+import { type Page, ProjectView, type Reload } from "./desktop-host";
 import { t } from "./i18n";
 import { LibraryPage } from "./library-pages";
+import { openProjectBytes } from "./open-project";
 import { createProjectSession, type ProjectSession } from "./session";
 import { StartScreen } from "./start-screen";
 
@@ -46,6 +47,12 @@ export function App() {
   const flush = useRef<() => Promise<unknown>>(async () => {});
   /** The session as last rendered, for commands that outlive a render (menus, dialogs). */
   const current = useRef(session);
+  /** The save running, if any; the next one waits for it. */
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
+  /** Set by the open workspace to load a file another program saved (#492). */
+  const reload = useRef<Reload | null>(null);
+  /** The reload running, if any; changes to the file are handled one at a time. */
+  const reloading = useRef<Promise<unknown>>(Promise.resolve());
   current.current = session;
 
   useEffect(() => {
@@ -101,10 +108,21 @@ export function App() {
 
   function open(
     file: ProjectFile,
-    options: { path: string | null; name: string; id?: string; modified?: boolean },
+    options: {
+      path: string | null;
+      name: string;
+      id?: string;
+      modified?: boolean;
+      stamp?: FileStamp;
+    },
   ) {
     let created: ProjectSession;
-    const recovery = () => ({ id: created.id, path: created.path, name: created.name });
+    const recovery = () => ({
+      id: created.id,
+      path: created.path,
+      name: created.name,
+      stamp: created.stamp,
+    });
     created = createProjectSession({
       ...options,
       file,
@@ -124,7 +142,14 @@ export function App() {
    * Saves the open project to its file, or where the user picks when it has
    * none or `as` is set. Resolves with whether it was saved.
    */
-  async function save(as = false): Promise<boolean> {
+  function save(as = false): Promise<boolean> {
+    // One at a time: a second Save sends the stamp the first one wrote.
+    const next = saving.current.then(() => saveNow(as));
+    saving.current = next.catch(() => false);
+    return next;
+  }
+
+  async function saveNow(as: boolean): Promise<boolean> {
     const session = current.current;
     if (!session) return false;
     await flush.current();
@@ -135,14 +160,19 @@ export function App() {
       void alert(errorText(t, error, t("Desktop.App.projectNotSaved")));
       return false;
     }
-    const result = await api.saveFile(as ? null : session.path, session.name, prepared.bytes);
+    const result = await api.saveFile(
+      as ? null : session.path,
+      session.name,
+      prepared.bytes,
+      as ? undefined : session.stamp,
+    );
     if (result === null) return false;
     if ("error" in result) {
       void alert(result.error);
       return false;
     }
     // Edits made while the file was written stay unsaved.
-    session.markSaved(result.path, result.name, prepared.contents);
+    session.markSaved(result.path, result.name, prepared.contents, result.stamp);
     return true;
   }
 
@@ -174,31 +204,59 @@ export function App() {
     else setError(message);
   }
 
-  async function openBytes(bytes: Uint8Array, path: string, name: string) {
-    let file: ProjectFile;
-    try {
-      file = await readProjectFile(bytes, t);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : t("Desktop.App.unreadable");
-      report(t("Desktop.App.openFailed", { name, reason }));
-      return;
-    }
+  async function openBytes(bytes: Uint8Array, path: string, name: string, stamp: FileStamp) {
     // Only `.furrow` files are saved over; others are saved as a new `.furrow` file.
     const savable = /\.furrow$/i.test(path);
-    await replaceWith(() => open(file, { path: savable ? path : null, name }));
+    await openProjectBytes(bytes, name, {
+      report,
+      replaceWith,
+      open: (file) => {
+        open(file, savable ? { path, name, stamp } : { path: null, name });
+        void api.addRecent(path);
+      },
+    });
   }
 
   async function openDialog() {
     const result = await api.openFile();
     if (result === null) return;
     if ("error" in result) report(result.error);
-    else await openBytes(result.bytes, result.path, result.name);
+    else await openBytes(result.bytes, result.path, result.name, result.stamp);
   }
 
   async function openPath(path: string) {
     const result = await api.readFile(path);
     if ("error" in result) report(result.error);
-    else await openBytes(result.bytes, result.path, result.name);
+    else await openBytes(result.bytes, result.path, result.name, result.stamp);
+  }
+
+  /**
+   * Shows the open project's file as another program, e.g. an assistant
+   * through the MCP server, saved it (#492): at once, or after asking if
+   * there are unsaved changes. Keeping them leaves the session's stamp, so
+   * Save then asks before replacing that version (#491).
+   */
+  async function reloadChanged(path: string, stamp: FileStamp) {
+    const session = current.current;
+    if (!session || session.path !== path) return;
+    // A save running writes the file itself, and gives the session its stamp.
+    await saving.current;
+    if (stamp === session.stamp) return;
+    const read = await api.readFile(path);
+    if ("error" in read || read.stamp === session.stamp) return;
+    let file: ProjectFile;
+    try {
+      file = await readProjectFile(read.bytes, t);
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+    if (current.current !== session) return;
+    await reload.current?.(
+      file,
+      read.stamp,
+      async () => (await api.askReload(session.name)) === "reload",
+    );
   }
 
   async function restore(recovery: Recovery) {
@@ -209,7 +267,13 @@ export function App() {
     }
     try {
       const file = await readProjectFile(bytes, t);
-      open(file, { path: recovery.path, name: recovery.name, id: recovery.id, modified: true });
+      open(file, {
+        path: recovery.path,
+        name: recovery.name,
+        id: recovery.id,
+        modified: true,
+        stamp: recovery.stamp,
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : t("Desktop.App.recoveryUnreadable"));
     }
@@ -261,6 +325,11 @@ export function App() {
     }
   });
   const onOpenPath = useEffectEvent((path: string) => void openPath(path));
+  const onFileChanged = useEffectEvent((path: string, stamp: FileStamp) => {
+    reloading.current = reloading.current
+      .then(() => reloadChanged(path, stamp))
+      .catch((error: unknown) => console.error(error));
+  });
   const onCloseRequest = useEffectEvent(() => {
     void closeOpen().then((closed) => closed && api.closeWindow());
   });
@@ -269,6 +338,7 @@ export function App() {
     const unsubscribe = [
       api.onMenu((command) => onMenu(command)),
       api.onOpenPath((path) => onOpenPath(path)),
+      api.onFileChanged((path, stamp) => onFileChanged(path, stamp)),
       api.onCloseRequest(() => onCloseRequest()),
     ];
     void api.takePendingPaths().then((paths) => {
@@ -329,6 +399,7 @@ export function App() {
         updateLibrary={updateLibrary}
         navigate={navigate}
         flush={flush}
+        reload={reload}
       >
         {libraryPage}
       </ProjectView>

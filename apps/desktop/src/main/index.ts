@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
-import { extname, join, normalize, relative, sep } from "node:path";
+import { dirname, extname, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { translator } from "@furrow/ui/lib/i18n";
 import { isLocale, type Locale, matchLocale } from "@furrow/ui/lib/locales";
@@ -34,18 +34,24 @@ import { PostHog } from "posthog-node";
 import {
   CHANNELS,
   type DataFile,
+  type FileStamp,
   type MenuCommand,
   OPEN_EXTENSIONS,
+  type RecentFile,
   type Recovery,
+  type ReloadChoice,
   type UnsavedChoice,
 } from "../shared/api";
 import {
   existingRecent,
+  fileStamp,
   parseRecent,
   projectName,
   projectPathsIn,
   readJson,
   recoveryStore,
+  watchFile,
+  withoutRecent,
   withRecent,
   writeFileAtomic,
   writeJson,
@@ -701,7 +707,10 @@ function createWindow() {
     current.webContents.send(CHANNELS.closeRequest);
   });
   current.on("closed", () => {
-    if (window === current) window = null;
+    if (window === current) {
+      window = null;
+      watchProject(null);
+    }
   });
 
   // Links out of the app (docs, the website) open in the system browser.
@@ -854,20 +863,98 @@ function buildMenu() {
   return Menu.buildFromTemplate(template);
 }
 
+/** The watch on the open project's file (#492), and which file it is. */
+let watched: { path: string; stop: () => void } | null = null;
+
+/** Watches `path`, the open project's file, telling the renderer when another program changes it. */
+function watchProject(path: string | null) {
+  if (watched?.path === path) return;
+  watched?.stop();
+  watched = null;
+  if (path === null) return;
+  // The renderer skips the app's own saves: their stamp is the session's.
+  const stop = watchFile(path, (stamp) => {
+    if (stamp !== null) window?.webContents.send(CHANNELS.fileChanged, path, stamp);
+  });
+  watched = { path, stop };
+}
+
+/** The files read this session: the only ones the renderer may list as recent (#494). */
+const readPaths = new Set<string>();
+
 async function readProject(path: string) {
   try {
+    // Taken before reading, so a change while reading shows at the next save.
+    const stamp = await fileStamp(path);
     const bytes = new Uint8Array(await readFile(path));
-    await addRecent(path);
-    return { path, name: projectName(path), bytes };
+    readPaths.add(path);
+    return { path, name: projectName(path), bytes, stamp };
   } catch {
     return { error: tr()("DesktopMain.files.openFailed", { name: projectName(path) }) };
   }
 }
 
+/**
+ * Whether to save over `path`, which the open project last read or wrote as
+ * `stamp` (#491): `path` if it is still that, or deleted (nothing to lose),
+ * or the user chose to replace it; `null` to save elsewhere; `undefined` to
+ * cancel. Asks again if it changes while the question is open.
+ */
+async function confirmReplace(path: string, stamp: FileStamp): Promise<string | null | undefined> {
+  const t = tr();
+  let seen = stamp;
+  for (;;) {
+    const now = await fileStamp(path);
+    if (now === seen || now === null) return path;
+    // E.g. an assistant saved it through the MCP server.
+    const { response } = await dialog.showMessageBox({
+      type: "warning",
+      message: t("DesktopMain.files.changed", { name: projectName(path) }),
+      detail: t("DesktopMain.files.changedDetail"),
+      buttons: [
+        t("DesktopMain.files.replace"),
+        t("DesktopMain.files.saveAs"),
+        t("DesktopMain.files.cancel"),
+      ],
+      defaultId: 1,
+      cancelId: 2,
+    });
+    if (response === 2) return undefined;
+    if (response === 1) return null;
+    // Replaces what the user was warned about, not a later save.
+    seen = now;
+  }
+}
+
+/** The recent-list update running; the next waits, so none writes back a list another changed. */
+let recentUpdate: Promise<unknown> = Promise.resolve();
+
+/**
+ * Applies `change` to the stored recent files and returns the list kept.
+ * Never fails: if it can't be written (e.g. a full disk), it stays as it was.
+ */
+function updateRecent(change: (recent: RecentFile[]) => RecentFile[]): Promise<RecentFile[]> {
+  const next = recentUpdate.then(async () => {
+    const stored = parseRecent(await readJson(recentPath()));
+    const recent = change(stored);
+    if (recent === stored) return stored;
+    try {
+      await writeJson(recentPath(), recent);
+      return recent;
+    } catch {
+      return stored;
+    }
+  });
+  recentUpdate = next;
+  return next;
+}
+
 async function addRecent(path: string) {
-  const recent = withRecent(parseRecent(await readJson(recentPath())), path);
-  await writeJson(recentPath(), recent);
-  app.addRecentDocument(path);
+  // Already first, e.g. read again after an assistant saved it (#492): nothing to write.
+  const recent = await updateRecent((stored) =>
+    stored[0]?.path === path ? stored : withRecent(stored, path),
+  );
+  if (recent[0]?.path === path) app.addRecentDocument(path);
 }
 
 function registerIpc() {
@@ -886,13 +973,19 @@ function registerIpc() {
 
   ipcMain.handle(
     CHANNELS.saveFile,
-    async (_event, path: unknown, suggestedName: unknown, bytes: unknown) => {
+    async (_event, path: unknown, suggestedName: unknown, bytes: unknown, stamp: unknown) => {
       const t = tr();
       if (!(bytes instanceof Uint8Array)) return { error: t("DesktopMain.files.nothingToSave") };
       let target = typeof path === "string" ? path : null;
+      if (target !== null && (typeof stamp === "string" || stamp === null)) {
+        const confirmed = await confirmReplace(target, stamp);
+        if (confirmed === undefined) return null;
+        target = confirmed;
+      }
       if (target === null) {
+        const folder = typeof path === "string" ? dirname(path) : app.getPath("documents");
         const result = await dialog.showSaveDialog({
-          defaultPath: join(app.getPath("documents"), `${String(suggestedName)}.furrow`),
+          defaultPath: join(folder, `${String(suggestedName)}.furrow`),
           filters: [{ name: t("DesktopMain.files.project"), extensions: ["furrow"] }],
         });
         if (result.canceled || !result.filePath) return null;
@@ -900,19 +993,33 @@ function registerIpc() {
           ? result.filePath
           : `${result.filePath}.furrow`;
       }
+      let saved: FileStamp;
       try {
         await writeFileAtomic(target, bytes);
+        saved = await fileStamp(target);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         return { error: t("DesktopMain.files.saveFailed", { reason }) };
       }
       await addRecent(target);
-      return { path: target, name: projectName(target) };
+      return { path: target, name: projectName(target), stamp: saved };
     },
   );
 
   ipcMain.handle(CHANNELS.recentFiles, async () => {
     const recent = parseRecent(await readJson(recentPath()));
+    return existingRecent(recent);
+  });
+  ipcMain.handle(CHANNELS.addRecent, async (_event, path: unknown) => {
+    if (typeof path === "string" && readPaths.has(path)) await addRecent(path);
+  });
+  ipcMain.handle(CHANNELS.removeRecent, async (_event, path: unknown) => {
+    const recent = await updateRecent((stored) =>
+      typeof path === "string" ? withoutRecent(stored, path) : stored,
+    );
+    // The OS list (Dock, Jump List) can't drop one file: rebuild it, oldest first.
+    app.clearRecentDocuments();
+    for (const file of [...recent].reverse()) app.addRecentDocument(file.path);
     return existingRecent(recent);
   });
 
@@ -932,6 +1039,19 @@ function registerIpc() {
   ipcMain.handle(CHANNELS.deleteRecovery, (_event, id: string) => recoveries().delete(id));
   ipcMain.handle(CHANNELS.listRecoveries, () => recoveries().list());
   ipcMain.handle(CHANNELS.readRecovery, (_event, id: string) => recoveries().read(id));
+
+  ipcMain.handle(CHANNELS.askReload, async (_event, name: unknown): Promise<ReloadChoice> => {
+    const t = tr();
+    const { response } = await dialog.showMessageBox({
+      type: "warning",
+      message: t("DesktopMain.files.askReload", { name: String(name) }),
+      detail: t("DesktopMain.files.askReloadDetail"),
+      buttons: [t("DesktopMain.files.reload"), t("DesktopMain.files.keep")],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    return response === 0 ? "reload" : "keep";
+  });
 
   ipcMain.handle(CHANNELS.askUnsaved, async (_event, name: unknown): Promise<UnsavedChoice> => {
     const t = tr();
@@ -955,6 +1075,7 @@ function registerIpc() {
     (_event, state: { title: string; path: string | null; modified: boolean }) => {
       if (!window) return;
       modified = state.modified;
+      watchProject(state.path);
       const mac = process.platform === "darwin";
       window.setTitle(!mac && state.modified ? `• ${state.title}` : state.title);
       if (mac) {

@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
+import { type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { PROJECT_FILE_SUFFIX, PROJECT_PATH } from "@furrow/document";
-import type { RecentFile, Recovery } from "../shared/api";
+import type { FileStamp, RecentFile, Recovery } from "../shared/api";
 
 /** How many recent files the start screen lists. */
 export const MAX_RECENT = 10;
@@ -42,12 +43,14 @@ export async function writeJson(path: string, data: unknown): Promise<void> {
   await writeFileAtomic(path, `${JSON.stringify(data, null, 2)}\n`);
 }
 
+/** `recent` without `path`. */
+export function withoutRecent(recent: readonly RecentFile[], path: string): RecentFile[] {
+  return recent.filter((file) => file.path !== path);
+}
+
 /** `recent` with `path` moved to the top, at most `MAX_RECENT` long. */
 export function withRecent(recent: readonly RecentFile[], path: string): RecentFile[] {
-  return [{ path, name: projectName(path) }, ...recent.filter((file) => file.path !== path)].slice(
-    0,
-    MAX_RECENT,
-  );
+  return [{ path, name: projectName(path) }, ...withoutRecent(recent, path)].slice(0, MAX_RECENT);
 }
 
 /** The recent files stored as `json`, leaving out malformed entries. */
@@ -58,6 +61,58 @@ export function parseRecent(json: unknown): RecentFile[] {
       ? [{ path: entry.path, name: projectName(entry.path) }]
       : [],
   );
+}
+
+/**
+ * `path`'s stamp: its inode, change and modification times and size, or
+ * `null` if it doesn't exist. A save by renaming a new file over it, as the
+ * MCP server and this app save, gives it a new inode, so even a same-size
+ * save within a filesystem's time resolution is seen. The MCP server's
+ * `stampOf` (apps/mcp/src/projects.ts) is the same: keep them alike.
+ */
+export function fileStamp(path: string): Promise<FileStamp> {
+  return stat(path).then(
+    ({ ino, ctimeMs, mtimeMs, size }) => `${ino}:${ctimeMs}:${mtimeMs}:${size}`,
+    () => null,
+  );
+}
+
+/**
+ * Calls `onChange` with `path`'s stamp each time the file changes, once
+ * things settle for `delay` ms (#492). Watches its folder, since a save that
+ * renames a new file over it replaces the file a watch would follow.
+ * Returns a function that stops it; does nothing if the folder can't be watched.
+ */
+export function watchFile(
+  path: string,
+  onChange: (stamp: FileStamp) => void,
+  delay = 200,
+): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let last: FileStamp | undefined;
+  let watcher: FSWatcher;
+  try {
+    watcher = watch(dirname(path), (_event, file) => {
+      // Some platforms don't say which file changed.
+      if (file !== null && file !== basename(path)) return;
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const stamp = await fileStamp(path);
+        if (stamp === last) return;
+        last = stamp;
+        onChange(stamp);
+      }, delay);
+    });
+  } catch {
+    return () => {};
+  }
+  // E.g. the folder deleted (EPERM on Windows) or its drive unplugged: stop, as if it
+  // couldn't be watched. Unhandled, the error would crash the main process.
+  watcher.on("error", () => watcher.close());
+  return () => {
+    clearTimeout(timer);
+    watcher.close();
+  };
 }
 
 /** `recent` without the files that no longer exist. */
@@ -87,12 +142,12 @@ export function recoveryStore(dir: string) {
   }
 
   return {
-    async write({ id, path, name }: Omit<Recovery, "savedAt">, bytes: Uint8Array) {
+    async write({ id, path, name, stamp }: Omit<Recovery, "savedAt">, bytes: Uint8Array) {
       const { file, meta } = paths(id);
       await mkdir(dir, { recursive: true });
       // The project first: a copy without its description is ignored, not offered half-written.
       await writeFileAtomic(file, bytes);
-      const recovery: Recovery = { id, path, name, savedAt: new Date().toISOString() };
+      const recovery: Recovery = { id, path, name, stamp, savedAt: new Date().toISOString() };
       await writeFileAtomic(meta, JSON.stringify(recovery));
     },
 
@@ -132,12 +187,13 @@ export function recoveryStore(dir: string) {
 
 function isRecovery(value: unknown): value is Recovery {
   if (typeof value !== "object" || value === null) return false;
-  const { id, path, name, savedAt } = value as Record<string, unknown>;
+  const { id, path, name, savedAt, stamp } = value as Record<string, unknown>;
   return (
     typeof id === "string" &&
     (path === null || typeof path === "string") &&
     typeof name === "string" &&
-    typeof savedAt === "string"
+    typeof savedAt === "string" &&
+    (stamp === undefined || stamp === null || typeof stamp === "string")
   );
 }
 
