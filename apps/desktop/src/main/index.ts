@@ -926,7 +926,10 @@ async function confirmReplace(path: string, stamp: FileStamp): Promise<string | 
 }
 
 async function addRecent(path: string) {
-  const recent = withRecent(parseRecent(await readJson(recentPath())), path);
+  const stored = parseRecent(await readJson(recentPath()));
+  // Already first, e.g. read again after an assistant saved it (#492): nothing to write.
+  if (stored[0]?.path === path) return;
+  const recent = withRecent(stored, path);
   await writeJson(recentPath(), recent);
   app.addRecentDocument(path);
 }

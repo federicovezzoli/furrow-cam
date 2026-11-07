@@ -53,6 +53,8 @@ export function createProjectSession({
 }) {
   let currentPath = path;
   let currentStamp = stamp;
+  /** How many times `replace` took the file another program saved. */
+  let reloads = 0;
   let currentName = name;
   let document = file.document;
   const meshes = new Map(file.meshes);
@@ -213,6 +215,10 @@ export function createProjectSession({
     get name() {
       return currentName;
     },
+    /** Counts `replace`s, so what lists the project's versions lists them again. */
+    get reloads() {
+      return reloads;
+    },
     /** `path`'s stamp as last read or written here. */
     get stamp() {
       return currentStamp;
@@ -265,6 +271,7 @@ export function createProjectSession({
       versionsChanged = false;
       savedDocument = JSON.stringify(document);
       currentStamp = stamp;
+      reloads += 1;
       // Taken as modified, so `changed` deletes a recovery copy of what was replaced.
       modified = true;
       changed();

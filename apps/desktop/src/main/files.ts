@@ -104,6 +104,9 @@ export function watchFile(
   } catch {
     return () => {};
   }
+  // E.g. the folder deleted (EPERM on Windows) or its drive unplugged: stop, as if it
+  // couldn't be watched. Unhandled, the error would crash the main process.
+  watcher.on("error", () => watcher.close());
   return () => {
     clearTimeout(timer);
     watcher.close();

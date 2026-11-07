@@ -93,6 +93,7 @@ export function ProjectView({
   /** The panel sizes the user last chose, before they reach the disk. */
   const layout = useRef(library.settings.workspaceLayout);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `session.reloads` rebuilds the host on purpose.
   const host = useMemo<WorkspaceHost>(
     () => ({
       app: { name: "desktop", version: packageJson.version },
@@ -145,8 +146,9 @@ export function ProjectView({
       navigation: { Link: DesktopLink },
       limits: { meshes: DEFAULT_STL_LIMITS, fonts: { maxBytes: MAX_FONT_BYTES } },
     }),
-    // `name` changes on Save As; the stores are keyed by `id`, so they stay.
-    [session, session.name, tools, machines, workspaceTourDone, updateLibrary],
+    // `name` changes on Save As, `reloads` when another program saved the file (#492), so
+    // the Versions pane lists its versions again; the stores are keyed by `id`, so they stay.
+    [session, session.name, session.reloads, tools, machines, workspaceTourDone, updateLibrary],
   );
 
   const onWorkspace = page.name === "workspace" || page.name === "simulator";

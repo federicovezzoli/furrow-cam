@@ -287,7 +287,7 @@ describe("readProjectFile", () => {
     const saved = file();
     const savedAt = session.replace(saved, "9:9:9:9");
     await settled();
-    expect(session).toMatchObject({ modified: false, stamp: "9:9:9:9" });
+    expect(session).toMatchObject({ modified: false, stamp: "9:9:9:9", reloads: 1 });
     expect(session.document).toBe(saved.document);
     expect(savedAt.getTime()).toBeGreaterThan(before.getTime());
     // The unsaved changes it replaced leave no recovery copy behind.
