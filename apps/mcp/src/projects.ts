@@ -188,7 +188,9 @@ export type Projects = ReturnType<typeof createProjects>;
  * document as it was as an automatic version, so the user can restore it
  * (ADR-0028); a change to a project with no room for one is undone and refused.
  * If `edit` throws, everything it changed is undone: a tool call changes all
- * it was asked to, or nothing.
+ * it was asked to, or nothing. That runs `edit` in a store transaction, so the
+ * actions it calls must not open their own (`lib/text-items.ts` does): their
+ * commit would end this one early, and a later refusal would undo nothing.
  */
 export function change(project: Project, edit: (store: DocumentStore) => void) {
   const { document: before, past, future } = project.store.getState();

@@ -508,12 +508,8 @@ export function createServer(projects: Projects = createProjects(), library = li
       ({ path, toolId, tool, ...input }: AddInput) =>
         respond(async () => {
           const project = await projects.get(path);
-          // The library only for a library tool, as in set_operation_tool.
-          const tools =
-            toolId === undefined
-              ? { tools: [], machines: [], problems: [] }
-              : await readLibrary(library);
-          const id = addOperation(project, tools, type, {
+          // Read even for a tool given by its settings: a V-carve's flat bottom may name a library tool.
+          const id = addOperation(project, await readLibrary(library), type, {
             ...input,
             tool: { toolId, settings: tool },
           });
@@ -546,13 +542,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     ({ path, operationId, ...edit }) =>
       respond(async () => {
         const project = await projects.get(path);
-        const flatBottom = edit.settings?.flatBottom;
-        const needsLibrary =
-          typeof flatBottom === "object" && flatBottom !== null && "toolId" in flatBottom;
-        const tools = needsLibrary
-          ? await readLibrary(library)
-          : { tools: [], machines: [], problems: [] };
-        editOperation(project, tools, operationId, edit);
+        editOperation(project, await readLibrary(library), operationId, edit);
         return summary(project);
       }),
   );

@@ -12,6 +12,7 @@ import {
   ReliefFinishParams,
   ReliefRoughParams,
   type StockSide,
+  stockPins,
   type Tool,
   VCarveParams,
 } from "@furrow/document";
@@ -270,7 +271,14 @@ function configure(
   if (Object.keys(changes).length > 0) {
     check(UPDATE[operation.type](store, id, changes as never));
   }
-  if (operation.type === "drill" && pins === true) setDrillPins(store, id);
+  if (operation.type === "drill" && pins === true) {
+    // `setDrillPins` would quietly do nothing on the bottom side, and drill nothing without pins.
+    if (!stockPins(store.getState().document.stock)) {
+      throw new ToolError("pins: this project has no locating pins to drill.");
+    }
+    if (operation.stockSide !== "top") throw new ToolError(text({ code: "operation.pinsTopOnly" }));
+    setDrillPins(store, id);
+  }
   if (operation.type === "profile" && tabs !== undefined) setTabs(store, id, tabs);
 }
 
@@ -326,7 +334,9 @@ export function addOperation(
       throw new ToolError("A 2D operation cuts shapes: give targets, not a modelId.");
     }
     targets = targetsOf(document, inputs ?? []);
-    const holes = type === "drill" && (settings?.pins === true || Array.isArray(settings?.points));
+    const holes =
+      type === "drill" &&
+      (settings?.pins === true || (Array.isArray(settings?.points) && settings.points.length > 0));
     if (targets.length === 0 && !holes) {
       throw new ToolError(
         type === "drill"

@@ -2,7 +2,14 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createProjectDocument, packProjectArchive } from "@furrow/document";
-import { DRAWING_ID, endMill, fullDocument, OPERATION_ID } from "@furrow/document/fixtures";
+import {
+  DRAWING_ID,
+  endMill,
+  fullDocument,
+  OPERATION_ID,
+  SQUARE_ID,
+  vBit,
+} from "@furrow/document/fixtures";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -161,5 +168,23 @@ describe("the MCP server", () => {
     expect(
       await refusal("edit_operation", { path, operationId: added.id, settings: { speed: 1 } }),
     ).toMatch(/no setting "speed"/);
+  });
+
+  it("finds a flat bottom's library end mill for a V-bit given by its settings", async () => {
+    const path = join(dir, "Part.furrow");
+    await writeFile(path, packProjectArchive(fullDocument(), new Map()));
+    await writeFile(
+      join(dir, "tools.json"),
+      JSON.stringify([{ id: "mill", isDefault: true, tool: endMill }]),
+    );
+    const added = await call("add_vcarve", {
+      path,
+      targets: [{ shapeId: SQUARE_ID }],
+      tool: vBit,
+      settings: { flatBottom: { toolId: "mill" } },
+    });
+    expect(added.operations.at(-1)).toMatchObject({
+      params: { flatBottom: { tool: endMill } },
+    });
   });
 });

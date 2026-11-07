@@ -205,6 +205,23 @@ describe("addOperation", () => {
       /pins: true/,
     );
     expectRefused(
+      () =>
+        addOperation(project, library, "drill", {
+          tool: { settings: { ...drill } },
+          settings: { points: [] },
+        }),
+      /pins: true/,
+    );
+    expectRefused(
+      () =>
+        addOperation(project, library, "drill", {
+          tool: { settings: { ...drill } },
+          stockSide: "bottom",
+          settings: { pins: true },
+        }),
+      /top-side drill/,
+    );
+    expectRefused(
       () => addOperation(project, library, "relief_rough", { modelId: "nope", tool }),
       /no model "nope"/,
     );
@@ -217,6 +234,14 @@ describe("addOperation", () => {
           stockSide: "bottom",
         }),
       /isn't two-sided/,
+    );
+    expectRefused(
+      () =>
+        addOperation(project, library, "drill", {
+          tool: { settings: { ...drill } },
+          settings: { pins: true },
+        }),
+      /no locating pins/,
     );
   });
 });
