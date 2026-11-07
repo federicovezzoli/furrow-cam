@@ -2,7 +2,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { addServer, clientStatus, type McpClient, mcpClients, SERVER_NAME } from "./mcp-setup";
+import {
+  addServer,
+  CLAUDE_CODE_COMMAND,
+  claudeCodeInstalled,
+  clientStatus,
+  type McpClient,
+  mcpClients,
+  SERVER_NAME,
+} from "./mcp-setup";
 
 let home: string;
 let clients: McpClient[];
@@ -23,7 +31,6 @@ describe("mcpClients", () => {
   it("finds each client's user-wide config where it keeps it", () => {
     expect(mcpClients("darwin", {}, "/Users/me").map((c) => c.config)).toEqual([
       "/Users/me/Library/Application Support/Claude/claude_desktop_config.json",
-      "/Users/me/.claude.json",
       "/Users/me/Library/Application Support/Code/User/mcp.json",
     ]);
     expect(mcpClients("linux", { XDG_CONFIG_HOME: "/cfg" }, "/home/me")[0]?.config).toBe(
@@ -42,7 +49,7 @@ describe("mcpClients", () => {
 
 describe("clientStatus and addServer", () => {
   it("finds no client that isn't installed", async () => {
-    expect(await Promise.all(clients.map(clientStatus))).toEqual(["absent", "absent", "absent"]);
+    expect(await Promise.all(clients.map(clientStatus))).toEqual(["absent", "absent"]);
   });
 
   it("adds the server to an installed client with no config yet", async () => {
@@ -57,19 +64,27 @@ describe("clientStatus and addServer", () => {
   });
 
   it("keeps everything else in the config", async () => {
-    const code = client("Claude Code");
+    const vscode = client("VS Code");
+    await mkdir(join(home, ".config", "Code", "User"), { recursive: true });
     await writeFile(
-      code.config,
-      JSON.stringify({ numStartups: 4, mcpServers: { other: { command: "other" } } }),
+      vscode.config,
+      JSON.stringify({ inputs: [], servers: { other: { command: "other" } } }),
     );
-    await addServer(code);
-    expect(await json(code.config)).toEqual({
-      numStartups: 4,
-      mcpServers: {
+    await addServer(vscode);
+    expect(await json(vscode.config)).toEqual({
+      inputs: [],
+      servers: {
         other: { command: "other" },
         [SERVER_NAME]: { type: "stdio", command: "npx", args: ["-y", "@furrow-cam/mcp"] },
       },
     });
+  });
+
+  it("leaves alone a server list that isn't an object", async () => {
+    const desktop = client("Claude Desktop");
+    await mkdir(join(home, ".config", "Claude"), { recursive: true });
+    await writeFile(desktop.config, JSON.stringify({ mcpServers: ["other"] }));
+    expect(await clientStatus(desktop)).toBe("unreadable");
   });
 
   it("leaves alone a config it can't read as JSON", async () => {
@@ -80,5 +95,17 @@ describe("clientStatus and addServer", () => {
     expect(await clientStatus(vscode)).toBe("unreadable");
     await expect(addServer(vscode)).rejects.toThrow();
     expect(await readFile(vscode.config, "utf8")).toBe(commented);
+  });
+});
+
+describe("Claude Code", () => {
+  it("is found by its ~/.claude.json, never edited, and given the README's command", async () => {
+    expect(await claudeCodeInstalled(home)).toBe(false);
+    await writeFile(join(home, ".claude.json"), "{}");
+    expect(await claudeCodeInstalled(home)).toBe(true);
+    expect(clients.map((c) => c.name)).not.toContain("Claude Code");
+    expect(CLAUDE_CODE_COMMAND).toBe(
+      "claude mcp add furrow-cam --scope user -- npx -y @furrow-cam/mcp",
+    );
   });
 });

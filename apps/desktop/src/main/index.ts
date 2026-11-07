@@ -16,10 +16,12 @@ import {
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
   type MenuItemConstructorOptions,
+  type MessageBoxOptions,
   net,
   protocol,
   session,
@@ -48,7 +50,14 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
-import { addServer, clientStatus, type McpClient, mcpClients } from "./mcp-setup";
+import {
+  addServer,
+  CLAUDE_CODE_COMMAND,
+  claudeCodeInstalled,
+  clientStatus,
+  type McpClient,
+  mcpClients,
+} from "./mcp-setup";
 import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import {
   isUpdateRequest,
@@ -438,7 +447,8 @@ const MCP_GUIDE = "https://github.com/federicovezzoli/furrow-cam/tree/main/apps/
 /**
  * Help → Set Up AI Assistants… (PRD-0012 M12): finds the MCP clients on this
  * computer, asks, and adds the local MCP server to the ones that don't have
- * it. Only this process touches their files (ADR-0044).
+ * it. Only this process touches their files (ADR-0044). Claude Code's file
+ * isn't edited: the user gets its command to run.
  */
 async function setUpAssistants() {
   const t = tr();
@@ -446,9 +456,12 @@ async function setUpAssistants() {
     new Intl.ListFormat(currentLocale(), { type: "conjunction" }).format(
       clients.map((client) => client.name),
     );
-  const found = await Promise.all(
-    mcpClients().map(async (client) => ({ client, status: await clientStatus(client) })),
-  );
+  const [found, claudeCode] = await Promise.all([
+    Promise.all(
+      mcpClients().map(async (client) => ({ client, status: await clientStatus(client) })),
+    ),
+    claudeCodeInstalled(),
+  ]);
   const having = (status: string) =>
     found.filter((each) => each.status === status).map(({ client }) => client);
   const ready = having("ready");
@@ -460,20 +473,39 @@ async function setUpAssistants() {
       ? t("DesktopMain.assistants.unreadable", { clients: list(unreadable) })
       : "",
   ].filter(Boolean);
+  const claudeCodeNote = claudeCode
+    ? [t("DesktopMain.assistants.claudeCode", { command: CLAUDE_CODE_COMMAND })]
+    : [];
 
-  if (ready.length === 0) {
+  /** The last dialog: OK, with Copy Command if Claude Code is here and the guide if asked. */
+  const finish = async (
+    options: Pick<MessageBoxOptions, "type" | "message">,
+    detail: string[],
+    guide: boolean,
+  ) => {
+    const buttons = [
+      t("DesktopMain.assistants.ok"),
+      ...(claudeCode ? [t("DesktopMain.assistants.copyCommand")] : []),
+      ...(guide ? [t("DesktopMain.assistants.guide")] : []),
+    ];
     const { response } = await dialog.showMessageBox({
-      type: "info",
-      message:
-        added.length > 0 || unreadable.length > 0
-          ? t("DesktopMain.assistants.nothingToAdd")
-          : t("DesktopMain.assistants.none"),
-      detail: [...notes, t("DesktopMain.assistants.others")].join("\n\n"),
-      buttons: [t("DesktopMain.assistants.ok"), t("DesktopMain.assistants.guide")],
+      ...options,
+      detail: [...detail, ...claudeCodeNote].join("\n\n"),
+      buttons,
       defaultId: 0,
       cancelId: 0,
     });
-    if (response === 1) void shell.openExternal(MCP_GUIDE);
+    // Copy Command is right after OK, the guide last.
+    if (claudeCode && response === 1) clipboard.writeText(CLAUDE_CODE_COMMAND);
+    else if (guide && response === buttons.length - 1) void shell.openExternal(MCP_GUIDE);
+  };
+
+  if (ready.length === 0) {
+    const message =
+      added.length > 0 || unreadable.length > 0 || claudeCode
+        ? t("DesktopMain.assistants.nothingToAdd")
+        : t("DesktopMain.assistants.none");
+    await finish({ type: "info", message }, [...notes, t("DesktopMain.assistants.others")], true);
     return;
   }
 
@@ -496,20 +528,19 @@ async function setUpAssistants() {
     }
   }
   const done = ready.filter((client) => !failed.includes(client));
-  await dialog.showMessageBox({
-    type: failed.length > 0 ? "warning" : "info",
-    message:
-      done.length > 0
-        ? t("DesktopMain.assistants.done", { clients: list(done) })
-        : t("DesktopMain.assistants.failed", { clients: list(failed) }),
-    detail: [
-      ...(done.length > 0 ? [t("DesktopMain.assistants.restart")] : []),
-      ...(done.length > 0 && failed.length > 0
-        ? [t("DesktopMain.assistants.failed", { clients: list(failed) })]
-        : []),
-    ].join("\n\n"),
-    buttons: [t("DesktopMain.assistants.ok")],
-  });
+  const failure = t("DesktopMain.assistants.failed", { clients: list(failed) });
+  if (done.length === 0) {
+    await finish({ type: "warning", message: failure }, [], true);
+    return;
+  }
+  await finish(
+    {
+      type: failed.length > 0 ? "warning" : "info",
+      message: t("DesktopMain.assistants.done", { clients: list(done) }),
+    },
+    [t("DesktopMain.assistants.restart"), ...(failed.length > 0 ? [failure] : [])],
+    failed.length > 0,
+  );
 }
 
 /** Help → Check for Updates…: always reports what it found. */

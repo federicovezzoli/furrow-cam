@@ -22,9 +22,10 @@ export type McpClient = {
 };
 
 /**
- * The clients the MCP server's README covers, with the files they keep their
- * user-wide servers in: Claude Desktop's config, Claude Code's `~/.claude.json`
- * (user scope) and VS Code's user `mcp.json`.
+ * The clients whose config the app edits, with the files they keep their
+ * user-wide servers in: Claude Desktop's config and VS Code's user `mcp.json`.
+ * Not Claude Code: its `~/.claude.json` holds much more, rewritten while it
+ * runs, so it gets `CLAUDE_CODE_COMMAND` to run instead.
  */
 export function mcpClients(
   platform: NodeJS.Platform = process.platform,
@@ -48,13 +49,6 @@ export function mcpClients(
         platform === "win32" ? { command: "cmd", args: ["/c", NPX.command, ...NPX.args] } : NPX,
     },
     {
-      name: "Claude Code",
-      marker: join(home, ".claude.json"),
-      config: join(home, ".claude.json"),
-      key: "mcpServers",
-      entry: { type: "stdio", ...NPX },
-    },
-    {
       name: "VS Code",
       marker: join(appData, "Code", "User"),
       config: join(appData, "Code", "User", "mcp.json"),
@@ -63,6 +57,20 @@ export function mcpClients(
     },
   ];
 }
+
+/** The command that adds the server to Claude Code for every project, as its README gives it. */
+export const CLAUDE_CODE_COMMAND = `claude mcp add ${SERVER_NAME} --scope user -- ${NPX.command} ${NPX.args.join(" ")}`;
+
+/** Whether Claude Code has been used on this computer: it keeps `~/.claude.json`. */
+export function claudeCodeInstalled(home = homedir()): Promise<boolean> {
+  return exists(join(home, ".claude.json"));
+}
+
+const exists = (path: string) =>
+  stat(path).then(
+    () => true,
+    () => false,
+  );
 
 /**
  * Whether a client is installed (`absent` if not), already has the server
@@ -95,7 +103,8 @@ async function readConfig({ config, key }: McpClient): Promise<Config> {
     typeof json !== "object" ||
     json === null ||
     Array.isArray(json) ||
-    (servers !== undefined && (typeof servers !== "object" || servers === null))
+    (servers !== undefined &&
+      (typeof servers !== "object" || servers === null || Array.isArray(servers)))
   ) {
     return { status: "unreadable" };
   }
@@ -104,11 +113,7 @@ async function readConfig({ config, key }: McpClient): Promise<Config> {
 }
 
 export async function clientStatus(client: McpClient): Promise<ClientStatus> {
-  const installed = await stat(client.marker).then(
-    () => true,
-    () => false,
-  );
-  return installed ? (await readConfig(client)).status : "absent";
+  return (await exists(client.marker)) ? (await readConfig(client)).status : "absent";
 }
 
 /**
