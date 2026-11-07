@@ -85,10 +85,10 @@ export interface DesktopApi {
   onMenu(listener: (command: MenuCommand) => void): () => void;
   onOpenPath(listener: (path: string) => void): () => void;
   /**
-   * The open project's file (the `path` given to `setWindowState`) changed,
-   * and not by this app's own save, e.g. an assistant saved it (#492).
+   * The open project's file (the `path` given to `setWindowState`) changed
+   * and is now `stamp`, e.g. an assistant saved it (#492), or this app did.
    */
-  onFileChanged(listener: (path: string) => void): () => void;
+  onFileChanged(listener: (path: string, stamp: FileStamp) => void): () => void;
   /** Hands a usage event to the main process, which sends it if the user agreed (ADR-0052). */
   trackEvent(event: TelemetryEvent): void;
   /** Hands an error report (from `reportableError`) to the main process, as `trackEvent`. */

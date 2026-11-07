@@ -1,5 +1,5 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
-import { CHANNELS, type DesktopApi, type MenuCommand } from "../shared/api";
+import { CHANNELS, type DesktopApi, type FileStamp, type MenuCommand } from "../shared/api";
 
 /** Subscribes `listener` to `channel`; the returned function unsubscribes. */
 function listen<T extends unknown[]>(channel: string, listener: (...args: T) => void) {
@@ -33,7 +33,7 @@ const api: DesktopApi = {
   setLocale: (locale) => ipcRenderer.invoke(CHANNELS.setLocale, locale),
   onMenu: (listener) => listen<[MenuCommand]>(CHANNELS.menu, listener),
   onOpenPath: (listener) => listen<[string]>(CHANNELS.openPath, listener),
-  onFileChanged: (listener) => listen<[string]>(CHANNELS.fileChanged, listener),
+  onFileChanged: (listener) => listen<[string, FileStamp]>(CHANNELS.fileChanged, listener),
   onCloseRequest: (listener) => listen<[]>(CHANNELS.closeRequest, listener),
 };
 

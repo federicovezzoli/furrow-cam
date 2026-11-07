@@ -236,12 +236,12 @@ export function App() {
    * there are unsaved changes. Keeping them leaves the session's stamp, so
    * Save then asks before replacing that version (#491).
    */
-  async function reloadChanged(path: string) {
+  async function reloadChanged(path: string, stamp: FileStamp) {
     const session = current.current;
     if (!session || session.path !== path) return;
-    // A save running writes the file itself; the workspace's last edits count as unsaved.
+    // A save running writes the file itself, and gives the session its stamp.
     await saving.current;
-    await flush.current();
+    if (stamp === session.stamp) return;
     const read = await api.readFile(path);
     if ("error" in read || read.stamp === session.stamp) return;
     let file: ProjectFile;
@@ -252,8 +252,11 @@ export function App() {
       return;
     }
     if (current.current !== session) return;
-    if (session.modified && (await api.askReload(session.name)) !== "reload") return;
-    if (current.current === session) await reload.current?.(file, read.stamp);
+    await reload.current?.(
+      file,
+      read.stamp,
+      async () => (await api.askReload(session.name)) === "reload",
+    );
   }
 
   async function restore(recovery: Recovery) {
@@ -322,9 +325,9 @@ export function App() {
     }
   });
   const onOpenPath = useEffectEvent((path: string) => void openPath(path));
-  const onFileChanged = useEffectEvent((path: string) => {
+  const onFileChanged = useEffectEvent((path: string, stamp: FileStamp) => {
     reloading.current = reloading.current
-      .then(() => reloadChanged(path))
+      .then(() => reloadChanged(path, stamp))
       .catch((error: unknown) => console.error(error));
   });
   const onCloseRequest = useEffectEvent(() => {
@@ -335,7 +338,7 @@ export function App() {
     const unsubscribe = [
       api.onMenu((command) => onMenu(command)),
       api.onOpenPath((path) => onOpenPath(path)),
-      api.onFileChanged((path) => onFileChanged(path)),
+      api.onFileChanged((path, stamp) => onFileChanged(path, stamp)),
       api.onCloseRequest(() => onCloseRequest()),
     ];
     void api.takePendingPaths().then((paths) => {

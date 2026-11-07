@@ -861,9 +861,6 @@ function buildMenu() {
   return Menu.buildFromTemplate(template);
 }
 
-/** Each project file's stamp after this app last wrote it, so the watch skips its own saves. */
-const ownSaves = new Map<string, FileStamp>();
-
 /** The watch on the open project's file (#492), and which file it is. */
 let watched: { path: string; stop: () => void } | null = null;
 
@@ -873,10 +870,9 @@ function watchProject(path: string | null) {
   watched?.stop();
   watched = null;
   if (path === null) return;
+  // The renderer skips the app's own saves: their stamp is the session's.
   const stop = watchFile(path, (stamp) => {
-    if (stamp !== null && stamp !== ownSaves.get(path)) {
-      window?.webContents.send(CHANNELS.fileChanged, path);
-    }
+    if (stamp !== null) window?.webContents.send(CHANNELS.fileChanged, path, stamp);
   });
   watched = { path, stop };
 }
@@ -974,7 +970,6 @@ function registerIpc() {
       try {
         await writeFileAtomic(target, bytes);
         saved = await fileStamp(target);
-        ownSaves.set(target, saved);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         return { error: t("DesktopMain.files.saveFailed", { reason }) };

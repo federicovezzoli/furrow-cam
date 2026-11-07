@@ -18,8 +18,15 @@ import type { FileStamp } from "../../shared/api";
 import type { LibraryState } from "./app";
 import type { ProjectSession } from "./session";
 
-/** Loads a project file another program saved into the open workspace (#492). */
-export type Reload = (file: ProjectFile, stamp: FileStamp) => Promise<void>;
+/**
+ * Loads a project file another program saved into the open workspace (#492);
+ * if there are unsaved changes, only once `confirm` resolves `true`.
+ */
+export type Reload = (
+  file: ProjectFile,
+  stamp: FileStamp,
+  confirm: () => Promise<boolean>,
+) => Promise<void>;
 
 /** What the window shows: navigation is view state, not routes (ADR-0045). */
 export type Page =
@@ -107,7 +114,8 @@ export function ProjectView({
       },
       meshes: session.host.meshes,
       fonts: session.host.fonts,
-      versions: session.host.versions,
+      // A new object on each reload, so an open Versions pane lists the file's versions again.
+      versions: session.host.versions && { ...session.host.versions },
       library: {
         tools,
         machines,
@@ -206,10 +214,15 @@ function ExternalReload({
   const autosave = useAutosaveApi();
   const documentStore = useDocumentStoreApi();
   useEffect(() => {
-    reload.current = async (file, stamp) => {
+    reload.current = async (file, stamp, confirm) => {
+      // Held first: edits made until now are in the session, and count as unsaved.
       await autosave.hold();
       let savedAt: Date;
       try {
+        if (session.modified && !(await confirm())) {
+          autosave.release();
+          return;
+        }
         savedAt = session.replace(file, stamp);
       } catch (error) {
         autosave.release();
