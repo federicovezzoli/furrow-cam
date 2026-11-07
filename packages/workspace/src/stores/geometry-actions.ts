@@ -583,7 +583,10 @@ export function centerDrawingOnStock(store: DocumentStore, id: string) {
   const bounds = drawingBounds(document.geometry, id);
   if (!bounds) return;
   const [cx, cy] = anchorPoint(bounds, "center");
-  moveDrawing(store, id, [document.stock.width / 2 - cx, document.stock.height / 2 - cy]);
+  const offset: Point = [document.stock.width / 2 - cx, document.stock.height / 2 - cy];
+  // Already centred but for float noise: no undo step.
+  if (Math.abs(offset[0]) < GEOMETRY_TOLERANCE && Math.abs(offset[1]) < GEOMETRY_TOLERANCE) return;
+  moveDrawing(store, id, offset);
 }
 
 /**

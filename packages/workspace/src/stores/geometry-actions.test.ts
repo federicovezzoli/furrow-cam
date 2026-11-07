@@ -616,6 +616,10 @@ describe("drawing size", () => {
     expect(moved[0] - tab[0]).toBeCloseTo(after.min[0] - before.min[0], 9);
     expect(moved[1] - tab[1]).toBeCloseTo(after.min[1] - before.min[1], 9);
     expect(s.getState().past).toHaveLength(steps + 1);
+    // Off centre by float noise only: no undo step.
+    moveDrawing(s, DRAWING_ID, [1e-7, 0]);
+    centerDrawingOnStock(s, DRAWING_ID);
+    expect(s.getState().past).toHaveLength(steps + 2);
   });
 
   it("mirrors in place, flipping arcs, with its tabs, in one undo step; twice restores it", () => {

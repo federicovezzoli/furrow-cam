@@ -165,6 +165,10 @@ describe("placement edits", () => {
     // Already centred: no undo step.
     centerModelOnStock(store, id);
     expect(store.getState().past).toHaveLength(steps + 1);
+    // Off centre by float noise only: still no undo step.
+    setModelOffset(store, id, "x", modelOffset(store.getState().document.stock, get())[0] + 1e-7);
+    centerModelOnStock(store, id);
+    expect(store.getState().past).toHaveLength(steps + 2);
   });
 
   it("removes a model, undoably", () => {
