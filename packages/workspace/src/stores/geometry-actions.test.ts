@@ -236,6 +236,61 @@ describe("removeDrawing", () => {
   });
 });
 
+describe("placed holes (#429)", () => {
+  /** `fullDocument` with a drill of no shapes: holes on a corner and an edge of the square, and one off the drawing. */
+  function withHoles() {
+    const doc = fullDocument();
+    const drill: Operation = {
+      ...(doc.operations[0] as Operation),
+      id: "4d5e6f7a-8b9c-4dae-8f1a-3b4c5d6e7f8a",
+      type: "drill",
+      targets: [],
+      params: {
+        depth: 5,
+        peck: false,
+        stepOver: 40,
+        pins: false,
+        points: [
+          [100, 0],
+          [100, 50],
+          [290, 190],
+        ],
+      },
+    };
+    doc.operations.push(drill);
+    return createDocumentStore(doc);
+  }
+  const points = (s: ReturnType<typeof withHoles>) => {
+    const drill = s.getState().document.operations.at(-1);
+    return drill?.type === "drill" ? drill.params.points : [];
+  };
+
+  it("move with the drawing they lie on, while a hole off it stays", () => {
+    const s = withHoles();
+    moveDrawing(s, DRAWING_ID, [10, 5]);
+    expect(points(s)).toEqual([
+      [110, 5],
+      [110, 55],
+      [290, 190],
+    ]);
+  });
+
+  it("are copied with the drawing they lie on", () => {
+    const s = withHoles();
+    const before = drawingBounds(fullDocument().geometry, DRAWING_ID);
+    if (!before) throw new Error("fixture");
+    duplicateDrawing(s, DRAWING_ID);
+    const dx = before.max[0] - before.min[0] + DUPLICATE_GAP;
+    expect(points(s)).toEqual([
+      [100, 0],
+      [100, 50],
+      [290, 190],
+      [100 + dx, 0],
+      [100 + dx, 50],
+    ]);
+  });
+});
+
 const OTHER_SQUARE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
 
 describe("duplicateDrawing", () => {
