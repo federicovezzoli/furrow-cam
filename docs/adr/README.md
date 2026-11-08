@@ -93,3 +93,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0076](0076-public-map-search-and-elevation-services.md) | Maps, place search and elevation come from public services the browser calls directly | Proposed |
 | [0077](0077-terrain-generated-as-stl.md) | Terrain is generated in the browser as an STL mesh and imported like one | Proposed |
 | [0078](0078-drawings-and-a-model-together.md) | A project holds drawings and one model together | Proposed |
+| [0079](0079-machine-snapshot-links-its-source.md) | A project's machine snapshot links to the library machine it came from | Proposed |
