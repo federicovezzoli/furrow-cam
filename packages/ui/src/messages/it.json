@@ -802,7 +802,15 @@
       "fontUnreadable": "Questo file non è un font leggibile: usa un file TTF, OTF o WOFF.",
       "fontTooLarge": "Questo font supera {mb, number} MB, il massimo consentito.",
       "tooManyFonts": "Un progetto contiene al massimo {max} font.",
-      "fontUploadOff": "Questo server non può archiviare font."
+      "fontUploadOff": "Questo server non può archiviare font.",
+      "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova."
+    },
+    "terrain": {
+      "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
+      "antimeridian": "Un'area non può attraversare il meridiano di 180°.",
+      "tooWide": "Quest'area è larga più di {km, number} km, il massimo consentito. Disegnane una più piccola.",
+      "tooDetailed": "Il modello di quest'area supererebbe i limiti dei modelli 3D.",
+      "noData": "Non ci sono dati di elevazione per quest'area."
     }
   },
   "Operation": {
@@ -1459,6 +1467,39 @@
     "cancel": "Annulla",
     "addText": "Aggiungi testo",
     "defaultText": "Testo"
+  },
+  "Terrain": {
+    "open": "Terreno da una mappa…",
+    "ribbon": "Terreno",
+    "hint": "Crea un modello in rilievo di un'area su una mappa",
+    "title": "Terreno da una mappa",
+    "description": "Disegna un'area sulla mappa per crearne un modello in rilievo.",
+    "notice": "La mappa viene da OpenFreeMap (dati OpenStreetMap) e le quote da Mapterhorn. Il browser li contatta direttamente, quindi vedono il tuo indirizzo IP e l'area che guardi. Furrow CAM conserva solo il modello che crei.",
+    "showMap": "Mostra la mappa",
+    "loading": "Caricamento della mappa…",
+    "mapUnavailable": "Non è stato possibile caricare la mappa. Controlla la connessione e riprova.",
+    "shape": "Area",
+    "shapes": {
+      "rectangle": "Rettangolo",
+      "circle": "Cerchio",
+      "ellipse": "Ellisse",
+      "freehand": "A mano libera"
+    },
+    "drawHint": "Trascina sulla mappa, o fai due clic, per disegnarla. Una nuova forma sostituisce l'ultima.",
+    "noArea": "Disegna un'area sulla mappa.",
+    "longestSide": "Lato più lungo",
+    "exaggeration": "Esagerazione",
+    "base": "Base",
+    "area": "Area: {width} × {depth} km",
+    "size": "Modello: {size} {unit}",
+    "heights": "Quote: {low, number}–{high, number} m",
+    "heightsLoading": "Quote: …",
+    "detail": "Dettaglio: {metres} m sul terreno, {mm} {unit} per cella",
+    "fetching": "Scaricamento delle quote… {done, number} di {total, number}",
+    "building": "Creazione del modello…",
+    "generate": "Genera",
+    "cancel": "Annulla",
+    "defaultName": "Terreno"
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",

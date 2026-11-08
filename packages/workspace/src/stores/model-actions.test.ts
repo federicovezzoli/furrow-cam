@@ -51,6 +51,15 @@ describe("addModel", () => {
     expect(store.getState().document.models).toEqual([]);
   });
 
+  it("keeps the mesh's size and centres it on the stock when not fitted", () => {
+    const store = createDocumentStore(createProjectDocument());
+    addModel(store, mesh, { fit: false });
+    const added = store.getState().document.models[0] as Model;
+    expect(added.placement).toMatchObject({ scale: 1, depth: 12, top: 0 });
+    // The 100 × 80 mesh in the middle of the 600 × 400 stock, whatever the zero.
+    expect(modelRect(added)).toEqual({ min: [250, 160], max: [350, 240] });
+  });
+
   it("adds no touch-off pad", () => {
     const { store } = storeWithModel("center");
     expect(store.getState().document.stock.touchOff).toBeNull();

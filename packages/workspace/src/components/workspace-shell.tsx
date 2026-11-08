@@ -39,6 +39,7 @@ import { OperationsPane } from "./operations-pane";
 import { Ribbon, RibbonGroup } from "./ribbon";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
+import { TerrainButton } from "./terrain-dialog";
 import { ToolpathProgressToast } from "./toolpath-progress-toast";
 import { TopBar } from "./top-bar";
 import { VersionsButton } from "./versions-pane";
@@ -97,6 +98,7 @@ export function WorkspaceShell() {
         <RibbonGroup caption={importT("import")} tour="import">
           <ImportDrawingButton />
           <ModelImportButton inRibbon />
+          <TerrainButton inRibbon />
           <AddTextButton />
         </RibbonGroup>
         <RibbonGroup caption={t("operations")} tour="add-operation">

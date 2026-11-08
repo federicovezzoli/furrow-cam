@@ -802,7 +802,15 @@
       "fontUnreadable": "Diese Datei ist keine lesbare Schrift: Verwende eine TTF-, OTF- oder WOFF-Datei.",
       "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",
-      "fontUploadOff": "Dieser Server kann keine Schriften speichern."
+      "fontUploadOff": "Dieser Server kann keine Schriften speichern.",
+      "terrainUnavailable": "Die Höhendaten konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
+    },
+    "terrain": {
+      "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",
+      "antimeridian": "Ein Gebiet darf den 180. Längengrad nicht überqueren.",
+      "tooWide": "Dieses Gebiet ist breiter als {km, number} km, das Maximum. Zeichne ein kleineres.",
+      "tooDetailed": "Das Modell dieses Gebiets würde die Grenzen für 3D-Modelle überschreiten.",
+      "noData": "Für dieses Gebiet gibt es keine Höhendaten."
     }
   },
   "Operation": {
@@ -1459,6 +1467,39 @@
     "cancel": "Abbrechen",
     "addText": "Text hinzufügen",
     "defaultText": "Text"
+  },
+  "Terrain": {
+    "open": "Gelände aus einer Karte…",
+    "ribbon": "Gelände",
+    "hint": "Ein Reliefmodell eines Gebiets auf einer Karte erstellen",
+    "title": "Gelände aus einer Karte",
+    "description": "Zeichne ein Gebiet auf der Karte, um ein Reliefmodell davon zu erstellen.",
+    "notice": "Die Karte stammt von OpenFreeMap (OpenStreetMap-Daten), die Höhen von Mapterhorn. Dein Browser kontaktiert sie direkt, sie sehen also deine IP-Adresse und das Gebiet, das du ansiehst. Furrow CAM speichert nur das Modell, das du erstellst.",
+    "showMap": "Karte anzeigen",
+    "loading": "Karte wird geladen…",
+    "mapUnavailable": "Die Karte konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+    "shape": "Gebiet",
+    "shapes": {
+      "rectangle": "Rechteck",
+      "circle": "Kreis",
+      "ellipse": "Ellipse",
+      "freehand": "Freihand"
+    },
+    "drawHint": "Ziehe auf der Karte oder klicke zweimal, um es zu zeichnen. Eine neue Form ersetzt die letzte.",
+    "noArea": "Zeichne ein Gebiet auf der Karte.",
+    "longestSide": "Längste Seite",
+    "exaggeration": "Überhöhung",
+    "base": "Sockel",
+    "area": "Gebiet: {width} × {depth} km",
+    "size": "Modell: {size} {unit}",
+    "heights": "Höhen: {low, number}–{high, number} m",
+    "heightsLoading": "Höhen: …",
+    "detail": "Detail: {metres} m im Gelände, {mm} {unit} pro Zelle",
+    "fetching": "Höhendaten werden geladen… {done, number} von {total, number}",
+    "building": "Modell wird erstellt…",
+    "generate": "Erstellen",
+    "cancel": "Abbrechen",
+    "defaultName": "Gelände"
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

@@ -802,7 +802,15 @@
       "fontUnreadable": "Este arquivo não é uma fonte legível: use um arquivo TTF, OTF ou WOFF.",
       "fontTooLarge": "Esta fonte tem mais de {mb, number} MB, o máximo permitido.",
       "tooManyFonts": "Um projeto contém no máximo {max} fontes.",
-      "fontUploadOff": "Este servidor não consegue armazenar fontes."
+      "fontUploadOff": "Este servidor não consegue armazenar fontes.",
+      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente."
+    },
+    "terrain": {
+      "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
+      "antimeridian": "Uma área não pode atravessar o meridiano de 180°.",
+      "tooWide": "Esta área tem mais de {km, number} km de largura, o máximo permitido. Desenhe uma mais pequena.",
+      "tooDetailed": "O modelo desta área excederia os limites dos modelos 3D.",
+      "noData": "Não há dados de altitude para esta área."
     }
   },
   "Operation": {
@@ -1459,6 +1467,39 @@
     "cancel": "Cancelar",
     "addText": "Adicionar texto",
     "defaultText": "Texto"
+  },
+  "Terrain": {
+    "open": "Terreno a partir de um mapa…",
+    "ribbon": "Terreno",
+    "hint": "Criar um modelo em relevo de uma área num mapa",
+    "title": "Terreno a partir de um mapa",
+    "description": "Desenhe uma área no mapa para criar um modelo em relevo dela.",
+    "notice": "O mapa vem do OpenFreeMap (dados do OpenStreetMap) e as altitudes do Mapterhorn. O seu navegador contacta-os diretamente, por isso veem o seu endereço IP e a área que está a ver. O Furrow CAM guarda apenas o modelo que criar.",
+    "showMap": "Mostrar o mapa",
+    "loading": "A carregar o mapa…",
+    "mapUnavailable": "Não foi possível carregar o mapa. Verifique a ligação e tente novamente.",
+    "shape": "Área",
+    "shapes": {
+      "rectangle": "Retângulo",
+      "circle": "Círculo",
+      "ellipse": "Elipse",
+      "freehand": "À mão livre"
+    },
+    "drawHint": "Arraste no mapa, ou clique duas vezes, para a desenhar. Uma nova forma substitui a anterior.",
+    "noArea": "Desenhe uma área no mapa.",
+    "longestSide": "Lado mais longo",
+    "exaggeration": "Exagero",
+    "base": "Base",
+    "area": "Área: {width} × {depth} km",
+    "size": "Modelo: {size} {unit}",
+    "heights": "Altitudes: {low, number}–{high, number} m",
+    "heightsLoading": "Altitudes: …",
+    "detail": "Detalhe: {metres} m no terreno, {mm} {unit} por célula",
+    "fetching": "A transferir altitudes… {done, number} de {total, number}",
+    "building": "A criar o modelo…",
+    "generate": "Gerar",
+    "cancel": "Cancelar",
+    "defaultName": "Terreno"
   },
   "Viewport": {
     "scene": "Material, geometria e percursos",

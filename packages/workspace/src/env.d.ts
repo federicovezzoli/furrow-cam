@@ -17,3 +17,5 @@ declare module "*.step?raw" {
   const text: string;
   export default text;
 }
+/** A stylesheet imported for its side effect (MapLibre's), which the bundler loads with the chunk. */
+declare module "*.css";

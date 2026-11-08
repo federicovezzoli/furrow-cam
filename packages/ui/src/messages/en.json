@@ -802,7 +802,15 @@
       "fontUnreadable": "This file isn't a font that can be read: use a TTF, OTF or WOFF file.",
       "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
       "tooManyFonts": "A project holds at most {max} fonts.",
-      "fontUploadOff": "This server can't store fonts."
+      "fontUploadOff": "This server can't store fonts.",
+      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again."
+    },
+    "terrain": {
+      "noArea": "This area is too small. Draw a larger one.",
+      "antimeridian": "An area can't cross the 180° meridian.",
+      "tooWide": "This area is wider than {km, number} km, the most allowed. Draw a smaller one.",
+      "tooDetailed": "This area's model would exceed the 3D model limits.",
+      "noData": "There is no elevation data for this area."
     }
   },
   "Operation": {
@@ -1459,6 +1467,39 @@
     "cancel": "Cancel",
     "addText": "Add text",
     "defaultText": "Text"
+  },
+  "Terrain": {
+    "open": "Terrain from a map…",
+    "ribbon": "Terrain",
+    "hint": "Make a relief model of an area on a map",
+    "title": "Terrain from a map",
+    "description": "Draw an area on the map to make a relief model of it.",
+    "notice": "The map comes from OpenFreeMap (OpenStreetMap data) and the heights from Mapterhorn. Your browser contacts them directly, so they see your IP address and the area you look at. Furrow CAM keeps only the model you make.",
+    "showMap": "Show the map",
+    "loading": "Loading the map…",
+    "mapUnavailable": "The map couldn't be loaded. Check your connection and try again.",
+    "shape": "Area",
+    "shapes": {
+      "rectangle": "Rectangle",
+      "circle": "Circle",
+      "ellipse": "Ellipse",
+      "freehand": "Freehand"
+    },
+    "drawHint": "Drag on the map, or click twice, to draw it. A new shape replaces the last.",
+    "noArea": "Draw an area on the map.",
+    "longestSide": "Longest side",
+    "exaggeration": "Exaggeration",
+    "base": "Base",
+    "area": "Area: {width} × {depth} km",
+    "size": "Model: {size} {unit}",
+    "heights": "Heights: {low, number}–{high, number} m",
+    "heightsLoading": "Heights: …",
+    "detail": "Detail: {metres} m on the ground, {mm} {unit} per cell",
+    "fetching": "Fetching elevation… {done, number} of {total, number}",
+    "building": "Building the model…",
+    "generate": "Generate",
+    "cancel": "Cancel",
+    "defaultName": "Terrain"
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

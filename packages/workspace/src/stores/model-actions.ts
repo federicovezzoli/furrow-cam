@@ -1,9 +1,12 @@
 import {
   anchorPoint,
+  type Box3,
   followModels,
   initialPlacement,
   modelRect,
+  positionAt,
   proportionalDepth,
+  type Rotation,
   replacePlacement,
   stockFit,
   translatePoint,
@@ -91,13 +94,15 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
 /**
  * Adds an imported mesh as a model, as one undo step: fitted inside the
  * stock less a border, its top at the stock top and aligned at the zero's
- * anchor (ADR-0031, ADR-0038). A project holds at most one model (ADR-0078):
- * returns `null`, adding nothing, if it already has one; otherwise the
- * model's id.
+ * anchor (ADR-0031, ADR-0038). With `fit: false` it keeps its size and is
+ * centred on the stock instead, as a terrain made at a chosen size is
+ * (ADR-0077). A project holds at most one model (ADR-0078): returns `null`,
+ * adding nothing, if it already has one; otherwise the model's id.
  */
 export function addModel(
   store: DocumentStore,
   mesh: Omit<Model, "id" | "placement" | "border">,
+  { fit = true }: { fit?: boolean } = {},
 ): string | null {
   const { document } = store.getState();
   if (!canImportModel(document)) return null;
@@ -105,11 +110,24 @@ export function addModel(
   const id = crypto.randomUUID();
   // The border it is fitted with is the one it keeps.
   const border = MODEL_BORDER;
-  const placement = initialPlacement(mesh.bounds, stock, modelAnchor(stock), border);
+  const placement = fit
+    ? initialPlacement(mesh.bounds, stock, modelAnchor(stock), border)
+    : centredPlacement(mesh.bounds, stock);
   store.getState().change("addModel", (draft) => {
     draft.models.push({ ...mesh, id, placement, border });
   });
   return id;
+}
+
+/** A mesh at its own size, its top at the stock top and centred on the stock. */
+function centredPlacement(bounds: Box3, stock: Stock): ModelPlacement {
+  const rotation: Rotation = [0, 0, 0];
+  const depth = proportionalDepth(bounds, rotation, 1) ?? stock.thickness;
+  const position = positionAt(bounds, { rotation, scale: 1 }, "center", [
+    stock.width / 2,
+    stock.height / 2,
+  ]);
+  return { rotation, scale: 1, depth, top: 0, position };
 }
 
 /** The operations that machine the model `id`, which go with it. */

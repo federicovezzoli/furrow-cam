@@ -1,7 +1,18 @@
-import { modelHeightmap, parseStl, type StlMesh } from "@furrow/cam-core";
+import {
+  type Box3,
+  decodeTerrarium,
+  modelHeightmap,
+  parseStl,
+  planTerrain,
+  type StlMesh,
+  type TileKey,
+  terrainMesh,
+} from "@furrow/cam-core";
 import { type Message, MessageError } from "@furrow/document";
 import { type MeshRequest, type MeshResponse, sha256Hex } from "../lib/mesh-worker-protocol";
 import { isStepFile, stepToStl } from "../lib/step";
+import { elevationTileUrl, MAX_ELEVATION_ZOOM } from "../lib/terrain-services";
+import { loadTerrainTiles } from "../lib/terrain-tiles";
 
 /** The worker's global scope; the app's TypeScript lib describes a window instead. */
 const scope = self as unknown as {
@@ -36,8 +47,41 @@ async function occtWasm() {
   return response.arrayBuffer();
 }
 
+const TERRAIN_UNAVAILABLE: Message = { code: "workspace.terrainUnavailable" };
+
+/** An elevation tile's heights, or `null` where the service has none at that zoom. */
+async function elevationTile(key: TileKey): Promise<Float32Array | null> {
+  const response = await fetch(elevationTileUrl(key)).catch(() => null);
+  if (response?.status === 404) return null;
+  if (!response?.ok) throw new MessageError(TERRAIN_UNAVAILABLE);
+  // The pixels are data, not colours: no colour management or premultiplied alpha.
+  const bitmap = await createImageBitmap(await response.blob(), {
+    colorSpaceConversion: "none",
+    premultiplyAlpha: "none",
+  }).catch(() => {
+    throw new MessageError(TERRAIN_UNAVAILABLE);
+  });
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new MessageError(TERRAIN_UNAVAILABLE);
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return decodeTerrarium(context.getImageData(0, 0, canvas.width, canvas.height).data);
+}
+
 async function handle(request: MeshRequest): Promise<MeshResponse> {
   const { id } = request;
+  if (request.kind === "terrain") {
+    const { ring, settings, limits } = request;
+    const plan = planTerrain(ring, limits, MAX_ELEVATION_ZOOM);
+    const tiles = await loadTerrainTiles(plan.tiles, elevationTile, (done, total) =>
+      scope.postMessage({ kind: "terrainProgress", id, done, total }),
+    );
+    const { stl, triangles, size, ...terrain } = terrainMesh(ring, plan, settings, tiles);
+    const sha256 = await sha256Hex(stl.buffer);
+    const bounds = { min: [0, 0, 0], max: size } satisfies Box3;
+    return { kind: "terrain", id, sha256, triangles, bounds, size, stl: stl.buffer, ...terrain };
+  }
   if (request.kind === "parse") {
     const step = isStepFile(new Uint8Array(request.bytes));
     const bytes = step
@@ -73,7 +117,7 @@ scope.onmessage = ({ data }) => {
       const transfer =
         response.kind === "preview" && response.heightmap
           ? [response.heightmap.heights.buffer]
-          : response.kind === "parsed" && response.stl
+          : (response.kind === "parsed" || response.kind === "terrain") && response.stl
             ? [response.stl]
             : [];
       scope.postMessage(response, transfer);

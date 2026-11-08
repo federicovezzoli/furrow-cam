@@ -802,7 +802,15 @@
       "fontUnreadable": "Dit bestand is geen leesbaar lettertype: gebruik een TTF-, OTF- of WOFF-bestand.",
       "fontTooLarge": "Dit lettertype is groter dan {mb, number} MB, het maximum.",
       "tooManyFonts": "Een project bevat hoogstens {max} lettertypen.",
-      "fontUploadOff": "Deze server kan geen lettertypen opslaan."
+      "fontUploadOff": "Deze server kan geen lettertypen opslaan.",
+      "terrainUnavailable": "De hoogtes konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw."
+    },
+    "terrain": {
+      "noArea": "Dit gebied is te klein. Teken een groter gebied.",
+      "antimeridian": "Een gebied kan de meridiaan van 180° niet kruisen.",
+      "tooWide": "Dit gebied is breder dan {km, number} km, het maximum. Teken een kleiner gebied.",
+      "tooDetailed": "Het model van dit gebied zou de limieten voor 3D-modellen overschrijden.",
+      "noData": "Er zijn geen hoogtegegevens voor dit gebied."
     }
   },
   "Operation": {
@@ -1459,6 +1467,39 @@
     "cancel": "Annuleren",
     "addText": "Tekst toevoegen",
     "defaultText": "Tekst"
+  },
+  "Terrain": {
+    "open": "Terrein van een kaart…",
+    "ribbon": "Terrein",
+    "hint": "Een reliëfmodel maken van een gebied op een kaart",
+    "title": "Terrein van een kaart",
+    "description": "Teken een gebied op de kaart om er een reliëfmodel van te maken.",
+    "notice": "De kaart komt van OpenFreeMap (OpenStreetMap-gegevens) en de hoogtes van Mapterhorn. Je browser neemt rechtstreeks contact met ze op, dus ze zien je IP-adres en het gebied dat je bekijkt. Furrow CAM bewaart alleen het model dat je maakt.",
+    "showMap": "Kaart tonen",
+    "loading": "Kaart laden…",
+    "mapUnavailable": "De kaart kon niet worden geladen. Controleer je verbinding en probeer het opnieuw.",
+    "shape": "Gebied",
+    "shapes": {
+      "rectangle": "Rechthoek",
+      "circle": "Cirkel",
+      "ellipse": "Ellips",
+      "freehand": "Uit de vrije hand"
+    },
+    "drawHint": "Sleep op de kaart, of klik twee keer, om het te tekenen. Een nieuwe vorm vervangt de vorige.",
+    "noArea": "Teken een gebied op de kaart.",
+    "longestSide": "Langste zijde",
+    "exaggeration": "Overdrijving",
+    "base": "Sokkel",
+    "area": "Gebied: {width} × {depth} km",
+    "size": "Model: {size} {unit}",
+    "heights": "Hoogtes: {low, number}–{high, number} m",
+    "heightsLoading": "Hoogtes: …",
+    "detail": "Detail: {metres} m in het terrein, {mm} {unit} per cel",
+    "fetching": "Hoogtes ophalen… {done, number} van {total, number}",
+    "building": "Model maken…",
+    "generate": "Maken",
+    "cancel": "Annuleren",
+    "defaultName": "Terrein"
   },
   "Viewport": {
     "scene": "Materiaal, geometrie en gereedschapsbanen",

@@ -101,23 +101,52 @@ export async function importModel(
     return;
   }
   const stored = mesh.stl ? new Blob([mesh.stl]) : file;
-  const upload = await meshes.put(mesh.sha256, stored);
-  if (upload.error !== undefined) {
-    fail(upload.error);
+  const error = await storeModel(mesh, stored, fileName, { meshes, document, workspace });
+  if (error) {
+    fail(error);
     return;
   }
+  setModelImport(null);
+  track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
+}
+
+/**
+ * Stores the checked mesh `stored` in the project's `meshes` and adds it to
+ * the document as one undo step, selected; `fit: false` keeps its size
+ * (`addModel`). Returns why it couldn't, or `null`.
+ */
+export async function storeModel(
+  mesh: MeshSummary,
+  stored: Blob,
+  fileName: string,
+  {
+    meshes,
+    document,
+    workspace,
+    fit,
+  }: {
+    meshes: WorkspaceHost["meshes"];
+    document: DocumentStore;
+    workspace: WorkspaceStore;
+    fit?: boolean;
+  },
+): Promise<Translatable | null> {
+  const upload = await meshes.put(mesh.sha256, stored);
+  if (upload.error !== undefined) return upload.error;
   // Another model may have been imported, or a step redone, while this one uploaded.
   const { sha256, triangles, bounds } = mesh;
-  const id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size });
+  const id = addModel(
+    document,
+    { sha256, triangles, bounds, fileName, size: stored.size },
+    { fit },
+  );
   if (id === null) {
     // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
       await meshes.discard(mesh.sha256);
     }
-    fail(ONE_MODEL);
-    return;
+    return ONE_MODEL;
   }
   workspace.getState().selectModel(id);
-  setModelImport(null);
-  track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
+  return null;
 }
