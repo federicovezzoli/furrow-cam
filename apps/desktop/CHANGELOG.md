@@ -1,5 +1,16 @@
 # @furrow/desktop
 
+## 0.19.0
+
+### Minor Changes
+
+- *Terrain from a map* works in the desktop app: the app now lets the map, elevation and place search services through, and nothing else. ([#519](https://github.com/federicovezzoli/furrow-cam/pull/519))
+
+### Patch Changes
+
+- Projects now remember which of your machines they use, and offer to update their copy when you open them after editing that machine. ([#520](https://github.com/federicovezzoli/furrow-cam/pull/520))
+- Updated dependencies: @furrow/workspace@0.24.0, @furrow/ui@0.8.5, @furrow/document@0.22.0, @furrow/cam-core@0.20.0
+
 ## 0.18.0
 
 ### Minor Changes

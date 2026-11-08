@@ -1,5 +1,15 @@
 # @furrow/mcp
 
+## 0.7.0
+
+### Minor Changes
+
+- A project can now hold drawings and a 3D model together, so a relief and the profile that cuts it out live in one project. The ribbon gets a button to import a model at any time. ([#509](https://github.com/federicovezzoli/furrow-cam/pull/509))
+
+### Patch Changes
+
+- Projects now remember which of your machines they use, and offer to update their copy when you open them after editing that machine. ([#520](https://github.com/federicovezzoli/furrow-cam/pull/520))
+
 ## 0.6.0
 
 ### Minor Changes
