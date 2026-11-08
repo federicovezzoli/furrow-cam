@@ -34,6 +34,7 @@ import {
 import { drawingShapes } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 import { RibbonButton } from "./ribbon";
+import { TerrainButton } from "./terrain-dialog";
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -236,6 +237,7 @@ export function GeometryImport() {
                 </Button>
                 <AddTextButton inCard />
                 <ModelImportButton />
+                <TerrainButton />
               </div>
             )}
             {empty && !meshLimits && (

@@ -802,7 +802,15 @@
       "fontUnreadable": "Ce fichier n'est pas une police lisible : utilisez un fichier TTF, OTF ou WOFF.",
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",
-      "fontUploadOff": "Ce serveur ne peut pas stocker de polices."
+      "fontUploadOff": "Ce serveur ne peut pas stocker de polices.",
+      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez."
+    },
+    "terrain": {
+      "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
+      "antimeridian": "Une zone ne peut pas traverser le méridien de 180°.",
+      "tooWide": "Cette zone fait plus de {km, number} km de large, le maximum autorisé. Dessinez-en une plus petite.",
+      "tooDetailed": "Le modèle de cette zone dépasserait les limites des modèles 3D.",
+      "noData": "Il n'y a pas de données d'altitude pour cette zone."
     }
   },
   "Operation": {
@@ -1459,6 +1467,41 @@
     "cancel": "Annuler",
     "addText": "Ajouter du texte",
     "defaultText": "Texte"
+  },
+  "Terrain": {
+    "open": "Terrain depuis une carte…",
+    "ribbon": "Terrain",
+    "hint": "Créer un modèle en relief d'une zone sur une carte",
+    "title": "Terrain depuis une carte",
+    "description": "Dessinez une zone sur la carte pour en créer un modèle en relief.",
+    "notice": "La carte vient d'OpenFreeMap (données OpenStreetMap) et les altitudes de Mapterhorn. Votre navigateur les contacte directement : ils voient votre adresse IP et la zone que vous regardez. Furrow CAM ne garde que le modèle que vous créez.",
+    "showMap": "Afficher la carte",
+    "loading": "Chargement de la carte…",
+    "mapUnavailable": "La carte n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+    "shape": "Zone",
+    "shapes": {
+      "rectangle": "Rectangle",
+      "circle": "Cercle",
+      "ellipse": "Ellipse",
+      "freehand": "Main levée"
+    },
+    "drawHint": "Faites glisser sur la carte, ou cliquez deux fois, pour la dessiner. Une nouvelle forme remplace la précédente.",
+    "noArea": "Dessinez une zone sur la carte.",
+    "longestSide": "Plus grand côté",
+    "exaggeration": "Exagération",
+    "base": "Socle",
+    "area": "Zone : {width, number} × {depth, number} km",
+    "size": "Modèle : {size} {unit}",
+    "heights": "Altitudes : {low, number}–{high, number} m",
+    "heightsLoading": "Altitudes : …",
+    "detail": "Détail : {metres, number} m au sol, {mm} {unit} par cellule",
+    "fetchingStart": "Téléchargement des altitudes…",
+    "fetching": "Téléchargement des altitudes… {done, number} sur {total, number}",
+    "building": "Création du modèle…",
+    "saving": "Ajout du modèle au projet…",
+    "generate": "Générer",
+    "cancel": "Annuler",
+    "defaultName": "Terrain"
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

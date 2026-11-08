@@ -139,11 +139,13 @@ describe("planTerrain", () => {
       [-179.99, -16.99],
       [179.99, -16.99],
     ];
-    expect(() => planTerrain(ring, SMALL, 14)).toThrow(/180/);
+    expect(() => planTerrain(ring, SMALL, 14)).toThrow(/terrain.antimeridian/);
   });
 
   it("refuses an area wider than the limit", () => {
-    expect(() => planTerrain(rectangle(MAX_TERRAIN_SPAN * 1.1, 1000), SMALL, 14)).toThrow();
+    expect(() => planTerrain(rectangle(MAX_TERRAIN_SPAN * 1.1, 1000), SMALL, 14)).toThrow(
+      /terrain.tooWide/,
+    );
   });
 });
 
@@ -222,7 +224,7 @@ describe("terrainMesh", () => {
   it("refuses an area no tile covers", () => {
     const ring = rectangle(1000, 1000);
     expect(() => terrainMesh(ring, planTerrain(ring, SMALL, 14), SETTINGS, [])).toThrow(
-      /elevation/,
+      /terrain.noData/,
     );
   });
 });

@@ -802,7 +802,15 @@
       "fontUnreadable": "このファイルは読み込めるフォントではありません。TTF、OTF、WOFF ファイルを使用してください。",
       "fontTooLarge": "このフォントは上限の {mb, number} MB を超えています。",
       "tooManyFonts": "プロジェクトに含められるフォントは{max}個までです。",
-      "fontUploadOff": "このサーバーではフォントを保存できません。"
+      "fontUploadOff": "このサーバーではフォントを保存できません。",
+      "terrainUnavailable": "標高を取得できませんでした。接続を確認して、もう一度お試しください。"
+    },
+    "terrain": {
+      "noArea": "この範囲は小さすぎます。もっと大きく描いてください。",
+      "antimeridian": "範囲は経度 180° の子午線をまたげません。",
+      "tooWide": "この範囲は上限の {km, number} km を超えています。もっと小さく描いてください。",
+      "tooDetailed": "この範囲のモデルは 3D モデルの上限を超えます。",
+      "noData": "この範囲の標高データはありません。"
     }
   },
   "Operation": {
@@ -1459,6 +1467,41 @@
     "cancel": "キャンセル",
     "addText": "テキストを追加",
     "defaultText": "Text"
+  },
+  "Terrain": {
+    "open": "地図から地形…",
+    "ribbon": "地形",
+    "hint": "地図上の範囲から立体レリーフのモデルを作成",
+    "title": "地図から地形",
+    "description": "地図上に範囲を描くと、そのレリーフモデルを作成します。",
+    "notice": "地図は OpenFreeMap（OpenStreetMap のデータ）、標高は Mapterhorn から取得します。ブラウザーが直接接続するため、これらのサービスには IP アドレスと表示中の範囲が送られます。Furrow CAM が保存するのは作成したモデルだけです。",
+    "showMap": "地図を表示",
+    "loading": "地図を読み込んでいます…",
+    "mapUnavailable": "地図を読み込めませんでした。接続を確認して、もう一度お試しください。",
+    "shape": "範囲",
+    "shapes": {
+      "rectangle": "長方形",
+      "circle": "円",
+      "ellipse": "楕円",
+      "freehand": "フリーハンド"
+    },
+    "drawHint": "地図上をドラッグするか 2 回クリックして描きます。新しい図形は前の図形を置き換えます。",
+    "noArea": "地図上に範囲を描いてください。",
+    "longestSide": "最長辺",
+    "exaggeration": "強調",
+    "base": "ベース",
+    "area": "範囲: {width, number} × {depth, number} km",
+    "size": "モデル: {size} {unit}",
+    "heights": "標高: {low, number}–{high, number} m",
+    "heightsLoading": "標高: …",
+    "detail": "精細度: 地上 {metres, number} m、1 セルあたり {mm} {unit}",
+    "fetchingStart": "標高を取得しています…",
+    "fetching": "標高を取得しています… {done, number} / {total, number}",
+    "building": "モデルを作成しています…",
+    "saving": "モデルをプロジェクトに追加しています…",
+    "generate": "作成",
+    "cancel": "キャンセル",
+    "defaultName": "地形"
   },
   "Viewport": {
     "scene": "素材、形状、ツールパス",

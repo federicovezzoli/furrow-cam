@@ -802,7 +802,15 @@
       "fontUnreadable": "Este archivo no es una fuente legible: usa un archivo TTF, OTF o WOFF.",
       "fontTooLarge": "Esta fuente supera los {mb, number} MB permitidos.",
       "tooManyFonts": "Un proyecto contiene como máximo {max} fuentes.",
-      "fontUploadOff": "Este servidor no puede almacenar fuentes."
+      "fontUploadOff": "Este servidor no puede almacenar fuentes.",
+      "terrainUnavailable": "No se pudieron descargar las altitudes. Comprueba tu conexión e inténtalo de nuevo."
+    },
+    "terrain": {
+      "noArea": "Esta zona es demasiado pequeña. Dibuja una más grande.",
+      "antimeridian": "Una zona no puede cruzar el meridiano de 180°.",
+      "tooWide": "Esta zona mide más de {km, number} km de ancho, el máximo permitido. Dibuja una más pequeña.",
+      "tooDetailed": "El modelo de esta zona superaría los límites de los modelos 3D.",
+      "noData": "No hay datos de altitud para esta zona."
     }
   },
   "Operation": {
@@ -1459,6 +1467,41 @@
     "cancel": "Cancelar",
     "addText": "Añadir texto",
     "defaultText": "Texto"
+  },
+  "Terrain": {
+    "open": "Terreno desde un mapa…",
+    "ribbon": "Terreno",
+    "hint": "Crear un modelo en relieve de una zona en un mapa",
+    "title": "Terreno desde un mapa",
+    "description": "Dibuja una zona en el mapa para crear un modelo en relieve de ella.",
+    "notice": "El mapa viene de OpenFreeMap (datos de OpenStreetMap) y las altitudes de Mapterhorn. Tu navegador los contacta directamente, así que ven tu dirección IP y la zona que miras. Furrow CAM solo guarda el modelo que creas.",
+    "showMap": "Mostrar el mapa",
+    "loading": "Cargando el mapa…",
+    "mapUnavailable": "No se pudo cargar el mapa. Comprueba tu conexión e inténtalo de nuevo.",
+    "shape": "Zona",
+    "shapes": {
+      "rectangle": "Rectángulo",
+      "circle": "Círculo",
+      "ellipse": "Elipse",
+      "freehand": "A mano alzada"
+    },
+    "drawHint": "Arrastra en el mapa, o haz clic dos veces, para dibujarla. Una forma nueva sustituye a la anterior.",
+    "noArea": "Dibuja una zona en el mapa.",
+    "longestSide": "Lado más largo",
+    "exaggeration": "Exageración",
+    "base": "Base",
+    "area": "Zona: {width, number} × {depth, number} km",
+    "size": "Modelo: {size} {unit}",
+    "heights": "Altitudes: {low, number}–{high, number} m",
+    "heightsLoading": "Altitudes: …",
+    "detail": "Detalle: {metres, number} m sobre el terreno, {mm} {unit} por celda",
+    "fetchingStart": "Descargando altitudes…",
+    "fetching": "Descargando altitudes… {done, number} de {total, number}",
+    "building": "Creando el modelo…",
+    "saving": "Añadiendo el modelo al proyecto…",
+    "generate": "Generar",
+    "cancel": "Cancelar",
+    "defaultName": "Terreno"
   },
   "Viewport": {
     "scene": "Material, geometría y trayectorias",

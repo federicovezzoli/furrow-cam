@@ -1,6 +1,6 @@
 import type { Model } from "@furrow/document";
 import { describe, expect, it } from "vitest";
-import { cappedBorder, originalSize } from "./model-size";
+import { cappedBorder, fittingSide, originalSize } from "./model-size";
 
 function model(placement: Partial<Model["placement"]>): Pick<Model, "bounds" | "placement"> {
   return {
@@ -44,5 +44,17 @@ describe("cappedBorder", () => {
     expect(cappedBorder(10, stock, "mm")).toBeNull();
     expect(cappedBorder(60, stock, "mm")).toBe("50 mm");
     expect(cappedBorder(60, stock, "in")).toBe("1.9685 in");
+  });
+});
+
+describe("fittingSide", () => {
+  const stock = { width: 600, height: 400 };
+
+  it("fits a wide area to the stock's width less the border", () => {
+    expect(fittingSide(stock, [2000, 1000])).toBeCloseTo(580);
+  });
+
+  it("fits a tall area to the stock's height, its long side the depth", () => {
+    expect(fittingSide(stock, [1000, 2000])).toBeCloseTo(380);
   });
 });

@@ -802,7 +802,15 @@
       "fontUnreadable": "Bu dosya okunabilen bir yazı tipi değil: TTF, OTF veya WOFF dosyası kullanın.",
       "fontTooLarge": "Bu yazı tipi, izin verilen {mb, number} MB sınırından büyük.",
       "tooManyFonts": "Bir projede en fazla {max} yazı tipi olabilir.",
-      "fontUploadOff": "Bu sunucu yazı tiplerini saklayamıyor."
+      "fontUploadOff": "Bu sunucu yazı tiplerini saklayamıyor.",
+      "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin."
+    },
+    "terrain": {
+      "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
+      "antimeridian": "Bir alan 180° meridyenini geçemez.",
+      "tooWide": "Bu alan izin verilen en fazla genişlik olan {km, number} km'den geniş. Daha küçük bir alan çizin.",
+      "tooDetailed": "Bu alanın modeli 3B model sınırlarını aşar.",
+      "noData": "Bu alan için yükseklik verisi yok."
     }
   },
   "Operation": {
@@ -1459,6 +1467,41 @@
     "cancel": "İptal",
     "addText": "Metin ekle",
     "defaultText": "Metin"
+  },
+  "Terrain": {
+    "open": "Haritadan arazi…",
+    "ribbon": "Arazi",
+    "hint": "Haritadaki bir alanın kabartma modelini oluşturun",
+    "title": "Haritadan arazi",
+    "description": "Kabartma modelini oluşturmak için haritada bir alan çizin.",
+    "notice": "Harita OpenFreeMap'ten (OpenStreetMap verileri), yükseklikler Mapterhorn'dan gelir. Tarayıcınız onlarla doğrudan iletişim kurar; bu yüzden IP adresinizi ve baktığınız alanı görürler. Furrow CAM yalnızca oluşturduğunuz modeli saklar.",
+    "showMap": "Haritayı göster",
+    "loading": "Harita yükleniyor…",
+    "mapUnavailable": "Harita yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+    "shape": "Alan",
+    "shapes": {
+      "rectangle": "Dikdörtgen",
+      "circle": "Daire",
+      "ellipse": "Elips",
+      "freehand": "Serbest çizim"
+    },
+    "drawHint": "Çizmek için haritada sürükleyin veya iki kez tıklayın. Yeni bir şekil öncekinin yerini alır.",
+    "noArea": "Haritada bir alan çizin.",
+    "longestSide": "En uzun kenar",
+    "exaggeration": "Abartma",
+    "base": "Taban",
+    "area": "Alan: {width, number} × {depth, number} km",
+    "size": "Model: {size} {unit}",
+    "heights": "Yükseklikler: {low, number}–{high, number} m",
+    "heightsLoading": "Yükseklikler: …",
+    "detail": "Ayrıntı: arazide {metres, number} m, hücre başına {mm} {unit}",
+    "fetchingStart": "Yükseklikler indiriliyor…",
+    "fetching": "Yükseklikler indiriliyor… {done, number} / {total, number}",
+    "building": "Model oluşturuluyor…",
+    "saving": "Model projeye ekleniyor…",
+    "generate": "Oluştur",
+    "cancel": "İptal",
+    "defaultName": "Arazi"
   },
   "Viewport": {
     "scene": "Ham malzeme, geometri ve takım yolları",

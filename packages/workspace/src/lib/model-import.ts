@@ -5,7 +5,7 @@ import type { DocumentState, DocumentStore } from "../stores/document-store";
 import { canImportModel, ONE_MODEL } from "../stores/geometry-actions";
 import { addModel } from "../stores/model-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
-import type { MeshResponse, MeshSummary } from "./mesh-worker-protocol";
+import type { MeshRequest, MeshResponse, MeshSummary } from "./mesh-worker-protocol";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
@@ -13,37 +13,70 @@ import type { WorkspaceHost } from "./workspace-host";
 export class MeshImportError extends MessageError {}
 
 const UNREADABLE: Message = { code: "workspace.unreadableFile" };
+const CANCELLED: Message = { code: "workspace.cancelled" };
+
+/** A mesh worker's answer, past its progress reports and failures. */
+type MeshAnswer = Exclude<MeshResponse, { kind: "failed" | "terrainProgress" }>;
 
 /**
- * Reads and checks an STL file in a Web Worker of its own (ADR-0004), which
- * then goes away with the mesh. A STEP file comes back as the STL made from
- * it, `stl` (ADR-0072). Throws a `MeshImportError` if the file can't be
- * imported.
+ * Sends `request` to a mesh worker of its own (ADR-0004), which goes away
+ * with its answer. `terrainProgress` reports go to `onProgress`. Rejects with
+ * a `MeshImportError`: the worker's own error, `fallback` if it crashes, or
+ * `workspace.cancelled` once `signal` aborts.
  */
-export function parseMesh(
-  bytes: ArrayBuffer,
-  limits: StlLimits,
-): Promise<MeshSummary & { stl?: ArrayBuffer }> {
+export function runMeshWorker(
+  request: MeshRequest,
+  transfer: Transferable[],
+  fallback: Message,
+  {
+    onProgress,
+    signal,
+  }: { onProgress?: (done: number, total: number) => void; signal?: AbortSignal } = {},
+): Promise<MeshAnswer> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new MeshImportError(CANCELLED));
     const worker = new Worker(new URL("../workers/mesh.worker.ts", import.meta.url), {
       type: "module",
     });
-    worker.onmessage = ({ data }: MessageEvent<MeshResponse>) => {
+    const finish = () => {
       worker.terminate();
-      if (data.kind === "parsed") {
-        const { sha256, triangles, bounds, stl } = data;
-        resolve({ sha256, triangles, bounds, ...(stl && { stl }) });
-      } else {
-        reject(new MeshImportError(data.kind === "failed" ? data.error : UNREADABLE));
+      signal?.removeEventListener("abort", abort);
+    };
+    const fail = (error: Message) => {
+      finish();
+      reject(new MeshImportError(error));
+    };
+    const abort = () => fail(CANCELLED);
+    signal?.addEventListener("abort", abort, { once: true });
+    worker.onmessage = ({ data }: MessageEvent<MeshResponse>) => {
+      if (data.kind === "terrainProgress") onProgress?.(data.done, data.total);
+      else if (data.kind === "failed") fail(data.error);
+      else {
+        finish();
+        resolve(data);
       }
     };
     worker.onerror = (event) => {
       event.preventDefault();
-      worker.terminate();
-      reject(new MeshImportError(UNREADABLE));
+      fail(fallback);
     };
-    worker.postMessage({ kind: "parse", id: 0, bytes, limits }, [bytes]);
+    worker.postMessage(request, transfer);
   });
+}
+
+/**
+ * Reads and checks an STL file in a mesh worker of its own. A STEP file
+ * comes back as the STL made from it, `stl` (ADR-0072). Throws a
+ * `MeshImportError` if the file can't be imported.
+ */
+export async function parseMesh(
+  bytes: ArrayBuffer,
+  limits: StlLimits,
+): Promise<MeshSummary & { stl?: ArrayBuffer }> {
+  const data = await runMeshWorker({ kind: "parse", id: 0, bytes, limits }, [bytes], UNREADABLE);
+  if (data.kind !== "parsed") throw new MeshImportError(UNREADABLE);
+  const { sha256, triangles, bounds, stl } = data;
+  return { sha256, triangles, bounds, ...(stl && { stl }) };
 }
 
 /**
@@ -101,23 +134,52 @@ export async function importModel(
     return;
   }
   const stored = mesh.stl ? new Blob([mesh.stl]) : file;
-  const upload = await meshes.put(mesh.sha256, stored);
-  if (upload.error !== undefined) {
-    fail(upload.error);
+  const error = await storeModel(mesh, stored, fileName, { meshes, document, workspace });
+  if (error) {
+    fail(error);
     return;
   }
+  setModelImport(null);
+  track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
+}
+
+/**
+ * Stores the checked mesh `stored` in the project's `meshes` and adds it to
+ * the document as one undo step, selected; `fit: false` keeps its size
+ * (`addModel`). Returns why it couldn't, or `null`.
+ */
+export async function storeModel(
+  mesh: MeshSummary,
+  stored: Blob,
+  fileName: string,
+  {
+    meshes,
+    document,
+    workspace,
+    fit,
+  }: {
+    meshes: WorkspaceHost["meshes"];
+    document: DocumentStore;
+    workspace: WorkspaceStore;
+    fit?: boolean;
+  },
+): Promise<Translatable | null> {
+  const upload = await meshes.put(mesh.sha256, stored);
+  if (upload.error !== undefined) return upload.error;
   // Another model may have been imported, or a step redone, while this one uploaded.
   const { sha256, triangles, bounds } = mesh;
-  const id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size });
+  const id = addModel(
+    document,
+    { sha256, triangles, bounds, fileName, size: stored.size },
+    { fit },
+  );
   if (id === null) {
     // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
       await meshes.discard(mesh.sha256);
     }
-    fail(ONE_MODEL);
-    return;
+    return ONE_MODEL;
   }
   workspace.getState().selectModel(id);
-  setModelImport(null);
-  track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
+  return null;
 }
