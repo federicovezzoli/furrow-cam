@@ -784,7 +784,7 @@
       "unreadableFile": "このファイルを読み込めませんでした。",
       "modelUnreadable": "モデルを読み込めませんでした。",
       "importFailed": "このファイルをインポートできませんでした。",
-      "drawingsOrModel": "プロジェクトに含められるのは SVG・DXF 図面か 1 つの 3D モデルのどちらかで、両方は含められません。",
+      "oneModel": "プロジェクトに含められる 3D モデルは 1 つだけです。",
       "noShapes": "このファイルにはインポートできる図形がありません。",
       "stlImportOff": "このサーバーでは 3D モデルのインポートを利用できません。",
       "stepUnreadable": "この STEP ファイルを読み込めませんでした。CAD ソフトからもう一度書き出して、再度お試しください。",
@@ -1204,6 +1204,8 @@
     "history": "履歴",
     "drawing": "図面",
     "importDrawing": "図面をインポート",
+    "model": "モデル",
+    "importModel": "モデルをインポート",
     "text": "テキスト",
     "relief_rough": "荒加工",
     "relief_finish": "仕上げ"
@@ -1533,7 +1535,7 @@
       },
       "import": {
         "title": "図面をインポート",
-        "body": "SVG または DXF ファイルから始めます。そのパスが切削する図形になります。"
+        "body": "SVG または DXF ファイルから始めます。そのパスが切削する図形になります。STL または STEP モデルを並べて 3D で彫ることもできます。"
       },
       "properties": {
         "title": "プロジェクトのプロパティ",

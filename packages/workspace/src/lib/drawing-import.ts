@@ -13,7 +13,7 @@ import {
 } from "@furrow/cam-core";
 import type { Message, Units } from "@furrow/document";
 import type { DocumentStore } from "../stores/document-store";
-import { addImportedShapes, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
+import { addImportedShapes } from "../stores/geometry-actions";
 
 /** The largest SVG or DXF file any import takes: anything larger is unlikely to be a drawing worth cutting. */
 export const MAX_DRAWING_FILE_SIZE = 20_000_000;
@@ -71,9 +71,7 @@ export function importDrawingFile(
       ? importSvg(file.svg, { dpi, fileName: file.name })
       : importDxf(file.dxf, { units, fileName: file.name });
   const [first] = shapes;
-  if (!first) return { ok: false, messages: [{ code: "workspace.noShapes" }, ...warnings] };
-  if (!addImportedShapes(store, file.kind === "svg" ? "importSvg" : "importDxf", shapes)) {
-    return { ok: false, messages: [DRAWINGS_OR_MODEL] };
-  }
+  if (!first || !addImportedShapes(store, file.kind === "svg" ? "importSvg" : "importDxf", shapes))
+    return { ok: false, messages: [{ code: "workspace.noShapes" }, ...warnings] };
   return { ok: true, id: first.drawingId, warnings };
 }

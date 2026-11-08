@@ -784,7 +784,7 @@
       "unreadableFile": "No se ha podido leer este archivo.",
       "modelUnreadable": "No se ha podido leer el modelo.",
       "importFailed": "No se ha podido importar este archivo.",
-      "drawingsOrModel": "Un proyecto contiene dibujos SVG y DXF o un modelo 3D, no ambos.",
+      "oneModel": "Un proyecto contiene solo un modelo 3D.",
       "noShapes": "Este archivo no tiene formas que importar.",
       "stlImportOff": "La importación de modelos 3D no está disponible en este servidor.",
       "stepUnreadable": "No se ha podido leer este archivo STEP. Vuelve a exportarlo desde tu programa CAD e inténtalo de nuevo.",
@@ -1204,6 +1204,8 @@
     "history": "Historial",
     "drawing": "Dibujo",
     "importDrawing": "Importa un dibujo",
+    "model": "Modelo",
+    "importModel": "Importa un modelo",
     "text": "Texto",
     "relief_rough": "Desbaste",
     "relief_finish": "Acabado"
@@ -1533,7 +1535,7 @@
       },
       "import": {
         "title": "Importa un dibujo",
-        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas."
+        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas. A su lado puedes añadir un modelo STL o STEP para tallar en 3D."
       },
       "properties": {
         "title": "Propiedades del proyecto",

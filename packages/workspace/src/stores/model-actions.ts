@@ -91,9 +91,9 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
 /**
  * Adds an imported mesh as a model, as one undo step: fitted inside the
  * stock less a border, its top at the stock top and aligned at the zero's
- * anchor (ADR-0031, ADR-0038). A project holds drawings or one model (ADR-0055): returns
- * `null`, adding nothing, if it already has a drawing or a model;
- * otherwise the model's id.
+ * anchor (ADR-0031, ADR-0038). A project holds at most one model (ADR-0078):
+ * returns `null`, adding nothing, if it already has one; otherwise the
+ * model's id.
  */
 export function addModel(
   store: DocumentStore,

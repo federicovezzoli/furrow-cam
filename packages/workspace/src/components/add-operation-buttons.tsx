@@ -35,8 +35,8 @@ import {
 /**
  * The ribbon's buttons adding profiles, pockets, drill, engrave and V-carve
  * operations from the selected paths, and 3D operations on the project's
- * model. A drawing project gets the first, a model project the second (a
- * project holds drawings or one model, ADR-0055).
+ * model: the first while the project has drawings or is empty, the second
+ * while it has a model (ADR-0078).
  */
 export function AddOperationButtons() {
   const t = useTranslations("Operations");
