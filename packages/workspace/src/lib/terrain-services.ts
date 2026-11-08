@@ -26,7 +26,7 @@ export const ELEVATION_ATTRIBUTION =
 /** komoot's Photon: place search over OpenStreetMap data, as the user types. */
 export const SEARCH_URL = "https://photon.komoot.io/api";
 
-/** The hosts the feature contacts, for the desktop app's request filter and CSP (#507). */
+/** The hosts the feature contacts, for the desktop app's request filter and CSP (ADR-0076). */
 export const TERRAIN_HOSTS = [
   "tiles.openfreemap.org",
   "tiles.mapterhorn.com",
