@@ -13,24 +13,27 @@ import { TerrainButton } from "./terrain-dialog";
 const download = vi.hoisted(() => vi.fn());
 vi.mock("@furrow/ui/lib/download", () => ({ downloadFile: download }));
 
-/** The map: one button that "draws" a small area near Lecco. */
-vi.mock("./terrain-map", () => ({
-  default: ({ onArea }: { onArea: (ring: [number, number][]) => void }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onArea([
-          [9.37, 45.9],
-          [9.41, 45.9],
-          [9.41, 45.93],
-          [9.37, 45.93],
-        ])
-      }
-    >
-      Draw
-    </button>
-  ),
-}));
+/** The map: one button that "draws" a small area near Lecco, one that moves it a little east. */
+vi.mock("./terrain-map", () => {
+  const area = (east: number): [number, number][] => [
+    [9.37 + east, 45.9],
+    [9.41 + east, 45.9],
+    [9.41 + east, 45.93],
+    [9.37 + east, 45.93],
+  ];
+  return {
+    default: ({ onArea }: { onArea: (ring: [number, number][], moved?: boolean) => void }) => (
+      <>
+        <button type="button" onClick={() => onArea(area(0))}>
+          Draw
+        </button>
+        <button type="button" onClick={() => onArea(area(0.01), true)}>
+          Drag area
+        </button>
+      </>
+    ),
+  };
+});
 
 /** The 3D preview needs WebGL, which jsdom hasn't: it only says what it shows. */
 vi.mock("./terrain-preview", () => ({
@@ -223,5 +226,21 @@ describe("TerrainDialog's steps", () => {
     expect(screen.getByText("Making the preview…")).toBeTruthy();
     expect(screen.getByText(/^Model: 200 × 150/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("Making the preview…")).toBeNull());
+  });
+
+  it("keeps the longest side typed when the area is only moved", async () => {
+    await openWithArea();
+    const side = () => screen.getByLabelText(/Longest side/) as HTMLInputElement;
+    fireEvent.change(side(), { target: { value: "300" } });
+    fireEvent.blur(side());
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Drag area" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(side().value).toBe("300");
+    // Drawn anew, it fits the stock again.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Draw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(side().value).not.toBe("300");
   });
 });

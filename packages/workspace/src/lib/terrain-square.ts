@@ -32,3 +32,19 @@ export function squareRing(start: LonLat, end: LonLat): LonLat[] {
     [lon0, lat1],
   ];
 }
+
+/**
+ * `ring` moved by a drag from `from` to `to`, keeping its size on the ground:
+ * its centre moves by the drag, and its east-west extent is rescaled to the
+ * new latitude, where a degree of longitude is shorter or longer.
+ */
+export function moveRing(ring: readonly LonLat[], from: LonLat, to: LonLat): LonLat[] {
+  const lons = ring.map(([lon]) => lon);
+  const lats = ring.map(([, lat]) => lat);
+  const lon0 = (Math.min(...lons) + Math.max(...lons)) / 2;
+  const lat0 = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const lon1 = lon0 + to[0] - from[0];
+  const lat1 = clamp(lat0 + to[1] - from[1], MAX_LATITUDE);
+  const stretch = Math.cos(lat0 * DEGREE) / Math.cos(lat1 * DEGREE);
+  return ring.map(([lon, lat]) => [lon1 + (lon - lon0) * stretch, lat1 + (lat - lat0)]);
+}

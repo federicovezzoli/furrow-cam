@@ -23,7 +23,7 @@ import {
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import type { PlaceView } from "../lib/place-search";
 import { ELEVATION_ATTRIBUTION, MAP_STYLE_URL } from "../lib/terrain-services";
-import { squareRing } from "../lib/terrain-square";
+import { moveRing, squareRing } from "../lib/terrain-square";
 import type { AreaShape } from "./terrain-dialog";
 
 // MapLibre looks for its worker beside its own file, which a bundler moves; this points it there.
@@ -43,17 +43,14 @@ const polygon = (ring: LonLat[]) => ({
   coordinates: [[...ring, ring[0] as LonLat].map(([lon, lat]) => [lon, lat])],
 });
 
-/** `ring` moved by the drag from `from` to `to`, in degrees: for the few kilometres of a nudge, the same shape. */
-const moved = (ring: LonLat[], from: LonLat, to: LonLat): LonLat[] =>
-  ring.map(([lon, lat]) => [lon + to[0] - from[0], lat + to[1] - from[1]]);
-
 /**
  * The map the user draws the terrain's area on (PRD-0014 T1, T3): MapLibre
  * with OpenFreeMap's style, and terra-draw for the shapes (ADR-0076). With no
  * `shape` the map is dragged, and so is the area drawn, by pressing on it;
  * with a shape, dragging draws it (a square is drawn here, terra-draw has
  * none). The area, `ring` (longitude and latitude, not repeating the first
- * point), is shown here whatever drew it; `onArea` hears a new or moved one.
+ * point), is shown here whatever drew it; `onArea` hears a new one, or a
+ * moved one with `moved`.
  * Loaded in a chunk of its own, only when the dialog opens. `onError` hears
  * that the map couldn't load. The map moves to `view` whenever it changes (a
  * place found, PRD-0014 T2).
@@ -68,7 +65,7 @@ export default function TerrainMap({
   shape: AreaShape | null;
   ring: LonLat[] | null;
   view: PlaceView | null;
-  onArea: (ring: LonLat[]) => void;
+  onArea: (ring: LonLat[], moved?: boolean) => void;
   onError: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
@@ -123,18 +120,16 @@ export default function TerrainMap({
       } as const;
       // Dragging or clicking twice both draw a shape.
       const drawInteraction = "click-move-or-drag";
-      // Fine enough that the outline drawing stays within the 0.01 mm chord tolerance up to 300 mm across.
-      const segments = 512;
       const terra = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
           new TerraDrawRectangleMode({ styles: style, drawInteraction }),
-          new TerraDrawCircleMode({ styles: style, drawInteraction, segments }),
-          new TerraDrawEllipseMode({ styles: style, drawInteraction, segments }),
+          new TerraDrawCircleMode({ styles: style, drawInteraction }),
+          new TerraDrawEllipseMode({ styles: style, drawInteraction }),
           new TerraDrawFreehandMode({
             styles: style,
             drawInteraction,
-            // A loop that crosses itself has no inside to cut out (T7); it isn't kept.
+            // A loop that crosses itself has no clear inside; it isn't kept.
             validation: (feature) => ValidateNotSelfIntersecting(feature),
           }),
         ],
@@ -196,7 +191,7 @@ export default function TerrainMap({
       const result = (to: LonLat) =>
         dragging === "square"
           ? squareRing(start as LonLat, to)
-          : moved(ringRef.current ?? [], start as LonLat, to);
+          : moveRing(ringRef.current ?? [], start as LonLat, to);
       const begin = (event: MapMouseEvent | MapTouchEvent) => {
         const over =
           !shapeRef.current &&
@@ -222,6 +217,7 @@ export default function TerrainMap({
         const onMap = event && "lngLat" in event;
         const ring = result(onMap ? at(event) : last);
         const [x, y] = onMap ? pixel(event) : lastPixel;
+        const dragged = dragging;
         start = null;
         dragging = null;
         // A click, even one that jittered a pixel or two, draws or moves nothing.
@@ -229,7 +225,7 @@ export default function TerrainMap({
           show(ringRef.current);
           return;
         }
-        callbacks.current.onArea(ring);
+        callbacks.current.onArea(ring, dragged === "move");
       };
       map.on("mousedown", begin);
       map.on("touchstart", begin);

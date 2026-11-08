@@ -1,6 +1,6 @@
 import { MAX_TERRAIN_SPAN, planTerrain } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { squareRing } from "./terrain-square";
+import { moveRing, squareRing } from "./terrain-square";
 
 describe("squareRing", () => {
   it("gives an area as wide as it is deep on the ground, whatever the drag", () => {
@@ -19,5 +19,18 @@ describe("squareRing", () => {
     expect(Math.max(...east.map(([lon]) => lon))).toBe(180);
     const north = squareRing([20, 84.9], [20.1, 86]);
     expect(Math.max(...north.map(([, lat]) => lat))).toBe(85);
+  });
+});
+
+describe("moveRing", () => {
+  it("keeps a square square on the ground when it is moved far north", () => {
+    const square = squareRing([9.39, 45.92], [9.39 + 5000 / 77_400, 45.92 + 5000 / 111_195]);
+    const north = moveRing(square, [9.4, 45.9], [9.4, 60.9]);
+    const limits = { maxBytes: 1e6, maxTriangles: 1e4 };
+    const before = planTerrain(square, limits, 14).span;
+    const after = planTerrain(north, limits, 14).span;
+    expect(after[0]).toBeCloseTo(before[0], -1);
+    expect(after[1]).toBeCloseTo(before[1], -1);
+    expect(Math.min(...north.map(([, lat]) => lat))).toBeGreaterThan(60);
   });
 });

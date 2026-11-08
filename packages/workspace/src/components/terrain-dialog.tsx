@@ -326,9 +326,10 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                         shape={shape}
                         ring={ring}
                         view={place?.view ?? null}
-                        onArea={(next) => {
+                        onArea={(next, moved) => {
                           setRing(next);
-                          setSide(null);
+                          // A moved area is as large as before: the size typed for it stays.
+                          if (!moved) setSide(null);
                           setError(null);
                           // Drawn or moved: back to browsing the map.
                           setShape(null);
