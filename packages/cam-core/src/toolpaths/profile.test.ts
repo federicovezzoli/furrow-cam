@@ -1001,6 +1001,7 @@ describe("generateToolpath", () => {
             operationStart: null,
             toolChange: null,
           },
+    machineId: null,
     drawings: [{ id: DRAWING_ID, name: "", border: 10, rotation: 0 }],
     geometry: [square, hole],
     models: [],

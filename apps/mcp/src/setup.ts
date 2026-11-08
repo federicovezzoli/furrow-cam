@@ -91,7 +91,7 @@ export function chooseMachine(project: Project, library: Library, id: string) {
   if (!choice) {
     throw new ToolError(`The machine list has no machine ${JSON.stringify(id)}.${why(library)}`);
   }
-  change(project, (store) => setMachine(store, choice.machine));
+  change(project, (store) => setMachine(store, choice.machine, choice.id));
 }
 
 /** A library tool's or a tool's settings, as the tools that take a tool are given it. */

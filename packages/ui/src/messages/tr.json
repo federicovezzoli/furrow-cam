@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Alt yüzün derinliğinden ince olmalıdır: {size} değerinden az",
     "holdingTabsPerModel": "Model başına köprü",
     "placeHoldingTabs": "Yerleştir",
-    "holdingTabCount": "{count, plural, =0 {Köprü yok} one {# köprü} other {# köprü}}"
+    "holdingTabCount": "{count, plural, =0 {Köprü yok} one {# köprü} other {# köprü}}",
+    "machineChanged": "Makinelerinizdeki {name}, bu projenin kopyasından farklı.",
+    "machineChangedHint": "Projedeki kopya makinenin güncel ayarlarına güncellensin mi? Takım yolları ve G-code bunları kullanır.",
+    "gcodeChanged": "değişti",
+    "keepMachine": "Projenin kopyasını koru",
+    "updateMachine": "Projeyi güncelle"
   },
   "Model": {
     "closeLabel": "Model özelliklerini kapat",

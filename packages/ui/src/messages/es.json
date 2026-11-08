@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Debe ser más fino que la profundidad de la cara inferior: menos de {size}",
     "holdingTabsPerModel": "Puentes por modelo",
     "placeHoldingTabs": "Colocar",
-    "holdingTabCount": "{count, plural, =0 {Sin puentes} one {# puente} other {# puentes}}"
+    "holdingTabCount": "{count, plural, =0 {Sin puentes} one {# puente} other {# puentes}}",
+    "machineChanged": "{name} en tus máquinas es distinta de la copia de este proyecto.",
+    "machineChangedHint": "¿Actualizar la copia del proyecto con los ajustes actuales de la máquina? Las trayectorias y el G-code los usarán.",
+    "gcodeChanged": "modificado",
+    "keepMachine": "Mantener la copia del proyecto",
+    "updateMachine": "Actualizar proyecto"
   },
   "Model": {
     "closeLabel": "Cerrar propiedades del modelo",

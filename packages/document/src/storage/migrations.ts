@@ -329,6 +329,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #512: snapshots link to their library machine. Older ones don't know it.
+  34: (doc) => {
+    doc.machineId = null;
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
