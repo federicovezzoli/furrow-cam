@@ -23,5 +23,24 @@ export const MAX_ELEVATION_ZOOM = 17;
 export const ELEVATION_ATTRIBUTION =
   '<a href="https://mapterhorn.com/attribution" target="_blank" rel="noopener noreferrer">© Mapterhorn</a>';
 
-/** The hosts the feature contacts, for the desktop app's request filter and CSP (#507). */
-export const TERRAIN_HOSTS = ["tiles.openfreemap.org", "tiles.mapterhorn.com"] as const;
+/** The hosts the feature contacts, for the desktop app's request filter and CSP (ADR-0076). */
+export const TERRAIN_HOSTS = [
+  "tiles.openfreemap.org",
+  "tiles.mapterhorn.com",
+  "photon.komoot.io",
+] as const;
+
+/** Whether the desktop app lets `url` through: a `GET` over HTTPS to one of `TERRAIN_HOSTS`. */
+export function isTerrainRequest(url: string, method: string): boolean {
+  if (method !== "GET") return false;
+  try {
+    const { protocol, hostname, port } = new URL(url);
+    return (
+      protocol === "https:" &&
+      port === "" &&
+      (TERRAIN_HOSTS as readonly string[]).includes(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
