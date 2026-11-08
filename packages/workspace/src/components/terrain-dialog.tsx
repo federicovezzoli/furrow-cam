@@ -138,25 +138,28 @@ const tenths = (value: number) => Math.round(value * 10) / 10;
 
 /**
  * The coarse terrain of `ring` with `settings`, made again once they stop
- * changing: the 3D preview, its size and its height range. `null` while it is
- * being made, or with no area.
+ * changing: the 3D preview, its size and its height range, with the
+ * settings it was made with (the last one stays shown while the next is
+ * made). `null` while the first is made, or with no area.
  */
 function usePreview(ring: LonLat[] | null, settings: TerrainSettings | null) {
   const [preview, setPreview] = useState<
-    { terrain: GeneratedTerrain } | { error: Translatable } | null
+    | { terrain: GeneratedTerrain; settings: TerrainSettings }
+    | { error: Translatable; settings: TerrainSettings }
+    | null
   >(null);
-  const key = settings && JSON.stringify(settings);
   useEffect(() => {
-    if (!ring || !key) return setPreview(null);
+    if (!ring || !settings) return setPreview(null);
     const abort = new AbortController();
     const timer = setTimeout(() => {
-      generateTerrain(ring, JSON.parse(key), PREVIEW_LIMITS, { signal: abort.signal }).then(
+      generateTerrain(ring, settings, PREVIEW_LIMITS, { signal: abort.signal }).then(
         (terrain) => {
-          if (!abort.signal.aborted) setPreview({ terrain });
+          if (!abort.signal.aborted) setPreview({ terrain, settings });
         },
         (error) => {
           if (abort.signal.aborted) return;
           setPreview({
+            settings,
             error:
               error instanceof MeshImportError
                 ? error.detail
@@ -169,7 +172,7 @@ function usePreview(ring: LonLat[] | null, settings: TerrainSettings | null) {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [ring, key]);
+  }, [ring, settings]);
   return preview;
 }
 
@@ -204,22 +207,37 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   const planned = usePlan(ring, limits);
   const plan = planned && "plan" in planned ? planned.plan : null;
   const longestSide = side ?? (plan ? fittingSide(stock, plan.span) : null);
-  const settings = longestSide ? { longestSide, exaggeration, base } : null;
+  const settings = useMemo(
+    () => (longestSide ? { longestSide, exaggeration, base } : null),
+    [longestSide, exaggeration, base],
+  );
   const preview = usePreview(step === "model" ? ring : null, settings);
   const shown = preview && "terrain" in preview ? preview.terrain : null;
+  // The preview on screen was made with other settings: a new one is on its way.
+  const stale = preview !== null && preview.settings !== settings;
   useEffect(() => () => abort.current?.abort(), []);
-  // The desktop app lets the services through only while the dialog is open (ADR-0076).
+  // The desktop app lets the services through only while the dialog is open (ADR-0076), and
+  // the map waits for that, or its first requests could be refused.
+  const [servicesOpen, setServicesOpen] = useState(!host.terrainServices);
   useEffect(() => {
-    host.terrainServices?.(true);
-    return () => host.terrainServices?.(false);
+    let open = true;
+    void Promise.resolve(host.terrainServices?.(true)).then(() => {
+      if (open) setServicesOpen(true);
+    });
+    return () => {
+      open = false;
+      void host.terrainServices?.(false);
+    };
   }, [host]);
 
   const length = (mm: number) => formatQuantity(mm, "length", units);
   const lengthUnit = unitLabel("length", units);
   const area =
     plan && t("area", { width: tenths(plan.span[0] / 1000), depth: tenths(plan.span[1] / 1000) });
+  // What the preview on screen was made with, so its lines agree with each other.
+  const made = preview?.settings;
   const summary =
-    plan && longestSide && shown
+    plan && made && shown
       ? [
           area,
           t("size", {
@@ -230,7 +248,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
           t("heights", { low: Math.round(shown.heights[0]), high: Math.round(shown.heights[1]) }),
           t("detail", {
             metres: tenths(plan.cellMetres),
-            mm: length((plan.cellMetres * longestSide) / Math.max(...plan.span)),
+            mm: length((plan.cellMetres * made.longestSide) / Math.max(...plan.span)),
             unit: lengthUnit,
           }),
         ]
@@ -298,20 +316,24 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                     {t("mapUnavailable")}
                   </p>
                 ) : (
-                  <Suspense fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}>
-                    <TerrainMap
-                      tool={tool}
-                      view={place?.view ?? null}
-                      onArea={(next) => {
-                        setRing(next);
-                        setSide(null);
-                        setError(null);
-                        // Drawn: the map can be moved again.
-                        setTool("move");
-                      }}
-                      onError={() => setMapFailed(true)}
-                    />
-                  </Suspense>
+                  servicesOpen && (
+                    <Suspense
+                      fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}
+                    >
+                      <TerrainMap
+                        tool={tool}
+                        view={place?.view ?? null}
+                        onArea={(next) => {
+                          setRing(next);
+                          setSide(null);
+                          setError(null);
+                          // Drawn: the map can be moved again.
+                          setTool("move");
+                        }}
+                        onError={() => setMapFailed(true)}
+                      />
+                    </Suspense>
+                  )
                 )}
               </div>
               {step === "model" && (
@@ -321,7 +343,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                       <TerrainPreview
                         stl={shown.stl}
                         size={shown.size}
-                        fitKey={`${ring?.join()}|${Math.round(longestSide ?? 0)}`}
+                        // From the mesh on screen, so the camera fits the model it shows.
+                        fitKey={`${ring?.join()}|${Math.round(Math.max(shown.size[0], shown.size[1]))}`}
                       />
                     </Suspense>
                   )}
@@ -423,6 +446,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 ) : (
                   <p>{area}</p>
                 )}
+                {stale && <p>{t("previewLoading")}</p>}
               </div>
               {(!storable || hasModel) && (
                 <p className="text-muted-foreground">{storable ? t("hasModel") : t("storeOff")}</p>

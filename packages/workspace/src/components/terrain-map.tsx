@@ -29,6 +29,11 @@ import type { AreaTool } from "./terrain-dialog";
 // MapLibre looks for its worker beside its own file, which a bundler moves; this points it there.
 setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href);
 
+/** How far the pointer must move, in pixels, for a press to draw a square rather than click. */
+const CLICK_PIXELS = 4;
+
+type Point2 = [x: number, y: number];
+
 /** The area's outline colour, readable on the map in both themes. */
 const STROKE = "#e11d48";
 
@@ -161,17 +166,23 @@ export default function TerrainMap({
       let start: LonLat | null = null;
       /** Where the drag last was on the map: a release outside it ends the square there. */
       let last: LonLat | null = null;
+      /** The same two places in pixels, to tell a drag from a click that jittered. */
+      let startPixel: Point2 = [0, 0];
+      let lastPixel: Point2 = [0, 0];
       const at = ({ lngLat }: MapMouseEvent | MapTouchEvent): LonLat => [lngLat.lng, lngLat.lat];
+      const pixel = ({ point }: MapMouseEvent | MapTouchEvent): Point2 => [point.x, point.y];
       const begin = (event: MapMouseEvent | MapTouchEvent) => {
         if (toolRef.current !== "square") return;
         event.preventDefault();
         start = last = at(event);
+        startPixel = lastPixel = pixel(event);
         // The map hears no release past its edge; the window does.
         window.addEventListener("mouseup", end, { once: true });
       };
       const grow = (event: MapMouseEvent | MapTouchEvent) => {
         if (!start) return;
         last = at(event);
+        lastPixel = pixel(event);
         preview.setData({
           type: "Feature",
           geometry: polygon(squareRing(start, last)),
@@ -180,10 +191,12 @@ export default function TerrainMap({
       };
       const end = (event?: MapMouseEvent | MapTouchEvent | MouseEvent) => {
         if (!start || !last) return;
-        const ring = squareRing(start, event && "lngLat" in event ? at(event) : last);
+        const onMap = event && "lngLat" in event;
+        const ring = squareRing(start, onMap ? at(event) : last);
+        const [x, y] = onMap ? pixel(event) : lastPixel;
         start = null;
-        // A click without a drag draws nothing.
-        if (ring[0]?.[0] === ring[1]?.[0]) {
+        // A click, even one that jittered a pixel or two, draws nothing.
+        if (Math.hypot(x - startPixel[0], y - startPixel[1]) < CLICK_PIXELS) {
           preview.setData({ type: "FeatureCollection", features: [] });
           return;
         }

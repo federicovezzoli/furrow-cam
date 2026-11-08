@@ -13,4 +13,11 @@ describe("squareRing", () => {
     // It went south of where the drag started.
     expect(ring[2]?.[1]).toBeLessThan(45.92);
   });
+
+  it("stops at the map's edges instead of going past them", () => {
+    const east = squareRing([179.9, 10], [181, 10.5]);
+    expect(Math.max(...east.map(([lon]) => lon))).toBe(180);
+    const north = squareRing([20, 84.9], [20.1, 86]);
+    expect(Math.max(...north.map(([, lat]) => lat))).toBe(85);
+  });
 });

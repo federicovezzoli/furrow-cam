@@ -200,4 +200,31 @@ describe("TerrainDialog's steps", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Draw" }));
     expect(move.getAttribute("aria-pressed")).toBe("true");
   });
+
+  it("shows the map only once the host has let its services through", async () => {
+    let open: () => void = () => {};
+    const terrainServices = vi.fn((on: boolean) =>
+      on ? new Promise<void>((resolve) => (open = resolve)) : undefined,
+    );
+    renderWorkspace(
+      <TerrainButton inRibbon />,
+      createMemoryHost({ document: createProjectDocument() }, { terrainServices }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("button", { name: "Draw" })).toBeNull();
+    open();
+    expect(await screen.findByRole("button", { name: "Draw" })).toBeTruthy();
+  });
+
+  it("says a new preview is on its way instead of mixing two sets of settings", async () => {
+    await openWithArea();
+    const side = screen.getByLabelText(/Longest side/);
+    fireEvent.change(side, { target: { value: "100" } });
+    fireEvent.blur(side);
+    // Until the new preview arrives, the lines still describe the one on screen.
+    expect(screen.getByText("Making the preview…")).toBeTruthy();
+    expect(screen.getByText(/^Model: 200 × 150/)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Making the preview…")).toBeNull());
+  });
 });
