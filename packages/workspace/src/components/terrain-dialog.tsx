@@ -348,14 +348,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
             <div className="grid content-start gap-3 text-ui">
               <TerrainSearch onPick={setPlace} />
               <div className="grid gap-1.5">
-                <span id="terrain-tools" className="font-medium">
-                  {t("shape")}
-                </span>
-                <div
-                  role="group"
-                  aria-labelledby="terrain-tools"
-                  className="grid grid-cols-3 gap-1.5"
-                >
+                <fieldset className="grid grid-cols-3 gap-1.5">
+                  <legend className="mb-1.5 font-medium">{t("shape")}</legend>
                   {AREA_TOOLS.map((option) => (
                     <Button
                       key={option}
@@ -372,7 +366,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                       {t(`tools.${option}`)}
                     </Button>
                   ))}
-                </div>
+                </fieldset>
                 <p className="text-muted-foreground">{t("drawHint")}</p>
               </div>
               <div className="grid gap-0.5 text-muted-foreground" aria-live="polite">
