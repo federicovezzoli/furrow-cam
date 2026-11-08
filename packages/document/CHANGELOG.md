@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.22.0
+
+### Minor Changes
+
+- Projects now remember which of your machines they use, and offer to update their copy when you open them after editing that machine. ([#520](https://github.com/federicovezzoli/furrow-cam/pull/520))
+
 ## 0.21.0
 
 ### Minor Changes

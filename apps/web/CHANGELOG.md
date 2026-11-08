@@ -1,5 +1,13 @@
 # @furrow/web
 
+## 0.22.7
+
+### Patch Changes
+
+- Projects now remember which of your machines they use, and offer to update their copy when you open them after editing that machine. ([#520](https://github.com/federicovezzoli/furrow-cam/pull/520))
+- The privacy policy now names the map, place search and elevation services the upcoming terrain-from-a-map feature contacts, and what each of them receives. ([#511](https://github.com/federicovezzoli/furrow-cam/pull/511))
+- Updated dependencies: @furrow/workspace@0.24.0, @furrow/ui@0.8.5, @furrow/document@0.22.0, @furrow/cam-core@0.20.0, @furrow/post@0.15.4
+
 ## 0.22.6
 
 ### Patch Changes

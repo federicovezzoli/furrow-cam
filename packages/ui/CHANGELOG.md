@@ -1,5 +1,17 @@
 # @furrow/ui
 
+## 0.8.5
+
+### Patch Changes
+
+- A project can now hold drawings and a 3D model together, so a relief and the profile that cuts it out live in one project. The ribbon gets a button to import a model at any time. ([#509](https://github.com/federicovezzoli/furrow-cam/pull/509))
+- Projects now remember which of your machines they use, and offer to update their copy when you open them after editing that machine. ([#520](https://github.com/federicovezzoli/furrow-cam/pull/520))
+- *Terrain from a map* can download the terrain as a closed STL file, for 3D printing or another CAM, also in a project that already has its model or on a server that can't store 3D models. ([#518](https://github.com/federicovezzoli/furrow-cam/pull/518))
+- Make a relief model from a map with *Terrain*: draw a rectangle, circle, ellipse or freehand area, choose the model's size, exaggeration and base, and generate it. The terrain becomes the project's model at the size chosen, centred on the stock, and machines like any imported STL. ([#513](https://github.com/federicovezzoli/furrow-cam/pull/513))
+- *Terrain from a map* can find a place: type its name for suggestions, or enter coordinates or paste a Google Maps or OpenStreetMap link, which never leave your device. The model is named after the place picked. ([#516](https://github.com/federicovezzoli/furrow-cam/pull/516))
+- *Terrain from a map* now works in two steps: pick the area on the map, then see a 3D preview of the relief while choosing its size, exaggeration and base. The map opens straight away and can be dragged with the new *Move* tool, the chosen shape is easy to see, and an area can also be a square. ([#523](https://github.com/federicovezzoli/furrow-cam/pull/523))
+- Updated dependencies: @furrow/document@0.22.0, @furrow/cam-core@0.20.0
+
 ## 0.8.4
 
 ### Patch Changes

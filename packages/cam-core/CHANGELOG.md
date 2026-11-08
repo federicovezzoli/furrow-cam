@@ -1,5 +1,16 @@
 # @furrow/cam-core
 
+## 0.20.0
+
+### Minor Changes
+
+- The CAM core can turn elevation map tiles of an area into a closed relief model, the groundwork for making terrain models from a map. ([#510](https://github.com/federicovezzoli/furrow-cam/pull/510))
+
+### Patch Changes
+
+- Make a relief model from a map with *Terrain*: draw a rectangle, circle, ellipse or freehand area, choose the model's size, exaggeration and base, and generate it. The terrain becomes the project's model at the size chosen, centred on the stock, and machines like any imported STL. ([#513](https://github.com/federicovezzoli/furrow-cam/pull/513))
+- Updated dependencies: @furrow/document@0.22.0
+
 ## 0.19.0
 
 ### Minor Changes
