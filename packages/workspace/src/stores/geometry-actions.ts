@@ -53,30 +53,34 @@ export function canImportModel({ models }: ProjectDocument): boolean {
   return models.length === 0;
 }
 
+/** The new drawing an import's shapes name, called after their file. */
+function importedDrawing(shapes: Shape[]): Drawing | null {
+  const [first] = shapes;
+  if (!first) return null;
+  return { id: first.drawingId, name: first.source ?? "", border: DRAWING_BORDER, rotation: 0 };
+}
+
 /**
  * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
  * step, at its size in the file, placed as `placeDrawing` does. The shapes
  * all name the new drawing, as an import gives them, and it takes its name
- * from their file. With `inPlace` they stay where they are instead, e.g. a
- * terrain's outline around its model (PRD-0014 T7). Returns `false`, adding
- * nothing, if `shapes` has no geometry. `name` labels the change, e.g.
- * `importSvg`.
+ * from their file. Returns `false`, adding nothing, if `shapes` has no
+ * geometry. `name` labels the change, e.g. `importSvg`.
  */
-export function addImportedShapes(
-  store: DocumentStore,
-  name: string,
-  shapes: Shape[],
-  { inPlace = false }: { inPlace?: boolean } = {},
-): boolean {
-  const [first] = shapes;
-  if (!first) return false;
-  const drawing = {
-    id: first.drawingId,
-    name: first.source ?? "",
-    border: DRAWING_BORDER,
-    rotation: 0,
-  };
-  return placeDrawing(store, name, drawing, shapes, inPlace);
+export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
+  const drawing = importedDrawing(shapes);
+  return drawing !== null && placeDrawing(store, name, drawing, shapes);
+}
+
+/**
+ * Adds shapes as a new drawing like `addImportedShapes`, but where they are,
+ * e.g. a terrain's outline around its model (PRD-0014 T7).
+ */
+export function addShapesInPlace(store: DocumentStore, name: string, shapes: Shape[]): boolean {
+  const drawing = importedDrawing(shapes);
+  if (!drawing || !shapesBounds(shapes)) return false;
+  addDrawing(store, name, drawing, shapes);
+  return true;
 }
 
 /** A text item's name: its text on one line, its lines joined by spaces. */
@@ -112,15 +116,14 @@ export function addTextItem(
  * XY zero's anchor (bottom-left for a custom zero) to the stock less the
  * drawing's border, the rectangle *Fit to stock* fits into (PRD-0009 D1): it
  * may overlap what the project already holds. A text item's placement moves
- * with its outlines. `inPlace` leaves the shapes where they are. Returns
- * `false`, adding nothing, if the shapes have no geometry.
+ * with its outlines. Returns `false`, adding nothing, if the shapes have no
+ * geometry.
  */
 function placeDrawing(
   store: DocumentStore,
   name: string,
   drawing: Drawing,
   shapes: Shape[],
-  inPlace = false,
 ): boolean {
   const { document } = store.getState();
   const bounds = shapesBounds(shapes);
@@ -129,17 +132,21 @@ function placeDrawing(
   const anchor = modelAnchor(stock);
   const [x, y] = anchorPoint(stockInset(stock, DRAWING_BORDER), anchor);
   const [bx, by] = anchorPoint(bounds, anchor);
-  const offset: Point = inPlace ? [0, 0] : [x - bx, y - by];
-  const placed = translateShapes(shapes, offset);
+  const offset: Point = [x - bx, y - by];
   const moved = { ...drawing };
   moveTextWithOutlines(moved, (point) => translatePoint(point, offset));
+  addDrawing(store, name, moved, translateShapes(shapes, offset));
+  return true;
+}
+
+/** Adds `drawing` and its `shapes`, as they are, as one undo step. */
+function addDrawing(store: DocumentStore, name: string, drawing: Drawing, shapes: Shape[]) {
   // One assignment, not a spread push: a file may hold more shapes than a call takes arguments.
-  const geometry = document.geometry.concat(placed);
+  const geometry = store.getState().document.geometry.concat(shapes);
   store.getState().change(name, (draft) => {
-    draft.drawings.push(moved);
+    draft.drawings.push(drawing);
     draft.geometry = geometry;
   });
-  return true;
 }
 
 /** How far off a text item's new outlines a tab may lie and stay: the flattening's chords, and float noise. */

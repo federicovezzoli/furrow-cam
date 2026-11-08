@@ -143,6 +143,18 @@ export async function importModel(
   track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
 }
 
+/** Resolves once no gesture holds the document's history open. */
+function gestureDone(document: DocumentStore): Promise<void> {
+  if (!document.getState().inTransaction) return Promise.resolve();
+  return new Promise((resolve) => {
+    const stop = document.subscribe(({ inTransaction }) => {
+      if (inTransaction) return;
+      stop();
+      resolve();
+    });
+  });
+}
+
 /**
  * Stores the checked mesh `stored` in the project's `meshes` and adds it to
  * the document as one undo step, selected; `fit: false` keeps its size
@@ -171,16 +183,19 @@ export async function storeModel(
   if (upload.error !== undefined) return upload.error;
   // Another model may have been imported, or a step redone, while this one uploaded.
   const { sha256, triangles, bounds } = mesh;
-  // One undo step with what goes alongside; inside a gesture, part of the gesture's, as any change.
-  const own = alongside !== undefined && !document.getState().inTransaction;
-  if (own) document.getState().beginTransaction();
-  const id = addModel(
-    document,
-    { sha256, triangles, bounds, fileName, size: stored.size },
-    { fit },
-  );
-  if (id !== null) alongside?.(id);
-  if (own) document.getState().commitTransaction();
+  // An undo step of its own: a gesture still open (a drag) is let finish first, so cancelling
+  // it can't take the model away after it was stored and selected.
+  await gestureDone(document);
+  // What goes alongside joins the model's step.
+  if (alongside) document.getState().beginTransaction();
+  let id: string | null = null;
+  try {
+    id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size }, { fit });
+    if (id !== null) alongside?.(id);
+  } finally {
+    // An error part-way still closes the step, or undo would stay off for the session.
+    if (alongside) document.getState().commitTransaction();
+  }
   if (id === null) {
     // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {

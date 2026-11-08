@@ -10,6 +10,7 @@ import {
   TerraDrawEllipseMode,
   TerraDrawFreehandMode,
   TerraDrawRectangleMode,
+  ValidateNotSelfIntersecting,
 } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { ELEVATION_ATTRIBUTION, MAP_STYLE_URL } from "../lib/terrain-services";
@@ -89,7 +90,12 @@ export default function TerrainMap({
           new TerraDrawRectangleMode({ styles: style, drawInteraction }),
           new TerraDrawCircleMode({ styles: style, drawInteraction, segments }),
           new TerraDrawEllipseMode({ styles: style, drawInteraction, segments }),
-          new TerraDrawFreehandMode({ styles: style, drawInteraction }),
+          new TerraDrawFreehandMode({
+            styles: style,
+            drawInteraction,
+            // A loop that crosses itself has no inside to cut out (T7); it isn't kept.
+            validation: (feature) => ValidateNotSelfIntersecting(feature),
+          }),
         ],
       });
       terra.start();

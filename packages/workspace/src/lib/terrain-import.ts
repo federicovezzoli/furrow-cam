@@ -1,14 +1,13 @@
 import {
   type LonLat,
-  modelRect,
+  modelTransform,
   type StlLimits,
   type TerrainSettings,
-  translatePoint,
 } from "@furrow/cam-core";
-import { type Message, type Point, pointsCoincide, type Shape } from "@furrow/document";
+import { type Message, type Model, type Point, pointsCoincide, type Shape } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentStore } from "../stores/document-store";
-import { addImportedShapes, canImportModel, ONE_MODEL } from "../stores/geometry-actions";
+import { addShapesInPlace, canImportModel, ONE_MODEL } from "../stores/geometry-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import type { GeneratedTerrain } from "./mesh-worker-protocol";
 import { MeshImportError, runMeshWorker, storeModel } from "./model-import";
@@ -37,14 +36,18 @@ export async function generateTerrain(
 }
 
 /**
- * The terrain's outline (in the mesh's mm, its lowest corner at the origin)
- * as a closed shape at `origin`, where the model's lowest corner is, named
- * after the place; `null` with fewer than three distinct points.
+ * The terrain's outline (in the mesh's mm) as a closed shape, each point
+ * moved by `place` to where the model puts it, named after the place;
+ * `null` with fewer than three distinct points.
  */
-export function outlineShape(outline: readonly Point[], origin: Point, name: string): Shape | null {
+export function outlineShape(
+  outline: readonly Point[],
+  place: (point: Point) => Point,
+  name: string,
+): Shape | null {
   const points: Point[] = [];
   for (const point of outline) {
-    const placed = translatePoint(point, origin);
+    const placed = place(point);
     const last = points.at(-1);
     if (!last || !pointsCoincide(last, placed)) points.push(placed);
   }
@@ -67,6 +70,13 @@ export function outlineShape(outline: readonly Point[], origin: Point, name: str
   };
 }
 
+/** Where a point of a model's mesh, on its base, lies on the stock, whatever its placement. */
+function onStock(model: Model): (point: Point) => Point {
+  const m = modelTransform(model);
+  const at = (i: number) => m[i] as number;
+  return ([x, y]) => [at(0) * x + at(1) * y + at(3), at(4) * x + at(5) * y + at(7)];
+}
+
 /**
  * Adds a generated terrain to the open project as its model, named
  * `<name>.stl`, at the size it was made and centred on the stock (PRD-0014
@@ -84,9 +94,8 @@ export async function importTerrain(
     fit: false,
     alongside: (id) => {
       const model = host.document.getState().document.models.find((m) => m.id === id);
-      const outline = model && outlineShape(terrain.outline, modelRect(model).min, name);
-      if (outline)
-        addImportedShapes(host.document, "addTerrainOutline", [outline], { inPlace: true });
+      const outline = model && outlineShape(terrain.outline, onStock(model), name);
+      if (outline) addShapesInPlace(host.document, "addTerrainOutline", [outline]);
     },
   });
   if (!error) track({ event: "file_imported", format: "terrain" });
