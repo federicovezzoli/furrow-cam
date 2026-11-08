@@ -13,6 +13,7 @@ import {
   ValidateNotSelfIntersecting,
 } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
+import type { PlaceView } from "../lib/place-search";
 import { ELEVATION_ATTRIBUTION, MAP_STYLE_URL } from "../lib/terrain-services";
 import type { AreaShape } from "./terrain-dialog";
 
@@ -27,19 +28,23 @@ const STROKE = "#e11d48";
  * with OpenFreeMap's style, and terra-draw for the shapes (ADR-0076). A new
  * shape replaces the last; `onArea` hears its ring (longitude and latitude,
  * not repeating the first point). Loaded in a chunk of its own, only when the
- * dialog opens. `onError` hears that the map couldn't load.
+ * dialog opens. `onError` hears that the map couldn't load. The map moves
+ * to `view` whenever it changes (a place found, PRD-0014 T2).
  */
 export default function TerrainMap({
   shape,
+  view,
   onArea,
   onError,
 }: {
   shape: AreaShape;
+  view: PlaceView | null;
   onArea: (ring: LonLat[]) => void;
   onError: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const draw = useRef<TerraDraw | null>(null);
+  const mapRef = useRef<MapLibre | null>(null);
   const callbacks = useRef({ onArea, onError });
   callbacks.current = { onArea, onError };
   const initialShape = useRef(shape);
@@ -59,6 +64,7 @@ export default function TerrainMap({
       touchPitch: false,
     });
     map.touchZoomRotate.disableRotation();
+    mapRef.current = map;
     map.addControl(
       new AttributionControl({ compact: false, customAttribution: ELEVATION_ATTRIBUTION }),
     );
@@ -114,6 +120,7 @@ export default function TerrainMap({
     return () => {
       draw.current?.stop();
       draw.current = null;
+      mapRef.current = null;
       map.remove();
     };
   }, []);
@@ -122,6 +129,13 @@ export default function TerrainMap({
     if (draw.current?.enabled) draw.current.setMode(shape);
     initialShape.current = shape;
   }, [shape]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !view) return;
+    if ("bounds" in view) map.fitBounds(view.bounds, { padding: 40, maxZoom: 16 });
+    else map.jumpTo(view);
+  }, [view]);
 
   return <div ref={container} className="size-full" data-demo="terrain-map" />;
 }

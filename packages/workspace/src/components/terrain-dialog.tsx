@@ -30,6 +30,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { MeshImportError } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
+import { areaName, fileNameFor, type PlaceView } from "../lib/place-search";
 import { generateTerrain, importTerrain } from "../lib/terrain-import";
 import { MAX_ELEVATION_ZOOM } from "../lib/terrain-services";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -40,6 +41,7 @@ import {
 } from "../providers/workspace-stores";
 import { canImportModel } from "../stores/geometry-actions";
 import { RibbonButton } from "./ribbon";
+import { TerrainSearch } from "./terrain-search";
 
 // MapLibre and terra-draw are about 1.5 MB: loaded only when the dialog opens (ADR-0076).
 const TerrainMap = lazy(() => import("./terrain-map"));
@@ -161,6 +163,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   const [mapFailed, setMapFailed] = useState(false);
   const [shape, setShape] = useState<AreaShape>("rectangle");
   const [ring, setRing] = useState<LonLat[] | null>(null);
+  /** The place last picked in the search, which names the model, and where the map went. */
+  const [place, setPlace] = useState<{ name: string | null; view: PlaceView } | null>(null);
   const [side, setSide] = useState<number | null>(null);
   const [exaggeration, setExaggeration] = useState(EXAGGERATION.initial);
   const [base, setBase] = useState(BASE.initial);
@@ -224,7 +228,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
       });
       // Cancelled as the worker finished: nothing is added.
       if (controller.signal.aborted) return;
-      const name = t("defaultName");
+      // Named after the place picked only if the area was drawn there.
+      const name = fileNameFor(areaName(place, ring) ?? "") || t("defaultName");
       if (download) {
         // A view on the worker's buffer, not a copy.
         downloadFile(new Uint8Array(terrain.stl), `${name}.stl`, "model/stl");
@@ -283,6 +288,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 <Suspense fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}>
                   <TerrainMap
                     shape={shape}
+                    view={place?.view ?? null}
                     onArea={(next) => {
                       // A new area stops a generation of the last one, unless it is being stored.
                       if (progress !== "saving") abort.current?.abort();
@@ -296,6 +302,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div className="grid content-start gap-3 text-ui">
+              <TerrainSearch onPick={setPlace} />
               <fieldset className="grid gap-1.5">
                 <legend className="mb-1.5 font-medium">{t("shape")}</legend>
                 <div className="grid grid-cols-2 gap-1.5">
