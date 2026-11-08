@@ -1,5 +1,5 @@
-import { DEFAULT_STL_LIMITS, type LonLat } from "@furrow/cam-core";
-import { createProjectDocument } from "@furrow/document";
+import { DEFAULT_STL_LIMITS, type LonLat, modelRect } from "@furrow/cam-core";
+import { createProjectDocument, type Model } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
@@ -16,7 +16,14 @@ const terrain: GeneratedTerrain = {
   size: [200, 150, 30],
   heights: [400, 2400],
   cellMetres: 6,
-  outline: [],
+  // The drawn area, a little past the mesh's cells, and one point repeated.
+  outline: [
+    [-1, -1],
+    [201, -1],
+    [201, -1],
+    [201, 151],
+    [-1, 151],
+  ],
 };
 
 /** The mesh worker: reports one tile, then answers with `terrain`, unless stopped. */
@@ -81,6 +88,26 @@ describe("importTerrain", () => {
     const [added] = document.getState().document.models;
     expect(added).toMatchObject({ fileName: "Grignetta.stl", placement: { scale: 1 } });
     expect(workspace.getState().selectedModelId).toBe(added?.id);
+  });
+
+  it("adds the outline around the model as a drawing, in the same undo step", async () => {
+    await importTerrain(terrain, "Grignetta", { meshes, document, workspace });
+    const { models, drawings, geometry } = document.getState().document;
+    expect(drawings).toMatchObject([{ name: "Grignetta" }]);
+    const [path] = geometry[0]?.paths ?? [];
+    // The model's lowest corner sits at its rectangle's corner: the outline follows it.
+    const [x, y] = modelRect(models[0] as Model).min;
+    expect(path).toEqual({
+      start: [x - 1, y - 1],
+      segments: [
+        { kind: "line", to: [x + 201, y - 1] },
+        { kind: "line", to: [x + 201, y + 151] },
+        { kind: "line", to: [x - 1, y + 151] },
+      ],
+      closed: true,
+    });
+    document.getState().undo();
+    expect(document.getState().document).toMatchObject({ models: [], drawings: [], geometry: [] });
   });
 
   it("refuses a project that has its model already", async () => {

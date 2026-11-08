@@ -81,12 +81,14 @@ export default function TerrainMap({
       } as const;
       // Dragging or clicking twice both draw a shape.
       const drawInteraction = "click-move-or-drag";
+      // Fine enough that the outline drawing stays within the 0.01 mm chord tolerance up to 300 mm across.
+      const segments = 512;
       const terra = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
           new TerraDrawRectangleMode({ styles: style, drawInteraction }),
-          new TerraDrawCircleMode({ styles: style, drawInteraction }),
-          new TerraDrawEllipseMode({ styles: style, drawInteraction }),
+          new TerraDrawCircleMode({ styles: style, drawInteraction, segments }),
+          new TerraDrawEllipseMode({ styles: style, drawInteraction, segments }),
           new TerraDrawFreehandMode({ styles: style, drawInteraction }),
         ],
       });
