@@ -1484,6 +1484,7 @@
     "noResults": "No places found.",
     "searchUnavailable": "Search isn't available right now. Enter coordinates or paste a Google Maps or OpenStreetMap link instead.",
     "shortLink": "Short links don't hold the coordinates. Open the link, then paste the address shown in the browser bar.",
+    "noCoordinates": "This link doesn't hold coordinates, and links are never sent to the search. Open it, then paste the address shown in the browser bar once the map has moved, or enter the coordinates.",
     "goTo": "Go to {lat, number}, {lon, number}",
     "shape": "Area",
     "shapes": {

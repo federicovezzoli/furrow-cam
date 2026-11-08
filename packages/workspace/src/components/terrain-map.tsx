@@ -125,16 +125,8 @@ export default function TerrainMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !view) return;
-    if ("bounds" in view) {
-      const [[west, south], [east, north]] = view.bounds;
-      map.fitBounds(
-        [
-          [west, south],
-          [east, north],
-        ],
-        { padding: 40, maxZoom: 16 },
-      );
-    } else map.jumpTo({ center: [...view.center], zoom: view.zoom });
+    if ("bounds" in view) map.fitBounds(view.bounds, { padding: 40, maxZoom: 16 });
+    else map.jumpTo(view);
   }, [view]);
 
   return <div ref={container} className="size-full" data-demo="terrain-map" />;

@@ -28,7 +28,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { MeshImportError } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
-import { fileNameFor, type PlaceView } from "../lib/place-search";
+import { areaName, fileNameFor, type PlaceView } from "../lib/place-search";
 import { generateTerrain, importTerrain } from "../lib/terrain-import";
 import { MAX_ELEVATION_ZOOM } from "../lib/terrain-services";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -225,7 +225,8 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
       // Cancelled as the worker finished: nothing is added.
       if (controller.signal.aborted) return;
       setProgress("saving");
-      const name = (place?.name && fileNameFor(place.name)) || t("defaultName");
+      // Named after the place picked only if the area was drawn there.
+      const name = fileNameFor(areaName(place, ring) ?? "") || t("defaultName");
       const failed = await importTerrain(terrain, name, {
         meshes: host.meshes,
         document,

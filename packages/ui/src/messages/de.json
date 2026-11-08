@@ -1484,6 +1484,7 @@
     "noResults": "Keine Orte gefunden.",
     "searchUnavailable": "Die Suche ist gerade nicht verfügbar. Gib Koordinaten ein oder füge einen Google-Maps- oder OpenStreetMap-Link ein.",
     "shortLink": "Kurzlinks enthalten keine Koordinaten. Öffne den Link und füge dann die Adresse aus der Adressleiste des Browsers ein.",
+    "noCoordinates": "Dieser Link enthält keine Koordinaten, und Links werden nie an die Suche gesendet. Öffne ihn und füge dann die Adresse aus der Adressleiste ein, sobald sich die Karte bewegt hat, oder gib die Koordinaten ein.",
     "goTo": "Gehe zu {lat, number}, {lon, number}",
     "shape": "Gebiet",
     "shapes": {

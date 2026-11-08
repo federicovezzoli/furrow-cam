@@ -1484,6 +1484,7 @@
     "noResults": "未找到地点。",
     "searchUnavailable": "搜索暂时不可用。请输入坐标，或粘贴 Google 地图或 OpenStreetMap 链接。",
     "shortLink": "短链接不包含坐标。请打开链接，然后粘贴浏览器地址栏中显示的地址。",
+    "noCoordinates": "此链接不包含坐标，且链接不会发送给搜索服务。请打开链接，待地图移动后粘贴浏览器地址栏中的地址，或直接输入坐标。",
     "goTo": "前往 {lat, number}, {lon, number}",
     "shape": "区域",
     "shapes": {

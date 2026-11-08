@@ -1484,6 +1484,7 @@
     "noResults": "Yer bulunamadı.",
     "searchUnavailable": "Arama şu anda kullanılamıyor. Koordinat girin veya bir Google Haritalar ya da OpenStreetMap bağlantısı yapıştırın.",
     "shortLink": "Kısa bağlantılar koordinat içermez. Bağlantıyı açın, ardından tarayıcının adres çubuğundaki adresi yapıştırın.",
+    "noCoordinates": "Bu bağlantı koordinat içermiyor ve bağlantılar asla aramaya gönderilmez. Bağlantıyı açın, harita kaydıktan sonra tarayıcının adres çubuğundaki adresi yapıştırın veya koordinatları girin.",
     "goTo": "{lat, number}, {lon, number} konumuna git",
     "shape": "Alan",
     "shapes": {

@@ -1484,6 +1484,7 @@
     "noResults": "Nenhum local encontrado.",
     "searchUnavailable": "A pesquisa não está disponível de momento. Introduza coordenadas ou cole uma ligação do Google Maps ou do OpenStreetMap.",
     "shortLink": "As ligações curtas não contêm as coordenadas. Abra a ligação e cole o endereço que aparece na barra do navegador.",
+    "noCoordinates": "Esta ligação não contém coordenadas, e as ligações nunca são enviadas para a pesquisa. Abra-a e cole o endereço que aparece na barra do navegador quando o mapa se mover, ou introduza as coordenadas.",
     "goTo": "Ir para {lat, number}, {lon, number}",
     "shape": "Área",
     "shapes": {

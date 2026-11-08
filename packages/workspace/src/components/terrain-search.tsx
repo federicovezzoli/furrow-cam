@@ -4,19 +4,13 @@ import { Input } from "@furrow/ui/components/ui/input";
 import { SearchIcon } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "use-intl";
-import {
-  type Place,
-  type PlaceView,
-  parsePlace,
-  SearchUnavailableError,
-  searchPlaces,
-} from "../lib/place-search";
+import { type Place, type PlaceView, parsePlace, searchPlaces } from "../lib/place-search";
 
 /** Photon is asked only once typing pauses this long, and only for this many characters (ADR-0076). */
 const SEARCH_DELAY = 300;
 const MIN_QUERY = 3;
 
-type Status = "idle" | "searching" | "none" | "unavailable" | "shortLink";
+type Status = "idle" | "searching" | "none" | "unavailable" | "shortLink" | "noCoordinates";
 
 /**
  * The terrain dialog's place search (PRD-0014 T2): names are suggested by
@@ -41,23 +35,26 @@ export function TerrainSearch({
     setResults([]);
     setPoint(null);
     const parsed = parsePlace(query);
-    if (parsed === "shortLink") return setStatus("shortLink");
+    if (parsed === "shortLink" || parsed === "noCoordinates") return setStatus(parsed);
+    if (parsed === "typing") return setStatus("idle");
     if (parsed) {
       setPoint(parsed);
       return setStatus("idle");
     }
     if (query.trim().length < MIN_QUERY) return setStatus("idle");
+    // The last query's answer is gone; this one's is on its way.
+    setStatus("searching");
     // Aborting the last search keeps at most one request in flight.
     const abort = new AbortController();
     const timer = setTimeout(() => {
-      setStatus("searching");
       searchPlaces(query.trim(), locale, abort.signal).then(
         (found) => {
+          if (abort.signal.aborted) return;
           setResults(found);
           setStatus(found.length > 0 ? "idle" : "none");
         },
-        (error) => {
-          if (error instanceof SearchUnavailableError) setStatus("unavailable");
+        () => {
+          if (!abort.signal.aborted) setStatus("unavailable");
         },
       );
     }, SEARCH_DELAY);
@@ -134,7 +131,9 @@ export function TerrainSearch({
               ? t("searchUnavailable")
               : status === "shortLink"
                 ? t("shortLink")
-                : null}
+                : status === "noCoordinates"
+                  ? t("noCoordinates")
+                  : null}
       </p>
     </div>
   );

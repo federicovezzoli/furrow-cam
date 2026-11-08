@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fileNameFor, parsePlace, SearchUnavailableError, searchPlaces } from "./place-search";
+import {
+  areaName,
+  fileNameFor,
+  parsePlace,
+  SearchUnavailableError,
+  searchPlaces,
+} from "./place-search";
 
 const at = (lat: number, lon: number, zoom = 12) => ({ center: [lon, lat], zoom });
 
@@ -12,6 +18,8 @@ describe("parsePlace", () => {
     ["46°12'N, 9°30'E", at(46.2, 9.5)],
     ["9°30′E 46°12′N", at(46.2, 9.5)],
     ["33°52'S 151°13'E", at(-(33 + 52 / 60), 151 + 13 / 60)],
+    ["45,9219 9,3907", at(45.9219, 9.3907)],
+    ["45,9219; 9,3907", at(45.9219, 9.3907)],
   ])("reads coordinates %s", (text, view) => {
     const parsed = parsePlace(text) as { center: [number, number]; zoom: number };
     expect(parsed.zoom).toBe(view.zoom);
@@ -41,14 +49,36 @@ describe("parsePlace", () => {
     expect(parsePlace("goo.gl/maps/AbCdEf")).toBe("shortLink");
   });
 
+  it.each(["Grignetta", "St. Moritz", "Piz Bernina", "Monte Rosa 4634"])(
+    "leaves %s to the search",
+    (text) => {
+      expect(parsePlace(text)).toBeNull();
+    },
+  );
+
   it.each([
-    "Grignetta",
-    "Monte Rosa 4634",
+    "45.92",
+    "45,92",
+    "45.9219,",
+    "45.9219, 9.3",
+    "46°12'",
+    "46°12'N 9",
     "95, 10",
     "45.9, 200",
+  ])("never searches coordinates being typed or out of range: %s", (text) => {
+    const parsed = parsePlace(text);
+    expect(parsed === "typing" || (parsed !== null && typeof parsed === "object")).toBe(true);
+  });
+
+  it.each([
+    "https://www.google.com/maps/place/Grigna",
+    "google.com/maps?q=Grignetta&utm_source=x",
+    "https://www.openstreetmap.org/node/123",
+    "https://www.openstreetmap.org/search?query=Grigna",
+    "https://www.openstreetmap.org/?mlat=north&mlon=9",
     "https://example.com/@45.9,9.3,14z",
-  ])("leaves %s to the search", (text) => {
-    expect(parsePlace(text)).toBeNull();
+  ])("never searches a link it can't read: %s", (link) => {
+    expect(parsePlace(link)).toBe("noCoordinates");
   });
 });
 
@@ -58,7 +88,8 @@ describe("searchPlaces", () => {
   function answer(response: Response | Error) {
     const fetch = vi.fn(async () => {
       if (response instanceof Error) throw response;
-      return response;
+      // A copy each time: a body can be read once.
+      return response.clone();
     });
     vi.stubGlobal("fetch", fetch);
     return fetch;
@@ -115,6 +146,25 @@ describe("searchPlaces", () => {
     ]);
   });
 
+  it("frames the point of a place whose extent crosses the 180° meridian", async () => {
+    answer(
+      Response.json({
+        features: [
+          {
+            geometry: { coordinates: [178, -18] },
+            properties: { name: "Fiji", extent: [177, -16, -178, -21] },
+          },
+        ],
+      }),
+    );
+    expect((await searchPlaces("Fiji", "en"))[0]?.view).toEqual({ center: [178, -18], zoom: 12 });
+  });
+
+  it("says search is unavailable when the answer isn't a list of places", async () => {
+    answer(Response.json({ features: "nope" }));
+    await expect(searchPlaces("Grignetta", "en")).rejects.toBeInstanceOf(SearchUnavailableError);
+  });
+
   it.each([
     new Response("busy", { status: 503 }),
     new Response("slow down", { status: 429 }),
@@ -129,5 +179,37 @@ describe("fileNameFor", () => {
   it("drops the characters file systems refuse", () => {
     expect(fileNameFor('Piz Bernina / "Biancograt"')).toBe("Piz Bernina Biancograt");
     expect(fileNameFor("??")).toBe("");
+    expect(fileNameFor("Monte\u0007 Rosa...  ")).toBe("Monte Rosa");
+    expect(fileNameFor("x".repeat(150))).toHaveLength(100);
+  });
+
+  it("refuses names Windows reserves", () => {
+    expect(fileNameFor("Nul")).toBe("");
+    expect(fileNameFor("COM1")).toBe("");
+    expect(fileNameFor("Console")).toBe("Console");
+  });
+});
+
+describe("areaName", () => {
+  const place = {
+    name: "Grigna Meridionale",
+    view: { center: [9.39, 45.92] as [number, number], zoom: 12 },
+  };
+  const square = (lon: number, lat: number): [number, number][] => [
+    [lon, lat],
+    [lon + 0.04, lat],
+    [lon + 0.04, lat + 0.03],
+    [lon, lat + 0.03],
+  ];
+
+  it("names an area drawn about the place picked, or beside it", () => {
+    expect(areaName(place, square(9.37, 45.9))).toBe("Grigna Meridionale");
+    expect(areaName(place, square(9.4, 45.9))).toBe("Grigna Meridionale");
+  });
+
+  it("doesn't name an area drawn elsewhere, nor one after coordinates", () => {
+    expect(areaName(place, square(10.5, 46.3))).toBeNull();
+    expect(areaName({ ...place, name: null }, square(9.37, 45.9))).toBeNull();
+    expect(areaName(null, square(9.37, 45.9))).toBeNull();
   });
 });

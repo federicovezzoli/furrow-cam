@@ -1484,6 +1484,7 @@
     "noResults": "Geen plaatsen gevonden.",
     "searchUnavailable": "Zoeken is nu niet beschikbaar. Voer coördinaten in of plak een Google Maps- of OpenStreetMap-link.",
     "shortLink": "Korte links bevatten geen coördinaten. Open de link en plak daarna het adres uit de adresbalk van de browser.",
+    "noCoordinates": "Deze link bevat geen coördinaten, en links worden nooit naar de zoekfunctie gestuurd. Open hem en plak daarna het adres uit de adresbalk zodra de kaart verschoven is, of voer de coördinaten in.",
     "goTo": "Ga naar {lat, number}, {lon, number}",
     "shape": "Gebied",
     "shapes": {
