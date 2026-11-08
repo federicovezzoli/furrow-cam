@@ -31,7 +31,7 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| D1 | Import several SVG and DXF files into one project. Each imported drawing keeps its size in the file and is aligned at the XY zero's anchor to the stock less its border (10 mm by default). A project holds drawings or one STL model, never both | Must |
+| D1 | Import several SVG and DXF files into one project. Each imported drawing keeps its size in the file and is aligned at the XY zero's anchor to the stock less its border (10 mm by default). A project holds drawings and at most one STL model, together (ADR-0078) | Must |
 | D2 | Each imported drawing is one item, named after its file. Clicking one of its shapes in the viewport, when not picking an operation's targets, selects it and shows its properties over the viewport, as a model's are | Must |
 | D3 | Set a drawing's width or height in the current units: it keeps its proportions, and its point at the zero's anchor stays put. *Fit to stock* fits it inside the stock less a border the user sets (10 mm by default), as for models (PRD-0005 S2) | Must |
 | D4 | Remove a drawing, with the operations that only machine it, in one undo step | Must |
@@ -63,3 +63,4 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 - 2026-10-21: D1 an imported drawing lands its border in from the anchor (#309)
 - 2026-10-22: D8 a duplicate lands 10 mm to the right of the original's bounding box, machined by the same operations; open question closed (#312)
 - 2026-11-07: D5 adds *Center on stock* (#495)
+- 2026-11-08: D1 a project holds drawings and one model together (PRD-0014, ADR-0078)

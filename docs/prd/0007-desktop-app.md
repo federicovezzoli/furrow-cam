@@ -31,7 +31,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | D1 | Installers for macOS (Apple Silicon and Intel), Windows and Linux are published with every release on the GitHub releases page | Must |
-| D2 | The app works fully offline and makes no network requests other than the update check (D12) and the usage statistics and error reports (D13) the user agreed to; there is no account and no sign-in | Must |
+| D2 | The app works fully offline and makes no network requests other than the update check (D12), the usage statistics and error reports (D13) the user agreed to, and the map, place search and elevation services while the user picks a terrain (PRD-0014, ADR-0076); there is no account and no sign-in | Must |
 | D3 | The workspace is the web app's: import, operations, toolpaths, simulation, G-code export, 3D models (PRD-0005) | Must |
 | D4 | A start screen offers New project, Open and the recently opened files | Must |
 | D5 | Projects are saved as `.furrow` files with New, Open, Save, Save As and Close; the window shows unsaved changes and the app asks before closing or quitting with them | Must |
@@ -67,3 +67,4 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 - 2026-10-18: D12, an opt-in update check; D2 allows it (#212, ADR-0048)
 - 2026-10-20: D13, opt-in usage statistics and error reports; D2 allows them (#283, ADR-0052)
 - 2026-11-02: D12, the app installs updates itself on Windows and Linux (#457, ADR-0074)
+- 2026-11-08: D2 allows the map, place search and elevation services of the terrain dialog (PRD-0014, ADR-0076)
