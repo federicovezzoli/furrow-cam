@@ -65,8 +65,8 @@ export default function TerrainMap({
   const setToolRef = useRef<(tool: AreaTool) => void>(() => {});
   const callbacks = useRef({ onArea, onError });
   callbacks.current = { onArea, onError };
-  const current = useRef({ tool });
-  current.current = { tool };
+  const toolRef = useRef(tool);
+  toolRef.current = tool;
 
   useEffect(() => {
     if (!container.current) return;
@@ -138,7 +138,7 @@ export default function TerrainMap({
         callbacks.current.onArea(ring.map(([lon, lat]) => [lon, lat] as LonLat));
       });
       draw.current = terra;
-      setTool(current.current.tool);
+      setTool(toolRef.current);
 
       // The square: dragged from a corner and drawn here, as terra-draw has none.
       map.addSource("square", {
@@ -159,23 +159,28 @@ export default function TerrainMap({
       });
       const preview = map.getSource("square") as GeoJSONSource;
       let start: LonLat | null = null;
+      /** Where the drag last was on the map: a release outside it ends the square there. */
+      let last: LonLat | null = null;
       const at = ({ lngLat }: MapMouseEvent | MapTouchEvent): LonLat => [lngLat.lng, lngLat.lat];
       const begin = (event: MapMouseEvent | MapTouchEvent) => {
-        if (current.current.tool !== "square") return;
+        if (toolRef.current !== "square") return;
         event.preventDefault();
-        start = at(event);
+        start = last = at(event);
+        // The map hears no release past its edge; the window does.
+        window.addEventListener("mouseup", end, { once: true });
       };
       const grow = (event: MapMouseEvent | MapTouchEvent) => {
         if (!start) return;
+        last = at(event);
         preview.setData({
           type: "Feature",
-          geometry: polygon(squareRing(start, at(event))),
+          geometry: polygon(squareRing(start, last)),
           properties: {},
         });
       };
-      const end = (event: MapMouseEvent | MapTouchEvent) => {
-        if (!start) return;
-        const ring = squareRing(start, at(event));
+      const end = (event?: MapMouseEvent | MapTouchEvent | MouseEvent) => {
+        if (!start || !last) return;
+        const ring = squareRing(start, event && "lngLat" in event ? at(event) : last);
         start = null;
         // A click without a drag draws nothing.
         if (ring[0]?.[0] === ring[1]?.[0]) {

@@ -191,13 +191,13 @@ describe("TerrainDialog's steps", () => {
       createMemoryHost({ document: createProjectDocument() }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
-    const move = screen.getByRole("radio", { name: "Move" });
-    const square = screen.getByRole("radio", { name: "Square" });
-    expect(move.getAttribute("aria-checked")).toBe("true");
+    const move = screen.getByRole("button", { name: "Move" });
+    const square = screen.getByRole("button", { name: "Square" });
+    expect(move.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(square);
-    expect(square.getAttribute("aria-checked")).toBe("true");
-    expect(move.getAttribute("aria-checked")).toBe("false");
+    expect(square.getAttribute("aria-pressed")).toBe("true");
+    expect(move.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(await screen.findByRole("button", { name: "Draw" }));
-    expect(move.getAttribute("aria-checked")).toBe("true");
+    expect(move.getAttribute("aria-pressed")).toBe("true");
   });
 });

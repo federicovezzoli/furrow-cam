@@ -352,15 +352,14 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                   {t("shape")}
                 </span>
                 <div
-                  role="radiogroup"
+                  role="group"
                   aria-labelledby="terrain-tools"
                   className="grid grid-cols-3 gap-1.5"
                 >
                   {AREA_TOOLS.map((option) => (
                     <Button
                       key={option}
-                      role="radio"
-                      aria-checked={tool === option}
+                      aria-pressed={tool === option}
                       variant={tool === option ? "default" : "outline"}
                       size="compact"
                       title={t(`tools.${option}`)}
