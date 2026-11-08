@@ -23,5 +23,12 @@ export const MAX_ELEVATION_ZOOM = 17;
 export const ELEVATION_ATTRIBUTION =
   '<a href="https://mapterhorn.com/attribution" target="_blank" rel="noopener noreferrer">© Mapterhorn</a>';
 
-/** The hosts the feature contacts, for the desktop app's request filter and CSP (#507). */
-export const TERRAIN_HOSTS = ["tiles.openfreemap.org", "tiles.mapterhorn.com"] as const;
+/** komoot's Photon: place search over OpenStreetMap data, as the user types. */
+export const SEARCH_URL = "https://photon.komoot.io/api";
+
+/** The hosts the feature contacts, for the desktop app's request filter and CSP (ADR-0076). */
+export const TERRAIN_HOSTS = [
+  "tiles.openfreemap.org",
+  "tiles.mapterhorn.com",
+  "photon.komoot.io",
+] as const;

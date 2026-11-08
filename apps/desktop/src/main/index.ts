@@ -13,6 +13,7 @@ import {
   type TelemetryEvent,
   track,
 } from "@furrow/workspace/lib/telemetry";
+import { TERRAIN_HOSTS } from "@furrow/workspace/lib/terrain-services";
 import {
   app,
   BrowserWindow,
@@ -65,6 +66,7 @@ import {
   mcpClients,
 } from "./mcp-setup";
 import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
+import { isTerrainRequest } from "./terrain";
 import {
   isUpdateRequest,
   latestDesktopRelease,
@@ -82,10 +84,14 @@ const DEV_URL = process.env.ELECTRON_RENDERER_URL;
 const rendererDir = () => join(app.getAppPath(), "out/renderer");
 const APP_ORIGIN = "app://furrow";
 
+/** The terrain dialog's services, the renderer's only way out (ADR-0076). */
+const TERRAIN_SOURCES = TERRAIN_HOSTS.map((host) => `https://${host}`).join(" ");
+
 /**
  * The renderer only loads its own files: no connections leave the app
- * (ADR-0044, PRD-0007 D2). Workers and the viewport's textures use blobs;
- * STEP import compiles OpenCascade's bundled WebAssembly (ADR-0072).
+ * (ADR-0044, PRD-0007 D2), but to the terrain dialog's services (ADR-0076).
+ * Workers and the viewport's textures use blobs; STEP import compiles
+ * OpenCascade's bundled WebAssembly (ADR-0072).
  */
 const CSP = [
   "default-src 'self'",
@@ -94,7 +100,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' blob: data:",
+  `connect-src 'self' blob: data: ${TERRAIN_SOURCES}`,
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
@@ -254,17 +260,21 @@ function serveRenderer() {
 
 /**
  * Cancels every request to the network: the app works offline (PRD-0007 D2).
- * The only exceptions are the update check's own session, which reaches the
- * releases list and nothing else (ADR-0048), electron-updater's, which reaches
- * the update endpoint and the release files (ADR-0074), and telemetry's, which
- * reaches only PostHog (ADR-0052).
+ * The only exceptions are the window's `GET`s to the terrain dialog's
+ * services while the dialog is open (ADR-0076), the update check's own
+ * session, which reaches the releases list and nothing else (ADR-0048),
+ * electron-updater's, which reaches the update endpoint and the release
+ * files (ADR-0074), and telemetry's, which reaches only PostHog (ADR-0052).
  */
+/** Whether the terrain dialog is open, as the renderer says: its services pass only meanwhile. */
+let terrainOpen = false;
+
 function blockNetwork() {
   if (DEV_URL) return;
   const filter = { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] };
   // The default session serves the app's only window.
-  session.defaultSession.webRequest.onBeforeRequest(filter, (_details, callback) =>
-    callback({ cancel: true }),
+  session.defaultSession.webRequest.onBeforeRequest(filter, (details, callback) =>
+    callback({ cancel: !(terrainOpen && isTerrainRequest(details.url, details.method)) }),
   );
   session
     .fromPartition(UPDATE_PARTITION)
@@ -1098,6 +1108,9 @@ function registerIpc() {
     if (event) track(event);
   });
   ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
+  ipcMain.on(CHANNELS.setTerrainServices, (_event, open: unknown) => {
+    terrainOpen = open === true;
+  });
 
   ipcMain.handle(CHANNELS.getLocale, () => currentLocale());
   ipcMain.handle(CHANNELS.setLocale, async (_event, locale: unknown) => {

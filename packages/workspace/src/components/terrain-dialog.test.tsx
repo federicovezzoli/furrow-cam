@@ -138,4 +138,17 @@ describe("TerrainDialog", () => {
     await new Promise((resolve) => setTimeout(resolve));
     expect(download).not.toHaveBeenCalled();
   });
+
+  it("tells the host when its services may be reached: only while it is open", () => {
+    const terrainServices = vi.fn();
+    renderWorkspace(
+      <TerrainButton inRibbon />,
+      createMemoryHost({ document: createProjectDocument() }, { terrainServices }),
+    );
+    expect(terrainServices).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
+    expect(terrainServices.mock.calls).toEqual([[true]]);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(terrainServices.mock.calls).toEqual([[true], [false]]);
+  });
 });

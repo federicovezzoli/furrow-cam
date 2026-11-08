@@ -33,6 +33,7 @@ const api: DesktopApi = {
   reportError: (error) => ipcRenderer.send(CHANNELS.reportError, error),
   getLocale: () => ipcRenderer.invoke(CHANNELS.getLocale),
   setLocale: (locale) => ipcRenderer.invoke(CHANNELS.setLocale, locale),
+  setTerrainServices: (open) => ipcRenderer.send(CHANNELS.setTerrainServices, open),
   onMenu: (listener) => listen<[MenuCommand]>(CHANNELS.menu, listener),
   onOpenPath: (listener) => listen<[string]>(CHANNELS.openPath, listener),
   onFileChanged: (listener) => listen<[string, FileStamp]>(CHANNELS.fileChanged, listener),
