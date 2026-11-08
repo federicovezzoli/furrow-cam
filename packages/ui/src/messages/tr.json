@@ -784,7 +784,7 @@
       "unreadableFile": "Bu dosya okunamadı.",
       "modelUnreadable": "Model okunamadı.",
       "importFailed": "Bu dosya içe aktarılamadı.",
-      "drawingsOrModel": "Bir proje SVG ve DXF çizimleri ya da tek bir 3B model içerir, ikisini birden değil.",
+      "oneModel": "Bir proje yalnızca tek bir 3B model içerir.",
       "noShapes": "Bu dosyada içe aktarılacak şekil yok.",
       "stlImportOff": "3B model içe aktarma bu sunucuda kullanılamıyor.",
       "stepUnreadable": "Bu STEP dosyası okunamadı. CAD programınızdan yeniden dışa aktarıp tekrar deneyin.",
@@ -1204,6 +1204,8 @@
     "history": "Geçmiş",
     "drawing": "Çizim",
     "importDrawing": "Çizim içe aktarın",
+    "model": "Model",
+    "importModel": "Model içe aktarın",
     "text": "Metin",
     "relief_rough": "Kaba",
     "relief_finish": "İnce"

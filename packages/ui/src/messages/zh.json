@@ -784,7 +784,7 @@
       "unreadableFile": "无法读取此文件。",
       "modelUnreadable": "无法读取模型。",
       "importFailed": "无法导入此文件。",
-      "drawingsOrModel": "一个项目可以包含SVG和DXF图纸，或一个3D模型，但不能两者兼有。",
+      "oneModel": "一个项目只能包含一个3D模型。",
       "noShapes": "此文件中没有可导入的形状。",
       "stlImportOff": "此服务器不支持导入3D模型。",
       "stepUnreadable": "无法读取此STEP文件。请从CAD软件重新导出后再试。",
@@ -1204,6 +1204,8 @@
     "history": "历史",
     "drawing": "图纸",
     "importDrawing": "导入图纸",
+    "model": "模型",
+    "importModel": "导入模型",
     "text": "文字",
     "relief_rough": "粗加工",
     "relief_finish": "精加工"

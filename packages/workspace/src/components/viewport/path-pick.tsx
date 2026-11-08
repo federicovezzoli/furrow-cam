@@ -21,9 +21,9 @@ const CLICK_THRESHOLD = 3;
  * or picking the zero, which take the clicks. The path under the cursor is
  * found from the document's geometry with `pathAt` (ADR-0008), not by
  * raycasting, and hovered; a click selects it, Ctrl/Cmd/Shift+click toggles
- * it. A click on no path selects the 3D model under it (PRD-0005), the one
- * added last where several overlap, and a click on nothing clears the
- * selection.
+ * it. Paths win over the model drawn under them (ADR-0078): a plain click on
+ * no path selects the 3D model under it (PRD-0005), and a click on nothing
+ * clears the selection.
  */
 export function PathPick() {
   const active = useWorkspaceStore((s) => s.view === "top" && s.editing === null && !s.pickingZero);
@@ -70,7 +70,8 @@ function PathPicker() {
         const point = onStockTop(event.ray);
         const hit = pathUnder(point, 1 / event.camera.zoom);
         const toggle = event.ctrlKey || event.metaKey || event.shiftKey;
-        const model = !hit && point ? modelAt(models, point) : null;
+        // Ctrl/Cmd/Shift+click only adds paths, so a model under it doesn't drop the selection.
+        const model = !hit && !toggle && point ? modelAt(models, point) : null;
         if (hit) workspace.getState().selectPaths([hit], toggle ? "toggle" : "replace");
         else if (model) workspace.getState().selectModel(model.id);
         else if (!toggle) workspace.getState().selectPaths([]);

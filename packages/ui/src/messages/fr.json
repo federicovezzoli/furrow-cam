@@ -784,7 +784,7 @@
       "unreadableFile": "Ce fichier n’a pas pu être lu.",
       "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
-      "drawingsOrModel": "Un projet contient des dessins SVG et DXF ou un modèle 3D, pas les deux.",
+      "oneModel": "Un projet ne contient qu’un seul modèle 3D.",
       "noShapes": "Ce fichier ne contient aucune forme à importer.",
       "stlImportOff": "L’import de modèles 3D n’est pas disponible sur ce serveur.",
       "stepUnreadable": "Ce fichier STEP n’a pas pu être lu. Exportez-le à nouveau depuis votre logiciel de CAO et réessayez.",
@@ -1204,6 +1204,8 @@
     "history": "Historique",
     "drawing": "Dessin",
     "importDrawing": "Importer un dessin",
+    "model": "Modèle",
+    "importModel": "Importer un modèle",
     "text": "Texte",
     "relief_rough": "Ébauche",
     "relief_finish": "Finition"

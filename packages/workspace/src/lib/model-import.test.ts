@@ -3,7 +3,7 @@ import { createProjectDocument } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
-import { addImportedShapes, DRAWINGS_OR_MODEL } from "../stores/geometry-actions";
+import { addImportedShapes, ONE_MODEL } from "../stores/geometry-actions";
 import { addModel, removeModel } from "../stores/model-actions";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import { importModel } from "./model-import";
@@ -57,21 +57,23 @@ describe("importModel", () => {
     expect(meshes.discard).not.toHaveBeenCalled();
   });
 
-  it("discards the upload when a drawing was imported meanwhile", async () => {
+  it("adds the model beside a drawing imported meanwhile", async () => {
     uploadWhile(() => addImportedShapes(document, "importSvg", fullDocument().geometry));
     await importFile();
-    expect(meshes.discard).toHaveBeenCalledWith(model.sha256);
-    expect(document.getState().document.models).toEqual([]);
-    expect(workspace.getState().modelImport).toEqual({
-      fileName: "relief.stl",
-      error: DRAWINGS_OR_MODEL,
-    });
+    expect(meshes.discard).not.toHaveBeenCalled();
+    expect(document.getState().document.models).toMatchObject([{ sha256: model.sha256 }]);
+    expect(document.getState().document.drawings).toHaveLength(1);
+    expect(workspace.getState().modelImport).toBeNull();
   });
 
   it("discards the upload when another model was added meanwhile", async () => {
     uploadWhile(() => addModel(document, otherMesh));
     await importFile();
     expect(meshes.discard).toHaveBeenCalledWith(model.sha256);
+    expect(workspace.getState().modelImport).toEqual({
+      fileName: "relief.stl",
+      error: ONE_MODEL,
+    });
   });
 
   it("keeps a mesh the project already had", async () => {
@@ -87,7 +89,7 @@ describe("importModel", () => {
     );
     await importFile();
     expect(meshes.discard).not.toHaveBeenCalled();
-    expect(workspace.getState().modelImport?.error).toBe(DRAWINGS_OR_MODEL);
+    expect(workspace.getState().modelImport?.error).toBe(ONE_MODEL);
   });
 
   it("keeps a mesh the undo history refers to: the same file imported and removed meanwhile", async () => {
@@ -95,17 +97,17 @@ describe("importModel", () => {
     uploadWhile(() => {
       const id = addModel(document, { sha256, triangles, bounds, size, fileName: "copy.stl" });
       if (id) removeModel(document, id);
-      addImportedShapes(document, "importSvg", fullDocument().geometry);
+      addModel(document, otherMesh);
     });
     await importFile();
     expect(meshes.discard).not.toHaveBeenCalled();
-    expect(document.getState().document.models).toEqual([]);
+    expect(document.getState().document.models).toMatchObject([{ sha256: otherMesh.sha256 }]);
   });
 
-  it("uploads nothing into a project that has a file", async () => {
+  it("uploads nothing into a project that has a model", async () => {
     addModel(document, otherMesh);
     await importFile();
     expect(meshes.put).not.toHaveBeenCalled();
-    expect(workspace.getState().modelImport?.error).toBe(DRAWINGS_OR_MODEL);
+    expect(workspace.getState().modelImport?.error).toBe(ONE_MODEL);
   });
 });

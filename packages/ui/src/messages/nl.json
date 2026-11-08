@@ -784,7 +784,7 @@
       "unreadableFile": "Dit bestand kon niet worden gelezen.",
       "modelUnreadable": "Het model kon niet worden gelezen.",
       "importFailed": "Dit bestand kon niet worden geïmporteerd.",
-      "drawingsOrModel": "Een project bevat SVG- en DXF-tekeningen of één 3D-model, niet allebei.",
+      "oneModel": "Een project bevat maar één 3D-model.",
       "noShapes": "Dit bestand bevat geen vormen om te importeren.",
       "stlImportOff": "Het importeren van 3D-modellen is niet beschikbaar op deze server.",
       "stepUnreadable": "Dit STEP-bestand kon niet worden gelezen. Exporteer het opnieuw vanuit je CAD-programma en probeer het nog eens.",
@@ -1204,6 +1204,8 @@
     "history": "Geschiedenis",
     "drawing": "Tekening",
     "importDrawing": "Importeer een tekening",
+    "model": "Model",
+    "importModel": "Importeer een model",
     "text": "Tekst",
     "relief_rough": "Voorfrezen",
     "relief_finish": "Nafrezen"

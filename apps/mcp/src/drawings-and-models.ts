@@ -24,9 +24,9 @@ import {
 import { stepToStl } from "@furrow/workspace/lib/step";
 import {
   canImportModel,
-  DRAWINGS_OR_MODEL,
   drawingBounds,
   fitDrawingToStock,
+  ONE_MODEL,
   setDrawingSize,
 } from "@furrow/workspace/stores/geometry-actions";
 import {
@@ -136,7 +136,7 @@ function importDrawing(
 
 async function importModel(project: Project, fileName: string, bytes: Uint8Array) {
   if (!canImportModel(project.store.getState().document)) {
-    throw new ToolError(text(DRAWINGS_OR_MODEL));
+    throw new ToolError(text(ONE_MODEL));
   }
   // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const mesh: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
@@ -146,7 +146,7 @@ async function importModel(project: Project, fileName: string, bytes: Uint8Array
   change(project, (store) => {
     id = addModel(store, { sha256, triangles, bounds, fileName, size: bytes.byteLength });
   });
-  if (id === null) throw new ToolError(text(DRAWINGS_OR_MODEL));
+  if (id === null) throw new ToolError(text(ONE_MODEL));
   // The project file stores the mesh, as the desktop app's does (ADR-0029, ADR-0047).
   project.meshes.set(sha256, bytes);
   return { id, warnings: [] };

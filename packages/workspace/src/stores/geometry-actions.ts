@@ -45,25 +45,20 @@ import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
 import { type ActionResult, hasPlacedHoles } from "./operation-actions";
 
-/** Why a file can't be imported: a project holds SVG and DXF drawings or one STL model (ADR-0055). */
-export const DRAWINGS_OR_MODEL: Message = { code: "workspace.drawingsOrModel" };
+/** Why a model can't be imported: a project holds drawings and at most one model (ADR-0078). */
+export const ONE_MODEL: Message = { code: "workspace.oneModel" };
 
-/** Whether the project can take another drawing: it holds no model. */
-export function canImportDrawing({ models }: ProjectDocument): boolean {
+/** Whether the project can take a model: it holds none yet. */
+export function canImportModel({ models }: ProjectDocument): boolean {
   return models.length === 0;
-}
-
-/** Whether the project can take a model: it holds no drawing and no model. */
-export function canImportModel({ geometry, models }: ProjectDocument): boolean {
-  return geometry.length === 0 && models.length === 0;
 }
 
 /**
  * Adds an imported file's shapes as a new drawing (ADR-0055), as one undo
  * step, at its size in the file, placed as `placeDrawing` does. The shapes
  * all name the new drawing, as an import gives them, and it takes its name
- * from their file. Returns `false`, adding nothing, if the project holds a
- * model. `name` labels the change, e.g. `importSvg`.
+ * from their file. Returns `false`, adding nothing, if `shapes` has no
+ * geometry. `name` labels the change, e.g. `importSvg`.
  */
 export function addImportedShapes(store: DocumentStore, name: string, shapes: Shape[]): boolean {
   const [first] = shapes;
@@ -89,7 +84,7 @@ export const TEXT_NO_OUTLINES: Message = { code: "workspace.textNoOutlines" };
  * Adds a text item (ADR-0059) as one undo step: `text`'s settings with
  * `paths`, its outlines laid out at its placement, as its one shape, placed
  * as `placeDrawing` does and named after its text. Returns its id; adds
- * nothing if it has no outlines or the project holds a model.
+ * nothing if it has no outlines.
  */
 export function addTextItem(
   store: DocumentStore,
@@ -102,7 +97,7 @@ export function addTextItem(
   const drawing = { id, name: textName(text.text), border: DRAWING_BORDER, rotation: 0, text };
   return placeDrawing(store, "addText", drawing, [shape])
     ? { ok: true, id }
-    : { ok: false, error: DRAWINGS_OR_MODEL };
+    : { ok: false, error: TEXT_NO_OUTLINES };
 }
 
 /**
@@ -110,8 +105,8 @@ export function addTextItem(
  * XY zero's anchor (bottom-left for a custom zero) to the stock less the
  * drawing's border, the rectangle *Fit to stock* fits into (PRD-0009 D1): it
  * may overlap what the project already holds. A text item's placement moves
- * with its outlines. Returns `false`, adding nothing, if the project holds a
- * model.
+ * with its outlines. Returns `false`, adding nothing, if the shapes have no
+ * geometry.
  */
 function placeDrawing(
   store: DocumentStore,
@@ -121,7 +116,7 @@ function placeDrawing(
 ): boolean {
   const { document } = store.getState();
   const bounds = shapesBounds(shapes);
-  if (!bounds || !canImportDrawing(document)) return false;
+  if (!bounds) return false;
   const { stock } = document;
   const anchor = modelAnchor(stock);
   const [x, y] = anchorPoint(stockInset(stock, DRAWING_BORDER), anchor);

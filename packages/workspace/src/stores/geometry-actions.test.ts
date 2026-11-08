@@ -155,13 +155,15 @@ describe("addImportedShapes", () => {
     // 150,000 shapes take seconds on a slow CI runner.
   }, 30_000);
 
-  it("refuses a drawing in a project with an STL model, and a model once it has drawings", () => {
+  it("adds a drawing beside a model, and takes a model beside drawings but not a second one", () => {
     const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    expect(addImportedShapes(store, "importSvg", importSvg(SVG).shapes)).toBe(true);
     const { document } = store.getState();
-    expect(addImportedShapes(store, "importSvg", importSvg(SVG).shapes)).toBe(false);
-    expect(store.getState().document).toBe(document);
+    expect(document.drawings).toHaveLength(1);
+    expect(document.models).toEqual([model]);
+    expect(() => ProjectDocument.parse(document)).not.toThrow();
     expect(canImportModel(document)).toBe(false);
-    expect(canImportModel(fullDocument())).toBe(false);
+    expect(canImportModel(fullDocument())).toBe(true);
     expect(canImportModel(createProjectDocument())).toBe(true);
   });
 });
@@ -821,18 +823,16 @@ describe("addTextItem", () => {
     expect(store.getState().document.drawings).toEqual([]);
   });
 
-  it("adds nothing without outlines, or to a project with a model", () => {
+  it("adds nothing without outlines, and text beside a model", () => {
     const store = storeAt("bottom_left");
     expect(addTextItem(store, settings, [])).toEqual({
       ok: false,
       error: { code: "workspace.textNoOutlines" },
     });
-    store.setState({ document: { ...createProjectDocument(), models: [model] } });
-    expect(addTextItem(store, settings, [box(0, 0, 20)])).toEqual({
-      ok: false,
-      error: { code: "workspace.drawingsOrModel" },
-    });
     expect(store.getState().document.drawings).toEqual([]);
+    store.setState({ document: { ...createProjectDocument(), models: [model] } });
+    expect(addTextItem(store, settings, [box(0, 0, 20)])).toMatchObject({ ok: true });
+    expect(store.getState().document.drawings).toHaveLength(1);
   });
 });
 

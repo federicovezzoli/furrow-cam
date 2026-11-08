@@ -784,7 +784,7 @@
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
-      "drawingsOrModel": "Ein Projekt enthält SVG- und DXF-Zeichnungen oder ein 3D-Modell, nicht beides.",
+      "oneModel": "Ein Projekt enthält nur ein 3D-Modell.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
       "stlImportOff": "Der Import von 3D-Modellen ist auf diesem Server nicht verfügbar.",
       "stepUnreadable": "Diese STEP-Datei konnte nicht gelesen werden. Exportiere sie erneut aus deinem CAD-Programm und versuche es noch einmal.",
@@ -1204,6 +1204,8 @@
     "history": "Verlauf",
     "drawing": "Zeichnung",
     "importDrawing": "Eine Zeichnung importieren",
+    "model": "Modell",
+    "importModel": "Ein Modell importieren",
     "text": "Text",
     "relief_rough": "Schruppen",
     "relief_finish": "Schlichten"

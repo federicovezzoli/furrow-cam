@@ -64,13 +64,13 @@ describe("addModel", () => {
     expect(store.getState().document.models[0]?.placement.position).toEqual([10, 10]);
   });
 
-  it("refuses a second file: a project holds drawings or one model", () => {
+  it("refuses a second model, and adds one beside drawings (ADR-0078)", () => {
     const { store } = storeWithModel();
     const steps = store.getState().past.length;
     expect(addModel(store, mesh)).toBeNull();
     expect(store.getState().document.models).toHaveLength(1);
     expect(store.getState().past).toHaveLength(steps);
-    expect(addModel(createDocumentStore(fullDocument()), mesh)).toBeNull();
+    expect(addModel(createDocumentStore(fullDocument()), mesh)).not.toBeNull();
   });
 });
 

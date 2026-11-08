@@ -31,7 +31,7 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { canImportDrawing, DRAWINGS_OR_MODEL, drawingShapes } from "../stores/geometry-actions";
+import { drawingShapes } from "../stores/geometry-actions";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 import { RibbonButton } from "./ribbon";
 
@@ -47,14 +47,12 @@ const UNIT_OPTIONS = ["mm", "in"] as const;
 const DRAWING_INPUT_ID = "workspace-drawing-file";
 
 /**
- * The ribbon's button importing a drawing, disabled in a model project. It
- * opens `GeometryImport`'s file input, which handles the file.
+ * The ribbon's button importing a drawing. It opens `GeometryImport`'s file
+ * input, which handles the file.
  */
 export function ImportDrawingButton() {
-  const allowed = useDocumentStore((s) => canImportDrawing(s.document));
   const t = useTranslations("Import");
   const ribbon = useTranslations("Ribbon");
-  const format = useFormatMessage();
   return (
     <RibbonButton
       icon={<UploadIcon />}
@@ -62,7 +60,6 @@ export function ImportDrawingButton() {
       aria-label={ribbon("importDrawing")}
       data-demo="import-drawing"
       hint={t("importDrawing")}
-      disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
       // shortcut: finds the input by id, so only one workspace per page; share a ref if that changes.
       onClick={() => document.getElementById(DRAWING_INPUT_ID)?.click()}
     />
@@ -74,12 +71,10 @@ const DEFAULT_TEXT_HEIGHT = 20;
 
 /**
  * Adds a text item (PRD-0010 T1), placed like an imported drawing, and
- * selects it so its properties open. In the ribbon, disabled in a model
- * project like `ImportDrawingButton`, or in the empty project's card
- * (`inCard`).
+ * selects it so its properties open. In the ribbon, or in the empty
+ * project's card (`inCard`).
  */
 export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
-  const allowed = useDocumentStore((s) => canImportDrawing(s.document));
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const { alert } = useDialogs();
@@ -114,7 +109,6 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
         aria-label={t("addText")}
         data-demo="add-text"
         hint={t("addText")}
-        disabledReason={allowed ? undefined : format(DRAWINGS_OR_MODEL)}
         disabled={adding}
         onClick={add}
       />
@@ -130,8 +124,8 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
 /**
  * Imports SVG and DXF files and STL or STEP models, over the viewport: a card in its
  * centre while the project is empty; then the ribbon's `ImportDrawingButton`
- * adds a drawing per file while the project holds drawings; a project holds
- * drawings or one model (ADR-0055). Prompts, import warnings (until
+ * adds a drawing per file and its `ModelImportButton` the one model a project
+ * holds beside them (ADR-0078). Prompts, import warnings (until
  * dismissed) and how a model import is going show in the viewport's corner.
  */
 export function GeometryImport() {
@@ -139,7 +133,6 @@ export function GeometryImport() {
   const empty = useDocumentStore(
     (s) => s.document.geometry.length === 0 && s.document.models.length === 0,
   );
-  const drawings = useDocumentStore((s) => canImportDrawing(s.document));
   const meshLimits = useWorkspaceHost().limits.meshes;
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
@@ -204,18 +197,16 @@ export function GeometryImport() {
 
   return (
     <>
-      {drawings && (
-        <input
-          ref={input}
-          id={DRAWING_INPUT_ID}
-          type="file"
-          accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
-          onChange={onChange}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-        />
-      )}
+      <input
+        ref={input}
+        id={DRAWING_INPUT_ID}
+        type="file"
+        accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
+        onChange={onChange}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+      />
       {!bare && (
         <div
           className={cn(
@@ -234,18 +225,16 @@ export function GeometryImport() {
             {empty && <p className="text-muted-foreground">{t("start")}</p>}
             {empty && (
               <div className="flex flex-wrap gap-2">
-                {drawings && (
-                  <Button
-                    variant="outline"
-                    size="compact"
-                    data-demo="start-import-drawing"
-                    onClick={() => input.current?.click()}
-                  >
-                    <UploadIcon />
-                    {t("importDrawing")}
-                  </Button>
-                )}
-                {drawings && <AddTextButton inCard />}
+                <Button
+                  variant="outline"
+                  size="compact"
+                  data-demo="start-import-drawing"
+                  onClick={() => input.current?.click()}
+                >
+                  <UploadIcon />
+                  {t("importDrawing")}
+                </Button>
+                <AddTextButton inCard />
                 <ModelImportButton />
               </div>
             )}
