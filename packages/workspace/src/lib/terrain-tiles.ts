@@ -21,10 +21,11 @@ export async function loadTerrainTiles(
     let request = requests.get(id);
     if (!request) {
       request = fetchTile(key).then((heights) => {
+        // The parent is queued before reporting, so `done` reaches `total` only at the end.
+        const parent =
+          heights || key.z === 0 ? null : load({ z: key.z - 1, x: key.x >> 1, y: key.y >> 1 });
         onProgress?.(++done, requests.size);
-        if (heights) return { ...key, heights };
-        if (key.z === 0) return null;
-        return load({ z: key.z - 1, x: key.x >> 1, y: key.y >> 1 });
+        return heights ? { ...key, heights } : parent;
       });
       requests.set(id, request);
     }

@@ -3,14 +3,13 @@
 import {
   formatQuantity,
   type LonLat,
-  modelBorder,
   planTerrain,
   type StlLimits,
   type TerrainPlan,
   type TerrainSettings,
   unitLabel,
 } from "@furrow/cam-core";
-import { MessageError, MODEL_BORDER, type Stock } from "@furrow/document";
+import { MessageError } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import {
@@ -28,6 +27,7 @@ import { MountainIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { MeshImportError } from "../lib/model-import";
+import { fittingSide } from "../lib/model-size";
 import { generateTerrain, importTerrain } from "../lib/terrain-import";
 import { MAX_ELEVATION_ZOOM } from "../lib/terrain-services";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -116,16 +116,6 @@ export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
   );
 }
 
-/** The longest side that fits the stock less the model border, for an area of `span` metres. */
-export function fittingSide(
-  stock: Pick<Stock, "width" | "height">,
-  [width, depth]: [number, number],
-) {
-  const gap = 2 * modelBorder(stock, MODEL_BORDER);
-  const scale = Math.min((stock.width - gap) / width, (stock.height - gap) / depth);
-  return Math.max(width, depth) * scale;
-}
-
 /** What the area gives, before generating: the plan, or why it can't be made. */
 function usePlan(ring: LonLat[] | null, limits: StlLimits) {
   return useMemo((): { plan: TerrainPlan } | { error: Translatable } | null => {
@@ -138,6 +128,9 @@ function usePlan(ring: LonLat[] | null, limits: StlLimits) {
     }
   }, [ring, limits]);
 }
+
+/** `value` rounded to a tenth, for ICU to format in the user's language. */
+const tenths = (value: number) => Math.round(value * 10) / 10;
 
 /** The area's lowest and highest heights in metres, from a coarse terrain made in the background. */
 function useHeightRange(ring: LonLat[] | null, valid: boolean) {
@@ -173,7 +166,8 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
   const [side, setSide] = useState<number | null>(null);
   const [exaggeration, setExaggeration] = useState(EXAGGERATION.initial);
   const [base, setBase] = useState(BASE.initial);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  /** Tiles fetched so far, then `saving` while the model is stored in the project. */
+  const [progress, setProgress] = useState<{ done: number; total: number } | "saving" | null>(null);
   const abort = useRef<AbortController | null>(null);
   const [error, setError] = useState<Translatable | null>(null);
 
@@ -189,22 +183,23 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
   let summary: string[] = [];
   if (plan && longestSide) {
     const scale = longestSide / Math.max(...plan.span);
+    // From the coarse preview, which smooths the peaks a little: shown as an estimate.
     const height = range ? (range[1] - range[0]) * scale * exaggeration + base : null;
     const size = [plan.span[0] * scale, plan.span[1] * scale].map(length).join(" × ");
     summary = [
       t("area", {
-        width: (plan.span[0] / 1000).toFixed(1),
-        depth: (plan.span[1] / 1000).toFixed(1),
+        width: tenths(plan.span[0] / 1000),
+        depth: tenths(plan.span[1] / 1000),
       }),
       t("size", {
-        size: height === null ? `${size} × …` : `${size} × ${length(height)}`,
+        size: height === null ? `${size} × …` : `${size} × ≈${length(height)}`,
         unit: lengthUnit,
       }),
       range
         ? t("heights", { low: Math.round(range[0]), high: Math.round(range[1]) })
         : t("heightsLoading"),
       t("detail", {
-        metres: plan.cellMetres.toFixed(1),
+        metres: tenths(plan.cellMetres),
         mm: length(plan.cellMetres * scale),
         unit: lengthUnit,
       }),
@@ -223,6 +218,9 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
         signal: controller.signal,
         onProgress: (done, total) => setProgress({ done, total }),
       });
+      // Cancelled as the worker finished: nothing is added.
+      if (controller.signal.aborted) return;
+      setProgress("saving");
       const failed = await importTerrain(terrain, t("defaultName"), {
         meshes: host.meshes,
         document,
@@ -245,7 +243,7 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
 
   const generating = progress !== null;
   return (
-    <Dialog open onOpenChange={(next) => !next && onClose()}>
+    <Dialog open onOpenChange={(next) => !next && progress !== "saving" && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
@@ -276,7 +274,10 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
                   <TerrainMap
                     shape={shape}
                     onArea={(next) => {
+                      // A new area stops a generation of the last one, unless it is being stored.
+                      if (progress !== "saving") abort.current?.abort();
                       setRing(next);
+                      setSide(null);
                       setError(null);
                     }}
                     onError={() => setMapFailed(true)}
@@ -310,6 +311,8 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
                 quantity="length"
                 units={units}
                 min={1}
+                // The model is placed at this size: no larger than the stock less its border.
+                max={plan ? fittingSide(stock, plan.span) : undefined}
                 value={longestSide}
                 disabled={!plan || generating}
                 onValueChange={setSide}
@@ -354,16 +357,25 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
               )}
               {progress && (
                 <p aria-live="polite">
-                  {progress.total === 0 || progress.done < progress.total
-                    ? t("fetching", progress)
-                    : t("building")}
+                  {progress === "saving"
+                    ? t("saving")
+                    : progress.total === 0
+                      ? t("fetchingStart")
+                      : progress.done < progress.total
+                        ? t("fetching", progress)
+                        : t("building")}
                 </p>
               )}
             </div>
           </div>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={generating ? () => abort.current?.abort() : onClose}>
+          <Button
+            variant="outline"
+            // Once the model is being stored, it can't be taken back.
+            disabled={progress === "saving"}
+            onClick={generating ? () => abort.current?.abort() : onClose}
+          >
             {t("cancel")}
           </Button>
           {notice && (

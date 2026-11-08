@@ -23,6 +23,23 @@ describe("loadTerrainTiles", () => {
     expect(progress).toHaveBeenLastCalledWith(4, 4);
   });
 
+  it("reports done only at the end, even when the last tile falls back to its parent", async () => {
+    const progress = vi.fn();
+    await loadTerrainTiles(
+      [
+        { z: 14, x: 10, y: 4 },
+        { z: 14, x: 12, y: 4 },
+      ],
+      async ({ z, x }) => (z === 13 || x === 10 ? heights : null),
+      progress,
+    );
+    expect(progress.mock.calls).toEqual([
+      [1, 2],
+      [2, 3],
+      [3, 3],
+    ]);
+  });
+
   it("gives up past zoom 0 and passes a failed request on", async () => {
     await expect(loadTerrainTiles([{ z: 1, x: 1, y: 1 }], async () => null)).resolves.toEqual([]);
     const offline = new Error("offline");

@@ -4,12 +4,11 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentStore } from "../stores/document-store";
 import { canImportModel, ONE_MODEL } from "../stores/geometry-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
-import type { GeneratedTerrain, MeshResponse } from "./mesh-worker-protocol";
-import { MeshImportError, storeModel } from "./model-import";
+import type { GeneratedTerrain } from "./mesh-worker-protocol";
+import { MeshImportError, runMeshWorker, storeModel } from "./model-import";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
 
-const CANCELLED: Message = { code: "workspace.cancelled" };
 const UNAVAILABLE: Message = { code: "workspace.terrainUnavailable" };
 
 /**
@@ -18,44 +17,17 @@ const UNAVAILABLE: Message = { code: "workspace.terrainUnavailable" };
  * `onProgress` hears the tile requests done so far; aborting `signal` stops
  * the worker. Throws a `MeshImportError` saying why it couldn't.
  */
-export function generateTerrain(
+export async function generateTerrain(
   ring: LonLat[],
   settings: TerrainSettings,
   limits: StlLimits,
-  {
-    onProgress,
-    signal,
-  }: { onProgress?: (done: number, total: number) => void; signal?: AbortSignal } = {},
+  options: { onProgress?: (done: number, total: number) => void; signal?: AbortSignal } = {},
 ): Promise<GeneratedTerrain> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(new MeshImportError(CANCELLED));
-    const worker = new Worker(new URL("../workers/mesh.worker.ts", import.meta.url), {
-      type: "module",
-    });
-    const stop = (error: Message) => {
-      worker.terminate();
-      signal?.removeEventListener("abort", abort);
-      reject(new MeshImportError(error));
-    };
-    const abort = () => stop(CANCELLED);
-    signal?.addEventListener("abort", abort, { once: true });
-    worker.onmessage = ({ data }: MessageEvent<MeshResponse>) => {
-      if (data.kind === "terrainProgress") {
-        onProgress?.(data.done, data.total);
-        return;
-      }
-      if (data.kind !== "terrain") return stop(data.kind === "failed" ? data.error : UNAVAILABLE);
-      worker.terminate();
-      signal?.removeEventListener("abort", abort);
-      const { kind: _, id: __, ...terrain } = data;
-      resolve(terrain);
-    };
-    worker.onerror = (event) => {
-      event.preventDefault();
-      stop(UNAVAILABLE);
-    };
-    worker.postMessage({ kind: "terrain", id: 0, ring, settings, limits });
-  });
+  const request = { kind: "terrain", id: 0, ring, settings, limits } as const;
+  const data = await runMeshWorker(request, [], UNAVAILABLE, options);
+  if (data.kind !== "terrain") throw new MeshImportError(UNAVAILABLE);
+  const { kind: _, id: __, ...terrain } = data;
+  return terrain;
 }
 
 /**

@@ -51,6 +51,8 @@ export default function TerrainMap({
       center: [10, 30],
       zoom: 1.5,
       attributionControl: false,
+      // One world: on a repeated copy longitudes pass 180°, which terra-draw refuses.
+      renderWorldCopies: false,
       // Rotating would turn the drawn rectangle on the ground; the model's sides follow north.
       dragRotate: false,
       touchPitch: false,
@@ -60,15 +62,17 @@ export default function TerrainMap({
       new AttributionControl({ compact: false, customAttribution: ELEVATION_ATTRIBUTION }),
     );
     map.addControl(new NavigationControl({ showCompass: false }));
+    let ready = false;
     let failed = false;
     map.on("error", () => {
       // Only a map that never loaded is reported; a missing tile later isn't worth a message.
-      if (!map.loaded() && !failed) {
+      if (!ready && !failed) {
         failed = true;
         callbacks.current.onError();
       }
     });
     map.on("load", () => {
+      ready = true;
       const style = {
         fillColor: STROKE,
         outlineColor: STROKE,
