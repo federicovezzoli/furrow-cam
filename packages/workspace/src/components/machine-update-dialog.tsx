@@ -44,13 +44,6 @@ const LABELS = {
   toolChange: "blocks.toolChange",
 } as const satisfies Record<keyof Machine, string>;
 
-const GCODE_BLOCKS = new Set<keyof Machine>([
-  "programStart",
-  "programEnd",
-  "operationStart",
-  "toolChange",
-]);
-
 /** `machine[key]` as text, in `units` and `locale`; `null` (unset) as a dash. */
 function formatField(machine: Machine, key: keyof Machine, units: Units, locale: string): string {
   const value = machine[key];
@@ -87,16 +80,18 @@ export function MachineUpdateDialog({ machines }: { machines: MachineChoice[] })
   const locale = useLocale();
   const { project } = useWorkspaceHost();
   const store = useDocumentStoreApi();
-  // Read once, on open: later edits in the session don't bring the dialog up.
-  const [choice] = useState(() =>
-    asked.has(project.id) ? undefined : outdatedMachineChoice(machines, store.getState().document),
-  );
+  // Read once, on open: later edits don't bring the dialog up, nor change it while it fades out.
+  const [{ choice, document }] = useState(() => {
+    const document = store.getState().document;
+    const choice = asked.has(project.id) ? undefined : outdatedMachineChoice(machines, document);
+    return { choice, document };
+  });
   const [open, setOpen] = useState(choice !== undefined);
   useEffect(() => {
     if (choice) asked.add(project.id);
   }, [choice, project.id]);
 
-  const { machine, units } = store.getState().document;
+  const { machine, units } = document;
   if (!choice || !machine) return null;
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -109,7 +104,7 @@ export function MachineUpdateDialog({ machines }: { machines: MachineChoice[] })
           {changedMachineFields(machine, choice.machine).map((key) => (
             <li key={key}>
               <span className="font-medium">{labels(LABELS[key])}</span>
-              {GCODE_BLOCKS.has(key) ? (
+              {LABELS[key].startsWith("blocks.") ? (
                 <span className="text-muted-foreground"> {t("gcodeChanged")}</span>
               ) : (
                 <>
