@@ -171,9 +171,10 @@ export type WorkspaceHost = {
   /**
    * Told when the terrain dialog opens (`true`) and closes, so a host that
    * blocks the network (the desktop app) lets its services through only
-   * meanwhile (ADR-0076). Hosts that don't block anything leave it out.
+   * meanwhile (ADR-0076); the map waits until it resolves. Hosts that don't
+   * block anything leave it out.
    */
-  terrainServices?(open: boolean): void;
+  terrainServices?(open: boolean): Promise<void> | void;
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
     meshes: MeshLimits | null;

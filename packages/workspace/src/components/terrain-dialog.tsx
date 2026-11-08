@@ -25,9 +25,21 @@ import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { downloadFile } from "@furrow/ui/lib/download";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
-import { DownloadIcon, MountainIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CircleIcon,
+  DownloadIcon,
+  HandIcon,
+  LassoIcon,
+  MountainIcon,
+  RectangleHorizontalIcon,
+  SquareIcon,
+} from "lucide-react";
+import type * as React from "react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import type { GeneratedTerrain } from "../lib/mesh-worker-protocol";
 import { MeshImportError } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
 import { areaName, fileNameFor, type PlaceView } from "../lib/place-search";
@@ -45,31 +57,27 @@ import { TerrainSearch } from "./terrain-search";
 
 // MapLibre and terra-draw are about 1.5 MB: loaded only when the dialog opens (ADR-0076).
 const TerrainMap = lazy(() => import("./terrain-map"));
+const TerrainPreview = lazy(() => import("./terrain-preview"));
 
-export const AREA_SHAPES = ["rectangle", "circle", "ellipse", "freehand"] as const;
-export type AreaShape = (typeof AREA_SHAPES)[number];
+/** Moving the map, or drawing one of the area's shapes (PRD-0014 T3). */
+export const AREA_TOOLS = ["move", "rectangle", "square", "circle", "ellipse", "freehand"] as const;
+export type AreaTool = (typeof AREA_TOOLS)[number];
+
+const TOOL_ICONS: Record<AreaTool, React.ReactNode> = {
+  move: <HandIcon />,
+  rectangle: <RectangleHorizontalIcon />,
+  square: <SquareIcon />,
+  circle: <CircleIcon />,
+  ellipse: <CircleIcon className="scale-y-[0.7]" />,
+  freehand: <LassoIcon />,
+};
 
 const EXAGGERATION = { min: 1, max: 10, initial: 1.5 };
 const BASE = { min: 1, initial: 3 };
-/** Enough cells to read an area's height range in a few small tiles, before generating. */
+/** A coarse terrain, quick to make and to turn in 3D, for the preview (PRD-0014 T4). */
 const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 20_000 };
-
-/** The notice of the services the map contacts has been read on this device (PRD-0014 T9). */
-const NOTICE_KEY = "furrow:terrain-services";
-function noticeRead(): boolean {
-  try {
-    return localStorage.getItem(NOTICE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-function markNoticeRead() {
-  try {
-    localStorage.setItem(NOTICE_KEY, "1");
-  } catch {
-    // Without storage the notice shows again next time.
-  }
-}
+/** How long settings stay unchanged before the preview is made again. */
+const PREVIEW_DELAY = 300;
 
 /**
  * Opens *Terrain from a map* (PRD-0014), from the empty project's import card
@@ -128,22 +136,44 @@ function usePlan(ring: LonLat[] | null, limits: StlLimits) {
 /** `value` rounded to a tenth, for ICU to format in the user's language. */
 const tenths = (value: number) => Math.round(value * 10) / 10;
 
-/** The area's lowest and highest heights in metres, from a coarse terrain made in the background. */
-function useHeightRange(ring: LonLat[] | null, valid: boolean) {
-  const [range, setRange] = useState<[number, number] | null>(null);
+/**
+ * The coarse terrain of `ring` with `settings`, made again once they stop
+ * changing: the 3D preview, its size and its height range, with the
+ * settings it was made with (the last one stays shown while the next is
+ * made). `null` while the first is made, or with no area.
+ */
+function usePreview(ring: LonLat[] | null, settings: TerrainSettings | null) {
+  const [preview, setPreview] = useState<
+    | { terrain: GeneratedTerrain; settings: TerrainSettings }
+    | { error: Translatable; settings: TerrainSettings }
+    | null
+  >(null);
   useEffect(() => {
-    setRange(null);
-    if (!ring || !valid) return;
+    if (!ring || !settings) return setPreview(null);
     const abort = new AbortController();
-    const settings = { longestSide: 100, exaggeration: 1, base: 1 };
-    generateTerrain(ring, settings, PREVIEW_LIMITS, { signal: abort.signal }).then(
-      (terrain) => setRange(terrain.heights),
-      // Generating says why, if it fails too.
-      () => {},
-    );
-    return () => abort.abort();
-  }, [ring, valid]);
-  return range;
+    const timer = setTimeout(() => {
+      generateTerrain(ring, settings, PREVIEW_LIMITS, { signal: abort.signal }).then(
+        (terrain) => {
+          if (!abort.signal.aborted) setPreview({ terrain, settings });
+        },
+        (error) => {
+          if (abort.signal.aborted) return;
+          setPreview({
+            settings,
+            error:
+              error instanceof MeshImportError
+                ? error.detail
+                : { code: "workspace.terrainUnavailable" },
+          });
+        },
+      );
+    }, PREVIEW_DELAY);
+    return () => {
+      clearTimeout(timer);
+      abort.abort();
+    };
+  }, [ring, settings]);
+  return preview;
 }
 
 function TerrainDialog({ onClose }: { onClose: () => void }) {
@@ -159,9 +189,10 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   const limits = storable ?? DEFAULT_STL_LIMITS;
   const units = useDocumentStore((s) => s.document.units);
 
-  const [notice, setNotice] = useState(noticeRead);
+  /** First the area on the map, then the model made from it (PRD-0014 T3, T4). */
+  const [step, setStep] = useState<"area" | "model">("area");
   const [mapFailed, setMapFailed] = useState(false);
-  const [shape, setShape] = useState<AreaShape>("rectangle");
+  const [tool, setTool] = useState<AreaTool>("move");
   const [ring, setRing] = useState<LonLat[] | null>(null);
   /** The place last picked in the search, which names the model, and where the map went. */
   const [place, setPlace] = useState<{ name: string | null; view: PlaceView } | null>(null);
@@ -175,52 +206,61 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
 
   const planned = usePlan(ring, limits);
   const plan = planned && "plan" in planned ? planned.plan : null;
-  const range = useHeightRange(ring, plan !== null);
+  const longestSide = side ?? (plan ? fittingSide(stock, plan.span) : null);
+  const settings = useMemo(
+    () => (longestSide ? { longestSide, exaggeration, base } : null),
+    [longestSide, exaggeration, base],
+  );
+  const preview = usePreview(step === "model" ? ring : null, settings);
+  const shown = preview && "terrain" in preview ? preview.terrain : null;
+  // The preview on screen was made with other settings: a new one is on its way.
+  const stale = preview !== null && preview.settings !== settings;
   useEffect(() => () => abort.current?.abort(), []);
-  // The desktop app lets the services through only while the dialog is open (ADR-0076).
+  // The desktop app lets the services through only while the dialog is open (ADR-0076), and
+  // the map waits for that, or its first requests could be refused.
+  const [servicesOpen, setServicesOpen] = useState(!host.terrainServices);
   useEffect(() => {
-    host.terrainServices?.(true);
-    return () => host.terrainServices?.(false);
+    let open = true;
+    void Promise.resolve(host.terrainServices?.(true)).then(() => {
+      if (open) setServicesOpen(true);
+    });
+    return () => {
+      open = false;
+      void host.terrainServices?.(false);
+    };
   }, [host]);
 
-  const longestSide = side ?? (plan ? fittingSide(stock, plan.span) : null);
   const length = (mm: number) => formatQuantity(mm, "length", units);
   const lengthUnit = unitLabel("length", units);
+  const area =
+    plan && t("area", { width: tenths(plan.span[0] / 1000), depth: tenths(plan.span[1] / 1000) });
+  // What the preview on screen was made with, so its lines agree with each other.
+  const made = preview?.settings;
+  const summary =
+    plan && made && shown
+      ? [
+          area,
+          t("size", {
+            // The coarse preview smooths the peaks a little: its height is an estimate.
+            size: `${length(shown.size[0])} × ${length(shown.size[1])} × ≈${length(shown.size[2])}`,
+            unit: lengthUnit,
+          }),
+          t("heights", { low: Math.round(shown.heights[0]), high: Math.round(shown.heights[1]) }),
+          t("detail", {
+            metres: tenths(plan.cellMetres),
+            mm: length((plan.cellMetres * made.longestSide) / Math.max(...plan.span)),
+            unit: lengthUnit,
+          }),
+        ]
+      : [];
 
-  let summary: string[] = [];
-  if (plan && longestSide) {
-    const scale = longestSide / Math.max(...plan.span);
-    // From the coarse preview, which smooths the peaks a little: shown as an estimate.
-    const height = range ? (range[1] - range[0]) * scale * exaggeration + base : null;
-    const size = [plan.span[0] * scale, plan.span[1] * scale].map(length).join(" × ");
-    summary = [
-      t("area", {
-        width: tenths(plan.span[0] / 1000),
-        depth: tenths(plan.span[1] / 1000),
-      }),
-      t("size", {
-        size: height === null ? `${size} × …` : `${size} × ≈${length(height)}`,
-        unit: lengthUnit,
-      }),
-      range
-        ? t("heights", { low: Math.round(range[0]), high: Math.round(range[1]) })
-        : t("heightsLoading"),
-      t("detail", {
-        metres: tenths(plan.cellMetres),
-        mm: length(plan.cellMetres * scale),
-        unit: lengthUnit,
-      }),
-    ];
-  }
-
-  /** Makes the terrain and adds it to the project, or with `download` saves it as an STL file (T8). */
+  /** Makes the terrain at full detail and adds it to the project, or with `download` saves it as an STL file (T8). */
   async function generate(download = false) {
-    if (!ring || !longestSide) return;
+    if (!ring || !settings) return;
     const controller = new AbortController();
     abort.current = controller;
     setError(null);
     setProgress({ done: 0, total: 0 });
-    const settings: TerrainSettings = { longestSide, exaggeration, base };
     try {
       const terrain = await generateTerrain(ring, settings, limits, {
         signal: controller.signal,
@@ -262,65 +302,106 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogDescription>
+            {step === "area" ? t("description") : t("modelDescription")}
+          </DialogDescription>
         </DialogHeader>
-        {!notice ? (
-          <div className="grid gap-3">
-            <p>{t("notice")}</p>
-            <Button
-              className="justify-self-start"
-              onClick={() => {
-                markNoticeRead();
-                setNotice(true);
-              }}
-            >
-              {t("showMap")}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-[1fr_16rem]">
+        <div className="grid gap-4 md:grid-cols-[1fr_16rem]">
+          <div className="grid gap-1.5">
             <div className="relative h-[60dvh] min-h-72 overflow-hidden rounded-md border">
-              {mapFailed ? (
-                <p className="p-4 text-muted-foreground" role="alert">
-                  {t("mapUnavailable")}
-                </p>
-              ) : (
-                <Suspense fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}>
-                  <TerrainMap
-                    shape={shape}
-                    view={place?.view ?? null}
-                    onArea={(next) => {
-                      // A new area stops a generation of the last one, unless it is being stored.
-                      if (progress !== "saving") abort.current?.abort();
-                      setRing(next);
-                      setSide(null);
-                      setError(null);
-                    }}
-                    onError={() => setMapFailed(true)}
-                  />
-                </Suspense>
+              {/* The map stays while the model is shown, so going back finds it as it was. */}
+              <div className={cn("size-full", step !== "area" && "hidden")}>
+                {mapFailed ? (
+                  <p className="p-4 text-muted-foreground" role="alert">
+                    {t("mapUnavailable")}
+                  </p>
+                ) : (
+                  servicesOpen && (
+                    <Suspense
+                      fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}
+                    >
+                      <TerrainMap
+                        tool={tool}
+                        view={place?.view ?? null}
+                        onArea={(next) => {
+                          setRing(next);
+                          setSide(null);
+                          setError(null);
+                          // Drawn: the map can be moved again.
+                          setTool("move");
+                        }}
+                        onError={() => setMapFailed(true)}
+                      />
+                    </Suspense>
+                  )
+                )}
+              </div>
+              {step === "model" && (
+                <div className="size-full" data-demo="terrain-preview">
+                  {shown && (
+                    <Suspense fallback={null}>
+                      <TerrainPreview
+                        stl={shown.stl}
+                        size={shown.size}
+                        // From the mesh on screen, so the camera fits the model it shows.
+                        fitKey={`${ring?.join()}|${Math.round(Math.max(shown.size[0], shown.size[1]))}`}
+                      />
+                    </Suspense>
+                  )}
+                  {!preview && (
+                    <p className="absolute inset-0 grid place-items-center text-muted-foreground">
+                      {t("previewLoading")}
+                    </p>
+                  )}
+                  {preview && "error" in preview && (
+                    <p
+                      className="absolute inset-0 grid place-items-center p-4 text-destructive"
+                      role="alert"
+                    >
+                      {format(preview.error)}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
+            {/* The services the dialog contacts, named where the user sees them (T9). */}
+            <p className="text-muted-foreground text-xs">{t("notice")}</p>
+          </div>
+          {step === "area" ? (
             <div className="grid content-start gap-3 text-ui">
               <TerrainSearch onPick={setPlace} />
-              <fieldset className="grid gap-1.5">
-                <legend className="mb-1.5 font-medium">{t("shape")}</legend>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {AREA_SHAPES.map((option) => (
+              <div className="grid gap-1.5">
+                <fieldset className="grid grid-cols-3 gap-1.5">
+                  <legend className="mb-1.5 font-medium">{t("shape")}</legend>
+                  {AREA_TOOLS.map((option) => (
                     <Button
                       key={option}
-                      variant="outline"
+                      aria-pressed={tool === option}
+                      variant={tool === option ? "default" : "outline"}
                       size="compact"
-                      aria-pressed={shape === option}
-                      className={cn(shape === option && "border-primary bg-accent")}
-                      onClick={() => setShape(option)}
+                      title={t(`tools.${option}`)}
+                      aria-label={t(`tools.${option}`)}
+                      data-demo={`terrain-tool-${option}`}
+                      className="flex-col gap-0.5 py-1.5 text-[0.625rem] h-auto"
+                      onClick={() => setTool(option)}
                     >
-                      {t(`shapes.${option}`)}
+                      {TOOL_ICONS[option]}
+                      {t(`tools.${option}`)}
                     </Button>
                   ))}
-                </div>
+                </fieldset>
                 <p className="text-muted-foreground">{t("drawHint")}</p>
-              </fieldset>
+              </div>
+              <div className="grid gap-0.5 text-muted-foreground" aria-live="polite">
+                {!ring && <p>{t("noArea")}</p>}
+                {planned && "error" in planned && (
+                  <p className="text-destructive">{format(planned.error)}</p>
+                )}
+                {area && <p>{area}</p>}
+              </div>
+            </div>
+          ) : (
+            <div className="grid content-start gap-3 text-ui">
               <NumberField
                 id="terrain-side"
                 label={t("longestSide")}
@@ -332,7 +413,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 // border; one that can only be downloaded has nothing to do with the stock.
                 max={plan && storable && !hasModel ? fittingSide(stock, plan.span) : undefined}
                 value={longestSide}
-                disabled={!plan || generating}
+                disabled={generating}
                 onValueChange={setSide}
               />
               <NumberField
@@ -360,13 +441,12 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 onValueChange={setBase}
               />
               <div className="grid gap-0.5 text-muted-foreground" aria-live="polite">
-                {!ring && <p>{t("noArea")}</p>}
-                {planned && "error" in planned && (
-                  <p className="text-destructive">{format(planned.error)}</p>
+                {summary.length > 0 ? (
+                  summary.map((line) => <p key={line}>{line}</p>)
+                ) : (
+                  <p>{area}</p>
                 )}
-                {summary.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
+                {stale && <p>{t("previewLoading")}</p>}
               </div>
               {(!storable || hasModel) && (
                 <p className="text-muted-foreground">{storable ? t("hasModel") : t("storeOff")}</p>
@@ -388,9 +468,20 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 </p>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <DialogFooter>
+          {step === "model" && (
+            <Button
+              variant="outline"
+              className="sm:mr-auto"
+              disabled={generating}
+              onClick={() => setStep("area")}
+            >
+              <ArrowLeftIcon />
+              {t("back")}
+            </Button>
+          )}
           <Button
             variant="outline"
             // Once the model is being stored, it can't be taken back.
@@ -399,18 +490,23 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
           >
             {t("cancel")}
           </Button>
-          {notice && (
+          {step === "area" ? (
+            <Button disabled={!plan || mapFailed} onClick={() => setStep("model")}>
+              {t("next")}
+              <ArrowRightIcon />
+            </Button>
+          ) : (
             <>
               <Button
                 variant="outline"
-                disabled={!plan || generating || mapFailed}
+                disabled={!plan || generating}
                 onClick={() => void generate(true)}
               >
                 <DownloadIcon />
                 {t("download")}
               </Button>
               <Button
-                disabled={!plan || generating || mapFailed || !storable || hasModel}
+                disabled={!plan || generating || !storable || hasModel}
                 onClick={() => void generate()}
               >
                 {t("generate")}

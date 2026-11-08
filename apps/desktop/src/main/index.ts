@@ -1108,7 +1108,8 @@ function registerIpc() {
     if (event) track(event);
   });
   ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
-  ipcMain.on(CHANNELS.setTerrainServices, (_event, open: unknown) => {
+  // Answered once set, so the dialog's map waits for its first requests to be let through.
+  ipcMain.handle(CHANNELS.setTerrainServices, (_event, open: unknown) => {
     terrainOpen = open === true;
   });
 
