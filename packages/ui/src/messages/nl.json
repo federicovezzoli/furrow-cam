@@ -1508,6 +1508,9 @@
     "building": "Model maken…",
     "saving": "Model aan het project toevoegen…",
     "generate": "Maken",
+    "download": "STL downloaden",
+    "hasModel": "Dit project heeft al zijn 3D-model: het terrein kan alleen als STL-bestand worden gedownload.",
+    "storeOff": "Deze server kan geen 3D-modellen opslaan: het terrein kan alleen als STL-bestand worden gedownload.",
     "cancel": "Annuleren",
     "defaultName": "Terrein"
   },

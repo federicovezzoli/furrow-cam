@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  DEFAULT_STL_LIMITS,
   formatQuantity,
   type LonLat,
   planTerrain,
@@ -21,9 +22,10 @@ import {
   DialogTitle,
 } from "@furrow/ui/components/ui/dialog";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import { downloadFile } from "@furrow/ui/lib/download";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
-import { MountainIcon } from "lucide-react";
+import { DownloadIcon, MountainIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { MeshImportError } from "../lib/model-import";
@@ -37,8 +39,7 @@ import {
   useDocumentStoreApi,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { canImportModel, ONE_MODEL } from "../stores/geometry-actions";
-import { STL_IMPORT_OFF } from "./model-import-button";
+import { canImportModel } from "../stores/geometry-actions";
 import { RibbonButton } from "./ribbon";
 import { TerrainSearch } from "./terrain-search";
 
@@ -72,16 +73,14 @@ function markNoticeRead() {
 
 /**
  * Opens *Terrain from a map* (PRD-0014), from the empty project's import card
- * or the ribbon (`inRibbon`), when the project has no model yet and the
- * server can store meshes.
+ * or the ribbon (`inRibbon`). Where the terrain can't become the project's
+ * model (a server that can't store meshes, a project that has its model),
+ * it can still be downloaded (T8).
  */
 export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
   const t = useTranslations("Terrain");
-  const format = useFormatMessage();
-  const limits = useWorkspaceHost().limits.meshes;
-  const allowed = useDocumentStore((s) => canImportModel(s.document));
   const [open, setOpen] = useState(false);
-  const dialog = limits && open && <TerrainDialog limits={limits} onClose={() => setOpen(false)} />;
+  const dialog = open && <TerrainDialog onClose={() => setOpen(false)} />;
   if (inRibbon)
     return (
       <>
@@ -91,9 +90,6 @@ export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
           aria-label={t("title")}
           data-demo="ribbon-terrain"
           hint={t("hint")}
-          disabledReason={
-            !limits ? format(STL_IMPORT_OFF) : allowed ? undefined : format(ONE_MODEL)
-          }
           onClick={() => setOpen(true)}
         />
         {dialog}
@@ -104,8 +100,6 @@ export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
       <Button
         variant="outline"
         size="compact"
-        disabled={!limits}
-        title={limits ? undefined : format(STL_IMPORT_OFF)}
         data-demo="import-terrain"
         onClick={() => setOpen(true)}
         className="justify-self-start"
@@ -152,13 +146,17 @@ function useHeightRange(ring: LonLat[] | null, valid: boolean) {
   return range;
 }
 
-function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => void }) {
+function TerrainDialog({ onClose }: { onClose: () => void }) {
   const t = useTranslations("Terrain");
   const format = useFormatMessage();
   const host = useWorkspaceHost();
   const document = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const stock = useDocumentStore((s) => s.document.stock);
+  const storable = host.limits.meshes;
+  const hasModel = useDocumentStore((s) => !canImportModel(s.document));
+  // A download stores nothing, so without the server's limits it takes the default ones.
+  const limits = storable ?? DEFAULT_STL_LIMITS;
   const units = useDocumentStore((s) => s.document.units);
 
   const [notice, setNotice] = useState(noticeRead);
@@ -210,7 +208,8 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
     ];
   }
 
-  async function generate() {
+  /** Makes the terrain and adds it to the project, or with `download` saves it as an STL file (T8). */
+  async function generate(download = false) {
     if (!ring || !longestSide) return;
     const controller = new AbortController();
     abort.current = controller;
@@ -224,9 +223,14 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
       });
       // Cancelled as the worker finished: nothing is added.
       if (controller.signal.aborted) return;
-      setProgress("saving");
       // Named after the place picked only if the area was drawn there.
       const name = fileNameFor(areaName(place, ring) ?? "") || t("defaultName");
+      if (download) {
+        // A view on the worker's buffer, not a copy.
+        downloadFile(new Uint8Array(terrain.stl), `${name}.stl`, "model/stl");
+        return;
+      }
+      setProgress("saving");
       const failed = await importTerrain(terrain, name, {
         meshes: host.meshes,
         document,
@@ -319,8 +323,9 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
                 quantity="length"
                 units={units}
                 min={1}
-                // The model is placed at this size: no larger than the stock less its border.
-                max={plan ? fittingSide(stock, plan.span) : undefined}
+                // A model added is placed at this size, so no larger than the stock less its
+                // border; one that can only be downloaded has nothing to do with the stock.
+                max={plan && storable && !hasModel ? fittingSide(stock, plan.span) : undefined}
                 value={longestSide}
                 disabled={!plan || generating}
                 onValueChange={setSide}
@@ -358,6 +363,9 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
                   <p key={line}>{line}</p>
                 ))}
               </div>
+              {(!storable || hasModel) && (
+                <p className="text-muted-foreground">{storable ? t("hasModel") : t("storeOff")}</p>
+              )}
               {error && (
                 <p className="text-destructive" role="alert">
                   {format(error)}
@@ -387,9 +395,22 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
             {t("cancel")}
           </Button>
           {notice && (
-            <Button disabled={!plan || generating || mapFailed} onClick={() => void generate()}>
-              {t("generate")}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                disabled={!plan || generating || mapFailed}
+                onClick={() => void generate(true)}
+              >
+                <DownloadIcon />
+                {t("download")}
+              </Button>
+              <Button
+                disabled={!plan || generating || mapFailed || !storable || hasModel}
+                onClick={() => void generate()}
+              >
+                {t("generate")}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

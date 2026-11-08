@@ -1508,6 +1508,9 @@
     "building": "Creando el modelo…",
     "saving": "Añadiendo el modelo al proyecto…",
     "generate": "Generar",
+    "download": "Descargar STL",
+    "hasModel": "Este proyecto ya tiene su modelo 3D: el terreno solo se puede descargar como archivo STL.",
+    "storeOff": "Este servidor no puede guardar modelos 3D: el terreno solo se puede descargar como archivo STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
   },
