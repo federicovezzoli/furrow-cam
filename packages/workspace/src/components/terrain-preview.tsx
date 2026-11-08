@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useTranslations } from "use-intl";
 import { type CameraPoses, OrbitCamera } from "./viewport/cameras";
 import { PALETTES } from "./viewport/scene-style";
@@ -27,7 +28,12 @@ export default function TerrainPreview({
   const t = useTranslations("Terrain");
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
-  const geometry = useMemo(() => new STLLoader().parse(stl), [stl]);
+  // Shared vertices with averaged normals: the slopes read smooth instead of as facets.
+  const geometry = useMemo(() => {
+    const merged = mergeVertices(new STLLoader().parse(stl).deleteAttribute("normal"));
+    merged.computeVertexNormals();
+    return merged;
+  }, [stl]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const [poses] = useState<CameraPoses>(() => new Map());
   const box = { min: [0, 0, 0] as [number, number, number], max: size };
@@ -37,7 +43,7 @@ export default function TerrainPreview({
       <ambientLight intensity={0.6} />
       <directionalLight position={[-1, -1, 2]} intensity={1.6} />
       <mesh geometry={geometry}>
-        <meshStandardMaterial color={palette.model} flatShading />
+        <meshStandardMaterial color={palette.model} />
       </mesh>
     </Canvas>
   );
