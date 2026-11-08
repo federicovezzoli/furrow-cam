@@ -62,46 +62,44 @@ export function tilesCovering(min: LonLat, max: LonLat, zoom: number): TileKey[]
 
 /**
  * The height in metres at a place, interpolated between the pixels of the
- * deepest tile in `tiles` that covers it: a tile missing at one zoom (no
- * regional data) falls back to its parent. `NaN` where no tile covers it.
+ * deepest tile in `tiles` that covers it, reading across into the tiles next
+ * to it at their edges: a tile missing at one zoom (no regional data) falls
+ * back to its parent. `NaN` where no tile covers it.
  */
 export function elevationSampler(tiles: readonly TerrainTile[]): (place: LonLat) => number {
   const byKey = new Map(tiles.map((tile) => [`${tile.z}/${tile.x}/${tile.y}`, tile]));
-  const deepest = Math.max(-1, ...tiles.map((tile) => tile.z));
+  let deepest = -1;
+  for (const tile of tiles) deepest = Math.max(deepest, tile.z);
   return (place) => {
     const [mx, my] = mercator(place);
     for (let z = deepest; z >= 0; z--) {
       const count = 2 ** z;
-      const x = Math.floor(mx * count);
-      const y = Math.floor(my * count);
-      const tile = byKey.get(`${z}/${x}/${y}`);
+      const tx = Math.floor(mx * count);
+      const ty = Math.floor(my * count);
+      const tile = byKey.get(`${z}/${tx}/${ty}`);
       if (!tile) continue;
       const size = Math.sqrt(tile.heights.length);
-      // Pixel centres sit half a pixel in.
-      return bilinear(
-        tile.heights,
-        size,
-        (mx * count - x) * size - 0.5,
-        (my * count - y) * size - 0.5,
-      );
+      // In pixels across the whole zoom level; pixel centres sit half a pixel in.
+      const u = mx * count * size - 0.5;
+      const v = my * count * size - 0.5;
+      const pixel = (i: number, j: number) => {
+        const neighbour = byKey.get(`${z}/${Math.floor(i / size)}/${Math.floor(j / size)}`);
+        const from = neighbour?.heights.length === tile.heights.length ? neighbour : tile;
+        // Past a missing neighbour, the tile's own edge pixel.
+        const x =
+          from === tile ? Math.min(size - 1, Math.max(0, i - tx * size)) : i - from.x * size;
+        const y =
+          from === tile ? Math.min(size - 1, Math.max(0, j - ty * size)) : j - from.y * size;
+        return from.heights[y * size + x] as number;
+      };
+      const i0 = Math.floor(u);
+      const j0 = Math.floor(v);
+      const fu = u - i0;
+      const fv = v - j0;
+      const top = pixel(i0, j0) * (1 - fu) + pixel(i0 + 1, j0) * fu;
+      const bottom = pixel(i0, j0 + 1) * (1 - fu) + pixel(i0 + 1, j0 + 1) * fu;
+      return top * (1 - fv) + bottom * fv;
     }
     return Number.NaN;
   };
-}
-
-/** `heights` (a `size` × `size` grid) at the fractional pixel `(u, v)`, clamped to its edges. */
-function bilinear(heights: Float32Array, size: number, u: number, v: number): number {
-  const clamp = (value: number) => Math.min(size - 1, Math.max(0, value));
-  const cu = clamp(u);
-  const cv = clamp(v);
-  const u0 = Math.floor(cu);
-  const v0 = Math.floor(cv);
-  const u1 = Math.min(size - 1, u0 + 1);
-  const v1 = Math.min(size - 1, v0 + 1);
-  const fu = cu - u0;
-  const fv = cv - v0;
-  const at = (i: number, j: number) => heights[j * size + i] as number;
-  const top = at(u0, v0) * (1 - fu) + at(u1, v0) * fu;
-  const bottom = at(u0, v1) * (1 - fu) + at(u1, v1) * fu;
-  return top * (1 - fv) + bottom * fv;
 }

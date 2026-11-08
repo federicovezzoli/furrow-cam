@@ -1,4 +1,5 @@
 import type { Point } from "@furrow/document";
+import { containmentIn, signedArea } from "../../geometry/clipper";
 import { triangulate } from "../../geometry/triangulate";
 import { binaryStlTriangles, type StlLimits, writeBinaryStl } from "../stl/import";
 import {
@@ -35,9 +36,11 @@ export type TerrainPlan = {
   cellMetres: number;
   /** The tiles to fetch, all at one zoom; a missing one may be replaced by its parent. */
   tiles: TileKey[];
+  /** The most triangles the mesh may have, from the STL limits. */
+  maxTriangles: number;
 };
 
-/** A terrain model: a closed binary STL in mm, its first corner at (0, 0, 0). */
+/** A terrain model: a closed binary STL in mm, its lowest corner at (0, 0, 0). */
 export type Terrain = {
   stl: Uint8Array<ArrayBuffer>;
   triangles: number;
@@ -61,19 +64,35 @@ const DEGREE = Math.PI / 180;
  */
 function localArea(ring: readonly LonLat[]) {
   if (ring.length < 3) throw new Error("A terrain area needs at least three points.");
-  const lons = ring.map(([lon]) => lon);
-  const lats = ring.map(([, lat]) => lat);
-  const lon0 = (Math.min(...lons) + Math.max(...lons)) / 2;
-  const lat0 = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const [lonMin, latMin, lonMax, latMax] = bounds(ring);
+  // shortcut: areas across the 180° meridian are refused (PRD-0014 non-goals); unwrap longitudes about the first point to allow them.
+  if (lonMax - lonMin > 180) throw new Error("Areas across the 180° meridian aren't supported.");
+  const lon0 = (lonMin + lonMax) / 2;
+  const lat0 = (latMin + latMax) / 2;
   const kx = EARTH_RADIUS * DEGREE * Math.cos(lat0 * DEGREE);
   const ky = EARTH_RADIUS * DEGREE;
   const local = ring.map(([lon, lat]): Point => [(lon - lon0) * kx, (lat - lat0) * ky]);
-  const xs = local.map(([x]) => x);
-  const ys = local.map(([, y]) => y);
-  const min: Point = [Math.min(...xs), Math.min(...ys)];
-  const max: Point = [Math.max(...xs), Math.max(...ys)];
-  const toLonLat = ([x, y]: Point): LonLat => [lon0 + x / kx, lat0 + y / ky];
+  const [xMin, yMin, xMax, yMax] = bounds(local);
+  const min: Point = [xMin, yMin];
+  const max: Point = [xMax, yMax];
+  // Grid corners past the area's edge are read at its edge, so the tiles covering it are enough.
+  const toLonLat = ([x, y]: Point): LonLat => [
+    lon0 + Math.min(xMax, Math.max(xMin, x)) / kx,
+    lat0 + Math.min(yMax, Math.max(yMin, y)) / ky,
+  ];
   return { local, min, max, lat0, toLonLat };
+}
+
+/** The smallest and largest of each coordinate, without spreading them into arguments. */
+function bounds(points: readonly (readonly [number, number])[]): [number, number, number, number] {
+  let [xMin, yMin, xMax, yMax] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const [x, y] of points) {
+    xMin = Math.min(xMin, x);
+    yMin = Math.min(yMin, y);
+    xMax = Math.max(xMax, x);
+    yMax = Math.max(yMax, y);
+  }
+  return [xMin, yMin, xMax, yMax];
 }
 
 type Area = ReturnType<typeof localArea>;
@@ -92,14 +111,12 @@ function plannedCells(area: Area, budget: number): number {
   const width = area.max[0] - area.min[0];
   const depth = area.max[1] - area.min[1];
   const longest = Math.max(width, depth);
-  let shoelace = 0;
   let manhattan = 0;
   area.local.forEach(([x, y], i) => {
     const [nx, ny] = area.local[(i + 1) % area.local.length] as Point;
-    shoelace += x * ny - nx * y;
     manhattan += Math.abs(nx - x) + Math.abs(ny - y);
   });
-  const fill = Math.abs(shoelace) / 2 / (width * depth);
+  const fill = Math.abs(signedArea(area.local)) / (width * depth);
   const estimate = (n: number) => {
     const cell = longest / n;
     return 2 * fill * Math.ceil(width / cell) * Math.ceil(depth / cell) + (4 * manhattan) / cell;
@@ -141,45 +158,79 @@ export function planTerrain(
   if (!(span[0] > 0 && span[1] > 0)) throw new Error("A terrain area needs a width and a depth.");
   if (Math.max(...span) > MAX_TERRAIN_SPAN)
     throw new Error(`A terrain area is at most ${MAX_TERRAIN_SPAN / 1000} km across.`);
-  const cells = plannedCells(area, triangleBudget(limits));
-  const { cell, nx, ny } = gridFor(area, cells);
+  const maxTriangles = triangleBudget(limits);
+  const cells = plannedCells(area, maxTriangles);
+  const { cell } = gridFor(area, cells);
   const zoom = terrainZoom(area.lat0, cell, maxZoom);
-  // The grid reaches past the area by up to a cell: its corners are what gets sampled.
-  const south = area.toLonLat(area.min);
-  const north = area.toLonLat([area.min[0] + nx * cell, area.min[1] + ny * cell]);
-  return { span, cells, cellMetres: cell, tiles: tilesCovering(south, north, zoom) };
+  const tiles = tilesCovering(area.toLonLat(area.min), area.toLonLat(area.max), zoom);
+  return { span, cells, cellMetres: cell, tiles, maxTriangles };
 }
 
 /**
- * The terrain of the area `ring` as a closed mesh (ADR-0077), from the
- * heights in `tiles`, sized by `settings` and within `limits`. Throws where
- * no tile covers a point of the area, or if the area holds no cell.
+ * The terrain of the area `ring` as a closed mesh (ADR-0077), on the grid
+ * `plan` chose for it, from the heights in `tiles` (those of the plan), and
+ * sized by `settings`. Throws where no tile covers a point of the area, or if
+ * the area holds no cell.
  */
 export function terrainMesh(
   ring: readonly LonLat[],
+  plan: TerrainPlan,
   settings: TerrainSettings,
-  limits: StlLimits,
   tiles: readonly TerrainTile[],
 ): Terrain {
   const area = localArea(ring);
-  const budget = triangleBudget(limits);
   const heightAt = elevationSampler(tiles);
-  let n = plannedCells(area, budget);
+  let n = plan.cells;
   // The plan estimates the outline's cost; a ragged one can cost more, so the grid shrinks until it fits.
   for (let attempt = 0; attempt < 8; attempt++) {
     const built = buildTerrain(area, gridFor(area, n), settings, heightAt);
-    if (built.triangles <= budget) return built;
-    n = Math.max(1, Math.floor(n * Math.sqrt(budget / built.triangles)) - 1);
+    const triangles = built.indices.length / 3;
+    if (triangles <= plan.maxTriangles) return finish(built);
+    n = Math.max(1, Math.floor(n * Math.sqrt(plan.maxTriangles / triangles)) - 1);
   }
   throw new Error("The terrain doesn't fit the model limits.");
 }
 
+/**
+ * Moves the mesh so its lowest corner is at the origin, its outline with it,
+ * and writes it out.
+ */
+function finish({
+  positions,
+  indices,
+  outline,
+  heights,
+  cellMetres,
+}: ReturnType<typeof buildTerrain>): Terrain {
+  let [xMin, yMin, xMax, yMax, zMax] = [Infinity, Infinity, -Infinity, -Infinity, 0];
+  for (let k = 0; k < positions.length; k += 3) {
+    xMin = Math.min(xMin, positions[k] as number);
+    yMin = Math.min(yMin, positions[k + 1] as number);
+    xMax = Math.max(xMax, positions[k] as number);
+    yMax = Math.max(yMax, positions[k + 1] as number);
+    zMax = Math.max(zMax, positions[k + 2] as number);
+  }
+  for (let k = 0; k < positions.length; k += 3) {
+    positions[k] = (positions[k] as number) - xMin;
+    positions[k + 1] = (positions[k + 1] as number) - yMin;
+  }
+  return {
+    stl: writeBinaryStl([{ positions, indices }]),
+    triangles: indices.length / 3,
+    size: [xMax - xMin, yMax - yMin, zMax],
+    heights,
+    cellMetres,
+    outline: outline.map(([x, y]): Point => [x - xMin, y - yMin]),
+  };
+}
+
+/** The mesh's vertices and triangles on one grid, in mm from the grid's corner. */
 function buildTerrain(
   area: Area,
   { cell, nx, ny }: ReturnType<typeof gridFor>,
   settings: TerrainSettings,
   heightAt: (place: LonLat) => number,
-): Terrain {
+) {
   const inside = cellsInside(area, cell, nx, ny);
   dropCornerContacts(inside, nx, ny);
   const columns = nx + 1;
@@ -268,19 +319,12 @@ function buildTerrain(
   const outline = area.local.map(
     ([x, y]): Point => [(x - area.min[0]) * scale, (y - area.min[1]) * scale],
   );
-  let [maxX, maxY, maxZ] = [0, 0, 0];
-  for (let k = 0; k < positions.length; k += 3) {
-    maxX = Math.max(maxX, positions[k] as number);
-    maxY = Math.max(maxY, positions[k + 1] as number);
-    maxZ = Math.max(maxZ, positions[k + 2] as number);
-  }
   return {
-    stl: writeBinaryStl([{ positions, indices }]),
-    triangles: indices.length / 3,
-    size: [maxX, maxY, maxZ],
-    heights: [low, high],
-    cellMetres: cell,
+    positions,
+    indices,
     outline,
+    heights: [low, high] as [number, number],
+    cellMetres: cell,
   };
 }
 
@@ -387,7 +431,7 @@ function addBottom(
       along.set(`${to},${from}`, [...between].reverse());
     });
     const points = corners.map(grid);
-    return { corners, points, area: signedArea(points) };
+    return { corners, points, area: signedArea(points), contains: containmentIn(points) };
   });
 
   const outers = shapes.filter((shape) => shape.area > 0);
@@ -395,7 +439,7 @@ function addBottom(
   for (const hole of shapes.filter((shape) => shape.area < 0)) {
     const point = hole.points[0] as Point;
     const around = outers
-      .filter((outer) => containsPoint(outer.points, point))
+      .filter((outer) => outer.contains(point) === "inside")
       .sort((p, q) => p.area - q.area)[0];
     if (around) holesOf.get(around)?.push(hole);
   }
@@ -427,24 +471,4 @@ function addBottom(
       });
     }
   }
-}
-
-/** Twice the signed area of `points`: positive counter-clockwise. */
-function signedArea(points: readonly Point[]): number {
-  let sum = 0;
-  points.forEach(([x, y], k) => {
-    const [nx, ny] = points[(k + 1) % points.length] as Point;
-    sum += x * ny - nx * y;
-  });
-  return sum;
-}
-
-/** Whether `point` is inside the polygon `points` (even-odd). */
-function containsPoint(points: readonly Point[], [x, y]: Point): boolean {
-  let inside = false;
-  points.forEach(([px, py], k) => {
-    const [qx, qy] = points[(k + 1) % points.length] as Point;
-    if (py > y !== qy > y && x < px + ((y - py) * (qx - px)) / (qy - py)) inside = !inside;
-  });
-  return inside;
 }

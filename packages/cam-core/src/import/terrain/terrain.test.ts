@@ -84,8 +84,8 @@ const SETTINGS = { longestSide: 200, exaggeration: 1.5, base: 3 };
 const SMALL = { maxBytes: 50_000_000, maxTriangles: 20_000 };
 
 function terrain(ring: LonLat[], limits = SMALL) {
-  const { tiles } = planTerrain(ring, limits, 14);
-  return terrainMesh(ring, SETTINGS, limits, tilesOf(tiles, cone));
+  const plan = planTerrain(ring, limits, 14);
+  return terrainMesh(ring, plan, SETTINGS, tilesOf(plan.tiles, cone));
 }
 
 describe("decodeTerrarium", () => {
@@ -108,6 +108,18 @@ describe("elevationSampler", () => {
     expect(at([150, 80])).toBeCloseTo(100);
     expect(at([-90, 80])).toBeNaN();
   });
+
+  it("reads across into the next tile at its edge, without a seam", () => {
+    const tiles = [
+      ...tilesOf([{ z: 2, x: 2, y: 1 }], () => 100),
+      ...tilesOf([{ z: 2, x: 3, y: 1 }], () => 300),
+    ];
+    const at = elevationSampler(tiles);
+    // Exactly on the edge between the two tiles: halfway between their edge pixels.
+    expect(at([90, 30])).toBeCloseTo(200);
+    // More than half a pixel (1.4° wide here) in, only its own tile counts.
+    expect(at([88, 30])).toBeCloseTo(100);
+  });
 });
 
 describe("planTerrain", () => {
@@ -118,6 +130,16 @@ describe("planTerrain", () => {
     expect(plan.cellMetres).toBeCloseTo(10_000 / plan.cells);
     expect(plan.tiles.length).toBeGreaterThan(0);
     expect(new Set(plan.tiles.map(({ z }) => z))).toEqual(new Set([plan.tiles[0]?.z]));
+  });
+
+  it("refuses an area across the 180° meridian", () => {
+    const ring: LonLat[] = [
+      [179.99, -17],
+      [-179.99, -17],
+      [-179.99, -16.99],
+      [179.99, -16.99],
+    ];
+    expect(() => planTerrain(ring, SMALL, 14)).toThrow(/180/);
   });
 
   it("refuses an area wider than the limit", () => {
@@ -146,6 +168,16 @@ describe("terrainMesh", () => {
     expect(closed(result.stl)).toBe(true);
     expect(result.triangles).toBeLessThanOrEqual(SMALL.maxTriangles);
     expect(result.outline).toHaveLength(64);
+    // The mesh starts at the origin, and its size is its extent.
+    const { bounds } = parseStl(result.stl);
+    expect(bounds.min[0]).toBeCloseTo(0);
+    expect(bounds.min[1]).toBeCloseTo(0);
+    expect(bounds.max[0]).toBeCloseTo(result.size[0]);
+    expect(bounds.max[1]).toBeCloseTo(result.size[1]);
+    for (const [x, y] of result.outline) {
+      expect(x).toBeGreaterThan(-result.size[0] / 100);
+      expect(y).toBeGreaterThan(-result.size[1] / 100);
+    }
   });
 
   it("drops cells that touch only at a corner", () => {
@@ -189,6 +221,8 @@ describe("terrainMesh", () => {
 
   it("refuses an area no tile covers", () => {
     const ring = rectangle(1000, 1000);
-    expect(() => terrainMesh(ring, SETTINGS, SMALL, [])).toThrow(/elevation/);
+    expect(() => terrainMesh(ring, planTerrain(ring, SMALL, 14), SETTINGS, [])).toThrow(
+      /elevation/,
+    );
   });
 });
