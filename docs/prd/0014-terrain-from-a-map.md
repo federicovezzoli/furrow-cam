@@ -35,15 +35,15 @@ Topographic reliefs (a mountain, a valley, an island) are among the most popular
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| T1 | **Terrain from a map** opens beside model import, in two steps: first the area on a map the user can pan and zoom (with a move tool that drags it), with the attribution of its map and elevation data; then the model made from it | Must |
+| T1 | **Terrain from a map** opens beside model import, in two steps: first the area on a map the user can pan and zoom, with the attribution of its map and elevation data; then the model made from it | Must |
 | T2 | **Find a place:** a search field suggests places as the user types, named in the interface language where the search service has it (English, German, French) and by their local names otherwise; picking one moves the map there. Entering coordinates or pasting a full Google Maps or OpenStreetMap link (with the coordinates in it) moves the map without sending anything to a search service. A short link (`maps.app.goo.gl`) carries no coordinates, so the dialog asks for the address shown in the browser bar after opening it. When the search service is unavailable, the dialog says so and points to coordinates and links | Must |
-| T3 | **Select the area:** a rectangle, a square, a circle, an ellipse or a freehand shape, drawn on the map by dragging and redrawn before generating. The area's size on the ground (km) is shown | Must |
+| T3 | **Select the area:** a rectangle, a square, a circle, an ellipse or a freehand shape, drawn on the map by dragging once its shape is picked (otherwise dragging moves the map), then moved by dragging it or redrawn before generating. The area's size on the ground (km) is shown | Must |
 | T4 | **Settings:** in the second step, a 3D preview of the mesh, made again as the settings change, beside the model's longest side in mm (by default it fits inside the stock less the model border, PRD-0005 S2), vertical exaggeration (1× to 10×, 1.5× by default), and base thickness under the lowest point (3 mm by default). The dialog shows the resulting model size, height range and detail (ground distance and mm per cell). The mesh is made at full detail only when it is added or downloaded | Must |
 | T5 | **Generate:** in a project with no model yet (it may hold drawings, ADR-0078), the terrain becomes a model, at the chosen size and centred on the stock, named after the place found (or "Terrain"). From then on it is an ordinary model: PRD-0005 S1 to S12 apply, it is stored, versioned, exported and imported with the project | Must |
 | T6 | Generating shows its progress and can be cancelled. It refuses an area too large or one whose detail would exceed the instance's STL limits (PRD-0005 S1) with a clear message, by lowering the detail first where it can | Must |
 | T7 | **Outline:** the shape's outline is added as a drawing at the model's position, so the piece can be cut out with a profile operation in the same project (ADR-0078) | Should |
 | T8 | **Download STL:** the same mesh can be downloaded as a closed (watertight) binary STL, for 3D printing or another CAM | Should |
-| T9 | The dialog names the services it contacts, in a line beside the map, without a click first; no account, sign-in or API key is needed, on any instance or in the desktop app | Must |
+| T9 | The services are named by the map's attribution (OpenStreetMap, OpenFreeMap, Mapterhorn) and the privacy policy (Photon too), with no notice or click in the dialog; no account, sign-in or API key is needed, on any instance or in the desktop app | Must |
 | T10 | **Lowest altitude:** set an altitude below which the terrain is flat, for lakes and coasts | Could |
 
 ## User flow
@@ -70,3 +70,4 @@ Topographic reliefs (a mountain, a valley, an island) are among the most popular
 
 - 2026-11-08: created
 - 2026-11-08: two steps with a 3D preview, a square and a move tool; the services are named beside the map instead of before it loads (T1, T3, T4, T9, #522)
+- 2026-11-08: the map is browsed until a shape is picked, the drawn area can be dragged, and no privacy line sits under the map (T1, T3, T9, #526)
