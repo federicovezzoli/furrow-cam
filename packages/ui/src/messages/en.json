@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Import a drawing",
-        "body": "Start from an SVG or DXF file: its paths become the shapes you cut."
+        "body": "Start from an SVG or DXF file: its paths become the shapes you cut. An STL or STEP model can go beside them, to carve in 3D."
       },
       "properties": {
         "title": "Project properties",

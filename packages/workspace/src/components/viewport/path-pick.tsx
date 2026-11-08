@@ -70,8 +70,9 @@ function PathPicker() {
         const point = onStockTop(event.ray);
         const hit = pathUnder(point, 1 / event.camera.zoom);
         const toggle = event.ctrlKey || event.metaKey || event.shiftKey;
-        // Ctrl/Cmd/Shift+click only adds paths, so a model under it doesn't drop the selection.
-        const model = !hit && !toggle && point ? modelAt(models, point) : null;
+        // Ctrl/Cmd/Shift+click adds paths, so a model under it doesn't drop the paths selected.
+        const keep = toggle && workspace.getState().selectedPaths.length > 0;
+        const model = !hit && !keep && point ? modelAt(models, point) : null;
         if (hit) workspace.getState().selectPaths([hit], toggle ? "toggle" : "replace");
         else if (model) workspace.getState().selectModel(model.id);
         else if (!toggle) workspace.getState().selectPaths([]);

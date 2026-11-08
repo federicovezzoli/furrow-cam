@@ -154,7 +154,7 @@ export function GeometryImport() {
     try {
       const result = importDrawingFile(store, file, { dpi, units });
       if (!result.ok) {
-        // Also when a model was imported, or a step redone, while the file was read or the prompt open.
+        // The file has no shapes Furrow CAM can cut.
         setNotice({ kind: "error", messages: result.messages });
         return;
       }

@@ -68,6 +68,7 @@ export function ModelImportButton({ inRibbon = false }: { inRibbon?: boolean }) 
           icon={<FileBoxIcon />}
           label={ribbon("model")}
           aria-label={ribbon("importModel")}
+          data-demo="ribbon-import-model"
           hint={t("importModel")}
           disabledReason={
             !limits ? format(STL_IMPORT_OFF) : allowed ? undefined : format(ONE_MODEL)

@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Importeer een tekening",
-        "body": "Begin met een SVG- of DXF-bestand: de paden worden de vormen die je freest."
+        "body": "Begin met een SVG- of DXF-bestand: de paden worden de vormen die je freest. Daarnaast kan een STL- of STEP-model komen om in 3D te frezen."
       },
       "properties": {
         "title": "Projecteigenschappen",

@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Importe um desenho",
-        "body": "Comece com um arquivo SVG ou DXF: os caminhos dele viram as formas que você corta."
+        "body": "Comece com um arquivo SVG ou DXF: os caminhos dele viram as formas que você corta. Ao lado, você pode importar um modelo STL ou STEP para entalhar em 3D."
       },
       "properties": {
         "title": "Propriedades do projeto",

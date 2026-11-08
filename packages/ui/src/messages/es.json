@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Importa un dibujo",
-        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas."
+        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas. A su lado puedes añadir un modelo STL o STEP para tallar en 3D."
       },
       "properties": {
         "title": "Propiedades del proyecto",

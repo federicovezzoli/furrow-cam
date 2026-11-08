@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Çizim içe aktarın",
-        "body": "Bir SVG veya DXF dosyasıyla başlayın: yolları, keseceğiniz şekiller olur."
+        "body": "Bir SVG veya DXF dosyasıyla başlayın: yolları, keseceğiniz şekiller olur. Yanına 3B oymak için bir STL veya STEP modeli de ekleyebilirsiniz."
       },
       "properties": {
         "title": "Proje özellikleri",

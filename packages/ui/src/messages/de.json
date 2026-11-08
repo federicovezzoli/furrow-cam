@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Eine Zeichnung importieren",
-        "body": "Beginne mit einer SVG- oder DXF-Datei: ihre Pfade werden die Formen, die du schneidest."
+        "body": "Beginne mit einer SVG- oder DXF-Datei: ihre Pfade werden die Formen, die du schneidest. Daneben kann ein STL- oder STEP-Modell stehen, das du in 3D fräst."
       },
       "properties": {
         "title": "Projekteigenschaften",

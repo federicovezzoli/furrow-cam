@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Importer un dessin",
-        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez."
+        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez. Un modèle STL ou STEP peut s’y ajouter, à sculpter en 3D."
       },
       "properties": {
         "title": "Propriétés du projet",

@@ -106,7 +106,7 @@ export async function importModel(
     fail(upload.error);
     return;
   }
-  // A drawing may have been imported, or a step redone, while this one uploaded.
+  // Another model may have been imported, or a step redone, while this one uploaded.
   const { sha256, triangles, bounds } = mesh;
   const id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size });
   if (id === null) {

@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "Importa un disegno",
-        "body": "Parti da un file SVG o DXF: i suoi percorsi diventano le forme che tagli."
+        "body": "Parti da un file SVG o DXF: i suoi percorsi diventano le forme che tagli. Accanto puoi importare un modello STL o STEP da scolpire in 3D."
       },
       "properties": {
         "title": "Proprietà del progetto",

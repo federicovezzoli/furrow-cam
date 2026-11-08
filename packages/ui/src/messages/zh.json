@@ -1535,7 +1535,7 @@
       },
       "import": {
         "title": "导入图纸",
-        "body": "从SVG或DXF文件开始：其路径就是你要切削的形状。"
+        "body": "从SVG或DXF文件开始：其路径就是你要切削的形状。旁边还可以导入STL或STEP模型进行3D雕刻。"
       },
       "properties": {
         "title": "项目属性",
