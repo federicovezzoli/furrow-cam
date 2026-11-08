@@ -32,7 +32,13 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { gestureHandlers } from "../stores/gesture-handlers";
-import { machineKey, matchingMachineChoice, setMachine } from "../stores/machine-actions";
+import {
+  machineKey,
+  matchingMachineChoice,
+  outdatedMachineChoice,
+  setMachine,
+  sourceMachineChoice,
+} from "../stores/machine-actions";
 import { addPinDrillOperation } from "../stores/operation-actions";
 import {
   addLocatingPin,
@@ -501,8 +507,9 @@ const SNAPSHOT = "";
 
 /**
  * The machine the project is for (PRD-0001 R19). Choosing one snapshots it
- * into the document (ADR-0003) as an undoable edit; choosing the same machine
- * again picks up changes made to it since.
+ * into the document (ADR-0003) as an undoable edit, linked to the library
+ * machine (ADR-0079); choosing the same machine again, or Update, picks up
+ * changes made to it since.
  */
 function MachineField({ machines }: { machines: MachineChoice[] }) {
   const t = useTranslations("Stock");
@@ -510,19 +517,18 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
   const { Link } = navigation;
   const store = useDocumentStoreApi();
   const machine = useDocumentStore((s) => s.document.machine);
-  // Tells apart machines with identical settings, which the snapshot alone can't.
-  const [chosenId, setChosenId] = useState<string | null>(null);
-  const chosen = machines.find((choice) => choice.id === chosenId);
+  const machineId = useDocumentStore((s) => s.document.machineId);
+  // The link tells apart machines with identical settings, which the snapshot alone can't.
+  const source = sourceMachineChoice(machines, { machine, machineId });
   const current =
-    chosen && machine && machineKey(chosen.machine) === machineKey(machine)
-      ? chosen
+    source && machine && machineKey(source.machine) === machineKey(machine)
+      ? source
       : matchingMachineChoice(machines, machine);
+  const outdated = current ? undefined : outdatedMachineChoice(machines, { machine, machineId });
 
   function choose(id: string) {
     const choice = machines.find((m) => m.id === id);
-    if (!choice) return;
-    setChosenId(id);
-    setMachine(store, choice.machine);
+    if (choice) setMachine(store, choice.machine, choice.id);
   }
 
   return (
@@ -552,6 +558,21 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
           ))}
         </NativeSelect>
       </div>
+      {outdated && machine && (
+        <p role="status" className="flex gap-1.5 text-muted-foreground">
+          <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            {t("machineChanged", { name: machine.name })}{" "}
+            <button
+              type="button"
+              onClick={() => setMachine(store, outdated.machine, outdated.id)}
+              className="underline"
+            >
+              {t("updateMachine")}
+            </button>
+          </span>
+        </p>
+      )}
       {machine === null && account && (
         <p role="status" className="flex gap-1.5 text-muted-foreground">
           <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />

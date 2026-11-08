@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Πρέπει να είναι λεπτότερη από το βάθος της κάτω όψης: λιγότερο από {size}",
     "holdingTabsPerModel": "Γέφυρες ανά μοντέλο",
     "placeHoldingTabs": "Τοποθέτηση",
-    "holdingTabCount": "{count, plural, =0 {Χωρίς γέφυρες} one {# γέφυρα} other {# γέφυρες}}"
+    "holdingTabCount": "{count, plural, =0 {Χωρίς γέφυρες} one {# γέφυρα} other {# γέφυρες}}",
+    "machineChanged": "Το {name} άλλαξε από τότε που το χρησιμοποίησε αυτό το έργο.",
+    "machineChangedHint": "Ενημέρωση του αντιγράφου του έργου με τις τρέχουσες ρυθμίσεις του μηχανήματος; Οι διαδρομές εργαλείου και ο G-code θα τις χρησιμοποιούν.",
+    "gcodeChanged": "άλλαξε",
+    "keepMachine": "Διατήρηση του αντιγράφου του έργου",
+    "updateMachine": "Ενημέρωση έργου"
   },
   "Model": {
     "closeLabel": "Κλείσιμο ιδιοτήτων μοντέλου",

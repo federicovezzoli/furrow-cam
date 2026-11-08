@@ -1,4 +1,4 @@
-import { createProjectDocument, type Machine } from "@furrow/document";
+import { createProjectDocument } from "@furrow/document";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { errorText } from "@furrow/ui/lib/i18n";
 import {
@@ -284,12 +284,12 @@ export function App() {
     setRecoveries((list) => list.filter((r) => r.id !== recovery.id));
   }
 
-  function createProject(machine: Machine) {
+  function createProject({ id, machine }: MachineChoice) {
     setNewProject(false);
     track({ event: "project_created" });
     open(
       {
-        document: { ...createProjectDocument(), machine },
+        document: { ...createProjectDocument(), machine, machineId: id },
         meshes: new Map(),
         fonts: new Map(),
         versions: [],

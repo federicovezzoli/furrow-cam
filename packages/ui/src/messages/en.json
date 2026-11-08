@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Must be thinner than the bottom side's depth: less than {size}",
     "holdingTabsPerModel": "Tabs per model",
     "placeHoldingTabs": "Place",
-    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}"
+    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}",
+    "machineChanged": "{name} has changed since this project used it.",
+    "machineChangedHint": "Update the project's copy to the machine's current settings? Toolpaths and G-code then use them.",
+    "gcodeChanged": "changed",
+    "keepMachine": "Keep project's copy",
+    "updateMachine": "Update project"
   },
   "Model": {
     "closeLabel": "Close model properties",

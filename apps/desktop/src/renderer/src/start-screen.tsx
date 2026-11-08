@@ -1,4 +1,3 @@
-import type { Machine } from "@furrow/document";
 import { FormError } from "@furrow/ui/components/form-error";
 import { Button } from "@furrow/ui/components/ui/button";
 import {
@@ -42,7 +41,7 @@ export function StartScreen({
   error: string | null;
   newProject: boolean;
   onNewProject: (open: boolean) => void;
-  onCreate: (machine: Machine) => void;
+  onCreate: (machine: MachineChoice) => void;
   onOpen: () => void;
   onOpenPath: (path: string) => void;
   onRestore: (recovery: Recovery) => void;
@@ -169,7 +168,7 @@ function NewProjectDialog({
   open: boolean;
   machines: MachineChoice[];
   onClose: () => void;
-  onCreate: (machine: Machine) => void;
+  onCreate: (machine: MachineChoice) => void;
   onAddMachine: () => void;
 }) {
   const t = useTranslations("Desktop.StartScreen");
@@ -178,7 +177,7 @@ function NewProjectDialog({
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (chosen) onCreate(chosen.machine);
+    if (chosen) onCreate(chosen);
   }
 
   return (

@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "裏面の深さより薄くする必要があります：{size} 未満",
     "holdingTabsPerModel": "モデルごとのタブ数",
     "placeHoldingTabs": "配置",
-    "holdingTabCount": "{count, plural, =0 {タブなし} other {#個のタブ}}"
+    "holdingTabCount": "{count, plural, =0 {タブなし} other {#個のタブ}}",
+    "machineChanged": "{name} はこのプロジェクトで使用した後に変更されています。",
+    "machineChangedHint": "プロジェクトのコピーをマシンの現在の設定に更新しますか？ツールパスと G-code はその設定を使います。",
+    "gcodeChanged": "変更あり",
+    "keepMachine": "プロジェクトのコピーを維持",
+    "updateMachine": "プロジェクトを更新"
   },
   "Model": {
     "closeLabel": "モデルのプロパティを閉じる",

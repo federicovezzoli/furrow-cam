@@ -84,7 +84,7 @@ export async function createProject(form: FormData): Promise<ProjectFormErrors> 
     machine = snapshot.machine;
   }
 
-  const document = { ...createProjectDocument(), machine };
+  const document = { ...createProjectDocument(), machine, machineId: machine && String(machineId) };
   const { id } = await db.project.create({
     data: { userId, name: name.data, ...documentColumns(document) },
     select: { id: true },
@@ -118,7 +118,7 @@ async function prepareImport(
   if (document.machine === null && machineId !== null) {
     const snapshot = await snapshotUserMachine(userId, machineId);
     if (snapshot.error !== undefined) return { error: snapshot.error };
-    document = { ...document, machine: snapshot.machine };
+    document = { ...document, machine: snapshot.machine, machineId };
   }
   const name = parseName(
     truncate(projectName ?? projectNameFromFileName(fileName) ?? "", PROJECT_NAME_MAX),

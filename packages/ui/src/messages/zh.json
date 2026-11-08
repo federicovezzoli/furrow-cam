@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "必须比底面的加工深度薄：小于{size}",
     "holdingTabsPerModel": "每个模型的保留桥数",
     "placeHoldingTabs": "放置",
-    "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}"
+    "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}",
+    "machineChanged": "自本项目使用以来，{name} 已被修改。",
+    "machineChangedHint": "要将项目中的副本更新为该机器的当前设置吗？刀具路径和 G-code 将使用这些设置。",
+    "gcodeChanged": "已修改",
+    "keepMachine": "保留项目副本",
+    "updateMachine": "更新项目"
   },
   "Model": {
     "closeLabel": "关闭模型属性",

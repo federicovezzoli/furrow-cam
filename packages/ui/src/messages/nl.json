@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Moet dunner zijn dan de diepte van de onderkant: minder dan {size}",
     "holdingTabsPerModel": "Bruggen per model",
     "placeHoldingTabs": "Plaatsen",
-    "holdingTabCount": "{count, plural, =0 {Geen bruggen} one {# brug} other {# bruggen}}"
+    "holdingTabCount": "{count, plural, =0 {Geen bruggen} one {# brug} other {# bruggen}}",
+    "machineChanged": "{name} is gewijzigd sinds dit project hem gebruikte.",
+    "machineChangedHint": "De kopie in het project bijwerken naar de huidige instellingen van de machine? Gereedschapsbanen en G-code gebruiken ze dan.",
+    "gcodeChanged": "gewijzigd",
+    "keepMachine": "Kopie van het project houden",
+    "updateMachine": "Project bijwerken"
   },
   "Model": {
     "closeLabel": "Eigenschappen van model sluiten",

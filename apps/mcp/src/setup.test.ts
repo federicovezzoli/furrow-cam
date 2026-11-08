@@ -92,6 +92,7 @@ describe("chooseMachine", () => {
     const edited = { ...library, machines: [{ id: "m1", machine: { ...machine, name: "Mine" } }] };
     chooseMachine(project, edited, "m1");
     expect(document().machine?.name).toBe("Mine");
+    expect(document().machineId).toBe("m1");
     expect(() => chooseMachine(project, library, "nope")).toThrow("no machine");
     expect(() => chooseMachine(project, unread, "m1")).toThrow("tools.json doesn't exist.");
   });

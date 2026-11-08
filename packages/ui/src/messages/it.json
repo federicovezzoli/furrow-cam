@@ -1365,7 +1365,12 @@
     "holdingTabTooThick": "Deve essere più sottile della profondità del lato inferiore: meno di {size}",
     "holdingTabsPerModel": "Ponticelli per modello",
     "placeHoldingTabs": "Posiziona",
-    "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}"
+    "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}",
+    "machineChanged": "{name} è cambiata da quando questo progetto l'ha usata.",
+    "machineChangedHint": "Aggiornare la copia del progetto alle impostazioni attuali della macchina? Percorsi utensile e G-code le useranno.",
+    "gcodeChanged": "modificato",
+    "keepMachine": "Mantieni la copia del progetto",
+    "updateMachine": "Aggiorna progetto"
   },
   "Model": {
     "closeLabel": "Chiudi le proprietà del modello",
