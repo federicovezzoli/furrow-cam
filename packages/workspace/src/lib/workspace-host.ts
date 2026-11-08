@@ -168,6 +168,12 @@ export type WorkspaceHost = {
    * explains how to get an account or the desktop app.
    */
   account?: { prompt(reason: AccountReason): void };
+  /**
+   * Told when the terrain dialog opens (`true`) and closes, so a host that
+   * blocks the network (the desktop app) lets its services through only
+   * meanwhile (ADR-0076). Hosts that don't block anything leave it out.
+   */
+  terrainServices?(open: boolean): void;
   limits: {
     /** The STL files the project may hold, or `null` when STL import is off. */
     meshes: MeshLimits | null;

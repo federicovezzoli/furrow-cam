@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTerrainRequest } from "./terrain-services";
+import { isTerrainRequest } from "./terrain";
 
 describe("isTerrainRequest", () => {
   it.each([

@@ -101,6 +101,8 @@ export interface DesktopApi {
   getLocale(): Promise<Locale>;
   /** Remembers `locale` as the interface language, over the system's. */
   setLocale(locale: Locale): Promise<void>;
+  /** The terrain dialog opened (`true`) or closed: its services are let through only meanwhile. */
+  setTerrainServices(open: boolean): void;
   /** The window is closing with unsaved changes; call `closeWindow` once they're handled. */
   onCloseRequest(listener: () => void): () => void;
 }
@@ -128,6 +130,7 @@ export const CHANNELS = {
   reportError: "telemetry:error",
   getLocale: "locale:get",
   setLocale: "locale:set",
+  setTerrainServices: "terrain:services",
   menu: "menu",
   openPath: "app:open-path",
   fileChanged: "file:changed",

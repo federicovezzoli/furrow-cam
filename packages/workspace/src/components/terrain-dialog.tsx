@@ -175,6 +175,11 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
   const plan = planned && "plan" in planned ? planned.plan : null;
   const range = useHeightRange(ring, plan !== null);
   useEffect(() => () => abort.current?.abort(), []);
+  // The desktop app lets the services through only while the dialog is open (ADR-0076).
+  useEffect(() => {
+    host.terrainServices?.(true);
+    return () => host.terrainServices?.(false);
+  }, [host]);
 
   const longestSide = side ?? (plan ? fittingSide(stock, plan.span) : null);
   const length = (mm: number) => formatQuantity(mm, "length", units);

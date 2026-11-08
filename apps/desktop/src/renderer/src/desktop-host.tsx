@@ -15,6 +15,7 @@ import type * as React from "react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
 import packageJson from "../../../package.json";
 import type { FileStamp } from "../../shared/api";
+import { api } from "./api";
 import type { LibraryState } from "./app";
 import type { ProjectSession } from "./session";
 
@@ -152,6 +153,7 @@ export function ProjectView({
         },
       },
       navigation: { Link: DesktopLink },
+      terrainServices: (open) => api.setTerrainServices(open),
       limits: { meshes: DEFAULT_STL_LIMITS, fonts: { maxBytes: MAX_FONT_BYTES } },
     }),
     // `name` changes on Save As, `reloads` when another program saved the file (#492), so

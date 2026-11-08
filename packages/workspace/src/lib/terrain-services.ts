@@ -29,18 +29,3 @@ export const TERRAIN_HOSTS = [
   "tiles.mapterhorn.com",
   "photon.komoot.io",
 ] as const;
-
-/** Whether the desktop app lets `url` through: a `GET` over HTTPS to one of `TERRAIN_HOSTS`. */
-export function isTerrainRequest(url: string, method: string): boolean {
-  if (method !== "GET") return false;
-  try {
-    const { protocol, hostname, port } = new URL(url);
-    return (
-      protocol === "https:" &&
-      port === "" &&
-      (TERRAIN_HOSTS as readonly string[]).includes(hostname)
-    );
-  } catch {
-    return false;
-  }
-}
