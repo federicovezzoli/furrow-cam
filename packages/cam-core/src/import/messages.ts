@@ -58,6 +58,11 @@ export const IMPORT_MESSAGES = [
   "stl.facetVertices",
   "stl.notStl",
   "stl.unfinished",
+  "terrain.noArea",
+  "terrain.antimeridian",
+  "terrain.tooWide",
+  "terrain.tooDetailed",
+  "terrain.noData",
 ] as const;
 
 export type ImportMessageCode = (typeof IMPORT_MESSAGES)[number];

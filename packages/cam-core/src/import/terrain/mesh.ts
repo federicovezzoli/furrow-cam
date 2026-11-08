@@ -1,6 +1,7 @@
-import type { Point } from "@furrow/document";
+import { MessageError, type Point } from "@furrow/document";
 import { containmentIn, signedArea } from "../../geometry/clipper";
 import { triangulate } from "../../geometry/triangulate";
+import type { ImportMessage } from "../messages";
 import { binaryStlTriangles, type StlLimits, writeBinaryStl } from "../stl/import";
 import {
   elevationSampler,
@@ -12,6 +13,9 @@ import {
 } from "./tiles";
 
 // Terrain from an area on a map, as a closed mesh (PRD-0014, ADR-0077).
+
+/** Why a terrain can't be made, for the user (ADR-0054). */
+export class TerrainError extends MessageError<ImportMessage> {}
 
 /** The widest area a terrain may cover, in metres (PRD-0014 non-goals). */
 export const MAX_TERRAIN_SPAN = 200_000;
@@ -63,10 +67,10 @@ const DEGREE = Math.PI / 180;
  * point) in metres on a local projection about its centre, with its bounds.
  */
 function localArea(ring: readonly LonLat[]) {
-  if (ring.length < 3) throw new Error("A terrain area needs at least three points.");
+  if (ring.length < 3) throw new TerrainError({ code: "terrain.noArea" });
   const [lonMin, latMin, lonMax, latMax] = bounds(ring);
   // shortcut: areas across the 180° meridian are refused (PRD-0014 non-goals); unwrap longitudes about the first point to allow them.
-  if (lonMax - lonMin > 180) throw new Error("Areas across the 180° meridian aren't supported.");
+  if (lonMax - lonMin > 180) throw new TerrainError({ code: "terrain.antimeridian" });
   const lon0 = (lonMin + lonMax) / 2;
   const lat0 = (latMin + latMax) / 2;
   const kx = EARTH_RADIUS * DEGREE * Math.cos(lat0 * DEGREE);
@@ -155,9 +159,9 @@ export function planTerrain(
 ): TerrainPlan {
   const area = localArea(ring);
   const span: [number, number] = [area.max[0] - area.min[0], area.max[1] - area.min[1]];
-  if (!(span[0] > 0 && span[1] > 0)) throw new Error("A terrain area needs a width and a depth.");
+  if (!(span[0] > 0 && span[1] > 0)) throw new TerrainError({ code: "terrain.noArea" });
   if (Math.max(...span) > MAX_TERRAIN_SPAN)
-    throw new Error(`A terrain area is at most ${MAX_TERRAIN_SPAN / 1000} km across.`);
+    throw new TerrainError({ code: "terrain.tooWide", values: { km: MAX_TERRAIN_SPAN / 1000 } });
   const maxTriangles = triangleBudget(limits);
   const cells = plannedCells(area, maxTriangles);
   const { cell } = gridFor(area, cells);
@@ -188,7 +192,7 @@ export function terrainMesh(
     if (triangles <= plan.maxTriangles) return finish(built);
     n = Math.max(1, Math.floor(n * Math.sqrt(plan.maxTriangles / triangles)) - 1);
   }
-  throw new Error("The terrain doesn't fit the model limits.");
+  throw new TerrainError({ code: "terrain.tooDetailed" });
 }
 
 /**
@@ -254,14 +258,14 @@ function buildTerrain(
         const v = vertex(ci, cj);
         if (!Number.isNaN(metres[v] as number)) continue;
         const h = heightAt(area.toLonLat([area.min[0] + ci * cell, area.min[1] + cj * cell]));
-        if (Number.isNaN(h)) throw new Error("No elevation data covers this area.");
+        if (Number.isNaN(h)) throw new TerrainError({ code: "terrain.noData" });
         metres[v] = h;
         low = Math.min(low, h);
         high = Math.max(high, h);
       }
     }
   }
-  if (low > high) throw new Error("The terrain area holds no cell.");
+  if (low > high) throw new TerrainError({ code: "terrain.noArea" });
 
   const longest = Math.max(area.max[0] - area.min[0], area.max[1] - area.min[1]);
   const scale = settings.longestSide / longest;
