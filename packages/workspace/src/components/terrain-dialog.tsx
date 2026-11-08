@@ -21,9 +21,10 @@ import {
   DialogTitle,
 } from "@furrow/ui/components/ui/dialog";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
+import { downloadFile } from "@furrow/ui/lib/download";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
-import { MountainIcon } from "lucide-react";
+import { DownloadIcon, MountainIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { MeshImportError } from "../lib/model-import";
@@ -70,14 +71,13 @@ function markNoticeRead() {
 
 /**
  * Opens *Terrain from a map* (PRD-0014), from the empty project's import card
- * or the ribbon (`inRibbon`), when the project has no model yet and the
- * server can store meshes.
+ * or the ribbon (`inRibbon`), when the server can store meshes. In a project
+ * that has its model already, the terrain can still be downloaded (T8).
  */
 export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
   const t = useTranslations("Terrain");
   const format = useFormatMessage();
   const limits = useWorkspaceHost().limits.meshes;
-  const allowed = useDocumentStore((s) => canImportModel(s.document));
   const [open, setOpen] = useState(false);
   const dialog = limits && open && <TerrainDialog limits={limits} onClose={() => setOpen(false)} />;
   if (inRibbon)
@@ -89,9 +89,7 @@ export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
           aria-label={t("title")}
           data-demo="ribbon-terrain"
           hint={t("hint")}
-          disabledReason={
-            !limits ? format(STL_IMPORT_OFF) : allowed ? undefined : format(ONE_MODEL)
-          }
+          disabledReason={limits ? undefined : format(STL_IMPORT_OFF)}
           onClick={() => setOpen(true)}
         />
         {dialog}
@@ -157,6 +155,7 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
   const document = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const stock = useDocumentStore((s) => s.document.stock);
+  const allowed = useDocumentStore((s) => canImportModel(s.document));
   const units = useDocumentStore((s) => s.document.units);
 
   const [notice, setNotice] = useState(noticeRead);
@@ -206,7 +205,8 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
     ];
   }
 
-  async function generate() {
+  /** Makes the terrain and adds it to the project, or with `download` saves it as an STL file (T8). */
+  async function generate(download = false) {
     if (!ring || !longestSide) return;
     const controller = new AbortController();
     abort.current = controller;
@@ -220,8 +220,13 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
       });
       // Cancelled as the worker finished: nothing is added.
       if (controller.signal.aborted) return;
+      const name = t("defaultName");
+      if (download) {
+        downloadFile(new Uint8Array(terrain.stl), `${name}.stl`, "model/stl");
+        return;
+      }
       setProgress("saving");
-      const failed = await importTerrain(terrain, t("defaultName"), {
+      const failed = await importTerrain(terrain, name, {
         meshes: host.meshes,
         document,
         workspace,
@@ -350,6 +355,7 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
                   <p key={line}>{line}</p>
                 ))}
               </div>
+              {!allowed && <p className="text-muted-foreground">{t("hasModel")}</p>}
               {error && (
                 <p className="text-destructive" role="alert">
                   {format(error)}
@@ -379,9 +385,23 @@ function TerrainDialog({ limits, onClose }: { limits: StlLimits; onClose: () => 
             {t("cancel")}
           </Button>
           {notice && (
-            <Button disabled={!plan || generating || mapFailed} onClick={() => void generate()}>
-              {t("generate")}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                disabled={!plan || generating || mapFailed}
+                onClick={() => void generate(true)}
+              >
+                <DownloadIcon />
+                {t("download")}
+              </Button>
+              <Button
+                disabled={!plan || generating || mapFailed || !allowed}
+                title={allowed ? undefined : format(ONE_MODEL)}
+                onClick={() => void generate()}
+              >
+                {t("generate")}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

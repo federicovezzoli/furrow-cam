@@ -1500,6 +1500,8 @@
     "building": "正在生成模型…",
     "saving": "正在将模型添加到项目…",
     "generate": "生成",
+    "download": "下载 STL",
+    "hasModel": "此项目已有 3D 模型：地形只能下载为 STL 文件。",
     "cancel": "取消",
     "defaultName": "地形"
   },

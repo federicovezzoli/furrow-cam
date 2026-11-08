@@ -1500,6 +1500,8 @@
     "building": "Model oluşturuluyor…",
     "saving": "Model projeye ekleniyor…",
     "generate": "Oluştur",
+    "download": "STL indir",
+    "hasModel": "Bu projede zaten bir 3B model var: arazi yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Arazi"
   },

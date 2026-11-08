@@ -1500,6 +1500,8 @@
     "building": "Modell wird erstellt…",
     "saving": "Modell wird zum Projekt hinzugefügt…",
     "generate": "Erstellen",
+    "download": "STL herunterladen",
+    "hasModel": "Dieses Projekt hat bereits sein 3D-Modell: Das Gelände kann nur als STL-Datei heruntergeladen werden.",
     "cancel": "Abbrechen",
     "defaultName": "Gelände"
   },

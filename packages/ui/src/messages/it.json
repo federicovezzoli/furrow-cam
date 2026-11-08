@@ -1500,6 +1500,8 @@
     "building": "Creazione del modello…",
     "saving": "Aggiunta del modello al progetto…",
     "generate": "Genera",
+    "download": "Scarica STL",
+    "hasModel": "Questo progetto ha già il suo modello 3D: il terreno si può solo scaricare come file STL.",
     "cancel": "Annulla",
     "defaultName": "Terreno"
   },
