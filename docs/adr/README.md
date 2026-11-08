@@ -90,3 +90,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0073](0073-no-look-between-close-samples.md) | Relief passes don't look between samples close in height | Proposed |
 | [0074](0074-desktop-installs-updates.md) | The desktop app installs updates itself on Windows and Linux, through the download Worker | Proposed |
 | [0075](0075-demo-videos-recorded-frame-by-frame.md) | Demo videos are recorded a frame at a time on a frozen page clock | Proposed |
+| [0078](0078-drawings-and-a-model-together.md) | A project holds drawings and one model together | Proposed |
