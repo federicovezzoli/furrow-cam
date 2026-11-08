@@ -784,7 +784,7 @@
       "unreadableFile": "このファイルを読み込めませんでした。",
       "modelUnreadable": "モデルを読み込めませんでした。",
       "importFailed": "このファイルをインポートできませんでした。",
-      "drawingsOrModel": "プロジェクトに含められるのは SVG・DXF 図面か 1 つの 3D モデルのどちらかで、両方は含められません。",
+      "oneModel": "プロジェクトに含められる 3D モデルは 1 つだけです。",
       "noShapes": "このファイルにはインポートできる図形がありません。",
       "stlImportOff": "このサーバーでは 3D モデルのインポートを利用できません。",
       "stepUnreadable": "この STEP ファイルを読み込めませんでした。CAD ソフトからもう一度書き出して、再度お試しください。",
@@ -802,7 +802,15 @@
       "fontUnreadable": "このファイルは読み込めるフォントではありません。TTF、OTF、WOFF ファイルを使用してください。",
       "fontTooLarge": "このフォントは上限の {mb, number} MB を超えています。",
       "tooManyFonts": "プロジェクトに含められるフォントは{max}個までです。",
-      "fontUploadOff": "このサーバーではフォントを保存できません。"
+      "fontUploadOff": "このサーバーではフォントを保存できません。",
+      "terrainUnavailable": "標高を取得できませんでした。接続を確認して、もう一度お試しください。"
+    },
+    "terrain": {
+      "noArea": "この範囲は小さすぎます。もっと大きく描いてください。",
+      "antimeridian": "範囲は経度 180° の子午線をまたげません。",
+      "tooWide": "この範囲は上限の {km, number} km を超えています。もっと小さく描いてください。",
+      "tooDetailed": "この範囲のモデルは 3D モデルの上限を超えます。",
+      "noData": "この範囲の標高データはありません。"
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "履歴",
     "drawing": "図面",
     "importDrawing": "図面をインポート",
+    "model": "モデル",
+    "importModel": "モデルをインポート",
     "text": "テキスト",
     "relief_rough": "荒加工",
     "relief_finish": "仕上げ"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "裏面の深さより薄くする必要があります：{size} 未満",
     "holdingTabsPerModel": "モデルごとのタブ数",
     "placeHoldingTabs": "配置",
-    "holdingTabCount": "{count, plural, =0 {タブなし} other {#個のタブ}}"
+    "holdingTabCount": "{count, plural, =0 {タブなし} other {#個のタブ}}",
+    "machineChanged": "マシン一覧の {name} は、このプロジェクトのコピーと異なります。",
+    "machineChangedHint": "プロジェクトのコピーをマシンの現在の設定に更新しますか？ツールパスと G-code はその設定を使います。",
+    "gcodeChanged": "変更あり",
+    "keepMachine": "プロジェクトのコピーを維持",
+    "updateMachine": "プロジェクトを更新"
   },
   "Model": {
     "closeLabel": "モデルのプロパティを閉じる",
@@ -1458,6 +1473,57 @@
     "addText": "テキストを追加",
     "defaultText": "Text"
   },
+  "Terrain": {
+    "open": "地図から地形…",
+    "ribbon": "地形",
+    "hint": "地図上の範囲から立体レリーフのモデルを作成",
+    "title": "地図から地形",
+    "description": "地図上に範囲を描くと、そのレリーフモデルを作成します。",
+    "modelDescription": "モデルのサイズと起伏を選び、プロジェクトに追加するかダウンロードします。",
+    "notice": "地図は OpenFreeMap（OpenStreetMap のデータ）、標高は Mapterhorn、場所の検索は komoot の Photon から取得します。ブラウザーが直接接続するため、これらのサービスには IP アドレス、表示中の範囲、検索した内容が送られます。座標と地図のリンクは端末内で処理されます。",
+    "loading": "地図を読み込んでいます…",
+    "mapUnavailable": "地図を読み込めませんでした。接続を確認して、もう一度お試しください。",
+    "preview": "地形のプレビュー",
+    "previewLoading": "プレビューを作成しています…",
+    "search": "場所を検索",
+    "searchPlaceholder": "地名、座標、または地図のリンク",
+    "searching": "検索しています…",
+    "noResults": "場所が見つかりませんでした。",
+    "searchUnavailable": "現在、検索は利用できません。座標を入力するか、Google マップまたは OpenStreetMap のリンクを貼り付けてください。",
+    "shortLink": "短縮リンクには座標が含まれていません。リンクを開き、ブラウザーのアドレスバーに表示されたアドレスを貼り付けてください。",
+    "noCoordinates": "このリンクには座標が含まれていません。リンクが検索に送られることはありません。リンクを開き、地図が移動したらブラウザーのアドレスバーのアドレスを貼り付けるか、座標を入力してください。",
+    "goTo": "{lat, number}, {lon, number} へ移動",
+    "shape": "範囲",
+    "tools": {
+      "move": "移動",
+      "rectangle": "長方形",
+      "square": "正方形",
+      "circle": "円",
+      "ellipse": "楕円",
+      "freehand": "フリーハンド"
+    },
+    "drawHint": "図形を選び、地図上をドラッグして描きます。「移動」で地図をドラッグできます。",
+    "noArea": "地図上に範囲を描いてください。",
+    "longestSide": "最長辺",
+    "exaggeration": "強調",
+    "base": "ベース",
+    "area": "範囲: {width, number} × {depth, number} km",
+    "size": "モデル: {size} {unit}",
+    "heights": "標高: {low, number}–{high, number} m",
+    "detail": "精細度: 地上 {metres, number} m、1 セルあたり {mm} {unit}",
+    "fetchingStart": "標高を取得しています…",
+    "fetching": "標高を取得しています… {done, number} / {total, number}",
+    "building": "モデルを作成しています…",
+    "saving": "モデルをプロジェクトに追加しています…",
+    "generate": "プロジェクトに追加",
+    "next": "次へ",
+    "back": "戻る",
+    "download": "STL をダウンロード",
+    "hasModel": "このプロジェクトにはすでに 3D モデルがあります。地形は STL ファイルとしてダウンロードすることだけができます。",
+    "storeOff": "このサーバーは 3D モデルを保存できません。地形は STL ファイルとしてダウンロードすることだけができます。",
+    "cancel": "キャンセル",
+    "defaultName": "地形"
+  },
   "Viewport": {
     "scene": "素材、形状、ツールパス",
     "simulating": "シミュレーション中…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "図面をインポート",
-        "body": "SVG または DXF ファイルから始めます。そのパスが切削する図形になります。"
+        "body": "SVG または DXF ファイルから始めます。そのパスが切削する図形になります。STL または STEP モデルを並べて 3D で彫ることもできます。"
       },
       "properties": {
         "title": "プロジェクトのプロパティ",

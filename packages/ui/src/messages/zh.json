@@ -784,7 +784,7 @@
       "unreadableFile": "无法读取此文件。",
       "modelUnreadable": "无法读取模型。",
       "importFailed": "无法导入此文件。",
-      "drawingsOrModel": "一个项目可以包含SVG和DXF图纸，或一个3D模型，但不能两者兼有。",
+      "oneModel": "一个项目只能包含一个3D模型。",
       "noShapes": "此文件中没有可导入的形状。",
       "stlImportOff": "此服务器不支持导入3D模型。",
       "stepUnreadable": "无法读取此STEP文件。请从CAD软件重新导出后再试。",
@@ -802,7 +802,15 @@
       "fontUnreadable": "此文件不是可读取的字体：请使用TTF、OTF或WOFF文件。",
       "fontTooLarge": "此字体超过{mb, number} MB的上限。",
       "tooManyFonts": "一个项目最多包含{max}种字体。",
-      "fontUploadOff": "此服务器无法存储字体。"
+      "fontUploadOff": "此服务器无法存储字体。",
+      "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。"
+    },
+    "terrain": {
+      "noArea": "此区域太小，请绘制更大的区域。",
+      "antimeridian": "区域不能跨越 180° 经线。",
+      "tooWide": "此区域宽度超过允许的最大值 {km, number} km，请绘制更小的区域。",
+      "tooDetailed": "此区域的模型会超出 3D 模型的限制。",
+      "noData": "此区域没有高程数据。"
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "历史",
     "drawing": "图纸",
     "importDrawing": "导入图纸",
+    "model": "模型",
+    "importModel": "导入模型",
     "text": "文字",
     "relief_rough": "粗加工",
     "relief_finish": "精加工"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "必须比底面的加工深度薄：小于{size}",
     "holdingTabsPerModel": "每个模型的保留桥数",
     "placeHoldingTabs": "放置",
-    "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}"
+    "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}",
+    "machineChanged": "你的机器中的 {name} 与本项目的副本不同。",
+    "machineChangedHint": "要将项目中的副本更新为该机器的当前设置吗？刀具路径和 G-code 将使用这些设置。",
+    "gcodeChanged": "已修改",
+    "keepMachine": "保留项目副本",
+    "updateMachine": "更新项目"
   },
   "Model": {
     "closeLabel": "关闭模型属性",
@@ -1458,6 +1473,57 @@
     "addText": "添加文字",
     "defaultText": "Text"
   },
+  "Terrain": {
+    "open": "从地图生成地形…",
+    "ribbon": "地形",
+    "hint": "根据地图上的区域生成浮雕模型",
+    "title": "从地图生成地形",
+    "description": "在地图上绘制一个区域，生成它的浮雕模型。",
+    "modelDescription": "选择模型的尺寸和起伏，然后将其添加到项目或下载。",
+    "notice": "地图来自 OpenFreeMap（OpenStreetMap 数据），高程来自 Mapterhorn，地点搜索来自 komoot 的 Photon。浏览器会直接连接这些服务，因此它们能看到你的 IP 地址、你查看的区域和你搜索的内容；坐标和地图链接只在你的设备上处理。",
+    "loading": "正在加载地图…",
+    "mapUnavailable": "无法加载地图。请检查网络连接后重试。",
+    "preview": "地形预览",
+    "previewLoading": "正在生成预览…",
+    "search": "查找地点",
+    "searchPlaceholder": "地名、坐标或地图链接",
+    "searching": "正在搜索…",
+    "noResults": "未找到地点。",
+    "searchUnavailable": "搜索暂时不可用。请输入坐标，或粘贴 Google 地图或 OpenStreetMap 链接。",
+    "shortLink": "短链接不包含坐标。请打开链接，然后粘贴浏览器地址栏中显示的地址。",
+    "noCoordinates": "此链接不包含坐标，且链接不会发送给搜索服务。请打开链接，待地图移动后粘贴浏览器地址栏中的地址，或直接输入坐标。",
+    "goTo": "前往 {lat, number}, {lon, number}",
+    "shape": "区域",
+    "tools": {
+      "move": "移动",
+      "rectangle": "矩形",
+      "square": "正方形",
+      "circle": "圆形",
+      "ellipse": "椭圆",
+      "freehand": "手绘"
+    },
+    "drawHint": "选择一个形状，在地图上拖动进行绘制。“移动”用于拖动地图。",
+    "noArea": "请在地图上绘制一个区域。",
+    "longestSide": "最长边",
+    "exaggeration": "夸张倍数",
+    "base": "底座",
+    "area": "区域：{width, number} × {depth, number} km",
+    "size": "模型：{size} {unit}",
+    "heights": "高程：{low, number}–{high, number} m",
+    "detail": "精度：地面 {metres, number} m，每格 {mm} {unit}",
+    "fetchingStart": "正在获取高程…",
+    "fetching": "正在获取高程… {done, number} / {total, number}",
+    "building": "正在生成模型…",
+    "saving": "正在将模型添加到项目…",
+    "generate": "添加到项目",
+    "next": "下一步",
+    "back": "上一步",
+    "download": "下载 STL",
+    "hasModel": "此项目已有 3D 模型：地形只能下载为 STL 文件。",
+    "storeOff": "此服务器无法保存 3D 模型：地形只能下载为 STL 文件。",
+    "cancel": "取消",
+    "defaultName": "地形"
+  },
   "Viewport": {
     "scene": "毛坯、几何图形和刀具路径",
     "simulating": "正在仿真…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "导入图纸",
-        "body": "从SVG或DXF文件开始：其路径就是你要切削的形状。"
+        "body": "从SVG或DXF文件开始：其路径就是你要切削的形状。旁边还可以导入STL或STEP模型进行3D雕刻。"
       },
       "properties": {
         "title": "项目属性",

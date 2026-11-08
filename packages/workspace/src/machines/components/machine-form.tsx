@@ -15,7 +15,7 @@ import { POST_PROCESSOR_LABELS } from "../lib/labels";
 import type { MachineFormErrors } from "../lib/machine-form-data";
 
 /** The custom G-code blocks; the placeholders without words stay as they are in every language. */
-const GCODE_BLOCKS = [
+export const GCODE_BLOCKS = [
   { name: "programStart", placeholder: "G21\nG90\nG94" },
   { name: "programEnd", placeholder: "M5\nM30" },
   { name: "operationStart", placeholder: null },

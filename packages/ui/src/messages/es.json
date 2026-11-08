@@ -784,7 +784,7 @@
       "unreadableFile": "No se ha podido leer este archivo.",
       "modelUnreadable": "No se ha podido leer el modelo.",
       "importFailed": "No se ha podido importar este archivo.",
-      "drawingsOrModel": "Un proyecto contiene dibujos SVG y DXF o un modelo 3D, no ambos.",
+      "oneModel": "Un proyecto contiene solo un modelo 3D.",
       "noShapes": "Este archivo no tiene formas que importar.",
       "stlImportOff": "La importación de modelos 3D no está disponible en este servidor.",
       "stepUnreadable": "No se ha podido leer este archivo STEP. Vuelve a exportarlo desde tu programa CAD e inténtalo de nuevo.",
@@ -802,7 +802,15 @@
       "fontUnreadable": "Este archivo no es una fuente legible: usa un archivo TTF, OTF o WOFF.",
       "fontTooLarge": "Esta fuente supera los {mb, number} MB permitidos.",
       "tooManyFonts": "Un proyecto contiene como máximo {max} fuentes.",
-      "fontUploadOff": "Este servidor no puede almacenar fuentes."
+      "fontUploadOff": "Este servidor no puede almacenar fuentes.",
+      "terrainUnavailable": "No se pudieron descargar las altitudes. Comprueba tu conexión e inténtalo de nuevo."
+    },
+    "terrain": {
+      "noArea": "Esta zona es demasiado pequeña. Dibuja una más grande.",
+      "antimeridian": "Una zona no puede cruzar el meridiano de 180°.",
+      "tooWide": "Esta zona mide más de {km, number} km de ancho, el máximo permitido. Dibuja una más pequeña.",
+      "tooDetailed": "El modelo de esta zona superaría los límites de los modelos 3D.",
+      "noData": "No hay datos de altitud para esta zona."
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "Historial",
     "drawing": "Dibujo",
     "importDrawing": "Importa un dibujo",
+    "model": "Modelo",
+    "importModel": "Importa un modelo",
     "text": "Texto",
     "relief_rough": "Desbaste",
     "relief_finish": "Acabado"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "Debe ser más fino que la profundidad de la cara inferior: menos de {size}",
     "holdingTabsPerModel": "Puentes por modelo",
     "placeHoldingTabs": "Colocar",
-    "holdingTabCount": "{count, plural, =0 {Sin puentes} one {# puente} other {# puentes}}"
+    "holdingTabCount": "{count, plural, =0 {Sin puentes} one {# puente} other {# puentes}}",
+    "machineChanged": "{name} en tus máquinas es distinta de la copia de este proyecto.",
+    "machineChangedHint": "¿Actualizar la copia del proyecto con los ajustes actuales de la máquina? Las trayectorias y el G-code los usarán.",
+    "gcodeChanged": "modificado",
+    "keepMachine": "Mantener la copia del proyecto",
+    "updateMachine": "Actualizar proyecto"
   },
   "Model": {
     "closeLabel": "Cerrar propiedades del modelo",
@@ -1458,6 +1473,57 @@
     "addText": "Añadir texto",
     "defaultText": "Texto"
   },
+  "Terrain": {
+    "open": "Terreno desde un mapa…",
+    "ribbon": "Terreno",
+    "hint": "Crear un modelo en relieve de una zona en un mapa",
+    "title": "Terreno desde un mapa",
+    "description": "Dibuja una zona en el mapa para crear un modelo en relieve de ella.",
+    "modelDescription": "Elige el tamaño y el relieve del modelo, y luego añádelo al proyecto o descárgalo.",
+    "notice": "El mapa viene de OpenFreeMap (datos de OpenStreetMap), las altitudes de Mapterhorn y la búsqueda de lugares de Photon de komoot. Tu navegador los contacta directamente, así que ven tu dirección IP, la zona que miras y lo que buscas; las coordenadas y los enlaces de mapas se quedan en tu dispositivo.",
+    "loading": "Cargando el mapa…",
+    "mapUnavailable": "No se pudo cargar el mapa. Comprueba tu conexión e inténtalo de nuevo.",
+    "preview": "Vista previa del terreno",
+    "previewLoading": "Creando la vista previa…",
+    "search": "Buscar un lugar",
+    "searchPlaceholder": "Nombre del lugar, coordenadas o enlace de mapa",
+    "searching": "Buscando…",
+    "noResults": "No se encontraron lugares.",
+    "searchUnavailable": "La búsqueda no está disponible ahora mismo. Introduce coordenadas o pega un enlace de Google Maps u OpenStreetMap.",
+    "shortLink": "Los enlaces cortos no contienen las coordenadas. Abre el enlace y pega la dirección que aparece en la barra del navegador.",
+    "noCoordinates": "Este enlace no contiene coordenadas, y los enlaces nunca se envían a la búsqueda. Ábrelo y pega la dirección que aparece en la barra del navegador cuando el mapa se haya movido, o introduce las coordenadas.",
+    "goTo": "Ir a {lat, number}, {lon, number}",
+    "shape": "Zona",
+    "tools": {
+      "move": "Mover",
+      "rectangle": "Rectángulo",
+      "square": "Cuadrado",
+      "circle": "Círculo",
+      "ellipse": "Elipse",
+      "freehand": "A mano alzada"
+    },
+    "drawHint": "Elige una forma y arrastra en el mapa para dibujarla. Mover arrastra el mapa.",
+    "noArea": "Dibuja una zona en el mapa.",
+    "longestSide": "Lado más largo",
+    "exaggeration": "Exageración",
+    "base": "Base",
+    "area": "Zona: {width, number} × {depth, number} km",
+    "size": "Modelo: {size} {unit}",
+    "heights": "Altitudes: {low, number}–{high, number} m",
+    "detail": "Detalle: {metres, number} m sobre el terreno, {mm} {unit} por celda",
+    "fetchingStart": "Descargando altitudes…",
+    "fetching": "Descargando altitudes… {done, number} de {total, number}",
+    "building": "Creando el modelo…",
+    "saving": "Añadiendo el modelo al proyecto…",
+    "generate": "Añadir al proyecto",
+    "next": "Siguiente",
+    "back": "Atrás",
+    "download": "Descargar STL",
+    "hasModel": "Este proyecto ya tiene su modelo 3D: el terreno solo se puede descargar como archivo STL.",
+    "storeOff": "Este servidor no puede guardar modelos 3D: el terreno solo se puede descargar como archivo STL.",
+    "cancel": "Cancelar",
+    "defaultName": "Terreno"
+  },
   "Viewport": {
     "scene": "Material, geometría y trayectorias",
     "simulating": "Simulando…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "Importa un dibujo",
-        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas."
+        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas. A su lado puedes añadir un modelo STL o STEP para tallar en 3D."
       },
       "properties": {
         "title": "Propiedades del proyecto",

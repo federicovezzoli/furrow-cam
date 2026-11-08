@@ -15,6 +15,8 @@ export {
 } from "./import/messages";
 export * from "./import/stl/import";
 export * from "./import/svg/import";
+export * from "./import/terrain/mesh";
+export * from "./import/terrain/tiles";
 export * from "./scene/model";
 export * from "./scene/pick";
 export * from "./scene/sides";

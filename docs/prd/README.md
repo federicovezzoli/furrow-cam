@@ -28,3 +28,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0011](0011-two-sided-machining.md) | Two-sided machining | Draft |
 | [0012](0012-mcp-server.md) | MCP server | Draft |
 | [0013](0013-demo-videos.md) | Automated demo videos | Draft |
+| [0014](0014-terrain-from-a-map.md) | Terrain from a map | Draft |

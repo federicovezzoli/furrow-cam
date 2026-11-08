@@ -784,7 +784,7 @@
       "unreadableFile": "Não foi possível ler este arquivo.",
       "modelUnreadable": "Não foi possível ler o modelo.",
       "importFailed": "Não foi possível importar este arquivo.",
-      "drawingsOrModel": "Um projeto contém desenhos SVG e DXF ou um modelo 3D, não os dois.",
+      "oneModel": "Um projeto contém apenas um modelo 3D.",
       "noShapes": "Este arquivo não tem formas para importar.",
       "stlImportOff": "A importação de modelos 3D não está disponível neste servidor.",
       "stepUnreadable": "Não foi possível ler este arquivo STEP. Exporte-o novamente do seu programa CAD e tente outra vez.",
@@ -802,7 +802,15 @@
       "fontUnreadable": "Este arquivo não é uma fonte legível: use um arquivo TTF, OTF ou WOFF.",
       "fontTooLarge": "Esta fonte tem mais de {mb, number} MB, o máximo permitido.",
       "tooManyFonts": "Um projeto contém no máximo {max} fontes.",
-      "fontUploadOff": "Este servidor não consegue armazenar fontes."
+      "fontUploadOff": "Este servidor não consegue armazenar fontes.",
+      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente."
+    },
+    "terrain": {
+      "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
+      "antimeridian": "Uma área não pode atravessar o meridiano de 180°.",
+      "tooWide": "Esta área tem mais de {km, number} km de largura, o máximo permitido. Desenhe uma mais pequena.",
+      "tooDetailed": "O modelo desta área excederia os limites dos modelos 3D.",
+      "noData": "Não há dados de altitude para esta área."
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "Histórico",
     "drawing": "Desenho",
     "importDrawing": "Importe um desenho",
+    "model": "Modelo",
+    "importModel": "Importe um modelo",
     "text": "Texto",
     "relief_rough": "Desbaste",
     "relief_finish": "Acabamento"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "Deve ser mais fina que a profundidade do lado de baixo: menos de {size}",
     "holdingTabsPerModel": "Pontes por modelo",
     "placeHoldingTabs": "Posicionar",
-    "holdingTabCount": "{count, plural, =0 {Nenhuma ponte} one {# ponte} other {# pontes}}"
+    "holdingTabCount": "{count, plural, =0 {Nenhuma ponte} one {# ponte} other {# pontes}}",
+    "machineChanged": "{name} nas suas máquinas é diferente da cópia deste projeto.",
+    "machineChangedHint": "Atualizar a cópia do projeto com as configurações atuais da máquina? As trajetórias e o G-code passam a usá-las.",
+    "gcodeChanged": "alterado",
+    "keepMachine": "Manter a cópia do projeto",
+    "updateMachine": "Atualizar projeto"
   },
   "Model": {
     "closeLabel": "Fechar as propriedades do modelo",
@@ -1458,6 +1473,57 @@
     "addText": "Adicionar texto",
     "defaultText": "Texto"
   },
+  "Terrain": {
+    "open": "Terreno a partir de um mapa…",
+    "ribbon": "Terreno",
+    "hint": "Criar um modelo em relevo de uma área num mapa",
+    "title": "Terreno a partir de um mapa",
+    "description": "Desenhe uma área no mapa para criar um modelo em relevo dela.",
+    "modelDescription": "Escolha o tamanho e o relevo do modelo e depois adicione-o ao projeto ou transfira-o.",
+    "notice": "O mapa vem do OpenFreeMap (dados do OpenStreetMap), as altitudes do Mapterhorn e a pesquisa de locais do Photon da komoot. O seu navegador contacta-os diretamente, por isso veem o seu endereço IP, a área que está a ver e o que pesquisa; as coordenadas e ligações de mapas ficam no seu dispositivo.",
+    "loading": "A carregar o mapa…",
+    "mapUnavailable": "Não foi possível carregar o mapa. Verifique a ligação e tente novamente.",
+    "preview": "Pré-visualização do terreno",
+    "previewLoading": "A criar a pré-visualização…",
+    "search": "Encontrar um local",
+    "searchPlaceholder": "Nome do local, coordenadas ou ligação de mapa",
+    "searching": "A pesquisar…",
+    "noResults": "Nenhum local encontrado.",
+    "searchUnavailable": "A pesquisa não está disponível de momento. Introduza coordenadas ou cole uma ligação do Google Maps ou do OpenStreetMap.",
+    "shortLink": "As ligações curtas não contêm as coordenadas. Abra a ligação e cole o endereço que aparece na barra do navegador.",
+    "noCoordinates": "Esta ligação não contém coordenadas, e as ligações nunca são enviadas para a pesquisa. Abra-a e cole o endereço que aparece na barra do navegador quando o mapa se mover, ou introduza as coordenadas.",
+    "goTo": "Ir para {lat, number}, {lon, number}",
+    "shape": "Área",
+    "tools": {
+      "move": "Mover",
+      "rectangle": "Retângulo",
+      "square": "Quadrado",
+      "circle": "Círculo",
+      "ellipse": "Elipse",
+      "freehand": "À mão livre"
+    },
+    "drawHint": "Escolha uma forma e arraste no mapa para a desenhar. Mover arrasta o mapa.",
+    "noArea": "Desenhe uma área no mapa.",
+    "longestSide": "Lado mais longo",
+    "exaggeration": "Exagero",
+    "base": "Base",
+    "area": "Área: {width, number} × {depth, number} km",
+    "size": "Modelo: {size} {unit}",
+    "heights": "Altitudes: {low, number}–{high, number} m",
+    "detail": "Detalhe: {metres, number} m no terreno, {mm} {unit} por célula",
+    "fetchingStart": "A transferir altitudes…",
+    "fetching": "A transferir altitudes… {done, number} de {total, number}",
+    "building": "A criar o modelo…",
+    "saving": "A adicionar o modelo ao projeto…",
+    "generate": "Adicionar ao projeto",
+    "next": "Seguinte",
+    "back": "Voltar",
+    "download": "Transferir STL",
+    "hasModel": "Este projeto já tem o seu modelo 3D: o terreno só pode ser transferido como ficheiro STL.",
+    "storeOff": "Este servidor não pode guardar modelos 3D: o terreno só pode ser transferido como ficheiro STL.",
+    "cancel": "Cancelar",
+    "defaultName": "Terreno"
+  },
   "Viewport": {
     "scene": "Material, geometria e percursos",
     "simulating": "Simulando…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "Importe um desenho",
-        "body": "Comece com um arquivo SVG ou DXF: os caminhos dele viram as formas que você corta."
+        "body": "Comece com um arquivo SVG ou DXF: os caminhos dele viram as formas que você corta. Ao lado, você pode importar um modelo STL ou STEP para entalhar em 3D."
       },
       "properties": {
         "title": "Propriedades do projeto",

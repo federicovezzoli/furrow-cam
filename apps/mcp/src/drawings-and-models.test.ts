@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { binaryStlSize } from "@furrow/cam-core";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
-import { DRAWINGS_OR_MODEL } from "@furrow/workspace/stores/geometry-actions";
+import { ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
@@ -139,10 +139,11 @@ describe("importFile", () => {
     ).rejects.toThrow(formatMessage(t, { code: "workspace.stepUnreadable" }));
   }, 30_000);
 
-  it("refuses drawings and a model in one project with the app's message", async () => {
+  it("takes a model beside drawings, and refuses a second model with the app's message", async () => {
     await importFile(project, await file("sign.svg", svg(100, 50, "mm")), {});
-    await expect(importFile(project, await file("emblem.stl", TETRAHEDRON), {})).rejects.toThrow(
-      formatMessage(t, DRAWINGS_OR_MODEL),
+    await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
+    await expect(importFile(project, await file("relief.stl", TETRAHEDRON), {})).rejects.toThrow(
+      formatMessage(t, ONE_MODEL),
     );
   });
 

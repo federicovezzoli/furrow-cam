@@ -784,7 +784,7 @@
       "unreadableFile": "Ce fichier n’a pas pu être lu.",
       "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
-      "drawingsOrModel": "Un projet contient des dessins SVG et DXF ou un modèle 3D, pas les deux.",
+      "oneModel": "Un projet ne contient qu’un seul modèle 3D.",
       "noShapes": "Ce fichier ne contient aucune forme à importer.",
       "stlImportOff": "L’import de modèles 3D n’est pas disponible sur ce serveur.",
       "stepUnreadable": "Ce fichier STEP n’a pas pu être lu. Exportez-le à nouveau depuis votre logiciel de CAO et réessayez.",
@@ -802,7 +802,15 @@
       "fontUnreadable": "Ce fichier n'est pas une police lisible : utilisez un fichier TTF, OTF ou WOFF.",
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",
-      "fontUploadOff": "Ce serveur ne peut pas stocker de polices."
+      "fontUploadOff": "Ce serveur ne peut pas stocker de polices.",
+      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez."
+    },
+    "terrain": {
+      "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
+      "antimeridian": "Une zone ne peut pas traverser le méridien de 180°.",
+      "tooWide": "Cette zone fait plus de {km, number} km de large, le maximum autorisé. Dessinez-en une plus petite.",
+      "tooDetailed": "Le modèle de cette zone dépasserait les limites des modèles 3D.",
+      "noData": "Il n'y a pas de données d'altitude pour cette zone."
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "Historique",
     "drawing": "Dessin",
     "importDrawing": "Importer un dessin",
+    "model": "Modèle",
+    "importModel": "Importer un modèle",
     "text": "Texte",
     "relief_rough": "Ébauche",
     "relief_finish": "Finition"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "Doit être plus fine que la profondeur de la face du dessous : moins de {size}",
     "holdingTabsPerModel": "Attaches par modèle",
     "placeHoldingTabs": "Placer",
-    "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}"
+    "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}",
+    "machineChanged": "{name} dans vos machines diffère de la copie de ce projet.",
+    "machineChangedHint": "Mettre à jour la copie du projet avec les réglages actuels de la machine ? Les parcours d'outil et le G-code les utiliseront.",
+    "gcodeChanged": "modifié",
+    "keepMachine": "Garder la copie du projet",
+    "updateMachine": "Mettre à jour le projet"
   },
   "Model": {
     "closeLabel": "Fermer les propriétés du modèle",
@@ -1458,6 +1473,57 @@
     "addText": "Ajouter du texte",
     "defaultText": "Texte"
   },
+  "Terrain": {
+    "open": "Terrain depuis une carte…",
+    "ribbon": "Terrain",
+    "hint": "Créer un modèle en relief d'une zone sur une carte",
+    "title": "Terrain depuis une carte",
+    "description": "Dessinez une zone sur la carte pour en créer un modèle en relief.",
+    "modelDescription": "Choisissez la taille et le relief du modèle, puis ajoutez-le au projet ou téléchargez-le.",
+    "notice": "La carte vient d'OpenFreeMap (données OpenStreetMap), les altitudes de Mapterhorn et la recherche de lieux de Photon de komoot. Votre navigateur les contacte directement : ils voient votre adresse IP, la zone que vous regardez et ce que vous cherchez ; les coordonnées et liens de carte restent sur votre appareil.",
+    "loading": "Chargement de la carte…",
+    "mapUnavailable": "La carte n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+    "preview": "Aperçu du terrain",
+    "previewLoading": "Création de l'aperçu…",
+    "search": "Trouver un lieu",
+    "searchPlaceholder": "Nom de lieu, coordonnées ou lien de carte",
+    "searching": "Recherche…",
+    "noResults": "Aucun lieu trouvé.",
+    "searchUnavailable": "La recherche n'est pas disponible pour le moment. Saisissez des coordonnées ou collez un lien Google Maps ou OpenStreetMap.",
+    "shortLink": "Les liens courts ne contiennent pas les coordonnées. Ouvrez le lien, puis collez l'adresse affichée dans la barre du navigateur.",
+    "noCoordinates": "Ce lien ne contient pas de coordonnées, et les liens ne sont jamais envoyés à la recherche. Ouvrez-le, puis collez l'adresse affichée dans la barre du navigateur une fois la carte déplacée, ou saisissez les coordonnées.",
+    "goTo": "Aller à {lat, number}, {lon, number}",
+    "shape": "Zone",
+    "tools": {
+      "move": "Déplacer",
+      "rectangle": "Rectangle",
+      "square": "Carré",
+      "circle": "Cercle",
+      "ellipse": "Ellipse",
+      "freehand": "Main levée"
+    },
+    "drawHint": "Choisissez une forme et faites glisser sur la carte pour la dessiner. Déplacer fait glisser la carte.",
+    "noArea": "Dessinez une zone sur la carte.",
+    "longestSide": "Plus grand côté",
+    "exaggeration": "Exagération",
+    "base": "Socle",
+    "area": "Zone : {width, number} × {depth, number} km",
+    "size": "Modèle : {size} {unit}",
+    "heights": "Altitudes : {low, number}–{high, number} m",
+    "detail": "Détail : {metres, number} m au sol, {mm} {unit} par cellule",
+    "fetchingStart": "Téléchargement des altitudes…",
+    "fetching": "Téléchargement des altitudes… {done, number} sur {total, number}",
+    "building": "Création du modèle…",
+    "saving": "Ajout du modèle au projet…",
+    "generate": "Ajouter au projet",
+    "next": "Suivant",
+    "back": "Retour",
+    "download": "Télécharger le STL",
+    "hasModel": "Ce projet a déjà son modèle 3D : le terrain peut seulement être téléchargé en fichier STL.",
+    "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le terrain peut seulement être téléchargé en fichier STL.",
+    "cancel": "Annuler",
+    "defaultName": "Terrain"
+  },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",
     "simulating": "Simulation…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "Importer un dessin",
-        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez."
+        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez. Un modèle STL ou STEP peut s’y ajouter, à sculpter en 3D."
       },
       "properties": {
         "title": "Propriétés du projet",

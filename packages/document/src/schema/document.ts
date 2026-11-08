@@ -6,7 +6,7 @@ import { Model, Sha256 } from "./model";
 import { Operation, operationModelId } from "./operation";
 import { PositiveLength, Units } from "./units";
 
-export const CURRENT_SCHEMA_VERSION = 34;
+export const CURRENT_SCHEMA_VERSION = 35;
 
 /** The 9 stock points an XY zero can sit on: corners, edge midpoints and the centre. */
 export const StockAnchor = z.enum([
@@ -218,6 +218,11 @@ export const ProjectDocument = z
     stock: Stock,
     /** Snapshot of the machine profile, or `null` if none is picked. */
     machine: Machine.nullable(),
+    /**
+     * The library machine `machine` was snapshotted from (ADR-0079), or `null`
+     * when unknown. Only offers to update the snapshot; G-code reads `machine`.
+     */
+    machineId: z.string().min(1).nullable(),
     /** Imported SVG and DXF files and text items, each grouping its shapes in `geometry` (ADR-0055, ADR-0059). */
     drawings: z.array(Drawing),
     geometry: z.array(Shape),
@@ -390,6 +395,7 @@ export function createProjectDocument(): ProjectDocument {
       twoSided: null,
     },
     machine: null,
+    machineId: null,
     drawings: [],
     geometry: [],
     models: [],

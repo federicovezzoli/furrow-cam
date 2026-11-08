@@ -262,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 34,
+    schemaVersion: 35,
     units: "in",
     stock: {
       width: 300,
@@ -284,6 +284,7 @@ export function fullDocument(): ProjectDocument {
       },
     },
     machine,
+    machineId: null,
     drawings: [{ id: DRAWING_ID, name: "part.dxf", border: 10, rotation: 0 }],
     geometry: [square, circle],
     models: [],

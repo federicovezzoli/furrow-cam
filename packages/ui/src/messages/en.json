@@ -784,7 +784,7 @@
       "unreadableFile": "This file couldn't be read.",
       "modelUnreadable": "The model couldn't be read.",
       "importFailed": "This file couldn't be imported.",
-      "drawingsOrModel": "A project holds SVG and DXF drawings or one 3D model, not both.",
+      "oneModel": "A project holds only one 3D model.",
       "noShapes": "This file has no shapes to import.",
       "stlImportOff": "3D model import isn't available on this server.",
       "stepUnreadable": "This STEP file couldn't be read. Export it again from your CAD program and try once more.",
@@ -802,7 +802,15 @@
       "fontUnreadable": "This file isn't a font that can be read: use a TTF, OTF or WOFF file.",
       "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
       "tooManyFonts": "A project holds at most {max} fonts.",
-      "fontUploadOff": "This server can't store fonts."
+      "fontUploadOff": "This server can't store fonts.",
+      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again."
+    },
+    "terrain": {
+      "noArea": "This area is too small. Draw a larger one.",
+      "antimeridian": "An area can't cross the 180° meridian.",
+      "tooWide": "This area is wider than {km, number} km, the most allowed. Draw a smaller one.",
+      "tooDetailed": "This area's model would exceed the 3D model limits.",
+      "noData": "There is no elevation data for this area."
     }
   },
   "Operation": {
@@ -1204,6 +1212,8 @@
     "history": "History",
     "drawing": "Drawing",
     "importDrawing": "Import a drawing",
+    "model": "Model",
+    "importModel": "Import a model",
     "text": "Text",
     "relief_rough": "Rough",
     "relief_finish": "Finish"
@@ -1355,7 +1365,12 @@
     "holdingTabTooThick": "Must be thinner than the bottom side's depth: less than {size}",
     "holdingTabsPerModel": "Tabs per model",
     "placeHoldingTabs": "Place",
-    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}"
+    "holdingTabCount": "{count, plural, =0 {No tabs} one {# tab} other {# tabs}}",
+    "machineChanged": "{name} in your machines differs from this project's copy.",
+    "machineChangedHint": "Update the project's copy to the machine's current settings? Toolpaths and G-code then use them.",
+    "gcodeChanged": "changed",
+    "keepMachine": "Keep project's copy",
+    "updateMachine": "Update project"
   },
   "Model": {
     "closeLabel": "Close model properties",
@@ -1458,6 +1473,57 @@
     "addText": "Add text",
     "defaultText": "Text"
   },
+  "Terrain": {
+    "open": "Terrain from a map…",
+    "ribbon": "Terrain",
+    "hint": "Make a relief model of an area on a map",
+    "title": "Terrain from a map",
+    "description": "Draw an area on the map to make a relief model of it.",
+    "modelDescription": "Choose the model's size and relief, then add it to the project or download it.",
+    "notice": "The map comes from OpenFreeMap (OpenStreetMap data), the heights from Mapterhorn and place search from komoot's Photon. Your browser contacts them directly, so they see your IP address, the area you look at and what you search for; coordinates and map links stay on your device.",
+    "loading": "Loading the map…",
+    "mapUnavailable": "The map couldn't be loaded. Check your connection and try again.",
+    "preview": "Terrain preview",
+    "previewLoading": "Making the preview…",
+    "search": "Find a place",
+    "searchPlaceholder": "Place name, coordinates or map link",
+    "searching": "Searching…",
+    "noResults": "No places found.",
+    "searchUnavailable": "Search isn't available right now. Enter coordinates or paste a Google Maps or OpenStreetMap link instead.",
+    "shortLink": "Short links don't hold the coordinates. Open the link, then paste the address shown in the browser bar.",
+    "noCoordinates": "This link doesn't hold coordinates, and links are never sent to the search. Open it, then paste the address shown in the browser bar once the map has moved, or enter the coordinates.",
+    "goTo": "Go to {lat, number}, {lon, number}",
+    "shape": "Area",
+    "tools": {
+      "move": "Move",
+      "rectangle": "Rectangle",
+      "square": "Square",
+      "circle": "Circle",
+      "ellipse": "Ellipse",
+      "freehand": "Freehand"
+    },
+    "drawHint": "Pick a shape and drag on the map to draw it. Move drags the map.",
+    "noArea": "Draw an area on the map.",
+    "longestSide": "Longest side",
+    "exaggeration": "Exaggeration",
+    "base": "Base",
+    "area": "Area: {width, number} × {depth, number} km",
+    "size": "Model: {size} {unit}",
+    "heights": "Heights: {low, number}–{high, number} m",
+    "detail": "Detail: {metres, number} m on the ground, {mm} {unit} per cell",
+    "fetchingStart": "Fetching elevation…",
+    "fetching": "Fetching elevation… {done, number} of {total, number}",
+    "building": "Building the model…",
+    "saving": "Adding the model to the project…",
+    "generate": "Add to project",
+    "next": "Next",
+    "back": "Back",
+    "download": "Download STL",
+    "hasModel": "This project has its 3D model already: the terrain can only be downloaded as an STL file.",
+    "storeOff": "This server can't store 3D models: the terrain can only be downloaded as an STL file.",
+    "cancel": "Cancel",
+    "defaultName": "Terrain"
+  },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",
     "simulating": "Simulating…",
@@ -1533,7 +1599,7 @@
       },
       "import": {
         "title": "Import a drawing",
-        "body": "Start from an SVG or DXF file: its paths become the shapes you cut."
+        "body": "Start from an SVG or DXF file: its paths become the shapes you cut. An STL or STEP model can go beside them, to carve in 3D."
       },
       "properties": {
         "title": "Project properties",

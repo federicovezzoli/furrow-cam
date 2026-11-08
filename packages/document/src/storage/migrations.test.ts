@@ -369,6 +369,11 @@ describe("migrations", () => {
     expect(parseProjectDocument(v33)).toEqual(current);
   });
 
+  it("gives v34 machine snapshots no library machine", () => {
+    const { machineId: _, ...v34 } = { ...fullDocument(), machineId: "m1", schemaVersion: 34 };
+    expect(parseProjectDocument(v34)).toEqual({ ...fullDocument(), machineId: null });
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

@@ -32,12 +32,15 @@ import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
 import { GcodeExportButton } from "./gcode-export-button";
 import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-import";
+import { MachineUpdateDialog } from "./machine-update-dialog";
+import { ModelImportButton } from "./model-import-button";
 import { ModelProperties } from "./model-properties";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { Ribbon, RibbonGroup } from "./ribbon";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
+import { TerrainButton } from "./terrain-dialog";
 import { ToolpathProgressToast } from "./toolpath-progress-toast";
 import { TopBar } from "./top-bar";
 import { VersionsButton } from "./versions-pane";
@@ -95,6 +98,8 @@ export function WorkspaceShell() {
       <Ribbon>
         <RibbonGroup caption={importT("import")} tour="import">
           <ImportDrawingButton />
+          <ModelImportButton inRibbon />
+          <TerrainButton inRibbon />
           <AddTextButton />
         </RibbonGroup>
         <RibbonGroup caption={t("operations")} tour="add-operation">
@@ -182,6 +187,7 @@ export function WorkspaceShell() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      <MachineUpdateDialog machines={library.machines} />
     </>
   );
 }
