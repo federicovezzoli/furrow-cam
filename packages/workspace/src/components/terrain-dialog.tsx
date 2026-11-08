@@ -316,8 +316,9 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 quantity="length"
                 units={units}
                 min={1}
-                // The model is placed at this size: no larger than the stock less its border.
-                max={plan ? fittingSide(stock, plan.span) : undefined}
+                // A model added is placed at this size, so no larger than the stock less its
+                // border; one that can only be downloaded has nothing to do with the stock.
+                max={plan && storable && !hasModel ? fittingSide(stock, plan.span) : undefined}
                 value={longestSide}
                 disabled={!plan || generating}
                 onValueChange={setSide}

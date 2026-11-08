@@ -99,6 +99,14 @@ describe("TerrainDialog", () => {
     expect(screen.getByRole("button", { name: "Generate" })).toHaveProperty("disabled", true);
     expect(screen.getByText(/has its 3D model already/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download STL" })).toHaveProperty("disabled", false);
+    // A download isn't held to the stock: a side twice the stock's width is taken.
+    const side = screen.getByLabelText(/Longest side/);
+    fireEvent.change(side, { target: { value: "1200" } });
+    fireEvent.blur(side);
+    fireEvent.click(screen.getByRole("button", { name: "Download STL" }));
+    finish();
+    await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+    expect(generate.mock.lastCall?.[1]).toMatchObject({ longestSide: 1200 });
   });
 
   it("only downloads where the server can't store meshes", async () => {
