@@ -1366,7 +1366,7 @@
     "holdingTabsPerModel": "Ponticelli per modello",
     "placeHoldingTabs": "Posiziona",
     "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}",
-    "machineChanged": "{name} è cambiata da quando questo progetto l'ha usata.",
+    "machineChanged": "{name} tra le tue macchine è diversa dalla copia di questo progetto.",
     "machineChangedHint": "Aggiornare la copia del progetto alle impostazioni attuali della macchina? Percorsi utensile e G-code le useranno.",
     "gcodeChanged": "modificato",
     "keepMachine": "Mantieni la copia del progetto",

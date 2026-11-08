@@ -102,6 +102,8 @@ describe("outdatedMachineChoice", () => {
     expect(outdatedMachineChoice([{ id: "a", machine }], { machine, machineId: "a" })).toBe(
       undefined,
     );
+    const twin = [...choices, { id: "b", machine }];
+    expect(outdatedMachineChoice(twin, { machine, machineId: "a" })).toBeUndefined();
   });
 });
 

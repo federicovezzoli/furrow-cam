@@ -51,11 +51,16 @@ export function sourceMachineChoice<Choice extends { id: string; machine: Machin
   return named.length === 1 ? named[0] : undefined;
 }
 
-/** The snapshot's library machine, when it has been edited since the project took its copy. */
+/**
+ * The snapshot's library machine, when it has been edited since the project
+ * took its copy and no other library machine still has the snapshot's values.
+ */
 export function outdatedMachineChoice<Choice extends { id: string; machine: Machine }>(
   machines: Choice[],
   document: Pick<ProjectDocument, "machine" | "machineId">,
 ): Choice | undefined {
+  // The machine select shows that one, so offering another would contradict it.
+  if (matchingMachineChoice(machines, document.machine)) return undefined;
   const source = sourceMachineChoice(machines, document);
   if (!source || !document.machine) return undefined;
   return machineKey(source.machine) === machineKey(document.machine) ? undefined : source;

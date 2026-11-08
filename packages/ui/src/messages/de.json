@@ -1366,7 +1366,7 @@
     "holdingTabsPerModel": "Stege pro Modell",
     "placeHoldingTabs": "Verteilen",
     "holdingTabCount": "{count, plural, =0 {Keine Stege} one {# Steg} other {# Stege}}",
-    "machineChanged": "{name} hat sich geändert, seit dieses Projekt sie verwendet hat.",
+    "machineChanged": "{name} in deinen Maschinen weicht von der Kopie dieses Projekts ab.",
     "machineChangedHint": "Die Kopie im Projekt auf die aktuellen Einstellungen der Maschine bringen? Werkzeugwege und G-Code verwenden sie dann.",
     "gcodeChanged": "geändert",
     "keepMachine": "Kopie des Projekts behalten",

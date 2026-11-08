@@ -1366,7 +1366,7 @@
     "holdingTabsPerModel": "Pontes por modelo",
     "placeHoldingTabs": "Posicionar",
     "holdingTabCount": "{count, plural, =0 {Nenhuma ponte} one {# ponte} other {# pontes}}",
-    "machineChanged": "{name} mudou desde que este projeto a usou.",
+    "machineChanged": "{name} nas suas máquinas é diferente da cópia deste projeto.",
     "machineChangedHint": "Atualizar a cópia do projeto com as configurações atuais da máquina? As trajetórias e o G-code passam a usá-las.",
     "gcodeChanged": "alterado",
     "keepMachine": "Manter a cópia do projeto",

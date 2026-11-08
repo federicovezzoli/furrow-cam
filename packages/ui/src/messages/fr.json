@@ -1366,7 +1366,7 @@
     "holdingTabsPerModel": "Attaches par modèle",
     "placeHoldingTabs": "Placer",
     "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}",
-    "machineChanged": "{name} a changé depuis que ce projet l'a utilisée.",
+    "machineChanged": "{name} dans vos machines diffère de la copie de ce projet.",
     "machineChangedHint": "Mettre à jour la copie du projet avec les réglages actuels de la machine ? Les parcours d'outil et le G-code les utiliseront.",
     "gcodeChanged": "modifié",
     "keepMachine": "Garder la copie du projet",

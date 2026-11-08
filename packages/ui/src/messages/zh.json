@@ -1366,7 +1366,7 @@
     "holdingTabsPerModel": "每个模型的保留桥数",
     "placeHoldingTabs": "放置",
     "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}",
-    "machineChanged": "自本项目使用以来，{name} 已被修改。",
+    "machineChanged": "你的机器中的 {name} 与本项目的副本不同。",
     "machineChangedHint": "要将项目中的副本更新为该机器的当前设置吗？刀具路径和 G-code 将使用这些设置。",
     "gcodeChanged": "已修改",
     "keepMachine": "保留项目副本",

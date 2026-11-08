@@ -22,7 +22,7 @@ We will use option 2:
 - The project document gains `machineId: string | null` beside `machine` (schema version 35; older documents migrate to `null`). It is not part of the `Machine` schema, which also validates library rows.
 - Choosing a machine, in the workspace, when creating a project or through the MCP server, stores its id with the snapshot.
 - A snapshot's source is the library machine with that id or, without an id (older projects, imported files), the only library machine with the same name.
-- When a project opens and its source differs from the snapshot, the workspace offers to update the snapshot, listing the changed fields. Updating is one undoable edit; keeping the copy changes nothing and isn't asked again in that session. A missing source (deleted, another account's id) asks nothing. A link under the machine select offers the same update later.
+- When a project opens and its source differs from the snapshot, the workspace offers to update the snapshot, listing the changed fields. It doesn't when another library machine still has the snapshot's values, which the machine select then shows. Updating is one undoable edit; keeping the copy changes nothing, and the same change isn't offered again in that session, whichever project or file it is opened from. A missing source (deleted, another account's id) asks nothing. A link under the machine select offers the same update later.
 - `machine` remains the only input to toolpaths and G-code; the id only finds the source.
 
 ## Consequences

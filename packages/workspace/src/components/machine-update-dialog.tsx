@@ -14,13 +14,27 @@ import { localizeDecimal } from "@furrow/ui/lib/locales";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "use-intl";
 import type { MachineChoice } from "../lib/workspace-host";
+import { GCODE_BLOCKS } from "../machines/components/machine-form";
 import { POST_PROCESSOR_LABELS } from "../machines/lib/labels";
-import { useWorkspaceHost } from "../providers/workspace-host";
 import { useDocumentStoreApi } from "../providers/workspace-stores";
-import { changedMachineFields, outdatedMachineChoice, setMachine } from "../stores/machine-actions";
+import {
+  changedMachineFields,
+  machineKey,
+  outdatedMachineChoice,
+  setMachine,
+} from "../stores/machine-actions";
 
-/** Projects already asked about in this session, by id: Keep is not remembered beyond it (#512). */
+/**
+ * Changes already offered in this session, by `offerKey`: Keep is not remembered
+ * beyond it (#512). Keyed by the change rather than the project id, which the
+ * desktop app makes anew each time a file opens.
+ */
 const asked = new Set<string>();
+
+/** Names an offer to update `snapshot` to library machine `choice`. */
+function offerKey(snapshot: Machine, choice: MachineChoice): string {
+  return JSON.stringify([choice.id, machineKey(choice.machine), machineKey(snapshot)]);
+}
 
 /** Each profile field's label in the machine form ("Machine" messages). */
 const LABELS = {
@@ -78,18 +92,21 @@ export function MachineUpdateDialog({ machines }: { machines: MachineChoice[] })
   const t = useTranslations("Stock");
   const labels = useTranslations("Machine");
   const locale = useLocale();
-  const { project } = useWorkspaceHost();
   const store = useDocumentStoreApi();
   // Read once, on open: later edits don't bring the dialog up, nor change it while it fades out.
   const [{ choice, document }] = useState(() => {
     const document = store.getState().document;
-    const choice = asked.has(project.id) ? undefined : outdatedMachineChoice(machines, document);
+    const found = outdatedMachineChoice(machines, document);
+    const choice =
+      found && document.machine && !asked.has(offerKey(document.machine, found))
+        ? found
+        : undefined;
     return { choice, document };
   });
   const [open, setOpen] = useState(choice !== undefined);
   useEffect(() => {
-    if (choice) asked.add(project.id);
-  }, [choice, project.id]);
+    if (choice && document.machine) asked.add(offerKey(document.machine, choice));
+  }, [choice, document]);
 
   const { machine, units } = document;
   if (!choice || !machine) return null;
@@ -104,7 +121,7 @@ export function MachineUpdateDialog({ machines }: { machines: MachineChoice[] })
           {changedMachineFields(machine, choice.machine).map((key) => (
             <li key={key}>
               <span className="font-medium">{labels(LABELS[key])}</span>
-              {LABELS[key].startsWith("blocks.") ? (
+              {GCODE_BLOCKS.some((block) => block.name === key) ? (
                 <span className="text-muted-foreground"> {t("gcodeChanged")}</span>
               ) : (
                 <>

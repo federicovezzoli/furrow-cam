@@ -38,7 +38,7 @@ describe("MachineUpdateDialog (ADR-0079)", () => {
   it("lists what changed, and Update replaces the snapshot as one undo step", () => {
     const { store } = open({ machine, machineId: "a" }, [{ id: "a", machine: edited }]);
     screen.getByRole("alertdialog", {
-      name: `${machine.name} has changed since this project used it.`,
+      name: `${machine.name} in your machines differs from this project's copy.`,
     });
     screen.getByText(/: 5 mm → 12 mm/);
     screen.getByText("Program end");
@@ -50,8 +50,9 @@ describe("MachineUpdateDialog (ADR-0079)", () => {
   });
 
   it("keeps the project's copy unchanged and doesn't ask again in the session", () => {
-    const machines = [{ id: "a", machine: edited }];
-    const first = open({ machine, machineId: "a" }, machines, "kept");
+    // A dedicated library machine id, so no other test has offered this change.
+    const machines = [{ id: "kept", machine: edited }];
+    const first = open({ machine, machineId: "kept" }, machines);
     fireEvent.click(screen.getByRole("button", { name: "Keep project's copy" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(first.store().getState().past).toHaveLength(0);
@@ -59,19 +60,25 @@ describe("MachineUpdateDialog (ADR-0079)", () => {
     screen.getByRole("button", { name: "Update project" });
     first.unmount();
 
-    open({ machine, machineId: "a" }, machines, "kept");
+    // Reopened, even under a new project id as the desktop app gives each open file.
+    open({ machine, machineId: "kept" }, machines);
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("doesn't ask for an unchanged or deleted machine, or no machine", () => {
     open({ machine, machineId: "a" }, [{ id: "a", machine }]).unmount();
     open({ machine, machineId: "a" }, [{ id: "b", machine: edited }]).unmount();
-    open({ machine: null, machineId: null }, [{ id: "a", machine: edited }]);
+    open({ machine: null, machineId: null }, [{ id: "a", machine: edited }]).unmount();
+    // Another library machine still has the snapshot's values, and the select shows it.
+    open({ machine, machineId: "a" }, [
+      { id: "a", machine: edited },
+      { id: "b", machine },
+    ]);
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("links a project without an id by its machine's unique name", () => {
-    open({ machine, machineId: null }, [{ id: "a", machine: edited }]);
+    open({ machine, machineId: null }, [{ id: "named", machine: edited }]);
     screen.getByRole("alertdialog");
   });
 });

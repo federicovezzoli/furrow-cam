@@ -35,7 +35,6 @@ import { gestureHandlers } from "../stores/gesture-handlers";
 import {
   machineKey,
   matchingMachineChoice,
-  outdatedMachineChoice,
   setMachine,
   sourceMachineChoice,
 } from "../stores/machine-actions";
@@ -524,7 +523,8 @@ function MachineField({ machines }: { machines: MachineChoice[] }) {
     source && machine && machineKey(source.machine) === machineKey(machine)
       ? source
       : matchingMachineChoice(machines, machine);
-  const outdated = current ? undefined : outdatedMachineChoice(machines, { machine, machineId });
+  // Without a match by value, a source differs from the snapshot.
+  const outdated = current ? undefined : source;
 
   function choose(id: string) {
     const choice = machines.find((m) => m.id === id);
