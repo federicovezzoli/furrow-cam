@@ -1502,6 +1502,7 @@
     "generate": "Gerar",
     "download": "Transferir STL",
     "hasModel": "Este projeto já tem o seu modelo 3D: o terreno só pode ser transferido como ficheiro STL.",
+    "storeOff": "Este servidor não pode guardar modelos 3D: o terreno só pode ser transferido como ficheiro STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
   },

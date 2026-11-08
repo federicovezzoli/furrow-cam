@@ -1502,6 +1502,7 @@
     "generate": "Générer",
     "download": "Télécharger le STL",
     "hasModel": "Ce projet a déjà son modèle 3D : le terrain peut seulement être téléchargé en fichier STL.",
+    "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le terrain peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Terrain"
   },

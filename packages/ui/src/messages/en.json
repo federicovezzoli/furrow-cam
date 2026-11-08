@@ -1502,6 +1502,7 @@
     "generate": "Generate",
     "download": "Download STL",
     "hasModel": "This project has its 3D model already: the terrain can only be downloaded as an STL file.",
+    "storeOff": "This server can't store 3D models: the terrain can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Terrain"
   },

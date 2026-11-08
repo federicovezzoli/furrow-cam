@@ -1502,6 +1502,7 @@
     "generate": "生成",
     "download": "下载 STL",
     "hasModel": "此项目已有 3D 模型：地形只能下载为 STL 文件。",
+    "storeOff": "此服务器无法保存 3D 模型：地形只能下载为 STL 文件。",
     "cancel": "取消",
     "defaultName": "地形"
   },
