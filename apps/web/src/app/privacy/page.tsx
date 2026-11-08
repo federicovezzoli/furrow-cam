@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
-const LAST_UPDATED = "2 November 2026";
+const LAST_UPDATED = "8 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -103,10 +103,11 @@ export default async function PrivacyPage() {
             never sends them to us. It makes no network requests except two you are asked about on
             first start and can turn off in its Help menu: checking for a newer version, and sending
             PostHog the anonymous usage statistics and error reports described below, with a new
-            random ID each time the app starts. The update check sends only your IP address and the
-            app&apos;s user agent: to GitHub on macOS, and to download.furrow.cam and then GitHub on
-            Windows and Linux, where the app also downloads the update from GitHub if you choose to
-            install it.
+            random ID each time the app starts. Making a terrain from a map also reaches the map,
+            search and elevation services described under &quot;Maps and terrain&quot;, only while
+            you use it. The update check sends only your IP address and the app&apos;s user agent:
+            to GitHub on macOS, and to download.furrow.cam and then GitHub on Windows and Linux,
+            where the app also downloads the update from GitHub if you choose to install it.
           </p>
         </Section>
 
@@ -190,6 +191,35 @@ export default async function PrivacyPage() {
             settings (not the project&apos;s name or drawings). The app shows all of it first and
             sends nothing itself: the report is published only if you submit the issue, from your
             own GitHub account, and it is public.
+          </p>
+        </Section>
+
+        <Section title="Maps and terrain">
+          <p>
+            When you make a terrain from a map, your browser (or the desktop app) contacts three
+            services directly; we don&apos;t pass anything through our servers and store none of it.
+            Each receives your IP address and user agent with every request:
+          </p>
+          <List>
+            <li>
+              <External href="https://openfreemap.org/privacy/">OpenFreeMap</External> serves the
+              map, so it sees which part of the map you look at. Its access logs don&apos;t keep IP
+              addresses, and its other logs are deleted after 7 days.
+            </li>
+            <li>
+              <External href="https://mapterhorn.com/privacy-policy/">Mapterhorn</External> serves
+              the elevation of the area you select. It keeps the IP address, referrer and user agent
+              of each request for up to 30 days.
+            </li>
+            <li>
+              <External href="https://www.komoot.com/privacy">komoot</External> runs Photon, the
+              place search, so it receives what you type in the search field. Coordinates and map
+              links you paste are read by the app itself and never sent.
+            </li>
+          </List>
+          <p>
+            Your project keeps only the terrain model and its name, never the area, the search or
+            the place. Without a connection the map doesn&apos;t load, and nothing else changes.
           </p>
         </Section>
 
