@@ -4,22 +4,6 @@ import type { Recorder } from "../recorder.ts";
 const terrain = fileURLToPath(new URL("../../fixtures/mountain-160x160.stl", import.meta.url));
 
 /**
- * Creates a library bit from the operation's tool select. Tab, not Enter,
- * between fields: Enter in a field submits the form.
- */
-async function newBit(
-  r: Recorder,
-  fields: { name: string; diameter: string; fluteLength: string; stepDown: string },
-) {
-  await r.select("operation-tool", "New bit…", { waitFor: "save-bit" });
-  for (const [field, value] of Object.entries(fields)) {
-    await r.type(field, value, { press: "Tab" });
-  }
-  // The bit is saved before the operation takes it: until then, the total is the last tool's.
-  await r.click("save-bit", { waitForGone: "save-bit", waitFor: "job-time" });
-}
-
-/**
  * V4 (PRD-0013): a 3D relief of a mountain from an STL terrain, roughed with
  * an 8 mm roughing end mill and finished with a 4 mm ball nose.
  */
@@ -44,7 +28,7 @@ export default async function stl(r: Recorder) {
   await r.hold(0.5);
 
   await r.click("add-relief_rough", { waitFor: "job-time" });
-  await newBit(r, {
+  await r.newBit({
     name: "8 mm roughing end mill",
     diameter: "8",
     fluteLength: "50",
@@ -54,7 +38,7 @@ export default async function stl(r: Recorder) {
   await r.hold(1);
 
   await r.click("add-relief_finish", { waitFor: "job-time" });
-  await newBit(r, { name: "4 mm ball nose", diameter: "4", fluteLength: "20", stepDown: "1" });
+  await r.newBit({ name: "4 mm ball nose", diameter: "4", fluteLength: "20", stepDown: "1" });
   await r.click("close-operation");
   await r.expectNoWarnings();
   await r.hold(1);

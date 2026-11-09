@@ -474,17 +474,7 @@ export class Recorder {
    */
   async waitForWork(target: Locator | string, timeout = 120_000) {
     const locator = typeof target === "string" ? this.#locate(target) : target;
-    const end = Date.now() + timeout;
-    const failed = this.page.locator('[data-demo="toolpath-failed"]').filter({ visible: true });
-    while (!(await locator.isVisible())) {
-      if ((await failed.count()) > 0) {
-        throw new Error(`Demo "${this.#name}": a toolpath failed while waiting for ${target}`);
-      }
-      if (Date.now() > end)
-        throw new Error(`Demo "${this.#name}": timed out waiting for ${locator}`);
-      await this.#step();
-    }
-    await this.#align();
+    await this.#waitUntil(() => locator.isVisible(), `waiting for ${target}`, timeout);
   }
 
   /**
@@ -493,11 +483,47 @@ export class Recorder {
    */
   async waitForGone(name: string, timeout = 120_000) {
     const locator = this.#locate(name);
+    await this.#waitUntil(
+      async () => !(await locator.isVisible()),
+      `waiting for ${name} to close`,
+      timeout,
+    );
+  }
+
+  /** Steps the page clock, recording nothing, until `done`, then aligns it (see `#align`). */
+  async #waitUntil(done: () => Promise<boolean>, what: string, timeout: number) {
     const end = Date.now() + timeout;
-    while (await locator.isVisible()) {
-      if (Date.now() > end) throw new Error(`Demo "${this.#name}": anchor "${name}" never closed`);
+    const failed = this.page.locator('[data-demo="toolpath-failed"]').filter({ visible: true });
+    while (!(await done())) {
+      if ((await failed.count()) > 0) {
+        throw new Error(`Demo "${this.#name}": a toolpath failed while ${what}`);
+      }
+      if (Date.now() > end) throw new Error(`Demo "${this.#name}": timed out ${what}`);
       await this.#step();
     }
+    await this.#align();
+  }
+
+  /** Stops the run unless the anchor `name`'s text matches `expected`. */
+  async expectText(name: string, expected: RegExp) {
+    const text = (await (await this.anchor(name)).textContent()) ?? "";
+    if (!expected.test(text)) {
+      throw new Error(`Demo "${this.#name}": anchor "${name}" reads "${text}", not ${expected}`);
+    }
+  }
+
+  /**
+   * Creates a library bit from the operation's tool select and waits for
+   * the operation's toolpaths with it. Tab, not Enter, between fields: Enter
+   * in a field submits the form.
+   */
+  async newBit(fields: { name: string; diameter: string; fluteLength: string; stepDown: string }) {
+    await this.select("operation-tool", "New bit…", { waitFor: "save-bit" });
+    for (const [field, value] of Object.entries(fields)) {
+      await this.type(field, value, { press: "Tab" });
+    }
+    // Saved, then taken by the operation as the form closes: until then the total is the last tool's.
+    await this.click("save-bit", { waitForGone: "save-bit", waitFor: "job-time" });
   }
 
   /**

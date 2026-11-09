@@ -16,22 +16,6 @@ const HALF_SIDE = 290;
 const OFF: readonly [number, number] = [-40, 15];
 
 /**
- * Creates a library bit from the operation's tool select. Tab, not Enter,
- * between fields: Enter in a field submits the form.
- */
-async function newBit(
-  r: Recorder,
-  fields: { name: string; diameter: string; fluteLength: string; stepDown: string },
-) {
-  await r.select("operation-tool", "New bit…", { waitFor: "save-bit" });
-  for (const [field, value] of Object.entries(fields)) {
-    await r.type(field, value, { press: "Tab" });
-  }
-  // The bit is saved before the operation takes it: until then, the total is the last tool's.
-  await r.click("save-bit", { waitForGone: "save-bit", waitFor: "job-time" });
-}
-
-/**
  * V5 (PRD-0013): *Terrain from a map*. Pizzo Arera, a peak in the Bergamo
  * Alps, found by name, cut out as a square centred on its summit, previewed
  * in 3D, then roughed and finished as in V4.
@@ -57,7 +41,9 @@ export default async function terrain(r: Recorder) {
     waitFor: "terrain-suggestion",
   });
   await r.hold(0.6);
-  // Photon's first suggestion is the peak: the map jumps to it, centred on the summit.
+  // Photon's first suggestion is the peak (a point: the map jumps to it at zoom 12, centred on
+  // the summit). Live data can rank another place first: that stops the run.
+  await r.expectText("terrain-suggestion", /^Pizzo AreraOltre il Colle/);
   await r.click("terrain-suggestion", { waitFor: "terrain-map-idle" });
   await r.hold(0.6);
 
@@ -70,6 +56,8 @@ export default async function terrain(r: Recorder) {
   await r.hold(0.6);
   await r.moveToPoint(cx + OFF[0], cy + OFF[1], 0.5);
   await r.drag(-OFF[0], -OFF[1], 1);
+  // A map of another size, or a search that frames the peak another way, draws another square.
+  await r.expectText("terrain-area", /^Area: 7\.\d × 7\.\d km$/);
   await r.hold(0.8);
 
   // Step two: the relief in 3D, at life size to fit the stock, on a thicker base.
@@ -91,7 +79,7 @@ export default async function terrain(r: Recorder) {
   await r.hold(0.5);
 
   await r.click("add-relief_rough", { waitFor: "job-time" });
-  await newBit(r, {
+  await r.newBit({
     name: "8 mm roughing end mill",
     diameter: "8",
     fluteLength: "50",
@@ -101,7 +89,7 @@ export default async function terrain(r: Recorder) {
   await r.hold(1);
 
   await r.click("add-relief_finish", { waitFor: "job-time" });
-  await newBit(r, { name: "4 mm ball nose", diameter: "4", fluteLength: "20", stepDown: "1" });
+  await r.newBit({ name: "4 mm ball nose", diameter: "4", fluteLength: "20", stepDown: "1" });
   await r.click("close-operation");
   await r.expectNoWarnings();
   await r.hold(1);
