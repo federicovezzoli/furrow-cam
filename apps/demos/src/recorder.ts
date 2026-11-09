@@ -119,6 +119,15 @@ export class Recorder {
   }
 
   /**
+   * Lets the page reach `urls` on the network, past the route that refuses
+   * other origins: for a demo that needs outside services (the terrain's
+   * map). What they answer can change between runs (PRD-0013).
+   */
+  async allow(urls: RegExp) {
+    await this.page.context().route(urls, (route) => route.continue());
+  }
+
+  /**
    * The element marked `data-tour` or `data-demo` with `name`, or a form field
    * with that id. A missing anchor stops the run, naming the video and the
    * anchor (PRD-0013 D2).
@@ -329,11 +338,15 @@ export class Recorder {
   /**
    * Moves to the anchor `name` and clicks it, with a short pause either side.
    * With `waitFor`, the work the click starts is waited for before the pause
-   * after it, until that anchor shows (see `waitForWork`).
+   * after it, until that anchor shows (see `waitForWork`); with `waitForGone`,
+   * first until that anchor is gone (see `waitForGone`).
    */
-  async click(name: string, { waitFor }: { waitFor?: string } = {}) {
+  async click(
+    name: string,
+    { waitFor, waitForGone }: { waitFor?: string; waitForGone?: string } = {},
+  ) {
     await this.moveTo(name);
-    await this.#clickHere(waitFor);
+    await this.#clickHere(waitFor, waitForGone);
   }
 
   /**
@@ -353,11 +366,12 @@ export class Recorder {
     }
   }
 
-  async #clickHere(waitFor?: string) {
+  async #clickHere(waitFor?: string, waitForGone?: string) {
     await this.hold(0.2);
     await this.#press("down");
     await this.frame();
     await this.#press("up");
+    if (waitForGone) await this.waitForGone(waitForGone);
     if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.4);
   }
@@ -471,6 +485,19 @@ export class Recorder {
       await this.#step();
     }
     await this.#align();
+  }
+
+  /**
+   * Runs the page clock, recording nothing, until the anchor `name` is gone:
+   * for work that ends by closing a form, before what it changes is waited for.
+   */
+  async waitForGone(name: string, timeout = 120_000) {
+    const locator = this.#locate(name);
+    const end = Date.now() + timeout;
+    while (await locator.isVisible()) {
+      if (Date.now() > end) throw new Error(`Demo "${this.#name}": anchor "${name}" never closed`);
+      await this.#step();
+    }
   }
 
   /**

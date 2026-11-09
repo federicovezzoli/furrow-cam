@@ -15,7 +15,8 @@ async function newBit(
   for (const [field, value] of Object.entries(fields)) {
     await r.type(field, value, { press: "Tab" });
   }
-  await r.click("save-bit", { waitFor: "job-time" });
+  // The bit is saved before the operation takes it: until then, the total is the last tool's.
+  await r.click("save-bit", { waitForGone: "save-bit", waitFor: "job-time" });
 }
 
 /**
