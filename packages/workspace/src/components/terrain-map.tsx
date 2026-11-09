@@ -23,13 +23,13 @@ import {
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import type { PlaceView } from "../lib/place-search";
 import { ELEVATION_ATTRIBUTION, MAP_STYLE_URL } from "../lib/terrain-services";
-import { squareRing } from "../lib/terrain-square";
-import type { AreaTool } from "./terrain-dialog";
+import { moveRing, squareRing } from "../lib/terrain-square";
+import type { AreaShape } from "./terrain-dialog";
 
 // MapLibre looks for its worker beside its own file, which a bundler moves; this points it there.
 setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href);
 
-/** How far the pointer must move, in pixels, for a press to draw a square rather than click. */
+/** How far the pointer must move, in pixels, for a press to draw or move rather than click. */
 const CLICK_PIXELS = 4;
 
 type Point2 = [x: number, y: number];
@@ -45,33 +45,41 @@ const polygon = (ring: LonLat[]) => ({
 
 /**
  * The map the user draws the terrain's area on (PRD-0014 T1, T3): MapLibre
- * with OpenFreeMap's style, and terra-draw for the shapes (ADR-0076). With
- * `tool` `move` the map is dragged; with a shape, dragging draws it (a square
- * is drawn here, terra-draw has none). A new shape replaces the last;
- * `onArea` hears its ring (longitude and latitude, not repeating the first
- * point). Loaded in a chunk of its own, only when the dialog opens. `onError`
- * hears that the map couldn't load. The map moves to `view` whenever it
- * changes (a place found, PRD-0014 T2).
+ * with OpenFreeMap's style, and terra-draw for the shapes (ADR-0076). With no
+ * `shape` the map is dragged, and so is the area drawn, by pressing on it;
+ * with a shape, dragging draws it (a square is drawn here, terra-draw has
+ * none). The area, `ring` (longitude and latitude, not repeating the first
+ * point), is shown here whatever drew it; `onArea` hears a new one, or a
+ * moved one with `moved`.
+ * Loaded in a chunk of its own, only when the dialog opens. `onError` hears
+ * that the map couldn't load. The map moves to `view` whenever it changes (a
+ * place found, PRD-0014 T2).
  */
 export default function TerrainMap({
-  tool,
+  shape,
+  ring,
   view,
   onArea,
   onError,
 }: {
-  tool: AreaTool;
+  shape: AreaShape | null;
+  ring: LonLat[] | null;
   view: PlaceView | null;
-  onArea: (ring: LonLat[]) => void;
+  onArea: (ring: LonLat[], moved?: boolean) => void;
   onError: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const draw = useRef<TerraDraw | null>(null);
   const mapRef = useRef<MapLibre | null>(null);
-  const setToolRef = useRef<(tool: AreaTool) => void>(() => {});
+  const setShapeRef = useRef<(shape: AreaShape | null) => void>(() => {});
   const callbacks = useRef({ onArea, onError });
   callbacks.current = { onArea, onError };
-  const toolRef = useRef(tool);
-  toolRef.current = tool;
+  const shapeRef = useRef(shape);
+  shapeRef.current = shape;
+  const ringRef = useRef(ring);
+  ringRef.current = ring;
+  /** Shows `ring`, or nothing, as the area. */
+  const showRef = useRef<(ring: LonLat[] | null) => void>(() => {});
 
   useEffect(() => {
     if (!container.current) return;
@@ -112,18 +120,16 @@ export default function TerrainMap({
       } as const;
       // Dragging or clicking twice both draw a shape.
       const drawInteraction = "click-move-or-drag";
-      // Fine enough that the outline drawing stays within the 0.01 mm chord tolerance up to 300 mm across.
-      const segments = 512;
       const terra = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
           new TerraDrawRectangleMode({ styles: style, drawInteraction }),
-          new TerraDrawCircleMode({ styles: style, drawInteraction, segments }),
-          new TerraDrawEllipseMode({ styles: style, drawInteraction, segments }),
+          new TerraDrawCircleMode({ styles: style, drawInteraction }),
+          new TerraDrawEllipseMode({ styles: style, drawInteraction }),
           new TerraDrawFreehandMode({
             styles: style,
             drawInteraction,
-            // A loop that crosses itself has no inside to cut out (T7); it isn't kept.
+            // A loop that crosses itself has no clear inside; it isn't kept.
             validation: (feature) => ValidateNotSelfIntersecting(feature),
           }),
         ],
@@ -132,37 +138,47 @@ export default function TerrainMap({
       terra.on("finish", (id) => {
         const feature = terra.getSnapshotFeature(id);
         if (feature?.geometry.type !== "Polygon") return;
-        // One area at a time: the new shape replaces the others, the square too.
-        (map.getSource("square") as GeoJSONSource | undefined)?.setData({
-          type: "FeatureCollection",
-          features: [],
-        });
-        const others = terra.getSnapshot().filter((f) => f.id !== id && f.id !== undefined);
-        if (others.length > 0) terra.removeFeatures(others.map((f) => f.id as string));
+        // The area is shown here from now on, so it can be moved like the square.
+        terra.clear();
         const ring = feature.geometry.coordinates[0]?.slice(0, -1) ?? [];
         callbacks.current.onArea(ring.map(([lon, lat]) => [lon, lat] as LonLat));
       });
       draw.current = terra;
-      setTool(toolRef.current);
+      setShape(shapeRef.current);
 
-      // The square: dragged from a corner and drawn here, as terra-draw has none.
-      map.addSource("square", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      // The area, whatever drew it, and the square as it is dragged out.
+      map.addSource("area", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
-        id: "square-fill",
+        id: "area-fill",
         type: "fill",
-        source: "square",
+        source: "area",
         paint: { "fill-color": STROKE, "fill-opacity": 0.15 },
       });
       map.addLayer({
-        id: "square-line",
+        id: "area-line",
         type: "line",
-        source: "square",
+        source: "area",
         paint: { "line-color": STROKE, "line-width": 2 },
       });
-      const preview = map.getSource("square") as GeoJSONSource;
+      const area = map.getSource("area") as GeoJSONSource;
+      const show = (ring: LonLat[] | null) =>
+        area.setData(
+          ring
+            ? { type: "Feature", geometry: polygon(ring), properties: {} }
+            : { type: "FeatureCollection", features: [] },
+        );
+      showRef.current = show;
+      show(ringRef.current);
+      // Pressing on the area grabs it: a cursor says so.
+      map.on("mouseenter", "area-fill", () => {
+        if (!shapeRef.current) map.getCanvas().style.cursor = "move";
+      });
+      map.on("mouseleave", "area-fill", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      /** A square being dragged out, or the area being moved. */
+      let dragging: "square" | "move" | null = null;
       let start: LonLat | null = null;
       /** Where the drag last was on the map: a release outside it ends the square there. */
       let last: LonLat | null = null;
@@ -171,8 +187,19 @@ export default function TerrainMap({
       let lastPixel: Point2 = [0, 0];
       const at = ({ lngLat }: MapMouseEvent | MapTouchEvent): LonLat => [lngLat.lng, lngLat.lat];
       const pixel = ({ point }: MapMouseEvent | MapTouchEvent): Point2 => [point.x, point.y];
+      /** Where the drag would put the area. */
+      const result = (to: LonLat) =>
+        dragging === "square"
+          ? squareRing(start as LonLat, to)
+          : moveRing(ringRef.current ?? [], start as LonLat, to);
       const begin = (event: MapMouseEvent | MapTouchEvent) => {
-        if (toolRef.current !== "square") return;
+        const over =
+          !shapeRef.current &&
+          ringRef.current !== null &&
+          map.queryRenderedFeatures(event.point, { layers: ["area-fill"] }).length > 0;
+        dragging = shapeRef.current === "square" ? "square" : over ? "move" : null;
+        if (!dragging) return;
+        // The map isn't dragged along.
         event.preventDefault();
         start = last = at(event);
         startPixel = lastPixel = pixel(event);
@@ -183,26 +210,22 @@ export default function TerrainMap({
         if (!start) return;
         last = at(event);
         lastPixel = pixel(event);
-        preview.setData({
-          type: "Feature",
-          geometry: polygon(squareRing(start, last)),
-          properties: {},
-        });
+        show(result(last));
       };
       const end = (event?: MapMouseEvent | MapTouchEvent | MouseEvent) => {
         if (!start || !last) return;
         const onMap = event && "lngLat" in event;
-        const ring = squareRing(start, onMap ? at(event) : last);
+        const ring = result(onMap ? at(event) : last);
         const [x, y] = onMap ? pixel(event) : lastPixel;
+        const dragged = dragging;
         start = null;
-        // A click, even one that jittered a pixel or two, draws nothing.
+        dragging = null;
+        // A click, even one that jittered a pixel or two, draws or moves nothing.
         if (Math.hypot(x - startPixel[0], y - startPixel[1]) < CLICK_PIXELS) {
-          preview.setData({ type: "FeatureCollection", features: [] });
+          show(ringRef.current);
           return;
         }
-        // The square stays drawn here and replaces terra-draw's shape; it goes when that draws one.
-        terra.clear();
-        callbacks.current.onArea(ring);
+        callbacks.current.onArea(ring, dragged === "move");
       };
       map.on("mousedown", begin);
       map.on("touchstart", begin);
@@ -212,16 +235,17 @@ export default function TerrainMap({
       map.on("touchend", end);
     });
 
-    /** Drawing with terra-draw, the square drawn here, or dragging the map. */
-    function setTool(next: AreaTool) {
+    /** Drawing with terra-draw, the square drawn here, or, with no shape, dragging the map. */
+    function setShape(next: AreaShape | null) {
       const terra = draw.current;
       if (!terra?.enabled) return;
-      const drawn = next !== "move" && next !== "square";
-      terra.setMode(drawn ? next : "static");
-      if (next === "move") map.dragPan.enable();
-      else map.dragPan.disable();
+      terra.setMode(next && next !== "square" ? next : "static");
+      // The "move" cursor over the area no longer holds once a press draws.
+      if (next) map.getCanvas().style.cursor = "";
+      if (next) map.dragPan.disable();
+      else map.dragPan.enable();
     }
-    setToolRef.current = setTool;
+    setShapeRef.current = setShape;
     return () => {
       draw.current?.stop();
       draw.current = null;
@@ -231,8 +255,12 @@ export default function TerrainMap({
   }, []);
 
   useEffect(() => {
-    setToolRef.current(tool);
-  }, [tool]);
+    setShapeRef.current(shape);
+  }, [shape]);
+
+  useEffect(() => {
+    showRef.current(ring);
+  }, [ring]);
 
   useEffect(() => {
     const map = mapRef.current;

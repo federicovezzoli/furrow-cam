@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import type { GeneratedTerrain } from "./mesh-worker-protocol";
-import { MeshImportError, storeModel } from "./model-import";
-import { generateTerrain, importTerrain, outlineShape } from "./terrain-import";
+import { MeshImportError } from "./model-import";
+import { generateTerrain, importTerrain } from "./terrain-import";
 
 const terrain: GeneratedTerrain = {
   sha256: model.sha256,
@@ -90,26 +90,6 @@ describe("importTerrain", () => {
     expect(workspace.getState().selectedModelId).toBe(added?.id);
   });
 
-  it("adds the outline around the model as a drawing, in the same undo step", async () => {
-    await importTerrain(terrain, "Grignetta", { meshes, document, workspace });
-    const { models, drawings, geometry } = document.getState().document;
-    expect(drawings).toMatchObject([{ name: "Grignetta" }]);
-    const [path] = geometry[0]?.paths ?? [];
-    // The model's lowest corner sits at its rectangle's corner: the outline follows it.
-    const [x, y] = modelRect(models[0] as Model).min;
-    expect(path).toEqual({
-      start: [x - 1, y - 1],
-      segments: [
-        { kind: "line", to: [x + 201, y - 1] },
-        { kind: "line", to: [x + 201, y + 151] },
-        { kind: "line", to: [x - 1, y + 151] },
-      ],
-      closed: true,
-    });
-    document.getState().undo();
-    expect(document.getState().document).toMatchObject({ models: [], drawings: [], geometry: [] });
-  });
-
   it("refuses a project that has its model already", async () => {
     await importTerrain(terrain, "Terrain", { meshes, document, workspace });
     expect(await importTerrain(terrain, "Terrain", { meshes, document, workspace })).toEqual({
@@ -119,72 +99,7 @@ describe("importTerrain", () => {
   });
 });
 
-describe("outlineShape", () => {
-  const shift = ([x, y]: [number, number]): [number, number] => [x + 10, y + 20];
-
-  it("drops a closing point that repeats the first, and places every point", () => {
-    const shape = outlineShape(
-      [
-        [0, 0],
-        [5, 0],
-        [5, 5],
-        [0, 0],
-      ],
-      shift,
-      "Lake",
-    );
-    expect(shape?.paths).toEqual([
-      {
-        start: [10, 20],
-        segments: [
-          { kind: "line", to: [15, 20] },
-          { kind: "line", to: [15, 25] },
-        ],
-        closed: true,
-      },
-    ]);
-    expect(shape).toMatchObject({ name: "Lake", source: "Lake" });
-  });
-
-  it("gives nothing for fewer than three distinct points", () => {
-    expect(outlineShape([], shift, "Lake")).toBeNull();
-    expect(
-      outlineShape(
-        [
-          [0, 0],
-          [5, 0],
-          [5, 0],
-          [0, 0],
-        ],
-        shift,
-        "Lake",
-      ),
-    ).toBeNull();
-  });
-});
-
 describe("importTerrain's undo step", () => {
-  it("still adds the model, alone, when the outline has no area", async () => {
-    await importTerrain({ ...terrain, outline: [] }, "Lake", { meshes, document, workspace });
-    expect(document.getState().document).toMatchObject({ drawings: [], geometry: [] });
-    expect(document.getState().document.models).toHaveLength(1);
-  });
-
-  it("closes the step when something added alongside throws, so undo still works", async () => {
-    const failing = storeModel(terrain, new Blob([terrain.stl]), "Lake.stl", {
-      meshes,
-      document,
-      workspace,
-      alongside: () => {
-        throw new Error("outline");
-      },
-    });
-    await expect(failing).rejects.toThrow("outline");
-    expect(document.getState().inTransaction).toBe(false);
-    document.getState().undo();
-    expect(document.getState().document.models).toEqual([]);
-  });
-
   it("waits for a drag in progress, so cancelling the drag keeps the model", async () => {
     document.getState().beginTransaction();
     const importing = importTerrain(terrain, "Lake", { meshes, document, workspace });
@@ -193,8 +108,8 @@ describe("importTerrain's undo step", () => {
     document.getState().cancelTransaction();
     expect(await importing).toBeNull();
     expect(document.getState().document.models).toHaveLength(1);
-    // Its own step: one undo takes the model and its outline away.
+    // Its own step: one undo takes it away.
     document.getState().undo();
-    expect(document.getState().document).toMatchObject({ models: [], drawings: [] });
+    expect(document.getState().document.models).toEqual([]);
   });
 });

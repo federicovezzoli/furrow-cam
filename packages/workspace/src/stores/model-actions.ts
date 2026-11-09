@@ -147,11 +147,12 @@ export function removeModel(store: DocumentStore, id: string) {
   });
 }
 
-/** Turns a model a quarter turn about the stock's `axis`, keeping its anchor point in place. */
-export function turnModelAbout(store: DocumentStore, id: string, axis: 0 | 1 | 2) {
+/** Turns a model `turns` quarter turns about the stock's `axis`, as one change, keeping its anchor point in place. */
+export function turnModelAbout(store: DocumentStore, id: string, axis: 0 | 1 | 2, turns = 1) {
   const { stock } = store.getState().document;
   changeModel(store, "turnModel", id, (model, current) => {
-    const rotation = turnModel(current.placement.rotation, axis);
+    let rotation = current.placement.rotation;
+    for (let i = 0; i < turns; i++) rotation = turnModel(rotation, axis);
     assignPlacement(model, replacePlacement(current, { rotation }, modelAnchor(stock)));
   });
 }

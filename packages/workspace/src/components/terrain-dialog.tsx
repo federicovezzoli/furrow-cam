@@ -30,7 +30,6 @@ import {
   ArrowRightIcon,
   CircleIcon,
   DownloadIcon,
-  HandIcon,
   LassoIcon,
   MountainIcon,
   RectangleHorizontalIcon,
@@ -59,12 +58,11 @@ import { TerrainSearch } from "./terrain-search";
 const TerrainMap = lazy(() => import("./terrain-map"));
 const TerrainPreview = lazy(() => import("./terrain-preview"));
 
-/** Moving the map, or drawing one of the area's shapes (PRD-0014 T3). */
-export const AREA_TOOLS = ["move", "rectangle", "square", "circle", "ellipse", "freehand"] as const;
-export type AreaTool = (typeof AREA_TOOLS)[number];
+/** The area's shapes (PRD-0014 T3); with none picked, the map is browsed. */
+export const AREA_SHAPES = ["rectangle", "square", "circle", "ellipse", "freehand"] as const;
+export type AreaShape = (typeof AREA_SHAPES)[number];
 
-const TOOL_ICONS: Record<AreaTool, React.ReactNode> = {
-  move: <HandIcon />,
+const SHAPE_ICONS: Record<AreaShape, React.ReactNode> = {
   rectangle: <RectangleHorizontalIcon />,
   square: <SquareIcon />,
   circle: <CircleIcon />,
@@ -74,8 +72,12 @@ const TOOL_ICONS: Record<AreaTool, React.ReactNode> = {
 
 const EXAGGERATION = { min: 1, max: 10, initial: 1.5 };
 const BASE = { min: 1, initial: 3 };
-/** A coarse terrain, quick to make and to turn in 3D, for the preview (PRD-0014 T4). */
-const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 20_000 };
+/**
+ * The preview's terrain (PRD-0014 T4): about 220 cells across, a tenth of the
+ * model's triangles. Detailed enough to judge; its normals, worked out on the
+ * main thread, take about 150 ms on a recent laptop.
+ */
+const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 100_000 };
 /** How long settings stay unchanged before the preview is made again. */
 const PREVIEW_DELAY = 300;
 
@@ -192,7 +194,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   /** First the area on the map, then the model made from it (PRD-0014 T3, T4). */
   const [step, setStep] = useState<"area" | "model">("area");
   const [mapFailed, setMapFailed] = useState(false);
-  const [tool, setTool] = useState<AreaTool>("move");
+  /** The shape being drawn, or `null` while the map is browsed. */
+  const [shape, setShape] = useState<AreaShape | null>(null);
   const [ring, setRing] = useState<LonLat[] | null>(null);
   /** The place last picked in the search, which names the model, and where the map went. */
   const [place, setPlace] = useState<{ name: string | null; view: PlaceView } | null>(null);
@@ -321,14 +324,16 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                       fallback={<p className="p-4 text-muted-foreground">{t("loading")}</p>}
                     >
                       <TerrainMap
-                        tool={tool}
+                        shape={shape}
+                        ring={ring}
                         view={place?.view ?? null}
-                        onArea={(next) => {
+                        onArea={(next, moved) => {
                           setRing(next);
-                          setSide(null);
+                          // A moved area is as large as before: the size typed for it stays.
+                          if (!moved) setSide(null);
                           setError(null);
-                          // Drawn: the map can be moved again.
-                          setTool("move");
+                          // Drawn or moved: back to browsing the map.
+                          setShape(null);
                         }}
                         onError={() => setMapFailed(true)}
                       />
@@ -364,8 +369,6 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 </div>
               )}
             </div>
-            {/* The services the dialog contacts, named where the user sees them (T9). */}
-            <p className="text-muted-foreground text-xs">{t("notice")}</p>
           </div>
           {step === "area" ? (
             <div className="grid content-start gap-3 text-ui">
@@ -373,19 +376,20 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
               <div className="grid gap-1.5">
                 <fieldset className="grid grid-cols-3 gap-1.5">
                   <legend className="mb-1.5 font-medium">{t("shape")}</legend>
-                  {AREA_TOOLS.map((option) => (
+                  {AREA_SHAPES.map((option) => (
                     <Button
                       key={option}
-                      aria-pressed={tool === option}
-                      variant={tool === option ? "default" : "outline"}
+                      aria-pressed={shape === option}
+                      variant={shape === option ? "default" : "outline"}
                       size="compact"
                       title={t(`tools.${option}`)}
                       aria-label={t(`tools.${option}`)}
                       data-demo={`terrain-tool-${option}`}
                       className="flex-col gap-0.5 py-1.5 text-[0.625rem] h-auto"
-                      onClick={() => setTool(option)}
+                      // Pressed again, back to browsing the map.
+                      onClick={() => setShape(shape === option ? null : option)}
                     >
-                      {TOOL_ICONS[option]}
+                      {SHAPE_ICONS[option]}
                       {t(`tools.${option}`)}
                     </Button>
                   ))}

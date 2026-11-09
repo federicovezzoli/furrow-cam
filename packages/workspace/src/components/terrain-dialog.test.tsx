@@ -13,24 +13,27 @@ import { TerrainButton } from "./terrain-dialog";
 const download = vi.hoisted(() => vi.fn());
 vi.mock("@furrow/ui/lib/download", () => ({ downloadFile: download }));
 
-/** The map: one button that "draws" a small area near Lecco. */
-vi.mock("./terrain-map", () => ({
-  default: ({ onArea }: { onArea: (ring: [number, number][]) => void }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onArea([
-          [9.37, 45.9],
-          [9.41, 45.9],
-          [9.41, 45.93],
-          [9.37, 45.93],
-        ])
-      }
-    >
-      Draw
-    </button>
-  ),
-}));
+/** The map: one button that "draws" a small area near Lecco, one that moves it a little east. */
+vi.mock("./terrain-map", () => {
+  const area = (east: number): [number, number][] => [
+    [9.37 + east, 45.9],
+    [9.41 + east, 45.9],
+    [9.41 + east, 45.93],
+    [9.37 + east, 45.93],
+  ];
+  return {
+    default: ({ onArea }: { onArea: (ring: [number, number][], moved?: boolean) => void }) => (
+      <>
+        <button type="button" onClick={() => onArea(area(0))}>
+          Draw
+        </button>
+        <button type="button" onClick={() => onArea(area(0.01), true)}>
+          Drag area
+        </button>
+      </>
+    ),
+  };
+});
 
 /** The 3D preview needs WebGL, which jsdom hasn't: it only says what it shows. */
 vi.mock("./terrain-preview", () => ({
@@ -48,7 +51,7 @@ const terrain: GeneratedTerrain = {
   outline: [],
 };
 
-/** The terrain worker: the height preview answers at once, a full terrain when `finish` is called. */
+/** The terrain worker: the preview answers at once, a full terrain when `finish` is called. */
 let finish: () => void = () => {};
 const generate = vi.hoisted(() => vi.fn());
 vi.mock("../lib/terrain-import", async (actual) => ({
@@ -63,10 +66,11 @@ beforeEach(() => {
     (
       _ring: unknown,
       _settings: unknown,
-      limits: { maxTriangles: number },
+      limits: { maxBytes: number },
       options?: { signal?: AbortSignal },
     ) =>
-      limits.maxTriangles < DEFAULT_STL_LIMITS.maxTriangles / 10
+      // Only the preview has no byte limit: it is never stored.
+      limits.maxBytes === Infinity
         ? Promise.resolve(terrain)
         : new Promise((resolve, reject) => {
             finish = () => resolve(terrain);
@@ -175,30 +179,26 @@ describe("TerrainDialog's steps", () => {
     expect(screen.getByRole("button", { name: "Next" })).toHaveProperty("disabled", false);
   });
 
-  it("names the services it contacts without asking for a click first", () => {
+  it("browses the map until a shape is picked, and again once it is drawn", async () => {
     renderWorkspace(
       <TerrainButton inRibbon />,
       createMemoryHost({ document: createProjectDocument() }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
-    expect(screen.getByText(/OpenFreeMap .* Mapterhorn .* Photon/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Move" })).toBeNull();
     expect(screen.getByRole("button", { name: "Next" })).toHaveProperty("disabled", true);
-  });
-
-  it("shows the tool picked, and moves the map again once an area is drawn", async () => {
-    renderWorkspace(
-      <TerrainButton inRibbon />,
-      createMemoryHost({ document: createProjectDocument() }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
-    const move = screen.getByRole("button", { name: "Move" });
     const square = screen.getByRole("button", { name: "Square" });
-    expect(move.getAttribute("aria-pressed")).toBe("true");
+    const pressed = () =>
+      screen.getAllByRole("button", { pressed: true }).map((button) => button.textContent);
+    expect(screen.queryAllByRole("button", { pressed: true })).toEqual([]);
     fireEvent.click(square);
-    expect(square.getAttribute("aria-pressed")).toBe("true");
-    expect(move.getAttribute("aria-pressed")).toBe("false");
+    expect(pressed()).toEqual(["Square"]);
+    // Pressed again, back to browsing.
+    fireEvent.click(square);
+    expect(screen.queryAllByRole("button", { pressed: true })).toEqual([]);
+    fireEvent.click(square);
     fireEvent.click(await screen.findByRole("button", { name: "Draw" }));
-    expect(move.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryAllByRole("button", { pressed: true })).toEqual([]);
   });
 
   it("shows the map only once the host has let its services through", async () => {
@@ -226,5 +226,21 @@ describe("TerrainDialog's steps", () => {
     expect(screen.getByText("Making the preview…")).toBeTruthy();
     expect(screen.getByText(/^Model: 200 × 150/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("Making the preview…")).toBeNull());
+  });
+
+  it("keeps the longest side typed when the area is only moved", async () => {
+    await openWithArea();
+    const side = () => screen.getByLabelText(/Longest side/) as HTMLInputElement;
+    fireEvent.change(side(), { target: { value: "300" } });
+    fireEvent.blur(side());
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Drag area" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(side().value).toBe("300");
+    // Drawn anew, it fits the stock again.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Draw" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(side().value).not.toBe("300");
   });
 });

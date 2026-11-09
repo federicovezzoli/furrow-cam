@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  DRAWING_ID,
   drill,
   endMill,
   fullDocument,
@@ -12,15 +13,29 @@ import {
 } from "@furrow/document/fixtures";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { exportProject } from "./gcode";
 import type { Library } from "./library";
+import { addOperation } from "./operations";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
-import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
+import {
+  chooseMachine,
+  setStock,
+  setToolOf,
+  setTouchOff,
+  setTwoSidedSetup,
+  setZero,
+} from "./setup";
+import { projectSummary } from "./summary";
 
 let dir: string;
 let project: Project;
 
 const library: Library = {
-  tools: [{ id: "t1", isDefault: true, tool: vBit }],
+  tools: [
+    { id: "t1", isDefault: true, tool: vBit },
+    { id: "mill", isDefault: false, tool: endMill },
+    { id: "drill", isDefault: false, tool: drill },
+  ],
   machines: [{ id: "m1", machine }],
   problems: [],
 };
@@ -86,6 +101,84 @@ describe("setTouchOff", () => {
 
 /** A library that couldn't be read. */
 const unread: Library = { tools: [], machines: [], problems: ["tools.json doesn't exist."] };
+
+describe("setTwoSidedSetup", () => {
+  const twoSided = () => document().stock.twoSided;
+
+  it("turns two-sided on at the app's default parting depth, and off", () => {
+    setTwoSidedSetup(project, { twoSided: true });
+    // No model: half the 18 mm stock.
+    expect(twoSided()).toEqual({ flipAxis: "x", partingDepth: 9, lineUp: null, tabs: null });
+    expect(projectSummary(document()).stock.inProjectUnits.twoSided).toMatch(
+      /^Turned over about x/,
+    );
+    setTwoSidedSetup(project, { twoSided: false });
+    expect(twoSided()).toBeNull();
+    expect(projectSummary(document()).stock.inProjectUnits).not.toHaveProperty("twoSided");
+  });
+
+  it("sets the flip axis, parting depth, line-up and holding tabs", () => {
+    setTwoSidedSetup(project, {
+      twoSided: true,
+      flipAxis: "y",
+      partingDepth: 12,
+      lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
+      tabs: { width: 5, thickness: 3, count: 2 },
+    });
+    expect(twoSided()).toMatchObject({
+      flipAxis: "y",
+      partingDepth: 12,
+      lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
+      tabs: { width: 5, thickness: 3, positions: [] },
+    });
+    setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "edges", corner: "top_right" } });
+    expect(twoSided()?.lineUp).toEqual({ type: "edges", corner: "top_right" });
+    expect(twoSided()?.partingDepth).toBe(12);
+  });
+
+  it("refuses invalid settings as a whole, changing nothing", () => {
+    setTwoSidedSetup(project, { twoSided: true });
+    const before = document();
+    for (const request of [
+      { partingDepth: 18 },
+      { flipAxis: "y" as const, lineUp: { type: "pins" as const, positions: [0] } },
+      { lineUp: { type: "pins" as const, holes: { type: "blind" as const, depth: 20 } } },
+      { tabs: { thickness: 9 } },
+      { tabs: { count: 2, positions: [[0, 0] as [number, number]] } },
+      { tabs: { positions: [[0, 0] as [number, number]] } },
+      // The stock is 300 mm along X: a 6 mm pin reaches 147 mm from its centre at most.
+      { lineUp: { type: "pins" as const, positions: [-148, 140] } },
+      { tabs: { width: -1 } },
+    ]) {
+      expect(() => setTwoSidedSetup(project, { twoSided: true, ...request })).toThrow(/^[\w.]+: /);
+      expect(document()).toBe(before);
+    }
+    expect(() =>
+      setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "pins", positions: [0] } }),
+    ).toThrow("at least 2 items");
+    expect(() => setTwoSidedSetup(project, { twoSided: false, partingDepth: 5 })).toThrow(
+      "partingDepth can't be set",
+    );
+    setTwoSidedSetup(project, { twoSided: false, lineUp: null, tabs: null });
+    expect(document().stock.twoSided).toBeNull();
+  });
+
+  it("round trips to a G-code file per side", async () => {
+    setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "pins" } });
+    addOperation(project, library, "drill", {
+      tool: { toolId: "drill" },
+      settings: { pins: true },
+    });
+    addOperation(project, library, "pocket", {
+      targets: [{ drawingId: DRAWING_ID }],
+      tool: { toolId: "mill" },
+      stockSide: "bottom",
+      settings: { depth: 3 },
+    });
+    const { files } = await exportProject(project, {});
+    expect(files).toHaveLength(2);
+  });
+});
 
 describe("chooseMachine", () => {
   it("snapshots a library machine, and refuses an unknown one, saying why", () => {

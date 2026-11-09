@@ -1,5 +1,5 @@
 import { MIN_LENGTH } from "@furrow/cam-core";
-import { StockAnchor } from "@furrow/document";
+import { FlipAxis, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
@@ -9,7 +9,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
 import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
 import {
@@ -21,7 +21,14 @@ import {
   removeOperation,
 } from "./operations";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
-import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
+import {
+  chooseMachine,
+  setStock,
+  setToolOf,
+  setTouchOff,
+  setTwoSidedSetup,
+  setZero,
+} from "./setup";
 import { projectSummary } from "./summary";
 import { topView } from "./top-view";
 
@@ -314,6 +321,27 @@ export function createServer(projects: Projects = createProjects(), library = li
       }),
   );
 
+  server.registerTool(
+    "turn_model",
+    {
+      title: "Turn a model in quarter turns",
+      description:
+        "Turns a model a quarter turn (or two or three) about the stock's X, Y or Z axis, as the app's turn buttons do, keeping its anchor point in place: for example to stand up a model exported lying on its side. Each turn is counter-clockwise looking from the axis's positive end towards the origin (right-hand rule): about Z, X turns into Y; about X, Y turns into Z; about Y, Z turns into X. Several turns make one change. Returns the project summary, with the model's new size.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        axis: z.enum(["x", "y", "z"]).describe("The stock axis to turn about."),
+        turns: z.number().int().min(1).max(3).default(1).describe("How many quarter turns."),
+      },
+    },
+    ({ path, id, axis, turns }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        turn(project, id, axis, turns);
+        return summary(project);
+      }),
+  );
+
   const mm = (what: string) => z.number().positive().describe(`${what}, in millimetres.`);
 
   server.registerTool(
@@ -383,6 +411,58 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         setTouchOff(project, pad);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_two_sided",
+    {
+      title: "Set up a two-sided project",
+      description:
+        "Makes the project two-sided (the stock is cut from the top, turned over about a line through its centre along the flip axis, and cut from the other face) and sets it up, as the app's two-sided settings do; settings left out stay as they are. Turning it on flips about x, parting halfway down the deepest model. twoSided: false makes it one-sided again and moves every operation to the top side. lineUp: pins (positions along the flip axis from the stock's centre, two at least; a drill operation with pins cuts them), edges (a stock corner goes into a fence corner on both sides), or null to turn it over by eye. tabs: holding tabs that keep the part held on the bottom side, spread round each model (count per model) or at positions moved to the nearest model's outline; null removes them. Lengths in millimetres. Refused as a whole if any setting is. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        twoSided: z.boolean(),
+        flipAxis: FlipAxis.optional().describe("The axis the stock is turned over about."),
+        partingDepth: mm("How far below the stock top the sides part").optional(),
+        lineUp: z
+          .discriminatedUnion("type", [
+            z.strictObject({ type: z.literal("edges"), corner: StockCorner }),
+            z.strictObject({
+              type: z.literal("pins"),
+              diameter: mm("The pins' diameter").optional(),
+              positions: z
+                .array(z.number())
+                .optional()
+                .describe(
+                  "Each pin's distance along the flip axis from the stock's centre, in millimetres.",
+                ),
+              holes: PinHoles.optional().describe(
+                "through: through the stock and spoilboardDepth into the spoilboard; blind: depth below the stock top.",
+              ),
+            }),
+          ])
+          .nullable()
+          .optional(),
+        tabs: z
+          .strictObject({
+            width: mm("The tabs' width").optional(),
+            thickness: mm("The tabs' thickness, less than the bottom side's depth").optional(),
+            count: z.number().int().min(1).optional().describe("Tabs spread round each model."),
+            positions: z
+              .array(z.tuple([z.number(), z.number()]))
+              .optional()
+              .describe("[x, y] in millimetres from the stock's bottom-left corner, one per tab."),
+          })
+          .nullable()
+          .optional(),
+      },
+    },
+    ({ path, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTwoSidedSetup(project, request);
         return summary(project);
       }),
   );

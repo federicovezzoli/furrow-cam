@@ -55,6 +55,7 @@ export type Terrain = {
   /** A cell's side on the ground, in metres: coarser than planned if the limits demanded it. */
   cellMetres: number;
   /** The area's own outline in the model's mm (not the cells' staircase), for a profile cut (T7). */
+  // shortcut: unread while the outline drawing is set aside (PRD-0014 T7, #526); drop it if T7 is dropped.
   outline: Point[];
 };
 

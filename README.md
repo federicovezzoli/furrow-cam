@@ -36,25 +36,27 @@ Furrow CAM is a Computer-Aided Manufacturing tool for **2.5D machining**: operat
 
 - **Profiling**: cutting parts out along a contour (inside / outside / on the line), with depth passes, ramp entry, holding tabs, dogbones at inside corners and a chosen start point
 - **Pocketing**: clearing material inside closed shapes (or outside, or on the line), with offset, linear or peel strategies
-- **Drilling**: plunging holes at circle centres or points
+- **Drilling**: plunging holes at circle centres or points, or at spots clicked in the viewport with snapping
 - **Engraving**: following lines at a fixed depth, or a fixed line width with a V-bit
 - **V-carving**: variable-depth carving with a V-bit, for crisp lettering and sharp corners
-- **3D relief**: roughing in Z levels and parallel, waterline or spiral finishing on STL and STEP models, with rest machining for a smaller bit
+- **3D relief**: roughing in Z levels and parallel, waterline or spiral finishing on STL and STEP models or terrain made from a map, with rest machining for a smaller bit
 - **Two-sided jobs**: flip the stock on locating pins and cut the bottom side too, with one G-code file per side
 
 It is **not** a full 3D CAM (relief only: no undercuts, 4th axis or tool tilting), and it is not a CAD tool. You design elsewhere, import here.
 
 ## Features
 
-- **Import** SVG and DXF drawings, several per project, then move, size, rotate, mirror or fit each one to the stock; or one STL or STEP model for relief carving
+- **Import** SVG and DXF drawings, several per project, then move, size, rotate, mirror, centre or fit each one to the stock; and one STL or STEP model for relief carving, in the same project, so a relief and the profile that cuts it out live together
+- **Terrain from a map**: find a place, draw a rectangle, square, circle, ellipse or freehand area, preview the relief in 3D while choosing its size, exaggeration and base, and machine it like any model, with its outline as a drawing to cut it out; or download it as an STL
 - **Text**: type text with bundled fonts (including a single-stroke font for engraving) or your own, then cut it or convert it into a drawing
 - **Zero point** on any of the stock's 9 anchors, a typed position, or a point picked in the viewport with snapping
-- **Tool library** and **machine profiles** saved to your account, with presets for popular hobby routers: V1 Engineering LowRider v4 and MPCNC Primo, Maslow 4, Sienci LongMill MK2, SainSmart Genmitsu 3018
+- **Tool library** and **machine profiles** saved to your account, with presets for popular hobby routers: V1 Engineering LowRider v4 and MPCNC Primo, Maslow 4, Sienci LongMill MK2, SainSmart Genmitsu 3018; a project offers to update its copy of a machine you have edited since
 - **Preview**: toolpaths in a 2D/3D viewport, rapids and cuts shown apart, an estimated machining time per operation, plus a simulator that plays the exported G-code line by line on the stock
 - **Touch-off pad** on the stock top, where the machine stops at each tool change to re-zero Z
 - **G-code export** for GRBL-compatible controllers (GRBL, grblHAL, FluidNC), with optional custom start, end and tool-change blocks per machine
 - **Projects** saved to your account, with undo/redo, and export/import as a file
 - Metric and imperial units, light and dark theme, English, Italian, French, German, Spanish, Dutch, Portuguese, Greek, Turkish, Chinese and Japanese
+- **AI assistants**: a local [MCP server](apps/mcp/README.md) lets Claude, VS Code or another MCP client import files, add operations, check toolpaths and export G-code on your `.furrow` projects, with each change showing live in the desktop app (Help → Set Up AI Assistants…)
 - **Installable** from Chrome, Edge and Safari, or as a [desktop app](#desktop-app) that works offline
 
 ## Goals

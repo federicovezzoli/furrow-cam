@@ -72,17 +72,6 @@ export function addImportedShapes(store: DocumentStore, name: string, shapes: Sh
   return drawing !== null && placeDrawing(store, name, drawing, shapes);
 }
 
-/**
- * Adds shapes as a new drawing like `addImportedShapes`, but where they are,
- * e.g. a terrain's outline around its model (PRD-0014 T7).
- */
-export function addShapesInPlace(store: DocumentStore, name: string, shapes: Shape[]): boolean {
-  const drawing = importedDrawing(shapes);
-  if (!drawing || !shapesBounds(shapes)) return false;
-  addDrawing(store, name, drawing, shapes);
-  return true;
-}
-
 /** A text item's name: its text on one line, its lines joined by spaces. */
 function textName(text: string): string {
   return text.trim().replace(/\s*[\r\n]+\s*/g, " ");

@@ -94,6 +94,14 @@ describe("placement edits", () => {
     expect(store.getState().past).toHaveLength(2);
   });
 
+  it("turns several quarter turns as one undo step", () => {
+    const { store, id, get } = storeWithModel("center");
+    const steps = store.getState().past.length;
+    turnModelAbout(store, id, 2, 3);
+    expect(get().placement.rotation).toEqual([0, 0, 270]);
+    expect(store.getState().past).toHaveLength(steps + 1);
+  });
+
   it("scales in all three directions, so the mesh is never stretched", () => {
     const { store, id, get } = storeWithModel();
     setModelScale(store, id, 2);
