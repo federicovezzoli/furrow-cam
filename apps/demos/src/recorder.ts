@@ -307,8 +307,8 @@ export class Recorder {
     await this.#handled("pointermove");
   }
 
-  async #press(button: "down" | "up") {
-    await this.page.mouse[button]();
+  async #press(button: "down" | "up", clickCount = 1) {
+    await this.page.mouse[button]({ clickCount });
     await this.#handled(`pointer${button}`);
   }
 
@@ -353,12 +353,13 @@ export class Recorder {
    * Clicks `[x, y]` pixels from the anchor `name`'s top left corner: for
    * what has no anchor of its own, such as a path in the viewport (measure it
    * on a recorded frame). With `shift`, adds to the selection; with `alt`,
-   * selects the path alone rather than its whole drawing (ADR-0080).
+   * selects the path alone rather than its whole drawing; with `double`,
+   * double clicks, which enters the drawing (ADR-0080).
    */
   async clickIn(
     name: string,
     [x, y]: readonly [number, number],
-    { shift = false, alt = false } = {},
+    { shift = false, alt = false, double = false } = {},
   ) {
     const box = await (await this.anchor(name)).boundingBox();
     if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
@@ -366,17 +367,23 @@ export class Recorder {
     const keys = [...(shift ? ["Shift"] : []), ...(alt ? ["Alt"] : [])];
     for (const key of keys) await this.page.keyboard.down(key);
     try {
-      await this.#clickHere();
+      await this.#clickHere(undefined, undefined, double);
     } finally {
       for (const key of keys) await this.page.keyboard.up(key);
     }
   }
 
-  async #clickHere(waitFor?: string, waitForGone?: string) {
+  async #clickHere(waitFor?: string, waitForGone?: string, double = false) {
     await this.hold(0.2);
     await this.#press("down");
     await this.frame();
     await this.#press("up");
+    if (double) {
+      // The second press of a double click, which the browser counts as such.
+      await this.#press("down", 2);
+      await this.frame();
+      await this.#press("up", 2);
+    }
     if (waitForGone) await this.waitForGone(waitForGone);
     if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.4);

@@ -47,8 +47,9 @@ export default async function svg(r: Recorder) {
   await r.hold(1);
 
   // A pocket for the pads.
-  await r.clickIn("viewport", PATHS.pad, { alt: true });
-  for (const toe of PATHS.toes) await r.clickIn("viewport", toe, { shift: true, alt: true });
+  // A double click enters the paw, so clicks pick its paths one by one.
+  await r.clickIn("viewport", PATHS.pad, { double: true });
+  for (const toe of PATHS.toes) await r.clickIn("viewport", toe, { shift: true });
   await r.expectSelected(5);
   await r.click("add-pocket", { waitFor: "job-time" });
   // Small enough for the gaps between the toes.
