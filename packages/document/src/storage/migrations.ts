@@ -334,6 +334,10 @@ export const migrations: Readonly<Record<number, Migration>> = {
     doc.machineId = null;
     return doc;
   },
+  // #536: drawings, shapes and models can be hidden or locked. Existing ones
+  // are neither, as an absent flag says; the bump keeps older releases from
+  // opening documents that use them.
+  35: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

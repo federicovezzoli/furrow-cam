@@ -67,6 +67,10 @@ export const Model = z.strictObject({
    * never more than a quarter of the stock's smaller side when applied.
    */
   border: z.number().nonnegative(),
+  /** Not drawn, picked or machined (ADR-0080); absent when shown. */
+  hidden: z.literal(true).optional(),
+  /** Drawn but not picked or moved in the viewport (ADR-0080); absent when unlocked. */
+  locked: z.literal(true).optional(),
 });
 export type Model = z.infer<typeof Model>;
 
