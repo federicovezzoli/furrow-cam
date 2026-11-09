@@ -434,7 +434,7 @@
       "upToDate": "Furrow CAM est à jour",
       "upToDateDetail": "La version {version} est la plus récente.",
       "available": "Furrow CAM {version} est disponible",
-      "availableDetail": "Vous avez la version {current}. Téléchargez la nouvelle version depuis sa page de publication et installez-la par-dessus celle-ci.",
+      "availableDetail": "Vous avez la version {current}. Téléchargez la nouvelle version depuis le site web et installez-la par-dessus celle-ci.",
       "installDetail": "Vous avez la version {current}. Furrow CAM peut télécharger la nouvelle version et l'installer pour vous.",
       "download": "Télécharger",
       "downloadAndInstall": "Télécharger et installer",
@@ -445,7 +445,7 @@
       "readyDetail": "Redémarrez maintenant pour terminer. Sinon, il sera installé quand vous quitterez Furrow CAM.",
       "restart": "Redémarrer maintenant",
       "installFailed": "Impossible d'installer la mise à jour",
-      "installFailedDetail": "Téléchargez Furrow CAM {version} depuis sa page de publication et installez-le par-dessus cette version.",
+      "installFailedDetail": "Téléchargez Furrow CAM {version} depuis le site web et installez-le par-dessus cette version.",
       "ok": "OK"
     },
     "assistants": {

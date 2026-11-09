@@ -1,6 +1,6 @@
 # ADR-0074: The desktop app installs updates itself on Windows and Linux
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0081](0081-update-notice-opens-the-website.md) (a failed install offers the website's download section)
 - **Date:** 2026-11-02
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007 (D2, D12), ADR-0012, ADR-0013, ADR-0044, ADR-0048, ADR-0049; #457. Supersedes ADR-0048 in part.

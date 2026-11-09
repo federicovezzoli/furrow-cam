@@ -68,13 +68,13 @@ import {
 import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import { isTerrainRequest } from "./terrain";
 import {
+  DOWNLOADS_PAGE,
   isUpdateRequest,
   latestDesktopRelease,
   newerRelease,
   parseUpdatePrefs,
   RELEASES_URL,
   type Release,
-  releasePage,
   type UpdatePrefs,
 } from "./updates";
 
@@ -379,8 +379,8 @@ async function fetchLatestRelease() {
 }
 
 /**
- * Windows and Linux download and install updates themselves; macOS only opens the release
- * page, as Squirrel.Mac refuses an unsigned app (ADR-0074). Also false when not packaged,
+ * Windows and Linux download and install updates themselves; macOS only opens the website's
+ * download section, as Squirrel.Mac refuses an unsigned app (ADR-0074). Also false when not packaged,
  * and for an AppImage's unpacked files.
  */
 function installsUpdates() {
@@ -392,7 +392,7 @@ async function checkUpdater(): Promise<Release | null> {
   const result = await autoUpdater.checkForUpdates();
   if (!result?.isUpdateAvailable) return null;
   const { version } = result.updateInfo;
-  return { version, url: releasePage(version) };
+  return { version };
 }
 
 /** A newer release than the running app, or `null`; throws when it can't be reached. */
@@ -596,8 +596,8 @@ function checkForUpdatesNow() {
 }
 
 /**
- * Offers to download and install the release, or on macOS to open its release page, where
- * the user downloads and installs it themselves.
+ * Offers to download and install the release, or on macOS to open the website's download
+ * section, where the user downloads and installs it themselves.
  */
 async function offerRelease(release: Release) {
   const t = tr();
@@ -619,7 +619,7 @@ async function offerRelease(release: Release) {
   });
   // Not awaited: the download takes minutes, and Check for Updates… says it's under way.
   if (response === 0 && install) void downloadRelease(release);
-  else if (response === 0) void shell.openExternal(release.url);
+  else if (response === 0) void shell.openExternal(DOWNLOADS_PAGE);
   else if (response === 1) await saveUpdatePrefs({ skippedVersion: release.version });
 }
 
@@ -671,7 +671,7 @@ function installAndRestart(release: Release) {
   autoUpdater.quitAndInstall(true, true);
 }
 
-/** Says the update couldn't be installed and offers its release page instead. */
+/** Says the update couldn't be installed and offers the website's download section instead. */
 async function installFailed(release: Release, error: unknown) {
   const t = tr();
   const detail = t("DesktopMain.updates.installFailedDetail", { version: release.version });
@@ -684,7 +684,7 @@ async function installFailed(release: Release, error: unknown) {
     cancelId: 1,
   });
   // Awaited: after a failed restart the app quits next.
-  if (response === 0) await shell.openExternal(release.url);
+  if (response === 0) await shell.openExternal(DOWNLOADS_PAGE);
 }
 
 function createWindow() {
