@@ -1,8 +1,9 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { BufferGeometry } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useTranslations } from "use-intl";
@@ -14,16 +15,20 @@ import { PALETTES } from "./viewport/scene-style";
  * it is made at full detail. `stl` is a binary STL in mm, its lowest corner
  * at the origin, `size` its width, depth and height. The camera fits the
  * mesh again when `fitKey` changes (a new area or longest side), not when
- * the relief alone does, so the view the user turned to stays.
+ * the relief alone does, so the view the user turned to stays. While
+ * `current` (the settings haven't changed since it was made) and drawn, it
+ * is marked `terrain-preview-ready`, which the demo videos wait for (ADR-0075).
  */
 export default function TerrainPreview({
   stl,
   size,
   fitKey,
+  current,
 }: {
   stl: ArrayBuffer;
   size: [number, number, number];
   fitKey: string;
+  current: boolean;
 }) {
   const t = useTranslations("Terrain");
   const { resolvedTheme } = useTheme();
@@ -33,9 +38,16 @@ export default function TerrainPreview({
   const geometry = useMemo(() => toCreasedNormals(new STLLoader().parse(stl), Math.PI / 4), [stl]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const [poses] = useState<CameraPoses>(() => new Map());
+  const [drawn, setDrawn] = useState<BufferGeometry | null>(null);
   const box = { min: [0, 0, 0] as [number, number, number], max: size };
   return (
-    <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("preview")}>
+    <Canvas
+      frameloop="demand"
+      dpr={[1, 2]}
+      aria-label={t("preview")}
+      data-demo={current && drawn === geometry ? "terrain-preview-ready" : undefined}
+    >
+      <Drawn geometry={geometry} onDrawn={setDrawn} />
       <OrbitCamera key={fitKey} box={box} poses={poses} poseKey={fitKey} />
       <ambientLight intensity={0.6} />
       <directionalLight position={[-1, -1, 2]} intensity={1.6} />
@@ -44,4 +56,22 @@ export default function TerrainPreview({
       </mesh>
     </Canvas>
   );
+}
+
+/** Hears that a frame with `geometry` has been rendered, once per geometry. */
+function Drawn({
+  geometry,
+  onDrawn,
+}: {
+  geometry: BufferGeometry;
+  onDrawn: (geometry: BufferGeometry) => void;
+}) {
+  const told = useRef<BufferGeometry | null>(null);
+  // Called before the frame renders: the state it sets commits after that frame is drawn.
+  useFrame(() => {
+    if (told.current === geometry) return;
+    told.current = geometry;
+    onDrawn(geometry);
+  });
+  return null;
 }

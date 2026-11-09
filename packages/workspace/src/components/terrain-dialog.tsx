@@ -345,18 +345,13 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 <div className="size-full" data-demo="terrain-preview">
                   {shown && (
                     <Suspense fallback={null}>
-                      {/* The demo videos wait for this before recording the preview (ADR-0075). */}
-                      <div
-                        className="size-full"
-                        data-demo={stale ? undefined : "terrain-preview-ready"}
-                      >
-                        <TerrainPreview
-                          stl={shown.stl}
-                          size={shown.size}
-                          // From the mesh on screen, so the camera fits the model it shows.
-                          fitKey={`${ring?.join()}|${Math.round(Math.max(shown.size[0], shown.size[1]))}`}
-                        />
-                      </div>
+                      <TerrainPreview
+                        stl={shown.stl}
+                        size={shown.size}
+                        // From the mesh on screen, so the camera fits the model it shows.
+                        fitKey={`${ring?.join()}|${Math.round(Math.max(shown.size[0], shown.size[1]))}`}
+                        current={!stale}
+                      />
                     </Suspense>
                   )}
                   {!preview && (
@@ -407,7 +402,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 {planned && "error" in planned && (
                   <p className="text-destructive">{format(planned.error)}</p>
                 )}
-                {area && <p>{area}</p>}
+                {area && <p data-demo="terrain-area">{area}</p>}
               </div>
             </div>
           ) : (
@@ -485,7 +480,6 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
             <Button
               variant="outline"
               className="sm:mr-auto"
-              data-demo="terrain-back"
               disabled={generating}
               onClick={() => setStep("area")}
             >
@@ -515,7 +509,6 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
               <Button
                 variant="outline"
                 disabled={!plan || generating}
-                data-demo="terrain-download"
                 onClick={() => void generate(true)}
               >
                 <DownloadIcon />
