@@ -1020,7 +1020,7 @@
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
     "addLabel": "Aggiungi {operation}",
-    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Maiusc+clic per aggiungerne altri.",
+    "selectHint": "Clicca un disegno nella vista dall’alto per selezionarlo; Maiusc+clic per aggiungerne altri. Doppio clic, o Alt+clic, per selezionare i singoli percorsi.",
     "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
     "inCuttingOrder": "Operazioni in ordine di taglio",
     "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Seleziona i percorsi",
-        "body": "Clicca un percorso nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Le operazioni tagliano ciò che è selezionato."
+        "body": "Clicca un disegno nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Fai doppio clic per selezionarne i percorsi uno per uno; Esc per uscire. Le operazioni tagliano ciò che è selezionato."
       },
       "operations": {
         "title": "Aggiungi operazioni",

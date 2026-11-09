@@ -1,7 +1,12 @@
 import type { Path, Shape } from "@furrow/document";
 import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { selectedDrawingId, selectionCounts, selectionTargets } from "./path-selection";
+import {
+  clickedPaths,
+  selectedDrawingId,
+  selectionCounts,
+  selectionTargets,
+} from "./path-selection";
 
 const point = (x: number): Path => ({ start: [x, 0], segments: [], closed: false });
 const a: Shape = {
@@ -84,5 +89,24 @@ describe("selectedDrawingId", () => {
         ],
       ),
     ).toBeNull();
+  });
+});
+
+describe("clickedPaths", () => {
+  const c: Shape = { ...b, id: "c", drawingId: "other" };
+
+  it("selects every path of the clicked drawing", () => {
+    expect(clickedPaths([a, b, c], { shapeId: "b", path: 0 }, false)).toEqual([
+      { shapeId: "a", path: 0 },
+      { shapeId: "a", path: 1 },
+      { shapeId: "a", path: 2 },
+      { shapeId: "b", path: 0 },
+    ]);
+  });
+
+  it("selects the path alone when direct", () => {
+    expect(clickedPaths([a, b, c], { shapeId: "a", path: 2 }, true)).toEqual([
+      { shapeId: "a", path: 2 },
+    ]);
   });
 });

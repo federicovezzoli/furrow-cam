@@ -1020,7 +1020,7 @@
     "selectModel": "Selecteer eerst een model in de weergave",
     "selectPaths": "Selecteer eerst paden in de weergave",
     "addLabel": "{operation} toevoegen",
-    "selectHint": "Klik op paden in het bovenaanzicht om te selecteren wat je wilt frezen; Shift+klik om meer toe te voegen.",
+    "selectHint": "Klik op een tekening in het bovenaanzicht om haar te selecteren; Shift+klik om meer toe te voegen. Dubbelklik, of Alt+klik, om losse paden te selecteren.",
     "addToolLibrary": "Voeg een gereedschap toe aan je <link>gereedschapsbibliotheek</link> om bewerkingen aan te maken.",
     "inCuttingOrder": "Bewerkingen in freesvolgorde",
     "selectInsideTitle": "Ook de gesloten paden binnen de geselecteerde selecteren, zoals de eilanden van een uitsparing",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Selecteer paden",
-        "body": "Klik op een pad in de weergave om het te selecteren, en Shift+klik om meer toe te voegen. Bewerkingen frezen wat geselecteerd is."
+        "body": "Klik op een tekening in de weergave om haar te selecteren, en Shift+klik om meer toe te voegen. Dubbelklik om haar paden één voor één te selecteren; Esc verlaat haar. Bewerkingen frezen wat geselecteerd is."
       },
       "operations": {
         "title": "Voeg bewerkingen toe",

@@ -1020,7 +1020,7 @@
     "selectModel": "Sélectionnez d’abord un modèle dans la vue",
     "selectPaths": "Sélectionnez d’abord des tracés dans la vue",
     "addLabel": "Ajouter : {operation}",
-    "selectHint": "Cliquez sur des tracés dans la vue de dessus pour choisir ce qu’il faut couper ; Maj+clic pour en ajouter d’autres.",
+    "selectHint": "Cliquez sur un dessin dans la vue de dessus pour le sélectionner ; Maj+clic pour en ajouter d’autres. Double-clic, ou Alt+clic, pour sélectionner des tracés seuls.",
     "addToolLibrary": "Ajoutez un outil à votre <link>bibliothèque d’outils</link> pour créer des opérations.",
     "inCuttingOrder": "Opérations dans l’ordre de coupe",
     "selectInsideTitle": "Sélectionner aussi les tracés fermés à l’intérieur de ceux sélectionnés, comme les îlots d’une poche",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Sélectionner des tracés",
-        "body": "Cliquez sur un tracé dans la vue pour le sélectionner, et Maj+clic pour en ajouter d’autres. Les opérations coupent ce qui est sélectionné."
+        "body": "Cliquez sur un dessin dans la vue pour le sélectionner, et Maj+clic pour en ajouter d’autres. Double-cliquez pour sélectionner ses tracés un par un ; Échap pour en sortir. Les opérations coupent ce qui est sélectionné."
       },
       "operations": {
         "title": "Ajouter des opérations",

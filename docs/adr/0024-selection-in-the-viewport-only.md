@@ -1,6 +1,6 @@
 # ADR-0023: Paths are selected in the viewport only
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded by [ADR-0080](0080-objects-then-paths.md)
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R5, R7, R8), ADR-0018 (supersedes its Geometry pane parts), ADR-0008, ADR-0010; PR #103

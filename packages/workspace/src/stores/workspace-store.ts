@@ -8,8 +8,11 @@ import { createStore } from "zustand/vanilla";
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";
 
-/** The path the pointer is over in the viewport. */
-export type HoveredGeometry = { shapeId: string; path: number };
+/**
+ * The path the pointer is over in the viewport; `direct` while Alt is held,
+ * when a click picks the path alone (ADR-0080).
+ */
+export type HoveredGeometry = { shapeId: string; path: number; direct?: boolean };
 
 /** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
 export type ModelImport = { fileName: string; error: Translatable | null };
@@ -22,7 +25,9 @@ export type EditMode = "tabs" | "startPoints" | "overcuts" | "holes";
  * The camera pose stays inside the viewport, which its controls change on
  * every pointer move.
  *
- * Selection is by path (ADR-0018): selecting a shape selects all its paths.
+ * Selection is by path (ADR-0018): selecting a shape selects all its paths,
+ * and a click in the top view selects all of a drawing's unless the drawing
+ * is entered (ADR-0080).
  * A 3D model is selected on its own, which drops the selected paths, and
  * selecting paths drops it. An undo can remove a selected shape, model or operation, so `prune` drops ids and
  * paths that are no longer in the document (selected, hovered and hidden
@@ -48,6 +53,13 @@ export type WorkspaceState = {
    */
   selectedModelId: string | null;
   selectedOperationId: string | null;
+  /**
+   * The drawing double clicked in the top view (ADR-0080), whose paths clicks
+   * select one by one while the other drawings are dimmed. Outside one, a
+   * click selects a whole drawing. Left with Esc, a double click outside it,
+   * and when the top view stops taking clicks.
+   */
+  enteredDrawingId: string | null;
   hovered: HoveredGeometry | null;
   /**
    * Editing the selected profile's tabs or corner overcuts (#428), or the
@@ -90,6 +102,8 @@ export type WorkspaceState = {
   selectPaths: (paths: PathRef[], mode?: "replace" | "toggle") => void;
   selectModel: (id: string | null) => void;
   selectOperation: (id: string | null) => void;
+  /** Enters a drawing, or leaves the one entered with `null`, keeping the selection. */
+  enterDrawing: (id: string | null) => void;
   setHovered: (hovered: HoveredGeometry | null) => void;
   /** Switches to the top view when turned on. */
   setEditing: (editing: EditMode | null) => void;
@@ -104,7 +118,7 @@ export type WorkspaceState = {
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
-   * Drops selected, hovered and hidden ids and paths that aren't in `document`, tab
+   * Drops selected, entered, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs, start point editing without a profile or engraving, overcut
    * editing without overcuts, placing holes without a drill other than a pin drill, picking the zero without a custom zero and the
    * bottom side of a project no longer two-sided.
@@ -123,6 +137,7 @@ export function createWorkspaceStore() {
         selectedPaths: [],
         selectedModelId: null,
         selectedOperationId: null,
+        enteredDrawingId: null,
         hovered: null,
         editing: null,
         markerCursor: null,
@@ -139,6 +154,7 @@ export function createWorkspaceStore() {
               if (view !== "top") {
                 state.editing = null;
                 state.pickingZero = false;
+                state.enteredDrawingId = null;
               }
             },
             false,
@@ -192,6 +208,7 @@ export function createWorkspaceStore() {
                 state.pickingZero = false;
                 state.selectedOperationId = null;
                 state.editing = null;
+                state.enteredDrawingId = null;
               }
             },
             false,
@@ -214,6 +231,16 @@ export function createWorkspaceStore() {
           );
         },
 
+        enterDrawing(id) {
+          set(
+            (state) => {
+              state.enteredDrawingId = id;
+            },
+            false,
+            "enterDrawing",
+          );
+        },
+
         setHovered(hovered) {
           set(
             (state) => {
@@ -233,6 +260,7 @@ export function createWorkspaceStore() {
                 state.side = "top";
                 state.pickingZero = false;
                 state.simulating = false;
+                state.enteredDrawingId = null;
               }
             },
             false,
@@ -259,6 +287,7 @@ export function createWorkspaceStore() {
                 state.side = "top";
                 state.editing = null;
                 state.simulating = false;
+                state.enteredDrawingId = null;
               }
             },
             false,
@@ -336,6 +365,7 @@ export function createWorkspaceStore() {
               state.selectedModelId = null;
               state.selectedOperationId = null;
               state.editing = null;
+              state.enteredDrawingId = null;
             },
             false,
             "clearSelection",
@@ -366,6 +396,10 @@ export function createWorkspaceStore() {
               const modelId = state.selectedModelId;
               if (modelId !== null && !document.models.some(({ id }) => id === modelId)) {
                 state.selectedModelId = null;
+              }
+              const entered = state.enteredDrawingId;
+              if (entered !== null && !document.drawings.some(({ id }) => id === entered)) {
+                state.enteredDrawingId = null;
               }
               const operationId = state.selectedOperationId;
               const operation = document.operations.find(({ id }) => id === operationId);

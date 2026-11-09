@@ -1,6 +1,6 @@
 # ADR-0018: Operations target paths, not whole shapes
 
-- **Status:** Proposed
+- **Status:** Proposed; superseded in part by [ADR-0080](0080-objects-then-paths.md) (selection)
 - **Date:** 2026-10-12
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R1, R5, R7, R8), ADR-0003, ADR-0008, ADR-0010

@@ -13,7 +13,10 @@ export function onStockTop(ray: Ray): Point | null {
   return hit ? [hit.x, hit.y] : null;
 }
 
-type CatcherHandlers = Pick<ThreeElements["mesh"], "onClick" | "onPointerMove" | "onPointerOut">;
+type CatcherHandlers = Pick<
+  ThreeElements["mesh"],
+  "onClick" | "onDoubleClick" | "onPointerMove" | "onPointerOut"
+>;
 
 /**
  * An invisible plane at height `z` that catches the pointer anywhere in the
