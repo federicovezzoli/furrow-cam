@@ -3,6 +3,8 @@ import {
   clampTouchOff,
   defaultTouchOff,
   designAlignment,
+  modelOutlines,
+  nearestOnLoops,
   touchOffOutsideStock,
   translatePoint,
   translateShapes,
@@ -379,6 +381,21 @@ export function autoPlaceHoldingTabs(store: DocumentStore, count: number) {
     const tabs = draft.stock.twoSided?.tabs;
     if (tabs) tabs.positions = autoHoldingTabPositions(models, count);
   });
+}
+
+/**
+ * Replaces the holding tabs with one at each of `positions`, each moved to
+ * the nearest model's outline. Refused with no model; returns whether it was taken.
+ */
+export function setHoldingTabPositions(store: DocumentStore, positions: readonly Point[]): boolean {
+  const loops = modelOutlines(store.getState().document.models);
+  const snapped = positions.map((point) => nearestOnLoops(loops, point)?.point);
+  if (!snapped.every((point) => point !== undefined)) return false;
+  store.getState().change("setStock.tabs.positions", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs) tabs.positions = snapped;
+  });
+  return true;
 }
 
 /** Moves holding tab `index` to `position`, already on a model's outline. */
