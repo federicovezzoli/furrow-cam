@@ -85,6 +85,7 @@ export function TerrainSearch({
           placeholder={t("searchPlaceholder")}
           autoComplete="off"
           className="pl-8"
+          data-demo="terrain-search-input"
           onChange={(event) => setQuery(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
@@ -113,6 +114,7 @@ export function TerrainSearch({
               <button
                 type="button"
                 className="grid w-full rounded-sm px-2 py-1 text-left hover:bg-accent focus-visible:bg-accent"
+                data-demo="terrain-suggestion"
                 onClick={() => pick(place)}
               >
                 <span>{place.name}</span>
