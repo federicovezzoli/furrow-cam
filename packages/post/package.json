@@ -1,6 +1,6 @@
 {
   "name": "@furrow/post",
-  "version": "0.15.4",
+  "version": "0.15.5",
   "private": true,
   "description": "Post-processors turning toolpaths into G-code",
   "type": "module",

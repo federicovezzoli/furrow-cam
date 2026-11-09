@@ -1,5 +1,12 @@
 # @furrow/desktop
 
+## 0.19.1
+
+### Patch Changes
+
+- On macOS 26 the app icon now fills the standard rounded square instead of sitting small on a grey tile. ([#528](https://github.com/federicovezzoli/furrow-cam/pull/528))
+- Updated dependencies: @furrow/workspace@0.24.1, @furrow/document@0.22.1, @furrow/ui@0.8.6, @furrow/cam-core@0.20.1
+
 ## 0.19.0
 
 ### Minor Changes

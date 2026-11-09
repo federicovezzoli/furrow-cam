@@ -1,5 +1,13 @@
 # @furrow/ui
 
+## 0.8.6
+
+### Patch Changes
+
+- The MCP server can make a project two-sided and set its flip axis, parting depth, line-up (locating pins or a fence corner) and holding tabs, so an AI assistant can plan a two-sided job from scratch. A list that is too short now says how many items it needs, not how many characters. ([#530](https://github.com/federicovezzoli/furrow-cam/pull/530))
+- In *Terrain from a map* the map is dragged until you pick a shape, a drawn area can be moved by dragging it, and the 3D preview shows the relief in much finer detail. The terrain no longer adds its outline as a drawing. ([#527](https://github.com/federicovezzoli/furrow-cam/pull/527))
+- Updated dependencies: @furrow/document@0.22.1, @furrow/cam-core@0.20.1
+
 ## 0.8.5
 
 ### Patch Changes
