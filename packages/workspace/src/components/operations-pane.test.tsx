@@ -3,6 +3,7 @@ import { createProjectDocument } from "@furrow/document";
 import {
   CIRCLE_ID,
   fullDocument,
+  model,
   RELIEF_FINISH_ID,
   RELIEF_ROUGH_ID,
   reliefFinish,
@@ -66,6 +67,30 @@ describe("OperationsPane: hidden objects (ADR-0080)", () => {
     expect(checkbox().disabled).toBe(true);
     expect(checkbox().title).toMatch(/all it cuts is hidden/);
     expect(screen.queryByLabelText(/Some of what it cuts is hidden/)).toBeNull();
+  });
+
+  it("totals the other operations' time", () => {
+    const document = fullDocument();
+    renderWorkspace(
+      <>
+        <OperationsPane />
+        <Toolpaths />
+      </>,
+      createMemoryHost({
+        document: {
+          ...document,
+          stock: { ...document.stock, twoSided: null },
+          drawings: document.drawings.map((d) => ({ ...d, hidden: true })),
+          models: [model],
+          operations: [...document.operations, reliefFinish],
+        },
+      }),
+    );
+    act(() => {
+      toolpaths?.getState().startComputing(RELIEF_FINISH_ID, "h");
+      toolpaths?.getState().setResult(RELIEF_FINISH_ID, "h", { warnings: [], lines, seconds: 725 });
+    });
+    expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
   });
 
   it("marks one with only some targets hidden, still on", () => {

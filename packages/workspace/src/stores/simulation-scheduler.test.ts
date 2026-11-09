@@ -147,6 +147,31 @@ describe("simulationRequest", () => {
     );
   });
 
+  it("doesn't wait for an operation that only cuts hidden objects (ADR-0080)", () => {
+    const shape = {
+      id: "33333333-2222-4333-8444-555555555555",
+      name: "",
+      layer: "",
+      drawingId: "44444444-2222-4333-8444-555555555555",
+      paths: [{ start: [10, 10] as [number, number], segments: [], closed: false }],
+      hidden: true as const,
+    };
+    const document = documentWithOperations();
+    const hidden = {
+      ...document,
+      geometry: [shape],
+      operations: document.operations.map((op) =>
+        op.id === DRILL_ID ? { ...op, targets: [{ shapeId: shape.id, paths: null }] } : op,
+      ),
+    };
+    const toolpaths = createToolpathStore();
+    // The drill never gets a toolpath: the scheduler leaves it out.
+    ready(toolpaths, PROFILE_ID, "a");
+    expect(
+      simulationRequest(hidden, toolpaths.getState().entries, MAX_CELLS)?.input.cuts,
+    ).toHaveLength(2);
+  });
+
   it("simulates each side of a two-sided project, the bottom from the top's cuts (ADR-0060)", () => {
     const document = documentWithOperations();
     const twoSided = {
