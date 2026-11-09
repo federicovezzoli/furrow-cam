@@ -169,14 +169,11 @@ export async function storeModel(
     document,
     workspace,
     fit,
-    alongside,
   }: {
     meshes: WorkspaceHost["meshes"];
     document: DocumentStore;
     workspace: WorkspaceStore;
     fit?: boolean;
-    /** Changes made with the model's, in the same undo step: its id is in the document. */
-    alongside?: (id: string) => void;
   },
 ): Promise<Translatable | null> {
   const upload = await meshes.put(mesh.sha256, stored);
@@ -186,16 +183,11 @@ export async function storeModel(
   // An undo step of its own: a gesture still open (a drag) is let finish first, so cancelling
   // it can't take the model away after it was stored and selected.
   await gestureDone(document);
-  // What goes alongside joins the model's step.
-  if (alongside) document.getState().beginTransaction();
-  let id: string | null = null;
-  try {
-    id = addModel(document, { sha256, triangles, bounds, fileName, size: stored.size }, { fit });
-    if (id !== null) alongside?.(id);
-  } finally {
-    // An error part-way still closes the step, or undo would stay off for the session.
-    if (alongside) document.getState().commitTransaction();
-  }
+  const id = addModel(
+    document,
+    { sha256, triangles, bounds, fileName, size: stored.size },
+    { fit },
+  );
   if (id === null) {
     // Only a mesh this import stored goes, and the server keeps one that something saved uses.
     if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {

@@ -1480,7 +1480,6 @@
     "title": "Terreno da una mappa",
     "description": "Disegna un'area sulla mappa per crearne un modello in rilievo.",
     "modelDescription": "Scegli dimensioni e rilievo del modello, poi aggiungilo al progetto o scaricalo.",
-    "notice": "La mappa viene da OpenFreeMap (dati OpenStreetMap), le quote da Mapterhorn e la ricerca dei luoghi da Photon di komoot. Il browser li contatta direttamente, quindi vedono il tuo indirizzo IP, l'area che guardi e ciò che cerchi; coordinate e link di mappe restano sul tuo dispositivo.",
     "loading": "Caricamento della mappa…",
     "mapUnavailable": "Non è stato possibile caricare la mappa. Controlla la connessione e riprova.",
     "preview": "Anteprima del terreno",
@@ -1495,14 +1494,13 @@
     "goTo": "Vai a {lat, number}, {lon, number}",
     "shape": "Area",
     "tools": {
-      "move": "Sposta",
       "rectangle": "Rettangolo",
       "square": "Quadrato",
       "circle": "Cerchio",
       "ellipse": "Ellisse",
       "freehand": "A mano libera"
     },
-    "drawHint": "Scegli una forma e trascina sulla mappa per disegnarla. Sposta trascina la mappa.",
+    "drawHint": "Scegli una forma e trascina sulla mappa per disegnarla. Trascina l'area per spostarla.",
     "noArea": "Disegna un'area sulla mappa.",
     "longestSide": "Lato più lungo",
     "exaggeration": "Esagerazione",
