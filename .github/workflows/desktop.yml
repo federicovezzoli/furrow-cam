@@ -41,7 +41,8 @@ jobs:
       matrix:
         include:
           - name: macOS
-            os: macos-latest
+            # Xcode 26's actool compiles the Icon Composer app icon (build/README.md).
+            os: macos-26
             target: --mac
           - name: Windows
             os: windows-latest

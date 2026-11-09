@@ -19,6 +19,9 @@ fileAssociations:
     mimeType: application/x-furrow-project
     role: Editor
 mac:
+  # Icon Composer icon: macOS 26 draws it in the system's rounded square; actool (Xcode 26)
+  # also renders the .icns that older macOS versions and .furrow files show.
+  icon: icon.icon
   category: public.app-category.graphics-design
   target:
     - target: dmg
