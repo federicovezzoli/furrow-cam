@@ -6,7 +6,7 @@ import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
 import { projectSummary } from "./summary";
 
@@ -185,6 +185,24 @@ describe("fitToStock and resize", () => {
     const before = summary().models[0]?.size;
     setTop(project, id, 2.5);
     expect(summary().models[0]?.size).toEqual({ ...before, top: 2.5 });
+  });
+
+  it("turns a model in quarter turns as one change", async () => {
+    const { id } = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
+    const { width, height, depth } = summary().models[0]?.size ?? {};
+    turn(project, id, "x", 1);
+    // About X, the height and depth swap.
+    expect(summary().models[0]?.size).toMatchObject({ width, height: depth, depth: height });
+    const steps = project.store.getState().past.length;
+    turn(project, id, "z", 3);
+    expect(project.store.getState().past).toHaveLength(steps + 1);
+    expect(summary().models[0]?.size).toMatchObject({ width: depth, height: width, depth: height });
+  });
+
+  it("refuses to turn a drawing or an unknown id", async () => {
+    const drawing = await importFile(project, await file("square.svg", svg(10, 10, "mm")), {});
+    expect(() => turn(project, drawing.id, "z", 1)).toThrow("only a model");
+    expect(() => turn(project, "nope", "z", 1)).toThrow("no drawing or model");
   });
 
   it("refuses to sink a drawing", async () => {

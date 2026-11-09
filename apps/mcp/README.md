@@ -20,6 +20,7 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |
+| `turn_model` | Turns a model a quarter turn (or more) about the stock's X, Y or Z axis |
 | `set_stock` | Sets the stock's size and the units the app shows |
 | `set_zero` | Sets the XY zero (a stock corner, edge or centre, or a custom point) and the Z zero |
 | `set_touch_off_pad` | Adds, moves or removes the touch-off pad |

@@ -9,7 +9,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize, setTop } from "./drawings-and-models";
+import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
 import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
 import { libraryDir, readLibrary } from "./library";
 import {
@@ -310,6 +310,27 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         setTop(project, id, mm);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "turn_model",
+    {
+      title: "Turn a model in quarter turns",
+      description:
+        "Turns a model a quarter turn (or two or three) about the stock's X, Y or Z axis, as the app's turn buttons do, keeping its anchor point in place: for example to stand up a model exported lying on its side. Each turn is counter-clockwise looking from the axis's positive end towards the origin (right-hand rule): about Z, X turns into Y; about X, Y turns into Z; about Y, Z turns into X. Several turns make one change. Returns the project summary, with the model's new size.",
+      inputSchema: {
+        path: projectPath,
+        id: z.string().describe("The model's id, from the project summary."),
+        axis: z.enum(["x", "y", "z"]).describe("The stock axis to turn about."),
+        turns: z.number().int().min(1).max(3).default(1).describe("How many quarter turns."),
+      },
+    },
+    ({ path, id, axis, turns }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        turn(project, id, axis, turns);
         return summary(project);
       }),
   );
