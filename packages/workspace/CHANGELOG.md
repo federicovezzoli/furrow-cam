@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.24.2
+
+### Patch Changes
+
+- Updated dependencies: @furrow/ui@0.8.7
+
 ## 0.24.1
 
 ### Patch Changes

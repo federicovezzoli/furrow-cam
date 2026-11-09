@@ -1,5 +1,12 @@
 # @furrow/desktop
 
+## 0.19.2
+
+### Patch Changes
+
+- When a new desktop version is available, *Download* now opens the download section of furrow.cam, which lists the installer for each system, instead of the GitHub release page. ([#540](https://github.com/federicovezzoli/furrow-cam/pull/540))
+- Updated dependencies: @furrow/ui@0.8.7, @furrow/workspace@0.24.2
+
 ## 0.19.1
 
 ### Patch Changes
