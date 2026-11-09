@@ -33,9 +33,9 @@ We will use option 2.
 - **Click** selects the **object** under the cursor: the drawing a picked path belongs to, otherwise the model (paths still win over the model under them, ADR-0078). Shift/Ctrl/Cmd+click adds or removes objects. A click on nothing clears the selection.
 - The selection stays a set of paths (ADR-0018): selecting a drawing selects all its paths, and the drawing whose properties show is still the one every selected path belongs to. What changes is what a click puts in the set. The workspace adds only which drawing is entered, if any.
 - A selected drawing shows its properties over the viewport and can be dragged, as today. With several drawings selected, no properties panel shows, but operations can still be added.
-- **Double click** on a drawing **enters** it. The other objects are dimmed and can't be picked, and clicks select paths as today (Shift/Ctrl/Cmd+click toggles, *Select inside* works). **Esc**, or a double click outside the drawing, leaves it with its paths still selected. Double clicking a text item enters it as well and focuses its text field.
+- **Double click** on a drawing **enters** it and selects the path under the cursor (Shift/Ctrl/Cmd+double click inside the entered drawing adds it instead). The other drawings are dimmed, nothing outside the drawing can be picked (the model included), and clicks select paths as today (Shift/Ctrl/Cmd+click toggles, *Select inside* works). **Esc**, or a double click outside the drawing, leaves it with its paths still selected. Selecting anything outside it from the interface (a duplicate, a new text item, an import) leaves it too.
 - **Alt+click** selects a path directly, without entering its drawing, as a direct-selection tool does (Alt+Shift+click toggles it).
-- Hover follows the same level: all of the drawing's paths when outside, the path when inside.
+- Hover follows the same level: all of the drawing's paths when outside, the path when inside or while Alt is held.
 - Picking an operation's targets, editing tabs or start points and picking the zero keep taking the clicks, as today.
 
 ### Operations
@@ -61,6 +61,7 @@ Targets stay as ADR-0018 defines them, so their schema doesn't change. Adding an
 ## Consequences
 
 - One click selects a whole map, lettering or outline, and one operation cuts it. Single paths take a double click or the pane.
+- Alt+click may not reach the app on Linux desktops that move windows with Alt+drag (KDE, Xfce). Double click works everywhere, so the hints name it first.
 - Hiding an object is a quick way to leave it out of a job without deleting it or its operations. Every reader of `operation.enabled` (toolpath and simulation schedulers, G-code export, the Operations pane) has to go through one helper that also checks hidden targets.
 - What a project holds is listed, with names and layers. Overlapped and hidden objects can be reached, and selection works from the keyboard.
 - The schema version goes up, and older app versions can't open documents saved with it (the schema is strict). The MCP server reports visibility and lock in `get_project` but does not need to change them.

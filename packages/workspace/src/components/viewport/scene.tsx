@@ -16,7 +16,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { DoubleSide } from "three";
 import { useShallow } from "zustand/react/shallow";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
-import { clickedPaths } from "../../lib/path-selection";
 import {
   boxCenter,
   concatPositions,
@@ -384,7 +383,9 @@ function SelectedPaths({ color, halo }: { color: string; halo: string }) {
 
 /**
  * What a click would select (ADR-0080): the hovered path inside an entered
- * drawing, otherwise its whole drawing, less what is selected: selection wins.
+ * drawing or with Alt, otherwise its whole drawing, less what is selected:
+ * selection wins. Rebuilt only when that changes, not on every path the
+ * pointer crosses inside one drawing.
  */
 function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
@@ -394,13 +395,25 @@ function HoveredPaths({ color }: { color: string }) {
   // Built when the geometry or the selection changes, not each time the hover does.
   const shapes = useMemo(() => new Map(geometry.map((shape) => [shape.id, shape])), [geometry]);
   const selectedKeys = useMemo(() => new Set(selected.map(pathKey)), [selected]);
+  const shape = hovered ? shapes.get(hovered.shapeId) : undefined;
+  const alone = entered || hovered?.direct === true;
+  const drawingId = shape && !alone ? shape.drawingId : null;
+  // Outside one only the drawing matters, so crossing its paths changes nothing.
+  const pickShape = shape && alone ? shape.id : null;
+  const pickPath = shape && alone ? (hovered?.path ?? null) : null;
   const positions = useMemo(() => {
-    if (!hovered || !shapes.has(hovered.shapeId)) return pathsLinePositions([]);
-    const refs = clickedPaths(geometry, hovered, entered);
+    const refs =
+      drawingId !== null
+        ? geometry
+            .filter((s) => s.drawingId === drawingId)
+            .flatMap((s) => s.paths.map((_, path) => ({ shapeId: s.id, path })))
+        : pickShape !== null && pickPath !== null
+          ? [{ shapeId: pickShape, path: pickPath }]
+          : [];
     const paths = refs.flatMap((ref) =>
       selectedKeys.has(pathKey(ref)) ? [] : (shapes.get(ref.shapeId)?.paths[ref.path] ?? []),
     );
     return pathsLinePositions(paths);
-  }, [geometry, shapes, hovered, selectedKeys, entered]);
+  }, [geometry, shapes, selectedKeys, drawingId, pickShape, pickPath]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }

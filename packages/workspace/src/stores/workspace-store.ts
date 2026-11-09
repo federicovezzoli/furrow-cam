@@ -8,8 +8,11 @@ import { createStore } from "zustand/vanilla";
 /** Orthographic top view for setup and editing, or perspective orbit view (ADR-0008). */
 export type ViewMode = "top" | "orbit";
 
-/** The path the pointer is over in the viewport. */
-export type HoveredGeometry = { shapeId: string; path: number };
+/**
+ * The path the pointer is over in the viewport; `direct` while Alt is held,
+ * when a click picks the path alone (ADR-0080).
+ */
+export type HoveredGeometry = { shapeId: string; path: number; direct?: boolean };
 
 /** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
 export type ModelImport = { fileName: string; error: Translatable | null };
