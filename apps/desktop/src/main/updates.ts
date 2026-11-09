@@ -25,9 +25,8 @@ const UPDATE_PREFIXES = [
 export const isUpdateRequest = (url: string) =>
   UPDATE_PREFIXES.some((prefix) => url.startsWith(prefix));
 
-/** A desktop version's release page. */
-export const releasePage = (version: string) =>
-  `${REPO}/releases/tag/%40furrow/desktop%40${version}`;
+/** The website's download section: each installer, through the counted links (ADR-0049). */
+export const DOWNLOADS_PAGE = "https://furrow.cam/#download";
 
 /** Desktop releases are tagged per package by Changesets (ADR-0012). */
 const TAG_PREFIX = "@furrow/desktop@";
@@ -41,7 +40,7 @@ export type UpdatePrefs = {
 };
 
 /** A desktop release newer than the running app. */
-export type Release = { version: string; url: string };
+export type Release = { version: string };
 
 type Version = [number, number, number];
 
@@ -61,14 +60,12 @@ export function latestDesktopRelease(releases: unknown): Release | null {
   let latest: { version: Version; release: Release } | null = null;
   for (const item of releases) {
     if (typeof item !== "object" || item === null) continue;
-    const { tag_name: tag, html_url: url, draft, prerelease } = item as Record<string, unknown>;
+    const { tag_name: tag, draft, prerelease } = item as Record<string, unknown>;
     if (draft !== false || prerelease !== false) continue;
     if (typeof tag !== "string" || !tag.startsWith(TAG_PREFIX)) continue;
-    // The notice opens it in the system browser: only ever a GitHub page.
-    if (typeof url !== "string" || !url.startsWith("https://github.com/")) continue;
     const version = parseVersion(tag.slice(TAG_PREFIX.length));
     if (version && (!latest || compare(version, latest.version) > 0)) {
-      latest = { version, release: { version: tag.slice(TAG_PREFIX.length), url } };
+      latest = { version, release: { version: tag.slice(TAG_PREFIX.length) } };
     }
   }
   return latest?.release ?? null;

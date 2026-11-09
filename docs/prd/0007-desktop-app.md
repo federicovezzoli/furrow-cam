@@ -41,7 +41,7 @@ Furrow CAM only runs as a hosted web app: users need an account and a connection
 | D9 | A tool library and machine list are kept on the computer and used for new projects, as in the web app | Must |
 | D10 | The web app imports `.furrow` files | Must |
 | D11 | The download page explains how to open the app the first time despite the operating system's warning for unsigned apps | Should |
-| D12 | If the user agrees on first start, the app checks for a newer version at start-up; on Windows and Linux it offers to download and install it, on macOS to open its release page. The user can check by hand from the Help menu and turn the start-up check off | Should |
+| D12 | If the user agrees on first start, the app checks for a newer version at start-up; on Windows and Linux it offers to download and install it, on macOS to open the website's download section. The user can check by hand from the Help menu and turn the start-up check off | Should |
 | D13 | If the user agrees on first start, the app sends anonymous usage statistics and error reports (ADR-0052); the user can turn them on or off from the Help menu | Should |
 
 ## User flow
