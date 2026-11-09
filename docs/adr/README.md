@@ -62,7 +62,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Proposed |
 | [0046](0046-ui-packages.md) | UI packages may use React | Proposed |
 | [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Proposed |
-| [0048](0048-desktop-update-check.md) | The desktop app checks GitHub for newer versions and links to them | Proposed |
+| [0048](0048-desktop-update-check.md) | The desktop app checks GitHub for newer versions and links to them | Proposed; superseded in part by ADR-0074 and ADR-0081 |
 | [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Proposed |
 | [0050](0050-guest-workspace-in-the-browser.md) | Guests use the workspace with projects kept in the browser | Proposed |
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Proposed |
@@ -88,9 +88,10 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0071](0071-going-over-clears-the-whole-sub-step.md) | Relief passes go over a wall no lower than the tool anywhere along the level move | Proposed |
 | [0072](0072-step-files-imported-as-stl.md) | STEP files are turned into STL on import, with OpenCascade in WebAssembly | Proposed |
 | [0073](0073-no-look-between-close-samples.md) | Relief passes don't look between samples close in height | Proposed |
-| [0074](0074-desktop-installs-updates.md) | The desktop app installs updates itself on Windows and Linux, through the download Worker | Proposed |
+| [0074](0074-desktop-installs-updates.md) | The desktop app installs updates itself on Windows and Linux, through the download Worker | Proposed; superseded in part by ADR-0081 |
 | [0075](0075-demo-videos-recorded-frame-by-frame.md) | Demo videos are recorded a frame at a time on a frozen page clock | Proposed |
 | [0076](0076-public-map-search-and-elevation-services.md) | Maps, place search and elevation come from public services the browser calls directly | Proposed |
 | [0077](0077-terrain-generated-as-stl.md) | Terrain is generated in the browser as an STL mesh and imported like one | Proposed |
 | [0078](0078-drawings-and-a-model-together.md) | A project holds drawings and one model together | Proposed |
 | [0079](0079-machine-snapshot-links-its-source.md) | A project's machine snapshot links to the library machine it came from | Proposed |
+| [0081](0081-update-notice-opens-the-website.md) | The update notice opens the website's download section | Proposed |
