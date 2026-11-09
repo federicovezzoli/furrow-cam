@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
     "export": {
+      "allHidden": "Jede aktive Operation schneidet etwas Ausgeblendetes: blende es ein, um zu exportieren.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
@@ -1029,6 +1030,7 @@
     "enableLabel": "{name} aktivieren",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert: keine Werkzeugbahn",
+    "targetsHidden": "Aus: etwas, das sie schneidet, ist ausgeblendet. Blende es ein, um es wieder zu schneiden.",
     "operationName": "Name der Operation",
     "renameTitle": "Doppelklicken oder F2 drücken zum Umbenennen",
     "reorderLabel": "{name} zum Neuordnen ziehen",

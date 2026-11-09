@@ -51,10 +51,13 @@ Targets stay as ADR-0018 defines them, so their schema doesn't change. Adding an
 
 ### Visibility and lock are saved
 
-`hidden: boolean` and `locked: boolean` are added to `Drawing`, `Shape` and `Model` in a new schema version. The migration sets both to `false`.
+`hidden` and `locked` are added to `Drawing`, `Shape` and `Model` in a new schema version, each stored only as `true` and absent otherwise. Absent means shown and unlocked, so existing documents need no change: the migration only bumps the version, which keeps older releases from opening documents that use the flags. Every place that builds a shape, drawing or model (the importers, text items, terrain, fixtures) stays as it is, and a duplicate drops the flags.
 
-- **Hidden:** not drawn, not pickable and **not machined**. Toolpath generation, the simulation and G-code export skip hidden targets, as they skip targets no longer in the document. An operation whose targets are all hidden is off: its checkbox shows as off and greyed, with the reason in its tooltip, and it can't be turned on while they stay hidden. An operation with only some targets hidden cuts the visible ones and shows a mark. This state is derived from the targets, not written to `enabled`, so showing the object again brings its operations back as they were, and `enabled` keeps the user's own choice.
-- **Locked:** drawn, but not pickable or draggable in the viewport, so a terrain or a background drawing can sit under the work. It can still be selected from the pane, to edit its properties or unlock it.
+One function, `machinedDocument` in `@furrow/cam-core`, gives the document as it is machined, with every operation that cuts a hidden object off. The toolpath and simulation schedulers, G-code export, the MCP server and the viewport's toolpaths all read operations through it.
+
+- **Hidden:** not drawn, not pickable and **not machined**. An operation that cuts any hidden object (a shape it targets, or its model) is off: its checkbox shows as off and greyed, with the reason in its tooltip, and it can't be turned on while the object stays hidden. It is not cut in part: without a hidden island a pocket would clear what the island stands for, and a profile's tabs and start points would move onto the shapes left. This state is derived from the targets, not written to `enabled`, so showing the object again brings its operations back as they were, and `enabled` keeps the user's own choice. Export says when every enabled operation is off this way, rather than that none is enabled.
+- **Locked:** drawn, but not pickable or draggable in the viewport, so a terrain or a background drawing can sit under the work; a drawing holding a locked shape isn't dragged either. It can still be selected from the pane, to edit its properties or unlock it.
+- Hiding an object drops it from the selection, and hidden shapes give the zero picker nothing to snap to.
 - A hidden or locked drawing hides or locks its shapes. A shape's own toggles apply only inside a drawing that is visible and unlocked.
 - Hiding or locking is one undo step, like any document change.
 
@@ -62,7 +65,7 @@ Targets stay as ADR-0018 defines them, so their schema doesn't change. Adding an
 
 - One click selects a whole map, lettering or outline, and one operation cuts it. Single paths take a double click or the pane.
 - Alt+click may not reach the app on Linux desktops that move windows with Alt+drag (KDE, Xfce). Double click works everywhere, so the hints name it first.
-- Hiding an object is a quick way to leave it out of a job without deleting it or its operations. Every reader of `operation.enabled` (toolpath and simulation schedulers, G-code export, the Operations pane) has to go through one helper that also checks hidden targets.
+- Hiding an object is a quick way to leave it out of a job without deleting it or its operations. Every reader of `operation.enabled` has to read it through `machinedDocument`, or a hidden object would still be cut.
 - What a project holds is listed, with names and layers. Overlapped and hidden objects can be reached, and selection works from the keyboard.
 - The schema version goes up, and older app versions can't open documents saved with it (the schema is strict). The MCP server reports visibility and lock in `get_project` but does not need to change them.
 - Viewport picking, hover, the drawing highlight and drag, the tour and the demo scripts (`data-tour` and `data-demo` anchors) and the component tests that expect a click to select a path all change.

@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
     "export": {
+      "allHidden": "Ogni operazione attiva taglia qualcosa di nascosto: mostralo per esportare.",
       "noEnabled": "Non ci sono operazioni attive da esportare.",
       "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
       "noToolpath": "Nessun percorso utensile, esclusa dal programma."
@@ -1029,6 +1030,7 @@
     "enableLabel": "Attiva {name}",
     "enabled": "Attiva",
     "disabled": "Disattivata: nessun percorso utensile",
+    "targetsHidden": "Spenta: qualcosa che taglia è nascosto. Mostralo per tagliarlo di nuovo.",
     "operationName": "Nome dell’operazione",
     "renameTitle": "Doppio clic o F2 per rinominare",
     "reorderLabel": "Trascina per riordinare {name}",

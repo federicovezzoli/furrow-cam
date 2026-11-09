@@ -1,3 +1,4 @@
+import { machinedDocument } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { applyPatches, type Draft, enablePatches, type Patch, produceWithPatches } from "immer";
 import { devtools } from "zustand/middleware";
@@ -62,9 +63,12 @@ export function versionLabel({ version }: DocumentState): string | null {
 
 export type DocumentStore = ReturnType<typeof createDocumentStore>;
 
-/** Whether the document has an operation to cut, which exporting and simulating need. */
+/**
+ * Whether the document has an operation to cut, which exporting and
+ * simulating need; one that only cuts hidden objects doesn't count (ADR-0080).
+ */
 export function hasEnabledOperations({ document }: DocumentState): boolean {
-  return document.operations.some((operation) => operation.enabled);
+  return machinedDocument(document).operations.some((operation) => operation.enabled);
 }
 
 /**

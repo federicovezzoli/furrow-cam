@@ -3,6 +3,7 @@
 import {
   type CellRange,
   type Heightmap,
+  machinedDocument,
   type PlaybackPath,
   playbackPath,
   playbackPosition,
@@ -51,7 +52,8 @@ type Loaded = {
  * of the other side's shows meanwhile. Derived data: none of it is saved.
  */
 export function usePlayback(maxCells: number | null) {
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const { width, height, thickness } = useDocumentStore((s) => s.document.stock);
   const flipAxis = useDocumentStore((s) => s.document.stock.twoSided?.flipAxis ?? null);
   // Always the top side unless the project is two-sided (`prune`).

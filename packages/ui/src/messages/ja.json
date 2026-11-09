@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "両面で素材全体を加工すると、部品を保持する枠が残りません。マージンを使用してください。"
     },
     "export": {
+      "allHidden": "有効な加工はすべて非表示のものを切削します。エクスポートするには表示してください。",
       "noEnabled": "エクスポートする有効な加工がありません。",
       "noneHasToolpath": "有効な加工のどれにも、エクスポートするツールパスがありません。",
       "noToolpath": "ツールパスがないため、プログラムから除外しました。"
@@ -1029,6 +1030,7 @@
     "enableLabel": "{name} を有効化",
     "enabled": "有効",
     "disabled": "無効：ツールパスなし",
+    "targetsHidden": "オフ：切削対象の一部が非表示です。表示すると再び切削します。",
     "operationName": "加工名",
     "renameTitle": "ダブルクリックまたは F2 で名前を変更",
     "reorderLabel": "ドラッグして {name} を並べ替え",

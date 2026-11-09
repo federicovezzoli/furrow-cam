@@ -1,6 +1,12 @@
 "use client";
 
-import { type Box3, type Heightmap, stockBox, xyOriginPosition } from "@furrow/cam-core";
+import {
+  type Box3,
+  type Heightmap,
+  machinedDocument,
+  stockBox,
+  xyOriginPosition,
+} from "@furrow/cam-core";
 import { Button } from "@furrow/ui/components/ui/button";
 import { Canvas } from "@react-three/fiber";
 import { RouteIcon, RouteOffIcon } from "lucide-react";
@@ -46,7 +52,8 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const playback = usePlayback(maxTextureSize === null ? null : heightmapCellLimit(maxTextureSize));
   const units = useDocumentStore((s) => s.document.units);
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const entries = useToolpathStore((s) => s.entries);
   const { side } = playback;
   // The bottom side is played back over the top side's cuts, so its failures count too.

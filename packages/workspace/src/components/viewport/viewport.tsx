@@ -1,6 +1,6 @@
 "use client";
 
-import { stockBox, xyOriginPosition } from "@furrow/cam-core";
+import { machinedDocument, stockBox, xyOriginPosition } from "@furrow/cam-core";
 import { StockSide } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { cn } from "@furrow/ui/lib/utils";
@@ -318,7 +318,8 @@ export const TOOLBAR_GROUP =
 function CutToolbar() {
   const workspace = useWorkspaceStoreApi();
   const simulating = useWorkspaceStore((s) => s.simulating);
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const operationIds = useMemo(
     () => operations.filter((op) => op.enabled).map((op) => op.id),
     [operations],

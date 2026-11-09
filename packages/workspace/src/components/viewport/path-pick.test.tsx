@@ -51,12 +51,12 @@ function Probe({ seen }: { seen: Seen }) {
   return null;
 }
 
-function render(): WorkspaceStore {
+function render(shapes: Shape[] = geometry): WorkspaceStore {
   const seen: Seen = { store: null };
   const document = {
     ...createProjectDocument(),
     drawings: [A, B].map((id) => ({ id, name: id, border: 10, rotation: 0 })),
-    geometry,
+    geometry: shapes,
   };
   renderWorkspace(
     <>
@@ -152,5 +152,21 @@ describe("PathPick (ADR-0080)", () => {
     doubleClick(IN_A0);
     act(() => store.getState().selectPaths([b0]));
     expect(store.getState().enteredDrawingId).toBeNull();
+  });
+
+  it("picks no hidden or locked shape, and leaves them out of a drawing's click (ADR-0080)", () => {
+    const [a, b] = geometry as [Shape, Shape];
+    const second = { ...a, id: "a2", paths: [square(20)] };
+    const store = render([
+      { ...a, paths: [square(0)] },
+      { ...second, locked: true },
+      { ...b, hidden: true },
+    ]);
+    click(IN_A0);
+    expect(store.getState().selectedPaths).toEqual([a0]);
+    click(IN_A1);
+    expect(store.getState().selectedPaths).toEqual([]);
+    click(IN_B);
+    expect(store.getState().selectedPaths).toEqual([]);
   });
 });

@@ -53,9 +53,10 @@ export function AddOperationButtons() {
   const cuttingTool = cuttingToolChoice(tools);
   const models = useDocumentStore((s) => s.document.models);
   const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
-  // The selected model, or the project's only one.
+  // The selected model, or the project's only one unless it is hidden (ADR-0080).
   const model =
-    models.find(({ id }) => id === selectedModelId) ?? (models.length === 1 ? models[0] : null);
+    models.find(({ id }) => id === selectedModelId) ??
+    (models.length === 1 && !models[0]?.hidden ? models[0] : null);
   const target = targets.length === 0 ? undefined : targetsLabel(targets);
 
   function added(id: string | null, placeHoles: boolean) {

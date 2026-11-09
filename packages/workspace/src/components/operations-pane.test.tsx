@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { createProjectDocument } from "@furrow/document";
 import {
+  CIRCLE_ID,
+  fullDocument,
+  model,
   RELIEF_FINISH_ID,
   RELIEF_ROUGH_ID,
   reliefFinish,
@@ -49,5 +52,53 @@ describe("OperationsPane", () => {
     expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
     // The project has no machine.
     expect(screen.getByText(/rapids aren't counted/)).toBeTruthy();
+  });
+});
+
+describe("OperationsPane: hidden objects (ADR-0080)", () => {
+  const render = (document: ReturnType<typeof fullDocument>) =>
+    renderWorkspace(<OperationsPane />, createMemoryHost({ document }));
+  const checkbox = () => screen.getByLabelText("Enable Outside profile") as HTMLInputElement;
+
+  it("turns off, without changing it, an operation whose targets are hidden", () => {
+    const document = fullDocument();
+    render({ ...document, drawings: document.drawings.map((d) => ({ ...d, hidden: true })) });
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(true);
+    expect(checkbox().title).toMatch(/something it cuts is hidden/);
+  });
+
+  it("totals the other operations' time", () => {
+    const document = fullDocument();
+    renderWorkspace(
+      <>
+        <OperationsPane />
+        <Toolpaths />
+      </>,
+      createMemoryHost({
+        document: {
+          ...document,
+          stock: { ...document.stock, twoSided: null },
+          drawings: document.drawings.map((d) => ({ ...d, hidden: true })),
+          models: [model],
+          operations: [...document.operations, reliefFinish],
+        },
+      }),
+    );
+    act(() => {
+      toolpaths?.getState().startComputing(RELIEF_FINISH_ID, "h");
+      toolpaths?.getState().setResult(RELIEF_FINISH_ID, "h", { warnings: [], lines, seconds: 725 });
+    });
+    expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
+  });
+
+  it("turns off one with only some targets hidden too", () => {
+    const document = fullDocument();
+    render({
+      ...document,
+      geometry: document.geometry.map((s) => (s.id === CIRCLE_ID ? { ...s, hidden: true } : s)),
+    });
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(true);
   });
 });

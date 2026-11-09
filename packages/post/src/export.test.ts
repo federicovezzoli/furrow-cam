@@ -146,6 +146,25 @@ describe("exportGcode", () => {
     expect(gcode).not.toContain("Disabled");
   });
 
+  it("leaves out what cuts something hidden, saying so when nothing is left (ADR-0080)", () => {
+    const project = referenceProject();
+    const hidden = {
+      ...project,
+      geometry: project.geometry.map((shape) => ({ ...shape, hidden: true as const })),
+    };
+    const partly = {
+      ...project,
+      geometry: [...hidden.geometry.slice(0, 1), ...project.geometry.slice(1)],
+    };
+    const { gcode } = oneFile(exportGcode(partly, "Plate", undefined, NAMING));
+    expect(gcode).not.toContain("(Operation: Cut out)");
+    expect(gcode).toContain("(Operation: Holes)");
+    // Says so, rather than "no enabled operations": they are on in the document.
+    expect(() => exportGcode(hidden, "Plate", undefined, NAMING)).toThrow("export.allHidden");
+    // The document itself still has the operation on.
+    expect(hidden.operations.some((operation) => operation.enabled)).toBe(true);
+  });
+
   describe("two-sided projects", () => {
     // The fixture model as a flat block, placed at a quarter of its 100 × 80 mm.
     const mesh = new Float32Array([

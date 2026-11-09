@@ -1,6 +1,7 @@
 "use client";
 
 import type { ToolpathLines } from "@furrow/cam-core";
+import { machinedDocument } from "@furrow/cam-core";
 import { clearingTool, type Operation } from "@furrow/document";
 import {
   useDocumentStore,
@@ -34,7 +35,8 @@ export function Toolpaths({
   /** Draws the toolpaths hidden in the Operations pane too, as the simulator does. */
   showHidden?: boolean;
 }) {
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const hidden = useWorkspaceStore((s) => s.hiddenToolpathIds);
   const topView = useWorkspaceStore((s) => s.view === "top");
   return operations

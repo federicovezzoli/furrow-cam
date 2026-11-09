@@ -1,6 +1,7 @@
 import {
   createCache,
   generateToolpath,
+  machinedDocument,
   type SimulationCut,
   type Toolpath,
   type ToolpathContext,
@@ -115,11 +116,15 @@ export function exportGcode(
   );
 }
 
-/** The inputs of the document's enabled operations, in order, as `exportGcode` posts them. */
+/**
+ * The inputs of the document's enabled operations, in order, as `exportGcode`
+ * posts them, as machined: without hidden objects (ADR-0080).
+ */
 export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
+  const machined = machinedDocument(doc);
   return toolpathInputs(
-    doc,
-    doc.operations.filter((operation) => operation.enabled),
+    machined,
+    machined.operations.filter((operation) => operation.enabled),
   );
 }
 
@@ -138,7 +143,11 @@ export function postToolpaths(
 ): GcodeExport {
   const first = computed[0];
   if (first === undefined) {
-    throw new GcodeExportError({ message: { code: "export.noEnabled" } });
+    // Enabled in the document but off as machined: what they cut is hidden (ADR-0080).
+    const hidden = doc.operations.some((operation) => operation.enabled);
+    throw new GcodeExportError({
+      message: { code: hidden ? "export.allHidden" : "export.noEnabled" },
+    });
   }
   // Leaving such an operation out could run the next bit into stock it was meant to clear.
   for (const { input } of computed) {

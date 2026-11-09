@@ -150,3 +150,17 @@ describe("OperationProperties", () => {
     expect(screen.getByText("Needs an inside or outside profile.")).toBeTruthy();
   });
 });
+
+describe("OperationProperties: hidden objects (ADR-0080)", () => {
+  it("says an operation is off while all it cuts is hidden, rather than computing", () => {
+    const document = fullDocument();
+    renderWorkspace(
+      <OperationProperties operationId={OPERATION_ID} />,
+      createMemoryHost({
+        document: { ...document, drawings: document.drawings.map((d) => ({ ...d, hidden: true })) },
+      }),
+    );
+    expect(screen.getByText(/something it cuts is hidden/)).toBeTruthy();
+    expect(screen.queryByText("Computing toolpath…")).toBeNull();
+  });
+});

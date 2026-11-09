@@ -1,4 +1,4 @@
-import { type PathRef, pathKey } from "@furrow/cam-core";
+import { flaggedIds, type PathRef, pathKey } from "@furrow/cam-core";
 import type { ProjectDocument, StockSide } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { devtools } from "zustand/middleware";
@@ -381,12 +381,14 @@ export function createWorkspaceStore() {
                   operationIds.has(id),
                 );
               }
+              // Hiding an object takes it out of the selection too (ADR-0080).
+              const hidden = flaggedIds(document, "hidden");
               const pathCounts = new Map(
                 document.geometry.map((shape) => [shape.id, shape.paths.length]),
               );
               const exists = ({ shapeId, path }: HoveredGeometry) => {
                 const count = pathCounts.get(shapeId);
-                return count !== undefined && path < count;
+                return count !== undefined && path < count && !hidden.has(shapeId);
               };
               // Assigned only when something went, so unchanged selections keep their identity.
               if (!state.selectedPaths.every(exists)) {
@@ -394,11 +396,17 @@ export function createWorkspaceStore() {
               }
               if (state.hovered !== null && !exists(state.hovered)) state.hovered = null;
               const modelId = state.selectedModelId;
-              if (modelId !== null && !document.models.some(({ id }) => id === modelId)) {
+              if (
+                modelId !== null &&
+                (hidden.has(modelId) || !document.models.some(({ id }) => id === modelId))
+              ) {
                 state.selectedModelId = null;
               }
               const entered = state.enteredDrawingId;
-              if (entered !== null && !document.drawings.some(({ id }) => id === entered)) {
+              if (
+                entered !== null &&
+                !document.drawings.some(({ id, hidden }) => id === entered && !hidden)
+              ) {
                 state.enteredDrawingId = null;
               }
               const operationId = state.selectedOperationId;

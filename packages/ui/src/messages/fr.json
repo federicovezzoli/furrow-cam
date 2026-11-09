@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
     },
     "export": {
+      "allHidden": "Chaque opération active coupe quelque chose de masqué : affichez-le pour exporter.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme."
@@ -1029,6 +1030,7 @@
     "enableLabel": "Activer {name}",
     "enabled": "Activée",
     "disabled": "Désactivée : pas de trajectoire",
+    "targetsHidden": "Désactivée : quelque chose qu’elle coupe est masqué. Affichez-le pour le couper à nouveau.",
     "operationName": "Nom de l’opération",
     "renameTitle": "Double-cliquez ou appuyez sur F2 pour renommer",
     "reorderLabel": "Glisser pour réordonner {name}",

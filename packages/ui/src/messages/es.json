@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
     },
     "export": {
+      "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
       "noEnabled": "No hay operaciones activadas que exportar.",
       "noneHasToolpath": "Ninguna de las operaciones activadas tiene una trayectoria que exportar.",
       "noToolpath": "Sin trayectoria, excluida del programa."
@@ -1029,6 +1030,7 @@
     "enableLabel": "Activar {name}",
     "enabled": "Activada",
     "disabled": "Desactivada: sin trayectoria",
+    "targetsHidden": "Desactivada: algo de lo que corta está oculto. Muéstralo para volver a cortarlo.",
     "operationName": "Nombre de la operación",
     "renameTitle": "Doble clic o F2 para cambiar el nombre",
     "reorderLabel": "Arrastra para reordenar {name}",

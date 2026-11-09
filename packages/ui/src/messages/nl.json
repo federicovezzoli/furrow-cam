@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
     },
     "export": {
+      "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
       "noEnabled": "Er zijn geen ingeschakelde bewerkingen om te exporteren.",
       "noneHasToolpath": "Geen van de ingeschakelde bewerkingen heeft een gereedschapsbaan om te exporteren.",
       "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma."
@@ -1029,6 +1030,7 @@
     "enableLabel": "{name} inschakelen",
     "enabled": "Ingeschakeld",
     "disabled": "Uitgeschakeld: geen gereedschapsbaan",
+    "targetsHidden": "Uit: iets wat ze freest is verborgen. Toon het om het weer te frezen.",
     "operationName": "Naam van bewerking",
     "renameTitle": "Dubbelklik of druk op F2 om te hernoemen",
     "reorderLabel": "Sleep om {name} te verplaatsen",

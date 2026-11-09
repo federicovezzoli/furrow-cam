@@ -287,6 +287,35 @@ describe("workspace store", () => {
     }
   });
 
+  it("drops what becomes hidden from the selection (ADR-0080)", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    const shapes = ["a", "b"].map(
+      (id) =>
+        ({ id, drawingId: "d", paths: [{}] }) as unknown as ProjectDocument["geometry"][number],
+    );
+    const drawing = { id: "d" } as ProjectDocument["drawings"][number];
+    const model = { id: "m" } as ProjectDocument["models"][number];
+    store.getState().enterDrawing("d");
+    store.getState().selectPaths([a0, b0]);
+    store.getState().prune({
+      ...document,
+      drawings: [drawing],
+      geometry: [shapes[0], { ...shapes[1], hidden: true }] as ProjectDocument["geometry"],
+    });
+    expect(store.getState()).toMatchObject({ selectedPaths: [a0], enteredDrawingId: "d" });
+    store.getState().prune({
+      ...document,
+      drawings: [{ ...drawing, hidden: true }],
+      geometry: shapes as ProjectDocument["geometry"],
+    });
+    expect(store.getState()).toMatchObject({ selectedPaths: [], enteredDrawingId: null });
+
+    store.getState().selectModel("m");
+    store.getState().prune({ ...document, models: [{ ...model, hidden: true }] });
+    expect(store.getState().selectedModelId).toBeNull();
+  });
+
   it("leaves an entered drawing that is no longer in the document", () => {
     const store = createWorkspaceStore();
     const document = createProjectDocument();
