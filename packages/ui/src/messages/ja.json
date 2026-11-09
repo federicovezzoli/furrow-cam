@@ -510,6 +510,7 @@
       "atMost": "{max}以下にしてください",
       "lessThan": "{max}未満にしてください",
       "minCharacters": "{min}文字以上にしてください",
+      "minItems": "{min}個以上にしてください",
       "choose": "選択肢から 1 つ選んでください",
       "multipleOf": "{divisor}の倍数にしてください",
       "blank": "空欄にはできません",

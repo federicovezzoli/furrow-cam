@@ -146,13 +146,21 @@ describe("setTwoSidedSetup", () => {
       { tabs: { thickness: 9 } },
       { tabs: { count: 2, positions: [[0, 0] as [number, number]] } },
       { tabs: { positions: [[0, 0] as [number, number]] } },
+      // The stock is 300 mm along X: a 6 mm pin reaches 147 mm from its centre at most.
+      { lineUp: { type: "pins" as const, positions: [-148, 140] } },
+      { tabs: { width: -1 } },
     ]) {
       expect(() => setTwoSidedSetup(project, { twoSided: true, ...request })).toThrow(/^[\w.]+: /);
       expect(document()).toBe(before);
     }
+    expect(() =>
+      setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "pins", positions: [0] } }),
+    ).toThrow("at least 2 items");
     expect(() => setTwoSidedSetup(project, { twoSided: false, partingDepth: 5 })).toThrow(
       "partingDepth can't be set",
     );
+    setTwoSidedSetup(project, { twoSided: false, lineUp: null, tabs: null });
+    expect(document().stock.twoSided).toBeNull();
   });
 
   it("round trips to a G-code file per side", async () => {

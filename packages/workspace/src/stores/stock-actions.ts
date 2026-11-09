@@ -299,23 +299,25 @@ export function setFlipAxis(store: DocumentStore, flipAxis: FlipAxis) {
   });
 }
 
-/**
- * Sets how far below the stock top a two-sided project's sides part, in
- * millimetres; a depth outside the stock is refused.
- */
 /** The parting depth's field limits: a tenth of a millimetre from either face, or the middle of thinner stock. */
 export function partingDepthLimits(thickness: number): [min: number, max: number] {
   const margin = Math.min(0.1, thickness / 2);
   return [margin, thickness - margin];
 }
 
-export function setPartingDepth(store: DocumentStore, partingDepth: number) {
-  const { thickness } = store.getState().document.stock;
-  if (!(partingDepth > 0 && partingDepth < thickness)) return;
+/**
+ * Sets how far below the stock top a two-sided project's sides part, in
+ * millimetres; refused outside `partingDepthLimits`. Returns whether it was taken.
+ */
+export function setPartingDepth(store: DocumentStore, partingDepth: number): boolean {
+  const { thickness, twoSided } = store.getState().document.stock;
+  const [min, max] = partingDepthLimits(thickness);
+  if (!twoSided || !(partingDepth >= min && partingDepth <= max)) return false;
   store.getState().change("setStock.partingDepth", (draft) => {
     if (draft.stock.twoSided) draft.stock.twoSided.partingDepth = partingDepth;
     keepTabsInBottomSide(draft);
   });
+  return true;
 }
 
 /** How deep the bottom side cuts up to the parting plane, which holding tabs must be thinner than. */
@@ -385,10 +387,12 @@ export function autoPlaceHoldingTabs(store: DocumentStore, count: number) {
 
 /**
  * Replaces the holding tabs with one at each of `positions`, each moved to
- * the nearest model's outline. Refused with no model; returns whether it was taken.
+ * the nearest model's outline. Refused without tabs or a model; returns whether it was taken.
  */
 export function setHoldingTabPositions(store: DocumentStore, positions: readonly Point[]): boolean {
-  const loops = modelOutlines(store.getState().document.models);
+  const { models, stock } = store.getState().document;
+  const loops = modelOutlines(models);
+  if (!stock.twoSided?.tabs || loops.length === 0) return false;
   const snapped = positions.map((point) => nearestOnLoops(loops, point)?.point);
   if (!snapped.every((point) => point !== undefined)) return false;
   store.getState().change("setStock.tabs.positions", (draft) => {

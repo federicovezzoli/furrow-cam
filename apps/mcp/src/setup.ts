@@ -1,10 +1,11 @@
 import {
   type FlipAxis,
-  HoldingTabs,
   issueMessage,
-  LocatingPins,
+  type LocatingPins,
   type PinHoles,
   type Point,
+  type ProjectDocument,
+  Stock,
   type StockAnchor,
   type StockCorner,
   stockPins,
@@ -124,17 +125,14 @@ export function setTwoSidedSetup(
   project: Project,
   { twoSided, flipAxis, partingDepth, lineUp, tabs }: TwoSidedRequest,
 ) {
+  // `null` agrees with turning the setup off.
   const given = Object.entries({ flipAxis, partingDepth, lineUp, tabs }).filter(
-    ([, value]) => value !== undefined,
+    ([, value]) => value !== undefined && (twoSided || value !== null),
   );
   if (!twoSided && given.length > 0) {
     throw new ToolError(
       `twoSided: false removes the setup; ${given.map(([field]) => field).join(", ")} can't be set with it.`,
     );
-  }
-  // The schema's own message for this one says "characters".
-  if (lineUp?.type === "pins" && lineUp.positions && lineUp.positions.length < 2) {
-    throw new ToolError("lineUp.positions: give two pins at least, to stop the stock turning.");
   }
   if (tabs?.count !== undefined && tabs.positions !== undefined) {
     throw new ToolError("tabs: give a count or positions, not both.");
@@ -144,36 +142,37 @@ export function setTwoSidedSetup(
     setTwoSided(store, twoSided);
     if (!twoSided) return;
     const stock = () => store.getState().document.stock;
+    /** Throws the document's message for the setup an action refused. */
+    const refuse = (setup: object) => {
+      parsed(Stock, { ...stock(), twoSided: { ...stock().twoSided, ...setup } });
+      throw new ToolError("The app refused this two-sided setting.");
+    };
     if (flipAxis) setFlipAxis(store, flipAxis);
-    if (partingDepth !== undefined) {
+    if (partingDepth !== undefined && !setPartingDepth(store, partingDepth)) {
       const [min, max] = partingDepthLimits(stock().thickness);
-      if (!(partingDepth >= min && partingDepth <= max)) {
-        throw new ToolError(
-          `partingDepth: give a depth from ${min} to ${max} mm below the stock top.`,
-        );
-      }
-      setPartingDepth(store, partingDepth);
+      throw new ToolError(
+        `partingDepth: give a depth from ${min} to ${max} mm below the stock top.`,
+      );
     }
     if (lineUp !== undefined) {
       setLineUp(store, lineUp?.type ?? null);
       if (lineUp?.type === "edges") setFenceCorner(store, lineUp.corner);
       if (lineUp?.type === "pins") {
         const { type: _, ...changes } = lineUp;
-        const pins = { ...stockPins(stock()), ...changes };
         if (!updateLocatingPins(store, changes)) {
-          parsed(LocatingPins, pins, "lineUp");
-          throw new ToolError(`lineUp.holes.depth: ${text({ code: "document.pinHolesThrough" })}`);
+          refuse({ lineUp: { ...stockPins(stock()), ...changes } });
         }
       }
     }
+    const pins = stockPins(stock());
+    if (pins && (lineUp?.type === "pins" || flipAxis)) keepPinsOnStock(stock(), pins);
     if (tabs !== undefined) {
       setHoldingTabs(store, tabs !== null);
       if (!tabs) return;
       for (const field of ["width", "thickness"] as const) {
         const value = tabs[field];
         if (value === undefined || setHoldingTabSize(store, field, value)) continue;
-        parsed(HoldingTabs, { ...stock().twoSided?.tabs, [field]: value }, "tabs");
-        throw new ToolError(`tabs.thickness: ${text({ code: "document.tabsThickerThanSide" })}`);
+        refuse({ tabs: { ...stock().twoSided?.tabs, [field]: value } });
       }
       if (tabs.count !== undefined) autoPlaceHoldingTabs(store, tabs.count);
       if (tabs.positions && !setHoldingTabPositions(store, tabs.positions)) {
@@ -181,6 +180,21 @@ export function setTwoSidedSetup(
       }
     }
   });
+}
+
+/** Throws a `ToolError` if a locating pin, or part of one, is off the stock along its flip axis. */
+function keepPinsOnStock(
+  { width, height, twoSided }: ProjectDocument["stock"],
+  { diameter, positions }: LocatingPins,
+) {
+  const axis = twoSided?.flipAxis ?? "x";
+  const reach = ((axis === "x" ? width : height) - diameter) / 2;
+  const off = positions.find((position) => Math.abs(position) > reach);
+  if (off !== undefined) {
+    throw new ToolError(
+      `lineUp.positions: a pin at ${off} mm is off the stock; keep each within ${reach} mm of the stock's centre along ${axis}.`,
+    );
+  }
 }
 
 /** Snapshots library machine `id` into the project (ADR-0003), as choosing it in the app does. */

@@ -510,6 +510,7 @@
       "atMost": "En fazla {max} olmalıdır",
       "lessThan": "{max} değerinden küçük olmalıdır",
       "minCharacters": "En az {min} karakter olmalıdır",
+      "minItems": "En az {min} öğe olmalıdır",
       "choose": "Seçeneklerden birini seçin",
       "multipleOf": "{divisor} değerinin katı olmalıdır",
       "blank": "Boş olmamalıdır",

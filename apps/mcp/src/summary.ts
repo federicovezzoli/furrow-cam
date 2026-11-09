@@ -79,7 +79,7 @@ function twoSidedText({ flipAxis, partingDepth, lineUp, tabs }: TwoSided, length
         ? `lined up by its ${lineUp.corner.replace("_", "-")} corner in a fence corner`
         : "turned over in place, by eye";
   const held = tabs
-    ? `${tabs.positions.length} holding tabs ${length(tabs.width)} wide, ${length(tabs.thickness)} thick`
+    ? `${tabs.positions.length === 1 ? "1 holding tab" : `${tabs.positions.length || "no"} holding tabs`} ${length(tabs.width)} wide, ${length(tabs.thickness)} thick`
     : "no holding tabs";
   return `Turned over about ${flipAxis}, the sides parting ${length(partingDepth)} below the stock top; ${lined}; ${held}.`;
 }
