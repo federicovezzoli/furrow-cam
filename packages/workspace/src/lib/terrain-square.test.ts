@@ -33,4 +33,11 @@ describe("moveRing", () => {
     expect(after[1]).toBeCloseTo(before[1], -1);
     expect(Math.min(...north.map(([, lat]) => lat))).toBeGreaterThan(60);
   });
+
+  it("stops at the map's edges when dragged past them", () => {
+    const square = squareRing([170, 80], [171, 81]);
+    const moved = moveRing(square, [170, 80], [185, 88]);
+    expect(Math.max(...moved.map(([lon]) => lon))).toBe(180);
+    expect(Math.max(...moved.map(([, lat]) => lat))).toBe(85);
+  });
 });

@@ -73,10 +73,11 @@ const SHAPE_ICONS: Record<AreaShape, React.ReactNode> = {
 const EXAGGERATION = { min: 1, max: 10, initial: 1.5 };
 const BASE = { min: 1, initial: 3 };
 /**
- * The preview's terrain (PRD-0014 T4): about 300 cells across, a fifth of the
- * model's triangles, detailed enough to judge and still made in a moment.
+ * The preview's terrain (PRD-0014 T4): about 220 cells across, a tenth of the
+ * model's triangles. Detailed enough to judge; its normals, worked out on the
+ * main thread, take about 150 ms on a recent laptop.
  */
-const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 200_000 };
+const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 100_000 };
 /** How long settings stay unchanged before the preview is made again. */
 const PREVIEW_DELAY = 300;
 

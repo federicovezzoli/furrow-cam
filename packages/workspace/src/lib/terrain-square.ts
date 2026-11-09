@@ -46,5 +46,9 @@ export function moveRing(ring: readonly LonLat[], from: LonLat, to: LonLat): Lon
   const lon1 = lon0 + to[0] - from[0];
   const lat1 = clamp(lat0 + to[1] - from[1], MAX_LATITUDE);
   const stretch = Math.cos(lat0 * DEGREE) / Math.cos(lat1 * DEGREE);
-  return ring.map(([lon, lat]) => [lon1 + (lon - lon0) * stretch, lat1 + (lat - lat0)]);
+  // Like the square, it stops at the map's edges, where the tiles end.
+  return ring.map(([lon, lat]) => [
+    clamp(lon1 + (lon - lon0) * stretch, 180),
+    clamp(lat1 + (lat - lat0), MAX_LATITUDE),
+  ]);
 }

@@ -4,7 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useTranslations } from "use-intl";
 import { type CameraPoses, OrbitCamera } from "./viewport/cameras";
 import { PALETTES } from "./viewport/scene-style";
@@ -28,12 +28,9 @@ export default function TerrainPreview({
   const t = useTranslations("Terrain");
   const { resolvedTheme } = useTheme();
   const palette = PALETTES[resolvedTheme === "dark" ? "dark" : "light"];
-  // Shared vertices with averaged normals: the slopes read smooth instead of as facets.
-  const geometry = useMemo(() => {
-    const merged = mergeVertices(new STLLoader().parse(stl).deleteAttribute("normal"));
-    merged.computeVertexNormals();
-    return merged;
-  }, [stl]);
+  // Normals averaged across gentle slopes, so they read smooth instead of as facets, but not
+  // across the 90° rim between the relief and its walls, which stays sharp.
+  const geometry = useMemo(() => toCreasedNormals(new STLLoader().parse(stl), Math.PI / 4), [stl]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const [poses] = useState<CameraPoses>(() => new Map());
   const box = { min: [0, 0, 0] as [number, number, number], max: size };

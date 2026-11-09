@@ -240,6 +240,8 @@ export default function TerrainMap({
       const terra = draw.current;
       if (!terra?.enabled) return;
       terra.setMode(next && next !== "square" ? next : "static");
+      // The "move" cursor over the area no longer holds once a press draws.
+      if (next) map.getCanvas().style.cursor = "";
       if (next) map.dragPan.disable();
       else map.dragPan.enable();
     }
