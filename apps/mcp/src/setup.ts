@@ -1,7 +1,13 @@
 import {
+  type FlipAxis,
+  HoldingTabs,
   issueMessage,
+  LocatingPins,
+  type PinHoles,
   type Point,
   type StockAnchor,
+  type StockCorner,
+  stockPins,
   Tool,
   taperedDiameter,
   type Units,
@@ -12,14 +18,25 @@ import { setMachine } from "@furrow/workspace/stores/machine-actions";
 import { setOperationTool } from "@furrow/workspace/stores/operation-actions";
 import {
   addTouchOff,
+  autoPlaceHoldingTabs,
+  partingDepthLimits,
   pickXYOrigin,
   removeTouchOff,
   type StockDimension,
+  setFenceCorner,
+  setFlipAxis,
+  setHoldingTabPositions,
+  setHoldingTabSize,
+  setHoldingTabs,
+  setLineUp,
+  setPartingDepth,
   setStockDimension,
   setTouchOffField,
+  setTwoSided,
   setUnits,
   setXYAnchor,
   setZOrigin,
+  updateLocatingPins,
 } from "@furrow/workspace/stores/stock-actions";
 import type { z } from "zod";
 import type { Library } from "./library";
@@ -81,6 +98,87 @@ export function setTouchOff(
     addTouchOff(store);
     for (const [field, mm] of Object.entries(fields) as ["x" | "y" | "diameter", number][]) {
       if (mm !== undefined) setTouchOffField(store, field, mm);
+    }
+  });
+}
+
+/** What `set_two_sided` is given: each setting left out stays as it is. */
+export type TwoSidedRequest = {
+  twoSided: boolean;
+  flipAxis?: FlipAxis;
+  partingDepth?: number;
+  lineUp?:
+    | null
+    | { type: "edges"; corner: StockCorner }
+    | { type: "pins"; diameter?: number; positions?: number[]; holes?: PinHoles };
+  tabs?: null | { width?: number; thickness?: number; count?: number; positions?: Point[] };
+};
+
+/**
+ * Makes the project two-sided (PRD-0011, ADR-0060) and sets up its flip
+ * axis, parting depth, line-up and holding tabs, as the app's two-sided
+ * settings do; or one-sided again. Refused as a whole, changing nothing, if
+ * any setting is.
+ */
+export function setTwoSidedSetup(
+  project: Project,
+  { twoSided, flipAxis, partingDepth, lineUp, tabs }: TwoSidedRequest,
+) {
+  const given = Object.entries({ flipAxis, partingDepth, lineUp, tabs }).filter(
+    ([, value]) => value !== undefined,
+  );
+  if (!twoSided && given.length > 0) {
+    throw new ToolError(
+      `twoSided: false removes the setup; ${given.map(([field]) => field).join(", ")} can't be set with it.`,
+    );
+  }
+  // The schema's own message for this one says "characters".
+  if (lineUp?.type === "pins" && lineUp.positions && lineUp.positions.length < 2) {
+    throw new ToolError("lineUp.positions: give two pins at least, to stop the stock turning.");
+  }
+  if (tabs?.count !== undefined && tabs.positions !== undefined) {
+    throw new ToolError("tabs: give a count or positions, not both.");
+  }
+  // Every refusal below throws inside `change`, which undoes the whole call.
+  change(project, (store) => {
+    setTwoSided(store, twoSided);
+    if (!twoSided) return;
+    const stock = () => store.getState().document.stock;
+    if (flipAxis) setFlipAxis(store, flipAxis);
+    if (partingDepth !== undefined) {
+      const [min, max] = partingDepthLimits(stock().thickness);
+      if (!(partingDepth >= min && partingDepth <= max)) {
+        throw new ToolError(
+          `partingDepth: give a depth from ${min} to ${max} mm below the stock top.`,
+        );
+      }
+      setPartingDepth(store, partingDepth);
+    }
+    if (lineUp !== undefined) {
+      setLineUp(store, lineUp?.type ?? null);
+      if (lineUp?.type === "edges") setFenceCorner(store, lineUp.corner);
+      if (lineUp?.type === "pins") {
+        const { type: _, ...changes } = lineUp;
+        const pins = { ...stockPins(stock()), ...changes };
+        if (!updateLocatingPins(store, changes)) {
+          parsed(LocatingPins, pins, "lineUp");
+          throw new ToolError(`lineUp.holes.depth: ${text({ code: "document.pinHolesThrough" })}`);
+        }
+      }
+    }
+    if (tabs !== undefined) {
+      setHoldingTabs(store, tabs !== null);
+      if (!tabs) return;
+      for (const field of ["width", "thickness"] as const) {
+        const value = tabs[field];
+        if (value === undefined || setHoldingTabSize(store, field, value)) continue;
+        parsed(HoldingTabs, { ...stock().twoSided?.tabs, [field]: value }, "tabs");
+        throw new ToolError(`tabs.thickness: ${text({ code: "document.tabsThickerThanSide" })}`);
+      }
+      if (tabs.count !== undefined) autoPlaceHoldingTabs(store, tabs.count);
+      if (tabs.positions && !setHoldingTabPositions(store, tabs.positions)) {
+        throw new ToolError("tabs.positions: holding tabs hold a model, and the project has none.");
+      }
     }
   });
 }
