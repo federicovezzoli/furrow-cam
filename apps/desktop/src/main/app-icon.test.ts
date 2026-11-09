@@ -13,6 +13,11 @@ describe("macOS app icon", () => {
     expect(read(`${iconDir}Assets/glyph.svg`)).toContain(glyph);
   });
 
+  it("draws the glyph with fills only", () => {
+    // actool draws strokes with square ends and stray hairlines (#533).
+    expect(read(`${iconDir}Assets/glyph.svg`)).not.toMatch(/stroke/);
+  });
+
   it("has the background of icon.svg", () => {
     const hex = source.match(/<rect[^>]*fill="#([0-9a-f]{6})"/i)?.[1] ?? "";
     const channels = (hex.match(/../g) ?? []).map((c) => (Number.parseInt(c, 16) / 255).toFixed(5));
