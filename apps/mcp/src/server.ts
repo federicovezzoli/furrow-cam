@@ -1,5 +1,5 @@
 import { MIN_LENGTH } from "@furrow/cam-core";
-import { StockAnchor } from "@furrow/document";
+import { FlipAxis, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
@@ -21,7 +21,14 @@ import {
   removeOperation,
 } from "./operations";
 import { createProjects, type Project, type Projects, ToolError } from "./projects";
-import { chooseMachine, setStock, setToolOf, setTouchOff, setZero } from "./setup";
+import {
+  chooseMachine,
+  setStock,
+  setToolOf,
+  setTouchOff,
+  setTwoSidedSetup,
+  setZero,
+} from "./setup";
 import { projectSummary } from "./summary";
 import { topView } from "./top-view";
 
@@ -404,6 +411,58 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         setTouchOff(project, pad);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "set_two_sided",
+    {
+      title: "Set up a two-sided project",
+      description:
+        "Makes the project two-sided (the stock is cut from the top, turned over about a line through its centre along the flip axis, and cut from the other face) and sets it up, as the app's two-sided settings do; settings left out stay as they are. Turning it on flips about x, parting halfway down the deepest model. twoSided: false makes it one-sided again and moves every operation to the top side. lineUp: pins (positions along the flip axis from the stock's centre, two at least; a drill operation with pins cuts them), edges (a stock corner goes into a fence corner on both sides), or null to turn it over by eye. tabs: holding tabs that keep the part held on the bottom side, spread round each model (count per model) or at positions moved to the nearest model's outline; null removes them. Lengths in millimetres. Refused as a whole if any setting is. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        twoSided: z.boolean(),
+        flipAxis: FlipAxis.optional().describe("The axis the stock is turned over about."),
+        partingDepth: mm("How far below the stock top the sides part").optional(),
+        lineUp: z
+          .discriminatedUnion("type", [
+            z.strictObject({ type: z.literal("edges"), corner: StockCorner }),
+            z.strictObject({
+              type: z.literal("pins"),
+              diameter: mm("The pins' diameter").optional(),
+              positions: z
+                .array(z.number())
+                .optional()
+                .describe(
+                  "Each pin's distance along the flip axis from the stock's centre, in millimetres.",
+                ),
+              holes: PinHoles.optional().describe(
+                "through: through the stock and spoilboardDepth into the spoilboard; blind: depth below the stock top.",
+              ),
+            }),
+          ])
+          .nullable()
+          .optional(),
+        tabs: z
+          .strictObject({
+            width: mm("The tabs' width").optional(),
+            thickness: mm("The tabs' thickness, less than the bottom side's depth").optional(),
+            count: z.number().int().min(1).optional().describe("Tabs spread round each model."),
+            positions: z
+              .array(z.tuple([z.number(), z.number()]))
+              .optional()
+              .describe("[x, y] in millimetres from the stock's bottom-left corner, one per tab."),
+          })
+          .nullable()
+          .optional(),
+      },
+    },
+    ({ path, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        setTwoSidedSetup(project, request);
         return summary(project);
       }),
   );

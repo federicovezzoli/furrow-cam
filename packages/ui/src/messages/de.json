@@ -510,6 +510,7 @@
       "atMost": "Darf höchstens {max} sein",
       "lessThan": "Muss kleiner als {max} sein",
       "minCharacters": "Muss mindestens {min} Zeichen haben",
+      "minItems": "Muss mindestens {min} Einträge haben",
       "choose": "Wähle eine der Optionen",
       "multipleOf": "Muss ein Vielfaches von {divisor} sein",
       "blank": "Darf nicht leer sein",

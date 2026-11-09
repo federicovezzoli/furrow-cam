@@ -89,6 +89,7 @@ describe("the MCP server", () => {
       "set_operation_tool",
       "set_stock",
       "set_touch_off_pad",
+      "set_two_sided",
       "set_zero",
       "turn_model",
     ]);

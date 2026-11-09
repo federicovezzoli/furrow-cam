@@ -510,6 +510,7 @@
       "atMost": "Mag hoogstens {max} zijn",
       "lessThan": "Moet kleiner zijn dan {max}",
       "minCharacters": "Moet minstens {min} tekens zijn",
+      "minItems": "Moet minstens {min} items hebben",
       "choose": "Kies een van de opties",
       "multipleOf": "Moet een veelvoud van {divisor} zijn",
       "blank": "Mag niet leeg zijn",

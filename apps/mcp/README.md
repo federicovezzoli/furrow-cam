@@ -22,6 +22,7 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `set_model_top` | Sinks a model's top below the stock top |
 | `turn_model` | Turns a model a quarter turn (or more) about the stock's X, Y or Z axis |
 | `set_stock` | Sets the stock's size and the units the app shows |
+| `set_two_sided` | Makes the project two-sided and sets its flip axis, parting depth, line-up and holding tabs |
 | `set_zero` | Sets the XY zero (a stock corner, edge or centre, or a custom point) and the Z zero |
 | `set_touch_off_pad` | Adds, moves or removes the touch-off pad |
 | `get_library` | Lists the desktop app's tool library and machines |

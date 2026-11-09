@@ -510,6 +510,7 @@
       "atMost": "不能大于{max}",
       "lessThan": "必须小于{max}",
       "minCharacters": "至少需要{min}个字符",
+      "minItems": "至少需要{min}项",
       "choose": "请从选项中选择一项",
       "multipleOf": "必须是{divisor}的倍数",
       "blank": "不能为空",

@@ -1,4 +1,10 @@
-import { autoHoldingTabPositions, touchOffOutsideStock, xyOriginPosition } from "@furrow/cam-core";
+import {
+  autoHoldingTabPositions,
+  modelOutlines,
+  nearestOnLoops,
+  touchOffOutsideStock,
+  xyOriginPosition,
+} from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, StockAnchor, stockPins } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
@@ -16,6 +22,7 @@ import {
   setCustomXYOrigin,
   setFenceCorner,
   setFlipAxis,
+  setHoldingTabPositions,
   setHoldingTabSize,
   setHoldingTabs,
   setLineUp,
@@ -508,6 +515,21 @@ describe("holding tabs (#357)", () => {
     expect(stock(store).twoSided?.tabs?.positions).toHaveLength(2);
   });
 
+  it("are set at positions moved onto the model's outline, refused without tabs or a model", () => {
+    const store = tabbedStore();
+    expect(setHoldingTabPositions(store, [])).toBe(false);
+    setHoldingTabs(store, true);
+    const far: [number, number] = [-500, -500];
+    expect(setHoldingTabPositions(store, [far])).toBe(true);
+    const onOutline = nearestOnLoops(modelOutlines([model]), far)?.point;
+    expect(stock(store).twoSided?.tabs?.positions).toEqual([onOutline]);
+    const empty = createDocumentStore(createProjectDocument());
+    setTwoSided(empty, true);
+    setHoldingTabs(empty, true);
+    expect(setHoldingTabPositions(empty, [far])).toBe(false);
+    expect(setHoldingTabPositions(empty, [])).toBe(false);
+  });
+
   it("keep their place on the model when it or the design moves", () => {
     const store = tabbedStore();
     setHoldingTabs(store, true);
@@ -557,7 +579,7 @@ describe("two-sided projects (ADR-0060)", () => {
       lineUp: null,
     });
     // Outside the stock: refused.
-    for (const depth of [0, 18, 20]) setPartingDepth(store, depth);
+    for (const depth of [0, 0.05, 18, 20]) expect(setPartingDepth(store, depth)).toBe(false);
     expect(stock(store).twoSided?.partingDepth).toBe(6);
   });
 

@@ -37,6 +37,7 @@ export const DOCUMENT_MESSAGES = [
   "validation.atMost",
   "validation.lessThan",
   "validation.minCharacters",
+  "validation.minItems",
   "validation.choose",
   "validation.multipleOf",
   "validation.blank",
@@ -162,7 +163,10 @@ export function issueMessage(issue: Issue): DocumentMessage {
     case "too_small":
       if (text) {
         return min !== undefined && min > 1
-          ? { code: "validation.minCharacters", values: { min } }
+          ? {
+              code: issue.origin === "array" ? "validation.minItems" : "validation.minCharacters",
+              values: { min },
+            }
           : { code: "validation.required" };
       }
       return {
