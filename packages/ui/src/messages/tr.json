@@ -1029,6 +1029,8 @@
     "enableLabel": "Etkinleştir: {name}",
     "enabled": "Etkin",
     "disabled": "Devre dışı: takım yolu yok",
+    "allTargetsHidden": "Kapalı: kestiği her şey gizli. Yeniden kesmek için gösterin.",
+    "someTargetsHidden": "Kestiklerinin bir kısmı gizli ve kesilmiyor",
     "operationName": "İşlem adı",
     "renameTitle": "Yeniden adlandırmak için çift tıklayın veya F2’ye basın",
     "reorderLabel": "Yeniden sıralamak için sürükleyin: {name}",

@@ -1029,6 +1029,8 @@
     "enableLabel": "{name} を有効化",
     "enabled": "有効",
     "disabled": "無効：ツールパスなし",
+    "allTargetsHidden": "オフ：切削対象がすべて非表示です。表示すると再び切削します。",
+    "someTargetsHidden": "切削対象の一部が非表示のため、切削されません",
     "operationName": "加工名",
     "renameTitle": "ダブルクリックまたは F2 で名前を変更",
     "reorderLabel": "ドラッグして {name} を並べ替え",

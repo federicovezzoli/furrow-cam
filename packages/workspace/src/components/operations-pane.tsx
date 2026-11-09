@@ -1,12 +1,13 @@
 "use client";
 
-import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
+import { closedPathsInside, hiddenTargets, pickablePaths } from "@furrow/cam-core";
 import { hasAccelerations, type Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
 import {
   CircleAlertIcon,
+  CircleDashedIcon,
   CircleSlashIcon,
   EyeIcon,
   EyeOffIcon,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { useFlaggedIds } from "../hooks/use-flagged-ids";
 import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -208,6 +210,9 @@ function OperationRow({
   const selected = useWorkspaceStore((s) => s.selectedOperationId === operation.id);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const [renaming, setRenaming] = useState(false);
+  // Off while all it cuts is hidden, without touching `enabled` (ADR-0080).
+  const hidden = hiddenTargets(operation, useFlaggedIds("hidden"));
+  const on = operation.enabled && hidden !== "all";
 
   function select() {
     workspace.getState().selectOperation(selected ? null : operation.id);
@@ -257,11 +262,12 @@ function OperationRow({
       </Button>
       <input
         type="checkbox"
-        checked={operation.enabled}
+        checked={on}
+        disabled={hidden === "all"}
         onChange={(event) => setOperationEnabled(store, operation.id, event.target.checked)}
         aria-label={t("enableLabel", { name: operation.name })}
-        title={operation.enabled ? t("enabled") : t("disabled")}
-        className="size-3.5 shrink-0 accent-primary"
+        title={hidden === "all" ? t("allTargetsHidden") : on ? t("enabled") : t("disabled")}
+        className="size-3.5 shrink-0 accent-primary disabled:opacity-50"
       />
       <span
         aria-hidden
@@ -289,7 +295,7 @@ function OperationRow({
           title={t("renameTitle")}
           className={cn(
             "min-w-0 flex-1 truncate py-1 text-left outline-none focus-visible:underline",
-            !operation.enabled && "text-muted-foreground line-through",
+            !on && "text-muted-foreground line-through",
           )}
         >
           {operation.name}
@@ -303,7 +309,16 @@ function OperationRow({
           {t(`sides.${operation.stockSide}`)}
         </span>
       )}
-      {operation.enabled && (
+      {hidden === "some" && (
+        <CircleDashedIcon
+          role="img"
+          aria-label={t("someTargetsHidden")}
+          className="size-3.5 shrink-0 text-muted-foreground"
+        >
+          <title>{t("someTargetsHidden")}</title>
+        </CircleDashedIcon>
+      )}
+      {on && (
         <>
           <ToolpathTime operationId={operation.id} />
           <ToolpathStatus operationId={operation.id} />

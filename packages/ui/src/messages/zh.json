@@ -1029,6 +1029,8 @@
     "enableLabel": "启用{name}",
     "enabled": "已启用",
     "disabled": "已禁用：无刀具路径",
+    "allTargetsHidden": "已关闭：其切削对象全部隐藏。显示后即可再次切削。",
+    "someTargetsHidden": "其切削对象有一部分已隐藏，不会被切削",
     "operationName": "加工操作名称",
     "renameTitle": "双击或按F2重命名",
     "reorderLabel": "拖动以调整{name}的顺序",

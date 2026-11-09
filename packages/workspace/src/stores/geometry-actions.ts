@@ -644,6 +644,28 @@ export function convertTextToDrawing(store: DocumentStore, id: string) {
   });
 }
 
+/**
+ * Hides or shows, or locks or unlocks, the drawing, shape or model `id`
+ * (ADR-0080), as one undo step. A drawing's flag covers its shapes; a shape's
+ * own counts only inside a shown, unlocked drawing.
+ */
+export function setObjectFlag(
+  store: DocumentStore,
+  id: string,
+  flag: "hidden" | "locked",
+  on: boolean,
+) {
+  store.getState().change(`setObject.${flag}`, (draft) => {
+    const object =
+      draft.drawings.find((drawing) => drawing.id === id) ??
+      draft.geometry.find((shape) => shape.id === id) ??
+      draft.models.find((model) => model.id === id);
+    if (!object || (object[flag] === true) === on) return;
+    if (on) object[flag] = true;
+    else delete object[flag];
+  });
+}
+
 /** The gap between a drawing and its duplicate, in millimetres. */
 export const DUPLICATE_GAP = 10;
 
@@ -663,7 +685,8 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const offset: Point = [bounds.max[0] - bounds.min[0] + DUPLICATE_GAP, 0];
   const copyId = crypto.randomUUID();
   const ids = new Map(shapes.map((shape) => [shape.id, crypto.randomUUID()]));
-  const copies = translateShapes(shapes, offset).map((shape) => ({
+  // A copy starts shown and unlocked (ADR-0080).
+  const copies = translateShapes(shapes, offset).map(({ hidden: _, locked: __, ...shape }) => ({
     ...shape,
     id: ids.get(shape.id) as string,
     drawingId: copyId,
@@ -672,7 +695,8 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const geometry = document.geometry.concat(copies);
   const markers = drawingMarkers(document, id, true);
   store.getState().change("duplicateDrawing", (draft) => {
-    const copy = { ...drawing, id: copyId };
+    const { hidden: _, locked: __, ...original } = drawing;
+    const copy = { ...original, id: copyId };
     moveTextWithOutlines(copy, (point) => translatePoint(point, offset));
     draft.drawings.push(copy);
     draft.geometry = geometry;

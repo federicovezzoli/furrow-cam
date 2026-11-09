@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { createProjectDocument } from "@furrow/document";
 import {
+  CIRCLE_ID,
+  fullDocument,
   RELIEF_FINISH_ID,
   RELIEF_ROUGH_ID,
   reliefFinish,
@@ -49,5 +51,31 @@ describe("OperationsPane", () => {
     expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
     // The project has no machine.
     expect(screen.getByText(/rapids aren't counted/)).toBeTruthy();
+  });
+});
+
+describe("OperationsPane: hidden objects (ADR-0080)", () => {
+  const render = (document: ReturnType<typeof fullDocument>) =>
+    renderWorkspace(<OperationsPane />, createMemoryHost({ document }));
+  const checkbox = () => screen.getByLabelText("Enable Outside profile") as HTMLInputElement;
+
+  it("turns off, without changing it, an operation whose targets are all hidden", () => {
+    const document = fullDocument();
+    render({ ...document, drawings: document.drawings.map((d) => ({ ...d, hidden: true })) });
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(true);
+    expect(checkbox().title).toMatch(/all it cuts is hidden/);
+    expect(screen.queryByLabelText(/Some of what it cuts is hidden/)).toBeNull();
+  });
+
+  it("marks one with only some targets hidden, still on", () => {
+    const document = fullDocument();
+    render({
+      ...document,
+      geometry: document.geometry.map((s) => (s.id === CIRCLE_ID ? { ...s, hidden: true } : s)),
+    });
+    expect(checkbox().checked).toBe(true);
+    expect(checkbox().disabled).toBe(false);
+    expect(screen.getByLabelText(/Some of what it cuts is hidden/)).toBeTruthy();
   });
 });

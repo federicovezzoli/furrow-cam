@@ -1029,6 +1029,8 @@
     "enableLabel": "Attiva {name}",
     "enabled": "Attiva",
     "disabled": "Disattivata: nessun percorso utensile",
+    "allTargetsHidden": "Spenta: tutto ciò che taglia è nascosto. Mostralo per tagliarlo di nuovo.",
+    "someTargetsHidden": "Una parte di ciò che taglia è nascosta e non viene tagliata",
     "operationName": "Nome dell’operazione",
     "renameTitle": "Doppio clic o F2 per rinominare",
     "reorderLabel": "Trascina per riordinare {name}",

@@ -1029,6 +1029,8 @@
     "enableLabel": "{name} aktivieren",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert: keine Werkzeugbahn",
+    "allTargetsHidden": "Aus: alles, was sie schneidet, ist ausgeblendet. Blende es ein, um es wieder zu schneiden.",
+    "someTargetsHidden": "Ein Teil dessen, was sie schneidet, ist ausgeblendet und wird nicht geschnitten",
     "operationName": "Name der Operation",
     "renameTitle": "Doppelklicken oder F2 drücken zum Umbenennen",
     "reorderLabel": "{name} zum Neuordnen ziehen",

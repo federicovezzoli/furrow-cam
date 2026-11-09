@@ -1029,6 +1029,8 @@
     "enableLabel": "Activar {name}",
     "enabled": "Activada",
     "disabled": "Desactivada: sin trayectoria",
+    "allTargetsHidden": "Desactivada: todo lo que corta está oculto. Muéstralo para volver a cortarlo.",
+    "someTargetsHidden": "Parte de lo que corta está oculto y no se corta",
     "operationName": "Nombre de la operación",
     "renameTitle": "Doble clic o F2 para cambiar el nombre",
     "reorderLabel": "Arrastra para reordenar {name}",

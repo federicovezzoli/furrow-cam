@@ -1029,6 +1029,8 @@
     "enableLabel": "Enable {name}",
     "enabled": "Enabled",
     "disabled": "Disabled: no toolpath",
+    "allTargetsHidden": "Off: all it cuts is hidden. Show it to cut it again.",
+    "someTargetsHidden": "Some of what it cuts is hidden and isn't cut",
     "operationName": "Operation name",
     "renameTitle": "Double-click or press F2 to rename",
     "reorderLabel": "Drag to reorder {name}",

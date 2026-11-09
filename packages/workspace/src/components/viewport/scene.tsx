@@ -15,6 +15,7 @@ import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { DoubleSide } from "three";
 import { useShallow } from "zustand/react/shallow";
+import { useFlaggedIds, useUnpickableIds } from "../../hooks/use-flagged-ids";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -240,8 +241,18 @@ function Shapes({ palette }: { palette: Palette }) {
 /** How much of their colour other drawings keep while one is entered (ADR-0080). */
 const DIMMED_OPACITY = 0.3;
 
-function AllShapes({ color }: { color: string }) {
+/** The shapes not hidden (ADR-0080). */
+function useShownShapes() {
   const geometry = useDocumentStore((s) => s.document.geometry);
+  const hidden = useFlaggedIds("hidden");
+  return useMemo(
+    () => (hidden.size === 0 ? geometry : geometry.filter(({ id }) => !hidden.has(id))),
+    [geometry, hidden],
+  );
+}
+
+function AllShapes({ color }: { color: string }) {
+  const geometry = useShownShapes();
   const entered = useWorkspaceStore((s) => s.enteredDrawingId);
   const [inside, outside] = useMemo(() => {
     if (entered === null) return [shapesLinePositions(geometry), shapesLinePositions([])];
@@ -273,15 +284,20 @@ type DrawingPress = { pointerId: number; x: number; y: number; last: Point; drag
  * A faint fill over the box of the drawing whose properties show, setting it
  * apart from the others. In the top view, dragging it moves the drawing
  * (PRD-0009 D5), one undo step per drag, showing the move cursor only then;
- * a click goes through to the paths.
+ * a click goes through to the paths. Around its shown shapes only, and not
+ * dragged while locked (ADR-0080).
  */
 function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
-  const geometry = useDocumentStore((s) => s.document.geometry);
+  const geometry = useShownShapes();
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
-  const draggable = useWorkspaceStore(
-    (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
+  const locked = useDocumentStore(
+    (s) => s.document.drawings.find((drawing) => drawing.id === id)?.locked === true,
   );
+  const draggable =
+    useWorkspaceStore(
+      (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
+    ) && !locked;
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);
   const press = useRef<DrawingPress | null>(null);
@@ -355,7 +371,7 @@ function SelectedDrawing({ color }: { color: string }) {
 
 /** The selected paths, wide over a wider, faint halo, so they show on the stock whatever its colour. */
 function SelectedPaths({ color, halo }: { color: string; halo: string }) {
-  const geometry = useDocumentStore((s) => s.document.geometry);
+  const geometry = useShownShapes();
   const selected = useWorkspaceStore((s) => s.selectedPaths);
   const positions = useMemo(() => {
     const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
@@ -389,6 +405,7 @@ function SelectedPaths({ color, halo }: { color: string; halo: string }) {
  */
 function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
+  const unpickable = useUnpickableIds();
   const hovered = useWorkspaceStore((s) => s.hovered);
   const selected = useWorkspaceStore((s) => s.selectedPaths);
   const entered = useWorkspaceStore((s) => s.enteredDrawingId !== null);
@@ -405,7 +422,7 @@ function HoveredPaths({ color }: { color: string }) {
     const refs =
       drawingId !== null
         ? geometry
-            .filter((s) => s.drawingId === drawingId)
+            .filter((s) => s.drawingId === drawingId && !unpickable.has(s.id))
             .flatMap((s) => s.paths.map((_, path) => ({ shapeId: s.id, path })))
         : pickShape !== null && pickPath !== null
           ? [{ shapeId: pickShape, path: pickPath }]
@@ -414,6 +431,6 @@ function HoveredPaths({ color }: { color: string }) {
       selectedKeys.has(pathKey(ref)) ? [] : (shapes.get(ref.shapeId)?.paths[ref.path] ?? []),
     );
     return pathsLinePositions(paths);
-  }, [geometry, shapes, selectedKeys, drawingId, pickShape, pickPath]);
+  }, [geometry, shapes, selectedKeys, drawingId, pickShape, pickPath, unpickable]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }

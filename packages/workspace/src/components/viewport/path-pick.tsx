@@ -4,6 +4,7 @@ import { modelAt, type PathRef, pathAt, pickablePaths } from "@furrow/cam-core";
 import type { Point } from "@furrow/document";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import { useUnpickableIds } from "../../hooks/use-flagged-ids";
 import { belongsElsewhere } from "../../lib/keyboard-target";
 import { clickedPaths } from "../../lib/path-selection";
 import { POINT_MARKER_SIZE } from "../../lib/viewport-scene";
@@ -47,7 +48,16 @@ function PathPicker() {
     () => new Map(geometry.map((shape) => [shape.id, shape.drawingId])),
     [geometry],
   );
-  const all = useMemo(() => pickablePaths(geometry), [geometry]);
+  // Hidden and locked shapes and models are out of reach (ADR-0080).
+  const unpickable = useUnpickableIds();
+  const all = useMemo(
+    () => pickablePaths(geometry.filter(({ id }) => !unpickable.has(id))),
+    [geometry, unpickable],
+  );
+  const pickableModels = useMemo(
+    () => models.filter(({ id }) => !unpickable.has(id)),
+    [models, unpickable],
+  );
   const inside = useMemo(
     () =>
       entered === null ? all : all.filter(({ shapeId }) => drawingOf.get(shapeId) === entered),
@@ -144,13 +154,13 @@ function PathPicker() {
         const hit = pathUnder(inside, point, 1 / event.camera.zoom);
         const toggle = toggles(event);
         if (hit) {
-          const paths = clickedPaths(geometry, hit, entered !== null || event.altKey);
+          const paths = clickedPaths(geometry, hit, entered !== null || event.altKey, unpickable);
           state.selectPaths(paths, toggle ? "toggle" : "replace");
           return;
         }
         // Ctrl/Cmd/Shift+click adds paths, so a model under it doesn't drop the paths selected.
         const keep = toggle && state.selectedPaths.length > 0;
-        const model = !keep && entered === null && point ? modelAt(models, point) : null;
+        const model = !keep && entered === null && point ? modelAt(pickableModels, point) : null;
         if (model) state.selectModel(model.id);
         else if (!toggle) state.selectPaths([]);
       }}

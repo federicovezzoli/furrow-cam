@@ -37,16 +37,21 @@ export function Models({
   const models = useDocumentStore((s) => s.document.models);
   const selectedId = useWorkspaceStore((s) => s.selectedModelId);
   const orbit = useWorkspaceStore((s) => s.view === "orbit");
-  return models.map((model) => (
-    <PlacedModel
-      key={model.id}
-      model={model}
-      preview={previews.get(previewKey(model))}
-      selected={model.id === selectedId}
-      clickable={orbit}
-      palette={palette}
-    />
-  ));
+  // A hidden model isn't drawn, a locked one isn't picked (ADR-0080).
+  return models.flatMap((model) =>
+    model.hidden
+      ? []
+      : [
+          <PlacedModel
+            key={model.id}
+            model={model}
+            preview={previews.get(previewKey(model))}
+            selected={model.id === selectedId}
+            clickable={orbit && !model.locked}
+            palette={palette}
+          />,
+        ],
+  );
 }
 
 function PlacedModel({
