@@ -36,6 +36,7 @@ import {
   setModelDepth,
   setModelScale,
   setModelTop,
+  turnModelAbout,
 } from "@furrow/workspace/stores/model-actions";
 import type { ActionResult } from "@furrow/workspace/stores/operation-actions";
 import { change, type Project, ToolError, t } from "./projects";
@@ -220,4 +221,16 @@ export function setTop(project: Project, id: string, mm: number) {
   if (!find(project, id).model)
     throw new ToolError("A drawing has no top: only a model sits below the stock top.");
   change(project, (store) => setModelTop(store, id, mm));
+}
+
+/**
+ * Turns model `id` `turns` quarter turns about the stock's `axis`, as the
+ * properties' turn buttons do, keeping its anchor point in place.
+ */
+export function turn(project: Project, id: string, axis: "x" | "y" | "z", turns: number) {
+  if (!find(project, id).model) {
+    throw new ToolError("A drawing can't be turned in quarter turns: only a model can.");
+  }
+  const index = ({ x: 0, y: 1, z: 2 } as const)[axis];
+  change(project, (store) => turnModelAbout(store, id, index, turns));
 }
