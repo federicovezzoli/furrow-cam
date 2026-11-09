@@ -322,7 +322,7 @@ export function createServer(projects: Projects = createProjects(), library = li
         "Turns a model a quarter turn (or two or three) about the stock's X, Y or Z axis, as the app's turn buttons do, keeping its anchor point in place: for example to stand up a model exported lying on its side. Each turn is counter-clockwise looking from the axis's positive end towards the origin (right-hand rule): about Z, X turns into Y; about X, Y turns into Z; about Y, Z turns into X. Several turns make one change. Returns the project summary, with the model's new size.",
       inputSchema: {
         path: projectPath,
-        id: z.string().describe("The model's id, from the project summary."),
+        id: itemId,
         axis: z.enum(["x", "y", "z"]).describe("The stock axis to turn about."),
         turns: z.number().int().min(1).max(3).default(1).describe("How many quarter turns."),
       },

@@ -189,14 +189,21 @@ describe("fitToStock and resize", () => {
 
   it("turns a model in quarter turns as one change", async () => {
     const { id } = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
-    const { width, height, depth } = summary().models[0]?.size ?? {};
+    const model = () => summary().models[0];
+    const { width, height, depth } = model()?.size ?? {};
     turn(project, id, "x", 1);
     // About X, the height and depth swap.
-    expect(summary().models[0]?.size).toMatchObject({ width, height: depth, depth: height });
+    expect(model()?.size).toMatchObject({ width, height: depth, depth: height });
+    expect(model()?.placement.rotation).toEqual([90, 0, 0]);
     const steps = project.store.getState().past.length;
     turn(project, id, "z", 3);
     expect(project.store.getState().past).toHaveLength(steps + 1);
-    expect(summary().models[0]?.size).toMatchObject({ width: depth, height: width, depth: height });
+    expect(model()?.placement.rotation).toEqual([90, 0, 270]);
+    // A half turn about Z leaves the size as it was.
+    const before = model()?.size;
+    turn(project, id, "z", 2);
+    expect(model()?.placement.rotation).toEqual([90, 0, 90]);
+    expect(model()?.size).toEqual(before);
   });
 
   it("refuses to turn a drawing or an unknown id", async () => {

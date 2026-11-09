@@ -232,7 +232,5 @@ export function turn(project: Project, id: string, axis: "x" | "y" | "z", turns:
     throw new ToolError("A drawing can't be turned in quarter turns: only a model can.");
   }
   const index = ({ x: 0, y: 1, z: 2 } as const)[axis];
-  change(project, (store) => {
-    for (let i = 0; i < turns; i++) turnModelAbout(store, id, index);
-  });
+  change(project, (store) => turnModelAbout(store, id, index, turns));
 }
