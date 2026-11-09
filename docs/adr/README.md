@@ -32,13 +32,13 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0015](0015-clipper2-typescript-port.md) | Clipper2 TypeScript port (clipper2-ts) | Accepted |
 | [0016](0016-zero-point-anchors.md) | XY zero on any stock anchor or a custom point | Proposed |
 | [0017](0017-freemium-limit-enforcement.md) | Enforcing freemium usage limits | Proposed |
-| [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed |
+| [0018](0018-operations-target-paths.md) | Operations target paths, not whole shapes | Proposed; superseded in part by ADR-0080 |
 | [0019](0019-heightmap-simulation.md) | Material-removal simulation with a heightmap | Proposed |
 | [0020](0020-page-view-analytics-goatcounter.md) | Page-view analytics with GoatCounter | Proposed; superseded by ADR-0052 |
 | [0021](0021-web-app-feature-folders.md) | Feature folders in the web app | Proposed |
 | [0022](0022-drawing-aligned-to-anchor.md) | The drawing is aligned to the stock at the zero's anchor | Proposed; superseded in part by ADR-0055 |
 | [0023](0023-password-policy-breached-passwords.md) | Password length limits and breached-password check | Proposed |
-| [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed |
+| [0024](0024-selection-in-the-viewport-only.md) | Paths are selected in the viewport only | Proposed; superseded by ADR-0080 |
 | [0025](0025-medial-axis-sampled-voronoi.md) | Medial axis from a Voronoi diagram of boundary samples | Proposed |
 | [0026](0026-operation-clearing-tool.md) | An operation may cut with a second, clearing tool | Proposed |
 | [0027](0027-compact-release-notes.md) | Compact release notes | Proposed |
@@ -94,3 +94,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0077](0077-terrain-generated-as-stl.md) | Terrain is generated in the browser as an STL mesh and imported like one | Proposed |
 | [0078](0078-drawings-and-a-model-together.md) | A project holds drawings and one model together | Proposed |
 | [0079](0079-machine-snapshot-links-its-source.md) | A project's machine snapshot links to the library machine it came from | Proposed |
+| [0080](0080-objects-then-paths.md) | Objects are selected first, their paths inside them, with an Objects pane | Proposed |
