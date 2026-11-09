@@ -1020,7 +1020,7 @@
     "selectModel": "Wähle zuerst ein Modell in der Ansicht aus",
     "selectPaths": "Wähle zuerst Pfade in der Ansicht aus",
     "addLabel": "Hinzufügen: {operation}",
-    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Umschalt+Klick, um weitere hinzuzufügen.",
+    "selectHint": "Klicke in der Draufsicht auf eine Zeichnung, um sie auszuwählen; Umschalt+Klick, um weitere hinzuzufügen. Doppelklick oder Alt+Klick wählt einzelne Pfade.",
     "addToolLibrary": "Füge deiner <link>Werkzeugbibliothek</link> ein Werkzeug hinzu, um Operationen zu erstellen.",
     "inCuttingOrder": "Operationen in Schnittreihenfolge",
     "selectInsideTitle": "Auch geschlossene Pfade innerhalb der ausgewählten auswählen, wie die Inseln einer Tasche",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Pfade auswählen",
-        "body": "Klicke auf einen Pfad in der Ansicht, um ihn auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Operationen schneiden, was ausgewählt ist."
+        "body": "Klicke in der Ansicht auf eine Zeichnung, um sie auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Ein Doppelklick wählt ihre Pfade einzeln aus; Esc verlässt sie. Operationen schneiden, was ausgewählt ist."
       },
       "operations": {
         "title": "Operationen hinzufügen",

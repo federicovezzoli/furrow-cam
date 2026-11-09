@@ -1020,7 +1020,7 @@
     "selectModel": "Select a model in the viewport first",
     "selectPaths": "Select paths in the viewport first",
     "addLabel": "Add {operation}",
-    "selectHint": "Click paths in the top view to select what to cut; Shift+click to add more.",
+    "selectHint": "Click a drawing in the top view to select it; Shift+click to add more. Double click it, or Alt+click, to select single paths.",
     "addToolLibrary": "Add a tool to your <link>tool library</link> to create operations.",
     "inCuttingOrder": "Operations in cutting order",
     "selectInsideTitle": "Also select the closed paths inside the selected ones, such as a pocket's islands",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Select paths",
-        "body": "Click a path in the viewport to select it, and Shift+click to add more. Operations cut what is selected."
+        "body": "Click a drawing in the viewport to select it, and Shift+click to add more. Double click it to select its paths one by one; Esc leaves it. Operations cut what is selected."
       },
       "operations": {
         "title": "Add operations",

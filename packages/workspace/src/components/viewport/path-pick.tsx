@@ -3,6 +3,8 @@
 import { modelAt, type PathRef, pathAt, pickablePaths } from "@furrow/cam-core";
 import type { Point } from "@furrow/document";
 import { useEffect, useMemo } from "react";
+import { belongsElsewhere } from "../../lib/keyboard-target";
+import { clickedPaths } from "../../lib/path-selection";
 import { POINT_MARKER_SIZE } from "../../lib/viewport-scene";
 import {
   useDocumentStore,
@@ -17,13 +19,15 @@ const PICK_RADIUS = 6;
 const CLICK_THRESHOLD = 3;
 
 /**
- * Selecting paths in the top view (#54), unless the workspace is editing tabs
- * or picking the zero, which take the clicks. The path under the cursor is
- * found from the document's geometry with `pathAt` (ADR-0008), not by
- * raycasting, and hovered; a click selects it, Ctrl/Cmd/Shift+click toggles
- * it. Paths win over the model drawn under them (ADR-0078): a plain click on
- * no path selects the 3D model under it (PRD-0005), and a click on nothing
- * clears the selection.
+ * Selecting in the top view (#54, ADR-0080), unless the workspace is editing
+ * tabs or picking the zero, which take the clicks. The path under the cursor
+ * is found from the document's geometry with `pathAt` (ADR-0008), not by
+ * raycasting. A click selects its whole drawing, Ctrl/Cmd/Shift+click
+ * toggles it, Alt+click picks the path alone. A double click enters the
+ * drawing, whose paths clicks then select one by one, the others being out
+ * of reach; Esc or a double click outside leaves it. Paths win over the
+ * model drawn under them (ADR-0078): a plain click on no path selects the 3D
+ * model under it (PRD-0005), and a click on nothing clears the selection.
  */
 export function PathPick() {
   const active = useWorkspaceStore((s) => s.view === "top" && s.editing === null && !s.pickingZero);
@@ -35,9 +39,18 @@ function PathPicker() {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const models = useDocumentStore((s) => s.document.models);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
-  const paths = useMemo(() => pickablePaths(geometry), [geometry]);
+  const entered = useWorkspaceStore((s) => s.enteredDrawingId);
+  const all = useMemo(() => pickablePaths(geometry), [geometry]);
+  const inside = useMemo(
+    () => (entered === null ? all : pickablePaths(geometry.filter((s) => s.drawingId === entered))),
+    [all, geometry, entered],
+  );
 
-  function pathUnder(point: Point | null, millimetresPerPixel: number): PathRef | null {
+  function pathUnder(
+    paths: typeof all,
+    point: Point | null,
+    millimetresPerPixel: number,
+  ): PathRef | null {
     // Drill points are drawn as crosses, which pick them as well as their centre.
     return (
       point &&
@@ -47,7 +60,7 @@ function PathPicker() {
 
   // Hovers the path under the cursor, writing to the store only when it changes.
   const hoverHandlers = useStockTopHover((point, millimetresPerPixel) => {
-    const hit = pathUnder(point, millimetresPerPixel);
+    const hit = pathUnder(inside, point, millimetresPerPixel);
     const { hovered, setHovered } = workspace.getState();
     if (hovered?.shapeId !== hit?.shapeId || hovered?.path !== hit?.path) setHovered(hit);
   });
@@ -61,6 +74,19 @@ function PathPicker() {
     [workspace],
   );
 
+  // Esc leaves the entered drawing, unless a field or dialog uses it.
+  useEffect(() => {
+    if (entered === null) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented || belongsElsewhere(event.target)) {
+        return;
+      }
+      workspace.getState().enterDrawing(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [entered, workspace]);
+
   return (
     <StockTopCatcher
       z={-thickness - 1}
@@ -68,14 +94,33 @@ function PathPicker() {
       onClick={(event) => {
         if (event.delta > CLICK_THRESHOLD) return;
         const point = onStockTop(event.ray);
-        const hit = pathUnder(point, 1 / event.camera.zoom);
+        const hit = pathUnder(inside, point, 1 / event.camera.zoom);
         const toggle = event.ctrlKey || event.metaKey || event.shiftKey;
+        const state = workspace.getState();
+        if (hit) {
+          const paths = clickedPaths(geometry, hit, entered !== null || event.altKey);
+          state.selectPaths(paths, toggle ? "toggle" : "replace");
+          return;
+        }
         // Ctrl/Cmd/Shift+click adds paths, so a model under it doesn't drop the paths selected.
-        const keep = toggle && workspace.getState().selectedPaths.length > 0;
-        const model = !hit && !keep && point ? modelAt(models, point) : null;
-        if (hit) workspace.getState().selectPaths([hit], toggle ? "toggle" : "replace");
-        else if (model) workspace.getState().selectModel(model.id);
-        else if (!toggle) workspace.getState().selectPaths([]);
+        const keep = toggle && state.selectedPaths.length > 0;
+        const model = !keep && entered === null && point ? modelAt(models, point) : null;
+        if (model) state.selectModel(model.id);
+        else if (!toggle) state.selectPaths([]);
+      }}
+      onDoubleClick={(event) => {
+        const hit = pathUnder(all, onStockTop(event.ray), 1 / event.camera.zoom);
+        const state = workspace.getState();
+        const shape = hit && geometry.find(({ id }) => id === hit.shapeId);
+        if (!hit || !shape) {
+          state.enterDrawing(null);
+          return;
+        }
+        state.enterDrawing(shape.drawingId);
+        state.selectPaths([hit]);
+        // A text item's text is what a double click on it edits.
+        const text = document.getElementById("text-text");
+        if (text instanceof HTMLElement) text.focus();
       }}
     />
   );

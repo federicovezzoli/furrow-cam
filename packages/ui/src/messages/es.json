@@ -1020,7 +1020,7 @@
     "selectModel": "Selecciona primero un modelo en la vista",
     "selectPaths": "Selecciona primero trazados en la vista",
     "addLabel": "Añadir {operation}",
-    "selectHint": "Haz clic en los trazados de la vista superior para seleccionar qué cortar; Mayús+clic para añadir más.",
+    "selectHint": "Haz clic en un dibujo de la vista superior para seleccionarlo; Mayús+clic para añadir más. Doble clic, o Alt+clic, para seleccionar trazados sueltos.",
     "addToolLibrary": "Añade una herramienta a tu <link>biblioteca de herramientas</link> para crear operaciones.",
     "inCuttingOrder": "Operaciones en orden de corte",
     "selectInsideTitle": "Seleccionar también los trazados cerrados dentro de los seleccionados, como las islas de un vaciado",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Selecciona trazados",
-        "body": "Haz clic en un trazado de la vista para seleccionarlo, y Mayús+clic para añadir más. Las operaciones cortan lo seleccionado."
+        "body": "Haz clic en un dibujo de la vista para seleccionarlo, y Mayús+clic para añadir más. Haz doble clic para seleccionar sus trazados uno a uno; Esc para salir. Las operaciones cortan lo seleccionado."
       },
       "operations": {
         "title": "Añade operaciones",

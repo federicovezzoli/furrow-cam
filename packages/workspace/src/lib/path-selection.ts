@@ -24,6 +24,19 @@ export function selectedDrawingId(geometry: Shape[], selected: PathRef[]): strin
 }
 
 /**
+ * What a click on `hit` in the top view selects (ADR-0080): the path alone
+ * inside an entered drawing or with Alt (`direct`), otherwise every path of
+ * its drawing.
+ */
+export function clickedPaths(geometry: Shape[], hit: PathRef, direct: boolean): PathRef[] {
+  const drawingId = geometry.find(({ id }) => id === hit.shapeId)?.drawingId;
+  if (direct || drawingId === undefined) return [hit];
+  return geometry
+    .filter((shape) => shape.drawingId === drawingId)
+    .flatMap((shape) => shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+}
+
+/**
  * How many shapes and paths `targets` cut, for `useTargetsLabel`: whole
  * shapes count as shapes, the paths of the others one by one.
  */

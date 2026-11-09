@@ -1020,7 +1020,7 @@
     "selectModel": "Önce görüntü alanında bir model seçin",
     "selectPaths": "Önce görüntü alanında yolları seçin",
     "addLabel": "Ekle: {operation}",
-    "selectHint": "Kesilecekleri seçmek için üst görünümde yollara tıklayın; daha fazlasını eklemek için Shift+tıklayın.",
+    "selectHint": "Seçmek için üst görünümde bir çizime tıklayın; daha fazlasını eklemek için Shift+tıklayın. Tek tek yolları seçmek için çift tıklayın veya Alt+tıklayın.",
     "addToolLibrary": "İşlem oluşturmak için <link>takım kütüphanenize</link> bir takım ekleyin.",
     "inCuttingOrder": "Kesim sırasına göre işlemler",
     "selectInsideTitle": "Seçili yolların içindeki kapalı yolları da seç (ör. bir cebin adaları)",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Yolları seçin",
-        "body": "Seçmek için görüntü alanında bir yola tıklayın, daha fazlasını eklemek için Shift+tıklayın. İşlemler seçili olanı keser."
+        "body": "Seçmek için görüntü alanında bir çizime tıklayın, daha fazlasını eklemek için Shift+tıklayın. Yollarını tek tek seçmek için çift tıklayın; Esc ile çıkın. İşlemler seçili olanı keser."
       },
       "operations": {
         "title": "İşlem ekleyin",

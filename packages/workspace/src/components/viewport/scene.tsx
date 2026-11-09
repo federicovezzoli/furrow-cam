@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { DoubleSide } from "three";
 import { useShallow } from "zustand/react/shallow";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
+import { clickedPaths } from "../../lib/path-selection";
 import {
   boxCenter,
   concatPositions,
@@ -237,10 +238,30 @@ function Shapes({ palette }: { palette: Palette }) {
   );
 }
 
+/** How much of their colour other drawings keep while one is entered (ADR-0080). */
+const DIMMED_OPACITY = 0.3;
+
 function AllShapes({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
-  const positions = useMemo(() => shapesLinePositions(geometry), [geometry]);
-  return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.shapes} />;
+  const entered = useWorkspaceStore((s) => s.enteredDrawingId);
+  const [inside, outside] = useMemo(() => {
+    if (entered === null) return [shapesLinePositions(geometry), shapesLinePositions([])];
+    return [
+      shapesLinePositions(geometry.filter((shape) => shape.drawingId === entered)),
+      shapesLinePositions(geometry.filter((shape) => shape.drawingId !== entered)),
+    ];
+  }, [geometry, entered]);
+  return (
+    <>
+      <Lines positions={inside} color={color} renderOrder={RENDER_ORDER.shapes} />
+      <Lines
+        positions={outside}
+        color={color}
+        opacity={DIMMED_OPACITY}
+        renderOrder={RENDER_ORDER.shapes}
+      />
+    </>
+  );
 }
 
 /** Pointer travel, in pixels, before a press on the selected drawing becomes a drag rather than a click. */
@@ -361,18 +382,25 @@ function SelectedPaths({ color, halo }: { color: string; halo: string }) {
   );
 }
 
-/** The hovered path, unless it is selected: selection wins. */
+/**
+ * What a click would select (ADR-0080): the hovered path inside an entered
+ * drawing, otherwise its whole drawing, less what is selected: selection wins.
+ */
 function HoveredPaths({ color }: { color: string }) {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const hovered = useWorkspaceStore((s) => s.hovered);
   const selected = useWorkspaceStore((s) => s.selectedPaths);
+  const entered = useWorkspaceStore((s) => s.enteredDrawingId !== null);
   // Built when the geometry or the selection changes, not each time the hover does.
   const shapes = useMemo(() => new Map(geometry.map((shape) => [shape.id, shape])), [geometry]);
   const selectedKeys = useMemo(() => new Set(selected.map(pathKey)), [selected]);
   const positions = useMemo(() => {
-    const path = hovered && shapes.get(hovered.shapeId)?.paths[hovered.path];
-    if (!hovered || !path || selectedKeys.has(pathKey(hovered))) return pathsLinePositions([]);
-    return pathsLinePositions([path]);
-  }, [shapes, hovered, selectedKeys]);
+    if (!hovered || !shapes.has(hovered.shapeId)) return pathsLinePositions([]);
+    const refs = clickedPaths(geometry, hovered, entered);
+    const paths = refs.flatMap((ref) =>
+      selectedKeys.has(pathKey(ref)) ? [] : (shapes.get(ref.shapeId)?.paths[ref.path] ?? []),
+    );
+    return pathsLinePositions(paths);
+  }, [geometry, shapes, hovered, selectedKeys, entered]);
   return <Lines positions={positions} color={color} renderOrder={RENDER_ORDER.hovered} />;
 }

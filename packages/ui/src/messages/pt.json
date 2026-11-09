@@ -1020,7 +1020,7 @@
     "selectModel": "Selecione primeiro um modelo na visualização",
     "selectPaths": "Selecione primeiro caminhos na visualização",
     "addLabel": "Adicionar {operation}",
-    "selectHint": "Clique em caminhos na vista superior para selecionar o que cortar; Shift+clique para adicionar mais.",
+    "selectHint": "Clique em um desenho na vista superior para selecioná-lo; Shift+clique para adicionar mais. Clique duplo, ou Alt+clique, para selecionar caminhos avulsos.",
     "addToolLibrary": "Adicione uma ferramenta à sua <link>biblioteca de ferramentas</link> para criar operações.",
     "inCuttingOrder": "Operações na ordem de corte",
     "selectInsideTitle": "Selecionar também os caminhos fechados dentro dos selecionados, como as ilhas de um rebaixo",
@@ -1606,7 +1606,7 @@
       },
       "select": {
         "title": "Selecione caminhos",
-        "body": "Clique em um caminho na visualização para selecioná-lo, e Shift+clique para adicionar mais. As operações cortam o que estiver selecionado."
+        "body": "Clique em um desenho na visualização para selecioná-lo, e Shift+clique para adicionar mais. Dê um clique duplo para selecionar seus caminhos um a um; Esc para sair. As operações cortam o que estiver selecionado."
       },
       "operations": {
         "title": "Adicione operações",

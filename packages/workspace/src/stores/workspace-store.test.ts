@@ -261,6 +261,43 @@ describe("workspace store", () => {
     });
   });
 
+  it("leaves an entered drawing when the top view stops taking clicks, keeping the paths", () => {
+    const store = createWorkspaceStore();
+    const enter = () => {
+      store.getState().enterDrawing("d");
+      store.getState().selectPaths([a0]);
+    };
+    enter();
+    store.getState().enterDrawing(null);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
+
+    for (const leave of [
+      () => store.getState().setView("orbit"),
+      () => store.getState().setEditing("tabs"),
+      () => store.getState().setPickingZero(true),
+      () => store.getState().selectModel("m"),
+      () => store.getState().clearSelection(),
+    ]) {
+      store.getState().setView("top");
+      store.getState().setEditing(null);
+      store.getState().setPickingZero(false);
+      enter();
+      leave();
+      expect(store.getState().enteredDrawingId).toBeNull();
+    }
+  });
+
+  it("leaves an entered drawing that is no longer in the document", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    const drawing = { id: "d" } as ProjectDocument["drawings"][number];
+    store.getState().enterDrawing("d");
+    store.getState().prune({ ...document, drawings: [drawing] });
+    expect(store.getState().enteredDrawingId).toBe("d");
+    store.getState().prune(document);
+    expect(store.getState().enteredDrawingId).toBeNull();
+  });
+
   it("drops hovered paths past a shape's paths", () => {
     const store = createWorkspaceStore();
     const geometry = [{ id: "a", paths: [{}] }] as ProjectDocument["geometry"];
