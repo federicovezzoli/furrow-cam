@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.22.1
+
+### Patch Changes
+
+- The MCP server can make a project two-sided and set its flip axis, parting depth, line-up (locating pins or a fence corner) and holding tabs, so an AI assistant can plan a two-sided job from scratch. A list that is too short now says how many items it needs, not how many characters. ([#530](https://github.com/federicovezzoli/furrow-cam/pull/530))
+
 ## 0.22.0
 
 ### Minor Changes

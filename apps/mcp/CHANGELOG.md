@@ -1,5 +1,12 @@
 # @furrow/mcp
 
+## 0.7.1
+
+### Patch Changes
+
+- The MCP server can make a project two-sided and set its flip axis, parting depth, line-up (locating pins or a fence corner) and holding tabs, so an AI assistant can plan a two-sided job from scratch. A list that is too short now says how many items it needs, not how many characters. ([#530](https://github.com/federicovezzoli/furrow-cam/pull/530))
+- The MCP server can turn a model in the stock in quarter turns about X, Y or Z, as the app's turn buttons do, so an AI assistant can stand up a model exported lying on its side. ([#529](https://github.com/federicovezzoli/furrow-cam/pull/529))
+
 ## 0.7.0
 
 ### Minor Changes
