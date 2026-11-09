@@ -352,17 +352,23 @@ export class Recorder {
   /**
    * Clicks `[x, y]` pixels from the anchor `name`'s top left corner: for
    * what has no anchor of its own, such as a path in the viewport (measure it
-   * on a recorded frame). With `shift`, adds to the selection.
+   * on a recorded frame). With `shift`, adds to the selection; with `alt`,
+   * selects the path alone rather than its whole drawing (ADR-0080).
    */
-  async clickIn(name: string, [x, y]: readonly [number, number], { shift = false } = {}) {
+  async clickIn(
+    name: string,
+    [x, y]: readonly [number, number],
+    { shift = false, alt = false } = {},
+  ) {
     const box = await (await this.anchor(name)).boundingBox();
     if (!box) throw new Error(`Demo "${this.#name}": anchor "${name}" has no box`);
     await this.moveToPoint(box.x + x, box.y + y);
-    if (shift) await this.page.keyboard.down("Shift");
+    const keys = [...(shift ? ["Shift"] : []), ...(alt ? ["Alt"] : [])];
+    for (const key of keys) await this.page.keyboard.down(key);
     try {
       await this.#clickHere();
     } finally {
-      if (shift) await this.page.keyboard.up("Shift");
+      for (const key of keys) await this.page.keyboard.up(key);
     }
   }
 
