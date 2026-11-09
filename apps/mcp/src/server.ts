@@ -137,7 +137,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Summarise a project",
       description:
-        "Returns a project's summary: the path to call tools with, the .furrow file it saves to, units, stock and zero, machine, drawings with their shapes and bounds, 3D models, and operations in cutting order with all their settings. Lengths are in millimetres, feed rates in mm/min; the stock and zero are also given in the project's units.",
+        "Returns a project's summary: the path to call tools with, the .furrow file it saves to, units, stock and zero, machine, drawings with their shapes and bounds, 3D models, and operations in cutting order with all their settings. Drawings, shapes and models marked hidden aren't cut (an operation cutting only hidden ones is off), and locked ones can't be picked in the app. Lengths are in millimetres, feed rates in mm/min; the stock and zero are also given in the project's units.",
       inputSchema: { path: projectPath },
       annotations: { readOnlyHint: true },
     },

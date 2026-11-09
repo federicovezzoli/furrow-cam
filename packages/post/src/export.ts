@@ -1,6 +1,7 @@
 import {
   createCache,
   generateToolpath,
+  machinedDocument,
   type SimulationCut,
   type Toolpath,
   type ToolpathContext,
@@ -115,11 +116,15 @@ export function exportGcode(
   );
 }
 
-/** The inputs of the document's enabled operations, in order, as `exportGcode` posts them. */
+/**
+ * The inputs of the document's enabled operations, in order, as `exportGcode`
+ * posts them, as machined: without hidden objects (ADR-0080).
+ */
 export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
+  const machined = machinedDocument(doc);
   return toolpathInputs(
-    doc,
-    doc.operations.filter((operation) => operation.enabled),
+    machined,
+    machined.operations.filter((operation) => operation.enabled),
   );
 }
 

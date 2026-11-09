@@ -27,7 +27,8 @@ export function projectSummary(document: ProjectDocument) {
       },
     },
     machine,
-    drawings: document.drawings.map(({ id, name, rotation, border, text }) => {
+    // Hidden objects aren't cut, locked ones aren't picked in the app (ADR-0080); flags only when set.
+    drawings: document.drawings.map(({ id, name, rotation, border, text, hidden, locked }) => {
       const shapes = document.geometry.filter((shape) => shape.drawingId === id);
       return {
         id,
@@ -35,37 +36,45 @@ export function projectSummary(document: ProjectDocument) {
         ...(text && { text }),
         rotation,
         border,
-        shapes: shapes.map(({ id, name, layer, paths }) => ({
+        ...(hidden && { hidden }),
+        ...(locked && { locked }),
+        shapes: shapes.map(({ id, name, layer, paths, hidden, locked }) => ({
           id,
           name,
           layer,
           paths: paths.length,
+          ...(hidden && { hidden }),
+          ...(locked && { locked }),
         })),
         /** In stock coordinates: (0, 0) is the stock's bottom-left corner. */
         bounds: shapesBounds(shapes),
       };
     }),
-    models: document.models.map(({ id, fileName, triangles, bounds, placement, border }) => {
-      const [width, height, depth] = rotatedSize(bounds, placement.rotation);
-      return {
-        id,
-        fileName,
-        triangles,
-        /**
-         * As placed: its outline on the stock, how far its top sits below the
-         * stock top, and how far it reaches into the stock from its top.
-         */
-        size: {
-          width: width * placement.scale,
-          height: height * placement.scale,
-          top: placement.top,
-          // A flat mesh keeps a depth it doesn't have.
-          depth: depth > 0 ? placement.depth : 0,
-        },
-        placement,
-        border,
-      };
-    }),
+    models: document.models.map(
+      ({ id, fileName, triangles, bounds, placement, border, hidden, locked }) => {
+        const [width, height, depth] = rotatedSize(bounds, placement.rotation);
+        return {
+          id,
+          fileName,
+          triangles,
+          /**
+           * As placed: its outline on the stock, how far its top sits below the
+           * stock top, and how far it reaches into the stock from its top.
+           */
+          size: {
+            width: width * placement.scale,
+            height: height * placement.scale,
+            top: placement.top,
+            // A flat mesh keeps a depth it doesn't have.
+            depth: depth > 0 ? placement.depth : 0,
+          },
+          placement,
+          border,
+          ...(hidden && { hidden }),
+          ...(locked && { locked }),
+        };
+      },
+    ),
     operations: document.operations,
   };
 }

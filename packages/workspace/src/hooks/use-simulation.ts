@@ -1,6 +1,7 @@
 "use client";
 
 import type { Heightmap } from "@furrow/cam-core";
+import { machinedDocument } from "@furrow/cam-core";
 import type { StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -47,7 +48,8 @@ export function useSimulation(maxCells: number | null, side: StockSide = "top") 
   const schedule = useRef<ReturnType<typeof scheduleSimulation> | null>(null);
   // The side simulated; a new one goes through `setSide`, keeping the worker.
   const shownSide = useRef(side);
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const entries = useToolpathStore((s) => s.entries);
   const skipped = useMemo(
     () =>

@@ -23,6 +23,7 @@ export * from "./scene/sides";
 export * from "./scene/snap";
 export * from "./scene/stock";
 export * from "./scene/touch-off";
+export * from "./scene/visibility";
 export * from "./simulation/playback";
 export * from "./simulation/preview";
 export * from "./simulation/simulation";

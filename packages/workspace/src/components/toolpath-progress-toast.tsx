@@ -1,5 +1,6 @@
 "use client";
 
+import { machinedDocument } from "@furrow/cam-core";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -17,7 +18,8 @@ const SHOW_AFTER_MS = 300;
  */
 export function ToolpathProgressToast() {
   const t = useTranslations("ToolpathProgress");
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: operations that only cut hidden objects are off (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const entries = useToolpathStore((s) => s.entries);
   const controls = useToolpathStore((s) => s.controls);
   const batch = useRef<ReadonlySet<string>>(new Set());

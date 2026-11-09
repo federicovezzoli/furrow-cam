@@ -1,4 +1,10 @@
-import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
+import {
+  machinedDocument,
+  type ToolpathInput,
+  toolpathInputs,
+  toolpathKey,
+  toolpathMeshes,
+} from "@furrow/cam-core";
 import {
   type Machine,
   type Message,
@@ -218,7 +224,8 @@ export function scheduleToolpaths(
   }
 
   function update() {
-    const { document } = documents.getState();
+    // As machined (ADR-0080): hidden objects aren't cut.
+    const document = machinedDocument(documents.getState().document);
     const enabled = document.operations.filter((operation) => operation.enabled);
     const ids = new Set(enabled.map((operation) => operation.id));
     toolpaths.getState().retain(ids);
@@ -319,7 +326,7 @@ export function scheduleToolpaths(
    */
   function exportRequest(pending: PendingExport): GcodeExportRequest {
     const state = documents.getState();
-    const { document } = state;
+    const document = machinedDocument(state.document);
     const enabled = document.operations.filter((operation) => operation.enabled);
     const inputs = toolpathInputs(document, enabled).map((input) => ({
       operationId: input.operation.id,
@@ -410,7 +417,7 @@ export function scheduleToolpaths(
     /** Computes the operation `id` again, e.g. after it was cancelled. */
     retry(id: string) {
       if (inFlight.has(id)) return;
-      const { document } = documents.getState();
+      const document = machinedDocument(documents.getState().document);
       const operation = document.operations.find((candidate) => candidate.id === id);
       if (!operation?.enabled) return;
       const [input] = toolpathInputs(document, [operation]);
