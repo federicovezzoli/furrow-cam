@@ -9,7 +9,6 @@ import {
 
 const release = (tag: string, extra: Record<string, unknown> = {}) => ({
   tag_name: tag,
-  html_url: `https://github.com/federicovezzoli/furrow-cam/releases/tag/${encodeURIComponent(tag)}`,
   draft: false,
   prerelease: false,
   ...extra,
@@ -35,10 +34,7 @@ describe("latestDesktopRelease", () => {
       release("@furrow/desktop@0.10.0"),
       release("@furrow/cam-core@5.0.0"),
     ];
-    expect(latestDesktopRelease(releases)).toEqual({
-      version: "0.10.0",
-      url: releases[2]?.html_url,
-    });
+    expect(latestDesktopRelease(releases)).toEqual({ version: "0.10.0" });
   });
 
   it("ignores drafts, prereleases and prerelease versions", () => {
@@ -51,11 +47,6 @@ describe("latestDesktopRelease", () => {
     expect(latestDesktopRelease(releases)?.version).toBe("0.2.0");
   });
 
-  it("ignores pages outside GitHub", () => {
-    const releases = [release("@furrow/desktop@0.2.0", { html_url: "https://example.com/" })];
-    expect(latestDesktopRelease(releases)).toBeNull();
-  });
-
   it("returns null for an unexpected response", () => {
     expect(latestDesktopRelease({ message: "API rate limit exceeded" })).toBeNull();
     expect(latestDesktopRelease([null, 3, "x"])).toBeNull();
@@ -63,7 +54,7 @@ describe("latestDesktopRelease", () => {
 });
 
 describe("newerRelease", () => {
-  const offered = { version: "0.2.0", url: "https://github.com/" };
+  const offered = { version: "0.2.0" };
 
   it("offers a higher version", () => {
     expect(newerRelease("0.1.9", offered)).toBe(offered);
