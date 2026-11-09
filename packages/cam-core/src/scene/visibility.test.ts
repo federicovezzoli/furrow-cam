@@ -48,16 +48,22 @@ describe("machinedDocument (ADR-0080)", () => {
     expect(machinedDocument(machinedDocument(hidden))).toBe(machinedDocument(hidden));
   });
 
-  it("cuts only the visible targets, and turns off what has none left or a hidden model", () => {
+  it("turns off what cuts any hidden object, keeping its targets, and leaves the rest", () => {
     const partly = machinedDocument(hide(document(), [CIRCLE_ID]));
     expect(partly.operations[0]).toMatchObject({
-      enabled: true,
-      targets: [{ shapeId: SQUARE_ID }],
+      enabled: false,
+      targets: fullDocument().operations[0]?.targets,
     });
     expect(partly.operations[1]).toBe(reliefFinish);
 
-    const all = machinedDocument(hide(document(), [DRAWING_ID, model.id]));
-    expect(all.operations.map(({ enabled }) => enabled)).toEqual([false, false]);
+    const model3d = machinedDocument(hide(document(), [model.id]));
+    expect(model3d.operations.map(({ enabled }) => enabled)).toEqual([true, false]);
+  });
+
+  it("keeps the operations' identity across unrelated edits", () => {
+    const doc = hide(document(), [CIRCLE_ID]);
+    const renamed = { ...doc, stock: { ...doc.stock, width: doc.stock.width + 1 } };
+    expect(machinedDocument(renamed).operations).toBe(machinedDocument(doc).operations);
   });
 
   it("never writes to the document", () => {

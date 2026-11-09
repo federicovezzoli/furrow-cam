@@ -1,18 +1,12 @@
 "use client";
 
-import {
-  closedPathsInside,
-  hiddenTargets,
-  machinedDocument,
-  pickablePaths,
-} from "@furrow/cam-core";
+import { closedPathsInside, cutsHidden, machinedDocument, pickablePaths } from "@furrow/cam-core";
 import { hasAccelerations, type Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import { cn } from "@furrow/ui/lib/utils";
 import {
   CircleAlertIcon,
-  CircleDashedIcon,
   CircleSlashIcon,
   EyeIcon,
   EyeOffIcon,
@@ -225,9 +219,9 @@ function OperationRow({
   const selected = useWorkspaceStore((s) => s.selectedOperationId === operation.id);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const [renaming, setRenaming] = useState(false);
-  // Off while all it cuts is hidden, without touching `enabled` (ADR-0080).
-  const hidden = hiddenTargets(operation, hiddenIds);
-  const on = operation.enabled && hidden !== "all";
+  // Off while anything it cuts is hidden, without touching `enabled` (ADR-0080).
+  const hidden = cutsHidden(operation, hiddenIds);
+  const on = operation.enabled && !hidden;
 
   function select() {
     workspace.getState().selectOperation(selected ? null : operation.id);
@@ -278,10 +272,10 @@ function OperationRow({
       <input
         type="checkbox"
         checked={on}
-        disabled={hidden === "all"}
+        disabled={hidden}
         onChange={(event) => setOperationEnabled(store, operation.id, event.target.checked)}
         aria-label={t("enableLabel", { name: operation.name })}
-        title={hidden === "all" ? t("allTargetsHidden") : on ? t("enabled") : t("disabled")}
+        title={hidden ? t("targetsHidden") : on ? t("enabled") : t("disabled")}
         className="size-3.5 shrink-0 accent-primary disabled:opacity-50"
       />
       <span
@@ -323,15 +317,6 @@ function OperationRow({
         >
           {t(`sides.${operation.stockSide}`)}
         </span>
-      )}
-      {hidden === "some" && (
-        <CircleDashedIcon
-          role="img"
-          aria-label={t("someTargetsHidden")}
-          className="size-3.5 shrink-0 text-muted-foreground"
-        >
-          <title>{t("someTargetsHidden")}</title>
-        </CircleDashedIcon>
       )}
       {on && (
         <>

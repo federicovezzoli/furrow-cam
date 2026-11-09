@@ -326,9 +326,9 @@ export function scheduleToolpaths(
    */
   function exportRequest(pending: PendingExport): GcodeExportRequest {
     const state = documents.getState();
-    const document = machinedDocument(state.document);
-    const enabled = document.operations.filter((operation) => operation.enabled);
-    const inputs = toolpathInputs(document, enabled).map((input) => ({
+    const machined = machinedDocument(state.document);
+    const enabled = machined.operations.filter((operation) => operation.enabled);
+    const inputs = toolpathInputs(machined, enabled).map((input) => ({
       operationId: input.operation.id,
       inputHash: hashInput(input),
       input,
@@ -339,7 +339,8 @@ export function scheduleToolpaths(
     );
     pending.request = {
       export: pending.request.export,
-      document,
+      // As it is, so an export with every operation off for hidden objects says so (ADR-0080).
+      document: state.document,
       name: pending.name(),
       version: versionLabel(state),
       inputs,

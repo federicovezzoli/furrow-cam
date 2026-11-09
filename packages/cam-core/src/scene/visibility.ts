@@ -18,50 +18,62 @@ export function flaggedIds(doc: Objects, flag: "hidden" | "locked"): Set<string>
 }
 
 /**
- * How much of what `operation` cuts is in `hidden` (from `flaggedIds`):
- * `"all"` when its model is, or every shape it targets, `"some"` when only
- * some of its shapes are, `null` when none is or it targets nothing.
+ * Whether `operation` cuts anything in `hidden` (from `flaggedIds`): its
+ * model or any shape it targets. Such an operation is off (ADR-0080): cutting
+ * only the rest would drop a pocket's islands, or move a profile's tabs and
+ * start points onto the shapes left.
  */
-export function hiddenTargets(
-  operation: Operation,
-  hidden: ReadonlySet<string>,
-): "all" | "some" | null {
+export function cutsHidden(operation: Operation, hidden: ReadonlySet<string>): boolean {
   const modelId = operationModelId(operation);
-  if (modelId !== null && hidden.has(modelId)) return "all";
-  const count = operation.targets.filter(({ shapeId }) => hidden.has(shapeId)).length;
-  if (count === 0) return null;
-  return count === operation.targets.length ? "all" : "some";
+  return (
+    (modelId !== null && hidden.has(modelId)) ||
+    operation.targets.some(({ shapeId }) => hidden.has(shapeId))
+  );
 }
 
-const machined = new WeakMap<ProjectDocument, ProjectDocument>();
+/** The off copy of each operation, so it keeps its identity while it stays the same. */
+const offCopies = new WeakMap<Operation, Operation>();
+/** The last machined list of each `operations`, with the ids it turned off. */
+const machined = new WeakMap<readonly Operation[], { off: string; operations: Operation[] }>();
+const documents = new WeakMap<ProjectDocument, ProjectDocument>();
 
 /**
  * `doc` as it is machined (ADR-0080): hidden objects are not cut, so an
- * operation whose targets are all hidden is off and the others lose their
- * hidden targets. Derived on every read, never stored, so showing an object
- * brings its operations back as they were. `doc` itself when nothing is
- * hidden, and the same result for the same `doc`, so toolpath inputs keep
- * their identity.
+ * operation that cuts any of them is off. Derived on every read, never
+ * stored, so showing the object brings its operations back as they were.
+ * `doc` itself when nothing it cuts is hidden; otherwise the same operations
+ * for the same operations and hidden objects, so an unrelated edit doesn't
+ * re-render what reads them.
  */
 export function machinedDocument(doc: ProjectDocument): ProjectDocument {
-  const known = machined.get(doc);
+  const known = documents.get(doc);
   if (known) return known;
   const hidden = flaggedIds(doc, "hidden");
+  const off = doc.operations.filter(
+    (operation) => operation.enabled && hidden.size > 0 && cutsHidden(operation, hidden),
+  );
   let result = doc;
-  if (hidden.size > 0) {
-    const operations = doc.operations.map((operation) => {
-      const status = hiddenTargets(operation, hidden);
-      if (status === null) return operation;
-      if (status === "all") return operation.enabled ? { ...operation, enabled: false } : operation;
-      return {
-        ...operation,
-        targets: operation.targets.filter(({ shapeId }) => !hidden.has(shapeId)),
+  if (off.length > 0) {
+    const key = off.map(({ id }) => id).join();
+    let last = machined.get(doc.operations);
+    if (last?.off !== key) {
+      const ids = new Set(off.map(({ id }) => id));
+      last = {
+        off: key,
+        operations: doc.operations.map((operation) => {
+          if (!ids.has(operation.id)) return operation;
+          let copy = offCopies.get(operation);
+          if (!copy) {
+            copy = { ...operation, enabled: false };
+            offCopies.set(operation, copy);
+          }
+          return copy;
+        }),
       };
-    });
-    if (operations.some((operation, i) => operation !== doc.operations[i])) {
-      result = { ...doc, operations };
+      machined.set(doc.operations, last);
     }
+    result = { ...doc, operations: last.operations };
   }
-  machined.set(doc, result);
+  documents.set(doc, result);
   return result;
 }

@@ -15,7 +15,7 @@ import { type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { DoubleSide } from "three";
 import { useShallow } from "zustand/react/shallow";
-import { useFlaggedIds, useUnpickableIds } from "../../hooks/use-flagged-ids";
+import { useFlaggedIds, useShownShapes, useUnpickableIds } from "../../hooks/use-flagged-ids";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
 import {
   boxCenter,
@@ -241,16 +241,6 @@ function Shapes({ palette }: { palette: Palette }) {
 /** How much of their colour other drawings keep while one is entered (ADR-0080). */
 const DIMMED_OPACITY = 0.3;
 
-/** The shapes not hidden (ADR-0080). */
-function useShownShapes() {
-  const geometry = useDocumentStore((s) => s.document.geometry);
-  const hidden = useFlaggedIds("hidden");
-  return useMemo(
-    () => (hidden.size === 0 ? geometry : geometry.filter(({ id }) => !hidden.has(id))),
-    [geometry, hidden],
-  );
-}
-
 function AllShapes({ color }: { color: string }) {
   const geometry = useShownShapes();
   const entered = useWorkspaceStore((s) => s.enteredDrawingId);
@@ -291,8 +281,11 @@ function SelectedDrawing({ color }: { color: string }) {
   const id = useSelectedDrawingId();
   const geometry = useShownShapes();
   const bounds = useMemo(() => (id === null ? null : drawingBounds(geometry, id)), [geometry, id]);
-  const locked = useDocumentStore(
-    (s) => s.document.drawings.find((drawing) => drawing.id === id)?.locked === true,
+  // Locked itself, or holding a shape locked on its own: dragging would move it.
+  const lockedIds = useFlaggedIds("locked");
+  const locked = useMemo(
+    () => id !== null && geometry.some((s) => s.drawingId === id && lockedIds.has(s.id)),
+    [geometry, id, lockedIds],
   );
   const draggable =
     useWorkspaceStore(

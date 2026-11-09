@@ -60,13 +60,12 @@ describe("OperationsPane: hidden objects (ADR-0080)", () => {
     renderWorkspace(<OperationsPane />, createMemoryHost({ document }));
   const checkbox = () => screen.getByLabelText("Enable Outside profile") as HTMLInputElement;
 
-  it("turns off, without changing it, an operation whose targets are all hidden", () => {
+  it("turns off, without changing it, an operation whose targets are hidden", () => {
     const document = fullDocument();
     render({ ...document, drawings: document.drawings.map((d) => ({ ...d, hidden: true })) });
     expect(checkbox().checked).toBe(false);
     expect(checkbox().disabled).toBe(true);
-    expect(checkbox().title).toMatch(/all it cuts is hidden/);
-    expect(screen.queryByLabelText(/Some of what it cuts is hidden/)).toBeNull();
+    expect(checkbox().title).toMatch(/something it cuts is hidden/);
   });
 
   it("totals the other operations' time", () => {
@@ -93,14 +92,13 @@ describe("OperationsPane: hidden objects (ADR-0080)", () => {
     expect(screen.getByText("Total ≈ 12min")).toBeTruthy();
   });
 
-  it("marks one with only some targets hidden, still on", () => {
+  it("turns off one with only some targets hidden too", () => {
     const document = fullDocument();
     render({
       ...document,
       geometry: document.geometry.map((s) => (s.id === CIRCLE_ID ? { ...s, hidden: true } : s)),
     });
-    expect(checkbox().checked).toBe(true);
-    expect(checkbox().disabled).toBe(false);
-    expect(screen.getByLabelText(/Some of what it cuts is hidden/)).toBeTruthy();
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(true);
   });
 });

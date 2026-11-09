@@ -49,6 +49,7 @@ export type PostOutput = {
 
 /** What exporting says (ADR-0054); toolpath warnings pass through as theirs. */
 export const POST_MESSAGES = [
+  "export.allHidden",
   "export.noEnabled",
   "export.noneHasToolpath",
   "export.noToolpath",

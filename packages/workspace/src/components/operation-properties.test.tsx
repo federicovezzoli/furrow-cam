@@ -160,7 +160,7 @@ describe("OperationProperties: hidden objects (ADR-0080)", () => {
         document: { ...document, drawings: document.drawings.map((d) => ({ ...d, hidden: true })) },
       }),
     );
-    expect(screen.getByText(/all it cuts is hidden/)).toBeTruthy();
+    expect(screen.getByText(/something it cuts is hidden/)).toBeTruthy();
     expect(screen.queryByText("Computing toolpath…")).toBeNull();
   });
 });

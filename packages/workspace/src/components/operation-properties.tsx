@@ -1,9 +1,9 @@
 "use client";
 
 import {
+  cutsHidden,
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
-  hiddenTargets,
   MIN_LENGTH,
   pinDepth,
   vBitConeDepth,
@@ -124,8 +124,8 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   const hasPins = useDocumentStore((s) => !!stockPins(s.document.stock));
   const hidden = useFlaggedIds("hidden");
   if (!operation) return null;
-  // Off while all it cuts is hidden: no toolpath comes (ADR-0080).
-  const allHidden = hiddenTargets(operation, hidden) === "all";
+  // Off while anything it cuts is hidden: no toolpath comes (ADR-0080).
+  const allHidden = cutsHidden(operation, hidden);
   // A drill on the top side may cut the locating pins (#356) instead of shapes.
   const pins =
     operation.type !== "drill"
@@ -178,7 +178,7 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "relief_rough" && <ReliefRoughFields operation={operation} />}
       {operation.type === "relief_finish" && <ReliefFinishFields operation={operation} />}
       {allHidden ? (
-        <p className="text-muted-foreground">{tOperations("allTargetsHidden")}</p>
+        <p className="text-muted-foreground">{tOperations("targetsHidden")}</p>
       ) : operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (

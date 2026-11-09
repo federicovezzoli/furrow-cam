@@ -143,7 +143,11 @@ export function postToolpaths(
 ): GcodeExport {
   const first = computed[0];
   if (first === undefined) {
-    throw new GcodeExportError({ message: { code: "export.noEnabled" } });
+    // Enabled in the document but off as machined: what they cut is hidden (ADR-0080).
+    const hidden = doc.operations.some((operation) => operation.enabled);
+    throw new GcodeExportError({
+      message: { code: hidden ? "export.allHidden" : "export.noEnabled" },
+    });
   }
   // Leaving such an operation out could run the next bit into stock it was meant to clear.
   for (const { input } of computed) {

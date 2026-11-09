@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
     },
     "export": {
+      "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
       "noEnabled": "Dışa aktarılacak etkin işlem yok.",
       "noneHasToolpath": "Etkin işlemlerin hiçbirinde dışa aktarılacak takım yolu yok.",
       "noToolpath": "Takım yolu yok, programa dahil edilmedi."
@@ -1029,8 +1030,7 @@
     "enableLabel": "Etkinleştir: {name}",
     "enabled": "Etkin",
     "disabled": "Devre dışı: takım yolu yok",
-    "allTargetsHidden": "Kapalı: kestiği her şey gizli. Yeniden kesmek için gösterin.",
-    "someTargetsHidden": "Kestiklerinin bir kısmı gizli ve kesilmiyor",
+    "targetsHidden": "Kapalı: kestiği bir şey gizli. Yeniden kesmek için gösterin.",
     "operationName": "İşlem adı",
     "renameTitle": "Yeniden adlandırmak için çift tıklayın veya F2’ye basın",
     "reorderLabel": "Yeniden sıralamak için sürükleyin: {name}",

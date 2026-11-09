@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。"
     },
     "export": {
+      "allHidden": "每个启用的操作都会切削隐藏的内容：请显示后再导出。",
       "noEnabled": "没有已启用的加工操作可导出。",
       "noneHasToolpath": "已启用的加工操作都没有可导出的刀具路径。",
       "noToolpath": "没有刀具路径，未包含在程序中。"
@@ -1029,8 +1030,7 @@
     "enableLabel": "启用{name}",
     "enabled": "已启用",
     "disabled": "已禁用：无刀具路径",
-    "allTargetsHidden": "已关闭：其切削对象全部隐藏。显示后即可再次切削。",
-    "someTargetsHidden": "其切削对象有一部分已隐藏，不会被切削",
+    "targetsHidden": "已关闭：其切削对象有隐藏的部分。显示后即可再次切削。",
     "operationName": "加工操作名称",
     "renameTitle": "双击或按F2重命名",
     "reorderLabel": "拖动以调整{name}的顺序",
