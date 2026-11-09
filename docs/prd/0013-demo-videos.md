@@ -35,6 +35,7 @@ The website needs short videos that show what Furrow CAM does. Screen recordings
 | V2 | **3D from a STEP file, both sides** | Import a STEP model of a windsurf board (`tavola3.step`, ADR-0072), place it in the stock, make the project two-sided (PRD-0011) with locating pins and holding tabs, add 3D roughing and finishing on the top and bottom sides, show and hide the parting plane in the 3D view, save the project for V3 |
 | V3 | **Simulation** | The V2 project in the simulation (ADR-0042): the top side cut, then the bottom side from the flipped stock the top left |
 | V4 | **3D relief from an STL terrain** | Import an STL of a mountain (`mountain-160x160.stl`), fit it to a 180 × 180 × 48 mm stock, rough it with a new 8 mm roughing end mill and finish it with a new 4 mm ball nose, both created from the operation's tool select, preview the toolpaths in 3D |
+| V5 | **Terrain from a map** | Set a 180 × 180 × 50 mm stock, open *Terrain from a map* (PRD-0014), find Pizzo Arera by name, draw a square beside its summit and drag it onto it, turn the 3D preview and change the exaggeration and base, add the terrain to the project, rough and finish it with new bits as in V4, preview the toolpaths in 3D. The only video that needs the network: the map, elevation and search come live from the public services (ADR-0076) |
 
 ## Requirements
 
@@ -92,3 +93,4 @@ What a spike on an M1 Pro (2026-11-02) found:
 - 2026-11-03: V2 toggles the parting plane (#473) in the 3D view
 - 2026-11-04: V1 and V2 no longer click **Export G-code**: V1 ends on the toolpaths, V2 on saving the project
 - 2026-11-05: V4 (`stl`) adds a one-sided 3D relief from an STL terrain
+- 2026-11-09: V5 (`terrain`) adds *Terrain from a map* around Pizzo Arera, in a square about 7.7 km across centred on the summit, about 68 s long; it shows no outline profile (the outline drawing was removed, PRD-0014 T7) nor *Download STL*. It fetches the map, elevation and search live rather than from recorded fixtures (about 7 MB, mostly the world map the dialog opens on): runs can differ as OpenStreetMap data and the services change, and recording it needs them up (an exception to D3 and D6)

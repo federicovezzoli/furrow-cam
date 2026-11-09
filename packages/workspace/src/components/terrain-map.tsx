@@ -69,6 +69,8 @@ export default function TerrainMap({
   onError: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  /** Marked `terrain-map-idle` while the map has drawn every tile it needs, for the demo videos (ADR-0075). */
+  const idleMarker = useRef<HTMLDivElement>(null);
   const draw = useRef<TerraDraw | null>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const setShapeRef = useRef<(shape: AreaShape | null) => void>(() => {});
@@ -101,6 +103,14 @@ export default function TerrainMap({
       new AttributionControl({ compact: false, customAttribution: ELEVATION_ATTRIBUTION }),
     );
     map.addControl(new NavigationControl({ showCompass: false }));
+    // Set on the element straight from the map's events: a React state would mark it a render late.
+    const idle = (isIdle: boolean) =>
+      isIdle
+        ? idleMarker.current?.setAttribute("data-demo", "terrain-map-idle")
+        : idleMarker.current?.removeAttribute("data-demo");
+    map.on("idle", () => idle(true));
+    map.on("movestart", () => idle(false));
+    map.on("dataloading", () => idle(false));
     let ready = false;
     let failed = false;
     map.on("error", () => {
@@ -269,5 +279,9 @@ export default function TerrainMap({
     else map.jumpTo(view);
   }, [view]);
 
-  return <div ref={container} className="size-full" data-demo="terrain-map" />;
+  return (
+    <div ref={idleMarker} className="size-full">
+      <div ref={container} className="size-full" data-demo="terrain-map" />
+    </div>
+  );
 }

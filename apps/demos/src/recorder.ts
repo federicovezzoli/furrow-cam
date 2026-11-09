@@ -119,6 +119,15 @@ export class Recorder {
   }
 
   /**
+   * Lets the page reach `urls` on the network, past the route that refuses
+   * other origins: for a demo that needs outside services (the terrain's
+   * map). What they answer can change between runs (PRD-0013).
+   */
+  async allow(urls: RegExp) {
+    await this.page.context().route(urls, (route) => route.continue());
+  }
+
+  /**
    * The element marked `data-tour` or `data-demo` with `name`, or a form field
    * with that id. A missing anchor stops the run, naming the video and the
    * anchor (PRD-0013 D2).
@@ -329,11 +338,15 @@ export class Recorder {
   /**
    * Moves to the anchor `name` and clicks it, with a short pause either side.
    * With `waitFor`, the work the click starts is waited for before the pause
-   * after it, until that anchor shows (see `waitForWork`).
+   * after it, until that anchor shows (see `waitForWork`); with `waitForGone`,
+   * first until that anchor is gone (see `waitForGone`).
    */
-  async click(name: string, { waitFor }: { waitFor?: string } = {}) {
+  async click(
+    name: string,
+    { waitFor, waitForGone }: { waitFor?: string; waitForGone?: string } = {},
+  ) {
     await this.moveTo(name);
-    await this.#clickHere(waitFor);
+    await this.#clickHere(waitFor, waitForGone);
   }
 
   /**
@@ -353,11 +366,12 @@ export class Recorder {
     }
   }
 
-  async #clickHere(waitFor?: string) {
+  async #clickHere(waitFor?: string, waitForGone?: string) {
     await this.hold(0.2);
     await this.#press("down");
     await this.frame();
     await this.#press("up");
+    if (waitForGone) await this.waitForGone(waitForGone);
     if (waitFor) await this.waitForWork(waitFor);
     await this.hold(0.4);
   }
@@ -460,17 +474,56 @@ export class Recorder {
    */
   async waitForWork(target: Locator | string, timeout = 120_000) {
     const locator = typeof target === "string" ? this.#locate(target) : target;
+    await this.#waitUntil(() => locator.isVisible(), `waiting for ${target}`, timeout);
+  }
+
+  /**
+   * Runs the page clock, recording nothing, until the anchor `name` is gone:
+   * for work that ends by closing a form, before what it changes is waited for.
+   */
+  async waitForGone(name: string, timeout = 120_000) {
+    const locator = this.#locate(name);
+    await this.#waitUntil(
+      async () => !(await locator.isVisible()),
+      `waiting for ${name} to close`,
+      timeout,
+    );
+  }
+
+  /** Steps the page clock, recording nothing, until `done`, then aligns it (see `#align`). */
+  async #waitUntil(done: () => Promise<boolean>, what: string, timeout: number) {
     const end = Date.now() + timeout;
     const failed = this.page.locator('[data-demo="toolpath-failed"]').filter({ visible: true });
-    while (!(await locator.isVisible())) {
+    while (!(await done())) {
       if ((await failed.count()) > 0) {
-        throw new Error(`Demo "${this.#name}": a toolpath failed while waiting for ${target}`);
+        throw new Error(`Demo "${this.#name}": a toolpath failed while ${what}`);
       }
-      if (Date.now() > end)
-        throw new Error(`Demo "${this.#name}": timed out waiting for ${locator}`);
+      if (Date.now() > end) throw new Error(`Demo "${this.#name}": timed out ${what}`);
       await this.#step();
     }
     await this.#align();
+  }
+
+  /** Stops the run unless the anchor `name`'s text matches `expected`. */
+  async expectText(name: string, expected: RegExp) {
+    const text = (await (await this.anchor(name)).textContent()) ?? "";
+    if (!expected.test(text)) {
+      throw new Error(`Demo "${this.#name}": anchor "${name}" reads "${text}", not ${expected}`);
+    }
+  }
+
+  /**
+   * Creates a library bit from the operation's tool select and waits for
+   * the operation's toolpaths with it. Tab, not Enter, between fields: Enter
+   * in a field submits the form.
+   */
+  async newBit(fields: { name: string; diameter: string; fluteLength: string; stepDown: string }) {
+    await this.select("operation-tool", "New bit…", { waitFor: "save-bit" });
+    for (const [field, value] of Object.entries(fields)) {
+      await this.type(field, value, { press: "Tab" });
+    }
+    // Saved, then taken by the operation as the form closes: until then the total is the last tool's.
+    await this.click("save-bit", { waitForGone: "save-bit", waitFor: "job-time" });
   }
 
   /**

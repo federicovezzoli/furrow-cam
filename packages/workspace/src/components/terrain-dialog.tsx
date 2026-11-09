@@ -350,6 +350,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                         size={shown.size}
                         // From the mesh on screen, so the camera fits the model it shows.
                         fitKey={`${ring?.join()}|${Math.round(Math.max(shown.size[0], shown.size[1]))}`}
+                        current={!stale}
                       />
                     </Suspense>
                   )}
@@ -401,7 +402,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 {planned && "error" in planned && (
                   <p className="text-destructive">{format(planned.error)}</p>
                 )}
-                {area && <p>{area}</p>}
+                {area && <p data-demo="terrain-area">{area}</p>}
               </div>
             </div>
           ) : (
@@ -495,7 +496,11 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
             {t("cancel")}
           </Button>
           {step === "area" ? (
-            <Button disabled={!plan || mapFailed} onClick={() => setStep("model")}>
+            <Button
+              disabled={!plan || mapFailed}
+              data-demo="terrain-next"
+              onClick={() => setStep("model")}
+            >
               {t("next")}
               <ArrowRightIcon />
             </Button>
@@ -511,6 +516,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
               </Button>
               <Button
                 disabled={!plan || generating || !storable || hasModel}
+                data-demo="terrain-generate"
                 onClick={() => void generate()}
               >
                 {t("generate")}
