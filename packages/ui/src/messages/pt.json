@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Aproximado: trocas de ferramenta não são contadas.",
     "estimateNoMachine": "Aproximado: os movimentos rápidos só são contados quando o projeto tem uma máquina, e acelerações e trocas de ferramenta não são contadas."
   },
+  "Objects": {
+    "label": "Objetos do projeto",
+    "empty": "Nada aqui ainda: importe um desenho ou um modelo, ou adicione texto.",
+    "untitled": "Desenho",
+    "shape": "Forma {n}",
+    "path": "Caminho {n}",
+    "targeted": "Cortado pela operação selecionada",
+    "show": "Mostrar {name}",
+    "hide": "Ocultar {name}",
+    "lock": "Bloquear {name}",
+    "unlock": "Desbloquear {name}"
+  },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",
     "progress": "Progresso de {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Não salvo"
     },
     "operations": "Operações",
+    "objects": "Objetos",
     "properties": "Propriedades",
     "versions": "Versões",
     "viewport": "Visualização",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Selecione caminhos",
         "body": "Clique em um desenho na visualização para selecioná-lo, e Shift+clique para adicionar mais. Dê um clique duplo para selecionar seus caminhos um a um; Esc para sair. As operações cortam o que estiver selecionado."
+      },
+      "objects": {
+        "title": "Objetos",
+        "body": "Cada desenho, com suas formas e caminhos, e o modelo 3D. Clique em um para selecioná-lo, oculte-o para deixá-lo fora do trabalho ou bloqueie-o para que a visualização não o selecione nem o mova."
       },
       "operations": {
         "title": "Adicione operações",

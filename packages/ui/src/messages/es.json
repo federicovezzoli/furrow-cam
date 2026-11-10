@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Aproximado: no se cuentan los cambios de herramienta.",
     "estimateNoMachine": "Aproximado: los movimientos rápidos no se cuentan hasta que el proyecto tenga una máquina, ni tampoco las aceleraciones y los cambios de herramienta."
   },
+  "Objects": {
+    "label": "Objetos del proyecto",
+    "empty": "Aún no hay nada: importa un dibujo o un modelo, o añade texto.",
+    "untitled": "Dibujo",
+    "shape": "Forma {n}",
+    "path": "Trazado {n}",
+    "targeted": "Lo corta la operación seleccionada",
+    "show": "Mostrar {name}",
+    "hide": "Ocultar {name}",
+    "lock": "Bloquear {name}",
+    "unlock": "Desbloquear {name}"
+  },
   "ToolpathProgress": {
     "title": "Calculando trayectorias · {done} de {total} hechas",
     "progress": "Progreso de {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Sin guardar"
     },
     "operations": "Operaciones",
+    "objects": "Objetos",
     "properties": "Propiedades",
     "versions": "Versiones",
     "viewport": "Vista",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Selecciona trazados",
         "body": "Haz clic en un dibujo de la vista para seleccionarlo, y Mayús+clic para añadir más. Haz doble clic para seleccionar sus trazados uno a uno; Esc para salir. Las operaciones cortan lo seleccionado."
+      },
+      "objects": {
+        "title": "Objetos",
+        "body": "Cada dibujo, con sus formas y trazados, y el modelo 3D. Haz clic en uno para seleccionarlo, ocúltalo para dejarlo fuera del trabajo o bloquéalo para que la vista no lo seleccione ni lo mueva."
       },
       "operations": {
         "title": "Añade operaciones",

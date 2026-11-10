@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Approximatif : les changements d’outil ne sont pas comptés.",
     "estimateNoMachine": "Approximatif : les déplacements rapides ne sont comptés qu’une fois une machine choisie pour le projet, l’accélération et les changements d’outil jamais."
   },
+  "Objects": {
+    "label": "Objets du projet",
+    "empty": "Rien pour l’instant : importez un dessin ou un modèle, ou ajoutez du texte.",
+    "untitled": "Dessin",
+    "shape": "Forme {n}",
+    "path": "Tracé {n}",
+    "targeted": "Coupé par l’opération sélectionnée",
+    "show": "Afficher {name}",
+    "hide": "Masquer {name}",
+    "lock": "Verrouiller {name}",
+    "unlock": "Déverrouiller {name}"
+  },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",
     "progress": "Progression de {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Non enregistré"
     },
     "operations": "Opérations",
+    "objects": "Objets",
     "properties": "Propriétés",
     "versions": "Versions",
     "viewport": "Vue",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Sélectionner des tracés",
         "body": "Cliquez sur un dessin dans la vue pour le sélectionner, et Maj+clic pour en ajouter d’autres. Double-cliquez pour sélectionner ses tracés un par un ; Échap pour en sortir. Les opérations coupent ce qui est sélectionné."
+      },
+      "objects": {
+        "title": "Objets",
+        "body": "Chaque dessin, avec ses formes et ses tracés, et le modèle 3D. Cliquez sur l’un d’eux pour le sélectionner, masquez-le pour le laisser hors du travail, ou verrouillez-le pour que la vue ne puisse ni le sélectionner ni le déplacer."
       },
       "operations": {
         "title": "Ajouter des opérations",

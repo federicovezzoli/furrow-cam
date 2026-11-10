@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Ungefähr: Werkzeugwechsel sind nicht eingerechnet.",
     "estimateNoMachine": "Ungefähr: Eilgänge werden erst eingerechnet, wenn das Projekt eine Maschine hat; Beschleunigung und Werkzeugwechsel nie."
   },
+  "Objects": {
+    "label": "Objekte im Projekt",
+    "empty": "Noch nichts da: importiere eine Zeichnung oder ein Modell oder füge Text hinzu.",
+    "untitled": "Zeichnung",
+    "shape": "Form {n}",
+    "path": "Pfad {n}",
+    "targeted": "Von der ausgewählten Operation geschnitten",
+    "show": "{name} einblenden",
+    "hide": "{name} ausblenden",
+    "lock": "{name} sperren",
+    "unlock": "{name} entsperren"
+  },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
     "progress": "Fortschritt von {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Nicht gespeichert"
     },
     "operations": "Operationen",
+    "objects": "Objekte",
     "properties": "Eigenschaften",
     "versions": "Versionen",
     "viewport": "Ansicht",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Pfade auswählen",
         "body": "Klicke in der Ansicht auf eine Zeichnung, um sie auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Ein Doppelklick wählt ihre Pfade einzeln aus; Esc verlässt sie. Operationen schneiden, was ausgewählt ist."
+      },
+      "objects": {
+        "title": "Objekte",
+        "body": "Jede Zeichnung mit ihren Formen und Pfaden und das 3D-Modell. Klicke eines an, um es auszuwählen, blende es aus, um es aus dem Auftrag zu nehmen, oder sperre es, damit die Ansicht es weder auswählt noch verschiebt."
       },
       "operations": {
         "title": "Operationen hinzufügen",

@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Approximate: tool changes aren't counted.",
     "estimateNoMachine": "Approximate: rapids aren't counted until the project has a machine, nor are acceleration and tool changes."
   },
+  "Objects": {
+    "label": "Objects in the project",
+    "empty": "Nothing here yet: import a drawing or a model, or add text.",
+    "untitled": "Drawing",
+    "shape": "Shape {n}",
+    "path": "Path {n}",
+    "targeted": "Cut by the selected operation",
+    "show": "Show {name}",
+    "hide": "Hide {name}",
+    "lock": "Lock {name}",
+    "unlock": "Unlock {name}"
+  },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
     "progress": "Progress of {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Not saved"
     },
     "operations": "Operations",
+    "objects": "Objects",
     "properties": "Properties",
     "versions": "Versions",
     "viewport": "Viewport",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Select paths",
         "body": "Click a drawing in the viewport to select it, and Shift+click to add more. Double click it to select its paths one by one; Esc leaves it. Operations cut what is selected."
+      },
+      "objects": {
+        "title": "Objects",
+        "body": "Every drawing, its shapes and paths, and the 3D model. Click one to select it, hide it to leave it out of the job, or lock it so the viewport can't pick or move it."
       },
       "operations": {
         "title": "Add operations",
