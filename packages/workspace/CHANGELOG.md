@@ -1,5 +1,18 @@
 # @furrow/workspace
 
+## 0.25.0
+
+### Minor Changes
+
+- Drawings, shapes and models can be hidden or locked, and the project remembers it. A hidden object isn't drawn or cut, and an operation that cuts one turns off until it is shown again; a locked one stays in view but can't be picked or moved. ([#542](https://github.com/federicovezzoli/furrow-cam/pull/542))
+- A new Objects tab lists every drawing, its shapes and paths, and the 3D model. Select them from the list or with the keyboard, see what the selected operation cuts, and hide or lock each one with its eye and lock. ([#543](https://github.com/federicovezzoli/furrow-cam/pull/543))
+- A click in the top view now selects a whole drawing, and Shift+click adds more. Double click a drawing to select its paths one by one (Esc leaves it), or Alt+click to pick a single path. ([#538](https://github.com/federicovezzoli/furrow-cam/pull/538))
+- Drawings and their paths can be selected in the 3D view too, as in the top view. Esc steps back: it stops picking the zero or editing, leaves a drawing you entered, then clears the selection. ([#545](https://github.com/federicovezzoli/furrow-cam/pull/545))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.23.0, @furrow/cam-core@0.21.0, @furrow/post@0.15.6, @furrow/ui@0.8.8
+
 ## 0.24.2
 
 ### Patch Changes

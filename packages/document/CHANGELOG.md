@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.23.0
+
+### Minor Changes
+
+- Drawings, shapes and models can be hidden or locked, and the project remembers it. A hidden object isn't drawn or cut, and an operation that cuts one turns off until it is shown again; a locked one stays in view but can't be picked or moved. ([#542](https://github.com/federicovezzoli/furrow-cam/pull/542))
+
 ## 0.22.1
 
 ### Patch Changes
