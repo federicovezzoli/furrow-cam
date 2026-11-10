@@ -1,5 +1,16 @@
 # @furrow/cam-core
 
+## 0.21.0
+
+### Minor Changes
+
+- Drawings, shapes and models can be hidden or locked, and the project remembers it. A hidden object isn't drawn or cut, and an operation that cuts one turns off until it is shown again; a locked one stays in view but can't be picked or moved. ([#542](https://github.com/federicovezzoli/furrow-cam/pull/542))
+- Drawings and their paths can be selected in the 3D view too, as in the top view. Esc steps back: it stops picking the zero or editing, leaves a drawing you entered, then clears the selection. ([#545](https://github.com/federicovezzoli/furrow-cam/pull/545))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.23.0
+
 ## 0.20.1
 
 ### Patch Changes
