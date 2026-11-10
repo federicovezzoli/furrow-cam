@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Approssimativo: i cambi utensile non sono contati.",
     "estimateNoMachine": "Approssimativo: i movimenti rapidi non sono contati finché il progetto non ha una macchina, né le accelerazioni e i cambi utensile."
   },
+  "Objects": {
+    "label": "Oggetti del progetto",
+    "empty": "Ancora niente: importa un disegno o un modello, oppure aggiungi un testo.",
+    "untitled": "Disegno",
+    "shape": "Forma {n}",
+    "path": "Percorso {n}",
+    "targeted": "Tagliato dall’operazione selezionata",
+    "show": "Mostra {name}",
+    "hide": "Nascondi {name}",
+    "lock": "Blocca {name}",
+    "unlock": "Sblocca {name}"
+  },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
     "progress": "Avanzamento di {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Non salvato"
     },
     "operations": "Operazioni",
+    "objects": "Oggetti",
     "properties": "Proprietà",
     "versions": "Versioni",
     "viewport": "Vista",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Seleziona i percorsi",
         "body": "Clicca un disegno nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Fai doppio clic per selezionarne i percorsi uno per uno; Esc per uscire. Le operazioni tagliano ciò che è selezionato."
+      },
+      "objects": {
+        "title": "Oggetti",
+        "body": "Ogni disegno, con forme e percorsi, e il modello 3D. Cliccane uno per selezionarlo, nascondilo per escluderlo dal lavoro, o bloccalo perché la vista non possa selezionarlo né spostarlo."
       },
       "operations": {
         "title": "Aggiungi operazioni",

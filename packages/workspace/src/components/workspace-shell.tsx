@@ -35,6 +35,7 @@ import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-i
 import { MachineUpdateDialog } from "./machine-update-dialog";
 import { ModelImportButton } from "./model-import-button";
 import { ModelProperties } from "./model-properties";
+import { ObjectsPane } from "./objects-pane";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
 import { Ribbon, RibbonGroup } from "./ribbon";
@@ -55,7 +56,8 @@ const Viewport = lazy(() =>
 /**
  * The CAM workspace (ADR-0009): a top bar and a ribbon of commands (import,
  * add operations, the project's versions, ADR-0028) over two resizable
- * columns: the operations and the project's properties in tabs on the left,
+ * columns: the operations, the objects (ADR-0080) and the project's
+ * properties in tabs on the left,
  * the viewport on the right, with the
  * selected operation's properties floating over it. Column sizes are
  * remembered by the host (`settings.layout`). The project and its
@@ -139,6 +141,9 @@ export function WorkspaceShell() {
                 <TabsTrigger value="operations" data-demo="tab-operations">
                   {t("operations")}
                 </TabsTrigger>
+                <TabsTrigger value="objects" data-demo="tab-objects">
+                  {t("objects")}
+                </TabsTrigger>
                 <TabsTrigger value="properties" data-demo="tab-properties">
                   {t("properties")}
                 </TabsTrigger>
@@ -155,6 +160,9 @@ export function WorkspaceShell() {
                 }
               >
                 <OperationsPane />
+              </SidebarTab>
+              <SidebarTab id="objects">
+                <ObjectsPane />
               </SidebarTab>
               <SidebarTab
                 id="properties"
@@ -275,7 +283,7 @@ function SidebarTab({
   children,
 }: {
   id: TourPane;
-  footer: React.ReactNode;
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Shell");
@@ -289,7 +297,7 @@ function SidebarTab({
     >
       {/* Relative, so absolute content (`sr-only` inputs) scrolls with it instead of growing the page. */}
       <div className="relative min-h-0 flex-1 overflow-auto">{children}</div>
-      <div className="shrink-0 border-t p-2">{footer}</div>
+      {footer && <div className="shrink-0 border-t p-2">{footer}</div>}
     </TabsContent>
   );
 }

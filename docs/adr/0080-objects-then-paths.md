@@ -44,7 +44,7 @@ Targets stay as ADR-0018 defines them, so their schema doesn't change. Adding an
 
 ### Objects pane
 
-- The left column gets two tabs, **Objects** and **Operations**. The Properties pane stays for the project only.
+- The left column, which already has the **Operations** and **Properties** tabs, gets a third, **Objects**, between them. Properties stays for the project only.
 - A tree: each drawing (its name, a text icon for text items), then its shapes (name, else layer, else "Shape n"), then a shape's paths when it has more than one. Rows below a drawing load only when it is expanded. The model is its own row.
 - Selecting a row selects that object, shape (all its paths) or path, and enters its drawing when the row is inside one. The viewport and the tree show the same selection. It is an ARIA tree, usable from the keyboard, which closes ADR-0023's follow-up.
 - Drawings, shapes and the model each have an **eye** (visible) and a **lock**.

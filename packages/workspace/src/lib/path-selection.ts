@@ -23,6 +23,11 @@ export function selectedDrawingId(geometry: Shape[], selected: PathRef[]): strin
   return drawingIds.size === 1 ? ([...drawingIds][0] as string) : null;
 }
 
+/** Every path of `shape`, as selected when the whole shape is. */
+export function shapePaths(shape: Shape): PathRef[] {
+  return shape.paths.map((_, path) => ({ shapeId: shape.id, path }));
+}
+
 /**
  * What a click on `hit` in the top view selects (ADR-0080): the path alone
  * inside an entered drawing or with Alt (`direct`), otherwise every path of
@@ -38,7 +43,7 @@ export function clickedPaths(
   if (direct || drawingId === undefined) return [hit];
   return geometry
     .filter((shape) => shape.drawingId === drawingId && !skip.has(shape.id))
-    .flatMap((shape) => shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+    .flatMap(shapePaths);
 }
 
 /**

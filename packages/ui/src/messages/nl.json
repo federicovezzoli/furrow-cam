@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "Bij benadering: gereedschapswissels worden niet meegeteld.",
     "estimateNoMachine": "Bij benadering: ijlgangen worden pas meegeteld als het project een machine heeft, acceleratie en gereedschapswissels helemaal niet."
   },
+  "Objects": {
+    "label": "Objecten in het project",
+    "empty": "Nog niets: importeer een tekening of een model, of voeg tekst toe.",
+    "untitled": "Tekening",
+    "shape": "Vorm {n}",
+    "path": "Pad {n}",
+    "targeted": "Gefreesd door de geselecteerde bewerking",
+    "show": "{name} tonen",
+    "hide": "{name} verbergen",
+    "lock": "{name} vergrendelen",
+    "unlock": "{name} ontgrendelen"
+  },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",
     "progress": "Voortgang van {name}",
@@ -1178,6 +1190,7 @@
       "failed": "Niet opgeslagen"
     },
     "operations": "Bewerkingen",
+    "objects": "Objecten",
     "properties": "Eigenschappen",
     "versions": "Versies",
     "viewport": "Weergave",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "Selecteer paden",
         "body": "Klik op een tekening in de weergave om haar te selecteren, en Shift+klik om meer toe te voegen. Dubbelklik om haar paden één voor één te selecteren; Esc verlaat haar. Bewerkingen frezen wat geselecteerd is."
+      },
+      "objects": {
+        "title": "Objecten",
+        "body": "Elke tekening, met haar vormen en paden, en het 3D-model. Klik erop om te selecteren, verberg het om het buiten de klus te laten, of vergrendel het zodat de weergave het niet kan selecteren of verplaatsen."
       },
       "operations": {
         "title": "Voeg bewerkingen toe",

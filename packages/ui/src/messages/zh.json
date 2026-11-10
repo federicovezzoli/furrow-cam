@@ -1065,6 +1065,18 @@
     "estimateWithAcceleration": "估算值：未计入换刀时间。",
     "estimateNoMachine": "估算值：项目设置机床之前不计入快速移动，也不计入加速和换刀时间。"
   },
+  "Objects": {
+    "label": "项目中的对象",
+    "empty": "这里还没有内容：导入图形或模型，或添加文字。",
+    "untitled": "图形",
+    "shape": "形状 {n}",
+    "path": "路径 {n}",
+    "targeted": "由所选操作切削",
+    "show": "显示 {name}",
+    "hide": "隐藏 {name}",
+    "lock": "锁定 {name}",
+    "unlock": "解锁 {name}"
+  },
   "ToolpathProgress": {
     "title": "正在计算刀具路径 · 已完成{done}/{total}",
     "progress": "{name}的进度",
@@ -1178,6 +1190,7 @@
       "failed": "未保存"
     },
     "operations": "加工操作",
+    "objects": "对象",
     "properties": "属性",
     "versions": "版本",
     "viewport": "视图",
@@ -1609,6 +1622,10 @@
       "select": {
         "title": "选择路径",
         "body": "在视图中点击图形以选择它，Shift+点击可添加更多。双击可逐条选择其路径，按 Esc 退出。加工操作会切削所选内容。"
+      },
+      "objects": {
+        "title": "对象",
+        "body": "每个图形及其形状和路径，以及 3D 模型。点击即可选中，隐藏可将其排除在加工之外，锁定后视图中无法选中或移动它。"
       },
       "operations": {
         "title": "添加加工操作",
