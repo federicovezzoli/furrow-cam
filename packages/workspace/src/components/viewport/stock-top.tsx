@@ -5,6 +5,7 @@ import { type ThreeElements, type ThreeEvent, useFrame } from "@react-three/fibe
 import { useMemo, useRef } from "react";
 import {
   type Camera,
+  DoubleSide,
   type OrthographicCamera,
   type PerspectiveCamera,
   Plane,
@@ -32,9 +33,12 @@ export function millimetresPerPixel(camera: Camera, point: Point, height: number
     return 1 / (camera as OrthographicCamera).zoom;
   }
   const { fov, zoom } = camera as PerspectiveCamera;
-  const distance = camera.position.distanceTo(new Vector3(point[0], point[1], 0));
-  return (2 * distance * Math.tan((fov * Math.PI) / 360)) / (zoom * Math.max(height, 1));
+  // Depth along the view axis, not the distance: a point off-centre is no farther on screen.
+  const depth = -scratch.set(point[0], point[1], 0).applyMatrix4(camera.matrixWorldInverse).z;
+  return (2 * depth * Math.tan((fov * Math.PI) / 360)) / (zoom * Math.max(height, 1));
 }
+
+const scratch = new Vector3();
 
 type CatcherHandlers = Pick<
   ThreeElements["mesh"],
@@ -50,7 +54,8 @@ export function StockTopCatcher({ z, ...handlers }: { z: number } & CatcherHandl
   return (
     <mesh position={[0, 0, z]} {...handlers}>
       <planeGeometry args={[100_000, 100_000]} />
-      <meshBasicMaterial visible={false} />
+      {/* Both sides: the orbit view may look at it from below (#544). */}
+      <meshBasicMaterial visible={false} side={DoubleSide} />
     </mesh>
   );
 }

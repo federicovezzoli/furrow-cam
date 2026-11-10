@@ -134,6 +134,15 @@ export type WorkspaceState = {
 
 export type WorkspaceStore = ReturnType<typeof createWorkspaceStore>;
 
+/** Selects nothing, which ends editing and leaves an entered drawing too. */
+function clear(state: WorkspaceState) {
+  state.selectedPaths = [];
+  state.selectedModelId = null;
+  state.selectedOperationId = null;
+  state.editing = null;
+  state.enteredDrawingId = null;
+}
+
 export function createWorkspaceStore() {
   return createStore<WorkspaceState>()(
     devtools(
@@ -365,17 +374,7 @@ export function createWorkspaceStore() {
         },
 
         clearSelection() {
-          set(
-            (state) => {
-              state.selectedPaths = [];
-              state.selectedModelId = null;
-              state.selectedOperationId = null;
-              state.editing = null;
-              state.enteredDrawingId = null;
-            },
-            false,
-            "clearSelection",
-          );
+          set(clear, false, "clearSelection");
         },
 
         escape() {
@@ -387,9 +386,7 @@ export function createWorkspaceStore() {
               } else if (state.enteredDrawingId !== null) {
                 state.enteredDrawingId = null;
               } else {
-                state.selectedPaths = [];
-                state.selectedModelId = null;
-                state.selectedOperationId = null;
+                clear(state);
               }
             },
             false,

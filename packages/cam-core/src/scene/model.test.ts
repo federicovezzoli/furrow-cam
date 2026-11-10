@@ -241,6 +241,13 @@ describe("modelOnRay (#544)", () => {
     expect(down(200, 10)).toBeNull();
   });
 
+  it("takes the nearest where boxes overlap, the last added where as near", () => {
+    const higher = { ...placed({ position: [0, 0], top: 0 }), id: "higher" };
+    const lower = { ...placed({ position: [0, 0], top: 5 }), id: "lower" };
+    expect(modelOnRay([higher, lower], [10, 10, 1000], [0, 0, -1])?.id).toBe("higher");
+    expect(modelOnRay([lower, higher], [10, 10, 1000], [0, 0, -1])?.id).toBe("higher");
+  });
+
   it("finds a model seen from the side, where the stock top's point is off its outline", () => {
     const { min, max } = placedModelBox(a);
     const y = (min[1] + max[1]) / 2;

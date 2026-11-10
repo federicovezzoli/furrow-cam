@@ -11,7 +11,7 @@ import { PathPick } from "./path-pick";
 // The catcher is a three.js plane: here its handlers are called directly, with the ray standing for the point.
 const catcher = vi.hoisted(() => ({ props: {} as Record<string, (event: unknown) => void> }));
 vi.mock("./stock-top", () => ({
-  onStockTop: (ray: Point) => ray,
+  onStockTop: (ray: { point: Point }) => ray.point,
   useStockTopHover: () => ({}),
   millimetresPerPixel: () => 1,
   canvasHeight: () => 0,
@@ -73,7 +73,12 @@ function render(shapes: Shape[] = geometry): WorkspaceStore {
 type Keys = { shift?: boolean; alt?: boolean };
 const event = (point: Point, { shift = false, alt = false }: Keys, detail: number) => ({
   delta: 0,
-  ray: point,
+  // Straight down onto the point, as the top view's camera looks.
+  ray: {
+    point,
+    origin: { toArray: () => [point[0], point[1], 1000] },
+    direction: { toArray: () => [0, 0, -1] },
+  },
   camera: { zoom: 1 },
   shiftKey: shift,
   ctrlKey: false,
@@ -157,6 +162,9 @@ describe("PathPick (ADR-0080)", () => {
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
     click(IN_B, { shift: true });
     expect(store.getState().selectedPaths).toEqual([a0, a1, b0]);
+    // A quick Shift+double click toggles once, not on and back off.
+    doubleClick(IN_B, { shift: true });
+    expect(store.getState().selectedPaths).toEqual([a0, a1]);
     click(EMPTY);
     expect(store.getState().selectedPaths).toEqual([]);
   });

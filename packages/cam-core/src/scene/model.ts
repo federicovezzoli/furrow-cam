@@ -351,10 +351,11 @@ export function designAlignment(
 
 /**
  * The model whose placed box the ray from `origin` along `direction` meets
- * first, whatever the view (#544): from above, the one whose outline holds
- * the point; from an angle, also one seen through the stock's side or below
- * its top. The last one in `models` where several are met as near, as it
- * was added last. `null` if none is.
+ * first, whatever the view (#544): from above, one whose outline holds the
+ * point; from an angle, also one seen through the stock's side or below its
+ * top. Where boxes overlap the nearest wins, so from above the one whose top
+ * is higher, and the last added where they are as near. A project holds one
+ * model (ADR-0078), so overlaps only matter if that changes. `null` if none.
  */
 export function modelOnRay<T extends PlacedModel>(
   models: readonly T[],

@@ -90,7 +90,8 @@ function PathPicker() {
   // Hovers the path under the cursor, writing to the store only when it changes.
   const hoverHandlers = useStockTopHover((point, millimetresPerPixel) => {
     const hit = pathUnder(inside, point, millimetresPerPixel);
-    const direct = altHeld.current;
+    // Read with the view, which may change while Alt is held (#544).
+    const direct = altHeld.current && workspace.getState().view === "top";
     const { hovered, setHovered } = workspace.getState();
     if (
       hovered?.shapeId !== hit?.shapeId ||
@@ -112,7 +113,7 @@ function PathPicker() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      altHeld.current = event.altKey && workspace.getState().view === "top";
+      altHeld.current = event.altKey;
     }
     const onBlur = () => {
       altHeld.current = false;
@@ -125,7 +126,7 @@ function PathPicker() {
       window.removeEventListener("keyup", onKey);
       window.removeEventListener("blur", onBlur);
     };
-  }, [workspace]);
+  }, []);
 
   // Selecting outside the entered drawing (a duplicate, a new text, an import) leaves it.
   useEffect(() => {
@@ -149,6 +150,8 @@ function PathPicker() {
       onClick={(event) => {
         if (event.delta > CLICK_THRESHOLD) return;
         const state = workspace.getState();
+        // The orbit view has no double click: a pair's second click would undo a toggle (#544).
+        if (state.view !== "top" && event.nativeEvent.detail > 1) return;
         if (event.nativeEvent.detail <= 1) beforeClicks.current = state.selectedPaths;
         const point = onStockTop(event.ray);
         const hit = point && pathUnder(inside, point, pixel(event, point));
@@ -165,7 +168,7 @@ function PathPicker() {
         // Along the ray, not at the stock top: in 3D a model shows through the stock (#544).
         const { origin, direction } = event.ray;
         const model =
-          !keep && entered === null && pickableModels.length > 0
+          !keep && entered === null
             ? modelOnRay(pickableModels, origin.toArray(), direction.toArray())
             : null;
         if (model) state.selectModel(model.id);
