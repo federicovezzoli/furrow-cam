@@ -210,8 +210,8 @@ export function ObjectsPane() {
       return;
     }
     state.selectPaths(row.paths, add ? "toggle" : "replace");
-    // Only while the top view takes clicks: elsewhere nothing could leave it (ADR-0080).
-    const picking = state.view === "top" && state.editing === null && !state.pickingZero;
+    // Only while the viewport takes clicks: otherwise nothing could leave it (ADR-0080).
+    const picking = state.editing === null && !state.pickingZero;
     state.enterDrawing(picking ? row.drawingId : null);
   }
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createProjectDocument, type Path, type Point, type Shape } from "@furrow/document";
-import { act, fireEvent } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../../lib/memory-host";
 import { useWorkspaceStoreApi } from "../../providers/workspace-stores";
@@ -11,8 +11,10 @@ import { PathPick } from "./path-pick";
 // The catcher is a three.js plane: here its handlers are called directly, with the ray standing for the point.
 const catcher = vi.hoisted(() => ({ props: {} as Record<string, (event: unknown) => void> }));
 vi.mock("./stock-top", () => ({
-  onStockTop: (ray: Point) => ray,
+  onStockTop: (ray: { point: Point }) => ray.point,
   useStockTopHover: () => ({}),
+  millimetresPerPixel: () => 1,
+  canvasHeight: () => 0,
   StockTopCatcher: (props: Record<string, (event: unknown) => void>) => {
     catcher.props = props;
     return null;
@@ -71,7 +73,12 @@ function render(shapes: Shape[] = geometry): WorkspaceStore {
 type Keys = { shift?: boolean; alt?: boolean };
 const event = (point: Point, { shift = false, alt = false }: Keys, detail: number) => ({
   delta: 0,
-  ray: point,
+  // Straight down onto the point, as the top view's camera looks.
+  ray: {
+    point,
+    origin: { toArray: () => [point[0], point[1], 1000] },
+    direction: { toArray: () => [0, 0, -1] },
+  },
   camera: { zoom: 1 },
   shiftKey: shift,
   ctrlKey: false,
@@ -133,10 +140,9 @@ describe("PathPick (ADR-0080)", () => {
     doubleClick(EMPTY);
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
 
+    // Esc too, through the store's `escape` that the viewport calls.
     doubleClick(IN_A0);
-    act(() => {
-      fireEvent.keyDown(window, { key: "Escape" });
-    });
+    act(() => store.getState().escape());
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
   });
 
@@ -145,6 +151,21 @@ describe("PathPick (ADR-0080)", () => {
     doubleClick(IN_A0);
     doubleClick(IN_B);
     expect(store.getState()).toMatchObject({ enteredDrawingId: B, selectedPaths: [b0] });
+  });
+
+  it("selects in the orbit view as in the top view: drawings, entered ones' paths, Alt+click (#544)", () => {
+    const store = render();
+    act(() => store.getState().setView("orbit"));
+    click(IN_A1);
+    expect(store.getState().selectedPaths).toEqual([a0, a1]);
+    click(IN_A1, { alt: true });
+    expect(store.getState().selectedPaths).toEqual([a1]);
+    doubleClick(IN_A0);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: A, selectedPaths: [a0] });
+    click(IN_A1, { shift: true });
+    expect(store.getState().selectedPaths).toEqual([a0, a1]);
+    doubleClick(EMPTY);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
   });
 
   it("leaves when something outside the drawing is selected", () => {

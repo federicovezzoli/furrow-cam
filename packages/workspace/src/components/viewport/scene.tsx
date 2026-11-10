@@ -296,13 +296,15 @@ function SelectedDrawing({ color }: { color: string }) {
   const canvas = useThree((s) => s.gl.domElement);
   const press = useRef<DrawingPress | null>(null);
 
-  // A drag cut short by unmounting (an undo, a deselection) is cancelled.
+  // A drag cut short (an undo, a deselection such as Esc, unmounting) is cancelled.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new `id` is what ends the drag.
   useEffect(
     () => () => {
       if (press.current?.dragging) store.getState().cancelTransaction();
+      press.current = null;
       canvas.style.cursor = "";
     },
-    [store, canvas],
+    [store, canvas, id],
   );
 
   if (!bounds || id === null) return null;

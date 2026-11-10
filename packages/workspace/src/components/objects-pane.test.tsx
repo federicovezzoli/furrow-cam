@@ -91,10 +91,10 @@ describe("ObjectsPane (ADR-0080)", () => {
     expect(workspace.getState().selectedModelId).toBe(model.id);
   });
 
-  it("enters no drawing while the top view doesn't take clicks", () => {
+  it("enters no drawing while the viewport doesn't take clicks", () => {
     const { workspace } = render();
     fireEvent.keyDown(row("part.dxf"), { key: "ArrowRight" });
-    act(() => workspace.getState().setView("orbit"));
+    act(() => workspace.getState().setPickingZero(true));
     fireEvent.click(row("Hole"));
     expect(workspace.getState()).toMatchObject({
       selectedPaths: [circle0],

@@ -160,8 +160,10 @@ export function TextureLimit({ onLimit }: { onLimit: (maxTextureSize: number) =>
 const RIGHT_CLICK_THRESHOLD = 3;
 
 /**
- * Esc or a right-click ends picking the zero or placing holes. The right button also pans the
- * top view, so only a press released where it started counts as a click.
+ * Esc steps back (`escape`, #544): it ends picking the zero or editing,
+ * leaves an entered drawing, or clears the selection. A right-click ends
+ * picking the zero or placing holes; the right button also pans the top view,
+ * so only a press released where it started counts as a click.
  * Returns the viewport's pointer handlers, which see presses before the
  * camera controls do.
  */
@@ -170,17 +172,16 @@ function useCancelPick(picking: boolean) {
   const press = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (!picking) return;
     function onKeyDown(event: KeyboardEvent) {
       // A focused field may use Esc itself, e.g. to cancel a gesture.
       if (event.key !== "Escape" || event.defaultPrevented || belongsElsewhere(event.target)) {
         return;
       }
-      endPick(workspace.getState());
+      workspace.getState().escape();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [picking, workspace]);
+  }, [workspace]);
 
   return {
     onPointerDownCapture(event: React.PointerEvent) {

@@ -37,6 +37,8 @@ We will use option 2.
 - **Alt+click** selects a path directly, without entering its drawing, as a direct-selection tool does (Alt+Shift+click toggles it).
 - Hover follows the same level: all of the drawing's paths when outside, the path when inside or while Alt is held.
 - Picking an operation's targets, editing tabs or start points and picking the zero keep taking the clicks, as today.
+- The orbit view selects the same way, where the cursor meets the stock top: whole drawings and the model, single paths with a double click or Alt+click, and an entered drawing stays entered across views (#544).
+- **Esc** steps back one thing at a time, in either view: it ends picking the zero or editing in the viewport, else leaves an entered drawing, else clears the selection (#544).
 
 ### Operations
 

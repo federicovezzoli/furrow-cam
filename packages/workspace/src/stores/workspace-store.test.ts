@@ -261,7 +261,7 @@ describe("workspace store", () => {
     });
   });
 
-  it("leaves an entered drawing when the top view stops taking clicks, keeping the paths", () => {
+  it("leaves an entered drawing when the viewport stops taking clicks, keeping the paths", () => {
     const store = createWorkspaceStore();
     const enter = () => {
       store.getState().enterDrawing("d");
@@ -272,7 +272,6 @@ describe("workspace store", () => {
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
 
     for (const leave of [
-      () => store.getState().setView("orbit"),
       () => store.getState().setEditing("tabs"),
       () => store.getState().setPickingZero(true),
       () => store.getState().selectModel("m"),
@@ -285,6 +284,31 @@ describe("workspace store", () => {
       leave();
       expect(store.getState().enteredDrawingId).toBeNull();
     }
+  });
+
+  it("steps back one thing at a time on Esc (#544)", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectOperation("op");
+    store.getState().setEditing("tabs");
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ editing: null, selectedOperationId: "op" });
+
+    store.getState().enterDrawing("d");
+    store.getState().selectPaths([a0]);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
+
+    store.getState().selectModel("m");
+    store.getState().escape();
+    expect(store.getState().selectedModelId).toBeNull();
+
+    store.getState().setPickingZero(true);
+    store.getState().selectPaths([a0]);
+    store.getState().setPickingZero(true);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ pickingZero: false, selectedPaths: [a0] });
   });
 
   it("drops what becomes hidden from the selection (ADR-0080)", () => {
@@ -314,6 +338,13 @@ describe("workspace store", () => {
     store.getState().selectModel("m");
     store.getState().prune({ ...document, models: [{ ...model, hidden: true }] });
     expect(store.getState().selectedModelId).toBeNull();
+  });
+
+  it("stays in an entered drawing across views (#544)", () => {
+    const store = createWorkspaceStore();
+    store.getState().enterDrawing("d");
+    store.getState().setView("orbit");
+    expect(store.getState().enteredDrawingId).toBe("d");
   });
 
   it("leaves an entered drawing that is no longer in the document", () => {

@@ -54,10 +54,11 @@ export type WorkspaceState = {
   selectedModelId: string | null;
   selectedOperationId: string | null;
   /**
-   * The drawing double clicked in the top view (ADR-0080), whose paths clicks
-   * select one by one while the other drawings are dimmed. Outside one, a
-   * click selects a whole drawing. Left with Esc, a double click outside it,
-   * and when the top view stops taking clicks.
+   * The drawing double clicked in the viewport (ADR-0080), in either view
+   * (#544), whose paths clicks select one by one while the other drawings
+   * are dimmed. Outside one, a click selects a whole drawing. Left with Esc,
+   * a double click outside it, and when the viewport stops taking clicks
+   * (editing, picking the zero).
    */
   enteredDrawingId: string | null;
   hovered: HoveredGeometry | null;
@@ -118,6 +119,12 @@ export type WorkspaceState = {
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
+   * What Esc does in the workspace (#544), one step at a time: end picking
+   * the zero or editing in the viewport; else leave the entered drawing,
+   * keeping its paths selected; else clear the selection.
+   */
+  escape: () => void;
+  /**
    * Drops selected, entered, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs, start point editing without a profile or engraving, overcut
    * editing without overcuts, placing holes without a drill other than a pin drill, picking the zero without a custom zero and the
@@ -127,6 +134,15 @@ export type WorkspaceState = {
 };
 
 export type WorkspaceStore = ReturnType<typeof createWorkspaceStore>;
+
+/** Selects nothing, which ends editing and leaves an entered drawing too. */
+function clear(state: WorkspaceState) {
+  state.selectedPaths = [];
+  state.selectedModelId = null;
+  state.selectedOperationId = null;
+  state.editing = null;
+  state.enteredDrawingId = null;
+}
 
 export function createWorkspaceStore() {
   return createStore<WorkspaceState>()(
@@ -154,7 +170,6 @@ export function createWorkspaceStore() {
               if (view !== "top") {
                 state.editing = null;
                 state.pickingZero = false;
-                state.enteredDrawingId = null;
               }
             },
             false,
@@ -359,16 +374,23 @@ export function createWorkspaceStore() {
         },
 
         clearSelection() {
+          set(clear, false, "clearSelection");
+        },
+
+        escape() {
           set(
             (state) => {
-              state.selectedPaths = [];
-              state.selectedModelId = null;
-              state.selectedOperationId = null;
-              state.editing = null;
-              state.enteredDrawingId = null;
+              if (state.pickingZero || state.editing !== null) {
+                state.pickingZero = false;
+                state.editing = null;
+              } else if (state.enteredDrawingId !== null) {
+                state.enteredDrawingId = null;
+              } else {
+                clear(state);
+              }
             },
             false,
-            "clearSelection",
+            "escape",
           );
         },
 
