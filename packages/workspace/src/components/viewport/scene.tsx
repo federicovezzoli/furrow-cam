@@ -17,6 +17,7 @@ import { DoubleSide } from "three";
 import { useShallow } from "zustand/react/shallow";
 import { useFlaggedIds, useShownShapes, useUnpickableIds } from "../../hooks/use-flagged-ids";
 import { useSelectedDrawingId } from "../../hooks/use-selected-drawing";
+import { shapePaths } from "../../lib/path-selection";
 import {
   boxCenter,
   concatPositions,
@@ -416,7 +417,7 @@ function HoveredPaths({ color }: { color: string }) {
       drawingId !== null
         ? geometry
             .filter((s) => s.drawingId === drawingId && !unpickable.has(s.id))
-            .flatMap((s) => s.paths.map((_, path) => ({ shapeId: s.id, path })))
+            .flatMap(shapePaths)
         : pickShape !== null && pickPath !== null
           ? [{ shapeId: pickShape, path: pickPath }]
           : [];

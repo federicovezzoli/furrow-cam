@@ -21,6 +21,7 @@ import {
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "use-intl";
 import { cappedBorder } from "../lib/model-size";
+import { shapePaths } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -88,11 +89,7 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
     const copyId = duplicateDrawing(store, drawing.id);
     if (copyId === null) return;
     const shapes = drawingShapes(store.getState().document.geometry, copyId);
-    workspace
-      .getState()
-      .selectPaths(
-        shapes.flatMap((shape) => shape.paths.map((_, path) => ({ shapeId: shape.id, path }))),
-      );
+    workspace.getState().selectPaths(shapes.flatMap(shapePaths));
   };
 
   return (

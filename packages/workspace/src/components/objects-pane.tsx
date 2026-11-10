@@ -18,6 +18,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { useFlaggedIds } from "../hooks/use-flagged-ids";
+import { shapePaths } from "../lib/path-selection";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -45,10 +46,11 @@ type Row = {
   /** Its own flags, which its eye and lock show and set. */
   hidden: boolean;
   locked: boolean;
+  /** A shape's drawing's flags, which cover its own (ADR-0080). */
+  inherited: { hidden: boolean; locked: boolean };
 };
 
-const allPaths = (shape: Shape): PathRef[] =>
-  shape.paths.map((_, path) => ({ shapeId: shape.id, path }));
+const NOT_INHERITED = { hidden: false, locked: false };
 
 /**
  * What the project holds (ADR-0080): each drawing, its shapes and a shape's
@@ -80,9 +82,16 @@ export function ObjectsPane() {
 
   const rows = useMemo(() => {
     const list: Row[] = [];
+    const byDrawing = new Map<string, Shape[]>();
+    for (const shape of geometry) {
+      const shapes = byDrawing.get(shape.drawingId);
+      if (shapes) shapes.push(shape);
+      else byDrawing.set(shape.drawingId, [shape]);
+    }
     for (const drawing of drawings) {
-      const shapes = geometry.filter((shape) => shape.drawingId === drawing.id);
+      const shapes = byDrawing.get(drawing.id) ?? [];
       const open = expanded.has(drawing.id);
+      const inherited = { hidden: drawing.hidden === true, locked: drawing.locked === true };
       list.push({
         key: drawing.id,
         level: 1,
@@ -90,13 +99,15 @@ export function ObjectsPane() {
         id: drawing.id,
         drawingId: null,
         label: drawing.name || t("untitled"),
-        // Hidden shapes aren't selected with their drawing, as in the viewport.
-        paths: shapes.filter(({ id }) => !hiddenIds.has(id)).flatMap(allPaths),
+        // As a click in the viewport: without hidden shapes, nor ones locked on their own.
+        paths: shapes
+          .filter(({ id, locked }) => !hiddenIds.has(id) && (inherited.locked || !locked))
+          .flatMap(shapePaths),
         expanded: shapes.length > 0 ? open : null,
         parent: null,
         text: drawing.text !== undefined,
-        hidden: drawing.hidden === true,
-        locked: drawing.locked === true,
+        ...inherited,
+        inherited: NOT_INHERITED,
       });
       if (!open) continue;
       shapes.forEach((shape, i) => {
@@ -109,15 +120,16 @@ export function ObjectsPane() {
           id: shape.id,
           drawingId: drawing.id,
           label: shape.name || shape.layer || t("shape", { n: i + 1 }),
-          paths: allPaths(shape),
+          paths: shapePaths(shape),
           expanded: several ? shapeOpen : null,
           parent: drawing.id,
           text: false,
           hidden: shape.hidden === true,
           locked: shape.locked === true,
+          inherited,
         });
         if (!shapeOpen) return;
-        for (const ref of allPaths(shape)) {
+        for (const ref of shapePaths(shape)) {
           list.push({
             key: pathKey(ref),
             level: 3,
@@ -131,6 +143,7 @@ export function ObjectsPane() {
             text: false,
             hidden: false,
             locked: false,
+            inherited: NOT_INHERITED,
           });
         }
       });
@@ -149,6 +162,7 @@ export function ObjectsPane() {
         text: false,
         hidden: model.hidden === true,
         locked: model.locked === true,
+        inherited: NOT_INHERITED,
       });
     }
     return list;
@@ -170,10 +184,12 @@ export function ObjectsPane() {
     return keys;
   }, [operation, geometry]);
 
-  const isSelected = (row: Row) =>
-    row.kind === "model"
-      ? row.id === selectedModelId
-      : row.paths.length > 0 && row.paths.every((ref) => selectedKeys.has(pathKey(ref)));
+  /** All of a row selected, or some: a drawing holding the one path picked inside it. */
+  const selection = (row: Row): "all" | "some" | "none" => {
+    if (row.kind === "model") return row.id === selectedModelId ? "all" : "none";
+    const count = row.paths.filter((ref) => selectedKeys.has(pathKey(ref))).length;
+    return count === 0 ? "none" : count === row.paths.length ? "all" : "some";
+  };
   const isTargeted = (row: Row) =>
     row.kind === "model"
       ? targeted.has(row.id)
@@ -181,12 +197,16 @@ export function ObjectsPane() {
   // A drawing's flag covers its shapes and their paths.
   const isHidden = (row: Row) =>
     row.kind === "path" ? hiddenIds.has(row.id) : hiddenIds.has(row.id) || row.hidden;
+  // Hidden, or nothing to select: a drawing whose shapes are all hidden.
+  const isDisabled = (row: Row) =>
+    isHidden(row) || (row.kind !== "model" && row.paths.length === 0);
 
   function select(row: Row, add: boolean) {
-    if (isHidden(row)) return;
+    if (isDisabled(row)) return;
     const state = workspace.getState();
     if (row.kind === "model") {
-      state.selectModel(row.id);
+      // As in the viewport, adding doesn't trade the paths selected for the model.
+      if (!add || state.selectedPaths.length === 0) state.selectModel(row.id);
       return;
     }
     state.selectPaths(row.paths, add ? "toggle" : "replace");
@@ -197,6 +217,13 @@ export function ObjectsPane() {
 
   function toggle(row: Row, open: boolean) {
     if (row.expanded === null || row.expanded === open) return;
+    if (!open) {
+      // Focus on a row about to go stays in the tree, on the one closed.
+      const index = rows.indexOf(row);
+      const end = rows.findIndex((other, i) => i > index && other.level <= row.level);
+      const below = rows.slice(index + 1, end === -1 ? undefined : end);
+      if (below.some(({ key }) => key === focusKey)) focus(row.key);
+    }
     setExpanded((current) => {
       const next = new Set(current);
       if (open) next.add(row.id);
@@ -256,6 +283,7 @@ export function ObjectsPane() {
     <div role="tree" aria-label={t("label")} aria-multiselectable className="grid p-2 text-ui">
       {rows.map((row, index) => {
         const hidden = isHidden(row);
+        const selected = selection(row);
         const Icon =
           row.kind === "model"
             ? BoxIcon
@@ -273,9 +301,9 @@ export function ObjectsPane() {
             }}
             role="treeitem"
             aria-level={row.level}
-            aria-selected={isSelected(row)}
+            aria-selected={selected === "all"}
             aria-expanded={row.expanded ?? undefined}
-            aria-disabled={hidden || undefined}
+            aria-disabled={isDisabled(row) || undefined}
             tabIndex={row.key === tabbable ? 0 : -1}
             onFocus={() => setFocusKey(row.key)}
             onKeyDown={(event) => {
@@ -284,7 +312,11 @@ export function ObjectsPane() {
             onClick={(event) => select(row, event.shiftKey || event.ctrlKey || event.metaKey)}
             className={cn(
               "flex min-w-0 cursor-default items-center gap-1 rounded-md py-0.5 pr-1 outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              isSelected(row) ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+              selected === "all"
+                ? "bg-accent text-accent-foreground"
+                : selected === "some"
+                  ? "bg-accent/40"
+                  : "hover:bg-muted/60",
               hidden && "text-muted-foreground opacity-60",
             )}
             style={{ paddingLeft: `${(row.level - 1) * 16 + 4}px` }}
@@ -317,14 +349,20 @@ export function ObjectsPane() {
               <>
                 <FlagButton
                   on={row.hidden}
-                  label={t(row.hidden ? "show" : "hide", { name: row.label })}
-                  Icon={row.hidden ? EyeOffIcon : EyeIcon}
+                  inherited={row.inherited.hidden}
+                  label={t(row.hidden || row.inherited.hidden ? "show" : "hide", {
+                    name: row.label,
+                  })}
+                  Icon={row.hidden || row.inherited.hidden ? EyeOffIcon : EyeIcon}
                   onClick={() => setObjectFlag(store, row.id, "hidden", !row.hidden)}
                 />
                 <FlagButton
                   on={row.locked}
-                  label={t(row.locked ? "unlock" : "lock", { name: row.label })}
-                  Icon={row.locked ? LockIcon : LockOpenIcon}
+                  inherited={row.inherited.locked}
+                  label={t(row.locked || row.inherited.locked ? "unlock" : "lock", {
+                    name: row.label,
+                  })}
+                  Icon={row.locked || row.inherited.locked ? LockIcon : LockOpenIcon}
                   onClick={() => setObjectFlag(store, row.id, "locked", !row.locked)}
                 />
               </>
@@ -336,14 +374,20 @@ export function ObjectsPane() {
   );
 }
 
-/** An eye or a lock: faint until set, so a set one stands out in the list. */
+/**
+ * An eye or a lock: faint until set, so a set one stands out in the list.
+ * Showing its drawing's flag, and not pressable, while the drawing has it:
+ * a shape's own counts only inside a shown, unlocked drawing (ADR-0080).
+ */
 function FlagButton({
   on,
+  inherited,
   label,
   Icon,
   onClick,
 }: {
   on: boolean;
+  inherited: boolean;
   label: string;
   Icon: typeof EyeIcon;
   onClick: () => void;
@@ -353,13 +397,14 @@ function FlagButton({
       variant="ghost"
       size="icon-compact"
       aria-label={label}
-      aria-pressed={on}
+      aria-pressed={on || inherited}
+      disabled={inherited}
       title={label}
       onClick={(event) => {
         event.stopPropagation();
         onClick();
       }}
-      className={cn("shrink-0", !on && "text-muted-foreground/50")}
+      className={cn("shrink-0", !on && !inherited && "text-muted-foreground/50")}
     >
       <Icon />
     </Button>

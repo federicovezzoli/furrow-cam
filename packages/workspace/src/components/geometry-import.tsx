@@ -22,6 +22,7 @@ import {
   parseDrawingFile,
 } from "../lib/drawing-import";
 import { DEFAULT_FONT } from "../lib/fonts";
+import { shapePaths } from "../lib/path-selection";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -98,8 +99,7 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
     setAdding(false);
     if (!result.ok) return alert(format(result.error));
     const [shape] = drawingShapes(store.getState().document.geometry, result.id);
-    if (shape)
-      workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+    if (shape) workspace.getState().selectPaths(shapePaths(shape));
   }
 
   if (!inCard)
