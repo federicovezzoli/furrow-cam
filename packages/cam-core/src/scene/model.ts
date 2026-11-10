@@ -350,14 +350,43 @@ export function designAlignment(
 }
 
 /**
- * The model whose outline seen from above holds `point`: the last one in
- * `models` where several overlap, as it was added last. `null` if none does.
+ * The model whose placed box the ray from `origin` along `direction` meets
+ * first, whatever the view (#544): from above, the one whose outline holds
+ * the point; from an angle, also one seen through the stock's side or below
+ * its top. The last one in `models` where several are met as near, as it
+ * was added last. `null` if none is.
  */
-export function modelAt<T extends PlacedModel>(models: readonly T[], [x, y]: Point): T | null {
+export function modelOnRay<T extends PlacedModel>(
+  models: readonly T[],
+  origin: Vec3,
+  direction: Vec3,
+): T | null {
+  let nearest: T | null = null;
+  let nearestT = Infinity;
   for (let i = models.length - 1; i >= 0; i--) {
     const model = models[i] as T;
-    const { min, max } = modelRect(model);
-    if (x >= min[0] && x <= max[0] && y >= min[1] && y <= max[1]) return model;
+    const { min, max } = placedModelBox(model);
+    // Where the ray is inside the box along each axis in turn (the slab test).
+    let near = 0;
+    let far = Infinity;
+    for (let axis = 0; axis < 3 && near <= far; axis++) {
+      const o = origin[axis] as number;
+      const d = direction[axis] as number;
+      const lo = min[axis] as number;
+      const hi = max[axis] as number;
+      if (Math.abs(d) < 1e-12) {
+        if (o < lo || o > hi) near = Infinity;
+        continue;
+      }
+      const a = (lo - o) / d;
+      const b = (hi - o) / d;
+      near = Math.max(near, Math.min(a, b));
+      far = Math.min(far, Math.max(a, b));
+    }
+    if (near <= far && near < nearestT) {
+      nearest = model;
+      nearestT = near;
+    }
   }
-  return null;
+  return nearest;
 }

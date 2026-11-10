@@ -1,6 +1,6 @@
 "use client";
 
-import { modelAt, type PathRef, pathAt, pickablePaths } from "@furrow/cam-core";
+import { modelOnRay, type PathRef, pathAt, pickablePaths } from "@furrow/cam-core";
 import type { Point } from "@furrow/document";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
@@ -162,7 +162,12 @@ function PathPicker() {
         }
         // Ctrl/Cmd/Shift+click adds paths, so a model under it doesn't drop the paths selected.
         const keep = toggle && state.selectedPaths.length > 0;
-        const model = !keep && entered === null && point ? modelAt(pickableModels, point) : null;
+        // Along the ray, not at the stock top: in 3D a model shows through the stock (#544).
+        const { origin, direction } = event.ray;
+        const model =
+          !keep && entered === null && pickableModels.length > 0
+            ? modelOnRay(pickableModels, origin.toArray(), direction.toArray())
+            : null;
         if (model) state.selectModel(model.id);
         else if (!toggle) state.selectPaths([]);
       }}
