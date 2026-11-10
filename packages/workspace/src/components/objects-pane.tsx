@@ -161,8 +161,9 @@ export function ObjectsPane() {
     if (!operation) return keys;
     const modelId = operationModelId(operation);
     if (modelId) keys.add(modelId);
+    const shapes = new Map(geometry.map((shape) => [shape.id, shape]));
     for (const { shapeId, paths } of operation.targets) {
-      const shape = geometry.find(({ id }) => id === shapeId);
+      const shape = shapes.get(shapeId);
       if (!shape) continue;
       for (const path of paths ?? shape.paths.map((_, i) => i)) keys.add(`${shapeId}:${path}`);
     }
@@ -189,7 +190,9 @@ export function ObjectsPane() {
       return;
     }
     state.selectPaths(row.paths, add ? "toggle" : "replace");
-    state.enterDrawing(row.drawingId);
+    // Only while the top view takes clicks: elsewhere nothing could leave it (ADR-0080).
+    const picking = state.view === "top" && state.editing === null && !state.pickingZero;
+    state.enterDrawing(picking ? row.drawingId : null);
   }
 
   function toggle(row: Row, open: boolean) {

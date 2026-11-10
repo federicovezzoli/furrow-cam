@@ -90,6 +90,17 @@ describe("ObjectsPane (ADR-0080)", () => {
     expect(workspace.getState().selectedModelId).toBe(model.id);
   });
 
+  it("enters no drawing while the top view doesn't take clicks", () => {
+    const { workspace } = render();
+    fireEvent.keyDown(row("part.dxf"), { key: "ArrowRight" });
+    act(() => workspace.getState().setView("orbit"));
+    fireEvent.click(row("Hole"));
+    expect(workspace.getState()).toMatchObject({
+      selectedPaths: [circle0],
+      enteredDrawingId: null,
+    });
+  });
+
   it("moves with the arrows and selects with Enter", () => {
     const { workspace } = render();
     const first = row("part.dxf");
