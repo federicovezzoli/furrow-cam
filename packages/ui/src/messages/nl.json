@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
     },
     "export": {
+      "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
       "noEnabled": "Er zijn geen ingeschakelde bewerkingen om te exporteren.",
       "noneHasToolpath": "Geen van de ingeschakelde bewerkingen heeft een gereedschapsbaan om te exporteren.",
       "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma."
@@ -1020,7 +1021,7 @@
     "selectModel": "Selecteer eerst een model in de weergave",
     "selectPaths": "Selecteer eerst paden in de weergave",
     "addLabel": "{operation} toevoegen",
-    "selectHint": "Klik op paden in het bovenaanzicht om te selecteren wat je wilt frezen; Shift+klik om meer toe te voegen.",
+    "selectHint": "Klik op een tekening in het bovenaanzicht om haar te selecteren; Shift+klik om meer toe te voegen. Dubbelklik, of Alt+klik, om losse paden te selecteren.",
     "addToolLibrary": "Voeg een gereedschap toe aan je <link>gereedschapsbibliotheek</link> om bewerkingen aan te maken.",
     "inCuttingOrder": "Bewerkingen in freesvolgorde",
     "selectInsideTitle": "Ook de gesloten paden binnen de geselecteerde selecteren, zoals de eilanden van een uitsparing",
@@ -1029,6 +1030,7 @@
     "enableLabel": "{name} inschakelen",
     "enabled": "Ingeschakeld",
     "disabled": "Uitgeschakeld: geen gereedschapsbaan",
+    "targetsHidden": "Uit: iets wat ze freest is verborgen. Toon het om het weer te frezen.",
     "operationName": "Naam van bewerking",
     "renameTitle": "Dubbelklik of druk op F2 om te hernoemen",
     "reorderLabel": "Sleep om {name} te verplaatsen",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Een ondergrens: acceleratie en gereedschapswissels worden niet meegeteld. Vul de acceleraties van de machine in voor een betere inschatting.",
     "estimateWithAcceleration": "Bij benadering: gereedschapswissels worden niet meegeteld.",
     "estimateNoMachine": "Bij benadering: ijlgangen worden pas meegeteld als het project een machine heeft, acceleratie en gereedschapswissels helemaal niet."
+  },
+  "Objects": {
+    "label": "Objecten in het project",
+    "empty": "Nog niets: importeer een tekening of een model, of voeg tekst toe.",
+    "untitled": "Tekening",
+    "shape": "Vorm {n}",
+    "path": "Pad {n}",
+    "targeted": "Gefreesd door de geselecteerde bewerking",
+    "show": "{name} tonen",
+    "hide": "{name} verbergen",
+    "lock": "{name} vergrendelen",
+    "unlock": "{name} ontgrendelen"
   },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",
@@ -1176,6 +1190,7 @@
       "failed": "Niet opgeslagen"
     },
     "operations": "Bewerkingen",
+    "objects": "Objecten",
     "properties": "Eigenschappen",
     "versions": "Versies",
     "viewport": "Weergave",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Selecteer paden",
-        "body": "Klik op een pad in de weergave om het te selecteren, en Shift+klik om meer toe te voegen. Bewerkingen frezen wat geselecteerd is."
+        "body": "Klik op een tekening in de weergave om haar te selecteren, en Shift+klik om meer toe te voegen. Dubbelklik om haar paden één voor één te selecteren; Esc verlaat haar. Bewerkingen frezen wat geselecteerd is."
+      },
+      "objects": {
+        "title": "Objecten",
+        "body": "Elke tekening, met haar vormen en paden, en het 3D-model. Klik erop om te selecteren, verberg het om het buiten de klus te laten, of vergrendel het zodat de weergave het niet kan selecteren of verplaatsen."
       },
       "operations": {
         "title": "Voeg bewerkingen toe",

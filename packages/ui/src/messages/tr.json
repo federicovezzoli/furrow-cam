@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
     },
     "export": {
+      "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
       "noEnabled": "Dışa aktarılacak etkin işlem yok.",
       "noneHasToolpath": "Etkin işlemlerin hiçbirinde dışa aktarılacak takım yolu yok.",
       "noToolpath": "Takım yolu yok, programa dahil edilmedi."
@@ -1020,7 +1021,7 @@
     "selectModel": "Önce görüntü alanında bir model seçin",
     "selectPaths": "Önce görüntü alanında yolları seçin",
     "addLabel": "Ekle: {operation}",
-    "selectHint": "Kesilecekleri seçmek için üst görünümde yollara tıklayın; daha fazlasını eklemek için Shift+tıklayın.",
+    "selectHint": "Seçmek için üst görünümde bir çizime tıklayın; daha fazlasını eklemek için Shift+tıklayın. Tek tek yolları seçmek için çift tıklayın veya Alt+tıklayın.",
     "addToolLibrary": "İşlem oluşturmak için <link>takım kütüphanenize</link> bir takım ekleyin.",
     "inCuttingOrder": "Kesim sırasına göre işlemler",
     "selectInsideTitle": "Seçili yolların içindeki kapalı yolları da seç (ör. bir cebin adaları)",
@@ -1029,6 +1030,7 @@
     "enableLabel": "Etkinleştir: {name}",
     "enabled": "Etkin",
     "disabled": "Devre dışı: takım yolu yok",
+    "targetsHidden": "Kapalı: kestiği bir şey gizli. Yeniden kesmek için gösterin.",
     "operationName": "İşlem adı",
     "renameTitle": "Yeniden adlandırmak için çift tıklayın veya F2’ye basın",
     "reorderLabel": "Yeniden sıralamak için sürükleyin: {name}",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Bir alt sınır: hızlanma ve takım değişimleri hesaba katılmaz. Daha yakın bir tahmin için makinenin ivmelerini girin.",
     "estimateWithAcceleration": "Yaklaşık: takım değişimleri hesaba katılmaz.",
     "estimateNoMachine": "Yaklaşık: projeye bir makine atanana kadar hızlı hareketler hesaba katılmaz; hızlanma ve takım değişimleri de katılmaz."
+  },
+  "Objects": {
+    "label": "Projedeki nesneler",
+    "empty": "Henüz bir şey yok: bir çizim ya da model içe aktarın veya metin ekleyin.",
+    "untitled": "Çizim",
+    "shape": "Şekil {n}",
+    "path": "Yol {n}",
+    "targeted": "Seçili işlem tarafından kesilir",
+    "show": "{name} göster",
+    "hide": "{name} gizle",
+    "lock": "{name} kilitle",
+    "unlock": "{name} kilidini aç"
   },
   "ToolpathProgress": {
     "title": "Takım yolları hesaplanıyor · {done}/{total} tamamlandı",
@@ -1176,6 +1190,7 @@
       "failed": "Kaydedilmedi"
     },
     "operations": "İşlemler",
+    "objects": "Nesneler",
     "properties": "Özellikler",
     "versions": "Sürümler",
     "viewport": "Görüntü alanı",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Yolları seçin",
-        "body": "Seçmek için görüntü alanında bir yola tıklayın, daha fazlasını eklemek için Shift+tıklayın. İşlemler seçili olanı keser."
+        "body": "Seçmek için görüntü alanında bir çizime tıklayın, daha fazlasını eklemek için Shift+tıklayın. Yollarını tek tek seçmek için çift tıklayın; Esc ile çıkın. İşlemler seçili olanı keser."
+      },
+      "objects": {
+        "title": "Nesneler",
+        "body": "Her çizim, şekilleri ve yollarıyla, ve 3B model. Seçmek için birine tıklayın, işin dışında bırakmak için gizleyin ya da görüntü alanı seçip taşıyamasın diye kilitleyin."
       },
       "operations": {
         "title": "İşlem ekleyin",

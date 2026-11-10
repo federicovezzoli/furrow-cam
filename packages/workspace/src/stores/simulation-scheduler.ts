@@ -1,4 +1,5 @@
 import type { Heightmap, SimulationCut, ToolpathLines } from "@furrow/cam-core";
+import { machinedDocument } from "@furrow/cam-core";
 import {
   clearingTool,
   type FlipAxis,
@@ -51,7 +52,7 @@ export function simulationRequest(
   side: StockSide = "top",
 ): SimulationRequest | null {
   const { width, height, thickness, twoSided } = document.stock;
-  const sides = toolpathsBySide(document.operations, entries, side);
+  const sides = toolpathsBySide(machinedDocument(document).operations, entries, side);
   if (!sides) return null;
   const cuts = (stockSide: StockSide) =>
     sides[stockSide].runs.flatMap(({ tool, lines }) => lineCuts(tool, lines));

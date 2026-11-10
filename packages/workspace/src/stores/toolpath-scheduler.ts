@@ -1,4 +1,10 @@
-import { type ToolpathInput, toolpathInputs, toolpathKey, toolpathMeshes } from "@furrow/cam-core";
+import {
+  machinedDocument,
+  type ToolpathInput,
+  toolpathInputs,
+  toolpathKey,
+  toolpathMeshes,
+} from "@furrow/cam-core";
 import {
   type Machine,
   type Message,
@@ -218,7 +224,8 @@ export function scheduleToolpaths(
   }
 
   function update() {
-    const { document } = documents.getState();
+    // As machined (ADR-0080): hidden objects aren't cut.
+    const document = machinedDocument(documents.getState().document);
     const enabled = document.operations.filter((operation) => operation.enabled);
     const ids = new Set(enabled.map((operation) => operation.id));
     toolpaths.getState().retain(ids);
@@ -319,9 +326,9 @@ export function scheduleToolpaths(
    */
   function exportRequest(pending: PendingExport): GcodeExportRequest {
     const state = documents.getState();
-    const { document } = state;
-    const enabled = document.operations.filter((operation) => operation.enabled);
-    const inputs = toolpathInputs(document, enabled).map((input) => ({
+    const machined = machinedDocument(state.document);
+    const enabled = machined.operations.filter((operation) => operation.enabled);
+    const inputs = toolpathInputs(machined, enabled).map((input) => ({
       operationId: input.operation.id,
       inputHash: hashInput(input),
       input,
@@ -332,7 +339,8 @@ export function scheduleToolpaths(
     );
     pending.request = {
       export: pending.request.export,
-      document,
+      // As it is, so an export with every operation off for hidden objects says so (ADR-0080).
+      document: state.document,
       name: pending.name(),
       version: versionLabel(state),
       inputs,
@@ -410,7 +418,7 @@ export function scheduleToolpaths(
     /** Computes the operation `id` again, e.g. after it was cancelled. */
     retry(id: string) {
       if (inFlight.has(id)) return;
-      const { document } = documents.getState();
+      const document = machinedDocument(documents.getState().document);
       const operation = document.operations.find((candidate) => candidate.id === id);
       if (!operation?.enabled) return;
       const [input] = toolpathInputs(document, [operation]);

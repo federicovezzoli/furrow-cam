@@ -64,3 +64,23 @@ describe("DrawingProperties: center on stock", () => {
     expect((bounds.min[1] + bounds.max[1]) / 2).toBeCloseTo(document.stock.height / 2, 9);
   });
 });
+
+describe("DrawingProperties: Esc during a gesture (#544)", () => {
+  it("is taken by the field before the window's listeners, so the workspace doesn't step back too", () => {
+    const seen: boolean[] = [];
+    // Registered first, as the viewport's Esc is.
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === "Escape") seen.push(event.defaultPrevented);
+    };
+    window.addEventListener("keydown", listener);
+    try {
+      render();
+      // A held arrow is a gesture, ended on keyup or cancelled with Esc.
+      fireEvent.keyDown(screen.getByLabelText(/Width/), { key: "ArrowUp" });
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(seen).toEqual([true]);
+    } finally {
+      window.removeEventListener("keydown", listener);
+    }
+  });
+});

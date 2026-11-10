@@ -1,6 +1,6 @@
 "use client";
 
-import { closedPathsInside, pickablePaths } from "@furrow/cam-core";
+import { closedPathsInside, cutsHidden, machinedDocument, pickablePaths } from "@furrow/cam-core";
 import { hasAccelerations, type Operation } from "@furrow/document";
 import { Button } from "@furrow/ui/components/ui/button";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { useFlaggedIds, useUnpickableIds } from "../hooks/use-flagged-ids";
 import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -51,6 +52,9 @@ export function OperationsPane() {
   const geometry = useDocumentStore((s) => s.document.geometry);
   const targets = useSelectionTargets();
   const pathCount = useWorkspaceStore((s) => s.selectedPaths.length);
+  const hidden = useFlaggedIds("hidden");
+  // What the viewport can't pick, *Select inside* doesn't add either (ADR-0080).
+  const unpickable = useUnpickableIds();
   const tools = useToolLibrary();
   const { Link } = useWorkspaceHost().navigation;
   const tool = defaultToolChoice(tools);
@@ -72,7 +76,10 @@ export function OperationsPane() {
           const { selectedPaths, selectPaths } = workspace.getState();
           selectPaths([
             ...selectedPaths,
-            ...closedPathsInside(pickablePaths(geometry), selectedPaths),
+            ...closedPathsInside(
+              pickablePaths(geometry.filter(({ id }) => !unpickable.has(id))),
+              selectedPaths,
+            ),
           ]);
         }}
       />
@@ -119,6 +126,7 @@ export function OperationsPane() {
             <OperationRow
               key={operation.id}
               operation={operation}
+              hiddenIds={hidden}
               index={index}
               dropLine={dropGap === index ? "before" : dropGap === index + 1 ? "after" : undefined}
               onDragStart={() => setDrag({ id: operation.id, from: index, gap: null })}
@@ -185,6 +193,7 @@ function Selection({
 
 function OperationRow({
   operation,
+  hiddenIds,
   index,
   dropLine,
   dragging,
@@ -193,6 +202,8 @@ function OperationRow({
   onDragEnd,
 }: {
   operation: Operation;
+  /** The hidden shapes and models (`useFlaggedIds`), found once for all rows. */
+  hiddenIds: ReadonlySet<string>;
   index: number;
   /** Where to draw the drop position while an operation is dragged over this row. */
   dropLine: "before" | "after" | undefined;
@@ -208,6 +219,9 @@ function OperationRow({
   const selected = useWorkspaceStore((s) => s.selectedOperationId === operation.id);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const [renaming, setRenaming] = useState(false);
+  // Off while anything it cuts is hidden, without touching `enabled` (ADR-0080).
+  const hidden = cutsHidden(operation, hiddenIds);
+  const on = operation.enabled && !hidden;
 
   function select() {
     workspace.getState().selectOperation(selected ? null : operation.id);
@@ -257,11 +271,12 @@ function OperationRow({
       </Button>
       <input
         type="checkbox"
-        checked={operation.enabled}
+        checked={on}
+        disabled={hidden}
         onChange={(event) => setOperationEnabled(store, operation.id, event.target.checked)}
         aria-label={t("enableLabel", { name: operation.name })}
-        title={operation.enabled ? t("enabled") : t("disabled")}
-        className="size-3.5 shrink-0 accent-primary"
+        title={hidden ? t("targetsHidden") : on ? t("enabled") : t("disabled")}
+        className="size-3.5 shrink-0 accent-primary disabled:opacity-50"
       />
       <span
         aria-hidden
@@ -289,7 +304,7 @@ function OperationRow({
           title={t("renameTitle")}
           className={cn(
             "min-w-0 flex-1 truncate py-1 text-left outline-none focus-visible:underline",
-            !operation.enabled && "text-muted-foreground line-through",
+            !on && "text-muted-foreground line-through",
           )}
         >
           {operation.name}
@@ -303,7 +318,7 @@ function OperationRow({
           {t(`sides.${operation.stockSide}`)}
         </span>
       )}
-      {operation.enabled && (
+      {on && (
         <>
           <ToolpathTime operationId={operation.id} />
           <ToolpathStatus operationId={operation.id} />
@@ -361,7 +376,8 @@ function ToolpathTime({ operationId }: { operationId: string }) {
 function JobTime() {
   const t = useTranslations("Operations");
   const formatTime = useFormatTime();
-  const operations = useDocumentStore((s) => s.document.operations);
+  // As machined: one that only cuts hidden objects has no toolpath to wait for (ADR-0080).
+  const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
   const twoSided = useDocumentStore((s) => s.document.stock.twoSided !== null);
   const note = useDocumentStore(({ document: { machine } }) =>
     machine === null

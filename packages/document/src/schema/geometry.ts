@@ -185,6 +185,10 @@ export const Drawing = z.strictObject({
   rotation: z.number().gt(-180).lte(180),
   /** A text item's settings; its outlines are its one shape, laid out from them (ADR-0059). */
   text: TextSettings.optional(),
+  /** Not drawn, picked or machined (ADR-0080); absent when shown. */
+  hidden: z.literal(true).optional(),
+  /** Drawn but not picked or moved in the viewport (ADR-0080); absent when unlocked. */
+  locked: z.literal(true).optional(),
 });
 export type Drawing = z.infer<typeof Drawing>;
 
@@ -208,5 +212,9 @@ export const Shape = z.strictObject({
   /** The drawing it belongs to (ADR-0055). */
   drawingId: z.uuid(),
   paths: z.array(Path).min(1),
+  /** Hidden on its own; a hidden drawing hides all its shapes (ADR-0080). */
+  hidden: z.literal(true).optional(),
+  /** Locked on its own; a locked drawing locks all its shapes (ADR-0080). */
+  locked: z.literal(true).optional(),
 });
 export type Shape = z.infer<typeof Shape>;

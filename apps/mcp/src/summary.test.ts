@@ -35,6 +35,24 @@ describe("projectSummary", () => {
     expect(drawing?.bounds).toEqual({ min: expect.any(Array), max: expect.any(Array) });
   });
 
+  it("marks hidden and locked drawings, shapes and models, and only those", () => {
+    const document = fullDocument();
+    const [drawing] = document.drawings;
+    const [square] = document.geometry;
+    if (!drawing || !square) throw new Error("fixture");
+    const summary = projectSummary({
+      ...document,
+      drawings: [{ ...drawing, hidden: true }],
+      geometry: [{ ...square, locked: true }, ...document.geometry.slice(1)],
+      models: [{ ...model, locked: true }],
+    });
+    expect(summary.drawings[0]).toMatchObject({ hidden: true });
+    expect(summary.drawings[0]).not.toHaveProperty("locked");
+    expect(summary.drawings[0]?.shapes[0]).toMatchObject({ locked: true });
+    expect(summary.drawings[0]?.shapes[1]).not.toHaveProperty("hidden");
+    expect(summary.models[0]).toMatchObject({ locked: true });
+  });
+
   it("says how far each model's top sits below the stock top", () => {
     const sunk = { ...model, placement: { ...model.placement, top: 2.5 } };
     const [summary] = projectSummary({ ...fullDocument(), models: [sunk] }).models;

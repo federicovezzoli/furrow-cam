@@ -7,6 +7,7 @@ import { useFrame } from "@react-three/fiber";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { useLocale, useTranslations } from "use-intl";
+import { useShownShapes } from "../../hooks/use-flagged-ids";
 import { pointLabel, snapKey } from "../../lib/snap-label";
 import {
   useDocumentStore,
@@ -49,7 +50,8 @@ function ZeroPicker({ color }: { color: string }) {
   const width = useDocumentStore((s) => s.document.stock.width);
   const height = useDocumentStore((s) => s.document.stock.height);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
-  const geometry = useDocumentStore((s) => s.document.geometry);
+  // Hidden shapes give no corners or centres to snap to (ADR-0080).
+  const geometry = useShownShapes();
   // Gathered once per stock size and geometry, not on every pointer move.
   const targets = useMemo(
     () => snapTargets({ width, height }, geometry),

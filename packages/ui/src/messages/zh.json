@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。"
     },
     "export": {
+      "allHidden": "每个启用的操作都会切削隐藏的内容：请显示后再导出。",
       "noEnabled": "没有已启用的加工操作可导出。",
       "noneHasToolpath": "已启用的加工操作都没有可导出的刀具路径。",
       "noToolpath": "没有刀具路径，未包含在程序中。"
@@ -1020,7 +1021,7 @@
     "selectModel": "请先在视图中选择模型",
     "selectPaths": "请先在视图中选择路径",
     "addLabel": "添加{operation}",
-    "selectHint": "在顶视图中点击路径以选择要切削的内容；Shift+点击可添加更多。",
+    "selectHint": "在顶视图中点击图形以选择它；Shift+点击可添加更多。双击或 Alt+点击可选择单条路径。",
     "addToolLibrary": "请在<link>刀具库</link>中添加刀具以创建加工操作。",
     "inCuttingOrder": "按切削顺序排列的加工操作",
     "selectInsideTitle": "同时选择所选路径内部的闭合路径，例如挖槽的岛屿",
@@ -1029,6 +1030,7 @@
     "enableLabel": "启用{name}",
     "enabled": "已启用",
     "disabled": "已禁用：无刀具路径",
+    "targetsHidden": "已关闭：其切削对象有隐藏的部分。显示后即可再次切削。",
     "operationName": "加工操作名称",
     "renameTitle": "双击或按F2重命名",
     "reorderLabel": "拖动以调整{name}的顺序",
@@ -1062,6 +1064,18 @@
     "estimateNote": "下限值：未计入加速和换刀时间。设置机床的加速度可得到更接近的估算。",
     "estimateWithAcceleration": "估算值：未计入换刀时间。",
     "estimateNoMachine": "估算值：项目设置机床之前不计入快速移动，也不计入加速和换刀时间。"
+  },
+  "Objects": {
+    "label": "项目中的对象",
+    "empty": "这里还没有内容：导入图形或模型，或添加文字。",
+    "untitled": "图形",
+    "shape": "形状 {n}",
+    "path": "路径 {n}",
+    "targeted": "由所选操作切削",
+    "show": "显示 {name}",
+    "hide": "隐藏 {name}",
+    "lock": "锁定 {name}",
+    "unlock": "解锁 {name}"
   },
   "ToolpathProgress": {
     "title": "正在计算刀具路径 · 已完成{done}/{total}",
@@ -1176,6 +1190,7 @@
       "failed": "未保存"
     },
     "operations": "加工操作",
+    "objects": "对象",
     "properties": "属性",
     "versions": "版本",
     "viewport": "视图",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "选择路径",
-        "body": "在视图中点击路径以选择它，Shift+点击可添加更多。加工操作会切削所选内容。"
+        "body": "在视图中点击图形以选择它，Shift+点击可添加更多。双击可逐条选择其路径，按 Esc 退出。加工操作会切削所选内容。"
+      },
+      "objects": {
+        "title": "对象",
+        "body": "每个图形及其形状和路径，以及 3D 模型。点击即可选中，隐藏可将其排除在加工之外，锁定后视图中无法选中或移动它。"
       },
       "operations": {
         "title": "添加加工操作",

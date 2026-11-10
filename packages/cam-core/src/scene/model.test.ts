@@ -9,8 +9,8 @@ import {
   drawingFit,
   fitScale,
   initialPlacement,
-  modelAt,
   modelBorder,
+  modelOnRay,
   modelRect,
   modelTransform,
   placedModelBox,
@@ -229,13 +229,31 @@ describe("designBounds and designAlignment", () => {
   });
 });
 
-describe("modelAt", () => {
-  it("finds the last model whose outline holds the point", () => {
-    const a = { ...placed({ position: [0, 0] }), id: "a" };
-    const b = { ...placed({ position: [50, 0] }), id: "b" };
-    expect(modelAt([a, b], [10, 10])?.id).toBe("a");
-    expect(modelAt([a, b], [60, 10])?.id).toBe("b");
-    expect(modelAt([a, b], [100, 80])?.id).toBe("b");
-    expect(modelAt([a, b], [200, 10])).toBeNull();
+describe("modelOnRay (#544)", () => {
+  const a = { ...placed({ position: [0, 0] }), id: "a" };
+  const b = { ...placed({ position: [50, 0] }), id: "b" };
+  const down = (x: number, y: number) => modelOnRay([a, b], [x, y, 1000], [0, 0, -1]);
+
+  it("finds, from above, the last model whose outline holds the point", () => {
+    expect(down(10, 10)?.id).toBe("a");
+    expect(down(60, 10)?.id).toBe("b");
+    expect(down(100, 80)?.id).toBe("b");
+    expect(down(200, 10)).toBeNull();
+  });
+
+  it("takes the nearest where boxes overlap, the last added where as near", () => {
+    const higher = { ...placed({ position: [0, 0], top: 0 }), id: "higher" };
+    const lower = { ...placed({ position: [0, 0], top: 5 }), id: "lower" };
+    expect(modelOnRay([higher, lower], [10, 10, 1000], [0, 0, -1])?.id).toBe("higher");
+    expect(modelOnRay([lower, higher], [10, 10, 1000], [0, 0, -1])?.id).toBe("higher");
+  });
+
+  it("finds a model seen from the side, where the stock top's point is off its outline", () => {
+    const { min, max } = placedModelBox(a);
+    const y = (min[1] + max[1]) / 2;
+    const z = (min[2] + max[2]) / 2;
+    // Nearly level, from the left: it meets the top's plane far from the model.
+    expect(modelOnRay([a], [min[0] - 1000, y, z + 1], [1000, 0, -1])?.id).toBe("a");
+    expect(modelOnRay([a], [min[0] - 1000, y, max[2] + 1], [1000, 0, 0])).toBeNull();
   });
 });

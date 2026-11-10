@@ -261,6 +261,103 @@ describe("workspace store", () => {
     });
   });
 
+  it("leaves an entered drawing when the viewport stops taking clicks, keeping the paths", () => {
+    const store = createWorkspaceStore();
+    const enter = () => {
+      store.getState().enterDrawing("d");
+      store.getState().selectPaths([a0]);
+    };
+    enter();
+    store.getState().enterDrawing(null);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
+
+    for (const leave of [
+      () => store.getState().setEditing("tabs"),
+      () => store.getState().setPickingZero(true),
+      () => store.getState().selectModel("m"),
+      () => store.getState().clearSelection(),
+    ]) {
+      store.getState().setView("top");
+      store.getState().setEditing(null);
+      store.getState().setPickingZero(false);
+      enter();
+      leave();
+      expect(store.getState().enteredDrawingId).toBeNull();
+    }
+  });
+
+  it("steps back one thing at a time on Esc (#544)", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectOperation("op");
+    store.getState().setEditing("tabs");
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ editing: null, selectedOperationId: "op" });
+
+    store.getState().enterDrawing("d");
+    store.getState().selectPaths([a0]);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
+
+    store.getState().selectModel("m");
+    store.getState().escape();
+    expect(store.getState().selectedModelId).toBeNull();
+
+    store.getState().setPickingZero(true);
+    store.getState().selectPaths([a0]);
+    store.getState().setPickingZero(true);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ pickingZero: false, selectedPaths: [a0] });
+  });
+
+  it("drops what becomes hidden from the selection (ADR-0080)", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    const shapes = ["a", "b"].map(
+      (id) =>
+        ({ id, drawingId: "d", paths: [{}] }) as unknown as ProjectDocument["geometry"][number],
+    );
+    const drawing = { id: "d" } as ProjectDocument["drawings"][number];
+    const model = { id: "m" } as ProjectDocument["models"][number];
+    store.getState().enterDrawing("d");
+    store.getState().selectPaths([a0, b0]);
+    store.getState().prune({
+      ...document,
+      drawings: [drawing],
+      geometry: [shapes[0], { ...shapes[1], hidden: true }] as ProjectDocument["geometry"],
+    });
+    expect(store.getState()).toMatchObject({ selectedPaths: [a0], enteredDrawingId: "d" });
+    store.getState().prune({
+      ...document,
+      drawings: [{ ...drawing, hidden: true }],
+      geometry: shapes as ProjectDocument["geometry"],
+    });
+    expect(store.getState()).toMatchObject({ selectedPaths: [], enteredDrawingId: null });
+
+    store.getState().selectModel("m");
+    store.getState().prune({ ...document, models: [{ ...model, hidden: true }] });
+    expect(store.getState().selectedModelId).toBeNull();
+  });
+
+  it("stays in an entered drawing across views (#544)", () => {
+    const store = createWorkspaceStore();
+    store.getState().enterDrawing("d");
+    store.getState().setView("orbit");
+    expect(store.getState().enteredDrawingId).toBe("d");
+  });
+
+  it("leaves an entered drawing that is no longer in the document", () => {
+    const store = createWorkspaceStore();
+    const document = createProjectDocument();
+    const drawing = { id: "d" } as ProjectDocument["drawings"][number];
+    store.getState().enterDrawing("d");
+    store.getState().prune({ ...document, drawings: [drawing] });
+    expect(store.getState().enteredDrawingId).toBe("d");
+    store.getState().prune(document);
+    expect(store.getState().enteredDrawingId).toBeNull();
+  });
+
   it("drops hovered paths past a shape's paths", () => {
     const store = createWorkspaceStore();
     const geometry = [{ id: "a", paths: [{}] }] as ProjectDocument["geometry"];

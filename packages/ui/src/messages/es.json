@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
     },
     "export": {
+      "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
       "noEnabled": "No hay operaciones activadas que exportar.",
       "noneHasToolpath": "Ninguna de las operaciones activadas tiene una trayectoria que exportar.",
       "noToolpath": "Sin trayectoria, excluida del programa."
@@ -1020,7 +1021,7 @@
     "selectModel": "Selecciona primero un modelo en la vista",
     "selectPaths": "Selecciona primero trazados en la vista",
     "addLabel": "Añadir {operation}",
-    "selectHint": "Haz clic en los trazados de la vista superior para seleccionar qué cortar; Mayús+clic para añadir más.",
+    "selectHint": "Haz clic en un dibujo de la vista superior para seleccionarlo; Mayús+clic para añadir más. Doble clic, o Alt+clic, para seleccionar trazados sueltos.",
     "addToolLibrary": "Añade una herramienta a tu <link>biblioteca de herramientas</link> para crear operaciones.",
     "inCuttingOrder": "Operaciones en orden de corte",
     "selectInsideTitle": "Seleccionar también los trazados cerrados dentro de los seleccionados, como las islas de un vaciado",
@@ -1029,6 +1030,7 @@
     "enableLabel": "Activar {name}",
     "enabled": "Activada",
     "disabled": "Desactivada: sin trayectoria",
+    "targetsHidden": "Desactivada: algo de lo que corta está oculto. Muéstralo para volver a cortarlo.",
     "operationName": "Nombre de la operación",
     "renameTitle": "Doble clic o F2 para cambiar el nombre",
     "reorderLabel": "Arrastra para reordenar {name}",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Un mínimo: no se cuentan las aceleraciones ni los cambios de herramienta. Indica las aceleraciones de la máquina para una estimación más precisa.",
     "estimateWithAcceleration": "Aproximado: no se cuentan los cambios de herramienta.",
     "estimateNoMachine": "Aproximado: los movimientos rápidos no se cuentan hasta que el proyecto tenga una máquina, ni tampoco las aceleraciones y los cambios de herramienta."
+  },
+  "Objects": {
+    "label": "Objetos del proyecto",
+    "empty": "Aún no hay nada: importa un dibujo o un modelo, o añade texto.",
+    "untitled": "Dibujo",
+    "shape": "Forma {n}",
+    "path": "Trazado {n}",
+    "targeted": "Lo corta la operación seleccionada",
+    "show": "Mostrar {name}",
+    "hide": "Ocultar {name}",
+    "lock": "Bloquear {name}",
+    "unlock": "Desbloquear {name}"
   },
   "ToolpathProgress": {
     "title": "Calculando trayectorias · {done} de {total} hechas",
@@ -1176,6 +1190,7 @@
       "failed": "Sin guardar"
     },
     "operations": "Operaciones",
+    "objects": "Objetos",
     "properties": "Propiedades",
     "versions": "Versiones",
     "viewport": "Vista",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Selecciona trazados",
-        "body": "Haz clic en un trazado de la vista para seleccionarlo, y Mayús+clic para añadir más. Las operaciones cortan lo seleccionado."
+        "body": "Haz clic en un dibujo de la vista para seleccionarlo, y Mayús+clic para añadir más. Haz doble clic para seleccionar sus trazados uno a uno; Esc para salir. Las operaciones cortan lo seleccionado."
+      },
+      "objects": {
+        "title": "Objetos",
+        "body": "Cada dibujo, con sus formas y trazados, y el modelo 3D. Haz clic en uno para seleccionarlo, ocúltalo para dejarlo fuera del trabajo o bloquéalo para que la vista no lo seleccione ni lo mueva."
       },
       "operations": {
         "title": "Añade operaciones",

@@ -16,6 +16,7 @@ import { ShapesIcon, UploadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { FONTS } from "../lib/fonts";
+import { shapePaths } from "../lib/path-selection";
 import { convertText, editText, textSettled, uploadedFonts, uploadFont } from "../lib/text-items";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -79,7 +80,7 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
     // The new outlines are numbered afresh: select all of them, as adding the text did.
     const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
     if (shape) {
-      workspace.getState().selectPaths(shape.paths.map((_, path) => ({ shapeId: shape.id, path })));
+      workspace.getState().selectPaths(shapePaths(shape));
     }
     return true;
   }

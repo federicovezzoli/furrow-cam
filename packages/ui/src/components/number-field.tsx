@@ -212,7 +212,8 @@ export function NumberField({
       endGesture(true);
     };
     gesture.current = { start: current, onKeyDown };
-    window.addEventListener("keydown", onKeyDown);
+    // Capturing, so it takes Esc before listeners on the window that step back further (#544).
+    window.addEventListener("keydown", onKeyDown, { capture: true });
     onGestureStart?.();
   }
 
@@ -222,7 +223,7 @@ export function NumberField({
     gesture.current = null;
     // A cancelled scrub stops following the pointer.
     press.current = null;
-    window.removeEventListener("keydown", open.onKeyDown);
+    window.removeEventListener("keydown", open.onKeyDown, { capture: true });
     if (cancelled) setOwnValue(open.start);
     onGestureEnd?.(cancelled);
   }

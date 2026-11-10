@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
     },
     "export": {
+      "allHidden": "Every enabled operation cuts something hidden: show it to export.",
       "noEnabled": "There are no enabled operations to export.",
       "noneHasToolpath": "None of the enabled operations has a toolpath to export.",
       "noToolpath": "No toolpath, left out of the program."
@@ -1020,7 +1021,7 @@
     "selectModel": "Select a model in the viewport first",
     "selectPaths": "Select paths in the viewport first",
     "addLabel": "Add {operation}",
-    "selectHint": "Click paths in the top view to select what to cut; Shift+click to add more.",
+    "selectHint": "Click a drawing in the top view to select it; Shift+click to add more. Double click it, or Alt+click, to select single paths.",
     "addToolLibrary": "Add a tool to your <link>tool library</link> to create operations.",
     "inCuttingOrder": "Operations in cutting order",
     "selectInsideTitle": "Also select the closed paths inside the selected ones, such as a pocket's islands",
@@ -1029,6 +1030,7 @@
     "enableLabel": "Enable {name}",
     "enabled": "Enabled",
     "disabled": "Disabled: no toolpath",
+    "targetsHidden": "Off: something it cuts is hidden. Show it to cut it again.",
     "operationName": "Operation name",
     "renameTitle": "Double-click or press F2 to rename",
     "reorderLabel": "Drag to reorder {name}",
@@ -1062,6 +1064,18 @@
     "estimateNote": "A lower bound: acceleration and tool changes aren't counted. Set the machine's accelerations for a closer estimate.",
     "estimateWithAcceleration": "Approximate: tool changes aren't counted.",
     "estimateNoMachine": "Approximate: rapids aren't counted until the project has a machine, nor are acceleration and tool changes."
+  },
+  "Objects": {
+    "label": "Objects in the project",
+    "empty": "Nothing here yet: import a drawing or a model, or add text.",
+    "untitled": "Drawing",
+    "shape": "Shape {n}",
+    "path": "Path {n}",
+    "targeted": "Cut by the selected operation",
+    "show": "Show {name}",
+    "hide": "Hide {name}",
+    "lock": "Lock {name}",
+    "unlock": "Unlock {name}"
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
@@ -1176,6 +1190,7 @@
       "failed": "Not saved"
     },
     "operations": "Operations",
+    "objects": "Objects",
     "properties": "Properties",
     "versions": "Versions",
     "viewport": "Viewport",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Select paths",
-        "body": "Click a path in the viewport to select it, and Shift+click to add more. Operations cut what is selected."
+        "body": "Click a drawing in the viewport to select it, and Shift+click to add more. Double click it to select its paths one by one; Esc leaves it. Operations cut what is selected."
+      },
+      "objects": {
+        "title": "Objects",
+        "body": "Every drawing, its shapes and paths, and the 3D model. Click one to select it, hide it to leave it out of the job, or lock it so the viewport can't pick or move it."
       },
       "operations": {
         "title": "Add operations",

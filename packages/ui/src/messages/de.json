@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
     },
     "export": {
+      "allHidden": "Jede aktive Operation schneidet etwas Ausgeblendetes: blende es ein, um zu exportieren.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
@@ -1020,7 +1021,7 @@
     "selectModel": "Wähle zuerst ein Modell in der Ansicht aus",
     "selectPaths": "Wähle zuerst Pfade in der Ansicht aus",
     "addLabel": "Hinzufügen: {operation}",
-    "selectHint": "Klicke in der Draufsicht auf Pfade, um zu wählen, was geschnitten wird; Umschalt+Klick, um weitere hinzuzufügen.",
+    "selectHint": "Klicke in der Draufsicht auf eine Zeichnung, um sie auszuwählen; Umschalt+Klick, um weitere hinzuzufügen. Doppelklick oder Alt+Klick wählt einzelne Pfade.",
     "addToolLibrary": "Füge deiner <link>Werkzeugbibliothek</link> ein Werkzeug hinzu, um Operationen zu erstellen.",
     "inCuttingOrder": "Operationen in Schnittreihenfolge",
     "selectInsideTitle": "Auch geschlossene Pfade innerhalb der ausgewählten auswählen, wie die Inseln einer Tasche",
@@ -1029,6 +1030,7 @@
     "enableLabel": "{name} aktivieren",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert: keine Werkzeugbahn",
+    "targetsHidden": "Aus: etwas, das sie schneidet, ist ausgeblendet. Blende es ein, um es wieder zu schneiden.",
     "operationName": "Name der Operation",
     "renameTitle": "Doppelklicken oder F2 drücken zum Umbenennen",
     "reorderLabel": "{name} zum Neuordnen ziehen",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Eine Untergrenze: Beschleunigung und Werkzeugwechsel sind nicht eingerechnet. Gib die Beschleunigungen der Maschine an, um genauer zu schätzen.",
     "estimateWithAcceleration": "Ungefähr: Werkzeugwechsel sind nicht eingerechnet.",
     "estimateNoMachine": "Ungefähr: Eilgänge werden erst eingerechnet, wenn das Projekt eine Maschine hat; Beschleunigung und Werkzeugwechsel nie."
+  },
+  "Objects": {
+    "label": "Objekte im Projekt",
+    "empty": "Noch nichts da: importiere eine Zeichnung oder ein Modell oder füge Text hinzu.",
+    "untitled": "Zeichnung",
+    "shape": "Form {n}",
+    "path": "Pfad {n}",
+    "targeted": "Von der ausgewählten Operation geschnitten",
+    "show": "{name} einblenden",
+    "hide": "{name} ausblenden",
+    "lock": "{name} sperren",
+    "unlock": "{name} entsperren"
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
@@ -1176,6 +1190,7 @@
       "failed": "Nicht gespeichert"
     },
     "operations": "Operationen",
+    "objects": "Objekte",
     "properties": "Eigenschaften",
     "versions": "Versionen",
     "viewport": "Ansicht",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Pfade auswählen",
-        "body": "Klicke auf einen Pfad in der Ansicht, um ihn auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Operationen schneiden, was ausgewählt ist."
+        "body": "Klicke in der Ansicht auf eine Zeichnung, um sie auszuwählen, und Umschalt+Klick, um weitere hinzuzufügen. Ein Doppelklick wählt ihre Pfade einzeln aus; Esc verlässt sie. Operationen schneiden, was ausgewählt ist."
+      },
+      "objects": {
+        "title": "Objekte",
+        "body": "Jede Zeichnung mit ihren Formen und Pfaden und das 3D-Modell. Klicke eines an, um es auszuwählen, blende es aus, um es aus dem Auftrag zu nehmen, oder sperre es, damit die Ansicht es weder auswählt noch verschiebt."
       },
       "operations": {
         "title": "Operationen hinzufügen",

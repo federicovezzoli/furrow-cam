@@ -5,6 +5,7 @@ import {
   createReliefCache,
   DEFAULT_STL_LIMITS,
   MissingMeshError,
+  machinedDocument,
   parseStl,
   type SimulationCut,
   type Toolpath,
@@ -149,7 +150,8 @@ function toolpathWarnings(computed: readonly ComputedToolpath[]): string[] {
  */
 export async function checkProject(project: Project, progress?: Progress, signal?: AbortSignal) {
   const document = project.store.getState().document;
-  const toolProblems = document.operations.flatMap((operation) => {
+  // Of the operations exported: none that only cuts hidden objects (ADR-0080).
+  const toolProblems = machinedDocument(document).operations.flatMap((operation) => {
     const problem = operation.enabled && toolProblem(operation);
     return problem ? [warning({ operation: operation.name, message: problem })] : [];
   });

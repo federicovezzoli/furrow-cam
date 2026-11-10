@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  cutsHidden,
   DRILL_DIAMETER_TOLERANCE,
   exceedsVBitCone,
   MIN_LENGTH,
@@ -50,6 +51,7 @@ import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
+import { useFlaggedIds } from "../hooks/use-flagged-ids";
 import { useLength } from "../hooks/use-length";
 import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
@@ -118,8 +120,12 @@ export function OperationProperties({ operationId }: { operationId: string }) {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const t = useTranslations("Operation");
+  const tOperations = useTranslations("Operations");
   const hasPins = useDocumentStore((s) => !!stockPins(s.document.stock));
+  const hidden = useFlaggedIds("hidden");
   if (!operation) return null;
+  // Off while anything it cuts is hidden: no toolpath comes (ADR-0080).
+  const allHidden = cutsHidden(operation, hidden);
   // A drill on the top side may cut the locating pins (#356) instead of shapes.
   const pins =
     operation.type !== "drill"
@@ -171,7 +177,9 @@ export function OperationProperties({ operationId }: { operationId: string }) {
       {operation.type === "vcarve" && <VCarveFields operation={operation} />}
       {operation.type === "relief_rough" && <ReliefRoughFields operation={operation} />}
       {operation.type === "relief_finish" && <ReliefFinishFields operation={operation} />}
-      {operation.enabled ? (
+      {allHidden ? (
+        <p className="text-muted-foreground">{tOperations("targetsHidden")}</p>
+      ) : operation.enabled ? (
         <ToolpathDetails operationId={operation.id} />
       ) : (
         <p className="text-muted-foreground">{t("disabled")}</p>

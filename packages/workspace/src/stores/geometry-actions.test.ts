@@ -53,6 +53,7 @@ import {
   setDrawingOffset,
   setDrawingRotation,
   setDrawingSize,
+  setObjectFlag,
   setTextItem,
 } from "./geometry-actions";
 import { pickXYOrigin, setXYAnchor } from "./stock-actions";
@@ -312,6 +313,39 @@ describe("placed holes (#429)", () => {
 });
 
 const OTHER_SQUARE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
+describe("setObjectFlag (ADR-0080)", () => {
+  it("hides, shows, locks and unlocks drawings, shapes and models, one undo step each", () => {
+    const store = createDocumentStore({ ...fullDocument(), models: [model] });
+    const doc = () => store.getState().document;
+    setObjectFlag(store, DRAWING_ID, "hidden", true);
+    setObjectFlag(store, SQUARE_ID, "locked", true);
+    setObjectFlag(store, model.id, "hidden", true);
+    expect(doc().drawings[0]?.hidden).toBe(true);
+    expect(doc().geometry[0]?.locked).toBe(true);
+    expect(doc().models[0]?.hidden).toBe(true);
+
+    setObjectFlag(store, model.id, "hidden", false);
+    // Cleared, not set to false: an absent flag is the schema's "shown".
+    expect(doc().models[0]).toEqual(model);
+    store.getState().undo();
+    expect(doc().models[0]?.hidden).toBe(true);
+    store.getState().undo();
+    store.getState().undo();
+    expect(doc().geometry[0]?.locked).toBeUndefined();
+    expect(doc().drawings[0]?.hidden).toBe(true);
+  });
+
+  it("starts a duplicate shown and unlocked", () => {
+    const store = createDocumentStore(fullDocument());
+    setObjectFlag(store, DRAWING_ID, "hidden", true);
+    setObjectFlag(store, SQUARE_ID, "locked", true);
+    const copyId = duplicateDrawing(store, DRAWING_ID) as string;
+    const { drawings, geometry } = store.getState().document;
+    expect(drawings.find(({ id }) => id === copyId)?.hidden).toBeUndefined();
+    expect(drawingShapes(geometry, copyId).some((shape) => shape.locked)).toBe(false);
+  });
+});
 
 describe("duplicateDrawing", () => {
   it("copies it to the right with fresh ids, its targets and tabs, in one undo step", () => {

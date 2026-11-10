@@ -374,6 +374,20 @@ describe("migrations", () => {
     expect(parseProjectDocument(v34)).toEqual({ ...fullDocument(), machineId: null });
   });
 
+  it("opens v35 documents with nothing hidden or locked, and keeps the flags once set", () => {
+    expect(parseProjectDocument({ ...fullDocument(), schemaVersion: 35 })).toEqual(fullDocument());
+    const document = fullDocument();
+    const [drawing] = document.drawings;
+    const [shape] = document.geometry;
+    if (!drawing || !shape) throw new Error("fixture has a drawing");
+    drawing.hidden = true;
+    shape.locked = true;
+    expect(parseProjectDocument(document)).toEqual(document);
+    expect(() =>
+      parseProjectDocument({ ...document, drawings: [{ ...drawing, hidden: false }] }),
+    ).toThrow();
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

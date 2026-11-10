@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem."
     },
     "export": {
+      "allHidden": "Toda operação ativa corta algo oculto: mostre para exportar.",
       "noEnabled": "Não há operações ativadas para exportar.",
       "noneHasToolpath": "Nenhuma das operações ativadas tem percurso para exportar.",
       "noToolpath": "Sem percurso, deixada fora do programa."
@@ -1020,7 +1021,7 @@
     "selectModel": "Selecione primeiro um modelo na visualização",
     "selectPaths": "Selecione primeiro caminhos na visualização",
     "addLabel": "Adicionar {operation}",
-    "selectHint": "Clique em caminhos na vista superior para selecionar o que cortar; Shift+clique para adicionar mais.",
+    "selectHint": "Clique em um desenho na vista superior para selecioná-lo; Shift+clique para adicionar mais. Clique duplo, ou Alt+clique, para selecionar caminhos avulsos.",
     "addToolLibrary": "Adicione uma ferramenta à sua <link>biblioteca de ferramentas</link> para criar operações.",
     "inCuttingOrder": "Operações na ordem de corte",
     "selectInsideTitle": "Selecionar também os caminhos fechados dentro dos selecionados, como as ilhas de um rebaixo",
@@ -1029,6 +1030,7 @@
     "enableLabel": "Ativar {name}",
     "enabled": "Ativada",
     "disabled": "Desativada: sem percurso",
+    "targetsHidden": "Desativada: algo que ela corta está oculto. Mostre para cortar de novo.",
     "operationName": "Nome da operação",
     "renameTitle": "Clique duas vezes ou pressione F2 para renomear",
     "reorderLabel": "Arraste para reordenar {name}",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Um mínimo: acelerações e trocas de ferramenta não são contadas. Informe as acelerações da máquina para uma estimativa mais precisa.",
     "estimateWithAcceleration": "Aproximado: trocas de ferramenta não são contadas.",
     "estimateNoMachine": "Aproximado: os movimentos rápidos só são contados quando o projeto tem uma máquina, e acelerações e trocas de ferramenta não são contadas."
+  },
+  "Objects": {
+    "label": "Objetos do projeto",
+    "empty": "Nada aqui ainda: importe um desenho ou um modelo, ou adicione texto.",
+    "untitled": "Desenho",
+    "shape": "Forma {n}",
+    "path": "Caminho {n}",
+    "targeted": "Cortado pela operação selecionada",
+    "show": "Mostrar {name}",
+    "hide": "Ocultar {name}",
+    "lock": "Bloquear {name}",
+    "unlock": "Desbloquear {name}"
   },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",
@@ -1176,6 +1190,7 @@
       "failed": "Não salvo"
     },
     "operations": "Operações",
+    "objects": "Objetos",
     "properties": "Propriedades",
     "versions": "Versões",
     "viewport": "Visualização",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Selecione caminhos",
-        "body": "Clique em um caminho na visualização para selecioná-lo, e Shift+clique para adicionar mais. As operações cortam o que estiver selecionado."
+        "body": "Clique em um desenho na visualização para selecioná-lo, e Shift+clique para adicionar mais. Dê um clique duplo para selecionar seus caminhos um a um; Esc para sair. As operações cortam o que estiver selecionado."
+      },
+      "objects": {
+        "title": "Objetos",
+        "body": "Cada desenho, com suas formas e caminhos, e o modelo 3D. Clique em um para selecioná-lo, oculte-o para deixá-lo fora do trabalho ou bloqueie-o para que a visualização não o selecione nem o mova."
       },
       "operations": {
         "title": "Adicione operações",

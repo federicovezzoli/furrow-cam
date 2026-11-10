@@ -718,6 +718,7 @@
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine."
     },
     "export": {
+      "allHidden": "Ogni operazione attiva taglia qualcosa di nascosto: mostralo per esportare.",
       "noEnabled": "Non ci sono operazioni attive da esportare.",
       "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
       "noToolpath": "Nessun percorso utensile, esclusa dal programma."
@@ -1020,7 +1021,7 @@
     "selectModel": "Seleziona prima un modello nella vista",
     "selectPaths": "Seleziona prima dei percorsi nella vista",
     "addLabel": "Aggiungi {operation}",
-    "selectHint": "Clicca i percorsi nella vista dall’alto per selezionare cosa tagliare; Maiusc+clic per aggiungerne altri.",
+    "selectHint": "Clicca un disegno nella vista dall’alto per selezionarlo; Maiusc+clic per aggiungerne altri. Doppio clic, o Alt+clic, per selezionare i singoli percorsi.",
     "addToolLibrary": "Aggiungi un utensile alla tua <link>libreria utensili</link> per creare operazioni.",
     "inCuttingOrder": "Operazioni in ordine di taglio",
     "selectInsideTitle": "Seleziona anche i percorsi chiusi dentro quelli selezionati, come le isole di una tasca",
@@ -1029,6 +1030,7 @@
     "enableLabel": "Attiva {name}",
     "enabled": "Attiva",
     "disabled": "Disattivata: nessun percorso utensile",
+    "targetsHidden": "Spenta: qualcosa che taglia è nascosto. Mostralo per tagliarlo di nuovo.",
     "operationName": "Nome dell’operazione",
     "renameTitle": "Doppio clic o F2 per rinominare",
     "reorderLabel": "Trascina per riordinare {name}",
@@ -1062,6 +1064,18 @@
     "estimateNote": "Un minimo: accelerazioni e cambi utensile non sono contati. Imposta le accelerazioni della macchina per una stima più precisa.",
     "estimateWithAcceleration": "Approssimativo: i cambi utensile non sono contati.",
     "estimateNoMachine": "Approssimativo: i movimenti rapidi non sono contati finché il progetto non ha una macchina, né le accelerazioni e i cambi utensile."
+  },
+  "Objects": {
+    "label": "Oggetti del progetto",
+    "empty": "Ancora niente: importa un disegno o un modello, oppure aggiungi un testo.",
+    "untitled": "Disegno",
+    "shape": "Forma {n}",
+    "path": "Percorso {n}",
+    "targeted": "Tagliato dall’operazione selezionata",
+    "show": "Mostra {name}",
+    "hide": "Nascondi {name}",
+    "lock": "Blocca {name}",
+    "unlock": "Sblocca {name}"
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -1176,6 +1190,7 @@
       "failed": "Non salvato"
     },
     "operations": "Operazioni",
+    "objects": "Oggetti",
     "properties": "Proprietà",
     "versions": "Versioni",
     "viewport": "Vista",
@@ -1606,7 +1621,11 @@
       },
       "select": {
         "title": "Seleziona i percorsi",
-        "body": "Clicca un percorso nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Le operazioni tagliano ciò che è selezionato."
+        "body": "Clicca un disegno nella vista per selezionarlo, e Maiusc+clic per aggiungerne altri. Fai doppio clic per selezionarne i percorsi uno per uno; Esc per uscire. Le operazioni tagliano ciò che è selezionato."
+      },
+      "objects": {
+        "title": "Oggetti",
+        "body": "Ogni disegno, con forme e percorsi, e il modello 3D. Cliccane uno per selezionarlo, nascondilo per escluderlo dal lavoro, o bloccalo perché la vista non possa selezionarlo né spostarlo."
       },
       "operations": {
         "title": "Aggiungi operazioni",

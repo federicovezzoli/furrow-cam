@@ -38,7 +38,8 @@ export default async function svg(r: Recorder) {
   await r.hold(0.5);
 
   // A profile around the paw, with holding tabs.
-  await r.clickIn("viewport", PATHS.outline);
+  // Alt+click picks one path of the paw, not the whole drawing.
+  await r.clickIn("viewport", PATHS.outline, { alt: true });
   await r.expectSelected(1);
   await r.click("add-profile", { waitFor: "job-time" });
   await r.click("profile-tabs", { waitFor: "job-time" });
@@ -46,7 +47,8 @@ export default async function svg(r: Recorder) {
   await r.hold(1);
 
   // A pocket for the pads.
-  await r.clickIn("viewport", PATHS.pad);
+  // A double click enters the paw, so clicks pick its paths one by one.
+  await r.clickIn("viewport", PATHS.pad, { double: true });
   for (const toe of PATHS.toes) await r.clickIn("viewport", toe, { shift: true });
   await r.expectSelected(5);
   await r.click("add-pocket", { waitFor: "job-time" });
