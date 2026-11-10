@@ -287,6 +287,31 @@ describe("workspace store", () => {
     }
   });
 
+  it("steps back one thing at a time on Esc (#544)", () => {
+    const store = createWorkspaceStore();
+    store.getState().selectOperation("op");
+    store.getState().setEditing("tabs");
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ editing: null, selectedOperationId: "op" });
+
+    store.getState().enterDrawing("d");
+    store.getState().selectPaths([a0]);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ selectedPaths: [], selectedOperationId: null });
+
+    store.getState().selectModel("m");
+    store.getState().escape();
+    expect(store.getState().selectedModelId).toBeNull();
+
+    store.getState().setPickingZero(true);
+    store.getState().selectPaths([a0]);
+    store.getState().setPickingZero(true);
+    store.getState().escape();
+    expect(store.getState()).toMatchObject({ pickingZero: false, selectedPaths: [a0] });
+  });
+
   it("drops what becomes hidden from the selection (ADR-0080)", () => {
     const store = createWorkspaceStore();
     const document = createProjectDocument();

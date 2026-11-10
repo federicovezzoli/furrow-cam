@@ -118,6 +118,12 @@ export type WorkspaceState = {
   setModelImport: (modelImport: ModelImport | null) => void;
   clearSelection: () => void;
   /**
+   * What Esc does in the workspace (#544), one step at a time: end picking
+   * the zero or editing in the viewport; else leave the entered drawing,
+   * keeping its paths selected; else clear the selection.
+   */
+  escape: () => void;
+  /**
    * Drops selected, entered, hovered and hidden ids and paths that aren't in `document`, tab
    * editing without tabs, start point editing without a profile or engraving, overcut
    * editing without overcuts, placing holes without a drill other than a pin drill, picking the zero without a custom zero and the
@@ -369,6 +375,25 @@ export function createWorkspaceStore() {
             },
             false,
             "clearSelection",
+          );
+        },
+
+        escape() {
+          set(
+            (state) => {
+              if (state.pickingZero || state.editing !== null) {
+                state.pickingZero = false;
+                state.editing = null;
+              } else if (state.enteredDrawingId !== null) {
+                state.enteredDrawingId = null;
+              } else {
+                state.selectedPaths = [];
+                state.selectedModelId = null;
+                state.selectedOperationId = null;
+              }
+            },
+            false,
+            "escape",
           );
         },
 

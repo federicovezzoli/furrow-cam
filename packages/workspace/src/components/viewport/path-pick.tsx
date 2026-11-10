@@ -5,7 +5,6 @@ import type { Point } from "@furrow/document";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { useUnpickableIds } from "../../hooks/use-flagged-ids";
-import { belongsElsewhere } from "../../lib/keyboard-target";
 import { clickedPaths } from "../../lib/path-selection";
 import { POINT_MARKER_SIZE } from "../../lib/viewport-scene";
 import {
@@ -13,7 +12,13 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../../providers/workspace-stores";
-import { onStockTop, StockTopCatcher, useStockTopHover } from "./stock-top";
+import {
+  canvasHeight,
+  millimetresPerPixel,
+  onStockTop,
+  StockTopCatcher,
+  useStockTopHover,
+} from "./stock-top";
 
 /** How near to a path's line, in pixels, the cursor picks it, however far zoomed. */
 const PICK_RADIUS = 6;
@@ -21,7 +26,7 @@ const PICK_RADIUS = 6;
 const CLICK_THRESHOLD = 3;
 
 /**
- * Selecting in the top view (#54, ADR-0080), unless the workspace is editing
+ * Selecting in the viewport (#54, ADR-0080), unless the workspace is editing
  * tabs or picking the zero, which take the clicks. The path under the cursor
  * is found from the document's geometry with `pathAt` (ADR-0008), not by
  * raycasting. A click selects its whole drawing, Ctrl/Cmd/Shift+click
@@ -30,10 +35,12 @@ const CLICK_THRESHOLD = 3;
  * reach; Esc, a double click outside it or selecting something outside it
  * leaves it. Paths win over the model drawn under them (ADR-0078): a plain
  * click on no path selects the 3D model under it (PRD-0005), and a click on
- * nothing clears the selection.
+ * nothing clears the selection. The orbit view selects whole drawings and the
+ * model the same way (#544), where the cursor meets the stock top; picking
+ * single paths, which needs the top view's precision, stays there.
  */
 export function PathPick() {
-  const active = useWorkspaceStore((s) => s.view === "top" && s.editing === null && !s.pickingZero);
+  const active = useWorkspaceStore((s) => s.editing === null && !s.pickingZero);
   return active ? <PathPicker /> : null;
 }
 
@@ -105,16 +112,7 @@ function PathPicker() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      altHeld.current = event.altKey;
-      // Esc leaves the entered drawing, unless a field or dialog uses it.
-      if (
-        event.type === "keydown" &&
-        event.key === "Escape" &&
-        !event.defaultPrevented &&
-        !belongsElsewhere(event.target)
-      ) {
-        workspace.getState().enterDrawing(null);
-      }
+      altHeld.current = event.altKey && workspace.getState().view === "top";
     }
     const onBlur = () => {
       altHeld.current = false;
@@ -141,6 +139,8 @@ function PathPicker() {
 
   const toggles = (event: ThreeEvent<MouseEvent>) =>
     event.ctrlKey || event.metaKey || event.shiftKey;
+  const pixel = (event: ThreeEvent<MouseEvent>, point: Point) =>
+    millimetresPerPixel(event.camera, point, canvasHeight(event));
 
   return (
     <StockTopCatcher
@@ -151,10 +151,12 @@ function PathPicker() {
         const state = workspace.getState();
         if (event.nativeEvent.detail <= 1) beforeClicks.current = state.selectedPaths;
         const point = onStockTop(event.ray);
-        const hit = pathUnder(inside, point, 1 / event.camera.zoom);
+        const hit = point && pathUnder(inside, point, pixel(event, point));
         const toggle = toggles(event);
+        // Single paths in the top view only (#544).
+        const direct = entered !== null || (event.altKey && state.view === "top");
         if (hit) {
-          const paths = clickedPaths(geometry, hit, entered !== null || event.altKey, unpickable);
+          const paths = clickedPaths(geometry, hit, direct, unpickable);
           state.selectPaths(paths, toggle ? "toggle" : "replace");
           return;
         }
@@ -165,9 +167,12 @@ function PathPicker() {
         else if (!toggle) state.selectPaths([]);
       }}
       onDoubleClick={(event) => {
-        const hit = pathUnder(all, onStockTop(event.ray), 1 / event.camera.zoom);
-        const drawingId = hit && drawingOf.get(hit.shapeId);
         const state = workspace.getState();
+        // Entering a drawing is the top view's (#544): its clicks already selected the drawing.
+        if (state.view !== "top") return;
+        const point = onStockTop(event.ray);
+        const hit = point && pathUnder(all, point, pixel(event, point));
+        const drawingId = hit && drawingOf.get(hit.shapeId);
         if (!hit || !drawingId) {
           // Outside the entered drawing: leave it with the paths selected before the pair.
           if (state.enteredDrawingId !== null) {

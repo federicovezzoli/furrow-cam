@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createProjectDocument, type Path, type Point, type Shape } from "@furrow/document";
-import { act, fireEvent } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../../lib/memory-host";
 import { useWorkspaceStoreApi } from "../../providers/workspace-stores";
@@ -13,6 +13,8 @@ const catcher = vi.hoisted(() => ({ props: {} as Record<string, (event: unknown)
 vi.mock("./stock-top", () => ({
   onStockTop: (ray: Point) => ray,
   useStockTopHover: () => ({}),
+  millimetresPerPixel: () => 1,
+  canvasHeight: () => 0,
   StockTopCatcher: (props: Record<string, (event: unknown) => void>) => {
     catcher.props = props;
     return null;
@@ -133,10 +135,9 @@ describe("PathPick (ADR-0080)", () => {
     doubleClick(EMPTY);
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
 
+    // Esc too, through the store's `escape` that the viewport calls.
     doubleClick(IN_A0);
-    act(() => {
-      fireEvent.keyDown(window, { key: "Escape" });
-    });
+    act(() => store.getState().escape());
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0] });
   });
 
@@ -145,6 +146,19 @@ describe("PathPick (ADR-0080)", () => {
     doubleClick(IN_A0);
     doubleClick(IN_B);
     expect(store.getState()).toMatchObject({ enteredDrawingId: B, selectedPaths: [b0] });
+  });
+
+  it("selects whole drawings in the orbit view, never single paths (#544)", () => {
+    const store = render();
+    act(() => store.getState().setView("orbit"));
+    click(IN_A1, { alt: true });
+    expect(store.getState().selectedPaths).toEqual([a0, a1]);
+    doubleClick(IN_A1);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
+    click(IN_B, { shift: true });
+    expect(store.getState().selectedPaths).toEqual([a0, a1, b0]);
+    click(EMPTY);
+    expect(store.getState().selectedPaths).toEqual([]);
   });
 
   it("leaves when something outside the drawing is selected", () => {
