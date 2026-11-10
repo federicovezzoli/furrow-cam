@@ -153,20 +153,19 @@ describe("PathPick (ADR-0080)", () => {
     expect(store.getState()).toMatchObject({ enteredDrawingId: B, selectedPaths: [b0] });
   });
 
-  it("selects whole drawings in the orbit view, never single paths (#544)", () => {
+  it("selects in the orbit view as in the top view: drawings, entered ones' paths, Alt+click (#544)", () => {
     const store = render();
     act(() => store.getState().setView("orbit"));
+    click(IN_A1);
+    expect(store.getState().selectedPaths).toEqual([a0, a1]);
     click(IN_A1, { alt: true });
+    expect(store.getState().selectedPaths).toEqual([a1]);
+    doubleClick(IN_A0);
+    expect(store.getState()).toMatchObject({ enteredDrawingId: A, selectedPaths: [a0] });
+    click(IN_A1, { shift: true });
     expect(store.getState().selectedPaths).toEqual([a0, a1]);
-    doubleClick(IN_A1);
+    doubleClick(EMPTY);
     expect(store.getState()).toMatchObject({ enteredDrawingId: null, selectedPaths: [a0, a1] });
-    click(IN_B, { shift: true });
-    expect(store.getState().selectedPaths).toEqual([a0, a1, b0]);
-    // A quick Shift+double click toggles once, not on and back off.
-    doubleClick(IN_B, { shift: true });
-    expect(store.getState().selectedPaths).toEqual([a0, a1]);
-    click(EMPTY);
-    expect(store.getState().selectedPaths).toEqual([]);
   });
 
   it("leaves when something outside the drawing is selected", () => {

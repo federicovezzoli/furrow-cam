@@ -54,10 +54,11 @@ export type WorkspaceState = {
   selectedModelId: string | null;
   selectedOperationId: string | null;
   /**
-   * The drawing double clicked in the top view (ADR-0080), whose paths clicks
-   * select one by one while the other drawings are dimmed. Outside one, a
-   * click selects a whole drawing. Left with Esc, a double click outside it,
-   * and when the top view stops taking clicks.
+   * The drawing double clicked in the viewport (ADR-0080), in either view
+   * (#544), whose paths clicks select one by one while the other drawings
+   * are dimmed. Outside one, a click selects a whole drawing. Left with Esc,
+   * a double click outside it, and when the viewport stops taking clicks
+   * (editing, picking the zero).
    */
   enteredDrawingId: string | null;
   hovered: HoveredGeometry | null;
@@ -169,7 +170,6 @@ export function createWorkspaceStore() {
               if (view !== "top") {
                 state.editing = null;
                 state.pickingZero = false;
-                state.enteredDrawingId = null;
               }
             },
             false,

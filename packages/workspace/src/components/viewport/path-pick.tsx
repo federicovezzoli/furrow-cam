@@ -35,9 +35,8 @@ const CLICK_THRESHOLD = 3;
  * reach; Esc, a double click outside it or selecting something outside it
  * leaves it. Paths win over the model drawn under them (ADR-0078): a plain
  * click on no path selects the 3D model under it (PRD-0005), and a click on
- * nothing clears the selection. The orbit view selects whole drawings and the
- * model the same way (#544), where the cursor meets the stock top; picking
- * single paths, which needs the top view's precision, stays there.
+ * nothing clears the selection. The orbit view works the same way (#544),
+ * where the cursor meets the stock top.
  */
 export function PathPick() {
   const active = useWorkspaceStore((s) => s.editing === null && !s.pickingZero);
@@ -90,8 +89,7 @@ function PathPicker() {
   // Hovers the path under the cursor, writing to the store only when it changes.
   const hoverHandlers = useStockTopHover((point, millimetresPerPixel) => {
     const hit = pathUnder(inside, point, millimetresPerPixel);
-    // Read with the view, which may change while Alt is held (#544).
-    const direct = altHeld.current && workspace.getState().view === "top";
+    const direct = altHeld.current;
     const { hovered, setHovered } = workspace.getState();
     if (
       hovered?.shapeId !== hit?.shapeId ||
@@ -150,14 +148,11 @@ function PathPicker() {
       onClick={(event) => {
         if (event.delta > CLICK_THRESHOLD) return;
         const state = workspace.getState();
-        // The orbit view has no double click: a pair's second click would undo a toggle (#544).
-        if (state.view !== "top" && event.nativeEvent.detail > 1) return;
         if (event.nativeEvent.detail <= 1) beforeClicks.current = state.selectedPaths;
         const point = onStockTop(event.ray);
         const hit = point && pathUnder(inside, point, pixel(event, point));
         const toggle = toggles(event);
-        // Single paths in the top view only (#544).
-        const direct = entered !== null || (event.altKey && state.view === "top");
+        const direct = entered !== null || event.altKey;
         if (hit) {
           const paths = clickedPaths(geometry, hit, direct, unpickable);
           state.selectPaths(paths, toggle ? "toggle" : "replace");
@@ -176,8 +171,6 @@ function PathPicker() {
       }}
       onDoubleClick={(event) => {
         const state = workspace.getState();
-        // Entering a drawing is the top view's (#544): its clicks already selected the drawing.
-        if (state.view !== "top") return;
         const point = onStockTop(event.ray);
         const hit = point && pathUnder(all, point, pixel(event, point));
         const drawingId = hit && drawingOf.get(hit.shapeId);
