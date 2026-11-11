@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.22.11
+
+### Patch Changes
+
+- The privacy policy now says that an AI assistant making a terrain through the MCP server contacts only the elevation service, Mapterhorn. ([#548](https://github.com/federicovezzoli/furrow-cam/pull/548))
+- Updated dependencies: @furrow/workspace@0.26.0, @furrow/cam-core@0.22.0, @furrow/document@0.24.0, @furrow/ui@0.8.9, @furrow/post@0.15.7
+
 ## 0.22.10
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @furrow/ui
 
+## 0.8.9
+
+### Patch Changes
+
+- A profile's start point can have a plunge point: right after placing it on a closed path, click beside the part or on a pre-drilled hole. The tool then goes up and down only there and feeds straight to the start, so T-slot and dovetail cutters can cut profiles. Plunge points can't be used together with holding tabs. ([#550](https://github.com/federicovezzoli/furrow-cam/pull/550))
+- Updated dependencies: @furrow/cam-core@0.22.0, @furrow/document@0.24.0
+
 ## 0.8.8
 
 ### Patch Changes

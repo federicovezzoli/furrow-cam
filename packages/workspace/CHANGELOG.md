@@ -1,5 +1,17 @@
 # @furrow/workspace
 
+## 0.26.0
+
+### Minor Changes
+
+- A profile's start point can have a plunge point: right after placing it on a closed path, click beside the part or on a pre-drilled hole. The tool then goes up and down only there and feeds straight to the start, so T-slot and dovetail cutters can cut profiles. Plunge points can't be used together with holding tabs. ([#550](https://github.com/federicovezzoli/furrow-cam/pull/550))
+- The Operations tab now shows the objects below the operations, so both are in view at once; drag the line between them to resize. ([#552](https://github.com/federicovezzoli/furrow-cam/pull/552))
+
+### Patch Changes
+
+- AI assistants can now make a terrain through the MCP server: give an area around coordinates or a map link, and the relief becomes the project's model, as with *Terrain from a map* in the app. This tool downloads only the area's elevation tiles from Mapterhorn; every other tool stays offline. ([#548](https://github.com/federicovezzoli/furrow-cam/pull/548))
+- Updated dependencies: @furrow/cam-core@0.22.0, @furrow/document@0.24.0, @furrow/ui@0.8.9, @furrow/post@0.15.7
+
 ## 0.25.0
 
 ### Minor Changes
