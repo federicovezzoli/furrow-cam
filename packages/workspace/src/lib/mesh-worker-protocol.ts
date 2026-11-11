@@ -26,8 +26,8 @@ import type { Message } from "@furrow/document";
  * - `terrain` fetches the elevation for the area `ring` and builds its mesh
  *   (PRD-0014, ADR-0077), reporting `terrainProgress` as tiles arrive; the
  *   STL comes back as `stl`, to be stored like an imported one.
- * - `image` decodes a PNG, JPEG or WebP image and builds its relief
- *   (PRD-0015), which comes back as a terrain does.
+ * - `image` builds the relief of an image's pixels, read on the main thread
+ *   (PRD-0015); it comes back as a terrain does.
  */
 export type MeshRequest =
   | { kind: "parse"; id: number; bytes: ArrayBuffer; limits: StlLimits }
@@ -49,7 +49,7 @@ export type MeshRequest =
   | {
       kind: "image";
       id: number;
-      image: ArrayBuffer;
+      image: ImageData;
       settings: ImageReliefSettings;
       limits: StlLimits;
     };

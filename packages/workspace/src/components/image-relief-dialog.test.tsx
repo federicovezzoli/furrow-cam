@@ -6,6 +6,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
 import type { GeneratedRelief } from "../lib/mesh-worker-protocol";
+import { MeshImportError } from "../lib/model-import";
 import { renderWorkspace } from "../test-render";
 import { ImageReliefButton } from "./image-relief-dialog";
 
@@ -27,26 +28,31 @@ const relief: GeneratedRelief = {
 };
 
 const generate = vi.hoisted(() => vi.fn());
-vi.mock("../lib/image-relief-import", () => ({
-  generateRelief: generate,
-  imageSize: async () => [400, 200],
-}));
+/** Reads a 400 × 200 image kept at half its pixels, unless a test makes it fail. */
+const read = vi.hoisted(() => vi.fn());
+vi.mock("../lib/image-relief-import", () => ({ generateRelief: generate, readImage: read }));
+const IMAGE = { image: { width: 200, height: 100 }, size: [400, 200] };
 
 beforeEach(() => {
   download.mockReset();
   generate.mockReset();
   generate.mockResolvedValue(relief);
+  read.mockReset();
+  read.mockResolvedValue(IMAGE);
 });
 
+/** Picks a file in the open dialog. */
+function pickFile(name: string) {
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const file = new File([new Uint8Array(8)], name, { type: "image/png" });
+  fireEvent.change(input, { target: { files: [file] } });
+}
+
 async function openWithImage(host = createMemoryHost({ document: createProjectDocument() })) {
-  const { container } = renderWorkspace(<ImageReliefButton inRibbon />, host);
+  renderWorkspace(<ImageReliefButton inRibbon />, host);
   fireEvent.click(screen.getByRole("button", { name: "Relief from image" }));
   expect(screen.getByText(/Pick an image to see/)).toBeTruthy();
-  const input = (container.ownerDocument as Document).querySelector(
-    'input[type="file"]',
-  ) as HTMLInputElement;
-  const file = new File([new Uint8Array(8)], "Logo.png", { type: "image/png" });
-  fireEvent.change(input, { target: { files: [file] } });
+  pickFile("Logo.png");
   expect(await screen.findByText("Preview 200 × 100 × 8")).toBeTruthy();
   expect(screen.getByText(/400 × 200 px/)).toBeTruthy();
   return host;
@@ -59,8 +65,22 @@ describe("ImageReliefDialog", () => {
     fireEvent.click(screen.getByLabelText("Invert"));
     await waitFor(() => expect(generate.mock.calls.length).toBe(previews + 1));
     expect(generate.mock.lastCall?.[1]).toMatchObject({ invert: true, relief: 5, base: 3 });
+    // The smoothing, in the picked image's pixels, is halved for the pixels kept.
+    const smoothing = screen.getByLabelText(/Smoothing/);
+    fireEvent.change(smoothing, { target: { value: "4" } });
+    fireEvent.blur(smoothing);
+    await waitFor(() => expect(generate.mock.lastCall?.[1]).toMatchObject({ blur: 2 }));
     // Sized to fit the stock by default, half as deep as wide like the image.
     expect(generate.mock.lastCall?.[1].width).toBeGreaterThan(0);
+  });
+
+  it("drops the image shown when another can't be read", async () => {
+    await openWithImage();
+    read.mockRejectedValueOnce(new MeshImportError({ code: "image.tooLarge", values: { mb: 50 } }));
+    pickFile("Huge.png");
+    expect(await screen.findByText(/larger than 50 MB/)).toBeTruthy();
+    expect(screen.getByText(/Pick an image to see/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download STL" })).toHaveProperty("disabled", true);
   });
 
   it("downloads the relief as STL, named after the image", async () => {

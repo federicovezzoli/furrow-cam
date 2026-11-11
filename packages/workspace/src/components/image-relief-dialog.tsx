@@ -7,6 +7,7 @@ import {
   type ImageReliefSettings,
   unitLabel,
 } from "@furrow/cam-core";
+import { MessageError } from "@furrow/document";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import {
@@ -24,11 +25,10 @@ import { DownloadIcon, ImageIcon, UploadIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { PREVIEW_LIMITS, useMeshPreview } from "../hooks/use-mesh-preview";
-import { generateRelief, imageSize } from "../lib/image-relief-import";
-import { MeshImportError } from "../lib/model-import";
+import { generateRelief, type ReadImage, readImage } from "../lib/image-relief-import";
+import { importGeneratedModel } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
 import { fileNameFor } from "../lib/place-search";
-import { importTerrain } from "../lib/terrain-import";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
@@ -43,8 +43,8 @@ const TerrainPreview = lazy(() => import("./terrain-preview"));
 
 const UNREADABLE: Translatable = { code: "workspace.unreadableFile" };
 
-/** The picked image: its bytes, its size in pixels and the model's name. */
-type Picked = { bytes: ArrayBuffer; pixels: [number, number]; name: string };
+/** The picked image, read once, the model's name, and which pick it was, to refit the view. */
+type Picked = ReadImage & { name: string; key: number };
 
 /**
  * Opens *Relief from image* (PRD-0015), from the empty project's import card
@@ -84,7 +84,7 @@ export function ImageReliefButton({ inRibbon = false }: { inRibbon?: boolean }) 
 }
 
 /** The preview's coarse relief of `image`, for `useMeshPreview`. */
-const previewRelief = (image: ArrayBuffer, settings: ImageReliefSettings, signal: AbortSignal) =>
+const previewRelief = (image: ImageData, settings: ImageReliefSettings, signal: AbortSignal) =>
   generateRelief(image, settings, PREVIEW_LIMITS, { signal });
 
 function ImageReliefDialog({ onClose }: { onClose: () => void }) {
@@ -101,6 +101,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
   const limits = storable ?? DEFAULT_STL_LIMITS;
 
   const input = useRef<HTMLInputElement>(null);
+  const picks = useRef(0);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [width, setWidth] = useState<number | null>(null);
   const [relief, setRelief] = useState(IMAGE_RELIEF.relief.initial);
@@ -114,23 +115,30 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
 
   // By default as wide as fits inside the stock less the model border, as a terrain (PRD-0014 T4).
   const fitting = picked
-    ? (fittingSide(stock, picked.pixels) * picked.pixels[0]) / Math.max(...picked.pixels)
+    ? (fittingSide(stock, picked.size) * picked.size[0]) / Math.max(...picked.size)
     : null;
   const modelWidth = width ?? fitting;
+  // The smoothing is in the picked image's pixels; the pixels kept may be fewer.
+  const shrunk = picked ? picked.image.width / picked.size[0] : 1;
   const settings = useMemo(
-    () => (modelWidth ? { width: modelWidth, relief, base, invert, blur } : null),
-    [modelWidth, relief, base, invert, blur],
+    () => (modelWidth ? { width: modelWidth, relief, base, invert, blur: blur * shrunk } : null),
+    [modelWidth, relief, base, invert, blur, shrunk],
   );
-  const preview = useMeshPreview(picked?.bytes ?? null, settings, previewRelief, UNREADABLE);
+  const preview = useMeshPreview(picked?.image ?? null, settings, previewRelief, UNREADABLE);
   const shown = preview && "mesh" in preview ? preview.mesh : null;
   const stale = preview !== null && preview.settings !== settings;
 
   async function pick(file: File) {
     setError(null);
-    const pixels = await imageSize(file);
-    if (!pixels) return setError(UNREADABLE);
-    const name = fileNameFor(file.name.replace(/\.[^.]*$/, "")) || t("defaultName");
-    setPicked({ bytes: await file.arrayBuffer(), pixels, name });
+    try {
+      const read = await readImage(file, limits);
+      const name = fileNameFor(file.name.replace(/\.[^.]*$/, "")) || t("defaultName");
+      setPicked({ ...read, name, key: ++picks.current });
+    } catch (caught) {
+      // The image shown before isn't the one picked: nothing is left to add by mistake.
+      setPicked(null);
+      setError(caught instanceof MessageError ? caught.detail : UNREADABLE);
+    }
     setWidth(null);
   }
 
@@ -142,7 +150,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
     setError(null);
     setProgress("building");
     try {
-      const made = await generateRelief(picked.bytes, settings, limits, {
+      const made = await generateRelief(picked.image, settings, limits, {
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
@@ -151,7 +159,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
         return;
       }
       setProgress("saving");
-      const failed = await importTerrain(
+      const failed = await importGeneratedModel(
         made,
         picked.name,
         { meshes: host.meshes, document, workspace },
@@ -161,7 +169,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
       else onClose();
     } catch (caught) {
       if (controller.signal.aborted) return;
-      setError(caught instanceof MeshImportError ? caught.detail : UNREADABLE);
+      setError(caught instanceof MessageError ? caught.detail : UNREADABLE);
     } finally {
       setProgress(null);
       abort.current = null;
@@ -185,7 +193,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
                 <TerrainPreview
                   stl={shown.stl}
                   size={shown.size}
-                  fitKey={`${picked?.name}|${Math.round(shown.size[0])}`}
+                  fitKey={`${picked?.key}|${Math.round(shown.size[0])}`}
                   current={!stale}
                   label={t("preview")}
                 />
@@ -291,9 +299,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
               onChange={setInvert}
             />
             <div className="grid gap-0.5 text-muted-foreground" aria-live="polite">
-              {picked && (
-                <p>{t("pixels", { width: picked.pixels[0], height: picked.pixels[1] })}</p>
-              )}
+              {picked && <p>{t("pixels", { width: picked.size[0], height: picked.size[1] })}</p>}
               {shown && (
                 <p>
                   {t("size", {

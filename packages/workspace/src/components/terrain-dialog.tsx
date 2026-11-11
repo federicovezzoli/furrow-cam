@@ -41,10 +41,10 @@ import type * as React from "react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { PREVIEW_LIMITS, useMeshPreview } from "../hooks/use-mesh-preview";
-import { MeshImportError } from "../lib/model-import";
+import { importGeneratedModel, MeshImportError } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
 import { areaName, fileNameFor, type PlaceView } from "../lib/place-search";
-import { generateTerrain, importTerrain } from "../lib/terrain-import";
+import { generateTerrain } from "../lib/terrain-import";
 import { MAX_ELEVATION_ZOOM } from "../lib/terrain-services";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -241,11 +241,12 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
         return;
       }
       setProgress("saving");
-      const failed = await importTerrain(terrain, name, {
-        meshes: host.meshes,
-        document,
-        workspace,
-      });
+      const failed = await importGeneratedModel(
+        terrain,
+        name,
+        { meshes: host.meshes, document, workspace },
+        "terrain",
+      );
       if (failed) setError(failed);
       else onClose();
     } catch (caught) {

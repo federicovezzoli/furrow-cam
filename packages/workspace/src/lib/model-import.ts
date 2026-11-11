@@ -198,3 +198,24 @@ export async function storeModel(
   workspace.getState().selectModel(id);
   return null;
 }
+
+/**
+ * Adds a mesh generated in the app, a terrain or an image relief (`format`),
+ * to the open project as its model, named `<name>.stl`, at the size it was
+ * made and centred on the stock (PRD-0014 T5, PRD-0015 I5). Returns why it
+ * couldn't, or `null`.
+ */
+export async function importGeneratedModel(
+  generated: MeshSummary & { stl: ArrayBuffer },
+  name: string,
+  host: { meshes: WorkspaceHost["meshes"]; document: DocumentStore; workspace: WorkspaceStore },
+  format: "terrain" | "image",
+): Promise<Translatable | null> {
+  if (!canImportModel(host.document.getState().document)) return ONE_MODEL;
+  const error = await storeModel(generated, new Blob([generated.stl]), `${name}.stl`, {
+    ...host,
+    fit: false,
+  });
+  if (!error) track({ event: "file_imported", format });
+  return error;
+}
