@@ -11,9 +11,8 @@ import { fittingSide } from "@furrow/workspace/lib/model-size";
 import { fileNameFor } from "@furrow/workspace/lib/place-search";
 import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { imageDecoder, imageFormat } from "./decoders";
-import { addMesh, text } from "./drawings-and-models";
+import { addMesh, making, text } from "./drawings-and-models";
 import { type Project, ToolError } from "./projects";
-import { making } from "./terrain";
 
 export type ImageReliefRequest = Omit<ImageReliefSettings, "width"> & {
   /** Absolute path of the PNG, JPEG or WebP image. */
@@ -38,7 +37,7 @@ export async function importImageRelief(project: Project, request: ImageReliefRe
   try {
     // An image as large as the largest STL is far more than the mesh can use.
     if ((await stat(path)).size > limits.maxBytes) {
-      throw new ToolError(`${path} is larger than ${limits.maxBytes / 1_000_000} MB.`);
+      throw new ToolError(text({ code: "image.tooLarge", values: { mb: limits.maxBytes / 1e6 } }));
     }
     bytes = new Uint8Array(await readFile(path));
   } catch (error) {
@@ -47,6 +46,7 @@ export async function importImageRelief(project: Project, request: ImageReliefRe
   }
   const format = imageFormat(bytes);
   if (!format) throw new ToolError(`${JSON.stringify(path)} isn't a PNG, JPEG or WebP image.`);
+  // shortcut: the decoders ignore EXIF orientation and colour profiles, which the app's browser applies, so a rotated phone photo comes out turned; read the orientation tag if users hit it.
   const decode = await imageDecoder(format);
   const pixels = await decode(bytes.slice().buffer).catch(() => {
     throw new ToolError(

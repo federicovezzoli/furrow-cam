@@ -362,7 +362,7 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Make a relief from an image",
       description:
-        "Makes a relief model from a greyscale PNG, JPEG or WebP image (a depth map, a logo, a photo for a lithophane) and adds it to a project as its model, as the app's Relief from image does: lighter is higher (darker with invert), transparent counts as black, placed at the chosen width (the depth follows the image's aspect ratio), centred on the stock, its top at the stock top, then machined like any model (add_relief_rough, add_relief_finish). A project holds at most one model. Detail is as fine as the STL limits and the image's pixels allow. Returns the model's id, size in mm, the image's pixels, the cells across and along, and the project summary.",
+        "Makes a relief model from a greyscale PNG, JPEG or WebP image (a depth map, a logo, a photo for a lithophane) and adds it to a project as its model, as the app's Relief from image does: lighter is higher (darker with invert), transparent counts as black, placed at the chosen width (the depth follows the image's aspect ratio), centred on the stock, its top at the stock top, then machined like any model (add_relief_rough, add_relief_finish). A project holds at most one model. Detail is as fine as the STL limits and the image's pixels allow. Unlike the app, it ignores a photo's EXIF orientation: a phone photo stored on its side comes out turned, so rotate it first. Returns the model's id, size in mm, the image's pixels, the cells across and along, and the project summary.",
       inputSchema: {
         path: projectPath,
         image: z.string().describe("Absolute path of the .png, .jpg or .webp image."),

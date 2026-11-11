@@ -8,7 +8,6 @@ import {
   type TerrainSettings,
   terrainMesh,
 } from "@furrow/cam-core";
-import { MessageError } from "@furrow/document";
 import { fittingSide } from "@furrow/workspace/lib/model-size";
 import { fileNameFor, parsePlace } from "@furrow/workspace/lib/place-search";
 import { MAX_ELEVATION_ZOOM } from "@furrow/workspace/lib/terrain-services";
@@ -16,7 +15,7 @@ import { MAX_LATITUDE, shapeRing } from "@furrow/workspace/lib/terrain-square";
 import { fetchElevationTile, loadTerrainTiles } from "@furrow/workspace/lib/terrain-tiles";
 import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { imageDecoder } from "./decoders";
-import { addMesh, text } from "./drawings-and-models";
+import { addMesh, making, text } from "./drawings-and-models";
 import { writeFileAtomic } from "./files";
 import { checkTarget, type Progress } from "./gcode";
 import { type Project, ToolError } from "./projects";
@@ -72,16 +71,6 @@ function ringOf(area: TerrainArea): LonLat[] {
     );
   }
   return points;
-}
-
-/** `run`'s result; throws a `ToolError` with the app's message if the terrain can't be made. */
-export async function making<T>(run: () => T | Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (error instanceof MessageError) throw new ToolError(text(error.detail));
-    throw error;
-  }
 }
 
 /**
