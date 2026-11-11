@@ -44,12 +44,12 @@ describe("ProfileParams", () => {
     ).toBe(true);
   });
 
-  it("rejects entry points together with tabs", () => {
-    const entries = [{ start: [0, 50], plunge: [-10, 50] }];
-    expect(ProfileParams.safeParse({ ...params, tabs: null, entries }).success).toBe(true);
-    const result = ProfileParams.safeParse({ ...params, entries });
+  it("rejects plunge points together with tabs", () => {
+    const startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
+    expect(ProfileParams.safeParse({ ...params, tabs: null, startPoints }).success).toBe(true);
+    const result = ProfileParams.safeParse({ ...params, startPoints });
     expect(result.error?.issues.map((issue) => issue.message)).toEqual([
-      "operation.entriesWithTabs",
+      "operation.plungeWithTabs",
     ]);
   });
 
@@ -82,7 +82,6 @@ describe("ProfileParams", () => {
       allowance: 0,
       finishPass: false,
       cornerOvercuts: null,
-      entries: [],
     };
     expect(ProfileParams.safeParse(onLine).success).toBe(true);
     expect(ProfileParams.safeParse({ ...onLine, allowance: 0.5 }).success).toBe(false);

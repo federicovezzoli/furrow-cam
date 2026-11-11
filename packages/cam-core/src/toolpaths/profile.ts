@@ -4,9 +4,9 @@ import {
   GEOMETRY_TOLERANCE,
   type MillingDirection,
   type Point,
-  type ProfileEntry,
   type ProfileOperation,
   type ProfileSide,
+  type ProfileStartPoint,
   type ProfileTabs,
   type Shape,
   type Tool,
@@ -56,7 +56,8 @@ export type ProfileOptions = {
  * A closed ring the tool follows, in cutting direction, without its closing
  * point, and the stretches of it where tabs keep the tool up. It never starts
  * on a tab, and has a point at each end of one. `startPoint` when it starts
- * where a start point put it, `plunge` where an entry point's tool goes down.
+ * where a start point put it, `plunge` where the tool goes down when that
+ * start point has a plunge point.
  */
 type Contour = {
   ring: Point[];
@@ -122,12 +123,11 @@ type Cut = Descent & {
  *   bisector until its edge reaches the drawn corner, less the allowance, and
  *   back, on every pass; above a tab it stays at the tab top. An excluded
  *   point on a drawn corner leaves out an overcut there.
- * - Each entry point (#427) goes to the closed contour its start is on, as a
- *   start point does, one per contour, finishing contour included. That
- *   contour starts at the entry's start, and at every level the tool plunges
- *   straight down at the entry's plunge point, ramping or not, feeds straight
- *   to the start, cuts the lap and feeds back: it never goes up or down
- *   anywhere else, so undercutting cutters are safe. No lead-in arc there.
+ * - A start point with a plunge point (#427), on a closed contour, finishing
+ *   contour included: at every level the tool plunges straight down at the
+ *   plunge point, ramping or not, feeds straight to the start, cuts the lap
+ *   and feeds back. It never goes up or down anywhere else, so undercutting
+ *   cutters are safe. No lead-in arc there; an open path ignores the plunge.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -160,10 +160,8 @@ export type ContourCut = {
   finishPass?: boolean;
   leadIn?: { radius: number } | null;
   tabs?: ProfileTabs | null;
-  /** Where cuts start, in stock coordinates. */
-  startPoints?: Point[];
-  /** Where closed contours are entered, in stock coordinates. */
-  entries?: ProfileEntry[];
+  /** Where cuts start, and where the tool plunges for them, in stock coordinates. */
+  startPoints?: ProfileStartPoint[];
   cornerOvercuts?: CornerOvercuts | null;
 };
 
@@ -180,7 +178,6 @@ export function contourToolpath(
     leadIn: null,
     tabs: null,
     startPoints: [],
-    entries: [],
     cornerOvercuts: null,
     ...settings,
   };
@@ -240,18 +237,10 @@ export function contourToolpath(
     // Open paths are only cut on the line.
     const paths = params.side === "on" ? open : [];
     const drawn = { lines: [...closedLines, ...paths.map(({ path }) => path)], within };
-    const starts = params.startPoints.map((start) => ({ start, plunge: null }));
     const count = worst((found) =>
-      placeStarts(found.contours, found === roughing ? paths : [], starts, drawn),
+      placeStarts(found.contours, found === roughing ? paths : [], params.startPoints, drawn),
     );
     if (count > 0) warnings.push({ code: "toolpath.startPointsLeftOut", values: { count } });
-  }
-
-  if (params.entries.length > 0) {
-    // After the start points, so an entry wins on its contour.
-    const drawn = { lines: closedLines, within };
-    const left = worst((found) => placeStarts(found.contours, [], params.entries, drawn));
-    if (left > 0) warnings.push({ code: "toolpath.entriesLeftOut", values: { count: left } });
     // On the line the tool cuts both sides of the path, so there is no part side to keep clear of.
     const inPart =
       params.side === "on"
@@ -261,7 +250,7 @@ export function contourToolpath(
               found.filter(({ ring, plunge }) => plunge && !leadIsFree(plunge, ring, found, isFree))
                 .length,
           );
-    if (inPart > 0) warnings.push({ code: "toolpath.entriesInPart", values: { count: inPart } });
+    if (inPart > 0) warnings.push({ code: "toolpath.plungesInPart", values: { count: inPart } });
   }
 
   const { tabs } = params;
@@ -353,7 +342,7 @@ export function contourToolpath(
             cutContour(cut, contour, levels, finishing.isFree);
             return;
           }
-          // Stretches go down along the contour, which an entry point is there to avoid.
+          // Stretches go down along the contour, which a plunge point is there to avoid.
           if (contour.plunge && stretches.length > 0) {
             cutContour(cut, contour, levels, finishing.isFree);
             return;
@@ -540,7 +529,7 @@ function cutOpenPath(cut: Cut, path: Point[], levels: number[], oneWay = false) 
 
 /**
  * Cuts the finish lap of `contour` at full depth: down through the slot the
- * depth passes cleared at `slot`, or at the entry's plunge point, across to
+ * depth passes cleared at `slot`, or at the start point's plunge point, across to
  * the contour, around it and back.
  */
 function finishContour(cut: Cut, contour: Contour, slot: Point, depth: number) {
@@ -764,7 +753,7 @@ function feedTrack(
 function placeStarts(
   contours: Contour[],
   paths: OpenPath[],
-  positions: { start: Point; plunge: Point | null }[],
+  positions: ProfileStartPoint[],
   drawn: { lines: Point[][]; within: number },
 ): number {
   const lines = [

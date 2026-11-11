@@ -48,7 +48,6 @@ const params: ProfileParams = {
   tabs: null,
   startPoints: [],
   cornerOvercuts: null,
-  entries: [],
 };
 
 /** 100 × 100 mm, counter-clockwise. */
@@ -92,6 +91,11 @@ const line: Shape = {
   drawingId: DRAWING_ID,
   paths: [{ start: [10, 10], segments: [{ kind: "line", to: [90, 10] }], closed: false }],
 };
+
+/** Start points at `points`, without plunge points. */
+function starts(...points: [number, number][]): ProfileParams["startPoints"] {
+  return points.map((start) => ({ start, plunge: null }));
+}
 
 function profile(
   overrides: Partial<ProfileParams> = {},
@@ -687,12 +691,12 @@ describe("profileToolpath with start points", () => {
 
   it("starts a closed contour at its start point, plunging, ramping or leading in", () => {
     for (const ramp of [false, true]) {
-      const toolpath = profile({ ramp, startPoints: [[0, 30]] });
+      const toolpath = profile({ ramp, startPoints: starts([0, 30]) });
       expect(entry(toolpath)?.[0]).toBeCloseTo(-3, 6);
       expect(entry(toolpath)?.[1]).toBeCloseTo(30, 6);
       expect(toolpath.warnings).toEqual([]);
     }
-    const led = profile({ leadIn: { radius: 3 }, startPoints: [[0, 30]] });
+    const led = profile({ leadIn: { radius: 3 }, startPoints: starts([0, 30]) });
     const arcEnd = led.moves.find(
       (move) => move.to[2] === -2 && Math.abs(move.to[0] + 3) < 1e-6,
     )?.to;
@@ -700,7 +704,7 @@ describe("profileToolpath with start points", () => {
   });
 
   it("starts the finish lap at the matching point of the exact contour", () => {
-    const toolpath = profile({ allowance: 0.5, finishPass: true, startPoints: [[0, 30]] });
+    const toolpath = profile({ allowance: 0.5, finishPass: true, startPoints: starts([0, 30]) });
     expect(entry(toolpath)?.[0]).toBeCloseTo(-3.5, 6);
     // Across from the slot to the exact contour at full depth.
     const across = steps(toolpath).find(
@@ -715,7 +719,7 @@ describe("profileToolpath with start points", () => {
   });
 
   it("cuts an open path from its start point's end on every pass, back above the stock between", () => {
-    const toolpath = profile({ side: "on", startPoints: [[88, 10]] }, [line]);
+    const toolpath = profile({ side: "on", startPoints: starts([88, 10]) }, [line]);
     expect(toolpath.warnings).toEqual([]);
     expect(entry(toolpath)?.slice(0, 2)).toEqual([90, 10]);
     const ends = [-2, -4, -6].map((z) => cutsAt(toolpath, z).at(-1)?.[0]);
@@ -729,7 +733,7 @@ describe("profileToolpath with start points", () => {
 
   it("moves a start point on a tab to the nearer end of the tab", () => {
     const tabs = { width: 4, height: 3, positions: [[0, 50]] as [number, number][] };
-    const toolpath = profile({ tabs, startPoints: [[0, 52]] });
+    const toolpath = profile({ tabs, startPoints: starts([0, 52]) });
     // Outside, climbing, the left side is cut upwards; the tab spans 45 to 55 there.
     expect(entry(toolpath)?.[0]).toBeCloseTo(-3, 6);
     expect(entry(toolpath)?.[1]).toBeCloseTo(55, 6);
@@ -748,25 +752,22 @@ describe("profileToolpath with start points", () => {
   });
 
   it("leaves out start points too far from every path or extra on a path", () => {
-    const far = profile({ startPoints: [[500, 500]] });
+    const far = profile({ startPoints: starts([500, 500]) });
     expect(far.warnings).toEqual([{ code: "toolpath.startPointsLeftOut", values: { count: 1 } }]);
     const { warnings, ...moves } = far;
     expect(moves).toEqual((({ warnings: _, ...rest }) => rest)(profile()));
     const extra = profile({
-      startPoints: [
-        [0, 30],
-        [0, 60],
-      ],
+      startPoints: starts([0, 30], [0, 60]),
     });
     expect(extra.warnings).toEqual([{ code: "toolpath.startPointsLeftOut", values: { count: 1 } }]);
     expect(entry(extra)?.[1]).toBeCloseTo(30, 6);
     // Off the drawn path, even within a tool radius of it.
-    expect(profile({ startPoints: [[-1, 30]] }).warnings).toHaveLength(1);
+    expect(profile({ startPoints: starts([-1, 30]) }).warnings).toHaveLength(1);
   });
 
   it("starts at a sharp corner, where the contour is further than the offset", () => {
     // Inside, the 3 mm offset of the corner at (0, 0) is (3, 3), 4.24 mm away.
-    const toolpath = profile({ side: "inside", startPoints: [[0, 0]] });
+    const toolpath = profile({ side: "inside", startPoints: starts([0, 0]) });
     expect(toolpath.warnings).toEqual([]);
     expect(entry(toolpath)?.[0]).toBeCloseTo(3, 6);
     expect(entry(toolpath)?.[1]).toBeCloseTo(3, 6);
@@ -788,7 +789,7 @@ describe("profileToolpath with start points", () => {
       ],
     };
     // Outside the part, the 4 mm hole closes up: the outline's contour is the only one.
-    const toolpath = profile({ side: "outside", startPoints: [[45, 47]] }, [square, small]);
+    const toolpath = profile({ side: "outside", startPoints: starts([45, 47]) }, [square, small]);
     expect(toolpath.warnings).toContainEqual({
       code: "toolpath.startPointsLeftOut",
       values: { count: 1 },
@@ -796,15 +797,15 @@ describe("profileToolpath with start points", () => {
   });
 });
 
-describe("profileToolpath with entry points", () => {
+describe("profileToolpath with plunge points", () => {
   const plunge: [number, number] = [-20, 30];
-  const entries = [{ start: [0, 30] as [number, number], plunge }];
+  const startPoints = [{ start: [0, 30] as [number, number], plunge }];
   const at = (point: Vec3, [x, y]: [number, number]) =>
     Math.abs(point[0] - x) < 1e-6 && Math.abs(point[1] - y) < 1e-6;
 
   it("goes up and down only at the plunge point, ramping and leading in or not", () => {
     for (const overrides of [{}, { ramp: true, leadIn: { radius: 3 } }]) {
-      const toolpath = profile({ ...overrides, entries });
+      const toolpath = profile({ ...overrides, startPoints });
       expect(toolpath.warnings).toEqual([]);
       const vertical = steps(toolpath).filter(
         ([from, move]) => from[2] !== move.to[2] && Math.min(from[2], move.to[2]) < 5,
@@ -823,7 +824,7 @@ describe("profileToolpath with entry points", () => {
   });
 
   it("enters the finish lap from the plunge point too", () => {
-    const toolpath = profile({ allowance: 0.5, finishPass: true, entries });
+    const toolpath = profile({ allowance: 0.5, finishPass: true, startPoints });
     expect(toolpath.warnings).toEqual([]);
     const vertical = steps(toolpath).filter(
       ([from, move]) => from[2] !== move.to[2] && Math.min(from[2], move.to[2]) < 5,
@@ -837,26 +838,30 @@ describe("profileToolpath with entry points", () => {
     for (const [, y] of leads) expect(y).toBeCloseTo(30, 6);
   });
 
-  it("warns about entries off every contour, and leads into the part", () => {
-    expect(profile({ entries: [{ start: [500, 500], plunge }] }).warnings).toEqual([
-      { code: "toolpath.entriesLeftOut", values: { count: 1 } },
+  it("warns about plunge points whose lead goes into the part", () => {
+    expect(profile({ startPoints: [{ start: [500, 500], plunge }] }).warnings).toEqual([
+      { code: "toolpath.startPointsLeftOut", values: { count: 1 } },
     ]);
-    const inPart = { code: "toolpath.entriesInPart", values: { count: 1 } };
+    const inPart = { code: "toolpath.plungesInPart", values: { count: 1 } };
     // Plunging in the part, or across it from the far side.
-    expect(profile({ entries: [{ start: [0, 30], plunge: [50, 30] }] }).warnings).toEqual([inPart]);
-    expect(profile({ entries: [{ start: [0, 30], plunge: [110, 30] }] }).warnings).toEqual([
+    expect(profile({ startPoints: [{ start: [0, 30], plunge: [50, 30] }] }).warnings).toEqual([
+      inPart,
+    ]);
+    expect(profile({ startPoints: [{ start: [0, 30], plunge: [110, 30] }] }).warnings).toEqual([
       inPart,
     ]);
     // A lead within the tool radius of the part cuts into it.
-    expect(profile({ entries: [{ start: [0, 30], plunge: [-2, 60] }] }).warnings).toEqual([inPart]);
+    expect(profile({ startPoints: [{ start: [0, 30], plunge: [-2, 60] }] }).warnings).toEqual([
+      inPart,
+    ]);
     // Inside, the waste is in the middle.
     expect(
-      profile({ side: "inside", entries: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
+      profile({ side: "inside", startPoints: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
     ).toEqual([]);
-    expect(profile({ side: "inside", entries }).warnings).toEqual([inPart]);
+    expect(profile({ side: "inside", startPoints }).warnings).toEqual([inPart]);
     // On the line there is no part side: a plunge in the middle frees a hole.
     expect(
-      profile({ side: "on", entries: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
+      profile({ side: "on", startPoints: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
     ).toEqual([]);
   });
 });
@@ -972,7 +977,11 @@ describe("profileToolpath with corner overcuts", () => {
   });
 
   it("starts on the contour's corner, not out on its overcut, for a start point there", () => {
-    const toolpath = profile({ side: "inside", startPoints: [[0, 0]], cornerOvercuts: overcuts });
+    const toolpath = profile({
+      side: "inside",
+      startPoints: starts([0, 0]),
+      cornerOvercuts: overcuts,
+    });
     const first = toolpath.moves.find((move) => move.kind === "feed");
     expect(first?.to[0]).toBeCloseTo(3, 6);
     expect(first?.to[1]).toBeCloseTo(3, 6);

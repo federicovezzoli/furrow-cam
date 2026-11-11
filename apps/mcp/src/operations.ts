@@ -252,7 +252,7 @@ function configure(
     );
   }
   const { tabs, pins, ...rest } = settings;
-  // Tabs off in the same change, so entries given with `tabs: null` aren't refused for the old tabs.
+  // Tabs off in the same change, so plunge points given with `tabs: null` aren't refused for the old tabs.
   let changes: Record<string, unknown> =
     operation.type === "profile" && tabs === null ? { ...rest, tabs } : rest;
   if (operation.type === "profile" && rest.side === "on") {

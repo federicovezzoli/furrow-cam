@@ -3,7 +3,7 @@ import {
   createProjectDocument,
   type Operation,
   type Point,
-  type ProfileEntry,
+  type ProfileStartPoint,
 } from "@furrow/document";
 import { endMill, fullDocument } from "@furrow/document/fixtures";
 import { act } from "@testing-library/react";
@@ -13,7 +13,7 @@ import { useDocumentStoreApi, useWorkspaceStoreApi } from "../../providers/works
 import type { DocumentStore } from "../../stores/document-store";
 import type { WorkspaceStore } from "../../stores/workspace-store";
 import { renderWorkspace } from "../../test-render";
-import { Entries } from "./tabs";
+import { StartPoints } from "./tabs";
 
 // The catcher is a three.js plane: here its handlers are called directly, with the ray standing for the point.
 const catcher = vi.hoisted(() => ({ props: {} as Record<string, (event: unknown) => void> }));
@@ -41,8 +41,8 @@ function Probe({ seen }: { seen: Seen }) {
   return null;
 }
 
-/** A 100 mm square and a second one at x 200, both profiled outside; the profile selected and its entries edited. */
-function render() {
+/** A 100 mm square and a second one at x 200, both profiled outside; the profile selected and its start points edited. */
+function render(tabs = false) {
   const [profile] = fullDocument().operations;
   if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
   const square = (x: number) => ({
@@ -60,7 +60,11 @@ function render() {
     id: PROFILE_ID,
     tool: endMill,
     targets: [{ shapeId: SHAPE_ID, paths: null }],
-    params: { ...profile.params, tabs: null, startPoints: [], entries: [] },
+    params: {
+      ...profile.params,
+      tabs: tabs ? { width: 8, height: 3, positions: [] } : null,
+      startPoints: [],
+    },
   };
   const document = {
     ...base,
@@ -73,7 +77,7 @@ function render() {
   const seen: Seen = { document: null, workspace: null };
   renderWorkspace(
     <>
-      <Entries color="#f00" />
+      <StartPoints color="#f00" />
       <Probe seen={seen} />
     </>,
     createMemoryHost({ document }),
@@ -81,51 +85,55 @@ function render() {
   const workspace = seen.workspace as WorkspaceStore;
   act(() => {
     workspace.getState().selectOperation(PROFILE_ID);
-    workspace.getState().setEditing("entries");
+    workspace.getState().setEditing("startPoints");
   });
-  const entries = () => {
+  const startPoints = () => {
     const [found] = (seen.document as DocumentStore).getState().document.operations;
-    return found?.type === "profile" ? found.params.entries : [];
+    return found?.type === "profile" ? found.params.startPoints : [];
   };
-  return { entries, workspace };
+  return { startPoints, workspace };
 }
 
 const click = (point: Point) =>
   act(() => catcher.props.onClick?.({ delta: 0, ray: { point }, camera: { zoom: 1 } }));
 
-describe("Entries (#427)", () => {
-  it("picks the start on a path, then the plunge point anywhere", () => {
-    const { entries } = render();
-    // Too far from every path: nothing picked.
-    click([50, 50]);
-    click([-20, 50]);
-    expect(entries()).toEqual([]);
-    click([2, 30]);
-    expect(entries()).toEqual([]);
+describe("StartPoints plunge points (#427)", () => {
+  it("gives the start point just placed on a closed path the next click away from the paths", () => {
+    const { startPoints } = render();
+    // Away from the paths with no start point just placed: nothing.
     click([-20, 30]);
-    expect(entries()).toEqual<ProfileEntry[]>([{ start: [0, 30], plunge: [-20, 30] }]);
+    expect(startPoints()).toEqual([]);
+    click([2, 30]);
+    click([-20, 30]);
+    expect(startPoints()).toEqual<ProfileStartPoint[]>([{ start: [0, 30], plunge: [-20, 30] }]);
+    // Only once: the next click away from the paths does nothing.
+    click([-30, 30]);
+    expect(startPoints()).toEqual<ProfileStartPoint[]>([{ start: [0, 30], plunge: [-20, 30] }]);
   });
 
-  it("replaces the entry on the same path, and keeps the other path's", () => {
-    const { entries } = render();
+  it("adds start points without plunge points when clicks stay on the paths", () => {
+    const { startPoints } = render();
     click([0, 30]);
-    click([-20, 30]);
     click([300, 50]);
-    click([320, 50]);
-    click([50, 100]);
-    click([50, 120]);
-    expect(entries()).toEqual<ProfileEntry[]>([
-      { start: [50, 100], plunge: [50, 120] },
-      { start: [300, 50], plunge: [320, 50] },
+    expect(startPoints()).toEqual<ProfileStartPoint[]>([
+      { start: [0, 30], plunge: null },
+      { start: [300, 50], plunge: null },
     ]);
   });
 
-  it("drops a half-picked entry when editing ends", () => {
-    const { entries, workspace } = render();
+  it("gives no plunge point with tabs", () => {
+    const withTabs = render(true);
+    click([0, 30]);
+    click([-20, 30]);
+    expect(withTabs.startPoints()).toEqual<ProfileStartPoint[]>([{ start: [0, 30], plunge: null }]);
+  });
+
+  it("drops a half-made pick when editing ends", () => {
+    const { startPoints, workspace } = render();
     click([0, 30]);
     act(() => workspace.getState().setEditing(null));
-    act(() => workspace.getState().setEditing("entries"));
+    act(() => workspace.getState().setEditing("startPoints"));
     click([-20, 30]);
-    expect(entries()).toEqual([]);
+    expect(startPoints()).toEqual<ProfileStartPoint[]>([{ start: [0, 30], plunge: null }]);
   });
 });

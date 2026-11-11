@@ -113,8 +113,12 @@ describe("snapStartPoint", () => {
 
   it("goes on the nearest closed path, or the nearer end of an open one on the line", () => {
     const paths = startPointPaths([square, line], "on");
-    expect(snapStartPoint(paths, [30, 2])).toEqual({ point: [30, 0], distance: 2 });
-    expect(snapStartPoint(paths, [70, -21])).toEqual({ point: [90, -20], distance: 1 });
+    expect(snapStartPoint(paths, [30, 2])).toEqual({ point: [30, 0], distance: 2, closed: true });
+    expect(snapStartPoint(paths, [70, -21])).toEqual({
+      point: [90, -20],
+      distance: 1,
+      closed: false,
+    });
     expect(snapStartPoint(paths, [30, -19])?.point).toEqual([10, -20]);
   });
 

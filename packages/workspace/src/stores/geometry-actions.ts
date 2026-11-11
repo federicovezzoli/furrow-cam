@@ -33,6 +33,7 @@ import {
   type Operation,
   type Path,
   type Point,
+  type ProfileStartPoint,
   type ProjectDocument,
   Sha256,
   type Shape,
@@ -227,14 +228,29 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
 }
 
 /**
- * Which of an operation's tab positions, start points (#426), entry points
- * (#427), excluded corner overcuts (#428) and placed holes (#429) belong to a
- * drawing.
+ * `startPoints` of a profile or engraving moved by `move`, a profile's plunge
+ * points (#427) with them; only those `own` marks when given.
+ */
+export function moveStartPoints<T extends Point | ProfileStartPoint>(
+  startPoints: T[],
+  move: (point: Point) => Point,
+  own?: boolean[],
+): T[] {
+  return startPoints.map((startPoint, i) => {
+    if (own && !own[i]) return startPoint;
+    if (Array.isArray(startPoint)) return move(startPoint) as T;
+    const { start, plunge } = startPoint as ProfileStartPoint;
+    return { start: move(start), plunge: plunge && move(plunge) } as T;
+  });
+}
+
+/**
+ * Which of an operation's tab positions, start points (#426), excluded
+ * corner overcuts (#428) and placed holes (#429) belong to a drawing.
  */
 type OwnMarkers = {
   tabs: boolean[];
   startPoints: boolean[];
-  entries: boolean[];
   overcuts: boolean[];
   holes: boolean[];
 };
@@ -246,11 +262,10 @@ type OwnMarkers = {
 const HOLE_ON_DRAWING = 0.05;
 
 /**
- * Which tab positions, start points, entry points and excluded overcuts of
- * each profile or engraving targeting drawing `id` belong to it, by operation
- * id: those nearer its paths than the operation's other targets' (ADR-0055),
- * closed paths for tabs, entries (by their start) and overcuts and any path
- * for start points. They are placed on the paths, but a
+ * Which tab positions, start points and excluded overcuts of each profile or
+ * engraving targeting drawing `id` belong to it, by operation id: those
+ * nearer its paths than the operation's other targets' (ADR-0055), closed
+ * paths for tabs and overcuts and any path for start points. They are placed on the paths, but a
  * tolerance can't tell after a scale moves them off the new flattening; a
  * tie, coincident shapes of two drawings, stays with the other drawing.
  */
@@ -269,7 +284,7 @@ function drawingMarkers(
     if (withHoles && operation.type === "drill" && operation.params.points.length > 0) {
       ownHoles ??= drawingHoles(document, id);
       const holes = operation.params.points.map(ownHoles);
-      markers.set(operation.id, { tabs: [], startPoints: [], entries: [], overcuts: [], holes });
+      markers.set(operation.id, { tabs: [], startPoints: [], overcuts: [], holes });
       continue;
     }
     if (operation.type !== "profile" && operation.type !== "engrave") continue;
@@ -290,8 +305,12 @@ function drawingMarkers(
     const profile = operation.type === "profile" ? operation.params : null;
     markers.set(operation.id, {
       tabs: own(profile?.tabs?.positions ?? [], (of) => closedLoops(of)),
-      startPoints: own(operation.params.startPoints, allPaths),
-      entries: own(profile?.entries.map(({ start }) => start) ?? [], (of) => closedLoops(of)),
+      startPoints: own(
+        operation.type === "profile"
+          ? operation.params.startPoints.map(({ start }) => start)
+          : operation.params.startPoints,
+        allPaths,
+      ),
       overcuts: own(profile?.cornerOvercuts?.excluded ?? [], (of) => closedLoops(of)),
       holes: [],
     });
@@ -429,13 +448,20 @@ function transformDrawing(
         move(operation.params.cornerOvercuts.excluded, moved.overcuts);
       }
       if (operation.type === "profile") {
-        operation.params.entries.forEach((entry, i) => {
-          if (!moved.entries[i]) return;
-          entry.start = transform.point(entry.start);
-          entry.plunge = transform.point(entry.plunge);
-        });
+        const { params } = operation;
+        params.startPoints = moveStartPoints(
+          params.startPoints,
+          transform.point,
+          moved.startPoints,
+        );
+      } else {
+        const { params } = operation;
+        params.startPoints = moveStartPoints(
+          params.startPoints,
+          transform.point,
+          moved.startPoints,
+        );
       }
-      move(operation.params.startPoints, moved.startPoints);
     }
   });
   return { ok: true };
@@ -721,11 +747,10 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       if (extra.length > 0) operation.targets = operation.targets.concat(extra);
       const own = markers.get(operation.id);
       // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
-      const copied = <T>(
-        items: T[],
-        mine: boolean[],
-        move: (item: T) => T = (point) => translatePoint(point as Point, offset) as T,
-      ) => items.concat(items.filter((_, i) => mine[i]).map(move));
+      const copied = (positions: Point[], mine: boolean[]) =>
+        positions.concat(
+          positions.filter((_, i) => mine[i]).map((position) => translatePoint(position, offset)),
+        );
       if (own?.holes.some(Boolean) && operation.type === "drill") {
         operation.params.points = copied(operation.params.points, own.holes);
       }
@@ -737,14 +762,18 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       if (overcuts && own.overcuts.some(Boolean)) {
         overcuts.excluded = copied(overcuts.excluded, own.overcuts);
       }
-      if (operation.type === "profile" && own.entries.some(Boolean)) {
-        operation.params.entries = copied(operation.params.entries, own.entries, (entry) => ({
-          start: translatePoint(entry.start, offset),
-          plunge: translatePoint(entry.plunge, offset),
-        }));
-      }
       if (own.startPoints.some(Boolean)) {
-        operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);
+        const shift = (point: Point) => translatePoint(point, offset);
+        const copies = <T extends Point | ProfileStartPoint>(startPoints: T[]) =>
+          startPoints.concat(
+            moveStartPoints(
+              startPoints.filter((_, i) => own.startPoints[i]),
+              shift,
+            ),
+          );
+        if (operation.type === "profile") {
+          operation.params.startPoints = copies(operation.params.startPoints);
+        } else operation.params.startPoints = copies(operation.params.startPoints);
       }
     }
   });
@@ -778,15 +807,14 @@ export function removeDrawing(store: DocumentStore, id: string) {
       if (gone && overcuts) {
         overcuts.excluded = overcuts.excluded.filter((_, i) => !gone.overcuts[i]);
       }
-      if (gone?.entries.some(Boolean) && operation.type === "profile") {
-        operation.params.entries = operation.params.entries.filter((_, i) => !gone.entries[i]);
-      }
       if (
         gone?.startPoints.some(Boolean) &&
         (operation.type === "profile" || operation.type === "engrave")
       ) {
-        const { startPoints } = operation.params;
-        operation.params.startPoints = startPoints.filter((_, i) => !gone.startPoints[i]);
+        const kept = (_: unknown, i: number) => !gone.startPoints[i];
+        if (operation.type === "profile") {
+          operation.params.startPoints = operation.params.startPoints.filter(kept);
+        } else operation.params.startPoints = operation.params.startPoints.filter(kept);
       }
       return targets.length > 0 || hasPlacedHoles(operation);
     });

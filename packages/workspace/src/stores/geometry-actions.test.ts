@@ -387,8 +387,8 @@ describe("duplicateDrawing", () => {
       [50 + dx, 0],
     ]);
     expect(profile?.type === "profile" && profile.params.startPoints).toEqual([
-      [0, 50],
-      [dx, 50],
+      { start: [0, 50], plunge: null },
+      { start: [dx, 50], plunge: null },
     ]);
     expect(profile?.type === "profile" && profile.params.cornerOvercuts?.excluded).toEqual([
       [0, 0],
@@ -506,7 +506,9 @@ describe("drawing size", () => {
     // The tab at (50, 0) on the square's bottom edge doubles its distance from the corner.
     const [profile] = s.getState().document.operations;
     expect(profile?.type === "profile" && profile.params.tabs?.positions).toEqual([[100, 0]]);
-    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[0, 100]]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([
+      { start: [0, 100], plunge: null },
+    ]);
     expect(s.getState().document.geometry[2]).toBe(otherBefore);
     expect(ProjectDocument.parse(s.getState().document)).toEqual(s.getState().document);
   });
@@ -606,24 +608,25 @@ describe("drawing size", () => {
     expect(tabsOf(s)).toEqual([[50, 0]]);
   });
 
-  it("moves, copies and drops a profile's entry points with its drawing (#427)", () => {
+  it("moves, copies and drops a profile's plunge points with its drawing (#427)", () => {
     const s = store();
     s.getState().change("setup", (draft) => {
       const [profile] = draft.operations;
       if (profile?.type !== "profile") throw new Error("fixture");
       profile.params.tabs = null;
-      profile.params.entries = [{ start: [0, 50], plunge: [-10, 50] }];
+      profile.params.startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
     });
-    const entries = () => {
+    const startPoints = () => {
       const [profile] = s.getState().document.operations;
-      return profile?.type === "profile" ? profile.params.entries : [];
+      return profile?.type === "profile" ? profile.params.startPoints : [];
     };
     moveDrawing(s, DRAWING_ID, [12.5, -3]);
-    expect(entries()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
+    expect(startPoints()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
     const copyId = duplicateDrawing(s, DRAWING_ID);
-    expect(entries()).toHaveLength(2);
+    expect(startPoints()).toHaveLength(2);
+    expect(startPoints()[1]?.plunge?.[1]).toBe(47);
     removeDrawing(s, copyId as string);
-    expect(entries()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
+    expect(startPoints()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
   });
 
   it("moves with the tabs on its paths in one undo step, leaving the other drawing", () => {
@@ -636,7 +639,9 @@ describe("drawing size", () => {
     expect(after.min[1]).toBeCloseTo(before.min[1] - 3, 9);
     expect(tabsOf(s)).toEqual([[62.5, -3]]);
     const [profile] = s.getState().document.operations;
-    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([[12.5, 47]]);
+    expect(profile?.type === "profile" && profile.params.startPoints).toEqual([
+      { start: [12.5, 47], plunge: null },
+    ]);
     expect(s.getState().document.geometry[2]).toBe(other);
     expect(s.getState().past).toHaveLength(1);
     moveDrawing(s, DRAWING_ID, [0, 0]);

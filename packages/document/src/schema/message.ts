@@ -88,7 +88,7 @@ export const DOCUMENT_MESSAGES = [
   "operation.pathIndices",
   "operation.allowanceZeroOnLine",
   "operation.overcutsOnLine",
-  "operation.entriesWithTabs",
+  "operation.plungeWithTabs",
   "operation.allowanceNeeded",
   "operation.vBitsCantDrill",
   "operation.taperedBitsCantDrill",

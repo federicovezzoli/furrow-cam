@@ -38,7 +38,6 @@ function documentWithOperations(): ProjectDocument {
           tabs: null,
           startPoints: [],
           cornerOvercuts: null,
-          entries: [],
         },
       },
       {

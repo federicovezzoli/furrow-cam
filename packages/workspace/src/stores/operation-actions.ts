@@ -18,9 +18,9 @@ import {
   type OperationTarget,
   PocketParams,
   type Point,
-  type ProfileEntry,
   type ProfileOperation,
   ProfileParams,
+  type ProfileStartPoint,
   type ProfileTabs,
   type ProjectDocument,
   ReliefFinishParams,
@@ -60,7 +60,6 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
     tabs: null,
     startPoints: [],
     cornerOvercuts: null,
-    entries: [],
   };
 }
 
@@ -717,29 +716,36 @@ export function removeTab(store: DocumentStore, id: string, index: number) {
   });
 }
 
-/** Applies `recipe` to the start points of the profile or engraving `id`. */
+/**
+ * Applies `recipe` to the start points of the profile or engraving `id`, as
+ * a profile has them: an engraving's have no plunge points.
+ */
 function changeStartPoints(
   store: DocumentStore,
   name: string,
   id: string,
-  recipe: (startPoints: Point[]) => void,
+  recipe: (startPoints: ProfileStartPoint[]) => void,
 ) {
   changeOperation(store, name, id, (operation) => {
-    if (operation.type === "profile" || operation.type === "engrave") {
-      recipe(operation.params.startPoints);
+    if (operation.type === "profile") recipe(operation.params.startPoints);
+    if (operation.type === "engrave") {
+      const startPoints = operation.params.startPoints.map((start) => ({ start, plunge: null }));
+      recipe(startPoints);
+      operation.params.startPoints = startPoints.map(({ start }) => start);
     }
   });
 }
 
 export function addStartPoint(store: DocumentStore, id: string, position: Point) {
   changeStartPoints(store, "addStartPoint", id, (startPoints) => {
-    startPoints.push(position);
+    startPoints.push({ start: position, plunge: null });
   });
 }
 
 export function moveStartPoint(store: DocumentStore, id: string, index: number, position: Point) {
   changeStartPoints(store, "moveStartPoint", id, (startPoints) => {
-    if (index >= 0 && index < startPoints.length) startPoints[index] = position;
+    const startPoint = startPoints[index];
+    if (startPoint) startPoint.start = position;
   });
 }
 
@@ -749,44 +755,19 @@ export function removeStartPoint(store: DocumentStore, id: string, index: number
   });
 }
 
-/** Applies `recipe` to the entry points (#427) of profile `id`. */
-function changeEntries(
-  store: DocumentStore,
-  name: string,
-  id: string,
-  recipe: (entries: ProfileEntry[]) => void,
-) {
-  changeOperation(store, name, id, (operation) => {
-    if (operation.type === "profile") recipe(operation.params.entries);
-  });
-}
-
 /**
- * Adds `entry` to profile `id`, in place of the entry at `replacing` when
- * that is the entry already on the same contour.
+ * Sets where the tool plunges (#427) for start point `index` of profile `id`,
+ * or `null` to plunge at the start point itself.
  */
-export function addEntry(
+export function setStartPlunge(
   store: DocumentStore,
   id: string,
-  entry: ProfileEntry,
-  replacing: number | null = null,
+  index: number,
+  plunge: Point | null,
 ) {
-  changeEntries(store, "addEntry", id, (entries) => {
-    if (replacing !== null && replacing >= 0 && replacing < entries.length) {
-      entries[replacing] = entry;
-    } else entries.push(entry);
-  });
-}
-
-export function moveEntry(store: DocumentStore, id: string, index: number, entry: ProfileEntry) {
-  changeEntries(store, "moveEntry", id, (entries) => {
-    if (index >= 0 && index < entries.length) entries[index] = entry;
-  });
-}
-
-export function removeEntry(store: DocumentStore, id: string, index: number) {
-  changeEntries(store, "removeEntry", id, (entries) => {
-    if (index >= 0 && index < entries.length) entries.splice(index, 1);
+  changeOperation(store, "setStartPlunge", id, (operation) => {
+    const startPoint = operation.type === "profile" ? operation.params.startPoints[index] : null;
+    if (startPoint) startPoint.plunge = plunge;
   });
 }
 

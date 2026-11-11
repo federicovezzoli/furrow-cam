@@ -282,16 +282,15 @@ describe("editOperation", () => {
         allowance: 0,
         finishPass: false,
         cornerOvercuts: null,
-        entries: [],
         tabs: null,
       },
     });
   });
 
-  it("swaps a profile's tabs for entry points in one call (#427)", () => {
-    const entries = [{ start: [0, 50], plunge: [-10, 50] }];
-    editOperation(project, library, OPERATION_ID, { settings: { tabs: null, entries } });
-    expect(operation(OPERATION_ID)).toMatchObject({ params: { tabs: null, entries } });
+  it("swaps a profile's tabs for plunge points in one call (#427)", () => {
+    const startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
+    editOperation(project, library, OPERATION_ID, { settings: { tabs: null, startPoints } });
+    expect(operation(OPERATION_ID)).toMatchObject({ params: { tabs: null, startPoints } });
   });
 
   it("changes nothing if the app refuses any of it", () => {

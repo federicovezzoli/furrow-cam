@@ -111,18 +111,23 @@ export function startPointPaths(
 /**
  * Where a start point placed at `point` goes on the nearest of `paths`: the
  * nearest point of a closed path, the nearer end of an open one. `distance`
- * is to the path, not to that end. `null` without paths.
+ * is to the path, not to that end; `closed` whether the path is. `null`
+ * without paths.
  */
 export function snapStartPoint(
   paths: StartPath[],
   point: Point,
-): { point: Point; distance: number } | null {
-  let best: { point: Point; distance: number } | null = null;
+): { point: Point; distance: number; closed: boolean } | null {
+  let best: { point: Point; distance: number; closed: boolean } | null = null;
   for (const { points, closed } of paths) {
     const projection = projectOnLoop(points, point);
     if (best && projection.distance >= best.distance) continue;
     const end = projection.at > loopLength(points) / 2 ? points.at(-1) : points[0];
-    best = { point: closed ? projection.point : (end as Point), distance: projection.distance };
+    best = {
+      point: closed ? projection.point : (end as Point),
+      distance: projection.distance,
+      closed,
+    };
   }
   return best;
 }
