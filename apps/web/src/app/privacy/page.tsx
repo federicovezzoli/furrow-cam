@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
-const LAST_UPDATED = "8 November 2026";
+const LAST_UPDATED = "11 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -198,7 +198,9 @@ export default async function PrivacyPage() {
           <p>
             When you make a terrain from a map, your browser (or the desktop app) contacts three
             services directly; we don&apos;t pass anything through our servers and store none of it.
-            Each receives your IP address and user agent with every request:
+            Each receives your IP address and user agent with every request. An AI assistant making
+            a terrain through Furrow CAM&apos;s MCP server on your computer contacts Mapterhorn
+            only:
           </p>
           <List>
             <li>
