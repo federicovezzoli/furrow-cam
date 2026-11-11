@@ -32,9 +32,9 @@ Depth maps, embossed logos and lithophanes start as a greyscale image, not as a 
 | I1 | **Relief from image** opens beside *Terrain from a map* (PRD-0014 T1) and picks a PNG, JPEG or WebP image | Must |
 | I2 | **Settings:** the model's width in mm (the depth follows the image's aspect ratio; by default and at most, as wide as fits inside the stock less the model border, PRD-0005 S2), relief height (5 mm by default), base under black (3 mm by default), *Invert* (dark is high) and smoothing, a box blur of 0 to 50 image pixels (0 by default) against pixel noise. A 3D preview follows the settings, with the image's pixels and the model's size | Must |
 | I3 | **Heights:** each pixel's luminance (Rec. 709 on its sRGB values), transparent counting as black before *Invert*, so a PNG logo stands on its base. The model is always the image's full rectangle | Must |
-| I4 | **Detail:** the grid is the largest that fits the instance's STL limits (PRD-0005 S1) and has no more corners than the image has pixels. Where the grid is coarser than the image, the image is smoothed over a cell first | Must |
+| I4 | **Detail:** the grid is the largest that fits the instance's STL limits (PRD-0005 S1) and has no more corners than the image has pixels. A larger image is read once, when it is picked, at two pixels a cell (its pixels averaged), then smoothed over a cell so the corners don't alias; the smoothing setting stays in the picked image's pixels. An image file larger than the STL byte limit is refused | Must |
 | I5 | **Generate:** as terrain (PRD-0014 T5, T6, T8): in a project with no model yet, the relief becomes its model at the chosen size, centred on the stock and named after the image; it can be cancelled, or downloaded as an STL | Must |
-| I6 | **From an assistant:** the MCP server (PRD-0012) adds the relief of an image file to a project with the I2 settings and the same defaults | Should |
+| I6 | **From an assistant:** the MCP server (PRD-0012) adds the relief of an image file to a project with the I2 settings and the same defaults. Its decoders ignore EXIF orientation and colour profiles, so a photo stored on its side must be turned first | Should |
 
 ## Decision record
 
