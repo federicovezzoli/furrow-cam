@@ -356,6 +356,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #554: engravings can chamfer to a width. Existing ones don't.
+  37: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "engrave" && isObject(operation.params)) {
+          operation.params.width ??= null;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

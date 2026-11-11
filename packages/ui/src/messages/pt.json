@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Fresas cônicas de topo esférico não furam",
       "taperedBitsCantClear": "Fresas cônicas de topo esférico só gravam e fazem acabamento 3D: escolha outra fresa.",
       "drillsCantEngrave": "Brocas não gravam",
+      "onlyVBitsChamfer": "Só fresas em V chanfram",
+      "chamferWidth": "Um chanfro precisa de uma largura, e só um chanfro tem uma",
       "flatBottomEndMill": "Só fresas de topo retas limpam um fundo plano",
       "onlyVBitsVCarve": "Só fresas em V fazem entalhe em V",
       "modelNotShapes": "Usina um modelo, não formas",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Há partes mais largas do que a fresa em V alcança na profundidade máxima, então suas bordas ficam sem entalhar: ative o fundo plano para limpá-las.",
       "flatAreasNarrow": "Algumas áreas planas são estreitas demais para a ferramenta de fundo plano e ficam sem cortar.",
       "engraveConeWide": "A profundidade excede o cone da fresa em V, então a linha fica tão larga quanto a fresa.",
+      "chamferConeWide": "O chanfro é mais largo que o cone da fresa em V: para na largura do cone.",
+      "chamferThroughStock": "O chanfro vai mais fundo que o material, no que está por baixo.",
       "pathsTooSmall": "Os caminhos fechados são pequenos demais para a ferramenta.",
       "nothingOutside": "Os caminhos fechados não deixam material fora deles para limpar.",
       "tabsTooTall": "As pontes são tão altas quanto a profundidade do corte, então nada é cortado sob elas.",
@@ -821,7 +825,8 @@
     "sides": {
       "outside": "Por fora",
       "inside": "Por dentro",
-      "on": "Sobre a linha"
+      "on": "Sobre a linha",
+      "chamfer": "Chanfro"
     },
     "directions": {
       "climb": "Concordante",
@@ -929,11 +934,14 @@
     "peckHint": "Mergulha em etapas não mais fundas que a profundidade por passada da ferramenta, recuando após cada uma para tirar os cavacos.",
     "engrave": "Gravação",
     "position": "Posição",
-    "engraveHint": "{side, select, inside {Segue os caminhos fechados por dentro da linha, com uma borda do sulco sobre ela,} outside {Segue os caminhos fechados por fora da linha, com uma borda do sulco sobre ela,} other {Segue todos os caminhos, abertos e fechados, sobre a linha,}} em passadas não mais fundas que a profundidade por passada da ferramenta.",
+    "engraveHint": "{side, select, inside {Segue os caminhos fechados por dentro da linha, com uma borda do sulco sobre ela,} outside {Segue os caminhos fechados por fora da linha, com uma borda do sulco sobre ela,} chamfer {Chanfra as bordas dos caminhos fechados com o cone da fresa em V, para dentro da linha nos contornos externos e para fora nos furos,} other {Segue todos os caminhos, abertos e fechados, sobre a linha,}} em passadas não mais fundas que a profundidade por passada da ferramenta.",
     "lineWidth": "Largura da linha",
     "lineTooDeep": "Mais fundo que o cone, então a linha fica tão larga quanto a fresa.",
     "lineAtTop": "No topo do material, pelo ângulo de {angle}° da fresa.",
     "lineAtTopTip": "No topo do material, pelo ângulo de {angle}° e pela ponta de {tip} da fresa.",
+    "chamferWidth": "Largura do chanfro",
+    "chamferDepth": "No topo do material; cortado a {depth} de profundidade.",
+    "chamferTooWide": "Mais largo que o cone, então o chanfro fica só tão largo quanto a fresa permite.",
     "vcarve": "Entalhe em V",
     "vcarveHint": "Segue o meio dos caminhos fechados, tão fundo quanto o ângulo da fresa precisa para alcançar as bordas, em passadas não mais fundas que a profundidade por passada da ferramenta. As ilhas ficam de pé.",
     "maxDepth": "Prof. máxima",

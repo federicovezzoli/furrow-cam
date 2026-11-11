@@ -18,6 +18,8 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.vcarveEdgesUncarved",
   "toolpath.flatAreasNarrow",
   "toolpath.engraveConeWide",
+  "toolpath.chamferConeWide",
+  "toolpath.chamferThroughStock",
   "toolpath.pathsTooSmall",
   "toolpath.nothingOutside",
   "toolpath.tabsTooTall",

@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
       "taperedBitsCantClear": "Konik küresel uçlu frezeler yalnızca gravür ve 3B finiş yapar: başka bir uç seçin.",
       "drillsCantEngrave": "Matkap uçları gravür yapamaz",
+      "onlyVBitsChamfer": "Yalnızca V-uçlar pah kırar",
+      "chamferWidth": "Pah bir genişlik ister ve yalnızca pahın genişliği olur",
       "flatBottomEndMill": "Düz tabanı yalnızca düz uçlu parmak frezeler temizler",
       "onlyVBitsVCarve": "V oymayı yalnızca V uçlar yapar",
       "modelNotShapes": "Şekilleri değil, bir modeli işler",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Bazı bölümler V ucun maksimum derinlikte ulaştığından daha geniş; bu nedenle kenarları oyulmadan kalır: temizlemek için düz tabanı açın.",
       "flatAreasNarrow": "Bazı düz alanlar düz taban takımı için çok dar ve kesilmeden kalıyor.",
       "engraveConeWide": "Derinlik V ucun konisini aşıyor; bu nedenle çizgi uç kadar geniş olur.",
+      "chamferConeWide": "Pah, V-ucun konisinden daha geniş: koninin genişliğinde durur.",
+      "chamferThroughStock": "Pah malzemeden daha derine, altındakine iniyor.",
       "pathsTooSmall": "Kapalı yollar takım için çok küçük.",
       "nothingOutside": "Kapalı yolların dışında temizlenecek ham malzeme kalmıyor.",
       "tabsTooTall": "Köprüler kesim derinliği kadar yüksek; bu nedenle altlarında hiçbir şey kesilmiyor.",
@@ -821,7 +825,8 @@
     "sides": {
       "outside": "Dış",
       "inside": "İç",
-      "on": "Çizgi üzerinde"
+      "on": "Çizgi üzerinde",
+      "chamfer": "Pah"
     },
     "directions": {
       "climb": "Aynı yönlü",
@@ -929,11 +934,14 @@
     "peckHint": "Takımın paso derinliğinden derin olmayan kademelerle dalar ve talaşı boşaltmak için her kademeden sonra geri çekilir.",
     "engrave": "Gravür",
     "position": "Konum",
-    "engraveHint": "{side, select, inside {Kapalı yolları çizginin içinden, oluğun bir kenarı çizgi üzerinde kalacak şekilde} outside {Kapalı yolları çizginin dışından, oluğun bir kenarı çizgi üzerinde kalacak şekilde} other {Açık ve kapalı tüm yolları çizgi üzerinde}}, takımın paso derinliğinden derin olmayan pasolarla izler.",
+    "engraveHint": "{side, select, inside {Kapalı yolları çizginin içinden, oluğun bir kenarı çizgi üzerinde kalacak şekilde} outside {Kapalı yolları çizginin dışından, oluğun bir kenarı çizgi üzerinde kalacak şekilde} chamfer {Kapalı yolların kenarlarına V-ucun konisiyle, dış hatlarda çizgiden içe, deliklerde dışa doğru pah kırarak} other {Açık ve kapalı tüm yolları çizgi üzerinde}}, takımın paso derinliğinden derin olmayan pasolarla izler.",
     "lineWidth": "Çizgi genişliği",
     "lineTooDeep": "Koniden daha derin; bu nedenle çizgi uç kadar geniş.",
     "lineAtTop": "Ham malzeme üstünde, ucun {angle}° açısına göre.",
     "lineAtTopTip": "Ham malzeme üstünde, ucun {angle}° açısına ve {tip} uç çapına göre.",
+    "chamferWidth": "Pah genişliği",
+    "chamferDepth": "Malzemenin üst yüzünde; {depth} derinlikte kesilir.",
+    "chamferTooWide": "Koniden daha geniş; bu nedenle pah yalnızca ucun izin verdiği kadar geniş.",
     "vcarve": "V oyma",
     "vcarveHint": "Kapalı yolların ortasını, ucun açısının kenarlara ulaşması için gereken derinlikte, takımın paso derinliğinden derin olmayan pasolarla izler. Adalar yerinde kalır.",
     "maxDepth": "Maks. derinlik",

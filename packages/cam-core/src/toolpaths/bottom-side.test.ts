@@ -228,7 +228,7 @@ describe("2D operations on the bottom side", () => {
           type: "engrave",
           tool: endMill,
           stockSide: "top",
-          params: { side: "on", depth: DEPTH, ramp: false, startPoints: [] },
+          params: { side: "on", depth: DEPTH, width: null, ramp: false, startPoints: [] },
         };
         const [top, bottom] = bothSides(engraving, axis);
         expect(bottom.moves).toHaveLength(top.moves.length);

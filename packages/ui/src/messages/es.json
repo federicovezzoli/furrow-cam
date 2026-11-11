@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Las fresas cónicas de punta esférica no pueden taladrar",
       "taperedBitsCantClear": "Las fresas cónicas de punta esférica solo graban y hacen acabado 3D: elige otra fresa.",
       "drillsCantEngrave": "Las brocas no pueden grabar",
+      "onlyVBitsChamfer": "Solo las fresas en V achaflanan",
+      "chamferWidth": "Un chaflán necesita un ancho, y solo un chaflán tiene uno",
       "flatBottomEndMill": "Solo las fresas planas vacían un fondo plano",
       "onlyVBitsVCarve": "Solo las fresas en V tallan en V",
       "modelNotShapes": "Mecaniza un modelo, no formas",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Hay partes más anchas de lo que alcanza la fresa en V a la profundidad máxima, así que sus bordes quedan sin tallar: activa un fondo plano para vaciarlas.",
       "flatAreasNarrow": "Algunas zonas planas son demasiado estrechas para la herramienta de fondo plano y quedan sin cortar.",
       "engraveConeWide": "La profundidad supera el cono de la fresa en V, así que la línea es tan ancha como la fresa.",
+      "chamferConeWide": "El chaflán es más ancho que el cono de la fresa en V: se detiene en el ancho del cono.",
+      "chamferThroughStock": "El chaflán es más profundo que el material y entra en lo que hay debajo.",
       "pathsTooSmall": "Los trazados cerrados son demasiado pequeños para la herramienta.",
       "nothingOutside": "Los trazados cerrados no dejan material fuera de ellos que vaciar.",
       "tabsTooTall": "Los puentes son tan altos como profundo es el corte, así que no se corta nada bajo ellos.",
@@ -821,7 +825,8 @@
     "sides": {
       "outside": "Exterior",
       "inside": "Interior",
-      "on": "Sobre la línea"
+      "on": "Sobre la línea",
+      "chamfer": "Chaflán"
     },
     "directions": {
       "climb": "En concordancia",
@@ -929,11 +934,14 @@
     "peckHint": "Penetra en picoteos no más profundos que la profundidad de pasada de la herramienta, retirándose tras cada uno para evacuar la viruta.",
     "engrave": "Grabado",
     "position": "Posición",
-    "engraveHint": "{side, select, inside {Sigue los trazados cerrados por dentro de la línea, con un borde de la ranura sobre ella,} outside {Sigue los trazados cerrados por fuera de la línea, con un borde de la ranura sobre ella,} other {Sigue todos los trazados, abiertos y cerrados, sobre la línea,}} en pasadas no más profundas que la profundidad de pasada de la herramienta.",
+    "engraveHint": "{side, select, inside {Sigue los trazados cerrados por dentro de la línea, con un borde de la ranura sobre ella,} outside {Sigue los trazados cerrados por fuera de la línea, con un borde de la ranura sobre ella,} chamfer {Achaflana los bordes de los trazados cerrados con el cono de la fresa en V, hacia dentro de la línea en los contornos exteriores y hacia fuera en los agujeros,} other {Sigue todos los trazados, abiertos y cerrados, sobre la línea,}} en pasadas no más profundas que la profundidad de pasada de la herramienta.",
     "lineWidth": "Ancho de línea",
     "lineTooDeep": "Más profundo que el cono, así que la línea es tan ancha como la fresa.",
     "lineAtTop": "En la superficie del material, según el ángulo de {angle}° de la fresa.",
     "lineAtTopTip": "En la superficie del material, según el ángulo de {angle}° y la punta de {tip} de la fresa.",
+    "chamferWidth": "Ancho del chaflán",
+    "chamferDepth": "En la cara superior del material; cortado a {depth} de profundidad.",
+    "chamferTooWide": "Más ancho que el cono, así que el chaflán solo es tan ancho como permite la fresa.",
     "vcarve": "Tallado en V",
     "vcarveHint": "Sigue el centro de los trazados cerrados, tan hondo como necesita el ángulo de la fresa para llegar a sus bordes, en pasadas no más profundas que la profundidad de pasada de la herramienta. Las islas quedan en pie.",
     "maxDepth": "Profundidad máx.",

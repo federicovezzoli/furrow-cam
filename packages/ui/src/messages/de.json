@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Konische Radiusfräser können nicht bohren",
       "taperedBitsCantClear": "Konische Radiusfräser gravieren und schlichten nur in 3D: Wähle einen anderen Fräser.",
       "drillsCantEngrave": "Bohrer können nicht gravieren",
+      "onlyVBitsChamfer": "Nur V-Fräser fasen",
+      "chamferWidth": "Eine Fase braucht eine Breite, und nur eine Fase hat eine",
       "flatBottomEndMill": "Nur flache Schaftfräser räumen einen flachen Boden aus",
       "onlyVBitsVCarve": "Nur V-Fräser schnitzen in V-Form",
       "modelNotShapes": "Bearbeitet ein Modell, keine Formen",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Manche Bereiche sind breiter, als der V-Fräser bei der maximalen Tiefe reicht, daher bleiben ihre Ränder unbearbeitet: Schalte einen flachen Boden ein, um sie auszuräumen.",
       "flatAreasNarrow": "Manche flachen Bereiche sind zu schmal für den Fräser des flachen Bodens und bleiben unbearbeitet.",
       "engraveConeWide": "Die Tiefe überschreitet den Kegel des V-Fräsers, daher ist die Linie so breit wie der Fräser.",
+      "chamferConeWide": "Die Fase ist breiter als der Kegel des V-Fräsers: sie endet an der Breite des Kegels.",
+      "chamferThroughStock": "Die Fase geht tiefer als das Rohteil, in das, was darunter liegt.",
       "pathsTooSmall": "Die geschlossenen Pfade sind zu klein für das Werkzeug.",
       "nothingOutside": "Die geschlossenen Pfade lassen außerhalb keinen Rohling zum Ausräumen übrig.",
       "tabsTooTall": "Die Haltestege sind so hoch wie der Schnitt tief ist, daher wird unter ihnen nichts geschnitten.",
@@ -821,7 +825,8 @@
     "sides": {
       "outside": "Außen",
       "inside": "Innen",
-      "on": "Auf der Linie"
+      "on": "Auf der Linie",
+      "chamfer": "Fase"
     },
     "directions": {
       "climb": "Gleichlauf",
@@ -929,11 +934,14 @@
     "peckHint": "Taucht in Schritten ein, nicht tiefer als die Zustellung des Werkzeugs, und hebt nach jedem ab, um Späne zu entfernen.",
     "engrave": "Gravur",
     "position": "Position",
-    "engraveHint": "{side, select, inside {Folgt geschlossenen Pfaden innerhalb der Linie, mit einer Nutkante darauf,} outside {Folgt geschlossenen Pfaden außerhalb der Linie, mit einer Nutkante darauf,} other {Folgt allen Pfaden, offen und geschlossen, auf der Linie,}} in Durchgängen nicht tiefer als die Zustellung des Werkzeugs.",
+    "engraveHint": "{side, select, inside {Folgt geschlossenen Pfaden innerhalb der Linie, mit einer Nutkante darauf,} outside {Folgt geschlossenen Pfaden außerhalb der Linie, mit einer Nutkante darauf,} chamfer {Fast die Kanten der geschlossenen Pfade mit dem Kegel des V-Fräsers an, an Außenkonturen nach innen und an Löchern nach außen,} other {Folgt allen Pfaden, offen und geschlossen, auf der Linie,}} in Durchgängen nicht tiefer als die Zustellung des Werkzeugs.",
     "lineWidth": "Linienbreite",
     "lineTooDeep": "Tiefer als der Kegel: die Linie ist so breit wie der Fräser.",
     "lineAtTop": "An der Rohteiloberseite, aus dem {angle}°-Winkel des Fräsers.",
     "lineAtTopTip": "An der Rohteiloberseite, aus dem {angle}°-Winkel des Fräsers und seiner {tip}-Spitze.",
+    "chamferWidth": "Fasenbreite",
+    "chamferDepth": "An der Rohteiloberseite; {depth} tief geschnitten.",
+    "chamferTooWide": "Breiter als der Kegel: die Fase wird nur so breit, wie der Fräser es erlaubt.",
     "vcarve": "V-Schnitzen",
     "vcarveHint": "Folgt der Mitte geschlossener Pfade, so tief, wie der Fräserwinkel es braucht, um ihre Kanten zu erreichen, in Durchgängen nicht tiefer als die Zustellung des Werkzeugs. Inseln bleiben stehen.",
     "maxDepth": "Max. Tiefe",
