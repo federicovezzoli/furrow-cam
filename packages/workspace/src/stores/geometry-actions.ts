@@ -227,12 +227,14 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
 }
 
 /**
- * Which of an operation's tab positions, start points (#426), excluded
- * corner overcuts (#428) and placed holes (#429) belong to a drawing.
+ * Which of an operation's tab positions, start points (#426), entry points
+ * (#427), excluded corner overcuts (#428) and placed holes (#429) belong to a
+ * drawing.
  */
 type OwnMarkers = {
   tabs: boolean[];
   startPoints: boolean[];
+  entries: boolean[];
   overcuts: boolean[];
   holes: boolean[];
 };
@@ -244,10 +246,11 @@ type OwnMarkers = {
 const HOLE_ON_DRAWING = 0.05;
 
 /**
- * Which tab positions, start points and excluded overcuts of each profile or
- * engraving targeting drawing `id` belong to it, by operation id: those
- * nearer its paths than the operation's other targets' (ADR-0055), closed
- * paths for tabs and overcuts and any path for start points. They are placed on the paths, but a
+ * Which tab positions, start points, entry points and excluded overcuts of
+ * each profile or engraving targeting drawing `id` belong to it, by operation
+ * id: those nearer its paths than the operation's other targets' (ADR-0055),
+ * closed paths for tabs, entries (by their start) and overcuts and any path
+ * for start points. They are placed on the paths, but a
  * tolerance can't tell after a scale moves them off the new flattening; a
  * tie, coincident shapes of two drawings, stays with the other drawing.
  */
@@ -266,7 +269,7 @@ function drawingMarkers(
     if (withHoles && operation.type === "drill" && operation.params.points.length > 0) {
       ownHoles ??= drawingHoles(document, id);
       const holes = operation.params.points.map(ownHoles);
-      markers.set(operation.id, { tabs: [], startPoints: [], overcuts: [], holes });
+      markers.set(operation.id, { tabs: [], startPoints: [], entries: [], overcuts: [], holes });
       continue;
     }
     if (operation.type !== "profile" && operation.type !== "engrave") continue;
@@ -288,6 +291,7 @@ function drawingMarkers(
     markers.set(operation.id, {
       tabs: own(profile?.tabs?.positions ?? [], (of) => closedLoops(of)),
       startPoints: own(operation.params.startPoints, allPaths),
+      entries: own(profile?.entries.map(({ start }) => start) ?? [], (of) => closedLoops(of)),
       overcuts: own(profile?.cornerOvercuts?.excluded ?? [], (of) => closedLoops(of)),
       holes: [],
     });
@@ -423,6 +427,13 @@ function transformDrawing(
       }
       if (operation.type === "profile" && operation.params.cornerOvercuts) {
         move(operation.params.cornerOvercuts.excluded, moved.overcuts);
+      }
+      if (operation.type === "profile") {
+        operation.params.entries.forEach((entry, i) => {
+          if (!moved.entries[i]) return;
+          entry.start = transform.point(entry.start);
+          entry.plunge = transform.point(entry.plunge);
+        });
       }
       move(operation.params.startPoints, moved.startPoints);
     }
@@ -725,6 +736,17 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       if (overcuts && own.overcuts.some(Boolean)) {
         overcuts.excluded = copied(overcuts.excluded, own.overcuts);
       }
+      if (operation.type === "profile" && own.entries.some(Boolean)) {
+        const { entries } = operation.params;
+        operation.params.entries = entries.concat(
+          entries
+            .filter((_, i) => own.entries[i])
+            .map(({ start, plunge }) => ({
+              start: translatePoint(start, offset),
+              plunge: translatePoint(plunge, offset),
+            })),
+        );
+      }
       if (own.startPoints.some(Boolean)) {
         operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);
       }
@@ -759,6 +781,9 @@ export function removeDrawing(store: DocumentStore, id: string) {
       const overcuts = operation.type === "profile" ? operation.params.cornerOvercuts : null;
       if (gone && overcuts) {
         overcuts.excluded = overcuts.excluded.filter((_, i) => !gone.overcuts[i]);
+      }
+      if (gone?.entries.some(Boolean) && operation.type === "profile") {
+        operation.params.entries = operation.params.entries.filter((_, i) => !gone.entries[i]);
       }
       if (
         gone?.startPoints.some(Boolean) &&

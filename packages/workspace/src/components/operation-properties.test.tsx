@@ -7,12 +7,12 @@ import {
   reliefFinish,
   SQUARE_ID,
 } from "@furrow/document/fixtures";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
-import { defaultPocketParams } from "../stores/operation-actions";
+import { addEntry, defaultPocketParams } from "../stores/operation-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
 import { OperationProperties } from "./operation-properties";
@@ -89,6 +89,40 @@ describe("OperationProperties", () => {
     expect(screen.queryByText(/Click a path to add a start point/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Edit start points" }));
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(workspace.getState().editing).toBeNull();
+  });
+
+  it("edits entry points in the viewport, never together with tabs (#427)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: fullDocument() }),
+    );
+    workspace.getState().selectOperation(OPERATION_ID);
+    // The fixture's profile has tabs.
+    const edit = () => screen.getByRole("button", { name: "Edit entry points" });
+    expect(edit()).toHaveProperty("disabled", true);
+    expect(screen.getByText("Not with holding tabs.")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Holding tabs"));
+    expect(edit()).toHaveProperty("disabled", false);
+    fireEvent.click(edit());
+    expect(workspace.getState().editing).toBe("entries");
+    expect(screen.getByText(/then click where the tool plunges/)).toBeTruthy();
+    act(() => addEntry(store, OPERATION_ID, { start: [0, 50], plunge: [-10, 50] }));
+    expect(screen.getByText("1 entry point")).toBeTruthy();
+    expect(screen.getByLabelText("Holding tabs")).toHaveProperty("disabled", true);
+    // Tabs turned back on (an undo) end entry editing.
+    act(() =>
+      store.getState().change("tabs", (draft) => {
+        const [profile] = draft.operations;
+        if (profile?.type === "profile") {
+          profile.params.entries = [];
+          profile.params.tabs = { width: 8, height: 3, positions: [] };
+        }
+      }),
+    );
     expect(workspace.getState().editing).toBeNull();
   });
 

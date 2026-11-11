@@ -697,7 +697,9 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       <Checkbox
         id="profile-tabs"
         label={t("holdingTabs")}
+        hint={params.entries.length > 0 ? t("tabsNeedNoEntries") : undefined}
         checked={params.tabs !== null}
+        disabled={params.tabs === null && params.entries.length > 0}
         onChange={(checked) =>
           update("tabs", {
             tabs: checked ? defaultTabs(store.getState().document, operation) : null,
@@ -713,6 +715,12 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
         />
       )}
       <StartPointsFields count={params.startPoints.length} />
+      <EntriesFields count={params.entries.length} tabs={params.tabs !== null} />
+      {errors.entries && (
+        <p role="alert" className="text-destructive">
+          {errors.entries}
+        </p>
+      )}
       <Checkbox
         id="profile-corner-overcuts"
         label={t("cornerOvercuts")}
@@ -1699,6 +1707,35 @@ function StartPointsFields({ count }: { count: number }) {
         </Button>
       </div>
       {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+    </>
+  );
+}
+
+/**
+ * How many entry points (#427) a profile has, and a toggle for editing them
+ * in the viewport, off while the profile has holding tabs.
+ */
+function EntriesFields({ count, tabs }: { count: number; tabs: boolean }) {
+  const t = useTranslations("Operation");
+  const editing = useWorkspaceStore((s) => s.editing === "entries");
+  const setEditing = useWorkspaceStore((s) => s.setEditing);
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-muted-foreground">
+          {tabs ? t("entriesNeedNoTabs") : t("entryCount", { count })}
+        </span>
+        <Button
+          variant={editing ? "secondary" : "outline"}
+          size="compact"
+          aria-pressed={editing}
+          disabled={tabs}
+          onClick={() => setEditing(editing ? null : "entries")}
+        >
+          {editing ? t("done") : t("editEntries")}
+        </Button>
+      </div>
+      {editing && <p className="text-muted-foreground">{t("entriesHint")}</p>}
     </>
   );
 }

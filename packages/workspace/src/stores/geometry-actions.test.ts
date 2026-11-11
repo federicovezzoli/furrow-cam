@@ -606,6 +606,26 @@ describe("drawing size", () => {
     expect(tabsOf(s)).toEqual([[50, 0]]);
   });
 
+  it("moves, copies and drops a profile's entry points with its drawing (#427)", () => {
+    const s = store();
+    s.getState().change("setup", (draft) => {
+      const [profile] = draft.operations;
+      if (profile?.type !== "profile") throw new Error("fixture");
+      profile.params.tabs = null;
+      profile.params.entries = [{ start: [0, 50], plunge: [-10, 50] }];
+    });
+    const entries = () => {
+      const [profile] = s.getState().document.operations;
+      return profile?.type === "profile" ? profile.params.entries : [];
+    };
+    moveDrawing(s, DRAWING_ID, [12.5, -3]);
+    expect(entries()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
+    const copyId = duplicateDrawing(s, DRAWING_ID);
+    expect(entries()).toHaveLength(2);
+    removeDrawing(s, copyId as string);
+    expect(entries()).toEqual([{ start: [12.5, 47], plunge: [2.5, 47] }]);
+  });
+
   it("moves with the tabs on its paths in one undo step, leaving the other drawing", () => {
     const s = store();
     const other = s.getState().document.geometry[2];

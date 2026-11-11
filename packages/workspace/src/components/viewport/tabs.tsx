@@ -31,19 +31,22 @@ import {
   useWorkspaceStore,
 } from "../../providers/workspace-stores";
 import {
+  addEntry,
   addHole,
   addStartPoint,
   addTab,
   excludeOvercut,
+  moveEntry,
   moveStartPoint,
   moveTab,
+  removeEntry,
   removeHole,
   removeStartPoint,
   removeTab,
   restoreOvercut,
 } from "../../stores/operation-actions";
 import { moveHoldingTab } from "../../stores/stock-actions";
-import { DashedLines } from "./lines";
+import { DashedLines, Lines } from "./lines";
 import { RENDER_ORDER } from "./scene-style";
 import { onStockTop, StockTopCatcher, useStockTopHover } from "./stock-top";
 import { CLICK_THRESHOLD, SNAP_RADIUS, SnapHover, type SnapPick, samePick } from "./zero-pick";
@@ -248,6 +251,128 @@ export function StartPoints({ color }: { color: string }) {
             <circleGeometry args={[radius, 32]} />
           </MarkerMesh>
         </TabMarker>
+      ))}
+    </>
+  );
+}
+
+/**
+ * The selected profile's entry points (#427): a disc as wide as the tool
+ * where its centre meets the contour (S) and where it plunges (P), joined by
+ * the lead line, at the stock top. While the workspace edits them (top view
+ * only), a click near one of the profile's closed paths picks S and the next
+ * click anywhere picks P, replacing the entry already on that path; dragging
+ * S moves it along the paths, dragging P moves it anywhere, and clicking
+ * either removes the entry.
+ */
+export function Entries({ color }: { color: string }) {
+  const selected = useSelectedOperation();
+  const operation = selected?.type === "profile" ? selected : null;
+  const editing = useWorkspaceStore((s) => s.editing === "entries");
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const store = useDocumentStoreApi();
+  const [pending, setPending] = useState<{ point: Point; loop: number } | null>(null);
+  const targets = operation?.targets;
+  const side = operation?.params.side;
+  const radius = operation && operation.tool.diameter / 2;
+  const entries = operation?.params.entries;
+  const shapes = useMemo(
+    () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
+    [geometry, targets],
+  );
+  const loops = useMemo(() => closedLoops(shapes), [shapes]);
+  const centres = useMemo(
+    () =>
+      side && radius && entries
+        ? startPointCentres(
+            shapes,
+            side,
+            radius,
+            entries.map(({ start }) => start),
+          )
+        : [],
+    [shapes, side, radius, entries],
+  );
+  const leads = useMemo(
+    () =>
+      new Float32Array(
+        (entries ?? []).flatMap(({ plunge }, i) => {
+          const centre = centres[i] ?? plunge;
+          return [plunge[0], plunge[1], 0, centre[0], centre[1], 0];
+        }),
+      ),
+    [entries, centres],
+  );
+  // A half-picked entry is dropped with its mode or operation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resets on either change
+  useEffect(() => setPending(null), [editing, operation?.id]);
+  if (!operation || !entries || !radius) return null;
+
+  function pick(event: ThreeEvent<MouseEvent>) {
+    if (!operation || event.delta > TAB_DRAG_THRESHOLD) return;
+    const point = onStockTop(event.ray);
+    if (!point) return;
+    if (pending) {
+      // One entry per path: a new one replaces the entry already on it.
+      const replacing = operation.params.entries.findIndex(
+        ({ start }) => nearestOnLoops(loops, start)?.loop === pending.loop,
+      );
+      addEntry(
+        store,
+        operation.id,
+        { start: pending.point, plunge: point },
+        replacing < 0 ? null : replacing,
+      );
+      setPending(null);
+      return;
+    }
+    const nearest = nearestOnLoops(loops, point);
+    if (nearest && nearest.distance <= TAB_PICK_DISTANCE / event.camera.zoom) {
+      setPending({ point: nearest.point, loop: nearest.loop });
+    }
+  }
+
+  const disc = <circleGeometry args={[radius, 32]} />;
+  return (
+    <>
+      {editing && <StockTopCatcher z={-operation.params.depth - 1} onClick={pick} />}
+      <Lines positions={leads} color={color} renderOrder={RENDER_ORDER.tabs} overlay />
+      {pending && (
+        <TabMarker frame={{ center: pending.point, angle: 0 }} z={0} editing={false}>
+          <MarkerMesh color={color} faded>
+            {disc}
+          </MarkerMesh>
+        </TabMarker>
+      )}
+      {entries.map((entry, index) => (
+        // Entries have no ids; a marker keeps its index while dragged.
+        // biome-ignore lint/suspicious/noArrayIndexKey: see above
+        <group key={index}>
+          <TabMarker
+            frame={{ center: centres[index] ?? entry.start, angle: 0 }}
+            z={0}
+            editing={editing}
+            onMove={(point) => {
+              const nearest = nearestOnLoops(loops, point);
+              if (nearest)
+                moveEntry(store, operation.id, index, { ...entry, start: nearest.point });
+            }}
+            onRemove={() => removeEntry(store, operation.id, index)}
+          >
+            <MarkerMesh color={color}>{disc}</MarkerMesh>
+          </TabMarker>
+          <TabMarker
+            frame={{ center: entry.plunge, angle: 0 }}
+            z={0}
+            editing={editing}
+            onMove={(plunge) => moveEntry(store, operation.id, index, { ...entry, plunge })}
+            onRemove={() => removeEntry(store, operation.id, index)}
+          >
+            <MarkerMesh color={color} faded>
+              {disc}
+            </MarkerMesh>
+          </TabMarker>
+        </group>
       ))}
     </>
   );

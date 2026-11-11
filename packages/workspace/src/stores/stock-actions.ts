@@ -76,6 +76,12 @@ function moveDrawing(
       const { tabs } = operation.params;
       tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));
     }
+    if (operation.type === "profile" && operation.params.entries.length > 0) {
+      operation.params.entries = operation.params.entries.map(({ start, plunge }) => ({
+        start: translatePoint(start, offset),
+        plunge: translatePoint(plunge, offset),
+      }));
+    }
     if (operation.type === "profile" && operation.params.cornerOvercuts) {
       const overcuts = operation.params.cornerOvercuts;
       overcuts.excluded = overcuts.excluded.map((point) => translatePoint(point, offset));
