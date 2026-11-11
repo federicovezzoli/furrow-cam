@@ -721,10 +721,11 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
       if (extra.length > 0) operation.targets = operation.targets.concat(extra);
       const own = markers.get(operation.id);
       // One assignment, as for targets: a large drawing has more tabs than a call takes arguments.
-      const copied = (positions: Point[], mine: boolean[]) =>
-        positions.concat(
-          positions.filter((_, i) => mine[i]).map((position) => translatePoint(position, offset)),
-        );
+      const copied = <T>(
+        items: T[],
+        mine: boolean[],
+        move: (item: T) => T = (point) => translatePoint(point as Point, offset) as T,
+      ) => items.concat(items.filter((_, i) => mine[i]).map(move));
       if (own?.holes.some(Boolean) && operation.type === "drill") {
         operation.params.points = copied(operation.params.points, own.holes);
       }
@@ -737,15 +738,10 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
         overcuts.excluded = copied(overcuts.excluded, own.overcuts);
       }
       if (operation.type === "profile" && own.entries.some(Boolean)) {
-        const { entries } = operation.params;
-        operation.params.entries = entries.concat(
-          entries
-            .filter((_, i) => own.entries[i])
-            .map(({ start, plunge }) => ({
-              start: translatePoint(start, offset),
-              plunge: translatePoint(plunge, offset),
-            })),
-        );
+        operation.params.entries = copied(operation.params.entries, own.entries, (entry) => ({
+          start: translatePoint(entry.start, offset),
+          plunge: translatePoint(entry.plunge, offset),
+        }));
       }
       if (own.startPoints.some(Boolean)) {
         operation.params.startPoints = copied(operation.params.startPoints, own.startPoints);

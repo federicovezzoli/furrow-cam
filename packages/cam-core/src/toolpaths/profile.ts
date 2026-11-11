@@ -252,11 +252,15 @@ export function contourToolpath(
     const drawn = { lines: closedLines, within };
     const left = worst((found) => placeStarts(found.contours, [], params.entries, drawn));
     if (left > 0) warnings.push({ code: "toolpath.entriesLeftOut", values: { count: left } });
-    const inPart = worst(
-      ({ contours: found, isFree }) =>
-        found.filter(({ ring, plunge }) => plunge && !leadIsFree(plunge, ring, found, isFree))
-          .length,
-    );
+    // On the line the tool cuts both sides of the path, so there is no part side to keep clear of.
+    const inPart =
+      params.side === "on"
+        ? 0
+        : worst(
+            ({ contours: found, isFree }) =>
+              found.filter(({ ring, plunge }) => plunge && !leadIsFree(plunge, ring, found, isFree))
+                .length,
+          );
     if (inPart > 0) warnings.push({ code: "toolpath.entriesInPart", values: { count: inPart } });
   }
 
@@ -817,6 +821,7 @@ function leadIsFree(
   const start = ring[0] as Point;
   if (!isFree(plunge)) return false;
   const d: Point = [start[0] - plunge[0], start[1] - plunge[1]];
+  const reach = distance(plunge, start);
   return contours.every((contour) =>
     contour.ring.every((a, i) => {
       const b = contour.ring[(i + 1) % contour.ring.length] as Point;
@@ -827,7 +832,6 @@ function leadIsFree(
       const w: Point = [a[0] - plunge[0], a[1] - plunge[1]];
       const t = (w[0] * e[1] - w[1] * e[0]) / denominator;
       const u = (w[0] * d[1] - w[1] * d[0]) / denominator;
-      const reach = distance(plunge, start);
       // Meeting the contour within float noise of the start is reaching it, not crossing.
       return !(u >= 0 && u <= 1 && t >= 0 && (1 - t) * reach > GEOMETRY_TOLERANCE);
     }),

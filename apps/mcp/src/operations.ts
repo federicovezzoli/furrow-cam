@@ -252,7 +252,9 @@ function configure(
     );
   }
   const { tabs, pins, ...rest } = settings;
-  let changes: Record<string, unknown> = rest;
+  // Tabs off in the same change, so entries given with `tabs: null` aren't refused for the old tabs.
+  let changes: Record<string, unknown> =
+    operation.type === "profile" && tabs === null ? { ...rest, tabs } : rest;
   if (operation.type === "profile" && rest.side === "on") {
     // As in the app: on the line leaves no wall for an allowance, and no corner to overcut.
     changes = { allowance: 0, finishPass: false, cornerOvercuts: null, ...rest };

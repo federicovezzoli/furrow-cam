@@ -716,11 +716,6 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       )}
       <StartPointsFields count={params.startPoints.length} />
       <EntriesFields count={params.entries.length} tabs={params.tabs !== null} />
-      {errors.entries && (
-        <p role="alert" className="text-destructive">
-          {errors.entries}
-        </p>
-      )}
       <Checkbox
         id="profile-corner-overcuts"
         label={t("cornerOvercuts")}

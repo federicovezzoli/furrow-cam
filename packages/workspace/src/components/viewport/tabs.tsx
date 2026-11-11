@@ -303,6 +303,14 @@ export function Entries({ color }: { color: string }) {
       ),
     [entries, centres],
   );
+  // Where the tool centre meets the path at the half-picked start, as for the committed ones.
+  const pendingCentre = useMemo(
+    () =>
+      pending && side && radius
+        ? (startPointCentres(shapes, side, radius, [pending.point])[0] ?? pending.point)
+        : null,
+    [pending, shapes, side, radius],
+  );
   // A half-picked entry is dropped with its mode or operation.
   // biome-ignore lint/correctness/useExhaustiveDependencies: resets on either change
   useEffect(() => setPending(null), [editing, operation?.id]);
@@ -337,8 +345,8 @@ export function Entries({ color }: { color: string }) {
     <>
       {editing && <StockTopCatcher z={-operation.params.depth - 1} onClick={pick} />}
       <Lines positions={leads} color={color} renderOrder={RENDER_ORDER.tabs} overlay />
-      {pending && (
-        <TabMarker frame={{ center: pending.point, angle: 0 }} z={0} editing={false}>
+      {pendingCentre && (
+        <TabMarker frame={{ center: pendingCentre, angle: 0 }} z={0} editing={false}>
           <MarkerMesh color={color} faded>
             {disc}
           </MarkerMesh>
@@ -354,8 +362,14 @@ export function Entries({ color }: { color: string }) {
             editing={editing}
             onMove={(point) => {
               const nearest = nearestOnLoops(loops, point);
-              if (nearest)
+              // One entry per path: S doesn't go onto a path another entry has.
+              const taken = operation.params.entries.some(
+                ({ start }, other) =>
+                  other !== index && nearestOnLoops(loops, start)?.loop === nearest?.loop,
+              );
+              if (nearest && !taken) {
                 moveEntry(store, operation.id, index, { ...entry, start: nearest.point });
+              }
             }}
             onRemove={() => removeEntry(store, operation.id, index)}
           >

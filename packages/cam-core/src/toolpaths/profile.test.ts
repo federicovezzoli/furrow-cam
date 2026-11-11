@@ -854,6 +854,10 @@ describe("profileToolpath with entry points", () => {
       profile({ side: "inside", entries: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
     ).toEqual([]);
     expect(profile({ side: "inside", entries }).warnings).toEqual([inPart]);
+    // On the line there is no part side: a plunge in the middle frees a hole.
+    expect(
+      profile({ side: "on", entries: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
+    ).toEqual([]);
   });
 });
 
