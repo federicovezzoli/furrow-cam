@@ -48,6 +48,7 @@ const params: ProfileParams = {
   tabs: null,
   startPoints: [],
   cornerOvercuts: null,
+  entries: [],
 };
 
 /** 100 × 100 mm, counter-clockwise. */
@@ -792,6 +793,67 @@ describe("profileToolpath with start points", () => {
       code: "toolpath.startPointsLeftOut",
       values: { count: 1 },
     });
+  });
+});
+
+describe("profileToolpath with entry points", () => {
+  const plunge: [number, number] = [-20, 30];
+  const entries = [{ start: [0, 30] as [number, number], plunge }];
+  const at = (point: Vec3, [x, y]: [number, number]) =>
+    Math.abs(point[0] - x) < 1e-6 && Math.abs(point[1] - y) < 1e-6;
+
+  it("goes up and down only at the plunge point, ramping and leading in or not", () => {
+    for (const overrides of [{}, { ramp: true, leadIn: { radius: 3 } }]) {
+      const toolpath = profile({ ...overrides, entries });
+      expect(toolpath.warnings).toEqual([]);
+      const vertical = steps(toolpath).filter(
+        ([from, move]) => from[2] !== move.to[2] && Math.min(from[2], move.to[2]) < 5,
+      );
+      expect(vertical.every(([from, move]) => at(from, plunge) && at(move.to, plunge))).toBe(true);
+      for (const z of [-2, -4, -6]) {
+        // In along the lead to the start, the whole lap, and back out to the plunge point.
+        const cuts = cutsAt(toolpath, z);
+        expect(cuts[0]?.[0]).toBeCloseTo(-3, 6);
+        expect(cuts[0]?.[1]).toBeCloseTo(30, 6);
+        expect(cuts.at(-2)?.[0]).toBeCloseTo(-3, 6);
+        expect(cuts.at(-2)?.[1]).toBeCloseTo(30, 6);
+        expect(cuts.at(-1)).toEqual(plunge);
+      }
+    }
+  });
+
+  it("enters the finish lap from the plunge point too", () => {
+    const toolpath = profile({ allowance: 0.5, finishPass: true, entries });
+    expect(toolpath.warnings).toEqual([]);
+    const vertical = steps(toolpath).filter(
+      ([from, move]) => from[2] !== move.to[2] && Math.min(from[2], move.to[2]) < 5,
+    );
+    expect(vertical.every(([from, move]) => at(from, plunge) && at(move.to, plunge))).toBe(true);
+    // The last roughing lap at -3.5, then the finishing one at -3, both led in from the plunge point.
+    const leads = steps(toolpath)
+      .filter(([from, move]) => from[2] === -6 && move.to[2] === -6 && at(from, plunge))
+      .map(([, move]) => [move.to[0], move.to[1]]);
+    expect(leads.map(([x]) => x)).toEqual([-3.5, -3]);
+    for (const [, y] of leads) expect(y).toBeCloseTo(30, 6);
+  });
+
+  it("warns about entries off every contour, and leads into the part", () => {
+    expect(profile({ entries: [{ start: [500, 500], plunge }] }).warnings).toEqual([
+      { code: "toolpath.entriesLeftOut", values: { count: 1 } },
+    ]);
+    const inPart = { code: "toolpath.entriesInPart", values: { count: 1 } };
+    // Plunging in the part, or across it from the far side.
+    expect(profile({ entries: [{ start: [0, 30], plunge: [50, 30] }] }).warnings).toEqual([inPart]);
+    expect(profile({ entries: [{ start: [0, 30], plunge: [110, 30] }] }).warnings).toEqual([
+      inPart,
+    ]);
+    // A lead within the tool radius of the part cuts into it.
+    expect(profile({ entries: [{ start: [0, 30], plunge: [-2, 60] }] }).warnings).toEqual([inPart]);
+    // Inside, the waste is in the middle.
+    expect(
+      profile({ side: "inside", entries: [{ start: [0, 30], plunge: [50, 50] }] }).warnings,
+    ).toEqual([]);
+    expect(profile({ side: "inside", entries }).warnings).toEqual([inPart]);
   });
 });
 

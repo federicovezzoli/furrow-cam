@@ -1,4 +1,4 @@
-import type { FlipAxis, Operation } from "@furrow/document";
+import type { FlipAxis, Operation, Point } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { applyAffine } from "../geometry/affine";
@@ -118,6 +118,20 @@ describe("flipOperation", () => {
       profile.params.cornerOvercuts?.excluded.map((point) => flipPoint2(flip, point)),
     );
     expect(flipOperation(flipped, flip)).toEqual(profile);
+  });
+
+  it("mirrors a profile's entry points with the drawing", () => {
+    const [profile] = fullDocument().operations;
+    if (profile?.type !== "profile") throw new Error("a profile");
+    const entries = [{ start: [0, 50] as Point, plunge: [-10, 40] as Point }];
+    const withEntries = { ...profile, params: { ...profile.params, tabs: null, entries } };
+    const flip = { ...stock, axis: "x" as const };
+    const flipped = flipOperation(withEntries, flip);
+    if (flipped.type !== "profile") throw new Error("still a profile");
+    expect(flipped.params.entries).toEqual([
+      { start: flipPoint2(flip, [0, 50]), plunge: flipPoint2(flip, [-10, 40]) },
+    ]);
+    expect(flipOperation(flipped, flip)).toEqual(withEntries);
   });
 
   it("mirrors a drill's placed holes with the drawing", () => {

@@ -4,6 +4,7 @@ import {
   GEOMETRY_TOLERANCE,
   type MillingDirection,
   type Point,
+  type ProfileEntry,
   type ProfileOperation,
   type ProfileSide,
   type ProfileTabs,
@@ -55,7 +56,7 @@ export type ProfileOptions = {
  * A closed ring the tool follows, in cutting direction, without its closing
  * point, and the stretches of it where tabs keep the tool up. It never starts
  * on a tab, and has a point at each end of one. `startPoint` when it starts
- * where a start point put it.
+ * where a start point put it, `plunge` where an entry point's tool goes down.
  */
 type Contour = {
   ring: Point[];
@@ -63,6 +64,7 @@ type Contour = {
   area: number;
   tabs: Span[];
   startPoint: boolean;
+  plunge: Point | null;
 };
 
 /** An open path the tool follows on the line, cut one way when a start point picked its end. */
@@ -120,6 +122,12 @@ type Cut = Descent & {
  *   bisector until its edge reaches the drawn corner, less the allowance, and
  *   back, on every pass; above a tab it stays at the tab top. An excluded
  *   point on a drawn corner leaves out an overcut there.
+ * - Each entry point (#427) goes to the closed contour its start is on, as a
+ *   start point does, one per contour, finishing contour included. That
+ *   contour starts at the entry's start, and at every level the tool plunges
+ *   straight down at the entry's plunge point, ramping or not, feeds straight
+ *   to the start, cuts the lap and feeds back: it never goes up or down
+ *   anywhere else, so undercutting cutters are safe. No lead-in arc there.
  */
 export function profileToolpath(
   operation: ProfileOperation,
@@ -154,6 +162,8 @@ export type ContourCut = {
   tabs?: ProfileTabs | null;
   /** Where cuts start, in stock coordinates. */
   startPoints?: Point[];
+  /** Where closed contours are entered, in stock coordinates. */
+  entries?: ProfileEntry[];
   cornerOvercuts?: CornerOvercuts | null;
 };
 
@@ -170,6 +180,7 @@ export function contourToolpath(
     leadIn: null,
     tabs: null,
     startPoints: [],
+    entries: [],
     cornerOvercuts: null,
     ...settings,
   };
@@ -216,23 +227,37 @@ export function contourToolpath(
     warnings.push({ code: "toolpath.pathsTooSmall" });
   }
 
+  // The paths are flattened as the viewport flattens them, give or take the chords and float noise.
+  const within = tolerance + GEOMETRY_TOLERANCE;
+  const closedLines = closed.map((ring) => [...ring, ring[0] as Point]);
+  // Of the roughing and finishing contours alike, the most any one of them leaves out.
+  const worst = (count: (found: Contours) => number) => {
+    const fromRoughing = count(roughing);
+    const fromFinishing = finishing ? count(finishing) : fromRoughing;
+    return roughing.contours.length === 0 ? fromFinishing : Math.max(fromRoughing, fromFinishing);
+  };
   if (params.startPoints.length > 0) {
     // Open paths are only cut on the line.
     const paths = params.side === "on" ? open : [];
-    const drawn = {
-      lines: [
-        ...closed.map((ring) => [...ring, ring[0] as Point]),
-        ...paths.map(({ path }) => path),
-      ],
-      // The paths are flattened as the viewport flattens them, give or take the chords and float noise.
-      within: tolerance + GEOMETRY_TOLERANCE,
-    };
-    const left = placeStarts(roughing.contours, paths, params.startPoints, drawn);
-    const leftFinishing = finishing
-      ? placeStarts(finishing.contours, [], params.startPoints, drawn)
-      : left;
-    const count = roughing.contours.length === 0 ? leftFinishing : Math.max(left, leftFinishing);
+    const drawn = { lines: [...closedLines, ...paths.map(({ path }) => path)], within };
+    const starts = params.startPoints.map((start) => ({ start, plunge: null }));
+    const count = worst((found) =>
+      placeStarts(found.contours, found === roughing ? paths : [], starts, drawn),
+    );
     if (count > 0) warnings.push({ code: "toolpath.startPointsLeftOut", values: { count } });
+  }
+
+  if (params.entries.length > 0) {
+    // After the start points, so an entry wins on its contour.
+    const drawn = { lines: closedLines, within };
+    const left = worst((found) => placeStarts(found.contours, [], params.entries, drawn));
+    if (left > 0) warnings.push({ code: "toolpath.entriesLeftOut", values: { count: left } });
+    const inPart = worst(
+      ({ contours: found, isFree }) =>
+        found.filter(({ ring, plunge }) => plunge && !leadIsFree(plunge, ring, found, isFree))
+          .length,
+    );
+    if (inPart > 0) warnings.push({ code: "toolpath.entriesInPart", values: { count: inPart } });
   }
 
   const { tabs } = params;
@@ -324,8 +349,13 @@ export function contourToolpath(
             cutContour(cut, contour, levels, finishing.isFree);
             return;
           }
+          // Stretches go down along the contour, which an entry point is there to avoid.
+          if (contour.plunge && stretches.length > 0) {
+            cutContour(cut, contour, levels, finishing.isFree);
+            return;
+          }
           for (const stretch of stretches) cutOpenPath(cut, stretch, levels);
-          finishContour(cut, contour, entry.point, -params.depth);
+          finishContour(cut, contour, contour.plunge ?? entry.point, -params.depth);
         };
       } else {
         jobs.push({
@@ -387,6 +417,7 @@ function contours(
       area: Math.abs(signedArea(ring)),
       tabs: [] as Span[],
       startPoint: false,
+      plunge: null,
     }))
     .sort((a, b) => a.area - b.area);
 
@@ -433,6 +464,18 @@ function cutContour(
   const track = new Track(loop);
   if (track.length <= cut.tolerance) return;
   const { builder } = cut;
+
+  const { plunge } = contour;
+  if (plunge) {
+    enter(cut, plunge);
+    for (const level of levels) {
+      builder.feed([plunge[0], plunge[1], level], cut.plungeRate);
+      feedAlong(cut, loop.slice(0, 1), level);
+      feedTrack(cut, track, contour.tabs, 0, track.length, () => level);
+      feedAlong(cut, [plunge], level);
+    }
+    return;
+  }
 
   const arc = fittingLeadIn(cut, loop, contour.wasteLeft, isFree);
   if (arc) {
@@ -493,7 +536,8 @@ function cutOpenPath(cut: Cut, path: Point[], levels: number[], oneWay = false) 
 
 /**
  * Cuts the finish lap of `contour` at full depth: down through the slot the
- * depth passes cleared at `slot`, across to the contour, around it and back.
+ * depth passes cleared at `slot`, or at the entry's plunge point, across to
+ * the contour, around it and back.
  */
 function finishContour(cut: Cut, contour: Contour, slot: Point, depth: number) {
   const { builder } = cut;
@@ -706,17 +750,17 @@ function feedTrack(
 
 /**
  * Restarts each of `contours`, or turns each of the open `paths` one way from
- * its nearer end, at the start point of `positions` nearest to it. A start
- * point counts on one of the `drawn` lines it lies on, within `within`, and
- * goes to the nearest point of the contour that line makes: one nearest to
- * that line of all of them, at any corner. Returns how many positions were
- * off every line, on one that makes no contour, or went to a path that
- * already had one.
+ * its nearer end, at the start of `positions` nearest to it, and gives a
+ * contour its plunge point. A start counts on one of the `drawn` lines it
+ * lies on, within `within`, and goes to the nearest point of the contour that
+ * line makes: one nearest to that line of all of them, at any corner. Returns
+ * how many positions were off every line, on one that makes no contour, or
+ * went to a path that already had one.
  */
 function placeStarts(
   contours: Contour[],
   paths: OpenPath[],
-  positions: Point[],
+  positions: { start: Point; plunge: Point | null }[],
   drawn: { lines: Point[][]; within: number },
 ): number {
   const lines = [
@@ -727,7 +771,7 @@ function placeStarts(
   const drawnBoxes = drawn.lines.map(bounds);
   let left = 0;
   const taken = new Set<number>();
-  for (const position of positions) {
+  for (const { start: position, plunge } of positions) {
     const own = nearestLine(drawn.lines, drawnBoxes, position, drawn.within);
     const best = own && nearestLine(lines, boxes, position);
     const from = best && nearestLine(drawn.lines, drawnBoxes, best.point);
@@ -748,6 +792,7 @@ function placeStarts(
     if (contour) {
       contour.ring = restartAt(line, best.at);
       contour.startPoint = true;
+      contour.plunge = plunge;
     } else {
       const open = paths[best.index - contours.length] as OpenPath;
       if (best.at > loopLength(line) / 2) open.path = [...line].reverse();
@@ -755,6 +800,38 @@ function placeStarts(
     }
   }
   return left;
+}
+
+/**
+ * Whether the tool centre stays where `isFree` allows all the way from
+ * `plunge` to the start of `ring`, so the tool's edge doesn't cut into the
+ * part: `plunge` is free and the lead crosses none of the `contours` that
+ * bound the free area before it reaches the start.
+ */
+function leadIsFree(
+  plunge: Point,
+  ring: Point[],
+  contours: Contour[],
+  isFree: (point: Point) => boolean,
+): boolean {
+  const start = ring[0] as Point;
+  if (!isFree(plunge)) return false;
+  const d: Point = [start[0] - plunge[0], start[1] - plunge[1]];
+  return contours.every((contour) =>
+    contour.ring.every((a, i) => {
+      const b = contour.ring[(i + 1) % contour.ring.length] as Point;
+      const e: Point = [b[0] - a[0], b[1] - a[1]];
+      const denominator = d[0] * e[1] - d[1] * e[0];
+      // Parallel to the lead: it can only touch, not cross.
+      if (Math.abs(denominator) < 1e-12) return true;
+      const w: Point = [a[0] - plunge[0], a[1] - plunge[1]];
+      const t = (w[0] * e[1] - w[1] * e[0]) / denominator;
+      const u = (w[0] * d[1] - w[1] * d[0]) / denominator;
+      const reach = distance(plunge, start);
+      // Meeting the contour within float noise of the start is reaching it, not crossing.
+      return !(u >= 0 && u <= 1 && t >= 0 && (1 - t) * reach > GEOMETRY_TOLERANCE);
+    }),
+  );
 }
 
 /**
