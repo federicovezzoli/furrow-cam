@@ -821,7 +821,8 @@
       "noData": "Bu alan için yükseklik verisi yok."
     },
     "image": {
-      "tooSmall": "Bu görüntü çok küçük. En az 2 × 2 piksel olan bir görüntü seçin."
+      "tooSmall": "Bu görüntü çok küçük. En az 2 × 2 piksel olan bir görüntü seçin.",
+      "tooLarge": "Bu görüntü izin verilen en fazla boyut olan {mb, number} MB'tan büyük."
     }
   },
   "Operation": {

@@ -63,6 +63,26 @@ describe("imageHeights", () => {
   });
 });
 
+describe("imageHeights, shrinking and smoothing", () => {
+  it("averages the pixels falling in each of a smaller size", () => {
+    const quarters = image(4, 2, (x) => [0, 255, 255, 255][x] as number);
+    expect([...imageHeights(quarters, false, 0, [2, 1])]).toEqual([0.5, 1]);
+  });
+
+  it("blurs by a fractional radius, counting the edge pixels in part", () => {
+    const step = image(5, 1, (x) => (x < 2 ? 0 : 255));
+    const blurred = imageHeights(step, false, 0.5);
+    expect([...blurred].map((h) => +h.toFixed(4))).toEqual([0, 0.25, 0.75, 1, 1]);
+  });
+
+  it("measures the blur in the image's own pixels when shrinking", () => {
+    const step = image(10, 2, (x) => (x < 4 ? 0 : 255));
+    // 2 of the image's pixels are 1 of the shrunk image's.
+    const shrunk = imageHeights(step, false, 2, [5, 1]);
+    expect([...shrunk].map((h) => +h.toFixed(4))).toEqual([0, 0.3333, 0.6667, 1, 1]);
+  });
+});
+
 describe("reliefCells", () => {
   it("never has more corners than pixels", () => {
     expect(reliefCells(30, 20, 1_000_000)).toEqual([29, 19]);

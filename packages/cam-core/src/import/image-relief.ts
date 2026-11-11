@@ -43,28 +43,48 @@ export type ImageRelief = {
 };
 
 /**
- * Each pixel's height from 0 to 1, row by row from the top: its luminance
- * (Rec. 709 on the sRGB values), transparent counting as black, inverted with
- * `invert`, then box-blurred `blur` pixels around.
+ * The image's heights from 0 to 1, row by row from the top, at `size`
+ * pixels (its own by default; a smaller size averages the pixels falling in
+ * each): each pixel's luminance (Rec. 709 on the sRGB values), transparent
+ * counting as black, inverted with `invert`, then box-blurred `blur` of the
+ * image's own pixels around.
  */
-export function imageHeights({ width, height, data }: ReliefImage, invert: boolean, blur: number) {
-  const heights = new Float32Array(width * height);
-  for (let p = 0; p < heights.length; p++) {
-    const k = p * 4;
-    const luminance =
-      (0.2126 * (data[k] as number) +
-        0.7152 * (data[k + 1] as number) +
-        0.0722 * (data[k + 2] as number)) /
-      255;
-    const value = (luminance * (data[k + 3] as number)) / 255;
-    heights[p] = invert ? 1 - value : value;
+export function imageHeights(
+  { width, height, data }: ReliefImage,
+  invert: boolean,
+  blur: number,
+  [columns, rows]: readonly [number, number] = [width, height],
+) {
+  const sums = new Float32Array(columns * rows);
+  const counts = new Uint32Array(columns * rows);
+  for (let y = 0; y < height; y++) {
+    const row = Math.floor((y * rows) / height) * columns;
+    for (let x = 0; x < width; x++) {
+      const k = (y * width + x) * 4;
+      const luminance =
+        (0.2126 * (data[k] as number) +
+          0.7152 * (data[k + 1] as number) +
+          0.0722 * (data[k + 2] as number)) /
+        255;
+      const value = (luminance * (data[k + 3] as number)) / 255;
+      const target = row + Math.floor((x * columns) / width);
+      sums[target] = (sums[target] as number) + (invert ? 1 - value : value);
+      counts[target] = (counts[target] as number) + 1;
+    }
   }
-  return boxBlur(heights, width, height, Math.round(blur));
+  const heights = sums.map((sum, p) => sum / (counts[p] as number));
+  return boxBlur(heights, columns, rows, (blur * columns) / width);
 }
 
-/** `values` averaged over a (2r + 1)² square about each pixel, the edge pixels repeated beyond it. */
+/**
+ * `values` averaged over a (2r + 1)² square about each pixel, the edge pixels
+ * repeated beyond it. A fractional `r` counts the pixels at the square's edge
+ * in part, so the blur grows smoothly with it.
+ */
 function boxBlur(values: Float32Array, width: number, height: number, r: number) {
-  if (r < 1) return values;
+  if (!(r > 0)) return values;
+  const whole = Math.floor(r);
+  const part = r - whole;
   const pass = (
     from: Float32Array,
     length: number,
@@ -77,10 +97,11 @@ function boxBlur(values: Float32Array, width: number, height: number, r: number)
       from[line * stride + Math.min(length - 1, Math.max(0, k)) * step] as number;
     for (let line = 0; line < lines; line++) {
       let sum = 0;
-      for (let k = -r; k <= r; k++) sum += at(line, k);
+      for (let k = -whole; k <= whole; k++) sum += at(line, k);
       for (let k = 0; k < length; k++) {
-        to[line * stride + k * step] = sum / (2 * r + 1);
-        sum += at(line, k + r + 1) - at(line, k - r);
+        const edges = at(line, k - whole - 1) + at(line, k + whole + 1);
+        to[line * stride + k * step] = (sum + part * edges) / (2 * r + 1);
+        sum += at(line, k + whole + 1) - at(line, k - whole);
       }
     }
     return to;
@@ -134,11 +155,12 @@ export function imageReliefMesh(
   settings: ImageReliefSettings,
   limits: StlLimits,
 ): ImageRelief {
-  const { width, height } = image;
-  const [nx, ny] = reliefCells(width, height, triangleBudget(limits));
+  const [nx, ny] = reliefCells(image.width, image.height, triangleBudget(limits));
+  // Read at no more pixels than the grid uses, so a large photo takes little memory.
+  const [width, height] = reliefPixels(image.width, image.height, limits);
   // Fewer cells than pixels: blurred over a cell too, so the corners don't alias.
-  const shrink = Math.floor((width - 1) / nx / 2);
-  const heights = imageHeights(image, settings.invert, settings.blur + shrink);
+  const cell = (Math.floor((width - 1) / nx / 2) * image.width) / width;
+  const heights = imageHeights(image, settings.invert, settings.blur + cell, [width, height]);
   const sample = (x: number, y: number) => {
     const x0 = Math.min(width - 2, Math.floor(x));
     const y0 = Math.min(height - 2, Math.floor(y));
@@ -161,7 +183,7 @@ export function imageReliefMesh(
       zMax = Math.max(zMax, z);
     }
   }
-  const depth = (settings.width * height) / width;
+  const depth = (settings.width * image.height) / image.width;
   const mesh = heightGridMesh({
     nx,
     ny,

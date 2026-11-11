@@ -821,7 +821,8 @@
       "noData": "Für dieses Gebiet gibt es keine Höhendaten."
     },
     "image": {
-      "tooSmall": "Dieses Bild ist zu klein. Wähle eines mit mindestens 2 × 2 Pixeln."
+      "tooSmall": "Dieses Bild ist zu klein. Wähle eines mit mindestens 2 × 2 Pixeln.",
+      "tooLarge": "Dieses Bild ist größer als {mb, number} MB, das erlaubte Maximum."
     }
   },
   "Operation": {

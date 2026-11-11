@@ -821,7 +821,8 @@
       "noData": "Non ci sono dati di elevazione per quest'area."
     },
     "image": {
-      "tooSmall": "Questa immagine è troppo piccola. Scegline una di almeno 2 × 2 pixel."
+      "tooSmall": "Questa immagine è troppo piccola. Scegline una di almeno 2 × 2 pixel.",
+      "tooLarge": "Questa immagine supera {mb, number} MB, il massimo consentito."
     }
   },
   "Operation": {

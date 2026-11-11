@@ -821,7 +821,8 @@
       "noData": "此区域没有高程数据。"
     },
     "image": {
-      "tooSmall": "此图像太小。请选择至少 2 × 2 像素的图像。"
+      "tooSmall": "此图像太小。请选择至少 2 × 2 像素的图像。",
+      "tooLarge": "此图像大于允许的上限 {mb, number} MB。"
     }
   },
   "Operation": {

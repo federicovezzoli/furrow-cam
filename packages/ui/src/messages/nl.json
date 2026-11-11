@@ -821,7 +821,8 @@
       "noData": "Er zijn geen hoogtegegevens voor dit gebied."
     },
     "image": {
-      "tooSmall": "Deze afbeelding is te klein. Kies er een van minstens 2 × 2 pixels."
+      "tooSmall": "Deze afbeelding is te klein. Kies er een van minstens 2 × 2 pixels.",
+      "tooLarge": "Deze afbeelding is groter dan {mb, number} MB, het toegestane maximum."
     }
   },
   "Operation": {
