@@ -819,6 +819,9 @@
       "tooWide": "Cette zone fait plus de {km, number} km de large, le maximum autorisé. Dessinez-en une plus petite.",
       "tooDetailed": "Le modèle de cette zone dépasserait les limites des modèles 3D.",
       "noData": "Il n'y a pas de données d'altitude pour cette zone."
+    },
+    "image": {
+      "tooSmall": "Cette image est trop petite. Choisissez-en une d'au moins 2 × 2 pixels."
     }
   },
   "Operation": {
@@ -1550,6 +1553,34 @@
     "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le terrain peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Terrain"
+  },
+  "ImageRelief": {
+    "open": "Relief depuis une image…",
+    "ribbon": "Image",
+    "hint": "Créer un modèle en relief à partir d'une image en niveaux de gris",
+    "title": "Relief depuis une image",
+    "description": "Choisissez une image PNG, JPEG ou WebP : plus c'est clair, plus c'est haut. Ajoutez le relief au projet ou téléchargez-le.",
+    "noImage": "Choisissez une image pour voir son relief.",
+    "pick": "Choisir une image…",
+    "change": "Changer d'image…",
+    "preview": "Aperçu du relief",
+    "previewLoading": "Création de l'aperçu…",
+    "width": "Largeur",
+    "relief": "Hauteur du relief",
+    "base": "Base",
+    "blur": "Lissage",
+    "invert": "Inverser",
+    "invertHint": "Le sombre est plus haut, par exemple pour une lithophanie usinée par l'arrière.",
+    "pixels": "Image : {width, number} × {height, number} px",
+    "size": "Modèle : {size} {unit}",
+    "building": "Création du modèle…",
+    "saving": "Ajout du modèle au projet…",
+    "generate": "Ajouter au projet",
+    "download": "Télécharger le STL",
+    "hasModel": "Ce projet a déjà son modèle 3D : le relief peut seulement être téléchargé en fichier STL.",
+    "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le relief peut seulement être téléchargé en fichier STL.",
+    "cancel": "Annuler",
+    "defaultName": "Relief"
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

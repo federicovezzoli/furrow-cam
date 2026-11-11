@@ -819,6 +819,9 @@
       "tooWide": "此区域宽度超过允许的最大值 {km, number} km，请绘制更小的区域。",
       "tooDetailed": "此区域的模型会超出 3D 模型的限制。",
       "noData": "此区域没有高程数据。"
+    },
+    "image": {
+      "tooSmall": "此图像太小。请选择至少 2 × 2 像素的图像。"
     }
   },
   "Operation": {
@@ -1550,6 +1553,34 @@
     "storeOff": "此服务器无法保存 3D 模型：地形只能下载为 STL 文件。",
     "cancel": "取消",
     "defaultName": "地形"
+  },
+  "ImageRelief": {
+    "open": "从图像生成浮雕…",
+    "ribbon": "图像",
+    "hint": "从灰度图像生成浮雕模型",
+    "title": "从图像生成浮雕",
+    "description": "选择 PNG、JPEG 或 WebP 图像：越亮越高。将浮雕添加到项目或下载。",
+    "noImage": "选择图像以查看其浮雕。",
+    "pick": "选择图像…",
+    "change": "更换图像…",
+    "preview": "浮雕预览",
+    "previewLoading": "正在生成预览…",
+    "width": "宽度",
+    "relief": "浮雕高度",
+    "base": "底座",
+    "blur": "平滑",
+    "invert": "反转",
+    "invertHint": "越暗越高，例如从背面加工的透光浮雕。",
+    "pixels": "图像：{width, number} × {height, number} px",
+    "size": "模型：{size} {unit}",
+    "building": "正在生成模型…",
+    "saving": "正在将模型添加到项目…",
+    "generate": "添加到项目",
+    "download": "下载 STL",
+    "hasModel": "此项目已有 3D 模型：浮雕只能下载为 STL 文件。",
+    "storeOff": "此服务器无法存储 3D 模型：浮雕只能下载为 STL 文件。",
+    "cancel": "取消",
+    "defaultName": "浮雕"
   },
   "Viewport": {
     "scene": "毛坯、几何图形和刀具路径",

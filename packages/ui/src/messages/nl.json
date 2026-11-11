@@ -819,6 +819,9 @@
       "tooWide": "Dit gebied is breder dan {km, number} km, het maximum. Teken een kleiner gebied.",
       "tooDetailed": "Het model van dit gebied zou de limieten voor 3D-modellen overschrijden.",
       "noData": "Er zijn geen hoogtegegevens voor dit gebied."
+    },
+    "image": {
+      "tooSmall": "Deze afbeelding is te klein. Kies er een van minstens 2 × 2 pixels."
     }
   },
   "Operation": {
@@ -1550,6 +1553,34 @@
     "storeOff": "Deze server kan geen 3D-modellen opslaan: het terrein kan alleen als STL-bestand worden gedownload.",
     "cancel": "Annuleren",
     "defaultName": "Terrein"
+  },
+  "ImageRelief": {
+    "open": "Reliëf van een afbeelding…",
+    "ribbon": "Afbeelding",
+    "hint": "Maak een reliëfmodel van een grijswaardenafbeelding",
+    "title": "Reliëf van een afbeelding",
+    "description": "Kies een PNG-, JPEG- of WebP-afbeelding: hoe lichter, hoe hoger. Voeg het reliëf toe aan het project of download het.",
+    "noImage": "Kies een afbeelding om het reliëf te zien.",
+    "pick": "Afbeelding kiezen…",
+    "change": "Andere afbeelding…",
+    "preview": "Voorbeeld van het reliëf",
+    "previewLoading": "Voorbeeld maken…",
+    "width": "Breedte",
+    "relief": "Reliëfhoogte",
+    "base": "Basis",
+    "blur": "Gladmaken",
+    "invert": "Omkeren",
+    "invertHint": "Donker is hoger, bijvoorbeeld voor een lithofaan die van achteren wordt gefreesd.",
+    "pixels": "Afbeelding: {width, number} × {height, number} px",
+    "size": "Model: {size} {unit}",
+    "building": "Model maken…",
+    "saving": "Model aan het project toevoegen…",
+    "generate": "Aan project toevoegen",
+    "download": "STL downloaden",
+    "hasModel": "Dit project heeft al zijn 3D-model: het reliëf kan alleen als STL-bestand worden gedownload.",
+    "storeOff": "Deze server kan geen 3D-modellen opslaan: het reliëf kan alleen als STL-bestand worden gedownload.",
+    "cancel": "Annuleren",
+    "defaultName": "Reliëf"
   },
   "Viewport": {
     "scene": "Materiaal, geometrie en gereedschapsbanen",

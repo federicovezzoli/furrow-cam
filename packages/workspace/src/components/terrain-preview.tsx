@@ -18,17 +18,20 @@ import { PALETTES } from "./viewport/scene-style";
  * the relief alone does, so the view the user turned to stays. While
  * `current` (the settings haven't changed since it was made) and drawn, it
  * is marked `terrain-preview-ready`, which the demo videos wait for (ADR-0075).
+ * Image reliefs (PRD-0015) are shown the same way, named by `label`.
  */
 export default function TerrainPreview({
   stl,
   size,
   fitKey,
   current,
+  label,
 }: {
   stl: ArrayBuffer;
   size: [number, number, number];
   fitKey: string;
   current: boolean;
+  label?: string;
 }) {
   const t = useTranslations("Terrain");
   const { resolvedTheme } = useTheme();
@@ -44,7 +47,7 @@ export default function TerrainPreview({
     <Canvas
       frameloop="demand"
       dpr={[1, 2]}
-      aria-label={t("preview")}
+      aria-label={label ?? t("preview")}
       data-demo={current && drawn === geometry ? "terrain-preview-ready" : undefined}
     >
       <Drawn geometry={geometry} onDrawn={setDrawn} />

@@ -40,7 +40,7 @@ import {
 import type * as React from "react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
-import type { GeneratedTerrain } from "../lib/mesh-worker-protocol";
+import { PREVIEW_LIMITS, useMeshPreview } from "../hooks/use-mesh-preview";
 import { MeshImportError } from "../lib/model-import";
 import { fittingSide } from "../lib/model-size";
 import { areaName, fileNameFor, type PlaceView } from "../lib/place-search";
@@ -71,15 +71,6 @@ const SHAPE_ICONS: Record<AreaShape, React.ReactNode> = {
   ellipse: <CircleIcon className="scale-y-[0.7]" />,
   freehand: <LassoIcon />,
 };
-
-/**
- * The preview's terrain (PRD-0014 T4): about 220 cells across, a tenth of the
- * model's triangles. Detailed enough to judge; its normals, worked out on the
- * main thread, take about 150 ms on a recent laptop.
- */
-const PREVIEW_LIMITS: StlLimits = { maxBytes: Infinity, maxTriangles: 100_000 };
-/** How long settings stay unchanged before the preview is made again. */
-const PREVIEW_DELAY = 300;
 
 /**
  * Opens *Terrain from a map* (PRD-0014), from the empty project's import card
@@ -138,45 +129,10 @@ function usePlan(ring: LonLat[] | null, limits: StlLimits) {
 /** `value` rounded to a tenth, for ICU to format in the user's language. */
 const tenths = (value: number) => Math.round(value * 10) / 10;
 
-/**
- * The coarse terrain of `ring` with `settings`, made again once they stop
- * changing: the 3D preview, its size and its height range, with the
- * settings it was made with (the last one stays shown while the next is
- * made). `null` while the first is made, or with no area.
- */
-function usePreview(ring: LonLat[] | null, settings: TerrainSettings | null) {
-  const [preview, setPreview] = useState<
-    | { terrain: GeneratedTerrain; settings: TerrainSettings }
-    | { error: Translatable; settings: TerrainSettings }
-    | null
-  >(null);
-  useEffect(() => {
-    if (!ring || !settings) return setPreview(null);
-    const abort = new AbortController();
-    const timer = setTimeout(() => {
-      generateTerrain(ring, settings, PREVIEW_LIMITS, { signal: abort.signal }).then(
-        (terrain) => {
-          if (!abort.signal.aborted) setPreview({ terrain, settings });
-        },
-        (error) => {
-          if (abort.signal.aborted) return;
-          setPreview({
-            settings,
-            error:
-              error instanceof MeshImportError
-                ? error.detail
-                : { code: "workspace.terrainUnavailable" },
-          });
-        },
-      );
-    }, PREVIEW_DELAY);
-    return () => {
-      clearTimeout(timer);
-      abort.abort();
-    };
-  }, [ring, settings]);
-  return preview;
-}
+const TERRAIN_UNAVAILABLE: Translatable = { code: "workspace.terrainUnavailable" };
+/** The preview's coarse terrain of `ring`, for `useMeshPreview`. */
+const previewTerrain = (ring: LonLat[], settings: TerrainSettings, signal: AbortSignal) =>
+  generateTerrain(ring, settings, PREVIEW_LIMITS, { signal });
 
 function TerrainDialog({ onClose }: { onClose: () => void }) {
   const t = useTranslations("Terrain");
@@ -214,8 +170,14 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
     () => (longestSide ? { longestSide, exaggeration, base } : null),
     [longestSide, exaggeration, base],
   );
-  const preview = usePreview(step === "model" ? ring : null, settings);
-  const shown = preview && "terrain" in preview ? preview.terrain : null;
+  // The 3D preview, its size and its height range, made again once the settings stop changing.
+  const preview = useMeshPreview(
+    step === "model" ? ring : null,
+    settings,
+    previewTerrain,
+    TERRAIN_UNAVAILABLE,
+  );
+  const shown = preview && "mesh" in preview ? preview.mesh : null;
   // The preview on screen was made with other settings: a new one is on its way.
   const stale = preview !== null && preview.settings !== settings;
   useEffect(() => () => abort.current?.abort(), []);

@@ -33,6 +33,7 @@ import { DrawingProperties } from "./drawing-properties";
 import { ExportProjectButton } from "./export-project-button";
 import { GcodeExportButton } from "./gcode-export-button";
 import { AddTextButton, GeometryImport, ImportDrawingButton } from "./geometry-import";
+import { ImageReliefButton } from "./image-relief-dialog";
 import { MachineUpdateDialog } from "./machine-update-dialog";
 import { ModelImportButton } from "./model-import-button";
 import { ModelProperties } from "./model-properties";
@@ -103,6 +104,7 @@ export function WorkspaceShell() {
           <ImportDrawingButton />
           <ModelImportButton inRibbon />
           <TerrainButton inRibbon />
+          <ImageReliefButton inRibbon />
           <AddTextButton />
         </RibbonGroup>
         <RibbonGroup caption={t("operations")} tour="add-operation">

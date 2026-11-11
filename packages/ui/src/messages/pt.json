@@ -819,6 +819,9 @@
       "tooWide": "Esta área tem mais de {km, number} km de largura, o máximo permitido. Desenhe uma mais pequena.",
       "tooDetailed": "O modelo desta área excederia os limites dos modelos 3D.",
       "noData": "Não há dados de altitude para esta área."
+    },
+    "image": {
+      "tooSmall": "Esta imagem é demasiado pequena. Escolha uma com pelo menos 2 × 2 píxeis."
     }
   },
   "Operation": {
@@ -1550,6 +1553,34 @@
     "storeOff": "Este servidor não pode guardar modelos 3D: o terreno só pode ser transferido como ficheiro STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
+  },
+  "ImageRelief": {
+    "open": "Relevo a partir de uma imagem…",
+    "ribbon": "Imagem",
+    "hint": "Criar um modelo em relevo a partir de uma imagem em tons de cinzento",
+    "title": "Relevo a partir de uma imagem",
+    "description": "Escolha uma imagem PNG, JPEG ou WebP: quanto mais clara, mais alta. Adicione o relevo ao projeto ou transfira-o.",
+    "noImage": "Escolha uma imagem para ver o seu relevo.",
+    "pick": "Escolher imagem…",
+    "change": "Mudar de imagem…",
+    "preview": "Pré-visualização do relevo",
+    "previewLoading": "A criar a pré-visualização…",
+    "width": "Largura",
+    "relief": "Altura do relevo",
+    "base": "Base",
+    "blur": "Suavização",
+    "invert": "Inverter",
+    "invertHint": "O escuro é mais alto, por exemplo para uma litofania maquinada por trás.",
+    "pixels": "Imagem: {width, number} × {height, number} px",
+    "size": "Modelo: {size} {unit}",
+    "building": "A criar o modelo…",
+    "saving": "A adicionar o modelo ao projeto…",
+    "generate": "Adicionar ao projeto",
+    "download": "Transferir STL",
+    "hasModel": "Este projeto já tem o seu modelo 3D: o relevo só pode ser transferido como ficheiro STL.",
+    "storeOff": "Este servidor não pode guardar modelos 3D: o relevo só pode ser transferido como ficheiro STL.",
+    "cancel": "Cancelar",
+    "defaultName": "Relevo"
   },
   "Viewport": {
     "scene": "Material, geometria e percursos",
