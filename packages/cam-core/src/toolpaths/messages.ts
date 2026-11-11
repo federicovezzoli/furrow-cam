@@ -25,6 +25,7 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.startPointsLeftOut",
   "toolpath.startPointsOnTabs",
   "toolpath.leadInMisfits",
+  "toolpath.plungesInPart",
   "toolpath.peelIsland",
   "toolpath.touchOffPad",
   "toolpath.modelMissing",

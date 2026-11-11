@@ -338,6 +338,24 @@ export const migrations: Readonly<Record<number, Migration>> = {
   // are neither, as an absent flag says; the bump keeps older releases from
   // opening documents that use them.
   35: (doc) => doc,
+  // #427: a profile's start points can have a plunge point. Existing ones have none.
+  36: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          operation.type === "profile" &&
+          isObject(operation.params) &&
+          Array.isArray(operation.params.startPoints)
+        ) {
+          operation.params.startPoints = operation.params.startPoints.map((start) =>
+            Array.isArray(start) ? { start, plunge: null } : start,
+          );
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

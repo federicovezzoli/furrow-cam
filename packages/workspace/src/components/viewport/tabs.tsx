@@ -41,9 +41,10 @@ import {
   removeStartPoint,
   removeTab,
   restoreOvercut,
+  setStartPlunge,
 } from "../../stores/operation-actions";
 import { moveHoldingTab } from "../../stores/stock-actions";
-import { DashedLines } from "./lines";
+import { DashedLines, Lines } from "./lines";
 import { RENDER_ORDER } from "./scene-style";
 import { onStockTop, StockTopCatcher, useStockTopHover } from "./stock-top";
 import { CLICK_THRESHOLD, SNAP_RADIUS, SnapHover, type SnapPick, samePick } from "./zero-pick";
@@ -182,10 +183,14 @@ export function HoldingTabs({ color }: { color: string }) {
 
 /**
  * The selected profile's or engraving's start points (#426), each a disc as
- * wide as the tool at the stock top, where the tool centre enters the cut.
- * While the workspace edits them (top view only), a click near one of the
- * operation's paths adds a start point there (at the nearer end of an open
- * path), dragging one moves it along the paths and clicking it removes it.
+ * wide as the tool at the stock top, where the tool centre enters the cut,
+ * and a profile's plunge points (#427), outlined discs joined to theirs by
+ * the lead line. While the workspace edits them (top view only), a click near
+ * one of the operation's paths adds a start point there (at the nearer end of
+ * an open path); on a profile without tabs, the next click away from the
+ * paths, right after one on a closed path, sets its plunge point. Dragging a
+ * start or plunge point moves it, clicking a start point removes it with its
+ * plunge point and clicking a plunge point removes only that.
  */
 export function StartPoints({ color }: { color: string }) {
   const selected = useSelectedOperation();
@@ -193,9 +198,17 @@ export function StartPoints({ color }: { color: string }) {
   const editing = useWorkspaceStore((s) => s.editing === "startPoints");
   const geometry = useDocumentStore((s) => s.document.geometry);
   const store = useDocumentStoreApi();
+  // The start point just added on a closed path, which the next click away from the paths gives a plunge point.
+  const [armed, setArmed] = useState<Point | null>(null);
   const targets = operation?.targets;
   const side = operation?.params.side;
-  const startPoints = operation?.params.startPoints;
+  const startPoints = useMemo(
+    () =>
+      operation?.type === "profile"
+        ? operation.params.startPoints
+        : operation?.params.startPoints.map((start) => ({ start, plunge: null })),
+    [operation],
+  );
   // How far the tool centre is off the closed paths, on the finished cut.
   const offset =
     operation &&
@@ -210,44 +223,84 @@ export function StartPoints({ color }: { color: string }) {
   const centres = useMemo(
     () =>
       side && offset !== null && offset !== undefined && startPoints
-        ? startPointCentres(shapes, side, offset, startPoints)
+        ? startPointCentres(
+            shapes,
+            side,
+            offset,
+            startPoints.map(({ start }) => start),
+          )
         : [],
     [shapes, side, offset, startPoints],
   );
+  const leads = useMemo(
+    () =>
+      new Float32Array(
+        (startPoints ?? []).flatMap(({ plunge }, i) => {
+          const centre = centres[i];
+          return plunge && centre ? [plunge[0], plunge[1], 0, centre[0], centre[1], 0] : [];
+        }),
+      ),
+    [startPoints, centres],
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a half-made pick ends with its mode or operation
+  useEffect(() => setArmed(null), [editing, operation?.id]);
   if (!operation || !startPoints) return null;
   const { depth } = operation.params;
   const radius = operation.tool.diameter / 2;
+  const plunges = operation.type === "profile" && !operation.params.tabs;
 
   function add(event: ThreeEvent<MouseEvent>) {
-    if (!operation || event.delta > TAB_DRAG_THRESHOLD) return;
+    if (!operation || !startPoints || event.delta > TAB_DRAG_THRESHOLD) return;
     const point = onStockTop(event.ray);
-    const snapped = point && snapStartPoint(paths, point);
+    if (!point) return;
+    const snapped = snapStartPoint(paths, point);
     if (snapped && snapped.distance <= TAB_PICK_DISTANCE / event.camera.zoom) {
       addStartPoint(store, operation.id, snapped.point);
+      setArmed(plunges && snapped.closed ? snapped.point : null);
+      return;
     }
+    const index = armed
+      ? startPoints.findIndex(({ start }) => start[0] === armed[0] && start[1] === armed[1])
+      : -1;
+    if (index >= 0) setStartPlunge(store, operation.id, index, point);
+    setArmed(null);
   }
 
+  const disc = <circleGeometry args={[radius, 32]} />;
   return (
     <>
       {editing && <StockTopCatcher z={-depth - 1} onClick={add} />}
-      {centres.map((center, index) => (
-        <TabMarker
-          // Positions have no ids; a marker keeps its index while dragged.
-          // biome-ignore lint/suspicious/noArrayIndexKey: see above
-          key={index}
-          frame={{ center, angle: 0 }}
-          z={0}
-          editing={editing}
-          onMove={(point) => {
-            const snapped = snapStartPoint(paths, point);
-            if (snapped) moveStartPoint(store, operation.id, index, snapped.point);
-          }}
-          onRemove={() => removeStartPoint(store, operation.id, index)}
-        >
-          <MarkerMesh color={color}>
-            <circleGeometry args={[radius, 32]} />
-          </MarkerMesh>
-        </TabMarker>
+      <Lines positions={leads} color={color} renderOrder={RENDER_ORDER.tabs} overlay />
+      {startPoints.map(({ plunge }, index) => (
+        // Positions have no ids; a marker keeps its index while dragged.
+        // biome-ignore lint/suspicious/noArrayIndexKey: see above
+        <group key={index}>
+          <TabMarker
+            frame={{ center: centres[index] ?? (startPoints[index]?.start as Point), angle: 0 }}
+            z={0}
+            editing={editing}
+            onMove={(point) => {
+              const snapped = snapStartPoint(paths, point);
+              if (snapped) moveStartPoint(store, operation.id, index, snapped.point);
+            }}
+            onRemove={() => removeStartPoint(store, operation.id, index)}
+          >
+            <MarkerMesh color={color}>{disc}</MarkerMesh>
+          </TabMarker>
+          {plunge && (
+            <TabMarker
+              frame={{ center: plunge, angle: 0 }}
+              z={0}
+              editing={editing}
+              onMove={(point) => setStartPlunge(store, operation.id, index, point)}
+              onRemove={() => setStartPlunge(store, operation.id, index, null)}
+            >
+              <MarkerMesh color={color} faded>
+                {disc}
+              </MarkerMesh>
+            </TabMarker>
+          )}
+        </group>
       ))}
     </>
   );

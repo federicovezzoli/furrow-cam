@@ -585,6 +585,7 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
     updateProfileParams(store, operation.id, changes),
   );
   const t = useTranslations("Operation");
+  const plunges = params.startPoints.filter(({ plunge }) => plunge !== null).length;
 
   const length = {
     layout: "inline",
@@ -697,7 +698,9 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
       <Checkbox
         id="profile-tabs"
         label={t("holdingTabs")}
+        hint={plunges > 0 ? t("tabsNeedNoPlunges") : undefined}
         checked={params.tabs !== null}
+        disabled={params.tabs === null && plunges > 0}
         onChange={(checked) =>
           update("tabs", {
             tabs: checked ? defaultTabs(store.getState().document, operation) : null,
@@ -712,7 +715,10 @@ function ProfileFields({ operation }: { operation: ProfileOperation }) {
           onChange={(tabs) => update("tabs", { tabs })}
         />
       )}
-      <StartPointsFields count={params.startPoints.length} />
+      <StartPointsFields
+        count={params.startPoints.length}
+        plunges={params.tabs === null ? plunges : null}
+      />
       <Checkbox
         id="profile-corner-overcuts"
         label={t("cornerOvercuts")}
@@ -1680,15 +1686,23 @@ function OvercutsEditing() {
   );
 }
 
-/** How many start points (#426) an operation has, and a toggle for editing them in the viewport. */
-function StartPointsFields({ count }: { count: number }) {
+/**
+ * How many start points (#426) an operation has, and how many of a profile's
+ * have a plunge point (#427), or `null` when it can't have them (an
+ * engraving, a profile with tabs); and a toggle for editing them in the
+ * viewport.
+ */
+function StartPointsFields({ count, plunges = null }: { count: number; plunges?: number | null }) {
   const t = useTranslations("Operation");
   const editing = useWorkspaceStore((s) => s.editing === "startPoints");
   const setEditing = useWorkspaceStore((s) => s.setEditing);
   return (
     <>
       <div className="flex items-center gap-2">
-        <span className="flex-1 text-muted-foreground">{t("startPointCount", { count })}</span>
+        <span className="flex-1 text-muted-foreground">
+          {t("startPointCount", { count })}
+          {plunges !== null && plunges > 0 && ` · ${t("plungeCount", { count: plunges })}`}
+        </span>
         <Button
           variant={editing ? "secondary" : "outline"}
           size="compact"
@@ -1698,7 +1712,12 @@ function StartPointsFields({ count }: { count: number }) {
           {editing ? t("done") : t("editStartPoints")}
         </Button>
       </div>
-      {editing && <p className="text-muted-foreground">{t("startPointsHint")}</p>}
+      {editing && (
+        <p className="text-muted-foreground">
+          {t("startPointsHint")}
+          {plunges !== null && ` ${t("plungeHint")}`}
+        </p>
+      )}
     </>
   );
 }

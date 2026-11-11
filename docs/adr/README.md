@@ -94,6 +94,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0077](0077-terrain-generated-as-stl.md) | Terrain is generated in the browser as an STL mesh and imported like one | Proposed |
 | [0078](0078-drawings-and-a-model-together.md) | A project holds drawings and one model together | Proposed |
 | [0079](0079-machine-snapshot-links-its-source.md) | A project's machine snapshot links to the library machine it came from | Proposed |
-| [0080](0080-objects-then-paths.md) | Objects are selected first, their paths inside them, with an Objects pane | Proposed |
+| [0080](0080-objects-then-paths.md) | Objects are selected first, their paths inside them, with an Objects pane | Proposed; superseded in part by ADR-0083 |
 | [0081](0081-update-notice-opens-the-website.md) | The update notice opens the website's download section | Proposed |
 | [0082](0082-mcp-terrain-fetches-elevation.md) | The MCP server makes terrain, fetching only elevation tiles while its tool runs | Proposed |
+| [0083](0083-operations-and-objects-share-a-tab.md) | Operations and objects share a sidebar tab, one above the other | Proposed |
