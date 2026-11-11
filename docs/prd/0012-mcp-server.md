@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-24
-- **Related:** PRD-0001, PRD-0005, PRD-0007, ADR-0003, ADR-0004, ADR-0013, ADR-0028, ADR-0045, ADR-0047, ADR-0052
+- **Related:** PRD-0001, PRD-0005, PRD-0007, ADR-0003, ADR-0004, ADR-0013, ADR-0028, ADR-0045, ADR-0047, ADR-0052, ADR-0067, ADR-0082
 
 ## Problem
 
@@ -45,6 +45,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 | M10 | A top view of the toolpaths as an image, so an assistant can show or check them | Could |
 | M11 | **Remote server (phase 2):** an MCP endpoint on the web app that reaches the signed-in user's cloud projects, with the user granting access through their account (OAuth) and able to revoke it | Should |
 | M12 | The desktop app offers to set up the local server for the user's MCP clients | Could |
+| M13 | Make a terrain from an area as the project's model, as the app does (PRD-0014 T11); the one tool that contacts a service, for the elevation tiles only (ADR-0082) | Should |
 
 ## User flow
 
@@ -57,7 +58,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 
 - An assistant goes from an SVG and a one-sentence brief to a project and G-code that the user cuts on a GRBL machine without manual G-code edits.
 - G-code exported through the server is byte-identical to the app's export of the same project.
-- In phase 1, Furrow CAM sends no project content or personal data anywhere; the docs say that tool results go wherever the user's assistant sends them.
+- In phase 1, Furrow CAM sends no project content or personal data anywhere, except the area's elevation tile requests (and with them the user's IP address) when the assistant makes a terrain; the docs say that tool results go wherever the user's assistant sends them.
 
 ## Open questions
 
@@ -69,3 +70,4 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 - 2026-10-24: initial draft
 - 2026-10-24: phase 1 uploads nothing, but tool results go where the assistant sends them
 - 2026-10-29: the local server sends no usage events and makes no network requests (ADR-0067, #364)
+- 2026-11-11: terrain from the server, which then fetches elevation tiles while that tool runs (M13, ADR-0082)

@@ -3,7 +3,7 @@
 - **Status:** Draft
 - **Author:** Federico Vezzoli
 - **Created:** 2026-11-08
-- **Related:** PRD-0005, PRD-0007, PRD-0008, ADR-0013, ADR-0029, ADR-0030, ADR-0076, ADR-0077, ADR-0078
+- **Related:** PRD-0005, PRD-0007, PRD-0008, PRD-0012, ADR-0013, ADR-0029, ADR-0030, ADR-0076, ADR-0077, ADR-0078, ADR-0082
 
 ## Problem
 
@@ -29,7 +29,6 @@ Topographic reliefs (a mountain, a valley, an island) are among the most popular
 - Sea floor depths (bathymetry), and areas beyond 85° latitude or across the 180° meridian.
 - Areas larger than 200 km across, where the Earth's curvature starts to matter.
 - Hosting our own map, search or elevation servers (ADR-0076).
-- Terrain from the MCP server (PRD-0012), which makes no network requests.
 
 ## Requirements
 
@@ -45,6 +44,7 @@ Topographic reliefs (a mountain, a valley, an island) are among the most popular
 | T8 | **Download STL:** the same mesh can be downloaded as a closed (watertight) binary STL, for 3D printing or another CAM | Should |
 | T9 | The services are named by the map's attribution (OpenStreetMap, OpenFreeMap, Mapterhorn) and the privacy policy (Photon too), with no notice or click in the dialog; no account, sign-in or API key is needed, on any instance or in the desktop app | Must |
 | T10 | **Lowest altitude:** set an altitude below which the terrain is flat, for lakes and coasts | Could |
+| T11 | **From an assistant:** the MCP server (PRD-0012) adds a terrain to a project from a centre (coordinates or a full map link, never searched by name) with a rectangle or ellipse in km, or a ring of points, and the T4 settings with the same defaults, and can also write the STL (T8). It gives the model's size, height range and detail, and credits the elevation data. It fetches only the elevation tiles, only while it runs (ADR-0082) | Should |
 
 ## User flow
 
@@ -71,3 +71,4 @@ Topographic reliefs (a mountain, a valley, an island) are among the most popular
 - 2026-11-08: created
 - 2026-11-08: two steps with a 3D preview, a square and a move tool; the services are named beside the map instead of before it loads (T1, T3, T4, T9, #522)
 - 2026-11-08: the map is browsed until a shape is picked, the drawn area can be dragged, and no privacy line sits under the map (T1, T3, T9, #526); the outline drawing is removed for now (T7)
+- 2026-11-11: terrain from the MCP server, fetching only elevation tiles (T11, ADR-0082); removed from the non-goals
