@@ -81,7 +81,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Proposed |
 | [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Proposed |
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Proposed |
-| [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Proposed |
+| [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Proposed; superseded in part by ADR-0082 |
 | [0068](0068-more-interface-languages.md) | Seven more interface languages, with one variant each | Proposed |
 | [0069](0069-model-sits-below-stock-top.md) | A model's top can sit below the stock top | Proposed |
 | [0070](0070-diagonal-moves-on-steep-faces.md) | Relief passes go straight down steep faces and merge within 0.02 mm | Proposed |
@@ -96,3 +96,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0079](0079-machine-snapshot-links-its-source.md) | A project's machine snapshot links to the library machine it came from | Proposed |
 | [0080](0080-objects-then-paths.md) | Objects are selected first, their paths inside them, with an Objects pane | Proposed |
 | [0081](0081-update-notice-opens-the-website.md) | The update notice opens the website's download section | Proposed |
+| [0082](0082-mcp-terrain-fetches-elevation.md) | The MCP server makes terrain, fetching only elevation tiles while its tool runs | Proposed |

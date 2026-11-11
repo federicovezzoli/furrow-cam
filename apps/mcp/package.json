@@ -26,13 +26,14 @@
     "provenance": true
   },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --external:occt-import-js --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js --metafile=dist/meta.json && node scripts/notices.mjs",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --external:occt-import-js --external:@jsquash/webp --define:process.env.NODE_ENV='\"production\"' --banner:js='#!/usr/bin/env node' --outfile=dist/main.js --metafile=dist/meta.json && node scripts/notices.mjs",
     "prepack": "npm run build && cp ../../LICENSE LICENSE",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jsquash/webp": "1.5.0",
     "occt-import-js": "0.0.23"
   },
   "devDependencies": {

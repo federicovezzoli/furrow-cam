@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
-const LAST_UPDATED = "8 November 2026";
+const LAST_UPDATED = "11 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -219,7 +219,9 @@ export default async function PrivacyPage() {
           </List>
           <p>
             Your project keeps only the terrain model and its name, never the area, the search or
-            the place. Without a connection the map doesn&apos;t load, and nothing else changes.
+            the place. Without a connection the map doesn&apos;t load, and nothing else changes. An
+            AI assistant making a terrain through Furrow CAM&apos;s MCP server on your computer
+            contacts Mapterhorn only.
           </p>
         </Section>
 

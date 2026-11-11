@@ -1,4 +1,4 @@
-import { MIN_LENGTH } from "@furrow/cam-core";
+import { MAX_TERRAIN_SPAN, MIN_LENGTH, TERRAIN_BASE, TERRAIN_EXAGGERATION } from "@furrow/cam-core";
 import { FlipAxis, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
@@ -30,6 +30,7 @@ import {
   setZero,
 } from "./setup";
 import { projectSummary } from "./summary";
+import { importTerrain, type TerrainArea } from "./terrain";
 import { topView } from "./top-view";
 
 const projectPath = z
@@ -261,6 +262,91 @@ export function createServer(projects: Projects = createProjects(), library = li
         const project = await projects.get(path);
         const imported = await importFile(project, file, { dpi, units });
         return { ...imported, ...summary(project) };
+      }),
+  );
+
+  const kilometres = z
+    .number()
+    .positive()
+    .max(MAX_TERRAIN_SPAN / 1000);
+  server.registerTool(
+    "import_terrain",
+    {
+      title: "Make a terrain from a map area",
+      description: `Makes a relief model of a real place from open elevation data and adds it to a project as its model, as the app's Terrain from a map does: placed at the chosen size, centred on the stock, its top at the stock top, then machined like any model (add_relief_rough, add_relief_finish). A project holds at most one model. The area is a rectangle or ellipse (a square or circle has equal sides) about a centre, or a ring of points. The centre is latitude and longitude ("45.92, 9.39") or a full Google Maps or OpenStreetMap link; place names are not searched, so give coordinates you know or ask the user for a link. At most ${MAX_TERRAIN_SPAN / 1000} km across. This is the one tool that uses the network: it downloads the area's elevation tiles from Mapterhorn (tiles.mapterhorn.com), which receives the user's IP address and which tiles they are, and nothing else. Detail is as fine as the STL limits allow. Returns the model's id, size in mm, lowest and highest heights in metres, detail (ground metres and mm per cell), the credit the data asks for (give it to the user), and the project summary.`,
+      inputSchema: {
+        path: projectPath,
+        centre: z
+          .string()
+          .optional()
+          .describe(
+            "The area's centre: latitude, longitude in degrees, or a full Google Maps or OpenStreetMap link. With shape, widthKm and depthKm.",
+          ),
+        shape: z
+          .enum(["rectangle", "ellipse"])
+          .optional()
+          .describe("The area's shape about centre."),
+        widthKm: kilometres.optional().describe("The area's width, east to west, in km."),
+        depthKm: kilometres.optional().describe("The area's depth, south to north, in km."),
+        ring: z
+          .array(z.tuple([z.number().min(-180).max(180), z.number().min(-85).max(85)]))
+          .min(3)
+          .optional()
+          .describe(
+            "Instead of centre and shape: the area's outline as [longitude, latitude] points in degrees.",
+          ),
+        name: z
+          .string()
+          .optional()
+          .describe("The model's name, usually the place's; \"Terrain\" if left out."),
+        longestSide: z
+          .number()
+          .min(1)
+          .optional()
+          .describe(
+            "The model's longest side in mm; by default, and at most, what fits inside the stock less the model border.",
+          ),
+        exaggeration: z
+          .number()
+          .min(TERRAIN_EXAGGERATION.min)
+          .max(TERRAIN_EXAGGERATION.max)
+          .default(TERRAIN_EXAGGERATION.initial)
+          .describe("How much taller than true scale the relief is."),
+        base: z
+          .number()
+          .min(TERRAIN_BASE.min)
+          .default(TERRAIN_BASE.initial)
+          .describe("The model's thickness under its lowest point, in mm."),
+        stl: z
+          .string()
+          .optional()
+          .describe(
+            "Absolute path to also write the terrain to as an STL file, e.g. for 3D printing.",
+          ),
+        overwrite: z.boolean().optional().describe("Replace the STL file if it exists."),
+      },
+    },
+    ({ path, centre, shape, widthKm, depthKm, ring, ...settings }, extra) =>
+      respond(async () => {
+        let area: TerrainArea;
+        if (ring) {
+          if (centre !== undefined || shape || widthKm || depthKm) {
+            throw new ToolError("Give either ring, or centre with shape, widthKm and depthKm.");
+          }
+          area = { ring };
+        } else if (centre !== undefined && shape && widthKm && depthKm) {
+          area = { centre, shape, widthKm, depthKm };
+        } else {
+          throw new ToolError("Give the area: centre with shape, widthKm and depthKm, or ring.");
+        }
+        const open = () => projects.get(path);
+        const terrain = await importTerrain(
+          open,
+          { area, ...settings },
+          progressOf(extra),
+          extra.signal,
+        );
+        return { ...terrain, ...summary(await open()) };
       }),
   );
 

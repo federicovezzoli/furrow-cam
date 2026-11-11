@@ -35,10 +35,10 @@ const available = (await readdir(join(root, "src", "demos")))
 const args = process.argv.slice(2);
 // `--no-build` reuses the last build, while working on a script.
 const build = !args.includes("--no-build");
-// `--speed <factor>` plays the videos faster (or slower), without changing the scripts. Whole
-// numbers play smoothest: at 1.5, 2 frames in 3 are recorded, so motion steps unevenly.
+// `--speed <factor>` plays the videos faster (or slower), without changing the scripts; 2 by
+// default, the pace the website shows. Whole numbers play smoothest: at 1.5, 2 frames in 3 are recorded, so motion steps unevenly.
 const speedAt = args.indexOf("--speed");
-const speed = speedAt === -1 ? 1 : Number(args[speedAt + 1]);
+const speed = speedAt === -1 ? 2 : Number(args[speedAt + 1]);
 if (!(speed >= 0.25 && speed <= 16)) {
   console.error(`--speed needs a number from 0.25 to 16, such as --speed 2`);
   process.exit(1);
