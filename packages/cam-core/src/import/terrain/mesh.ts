@@ -30,6 +30,11 @@ export type TerrainSettings = {
   base: number;
 };
 
+/** The exaggeration's range and default (PRD-0014 T4). */
+export const TERRAIN_EXAGGERATION = { min: 1, max: 10, initial: 1.5 };
+/** The base's smallest value and default, in mm (PRD-0014 T4). */
+export const TERRAIN_BASE = { min: 1, initial: 3 };
+
 /** What a terrain needs before its heights are fetched. */
 export type TerrainPlan = {
   /** The area's width and depth on the ground, in metres. */

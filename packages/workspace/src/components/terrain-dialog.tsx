@@ -6,6 +6,8 @@ import {
   type LonLat,
   planTerrain,
   type StlLimits,
+  TERRAIN_BASE,
+  TERRAIN_EXAGGERATION,
   type TerrainPlan,
   type TerrainSettings,
   unitLabel,
@@ -70,8 +72,6 @@ const SHAPE_ICONS: Record<AreaShape, React.ReactNode> = {
   freehand: <LassoIcon />,
 };
 
-const EXAGGERATION = { min: 1, max: 10, initial: 1.5 };
-const BASE = { min: 1, initial: 3 };
 /**
  * The preview's terrain (PRD-0014 T4): about 220 cells across, a tenth of the
  * model's triangles. Detailed enough to judge; its normals, worked out on the
@@ -200,8 +200,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   /** The place last picked in the search, which names the model, and where the map went. */
   const [place, setPlace] = useState<{ name: string | null; view: PlaceView } | null>(null);
   const [side, setSide] = useState<number | null>(null);
-  const [exaggeration, setExaggeration] = useState(EXAGGERATION.initial);
-  const [base, setBase] = useState(BASE.initial);
+  const [exaggeration, setExaggeration] = useState(TERRAIN_EXAGGERATION.initial);
+  const [base, setBase] = useState(TERRAIN_BASE.initial);
   /** Tiles fetched so far, then `saving` while the model is stored in the project. */
   const [progress, setProgress] = useState<{ done: number; total: number } | "saving" | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -427,8 +427,8 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 layout="inline"
                 quantity="number"
                 suffix="×"
-                min={EXAGGERATION.min}
-                max={EXAGGERATION.max}
+                min={TERRAIN_EXAGGERATION.min}
+                max={TERRAIN_EXAGGERATION.max}
                 step={0.5}
                 value={exaggeration}
                 disabled={generating}
@@ -440,7 +440,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 layout="inline"
                 quantity="length"
                 units={units}
-                min={BASE.min}
+                min={TERRAIN_BASE.min}
                 value={base}
                 disabled={generating}
                 onValueChange={setBase}
