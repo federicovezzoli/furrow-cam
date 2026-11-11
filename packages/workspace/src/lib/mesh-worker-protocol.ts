@@ -1,6 +1,8 @@
 import type {
   Box3,
   Heightmap,
+  ImageRelief,
+  ImageReliefSettings,
   LonLat,
   Rotation,
   StlLimits,
@@ -24,6 +26,8 @@ import type { Message } from "@furrow/document";
  * - `terrain` fetches the elevation for the area `ring` and builds its mesh
  *   (PRD-0014, ADR-0077), reporting `terrainProgress` as tiles arrive; the
  *   STL comes back as `stl`, to be stored like an imported one.
+ * - `image` builds the relief of an image's pixels, read on the main thread
+ *   (PRD-0015); it comes back as a terrain does.
  */
 export type MeshRequest =
   | { kind: "parse"; id: number; bytes: ArrayBuffer; limits: StlLimits }
@@ -41,6 +45,13 @@ export type MeshRequest =
       ring: LonLat[];
       settings: TerrainSettings;
       limits: StlLimits;
+    }
+  | {
+      kind: "image";
+      id: number;
+      image: ImageData;
+      settings: ImageReliefSettings;
+      limits: StlLimits;
     };
 
 /** What the document records of a mesh (ADR-0029). */
@@ -50,6 +61,10 @@ export type MeshSummary = { sha256: string; triangles: number; bounds: Box3 };
 export type GeneratedTerrain = MeshSummary &
   Omit<Terrain, "stl" | "triangles"> & { stl: ArrayBuffer };
 
+/** An image relief built in the worker, its STL as a buffer to transfer. */
+export type GeneratedRelief = MeshSummary &
+  Omit<ImageRelief, "stl" | "triangles"> & { stl: ArrayBuffer };
+
 export type MeshResponse =
   | ({ kind: "parsed"; id: number; stl?: ArrayBuffer } & MeshSummary)
   | { kind: "preview"; id: number; heightmap: Heightmap | null }
@@ -57,6 +72,7 @@ export type MeshResponse =
   /** `done` of `total` tile requests known so far. */
   | { kind: "terrainProgress"; id: number; done: number; total: number }
   | ({ kind: "terrain"; id: number } & GeneratedTerrain)
+  | ({ kind: "image"; id: number } & GeneratedRelief)
   /** `error` is for the user. */
   | { kind: "failed"; id: number; error: Message };
 

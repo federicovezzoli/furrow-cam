@@ -819,6 +819,10 @@
       "tooWide": "Bu alan izin verilen en fazla genişlik olan {km, number} km'den geniş. Daha küçük bir alan çizin.",
       "tooDetailed": "Bu alanın modeli 3B model sınırlarını aşar.",
       "noData": "Bu alan için yükseklik verisi yok."
+    },
+    "image": {
+      "tooSmall": "Bu görüntü çok küçük. En az 2 × 2 piksel olan bir görüntü seçin.",
+      "tooLarge": "Bu görüntü izin verilen en fazla boyut olan {mb, number} MB'tan büyük."
     }
   },
   "Operation": {
@@ -1550,6 +1554,34 @@
     "storeOff": "Bu sunucu 3B model saklayamıyor: arazi yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Arazi"
+  },
+  "ImageRelief": {
+    "open": "Görüntüden kabartma…",
+    "ribbon": "Görüntü",
+    "hint": "Gri tonlamalı bir görüntüden kabartma modeli oluşturun",
+    "title": "Görüntüden kabartma",
+    "description": "Bir PNG, JPEG veya WebP görüntüsü seçin: açık renk daha yüksektir. Kabartmayı projeye ekleyin veya indirin.",
+    "noImage": "Kabartmasını görmek için bir görüntü seçin.",
+    "pick": "Görüntü seç…",
+    "change": "Görüntüyü değiştir…",
+    "preview": "Kabartma önizlemesi",
+    "previewLoading": "Önizleme oluşturuluyor…",
+    "width": "Genişlik",
+    "relief": "Kabartma yüksekliği",
+    "base": "Taban",
+    "blur": "Yumuşatma",
+    "invert": "Ters çevir",
+    "invertHint": "Koyu renk daha yüksektir; örneğin arkadan kesilen bir litofan için.",
+    "pixels": "Görüntü: {width, number} × {height, number} px",
+    "size": "Model: {size} {unit}",
+    "building": "Model oluşturuluyor…",
+    "saving": "Model projeye ekleniyor…",
+    "generate": "Projeye ekle",
+    "download": "STL indir",
+    "hasModel": "Bu projede zaten bir 3B model var: kabartma yalnızca STL dosyası olarak indirilebilir.",
+    "storeOff": "Bu sunucu 3B modelleri saklayamaz: kabartma yalnızca STL dosyası olarak indirilebilir.",
+    "cancel": "İptal",
+    "defaultName": "Kabartma"
   },
   "Viewport": {
     "scene": "Ham malzeme, geometri ve takım yolları",

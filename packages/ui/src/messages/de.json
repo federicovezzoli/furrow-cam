@@ -819,6 +819,10 @@
       "tooWide": "Dieses Gebiet ist breiter als {km, number} km, das Maximum. Zeichne ein kleineres.",
       "tooDetailed": "Das Modell dieses Gebiets würde die Grenzen für 3D-Modelle überschreiten.",
       "noData": "Für dieses Gebiet gibt es keine Höhendaten."
+    },
+    "image": {
+      "tooSmall": "Dieses Bild ist zu klein. Wähle eines mit mindestens 2 × 2 Pixeln.",
+      "tooLarge": "Dieses Bild ist größer als {mb, number} MB, das erlaubte Maximum."
     }
   },
   "Operation": {
@@ -1550,6 +1554,34 @@
     "storeOff": "Dieser Server kann keine 3D-Modelle speichern: Das Gelände kann nur als STL-Datei heruntergeladen werden.",
     "cancel": "Abbrechen",
     "defaultName": "Gelände"
+  },
+  "ImageRelief": {
+    "open": "Relief aus Bild…",
+    "ribbon": "Bild",
+    "hint": "Ein Reliefmodell aus einem Graustufenbild erstellen",
+    "title": "Relief aus Bild",
+    "description": "Wähle ein PNG-, JPEG- oder WebP-Bild: Je heller, desto höher. Füge das Relief dem Projekt hinzu oder lade es herunter.",
+    "noImage": "Wähle ein Bild, um sein Relief zu sehen.",
+    "pick": "Bild wählen…",
+    "change": "Bild ändern…",
+    "preview": "Reliefvorschau",
+    "previewLoading": "Vorschau wird erstellt…",
+    "width": "Breite",
+    "relief": "Reliefhöhe",
+    "base": "Sockel",
+    "blur": "Glättung",
+    "invert": "Umkehren",
+    "invertHint": "Dunkel ist höher, z. B. für eine Lithophanie, die von hinten gefräst wird.",
+    "pixels": "Bild: {width, number} × {height, number} px",
+    "size": "Modell: {size} {unit}",
+    "building": "Modell wird erstellt…",
+    "saving": "Modell wird dem Projekt hinzugefügt…",
+    "generate": "Zum Projekt hinzufügen",
+    "download": "STL herunterladen",
+    "hasModel": "Dieses Projekt hat bereits sein 3D-Modell: Das Relief kann nur als STL-Datei heruntergeladen werden.",
+    "storeOff": "Dieser Server kann keine 3D-Modelle speichern: Das Relief kann nur als STL-Datei heruntergeladen werden.",
+    "cancel": "Abbrechen",
+    "defaultName": "Relief"
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

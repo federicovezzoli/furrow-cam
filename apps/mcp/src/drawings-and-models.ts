@@ -60,15 +60,19 @@ function reading<T>(run: () => T): T {
 const occtWasm = () =>
   readFile(createRequire(import.meta.url).resolve("occt-import-js/dist/occt-import-js.wasm"));
 
-/** A STEP file as the STL made from it (ADR-0072); throws a `ToolError` with the app's message. */
-async function stepMesh(bytes: Uint8Array) {
+/** `run`'s result; throws a `ToolError` with the app's message if it throws one. */
+export async function making<T>(run: () => T | Promise<T>): Promise<T> {
   try {
-    return await stepToStl(bytes, DEFAULT_STL_LIMITS, occtWasm);
+    return await run();
   } catch (error) {
     if (error instanceof MessageError) throw new ToolError(text(error.detail));
     throw error;
   }
 }
+
+/** A STEP file as the STL made from it (ADR-0072); throws a `ToolError` with the app's message. */
+const stepMesh = (bytes: Uint8Array) =>
+  making(() => stepToStl(bytes, DEFAULT_STL_LIMITS, occtWasm));
 
 /**
  * Imports the SVG, DXF, STL or STEP file at `path` into `project` as the app does

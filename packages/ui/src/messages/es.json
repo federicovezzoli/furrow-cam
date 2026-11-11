@@ -819,6 +819,10 @@
       "tooWide": "Esta zona mide más de {km, number} km de ancho, el máximo permitido. Dibuja una más pequeña.",
       "tooDetailed": "El modelo de esta zona superaría los límites de los modelos 3D.",
       "noData": "No hay datos de altitud para esta zona."
+    },
+    "image": {
+      "tooSmall": "Esta imagen es demasiado pequeña. Elige una de al menos 2 × 2 píxeles.",
+      "tooLarge": "Esta imagen supera {mb, number} MB, el máximo permitido."
     }
   },
   "Operation": {
@@ -1550,6 +1554,34 @@
     "storeOff": "Este servidor no puede guardar modelos 3D: el terreno solo se puede descargar como archivo STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
+  },
+  "ImageRelief": {
+    "open": "Relieve desde una imagen…",
+    "ribbon": "Imagen",
+    "hint": "Crea un modelo en relieve a partir de una imagen en escala de grises",
+    "title": "Relieve desde una imagen",
+    "description": "Elige una imagen PNG, JPEG o WebP: cuanto más clara, más alta. Añade el relieve al proyecto o descárgalo.",
+    "noImage": "Elige una imagen para ver su relieve.",
+    "pick": "Elegir imagen…",
+    "change": "Cambiar imagen…",
+    "preview": "Vista previa del relieve",
+    "previewLoading": "Creando la vista previa…",
+    "width": "Ancho",
+    "relief": "Altura del relieve",
+    "base": "Base",
+    "blur": "Suavizado",
+    "invert": "Invertir",
+    "invertHint": "Lo oscuro es más alto, por ejemplo para una litofanía tallada por detrás.",
+    "pixels": "Imagen: {width, number} × {height, number} px",
+    "size": "Modelo: {size} {unit}",
+    "building": "Creando el modelo…",
+    "saving": "Añadiendo el modelo al proyecto…",
+    "generate": "Añadir al proyecto",
+    "download": "Descargar STL",
+    "hasModel": "Este proyecto ya tiene su modelo 3D: el relieve solo se puede descargar como archivo STL.",
+    "storeOff": "Este servidor no puede guardar modelos 3D: el relieve solo se puede descargar como archivo STL.",
+    "cancel": "Cancelar",
+    "defaultName": "Relieve"
   },
   "Viewport": {
     "scene": "Material, geometría y trayectorias",

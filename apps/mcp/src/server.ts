@@ -1,4 +1,10 @@
-import { MAX_TERRAIN_SPAN, MIN_LENGTH, TERRAIN_BASE, TERRAIN_EXAGGERATION } from "@furrow/cam-core";
+import {
+  IMAGE_RELIEF,
+  MAX_TERRAIN_SPAN,
+  MIN_LENGTH,
+  TERRAIN_BASE,
+  TERRAIN_EXAGGERATION,
+} from "@furrow/cam-core";
 import { FlipAxis, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
@@ -11,6 +17,7 @@ import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
 import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
+import { importImageRelief } from "./image-relief";
 import { libraryDir, readLibrary } from "./library";
 import {
   addOperation,
@@ -347,6 +354,57 @@ export function createServer(projects: Projects = createProjects(), library = li
           extra.signal,
         );
         return { ...terrain, ...summary(await open()) };
+      }),
+  );
+
+  server.registerTool(
+    "import_image_relief",
+    {
+      title: "Make a relief from an image",
+      description:
+        "Makes a relief model from a greyscale PNG, JPEG or WebP image (a depth map, a logo, a photo for a lithophane) and adds it to a project as its model, as the app's Relief from image does: lighter is higher (darker with invert), transparent counts as black, placed at the chosen width (the depth follows the image's aspect ratio), centred on the stock, its top at the stock top, then machined like any model (add_relief_rough, add_relief_finish). A project holds at most one model. Detail is as fine as the STL limits and the image's pixels allow. Unlike the app, it ignores a photo's EXIF orientation: a phone photo stored on its side comes out turned, so rotate it first. Returns the model's id, size in mm, the image's pixels, the cells across and along, and the project summary.",
+      inputSchema: {
+        path: projectPath,
+        image: z.string().describe("Absolute path of the .png, .jpg or .webp image."),
+        name: z
+          .string()
+          .optional()
+          .describe("The model's name; the image's file name if left out."),
+        width: z
+          .number()
+          .min(1)
+          .optional()
+          .describe(
+            "The model's width in mm; by default, and at most, what fits inside the stock less the model border.",
+          ),
+        relief: z
+          .number()
+          .min(IMAGE_RELIEF.relief.min)
+          .default(IMAGE_RELIEF.relief.initial)
+          .describe("How much higher white is than black, in mm."),
+        base: z
+          .number()
+          .min(IMAGE_RELIEF.base.min)
+          .default(IMAGE_RELIEF.base.initial)
+          .describe("The model's thickness under black, in mm."),
+        invert: z
+          .boolean()
+          .default(false)
+          .describe("Dark is higher, e.g. for a lithophane cut from the back."),
+        blur: z
+          .number()
+          .int()
+          .min(IMAGE_RELIEF.blur.min)
+          .max(IMAGE_RELIEF.blur.max)
+          .default(IMAGE_RELIEF.blur.initial)
+          .describe("Smoothing against pixel noise: a box blur's radius in image pixels."),
+      },
+    },
+    ({ path, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        const relief = await importImageRelief(project, request);
+        return { ...relief, ...summary(project) };
       }),
   );
 

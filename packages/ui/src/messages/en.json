@@ -819,6 +819,10 @@
       "tooWide": "This area is wider than {km, number} km, the most allowed. Draw a smaller one.",
       "tooDetailed": "This area's model would exceed the 3D model limits.",
       "noData": "There is no elevation data for this area."
+    },
+    "image": {
+      "tooSmall": "This image is too small. Pick one at least 2 × 2 pixels.",
+      "tooLarge": "This image is larger than {mb, number} MB, the most allowed."
     }
   },
   "Operation": {
@@ -1550,6 +1554,34 @@
     "storeOff": "This server can't store 3D models: the terrain can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Terrain"
+  },
+  "ImageRelief": {
+    "open": "Relief from image…",
+    "ribbon": "Image",
+    "hint": "Make a relief model from a greyscale image",
+    "title": "Relief from image",
+    "description": "Pick a PNG, JPEG or WebP image: lighter is higher. Add the relief to the project or download it.",
+    "noImage": "Pick an image to see its relief.",
+    "pick": "Pick image…",
+    "change": "Change image…",
+    "preview": "Relief preview",
+    "previewLoading": "Making the preview…",
+    "width": "Width",
+    "relief": "Relief height",
+    "base": "Base",
+    "blur": "Smoothing",
+    "invert": "Invert",
+    "invertHint": "Dark is higher, e.g. for a lithophane cut from the back.",
+    "pixels": "Image: {width, number} × {height, number} px",
+    "size": "Model: {size} {unit}",
+    "building": "Building the model…",
+    "saving": "Adding the model to the project…",
+    "generate": "Add to project",
+    "download": "Download STL",
+    "hasModel": "This project has its 3D model already: the relief can only be downloaded as an STL file.",
+    "storeOff": "This server can't store 3D models: the relief can only be downloaded as an STL file.",
+    "cancel": "Cancel",
+    "defaultName": "Relief"
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

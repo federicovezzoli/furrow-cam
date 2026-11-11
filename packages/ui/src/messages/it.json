@@ -819,6 +819,10 @@
       "tooWide": "Quest'area è larga più di {km, number} km, il massimo consentito. Disegnane una più piccola.",
       "tooDetailed": "Il modello di quest'area supererebbe i limiti dei modelli 3D.",
       "noData": "Non ci sono dati di elevazione per quest'area."
+    },
+    "image": {
+      "tooSmall": "Questa immagine è troppo piccola. Scegline una di almeno 2 × 2 pixel.",
+      "tooLarge": "Questa immagine supera {mb, number} MB, il massimo consentito."
     }
   },
   "Operation": {
@@ -1550,6 +1554,34 @@
     "storeOff": "Questo server non può salvare modelli 3D: il terreno si può solo scaricare come file STL.",
     "cancel": "Annulla",
     "defaultName": "Terreno"
+  },
+  "ImageRelief": {
+    "open": "Rilievo da immagine…",
+    "ribbon": "Immagine",
+    "hint": "Crea un modello in rilievo da un'immagine in scala di grigi",
+    "title": "Rilievo da immagine",
+    "description": "Scegli un'immagine PNG, JPEG o WebP: più è chiara, più è alta. Aggiungi il rilievo al progetto o scaricalo.",
+    "noImage": "Scegli un'immagine per vederne il rilievo.",
+    "pick": "Scegli immagine…",
+    "change": "Cambia immagine…",
+    "preview": "Anteprima del rilievo",
+    "previewLoading": "Creazione dell'anteprima…",
+    "width": "Larghezza",
+    "relief": "Altezza del rilievo",
+    "base": "Base",
+    "blur": "Levigatura",
+    "invert": "Inverti",
+    "invertHint": "Il scuro è più alto, ad esempio per una litofania fresata dal retro.",
+    "pixels": "Immagine: {width, number} × {height, number} px",
+    "size": "Modello: {size} {unit}",
+    "building": "Creazione del modello…",
+    "saving": "Aggiunta del modello al progetto…",
+    "generate": "Aggiungi al progetto",
+    "download": "Scarica STL",
+    "hasModel": "Questo progetto ha già il suo modello 3D: il rilievo si può solo scaricare come file STL.",
+    "storeOff": "Questo server non può salvare modelli 3D: il rilievo si può solo scaricare come file STL.",
+    "cancel": "Annulla",
+    "defaultName": "Rilievo"
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",
