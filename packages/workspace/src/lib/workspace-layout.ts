@@ -5,6 +5,8 @@ const PanelLayout = z.record(z.string(), z.number().min(0).max(100));
 
 const WorkspaceLayout = z.object({
   columns: PanelLayout.optional(),
+  /** The sidebar's split between operations and objects. */
+  sidebar: PanelLayout.optional(),
 });
 
 /**

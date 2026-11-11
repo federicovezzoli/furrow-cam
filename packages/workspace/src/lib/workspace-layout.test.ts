@@ -22,9 +22,12 @@ describe("savedLayout", () => {
 });
 
 describe("toWorkspaceLayout", () => {
-  it("reads the columns and ignores anything else", () => {
-    const layout = { columns: { sidebar: 30, viewport: 70 } };
-    expect(toWorkspaceLayout({ ...layout, sidebar: { operations: 40 } })).toEqual(layout);
+  it("reads the columns and the sidebar split, and ignores anything else", () => {
+    const layout = {
+      columns: { sidebar: 30, viewport: 70 },
+      sidebar: { operations: 40, objects: 60 },
+    };
+    expect(toWorkspaceLayout({ ...layout, rows: { top: 50 } })).toEqual(layout);
     expect(toWorkspaceLayout({ columns: { sidebar: 130 } })).toEqual({});
     expect(toWorkspaceLayout(null)).toEqual({});
   });
