@@ -4,9 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { decodeTerrarium, planTerrain, TERRAIN_TILE_SIZE, terrainMesh } from "@furrow/cam-core";
 import { MAX_ELEVATION_ZOOM } from "@furrow/workspace/lib/terrain-services";
+import { shapeRing } from "@furrow/workspace/lib/terrain-square";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createProjects, type Project, ToolError } from "./projects";
-import { importTerrain, shapeRing, type TerrainRequest } from "./terrain";
+import { importTerrain, type TerrainRequest } from "./terrain";
 
 /** A Terrarium tile whose heights rise from 1000 m on its west edge by 0.1 m a pixel. */
 const SIZE = TERRAIN_TILE_SIZE;
@@ -60,7 +61,7 @@ async function refusal(run: Promise<unknown>) {
 // Each test decodes and meshes tiles: slower than most when every package runs at once.
 describe("importTerrain", { timeout: 30_000 }, () => {
   it("adds the app's mesh as the model, at its size and centred on the stock, from Mapterhorn only", async () => {
-    const result = await importTerrain(project, { ...request, longestSide: 100 });
+    const result = await importTerrain(async () => project, { ...request, longestSide: 100 });
     const [model] = project.store.getState().document.models;
     expect(model).toMatchObject({ id: result.id, fileName: "Pizzo.stl" });
     expect(model?.placement).toMatchObject({ scale: 1, rotation: [0, 0, 0], top: 0 });
@@ -82,56 +83,85 @@ describe("importTerrain", { timeout: 30_000 }, () => {
   });
 
   it("fits the stock less its border by default, and refuses a larger side", async () => {
-    const message = await refusal(importTerrain(project, { ...request, longestSide: 10_000 }));
+    const message = await refusal(
+      importTerrain(async () => project, { ...request, longestSide: 10_000 }),
+    );
     expect(message).toMatch(/at most [\d.]+ mm/);
     expect(fetchTile).not.toHaveBeenCalled();
-    const { size } = await importTerrain(project, request);
+    const { size } = await importTerrain(async () => project, request);
     const { stock } = project.store.getState().document;
     expect(Math.max(...size.slice(0, 2))).toBeLessThan(Math.max(stock.width, stock.height));
   });
 
   it("refuses a project that has a model, before fetching anything", async () => {
-    await importTerrain(project, request);
+    await importTerrain(async () => project, request);
     fetchTile.mockClear();
-    expect(await refusal(importTerrain(project, request))).toMatch(/model/i);
+    expect(await refusal(importTerrain(async () => project, request))).toMatch(/model/i);
     expect(fetchTile).not.toHaveBeenCalled();
   });
 
   it("never searches a name, and refuses a short link", async () => {
     const name = { ...request, area: { ...area, centre: "Pizzo Arera" } };
-    expect(await refusal(importTerrain(project, name))).toMatch(/aren't searched/);
+    expect(await refusal(importTerrain(async () => project, name))).toMatch(/aren't searched/);
     const short = { ...request, area: { ...area, centre: "https://maps.app.goo.gl/abc" } };
-    expect(await refusal(importTerrain(project, short))).toMatch(/short Google Maps link/);
+    expect(await refusal(importTerrain(async () => project, short))).toMatch(
+      /short Google Maps link/,
+    );
     expect(fetchTile).not.toHaveBeenCalled();
   });
 
   it("reads a full map link, and a ring with its first point repeated", async () => {
     const link = "https://www.openstreetmap.org/#map=14/45.92/9.39";
-    await importTerrain(project, { ...request, area: { ...area, centre: link } });
+    await importTerrain(async () => project, { ...request, area: { ...area, centre: link } });
     const ring = shapeRing([9.39, 45.92], "ellipse", 1, 1);
     const other = await createProjects().create(join(dir, "Other.furrow"));
-    await importTerrain(other, { ...request, area: { ring: [...ring, ring[0] as never] } });
+    await importTerrain(async () => other, {
+      ...request,
+      area: { ring: [...ring, ring[0] as never] },
+    });
     expect(other.store.getState().document.models).toHaveLength(1);
   });
 
   it("says the elevation couldn't be loaded when offline, changing nothing", async () => {
     fetchTile.mockRejectedValue(new TypeError("fetch failed"));
-    expect(await refusal(importTerrain(project, request))).toMatch(/elevation data couldn't/);
+    expect(await refusal(importTerrain(async () => project, request))).toMatch(
+      /elevation data couldn't/,
+    );
     expect(project.store.getState().document.models).toHaveLength(0);
     fetchTile.mockImplementation(async () => new Response(webp.slice(0)));
   });
 
   it("refuses an area too wide, with the app's message", async () => {
     const wide = { ...request, area: { ...area, widthKm: 250 } };
-    expect(await refusal(importTerrain(project, wide))).toMatch(/200 km/);
+    expect(await refusal(importTerrain(async () => project, wide))).toMatch(/200 km/);
+  });
+
+  it("adds the model to the project as it is once the terrain is made", async () => {
+    // The user saved in the app meanwhile, so the server read the project again.
+    const reread = await createProjects().create(join(dir, "Reread.furrow"));
+    const open = vi.fn().mockResolvedValueOnce(project).mockResolvedValue(reread);
+    await importTerrain(open, request);
+    expect(project.store.getState().document.models).toHaveLength(0);
+    expect(reread.store.getState().document.models).toHaveLength(1);
+  });
+
+  it("refuses an STL path that isn't one, such as the project's own file", async () => {
+    const stl = join(dir, "Peak.furrow");
+    const message = await refusal(
+      importTerrain(async () => project, { ...request, stl, overwrite: true }),
+    );
+    expect(message).toMatch(/ending in \.stl/);
+    expect(fetchTile).not.toHaveBeenCalled();
   });
 
   it("writes the STL too, never over a file unless asked", async () => {
     const stl = join(dir, "Pizzo.stl");
     await writeFile(stl, "mine");
-    expect(await refusal(importTerrain(project, { ...request, stl }))).toMatch(/already exists/);
+    expect(await refusal(importTerrain(async () => project, { ...request, stl }))).toMatch(
+      /already exists/,
+    );
     expect(fetchTile).not.toHaveBeenCalled();
-    await importTerrain(project, { ...request, stl, overwrite: true });
+    await importTerrain(async () => project, { ...request, stl, overwrite: true });
     const [model] = project.store.getState().document.models;
     expect(new Uint8Array(await readFile(stl))).toEqual(project.meshes.get(model?.sha256 ?? ""));
   });

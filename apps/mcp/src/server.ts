@@ -339,14 +339,14 @@ export function createServer(projects: Projects = createProjects(), library = li
         } else {
           throw new ToolError("Give the area: centre with shape, widthKm and depthKm, or ring.");
         }
-        const project = await projects.get(path);
+        const open = () => projects.get(path);
         const terrain = await importTerrain(
-          project,
+          open,
           { area, ...settings },
           progressOf(extra),
           extra.signal,
         );
-        return { ...terrain, ...summary(project) };
+        return { ...terrain, ...summary(await open()) };
       }),
   );
 

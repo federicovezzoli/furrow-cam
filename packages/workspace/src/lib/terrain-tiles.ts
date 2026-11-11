@@ -15,7 +15,11 @@ export async function fetchElevationTile(
   decode: (webp: ArrayBuffer) => Promise<ArrayLike<number>>,
   signal?: AbortSignal,
 ): Promise<Float32Array | null> {
-  const response = await fetch(elevationTileUrl(key), { signal }).catch(() => null);
+  const response = await fetch(elevationTileUrl(key), { signal }).catch((error: unknown) => {
+    // Cancelled, not unavailable: the caller hears the abort itself.
+    if (signal?.aborted) throw error;
+    return null;
+  });
   if (response?.status === 404) return null;
   if (!response?.ok) throw new MessageError(TERRAIN_UNAVAILABLE);
   const pixels = await response

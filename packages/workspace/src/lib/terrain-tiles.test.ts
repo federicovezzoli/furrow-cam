@@ -77,4 +77,13 @@ describe("fetchElevationTile", () => {
       detail: { code: "workspace.terrainUnavailable" },
     });
   });
+
+  it("lets a cancellation through as it is", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    vi.stubGlobal("fetch", async () => Promise.reject(controller.signal.reason));
+    await expect(fetchElevationTile(key, decode, controller.signal)).rejects.toBe(
+      controller.signal.reason,
+    );
+  });
 });

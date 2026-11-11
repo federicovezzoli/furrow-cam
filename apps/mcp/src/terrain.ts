@@ -14,6 +14,7 @@ import { MessageError } from "@furrow/document";
 import { fittingSide } from "@furrow/workspace/lib/model-size";
 import { fileNameFor, parsePlace } from "@furrow/workspace/lib/place-search";
 import { MAX_ELEVATION_ZOOM } from "@furrow/workspace/lib/terrain-services";
+import { MAX_LATITUDE, shapeRing } from "@furrow/workspace/lib/terrain-square";
 import { fetchElevationTile, loadTerrainTiles } from "@furrow/workspace/lib/terrain-tiles";
 import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { addMesh, text } from "./drawings-and-models";
@@ -43,13 +44,6 @@ export type TerrainRequest = {
 export const ELEVATION_CREDIT =
   "Elevation data © Mapterhorn and its sources, https://mapterhorn.com/attribution";
 
-/** Tiles are Web Mercator, which stops short of the poles (PRD-0014 non-goals). */
-const MAX_LATITUDE = 85;
-const EARTH_RADIUS = 6_371_008.8;
-const DEGREE = Math.PI / 180;
-/** Points of an ellipse's outline. */
-const ELLIPSE_POINTS = 72;
-
 /** The point `centre` gives, read without sending it anywhere (ADR-0082). */
 function centreOf(centre: string): LonLat {
   const place = parsePlace(centre);
@@ -62,32 +56,6 @@ function centreOf(centre: string): LonLat {
   throw new ToolError(
     `Can't read a place from ${JSON.stringify(centre)}: give its latitude and longitude (45.92, 9.39) or a full Google Maps or OpenStreetMap link. Place names aren't searched.`,
   );
-}
-
-/** A rectangle or ellipse `widthKm` × `depthKm` about `centre`, as longitude and latitude. */
-export function shapeRing(
-  [lon, lat]: LonLat,
-  shape: "rectangle" | "ellipse",
-  widthKm: number,
-  depthKm: number,
-): LonLat[] {
-  const a = widthKm * 500;
-  const b = depthKm * 500;
-  const corners: [number, number][] =
-    shape === "rectangle"
-      ? [
-          [-a, -b],
-          [a, -b],
-          [a, b],
-          [-a, b],
-        ]
-      : Array.from({ length: ELLIPSE_POINTS }, (_, i) => {
-          const angle = (2 * Math.PI * i) / ELLIPSE_POINTS;
-          return [a * Math.cos(angle), b * Math.sin(angle)];
-        });
-  const kx = EARTH_RADIUS * DEGREE * Math.cos(lat * DEGREE);
-  const ky = EARTH_RADIUS * DEGREE;
-  return corners.map(([x, y]): LonLat => [lon + x / kx, lat + y / ky]);
 }
 
 function ringOf(area: TerrainArea): LonLat[] {
@@ -116,7 +84,11 @@ function webpDecoder() {
     const wasm = await readFile(require.resolve("@jsquash/webp/codec/dec/webp_dec.wasm"));
     await init(await WebAssembly.compile(wasm));
     return async (webp: ArrayBuffer) => (await decode(webp)).data;
-  })();
+  })().catch((error: unknown) => {
+    // A failed load is tried again on the next call, not kept.
+    decoder = undefined;
+    throw error;
+  });
   return decoder;
 }
 
@@ -131,22 +103,47 @@ async function making<T>(run: () => T | Promise<T>): Promise<T> {
 }
 
 /**
- * Makes the terrain of `request.area` and adds it to `project` as its model,
- * at the chosen size and centred on the stock, as the app's *Terrain from a
- * map* does (PRD-0014 T11, ADR-0082). Fetches the area's elevation tiles from
- * Mapterhorn, and nothing else. Returns the model's id, size and detail.
+ * The longest side a terrain of an area `span` (metres) takes in `project`:
+ * `requested`, or by default what fits inside the stock less the model
+ * border, as in the app. Throws a `ToolError` if the project already has a
+ * model or `requested` doesn't fit.
+ */
+function sideIn(project: Project, span: [number, number], requested?: number): number {
+  const { document } = project.store.getState();
+  if (!canImportModel(document)) throw new ToolError(text(ONE_MODEL));
+  const fitting = fittingSide(document.stock, span);
+  const side = requested ?? fitting;
+  if (side > fitting + 1e-9) {
+    throw new ToolError(
+      `The longest side can be at most ${Math.floor(fitting * 10) / 10} mm, to fit inside the stock less the model border: make the stock larger first, or leave longestSide out.`,
+    );
+  }
+  return side;
+}
+
+/**
+ * Makes the terrain of `request.area` and adds it to the project `open`
+ * gives as its model, at the chosen size and centred on the stock, as the
+ * app's *Terrain from a map* does (PRD-0014 T11, ADR-0082). Fetches the
+ * area's elevation tiles from Mapterhorn, and nothing else. `open` is asked
+ * again once the terrain is made, since the project may have changed, or
+ * been read again from its file, meanwhile. Returns the model's id, size and
+ * detail.
  */
 export async function importTerrain(
-  project: Project,
+  open: () => Promise<Project>,
   request: TerrainRequest,
   progress?: Progress,
   signal?: AbortSignal,
 ) {
-  const { document } = project.store.getState();
-  if (!canImportModel(document)) throw new ToolError(text(ONE_MODEL));
+  if (!canImportModel((await open()).store.getState().document)) {
+    throw new ToolError(text(ONE_MODEL));
+  }
   if (request.stl !== undefined) {
-    if (!isAbsolute(request.stl)) {
-      throw new ToolError(`Give an absolute path, not ${JSON.stringify(request.stl)}.`);
+    if (!isAbsolute(request.stl) || !/\.stl$/i.test(request.stl)) {
+      throw new ToolError(
+        `Give an absolute path ending in .stl, not ${JSON.stringify(request.stl)}.`,
+      );
     }
     await checkTarget(request.stl, request.overwrite ?? false);
   }
@@ -154,14 +151,7 @@ export async function importTerrain(
   const plan = await making(() =>
     planTerrain(ring, request.limits ?? DEFAULT_STL_LIMITS, MAX_ELEVATION_ZOOM),
   );
-  // Placed at this size, so no larger than the stock less its border, as in the app.
-  const fitting = fittingSide(document.stock, plan.span);
-  const longestSide = request.longestSide ?? fitting;
-  if (longestSide > fitting + 1e-9) {
-    throw new ToolError(
-      `The longest side can be at most ${Math.floor(fitting * 10) / 10} mm, to fit inside the stock less the model border: make the stock larger first, or leave longestSide out.`,
-    );
-  }
+  const longestSide = sideIn(await open(), plan.span, request.longestSide);
   const settings: TerrainSettings = {
     longestSide,
     exaggeration: request.exaggeration,
@@ -173,11 +163,18 @@ export async function importTerrain(
       plan.tiles,
       (key) => fetchElevationTile(key, decode, signal),
       // No operation name: the client is told only how many tiles are done.
-      (done, total) => void progress?.(done, total, ""),
+      (done, total) => {
+        // A progress note the client can no longer receive mustn't fail the import.
+        Promise.resolve(progress?.(done, total, "")).catch(() => {});
+      },
     ),
   );
   signal?.throwIfAborted();
+  // shortcut: meshed on the server's one thread, so other tool calls wait seconds for a large area; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const terrain = await making(() => terrainMesh(ring, plan, settings, tiles));
+  // The stock or the model may have changed while the tiles came in.
+  const project = await open();
+  sideIn(project, plan.span, longestSide);
   const name = fileNameFor(request.name ?? "") || "Terrain";
 
   // Written before the model is added, so a file that can't be written changes nothing.
