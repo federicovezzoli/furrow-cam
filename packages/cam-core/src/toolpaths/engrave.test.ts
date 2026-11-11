@@ -121,7 +121,7 @@ describe("engraveToolpath", () => {
             leadIn: null,
             ramp: true,
             tabs: null,
-            startPoints: [[90, 10]],
+            startPoints: [{ start: [90, 10], plunge: null }],
             cornerOvercuts: null,
           },
         },

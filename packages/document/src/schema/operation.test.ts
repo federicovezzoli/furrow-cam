@@ -44,6 +44,15 @@ describe("ProfileParams", () => {
     ).toBe(true);
   });
 
+  it("rejects plunge points together with tabs", () => {
+    const startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
+    expect(ProfileParams.safeParse({ ...params, tabs: null, startPoints }).success).toBe(true);
+    const result = ProfileParams.safeParse({ ...params, startPoints });
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      "operation.plungeWithTabs",
+    ]);
+  });
+
   it("rejects out-of-range values", () => {
     expect(ProfileParams.safeParse({ ...params, depth: 0 }).success).toBe(false);
     expect(ProfileParams.safeParse({ ...params, allowance: -0.1 }).success).toBe(false);

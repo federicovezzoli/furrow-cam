@@ -287,6 +287,22 @@ describe("editOperation", () => {
     });
   });
 
+  it("swaps a profile's tabs for plunge points in one call (#427)", () => {
+    const startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
+    editOperation(project, library, OPERATION_ID, { settings: { tabs: null, startPoints } });
+    expect(operation(OPERATION_ID)).toMatchObject({ params: { tabs: null, startPoints } });
+  });
+
+  it("keeps tabs: null when the same call cuts on the line", () => {
+    const startPoints = [{ start: [0, 50], plunge: [-10, 50] }];
+    editOperation(project, library, OPERATION_ID, {
+      settings: { side: "on", tabs: null, startPoints },
+    });
+    expect(operation(OPERATION_ID)).toMatchObject({
+      params: { side: "on", tabs: null, startPoints },
+    });
+  });
+
   it("changes nothing if the app refuses any of it", () => {
     expectRefused(
       () =>

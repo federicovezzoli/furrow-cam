@@ -39,6 +39,7 @@ import {
   setOperationEnabled,
   setOperationTargets,
   setOperationTool,
+  setStartPlunge,
   toolError,
   updateDrillParams,
   updateEngraveParams,
@@ -549,6 +550,21 @@ describe("addEngraveOperation", () => {
     });
     expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
   });
+
+  it("takes plain start points, out of range doing nothing", () => {
+    const { store, operations } = setup();
+    const id = addEngrave(store);
+    addStartPoint(store, id, [0, 30]);
+    moveStartPoint(store, id, 0, [0, 40]);
+    const engraving = operations().find((operation) => operation.id === id);
+    expect(engraving?.type === "engrave" && engraving.params.startPoints).toEqual([[0, 40]]);
+    const before = store.getState().document;
+    const steps = store.getState().past.length;
+    moveStartPoint(store, id, 3, [1, 1]);
+    removeStartPoint(store, id, -1);
+    expect(store.getState().document).toBe(before);
+    expect(store.getState().past).toHaveLength(steps);
+  });
 });
 
 describe("addVCarveOperation", () => {
@@ -896,17 +912,29 @@ describe("start points", () => {
     addStartPoint(store, id, [100, 30]);
     moveStartPoint(store, id, 1, [100, 40]);
     expect(profile(id).params.startPoints).toEqual([
-      [0, 30],
-      [100, 40],
+      { start: [0, 30], plunge: null },
+      { start: [100, 40], plunge: null },
     ]);
     removeStartPoint(store, id, 0);
-    expect(profile(id).params.startPoints).toEqual([[100, 40]]);
+    expect(profile(id).params.startPoints).toEqual([{ start: [100, 40], plunge: null }]);
     store.getState().undo();
     expect(profile(id).params.startPoints).toHaveLength(2);
     const before = store.getState().document;
     moveStartPoint(store, id, 2, [1, 1]);
     removeStartPoint(store, id, -1);
+    setStartPlunge(store, id, 2, [1, 1]);
     expect(store.getState().document).toBe(before);
+  });
+
+  it("take a plunge point on a profile, moving with it and removed apart from it (#427)", () => {
+    const { store, add, profile } = setup();
+    const id = add();
+    addStartPoint(store, id, [0, 30]);
+    setStartPlunge(store, id, 0, [-20, 30]);
+    moveStartPoint(store, id, 0, [0, 40]);
+    expect(profile(id).params.startPoints).toEqual([{ start: [0, 40], plunge: [-20, 30] }]);
+    setStartPlunge(store, id, 0, null);
+    expect(profile(id).params.startPoints).toEqual([{ start: [0, 40], plunge: null }]);
   });
 });
 

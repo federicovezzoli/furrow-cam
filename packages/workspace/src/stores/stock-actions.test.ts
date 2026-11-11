@@ -73,7 +73,7 @@ function moved(before: ProjectDocument, after: ProjectDocument) {
   };
   const start = (document: ProjectDocument) => {
     const operation = document.operations[0];
-    return (operation?.type === "profile" && operation.params.startPoints[0]) || [0, 0];
+    return (operation?.type === "profile" && operation.params.startPoints[0]?.start) || [0, 0];
   };
   const overcut = (document: ProjectDocument) => {
     const operation = document.operations[0];

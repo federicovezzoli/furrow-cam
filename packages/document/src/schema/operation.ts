@@ -117,6 +117,15 @@ export const CornerOvercuts = z.strictObject({
 });
 export type CornerOvercuts = z.infer<typeof CornerOvercuts>;
 
+/**
+ * Where a profile's cut starts (#426), in stock coordinates; it goes to the
+ * nearest path. With a `plunge` point (#427), in air or a pre-drilled hole,
+ * the tool goes down only there on a closed contour and feeds straight to
+ * `start`, and back after the lap.
+ */
+export const ProfileStartPoint = z.strictObject({ start: Point, plunge: Point.nullable() });
+export type ProfileStartPoint = z.infer<typeof ProfileStartPoint>;
+
 /** Profile parameters (#21). The step-down and the ramp angle come from the tool. */
 export const ProfileParams = z
   .strictObject({
@@ -134,12 +143,19 @@ export const ProfileParams = z
     ramp: z.boolean(),
     /** Holding tabs, or `null` to cut the closed contours all the way round. */
     tabs: ProfileTabs.nullable(),
-    /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
-    startPoints: z.array(Point),
+    /** Where cuts start, one per path; plunge points aren't allowed with tabs. */
+    startPoints: z.array(ProfileStartPoint),
     /** Overcuts at sharp corners, or `null` for none; never on the line. */
     cornerOvercuts: CornerOvercuts.nullable(),
   })
   .superRefine((params, ctx) => {
+    if (params.tabs !== null && params.startPoints.some(({ plunge }) => plunge !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startPoints"],
+        message: "operation.plungeWithTabs",
+      });
+    }
     if (params.side === "on" && params.allowance !== 0) {
       ctx.addIssue({
         code: "custom",
