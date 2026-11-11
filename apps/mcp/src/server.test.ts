@@ -79,6 +79,7 @@ describe("the MCP server", () => {
       "get_project",
       "get_top_view",
       "import_file",
+      "import_image_relief",
       "import_terrain",
       "move_operation",
       "open_project",

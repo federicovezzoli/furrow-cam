@@ -18,6 +18,7 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `save_project` | Saves a project opened from a `.furrow.zip` or `.furrow.json` as `.furrow`, or saves one to another path; never replaces another file, nor a project changed since it was read (for example in the app) |
 | `import_file` | Imports an SVG or DXF drawing, or an STL or STEP 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
 | `import_terrain` | Makes a relief model of a real place from open elevation data, as the app's *Terrain from a map* does: an area about coordinates or a map link (names aren't searched), at the size, exaggeration and base you give; can also write it as an STL file |
+| `import_image_relief` | Makes a relief model from a greyscale PNG, JPEG or WebP image, as the app's *Relief from image* does: lighter is higher (darker with invert), at the width, relief height, base and smoothing you give |
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |
