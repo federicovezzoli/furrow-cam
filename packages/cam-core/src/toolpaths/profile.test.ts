@@ -838,6 +838,52 @@ describe("profileToolpath with plunge points", () => {
     for (const [, y] of leads) expect(y).toBeCloseTo(30, 6);
   });
 
+  it("cuts the finish lap at every level from the plunge point when a notch needs depth passes", () => {
+    // The bridged notch of the finish pass tests: the depth passes don't reach into it.
+    const notched: Shape = {
+      ...square,
+      paths: [
+        {
+          start: [0, 0],
+          segments: (
+            [
+              [100, 0],
+              [100, 50],
+              [46.5, 50],
+              [46.5, 30],
+              [40, 30],
+              [40, 50],
+              [0, 50],
+            ] as [number, number][]
+          ).map((to) => ({ kind: "line" as const, to })),
+          closed: true,
+        },
+      ],
+    };
+    const toolpath = profile(
+      {
+        allowance: 0.2,
+        finishPass: true,
+        depth: 18,
+        startPoints: [{ start: [0, 25], plunge: [-20, 25] }],
+      },
+      [notched],
+      { diameter: 6.35, fluteLength: 25 },
+    );
+    const at25 = (point: Vec3) => Math.abs(point[0] + 20) < 1e-6 && Math.abs(point[1] - 25) < 1e-6;
+    const vertical = steps(toolpath).filter(
+      ([from, move]) => from[2] !== move.to[2] && Math.min(from[2], move.to[2]) < 5,
+    );
+    expect(vertical.length).toBeGreaterThan(0);
+    expect(vertical.every(([from, move]) => at25(from) && at25(move.to))).toBe(true);
+    // Into the notch, which only the finishing contour reaches.
+    expect(
+      steps(toolpath).some(
+        ([, move]) => move.to[1] > 30 && move.to[1] < 40 && move.to[0] > 42 && move.to[0] < 44.5,
+      ),
+    ).toBe(true);
+  });
+
   it("warns about plunge points whose lead goes into the part", () => {
     expect(profile({ startPoints: [{ start: [500, 500], plunge }] }).warnings).toEqual([
       { code: "toolpath.startPointsLeftOut", values: { count: 1 } },

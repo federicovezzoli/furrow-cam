@@ -550,6 +550,21 @@ describe("addEngraveOperation", () => {
     });
     expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
   });
+
+  it("takes plain start points, out of range doing nothing", () => {
+    const { store, operations } = setup();
+    const id = addEngrave(store);
+    addStartPoint(store, id, [0, 30]);
+    moveStartPoint(store, id, 0, [0, 40]);
+    const engraving = operations().find((operation) => operation.id === id);
+    expect(engraving?.type === "engrave" && engraving.params.startPoints).toEqual([[0, 40]]);
+    const before = store.getState().document;
+    const steps = store.getState().past.length;
+    moveStartPoint(store, id, 3, [1, 1]);
+    removeStartPoint(store, id, -1);
+    expect(store.getState().document).toBe(before);
+    expect(store.getState().past).toHaveLength(steps);
+  });
 });
 
 describe("addVCarveOperation", () => {

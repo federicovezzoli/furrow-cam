@@ -28,7 +28,7 @@ import {
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
-import { moveStartPoints, moveTextWithOutlines } from "./geometry-actions";
+import { moveStartPoints, moveTextWithOutlines, type StartPointParams } from "./geometry-actions";
 
 /**
  * Document store actions on the project's units and stock (ADR-0010): each
@@ -68,10 +68,10 @@ function moveDrawing(
   }
   for (const operation of draft.operations) {
     if (operation.type !== "profile" && operation.type !== "engrave") continue;
-    const shift = (point: Point) => translatePoint(point, offset);
-    if (operation.type === "profile") {
-      operation.params.startPoints = moveStartPoints(operation.params.startPoints, shift);
-    } else operation.params.startPoints = moveStartPoints(operation.params.startPoints, shift);
+    const params: StartPointParams = operation.params;
+    params.startPoints = moveStartPoints(params.startPoints, (point) =>
+      translatePoint(point, offset),
+    );
     if (operation.type === "profile" && operation.params.tabs) {
       const { tabs } = operation.params;
       tabs.positions = tabs.positions.map((position) => translatePoint(position, offset));

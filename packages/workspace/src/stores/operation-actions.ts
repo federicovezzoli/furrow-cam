@@ -729,9 +729,16 @@ function changeStartPoints(
   changeOperation(store, name, id, (operation) => {
     if (operation.type === "profile") recipe(operation.params.startPoints);
     if (operation.type === "engrave") {
-      const startPoints = operation.params.startPoints.map((start) => ({ start, plunge: null }));
+      const before = operation.params.startPoints;
+      const startPoints = before.map((start) => ({ start, plunge: null }));
       recipe(startPoints);
-      operation.params.startPoints = startPoints.map(({ start }) => start);
+      // Written back only when changed, so a change that does nothing records no undo step.
+      if (
+        startPoints.length !== before.length ||
+        startPoints.some(({ start }, i) => start !== before[i])
+      ) {
+        operation.params.startPoints = startPoints.map(({ start }) => start);
+      }
     }
   });
 }

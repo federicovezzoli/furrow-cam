@@ -228,6 +228,13 @@ export function drawingOperations(document: ProjectDocument, id: string): Operat
 }
 
 /**
+ * A profile's or engraving's params, with the start points either of them
+ * has: one assignment serves both, as moving, copying and filtering keep
+ * each start point in its own form.
+ */
+export type StartPointParams = { startPoints: (Point | ProfileStartPoint)[] };
+
+/**
  * `startPoints` of a profile or engraving moved by `move`, a profile's plunge
  * points (#427) with them; only those `own` marks when given.
  */
@@ -447,21 +454,8 @@ function transformDrawing(
       if (operation.type === "profile" && operation.params.cornerOvercuts) {
         move(operation.params.cornerOvercuts.excluded, moved.overcuts);
       }
-      if (operation.type === "profile") {
-        const { params } = operation;
-        params.startPoints = moveStartPoints(
-          params.startPoints,
-          transform.point,
-          moved.startPoints,
-        );
-      } else {
-        const { params } = operation;
-        params.startPoints = moveStartPoints(
-          params.startPoints,
-          transform.point,
-          moved.startPoints,
-        );
-      }
+      const params: StartPointParams = operation.params;
+      params.startPoints = moveStartPoints(params.startPoints, transform.point, moved.startPoints);
     }
   });
   return { ok: true };
@@ -763,17 +757,11 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
         overcuts.excluded = copied(overcuts.excluded, own.overcuts);
       }
       if (own.startPoints.some(Boolean)) {
-        const shift = (point: Point) => translatePoint(point, offset);
-        const copies = <T extends Point | ProfileStartPoint>(startPoints: T[]) =>
-          startPoints.concat(
-            moveStartPoints(
-              startPoints.filter((_, i) => own.startPoints[i]),
-              shift,
-            ),
-          );
-        if (operation.type === "profile") {
-          operation.params.startPoints = copies(operation.params.startPoints);
-        } else operation.params.startPoints = copies(operation.params.startPoints);
+        const params: StartPointParams = operation.params;
+        const mine = params.startPoints.filter((_, i) => own.startPoints[i]);
+        params.startPoints = params.startPoints.concat(
+          moveStartPoints(mine, (point) => translatePoint(point, offset)),
+        );
       }
     }
   });
@@ -811,10 +799,8 @@ export function removeDrawing(store: DocumentStore, id: string) {
         gone?.startPoints.some(Boolean) &&
         (operation.type === "profile" || operation.type === "engrave")
       ) {
-        const kept = (_: unknown, i: number) => !gone.startPoints[i];
-        if (operation.type === "profile") {
-          operation.params.startPoints = operation.params.startPoints.filter(kept);
-        } else operation.params.startPoints = operation.params.startPoints.filter(kept);
+        const params: StartPointParams = operation.params;
+        params.startPoints = params.startPoints.filter((_, i) => !gone.startPoints[i]);
       }
       return targets.length > 0 || hasPlacedHoles(operation);
     });

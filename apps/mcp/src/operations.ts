@@ -257,7 +257,7 @@ function configure(
     operation.type === "profile" && tabs === null ? { ...rest, tabs } : rest;
   if (operation.type === "profile" && rest.side === "on") {
     // As in the app: on the line leaves no wall for an allowance, and no corner to overcut.
-    changes = { allowance: 0, finishPass: false, cornerOvercuts: null, ...rest };
+    changes = { allowance: 0, finishPass: false, cornerOvercuts: null, ...changes };
   }
   if (operation.type === "vcarve" && "flatBottom" in rest) {
     changes.flatBottom = flatBottomOf(library, operation, rest.flatBottom);
