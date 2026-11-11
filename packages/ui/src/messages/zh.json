@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "锥度球头立铣刀不能钻孔",
       "taperedBitsCantClear": "锥度球头立铣刀仅用于雕刻和3D精加工：请选择其他刀具。",
       "drillsCantEngrave": "钻头不能雕刻",
+      "onlyVBitsChamfer": "只有V形刀可以倒角",
+      "chamferWidth": "倒角需要宽度，且只有倒角才有宽度",
       "flatBottomEndMill": "只有平底立铣刀能清出平底",
       "onlyVBitsVCarve": "只有V形刀能进行V形雕刻",
       "modelNotShapes": "加工的是模型，而不是形状",
@@ -692,7 +694,7 @@
       "vcarveConeLimit": "最大深度超过了V形刀的锥体，因此雕刻深度不会超过锥体。",
       "vcarveEdgesUncarved": "部分区域比V形刀在最大深度处能达到的宽度更宽，其边缘将不会被雕刻：开启平底以清除它们。",
       "flatAreasNarrow": "部分平底区域对平底刀具来说太窄，将不会被切削。",
-      "engraveConeWide": "深度超过了V形刀的锥体，因此线宽等于刀具宽度。",
+      "engraveConeWide": "超出V形刀的锥体，因此切削宽度最多等于刀具宽度。",
       "pathsTooSmall": "闭合路径对刀具来说太小。",
       "nothingOutside": "闭合路径之外没有需要清除的毛坯。",
       "tabsTooTall": "连接桥高度等于切削深度，因此其下方不会被切削。",
@@ -821,7 +823,8 @@
     "sides": {
       "outside": "外侧",
       "inside": "内侧",
-      "on": "在线上"
+      "on": "在线上",
+      "chamfer": "倒角"
     },
     "directions": {
       "climb": "顺铣",
@@ -929,11 +932,14 @@
     "peckHint": "分次啄钻，每次不超过刀具的每层切深，每次后抬刀排屑。",
     "engrave": "雕刻",
     "position": "位置",
-    "engraveHint": "{side, select, inside {沿线内侧加工闭合路径，槽的一侧边缘在线上，} outside {沿线外侧加工闭合路径，槽的一侧边缘在线上，} other {沿线加工所有开放和闭合路径，}}每层不超过刀具的每层切深。",
+    "engraveHint": "{side, select, inside {沿线内侧加工闭合路径，槽的一侧边缘在线上，} outside {沿线外侧加工闭合路径，槽的一侧边缘在线上，} chamfer {用V形刀的锥面为闭合路径的边缘倒角，外轮廓向线内，孔向线外，} other {沿线加工所有开放和闭合路径，}}每层不超过刀具的每层切深。",
     "lineWidth": "线宽",
     "lineTooDeep": "超过锥体深度，因此线宽等于刀具宽度。",
     "lineAtTop": "毛坯顶面处，由刀具的{angle}°角决定。",
     "lineAtTopTip": "毛坯顶面处，由刀具的{angle}°角和{tip}刀尖决定。",
+    "chamferWidth": "倒角宽度",
+    "chamferDepth": "在毛坯顶面上；切削深度 {depth}。",
+    "chamferTooWide": "超过锥体宽度，因此倒角只能达到刀具允许的宽度。",
     "vcarve": "V形雕刻",
     "vcarveHint": "沿闭合路径的中线加工，深度取决于刀具角度到达边缘所需的深度，每层不超过刀具的每层切深。岛屿保留不切。",
     "maxDepth": "最大深度",

@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Les fraises coniques hémisphériques ne percent pas",
       "taperedBitsCantClear": "Les fraises coniques hémisphériques ne font que graver et finir en 3D : choisissez une autre fraise.",
       "drillsCantEngrave": "Les forets ne gravent pas",
+      "onlyVBitsChamfer": "Seules les fraises en V chanfreinent",
+      "chamferWidth": "Un chanfrein a besoin d’une largeur, et seul un chanfrein en a une",
       "flatBottomEndMill": "Seules les fraises droites à bout plat dégagent un fond plat",
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",
       "modelNotShapes": "Usine un modèle, pas des formes",
@@ -692,7 +694,7 @@
       "vcarveConeLimit": "La profondeur maximale dépasse le cône de la fraise en V, donc elle ne grave pas plus profond que lui.",
       "vcarveEdgesUncarved": "Certaines parties sont plus larges que ce que la fraise en V atteint à la profondeur maximale, donc leurs bords restent non gravés : activez un fond plat pour les dégager.",
       "flatAreasNarrow": "Certaines zones plates sont trop étroites pour la fraise du fond plat et restent non usinées.",
-      "engraveConeWide": "La profondeur dépasse le cône de la fraise en V, donc la ligne est aussi large que la fraise.",
+      "engraveConeWide": "Au-delà du cône de la fraise en V : la coupe n’est pas plus large que la fraise.",
       "pathsTooSmall": "Les tracés fermés sont trop petits pour l'outil.",
       "nothingOutside": "Les tracés fermés ne laissent aucun brut à évider à l'extérieur.",
       "tabsTooTall": "Les attaches sont aussi hautes que la coupe est profonde, donc rien n'est coupé sous elles.",
@@ -821,7 +823,8 @@
     "sides": {
       "outside": "Extérieur",
       "inside": "Intérieur",
-      "on": "Sur la ligne"
+      "on": "Sur la ligne",
+      "chamfer": "Chanfrein"
     },
     "directions": {
       "climb": "En avalant",
@@ -929,11 +932,14 @@
     "peckHint": "Plonge par étapes pas plus profondes que la passe de l’outil, en remontant après chacune pour évacuer les copeaux.",
     "engrave": "Gravure",
     "position": "Position",
-    "engraveHint": "{side, select, inside {Suit les tracés fermés à l’intérieur de la ligne, avec un bord de la rainure dessus,} outside {Suit les tracés fermés à l’extérieur de la ligne, avec un bord de la rainure dessus,} other {Suit tous les tracés, ouverts et fermés, sur la ligne,}} en passes pas plus profondes que la passe de l’outil.",
+    "engraveHint": "{side, select, inside {Suit les tracés fermés à l’intérieur de la ligne, avec un bord de la rainure dessus,} outside {Suit les tracés fermés à l’extérieur de la ligne, avec un bord de la rainure dessus,} chamfer {Chanfreine les bords des tracés fermés avec le cône de la fraise en V, vers l’intérieur de la ligne sur les contours extérieurs et vers l’extérieur sur les trous,} other {Suit tous les tracés, ouverts et fermés, sur la ligne,}} en passes pas plus profondes que la passe de l’outil.",
     "lineWidth": "Largeur du trait",
     "lineTooDeep": "Plus profond que le cône : le trait est aussi large que la fraise.",
     "lineAtTop": "Au dessus du brut, d’après l’angle de {angle}° de la fraise.",
     "lineAtTopTip": "Au dessus du brut, d’après l’angle de {angle}° de la fraise et sa pointe de {tip}.",
+    "chamferWidth": "Largeur du chanfrein",
+    "chamferDepth": "Sur le dessus du brut ; coupé à {depth} de profondeur.",
+    "chamferTooWide": "Plus large que le cône : le chanfrein n’est large que ce que la fraise permet.",
     "vcarve": "Gravure en V",
     "vcarveHint": "Suit le milieu des tracés fermés, aussi profond que l’angle de la fraise l’exige pour atteindre leurs bords, en passes pas plus profondes que la passe de l’outil. Les îlots restent debout.",
     "maxDepth": "Profondeur max",

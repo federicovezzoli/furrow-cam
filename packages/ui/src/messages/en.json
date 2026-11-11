@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Tapered ball end mills can't drill",
       "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
+      "onlyVBitsChamfer": "Only V-bits chamfer",
+      "chamferWidth": "A chamfer needs a width, and only a chamfer has one",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",
       "modelNotShapes": "Machines a model, not shapes",
@@ -692,7 +694,7 @@
       "vcarveConeLimit": "The maximum depth exceeds the V-bit's cone, so it carves no deeper than that.",
       "vcarveEdgesUncarved": "Parts are wider than the V-bit reaches at the maximum depth, so their edges stay uncarved: turn on a flat bottom to clear them.",
       "flatAreasNarrow": "Some flat areas are too narrow for the flat-bottom tool and stay uncut.",
-      "engraveConeWide": "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
+      "engraveConeWide": "Past the V-bit's cone, so the cut is only as wide as the bit.",
       "pathsTooSmall": "The closed paths are too small for the tool.",
       "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
@@ -821,7 +823,8 @@
     "sides": {
       "outside": "Outside",
       "inside": "Inside",
-      "on": "On the line"
+      "on": "On the line",
+      "chamfer": "Chamfer"
     },
     "directions": {
       "climb": "Climb",
@@ -929,11 +932,14 @@
     "peckHint": "Plunges in pecks no deeper than the tool's step-down, retracting after each to clear chips.",
     "engrave": "Engrave",
     "position": "Position",
-    "engraveHint": "{side, select, inside {Follows the closed paths inside the line, with an edge of the groove on it,} outside {Follows the closed paths outside the line, with an edge of the groove on it,} other {Follows every path, open and closed, on the line,}} in passes no deeper than the tool's step-down.",
+    "engraveHint": "{side, select, inside {Follows the closed paths inside the line, with an edge of the groove on it,} outside {Follows the closed paths outside the line, with an edge of the groove on it,} chamfer {Bevels the edges of the closed paths with the V-bit's cone, inward from the line on outer contours and outward on holes,} other {Follows every path, open and closed, on the line,}} in passes no deeper than the tool's step-down.",
     "lineWidth": "Line width",
     "lineTooDeep": "Deeper than the cone, so the line is as wide as the bit.",
     "lineAtTop": "At the stock top, from the bit's {angle}° angle.",
     "lineAtTopTip": "At the stock top, from the bit's {angle}° angle and {tip} tip.",
+    "chamferWidth": "Chamfer width",
+    "chamferDepth": "On the stock top; cut {depth} deep.",
+    "chamferTooWide": "Wider than the cone, so the chamfer is only as wide as the bit allows.",
     "vcarve": "V-carve",
     "vcarveHint": "Follows the middle of the closed paths, as deep as the bit's angle needs to reach their edges, in passes no deeper than the tool's step-down. Islands stay standing.",
     "maxDepth": "Max depth",

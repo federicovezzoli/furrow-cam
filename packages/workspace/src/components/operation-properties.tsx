@@ -3,6 +3,7 @@
 import {
   cutsHidden,
   DRILL_DIAMETER_TOLERANCE,
+  engraveCut,
   exceedsVBitCone,
   MIN_LENGTH,
   pinDepth,
@@ -15,6 +16,7 @@ import {
   canClearFlatBottom,
   type DrillOperation,
   type EngraveOperation,
+  EngraveSide,
   type FinishingStrategy,
   LinearAngle,
   MillingDirection,
@@ -1021,6 +1023,9 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
   // The narrowest line the depth field allows, so the two fields share a floor.
   const minWidth = vBitLineWidth(tool, MIN_LENGTH);
   const tip = tool.tipDiameter ?? 0;
+  const chamfer = params.side === "chamfer";
+  const cut = engraveCut(tool, params);
+  const sides = tool.type === "v_bit" ? EngraveSide.options : ProfileSide.options;
 
   return (
     <section aria-labelledby="engrave-heading" className="grid gap-2">
@@ -1032,10 +1037,10 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
           id="engrave-side"
           size="sm"
           value={params.side}
-          onChange={(event) => update("side", { side: ProfileSide.parse(event.target.value) })}
+          onChange={(event) => update("side", { side: EngraveSide.parse(event.target.value) })}
           className={SELECT_CLASS}
         >
-          {(["on", "inside", "outside"] as const).map((option) => (
+          {sides.map((option) => (
             <NativeSelectOption key={option} value={option}>
               {t(`sides.${option}`)}
             </NativeSelectOption>
@@ -1043,16 +1048,35 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
         </NativeSelect>
       </Row>
       <p className="text-muted-foreground">{t("engraveHint", { side: params.side })}</p>
-      <NumberField
-        id="engrave-depth"
-        label={t("depth")}
-        min={MIN_LENGTH}
-        value={params.depth}
-        onValueChange={(depth) => update("depth", { depth })}
-        error={errors.depth}
-        {...length}
-      />
-      {width !== null && minWidth !== null && (
+      {chamfer ? (
+        <>
+          <NumberField
+            id="engrave-chamfer"
+            label={t("chamferWidth")}
+            min={MIN_LENGTH}
+            value={params.width}
+            onValueChange={(value) => update("width", { width: value })}
+            error={errors.width}
+            {...length}
+          />
+          <p className="text-muted-foreground">
+            {cut.coneWide
+              ? t("chamferTooWide")
+              : t("chamferDepth", { depth: lengthText(cut.depth) })}
+          </p>
+        </>
+      ) : (
+        <NumberField
+          id="engrave-depth"
+          label={t("depth")}
+          min={MIN_LENGTH}
+          value={params.depth}
+          onValueChange={(depth) => update("depth", { depth })}
+          error={errors.depth}
+          {...length}
+        />
+      )}
+      {!chamfer && width !== null && minWidth !== null && (
         <>
           <NumberField
             id="engrave-width"

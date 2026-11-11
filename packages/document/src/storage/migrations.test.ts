@@ -320,7 +320,7 @@ describe("migrations", () => {
       id: "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
       type: "engrave",
       tool: { ...profile.tool },
-      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
+      params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [] },
     };
     const withNone = {
       ...current,
@@ -395,6 +395,19 @@ describe("migrations", () => {
     const params = { ...profile.params, startPoints: [[0, 50]] };
     const v36 = { ...current, schemaVersion: 36, operations: [{ ...profile, params }] };
     expect(parseProjectDocument(v36)).toEqual(current);
+  });
+
+  it("gives v37 engravings no chamfer width", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const params = { side: "on", depth: 1, ramp: false, startPoints: [] } as const;
+    const engrave = { ...profile, type: "engrave", params } as const;
+    const v37 = { ...current, schemaVersion: 37, operations: [engrave] };
+    expect(parseProjectDocument(v37)).toEqual({
+      ...current,
+      operations: [{ ...engrave, params: { ...params, width: null } }],
+    });
   });
 
   it("gives v6 documents no models", () => {

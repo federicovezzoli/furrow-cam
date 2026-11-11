@@ -112,6 +112,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
   return {
     side: "on",
     depth: Math.min(DEFAULT_ENGRAVE_DEPTH, document.stock.thickness),
+    width: null,
     ramp: false,
     startPoints: [],
   };
@@ -598,12 +599,29 @@ export function updateReliefRoughParams(
   );
 }
 
-/** Changes some of an engrave operation's params at once, like `updateProfileParams`. */
+/** How wide a new chamfer is, unless the V-bit's cone is narrower. */
+export const DEFAULT_CHAMFER_WIDTH = 1;
+
+/**
+ * Changes some of an engrave operation's params at once, like
+ * `updateProfileParams`. A change of side alone gives a chamfer its default
+ * width, at most the cone's, and takes it from other sides.
+ */
 export function updateEngraveParams(
   store: DocumentStore,
   id: string,
   changes: Partial<EngraveParams>,
 ): ActionResult {
+  const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
+  if (changes.side !== undefined && changes.width === undefined && operation?.type === "engrave") {
+    const { diameter, tipDiameter } = operation.tool;
+    const cone = (diameter - (tipDiameter ?? 0)) / 2;
+    const width =
+      changes.side === "chamfer"
+        ? (operation.params.width ?? Math.min(DEFAULT_CHAMFER_WIDTH, cone))
+        : null;
+    changes = { ...changes, width };
+  }
   return updateParams(store, id, "engrave", EngraveParams, "updateEngraveParams", changes);
 }
 
@@ -623,6 +641,9 @@ function updateParams<T extends Operation["type"]>(
   }
   const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  // The operation's own checks too, such as which tools a side needs.
+  const whole = Operation.safeParse({ ...operation, params: parsed.data });
+  if (!whole.success) return { ok: false, error: firstError(whole.error) };
   changeOperation(store, name, id, (draft) => {
     // Field by field, so unchanged values record no patches.
     if (draft.type === type) Object.assign(draft.params, changes);

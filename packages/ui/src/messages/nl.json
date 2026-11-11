@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Conische bolkopfrezen kunnen niet boren",
       "taperedBitsCantClear": "Conische bolkopfrezen graveren en werken alleen 3D af: kies een andere frees.",
       "drillsCantEngrave": "Boren kunnen niet graveren",
+      "onlyVBitsChamfer": "Alleen V-frezen schuinen af",
+      "chamferWidth": "Een afschuining heeft een breedte nodig, en alleen een afschuining heeft er een",
       "flatBottomEndMill": "Alleen platte vingerfrezen maken een vlakke bodem",
       "onlyVBitsVCarve": "Alleen V-frezen kunnen V-carven",
       "modelNotShapes": "Bewerkt een model, geen vormen",
@@ -692,7 +694,7 @@
       "vcarveConeLimit": "De maximale diepte is groter dan de kegel van de V-frees, dus hij freest niet dieper dan dat.",
       "vcarveEdgesUncarved": "Delen zijn breder dan de V-frees op de maximale diepte bereikt, dus hun randen blijven onbewerkt: zet een vlakke bodem aan om ze vrij te frezen.",
       "flatAreasNarrow": "Sommige vlakke delen zijn te smal voor het gereedschap voor de vlakke bodem en blijven onbewerkt.",
-      "engraveConeWide": "De diepte is groter dan de kegel van de V-frees, dus de lijn is even breed als de frees.",
+      "engraveConeWide": "Voorbij de kegel van de V-frees, dus de snede is maar zo breed als de frees.",
       "pathsTooSmall": "De gesloten paden zijn te klein voor het gereedschap.",
       "nothingOutside": "Buiten de gesloten paden is geen materiaal om weg te frezen.",
       "tabsTooTall": "De bruggen zijn even hoog als de snede diep is, dus eronder wordt niets gefreesd.",
@@ -821,7 +823,8 @@
     "sides": {
       "outside": "Buiten",
       "inside": "Binnen",
-      "on": "Op de lijn"
+      "on": "Op de lijn",
+      "chamfer": "Afschuining"
     },
     "directions": {
       "climb": "Meelopend",
@@ -929,11 +932,14 @@
     "peckHint": "Steekt in stappen niet dieper dan de snedediepte van het gereedschap in, en trekt na elke stap terug om spanen af te voeren.",
     "engrave": "Graveren",
     "position": "Positie",
-    "engraveHint": "{side, select, inside {Volgt de gesloten paden binnen de lijn, met een rand van de groef erop,} outside {Volgt de gesloten paden buiten de lijn, met een rand van de groef erop,} other {Volgt elk pad, open en gesloten, op de lijn,}} in gangen niet dieper dan de snedediepte van het gereedschap.",
+    "engraveHint": "{side, select, inside {Volgt de gesloten paden binnen de lijn, met een rand van de groef erop,} outside {Volgt de gesloten paden buiten de lijn, met een rand van de groef erop,} chamfer {Schuint de randen van de gesloten paden af met de kegel van de V-frees, naar binnen vanaf de lijn bij buitencontouren en naar buiten bij gaten,} other {Volgt elk pad, open en gesloten, op de lijn,}} in gangen niet dieper dan de snedediepte van het gereedschap.",
     "lineWidth": "Lijnbreedte",
     "lineTooDeep": "Dieper dan de kegel, dus de lijn is even breed als de frees.",
     "lineAtTop": "Aan de bovenkant van het materiaal, volgens de hoek van {angle}° van de frees.",
     "lineAtTopTip": "Aan de bovenkant van het materiaal, volgens de hoek van {angle}° en de punt van {tip} van de frees.",
+    "chamferWidth": "Afschuiningsbreedte",
+    "chamferDepth": "Aan de bovenkant van het materiaal; {depth} diep gesneden.",
+    "chamferTooWide": "Breder dan de kegel, dus de afschuining is maar zo breed als de frees toelaat.",
     "vcarve": "V-carve",
     "vcarveHint": "Volgt het midden van de gesloten paden, zo diep als de hoek van de frees nodig heeft om de randen te bereiken, in gangen niet dieper dan de snedediepte van het gereedschap. Eilanden blijven staan.",
     "maxDepth": "Max. diepte",

@@ -208,9 +208,27 @@ describe("EngraveOperation", () => {
   const engrave = {
     ...profile,
     type: "engrave",
-    params: { side: "on", depth: 0.5, ramp: false, startPoints: [] },
+    params: { side: "on", depth: 0.5, width: null, ramp: false, startPoints: [] },
   };
   const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
+
+  it("chamfers with V-bits only, and only a chamfer has a width", () => {
+    const chamfer = {
+      ...engrave,
+      tool: vBit,
+      params: { ...engrave.params, side: "chamfer", width: 1 },
+    };
+    expect(EngraveOperation.safeParse(chamfer).success).toBe(true);
+    expect(EngraveOperation.safeParse({ ...chamfer, tool: endMill }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["params", "side"], message: "operation.onlyVBitsChamfer" }),
+    ]);
+    const unsized = { ...chamfer, params: { ...chamfer.params, width: null } };
+    expect(EngraveOperation.safeParse(unsized).error?.issues).toEqual([
+      expect.objectContaining({ path: ["params", "width"], message: "operation.chamferWidth" }),
+    ]);
+    const sized = { ...engrave, params: { ...engrave.params, width: 1 } };
+    expect(EngraveOperation.safeParse(sized).success).toBe(false);
+  });
 
   it("accepts V-bits, ball and flat end mills, as an operation too", () => {
     expect(EngraveOperation.safeParse(engrave).success).toBe(true);
@@ -226,7 +244,7 @@ describe("EngraveOperation", () => {
   });
 
   it("rejects invalid params and the profile's options", () => {
-    const valid = { side: "outside", depth: 1, ramp: false, startPoints: [] };
+    const valid = { side: "outside", depth: 1, width: null, ramp: false, startPoints: [] };
     expect(EngraveParams.safeParse(valid).success).toBe(true);
     expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
     expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);

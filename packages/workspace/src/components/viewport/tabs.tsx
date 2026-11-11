@@ -2,8 +2,8 @@
 
 import {
   closedLoops,
+  engraveCut,
   excludeOvercuts,
-  grooveWidth,
   holdingTabStrips,
   holeSnapTargets,
   modelOutlines,
@@ -201,7 +201,9 @@ export function StartPoints({ color }: { color: string }) {
   // The start point just added on a closed path, which the next click away from the paths gives a plunge point.
   const [armed, setArmed] = useState<Point | null>(null);
   const targets = operation?.targets;
-  const side = operation?.params.side;
+  // A chamfer's tool runs as an outside engraving does.
+  const cut = operation?.type === "engrave" ? engraveCut(operation.tool, operation.params) : null;
+  const side = cut ? cut.side : operation?.type === "profile" ? operation.params.side : undefined;
   const startPoints = useMemo(
     () =>
       operation?.type === "profile"
@@ -211,10 +213,7 @@ export function StartPoints({ color }: { color: string }) {
   );
   // How far the tool centre is off the closed paths, on the finished cut.
   const offset =
-    operation &&
-    (operation.type === "profile"
-      ? operation.tool.diameter / 2
-      : grooveWidth(operation.tool, operation.params.depth) / 2);
+    operation && (operation.type === "profile" ? operation.tool.diameter / 2 : cut?.offset);
   const shapes = useMemo(
     () => targetedShapes(new Map(geometry.map((shape) => [shape.id, shape])), targets ?? []),
     [geometry, targets],
@@ -245,7 +244,7 @@ export function StartPoints({ color }: { color: string }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: a half-made pick ends with its mode or operation
   useEffect(() => setArmed(null), [editing, operation?.id]);
   if (!operation || !startPoints) return null;
-  const { depth } = operation.params;
+  const depth = cut ? cut.depth : operation.params.depth;
   const radius = operation.tool.diameter / 2;
   const plunges = operation.type === "profile" && !operation.params.tabs;
 

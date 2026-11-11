@@ -1,6 +1,7 @@
 import type { EngraveOperation, EngraveParams, Shape, Tool } from "@furrow/document";
 import { DRAWING_ID, endMill, taperedBallEndMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
+import { simulateCuts } from "../simulation/simulation";
 import {
   engraveToolpath,
   exceedsVBitCone,
@@ -9,7 +10,7 @@ import {
   vBitDepthForWidth,
   vBitLineWidth,
 } from "./engrave";
-import { generateToolpath } from "./generate";
+import { generateToolpath, toolpathCuts } from "./generate";
 import { profileToolpath } from "./profile";
 import type { Toolpath } from "./toolpath";
 
@@ -55,7 +56,7 @@ function engraving(
     type: "engrave",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool,
-    params: { side: "on", depth: 1, ramp: false, startPoints: [], ...params },
+    params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [], ...params },
   };
 }
 
@@ -189,6 +190,81 @@ describe("engraveToolpath", () => {
       { code: "toolpath.engraveConeWide" },
     ]);
     expect(engrave([line], { depth: 6 }).warnings).toEqual([]);
+  });
+});
+
+describe("chamfer", () => {
+  /** A 60 × 60 mm part with a 20 × 20 mm hole, on a 100 × 100 mm stock. */
+  const part: Shape = {
+    ...square,
+    paths: [
+      {
+        start: [20, 20],
+        segments: [
+          { kind: "line", to: [80, 20] },
+          { kind: "line", to: [80, 80] },
+          { kind: "line", to: [20, 80] },
+        ],
+        closed: true,
+      },
+      {
+        start: [40, 40],
+        segments: [
+          { kind: "line", to: [60, 40] },
+          { kind: "line", to: [60, 60] },
+          { kind: "line", to: [40, 60] },
+        ],
+        closed: true,
+      },
+    ],
+  };
+  const sharp: Tool = { ...vBit, vAngle: 90, diameter: 6, tipDiameter: 0 };
+  const flat: Tool = { ...sharp, tipDiameter: 1 };
+
+  /** The stock top along y = 50 after the chamfer, as a function of x. */
+  function topAlong(tool: Tool, width: number) {
+    const operation = engraving([part], { side: "chamfer", width }, tool);
+    const toolpath = engraveToolpath(operation, [part], options);
+    expect(toolpath.warnings).toEqual([]);
+    const grid = { columns: 2000, rows: 1, cellWidth: 0.05, cellHeight: 100 };
+    const stock = simulateCuts(
+      { width: 100, height: 100, thickness: 18 },
+      toolpathCuts(operation, toolpath),
+      grid,
+    );
+    // The single row is centred on y = 50, which crosses the left edges at x = 20 and 40.
+    return (x: number) => stock.heights[Math.floor(x / 0.05)] as number;
+  }
+
+  for (const tool of [sharp, flat]) {
+    it(`bevels the outer contour and the hole \`width\` wide on the top, tip ${tool.tipDiameter}`, () => {
+      const top = topAlong(tool, 2);
+      // 90°: as deep as wide, on the line.
+      expect(top(20.01)).toBeCloseTo(-2, 1);
+      expect(top(21)).toBeCloseTo(-1, 1);
+      expect(top(21.9)).toBeLessThan(0);
+      expect(top(22.1)).toBe(0);
+      // The hole's edge is bevelled into the part, outside the hole.
+      expect(top(39.99)).toBeCloseTo(-2, 1);
+      expect(top(38.1)).toBeLessThan(0);
+      expect(top(37.9)).toBe(0);
+      expect(top(30)).toBe(0);
+    });
+  }
+
+  it("cuts outside the line by half the tip's flat, as deep as the width needs", () => {
+    const toolpath = engrave([square], { side: "chamfer", width: 2 }, flat);
+    // Two passes of the 2 mm step-down down to 2 mm, the tip 0.5 mm outside.
+    expect(feedsAt(toolpath, -2)).toContainEqual([100.5, 0]);
+    expect(toolpath.moves.every((move) => move.to[2] >= -2 - 1e-9)).toBe(true);
+  });
+
+  it("warns when the width needs more than the cone", () => {
+    // 6 mm and no tip: up to 3 mm.
+    expect(engrave([square], { side: "chamfer", width: 3 }, sharp).warnings).toEqual([]);
+    const wide = engrave([square], { side: "chamfer", width: 4 }, sharp);
+    expect(wide.warnings).toEqual([{ code: "toolpath.engraveConeWide" }]);
+    expect(Math.min(...wide.moves.map((move) => move.to[2]))).toBeCloseTo(-3, 9);
   });
 });
 

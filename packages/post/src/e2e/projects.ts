@@ -335,7 +335,7 @@ function svgSign(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byName("rect1")),
         tool: vBit,
-        params: { side: "on", depth: 1.5, ramp: false, startPoints: [] },
+        params: { side: "on", depth: 1.5, width: null, ramp: false, startPoints: [] },
       },
       {
         id: id(),
@@ -401,7 +401,7 @@ function inchPanel(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byName("Label")),
         tool: endMill,
-        params: { side: "on", depth: 0.04 * inch, ramp: true, startPoints: [] },
+        params: { side: "on", depth: 0.04 * inch, width: null, ramp: true, startPoints: [] },
       },
       {
         id: id(),
@@ -815,7 +815,7 @@ function flutedDoors(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byLayer("cannettature")),
         tool: bowl44,
-        params: { side: "on", depth: 4, ramp: true, startPoints: [] },
+        params: { side: "on", depth: 4, width: null, ramp: true, startPoints: [] },
       },
     ],
   };

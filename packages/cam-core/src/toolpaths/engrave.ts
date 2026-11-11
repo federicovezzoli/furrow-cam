@@ -1,4 +1,4 @@
-import type { EngraveOperation, Shape, Tool } from "@furrow/document";
+import type { EngraveOperation, EngraveParams, ProfileSide, Shape, Tool } from "@furrow/document";
 import { cutterProfile } from "../simulation/simulation";
 import { contourToolpath, type ProfileOptions } from "./profile";
 import type { Toolpath } from "./toolpath";
@@ -15,8 +15,9 @@ export type EngraveOptions = ProfileOptions;
  *   the `grooveWidth` at the depth, so one edge of the groove is on the line;
  *   nested paths toggle inside and outside (even-odd) as for profiles. Open
  *   paths are skipped with a warning.
- * - A V-bit cut deeper than its cone is warned about, since the line can't
- *   get wider than the bit.
+ * - `chamfer` cuts the closed paths as `outside` does (see `engraveCut`).
+ * - A V-bit cut deeper than its cone, or a chamfer wider than it, is warned
+ *   about, since the line can't get wider than the bit.
  */
 export function engraveToolpath(
   operation: EngraveOperation,
@@ -24,23 +25,43 @@ export function engraveToolpath(
   options: EngraveOptions,
 ): Toolpath {
   const { tool, params } = operation;
+  const cut = engraveCut(tool, params);
   const toolpath = contourToolpath(
     tool,
     shapes,
     {
-      side: params.side,
+      side: cut.side,
       direction: "climb",
-      depth: params.depth,
+      depth: cut.depth,
       ramp: params.ramp,
       startPoints: params.startPoints.map((start) => ({ start, plunge: null })),
-      offset: grooveWidth(tool, params.depth) / 2,
+      offset: cut.offset,
     },
     options,
   );
-  if (exceedsVBitCone(tool, params.depth)) {
-    toolpath.warnings.push({ code: "toolpath.engraveConeWide" });
-  }
+  if (cut.coneWide) toolpath.warnings.push({ code: "toolpath.engraveConeWide" });
   return toolpath;
+}
+
+/** How an engraving cuts: the profile side, depth and tool centre's offset off the line. */
+export type EngraveCut = { side: ProfileSide; depth: number; offset: number; coneWide: boolean };
+
+/**
+ * How the engraving `params` cut with `tool`. A chamfer (#554) runs the
+ * V-bit's tip outside the line, its flat's inner edge on it, as deep as the
+ * cone needs to reach `width` inside the line at the stock top; no deeper
+ * than the cone, which a wider chamfer is warned about.
+ */
+export function engraveCut(tool: Tool, params: EngraveParams): EngraveCut {
+  const { side, depth, width } = params;
+  if (side !== "chamfer") {
+    const offset = grooveWidth(tool, depth) / 2;
+    return { side, depth, offset, coneWide: exceedsVBitCone(tool, depth) };
+  }
+  const tip = tool.tipDiameter ?? 0;
+  const chamfer = vBitDepthForWidth(tool, 2 * (width ?? 0) + tip);
+  const full = chamfer ?? vBitConeDepth(tool) ?? depth;
+  return { side: "outside", depth: full, offset: tip / 2, coneWide: chamfer === null };
 }
 
 /**
