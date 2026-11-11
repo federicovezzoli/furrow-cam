@@ -48,7 +48,7 @@ async function occtWasm() {
 /** A WebP tile's RGBA pixels, decoded by the browser. */
 async function decodeWebp(webp: ArrayBuffer): Promise<Uint8ClampedArray> {
   // The pixels are data, not colours: no colour management or premultiplied alpha.
-  const bitmap = await createImageBitmap(new Blob([webp]), {
+  const bitmap = await createImageBitmap(new Blob([webp], { type: "image/webp" }), {
     colorSpaceConversion: "none",
     premultiplyAlpha: "none",
   });

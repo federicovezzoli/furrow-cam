@@ -198,9 +198,7 @@ export default async function PrivacyPage() {
           <p>
             When you make a terrain from a map, your browser (or the desktop app) contacts three
             services directly; we don&apos;t pass anything through our servers and store none of it.
-            Each receives your IP address and user agent with every request. An AI assistant making
-            a terrain through Furrow CAM&apos;s MCP server on your computer contacts Mapterhorn
-            only:
+            Each receives your IP address and user agent with every request:
           </p>
           <List>
             <li>
@@ -221,7 +219,9 @@ export default async function PrivacyPage() {
           </List>
           <p>
             Your project keeps only the terrain model and its name, never the area, the search or
-            the place. Without a connection the map doesn&apos;t load, and nothing else changes.
+            the place. Without a connection the map doesn&apos;t load, and nothing else changes. An
+            AI assistant making a terrain through Furrow CAM&apos;s MCP server on your computer
+            contacts Mapterhorn only.
           </p>
         </Section>
 
