@@ -9,6 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@furrow/ui/components/ui/tabs";
 import { useFormatMessage } from "@furrow/ui/hooks/use-format-message";
 import type { Translatable } from "@furrow/ui/lib/i18n";
+import { cn } from "@furrow/ui/lib/utils";
 import { CircleAlertIcon } from "lucide-react";
 import type * as React from "react";
 import { lazy, useRef, useState } from "react";
@@ -56,8 +57,8 @@ const Viewport = lazy(() =>
 /**
  * The CAM workspace (ADR-0009): a top bar and a ribbon of commands (import,
  * add operations, the project's versions, ADR-0028) over two resizable
- * columns: the operations, the objects (ADR-0080) and the project's
- * properties in tabs on the left,
+ * columns: on the left, a tab with the operations over the objects
+ * (ADR-0080, ADR-0083) and a tab with the project's properties,
  * the viewport on the right, with the
  * selected operation's properties floating over it. Column sizes are
  * remembered by the host (`settings.layout`). The project and its
@@ -83,12 +84,12 @@ export function WorkspaceShell() {
   const [layout] = useState(() => settings.layout);
   const saved = useRef(layout);
 
-  function remember(sizes: Layout, meta: LayoutChangedMeta) {
+  const remember = (key: "columns" | "sidebar") => (sizes: Layout, meta: LayoutChangedMeta) => {
     // Window resizes and the initial mount aren't a choice worth keeping.
     if (!meta.isUserInteraction) return;
-    saved.current = { ...saved.current, columns: sizes };
+    saved.current = { ...saved.current, [key]: sizes };
     settings.saveLayout(saved.current);
-  }
+  };
 
   return (
     <>
@@ -126,7 +127,7 @@ export function WorkspaceShell() {
           orientation="horizontal"
           className="min-w-100"
           defaultLayout={savedLayout(layout.columns, ["sidebar", "viewport"])}
-          onLayoutChanged={remember}
+          onLayoutChanged={remember("columns")}
         >
           <ResizablePanel
             id="sidebar"
@@ -141,15 +142,13 @@ export function WorkspaceShell() {
                 <TabsTrigger value="operations" data-demo="tab-operations">
                   {t("operations")}
                 </TabsTrigger>
-                <TabsTrigger value="objects" data-demo="tab-objects">
-                  {t("objects")}
-                </TabsTrigger>
                 <TabsTrigger value="properties" data-demo="tab-properties">
                   {t("properties")}
                 </TabsTrigger>
               </TabsList>
               <SidebarTab
                 id="operations"
+                scroll={false}
                 footer={
                   <div className="flex gap-2">
                     <div data-tour="export-gcode" className="min-w-0 flex-1">
@@ -159,10 +158,33 @@ export function WorkspaceShell() {
                   </div>
                 }
               >
-                <OperationsPane />
-              </SidebarTab>
-              <SidebarTab id="objects">
-                <ObjectsPane />
+                {/* Both are often a few rows, so they share the tab rather than each leaving it empty. */}
+                <ResizablePanelGroup
+                  orientation="vertical"
+                  defaultLayout={savedLayout(layout.sidebar, ["operations", "objects"])}
+                  onLayoutChanged={remember("sidebar")}
+                >
+                  <ResizablePanel id="operations" defaultSize="50%" minSize={80}>
+                    <div className="relative h-full overflow-auto">
+                      <OperationsPane />
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle />
+                  <ResizablePanel id="objects" defaultSize="50%" minSize={80}>
+                    <section
+                      aria-label={t("objects")}
+                      data-tour="objects"
+                      className="flex h-full flex-col"
+                    >
+                      <h2 className="shrink-0 border-b px-3 py-1.5 font-medium text-muted-foreground text-ui">
+                        {t("objects")}
+                      </h2>
+                      <div className="relative min-h-0 flex-1 overflow-auto">
+                        <ObjectsPane />
+                      </div>
+                    </section>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
               </SidebarTab>
               <SidebarTab
                 id="properties"
@@ -280,10 +302,13 @@ function SaveError({ message }: { message: Translatable | undefined }) {
 function SidebarTab({
   id,
   footer,
+  scroll = true,
   children,
 }: {
   id: TourPane;
   footer?: React.ReactNode;
+  /** Off when the content scrolls its own parts. */
+  scroll?: boolean;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Shell");
@@ -296,7 +321,7 @@ function SidebarTab({
       className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
     >
       {/* Relative, so absolute content (`sr-only` inputs) scrolls with it instead of growing the page. */}
-      <div className="relative min-h-0 flex-1 overflow-auto">{children}</div>
+      <div className={cn("relative min-h-0 flex-1", scroll && "overflow-auto")}>{children}</div>
       {footer && <div className="shrink-0 border-t p-2">{footer}</div>}
     </TabsContent>
   );

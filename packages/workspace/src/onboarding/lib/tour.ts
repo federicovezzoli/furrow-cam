@@ -8,7 +8,7 @@
 export type TourId = "app" | "workspace";
 
 /** A workspace sidebar tab the tour opens when it reaches a step inside it. */
-export type TourPane = "operations" | "objects" | "properties";
+export type TourPane = "operations" | "properties";
 
 export interface TourStep {
   /** Its title and text are `Tour.steps.<id>` in the catalogs (ADR-0054). */
@@ -73,7 +73,7 @@ export const TOURS: Record<TourId, readonly TourStep[]> = {
     {
       id: "objects",
       anchor: "objects",
-      pane: "objects",
+      pane: "operations",
       side: "right",
     },
     {
