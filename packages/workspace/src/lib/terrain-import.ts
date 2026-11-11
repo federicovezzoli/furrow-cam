@@ -4,7 +4,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentStore } from "../stores/document-store";
 import { canImportModel, ONE_MODEL } from "../stores/geometry-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
-import type { GeneratedTerrain } from "./mesh-worker-protocol";
+import type { GeneratedTerrain, MeshSummary } from "./mesh-worker-protocol";
 import { MeshImportError, runMeshWorker, storeModel } from "./model-import";
 import { track } from "./telemetry";
 import type { WorkspaceHost } from "./workspace-host";
@@ -31,20 +31,22 @@ export async function generateTerrain(
 }
 
 /**
- * Adds a generated terrain to the open project as its model, named
- * `<name>.stl`, at the size it was made and centred on the stock (PRD-0014
- * T5). Returns why it couldn't, or `null`.
+ * Adds a generated terrain (or an image relief, `format`) to the open
+ * project as its model, named `<name>.stl`, at the size it was made and
+ * centred on the stock (PRD-0014 T5, PRD-0015). Returns why it couldn't, or
+ * `null`.
  */
 export async function importTerrain(
-  terrain: GeneratedTerrain,
+  terrain: MeshSummary & { stl: ArrayBuffer },
   name: string,
   host: { meshes: WorkspaceHost["meshes"]; document: DocumentStore; workspace: WorkspaceStore },
+  format: "terrain" | "image" = "terrain",
 ): Promise<Translatable | null> {
   if (!canImportModel(host.document.getState().document)) return ONE_MODEL;
   const error = await storeModel(terrain, new Blob([terrain.stl]), `${name}.stl`, {
     ...host,
     fit: false,
   });
-  if (!error) track({ event: "file_imported", format: "terrain" });
+  if (!error) track({ event: "file_imported", format });
   return error;
 }

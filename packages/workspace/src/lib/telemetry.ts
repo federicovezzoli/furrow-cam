@@ -26,7 +26,7 @@ const TelemetryEvent = z.discriminatedUnion("event", [
   z.strictObject({ event: z.literal("project_created") }),
   z.strictObject({
     event: z.literal("file_imported"),
-    format: z.enum(["svg", "dxf", "stl", "step", "terrain"]),
+    format: z.enum(["svg", "dxf", "stl", "step", "terrain", "image"]),
   }),
   z.strictObject({
     event: z.literal("operation_added"),

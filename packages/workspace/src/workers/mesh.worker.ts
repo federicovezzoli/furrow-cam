@@ -1,8 +1,10 @@
 import {
   type Box3,
+  imageReliefMesh,
   modelHeightmap,
   parseStl,
   planTerrain,
+  reliefPixels,
   type StlMesh,
   terrainMesh,
 } from "@furrow/cam-core";
@@ -45,23 +47,63 @@ async function occtWasm() {
   return response.arrayBuffer();
 }
 
-/** A WebP tile's RGBA pixels, decoded by the browser. */
-async function decodeWebp(webp: ArrayBuffer): Promise<Uint8ClampedArray> {
-  // The pixels are data, not colours: no colour management or premultiplied alpha.
-  const bitmap = await createImageBitmap(new Blob([webp], { type: "image/webp" }), {
-    colorSpaceConversion: "none",
-    premultiplyAlpha: "none",
-  });
+/**
+ * An image's RGBA pixels, decoded by the browser; with `fit`, shrunk first to
+ * the size it gives for the image's own.
+ */
+async function decodePixels(
+  image: Blob,
+  options: ImageBitmapOptions,
+  fit?: (width: number, height: number) => [number, number],
+): Promise<ImageData> {
+  let bitmap = await createImageBitmap(image, options);
+  const [width, height] = fit?.(bitmap.width, bitmap.height) ?? [bitmap.width, bitmap.height];
+  if (width < bitmap.width) {
+    const full = bitmap;
+    const resize = { resizeWidth: width, resizeHeight: height, resizeQuality: "high" } as const;
+    bitmap = await createImageBitmap(full, { ...options, ...resize });
+    full.close();
+  }
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("No 2D context");
   context.drawImage(bitmap, 0, 0);
   bitmap.close();
-  return context.getImageData(0, 0, canvas.width, canvas.height).data;
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+/** A WebP tile's RGBA pixels. */
+async function decodeWebp(webp: ArrayBuffer): Promise<Uint8ClampedArray> {
+  // The pixels are data, not colours: no colour management or premultiplied alpha.
+  const options = { colorSpaceConversion: "none", premultiplyAlpha: "none" } as const;
+  return (await decodePixels(new Blob([webp], { type: "image/webp" }), options)).data;
 }
 
 async function handle(request: MeshRequest): Promise<MeshResponse> {
   const { id } = request;
+  if (request.kind === "image") {
+    // Colours turned into sRGB, as the image is seen; transparency stays apart from them.
+    // Shrunk to what the grid can use, so a large photo's pixels aren't all read.
+    let original = 0;
+    const pixels = await decodePixels(
+      new Blob([request.image]),
+      { premultiplyAlpha: "none" },
+      (width, height) => {
+        original = width;
+        return reliefPixels(width, height, request.limits);
+      },
+    );
+    // The smoothing is in the picked image's pixels, not the shrunk ones.
+    const blur = (request.settings.blur * pixels.width) / original;
+    const { stl, triangles, size, cells } = imageReliefMesh(
+      pixels,
+      { ...request.settings, blur },
+      request.limits,
+    );
+    const sha256 = await sha256Hex(stl.buffer);
+    const bounds = { min: [0, 0, 0], max: size } satisfies Box3;
+    return { kind: "image", id, sha256, triangles, bounds, size, cells, stl: stl.buffer };
+  }
   if (request.kind === "terrain") {
     const { ring, settings, limits } = request;
     const plan = planTerrain(ring, limits, MAX_ELEVATION_ZOOM);
@@ -110,7 +152,10 @@ scope.onmessage = ({ data }) => {
       const transfer =
         response.kind === "preview" && response.heightmap
           ? [response.heightmap.heights.buffer]
-          : (response.kind === "parsed" || response.kind === "terrain") && response.stl
+          : (response.kind === "parsed" ||
+                response.kind === "terrain" ||
+                response.kind === "image") &&
+              response.stl
             ? [response.stl]
             : [];
       scope.postMessage(response, transfer);

@@ -8,6 +8,7 @@ export * from "./geometry/medial-axis";
 export * from "./geometry/scale";
 export * from "./geometry/translate";
 export * from "./import/dxf/import";
+export * from "./import/image-relief";
 export {
   IMPORT_MESSAGES,
   type ImportMessage,
