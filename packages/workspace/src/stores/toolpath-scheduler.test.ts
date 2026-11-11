@@ -80,6 +80,7 @@ function documentWithProfile(): ProjectDocument {
           tabs: null,
           startPoints: [],
           cornerOvercuts: null,
+          entries: [],
         },
       },
     ],

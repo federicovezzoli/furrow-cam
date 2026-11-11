@@ -123,6 +123,7 @@ describe("engraveToolpath", () => {
             tabs: null,
             startPoints: [[90, 10]],
             cornerOvercuts: null,
+            entries: [],
           },
         },
         [square, line],

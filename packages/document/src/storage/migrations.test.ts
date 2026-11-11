@@ -388,6 +388,15 @@ describe("migrations", () => {
     ).toThrow();
   });
 
+  it("gives v36 profiles no entry points", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const { entries: _, ...params } = profile.params;
+    const v36 = { ...current, schemaVersion: 36, operations: [{ ...profile, params }] };
+    expect(parseProjectDocument(v36)).toEqual(current);
+  });
+
   it("gives v6 documents no models", () => {
     const { models: _, ...v6 } = { ...fullDocument(), schemaVersion: 6 };
     expect(parseProjectDocument(v6)).toEqual(fullDocument());

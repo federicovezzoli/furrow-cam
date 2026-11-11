@@ -18,6 +18,7 @@ import {
   type OperationTarget,
   PocketParams,
   type Point,
+  type ProfileEntry,
   type ProfileOperation,
   ProfileParams,
   type ProfileTabs,
@@ -59,6 +60,7 @@ export function defaultProfileParams(document: ProjectDocument): ProfileParams {
     tabs: null,
     startPoints: [],
     cornerOvercuts: null,
+    entries: [],
   };
 }
 
@@ -744,6 +746,47 @@ export function moveStartPoint(store: DocumentStore, id: string, index: number, 
 export function removeStartPoint(store: DocumentStore, id: string, index: number) {
   changeStartPoints(store, "removeStartPoint", id, (startPoints) => {
     if (index >= 0 && index < startPoints.length) startPoints.splice(index, 1);
+  });
+}
+
+/** Applies `recipe` to the entry points (#427) of profile `id`. */
+function changeEntries(
+  store: DocumentStore,
+  name: string,
+  id: string,
+  recipe: (entries: ProfileEntry[]) => void,
+) {
+  changeOperation(store, name, id, (operation) => {
+    if (operation.type === "profile") recipe(operation.params.entries);
+  });
+}
+
+/**
+ * Adds `entry` to profile `id`, in place of the entry at `replacing` when
+ * that is the entry already on the same contour.
+ */
+export function addEntry(
+  store: DocumentStore,
+  id: string,
+  entry: ProfileEntry,
+  replacing: number | null = null,
+) {
+  changeEntries(store, "addEntry", id, (entries) => {
+    if (replacing !== null && replacing >= 0 && replacing < entries.length) {
+      entries[replacing] = entry;
+    } else entries.push(entry);
+  });
+}
+
+export function moveEntry(store: DocumentStore, id: string, index: number, entry: ProfileEntry) {
+  changeEntries(store, "moveEntry", id, (entries) => {
+    if (index >= 0 && index < entries.length) entries[index] = entry;
+  });
+}
+
+export function removeEntry(store: DocumentStore, id: string, index: number) {
+  changeEntries(store, "removeEntry", id, (entries) => {
+    if (index >= 0 && index < entries.length) entries.splice(index, 1);
   });
 }
 

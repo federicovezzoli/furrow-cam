@@ -282,6 +282,7 @@ describe("editOperation", () => {
         allowance: 0,
         finishPass: false,
         cornerOvercuts: null,
+        entries: [],
         tabs: null,
       },
     });

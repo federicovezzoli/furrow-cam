@@ -117,6 +117,15 @@ export const CornerOvercuts = z.strictObject({
 });
 export type CornerOvercuts = z.infer<typeof CornerOvercuts>;
 
+/**
+ * An entry point (#427): the tool plunges at `plunge`, in air or a
+ * pre-drilled hole, and feeds straight to `start` on a closed contour, then
+ * back after the lap. Both in stock coordinates; `start` goes to the nearest
+ * closed contour.
+ */
+export const ProfileEntry = z.strictObject({ start: Point, plunge: Point });
+export type ProfileEntry = z.infer<typeof ProfileEntry>;
+
 /** Profile parameters (#21). The step-down and the ramp angle come from the tool. */
 export const ProfileParams = z
   .strictObject({
@@ -138,8 +147,13 @@ export const ProfileParams = z
     startPoints: z.array(Point),
     /** Overcuts at sharp corners, or `null` for none; never on the line. */
     cornerOvercuts: CornerOvercuts.nullable(),
+    /** Entry points (#427), at most one per closed contour; not with tabs. */
+    entries: z.array(ProfileEntry),
   })
   .superRefine((params, ctx) => {
+    if (params.tabs !== null && params.entries.length > 0) {
+      ctx.addIssue({ code: "custom", path: ["entries"], message: "operation.entriesWithTabs" });
+    }
     if (params.side === "on" && params.allowance !== 0) {
       ctx.addIssue({
         code: "custom",

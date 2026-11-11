@@ -151,6 +151,7 @@ function plate(): ProjectDocument {
       tabs: { width: 6, height: 2, positions: [[80, 20]] },
       startPoints: [],
       cornerOvercuts: null,
+      entries: [],
     },
   };
   return {
@@ -249,6 +250,7 @@ function svgPart(): ProjectDocument {
           tabs: null,
           startPoints: [],
           cornerOvercuts: null,
+          entries: [],
         },
       },
       {
@@ -296,6 +298,7 @@ function svgPart(): ProjectDocument {
           },
           startPoints: [],
           cornerOvercuts: null,
+          entries: [],
         },
       },
     ],
@@ -441,6 +444,7 @@ function inchPanel(): ProjectDocument {
           tabs: null,
           startPoints: [],
           cornerOvercuts: null,
+          entries: [],
         },
       },
     ],
@@ -641,6 +645,7 @@ function outsideProfile(
       tabs,
       startPoints: [],
       cornerOvercuts: null,
+      entries: [],
     },
   };
 }

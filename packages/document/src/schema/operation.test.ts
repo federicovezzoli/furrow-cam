@@ -44,6 +44,15 @@ describe("ProfileParams", () => {
     ).toBe(true);
   });
 
+  it("rejects entry points together with tabs", () => {
+    const entries = [{ start: [0, 50], plunge: [-10, 50] }];
+    expect(ProfileParams.safeParse({ ...params, tabs: null, entries }).success).toBe(true);
+    const result = ProfileParams.safeParse({ ...params, entries });
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      "operation.entriesWithTabs",
+    ]);
+  });
+
   it("rejects out-of-range values", () => {
     expect(ProfileParams.safeParse({ ...params, depth: 0 }).success).toBe(false);
     expect(ProfileParams.safeParse({ ...params, allowance: -0.1 }).success).toBe(false);
@@ -73,6 +82,7 @@ describe("ProfileParams", () => {
       allowance: 0,
       finishPass: false,
       cornerOvercuts: null,
+      entries: [],
     };
     expect(ProfileParams.safeParse(onLine).success).toBe(true);
     expect(ProfileParams.safeParse({ ...onLine, allowance: 0.5 }).success).toBe(false);
