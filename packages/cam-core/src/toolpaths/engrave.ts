@@ -17,7 +17,7 @@ export type EngraveOptions = ProfileOptions;
  *   paths are skipped with a warning.
  * - `chamfer` cuts the closed paths as `outside` does (see `engraveCut`).
  * - A V-bit cut deeper than its cone, or a chamfer wider than it, is warned
- *   about, since the line can't get wider than the bit.
+ *   about, since the cut can't get wider than the cone.
  */
 export function engraveToolpath(
   operation: EngraveOperation,
@@ -39,7 +39,11 @@ export function engraveToolpath(
     },
     options,
   );
-  if (cut.coneWide) toolpath.warnings.push({ code: "toolpath.engraveConeWide" });
+  if (cut.coneWide) {
+    const code =
+      params.side === "chamfer" ? "toolpath.chamferConeWide" : "toolpath.engraveConeWide";
+    toolpath.warnings.push({ code });
+  }
   return toolpath;
 }
 
@@ -62,6 +66,15 @@ export function engraveCut(tool: Tool, params: EngraveParams): EngraveCut {
   const chamfer = vBitDepthForWidth(tool, 2 * (width ?? 0) + tip);
   const full = chamfer ?? vBitConeDepth(tool) ?? depth;
   return { side: "outside", depth: full, offset: tip / 2, coneWide: chamfer === null };
+}
+
+/**
+ * The widest chamfer a V-bit cuts: its cone's width from the tip's edge out
+ * to the diameter. `null` for other tools.
+ */
+export function maxChamferWidth(tool: Tool): number | null {
+  if (tool.type !== "v_bit") return null;
+  return (tool.diameter - (tool.tipDiameter ?? 0)) / 2;
 }
 
 /**
@@ -113,11 +126,12 @@ export function vBitLineWidth(tool: Tool, depth: number): number | null {
 /**
  * The depth at which a V-bit cuts a line `width` wide: the inverse of
  * `vBitLineWidth` for widths wider than the tip and no wider than the bit.
- * `null` for other tools and for widths outside that range.
+ * `null` for other tools and for widths outside that range. Rounding is
+ * ignored: a width summed up to the bit's own diameter is that diameter.
  */
 export function vBitDepthForWidth(tool: Tool, width: number): number | null {
   if (tool.type !== "v_bit") return null;
   const tip = tool.tipDiameter ?? 0;
-  if (width <= tip || width > tool.diameter) return null;
+  if (width <= tip || width > tool.diameter + 1e-9) return null;
   return (width - tip) / 2 / Math.tan(halfAngle(tool));
 }

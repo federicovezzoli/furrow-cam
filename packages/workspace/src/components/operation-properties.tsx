@@ -1019,13 +1019,13 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
     units,
     ...gestureHandlers(store),
   } as const;
-  const width = vBitLineWidth(tool, params.depth);
+  const lineWidth = vBitLineWidth(tool, params.depth);
   // The narrowest line the depth field allows, so the two fields share a floor.
   const minWidth = vBitLineWidth(tool, MIN_LENGTH);
   const tip = tool.tipDiameter ?? 0;
   const chamfer = params.side === "chamfer";
   const cut = engraveCut(tool, params);
-  const sides = tool.type === "v_bit" ? EngraveSide.options : ProfileSide.options;
+  const sides = ["on", "inside", "outside", ...(tool.type === "v_bit" ? ["chamfer"] : [])] as const;
 
   return (
     <section aria-labelledby="engrave-heading" className="grid gap-2">
@@ -1076,14 +1076,14 @@ function EngraveFields({ operation }: { operation: EngraveOperation }) {
           {...length}
         />
       )}
-      {!chamfer && width !== null && minWidth !== null && (
+      {!chamfer && lineWidth !== null && minWidth !== null && (
         <>
           <NumberField
             id="engrave-width"
             label={t("lineWidth")}
             min={minWidth}
             max={tool.diameter}
-            value={width}
+            value={lineWidth}
             onValueChange={(value) => {
               const depth = vBitDepthForWidth(tool, value);
               if (depth !== null) update("depth", { depth });

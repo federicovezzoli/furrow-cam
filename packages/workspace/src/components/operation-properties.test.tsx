@@ -72,7 +72,14 @@ describe("OperationProperties", () => {
       if (engraving?.type !== "engrave") throw new Error("not an engraving");
       return engraving.params;
     };
-    fireEvent.change(screen.getByLabelText("Position"), { target: { value: "chamfer" } });
+    const position = screen.getByLabelText("Position") as HTMLSelectElement;
+    expect([...position.options].map((option) => option.value)).toEqual([
+      "on",
+      "inside",
+      "outside",
+      "chamfer",
+    ]);
+    fireEvent.change(position, { target: { value: "chamfer" } });
     expect(params()).toMatchObject({ side: "chamfer", width: 1 });
     expect(document.getElementById("engrave-depth")).toBeNull();
     const width = document.getElementById("engrave-chamfer") as HTMLInputElement;
@@ -89,7 +96,7 @@ describe("OperationProperties", () => {
       createMemoryHost({ document: withEngraving(fullDocument().operations[0]?.tool as Tool) }),
     );
     const options = [...(screen.getByLabelText("Position") as HTMLSelectElement).options];
-    expect(options.map((option) => option.value)).toEqual(["inside", "outside", "on"]);
+    expect(options.map((option) => option.value)).toEqual(["on", "inside", "outside"]);
   });
 
   it("sets the side of the paths a pocket clears (#386)", () => {

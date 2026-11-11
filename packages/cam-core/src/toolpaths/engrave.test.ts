@@ -1,16 +1,23 @@
 import type { EngraveOperation, EngraveParams, Shape, Tool } from "@furrow/document";
-import { DRAWING_ID, endMill, taperedBallEndMill, vBit } from "@furrow/document/fixtures";
+import {
+  DRAWING_ID,
+  endMill,
+  fullDocument,
+  taperedBallEndMill,
+  vBit,
+} from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { simulateCuts } from "../simulation/simulation";
 import {
   engraveToolpath,
   exceedsVBitCone,
   grooveWidth,
+  maxChamferWidth,
   vBitConeDepth,
   vBitDepthForWidth,
   vBitLineWidth,
 } from "./engrave";
-import { generateToolpath, toolpathCuts } from "./generate";
+import { generateToolpath, toolpathCuts, toolpathInputs } from "./generate";
 import { profileToolpath } from "./profile";
 import type { Toolpath } from "./toolpath";
 
@@ -263,8 +270,37 @@ describe("chamfer", () => {
     // 6 mm and no tip: up to 3 mm.
     expect(engrave([square], { side: "chamfer", width: 3 }, sharp).warnings).toEqual([]);
     const wide = engrave([square], { side: "chamfer", width: 4 }, sharp);
-    expect(wide.warnings).toEqual([{ code: "toolpath.engraveConeWide" }]);
+    expect(wide.warnings).toEqual([{ code: "toolpath.chamferConeWide" }]);
     expect(Math.min(...wide.moves.map((move) => move.to[2]))).toBeCloseTo(-3, 9);
+  });
+
+  it("doesn't warn for a chamfer as wide as the cone, despite rounding", () => {
+    // 2 × 0.55 + 0.35 is a hair over 1.45 in floating point.
+    const small: Tool = { ...sharp, diameter: 1.45, tipDiameter: 0.35 };
+    expect(maxChamferWidth(small)).toBeCloseTo(0.55, 12);
+    expect(engrave([square], { side: "chamfer", width: 0.55 }, small).warnings).toEqual([]);
+    expect(maxChamferWidth(endMill)).toBeNull();
+  });
+
+  it("warns when the chamfer goes deeper than the stock", () => {
+    const warnings = (thickness: number) => {
+      const doc = fullDocument();
+      const [profile] = doc.operations;
+      if (!profile) throw new Error("fullDocument has an operation");
+      // 30°: a 1 mm chamfer is 1 / tan 15° ≈ 3.7 mm deep.
+      const narrow: Tool = { ...sharp, vAngle: 30 };
+      doc.stock.thickness = thickness;
+      doc.operations = [
+        {
+          ...engraving([], { side: "chamfer", width: 1 }, narrow),
+          targets: profile.targets,
+        },
+      ];
+      const [input] = toolpathInputs(doc);
+      return input && generateToolpath(input).warnings;
+    };
+    expect(warnings(18)).toEqual([]);
+    expect(warnings(3)).toEqual([{ code: "toolpath.chamferThroughStock" }]);
   });
 });
 

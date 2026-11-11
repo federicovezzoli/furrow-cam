@@ -1,5 +1,6 @@
 import {
   autoTabPositions,
+  maxChamferWidth,
   type TabPlacement,
   targetedShapes,
   vBitConeDepth,
@@ -614,8 +615,8 @@ export function updateEngraveParams(
 ): ActionResult {
   const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
   if (changes.side !== undefined && changes.width === undefined && operation?.type === "engrave") {
-    const { diameter, tipDiameter } = operation.tool;
-    const cone = (diameter - (tipDiameter ?? 0)) / 2;
+    // Not a V-bit: the default width the operation's check then refuses.
+    const cone = maxChamferWidth(operation.tool) ?? DEFAULT_CHAMFER_WIDTH;
     const width =
       changes.side === "chamfer"
         ? (operation.params.width ?? Math.min(DEFAULT_CHAMFER_WIDTH, cone))
@@ -642,8 +643,8 @@ function updateParams<T extends Operation["type"]>(
   const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   // The operation's own checks too, such as which tools a side needs.
-  const whole = Operation.safeParse({ ...operation, params: parsed.data });
-  if (!whole.success) return { ok: false, error: firstError(whole.error) };
+  const error = operationError({ ...operation, params: parsed.data } as Operation);
+  if (error) return { ok: false, error };
   changeOperation(store, name, id, (draft) => {
     // Field by field, so unchanged values record no patches.
     if (draft.type === type) Object.assign(draft.params, changes);
