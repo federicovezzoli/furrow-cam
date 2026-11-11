@@ -180,8 +180,8 @@ export async function checkProject(project: Project, progress?: Progress, signal
   }
 }
 
-/** Whether the export may write to `path`; throws a `ToolError` if not. */
-async function checkTarget(path: string, overwrite: boolean) {
+/** Whether a file may be written to `path`; throws a `ToolError` if not. */
+export async function checkTarget(path: string, overwrite: boolean) {
   const entry = await lstat(path).catch(() => null);
   if (!entry) return;
   if (!overwrite) throw new ToolError(`${path} already exists: pass overwrite to replace it.`);

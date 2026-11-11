@@ -4,7 +4,9 @@ import type { LonLat } from "@furrow/cam-core";
 const EARTH_RADIUS = 6_371_008.8;
 const DEGREE = Math.PI / 180;
 /** Web Mercator's tiles, the map's and the elevation's, end here. */
-const MAX_LATITUDE = 85;
+export const MAX_LATITUDE = 85;
+/** Points of an ellipse's outline. */
+const ELLIPSE_POINTS = 72;
 const clamp = (value: number, limit: number) => Math.min(limit, Math.max(-limit, value));
 
 /**
@@ -51,4 +53,34 @@ export function moveRing(ring: readonly LonLat[], from: LonLat, to: LonLat): Lon
     clamp(lon1 + (lon - lon0) * stretch, 180),
     clamp(lat1 + (lat - lat0), MAX_LATITUDE),
   ]);
+}
+
+/**
+ * A rectangle or ellipse `widthKm` × `depthKm` about `centre`, as longitude
+ * and latitude on the terrain's local projection (ADR-0077), not repeating its
+ * first point: the MCP server's areas (ADR-0082).
+ */
+export function shapeRing(
+  [lon, lat]: LonLat,
+  shape: "rectangle" | "ellipse",
+  widthKm: number,
+  depthKm: number,
+): LonLat[] {
+  const a = widthKm * 500;
+  const b = depthKm * 500;
+  const corners: [number, number][] =
+    shape === "rectangle"
+      ? [
+          [-a, -b],
+          [a, -b],
+          [a, b],
+          [-a, b],
+        ]
+      : Array.from({ length: ELLIPSE_POINTS }, (_, i) => {
+          const angle = (2 * Math.PI * i) / ELLIPSE_POINTS;
+          return [a * Math.cos(angle), b * Math.sin(angle)];
+        });
+  const kx = EARTH_RADIUS * DEGREE * Math.cos(lat * DEGREE);
+  const ky = EARTH_RADIUS * DEGREE;
+  return corners.map(([x, y]): LonLat => [lon + x / kx, lat + y / ky]);
 }

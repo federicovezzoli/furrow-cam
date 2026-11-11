@@ -1,4 +1,35 @@
-import type { TerrainTile, TileKey } from "@furrow/cam-core";
+import { decodeTerrarium, type TerrainTile, type TileKey } from "@furrow/cam-core";
+import { type Message, MessageError } from "@furrow/document";
+import { elevationTileUrl } from "./terrain-services";
+
+const TERRAIN_UNAVAILABLE: Message = { code: "workspace.terrainUnavailable" };
+
+/**
+ * Fetches the elevation tile `key` and gives its heights, or `null` where the
+ * service has none at that zoom (a 404). `decode` turns the WebP into RGBA
+ * pixels: the browser's own in the mesh worker, WebAssembly in the MCP server
+ * (ADR-0082). Throws `workspace.terrainUnavailable` for any other failure.
+ */
+export async function fetchElevationTile(
+  key: TileKey,
+  decode: (webp: ArrayBuffer) => Promise<ArrayLike<number>>,
+  signal?: AbortSignal,
+): Promise<Float32Array | null> {
+  const response = await fetch(elevationTileUrl(key), { signal }).catch((error: unknown) => {
+    // Cancelled, not unavailable: the caller hears the abort itself.
+    if (signal?.aborted) throw error;
+    return null;
+  });
+  if (response?.status === 404) return null;
+  if (!response?.ok) throw new MessageError(TERRAIN_UNAVAILABLE);
+  const pixels = await response
+    .arrayBuffer()
+    .then(decode)
+    .catch(() => {
+      throw new MessageError(TERRAIN_UNAVAILABLE);
+    });
+  return decodeTerrarium(pixels);
+}
 
 const keyOf = ({ z, x, y }: TileKey) => `${z}/${x}/${y}`;
 

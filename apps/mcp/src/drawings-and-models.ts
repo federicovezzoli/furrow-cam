@@ -10,7 +10,7 @@ import {
   StlImportError,
   type StlMesh,
 } from "@furrow/cam-core";
-import { MessageError, sha256Hex, type Units } from "@furrow/document";
+import { MessageError, type Model, sha256Hex, type Units } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
 import {
   DRAWING_FILE_TOO_LARGE,
@@ -42,7 +42,7 @@ import type { ActionResult } from "@furrow/workspace/stores/operation-actions";
 import { change, type Project, ToolError, t } from "./projects";
 
 /** The app's message for the assistant. */
-const text = (message: Translatable) => formatMessage(t, message);
+export const text = (message: Translatable) => formatMessage(t, message);
 
 /** `run`'s result; throws a `ToolError` with the app's message if a drawing file can't be imported. */
 function reading<T>(run: () => T): T {
@@ -140,17 +140,29 @@ async function importModel(project: Project, fileName: string, bytes: Uint8Array
     throw new ToolError(text(ONE_MODEL));
   }
   // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
-  const mesh: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
+  const { triangles, bounds }: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
+  return { id: await addMesh(project, { triangles, bounds, fileName }, bytes), warnings: [] };
+}
+
+/**
+ * Adds the STL `bytes` as the project's model, fitted to the stock or, with
+ * `fit: false`, at its size centred on it (a terrain, ADR-0077). Returns its id.
+ */
+export async function addMesh(
+  project: Project,
+  mesh: Pick<Model, "triangles" | "bounds" | "fileName">,
+  bytes: Uint8Array,
+  { fit = true }: { fit?: boolean } = {},
+): Promise<string> {
   const sha256 = await sha256Hex(bytes);
-  const { triangles, bounds } = mesh;
   let id: string | null = null;
   change(project, (store) => {
-    id = addModel(store, { sha256, triangles, bounds, fileName, size: bytes.byteLength });
+    id = addModel(store, { ...mesh, sha256, size: bytes.byteLength }, { fit });
   });
   if (id === null) throw new ToolError(text(ONE_MODEL));
   // The project file stores the mesh, as the desktop app's does (ADR-0029, ADR-0047).
   project.meshes.set(sha256, bytes);
-  return { id, warnings: [] };
+  return id;
 }
 
 /** Throws a `ToolError` with `result`'s message if the action was refused. */

@@ -17,6 +17,7 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `get_project` | Summarises a project: units, stock and zero, machine, drawings, 3D models and operations with their settings |
 | `save_project` | Saves a project opened from a `.furrow.zip` or `.furrow.json` as `.furrow`, or saves one to another path; never replaces another file, nor a project changed since it was read (for example in the app) |
 | `import_file` | Imports an SVG or DXF drawing, or an STL or STEP 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
+| `import_terrain` | Makes a relief model of a real place from open elevation data, as the app's *Terrain from a map* does: an area about coordinates or a map link (names aren't searched), at the size, exaggeration and base you give; can also write it as an STL file |
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |
@@ -43,7 +44,8 @@ The server changes projects with the same code as the app. Before its first chan
 
 ## Privacy and safety
 
-- **Local files only.** The server reads and writes the files you point it at, on your computer. Furrow CAM uploads nothing and the server makes no network requests: no account, no usage tracking.
+- **Local files only.** The server reads and writes the files you point it at, on your computer. Furrow CAM uploads nothing: no account, no usage tracking.
+- **One tool uses the network.** `import_terrain` downloads the area's elevation tiles from [Mapterhorn](https://mapterhorn.com/privacy-policy/), which receives your IP address and which tiles they are; nothing else is sent, and no other tool makes network requests.
 - **Your assistant decides where results go.** What a tool returns (a project summary, an error) goes to the assistant that called it, which usually sends it to a cloud model. Don't point it at projects you wouldn't share with your assistant.
 - **It never talks to your machine.** The server only works on project files. You load and run the G-code yourself, after checking the toolpaths and the simulation in the app.
 
