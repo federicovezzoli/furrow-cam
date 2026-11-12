@@ -348,8 +348,8 @@ importers:
         specifier: workspace:*
         version: link:../document
       clipper2-ts:
-        specifier: 2.0.1-18
-        version: 2.0.1-18
+        specifier: 2.0.1-19
+        version: 2.0.1-19
       delaunator:
         specifier: ^5.1.0
         version: 5.1.0
@@ -3682,8 +3682,8 @@ packages:
   client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
 
-  clipper2-ts@2.0.1-18:
-    resolution: {integrity: sha512-WuRO1ZHzyYTVHY78r4wVWVydvQ+1lx9qZ+DeZa/8zhvrxIgCVzElJ6lwSMGtUUKFPefhvfJsHZ5C9RNkgisCOQ==}
+  clipper2-ts@2.0.1-19:
+    resolution: {integrity: sha512-hBdoBBda/a/iLdpDckbDjEGAq5GRhHTRAv/Ys9f2oTBuixRy9uLZukG8pO5txtbf9wZTpBD3KFHuoLrEkI3r7g==}
     engines: {node: '>=14.0.0'}
 
   cliui@8.0.1:
@@ -9908,7 +9908,7 @@ snapshots:
 
   client-only@0.0.1: {}
 
-  clipper2-ts@2.0.1-18: {}
+  clipper2-ts@2.0.1-19: {}
 
   cliui@8.0.1:
     dependencies:

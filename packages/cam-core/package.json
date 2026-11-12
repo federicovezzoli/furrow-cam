@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@furrow/document": "workspace:*",
-    "clipper2-ts": "2.0.1-18",
+    "clipper2-ts": "2.0.1-19",
     "delaunator": "^5.1.0",
     "earcut": "3.2.4",
     "opentype.js": "2.0.0"
