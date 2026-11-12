@@ -697,6 +697,22 @@ export function setObjectFlag(
   });
 }
 
+/**
+ * `shapes` as copies in drawing `drawingId`, each with its id in `ids` or a
+ * new one. A copy starts shown and unlocked (ADR-0080).
+ */
+export function copyShapes(
+  shapes: Shape[],
+  drawingId: string,
+  ids: ReadonlyMap<string, string> = new Map(),
+): Shape[] {
+  return shapes.map(({ hidden: _, locked: __, ...shape }) => ({
+    ...shape,
+    id: ids.get(shape.id) ?? crypto.randomUUID(),
+    drawingId,
+  }));
+}
+
 /** The gap between a drawing and its duplicate, in millimetres. */
 export const DUPLICATE_GAP = 10;
 
@@ -716,12 +732,7 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const offset: Point = [bounds.max[0] - bounds.min[0] + DUPLICATE_GAP, 0];
   const copyId = crypto.randomUUID();
   const ids = new Map(shapes.map((shape) => [shape.id, crypto.randomUUID()]));
-  // A copy starts shown and unlocked (ADR-0080).
-  const copies = translateShapes(shapes, offset).map(({ hidden: _, locked: __, ...shape }) => ({
-    ...shape,
-    id: ids.get(shape.id) as string,
-    drawingId: copyId,
-  }));
+  const copies = copyShapes(translateShapes(shapes, offset), copyId, ids);
   // One assignment, not a spread push, as on import.
   const geometry = document.geometry.concat(copies);
   const markers = drawingMarkers(document, id, true);

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Operation } from "@furrow/document";
+import { Fragment } from "react";
 import { useTranslations } from "use-intl";
 import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
@@ -142,26 +143,19 @@ export function AddOperationButtons() {
     }
   }
 
-  const buttons = kinds.map(({ type, label, short, add, choice, hint, missingTool, needs }) => (
-    <RibbonButton
-      key={type}
-      icon={<OperationTypeIcon type={type} />}
-      label={short}
-      aria-label={t("addLabel", { operation: label })}
-      data-demo={`add-${type}`}
-      hint={hint}
-      disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
-      onClick={() => choice && added(add(choice), type === "drill" && !target)}
-    />
+  return kinds.map(({ type, label, short, add, choice, hint, missingTool, needs }) => (
+    <Fragment key={type}>
+      <RibbonButton
+        icon={<OperationTypeIcon type={type} />}
+        label={short}
+        aria-label={t("addLabel", { operation: label })}
+        data-demo={`add-${type}`}
+        hint={hint}
+        disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
+        onClick={() => choice && added(add(choice), type === "drill" && !target)}
+      />
+      {/* Beside the V-carve it is made of. */}
+      {type === "vcarve" && <InlayButton targets={targets} target={target} tools={tools} />}
+    </Fragment>
   ));
-  // Beside the V-carve it is made of, while paths can be selected.
-  const vcarve = buttons.findIndex((button) => button.key === "vcarve");
-  if (vcarve !== -1) {
-    buttons.splice(
-      vcarve + 1,
-      0,
-      <InlayButton key="inlay" targets={targets} target={target} tools={tools} />,
-    );
-  }
-  return buttons;
 }
