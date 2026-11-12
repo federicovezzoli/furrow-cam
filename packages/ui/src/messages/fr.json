@@ -813,7 +813,8 @@
       "fontUploadOff": "Ce serveur ne peut pas stocker de polices.",
       "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
       "inlayClosedPaths": "Sélectionnez des tracés fermés pour en faire une marqueterie.",
-      "inlayGap": "Le jeu de colle doit être d'au moins 0 et inférieur à la profondeur de la poche."
+      "inlayGap": "Le jeu de colle doit être d'au moins 0 et inférieur à la profondeur de la poche.",
+      "inlayTooDeep": "Cette incrustation est trop profonde pour le cône de la fraise en V ou pour le brut : la poche doit rester dans le cône et le fond de la pièce dans le brut."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -1599,7 +1600,8 @@
     "pocket": "Poche d'incrustation",
     "plug": "Pièce d'incrustation",
     "drawing": "{name} pièce",
-    "missingFlat": "Ajoutez une fraise droite à votre bibliothèque d'outils : elle dresse les fonds d'une incrustation"
+    "missingFlat": "Ajoutez une fraise droite à votre bibliothèque d'outils : elle dresse les fonds d'une incrustation",
+    "separate": "Les deux parties sont usinées dans le brut de ce projet : déplacez le dessin de la pièce, ou désactivez une opération, pour usiner chacune dans son propre morceau de bois."
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

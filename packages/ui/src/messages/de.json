@@ -813,7 +813,8 @@
       "fontUploadOff": "Dieser Server kann keine Schriften speichern.",
       "terrainUnavailable": "Die Höhendaten konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
       "inlayClosedPaths": "Wähle geschlossene Pfade aus, um daraus eine Einlage zu machen.",
-      "inlayGap": "Der Leimspalt muss mindestens 0 und kleiner als die Taschentiefe sein."
+      "inlayGap": "Der Leimspalt muss mindestens 0 und kleiner als die Taschentiefe sein.",
+      "inlayTooDeep": "Diese Einlage ist zu tief für den Kegel des V-Fräsers oder das Rohteil: Die Tasche muss im Kegel bleiben und der Boden des Einsatzes im Rohteil."
     },
     "terrain": {
       "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",
@@ -1599,7 +1600,8 @@
     "pocket": "Einlage-Tasche",
     "plug": "Einlage-Einsatz",
     "drawing": "{name} Einsatz",
-    "missingFlat": "Füge deiner Werkzeugbibliothek einen Schaftfräser hinzu: er räumt die Böden einer Einlage"
+    "missingFlat": "Füge deiner Werkzeugbibliothek einen Schaftfräser hinzu: er räumt die Böden einer Einlage",
+    "separate": "Beide Teile werden aus dem Rohteil dieses Projekts gefräst: Verschiebe die Zeichnung des Einsatzes oder schalte eine Operation aus, um jedes aus seinem eigenen Holzstück zu fräsen."
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

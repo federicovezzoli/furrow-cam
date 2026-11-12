@@ -813,7 +813,8 @@
       "fontUploadOff": "Questo server non può archiviare font.",
       "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova.",
       "inlayClosedPaths": "Seleziona percorsi chiusi per farne un intarsio.",
-      "inlayGap": "Lo spazio per la colla deve essere almeno 0 e minore della profondità della tasca."
+      "inlayGap": "Lo spazio per la colla deve essere almeno 0 e minore della profondità della tasca.",
+      "inlayTooDeep": "Questo intarsio è troppo profondo per il cono della fresa a V o per il grezzo: la tasca deve restare nel cono e il fondo del tassello nel grezzo."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -1599,7 +1600,8 @@
     "pocket": "Tasca intarsio",
     "plug": "Tassello intarsio",
     "drawing": "{name} tassello",
-    "missingFlat": "Aggiungi una fresa piatta alla libreria utensili: spiana i fondi dell'intarsio"
+    "missingFlat": "Aggiungi una fresa piatta alla libreria utensili: spiana i fondi dell'intarsio",
+    "separate": "Entrambe le parti sono tagliate nel grezzo di questo progetto: sposta il disegno del tassello, o disattiva un'operazione, per tagliarle ciascuna dal proprio pezzo di legno."
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",

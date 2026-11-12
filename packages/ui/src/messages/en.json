@@ -813,7 +813,8 @@
       "fontUploadOff": "This server can't store fonts.",
       "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again.",
       "inlayClosedPaths": "Select closed paths to make an inlay of.",
-      "inlayGap": "The glue gap must be at least 0 and less than the pocket depth."
+      "inlayGap": "The glue gap must be at least 0 and less than the pocket depth.",
+      "inlayTooDeep": "This inlay is too deep for the V-bit's cone or the stock: the pocket must stay within the cone and the plug's floor within the stock."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",
@@ -1599,7 +1600,8 @@
     "pocket": "Inlay pocket",
     "plug": "Inlay plug",
     "drawing": "{name} plug",
-    "missingFlat": "Add a flat end mill to your tool library: it clears an inlay's floors"
+    "missingFlat": "Add a flat end mill to your tool library: it clears an inlay's floors",
+    "separate": "Both parts are cut in this project's stock: move the plug's drawing, or turn one operation off, to cut each from its own piece of wood."
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

@@ -813,7 +813,8 @@
       "fontUploadOff": "Deze server kan geen lettertypen opslaan.",
       "terrainUnavailable": "De hoogtes konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw.",
       "inlayClosedPaths": "Selecteer gesloten paden om er een inlegwerk van te maken.",
-      "inlayGap": "De lijmspleet moet minstens 0 zijn en kleiner dan de diepte van de uitsparing."
+      "inlayGap": "De lijmspleet moet minstens 0 zijn en kleiner dan de diepte van de uitsparing.",
+      "inlayTooDeep": "Dit inlegwerk is te diep voor de kegel van de V-frees of voor het materiaal: de uitsparing moet binnen de kegel blijven en de bodem van het inlegstuk binnen het materiaal."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",
@@ -1599,7 +1600,8 @@
     "pocket": "Uitsparing inlegwerk",
     "plug": "Inlegstuk",
     "drawing": "{name} inlegstuk",
-    "missingFlat": "Voeg een vlakfrees toe aan je gereedschapsbibliotheek: die freest de bodems van een inlegwerk vlak"
+    "missingFlat": "Voeg een vlakfrees toe aan je gereedschapsbibliotheek: die freest de bodems van een inlegwerk vlak",
+    "separate": "Beide delen worden uit het materiaal van dit project gefreesd: verplaats de tekening van het inlegstuk, of zet een bewerking uit, om elk uit zijn eigen stuk hout te frezen."
   },
   "Viewport": {
     "scene": "Materiaal, geometrie en gereedschapsbanen",

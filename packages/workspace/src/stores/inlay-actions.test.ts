@@ -66,14 +66,17 @@ describe("makeInlay", () => {
         { shapeId: copy.id, paths: null },
         { shapeId: boundary.id, paths: null },
       ],
-      params: { startDepth: 4, maxDepth: 5, flatBottom: { tool: endMill } },
+      params: { startDepth: 4, flatBottom: { tool: endMill } },
     });
+    // Only down to the 60° bit's cone, 3.175 / tan 30° deep: no cone warning.
+    const cone = 3.175 / Math.tan(Math.PI / 6);
+    expect(plug?.params.maxDepth).toBeCloseTo(cone - 4, 9);
 
     store.getState().undo();
     expect(store.getState().document).toEqual(before);
   });
 
-  it("refuses open paths only, and a gap outside the depth", () => {
+  it("refuses open paths only, a gap outside the depth, and a pocket or plug too deep", () => {
     const doc = fullDocument();
     const line = { ...square, paths: square.paths.map((path) => ({ ...path, closed: false })) };
     doc.geometry = doc.geometry.map((shape) => (shape.id === SQUARE_ID ? line : shape));
@@ -94,6 +97,16 @@ describe("makeInlay", () => {
         error: { code: "workspace.inlayGap" },
       });
     }
+    // Past the 5.5 mm cone; and in 5 mm stock, a plug whose floor is the cone, past it, unless 2 · depth - 1 ≤ 5.
+    const tooDeep = { ok: false, error: { code: "workspace.inlayTooDeep" } };
+    expect(makeInlay(store, { ...inlay, depth: 5.6 })).toEqual(tooDeep);
+    const thin = createDocumentStore(fullDocument());
+    thin.getState().change("thin", (draft) => {
+      draft.stock.thickness = 5;
+    });
+    expect(makeInlay(thin, inlay)).toEqual(tooDeep);
+    expect(makeInlay(thin, { ...inlay, depth: 3.1 })).toEqual(tooDeep);
+    expect(makeInlay(thin, { ...inlay, depth: 3 })).toMatchObject({ ok: true });
     expect(store.getState().document).toBe(before);
   });
 });

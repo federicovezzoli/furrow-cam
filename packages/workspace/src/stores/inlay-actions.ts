@@ -5,6 +5,7 @@ import {
   shapesBounds,
   targetedShapes,
   translateShapes,
+  vBitConeDepth,
   vBitLineWidth,
 } from "@furrow/cam-core";
 import {
@@ -22,7 +23,7 @@ import {
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { track } from "../lib/telemetry";
 import type { DocumentStore } from "./document-store";
-import { DUPLICATE_GAP } from "./geometry-actions";
+import { copyShapes, DUPLICATE_GAP } from "./geometry-actions";
 import { DEFAULT_STEP_OVER, nextName } from "./operation-actions";
 
 export type NewInlay = {
@@ -43,6 +44,17 @@ export type NewInlay = {
 
 const NO_CLOSED_PATHS = { code: "workspace.inlayClosedPaths" } as const;
 const GAP_RANGE = { code: "workspace.inlayGap" } as const;
+const TOO_DEEP = { code: "workspace.inlayTooDeep" } as const;
+
+/**
+ * The deepest pocket an inlay with `gap` can have: no deeper than the V-bit's
+ * cone, below which its shank cuts straight walls, and with the plug's floor,
+ * at `2 · depth - gap` or the cone, inside the stock.
+ */
+export function inlayMaxDepth(tool: Tool, thickness: number, gap: number): number {
+  const cone = vBitConeDepth(tool) ?? 0;
+  return cone <= thickness ? cone : Math.min(cone, (thickness + gap) / 2);
+}
 
 /**
  * Makes a V-carve inlay (#553, ADR-0084) as one undo step: a V-carve pocket
@@ -51,7 +63,7 @@ const GAP_RANGE = { code: "workspace.inlayGap" } as const;
  * carved from a mirrored copy of the paths, a new drawing to the right of
  * them with a rectangle round them: the V-carve of both, starting `depth -
  * gap` down, carves the area between them and leaves the plug standing.
- * Returns the pocket's id.
+ * Refuses a pocket deeper than `inlayMaxDepth`. Returns the pocket's id.
  */
 export function makeInlay(
   store: DocumentStore,
@@ -59,6 +71,9 @@ export function makeInlay(
 ): { ok: true; id: string } | { ok: false; error: Translatable } {
   if (!(gap >= 0 && gap < depth)) return { ok: false, error: GAP_RANGE };
   const { document } = store.getState();
+  if (depth > inlayMaxDepth(tool, document.stock.thickness, gap) + 1e-9) {
+    return { ok: false, error: TOO_DEEP };
+  }
   const byId = new Map(document.geometry.map((shape) => [shape.id, shape]));
   const closed = targetedShapes(byId, normalizeTargets(document.geometry, targets)).flatMap(
     (shape) => {
@@ -77,10 +92,7 @@ export function makeInlay(
   const mirrored = mapShapes(closed, (point) => mirrorPoint(point, "x", centre), true);
   const drawingId = crypto.randomUUID();
   const layer = closed[0]?.layer ?? "0";
-  // A copy starts shown and unlocked (ADR-0080).
-  const copies: Shape[] = translateShapes(mirrored, offset).map(
-    ({ hidden: _, locked: __, ...shape }) => ({ ...shape, id: crypto.randomUUID(), drawingId }),
-  );
+  const copies = copyShapes(translateShapes(mirrored, offset), drawingId);
   const [x0, y0] = [bounds.min[0] - margin + offset[0], bounds.min[1] - margin];
   const [x1, y1] = [bounds.max[0] + margin + offset[0], bounds.max[1] + margin];
   const boundary: Path = {
@@ -105,6 +117,7 @@ export function makeInlay(
     name: string,
     operationTargets: OperationTarget[],
     startDepth: number,
+    maxDepth: number,
   ): VCarveOperation => ({
     id: crypto.randomUUID(),
     type: "vcarve",
@@ -113,7 +126,7 @@ export function makeInlay(
     stockSide,
     targets: operationTargets,
     tool,
-    params: { startDepth, maxDepth: depth, flatBottom },
+    params: { startDepth, maxDepth, flatBottom },
   });
   const pocketName = nextName(document, names.pocket);
   const pocket = vcarve(
@@ -124,6 +137,7 @@ export function makeInlay(
         shape.paths.length === byId.get(shape.id)?.paths.length ? null : pathIndices(byId, shape),
     })),
     0,
+    depth,
   );
   const plugName = nextName(
     { ...document, operations: [...document.operations, pocket] },
@@ -133,6 +147,8 @@ export function makeInlay(
     plugName,
     [...copies, boundaryShape].map((shape) => ({ shapeId: shape.id, paths: null })),
     depth - gap,
+    // Down to the cone at most, as the toolpath would stop anyway, so the plug doesn't warn.
+    Math.min(depth, (vBitConeDepth(tool) ?? depth) - (depth - gap)),
   );
   for (const operation of [pocket, plug]) {
     const parsed = VCarveOperation.safeParse(operation);

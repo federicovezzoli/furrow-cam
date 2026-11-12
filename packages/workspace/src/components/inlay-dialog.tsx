@@ -24,7 +24,7 @@ import {
   useDocumentStoreApi,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { makeInlay } from "../stores/inlay-actions";
+import { inlayMaxDepth, makeInlay } from "../stores/inlay-actions";
 import { RibbonButton } from "./ribbon";
 import { flatBottomToolChoice, vcarveToolChoice } from "./tool-library";
 
@@ -103,13 +103,13 @@ function InlayDialog({
   const units = useDocumentStore((s) => s.document.units);
   const thickness = useDocumentStore((s) => s.document.stock.thickness);
   const length = useLength(units);
-  // Deeper, the shank cuts straight walls and the plug no longer fits.
-  const cone = vBitConeDepth(tool.tool) ?? undefined;
+  // Half the stock leaves room for the plug's floor, at twice the depth less the gap.
   const [depth, setDepth] = useState(() =>
-    Math.min(DEFAULT_INLAY_DEPTH, cone ?? Infinity, thickness / 2),
+    Math.min(DEFAULT_INLAY_DEPTH, vBitConeDepth(tool.tool) ?? Infinity, thickness / 2),
   );
   const [gap, setGap] = useState(() => Math.min(DEFAULT_INLAY_GAP, depth / 2));
   const [error, setError] = useState<Translatable | null>(null);
+  const maxDepth = inlayMaxDepth(tool.tool, thickness, gap);
 
   function make() {
     const { geometry, drawings } = store.getState().document;
@@ -151,7 +151,7 @@ function InlayDialog({
             quantity="length"
             units={units}
             min={MIN_LENGTH}
-            max={cone}
+            max={maxDepth}
             value={depth}
             onValueChange={setDepth}
           />
@@ -172,6 +172,7 @@ function InlayDialog({
               start: length(Math.max(0, depth - gap)),
             })}
           </p>
+          <p className="text-muted-foreground">{t("separate")}</p>
           {error && (
             <p className="text-destructive" role="alert">
               {format(error)}

@@ -813,7 +813,8 @@
       "fontUploadOff": "Este servidor não consegue armazenar fontes.",
       "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente.",
       "inlayClosedPaths": "Selecione caminhos fechados para fazer uma incrustação.",
-      "inlayGap": "A folga para a cola deve ser pelo menos 0 e menor que a profundidade do rebaixo."
+      "inlayGap": "A folga para a cola deve ser pelo menos 0 e menor que a profundidade do rebaixo.",
+      "inlayTooDeep": "Esta incrustação é profunda demais para o cone da fresa em V ou para o material: o rebaixo deve ficar dentro do cone e o fundo da peça dentro do material."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
@@ -1599,7 +1600,8 @@
     "pocket": "Rebaixo da incrustação",
     "plug": "Peça da incrustação",
     "drawing": "{name} peça",
-    "missingFlat": "Adicione uma fresa de topo plano à sua biblioteca de ferramentas: ela limpa os fundos de uma incrustação"
+    "missingFlat": "Adicione uma fresa de topo plano à sua biblioteca de ferramentas: ela limpa os fundos de uma incrustação",
+    "separate": "As duas partes são cortadas no material deste projeto: mova o desenho da peça, ou desative uma operação, para cortar cada uma da sua própria madeira."
   },
   "Viewport": {
     "scene": "Material, geometria e percursos",

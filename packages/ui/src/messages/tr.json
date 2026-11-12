@@ -813,7 +813,8 @@
       "fontUploadOff": "Bu sunucu yazı tiplerini saklayamıyor.",
       "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
       "inlayClosedPaths": "Kakma yapmak için kapalı yollar seçin.",
-      "inlayGap": "Tutkal boşluğu en az 0 ve cep derinliğinden küçük olmalıdır."
+      "inlayGap": "Tutkal boşluğu en az 0 ve cep derinliğinden küçük olmalıdır.",
+      "inlayTooDeep": "Bu kakma V ucunun konisi veya malzeme için çok derin: cep koninin, parçanın tabanı malzemenin içinde kalmalıdır."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
@@ -1599,7 +1600,8 @@
     "pocket": "Kakma cebi",
     "plug": "Kakma parçası",
     "drawing": "{name} parça",
-    "missingFlat": "Araç kitaplığınıza düz bir parmak freze ekleyin: kakmanın tabanlarını temizler"
+    "missingFlat": "Araç kitaplığınıza düz bir parmak freze ekleyin: kakmanın tabanlarını temizler",
+    "separate": "İki parça da bu projenin malzemesinde kesilir: her birini kendi ahşabından kesmek için parçanın çizimini taşıyın veya bir işlemi kapatın."
   },
   "Viewport": {
     "scene": "Ham malzeme, geometri ve takım yolları",

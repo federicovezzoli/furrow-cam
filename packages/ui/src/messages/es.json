@@ -813,7 +813,8 @@
       "fontUploadOff": "Este servidor no puede almacenar fuentes.",
       "terrainUnavailable": "No se pudieron descargar las altitudes. Comprueba tu conexión e inténtalo de nuevo.",
       "inlayClosedPaths": "Selecciona trazados cerrados para hacer una incrustación.",
-      "inlayGap": "El hueco para la cola debe ser al menos 0 y menor que la profundidad del cajeado."
+      "inlayGap": "El hueco para la cola debe ser al menos 0 y menor que la profundidad del cajeado.",
+      "inlayTooDeep": "Esta incrustación es demasiado profunda para el cono de la fresa en V o para el material: el cajeado debe quedar dentro del cono y el fondo de la pieza dentro del material."
     },
     "terrain": {
       "noArea": "Esta zona es demasiado pequeña. Dibuja una más grande.",
@@ -1599,7 +1600,8 @@
     "pocket": "Cajeado de incrustación",
     "plug": "Pieza de incrustación",
     "drawing": "{name} pieza",
-    "missingFlat": "Añade una fresa plana a tu biblioteca de herramientas: limpia los fondos de una incrustación"
+    "missingFlat": "Añade una fresa plana a tu biblioteca de herramientas: limpia los fondos de una incrustación",
+    "separate": "Ambas partes se cortan en el material de este proyecto: mueve el dibujo de la pieza, o desactiva una operación, para cortar cada una de su propia madera."
   },
   "Viewport": {
     "scene": "Material, geometría y trayectorias",

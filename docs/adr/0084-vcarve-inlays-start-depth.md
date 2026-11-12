@@ -21,7 +21,7 @@ With a V-bit of half angle α, a pocket carved to depth D is, at depth y, the sh
 
 We will use option 1. `VCarveParams.startDepth` (default 0) moves the whole carve down: the bit's tip is `startDepth` deep on the paths, `maxDepth` and the flat bottom are measured from there, and above it the cone cuts the walls on up to the stock top. The deepest the bit goes below `startDepth` is also limited by the cone, which has to reach the stock top.
 
-*Make inlay* adds, in one undo step, from the selected closed paths: the pocket, a V-carve of them from the stock top, `D` deep, with a flat bottom; and a mirrored copy of them as a new drawing (ADR-0055) to the right, with a rectangle round it, and the plug, a V-carve of both from `D − g`, `D` deep below it, with a flat bottom. The rectangle leaves room for the walls on both sides and the end mill between them. Both parts are on the side in view, so one simulation shows both; the user moves the plug's drawing, or turns one operation off, to cut each from its own wood.
+*Make inlay* adds, in one undo step, from the selected closed paths: the pocket, a V-carve of them from the stock top, `D` deep, with a flat bottom; and a mirrored copy of them as a new drawing (ADR-0055) to the right, with a rectangle round it, and the plug, a V-carve of both from `D − g`, `D` deep below it or down to the cone, with a flat bottom. A pocket deeper than the cone, or a plug whose floor would go through the stock, is refused. The rectangle leaves room for the walls on both sides and the end mill between them. Both parts are on the side in view, so one simulation shows both; the user moves the plug's drawing, or turns one operation off, to cut each from its own wood, as the dialog says.
 
 ## Consequences
 
