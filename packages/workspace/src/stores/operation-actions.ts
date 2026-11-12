@@ -125,7 +125,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
  */
 export function defaultVCarveParams(document: ProjectDocument, tool: Tool): VCarveParams {
   const half = document.stock.thickness / 2;
-  return { maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
+  return { startDepth: 0, maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
 }
 
 /** Step-over of new 3D finishing operations, as a percentage of the tool's diameter. */
@@ -167,7 +167,7 @@ export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
 }
 
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
-function nextName(document: ProjectDocument, base: string): string {
+export function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
   let n = 1;
   while (names.has(`${base} ${n}`)) n++;

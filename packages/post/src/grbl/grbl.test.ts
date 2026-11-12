@@ -451,7 +451,7 @@ describe("grbl", () => {
     const vcarve: Operation = {
       ...operation("Sign", vBit),
       type: "vcarve",
-      params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
+      params: { startDepth: 0, maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
     };
     const toolpath = { ...plunge([30, 0]), clearing: plunge([40, 0]).moves };
 
@@ -489,7 +489,10 @@ describe("grbl", () => {
         { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
       ]);
       // Without a clearing tool, stray clearing moves aren't cut.
-      const plain = { ...vcarve, params: { maxDepth: 3, flatBottom: null } } as Operation;
+      const plain = {
+        ...vcarve,
+        params: { startDepth: 0, maxDepth: 3, flatBottom: null },
+      } as Operation;
       expect(postSteps([{ operation: plain, toolpath }])).toEqual([
         { name: "Sign", tool: vBit, moves: toolpath.moves },
       ]);

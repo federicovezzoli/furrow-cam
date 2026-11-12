@@ -33,7 +33,10 @@ type Run = { points: Point[]; depths: number[]; closed: boolean };
  * - The V-bit follows the area's medial axis (ADR-0025), at each point as
  *   deep as the bit's angle and tip need to reach the nearest edge: corners
  *   are carved right into, wide parts deeper. Nowhere deeper than the
- *   operation's maximum depth, nor than the bit's cone.
+ *   operation's maximum depth, nor than the bit's cone. All of it is
+ *   `startDepth` deeper (ADR-0084): the bit is that deep on the edges, and
+ *   above it the cone cuts the walls on up to the stock top, as an inlay's
+ *   plug needs.
  * - Where the area is wider than the bit reaches at that limit, without a
  *   flat bottom the bit follows the axis at the limit and those edges stay
  *   uncarved (a warning says so). With one, the bit stops where the axis
@@ -76,16 +79,20 @@ export function vcarveToolpath(
 
   const cone = vBitConeDepth(tool);
   if (cone === null) throw new Error("Only V-bits V-carve");
-  if (params.maxDepth > cone + 1e-9) {
+  const start = params.startDepth;
+  if (start + params.maxDepth > cone + 1e-9) {
     warnings.push({ code: "toolpath.vcarveConeLimit" });
   }
-  const limit = Math.min(params.maxDepth, cone);
-  if (limit > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
+  /** Deepest below `start`: the cone has to reach from the tip up to the stock top. */
+  const limit = Math.max(0, Math.min(params.maxDepth, cone - start));
+  const bottom = start + limit;
+  if (bottom > tool.fluteLength) warnings.push({ code: "toolpath.depthExceedsFlutes" });
   const tipRadius = (tool.tipDiameter ?? 0) / 2;
   const slope = Math.tan((((tool.vAngle as number) / 2) * Math.PI) / 180);
   /** Distance to the edges at which the bit reaches the limit: half its line width there. */
   const reach = tipRadius + limit * slope;
-  const depthAt = (radius: number) => Math.max(0, Math.min(limit, (radius - tipRadius) / slope));
+  const depthAt = (radius: number) =>
+    start + Math.max(0, Math.min(limit, (radius - tipRadius) / slope));
 
   const branches = closed.length > 0 ? medialAxis(closed, { fillRule: "evenOdd" }) : [];
   const { flatBottom } = params;
@@ -101,7 +108,7 @@ export function vcarveToolpath(
     for (const ring of walls) {
       if (ring.length < 3) continue;
       const loop = [...ring, ring[0] as Point];
-      runs.push({ points: loop, depths: loop.map(() => limit), closed: true });
+      runs.push({ points: loop, depths: loop.map(() => bottom), closed: true });
     }
     const pocket = clearPocket(
       flatBottom.tool,
@@ -109,7 +116,7 @@ export function vcarveToolpath(
         strategy: { type: "offset" },
         direction: "climb",
         stepOver: flatBottom.stepOver,
-        depth: limit,
+        depth: bottom,
         allowance: 0,
         finishPass: false,
         ramp: true,
@@ -122,7 +129,7 @@ export function vcarveToolpath(
     if (missesFloor(walls, flatBottom.tool, tolerance)) {
       warnings.push({ code: "toolpath.flatAreasNarrow" });
     }
-    if (limit > flatBottom.tool.fluteLength) {
+    if (bottom > flatBottom.tool.fluteLength) {
       warnings.push({ code: "toolpath.flatDepthExceedsFlutes" });
     }
   } else {
@@ -137,7 +144,7 @@ export function vcarveToolpath(
   }
 
   const builder = new ToolpathBuilder(options.safeZ, options.entryClearance);
-  cutRuns(builder, tool, runs, depthLevels(limit, tool.stepDown), tolerance);
+  cutRuns(builder, tool, runs, depthLevels(bottom, tool.stepDown), tolerance);
   builder.retract();
   return clearing
     ? { moves: builder.moves, clearing, warnings }

@@ -345,7 +345,7 @@ function svgSign(): ProjectDocument {
         stockSide: "top",
         targets: targets(doc, byName("path3")),
         tool: vBit,
-        params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
+        params: { startDepth: 0, maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
       },
       {
         id: id(),

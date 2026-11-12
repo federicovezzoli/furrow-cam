@@ -407,7 +407,14 @@ export type EngraveOperation = z.infer<typeof EngraveOperation>;
  */
 export const VCarveParams = z
   .strictObject({
-    /** Deepest the V-bit goes below the stock top; wider parts are carved no deeper. */
+    /**
+     * How far below the stock top the carve starts (#553, ADR-0084): the bit's
+     * tip is this deep on the paths, and `maxDepth` and the flat bottom are
+     * measured down from here. An inlay's plug starts at its pocket's depth
+     * less the glue gap.
+     */
+    startDepth: z.number().nonnegative(),
+    /** Deepest the V-bit goes below `startDepth`; wider parts are carved no deeper. */
     maxDepth: PositiveLength,
     /**
      * Where the shape is wider than the V-bit reaches at `maxDepth`, the bit

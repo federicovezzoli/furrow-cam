@@ -367,6 +367,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #553: V-carves can start below the stock top, as an inlay's plug does. Existing ones start at it.
+  38: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "vcarve" && isObject(operation.params)) {
+          operation.params.startDepth ??= 0;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */
