@@ -811,7 +811,10 @@
       "fontTooLarge": "Dit lettertype is groter dan {mb, number} MB, het maximum.",
       "tooManyFonts": "Een project bevat hoogstens {max} lettertypen.",
       "fontUploadOff": "Deze server kan geen lettertypen opslaan.",
-      "terrainUnavailable": "De hoogtes konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw."
+      "terrainUnavailable": "De hoogtes konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw.",
+      "inlayClosedPaths": "Selecteer gesloten paden om er een inlegwerk van te maken.",
+      "inlayGap": "De lijmspleet moet minstens 0 zijn en kleiner dan de diepte van de uitsparing.",
+      "inlayTooDeep": "Dit inlegwerk is te diep voor de kegel van de V-frees of voor het materiaal: de uitsparing moet binnen de kegel blijven en de bodem van het inlegstuk binnen het materiaal."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Breder dan de kegel, dus de afschuining is maar zo breed als de frees toelaat.",
     "vcarve": "V-carve",
     "vcarveHint": "Volgt het midden van de gesloten paden, zo diep als de hoek van de frees nodig heeft om de randen te bereiken, in gangen niet dieper dan de snedediepte van het gereedschap. Eilanden blijven staan.",
+    "startDepth": "Begindiepte",
     "maxDepth": "Max. diepte",
     "vcarveTooDeep": "Dieper dan de kegel, dus de frees gaat niet dieper dan {depth}.",
     "vcarveReach": "Delen breder dan {width} bereiken die diepte.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Deze server kan geen 3D-modellen opslaan: het reliëf kan alleen als STL-bestand worden gedownload.",
     "cancel": "Annuleren",
     "defaultName": "Reliëf"
+  },
+  "Inlay": {
+    "ribbon": "Inlegwerk",
+    "hint": "V-frees een uitsparing in de {target} en een passend inlegstuk uit hun spiegelbeeld",
+    "title": "Inlegwerk maken",
+    "description": "Een V-gefreesde uitsparing van de geselecteerde gesloten paden, en een inlegstuk uit hun spiegelbeeld in een nieuwe tekening ernaast, om uit ander hout te frezen, om te draaien en in te lijmen.",
+    "depth": "Diepte uitsparing",
+    "gap": "Lijmspleet",
+    "tools": "Met {tool}, en {flatTool} die de bodems vlak freest. Het inlegstuk begint {start} diep.",
+    "make": "Inlegwerk maken",
+    "cancel": "Annuleren",
+    "pocket": "Uitsparing inlegwerk",
+    "plug": "Inlegstuk",
+    "drawing": "{name} inlegstuk",
+    "missingFlat": "Voeg een vlakfrees toe aan je gereedschapsbibliotheek: die freest de bodems van een inlegwerk vlak",
+    "separate": "Beide delen worden uit het materiaal van dit project gefreesd: verplaats de tekening van het inlegstuk, of zet een bewerking uit, om elk uit zijn eigen stuk hout te frezen."
   },
   "Viewport": {
     "scene": "Materiaal, geometrie en gereedschapsbanen",

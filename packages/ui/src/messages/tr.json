@@ -811,7 +811,10 @@
       "fontTooLarge": "Bu yazı tipi, izin verilen {mb, number} MB sınırından büyük.",
       "tooManyFonts": "Bir projede en fazla {max} yazı tipi olabilir.",
       "fontUploadOff": "Bu sunucu yazı tiplerini saklayamıyor.",
-      "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin."
+      "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+      "inlayClosedPaths": "Kakma yapmak için kapalı yollar seçin.",
+      "inlayGap": "Tutkal boşluğu en az 0 ve cep derinliğinden küçük olmalıdır.",
+      "inlayTooDeep": "Bu kakma V ucunun konisi veya malzeme için çok derin: cep koninin, parçanın tabanı malzemenin içinde kalmalıdır."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Koniden daha geniş; bu nedenle pah yalnızca ucun izin verdiği kadar geniş.",
     "vcarve": "V oyma",
     "vcarveHint": "Kapalı yolların ortasını, ucun açısının kenarlara ulaşması için gereken derinlikte, takımın paso derinliğinden derin olmayan pasolarla izler. Adalar yerinde kalır.",
+    "startDepth": "Başlangıç derinliği",
     "maxDepth": "Maks. derinlik",
     "vcarveTooDeep": "Koniden daha derin; bu nedenle uç en fazla {depth} derinliğe oyar.",
     "vcarveReach": "{width} genişliğinden geniş bölümler bu derinliğe ulaşır.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Bu sunucu 3B modelleri saklayamaz: kabartma yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Kabartma"
+  },
+  "Inlay": {
+    "ribbon": "Kakma",
+    "hint": "{target} içine V ile bir cep ve ayna görüntüsünden ona oturan bir parça oy",
+    "title": "Kakma oluştur",
+    "description": "Seçili kapalı yolların V ile oyulmuş bir cebi ve yanında yeni bir çizimde ayna görüntülerinden oyulmuş bir parça; başka bir ahşaptan kesilip ters çevrilerek yapıştırılır.",
+    "depth": "Cep derinliği",
+    "gap": "Tutkal boşluğu",
+    "tools": "{tool} ile, tabanları {flatTool} temizler. Parça {start} derinde başlar.",
+    "make": "Kakma oluştur",
+    "cancel": "İptal",
+    "pocket": "Kakma cebi",
+    "plug": "Kakma parçası",
+    "drawing": "{name} parça",
+    "missingFlat": "Araç kitaplığınıza düz bir parmak freze ekleyin: kakmanın tabanlarını temizler",
+    "separate": "İki parça da bu projenin malzemesinde kesilir: her birini kendi ahşabından kesmek için parçanın çizimini taşıyın veya bir işlemi kapatın."
   },
   "Viewport": {
     "scene": "Ham malzeme, geometri ve takım yolları",

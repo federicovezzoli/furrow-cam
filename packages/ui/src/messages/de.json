@@ -811,7 +811,10 @@
       "fontTooLarge": "Diese Schrift ist größer als {mb, number} MB, das erlaubte Maximum.",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften.",
       "fontUploadOff": "Dieser Server kann keine Schriften speichern.",
-      "terrainUnavailable": "Die Höhendaten konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
+      "terrainUnavailable": "Die Höhendaten konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+      "inlayClosedPaths": "Wähle geschlossene Pfade aus, um daraus eine Einlage zu machen.",
+      "inlayGap": "Der Leimspalt muss mindestens 0 und kleiner als die Taschentiefe sein.",
+      "inlayTooDeep": "Diese Einlage ist zu tief für den Kegel des V-Fräsers oder das Rohteil: Die Tasche muss im Kegel bleiben und der Boden des Einsatzes im Rohteil."
     },
     "terrain": {
       "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Breiter als der Kegel: die Fase wird nur so breit, wie der Fräser es erlaubt.",
     "vcarve": "V-Schnitzen",
     "vcarveHint": "Folgt der Mitte geschlossener Pfade, so tief, wie der Fräserwinkel es braucht, um ihre Kanten zu erreichen, in Durchgängen nicht tiefer als die Zustellung des Werkzeugs. Inseln bleiben stehen.",
+    "startDepth": "Starttiefe",
     "maxDepth": "Max. Tiefe",
     "vcarveTooDeep": "Tiefer als der Kegel: der Fräser schnitzt nicht tiefer als {depth}.",
     "vcarveReach": "Teile breiter als {width} erreichen sie.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Dieser Server kann keine 3D-Modelle speichern: Das Relief kann nur als STL-Datei heruntergeladen werden.",
     "cancel": "Abbrechen",
     "defaultName": "Relief"
+  },
+  "Inlay": {
+    "ribbon": "Einlage",
+    "hint": "Eine Tasche in die {target} V-schnitzen und einen passenden Einsatz aus ihrem Spiegelbild",
+    "title": "Einlage erstellen",
+    "description": "Eine V-geschnitzte Tasche der ausgewählten geschlossenen Pfade und ein Einsatz aus ihrem Spiegelbild in einer neuen Zeichnung daneben, aus einem anderen Holzstück zu fräsen, umzudrehen und einzuleimen.",
+    "depth": "Taschentiefe",
+    "gap": "Leimspalt",
+    "tools": "Mit {tool}, und {flatTool} räumt die Böden. Der Einsatz beginnt {start} tief.",
+    "make": "Einlage erstellen",
+    "cancel": "Abbrechen",
+    "pocket": "Einlage-Tasche",
+    "plug": "Einlage-Einsatz",
+    "drawing": "{name} Einsatz",
+    "missingFlat": "Füge deiner Werkzeugbibliothek einen Schaftfräser hinzu: er räumt die Böden einer Einlage",
+    "separate": "Beide Teile werden aus dem Rohteil dieses Projekts gefräst: Verschiebe die Zeichnung des Einsatzes oder schalte eine Operation aus, um jedes aus seinem eigenen Holzstück zu fräsen."
   },
   "Viewport": {
     "scene": "Rohteil, Geometrie und Werkzeugbahnen",

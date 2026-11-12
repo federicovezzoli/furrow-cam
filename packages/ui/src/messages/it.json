@@ -811,7 +811,10 @@
       "fontTooLarge": "Questo font supera {mb, number} MB, il massimo consentito.",
       "tooManyFonts": "Un progetto contiene al massimo {max} font.",
       "fontUploadOff": "Questo server non può archiviare font.",
-      "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova."
+      "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova.",
+      "inlayClosedPaths": "Seleziona percorsi chiusi per farne un intarsio.",
+      "inlayGap": "Lo spazio per la colla deve essere almeno 0 e minore della profondità della tasca.",
+      "inlayTooDeep": "Questo intarsio è troppo profondo per il cono della fresa a V o per il grezzo: la tasca deve restare nel cono e il fondo del tassello nel grezzo."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Più largo del cono, quindi lo smusso è largo solo quanto la fresa consente.",
     "vcarve": "V-carve",
     "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
+    "startDepth": "Profondità iniziale",
     "maxDepth": "Profondità massima",
     "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
     "vcarveReach": "Le parti più larghe di {width} la raggiungono.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Questo server non può salvare modelli 3D: il rilievo si può solo scaricare come file STL.",
     "cancel": "Annulla",
     "defaultName": "Rilievo"
+  },
+  "Inlay": {
+    "ribbon": "Intarsio",
+    "hint": "Incidi a V una tasca nei {target} e un tassello che vi si incastra, dalla loro immagine speculare",
+    "title": "Crea intarsio",
+    "description": "Una tasca incisa a V nei percorsi chiusi selezionati e un tassello inciso dalla loro immagine speculare in un nuovo disegno accanto, da tagliare da un altro pezzo di legno, capovolgere e incollare.",
+    "depth": "Profondità tasca",
+    "gap": "Spazio per la colla",
+    "tools": "Con {tool}, e {flatTool} che spiana i fondi. Il tassello inizia {start} sotto.",
+    "make": "Crea intarsio",
+    "cancel": "Annulla",
+    "pocket": "Tasca intarsio",
+    "plug": "Tassello intarsio",
+    "drawing": "{name} tassello",
+    "missingFlat": "Aggiungi una fresa piatta alla libreria utensili: spiana i fondi dell'intarsio",
+    "separate": "Entrambe le parti sono tagliate nel grezzo di questo progetto: sposta il disegno del tassello, o disattiva un'operazione, per tagliarle ciascuna dal proprio pezzo di legno."
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",

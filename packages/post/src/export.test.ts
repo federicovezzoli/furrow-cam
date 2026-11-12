@@ -362,7 +362,7 @@ describe("exportGcode", () => {
         stockSide: "top",
         targets: [{ shapeId: recess.id, paths: null }],
         tool: vBit,
-        params: { maxDepth: 2, flatBottom: { tool: endMill, stepOver: 40 } },
+        params: { startDepth: 0, maxDepth: 2, flatBottom: { tool: endMill, stepOver: 40 } },
       },
     ];
     const { gcode, warnings } = oneFile(exportGcode(doc, "Plate"));

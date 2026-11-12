@@ -811,7 +811,10 @@
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",
       "fontUploadOff": "Ce serveur ne peut pas stocker de polices.",
-      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez."
+      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
+      "inlayClosedPaths": "Sélectionnez des tracés fermés pour en faire une marqueterie.",
+      "inlayGap": "Le jeu de colle doit être d'au moins 0 et inférieur à la profondeur de la poche.",
+      "inlayTooDeep": "Cette incrustation est trop profonde pour le cône de la fraise en V ou pour le brut : la poche doit rester dans le cône et le fond de la pièce dans le brut."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Plus large que le cône : le chanfrein n’est large que ce que la fraise permet.",
     "vcarve": "Gravure en V",
     "vcarveHint": "Suit le milieu des tracés fermés, aussi profond que l’angle de la fraise l’exige pour atteindre leurs bords, en passes pas plus profondes que la passe de l’outil. Les îlots restent debout.",
+    "startDepth": "Profondeur de départ",
     "maxDepth": "Profondeur max",
     "vcarveTooDeep": "Plus profond que le cône : la fraise ne grave pas plus profond que {depth}.",
     "vcarveReach": "Les parties plus larges que {width} l’atteignent.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le relief peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Relief"
+  },
+  "Inlay": {
+    "ribbon": "Incrustation",
+    "hint": "Graver en V une poche dans les {target} et une pièce qui s'y emboîte, à partir de leur image miroir",
+    "title": "Créer une incrustation",
+    "description": "Une poche gravée en V des tracés fermés sélectionnés, et une pièce gravée à partir de leur image miroir dans un nouveau dessin à côté, à usiner dans un autre morceau de bois, retourner et coller.",
+    "depth": "Profondeur de la poche",
+    "gap": "Jeu de colle",
+    "tools": "Avec {tool}, et {flatTool} pour dresser les fonds. La pièce commence à {start} de profondeur.",
+    "make": "Créer l'incrustation",
+    "cancel": "Annuler",
+    "pocket": "Poche d'incrustation",
+    "plug": "Pièce d'incrustation",
+    "drawing": "{name} pièce",
+    "missingFlat": "Ajoutez une fraise droite à votre bibliothèque d'outils : elle dresse les fonds d'une incrustation",
+    "separate": "Les deux parties sont usinées dans le brut de ce projet : déplacez le dessin de la pièce, ou désactivez une opération, pour usiner chacune dans son propre morceau de bois."
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

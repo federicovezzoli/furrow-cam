@@ -264,14 +264,14 @@ describe("VCarveOperation", () => {
     ...profile,
     type: "vcarve",
     tool: vBit,
-    params: { maxDepth: 5, flatBottom: null },
+    params: { startDepth: 0, maxDepth: 5, flatBottom: null },
   };
 
   it("accepts V-bits, with or without a flat bottom, as an operation too", () => {
     expect(VCarveOperation.safeParse(vcarve).success).toBe(true);
     const flat = {
       ...vcarve,
-      params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
+      params: { startDepth: 0, maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
     };
     expect(Operation.parse(flat)).toEqual(flat);
     expect(Operation.parse(vcarve)).toEqual(vcarve);
@@ -285,7 +285,7 @@ describe("VCarveOperation", () => {
 
   it("clears a flat bottom with flat end mills only", () => {
     for (const tool of [vBit, { ...endMill, type: "ball_end_mill" }]) {
-      const params = { maxDepth: 3, flatBottom: { tool, stepOver: 40 } };
+      const params = { startDepth: 0, maxDepth: 3, flatBottom: { tool, stepOver: 40 } };
       expect(VCarveOperation.safeParse({ ...vcarve, params }).success).toBe(false);
     }
   });
@@ -300,7 +300,7 @@ describe("VCarveOperation", () => {
 
   it("names the flat-bottom tool as the clearing tool", () => {
     expect(clearingTool(VCarveOperation.parse(vcarve))).toBeNull();
-    const params = { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } };
+    const params = { startDepth: 0, maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } };
     expect(clearingTool(VCarveOperation.parse({ ...vcarve, params }))).toEqual(endMill);
     expect(clearingTool(profile)).toBeNull();
   });

@@ -811,7 +811,10 @@
       "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
       "tooManyFonts": "A project holds at most {max} fonts.",
       "fontUploadOff": "This server can't store fonts.",
-      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again."
+      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again.",
+      "inlayClosedPaths": "Select closed paths to make an inlay of.",
+      "inlayGap": "The glue gap must be at least 0 and less than the pocket depth.",
+      "inlayTooDeep": "This inlay is too deep for the V-bit's cone or the stock: the pocket must stay within the cone and the plug's floor within the stock."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Wider than the cone, so the chamfer is only as wide as the bit allows.",
     "vcarve": "V-carve",
     "vcarveHint": "Follows the middle of the closed paths, as deep as the bit's angle needs to reach their edges, in passes no deeper than the tool's step-down. Islands stay standing.",
+    "startDepth": "Start depth",
     "maxDepth": "Max depth",
     "vcarveTooDeep": "Deeper than the cone, so the bit carves no deeper than {depth}.",
     "vcarveReach": "Parts wider than {width} reach it.",
@@ -1582,6 +1586,22 @@
     "storeOff": "This server can't store 3D models: the relief can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Relief"
+  },
+  "Inlay": {
+    "ribbon": "Inlay",
+    "hint": "V-carve a pocket in the {target} and a plug that fits it, from their mirror image",
+    "title": "Make inlay",
+    "description": "A V-carved pocket of the selected closed paths, and a plug carved from their mirror image in a new drawing beside them, to cut from another piece of wood, turn over and glue in.",
+    "depth": "Pocket depth",
+    "gap": "Glue gap",
+    "tools": "With {tool}, and {flatTool} clearing the floors. The plug starts {start} down.",
+    "make": "Make inlay",
+    "cancel": "Cancel",
+    "pocket": "Inlay pocket",
+    "plug": "Inlay plug",
+    "drawing": "{name} plug",
+    "missingFlat": "Add a flat end mill to your tool library: it clears an inlay's floors",
+    "separate": "Both parts are cut in this project's stock: move the plug's drawing, or turn one operation off, to cut each from its own piece of wood."
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

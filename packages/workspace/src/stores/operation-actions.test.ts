@@ -621,7 +621,7 @@ describe("addVCarveOperation", () => {
       draft.stock.thickness = 4;
     });
     addVCarve(store);
-    expect(operations()[0]?.params).toEqual({ maxDepth: 2, flatBottom: null });
+    expect(operations()[0]?.params).toEqual({ startDepth: 0, maxDepth: 2, flatBottom: null });
   });
 
   it("takes V-bits only, adding or switching tools", () => {
@@ -644,6 +644,7 @@ describe("addVCarveOperation", () => {
       ok: true,
     });
     expect(operations()[0]?.params).toEqual({
+      startDepth: 0,
       maxDepth: 2,
       flatBottom: { tool: endMill, stepOver: 40 },
     });

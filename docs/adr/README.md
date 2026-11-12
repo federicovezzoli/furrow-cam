@@ -98,3 +98,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0081](0081-update-notice-opens-the-website.md) | The update notice opens the website's download section | Proposed |
 | [0082](0082-mcp-terrain-fetches-elevation.md) | The MCP server makes terrain, fetching only elevation tiles while its tool runs | Proposed |
 | [0083](0083-operations-and-objects-share-a-tab.md) | Operations and objects share a sidebar tab, one above the other | Proposed |
+| [0084](0084-vcarve-inlays-start-depth.md) | V-carve inlays come from a start depth and a boundary path among the targets | Proposed |

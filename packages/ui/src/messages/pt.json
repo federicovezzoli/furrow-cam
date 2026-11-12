@@ -811,7 +811,10 @@
       "fontTooLarge": "Esta fonte tem mais de {mb, number} MB, o máximo permitido.",
       "tooManyFonts": "Um projeto contém no máximo {max} fontes.",
       "fontUploadOff": "Este servidor não consegue armazenar fontes.",
-      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente."
+      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente.",
+      "inlayClosedPaths": "Selecione caminhos fechados para fazer uma incrustação.",
+      "inlayGap": "A folga para a cola deve ser pelo menos 0 e menor que a profundidade do rebaixo.",
+      "inlayTooDeep": "Esta incrustação é profunda demais para o cone da fresa em V ou para o material: o rebaixo deve ficar dentro do cone e o fundo da peça dentro do material."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
@@ -948,6 +951,7 @@
     "chamferTooWide": "Mais largo que o cone, então o chanfro fica só tão largo quanto a fresa permite.",
     "vcarve": "Entalhe em V",
     "vcarveHint": "Segue o meio dos caminhos fechados, tão fundo quanto o ângulo da fresa precisa para alcançar as bordas, em passadas não mais fundas que a profundidade por passada da ferramenta. As ilhas ficam de pé.",
+    "startDepth": "Profundidade inicial",
     "maxDepth": "Prof. máxima",
     "vcarveTooDeep": "Mais fundo que o cone, então a fresa não entalha mais fundo que {depth}.",
     "vcarveReach": "Partes mais largas que {width} a alcançam.",
@@ -1582,6 +1586,22 @@
     "storeOff": "Este servidor não pode guardar modelos 3D: o relevo só pode ser transferido como ficheiro STL.",
     "cancel": "Cancelar",
     "defaultName": "Relevo"
+  },
+  "Inlay": {
+    "ribbon": "Incrustação",
+    "hint": "Entalhar em V um rebaixo nos {target} e uma peça que encaixe, a partir da sua imagem espelhada",
+    "title": "Criar incrustação",
+    "description": "Um rebaixo entalhado em V dos caminhos fechados selecionados, e uma peça entalhada a partir da sua imagem espelhada num desenho novo ao lado, para cortar de outra madeira, virar e colar.",
+    "depth": "Profundidade do rebaixo",
+    "gap": "Folga para a cola",
+    "tools": "Com {tool}, e {flatTool} limpando os fundos. A peça começa a {start} de profundidade.",
+    "make": "Criar incrustação",
+    "cancel": "Cancelar",
+    "pocket": "Rebaixo da incrustação",
+    "plug": "Peça da incrustação",
+    "drawing": "{name} peça",
+    "missingFlat": "Adicione uma fresa de topo plano à sua biblioteca de ferramentas: ela limpa os fundos de uma incrustação",
+    "separate": "As duas partes são cortadas no material deste projeto: mova o desenho da peça, ou desative uma operação, para cortar cada uma da sua própria madeira."
   },
   "Viewport": {
     "scene": "Material, geometria e percursos",
