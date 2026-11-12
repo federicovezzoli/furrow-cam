@@ -2,7 +2,8 @@ import type { Path, Point, Shape, Tool, VCarveOperation, VCarveParams } from "@f
 import { DRAWING_ID, endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../scene/stock";
-import { generateToolpath } from "./generate";
+import { simulateCuts } from "../simulation/simulation";
+import { generateToolpath, toolpathCuts } from "./generate";
 import { distanceToSegment } from "./passes";
 import type { Toolpath, ToolpathMove } from "./toolpath";
 import { simplify3d, vcarveToolpath } from "./vcarve";
@@ -58,7 +59,7 @@ function vcarve(params: Partial<VCarveParams> = {}, tool = bit): VCarveOperation
     targets: [],
     tool,
     type: "vcarve",
-    params: { maxDepth: 10, flatBottom: null, ...params },
+    params: { startDepth: 0, maxDepth: 10, flatBottom: null, ...params },
   };
 }
 
@@ -315,6 +316,90 @@ describe("vcarveToolpath", () => {
         entryClearance: 1,
       }),
     ).toEqual(vcarveToolpath(operation, [bar], options));
+  });
+});
+
+describe("V-carve inlays", () => {
+  /** A pocket `D` deep and a plug starting `D - GAP` down fit with `GAP` under the plug (ADR-0084). */
+  const D = 3;
+  const GAP = 1;
+  const small = { ...endMill, diameter: 1 };
+  const stock = { width: 60, height: 60, thickness: 20 };
+  /** 0.05 by 0.1 mm cells, whose centres are off the contours at every 0.5 mm. */
+  const grid = { columns: 1200, rows: 600, cellWidth: 0.05, cellHeight: 0.1 };
+
+  /** The stock after carving `paths` from `startDepth`, `D` deep with a flat bottom. */
+  function simulate(startDepth: number, ...paths: Path[]) {
+    const operation = vcarve({
+      startDepth,
+      maxDepth: D,
+      flatBottom: { tool: small, stepOver: 40 },
+    });
+    const toolpath = vcarveToolpath(operation, [shape(...paths)], options);
+    return simulateCuts(stock, toolpathCuts(operation, toolpath), grid);
+  }
+
+  /** Cells, and their area, inside `[x0, x1] × [y0, y1]` that pass `test` on their height. */
+  function area(
+    { heights, columns, cellWidth, cellHeight }: ReturnType<typeof simulate>,
+    test: (height: number) => boolean,
+    [x0, y0, x1, y1] = [0, 0, stock.width, stock.height],
+  ): number {
+    let count = 0;
+    heights.forEach((height, i) => {
+      const x = ((i % columns) + 0.5) * cellWidth;
+      const y = (Math.floor(i / columns) + 0.5) * cellHeight;
+      if (x > x0 && x < x1 && y > y0 && y < y1 && test(height)) count++;
+    });
+    return count * cellWidth * cellHeight;
+  }
+
+  it("cut from a square, the plug is as wide at each depth as the pocket where it sits", () => {
+    const pocket = simulate(0, rectangle(20, 20, 20, 20));
+    // Mirrored, a square is itself; the boundary leaves 15 mm round it.
+    const plug = simulate(D - GAP, rectangle(5, 5, 50, 50), rectangle(20, 20, 20, 20));
+    /** The width at y = 30 cut below `depth` (pocket) or standing above it (plug). */
+    const across = (map: typeof pocket, test: (height: number) => boolean) =>
+      area(map, test, [10, 29.9, 50, 30.1]) / 0.2;
+    for (const z of [0, 0.5, 1, 1.5, 2]) {
+      const female = D - GAP - z;
+      const male = across(plug, (h) => h > -z - 1e-3);
+      expect(Math.abs(male - (20 - 2 * female))).toBeLessThan(0.2);
+      expect(Math.abs(male - across(pocket, (h) => h < -female))).toBeLessThan(0.2);
+    }
+    // Below where it sits, the plug flares out to the boundary's floor, D under the start.
+    expect(area(plug, (h) => h < -(2 * D - GAP) + 1e-3)).toBeGreaterThan(0);
+  });
+
+  it("cut from a letter and its mirror image, the plug fills the pocket at each depth", () => {
+    /** An L with 8 mm strokes, and its mirror image about x = 30. */
+    const l = (mirror: boolean): Path => {
+      const corners: Point[] = [
+        [24, 0],
+        [24, 8],
+        [8, 8],
+        [8, 30],
+        [0, 30],
+      ];
+      const at = ([x, y]: Point): Point => (mirror ? [48 - x, 15 + y] : [12 + x, 15 + y]);
+      const points = corners.map(at);
+      if (mirror) points.reverse();
+      return {
+        start: at([0, 0]),
+        segments: points.map((to) => ({ kind: "line", to })),
+        closed: true,
+      };
+    };
+    const pocket = simulate(0, l(false));
+    const plug = simulate(D - GAP, rectangle(2, 5, 56, 50), l(true));
+    // Away from the boundary's walls, which the cone cuts beyond above the start.
+    const inner: [number, number, number, number] = [8, 11, 52, 49];
+    for (const z of [0, 0.5, 1, 1.5, 2]) {
+      const female = area(pocket, (h) => h < -(D - GAP - z));
+      const male = area(plug, (h) => h > -z - 1e-3, inner);
+      expect(female).toBeGreaterThan(50);
+      expect(Math.abs(male - female) / female).toBeLessThan(0.01);
+    }
   });
 });
 

@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Tapered ball end mills can't drill",
       "taperedBitsCantClear": "Tapered ball end mills only engrave and finish 3D: pick another bit.",
       "drillsCantEngrave": "Drill bits can't engrave",
+      "onlyVBitsChamfer": "Only V-bits chamfer",
+      "chamferWidth": "A chamfer needs a width, and only a chamfer has one",
       "flatBottomEndMill": "Only flat end mills clear a flat bottom",
       "onlyVBitsVCarve": "Only V-bits V-carve",
       "modelNotShapes": "Machines a model, not shapes",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Parts are wider than the V-bit reaches at the maximum depth, so their edges stay uncarved: turn on a flat bottom to clear them.",
       "flatAreasNarrow": "Some flat areas are too narrow for the flat-bottom tool and stay uncut.",
       "engraveConeWide": "The depth exceeds the V-bit's cone, so the line is as wide as the bit.",
+      "chamferConeWide": "The chamfer is wider than the V-bit's cone: it stops at the cone's width.",
+      "chamferThroughStock": "The chamfer goes deeper than the stock, into what is under it.",
       "pathsTooSmall": "The closed paths are too small for the tool.",
       "nothingOutside": "The closed paths leave no stock outside them to clear.",
       "tabsTooTall": "The tabs are as tall as the cut is deep, so nothing is cut under them.",
@@ -807,7 +811,10 @@
       "fontTooLarge": "This font is larger than {mb, number} MB, the most allowed.",
       "tooManyFonts": "A project holds at most {max} fonts.",
       "fontUploadOff": "This server can't store fonts.",
-      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again."
+      "terrainUnavailable": "The elevation data couldn't be loaded. Check your connection and try again.",
+      "inlayClosedPaths": "Select closed paths to make an inlay of.",
+      "inlayGap": "The glue gap must be at least 0 and less than the pocket depth.",
+      "inlayTooDeep": "This inlay is too deep for the V-bit's cone or the stock: the pocket must stay within the cone and the plug's floor within the stock."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",
@@ -815,13 +822,18 @@
       "tooWide": "This area is wider than {km, number} km, the most allowed. Draw a smaller one.",
       "tooDetailed": "This area's model would exceed the 3D model limits.",
       "noData": "There is no elevation data for this area."
+    },
+    "image": {
+      "tooSmall": "This image is too small. Pick one at least 2 × 2 pixels.",
+      "tooLarge": "This image is larger than {mb, number} MB, the most allowed."
     }
   },
   "Operation": {
     "sides": {
       "outside": "Outside",
       "inside": "Inside",
-      "on": "On the line"
+      "on": "On the line",
+      "chamfer": "Chamfer"
     },
     "directions": {
       "climb": "Climb",
@@ -929,13 +941,17 @@
     "peckHint": "Plunges in pecks no deeper than the tool's step-down, retracting after each to clear chips.",
     "engrave": "Engrave",
     "position": "Position",
-    "engraveHint": "{side, select, inside {Follows the closed paths inside the line, with an edge of the groove on it,} outside {Follows the closed paths outside the line, with an edge of the groove on it,} other {Follows every path, open and closed, on the line,}} in passes no deeper than the tool's step-down.",
+    "engraveHint": "{side, select, inside {Follows the closed paths inside the line, with an edge of the groove on it,} outside {Follows the closed paths outside the line, with an edge of the groove on it,} chamfer {Bevels the edges of the closed paths with the V-bit's cone, inward from the line on outer contours and outward on holes,} other {Follows every path, open and closed, on the line,}} in passes no deeper than the tool's step-down.",
     "lineWidth": "Line width",
     "lineTooDeep": "Deeper than the cone, so the line is as wide as the bit.",
     "lineAtTop": "At the stock top, from the bit's {angle}° angle.",
     "lineAtTopTip": "At the stock top, from the bit's {angle}° angle and {tip} tip.",
+    "chamferWidth": "Chamfer width",
+    "chamferDepth": "On the stock top; cut {depth} deep.",
+    "chamferTooWide": "Wider than the cone, so the chamfer is only as wide as the bit allows.",
     "vcarve": "V-carve",
     "vcarveHint": "Follows the middle of the closed paths, as deep as the bit's angle needs to reach their edges, in passes no deeper than the tool's step-down. Islands stay standing.",
+    "startDepth": "Start depth",
     "maxDepth": "Max depth",
     "vcarveTooDeep": "Deeper than the cone, so the bit carves no deeper than {depth}.",
     "vcarveReach": "Parts wider than {width} reach it.",
@@ -1542,6 +1558,50 @@
     "storeOff": "This server can't store 3D models: the terrain can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Terrain"
+  },
+  "ImageRelief": {
+    "open": "Relief from image…",
+    "ribbon": "Image",
+    "hint": "Make a relief model from a greyscale image",
+    "title": "Relief from image",
+    "description": "Pick a PNG, JPEG or WebP image: lighter is higher. Add the relief to the project or download it.",
+    "noImage": "Pick an image to see its relief.",
+    "pick": "Pick image…",
+    "change": "Change image…",
+    "preview": "Relief preview",
+    "previewLoading": "Making the preview…",
+    "width": "Width",
+    "relief": "Relief height",
+    "base": "Base",
+    "blur": "Smoothing",
+    "invert": "Invert",
+    "invertHint": "Dark is higher, e.g. for a lithophane cut from the back.",
+    "pixels": "Image: {width, number} × {height, number} px",
+    "size": "Model: {size} {unit}",
+    "building": "Building the model…",
+    "saving": "Adding the model to the project…",
+    "generate": "Add to project",
+    "download": "Download STL",
+    "hasModel": "This project has its 3D model already: the relief can only be downloaded as an STL file.",
+    "storeOff": "This server can't store 3D models: the relief can only be downloaded as an STL file.",
+    "cancel": "Cancel",
+    "defaultName": "Relief"
+  },
+  "Inlay": {
+    "ribbon": "Inlay",
+    "hint": "V-carve a pocket in the {target} and a plug that fits it, from their mirror image",
+    "title": "Make inlay",
+    "description": "A V-carved pocket of the selected closed paths, and a plug carved from their mirror image in a new drawing beside them, to cut from another piece of wood, turn over and glue in.",
+    "depth": "Pocket depth",
+    "gap": "Glue gap",
+    "tools": "With {tool}, and {flatTool} clearing the floors. The plug starts {start} down.",
+    "make": "Make inlay",
+    "cancel": "Cancel",
+    "pocket": "Inlay pocket",
+    "plug": "Inlay plug",
+    "drawing": "{name} plug",
+    "missingFlat": "Add a flat end mill to your tool library: it clears an inlay's floors",
+    "separate": "Both parts are cut in this project's stock: move the plug's drawing, or turn one operation off, to cut each from its own piece of wood."
   },
   "Viewport": {
     "scene": "Stock, geometry and toolpaths",

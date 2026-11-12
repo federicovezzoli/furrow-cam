@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Konik küresel uçlu frezeler delme yapamaz",
       "taperedBitsCantClear": "Konik küresel uçlu frezeler yalnızca gravür ve 3B finiş yapar: başka bir uç seçin.",
       "drillsCantEngrave": "Matkap uçları gravür yapamaz",
+      "onlyVBitsChamfer": "Yalnızca V-uçlar pah kırar",
+      "chamferWidth": "Pah bir genişlik ister ve yalnızca pahın genişliği olur",
       "flatBottomEndMill": "Düz tabanı yalnızca düz uçlu parmak frezeler temizler",
       "onlyVBitsVCarve": "V oymayı yalnızca V uçlar yapar",
       "modelNotShapes": "Şekilleri değil, bir modeli işler",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Bazı bölümler V ucun maksimum derinlikte ulaştığından daha geniş; bu nedenle kenarları oyulmadan kalır: temizlemek için düz tabanı açın.",
       "flatAreasNarrow": "Bazı düz alanlar düz taban takımı için çok dar ve kesilmeden kalıyor.",
       "engraveConeWide": "Derinlik V ucun konisini aşıyor; bu nedenle çizgi uç kadar geniş olur.",
+      "chamferConeWide": "Pah, V-ucun konisinden daha geniş: koninin genişliğinde durur.",
+      "chamferThroughStock": "Pah malzemeden daha derine, altındakine iniyor.",
       "pathsTooSmall": "Kapalı yollar takım için çok küçük.",
       "nothingOutside": "Kapalı yolların dışında temizlenecek ham malzeme kalmıyor.",
       "tabsTooTall": "Köprüler kesim derinliği kadar yüksek; bu nedenle altlarında hiçbir şey kesilmiyor.",
@@ -807,7 +811,10 @@
       "fontTooLarge": "Bu yazı tipi, izin verilen {mb, number} MB sınırından büyük.",
       "tooManyFonts": "Bir projede en fazla {max} yazı tipi olabilir.",
       "fontUploadOff": "Bu sunucu yazı tiplerini saklayamıyor.",
-      "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin."
+      "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
+      "inlayClosedPaths": "Kakma yapmak için kapalı yollar seçin.",
+      "inlayGap": "Tutkal boşluğu en az 0 ve cep derinliğinden küçük olmalıdır.",
+      "inlayTooDeep": "Bu kakma V ucunun konisi veya malzeme için çok derin: cep koninin, parçanın tabanı malzemenin içinde kalmalıdır."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
@@ -815,13 +822,18 @@
       "tooWide": "Bu alan izin verilen en fazla genişlik olan {km, number} km'den geniş. Daha küçük bir alan çizin.",
       "tooDetailed": "Bu alanın modeli 3B model sınırlarını aşar.",
       "noData": "Bu alan için yükseklik verisi yok."
+    },
+    "image": {
+      "tooSmall": "Bu görüntü çok küçük. En az 2 × 2 piksel olan bir görüntü seçin.",
+      "tooLarge": "Bu görüntü izin verilen en fazla boyut olan {mb, number} MB'tan büyük."
     }
   },
   "Operation": {
     "sides": {
       "outside": "Dış",
       "inside": "İç",
-      "on": "Çizgi üzerinde"
+      "on": "Çizgi üzerinde",
+      "chamfer": "Pah"
     },
     "directions": {
       "climb": "Aynı yönlü",
@@ -929,13 +941,17 @@
     "peckHint": "Takımın paso derinliğinden derin olmayan kademelerle dalar ve talaşı boşaltmak için her kademeden sonra geri çekilir.",
     "engrave": "Gravür",
     "position": "Konum",
-    "engraveHint": "{side, select, inside {Kapalı yolları çizginin içinden, oluğun bir kenarı çizgi üzerinde kalacak şekilde} outside {Kapalı yolları çizginin dışından, oluğun bir kenarı çizgi üzerinde kalacak şekilde} other {Açık ve kapalı tüm yolları çizgi üzerinde}}, takımın paso derinliğinden derin olmayan pasolarla izler.",
+    "engraveHint": "{side, select, inside {Kapalı yolları çizginin içinden, oluğun bir kenarı çizgi üzerinde kalacak şekilde} outside {Kapalı yolları çizginin dışından, oluğun bir kenarı çizgi üzerinde kalacak şekilde} chamfer {Kapalı yolların kenarlarına V-ucun konisiyle, dış hatlarda çizgiden içe, deliklerde dışa doğru pah kırarak} other {Açık ve kapalı tüm yolları çizgi üzerinde}}, takımın paso derinliğinden derin olmayan pasolarla izler.",
     "lineWidth": "Çizgi genişliği",
     "lineTooDeep": "Koniden daha derin; bu nedenle çizgi uç kadar geniş.",
     "lineAtTop": "Ham malzeme üstünde, ucun {angle}° açısına göre.",
     "lineAtTopTip": "Ham malzeme üstünde, ucun {angle}° açısına ve {tip} uç çapına göre.",
+    "chamferWidth": "Pah genişliği",
+    "chamferDepth": "Malzemenin üst yüzünde; {depth} derinlikte kesilir.",
+    "chamferTooWide": "Koniden daha geniş; bu nedenle pah yalnızca ucun izin verdiği kadar geniş.",
     "vcarve": "V oyma",
     "vcarveHint": "Kapalı yolların ortasını, ucun açısının kenarlara ulaşması için gereken derinlikte, takımın paso derinliğinden derin olmayan pasolarla izler. Adalar yerinde kalır.",
+    "startDepth": "Başlangıç derinliği",
     "maxDepth": "Maks. derinlik",
     "vcarveTooDeep": "Koniden daha derin; bu nedenle uç en fazla {depth} derinliğe oyar.",
     "vcarveReach": "{width} genişliğinden geniş bölümler bu derinliğe ulaşır.",
@@ -1542,6 +1558,50 @@
     "storeOff": "Bu sunucu 3B model saklayamıyor: arazi yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Arazi"
+  },
+  "ImageRelief": {
+    "open": "Görüntüden kabartma…",
+    "ribbon": "Görüntü",
+    "hint": "Gri tonlamalı bir görüntüden kabartma modeli oluşturun",
+    "title": "Görüntüden kabartma",
+    "description": "Bir PNG, JPEG veya WebP görüntüsü seçin: açık renk daha yüksektir. Kabartmayı projeye ekleyin veya indirin.",
+    "noImage": "Kabartmasını görmek için bir görüntü seçin.",
+    "pick": "Görüntü seç…",
+    "change": "Görüntüyü değiştir…",
+    "preview": "Kabartma önizlemesi",
+    "previewLoading": "Önizleme oluşturuluyor…",
+    "width": "Genişlik",
+    "relief": "Kabartma yüksekliği",
+    "base": "Taban",
+    "blur": "Yumuşatma",
+    "invert": "Ters çevir",
+    "invertHint": "Koyu renk daha yüksektir; örneğin arkadan kesilen bir litofan için.",
+    "pixels": "Görüntü: {width, number} × {height, number} px",
+    "size": "Model: {size} {unit}",
+    "building": "Model oluşturuluyor…",
+    "saving": "Model projeye ekleniyor…",
+    "generate": "Projeye ekle",
+    "download": "STL indir",
+    "hasModel": "Bu projede zaten bir 3B model var: kabartma yalnızca STL dosyası olarak indirilebilir.",
+    "storeOff": "Bu sunucu 3B modelleri saklayamaz: kabartma yalnızca STL dosyası olarak indirilebilir.",
+    "cancel": "İptal",
+    "defaultName": "Kabartma"
+  },
+  "Inlay": {
+    "ribbon": "Kakma",
+    "hint": "{target} içine V ile bir cep ve ayna görüntüsünden ona oturan bir parça oy",
+    "title": "Kakma oluştur",
+    "description": "Seçili kapalı yolların V ile oyulmuş bir cebi ve yanında yeni bir çizimde ayna görüntülerinden oyulmuş bir parça; başka bir ahşaptan kesilip ters çevrilerek yapıştırılır.",
+    "depth": "Cep derinliği",
+    "gap": "Tutkal boşluğu",
+    "tools": "{tool} ile, tabanları {flatTool} temizler. Parça {start} derinde başlar.",
+    "make": "Kakma oluştur",
+    "cancel": "İptal",
+    "pocket": "Kakma cebi",
+    "plug": "Kakma parçası",
+    "drawing": "{name} parça",
+    "missingFlat": "Araç kitaplığınıza düz bir parmak freze ekleyin: kakmanın tabanlarını temizler",
+    "separate": "İki parça da bu projenin malzemesinde kesilir: her birini kendi ahşabından kesmek için parçanın çizimini taşıyın veya bir işlemi kapatın."
   },
   "Viewport": {
     "scene": "Ham malzeme, geometri ve takım yolları",

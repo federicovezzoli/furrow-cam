@@ -8,6 +8,7 @@ import {
   SQUARE_ID,
   textItem,
   textShape,
+  vBit,
 } from "../fixtures";
 import { createProjectDocument } from "../schema/document";
 import type { Point } from "../schema/geometry";
@@ -320,7 +321,7 @@ describe("migrations", () => {
       id: "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
       type: "engrave",
       tool: { ...profile.tool },
-      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
+      params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [] },
     };
     const withNone = {
       ...current,
@@ -395,6 +396,32 @@ describe("migrations", () => {
     const params = { ...profile.params, startPoints: [[0, 50]] };
     const v36 = { ...current, schemaVersion: 36, operations: [{ ...profile, params }] };
     expect(parseProjectDocument(v36)).toEqual(current);
+  });
+
+  it("gives v37 engravings no chamfer width", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const params = { side: "on", depth: 1, ramp: false, startPoints: [] } as const;
+    const engrave = { ...profile, type: "engrave", params } as const;
+    const v37 = { ...current, schemaVersion: 37, operations: [engrave] };
+    expect(parseProjectDocument(v37)).toEqual({
+      ...current,
+      operations: [{ ...engrave, params: { ...params, width: null } }],
+    });
+  });
+
+  it("starts v38 V-carves at the stock top", () => {
+    const current = fullDocument();
+    const [profile] = current.operations;
+    if (profile?.type !== "profile") throw new Error("fullDocument has a profile");
+    const params = { maxDepth: 3, flatBottom: null };
+    const vcarve = { ...profile, type: "vcarve", tool: vBit, params } as const;
+    const v38 = { ...current, schemaVersion: 38, operations: [vcarve] };
+    expect(parseProjectDocument(v38)).toEqual({
+      ...current,
+      operations: [{ ...vcarve, params: { startDepth: 0, ...params } }],
+    });
   });
 
   it("gives v6 documents no models", () => {
@@ -544,7 +571,7 @@ describe("migrations", () => {
     const [profile] = doc.operations;
     if (!profile) throw new Error("The fixture has an operation");
     const { tool } = profile;
-    const vBit = {
+    const ownVBit = {
       ...tool,
       type: "v_bit",
       cutDirection: null,
@@ -576,8 +603,8 @@ describe("migrations", () => {
       ...profile,
       id: "3d4e5f6a-7b8c-4d9e-8f1a-2b3c4d5e6f7a",
       type: "vcarve",
-      tool: vBit,
-      params: { maxDepth: 3, flatBottom: { tool, stepOver: 50 } },
+      tool: ownVBit,
+      params: { startDepth: 0, maxDepth: 3, flatBottom: { tool, stepOver: 50 } },
     } as const;
     const ownRough = { ...reliefRough, params: { ...reliefRough.params, stepOver: 25 } };
     const toolRough = {
@@ -600,6 +627,7 @@ describe("migrations", () => {
     v17VCarve.tool.stepOver = 40;
     v17VCarve.params.flatBottom.tool.stepOver = 50;
     delete v17VCarve.params.flatBottom.stepOver;
+    delete v17VCarve.params.startDepth;
     v17OwnRough.tool.stepOver = 40;
     v17ToolRough.tool.stepOver = 60;
     v17ToolRough.params.stepOver = null;

@@ -95,6 +95,8 @@ export const DOCUMENT_MESSAGES = [
   "operation.taperedBitsCantClear",
   "operation.pinsTopOnly",
   "operation.drillsCantEngrave",
+  "operation.onlyVBitsChamfer",
+  "operation.chamferWidth",
   "operation.flatBottomEndMill",
   "operation.onlyVBitsVCarve",
   "operation.modelNotShapes",

@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
 import { createWorkspaceStore, type WorkspaceStore } from "../stores/workspace-store";
 import type { GeneratedTerrain } from "./mesh-worker-protocol";
-import { MeshImportError } from "./model-import";
-import { generateTerrain, importTerrain } from "./terrain-import";
+import { importGeneratedModel, MeshImportError } from "./model-import";
+import { generateTerrain } from "./terrain-import";
 
 const terrain: GeneratedTerrain = {
   sha256: model.sha256,
@@ -81,9 +81,11 @@ describe("generateTerrain", () => {
   });
 });
 
-describe("importTerrain", () => {
+describe("importGeneratedModel", () => {
   it("stores the mesh and adds it at its size, centred, named after the place", async () => {
-    expect(await importTerrain(terrain, "Grignetta", { meshes, document, workspace })).toBeNull();
+    expect(
+      await importGeneratedModel(terrain, "Grignetta", { meshes, document, workspace }, "terrain"),
+    ).toBeNull();
     expect(meshes.put).toHaveBeenCalledWith(terrain.sha256, expect.any(Blob));
     const [added] = document.getState().document.models;
     expect(added).toMatchObject({ fileName: "Grignetta.stl", placement: { scale: 1 } });
@@ -91,18 +93,25 @@ describe("importTerrain", () => {
   });
 
   it("refuses a project that has its model already", async () => {
-    await importTerrain(terrain, "Terrain", { meshes, document, workspace });
-    expect(await importTerrain(terrain, "Terrain", { meshes, document, workspace })).toEqual({
+    await importGeneratedModel(terrain, "Terrain", { meshes, document, workspace }, "terrain");
+    expect(
+      await importGeneratedModel(terrain, "Terrain", { meshes, document, workspace }, "terrain"),
+    ).toEqual({
       code: "workspace.oneModel",
     });
     expect(meshes.put).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("importTerrain's undo step", () => {
+describe("importGeneratedModel's undo step", () => {
   it("waits for a drag in progress, so cancelling the drag keeps the model", async () => {
     document.getState().beginTransaction();
-    const importing = importTerrain(terrain, "Lake", { meshes, document, workspace });
+    const importing = importGeneratedModel(
+      terrain,
+      "Lake",
+      { meshes, document, workspace },
+      "terrain",
+    );
     await new Promise((resolve) => setTimeout(resolve));
     expect(document.getState().document.models).toEqual([]);
     document.getState().cancelTransaction();

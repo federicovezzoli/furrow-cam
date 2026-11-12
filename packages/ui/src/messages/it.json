@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Le frese sferiche coniche non possono forare",
       "taperedBitsCantClear": "Le frese sferiche coniche servono solo per incidere e per la finitura 3D: scegli un'altra fresa.",
       "drillsCantEngrave": "Le punte da foratura non possono incidere",
+      "onlyVBitsChamfer": "Solo le frese a V smussano",
+      "chamferWidth": "Uno smusso richiede una larghezza, e solo uno smusso ne ha una",
       "flatBottomEndMill": "Solo le frese a candela piatte puliscono un fondo piatto",
       "onlyVBitsVCarve": "Solo le frese a V fanno il V-carve",
       "modelNotShapes": "Lavora un modello, non forme",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Alcune parti sono più larghe di quanto la fresa a V raggiunga alla profondità massima, quindi i loro bordi restano non incisi: attiva il fondo piatto per pulirli.",
       "flatAreasNarrow": "Alcune zone piatte sono troppo strette per la fresa del fondo piatto e restano non lavorate.",
       "engraveConeWide": "La profondità supera il cono della fresa a V, quindi la linea è larga quanto la fresa.",
+      "chamferConeWide": "Lo smusso è più largo del cono della fresa a V: si ferma alla larghezza del cono.",
+      "chamferThroughStock": "Lo smusso va più in profondità del grezzo, in ciò che c’è sotto.",
       "pathsTooSmall": "I percorsi chiusi sono troppo piccoli per l'utensile.",
       "nothingOutside": "I percorsi chiusi non lasciano grezzo da svuotare all'esterno.",
       "tabsTooTall": "I ponticelli sono alti quanto la profondità del taglio, quindi sotto di essi non si taglia nulla.",
@@ -807,7 +811,10 @@
       "fontTooLarge": "Questo font supera {mb, number} MB, il massimo consentito.",
       "tooManyFonts": "Un progetto contiene al massimo {max} font.",
       "fontUploadOff": "Questo server non può archiviare font.",
-      "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova."
+      "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova.",
+      "inlayClosedPaths": "Seleziona percorsi chiusi per farne un intarsio.",
+      "inlayGap": "Lo spazio per la colla deve essere almeno 0 e minore della profondità della tasca.",
+      "inlayTooDeep": "Questo intarsio è troppo profondo per il cono della fresa a V o per il grezzo: la tasca deve restare nel cono e il fondo del tassello nel grezzo."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -815,13 +822,18 @@
       "tooWide": "Quest'area è larga più di {km, number} km, il massimo consentito. Disegnane una più piccola.",
       "tooDetailed": "Il modello di quest'area supererebbe i limiti dei modelli 3D.",
       "noData": "Non ci sono dati di elevazione per quest'area."
+    },
+    "image": {
+      "tooSmall": "Questa immagine è troppo piccola. Scegline una di almeno 2 × 2 pixel.",
+      "tooLarge": "Questa immagine supera {mb, number} MB, il massimo consentito."
     }
   },
   "Operation": {
     "sides": {
       "outside": "Esterno",
       "inside": "Interno",
-      "on": "Sulla linea"
+      "on": "Sulla linea",
+      "chamfer": "Smusso"
     },
     "directions": {
       "climb": "Concorde",
@@ -929,13 +941,17 @@
     "peckHint": "Scende a step non più profondi della passata dell’utensile, risalendo dopo ognuno per scaricare il truciolo.",
     "engrave": "Incisione",
     "position": "Posizione",
-    "engraveHint": "{side, select, inside {Segue i percorsi chiusi all’interno della linea, con un bordo della scanalatura su di essa,} outside {Segue i percorsi chiusi all’esterno della linea, con un bordo della scanalatura su di essa,} other {Segue ogni percorso, aperto e chiuso, sulla linea,}} in passate non più profonde della passata dell’utensile.",
+    "engraveHint": "{side, select, inside {Segue i percorsi chiusi all’interno della linea, con un bordo della scanalatura su di essa,} outside {Segue i percorsi chiusi all’esterno della linea, con un bordo della scanalatura su di essa,} chamfer {Smussa i bordi dei percorsi chiusi con il cono della fresa a V, verso l’interno della linea sui contorni esterni e verso l’esterno sui fori,} other {Segue ogni percorso, aperto e chiuso, sulla linea,}} in passate non più profonde della passata dell’utensile.",
     "lineWidth": "Larghezza della linea",
     "lineTooDeep": "Più profondo del cono, quindi la linea è larga quanto la fresa.",
     "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
     "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
+    "chamferWidth": "Larghezza smusso",
+    "chamferDepth": "Sulla superficie del grezzo; taglio profondo {depth}.",
+    "chamferTooWide": "Più largo del cono, quindi lo smusso è largo solo quanto la fresa consente.",
     "vcarve": "V-carve",
     "vcarveHint": "Segue il centro dei percorsi chiusi, alla profondità che l’angolo della fresa richiede per raggiungerne i bordi, in passate non più profonde della passata dell’utensile. Le isole restano in piedi.",
+    "startDepth": "Profondità iniziale",
     "maxDepth": "Profondità massima",
     "vcarveTooDeep": "Più profondo del cono, quindi la fresa non incide oltre {depth}.",
     "vcarveReach": "Le parti più larghe di {width} la raggiungono.",
@@ -1542,6 +1558,50 @@
     "storeOff": "Questo server non può salvare modelli 3D: il terreno si può solo scaricare come file STL.",
     "cancel": "Annulla",
     "defaultName": "Terreno"
+  },
+  "ImageRelief": {
+    "open": "Rilievo da immagine…",
+    "ribbon": "Immagine",
+    "hint": "Crea un modello in rilievo da un'immagine in scala di grigi",
+    "title": "Rilievo da immagine",
+    "description": "Scegli un'immagine PNG, JPEG o WebP: più è chiara, più è alta. Aggiungi il rilievo al progetto o scaricalo.",
+    "noImage": "Scegli un'immagine per vederne il rilievo.",
+    "pick": "Scegli immagine…",
+    "change": "Cambia immagine…",
+    "preview": "Anteprima del rilievo",
+    "previewLoading": "Creazione dell'anteprima…",
+    "width": "Larghezza",
+    "relief": "Altezza del rilievo",
+    "base": "Base",
+    "blur": "Levigatura",
+    "invert": "Inverti",
+    "invertHint": "Il scuro è più alto, ad esempio per una litofania fresata dal retro.",
+    "pixels": "Immagine: {width, number} × {height, number} px",
+    "size": "Modello: {size} {unit}",
+    "building": "Creazione del modello…",
+    "saving": "Aggiunta del modello al progetto…",
+    "generate": "Aggiungi al progetto",
+    "download": "Scarica STL",
+    "hasModel": "Questo progetto ha già il suo modello 3D: il rilievo si può solo scaricare come file STL.",
+    "storeOff": "Questo server non può salvare modelli 3D: il rilievo si può solo scaricare come file STL.",
+    "cancel": "Annulla",
+    "defaultName": "Rilievo"
+  },
+  "Inlay": {
+    "ribbon": "Intarsio",
+    "hint": "Incidi a V una tasca nei {target} e un tassello che vi si incastra, dalla loro immagine speculare",
+    "title": "Crea intarsio",
+    "description": "Una tasca incisa a V nei percorsi chiusi selezionati e un tassello inciso dalla loro immagine speculare in un nuovo disegno accanto, da tagliare da un altro pezzo di legno, capovolgere e incollare.",
+    "depth": "Profondità tasca",
+    "gap": "Spazio per la colla",
+    "tools": "Con {tool}, e {flatTool} che spiana i fondi. Il tassello inizia {start} sotto.",
+    "make": "Crea intarsio",
+    "cancel": "Annulla",
+    "pocket": "Tasca intarsio",
+    "plug": "Tassello intarsio",
+    "drawing": "{name} tassello",
+    "missingFlat": "Aggiungi una fresa piatta alla libreria utensili: spiana i fondi dell'intarsio",
+    "separate": "Entrambe le parti sono tagliate nel grezzo di questo progetto: sposta il disegno del tassello, o disattiva un'operazione, per tagliarle ciascuna dal proprio pezzo di legno."
   },
   "Viewport": {
     "scene": "Grezzo, geometria e percorsi utensile",

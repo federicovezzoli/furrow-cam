@@ -29,3 +29,4 @@ Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
 | [0012](0012-mcp-server.md) | MCP server | Draft |
 | [0013](0013-demo-videos.md) | Automated demo videos | Draft |
 | [0014](0014-terrain-from-a-map.md) | Terrain from a map | Draft |
+| [0015](0015-relief-from-image.md) | Relief from an image | Draft |

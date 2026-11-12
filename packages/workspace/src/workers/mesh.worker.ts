@@ -1,5 +1,6 @@
 import {
   type Box3,
+  imageReliefMesh,
   modelHeightmap,
   parseStl,
   planTerrain,
@@ -62,6 +63,13 @@ async function decodeWebp(webp: ArrayBuffer): Promise<Uint8ClampedArray> {
 
 async function handle(request: MeshRequest): Promise<MeshResponse> {
   const { id } = request;
+  if (request.kind === "image") {
+    const { image, settings, limits } = request;
+    const { stl, triangles, size, cells } = imageReliefMesh(image, settings, limits);
+    const sha256 = await sha256Hex(stl.buffer);
+    const bounds = { min: [0, 0, 0], max: size } satisfies Box3;
+    return { kind: "image", id, sha256, triangles, bounds, size, cells, stl: stl.buffer };
+  }
   if (request.kind === "terrain") {
     const { ring, settings, limits } = request;
     const plan = planTerrain(ring, limits, MAX_ELEVATION_ZOOM);
@@ -110,7 +118,10 @@ scope.onmessage = ({ data }) => {
       const transfer =
         response.kind === "preview" && response.heightmap
           ? [response.heightmap.heights.buffer]
-          : (response.kind === "parsed" || response.kind === "terrain") && response.stl
+          : (response.kind === "parsed" ||
+                response.kind === "terrain" ||
+                response.kind === "image") &&
+              response.stl
             ? [response.stl]
             : [];
       scope.postMessage(response, transfer);

@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Fresas cônicas de topo esférico não furam",
       "taperedBitsCantClear": "Fresas cônicas de topo esférico só gravam e fazem acabamento 3D: escolha outra fresa.",
       "drillsCantEngrave": "Brocas não gravam",
+      "onlyVBitsChamfer": "Só fresas em V chanfram",
+      "chamferWidth": "Um chanfro precisa de uma largura, e só um chanfro tem uma",
       "flatBottomEndMill": "Só fresas de topo retas limpam um fundo plano",
       "onlyVBitsVCarve": "Só fresas em V fazem entalhe em V",
       "modelNotShapes": "Usina um modelo, não formas",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Há partes mais largas do que a fresa em V alcança na profundidade máxima, então suas bordas ficam sem entalhar: ative o fundo plano para limpá-las.",
       "flatAreasNarrow": "Algumas áreas planas são estreitas demais para a ferramenta de fundo plano e ficam sem cortar.",
       "engraveConeWide": "A profundidade excede o cone da fresa em V, então a linha fica tão larga quanto a fresa.",
+      "chamferConeWide": "O chanfro é mais largo que o cone da fresa em V: para na largura do cone.",
+      "chamferThroughStock": "O chanfro vai mais fundo que o material, no que está por baixo.",
       "pathsTooSmall": "Os caminhos fechados são pequenos demais para a ferramenta.",
       "nothingOutside": "Os caminhos fechados não deixam material fora deles para limpar.",
       "tabsTooTall": "As pontes são tão altas quanto a profundidade do corte, então nada é cortado sob elas.",
@@ -807,7 +811,10 @@
       "fontTooLarge": "Esta fonte tem mais de {mb, number} MB, o máximo permitido.",
       "tooManyFonts": "Um projeto contém no máximo {max} fontes.",
       "fontUploadOff": "Este servidor não consegue armazenar fontes.",
-      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente."
+      "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente.",
+      "inlayClosedPaths": "Selecione caminhos fechados para fazer uma incrustação.",
+      "inlayGap": "A folga para a cola deve ser pelo menos 0 e menor que a profundidade do rebaixo.",
+      "inlayTooDeep": "Esta incrustação é profunda demais para o cone da fresa em V ou para o material: o rebaixo deve ficar dentro do cone e o fundo da peça dentro do material."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
@@ -815,13 +822,18 @@
       "tooWide": "Esta área tem mais de {km, number} km de largura, o máximo permitido. Desenhe uma mais pequena.",
       "tooDetailed": "O modelo desta área excederia os limites dos modelos 3D.",
       "noData": "Não há dados de altitude para esta área."
+    },
+    "image": {
+      "tooSmall": "Esta imagem é demasiado pequena. Escolha uma com pelo menos 2 × 2 píxeis.",
+      "tooLarge": "Esta imagem tem mais de {mb, number} MB, o máximo permitido."
     }
   },
   "Operation": {
     "sides": {
       "outside": "Por fora",
       "inside": "Por dentro",
-      "on": "Sobre a linha"
+      "on": "Sobre a linha",
+      "chamfer": "Chanfro"
     },
     "directions": {
       "climb": "Concordante",
@@ -929,13 +941,17 @@
     "peckHint": "Mergulha em etapas não mais fundas que a profundidade por passada da ferramenta, recuando após cada uma para tirar os cavacos.",
     "engrave": "Gravação",
     "position": "Posição",
-    "engraveHint": "{side, select, inside {Segue os caminhos fechados por dentro da linha, com uma borda do sulco sobre ela,} outside {Segue os caminhos fechados por fora da linha, com uma borda do sulco sobre ela,} other {Segue todos os caminhos, abertos e fechados, sobre a linha,}} em passadas não mais fundas que a profundidade por passada da ferramenta.",
+    "engraveHint": "{side, select, inside {Segue os caminhos fechados por dentro da linha, com uma borda do sulco sobre ela,} outside {Segue os caminhos fechados por fora da linha, com uma borda do sulco sobre ela,} chamfer {Chanfra as bordas dos caminhos fechados com o cone da fresa em V, para dentro da linha nos contornos externos e para fora nos furos,} other {Segue todos os caminhos, abertos e fechados, sobre a linha,}} em passadas não mais fundas que a profundidade por passada da ferramenta.",
     "lineWidth": "Largura da linha",
     "lineTooDeep": "Mais fundo que o cone, então a linha fica tão larga quanto a fresa.",
     "lineAtTop": "No topo do material, pelo ângulo de {angle}° da fresa.",
     "lineAtTopTip": "No topo do material, pelo ângulo de {angle}° e pela ponta de {tip} da fresa.",
+    "chamferWidth": "Largura do chanfro",
+    "chamferDepth": "No topo do material; cortado a {depth} de profundidade.",
+    "chamferTooWide": "Mais largo que o cone, então o chanfro fica só tão largo quanto a fresa permite.",
     "vcarve": "Entalhe em V",
     "vcarveHint": "Segue o meio dos caminhos fechados, tão fundo quanto o ângulo da fresa precisa para alcançar as bordas, em passadas não mais fundas que a profundidade por passada da ferramenta. As ilhas ficam de pé.",
+    "startDepth": "Profundidade inicial",
     "maxDepth": "Prof. máxima",
     "vcarveTooDeep": "Mais fundo que o cone, então a fresa não entalha mais fundo que {depth}.",
     "vcarveReach": "Partes mais largas que {width} a alcançam.",
@@ -1542,6 +1558,50 @@
     "storeOff": "Este servidor não pode guardar modelos 3D: o terreno só pode ser transferido como ficheiro STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
+  },
+  "ImageRelief": {
+    "open": "Relevo a partir de uma imagem…",
+    "ribbon": "Imagem",
+    "hint": "Criar um modelo em relevo a partir de uma imagem em tons de cinzento",
+    "title": "Relevo a partir de uma imagem",
+    "description": "Escolha uma imagem PNG, JPEG ou WebP: quanto mais clara, mais alta. Adicione o relevo ao projeto ou transfira-o.",
+    "noImage": "Escolha uma imagem para ver o seu relevo.",
+    "pick": "Escolher imagem…",
+    "change": "Mudar de imagem…",
+    "preview": "Pré-visualização do relevo",
+    "previewLoading": "A criar a pré-visualização…",
+    "width": "Largura",
+    "relief": "Altura do relevo",
+    "base": "Base",
+    "blur": "Suavização",
+    "invert": "Inverter",
+    "invertHint": "O escuro é mais alto, por exemplo para uma litofania maquinada por trás.",
+    "pixels": "Imagem: {width, number} × {height, number} px",
+    "size": "Modelo: {size} {unit}",
+    "building": "A criar o modelo…",
+    "saving": "A adicionar o modelo ao projeto…",
+    "generate": "Adicionar ao projeto",
+    "download": "Transferir STL",
+    "hasModel": "Este projeto já tem o seu modelo 3D: o relevo só pode ser transferido como ficheiro STL.",
+    "storeOff": "Este servidor não pode guardar modelos 3D: o relevo só pode ser transferido como ficheiro STL.",
+    "cancel": "Cancelar",
+    "defaultName": "Relevo"
+  },
+  "Inlay": {
+    "ribbon": "Incrustação",
+    "hint": "Entalhar em V um rebaixo nos {target} e uma peça que encaixe, a partir da sua imagem espelhada",
+    "title": "Criar incrustação",
+    "description": "Um rebaixo entalhado em V dos caminhos fechados selecionados, e uma peça entalhada a partir da sua imagem espelhada num desenho novo ao lado, para cortar de outra madeira, virar e colar.",
+    "depth": "Profundidade do rebaixo",
+    "gap": "Folga para a cola",
+    "tools": "Com {tool}, e {flatTool} limpando os fundos. A peça começa a {start} de profundidade.",
+    "make": "Criar incrustação",
+    "cancel": "Cancelar",
+    "pocket": "Rebaixo da incrustação",
+    "plug": "Peça da incrustação",
+    "drawing": "{name} peça",
+    "missingFlat": "Adicione uma fresa de topo plano à sua biblioteca de ferramentas: ela limpa os fundos de uma incrustação",
+    "separate": "As duas partes são cortadas no material deste projeto: mova o desenho da peça, ou desative uma operação, para cortar cada uma da sua própria madeira."
   },
   "Viewport": {
     "scene": "Material, geometria e percursos",

@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "Les fraises coniques hémisphériques ne percent pas",
       "taperedBitsCantClear": "Les fraises coniques hémisphériques ne font que graver et finir en 3D : choisissez une autre fraise.",
       "drillsCantEngrave": "Les forets ne gravent pas",
+      "onlyVBitsChamfer": "Seules les fraises en V chanfreinent",
+      "chamferWidth": "Un chanfrein a besoin d’une largeur, et seul un chanfrein en a une",
       "flatBottomEndMill": "Seules les fraises droites à bout plat dégagent un fond plat",
       "onlyVBitsVCarve": "Seules les fraises en V gravent en V",
       "modelNotShapes": "Usine un modèle, pas des formes",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "Certaines parties sont plus larges que ce que la fraise en V atteint à la profondeur maximale, donc leurs bords restent non gravés : activez un fond plat pour les dégager.",
       "flatAreasNarrow": "Certaines zones plates sont trop étroites pour la fraise du fond plat et restent non usinées.",
       "engraveConeWide": "La profondeur dépasse le cône de la fraise en V, donc la ligne est aussi large que la fraise.",
+      "chamferConeWide": "Le chanfrein est plus large que le cône de la fraise en V : il s’arrête à la largeur du cône.",
+      "chamferThroughStock": "Le chanfrein va plus profond que le brut, dans ce qui se trouve dessous.",
       "pathsTooSmall": "Les tracés fermés sont trop petits pour l'outil.",
       "nothingOutside": "Les tracés fermés ne laissent aucun brut à évider à l'extérieur.",
       "tabsTooTall": "Les attaches sont aussi hautes que la coupe est profonde, donc rien n'est coupé sous elles.",
@@ -807,7 +811,10 @@
       "fontTooLarge": "Cette police dépasse {mb, number} Mo, le maximum autorisé.",
       "tooManyFonts": "Un projet contient au plus {max} polices.",
       "fontUploadOff": "Ce serveur ne peut pas stocker de polices.",
-      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez."
+      "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
+      "inlayClosedPaths": "Sélectionnez des tracés fermés pour en faire une marqueterie.",
+      "inlayGap": "Le jeu de colle doit être d'au moins 0 et inférieur à la profondeur de la poche.",
+      "inlayTooDeep": "Cette incrustation est trop profonde pour le cône de la fraise en V ou pour le brut : la poche doit rester dans le cône et le fond de la pièce dans le brut."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -815,13 +822,18 @@
       "tooWide": "Cette zone fait plus de {km, number} km de large, le maximum autorisé. Dessinez-en une plus petite.",
       "tooDetailed": "Le modèle de cette zone dépasserait les limites des modèles 3D.",
       "noData": "Il n'y a pas de données d'altitude pour cette zone."
+    },
+    "image": {
+      "tooSmall": "Cette image est trop petite. Choisissez-en une d'au moins 2 × 2 pixels.",
+      "tooLarge": "Cette image dépasse {mb, number} Mo, le maximum autorisé."
     }
   },
   "Operation": {
     "sides": {
       "outside": "Extérieur",
       "inside": "Intérieur",
-      "on": "Sur la ligne"
+      "on": "Sur la ligne",
+      "chamfer": "Chanfrein"
     },
     "directions": {
       "climb": "En avalant",
@@ -929,13 +941,17 @@
     "peckHint": "Plonge par étapes pas plus profondes que la passe de l’outil, en remontant après chacune pour évacuer les copeaux.",
     "engrave": "Gravure",
     "position": "Position",
-    "engraveHint": "{side, select, inside {Suit les tracés fermés à l’intérieur de la ligne, avec un bord de la rainure dessus,} outside {Suit les tracés fermés à l’extérieur de la ligne, avec un bord de la rainure dessus,} other {Suit tous les tracés, ouverts et fermés, sur la ligne,}} en passes pas plus profondes que la passe de l’outil.",
+    "engraveHint": "{side, select, inside {Suit les tracés fermés à l’intérieur de la ligne, avec un bord de la rainure dessus,} outside {Suit les tracés fermés à l’extérieur de la ligne, avec un bord de la rainure dessus,} chamfer {Chanfreine les bords des tracés fermés avec le cône de la fraise en V, vers l’intérieur de la ligne sur les contours extérieurs et vers l’extérieur sur les trous,} other {Suit tous les tracés, ouverts et fermés, sur la ligne,}} en passes pas plus profondes que la passe de l’outil.",
     "lineWidth": "Largeur du trait",
     "lineTooDeep": "Plus profond que le cône : le trait est aussi large que la fraise.",
     "lineAtTop": "Au dessus du brut, d’après l’angle de {angle}° de la fraise.",
     "lineAtTopTip": "Au dessus du brut, d’après l’angle de {angle}° de la fraise et sa pointe de {tip}.",
+    "chamferWidth": "Largeur du chanfrein",
+    "chamferDepth": "Sur le dessus du brut ; coupé à {depth} de profondeur.",
+    "chamferTooWide": "Plus large que le cône : le chanfrein n’est large que ce que la fraise permet.",
     "vcarve": "Gravure en V",
     "vcarveHint": "Suit le milieu des tracés fermés, aussi profond que l’angle de la fraise l’exige pour atteindre leurs bords, en passes pas plus profondes que la passe de l’outil. Les îlots restent debout.",
+    "startDepth": "Profondeur de départ",
     "maxDepth": "Profondeur max",
     "vcarveTooDeep": "Plus profond que le cône : la fraise ne grave pas plus profond que {depth}.",
     "vcarveReach": "Les parties plus larges que {width} l’atteignent.",
@@ -1542,6 +1558,50 @@
     "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le terrain peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Terrain"
+  },
+  "ImageRelief": {
+    "open": "Relief depuis une image…",
+    "ribbon": "Image",
+    "hint": "Créer un modèle en relief à partir d'une image en niveaux de gris",
+    "title": "Relief depuis une image",
+    "description": "Choisissez une image PNG, JPEG ou WebP : plus c'est clair, plus c'est haut. Ajoutez le relief au projet ou téléchargez-le.",
+    "noImage": "Choisissez une image pour voir son relief.",
+    "pick": "Choisir une image…",
+    "change": "Changer d'image…",
+    "preview": "Aperçu du relief",
+    "previewLoading": "Création de l'aperçu…",
+    "width": "Largeur",
+    "relief": "Hauteur du relief",
+    "base": "Base",
+    "blur": "Lissage",
+    "invert": "Inverser",
+    "invertHint": "Le sombre est plus haut, par exemple pour une lithophanie usinée par l'arrière.",
+    "pixels": "Image : {width, number} × {height, number} px",
+    "size": "Modèle : {size} {unit}",
+    "building": "Création du modèle…",
+    "saving": "Ajout du modèle au projet…",
+    "generate": "Ajouter au projet",
+    "download": "Télécharger le STL",
+    "hasModel": "Ce projet a déjà son modèle 3D : le relief peut seulement être téléchargé en fichier STL.",
+    "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le relief peut seulement être téléchargé en fichier STL.",
+    "cancel": "Annuler",
+    "defaultName": "Relief"
+  },
+  "Inlay": {
+    "ribbon": "Incrustation",
+    "hint": "Graver en V une poche dans les {target} et une pièce qui s'y emboîte, à partir de leur image miroir",
+    "title": "Créer une incrustation",
+    "description": "Une poche gravée en V des tracés fermés sélectionnés, et une pièce gravée à partir de leur image miroir dans un nouveau dessin à côté, à usiner dans un autre morceau de bois, retourner et coller.",
+    "depth": "Profondeur de la poche",
+    "gap": "Jeu de colle",
+    "tools": "Avec {tool}, et {flatTool} pour dresser les fonds. La pièce commence à {start} de profondeur.",
+    "make": "Créer l'incrustation",
+    "cancel": "Annuler",
+    "pocket": "Poche d'incrustation",
+    "plug": "Pièce d'incrustation",
+    "drawing": "{name} pièce",
+    "missingFlat": "Ajoutez une fraise droite à votre bibliothèque d'outils : elle dresse les fonds d'une incrustation",
+    "separate": "Les deux parties sont usinées dans le brut de ce projet : déplacez le dessin de la pièce, ou désactivez une opération, pour usiner chacune dans son propre morceau de bois."
   },
   "Viewport": {
     "scene": "Brut, géométrie et trajectoires",

@@ -33,6 +33,7 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { drawingShapes } from "../stores/geometry-actions";
+import { ImageReliefButton } from "./image-relief-dialog";
 import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 import { RibbonButton } from "./ribbon";
 import { TerrainButton } from "./terrain-dialog";
@@ -238,6 +239,7 @@ export function GeometryImport() {
                 <AddTextButton inCard />
                 <ModelImportButton />
                 <TerrainButton />
+                <ImageReliefButton />
               </div>
             )}
             {empty && !meshLimits && (

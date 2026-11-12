@@ -1,5 +1,6 @@
 import {
   autoTabPositions,
+  maxChamferWidth,
   type TabPlacement,
   targetedShapes,
   vBitConeDepth,
@@ -112,6 +113,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
   return {
     side: "on",
     depth: Math.min(DEFAULT_ENGRAVE_DEPTH, document.stock.thickness),
+    width: null,
     ramp: false,
     startPoints: [],
   };
@@ -123,7 +125,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
  */
 export function defaultVCarveParams(document: ProjectDocument, tool: Tool): VCarveParams {
   const half = document.stock.thickness / 2;
-  return { maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
+  return { startDepth: 0, maxDepth: Math.min(vBitConeDepth(tool) ?? half, half), flatBottom: null };
 }
 
 /** Step-over of new 3D finishing operations, as a percentage of the tool's diameter. */
@@ -165,7 +167,7 @@ export function defaultReliefRoughParams(modelId: string): ReliefRoughParams {
 }
 
 /** `Profile 1`, `Profile 2`, …: the first number no operation's name uses. */
-function nextName(document: ProjectDocument, base: string): string {
+export function nextName(document: ProjectDocument, base: string): string {
   const names = new Set(document.operations.map((operation) => operation.name));
   let n = 1;
   while (names.has(`${base} ${n}`)) n++;
@@ -598,12 +600,29 @@ export function updateReliefRoughParams(
   );
 }
 
-/** Changes some of an engrave operation's params at once, like `updateProfileParams`. */
+/** How wide a new chamfer is, unless the V-bit's cone is narrower. */
+export const DEFAULT_CHAMFER_WIDTH = 1;
+
+/**
+ * Changes some of an engrave operation's params at once, like
+ * `updateProfileParams`. A change of side alone gives a chamfer its default
+ * width, at most the cone's, and takes it from other sides.
+ */
 export function updateEngraveParams(
   store: DocumentStore,
   id: string,
   changes: Partial<EngraveParams>,
 ): ActionResult {
+  const operation = store.getState().document.operations.find((candidate) => candidate.id === id);
+  if (changes.side !== undefined && changes.width === undefined && operation?.type === "engrave") {
+    // Not a V-bit: the default width the operation's check then refuses.
+    const cone = maxChamferWidth(operation.tool) ?? DEFAULT_CHAMFER_WIDTH;
+    const width =
+      changes.side === "chamfer"
+        ? (operation.params.width ?? Math.min(DEFAULT_CHAMFER_WIDTH, cone))
+        : null;
+    changes = { ...changes, width };
+  }
   return updateParams(store, id, "engrave", EngraveParams, "updateEngraveParams", changes);
 }
 
@@ -623,6 +642,9 @@ function updateParams<T extends Operation["type"]>(
   }
   const parsed = schema.safeParse({ ...operation.params, ...changes });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  // The operation's own checks too, such as which tools a side needs.
+  const error = operationError({ ...operation, params: parsed.data } as Operation);
+  if (error) return { ok: false, error };
   changeOperation(store, name, id, (draft) => {
     // Field by field, so unchanged values record no patches.
     if (draft.type === type) Object.assign(draft.params, changes);

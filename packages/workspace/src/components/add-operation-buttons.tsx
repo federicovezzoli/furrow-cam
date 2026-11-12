@@ -1,6 +1,7 @@
 "use client";
 
 import type { Operation } from "@furrow/document";
+import { Fragment } from "react";
 import { useTranslations } from "use-intl";
 import { useSelectionTargets } from "../hooks/use-selection-targets";
 import { useTargetsLabel } from "../hooks/use-targets-label";
@@ -19,6 +20,7 @@ import {
   addReliefRoughOperation,
   addVCarveOperation,
 } from "../stores/operation-actions";
+import { InlayButton } from "./inlay-dialog";
 import { OperationTypeIcon } from "./operation-type-icon";
 import { RibbonButton } from "./ribbon";
 import {
@@ -34,7 +36,7 @@ import {
 
 /**
  * The ribbon's buttons adding profiles, pockets, drill, engrave and V-carve
- * operations from the selected paths, and 3D operations on the project's
+ * operations from the selected paths, and V-carve inlays (#553), and 3D operations on the project's
  * model: the first while the project has drawings or is empty, the second
  * while it has a model (ADR-0078).
  */
@@ -142,15 +144,18 @@ export function AddOperationButtons() {
   }
 
   return kinds.map(({ type, label, short, add, choice, hint, missingTool, needs }) => (
-    <RibbonButton
-      key={type}
-      icon={<OperationTypeIcon type={type} />}
-      label={short}
-      aria-label={t("addLabel", { operation: label })}
-      data-demo={`add-${type}`}
-      hint={hint}
-      disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
-      onClick={() => choice && added(add(choice), type === "drill" && !target)}
-    />
+    <Fragment key={type}>
+      <RibbonButton
+        icon={<OperationTypeIcon type={type} />}
+        label={short}
+        aria-label={t("addLabel", { operation: label })}
+        data-demo={`add-${type}`}
+        hint={hint}
+        disabledReason={!choice ? (tool ? missingTool : t("noTool")) : needs}
+        onClick={() => choice && added(add(choice), type === "drill" && !target)}
+      />
+      {/* Beside the V-carve it is made of. */}
+      {type === "vcarve" && <InlayButton targets={targets} target={target} tools={tools} />}
+    </Fragment>
   ));
 }

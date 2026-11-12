@@ -1,4 +1,10 @@
-import { MAX_TERRAIN_SPAN, MIN_LENGTH, TERRAIN_BASE, TERRAIN_EXAGGERATION } from "@furrow/cam-core";
+import {
+  IMAGE_RELIEF,
+  MAX_TERRAIN_SPAN,
+  MIN_LENGTH,
+  TERRAIN_BASE,
+  TERRAIN_EXAGGERATION,
+} from "@furrow/cam-core";
 import { FlipAxis, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
@@ -11,6 +17,7 @@ import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
 import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
+import { importImageRelief } from "./image-relief";
 import { libraryDir, readLibrary } from "./library";
 import {
   addOperation,
@@ -351,6 +358,57 @@ export function createServer(projects: Projects = createProjects(), library = li
   );
 
   server.registerTool(
+    "import_image_relief",
+    {
+      title: "Make a relief from an image",
+      description:
+        "Makes a relief model from a greyscale PNG, JPEG or WebP image (a depth map, a logo, a photo for a lithophane) and adds it to a project as its model, as the app's Relief from image does: lighter is higher (darker with invert), transparent counts as black, placed at the chosen width (the depth follows the image's aspect ratio), centred on the stock, its top at the stock top, then machined like any model (add_relief_rough, add_relief_finish). A project holds at most one model. Detail is as fine as the STL limits and the image's pixels allow. Unlike the app, it ignores a photo's EXIF orientation: a phone photo stored on its side comes out turned, so rotate it first. Returns the model's id, size in mm, the image's pixels, the cells across and along, and the project summary.",
+      inputSchema: {
+        path: projectPath,
+        image: z.string().describe("Absolute path of the .png, .jpg or .webp image."),
+        name: z
+          .string()
+          .optional()
+          .describe("The model's name; the image's file name if left out."),
+        width: z
+          .number()
+          .min(1)
+          .optional()
+          .describe(
+            "The model's width in mm; by default, and at most, what fits inside the stock less the model border.",
+          ),
+        relief: z
+          .number()
+          .min(IMAGE_RELIEF.relief.min)
+          .default(IMAGE_RELIEF.relief.initial)
+          .describe("How much higher white is than black, in mm."),
+        base: z
+          .number()
+          .min(IMAGE_RELIEF.base.min)
+          .default(IMAGE_RELIEF.base.initial)
+          .describe("The model's thickness under black, in mm."),
+        invert: z
+          .boolean()
+          .default(false)
+          .describe("Dark is higher, e.g. for a lithophane cut from the back."),
+        blur: z
+          .number()
+          .int()
+          .min(IMAGE_RELIEF.blur.min)
+          .max(IMAGE_RELIEF.blur.max)
+          .default(IMAGE_RELIEF.blur.initial)
+          .describe("Smoothing against pixel noise: a box blur's radius in image pixels."),
+      },
+    },
+    ({ path, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        const relief = await importImageRelief(project, request);
+        return { ...relief, ...summary(project) };
+      }),
+  );
+
+  server.registerTool(
     "fit_to_stock",
     {
       title: "Fit a drawing or model to the stock",
@@ -667,8 +725,8 @@ export function createServer(projects: Projects = createProjects(), library = li
     profile: `side: outside, inside or on (follows the line); ${DIRECTION}; depth: final depth, ${DEPTH} (default: the stock's thickness, cutting through); allowance: millimetres the depth passes leave on the wall (0 when side is on); finishPass: true for one more lap at full depth removing the allowance (needs an allowance); leadIn: {radius} in millimetres, a tangent arc into each closed contour, or null; ${RAMP}; tabs: holding tabs that keep the part attached, null for none, or {count} per closed contour (or {spacing} in millimetres, or positions as ${POINTS}), with width (along the contour, default 6) and height (up from the final depth, default 3 but at most half the depth) in millimetres; startPoints: where cuts start, one per path, [{start: [x, y], plunge: null or [x, y]}, …] in millimetres in stock coordinates, each start moved to the nearest path; a plunge point (closed paths only, not with tabs) is where the tool goes straight down at every level, beside the part or in a pre-drilled hole, feeding straight to start and back after the lap, for cutters that can't plunge into stock; cornerOvercuts: dogbones at sharp inside corners so a square-edged part fits, {maxAngle: corners up to this many degrees get one (the app starts at 90), excluded: []}, or null (not with side on).`,
     pocket: `side: inside (clears inside the closed paths, leaving any islands), outside (clears the stock outside them up to its edge) or on (inside, the tool's centre reaching the paths); strategy: {type: "offset"} (rings from the centre out), {type: "linear", angle} (zig-zag passes at 0, 90, 45 or -45 degrees from X) or {type: "peel", start} (engagement-limited, from centre, inside or outside); ${DIRECTION}; ${STEP_OVER} (default 40); depth: final depth, ${DEPTH} (default half the stock); allowance: millimetres left on the walls and islands; finishPass: true for one more lap on each wall removing the allowance (needs an allowance); ${RAMP} (default true).`,
     drill: `depth: of the tool tip, ${DEPTH} (default: the stock's thickness); peck: true (default) to drill in pecks of the tool's step-down, retracting to clear chips; ${STEP_OVER}, for an end mill boring a hole wider than itself in rings (default 40); points: holes placed at ${POINTS}, which need no shapes; pins: true to drill a two-sided project's locating pins instead of shapes and points (top side only). It drills single-point paths and circles; a drill bit drills circles of its own diameter.`,
-    engrave: `side: on (default, the groove centred on the line), inside or outside (an edge of the groove on the line, for closed paths); depth: of the tool tip, ${DEPTH} (default 1, or the stock's thickness if thinner; with a V-bit it sets the line's width); ${RAMP}; startPoints: where cuts start, ${POINTS}.`,
-    vcarve: `maxDepth: the deepest the V-bit goes, ${DEPTH} (default: the bit's cone depth, at most half the stock); flatBottom: where the shape is wider than the bit reaches at maxDepth, a flat end mill clears the floor flat first: {toolId} or {tool: settings as for tool}, with stepOver (percentage of its diameter, default 40), or null for none (default).`,
+    engrave: `side: on (default, the groove centred on the line), inside or outside (an edge of the groove on the line, for closed paths), or chamfer (V-bits only: bevels the closed paths' edges, inward on outer contours and outward on holes); depth: of the tool tip, ${DEPTH} (default 1, or the stock's thickness if thinner; with a V-bit it sets the line's width; a chamfer ignores it); width: the chamfer's width on the stock top, in mm (only with side chamfer; default 1, or the cone's if narrower; null on other sides, which changing the side sets); ${RAMP}; startPoints: where cuts start, ${POINTS}.`,
+    vcarve: `startDepth: how far the carve starts below the stock top, in millimetres (default 0; an inlay's plug starts at its pocket's depth less the glue gap, with a closed boundary path round its mirrored shape among the targets); maxDepth: the deepest the V-bit goes below startDepth, in millimetres (default: the bit's cone depth, at most half the stock); flatBottom: where the shape is wider than the bit reaches at maxDepth, a flat end mill clears the floor flat first: {toolId} or {tool: settings as for tool}, with stepOver (percentage of its diameter, default 40), or null for none (default).`,
     relief_rough: `strategy: {type: "offset"}, {type: "linear", angle} (0, 90, 45 or -45 degrees from X) or {type: "peel", start} (centre or outside); ${DIRECTION}; ${STEP_OVER} (default 40); stockToLeave: millimetres left on the model everywhere for finishing (default 0.5); ${BOUNDARY} (default model); ${RAMP} (default true); ${REST}.`,
     relief_finish: `strategy: {type: "parallel", angle, direction} (straight passes at angle degrees from X, 0 up to but not 180, direction one_way or zigzag; the default, 0 and zigzag), {type: "waterline", stepDown} (contours at constant height, stepDown millimetres apart) or {type: "spiral", start} (outside or centre); ${STEP_OVER}, between parallel passes or spiral laps (default 10); stockToLeave: millimetres left on the model (default 0); ${BOUNDARY} (default model); ${REST}.`,
   };

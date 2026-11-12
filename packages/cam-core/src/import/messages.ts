@@ -63,6 +63,8 @@ export const IMPORT_MESSAGES = [
   "terrain.tooWide",
   "terrain.tooDetailed",
   "terrain.noData",
+  "image.tooSmall",
+  "image.tooLarge",
 ] as const;
 
 export type ImportMessageCode = (typeof IMPORT_MESSAGES)[number];

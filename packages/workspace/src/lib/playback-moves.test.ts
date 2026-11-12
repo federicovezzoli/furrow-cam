@@ -35,7 +35,7 @@ const vcarve: Operation = {
   stockSide: "top",
   targets: [],
   tool: vBit,
-  params: { maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
+  params: { startDepth: 0, maxDepth: 3, flatBottom: { tool: endMill, stepOver: 40 } },
 };
 
 const ready = (x: number, extra: Partial<ToolpathEntry> = {}): ToolpathEntry =>

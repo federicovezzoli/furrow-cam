@@ -23,6 +23,7 @@ import {
   addTab,
   addVCarveOperation,
   autoPlaceTabs,
+  DEFAULT_CHAMFER_WIDTH,
   defaultTabs,
   deleteOperation,
   excludeOvercut,
@@ -519,7 +520,7 @@ describe("addEngraveOperation", () => {
       stockSide: "top",
       targets: [whole(square)],
       tool: vBit,
-      params: { side: "on", depth: 1, ramp: false, startPoints: [] },
+      params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [] },
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
   });
@@ -545,10 +546,32 @@ describe("addEngraveOperation", () => {
     expect(operations().find((operation) => operation.id === id)?.params).toEqual({
       side: "inside",
       depth: 0.4,
+      width: null,
       ramp: true,
       startPoints: [],
     });
     expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
+  });
+
+  it("chamfers with a V-bit, giving the side a width and taking it back", () => {
+    const { store, operations } = setup();
+    const id = addEngrave(store);
+    const params = () => operations().find((operation) => operation.id === id)?.params;
+    expect(updateEngraveParams(store, id, { side: "chamfer" })).toEqual({ ok: true });
+    expect(params()).toMatchObject({ side: "chamfer", width: DEFAULT_CHAMFER_WIDTH });
+    expect(updateEngraveParams(store, id, { width: 2 })).toEqual({ ok: true });
+    expect(setOperationTool(store, id, endMill)).toEqual({
+      ok: false,
+      error: { code: "operation.onlyVBitsChamfer" },
+    });
+    expect(updateEngraveParams(store, id, { side: "on" })).toEqual({ ok: true });
+    expect(params()).toMatchObject({ side: "on", width: null });
+
+    const milled = addEngrave(store, endMill);
+    expect(updateEngraveParams(store, milled, { side: "chamfer" })).toEqual({
+      ok: false,
+      error: { code: "operation.onlyVBitsChamfer" },
+    });
   });
 
   it("takes plain start points, out of range doing nothing", () => {
@@ -598,7 +621,7 @@ describe("addVCarveOperation", () => {
       draft.stock.thickness = 4;
     });
     addVCarve(store);
-    expect(operations()[0]?.params).toEqual({ maxDepth: 2, flatBottom: null });
+    expect(operations()[0]?.params).toEqual({ startDepth: 0, maxDepth: 2, flatBottom: null });
   });
 
   it("takes V-bits only, adding or switching tools", () => {
@@ -621,6 +644,7 @@ describe("addVCarveOperation", () => {
       ok: true,
     });
     expect(operations()[0]?.params).toEqual({
+      startDepth: 0,
       maxDepth: 2,
       flatBottom: { tool: endMill, stepOver: 40 },
     });

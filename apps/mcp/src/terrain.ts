@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { isAbsolute } from "node:path";
 import {
   type Box3,
@@ -10,14 +8,14 @@ import {
   type TerrainSettings,
   terrainMesh,
 } from "@furrow/cam-core";
-import { MessageError } from "@furrow/document";
 import { fittingSide } from "@furrow/workspace/lib/model-size";
 import { fileNameFor, parsePlace } from "@furrow/workspace/lib/place-search";
 import { MAX_ELEVATION_ZOOM } from "@furrow/workspace/lib/terrain-services";
 import { MAX_LATITUDE, shapeRing } from "@furrow/workspace/lib/terrain-square";
 import { fetchElevationTile, loadTerrainTiles } from "@furrow/workspace/lib/terrain-tiles";
 import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
-import { addMesh, text } from "./drawings-and-models";
+import { imageDecoder } from "./decoders";
+import { addMesh, making, text } from "./drawings-and-models";
 import { writeFileAtomic } from "./files";
 import { checkTarget, type Progress } from "./gcode";
 import { type Project, ToolError } from "./projects";
@@ -75,33 +73,6 @@ function ringOf(area: TerrainArea): LonLat[] {
   return points;
 }
 
-/** The decoder's WebAssembly, read from the package (kept out of the bundle), compiled once. */
-let decoder: Promise<(webp: ArrayBuffer) => Promise<ArrayLike<number>>> | undefined;
-function webpDecoder() {
-  decoder ??= (async () => {
-    const { default: decode, init } = await import("@jsquash/webp/decode.js");
-    const require = createRequire(import.meta.url);
-    const wasm = await readFile(require.resolve("@jsquash/webp/codec/dec/webp_dec.wasm"));
-    await init(await WebAssembly.compile(wasm));
-    return async (webp: ArrayBuffer) => (await decode(webp)).data;
-  })().catch((error: unknown) => {
-    // A failed load is tried again on the next call, not kept.
-    decoder = undefined;
-    throw error;
-  });
-  return decoder;
-}
-
-/** `run`'s result; throws a `ToolError` with the app's message if the terrain can't be made. */
-async function making<T>(run: () => T | Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (error instanceof MessageError) throw new ToolError(text(error.detail));
-    throw error;
-  }
-}
-
 /**
  * The longest side a terrain of an area `span` (metres) takes in `project`:
  * `requested`, or by default what fits inside the stock less the model
@@ -157,7 +128,8 @@ export async function importTerrain(
     exaggeration: request.exaggeration,
     base: request.base,
   };
-  const decode = await webpDecoder();
+  const webp = await imageDecoder("webp");
+  const decode = async (bytes: ArrayBuffer) => (await webp(bytes)).data;
   const tiles = await making(() =>
     loadTerrainTiles(
       plan.tiles,

@@ -33,6 +33,7 @@ export default async function stepSimulation(r: Recorder) {
   await r.click("view-orbit");
   // The stock as it is cut, not the lines over it.
   await r.click("show-toolpaths");
+  await r.click("parting-plane");
   await r.select("playback-speed", "100×");
   // 50 m of top side and 61 m of bottom side: about 20 s and 24 s.
   await playSide(r, "top");

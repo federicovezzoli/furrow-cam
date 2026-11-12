@@ -579,6 +579,8 @@
       "taperedBitsCantDrill": "锥度球头立铣刀不能钻孔",
       "taperedBitsCantClear": "锥度球头立铣刀仅用于雕刻和3D精加工：请选择其他刀具。",
       "drillsCantEngrave": "钻头不能雕刻",
+      "onlyVBitsChamfer": "只有V形刀可以倒角",
+      "chamferWidth": "倒角需要宽度，且只有倒角才有宽度",
       "flatBottomEndMill": "只有平底立铣刀能清出平底",
       "onlyVBitsVCarve": "只有V形刀能进行V形雕刻",
       "modelNotShapes": "加工的是模型，而不是形状",
@@ -693,6 +695,8 @@
       "vcarveEdgesUncarved": "部分区域比V形刀在最大深度处能达到的宽度更宽，其边缘将不会被雕刻：开启平底以清除它们。",
       "flatAreasNarrow": "部分平底区域对平底刀具来说太窄，将不会被切削。",
       "engraveConeWide": "深度超过了V形刀的锥体，因此线宽等于刀具宽度。",
+      "chamferConeWide": "倒角宽于V形刀的锥体：止于锥体的宽度。",
+      "chamferThroughStock": "倒角深于毛坯，会切入其下方的物体。",
       "pathsTooSmall": "闭合路径对刀具来说太小。",
       "nothingOutside": "闭合路径之外没有需要清除的毛坯。",
       "tabsTooTall": "连接桥高度等于切削深度，因此其下方不会被切削。",
@@ -807,7 +811,10 @@
       "fontTooLarge": "此字体超过{mb, number} MB的上限。",
       "tooManyFonts": "一个项目最多包含{max}种字体。",
       "fontUploadOff": "此服务器无法存储字体。",
-      "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。"
+      "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。",
+      "inlayClosedPaths": "请选择闭合路径来制作镶嵌。",
+      "inlayGap": "胶缝必须至少为 0，且小于凹槽深度。",
+      "inlayTooDeep": "此镶嵌对 V 形刀的锥体或毛坯来说太深：凹槽必须在锥体范围内，嵌件底面必须在毛坯内。"
     },
     "terrain": {
       "noArea": "此区域太小，请绘制更大的区域。",
@@ -815,13 +822,18 @@
       "tooWide": "此区域宽度超过允许的最大值 {km, number} km，请绘制更小的区域。",
       "tooDetailed": "此区域的模型会超出 3D 模型的限制。",
       "noData": "此区域没有高程数据。"
+    },
+    "image": {
+      "tooSmall": "此图像太小。请选择至少 2 × 2 像素的图像。",
+      "tooLarge": "此图像大于允许的上限 {mb, number} MB。"
     }
   },
   "Operation": {
     "sides": {
       "outside": "外侧",
       "inside": "内侧",
-      "on": "在线上"
+      "on": "在线上",
+      "chamfer": "倒角"
     },
     "directions": {
       "climb": "顺铣",
@@ -929,13 +941,17 @@
     "peckHint": "分次啄钻，每次不超过刀具的每层切深，每次后抬刀排屑。",
     "engrave": "雕刻",
     "position": "位置",
-    "engraveHint": "{side, select, inside {沿线内侧加工闭合路径，槽的一侧边缘在线上，} outside {沿线外侧加工闭合路径，槽的一侧边缘在线上，} other {沿线加工所有开放和闭合路径，}}每层不超过刀具的每层切深。",
+    "engraveHint": "{side, select, inside {沿线内侧加工闭合路径，槽的一侧边缘在线上，} outside {沿线外侧加工闭合路径，槽的一侧边缘在线上，} chamfer {用V形刀的锥面为闭合路径的边缘倒角，外轮廓向线内，孔向线外，} other {沿线加工所有开放和闭合路径，}}每层不超过刀具的每层切深。",
     "lineWidth": "线宽",
     "lineTooDeep": "超过锥体深度，因此线宽等于刀具宽度。",
     "lineAtTop": "毛坯顶面处，由刀具的{angle}°角决定。",
     "lineAtTopTip": "毛坯顶面处，由刀具的{angle}°角和{tip}刀尖决定。",
+    "chamferWidth": "倒角宽度",
+    "chamferDepth": "在毛坯顶面上；切削深度 {depth}。",
+    "chamferTooWide": "超过锥体宽度，因此倒角只能达到刀具允许的宽度。",
     "vcarve": "V形雕刻",
     "vcarveHint": "沿闭合路径的中线加工，深度取决于刀具角度到达边缘所需的深度，每层不超过刀具的每层切深。岛屿保留不切。",
+    "startDepth": "起始深度",
     "maxDepth": "最大深度",
     "vcarveTooDeep": "超过锥体深度，因此刀具雕刻深度不超过{depth}。",
     "vcarveReach": "宽于{width}的区域会达到此深度。",
@@ -1542,6 +1558,50 @@
     "storeOff": "此服务器无法保存 3D 模型：地形只能下载为 STL 文件。",
     "cancel": "取消",
     "defaultName": "地形"
+  },
+  "ImageRelief": {
+    "open": "从图像生成浮雕…",
+    "ribbon": "图像",
+    "hint": "从灰度图像生成浮雕模型",
+    "title": "从图像生成浮雕",
+    "description": "选择 PNG、JPEG 或 WebP 图像：越亮越高。将浮雕添加到项目或下载。",
+    "noImage": "选择图像以查看其浮雕。",
+    "pick": "选择图像…",
+    "change": "更换图像…",
+    "preview": "浮雕预览",
+    "previewLoading": "正在生成预览…",
+    "width": "宽度",
+    "relief": "浮雕高度",
+    "base": "底座",
+    "blur": "平滑",
+    "invert": "反转",
+    "invertHint": "越暗越高，例如从背面加工的透光浮雕。",
+    "pixels": "图像：{width, number} × {height, number} px",
+    "size": "模型：{size} {unit}",
+    "building": "正在生成模型…",
+    "saving": "正在将模型添加到项目…",
+    "generate": "添加到项目",
+    "download": "下载 STL",
+    "hasModel": "此项目已有 3D 模型：浮雕只能下载为 STL 文件。",
+    "storeOff": "此服务器无法存储 3D 模型：浮雕只能下载为 STL 文件。",
+    "cancel": "取消",
+    "defaultName": "浮雕"
+  },
+  "Inlay": {
+    "ribbon": "镶嵌",
+    "hint": "在{target}中 V 雕一个凹槽，并从其镜像雕出与之相配的嵌件",
+    "title": "制作镶嵌",
+    "description": "所选闭合路径的 V 雕凹槽，以及在旁边新图纸中从其镜像雕出的嵌件，用另一块木料加工，翻转后粘入。",
+    "depth": "凹槽深度",
+    "gap": "胶缝",
+    "tools": "使用 {tool}，并由 {flatTool} 清底。嵌件从 {start} 深处开始。",
+    "make": "制作镶嵌",
+    "cancel": "取消",
+    "pocket": "镶嵌凹槽",
+    "plug": "镶嵌嵌件",
+    "drawing": "{name} 嵌件",
+    "missingFlat": "请在刀具库中添加平底立铣刀：它用于清理镶嵌的底面",
+    "separate": "两个部分都在本项目的毛坯上加工：移动嵌件的图纸，或关闭其中一个操作，以便各自用不同的木料加工。"
   },
   "Viewport": {
     "scene": "毛坯、几何图形和刀具路径",

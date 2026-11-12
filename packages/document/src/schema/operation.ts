@@ -320,17 +320,27 @@ export const DrillOperation = z
 export type DrillOperation = z.infer<typeof DrillOperation>;
 
 /**
+ * Where an engraving's groove is: a profile's sides, or `chamfer` (#554): a
+ * V-bit bevels the closed paths' edges, nested ones toggling inside and
+ * outside (even-odd) as for profiles.
+ */
+export const EngraveSide = z.enum([...ProfileSide.options, "chamfer"]);
+export type EngraveSide = z.infer<typeof EngraveSide>;
+
+/**
  * Engrave parameters (#95): the paths followed on the line, or inside or
  * outside the closed ones with an edge of the groove on the line, cut to
  * `depth` in passes no deeper than the tool's step-down. With a V-bit the
  * depth sets the line width; the width isn't stored, so it follows the bit
- * the operation uses.
+ * the operation uses. A chamfer is cut as deep as its `width` needs instead.
  */
 export const EngraveParams = z.strictObject({
-  /** Where the groove is: centred on the line, or inside or outside it. */
-  side: ProfileSide,
-  /** Depth of the tool tip below the stock top. */
+  /** Where the groove is: centred on the line, inside or outside it, or a chamfer. */
+  side: EngraveSide,
+  /** Depth of the tool tip below the stock top; a chamfer ignores it. */
   depth: PositiveLength,
+  /** A chamfer's width on the stock top, inward from the line; `null` on other sides. */
+  width: PositiveLength.nullable(),
   /** Ramp in at the tool's plunge angle instead of plunging straight down. */
   ramp: z.boolean(),
   /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
@@ -371,6 +381,21 @@ export const EngraveOperation = z
         message: "operation.drillsCantEngrave",
       });
     }
+    const { side, width } = operation.params;
+    if (side === "chamfer" && operation.tool.type !== "v_bit") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["params", "side"],
+        message: "operation.onlyVBitsChamfer",
+      });
+    }
+    if ((side === "chamfer") !== (width !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["params", "width"],
+        message: "operation.chamferWidth",
+      });
+    }
   });
 export type EngraveOperation = z.infer<typeof EngraveOperation>;
 
@@ -382,7 +407,14 @@ export type EngraveOperation = z.infer<typeof EngraveOperation>;
  */
 export const VCarveParams = z
   .strictObject({
-    /** Deepest the V-bit goes below the stock top; wider parts are carved no deeper. */
+    /**
+     * How far below the stock top the carve starts (#553, ADR-0084): the bit's
+     * tip is this deep on the paths, and `maxDepth` and the flat bottom are
+     * measured down from here. An inlay's plug starts at its pocket's depth
+     * less the glue gap.
+     */
+    startDepth: z.number().nonnegative(),
+    /** Deepest the V-bit goes below `startDepth`; wider parts are carved no deeper. */
     maxDepth: PositiveLength,
     /**
      * Where the shape is wider than the V-bit reaches at `maxDepth`, the bit

@@ -2,6 +2,7 @@ import {
   clearingTool,
   DEFAULT_ENTRY_CLEARANCE,
   type DrillOperation,
+  type EngraveOperation,
   type Model,
   type Operation,
   type OperationTarget,
@@ -26,7 +27,7 @@ import {
 import { activeTouchOff } from "../scene/touch-off";
 import { cutterProfile, type SimulationCut } from "../simulation/simulation";
 import { drillToolpath } from "./drill";
-import { engraveToolpath } from "./engrave";
+import { engraveCut, engraveToolpath } from "./engrave";
 import { holdingTabStrips } from "./holding-tabs";
 import type { ToolpathMessage } from "./messages";
 import { pocketToolpath } from "./pocket/pocket";
@@ -61,7 +62,10 @@ export type ToolpathInput = {
    * `null` for the others.
    */
   stock: Rect | null;
-  /** The stock's bottom, below which 3D operations don't cut; `null` for the others. */
+  /**
+   * The stock's bottom, below which 3D operations don't cut and past which a
+   * chamfer is warned about; `null` for the others.
+   */
   stockBottom: number | null;
   /**
    * In a two-sided project, the parting plane in this side's stock
@@ -168,7 +172,12 @@ export function toolpathInputs(
         (operation.type === "pocket" && operation.params.side === "outside")
           ? stock
           : null,
-      stockBottom: operationModelId(operation) === null ? null : -doc.stock.thickness,
+      // Chamfers too, whose depth follows their width: checked against the stock bottom.
+      stockBottom:
+        operationModelId(operation) === null &&
+        !(operation.type === "engrave" && operation.params.side === "chamfer")
+          ? null
+          : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
       flip,
       // The bottom side leaves the tabs up to their thickness past the
@@ -469,6 +478,18 @@ function checkPinsOnStock(
   return { ...toolpath, warnings: [...toolpath.warnings, { code: "toolpath.pinsOffStock" }] };
 }
 
+/** Warns when a chamfer (#554) goes deeper than the stock, into what is under it. */
+function checkChamferDepth(
+  operation: EngraveOperation,
+  stockBottom: number | null,
+  toolpath: Toolpath,
+): Toolpath {
+  if (stockBottom === null) return toolpath;
+  if (-engraveCut(operation.tool, operation.params).depth >= stockBottom - 1e-9) return toolpath;
+  const warning = { code: "toolpath.chamferThroughStock" } as const;
+  return { ...toolpath, warnings: [...toolpath.warnings, warning] };
+}
+
 /** Warns when a hole placed in the viewport (#429) is not wholly on the stock. */
 function checkHolesOnStock(
   operation: DrillOperation,
@@ -530,7 +551,11 @@ function* operationSteps(
         ),
       );
     case "engrave":
-      return checkTouchOff(operation, engraveToolpath(operation, shapes, options), touchOff);
+      return checkTouchOff(
+        operation,
+        checkChamferDepth(operation, stockBottom, engraveToolpath(operation, shapes, options)),
+        touchOff,
+      );
     case "vcarve":
       return checkTouchOff(operation, vcarveToolpath(operation, shapes, options), touchOff);
     case "relief_finish":

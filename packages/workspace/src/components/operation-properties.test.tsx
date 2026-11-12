@@ -1,18 +1,23 @@
 // @vitest-environment jsdom
-import type { ProjectDocument } from "@furrow/document";
+import type { ProjectDocument, Tool } from "@furrow/document";
 import {
   fullDocument,
   model,
   OPERATION_ID,
   reliefFinish,
   SQUARE_ID,
+  vBit,
 } from "@furrow/document/fixtures";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
-import { defaultPocketParams, setStartPlunge } from "../stores/operation-actions";
+import {
+  defaultEngraveParams,
+  defaultPocketParams,
+  setStartPlunge,
+} from "../stores/operation-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
 import { OperationProperties } from "./operation-properties";
@@ -38,7 +43,62 @@ function withPocket(): ProjectDocument {
   };
 }
 
+/** `fullDocument` in millimetres, with its profile turned into an engraving with `tool`. */
+function withEngraving(tool: Tool): ProjectDocument {
+  const doc = fullDocument();
+  const [profile] = doc.operations;
+  if (profile?.type !== "profile") throw new Error("The fixture has no profile");
+  const { params: _, ...rest } = profile;
+  return {
+    ...doc,
+    units: "mm",
+    operations: [
+      { ...rest, tool, type: "engrave", name: "Engrave", params: defaultEngraveParams(doc) },
+    ],
+  };
+}
+
 describe("OperationProperties", () => {
+  it("chamfers with a V-bit to a width instead of a depth (#554)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: withEngraving(vBit) }),
+    );
+    const params = () => {
+      const [engraving] = store.getState().document.operations;
+      if (engraving?.type !== "engrave") throw new Error("not an engraving");
+      return engraving.params;
+    };
+    const position = screen.getByLabelText("Position") as HTMLSelectElement;
+    expect([...position.options].map((option) => option.value)).toEqual([
+      "on",
+      "inside",
+      "outside",
+      "chamfer",
+    ]);
+    fireEvent.change(position, { target: { value: "chamfer" } });
+    expect(params()).toMatchObject({ side: "chamfer", width: 1 });
+    expect(document.getElementById("engrave-depth")).toBeNull();
+    const width = document.getElementById("engrave-chamfer") as HTMLInputElement;
+    expect(screen.getByText("Chamfer width")).toBeTruthy();
+    expect(width.value).toBe("1");
+    fireEvent.change(width, { target: { value: "2" } });
+    fireEvent.keyDown(width, { key: "Enter" });
+    expect(params().width).toBe(2);
+  });
+
+  it("offers no chamfer for other bits (#554)", () => {
+    renderWorkspace(
+      <OperationProperties operationId={OPERATION_ID} />,
+      createMemoryHost({ document: withEngraving(fullDocument().operations[0]?.tool as Tool) }),
+    );
+    const options = [...(screen.getByLabelText("Position") as HTMLSelectElement).options];
+    expect(options.map((option) => option.value)).toEqual(["on", "inside", "outside"]);
+  });
+
   it("sets the side of the paths a pocket clears (#386)", () => {
     renderWorkspace(
       <>
