@@ -811,7 +811,9 @@
       "fontTooLarge": "Esta fuente supera los {mb, number} MB permitidos.",
       "tooManyFonts": "Un proyecto contiene como máximo {max} fuentes.",
       "fontUploadOff": "Este servidor no puede almacenar fuentes.",
-      "terrainUnavailable": "No se pudieron descargar las altitudes. Comprueba tu conexión e inténtalo de nuevo."
+      "terrainUnavailable": "No se pudieron descargar las altitudes. Comprueba tu conexión e inténtalo de nuevo.",
+      "inlayClosedPaths": "Selecciona trazados cerrados para hacer una incrustación.",
+      "inlayGap": "El hueco para la cola debe ser al menos 0 y menor que la profundidad del cajeado."
     },
     "terrain": {
       "noArea": "Esta zona es demasiado pequeña. Dibuja una más grande.",
@@ -948,6 +950,7 @@
     "chamferTooWide": "Más ancho que el cono, así que el chaflán solo es tan ancho como permite la fresa.",
     "vcarve": "Tallado en V",
     "vcarveHint": "Sigue el centro de los trazados cerrados, tan hondo como necesita el ángulo de la fresa para llegar a sus bordes, en pasadas no más profundas que la profundidad de pasada de la herramienta. Las islas quedan en pie.",
+    "startDepth": "Profundidad inicial",
     "maxDepth": "Profundidad máx.",
     "vcarveTooDeep": "Más profundo que el cono, así que la fresa no talla más hondo que {depth}.",
     "vcarveReach": "Las partes de más de {width} de ancho la alcanzan.",
@@ -1582,6 +1585,21 @@
     "storeOff": "Este servidor no puede guardar modelos 3D: el relieve solo se puede descargar como archivo STL.",
     "cancel": "Cancelar",
     "defaultName": "Relieve"
+  },
+  "Inlay": {
+    "ribbon": "Incrustación",
+    "hint": "Tallar en V un cajeado en los {target} y una pieza que encaje, a partir de su imagen especular",
+    "title": "Crear incrustación",
+    "description": "Un cajeado tallado en V de los trazados cerrados seleccionados, y una pieza tallada a partir de su imagen especular en un dibujo nuevo al lado, para cortar de otra madera, dar la vuelta y encolar.",
+    "depth": "Profundidad del cajeado",
+    "gap": "Hueco para la cola",
+    "tools": "Con {tool}, y {flatTool} limpiando los fondos. La pieza empieza a {start} de profundidad.",
+    "make": "Crear incrustación",
+    "cancel": "Cancelar",
+    "pocket": "Cajeado de incrustación",
+    "plug": "Pieza de incrustación",
+    "drawing": "{name} pieza",
+    "missingFlat": "Añade una fresa plana a tu biblioteca de herramientas: limpia los fondos de una incrustación"
   },
   "Viewport": {
     "scene": "Material, geometría y trayectorias",

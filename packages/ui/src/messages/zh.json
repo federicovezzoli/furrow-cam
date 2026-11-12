@@ -811,7 +811,9 @@
       "fontTooLarge": "此字体超过{mb, number} MB的上限。",
       "tooManyFonts": "一个项目最多包含{max}种字体。",
       "fontUploadOff": "此服务器无法存储字体。",
-      "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。"
+      "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。",
+      "inlayClosedPaths": "请选择闭合路径来制作镶嵌。",
+      "inlayGap": "胶缝必须至少为 0，且小于凹槽深度。"
     },
     "terrain": {
       "noArea": "此区域太小，请绘制更大的区域。",
@@ -948,6 +950,7 @@
     "chamferTooWide": "超过锥体宽度，因此倒角只能达到刀具允许的宽度。",
     "vcarve": "V形雕刻",
     "vcarveHint": "沿闭合路径的中线加工，深度取决于刀具角度到达边缘所需的深度，每层不超过刀具的每层切深。岛屿保留不切。",
+    "startDepth": "起始深度",
     "maxDepth": "最大深度",
     "vcarveTooDeep": "超过锥体深度，因此刀具雕刻深度不超过{depth}。",
     "vcarveReach": "宽于{width}的区域会达到此深度。",
@@ -1582,6 +1585,21 @@
     "storeOff": "此服务器无法存储 3D 模型：浮雕只能下载为 STL 文件。",
     "cancel": "取消",
     "defaultName": "浮雕"
+  },
+  "Inlay": {
+    "ribbon": "镶嵌",
+    "hint": "在{target}中 V 雕一个凹槽，并从其镜像雕出与之相配的嵌件",
+    "title": "制作镶嵌",
+    "description": "所选闭合路径的 V 雕凹槽，以及在旁边新图纸中从其镜像雕出的嵌件，用另一块木料加工，翻转后粘入。",
+    "depth": "凹槽深度",
+    "gap": "胶缝",
+    "tools": "使用 {tool}，并由 {flatTool} 清底。嵌件从 {start} 深处开始。",
+    "make": "制作镶嵌",
+    "cancel": "取消",
+    "pocket": "镶嵌凹槽",
+    "plug": "镶嵌嵌件",
+    "drawing": "{name} 嵌件",
+    "missingFlat": "请在刀具库中添加平底立铣刀：它用于清理镶嵌的底面"
   },
   "Viewport": {
     "scene": "毛坯、几何图形和刀具路径",

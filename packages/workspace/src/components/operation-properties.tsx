@@ -1139,6 +1139,18 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
       </h4>
       <p className="text-muted-foreground">{t("vcarveHint")}</p>
       <NumberField
+        id="vcarve-start-depth"
+        label={t("startDepth")}
+        min={0}
+        value={params.startDepth}
+        onValueChange={(startDepth) => update("startDepth", { startDepth })}
+        error={errors.startDepth}
+        layout="inline"
+        quantity="length"
+        units={units}
+        {...gestureHandlers(store)}
+      />
+      <NumberField
         id="vcarve-max-depth"
         label={t("maxDepth")}
         min={MIN_LENGTH}
@@ -1152,7 +1164,7 @@ function VCarveFields({ operation }: { operation: VCarveOperation }) {
       />
       {cone !== null && width !== null && (
         <p className="text-muted-foreground">
-          {exceedsVBitCone(tool, params.maxDepth)
+          {exceedsVBitCone(tool, params.startDepth + params.maxDepth)
             ? t("vcarveTooDeep", { depth: length(cone) })
             : t("vcarveReach", { width: length(width) })}
         </p>

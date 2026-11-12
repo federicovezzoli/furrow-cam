@@ -19,6 +19,7 @@ import {
   addReliefRoughOperation,
   addVCarveOperation,
 } from "../stores/operation-actions";
+import { InlayButton } from "./inlay-dialog";
 import { OperationTypeIcon } from "./operation-type-icon";
 import { RibbonButton } from "./ribbon";
 import {
@@ -34,7 +35,7 @@ import {
 
 /**
  * The ribbon's buttons adding profiles, pockets, drill, engrave and V-carve
- * operations from the selected paths, and 3D operations on the project's
+ * operations from the selected paths, and V-carve inlays (#553), and 3D operations on the project's
  * model: the first while the project has drawings or is empty, the second
  * while it has a model (ADR-0078).
  */
@@ -141,7 +142,7 @@ export function AddOperationButtons() {
     }
   }
 
-  return kinds.map(({ type, label, short, add, choice, hint, missingTool, needs }) => (
+  const buttons = kinds.map(({ type, label, short, add, choice, hint, missingTool, needs }) => (
     <RibbonButton
       key={type}
       icon={<OperationTypeIcon type={type} />}
@@ -153,4 +154,14 @@ export function AddOperationButtons() {
       onClick={() => choice && added(add(choice), type === "drill" && !target)}
     />
   ));
+  // Beside the V-carve it is made of, while paths can be selected.
+  const vcarve = buttons.findIndex((button) => button.key === "vcarve");
+  if (vcarve !== -1) {
+    buttons.splice(
+      vcarve + 1,
+      0,
+      <InlayButton key="inlay" targets={targets} target={target} tools={tools} />,
+    );
+  }
+  return buttons;
 }
