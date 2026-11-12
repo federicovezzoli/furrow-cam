@@ -1,5 +1,13 @@
 # @furrow/mcp
 
+## 0.9.0
+
+### Minor Changes
+
+- Engravings can chamfer: with a V-bit, the new Chamfer position bevels the edges of a part and its holes to the width you set, cutting as deep as the bit's angle needs. ([#558](https://github.com/federicovezzoli/furrow-cam/pull/558))
+- AI assistants can now turn a greyscale PNG, JPEG or WebP image into the project's relief model through the MCP server, as with *Relief from image* in the app. ([#559](https://github.com/federicovezzoli/furrow-cam/pull/559))
+- V-carves can start below the stock top, and *Make inlay* turns the selected closed paths into a V-carved pocket and a mirrored plug that fits it, with the pocket depth and glue gap you choose. ([#560](https://github.com/federicovezzoli/furrow-cam/pull/560))
+
 ## 0.8.0
 
 ### Minor Changes

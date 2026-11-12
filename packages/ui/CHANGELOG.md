@@ -1,5 +1,17 @@
 # @furrow/ui
 
+## 0.9.0
+
+### Minor Changes
+
+- Engravings can chamfer: with a V-bit, the new Chamfer position bevels the edges of a part and its holes to the width you set, cutting as deep as the bit's angle needs. ([#558](https://github.com/federicovezzoli/furrow-cam/pull/558))
+
+### Patch Changes
+
+- Make a relief model from a greyscale image with *Relief from image*: pick a PNG, JPEG or WebP, choose its width, relief height, base and smoothing, and invert it for a lithophane. It becomes the project's model, or downloads as an STL, like a terrain. ([#559](https://github.com/federicovezzoli/furrow-cam/pull/559))
+- V-carves can start below the stock top, and *Make inlay* turns the selected closed paths into a V-carved pocket and a mirrored plug that fits it, with the pocket depth and glue gap you choose. ([#560](https://github.com/federicovezzoli/furrow-cam/pull/560))
+- Updated dependencies: @furrow/document@0.25.0, @furrow/cam-core@0.23.0
+
 ## 0.8.9
 
 ### Patch Changes

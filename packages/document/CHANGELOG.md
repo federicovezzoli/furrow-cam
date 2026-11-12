@@ -1,5 +1,12 @@
 # @furrow/document
 
+## 0.25.0
+
+### Minor Changes
+
+- Engravings can chamfer: with a V-bit, the new Chamfer position bevels the edges of a part and its holes to the width you set, cutting as deep as the bit's angle needs. ([#558](https://github.com/federicovezzoli/furrow-cam/pull/558))
+- V-carves can start below the stock top, and *Make inlay* turns the selected closed paths into a V-carved pocket and a mirrored plug that fits it, with the pocket depth and glue gap you choose. ([#560](https://github.com/federicovezzoli/furrow-cam/pull/560))
+
 ## 0.24.0
 
 ### Minor Changes
