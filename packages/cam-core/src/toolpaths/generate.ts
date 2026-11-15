@@ -391,8 +391,8 @@ export const TOUCH_OFF_WARNING: ToolpathMessage = { code: "toolpath.touchOffPad"
 
 /**
  * Whether any cut of `operation`'s toolpath deeper than `below` the stock
- * top reaches into one of `discs`: the tool's reach at the cut's depth comes
- * within the disc.
+ * top reaches into one of `discs`: the tool's reach `below` the stock top,
+ * where the discs start, comes within the disc.
  */
 export function cutsInto(
   operation: Operation,
@@ -406,7 +406,8 @@ export function cutsInto(
       const [ax, ay, az, bx, by, bz] = segments.subarray(i, i + 6) as unknown as number[];
       const depth = -Math.min(az as number, bz as number);
       if (!(depth > below + 1e-6)) continue;
-      const reach = Math.min(profile.radius, profile.reach(depth));
+      // The tool's radius where the pin starts, `below` under the stock top: a tapered tool is narrower there.
+      const reach = Math.min(profile.radius, profile.reach(depth - below));
       for (const { x, y, diameter } of discs) {
         if (
           segmentDistance(x, y, ax as number, ay as number, bx as number, by as number) <

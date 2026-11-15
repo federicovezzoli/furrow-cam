@@ -48,15 +48,16 @@ export type FileResult<T> = T | { error: string };
 export interface DesktopApi {
   /** Shows the open dialog and reads the chosen file; `null` when cancelled. */
   openFile(): Promise<FileResult<OpenedFile> | null>;
-  /** Reads the project file at `path`, e.g. a recent one. */
+  /** Reads the project file at `path`, e.g. a recent one: only one the main process gave the renderer. */
   readFile(path: string): Promise<FileResult<OpenedFile>>;
   /**
    * Writes `bytes` to `path`, or where the user picks in a save dialog
    * (starting at `suggestedName`, next to `path` if there is one) when
    * `path` is `null`. If the file at `path` isn't what `stamp` says it was,
-   * asks first: replace it, save elsewhere or cancel; an `undefined` stamp
-   * isn't checked. Returns where it was saved and its new stamp, or `null`
-   * when cancelled.
+   * asks first: replace it, save elsewhere or cancel; without a stamp, asks
+   * if there is any file. A `path` the user didn't open or save this session
+   * is treated as `null`. Returns where it was saved and its new stamp, or
+   * `null` when cancelled.
    */
   saveFile(
     path: string | null,

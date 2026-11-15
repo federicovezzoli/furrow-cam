@@ -483,6 +483,8 @@
       "keep": "Mijn wijzigingen houden",
       "changed": "{name} is gewijzigd sinds het werd geopend",
       "changedDetail": "Een ander programma, zoals een AI-assistent via de MCP-server van Furrow CAM, heeft het intussen bewaard. Vervangen gooit die wijzigingen weg; met Bewaar als blijven beide behouden.",
+      "exists": "{name} bestaat al",
+      "existsDetail": "Vervangen gooit de huidige inhoud weg; Bewaar als bewaart beide.",
       "replace": "Vervangen",
       "saveAs": "Bewaar als…",
       "cancel": "Annuleer"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, one {# open pad} other {# open paden}} overgeslagen: uitsparingen hebben gesloten paden nodig.",
       "skippedOpenVCarve": "{count, plural, one {# open pad} other {# open paden}} overgeslagen: V-carven heeft gesloten paden nodig.",
       "skippedSmallCircles": "{count, plural, one {# cirkel} other {# cirkels}} kleiner dan het gereedschap overgeslagen.",
+      "skippedSmallPaths": "{count, plural, one {# gesloten pad} other {# gesloten paden}} overgeslagen, te klein voor het gereedschap.",
       "skippedLargeCircles": "{count, plural, one {# cirkel} other {# cirkels}} groter dan de boor overgeslagen: frees ze uit met een vingerfrees.",
       "skippedNonCircles": "{count, plural, one {# pad} other {# paden}} overgeslagen: boren heeft cirkels of punten nodig.",
       "depthExceedsFlutes": "De diepte is groter dan de snijlengte van het gereedschap.",
@@ -727,7 +730,8 @@
       "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
       "noEnabled": "Er zijn geen ingeschakelde bewerkingen om te exporteren.",
       "noneHasToolpath": "Geen van de ingeschakelde bewerkingen heeft een gereedschapsbaan om te exporteren.",
-      "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma."
+      "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma.",
+      "notFinite": "Een coördinaat of voeding van het gereedschapspad is geen getal, dus er is geen programma geschreven."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {Regel {line}, na het blok {block, select, programStart {programmastart} toolChangePad {gereedschapswissel op het tastvlak} toolChange {gereedschapswissel} operationStart {start bewerking} other {programma-einde}},} other {{block, select, programStart {Programmastart} toolChangePad {Gereedschapswissel op het tastvlak} toolChange {Gereedschapswissel} operationStart {Start bewerking} other {Programma-einde}}: regel {line}}} {problem, select, material {beweegt door {amount, number} mm materiaal} belowBottom {gaat onder de onderkant van het materiaal tot Z{amount}} unknownPosition {gaat vanaf een onbekende positie onder de bovenkant van het materiaal} unreadable {kan niet worden gelezen, dus vanaf daar wordt het programma niet gecontroleerd op bewegingen in het materiaal} other {laat het gereedschap achter waar het niet te volgen is, dus vanaf daar wordt het programma niet gecontroleerd op bewegingen in het materiaal}}.",

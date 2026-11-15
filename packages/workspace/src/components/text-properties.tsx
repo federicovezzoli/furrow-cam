@@ -60,19 +60,39 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   const t = useTranslations("Text");
   const format = useFormatMessage();
 
+  /**
+   * The gesture start or end still waiting for the one before: a gesture begun
+   * while the last one's layouts land waits for it to commit, and so do its
+   * edits, so each gesture is its own undo step.
+   */
+  const pending = useRef<Promise<void> | null>(null);
+  function afterPending(step: () => void | Promise<void>): Promise<void> {
+    const next = (pending.current ?? Promise.resolve()).then(step);
+    pending.current = next;
+    void next.finally(() => {
+      if (pending.current === next) pending.current = null;
+    });
+    return next;
+  }
   // A scrub or held arrow is one undo step: its layouts land before it ends.
   const gestures = {
-    onGestureStart: () => store.getState().beginTransaction(),
-    onGestureEnd: async (cancelled: boolean) => {
-      await textSettled(drawingId);
-      const state = store.getState();
-      if (cancelled) state.cancelTransaction();
-      else state.commitTransaction();
+    onGestureStart: () => {
+      const begin = () => store.getState().beginTransaction();
+      if (pending.current) void afterPending(begin);
+      else begin();
     },
+    onGestureEnd: (cancelled: boolean) =>
+      afterPending(async () => {
+        await textSettled(drawingId);
+        const state = store.getState();
+        if (cancelled) state.cancelTransaction();
+        else state.commitTransaction();
+      }),
   };
 
   /** Applies `edits` once laid out; whether they were. */
   async function edit(edits: Partial<Omit<TextSettings, "placement">>): Promise<boolean> {
+    if (pending.current) await pending.current;
     const result = await editText(store, drawingId, edits, uploadedFonts(store, host.fonts));
     setError(result.ok ? null : result.error);
     if (!result.ok) return false;

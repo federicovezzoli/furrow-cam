@@ -10,6 +10,7 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.skippedOpenPocket",
   "toolpath.skippedOpenVCarve",
   "toolpath.skippedSmallCircles",
+  "toolpath.skippedSmallPaths",
   "toolpath.skippedLargeCircles",
   "toolpath.skippedNonCircles",
   "toolpath.depthExceedsFlutes",

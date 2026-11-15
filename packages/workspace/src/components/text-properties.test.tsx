@@ -42,9 +42,22 @@ class TextWorker {
       closed: true,
     };
     const paths = settings.text === "∅" ? [] : [box];
-    queueMicrotask(() => this.onmessage?.({ data: { id, paths } } as MessageEvent));
+    const reply = () => this.onmessage?.({ data: { id, paths } } as MessageEvent);
+    if (heldLayouts) heldLayouts.push(reply);
+    else queueMicrotask(reply);
   }
   terminate() {}
+}
+/** Layouts waiting for `releaseLayouts`, while a test holds them to make layout slow. */
+let heldLayouts: (() => void)[] | null = null;
+
+/** Lets the held layouts land, and those they start, until none is left. */
+async function releaseLayouts() {
+  for (let i = 0; i < 20; i++)
+    await act(async () => {
+      for (const reply of heldLayouts?.splice(0) ?? []) reply();
+    });
+  heldLayouts = null;
 }
 vi.stubGlobal("Worker", TextWorker);
 
@@ -166,6 +179,36 @@ describe("TextProperties", () => {
     act(() => stores.document.getState().undo());
     expect(current()).toEqual(withText());
   });
+
+  it.each([
+    [false, 2],
+    [true, 1],
+  ])(
+    "keeps two quick gestures apart while layout is slow (Escape on the second: %s)",
+    async (cancel, steps) => {
+      render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+      heldLayouts = [];
+      const height = screen.getByLabelText(/^Letter height/);
+      fireEvent.keyDown(height, { key: "ArrowUp" });
+      fireEvent.keyUp(height, { key: "ArrowUp" });
+      // The second starts before the first's layout lands.
+      const lineSpacing = screen.getByLabelText(/^Line spacing/);
+      fireEvent.keyDown(lineSpacing, { key: "ArrowUp" });
+      if (cancel) fireEvent.keyDown(window, { key: "Escape" });
+      else fireEvent.keyUp(lineSpacing, { key: "ArrowUp" });
+      await releaseLayouts();
+      await waitFor(() => expect(stores.document.getState().inTransaction).toBe(false));
+      const raised = withText().drawings.at(-1)?.text;
+      expect(text()?.height).toBeGreaterThan(raised?.height ?? 0);
+      expect(text()?.lineSpacing === raised?.lineSpacing).toBe(cancel);
+      expect(stores.document.getState().past).toHaveLength(steps);
+      if (!cancel) {
+        act(() => stores.document.getState().undo());
+        expect(text()?.lineSpacing).toBe(raised?.lineSpacing);
+        expect(text()?.height).toBeGreaterThan(raised?.height ?? 0);
+      }
+    },
+  );
 
   it("converts the text into a drawing, which has no text settings", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());

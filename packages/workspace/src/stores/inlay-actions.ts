@@ -71,7 +71,9 @@ export function makeInlay(
 ): { ok: true; id: string } | { ok: false; error: Translatable } {
   if (!(gap >= 0 && gap < depth)) return { ok: false, error: GAP_RANGE };
   const { document } = store.getState();
-  if (depth > inlayMaxDepth(tool, document.stock.thickness, gap) + 1e-9) {
+  // The plug goes down to the cone at most, as the toolpath would stop anyway, so it doesn't warn.
+  const plugDepth = Math.min(depth, (vBitConeDepth(tool) ?? depth) - (depth - gap));
+  if (depth > inlayMaxDepth(tool, document.stock.thickness, gap) + 1e-9 || !(plugDepth > 1e-9)) {
     return { ok: false, error: TOO_DEEP };
   }
   const byId = new Map(document.geometry.map((shape) => [shape.id, shape]));
@@ -147,8 +149,7 @@ export function makeInlay(
     plugName,
     [...copies, boundaryShape].map((shape) => ({ shapeId: shape.id, paths: null })),
     depth - gap,
-    // Down to the cone at most, as the toolpath would stop anyway, so the plug doesn't warn.
-    Math.min(depth, (vBitConeDepth(tool) ?? depth) - (depth - gap)),
+    plugDepth,
   );
   for (const operation of [pocket, plug]) {
     const parsed = VCarveOperation.safeParse(operation);

@@ -681,6 +681,13 @@ describe("grbl", () => {
     );
   });
 
+  it("refuses a toolpath with a coordinate that isn't a number, naming its operation", () => {
+    const toolpath = plunge([100, Number.NaN]);
+    expect(() => post({ operations: [{ operation: operation("Bad"), toolpath }] })).toThrow(
+      expect.objectContaining({ operation: "Bad", detail: { code: "export.notFinite" } }),
+    );
+  });
+
   it("keeps parentheses and line breaks out of comments", () => {
     const { gcode } = post({ name: "Sign (v2)\nfinal" });
     expect(gcode.split("\n")[0]).toBe("(Sign [v2] final)");

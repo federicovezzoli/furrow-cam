@@ -483,6 +483,8 @@
       "keep": "Keep Mine",
       "changed": "{name} changed since it was opened",
       "changedDetail": "Another program, such as an AI assistant using Furrow CAM's MCP server, saved it meanwhile. Replacing it loses those changes; Save As keeps both.",
+      "exists": "{name} already exists",
+      "existsDetail": "Replacing it loses what's in it now; Save As keeps both.",
       "replace": "Replace",
       "saveAs": "Save As…",
       "cancel": "Cancel"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "Skipped {count, plural, one {# open path} other {# open paths}}: pockets need closed paths.",
       "skippedOpenVCarve": "Skipped {count, plural, one {# open path} other {# open paths}}: V-carving needs closed paths.",
       "skippedSmallCircles": "Skipped {count, plural, one {# circle} other {# circles}} smaller than the tool.",
+      "skippedSmallPaths": "Skipped {count, plural, one {# closed path} other {# closed paths}} too small for the tool.",
       "skippedLargeCircles": "Skipped {count, plural, one {# circle} other {# circles}} larger than the drill: bore them with an end mill.",
       "skippedNonCircles": "Skipped {count, plural, one {# path} other {# paths}}: drilling needs circles or points.",
       "depthExceedsFlutes": "The depth exceeds the tool's flute length.",
@@ -727,7 +730,8 @@
       "allHidden": "Every enabled operation cuts something hidden: show it to export.",
       "noEnabled": "There are no enabled operations to export.",
       "noneHasToolpath": "None of the enabled operations has a toolpath to export.",
-      "noToolpath": "No toolpath, left out of the program."
+      "noToolpath": "No toolpath, left out of the program.",
+      "notFinite": "A coordinate or feed of the toolpath isn't a number, so no program was written."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {Line {line}, after the {block, select, programStart {program start} toolChangePad {tool change on the pad} toolChange {tool change} operationStart {operation start} other {program end}} block,} other {{block, select, programStart {Program start} toolChangePad {Tool change on the pad} toolChange {Tool change} operationStart {Operation start} other {Program end}}: line {line}}} {problem, select, material {moves through {amount, number} mm of material} belowBottom {goes below the stock bottom to Z{amount}} unknownPosition {goes below the stock top from an unknown position} unreadable {can't be read, so the program isn't checked for moves into the stock from there on} other {leaves the tool where it can't be followed, so the program isn't checked for moves into the stock from there on}}.",

@@ -1,5 +1,6 @@
 import type { Vec3 } from "@furrow/cam-core";
 import { formatNumber } from "./format";
+import { GcodeExportError } from "./post";
 import type { BlockLabel, CustomBlock } from "./read-back";
 
 type Axes = { x?: number; y?: number; z?: number };
@@ -25,6 +26,9 @@ export class GcodeWriter {
   readonly customBlocks: CustomBlock[] = [];
   /** Last written value of each word, as formatted, or absent when unknown. */
   private written: Partial<Record<"x" | "y" | "z" | "f", string>> = {};
+
+  /** The operation being written, named if a move can't be. */
+  operation: string | undefined;
 
   constructor(private readonly offset: Vec3) {}
 
@@ -75,6 +79,14 @@ export class GcodeWriter {
   }
 
   private move(code: "G0" | "G1", to: Axes, feedRate?: number) {
+    // `NaN` or `Infinity` would be written as is, and the machine would stop mid-job on it.
+    const values = [to.x, to.y, to.z, feedRate].filter((value) => value !== undefined);
+    if (!values.every(Number.isFinite)) {
+      throw new GcodeExportError({
+        operation: this.operation,
+        message: { code: "export.notFinite" },
+      });
+    }
     const words: string[] = [];
     for (const axis of AXES) {
       const value = to[axis];

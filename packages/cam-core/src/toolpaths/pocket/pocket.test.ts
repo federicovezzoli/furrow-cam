@@ -513,6 +513,14 @@ describe("pocketToolpath", () => {
     ]);
   });
 
+  it("warns how many areas it skips as too narrow for the tool when others fit", () => {
+    const tiny = rectangle("0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a", 150, 0, 4, 4);
+    const skipped = [{ code: "toolpath.skippedSmallPaths", values: { count: 1 } }];
+    expect(pocket({}, [square, tiny]).warnings).toEqual(skipped);
+    expect(pocket({ finishPass: true, allowance: 0.5 }, [square, tiny]).warnings).toEqual(skipped);
+    expect(pocket({}, [square, tiny], { diameter: 3 }).warnings).toEqual([]);
+  });
+
   it("is what generateToolpath returns for a pocket", () => {
     expect(
       generateToolpath({

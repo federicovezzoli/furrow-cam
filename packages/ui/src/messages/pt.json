@@ -483,6 +483,8 @@
       "keep": "Manter as minhas",
       "changed": "{name} foi alterado desde que foi aberto",
       "changedDetail": "Outro programa, como um assistente de IA usando o servidor MCP do Furrow CAM, salvou o arquivo nesse meio-tempo. Substituí-lo perde essas alterações; Salvar Como mantém os dois.",
+      "exists": "{name} já existe",
+      "existsDetail": "Substituí-lo perde o conteúdo atual; Salvar Como mantém ambos.",
       "replace": "Substituir",
       "saveAs": "Salvar Como…",
       "cancel": "Cancelar"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, one {# caminho aberto ignorado} other {# caminhos abertos ignorados}}: rebaixos precisam de caminhos fechados.",
       "skippedOpenVCarve": "{count, plural, one {# caminho aberto ignorado} other {# caminhos abertos ignorados}}: o entalhe em V precisa de caminhos fechados.",
       "skippedSmallCircles": "{count, plural, one {# círculo menor que a ferramenta ignorado} other {# círculos menores que a ferramenta ignorados}}.",
+      "skippedSmallPaths": "{count, plural, one {Ignorado # caminho fechado pequeno demais} other {Ignorados # caminhos fechados pequenos demais}} para a ferramenta.",
       "skippedLargeCircles": "{count, plural, one {# círculo maior que a broca ignorado} other {# círculos maiores que a broca ignorados}}: usine-os com uma fresa de topo.",
       "skippedNonCircles": "{count, plural, one {# caminho ignorado} other {# caminhos ignorados}}: a furação precisa de círculos ou pontos.",
       "depthExceedsFlutes": "A profundidade excede o comprimento de corte da ferramenta.",
@@ -727,7 +730,8 @@
       "allHidden": "Toda operação ativa corta algo oculto: mostre para exportar.",
       "noEnabled": "Não há operações ativadas para exportar.",
       "noneHasToolpath": "Nenhuma das operações ativadas tem percurso para exportar.",
-      "noToolpath": "Sem percurso, deixada fora do programa."
+      "noToolpath": "Sem percurso, deixada fora do programa.",
+      "notFinite": "Uma coordenada ou um avanço do percurso da ferramenta não é um número, por isso nenhum programa foi escrito."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {Linha {line}, após o bloco {block, select, programStart {início do programa} toolChangePad {troca de ferramenta na área de zeragem} toolChange {troca de ferramenta} operationStart {início da operação} other {fim do programa}},} other {{block, select, programStart {Início do programa} toolChangePad {Troca de ferramenta na área de zeragem} toolChange {Troca de ferramenta} operationStart {Início da operação} other {Fim do programa}}: linha {line}}} {problem, select, material {atravessa {amount, number} mm de material} belowBottom {desce abaixo do fundo do material até Z{amount}} unknownPosition {desce abaixo do topo do material a partir de uma posição desconhecida} unreadable {não pode ser lida, então o programa não é verificado quanto a movimentos dentro do material a partir dali} other {deixa a ferramenta onde não é possível acompanhá-la, então o programa não é verificado quanto a movimentos dentro do material a partir dali}}.",

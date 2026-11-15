@@ -53,6 +53,7 @@ export const POST_MESSAGES = [
   "export.noEnabled",
   "export.noneHasToolpath",
   "export.noToolpath",
+  "export.notFinite",
   "grbl.customBlockMove",
   "grbl.slowed",
   "grbl.spindleClamped",

@@ -483,6 +483,8 @@
       "keep": "Meine behalten",
       "changed": "{name} wurde seit dem Öffnen geändert",
       "changedDetail": "Ein anderes Programm, etwa ein KI-Assistent über den MCP-Server von Furrow CAM, hat die Datei inzwischen gespeichert. Ersetzen verwirft diese Änderungen; Speichern unter behält beide.",
+      "exists": "{name} existiert bereits",
+      "existsDetail": "Beim Ersetzen geht der jetzige Inhalt verloren; „Speichern unter“ behält beides.",
       "replace": "Ersetzen",
       "saveAs": "Speichern unter…",
       "cancel": "Abbrechen"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, one {# offener Pfad übersprungen} other {# offene Pfade übersprungen}}: Taschen brauchen geschlossene Pfade.",
       "skippedOpenVCarve": "{count, plural, one {# offener Pfad übersprungen} other {# offene Pfade übersprungen}}: V-Schnitzen braucht geschlossene Pfade.",
       "skippedSmallCircles": "{count, plural, one {# Kreis übersprungen, der} other {# Kreise übersprungen, die}} kleiner als das Werkzeug {count, plural, one {ist} other {sind}}.",
+      "skippedSmallPaths": "{count, plural, one {# geschlossener Pfad} other {# geschlossene Pfade}} übersprungen, zu klein für das Werkzeug.",
       "skippedLargeCircles": "{count, plural, one {# Kreis übersprungen, der} other {# Kreise übersprungen, die}} größer als der Bohrer {count, plural, one {ist} other {sind}}: Bohre sie mit einem Schaftfräser aus.",
       "skippedNonCircles": "{count, plural, one {# Pfad übersprungen} other {# Pfade übersprungen}}: Bohren braucht Kreise oder Punkte.",
       "depthExceedsFlutes": "Die Tiefe überschreitet die Schneidenlänge des Werkzeugs.",
@@ -727,7 +730,8 @@
       "allHidden": "Jede aktive Operation schneidet etwas Ausgeblendetes: blende es ein, um zu exportieren.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
-      "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen."
+      "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen.",
+      "notFinite": "Eine Koordinate oder ein Vorschub der Werkzeugbahn ist keine Zahl, daher wurde kein Programm geschrieben."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {Zeile {line}, nach dem Block {block, select, programStart {Programmstart} toolChangePad {Werkzeugwechsel auf der Platte} toolChange {Werkzeugwechsel} operationStart {Operationsstart} other {Programmende}},} other {{block, select, programStart {Programmstart} toolChangePad {Werkzeugwechsel auf der Platte} toolChange {Werkzeugwechsel} operationStart {Operationsstart} other {Programmende}}: Zeile {line}}} {problem, select, material {fährt durch {amount, number} mm Material} belowBottom {fährt unter den Boden des Rohteils auf Z{amount}} unknownPosition {fährt von einer unbekannten Position unter die Oberseite des Rohteils} unreadable {kann nicht gelesen werden, daher wird das Programm ab dort nicht auf Fahrten ins Rohteil geprüft} other {lässt das Werkzeug an einer Stelle, die sich nicht verfolgen lässt, daher wird das Programm ab dort nicht auf Fahrten ins Rohteil geprüft}}.",

@@ -5,8 +5,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   existingRecent,
   fileStamp,
+  isPageOf,
+  isRecoveryInput,
   MAX_RECENT,
   parseRecent,
+  pathGrants,
   projectName,
   projectPathsIn,
   recoveryStore,
@@ -142,9 +145,43 @@ describe("watchFile", () => {
       await writeFileAtomic(path, "two");
       const saved = await fileStamp(path);
       // macOS may also report a change from just before the watch started.
-      await expect.poll(() => stamps.at(-1), { timeout: 5000 }).toBe(saved);
+      // File events can be slow under load; the test timeout stays above the poll's so a miss is reported.
+      await expect.poll(() => stamps.at(-1), { timeout: 10_000 }).toBe(saved);
     } finally {
       stop();
     }
+  }, 15_000);
+});
+
+describe("pathGrants", () => {
+  it("allows only granted paths whose name matches", () => {
+    const grants = pathGrants();
+    grants.grant("/a/Coasters.furrow", null);
+    expect(grants.allows("/a/Coasters.furrow", /\.furrow$/i)).toBe(true);
+    expect(grants.allows("/a/Other.furrow", /\.furrow$/i)).toBe(false);
+    expect(grants.allows("/a/../a/Coasters.furrow", /\.furrow$/i)).toBe(false);
+    expect(grants.allows(undefined, /\.furrow$/i)).toBe(false);
+    grants.grant("/home/me/.bashrc");
+    expect(grants.allows("/home/me/.bashrc", /\.furrow$/i)).toBe(false);
+  });
+});
+
+describe("isRecoveryInput", () => {
+  it("accepts what the renderer sends and refuses anything else", () => {
+    expect(isRecoveryInput({ id: "a", path: null, name: "A" })).toBe(true);
+    expect(isRecoveryInput({ id: "a", path: "/a.furrow", name: "A", stamp: "1:2:3:4" })).toBe(true);
+    expect(isRecoveryInput({ id: "a", path: 1, name: "A" })).toBe(false);
+    expect(isRecoveryInput({ id: "a", path: null, name: "A", stamp: 5 })).toBe(false);
+    expect(isRecoveryInput(null)).toBe(false);
+  });
+});
+
+describe("isPageOf", () => {
+  it("matches the origin's pages and nothing that only starts like it", () => {
+    expect(isPageOf("app://furrow/index.html", "app://furrow")).toBe(true);
+    expect(isPageOf("app://furrow.evil/index.html", "app://furrow")).toBe(false);
+    expect(isPageOf("app://furrow", "app://furrow")).toBe(false);
+    expect(isPageOf("http://localhost:5173/", "http://localhost:5173")).toBe(true);
+    expect(isPageOf("http://localhost:51730/", "http://localhost:5173")).toBe(false);
   });
 });

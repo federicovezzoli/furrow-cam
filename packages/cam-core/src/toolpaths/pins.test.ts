@@ -1,10 +1,11 @@
 import type { FlipAxis, Operation, PinHoles, ProjectDocument } from "@furrow/document";
-import { drill, fullDocument, reliefRough } from "@furrow/document/fixtures";
+import { drill, fullDocument, reliefRough, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { flipPoint, pinCenters } from "../scene/sides";
 import { stockOffset } from "../scene/stock";
 import {
   checkPins,
+  cutsInto,
   generateToolpath,
   PINS_WARNING,
   type ToolpathInput,
@@ -167,6 +168,25 @@ describe("locating pins", () => {
       expect(checkPins(relief, across(-1)).warnings).toEqual([PINS_WARNING]);
       expect(checkPins(relief, across(1)).warnings).toEqual([]);
     });
+  });
+
+  it("measures a V-bit's reach where the pin starts, not at the stock top", () => {
+    const operation = { ...(fullDocument().operations[0] as Operation), tool: vBit };
+    // A 6 mm pin from 5 mm under the stock top; the 60° V-bit cuts 5.5 mm deep, 3.18 mm wide at the top.
+    const pin = { x: 0, y: 0, diameter: 6 };
+    const cut = (y: number): Toolpath => ({
+      moves: [
+        { kind: "rapid", to: [-10, y, 5] },
+        { kind: "feed", to: [-10, y, -5.5], feedRate: 1000 },
+        { kind: "feed", to: [10, y, -5.5], feedRate: 1000 },
+      ],
+      warnings: [],
+    });
+    // 0.5 mm into the pin's depth, the cone is 0.29 mm wide in radius.
+    expect(cutsInto(operation, cut(4), [pin], 5)).toBe(false);
+    expect(cutsInto(operation, cut(3.2), [pin], 5)).toBe(true);
+    // The touch-off pad, from the stock top, still takes the reach there.
+    expect(cutsInto(operation, cut(4), [pin])).toBe(true);
   });
 
   it("warns when the project has no pins to drill", () => {

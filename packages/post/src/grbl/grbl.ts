@@ -179,6 +179,7 @@ function writeOperation(program: Program, step: PostStep) {
     writeCustom(program, "operationStart", machine.operationStart);
     if (stopsSpindle(machine.operationStart)) program.speed = undefined;
   } else out.comment(`Operation: ${step.name}`);
+  out.operation = step.name;
 
   // Getting to the first entry point safely is the post-processor's job.
   // The user may have jogged during a pause, so nothing is taken as known.
@@ -240,6 +241,7 @@ function writeMoves(program: Program, step: PostStep) {
 /** The machine's program end, else the spindle off, a rise, back to the XY zero and `M30`. */
 function writeEnd(program: Program) {
   const { out, input } = program;
+  out.operation = undefined;
   const { machine, safeZ } = input;
   if (machine?.programEnd)
     out.custom("programEnd", fill(program, "programEnd", machine.programEnd));

@@ -483,6 +483,8 @@
       "keep": "保留我的更改",
       "changed": "{name} 在打开后已被更改",
       "changedDetail": "另一个程序（例如通过 Furrow CAM 的 MCP 服务器工作的 AI 助手）在此期间保存了它。替换会丢失这些更改；“另存为”可以保留两者。",
+      "exists": "{name} 已存在",
+      "existsDetail": "替换会丢失其当前内容；“另存为”可以保留两者。",
       "replace": "替换",
       "saveAs": "另存为…",
       "cancel": "取消"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "已跳过{count, plural, other {#条开放路径}}：挖槽需要闭合路径。",
       "skippedOpenVCarve": "已跳过{count, plural, other {#条开放路径}}：V形雕刻需要闭合路径。",
       "skippedSmallCircles": "已跳过{count, plural, other {#个}}比刀具小的圆。",
+      "skippedSmallPaths": "已跳过 {count, plural, other {# 条}}对刀具来说太小的闭合路径。",
       "skippedLargeCircles": "已跳过{count, plural, other {#个}}比钻头大的圆：请用立铣刀铣孔。",
       "skippedNonCircles": "已跳过{count, plural, other {#条路径}}：钻孔需要圆或点。",
       "depthExceedsFlutes": "深度超过了刀具的刃长。",
@@ -727,7 +730,8 @@
       "allHidden": "每个启用的操作都会切削隐藏的内容：请显示后再导出。",
       "noEnabled": "没有已启用的加工操作可导出。",
       "noneHasToolpath": "已启用的加工操作都没有可导出的刀具路径。",
-      "noToolpath": "没有刀具路径，未包含在程序中。"
+      "noToolpath": "没有刀具路径，未包含在程序中。",
+      "notFinite": "刀具路径的某个坐标或进给不是数字，因此未写入程序。"
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {{block, select, programStart {程序开始} toolChangePad {在对刀区换刀} toolChange {换刀} operationStart {加工操作开始} other {程序结束}}代码块之后的第{line}行} other {{block, select, programStart {程序开始} toolChangePad {在对刀区换刀} toolChange {换刀} operationStart {加工操作开始} other {程序结束}}：第{line}行}}{problem, select, material {穿过了{amount, number} mm的材料} belowBottom {低于毛坯底面，到达Z{amount}} unknownPosition {从未知位置移动到毛坯顶面以下} unreadable {无法读取，因此从此处起不再检查程序中切入毛坯的移动} other {使刀具处于无法追踪的位置，因此从此处起不再检查程序中切入毛坯的移动}}。",

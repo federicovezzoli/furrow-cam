@@ -1,6 +1,6 @@
 import type { PocketOperation, PocketParams, Point, Shape, Tool } from "@furrow/document";
 import type { Rect } from "../../geometry/bounds";
-import { difference, offset, type Polygon } from "../../geometry/clipper";
+import { difference, nest, offset, type Polygon } from "../../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../../geometry/flatten";
 import { projectOnLoop } from "../../geometry/loop";
 import type { ToolpathMessage } from "../messages";
@@ -107,6 +107,14 @@ export function pocketToolpath(
     ...options,
     stock: params.side === "outside" ? stock : null,
   });
+  if (params.side === "inside" && !toolpath.warnings.some(isTooSmall)) {
+    const count = narrowAreas(
+      closed,
+      tool.diameter / 2 + (params.finishPass ? 0 : params.allowance),
+      tolerance,
+    );
+    if (count > 0) warnings.push({ code: "toolpath.skippedSmallPaths", values: { count } });
+  }
   if (params.side !== "outside") {
     return { moves: toolpath.moves, warnings: [...warnings, ...toolpath.warnings] };
   }
@@ -118,6 +126,19 @@ export function pocketToolpath(
     );
   }
   return { moves: toolpath.moves, warnings };
+}
+
+const isTooSmall = ({ code }: ToolpathMessage) => code === "toolpath.pathsTooSmall";
+
+/**
+ * How many areas inside the rings `closed`, each an outer ring and its holes,
+ * leave no room for the tool centre `reach` from their edges, so nothing of them is cut.
+ */
+function narrowAreas(closed: Polygon[], reach: number, tolerance: number): number {
+  const options = { arcTolerance: tolerance };
+  return nest(closed).filter(({ outer, holes }) =>
+    offset([outer, ...holes], -reach, options).every((ring) => ring.length < 3),
+  ).length;
 }
 
 /** Whether the segment `a`–`b` passes through the inside of `rect` (Liang–Barsky). */

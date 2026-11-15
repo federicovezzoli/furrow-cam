@@ -19,6 +19,8 @@ import {
   BrowserWindow,
   clipboard,
   dialog,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
   ipcMain,
   Menu,
   type MenuItemConstructorOptions,
@@ -39,14 +41,16 @@ import {
   type MenuCommand,
   OPEN_EXTENSIONS,
   type RecentFile,
-  type Recovery,
   type ReloadChoice,
   type UnsavedChoice,
 } from "../shared/api";
 import {
   existingRecent,
   fileStamp,
+  isPageOf,
+  isRecoveryInput,
   parseRecent,
+  pathGrants,
   projectName,
   projectPathsIn,
   readJson,
@@ -83,6 +87,10 @@ const DEV_URL = process.env.ELECTRON_RENDERER_URL;
 /** The built renderer, next to `package.json` (or inside the app's archive). */
 const rendererDir = () => join(app.getAppPath(), "out/renderer");
 const APP_ORIGIN = "app://furrow";
+/** Where the window's own pages come from: IPC from anywhere else is ignored. */
+const RENDERER_ORIGIN = DEV_URL ? new URL(DEV_URL).origin : APP_ORIGIN;
+/** What the window may use; every other permission (camera, USB, serial…) is refused. */
+const PERMISSIONS = new Set(["clipboard-sanitized-write", "fullscreen"]);
 
 /** The terrain dialog's services, the renderer's only way out (ADR-0076). */
 const TERRAIN_SOURCES = TERRAIN_HOSTS.map((host) => `https://${host}`).join(" ");
@@ -213,6 +221,7 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(async () => {
     if (!DEV_URL) serveRenderer();
     blockNetwork();
+    refusePermissions();
     registerIpc();
     updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
     telemetryPrefs = parseTelemetryPrefs(await readJson(telemetryPath()));
@@ -235,6 +244,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 function openPath(path: string) {
+  grants.grant(path);
   if (window && !window.webContents.isLoading()) window.webContents.send(CHANNELS.openPath, path);
   else pendingPaths.push(path);
   if (!window && app.isReady()) createWindow();
@@ -256,6 +266,19 @@ function serveRenderer() {
     headers.set("Content-Security-Policy", CSP);
     return new Response(response.body, { status: response.status, headers });
   });
+}
+
+/** Refuses every permission but `PERMISSIONS`, and any `<webview>`: Electron grants them by default. */
+function refusePermissions() {
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) =>
+    callback(PERMISSIONS.has(permission)),
+  );
+  session.defaultSession.setPermissionCheckHandler((_contents, permission) =>
+    PERMISSIONS.has(permission),
+  );
+  app.on("web-contents-created", (_event, contents) =>
+    contents.on("will-attach-webview", (event) => event.preventDefault()),
+  );
 }
 
 /**
@@ -891,12 +914,19 @@ function watchProject(path: string | null) {
 
 /** The files read this session: the only ones the renderer may list as recent (#494). */
 const readPaths = new Set<string>();
+/** The files the renderer may read or save over (GHSA-rh2g-j7fh-cvgf). */
+const grants = pathGrants();
+/** What the renderer may read: the open dialog's kinds of file. */
+const READABLE = new RegExp(`\\.(${OPEN_EXTENSIONS.join("|")})$`, "i");
+/** What the renderer may save over: projects alone (ADR-0047). */
+const SAVABLE = /\.furrow$/i;
 
 async function readProject(path: string) {
   try {
     // Taken before reading, so a change while reading shows at the next save.
     const stamp = await fileStamp(path);
     const bytes = new Uint8Array(await readFile(path));
+    grants.grant(path);
     readPaths.add(path);
     return { path, name: projectName(path), bytes, stamp };
   } catch {
@@ -910,17 +940,28 @@ async function readProject(path: string) {
  * or the user chose to replace it; `null` to save elsewhere; `undefined` to
  * cancel. Asks again if it changes while the question is open.
  */
-async function confirmReplace(path: string, stamp: FileStamp): Promise<string | null | undefined> {
+async function confirmReplace(
+  path: string,
+  stamp: FileStamp | undefined,
+): Promise<string | null | undefined> {
   const t = tr();
   let seen = stamp;
   for (;;) {
     const now = await fileStamp(path);
     if (now === seen || now === null) return path;
-    // E.g. an assistant saved it through the MCP server.
+    // Changed: e.g. an assistant saved it through the MCP server. Without a stamp
+    // (a recovery copy older than #491) nothing says it changed, only that it's there.
+    const name = projectName(path);
     const { response } = await dialog.showMessageBox({
       type: "warning",
-      message: t("DesktopMain.files.changed", { name: projectName(path) }),
-      detail: t("DesktopMain.files.changedDetail"),
+      message:
+        seen === undefined
+          ? t("DesktopMain.files.exists", { name })
+          : t("DesktopMain.files.changed", { name }),
+      detail:
+        seen === undefined
+          ? t("DesktopMain.files.existsDetail")
+          : t("DesktopMain.files.changedDetail"),
       buttons: [
         t("DesktopMain.files.replace"),
         t("DesktopMain.files.saveAs"),
@@ -967,8 +1008,32 @@ async function addRecent(path: string) {
   if (recent[0]?.path === path) app.addRecentDocument(path);
 }
 
+/** Whether `event` came from the window's own page, not a frame or page loaded into it. */
+function fromRenderer(event: IpcMainEvent | IpcMainInvokeEvent) {
+  const frame = event.senderFrame;
+  return frame?.parent === null && isPageOf(frame.url, RENDERER_ORIGIN);
+}
+
+/** `ipcMain.handle`, refusing calls from anywhere but the window's own page. */
+function handle(
+  channel: string,
+  listener: (event: IpcMainInvokeEvent, ...args: never[]) => unknown,
+) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!fromRenderer(event)) throw new Error(`Refused ${channel} from ${event.senderFrame?.url}`);
+    return listener(event, ...(args as never[]));
+  });
+}
+
+/** `ipcMain.on`, ignoring messages from anywhere but the window's own page. */
+function on(channel: string, listener: (event: IpcMainEvent, ...args: never[]) => void) {
+  ipcMain.on(channel, (event, ...args) => {
+    if (fromRenderer(event)) listener(event, ...(args as never[]));
+  });
+}
+
 function registerIpc() {
-  ipcMain.handle(CHANNELS.openFile, async () => {
+  handle(CHANNELS.openFile, async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openFile"],
       filters: [{ name: tr()("DesktopMain.files.projects"), extensions: [...OPEN_EXTENSIONS] }],
@@ -977,23 +1042,27 @@ function registerIpc() {
     return result.canceled || path === undefined ? null : readProject(path);
   });
 
-  ipcMain.handle(CHANNELS.readFile, (_event, path: unknown) =>
-    typeof path === "string" ? readProject(path) : { error: tr()("DesktopMain.files.noFile") },
+  handle(CHANNELS.readFile, (_event, path: unknown) =>
+    grants.allows(path, READABLE) ? readProject(path) : { error: tr()("DesktopMain.files.noFile") },
   );
 
-  ipcMain.handle(
+  handle(
     CHANNELS.saveFile,
     async (_event, path: unknown, suggestedName: unknown, bytes: unknown, stamp: unknown) => {
       const t = tr();
       if (!(bytes instanceof Uint8Array)) return { error: t("DesktopMain.files.nothingToSave") };
-      let target = typeof path === "string" ? path : null;
-      if (target !== null && (typeof stamp === "string" || stamp === null)) {
-        const confirmed = await confirmReplace(target, stamp);
+      // Any other path is saved where the user picks, as a new project.
+      const known = grants.allows(path, SAVABLE) ? path : null;
+      let target = known;
+      if (target !== null) {
+        // Without a stamp, asks before replacing whatever is there.
+        const lastSeen = typeof stamp === "string" || stamp === null ? stamp : undefined;
+        const confirmed = await confirmReplace(target, lastSeen);
         if (confirmed === undefined) return null;
         target = confirmed;
       }
       if (target === null) {
-        const folder = typeof path === "string" ? dirname(path) : app.getPath("documents");
+        const folder = known !== null ? dirname(known) : app.getPath("documents");
         const result = await dialog.showSaveDialog({
           defaultPath: join(folder, `${String(suggestedName)}.furrow`),
           filters: [{ name: t("DesktopMain.files.project"), extensions: ["furrow"] }],
@@ -1011,46 +1080,55 @@ function registerIpc() {
         const reason = error instanceof Error ? error.message : String(error);
         return { error: t("DesktopMain.files.saveFailed", { reason }) };
       }
+      grants.grant(target);
       await addRecent(target);
       return { path: target, name: projectName(target), stamp: saved };
     },
   );
 
-  ipcMain.handle(CHANNELS.recentFiles, async () => {
-    const recent = parseRecent(await readJson(recentPath()));
-    return existingRecent(recent);
+  handle(CHANNELS.recentFiles, async () => {
+    const recent = await existingRecent(parseRecent(await readJson(recentPath())));
+    grants.grant(...recent.map((file) => file.path));
+    return recent;
   });
-  ipcMain.handle(CHANNELS.addRecent, async (_event, path: unknown) => {
+  handle(CHANNELS.addRecent, async (_event, path: unknown) => {
     if (typeof path === "string" && readPaths.has(path)) await addRecent(path);
   });
-  ipcMain.handle(CHANNELS.removeRecent, async (_event, path: unknown) => {
+  handle(CHANNELS.removeRecent, async (_event, path: unknown) => {
     const recent = await updateRecent((stored) =>
       typeof path === "string" ? withoutRecent(stored, path) : stored,
     );
     // The OS list (Dock, Jump List) can't drop one file: rebuild it, oldest first.
     app.clearRecentDocuments();
     for (const file of [...recent].reverse()) app.addRecentDocument(file.path);
-    return existingRecent(recent);
+    const listed = await existingRecent(recent);
+    grants.grant(...listed.map((file) => file.path));
+    return listed;
   });
 
-  ipcMain.handle(CHANNELS.readData, (_event, file: unknown) =>
+  handle(CHANNELS.readData, (_event, file: unknown) =>
     isDataFile(file) ? readJson(join(dataDir(), `${file}.json`)) : null,
   );
-  ipcMain.handle(CHANNELS.writeData, async (_event, file: unknown, data: unknown) => {
+  handle(CHANNELS.writeData, async (_event, file: unknown, data: unknown) => {
     if (isDataFile(file)) await writeJson(join(dataDir(), `${file}.json`), data);
   });
 
-  ipcMain.handle(
-    CHANNELS.writeRecovery,
-    (_event, recovery: Omit<Recovery, "savedAt">, bytes: unknown) => {
-      if (bytes instanceof Uint8Array) return recoveries().write(recovery, bytes);
-    },
-  );
-  ipcMain.handle(CHANNELS.deleteRecovery, (_event, id: string) => recoveries().delete(id));
-  ipcMain.handle(CHANNELS.listRecoveries, () => recoveries().list());
-  ipcMain.handle(CHANNELS.readRecovery, (_event, id: string) => recoveries().read(id));
+  handle(CHANNELS.writeRecovery, (_event, recovery: unknown, bytes: unknown) => {
+    // Its path is offered back as a granted file next session: only one granted now.
+    const valid =
+      isRecoveryInput(recovery) &&
+      (recovery.path === null || grants.allows(recovery.path, SAVABLE));
+    if (valid && bytes instanceof Uint8Array) return recoveries().write(recovery, bytes);
+  });
+  handle(CHANNELS.deleteRecovery, (_event, id: string) => recoveries().delete(id));
+  handle(CHANNELS.listRecoveries, async () => {
+    const list = await recoveries().list();
+    grants.grant(...list.map((recovery) => recovery.path));
+    return list;
+  });
+  handle(CHANNELS.readRecovery, (_event, id: string) => recoveries().read(id));
 
-  ipcMain.handle(CHANNELS.askReload, async (_event, name: unknown): Promise<ReloadChoice> => {
+  handle(CHANNELS.askReload, async (_event, name: unknown): Promise<ReloadChoice> => {
     const t = tr();
     const { response } = await dialog.showMessageBox({
       type: "warning",
@@ -1063,7 +1141,7 @@ function registerIpc() {
     return response === 0 ? "reload" : "keep";
   });
 
-  ipcMain.handle(CHANNELS.askUnsaved, async (_event, name: unknown): Promise<UnsavedChoice> => {
+  handle(CHANNELS.askUnsaved, async (_event, name: unknown): Promise<UnsavedChoice> => {
     const t = tr();
     const { response } = await dialog.showMessageBox({
       type: "warning",
@@ -1080,22 +1158,19 @@ function registerIpc() {
     return response === 0 ? "save" : response === 1 ? "discard" : "cancel";
   });
 
-  ipcMain.on(
-    CHANNELS.setWindowState,
-    (_event, state: { title: string; path: string | null; modified: boolean }) => {
-      if (!window) return;
-      modified = state.modified;
-      watchProject(state.path);
-      const mac = process.platform === "darwin";
-      window.setTitle(!mac && state.modified ? `• ${state.title}` : state.title);
-      if (mac) {
-        window.setDocumentEdited(state.modified);
-        window.setRepresentedFilename(state.path ?? "");
-      }
-    },
-  );
+  on(CHANNELS.setWindowState, (_event, state: unknown) => {
+    if (!window || !isWindowState(state)) return;
+    modified = state.modified;
+    watchProject(state.path);
+    const mac = process.platform === "darwin";
+    window.setTitle(!mac && state.modified ? `• ${state.title}` : state.title);
+    if (mac) {
+      window.setDocumentEdited(state.modified);
+      window.setRepresentedFilename(state.path ?? "");
+    }
+  });
 
-  ipcMain.on(CHANNELS.closeWindow, () => {
+  on(CHANNELS.closeWindow, () => {
     closeAllowed = true;
     if (quitAfterClose) {
       installOnQuit = installAfterClose;
@@ -1103,18 +1178,18 @@ function registerIpc() {
     } else window?.close();
   });
 
-  ipcMain.on(CHANNELS.trackEvent, (_event, data: unknown) => {
+  on(CHANNELS.trackEvent, (_event, data: unknown) => {
     const event = parseTelemetryEvent(data);
     if (event) track(event);
   });
-  ipcMain.on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
+  on(CHANNELS.reportError, (_event, error: unknown) => captureError(error));
   // Answered once set, so the dialog's map waits for its first requests to be let through.
-  ipcMain.handle(CHANNELS.setTerrainServices, (_event, open: unknown) => {
+  handle(CHANNELS.setTerrainServices, (_event, open: unknown) => {
     terrainOpen = open === true;
   });
 
-  ipcMain.handle(CHANNELS.getLocale, () => currentLocale());
-  ipcMain.handle(CHANNELS.setLocale, async (_event, locale: unknown) => {
+  handle(CHANNELS.getLocale, () => currentLocale());
+  handle(CHANNELS.setLocale, async (_event, locale: unknown) => {
     if (!isLocale(locale)) return;
     pickedLocale = locale;
     Menu.setApplicationMenu(buildMenu());
@@ -1123,9 +1198,10 @@ function registerIpc() {
     );
   });
 
-  ipcMain.handle(CHANNELS.takePendingPaths, () => {
+  handle(CHANNELS.takePendingPaths, () => {
     const paths = pendingPaths;
     pendingPaths = [];
+    grants.grant(...paths);
     return paths;
   });
 }
@@ -1138,6 +1214,19 @@ function tr() {
 /** The interface language: the picked one, else the first supported system language, else English. */
 function currentLocale(): Locale {
   return pickedLocale ?? matchLocale([...app.getPreferredSystemLanguages(), app.getLocale()]);
+}
+
+/** Whether `state` is what `setWindowState` takes, with a file the renderer may watch. */
+function isWindowState(
+  state: unknown,
+): state is { title: string; path: string | null; modified: boolean } {
+  if (typeof state !== "object" || state === null) return false;
+  const { title, path, modified } = state as Record<string, unknown>;
+  return (
+    typeof title === "string" &&
+    typeof modified === "boolean" &&
+    (path === null || grants.allows(path, SAVABLE))
+  );
 }
 
 function isDataFile(file: unknown): file is DataFile {

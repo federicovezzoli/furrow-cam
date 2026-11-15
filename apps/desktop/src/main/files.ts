@@ -186,15 +186,43 @@ export function recoveryStore(dir: string) {
 }
 
 function isRecovery(value: unknown): value is Recovery {
+  return isRecoveryInput(value) && typeof (value as { savedAt?: unknown }).savedAt === "string";
+}
+
+/** Whether `value` is what the renderer sends to describe a recovery copy. */
+export function isRecoveryInput(value: unknown): value is Omit<Recovery, "savedAt"> {
   if (typeof value !== "object" || value === null) return false;
-  const { id, path, name, savedAt, stamp } = value as Record<string, unknown>;
+  const { id, path, name, stamp } = value as Record<string, unknown>;
   return (
     typeof id === "string" &&
     (path === null || typeof path === "string") &&
     typeof name === "string" &&
-    typeof savedAt === "string" &&
     (stamp === undefined || stamp === null || typeof stamp === "string")
   );
+}
+
+/** Whether `url` is a page of `origin`: `app://furrow` is not `app://furrow.evil`. */
+export function isPageOf(url: string, origin: string): boolean {
+  return url.startsWith(`${origin}/`);
+}
+
+/**
+ * The files the user chose this session: in a dialog, by double-click or on
+ * the command line, or listed as recent or recovered. The only paths the
+ * main process reads or writes for the renderer, so a misbehaving renderer
+ * can't reach any other file.
+ */
+export function pathGrants() {
+  const granted = new Set<string>();
+  return {
+    grant(...paths: readonly (string | null)[]) {
+      for (const path of paths) if (path !== null) granted.add(path);
+    },
+    /** Whether `path` was granted and its name matches `pattern`. */
+    allows(path: unknown, pattern: RegExp): path is string {
+      return typeof path === "string" && granted.has(path) && pattern.test(path);
+    },
+  };
 }
 
 /** The project files among command-line `args`, e.g. from a double-click on Windows or Linux. */

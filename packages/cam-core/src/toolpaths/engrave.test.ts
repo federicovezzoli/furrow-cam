@@ -139,6 +139,28 @@ describe("engraveToolpath", () => {
     );
   });
 
+  it("warns how many closed paths it skips as too small inside or outside", () => {
+    const tiny: Shape = {
+      ...square,
+      id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      paths: [
+        {
+          start: [150, 0],
+          segments: [
+            { kind: "line", to: [151, 0] },
+            { kind: "line", to: [151, 1] },
+            { kind: "line", to: [150, 1] },
+          ],
+          closed: true,
+        },
+      ],
+    };
+    expect(engrave([square, tiny], { side: "inside" }).warnings).toEqual([
+      { code: "toolpath.skippedSmallPaths", values: { count: 1 } },
+    ]);
+    expect(engrave([square, tiny], { side: "outside" }).warnings).toEqual([]);
+  });
+
   it("keeps an edge of the groove on the line inside and outside", () => {
     // 60° V-bit 1 mm deep: a line 2·tan(30°) wide, its centre half that off the path.
     const half = Math.tan(Math.PI / 6);

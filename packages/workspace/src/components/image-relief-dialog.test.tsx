@@ -83,6 +83,24 @@ describe("ImageReliefDialog", () => {
     expect(screen.getByRole("button", { name: "Download STL" })).toHaveProperty("disabled", true);
   });
 
+  it("keeps the image picked last when earlier picks are read after it", async () => {
+    await openWithImage();
+    const late: { resolve: (value: unknown) => void; reject: (reason: unknown) => void }[] = [];
+    const deferred = () => new Promise((resolve, reject) => late.push({ resolve, reject }));
+    read.mockImplementationOnce(deferred).mockImplementationOnce(deferred);
+    read.mockResolvedValueOnce({ ...IMAGE, size: [300, 150] });
+    pickFile("Big.png");
+    pickFile("Broken.png");
+    pickFile("Small.png");
+    expect(await screen.findByText(/300 × 150 px/)).toBeTruthy();
+    late[0]?.resolve({ ...IMAGE, size: [4000, 2000] });
+    late[1]?.reject(new MeshImportError({ code: "image.tooLarge", values: { mb: 50 } }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByText(/300 × 150 px/)).toBeTruthy();
+    expect(screen.queryByText(/4000 × 2000 px/)).toBeNull();
+    expect(screen.queryByText(/larger than 50 MB/)).toBeNull();
+  });
+
   it("downloads the relief as STL, named after the image", async () => {
     const host = await openWithImage();
     expect(screen.getByRole("button", { name: "Add to project" })).toHaveProperty("disabled", true);

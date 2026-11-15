@@ -220,12 +220,17 @@ export function contourToolpath(
 
   const roughing = contours(closed, params, offset + params.allowance);
   const finishing = params.finishPass ? contours(closed, params, offset) : null;
-  if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
-    warnings.push({ code: "toolpath.pathsTooSmall" });
-  }
-
   // The paths are flattened as the viewport flattens them, give or take the chords and float noise.
   const within = tolerance + GEOMETRY_TOLERANCE;
+  if (closed.length > 0 && roughing.contours.length === 0 && !finishing?.contours.length) {
+    warnings.push({ code: "toolpath.pathsTooSmall" });
+  } else if (params.side !== "on") {
+    // The finishing contours come closer to the paths, so they reach every path the roughing does.
+    const reach = finishing ? offset : offset + params.allowance;
+    const count = uncutRings(closed, (finishing ?? roughing).contours, reach, within);
+    if (count > 0) warnings.push({ code: "toolpath.skippedSmallPaths", values: { count } });
+  }
+
   const closedLines = closed.map((ring) => [...ring, ring[0] as Point]);
   // Of the roughing and finishing contours alike, the most any one of them leaves out.
   const worst = (count: (found: Contours) => number) => {
@@ -423,6 +428,44 @@ function contours(
       2 ===
     1;
   return { contours, isFree: side === "inside" ? bounded : (point) => !bounded(point) };
+}
+
+/**
+ * How many of the rings `closed` no contour runs along, `distance` from it:
+ * the offset left nothing of them, as they are too small for the tool. Every
+ * contour point is at least `distance` from every ring, so one at about
+ * `distance` from a ring is that ring's.
+ */
+function uncutRings(closed: Polygon[], found: Contour[], distance: number, within: number): number {
+  const near = distance + within;
+  const boxes = found.map(({ ring }) => bounds(ring));
+  return closed.filter((ring) => {
+    const box = bounds(ring);
+    return !found.some(
+      ({ ring: contour }, i) =>
+        boxesOverlap(box, boxes[i] as Box, near) &&
+        contour.some((point) => inBox(point, box, near) && ringDistance(point, ring) <= near),
+    );
+  }).length;
+}
+
+function boxesOverlap(a: Box, b: Box, margin: number): boolean {
+  return (
+    a.minX - margin <= b.maxX &&
+    b.minX <= a.maxX + margin &&
+    a.minY - margin <= b.maxY &&
+    b.minY <= a.maxY + margin
+  );
+}
+
+/** The distance from `point` to the closed ring `ring`. */
+function ringDistance(point: Point, ring: Point[]): number {
+  let least = Infinity;
+  ring.forEach((a, i) => {
+    const b = ring[(i + 1) % ring.length] as Point;
+    least = Math.min(least, distance(point, nearestOnSegment(point, a, b)));
+  });
+  return least;
 }
 
 /** Starts the ring halfway along its longest edge, so a lead-in meets it on a straight. */

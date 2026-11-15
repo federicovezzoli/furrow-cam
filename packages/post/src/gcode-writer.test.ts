@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { comment, GcodeWriter } from "./gcode-writer";
+import { GcodeExportError } from "./post";
 
 function lines(out: GcodeWriter): string[] {
   return out.toString().trimEnd().split("\n");
@@ -28,6 +29,28 @@ describe("GcodeWriter", () => {
     out.feed({ x: 3.0001, y: 2, z: -1 }, 800);
     out.feed({ x: 3, y: 4, z: -1 }, 800);
     expect(lines(out)).toEqual(["G1 X1 Y2 Z-1 F500", "G1 X3", "G1 Y4 F800"]);
+  });
+
+  it("refuses a coordinate or feed that isn't finite, naming the operation", () => {
+    const out = new GcodeWriter([0, 0, 0]);
+    out.operation = "Outline";
+    const thrown = (write: () => void) => {
+      try {
+        write();
+      } catch (error) {
+        return error;
+      }
+    };
+    for (const write of [
+      () => out.rapid({ x: Number.NaN }),
+      () => out.feed({ x: 1, y: Number.POSITIVE_INFINITY }, 500),
+      () => out.feed({ x: 1 }, Number.NaN),
+    ]) {
+      const error = thrown(write);
+      expect(error).toBeInstanceOf(GcodeExportError);
+      expect(error).toMatchObject({ operation: "Outline", detail: { code: "export.notFinite" } });
+    }
+    expect(out.toString()).toBe("\n");
   });
 
   it("writes every word again after forget", () => {

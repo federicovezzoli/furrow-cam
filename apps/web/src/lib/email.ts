@@ -36,5 +36,9 @@ export async function sendEmail({ to, subject, template }: Email): Promise<void>
   }
 
   const { error } = await resend.emails.send({ from: env.EMAIL_FROM, to, subject, html, text });
-  if (error) throw new Error(`Failed to send email to ${to}: ${error.message}`);
+  // The address is the only personal data (ADR-0013): keep it out of the logs this error reaches.
+  if (error) {
+    const reason = error.message.replaceAll(to, "<recipient>");
+    throw new Error(`Failed to send the email "${subject}": ${reason}`);
+  }
 }

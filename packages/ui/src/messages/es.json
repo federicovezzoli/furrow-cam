@@ -483,6 +483,8 @@
       "keep": "Conservar los míos",
       "changed": "{name} ha cambiado desde que se abrió",
       "changedDetail": "Otro programa, como un asistente de IA a través del servidor MCP de Furrow CAM, lo ha guardado mientras tanto. Si lo reemplazas, esos cambios se pierden; Guardar como conserva ambos.",
+      "exists": "{name} ya existe",
+      "existsDetail": "Reemplazarlo pierde su contenido actual; Guardar como conserva ambos.",
       "replace": "Reemplazar",
       "saveAs": "Guardar como…",
       "cancel": "Cancelar"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, one {Se ha omitido # trazado abierto} other {Se han omitido # trazados abiertos}}: los vaciados necesitan trazados cerrados.",
       "skippedOpenVCarve": "{count, plural, one {Se ha omitido # trazado abierto} other {Se han omitido # trazados abiertos}}: el tallado en V necesita trazados cerrados.",
       "skippedSmallCircles": "{count, plural, one {Se ha omitido # círculo más pequeño} other {Se han omitido # círculos más pequeños}} que la herramienta.",
+      "skippedSmallPaths": "Se {count, plural, one {omitió # trayecto cerrado demasiado pequeño} other {omitieron # trayectos cerrados demasiado pequeños}} para la herramienta.",
       "skippedLargeCircles": "{count, plural, one {Se ha omitido # círculo más grande} other {Se han omitido # círculos más grandes}} que la broca: mandrínalos con una fresa plana.",
       "skippedNonCircles": "{count, plural, one {Se ha omitido # trazado} other {Se han omitido # trazados}}: el taladrado necesita círculos o puntos.",
       "depthExceedsFlutes": "La profundidad supera la longitud de corte de la herramienta.",
@@ -727,7 +730,8 @@
       "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
       "noEnabled": "No hay operaciones activadas que exportar.",
       "noneHasToolpath": "Ninguna de las operaciones activadas tiene una trayectoria que exportar.",
-      "noToolpath": "Sin trayectoria, excluida del programa."
+      "noToolpath": "Sin trayectoria, excluida del programa.",
+      "notFinite": "Una coordenada o un avance de la trayectoria no es un número, así que no se ha escrito ningún programa."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {Línea {line}, tras el bloque de {block, select, programStart {inicio del programa} toolChangePad {cambio de herramienta en la zona de puesta a cero} toolChange {cambio de herramienta} operationStart {inicio de operación} other {fin del programa}},} other {{block, select, programStart {Inicio del programa} toolChangePad {Cambio de herramienta en la zona de puesta a cero} toolChange {Cambio de herramienta} operationStart {Inicio de operación} other {Fin del programa}}: línea {line}}} {problem, select, material {atraviesa {amount, number} mm de material} belowBottom {baja por debajo del fondo del material hasta Z{amount}} unknownPosition {baja por debajo de la superficie del material desde una posición desconocida} unreadable {no se puede leer, así que a partir de ahí no se comprueba si el programa entra en el material} other {deja la herramienta en un punto que no se puede seguir, así que a partir de ahí no se comprueba si el programa entra en el material}}.",

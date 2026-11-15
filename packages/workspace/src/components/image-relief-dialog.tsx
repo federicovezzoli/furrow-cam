@@ -129,12 +129,16 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
   const stale = preview !== null && preview.settings !== settings;
 
   async function pick(file: File) {
+    // A later pick wins, even when this one's image is read after it.
+    const key = ++picks.current;
     setError(null);
     try {
       const read = await readImage(file, limits);
+      if (key !== picks.current) return;
       const name = fileNameFor(file.name.replace(/\.[^.]*$/, "")) || t("defaultName");
-      setPicked({ ...read, name, key: ++picks.current });
+      setPicked({ ...read, name, key });
     } catch (caught) {
+      if (key !== picks.current) return;
       // The image shown before isn't the one picked: nothing is left to add by mistake.
       setPicked(null);
       setError(caught instanceof MessageError ? caught.detail : UNREADABLE);

@@ -45,6 +45,31 @@ describe("sendEmail without RESEND_API_KEY", () => {
   });
 });
 
+describe("sendEmail with Resend", () => {
+  it("names the subject, not the recipient, when sending fails", async () => {
+    vi.resetModules();
+    vi.doMock("@/env", () => ({ env: { EMAIL_FROM: "test@example.com", RESEND_API_KEY: "re_x" } }));
+    vi.doMock("resend", () => ({
+      Resend: class {
+        emails = {
+          send: async () => ({ error: { message: "Invalid `to` field: a@example.com" } }),
+        };
+      },
+    }));
+    const email = await import("./email");
+    const sending = email.sendEmail({
+      to: "a@example.com",
+      subject: "Hi",
+      template: templates[0][1],
+    });
+    await expect(sending).rejects.toThrow(
+      'Failed to send the email "Hi": Invalid `to` field: <recipient>',
+    );
+    vi.doUnmock("@/env");
+    vi.doUnmock("resend");
+  });
+});
+
 describe("translated emails", () => {
   it("renders the subject and body in the requester's language", async () => {
     const { html, text } = await renderEmail(createElement(ResetPassword, { url, locale: "it" }));

@@ -539,6 +539,31 @@ describe("profileToolpath", () => {
     ]);
     expect(profile({ depth: 30 }).warnings).toEqual([{ code: "toolpath.depthExceedsFlutes" }]);
   });
+
+  it("warns how many closed paths it skips as too small when others fit", () => {
+    const skipped = (count: number) => [{ code: "toolpath.skippedSmallPaths", values: { count } }];
+    // Outside the square with its 20 mm hole, a 22 mm bit cuts the outline but not the hole.
+    expect(profile({}, [square, hole], { diameter: 22, fluteLength: 30 }).warnings).toEqual(
+      skipped(1),
+    );
+    expect(profile({}, [square, hole]).warnings).toEqual([]);
+    // Inside, a 5 mm circle beside the square is too small for the 6 mm bit; with a finish pass too.
+    const circle: Shape = {
+      ...hole,
+      paths: [
+        {
+          start: [152.5, 50],
+          segments: [{ kind: "arc", to: [152.5, 50], center: [150, 50], clockwise: false }],
+          closed: true,
+        },
+      ],
+    };
+    expect(profile({ side: "inside" }, [square, circle]).warnings).toEqual(skipped(1));
+    expect(
+      profile({ side: "inside", finishPass: true, allowance: 0.5 }, [square, circle]).warnings,
+    ).toEqual(skipped(1));
+    expect(profile({ side: "inside" }, [square, hole]).warnings).toEqual([]);
+  });
 });
 
 describe("profileToolpath with tabs", () => {

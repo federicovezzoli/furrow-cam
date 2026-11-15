@@ -483,6 +483,8 @@
       "keep": "Benimkileri Tut",
       "changed": "{name} açıldığından beri değişti",
       "changedDetail": "Başka bir program, örneğin Furrow CAM MCP sunucusunu kullanan bir yapay zekâ asistanı, onu bu arada kaydetti. Değiştirirseniz bu değişiklikler kaybolur; Farklı Kaydet ikisini de korur.",
+      "exists": "{name} zaten var",
+      "existsDetail": "Değiştirmek şu anki içeriğini kaybettirir; Farklı Kaydet ikisini de korur.",
       "replace": "Değiştir",
       "saveAs": "Farklı Kaydet…",
       "cancel": "İptal"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, one {# açık yol} other {# açık yol}} atlandı: cepler kapalı yollar gerektirir.",
       "skippedOpenVCarve": "{count, plural, one {# açık yol} other {# açık yol}} atlandı: V oyma kapalı yollar gerektirir.",
       "skippedSmallCircles": "Takımdan küçük {count, plural, one {# çember} other {# çember}} atlandı.",
+      "skippedSmallPaths": "Takım için çok küçük olan {count, plural, other {# kapalı yol}} atlandı.",
       "skippedLargeCircles": "Matkaptan büyük {count, plural, one {# çember} other {# çember}} atlandı: bunları parmak frezeyle genişletin.",
       "skippedNonCircles": "{count, plural, one {# yol} other {# yol}} atlandı: delme için çember veya nokta gerekir.",
       "depthExceedsFlutes": "Derinlik, takımın kesme boyunu aşıyor.",
@@ -727,7 +730,8 @@
       "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
       "noEnabled": "Dışa aktarılacak etkin işlem yok.",
       "noneHasToolpath": "Etkin işlemlerin hiçbirinde dışa aktarılacak takım yolu yok.",
-      "noToolpath": "Takım yolu yok, programa dahil edilmedi."
+      "noToolpath": "Takım yolu yok, programa dahil edilmedi.",
+      "notFinite": "Takım yolunun bir koordinatı veya ilerlemesi sayı değil, bu yüzden program yazılmadı."
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {{block, select, programStart {Program başlangıcı} toolChangePad {Ped üzerinde takım değişimi} toolChange {Takım değişimi} operationStart {İşlem başlangıcı} other {Program sonu}} bloğundan sonraki {line}. satır} other {{block, select, programStart {Program başlangıcı} toolChangePad {Ped üzerinde takım değişimi} toolChange {Takım değişimi} operationStart {İşlem başlangıcı} other {Program sonu}}: {line}. satır}} {problem, select, material {{amount, number} mm malzemenin içinden geçiyor} belowBottom {Z{amount} ile ham malzeme tabanının altına iniyor} unknownPosition {bilinmeyen bir konumdan ham malzeme üstünün altına iniyor} unreadable {okunamıyor; bu nedenle program o noktadan sonra ham malzemeye giren hareketler için denetlenmiyor} other {takımı izlenemeyen bir konumda bırakıyor; bu nedenle program o noktadan sonra ham malzemeye giren hareketler için denetlenmiyor}}.",

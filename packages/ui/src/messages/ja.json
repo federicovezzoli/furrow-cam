@@ -483,6 +483,8 @@
       "keep": "自分の変更を残す",
       "changed": "{name} は開いた後に変更されました",
       "changedDetail": "Furrow CAM の MCP サーバーを使う AI アシスタントなど、別のプログラムがその間に保存しました。置き換えるとその変更は失われます。「名前を付けて保存」なら両方とも残ります。",
+      "exists": "{name} は既に存在します",
+      "existsDetail": "置き換えると現在の内容は失われます。「名前を付けて保存」なら両方を残せます。",
       "replace": "置き換える",
       "saveAs": "名前を付けて保存…",
       "cancel": "キャンセル"
@@ -687,6 +689,7 @@
       "skippedOpenPocket": "{count, plural, other {#本の開いたパス}}をスキップしました。ポケットには閉じたパスが必要です。",
       "skippedOpenVCarve": "{count, plural, other {#本の開いたパス}}をスキップしました。V カービングには閉じたパスが必要です。",
       "skippedSmallCircles": "工具より小さい{count, plural, other {#個の円}}をスキップしました。",
+      "skippedSmallPaths": "工具に対して小さすぎる閉じたパスを{count, plural, other {#本}}スキップしました。",
       "skippedLargeCircles": "ドリルより大きい{count, plural, other {#個の円}}をスキップしました。エンドミルでボーリングしてください。",
       "skippedNonCircles": "{count, plural, other {#本のパス}}をスキップしました。穴あけには円または点が必要です。",
       "depthExceedsFlutes": "深さが工具の刃長を超えています。",
@@ -727,7 +730,8 @@
       "allHidden": "有効な加工はすべて非表示のものを切削します。エクスポートするには表示してください。",
       "noEnabled": "エクスポートする有効な加工がありません。",
       "noneHasToolpath": "有効な加工のどれにも、エクスポートするツールパスがありません。",
-      "noToolpath": "ツールパスがないため、プログラムから除外しました。"
+      "noToolpath": "ツールパスがないため、プログラムから除外しました。",
+      "notFinite": "ツールパスの座標または送り速度が数値ではないため、プログラムは書き出されませんでした。"
     },
     "grbl": {
       "customBlockMove": "{after, select, yes {{block, select, programStart {プログラム開始} toolChangePad {パッド上での工具交換} toolChange {工具交換} operationStart {加工開始} other {プログラム終了}}ブロックの後の{line}行目が、} other {{block, select, programStart {プログラム開始} toolChangePad {パッド上での工具交換} toolChange {工具交換} operationStart {加工開始} other {プログラム終了}}：{line}行目が、}}{problem, select, material {素材の中を {amount, number} mm 移動します} belowBottom {素材の底より下の Z{amount} まで移動します} unknownPosition {不明な位置から素材上面より下に移動します} unreadable {読み取れないため、それ以降のプログラムは素材への移動をチェックしません} other {追跡できない位置に工具を残すため、それ以降のプログラムは素材への移動をチェックしません}}。",

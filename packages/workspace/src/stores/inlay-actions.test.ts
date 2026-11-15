@@ -100,6 +100,9 @@ describe("makeInlay", () => {
     // Past the 5.5 mm cone; and in 5 mm stock, a plug whose floor is the cone, past it, unless 2 · depth - 1 ≤ 5.
     const tooDeep = { ok: false, error: { code: "workspace.inlayTooDeep" } };
     expect(makeInlay(store, { ...inlay, depth: 5.6 })).toEqual(tooDeep);
+    // Exactly the cone with no gap: the plug would have no depth left.
+    const cone = 3.175 / Math.tan(Math.PI / 6);
+    expect(makeInlay(store, { ...inlay, depth: cone, gap: 0 })).toEqual(tooDeep);
     const thin = createDocumentStore(fullDocument());
     thin.getState().change("thin", (draft) => {
       draft.stock.thickness = 5;
