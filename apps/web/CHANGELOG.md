@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.22.13
+
+### Patch Changes
+
+- When an email can't be sent, the error in the server logs now names the email's subject instead of the recipient's address. ([#588](https://github.com/federicovezzoli/furrow-cam/pull/588))
+- Updated dependencies: @furrow/post@0.15.9, @furrow/ui@0.9.1, @furrow/workspace@0.27.1, @furrow/cam-core@0.23.1
+
 ## 0.22.12
 
 ### Patch Changes

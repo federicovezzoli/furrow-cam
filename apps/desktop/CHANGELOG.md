@@ -1,5 +1,12 @@
 # @furrow/desktop
 
+## 0.19.6
+
+### Patch Changes
+
+- The desktop app now reads and saves only the project files you opened or saved yourself, always asks before replacing a file that changed, and refuses camera, microphone, location, USB and other device permissions. ([#581](https://github.com/federicovezzoli/furrow-cam/pull/581))
+- Updated dependencies: @furrow/ui@0.9.1, @furrow/workspace@0.27.1, @furrow/cam-core@0.23.1
+
 ## 0.19.5
 
 ### Patch Changes
