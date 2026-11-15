@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.22.14
+
+### Patch Changes
+
+- The web app now sends security headers: other sites can no longer embed its pages, and browsers get a stricter referrer policy and no access to the camera, microphone or location. ([#591](https://github.com/federicovezzoli/furrow-cam/pull/591))
+- Updated dependencies: @furrow/workspace@0.28.0, @furrow/ui@0.10.0, @furrow/cam-core@0.24.0, @furrow/post@0.15.10
+
 ## 0.22.13
 
 ### Patch Changes
