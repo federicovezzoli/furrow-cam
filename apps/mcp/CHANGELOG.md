@@ -1,5 +1,11 @@
 # @furrow/mcp
 
+## 0.10.0
+
+### Minor Changes
+
+- A project can now hold several 3D models: import as many STL or STEP files, terrains and image reliefs as you need. A 3D operation warns when it would cut into another model. ([#599](https://github.com/federicovezzoli/furrow-cam/pull/599))
+
 ## 0.9.0
 
 ### Minor Changes

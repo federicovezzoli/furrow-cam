@@ -1,5 +1,16 @@
 # @furrow/ui
 
+## 0.10.0
+
+### Minor Changes
+
+- A project can now hold several 3D models: import as many STL or STEP files, terrains and image reliefs as you need. A 3D operation warns when it would cut into another model. ([#599](https://github.com/federicovezzoli/furrow-cam/pull/599))
+
+### Patch Changes
+
+- A new project opens on a clear viewport: the card in its middle suggesting what to import is gone, and every import is in the ribbon. ([#600](https://github.com/federicovezzoli/furrow-cam/pull/600))
+- Updated dependencies: @furrow/cam-core@0.24.0
+
 ## 0.9.1
 
 ### Patch Changes
