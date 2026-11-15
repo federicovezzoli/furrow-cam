@@ -1,5 +1,12 @@
 # @furrow/cam-core
 
+## 0.23.1
+
+### Patch Changes
+
+- V-bit and ball-end operations near the locating pins no longer warn that they cut the pins when only the wider part of the tool, above the pins, passes over them. ([#587](https://github.com/federicovezzoli/furrow-cam/pull/587))
+- Profile, pocket and engrave operations now warn how many closed paths they skip as too small for the tool, even when other paths are cut, so a hole narrower than the bit no longer goes missing without a word. ([#589](https://github.com/federicovezzoli/furrow-cam/pull/589))
+
 ## 0.23.0
 
 ### Minor Changes

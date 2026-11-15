@@ -1,5 +1,14 @@
 # @furrow/workspace
 
+## 0.27.1
+
+### Patch Changes
+
+- The relief from image dialog keeps the image picked last, even when an earlier, larger pick finishes reading after it. ([#584](https://github.com/federicovezzoli/furrow-cam/pull/584))
+- Make inlay now says the pocket is too deep, instead of showing a validation error, when the pocket is exactly as deep as the V-bit's cone with no glue gap. ([#583](https://github.com/federicovezzoli/furrow-cam/pull/583))
+- Two quick scrubs or held arrows on a text item's settings are now two undo steps, and Escape on the second undoes only the second, even while the text is still being laid out. ([#585](https://github.com/federicovezzoli/furrow-cam/pull/585))
+- Updated dependencies: @furrow/post@0.15.9, @furrow/ui@0.9.1, @furrow/cam-core@0.23.1
+
 ## 0.27.0
 
 ### Minor Changes

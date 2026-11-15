@@ -1,5 +1,13 @@
 # @furrow/ui
 
+## 0.9.1
+
+### Patch Changes
+
+- Exporting G-code now fails with a message naming the operation if a toolpath ever has a coordinate or feed that isn't a number, instead of writing `NaN` into the program for the machine to stop on. ([#586](https://github.com/federicovezzoli/furrow-cam/pull/586))
+- Profile, pocket and engrave operations now warn how many closed paths they skip as too small for the tool, even when other paths are cut, so a hole narrower than the bit no longer goes missing without a word. ([#589](https://github.com/federicovezzoli/furrow-cam/pull/589))
+- Updated dependencies: @furrow/cam-core@0.23.1
+
 ## 0.9.0
 
 ### Minor Changes
