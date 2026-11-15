@@ -1,6 +1,6 @@
 # PRD-0015: Relief from an image
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-11-11
 - **Related:** PRD-0005, PRD-0012, PRD-0014, ADR-0004, ADR-0029, ADR-0030, ADR-0077, ADR-0078

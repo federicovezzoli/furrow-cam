@@ -1,6 +1,6 @@
 # PRD-0014: Terrain from a map
 
-- **Status:** Draft
+- **Status:** Partially shipped (open: T7, the outline, removed for now; T10, lowest altitude)
 - **Author:** Federico Vezzoli
 - **Created:** 2026-11-08
 - **Related:** PRD-0005, PRD-0007, PRD-0008, PRD-0012, ADR-0013, ADR-0029, ADR-0030, ADR-0076, ADR-0077, ADR-0078, ADR-0082

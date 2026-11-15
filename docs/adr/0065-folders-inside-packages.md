@@ -1,6 +1,6 @@
 # ADR-0065: Folders inside packages
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-29
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0011, ADR-0037; #398, #399, #400. Supersedes in part ADR-0037: `@furrow/document` and `@furrow/post` no longer stay flat.

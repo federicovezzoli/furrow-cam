@@ -9,7 +9,6 @@ import {
 } from "@furrow/cam-core";
 import { fittingSide } from "@furrow/workspace/lib/model-size";
 import { fileNameFor } from "@furrow/workspace/lib/place-search";
-import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { imageDecoder, imageFormat } from "./decoders";
 import { addMesh, making, text } from "./drawings-and-models";
 import { type Project, ToolError } from "./projects";
@@ -24,12 +23,11 @@ export type ImageReliefRequest = Omit<ImageReliefSettings, "width"> & {
 };
 
 /**
- * Makes the relief of `request.image` and adds it to `project` as its model,
+ * Makes the relief of `request.image` and adds it to `project` as a model,
  * at the chosen width and centred on the stock, as the app's *Relief from
  * image* does (PRD-0015). Returns the model's id, size and cells.
  */
 export async function importImageRelief(project: Project, request: ImageReliefRequest) {
-  if (!canImportModel(project.store.getState().document)) throw new ToolError(text(ONE_MODEL));
   const path = request.image;
   if (!isAbsolute(path)) throw new ToolError(`Give an absolute path, not ${JSON.stringify(path)}.`);
   const limits = request.limits ?? DEFAULT_STL_LIMITS;

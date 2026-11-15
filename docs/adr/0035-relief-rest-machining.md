@@ -1,6 +1,6 @@
 # ADR-0035: Rest machining simulates the earlier toolpaths on a coarser grid
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S8, S11), ADR-0004, ADR-0019, ADR-0030, ADR-0032, ADR-0033; issue #118

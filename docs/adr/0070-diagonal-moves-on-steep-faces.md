@@ -1,6 +1,6 @@
 # ADR-0070: Relief passes go straight down steep faces and merge within 0.02 mm
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-01
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4), ADR-0030, ADR-0032, ADR-0039, ADR-0040; issues #151, #435. Supersedes ADR-0040's rule for steep samples, and ADR-0032's 0.01 mm merge tolerance.

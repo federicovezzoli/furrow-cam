@@ -1,6 +1,6 @@
 # ADR-0029: Meshes are stored as project assets in S3-compatible storage
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005, ADR-0003, ADR-0004, ADR-0005, ADR-0013, ADR-0028

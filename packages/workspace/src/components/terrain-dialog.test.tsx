@@ -80,7 +80,7 @@ beforeEach(() => {
 });
 
 async function openWithArea(host = createMemoryHost({ document: createProjectDocument() })) {
-  renderWorkspace(<TerrainButton inRibbon />, host);
+  renderWorkspace(<TerrainButton />, host);
   fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
   fireEvent.click(await screen.findByRole("button", { name: "Draw" }));
   // The area's step, then the model's, with its preview.
@@ -101,15 +101,23 @@ describe("TerrainDialog", () => {
     expect(host.stored.document().models).toEqual([]);
   });
 
-  it("only downloads in a project that has its model", async () => {
+  it("adds to a project that has a model already (#596)", async () => {
     await openWithArea(
       createMemoryHost(
         { document: { ...createProjectDocument(), models: [model] } },
         { limits: { meshes: DEFAULT_STL_LIMITS, fonts: null } },
       ),
     );
+    expect(screen.getByRole("button", { name: "Add to project" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
+  it("only downloads where the server can't store meshes", async () => {
+    await openWithArea();
     expect(screen.getByRole("button", { name: "Add to project" })).toHaveProperty("disabled", true);
-    expect(screen.getByText(/has its 3D model already/)).toBeTruthy();
+    expect(screen.getByText(/can't store 3D models/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download STL" })).toHaveProperty("disabled", false);
     // A download isn't held to the stock: a side twice the stock's width is taken.
     const side = screen.getByLabelText(/Longest side/);
@@ -119,13 +127,6 @@ describe("TerrainDialog", () => {
     finish();
     await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
     expect(generate.mock.lastCall?.[1]).toMatchObject({ longestSide: 1200 });
-  });
-
-  it("only downloads where the server can't store meshes", async () => {
-    await openWithArea();
-    expect(screen.getByRole("button", { name: "Add to project" })).toHaveProperty("disabled", true);
-    expect(screen.getByText(/can't store 3D models/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Download STL" })).toHaveProperty("disabled", false);
   });
 
   it("adds the terrain where it can be stored", async () => {
@@ -154,7 +155,7 @@ describe("TerrainDialog", () => {
   it("tells the host when its services may be reached: only while it is open", () => {
     const terrainServices = vi.fn();
     renderWorkspace(
-      <TerrainButton inRibbon />,
+      <TerrainButton />,
       createMemoryHost({ document: createProjectDocument() }, { terrainServices }),
     );
     expect(terrainServices).not.toHaveBeenCalled();
@@ -180,10 +181,7 @@ describe("TerrainDialog's steps", () => {
   });
 
   it("browses the map until a shape is picked, and again once it is drawn", async () => {
-    renderWorkspace(
-      <TerrainButton inRibbon />,
-      createMemoryHost({ document: createProjectDocument() }),
-    );
+    renderWorkspace(<TerrainButton />, createMemoryHost({ document: createProjectDocument() }));
     fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));
     expect(screen.queryByRole("button", { name: "Move" })).toBeNull();
     expect(screen.getByRole("button", { name: "Next" })).toHaveProperty("disabled", true);
@@ -207,7 +205,7 @@ describe("TerrainDialog's steps", () => {
       on ? new Promise<void>((resolve) => (open = resolve)) : undefined,
     );
     renderWorkspace(
-      <TerrainButton inRibbon />,
+      <TerrainButton />,
       createMemoryHost({ document: createProjectDocument() }, { terrainServices }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Terrain from a map" }));

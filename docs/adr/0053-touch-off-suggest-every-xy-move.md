@@ -1,6 +1,6 @@
 # ADR-0053: Touch-off Suggest keeps the tool on the pad through every kind of XY move
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-19
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S12), ADR-0043; #250. Supersedes the part of ADR-0043's *Its own tool change* bullet that says which moves **Suggest** puts on the pad.

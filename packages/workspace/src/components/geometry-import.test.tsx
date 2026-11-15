@@ -55,13 +55,21 @@ describe("ImportDrawingButton", () => {
   });
 });
 
+describe("GeometryImport in an empty project", () => {
+  it("shows nothing over the viewport: imports start from the ribbon (#595)", () => {
+    const { container } = renderWorkspace(<GeometryImport />);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(container.textContent).toBe("");
+  });
+});
+
 describe("ModelImportButton in the ribbon", () => {
   const limits = { meshes: { maxBytes: 50_000_000, maxTriangles: 2_000_000 }, fonts: null };
 
   it("opens the model file input in a project holding drawings", () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
     renderWorkspace(
-      <ModelImportButton inRibbon />,
+      <ModelImportButton />,
       createMemoryHost({ document: fullDocument() }, { limits }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Import a model" }));
@@ -69,16 +77,16 @@ describe("ModelImportButton in the ribbon", () => {
     click.mockRestore();
   });
 
-  it("is disabled once the project has its one model", () => {
+  it("imports another model into a project that has one (#596)", () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
     renderWorkspace(
-      <ModelImportButton inRibbon />,
+      <ModelImportButton />,
       createMemoryHost({ document: { ...createProjectDocument(), models: [model] } }, { limits }),
     );
     const button = screen.getByRole("button", { name: "Import a model" });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("aria-disabled")).not.toBe("true");
     fireEvent.click(button);
-    expect(click).not.toHaveBeenCalled();
+    expect(click).toHaveBeenCalled();
     click.mockRestore();
   });
 });

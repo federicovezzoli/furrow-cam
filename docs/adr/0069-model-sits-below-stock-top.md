@@ -1,6 +1,6 @@
 # ADR-0069: A model's top can sit below the stock top
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-01
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S2), ADR-0031, ADR-0034, ADR-0060, ADR-0063; #434

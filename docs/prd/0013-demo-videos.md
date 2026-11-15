@@ -1,6 +1,6 @@
 # PRD-0013: Automated demo videos
 
-- **Status:** Draft
+- **Status:** Partially shipped (open: D9, videos in other languages)
 - **Author:** Federico Vezzoli
 - **Created:** 2026-11-02
 - **Related:** PRD-0001, PRD-0005, PRD-0008, PRD-0010, PRD-0011, ADR-0042, ADR-0050, ADR-0054, ADR-0072

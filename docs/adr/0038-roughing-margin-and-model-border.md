@@ -1,6 +1,6 @@
 # ADR-0038: Roughing can clear a margin around the model, and fitted models leave a border
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S2, S5), ADR-0014, ADR-0022, ADR-0031, ADR-0033, ADR-0034; issue #146. Supersedes ADR-0033's *Boundary* and ADR-0031's *Import* and *Editing* (*Fit to stock*) in part.

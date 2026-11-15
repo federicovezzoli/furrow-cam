@@ -1,6 +1,6 @@
 # ADR-0084: V-carve inlays come from a start depth and a boundary path among the targets
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0025, ADR-0026, ADR-0055, PRD-0001 R16, #553

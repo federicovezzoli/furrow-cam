@@ -1,6 +1,6 @@
 # ADR-0049: Stable download links from a Cloudflare Worker, counted in Analytics Engine
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0012, ADR-0013, ADR-0044, ADR-0048; #201

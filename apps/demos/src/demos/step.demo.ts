@@ -27,7 +27,7 @@ async function cutSide(r: Recorder, side: "top" | "bottom") {
 export default async function step(r: Recorder) {
   await r.openWorkspace();
   await r.hold(0.5);
-  await r.chooseFile("import-model", board);
+  await r.chooseFile("ribbon-import-model", board);
   await r.waitForWork("model-width");
   await r.hold(1);
 

@@ -1,6 +1,6 @@
 # PRD-0002: Zero point selection
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-11
 - **Related:** PRD-0001 (R3), ADR-0014, ADR-0016, ADR-0022; issues #49, #50, #51, #26, #91

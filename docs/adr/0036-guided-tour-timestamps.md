@@ -1,6 +1,6 @@
 # ADR-0036: The account remembers when each guided tour was seen
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R22), ADR-0013, ADR-0006; issue #138

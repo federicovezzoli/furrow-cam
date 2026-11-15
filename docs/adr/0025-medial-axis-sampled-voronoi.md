@@ -1,6 +1,6 @@
 # ADR-0025: Medial axis from a Voronoi diagram of boundary samples
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R16), ADR-0004, ADR-0007, ADR-0015

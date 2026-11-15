@@ -1,6 +1,6 @@
 # ADR-0063: Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-28
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0011 (B2, B5), ADR-0030, ADR-0033, ADR-0038, ADR-0060; #357. Supersedes in part ADR-0060: the parting plane no longer limits the cut inside the model's outline.

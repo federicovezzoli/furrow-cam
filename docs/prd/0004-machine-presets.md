@@ -1,6 +1,6 @@
 # PRD-0004: Machine presets
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-13
 - **Related:** PRD-0001 (R19), PRD-0003, ADR-0003

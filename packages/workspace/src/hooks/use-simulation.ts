@@ -5,6 +5,7 @@ import { machinedDocument } from "@furrow/cam-core";
 import type { StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -17,6 +18,7 @@ import {
   type SimulationResponse,
   scheduleSimulation,
 } from "../stores/simulation-scheduler";
+import { settledEntries } from "../stores/toolpath-store";
 
 type Result = {
   heightmap: Heightmap | null;
@@ -50,7 +52,7 @@ export function useSimulation(maxCells: number | null, side: StockSide = "top") 
   const shownSide = useRef(side);
   // As machined: operations that only cut hidden objects are off (ADR-0080).
   const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
-  const entries = useToolpathStore((s) => s.entries);
+  const entries = useToolpathStore(useShallow(settledEntries));
   const skipped = useMemo(
     () =>
       operations

@@ -724,7 +724,8 @@
       "noHoles": "Nichts zu bohren: Bohrungen im Ansichtsfenster setzen oder ausgewählte Formen verwenden.",
       "cutsPins": "Diese Operation schneidet dort, wo ein Passstift sitzt, daher würde das Werkzeug den Stift treffen, wenn das Rohteil gewendet ist: Verschiebe die Stifte oder den Schnitt.",
       "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
-      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand."
+      "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand.",
+      "reachesOtherModel": "Das Werkzeug schneidet in ein anderes Modell, dem diese Operation nicht folgt: Nur ihr eigenes Modell wird bearbeitet. Verwende eine kleinere Begrenzung oder rücke die Modelle auseinander."
     },
     "export": {
       "allHidden": "Jede aktive Operation schneidet etwas Ausgeblendetes: blende es ein, um zu exportieren.",
@@ -796,7 +797,6 @@
       "unreadableFile": "Diese Datei konnte nicht gelesen werden.",
       "modelUnreadable": "Das Modell konnte nicht gelesen werden.",
       "importFailed": "Diese Datei konnte nicht importiert werden.",
-      "oneModel": "Ein Projekt enthält nur ein 3D-Modell.",
       "noShapes": "Diese Datei enthält keine Formen zum Importieren.",
       "stlImportOff": "Der Import von 3D-Modellen ist auf diesem Server nicht verfügbar.",
       "stepUnreadable": "Diese STEP-Datei konnte nicht gelesen werden. Exportiere sie erneut aus deinem CAD-Programm und versuche es noch einmal.",
@@ -1498,7 +1498,6 @@
       "mm": "Millimeter",
       "in": "Zoll"
     },
-    "start": "Importiere eine SVG- oder DXF-Zeichnung oder ein STL- oder STEP-Modell, um zu beginnen.",
     "importDrawing": "SVG/DXF importieren…",
     "importModel": "STL oder STEP importieren…",
     "dpi": "DPI",
@@ -1515,7 +1514,6 @@
     "defaultText": "Text"
   },
   "Terrain": {
-    "open": "Gelände aus einer Karte…",
     "ribbon": "Gelände",
     "hint": "Ein Reliefmodell eines Gebiets auf einer Karte erstellen",
     "title": "Gelände aus einer Karte",
@@ -1558,13 +1556,11 @@
     "next": "Weiter",
     "back": "Zurück",
     "download": "STL herunterladen",
-    "hasModel": "Dieses Projekt hat bereits sein 3D-Modell: Das Gelände kann nur als STL-Datei heruntergeladen werden.",
     "storeOff": "Dieser Server kann keine 3D-Modelle speichern: Das Gelände kann nur als STL-Datei heruntergeladen werden.",
     "cancel": "Abbrechen",
     "defaultName": "Gelände"
   },
   "ImageRelief": {
-    "open": "Relief aus Bild…",
     "ribbon": "Bild",
     "hint": "Ein Reliefmodell aus einem Graustufenbild erstellen",
     "title": "Relief aus Bild",
@@ -1586,7 +1582,6 @@
     "saving": "Modell wird dem Projekt hinzugefügt…",
     "generate": "Zum Projekt hinzufügen",
     "download": "STL herunterladen",
-    "hasModel": "Dieses Projekt hat bereits sein 3D-Modell: Das Relief kann nur als STL-Datei heruntergeladen werden.",
     "storeOff": "Dieser Server kann keine 3D-Modelle speichern: Das Relief kann nur als STL-Datei heruntergeladen werden.",
     "cancel": "Abbrechen",
     "defaultName": "Relief"

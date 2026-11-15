@@ -12,6 +12,7 @@ import type { StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { type PlaybackPart, playbackMoves } from "../lib/playback-moves";
 import { TEXTURE_WIDTH } from "../lib/simulation-mesh";
 import {
@@ -25,6 +26,7 @@ import {
   schedulePlayback,
 } from "../stores/playback-scheduler";
 import { advance, createPlaybackStore, type PlaybackStore } from "../stores/playback-store";
+import { settledEntries } from "../stores/toolpath-store";
 
 /** Tells a renderer which cells of a heightmap changed in place. */
 export type HeightmapUpdates = {
@@ -58,7 +60,7 @@ export function usePlayback(maxCells: number | null) {
   const flipAxis = useDocumentStore((s) => s.document.stock.twoSided?.flipAxis ?? null);
   // Always the top side unless the project is two-sided (`prune`).
   const side = useWorkspaceStore((s) => s.side);
-  const entries = useToolpathStore((s) => s.entries);
+  const entries = useToolpathStore(useShallow(settledEntries));
   const [store] = useState(createPlaybackStore);
   const [listeners] = useState(() => new Set<(range: CellRange) => void>());
   const [updates] = useState<HeightmapUpdates>(() => ({

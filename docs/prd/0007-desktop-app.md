@@ -1,6 +1,6 @@
 # PRD-0007: Desktop app
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-18
 - **Related:** PRD-0001, PRD-0005, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0074

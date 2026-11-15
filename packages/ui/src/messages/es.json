@@ -724,7 +724,8 @@
       "noHoles": "Nada que taladrar: coloca agujeros en la vista o usa las formas seleccionadas.",
       "cutsPins": "Esta operación corta donde va un pasador de referencia, así que la herramienta chocaría con el pasador al dar la vuelta al material: mueve los pasadores o el corte.",
       "noHoldingTabs": "Sin puentes de sujeción: la pieza se suelta en cuanto la cara inferior corta todo su contorno.",
-      "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen."
+      "stockBoundaryTwoSided": "Mecanizar todo el material por ambas caras no deja ningún marco del que cuelgue la pieza: usa un margen.",
+      "reachesOtherModel": "La herramienta corta dentro de otro modelo, que esta operación no sigue: solo se mecaniza su propio modelo. Usa un límite más pequeño o separa los modelos."
     },
     "export": {
       "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
@@ -796,7 +797,6 @@
       "unreadableFile": "No se ha podido leer este archivo.",
       "modelUnreadable": "No se ha podido leer el modelo.",
       "importFailed": "No se ha podido importar este archivo.",
-      "oneModel": "Un proyecto contiene solo un modelo 3D.",
       "noShapes": "Este archivo no tiene formas que importar.",
       "stlImportOff": "La importación de modelos 3D no está disponible en este servidor.",
       "stepUnreadable": "No se ha podido leer este archivo STEP. Vuelve a exportarlo desde tu programa CAD e inténtalo de nuevo.",
@@ -1498,7 +1498,6 @@
       "mm": "Milímetros",
       "in": "Pulgadas"
     },
-    "start": "Importa un dibujo SVG o DXF, o un modelo STL o STEP, para empezar.",
     "importDrawing": "Importar SVG/DXF…",
     "importModel": "Importar STL o STEP…",
     "dpi": "DPI",
@@ -1515,7 +1514,6 @@
     "defaultText": "Texto"
   },
   "Terrain": {
-    "open": "Terreno desde un mapa…",
     "ribbon": "Terreno",
     "hint": "Crear un modelo en relieve de una zona en un mapa",
     "title": "Terreno desde un mapa",
@@ -1558,13 +1556,11 @@
     "next": "Siguiente",
     "back": "Atrás",
     "download": "Descargar STL",
-    "hasModel": "Este proyecto ya tiene su modelo 3D: el terreno solo se puede descargar como archivo STL.",
     "storeOff": "Este servidor no puede guardar modelos 3D: el terreno solo se puede descargar como archivo STL.",
     "cancel": "Cancelar",
     "defaultName": "Terreno"
   },
   "ImageRelief": {
-    "open": "Relieve desde una imagen…",
     "ribbon": "Imagen",
     "hint": "Crea un modelo en relieve a partir de una imagen en escala de grises",
     "title": "Relieve desde una imagen",
@@ -1586,7 +1582,6 @@
     "saving": "Añadiendo el modelo al proyecto…",
     "generate": "Añadir al proyecto",
     "download": "Descargar STL",
-    "hasModel": "Este proyecto ya tiene su modelo 3D: el relieve solo se puede descargar como archivo STL.",
     "storeOff": "Este servidor no puede guardar modelos 3D: el relieve solo se puede descargar como archivo STL.",
     "cancel": "Cancelar",
     "defaultName": "Relieve"

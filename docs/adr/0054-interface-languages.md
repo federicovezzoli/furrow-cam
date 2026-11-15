@@ -1,6 +1,6 @@
 # ADR-0054: Interface languages with use-intl, picked from the browser or the system
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-21
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0011, ADR-0013, ADR-0046, ADR-0048, ADR-0050; #294, #295

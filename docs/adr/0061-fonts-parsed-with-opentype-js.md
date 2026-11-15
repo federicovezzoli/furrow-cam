@@ -1,6 +1,6 @@
 # ADR-0061: Fonts are parsed and laid out with opentype.js, behind one adapter
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-24
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0010 (T2, T4, T7), ADR-0004, ADR-0007, ADR-0015, ADR-0025, ADR-0059; #348

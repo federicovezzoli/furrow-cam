@@ -62,8 +62,10 @@ describe("importImageRelief", () => {
       triangles: result.triangles,
     });
     expect(project.meshes.size).toBe(1);
-    // A project holds one model.
-    expect(await refusal(importImageRelief(project, { image, ...settings }))).toMatch(/model/);
+    // A second relief is a second model (#596), of the same mesh.
+    await importImageRelief(project, { image, width: 100, ...settings });
+    expect(project.store.getState().document.models).toHaveLength(2);
+    expect(project.meshes.size).toBe(1);
   });
 
   it("reads a JPEG", async () => {

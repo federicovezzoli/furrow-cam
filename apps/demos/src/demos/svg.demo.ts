@@ -25,7 +25,7 @@ const PATHS = {
 export default async function svg(r: Recorder) {
   await r.openWorkspace();
   await r.hold(0.5);
-  await r.chooseFile("start-import-drawing", paw);
+  await r.chooseFile("import-drawing", paw);
   await r.hold(1);
 
   // Stock and zero.

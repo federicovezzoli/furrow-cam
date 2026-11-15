@@ -1,6 +1,6 @@
 # PRD-0011: Two-sided machining
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-23
 - **Related:** PRD-0001, PRD-0002, PRD-0005, ADR-0016, ADR-0030, ADR-0031, ADR-0035, ADR-0041, ADR-0060, ADR-0063

@@ -724,7 +724,8 @@
       "noHoles": "Nothing to drill: place holes in the viewport or use selected shapes.",
       "cutsPins": "This operation cuts where a locating pin goes, so the tool would hit the pin when the stock is turned over: move the pins or the cut.",
       "noHoldingTabs": "No holding tabs: the part comes loose once the bottom side cuts all round it.",
-      "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin."
+      "stockBoundaryTwoSided": "Machining the whole stock on both sides leaves no frame for the part to hang on: use a margin.",
+      "reachesOtherModel": "The tool cuts into another model, which this operation doesn’t follow: only its own model is machined. Use a smaller boundary or move the models apart."
     },
     "export": {
       "allHidden": "Every enabled operation cuts something hidden: show it to export.",
@@ -796,7 +797,6 @@
       "unreadableFile": "This file couldn't be read.",
       "modelUnreadable": "The model couldn't be read.",
       "importFailed": "This file couldn't be imported.",
-      "oneModel": "A project holds only one 3D model.",
       "noShapes": "This file has no shapes to import.",
       "stlImportOff": "3D model import isn't available on this server.",
       "stepUnreadable": "This STEP file couldn't be read. Export it again from your CAD program and try once more.",
@@ -1498,7 +1498,6 @@
       "mm": "Millimetres",
       "in": "Inches"
     },
-    "start": "Import an SVG or DXF drawing, or an STL or STEP model, to start.",
     "importDrawing": "Import SVG/DXF…",
     "importModel": "Import STL or STEP…",
     "dpi": "DPI",
@@ -1515,7 +1514,6 @@
     "defaultText": "Text"
   },
   "Terrain": {
-    "open": "Terrain from a map…",
     "ribbon": "Terrain",
     "hint": "Make a relief model of an area on a map",
     "title": "Terrain from a map",
@@ -1558,13 +1556,11 @@
     "next": "Next",
     "back": "Back",
     "download": "Download STL",
-    "hasModel": "This project has its 3D model already: the terrain can only be downloaded as an STL file.",
     "storeOff": "This server can't store 3D models: the terrain can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Terrain"
   },
   "ImageRelief": {
-    "open": "Relief from image…",
     "ribbon": "Image",
     "hint": "Make a relief model from a greyscale image",
     "title": "Relief from image",
@@ -1586,7 +1582,6 @@
     "saving": "Adding the model to the project…",
     "generate": "Add to project",
     "download": "Download STL",
-    "hasModel": "This project has its 3D model already: the relief can only be downloaded as an STL file.",
     "storeOff": "This server can't store 3D models: the relief can only be downloaded as an STL file.",
     "cancel": "Cancel",
     "defaultName": "Relief"

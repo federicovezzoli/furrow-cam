@@ -35,7 +35,6 @@ import {
   useDocumentStoreApi,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { canImportModel } from "../stores/geometry-actions";
 import { Checkbox } from "./checkbox";
 import { RibbonButton } from "./ribbon";
 
@@ -47,37 +46,22 @@ const UNREADABLE: Translatable = { code: "workspace.unreadableFile" };
 type Picked = ReadImage & { name: string; key: number };
 
 /**
- * Opens *Relief from image* (PRD-0015), from the empty project's import card
- * or the ribbon (`inRibbon`), beside *Terrain from a map*.
+ * The ribbon's button opening *Relief from image* (PRD-0015), beside
+ * *Terrain from a map*.
  */
-export function ImageReliefButton({ inRibbon = false }: { inRibbon?: boolean }) {
+export function ImageReliefButton() {
   const t = useTranslations("ImageRelief");
   const [open, setOpen] = useState(false);
   const dialog = open && <ImageReliefDialog onClose={() => setOpen(false)} />;
-  if (inRibbon)
-    return (
-      <>
-        <RibbonButton
-          icon={<ImageIcon />}
-          label={t("ribbon")}
-          aria-label={t("title")}
-          hint={t("hint")}
-          onClick={() => setOpen(true)}
-        />
-        {dialog}
-      </>
-    );
   return (
     <>
-      <Button
-        variant="outline"
-        size="compact"
+      <RibbonButton
+        icon={<ImageIcon />}
+        label={t("ribbon")}
+        aria-label={t("title")}
+        hint={t("hint")}
         onClick={() => setOpen(true)}
-        className="justify-self-start"
-      >
-        <ImageIcon />
-        {t("open")}
-      </Button>
+      />
       {dialog}
     </>
   );
@@ -96,7 +80,6 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const units = useDocumentStore((s) => s.document.units);
   const storable = host.limits.meshes;
-  const hasModel = useDocumentStore((s) => !canImportModel(s.document));
   // A download stores nothing, so without the server's limits it takes the default ones.
   const limits = storable ?? DEFAULT_STL_LIMITS;
 
@@ -254,7 +237,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
               units={units}
               min={1}
               // Placed at this size, so no wider than fits the stock; a download has nothing to do with it.
-              max={fitting && storable && !hasModel ? fitting : undefined}
+              max={fitting && storable ? fitting : undefined}
               value={modelWidth}
               disabled={!picked || generating}
               onValueChange={setWidth}
@@ -315,9 +298,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
               )}
               {stale && <p>{t("previewLoading")}</p>}
             </div>
-            {(!storable || hasModel) && (
-              <p className="text-muted-foreground">{storable ? t("hasModel") : t("storeOff")}</p>
-            )}
+            {!storable && <p className="text-muted-foreground">{t("storeOff")}</p>}
             {error && (
               <p className="text-destructive" role="alert">
                 {format(error)}
@@ -342,10 +323,7 @@ function ImageReliefDialog({ onClose }: { onClose: () => void }) {
             <DownloadIcon />
             {t("download")}
           </Button>
-          <Button
-            disabled={!settings || generating || !storable || hasModel}
-            onClick={() => void generate()}
-          >
+          <Button disabled={!settings || generating || !storable} onClick={() => void generate()}>
             {t("generate")}
           </Button>
         </DialogFooter>

@@ -1,6 +1,6 @@
 # ADR-0066: Drawings store their rotation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-29
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0055, ADR-0059; PRD-0009 D6, D7; #387

@@ -73,13 +73,13 @@ describe("addModel", () => {
     expect(store.getState().document.models[0]?.placement.position).toEqual([10, 10]);
   });
 
-  it("refuses a second model, and adds one beside drawings (ADR-0078)", () => {
-    const { store } = storeWithModel();
+  it("adds a second model as its own undo step, and one beside drawings (ADR-0085)", () => {
+    const { store, id } = storeWithModel();
     const steps = store.getState().past.length;
-    expect(addModel(store, mesh)).toBeNull();
-    expect(store.getState().document.models).toHaveLength(1);
-    expect(store.getState().past).toHaveLength(steps);
-    expect(addModel(createDocumentStore(fullDocument()), mesh)).not.toBeNull();
+    expect(addModel(store, mesh)).not.toBe(id);
+    expect(store.getState().document.models).toHaveLength(2);
+    expect(store.getState().past).toHaveLength(steps + 1);
+    expect(addModel(createDocumentStore(fullDocument()), mesh)).toBeTruthy();
   });
 });
 

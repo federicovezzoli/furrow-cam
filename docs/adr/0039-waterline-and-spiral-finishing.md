@@ -1,6 +1,6 @@
 # ADR-0039: Waterline contours from a map of tip heights, spirals along rows and columns
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4, S10), ADR-0030, ADR-0032, ADR-0033, ADR-0035; issue #130

@@ -1,6 +1,6 @@
 # ADR-0046: UI packages may use React
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007, ADR-0004, ADR-0008, ADR-0009, ADR-0011, ADR-0021, ADR-0044, ADR-0045; #184

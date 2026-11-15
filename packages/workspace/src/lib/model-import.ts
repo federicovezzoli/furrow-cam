@@ -1,8 +1,7 @@
 import type { StlLimits } from "@furrow/cam-core";
 import { type Message, MessageError } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
-import type { DocumentState, DocumentStore } from "../stores/document-store";
-import { canImportModel, ONE_MODEL } from "../stores/geometry-actions";
+import type { DocumentStore } from "../stores/document-store";
 import { addModel } from "../stores/model-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import type { MeshRequest, MeshResponse, MeshSummary } from "./mesh-worker-protocol";
@@ -80,18 +79,6 @@ export async function parseMesh(
 }
 
 /**
- * Whether the document or its undo and redo steps refer to mesh `sha256`,
- * e.g. the same file imported twice at once and the model since removed.
- * A hash can't occur by chance, so the patches are searched as text.
- */
-export function usesMesh({ document, past, future }: DocumentState, sha256: string): boolean {
-  return (
-    document.models.some((model) => model.sha256 === sha256) ||
-    JSON.stringify([past, future]).includes(sha256)
-  );
-}
-
-/**
  * Imports an STL or STEP file into the open project (PRD-0005 S1, ADR-0029,
  * ADR-0072): reads and checks it, stores it (a STEP file as the STL made
  * from it) in the project's `meshes`, then adds it to the
@@ -118,10 +105,6 @@ export async function importModel(
   const fail = (error: Translatable) => setModelImport({ fileName, error });
   setModelImport({ fileName, error: null });
 
-  if (!canImportModel(document.getState().document)) {
-    fail(ONE_MODEL);
-    return;
-  }
   if (file.size > limits.maxBytes) {
     fail({ code: "stl.tooLarge", values: { mb: limits.maxBytes / 1_000_000 } });
     return;
@@ -178,7 +161,6 @@ export async function storeModel(
 ): Promise<Translatable | null> {
   const upload = await meshes.put(mesh.sha256, stored);
   if (upload.error !== undefined) return upload.error;
-  // Another model may have been imported, or a step redone, while this one uploaded.
   const { sha256, triangles, bounds } = mesh;
   // An undo step of its own: a gesture still open (a drag) is let finish first, so cancelling
   // it can't take the model away after it was stored and selected.
@@ -188,20 +170,13 @@ export async function storeModel(
     { sha256, triangles, bounds, fileName, size: stored.size },
     { fit },
   );
-  if (id === null) {
-    // Only a mesh this import stored goes, and the server keeps one that something saved uses.
-    if (upload.uploaded && !usesMesh(document.getState(), mesh.sha256)) {
-      await meshes.discard(mesh.sha256);
-    }
-    return ONE_MODEL;
-  }
   workspace.getState().selectModel(id);
   return null;
 }
 
 /**
  * Adds a mesh generated in the app, a terrain or an image relief (`format`),
- * to the open project as its model, named `<name>.stl`, at the size it was
+ * to the open project as a model, named `<name>.stl`, at the size it was
  * made and centred on the stock (PRD-0014 T5, PRD-0015 I5). Returns why it
  * couldn't, or `null`.
  */
@@ -211,7 +186,6 @@ export async function importGeneratedModel(
   host: { meshes: WorkspaceHost["meshes"]; document: DocumentStore; workspace: WorkspaceStore },
   format: "terrain" | "image",
 ): Promise<Translatable | null> {
-  if (!canImportModel(host.document.getState().document)) return ONE_MODEL;
   const error = await storeModel(generated, new Blob([generated.stl]), `${name}.stl`, {
     ...host,
     fit: false,

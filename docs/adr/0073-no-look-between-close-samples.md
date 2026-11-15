@@ -1,6 +1,6 @@
 # ADR-0073: Relief passes don't look between samples close in height
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-01
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4), ADR-0030, ADR-0033, ADR-0040, ADR-0070, ADR-0071; issues #439, #443. Restates ADR-0040's guarantee.

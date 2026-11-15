@@ -1,6 +1,6 @@
 # ADR-0076: Maps, place search and elevation come from public services the browser calls directly
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0014, PRD-0007 (D2), ADR-0004, ADR-0013, ADR-0044, ADR-0052, ADR-0077

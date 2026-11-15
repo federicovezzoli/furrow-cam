@@ -12,7 +12,7 @@ import type { DocumentStore } from "../stores/document-store";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
 import { DrawingProperties } from "./drawing-properties";
-import { GeometryImport } from "./geometry-import";
+import { AddTextButton } from "./geometry-import";
 
 /**
  * The text worker: lays every text out as one box at its origin, as wide as
@@ -92,7 +92,7 @@ function withText(): ProjectDocument {
 
 describe("AddTextButton", () => {
   it("adds a text item to an empty project, placed like a drawing, and selects it", async () => {
-    render(<GeometryImport />, createProjectDocument());
+    render(<AddTextButton />, createProjectDocument());
     fireEvent.click(screen.getByRole("button", { name: "Add text" }));
     await waitFor(() => expect(current().drawings).toHaveLength(1));
     const [drawing] = current().drawings;

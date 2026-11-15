@@ -1,6 +1,6 @@
 # ADR-0082: The MCP server makes terrain, fetching only elevation tiles while its tool runs
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-11
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0012, PRD-0014, ADR-0013, ADR-0067, ADR-0072, ADR-0076, ADR-0077; supersedes in part ADR-0067 ("makes no network requests")

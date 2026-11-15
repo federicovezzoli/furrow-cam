@@ -19,7 +19,7 @@ export default async function stl(r: Recorder) {
   await r.type("stock-width", "180");
   await r.type("stock-height", "180");
   await r.type("stock-thickness", "48");
-  await r.chooseFile("import-model", terrain);
+  await r.chooseFile("ribbon-import-model", terrain);
   await r.waitForWork("model-width");
   await r.hold(1);
   await r.click("close-model");

@@ -14,6 +14,7 @@ import {
   toolProblem,
 } from "@furrow/document";
 import type { Rect } from "../geometry/bounds";
+import { boxRect } from "../scene/model";
 import {
   drillTargets,
   type Flip,
@@ -21,6 +22,7 @@ import {
   flipPoint2,
   flipShapes,
   isPinDrill,
+  modelView,
   pinCenters,
   pinDepth,
 } from "../scene/sides";
@@ -39,6 +41,7 @@ import {
   type HoldingTab,
   type ReliefCache,
   type RestOptions,
+  roughingArea,
   runSteps,
 } from "./relief/finish";
 import { reliefFinishSteps } from "./relief/finishing";
@@ -84,6 +87,12 @@ export type ToolpathInput = {
    * other operation.
    */
   tabs: HoldingTab[] | null;
+  /**
+   * Whether a 3D operation's tool reaches another visible model (#596),
+   * which it cuts without following; `false` for every other operation. A
+   * flag, not the models, so moving another model recomputes nothing.
+   */
+  reachesOther: boolean;
   /** Retract height above the stock top. */
   safeZ: number;
   /** Height above the stock top where rapids down stop and feeding starts. */
@@ -151,7 +160,8 @@ export function toolpathInputs(
     if (known) return known;
     const rest = isRestMachining(operation);
     const index = doc.operations.indexOf(operation);
-    const sided = twoSided && operationModelId(operation) !== null ? twoSided : null;
+    const modelId = operationModelId(operation);
+    const sided = twoSided && modelId !== null ? twoSided : null;
     const bottom = operation.stockSide === "bottom";
     const flip: Flip | null = twoSided && bottom ? { ...size, axis: twoSided.flipAxis } : null;
     const targeted = targetedShapes(shapes, operation.targets);
@@ -159,7 +169,7 @@ export function toolpathInputs(
       ...(operation.type === "drill"
         ? drillTargets(operation, targeted, doc.stock)
         : { operation, shapes: targeted }),
-      model: models.get(operationModelId(operation) ?? "") ?? null,
+      model: models.get(modelId ?? "") ?? null,
       // Only these depend on the stock, so resizing it recomputes nothing else.
       stock:
         rest ||
@@ -174,8 +184,7 @@ export function toolpathInputs(
           : null,
       // Chamfers too, whose depth follows their width: checked against the stock bottom.
       stockBottom:
-        operationModelId(operation) === null &&
-        !(operation.type === "engrave" && operation.params.side === "chamfer")
+        modelId === null && !(operation.type === "engrave" && operation.params.side === "chamfer")
           ? null
           : -doc.stock.thickness,
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
@@ -193,6 +202,7 @@ export function toolpathInputs(
             ? sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0)
             : -sided.partingDepth,
         })),
+      reachesOther: reachesOtherModel(doc, operation, flip, stock),
       safeZ,
       entryClearance,
       // Each side starts from uncut stock (ADR-0060).
@@ -211,6 +221,40 @@ export function toolpathInputs(
     return input;
   }
   return operations.map(inputOf);
+}
+
+/**
+ * Whether the tool of 3D `operation`, its centre within its boundary
+ * (`roughingArea`), reaches the footprint of another visible model on its
+ * side (#596, ADR-0085). Only its own model is machined, so it cuts into
+ * that one without following it.
+ */
+function reachesOtherModel(
+  doc: ProjectDocument,
+  operation: Operation,
+  flip: Flip | null,
+  stock: Rect,
+): boolean {
+  if (operation.type !== "relief_rough" && operation.type !== "relief_finish") return false;
+  const { modelId } = operation.params;
+  const model = doc.models.find(({ id }) => id === modelId);
+  if (!model) return false;
+  const boundary =
+    operation.type === "relief_finish"
+      ? finishingBoundary(operation.params)
+      : operation.params.boundary;
+  const radius = operation.tool.diameter / 2;
+  const covered = roughingArea(boundary, modelView(model, flip), stock, radius);
+  if (!covered) return false;
+  return doc.models.some((other) => {
+    if (other.id === modelId || other.hidden) return false;
+    const { min, max } = boxRect(modelView(other, flip).box);
+    return [0, 1].every(
+      (i) =>
+        (min[i] as number) < (covered.max[i] as number) + radius &&
+        (max[i] as number) > (covered.min[i] as number) - radius,
+    );
+  });
 }
 
 /**
@@ -253,6 +297,7 @@ function ownKey({
   parting,
   flip,
   tabs,
+  reachesOther,
   safeZ,
   entryClearance,
   touchOff,
@@ -269,6 +314,7 @@ function ownKey({
     parting,
     flip,
     tabs,
+    reachesOther,
     safeZ,
     entryClearance,
     touchOff,
@@ -517,6 +563,7 @@ function* operationSteps(
     parting,
     flip,
     tabs,
+    reachesOther,
     before,
     touchOff,
     ...options
@@ -576,6 +623,7 @@ function* operationSteps(
       if (parting !== null && boundary.type === "stock") {
         warnings.push({ code: "toolpath.stockBoundaryTwoSided" });
       }
+      if (reachesOther) warnings.push({ code: "toolpath.reachesOtherModel" });
       let rest: RestOptions | null = null;
       let share = 0;
       if (operation.params.rest) {

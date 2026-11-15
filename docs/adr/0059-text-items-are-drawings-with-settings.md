@@ -1,6 +1,6 @@
 # ADR-0059: A text item is a drawing that keeps its settings and stores its outlines as one shape
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-24
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0010 (T1, T3, T8), ADR-0003, ADR-0004, ADR-0014, ADR-0022, ADR-0055; #347–#353

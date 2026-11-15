@@ -7,26 +7,26 @@ A PRD describes **what** we build and **why**: the problem, the users, the scope
 1. Copy [`0000-template.md`](0000-template.md) to `NNNN-short-title.md` using the next free number.
 2. Start as **Draft**, iterate via PRs and issues.
 3. Move to **Approved** when scope is agreed. Unlike ADRs, PRDs may be revised after approval; note changes in the changelog section.
-4. Mark **Shipped** when delivered, or **Abandoned** with a reason.
+4. Mark **Shipped** when delivered, **Partially shipped** with the requirements still open, or **Abandoned** with a reason.
 
-Statuses: `Draft` · `Approved` · `Shipped` · `Abandoned`
+Statuses: `Draft` · `Approved` · `Partially shipped` · `Shipped` · `Abandoned`
 
 ## Index
 
 | # | Title | Status |
 | --- | --- | --- |
-| [0001](0001-mvp.md) | MVP: 2D vector → G-code for hobby CNC routers | Draft |
-| [0002](0002-zero-point.md) | Zero point selection | Draft |
-| [0003](0003-freemium-limits.md) | Freemium usage limits | Draft |
-| [0004](0004-machine-presets.md) | Machine presets | Draft |
-| [0005](0005-stl-relief-machining.md) | STL relief machining | Draft |
+| [0001](0001-mvp.md) | MVP: 2D vector → G-code for hobby CNC routers | Partially shipped |
+| [0002](0002-zero-point.md) | Zero point selection | Shipped |
+| [0003](0003-freemium-limits.md) | Freemium usage limits | Abandoned |
+| [0004](0004-machine-presets.md) | Machine presets | Shipped |
+| [0005](0005-stl-relief-machining.md) | STL relief machining | Partially shipped |
 | [0006](0006-gcode-simulation.md) | G-code simulation | Abandoned |
-| [0007](0007-desktop-app.md) | Desktop app | Draft |
+| [0007](0007-desktop-app.md) | Desktop app | Shipped |
 | [0008](0008-try-without-account.md) | Use the app without an account | Shipped |
-| [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Draft |
-| [0010](0010-text.md) | Text | Draft |
-| [0011](0011-two-sided-machining.md) | Two-sided machining | Draft |
-| [0012](0012-mcp-server.md) | MCP server | Draft |
-| [0013](0013-demo-videos.md) | Automated demo videos | Draft |
-| [0014](0014-terrain-from-a-map.md) | Terrain from a map | Draft |
-| [0015](0015-relief-from-image.md) | Relief from an image | Draft |
+| [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Shipped |
+| [0010](0010-text.md) | Text | Partially shipped |
+| [0011](0011-two-sided-machining.md) | Two-sided machining | Shipped |
+| [0012](0012-mcp-server.md) | MCP server | Partially shipped |
+| [0013](0013-demo-videos.md) | Automated demo videos | Partially shipped |
+| [0014](0014-terrain-from-a-map.md) | Terrain from a map | Partially shipped |
+| [0015](0015-relief-from-image.md) | Relief from an image | Shipped |

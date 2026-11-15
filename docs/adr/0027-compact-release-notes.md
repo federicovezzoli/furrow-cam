@@ -1,6 +1,6 @@
 # ADR-0027: Compact release notes
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0012

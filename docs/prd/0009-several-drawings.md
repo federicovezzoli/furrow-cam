@@ -1,6 +1,6 @@
 # PRD-0009: Several drawings, arranged on the stock
 
-- **Status:** Draft
+- **Status:** Shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-21
 - **Related:** PRD-0001, PRD-0002, PRD-0005, ADR-0022, ADR-0031, ADR-0038, ADR-0055
@@ -31,7 +31,7 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| D1 | Import several SVG and DXF files into one project. Each imported drawing keeps its size in the file and is aligned at the XY zero's anchor to the stock less its border (10 mm by default). A project holds drawings and at most one STL model, together (ADR-0078) | Must |
+| D1 | Import several SVG and DXF files into one project. Each imported drawing keeps its size in the file and is aligned at the XY zero's anchor to the stock less its border (10 mm by default). A project holds drawings and any number of models, together (ADR-0078, ADR-0085) | Must |
 | D2 | Each imported drawing is one item, named after its file. Clicking it in the viewport, when not picking an operation's targets, selects the whole drawing and shows its properties over the viewport, as a model's are; double clicking enters it to select its paths (ADR-0080) | Must |
 | D3 | Set a drawing's width or height in the current units: it keeps its proportions, and its point at the zero's anchor stays put. *Fit to stock* fits it inside the stock less a border the user sets (10 mm by default), as for models (PRD-0005 S2) | Must |
 | D4 | Remove a drawing, with the operations that only machine it, in one undo step | Must |
@@ -66,3 +66,4 @@ A project holds one imported file: an SVG or DXF drawing, or an STL model (ADR-0
 - 2026-11-07: D5 adds *Center on stock* (#495)
 - 2026-11-08: D1 a project holds drawings and one model together (PRD-0014, ADR-0078)
 - 2026-11-09: D2 a click selects the whole drawing, a double click its paths; D10 an Objects pane; open question closed (ADR-0080)
+- 2026-11-15: D1 a project holds several models (#596, ADR-0085)

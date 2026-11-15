@@ -58,6 +58,22 @@ export type ToolpathControls = {
 /** What a cancelled toolpath says. */
 export const CANCELLED = "cancelled";
 
+const COMPUTING: ToolpathEntry = { inputHash: "", status: "computing" };
+
+/**
+ * `entries` with every computing entry replaced by one placeholder that keeps
+ * only its status, for `useShallow`: readers that only ask whether a toolpath
+ * is still computing then skip the progress reports (one every 100 ms).
+ */
+export function settledEntries(state: ToolpathState): ToolpathState["entries"] {
+  return Object.fromEntries(
+    Object.entries(state.entries).map(([id, entry]) => [
+      id,
+      entry.status === "computing" ? COMPUTING : entry,
+    ]),
+  );
+}
+
 /** Derived data (ADR-0010): never undoable, never saved. */
 export type ToolpathState = {
   /** Operation id → its latest toolpath. */

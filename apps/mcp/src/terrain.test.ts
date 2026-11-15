@@ -93,11 +93,10 @@ describe("importTerrain", { timeout: 30_000 }, () => {
     expect(Math.max(...size.slice(0, 2))).toBeLessThan(Math.max(stock.width, stock.height));
   });
 
-  it("refuses a project that has a model, before fetching anything", async () => {
+  it("adds a second terrain beside the first (#596)", async () => {
     await importTerrain(async () => project, request);
-    fetchTile.mockClear();
-    expect(await refusal(importTerrain(async () => project, request))).toMatch(/model/i);
-    expect(fetchTile).not.toHaveBeenCalled();
+    await importTerrain(async () => project, request);
+    expect(project.store.getState().document.models).toHaveLength(2);
   });
 
   it("never searches a name, and refuses a short link", async () => {

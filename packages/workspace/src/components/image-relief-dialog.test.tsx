@@ -49,7 +49,7 @@ function pickFile(name: string) {
 }
 
 async function openWithImage(host = createMemoryHost({ document: createProjectDocument() })) {
-  renderWorkspace(<ImageReliefButton inRibbon />, host);
+  renderWorkspace(<ImageReliefButton />, host);
   fireEvent.click(screen.getByRole("button", { name: "Relief from image" }));
   expect(screen.getByText(/Pick an image to see/)).toBeTruthy();
   pickFile("Logo.png");

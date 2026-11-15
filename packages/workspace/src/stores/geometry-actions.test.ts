@@ -34,7 +34,6 @@ import { drawingAnchor } from "./drawing-test-utils";
 import {
   addImportedShapes,
   addTextItem,
-  canImportModel,
   centerDrawingOnStock,
   convertTextToDrawing,
   DUPLICATE_GAP,
@@ -156,16 +155,13 @@ describe("addImportedShapes", () => {
     // 150,000 shapes take seconds on a slow CI runner.
   }, 30_000);
 
-  it("adds a drawing beside a model, and takes a model beside drawings but not a second one", () => {
+  it("adds a drawing beside a model", () => {
     const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
     expect(addImportedShapes(store, "importSvg", importSvg(SVG).shapes)).toBe(true);
     const { document } = store.getState();
     expect(document.drawings).toHaveLength(1);
     expect(document.models).toEqual([model]);
     expect(() => ProjectDocument.parse(document)).not.toThrow();
-    expect(canImportModel(document)).toBe(false);
-    expect(canImportModel(fullDocument())).toBe(true);
-    expect(canImportModel(createProjectDocument())).toBe(true);
   });
 });
 

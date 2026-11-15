@@ -27,7 +27,6 @@ import {
 } from "@furrow/document";
 import type { Draft } from "immer";
 import type { DocumentStore } from "./document-store";
-import { canImportModel } from "./geometry-actions";
 
 /**
  * Document store actions on imported 3D models (PRD-0005 S2, ADR-0031): each
@@ -96,17 +95,14 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
  * stock less a border, its top at the stock top and aligned at the zero's
  * anchor (ADR-0031, ADR-0038). With `fit: false` it keeps its size and is
  * centred on the stock instead, as a terrain made at a chosen size is
- * (ADR-0077). A project holds at most one model (ADR-0078): returns `null`,
- * adding nothing, if it already has one; otherwise the model's id.
+ * (ADR-0077). Returns the model's id.
  */
 export function addModel(
   store: DocumentStore,
   mesh: Omit<Model, "id" | "placement" | "border">,
   { fit = true }: { fit?: boolean } = {},
-): string | null {
-  const { document } = store.getState();
-  if (!canImportModel(document)) return null;
-  const { stock } = document;
+): string {
+  const { stock } = store.getState().document;
   const id = crypto.randomUUID();
   // The border it is fitted with is the one it keeps.
   const border = MODEL_BORDER;

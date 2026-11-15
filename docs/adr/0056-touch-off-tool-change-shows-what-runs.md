@@ -1,6 +1,6 @@
 # ADR-0056: The touch-off pad's tool change is always a block, and the field shows it
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-22
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0002 (Z11), PRD-0005 (S12), ADR-0041, ADR-0043, ADR-0053; #284. Supersedes ADR-0043's *Its own tool change* bullet where `TouchOff.toolChange` is `null` and where it describes the field's buttons, and the part of ADR-0041's *GRBL post* bullet that moves over the pad before the machine's block.

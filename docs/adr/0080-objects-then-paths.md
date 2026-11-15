@@ -1,6 +1,6 @@
 # ADR-0080: Objects are selected first, their paths inside them, with an Objects pane
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-09
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0009 (D2), PRD-0010, PRD-0014, ADR-0018, ADR-0023 (`0024-selection-in-the-viewport-only.md`), ADR-0055, ADR-0059, ADR-0078. Supersedes ADR-0023 and the selection paragraph of ADR-0018.

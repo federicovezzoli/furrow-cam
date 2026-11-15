@@ -1,6 +1,6 @@
 # ADR-0042: Simulating the G-code program parsed from its text
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0006, PRD-0001 (R10, R11), ADR-0004, ADR-0011, ADR-0014, ADR-0016, ADR-0019, ADR-0021, ADR-0041

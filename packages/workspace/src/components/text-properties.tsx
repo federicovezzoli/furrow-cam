@@ -25,7 +25,7 @@ import {
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { drawingShapes } from "../stores/geometry-actions";
-import { Row } from "./operation-properties";
+import { Row } from "./operation-properties/fields";
 
 /** Keeps the height positive when stepping down. */
 const MIN_HEIGHT = 0.01;

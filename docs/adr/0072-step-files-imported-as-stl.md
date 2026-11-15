@@ -1,6 +1,6 @@
 # ADR-0072: STEP files are turned into STL on import, with OpenCascade in WebAssembly
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-01
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S1), PRD-0001, ADR-0004, ADR-0029, ADR-0044, ADR-0047, ADR-0067; issue #442

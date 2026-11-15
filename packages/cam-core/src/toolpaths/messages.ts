@@ -39,6 +39,7 @@ export const TOOLPATH_MESSAGES = [
   "toolpath.cutsPins",
   "toolpath.noHoldingTabs",
   "toolpath.stockBoundaryTwoSided",
+  "toolpath.reachesOtherModel",
   "toolpath.noArea",
   "toolpath.belowStock",
   "toolpath.coarsened",

@@ -1,6 +1,6 @@
 # ADR-0058: Each operation sets its own step-over; tools have none
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-22
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R7, R18, R20), PRD-0005 (S4, S5), ADR-0003, ADR-0026, ADR-0033; #332. Supersedes ADR-0033's rule that roughing's step-over is the tool's unless the operation sets its own.

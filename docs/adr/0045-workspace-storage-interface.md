@@ -1,6 +1,6 @@
 # ADR-0045: The workspace saves and loads through a storage interface
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007, ADR-0003, ADR-0010, ADR-0021, ADR-0028, ADR-0029, ADR-0036, ADR-0044, ADR-0046; #184

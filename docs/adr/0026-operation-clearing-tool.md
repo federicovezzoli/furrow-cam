@@ -1,6 +1,6 @@
 # ADR-0026: An operation may cut with a second, clearing tool
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R16), ADR-0003, ADR-0004, ADR-0025

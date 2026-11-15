@@ -25,18 +25,13 @@ import { DEFAULT_FONT } from "../lib/fonts";
 import { shapePaths } from "../lib/path-selection";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
-import { useWorkspaceHost } from "../providers/workspace-host";
 import {
-  useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
 import { drawingShapes } from "../stores/geometry-actions";
-import { ImageReliefButton } from "./image-relief-dialog";
-import { ModelImportButton, STL_IMPORT_OFF } from "./model-import-button";
 import { RibbonButton } from "./ribbon";
-import { TerrainButton } from "./terrain-dialog";
 
 /** Common pixels per inch in SVG files; editors let users pick any. */
 const DPI_OPTIONS = [96, 72, 90, 300] as const;
@@ -74,10 +69,9 @@ const DEFAULT_TEXT_HEIGHT = 20;
 
 /**
  * Adds a text item (PRD-0010 T1), placed like an imported drawing, and
- * selects it so its properties open. In the ribbon, or in the empty
- * project's card (`inCard`).
+ * selects it so its properties open, from the ribbon.
  */
-export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
+export function AddTextButton() {
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const { alert } = useDialogs();
@@ -103,42 +97,28 @@ export function AddTextButton({ inCard = false }: { inCard?: boolean }) {
     if (shape) workspace.getState().selectPaths(shapePaths(shape));
   }
 
-  if (!inCard)
-    return (
-      <RibbonButton
-        icon={<TypeIcon />}
-        label={ribbon("text")}
-        aria-label={t("addText")}
-        data-demo="add-text"
-        hint={t("addText")}
-        disabled={adding}
-        onClick={add}
-      />
-    );
   return (
-    <Button variant="outline" size="compact" disabled={adding} onClick={add}>
-      <TypeIcon />
-      {t("addText")}
-    </Button>
+    <RibbonButton
+      icon={<TypeIcon />}
+      label={ribbon("text")}
+      aria-label={t("addText")}
+      data-demo="add-text"
+      hint={t("addText")}
+      disabled={adding}
+      onClick={add}
+    />
   );
 }
 
 /**
- * Imports SVG and DXF files and STL or STEP models, over the viewport: a card in its
- * centre while the project is empty; then the ribbon's `ImportDrawingButton`
- * adds a drawing per file and its `ModelImportButton` the one model a project
- * holds beside them (ADR-0078). Prompts, import warnings (until
- * dismissed) and how a model import is going show in the viewport's corner.
+ * Imports the SVG and DXF files the ribbon's `ImportDrawingButton` picks, a
+ * drawing per file. Prompts, import warnings (until dismissed) and how a
+ * model import (`ModelImportButton`) is going show in the viewport's corner.
  */
 export function GeometryImport() {
   const store = useDocumentStoreApi();
-  const empty = useDocumentStore(
-    (s) => s.document.geometry.length === 0 && s.document.models.length === 0,
-  );
-  const meshLimits = useWorkspaceHost().limits.meshes;
   const modelImport = useWorkspaceStore((s) => s.modelImport);
   const setModelImport = useWorkspaceStore((s) => s.setModelImport);
-  const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<DrawingFile | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const format = useFormatMessage();
@@ -194,13 +174,12 @@ export function GeometryImport() {
     }
   }
 
-  /** Nothing to show over the viewport: the ribbon has the import button. */
-  const bare = !empty && !pending && !notice && !modelImport;
+  /** Nothing to show over the viewport: imports start from the ribbon. */
+  const bare = !pending && !notice && !modelImport;
 
   return (
     <>
       <input
-        ref={input}
         id={DRAWING_INPUT_ID}
         type="file"
         accept=".svg,.dxf,image/svg+xml,image/vnd.dxf"
@@ -210,42 +189,13 @@ export function GeometryImport() {
         aria-hidden
       />
       {!bare && (
-        <div
-          className={cn(
-            "pointer-events-none absolute flex",
-            empty
-              ? "inset-0 items-center justify-center p-4"
-              : "right-2 bottom-2 left-2 justify-end",
-          )}
-        >
+        <div className="pointer-events-none absolute right-2 bottom-2 left-2 flex justify-end">
           <div
             className={cn(
               "pointer-events-auto grid gap-2 rounded-md border bg-background/85 text-ui shadow-xs backdrop-blur-md",
               "w-full max-w-72 p-3",
             )}
           >
-            {empty && <p className="text-muted-foreground">{t("start")}</p>}
-            {empty && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="compact"
-                  data-demo="start-import-drawing"
-                  onClick={() => input.current?.click()}
-                >
-                  <UploadIcon />
-                  {t("importDrawing")}
-                </Button>
-                <AddTextButton inCard />
-                <ModelImportButton />
-                <TerrainButton />
-                <ImageReliefButton />
-              </div>
-            )}
-            {empty && !meshLimits && (
-              <p className="text-muted-foreground">{format(STL_IMPORT_OFF)}</p>
-            )}
-
             {pending?.kind === "svg" && (
               <ImportPrompt
                 id="svg-dpi"

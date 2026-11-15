@@ -724,7 +724,8 @@
       "noHoles": "Delinecek bir şey yok: görünümde delik yerleştirin veya seçili şekilleri kullanın.",
       "cutsPins": "Bu işlem bir konumlama piminin geldiği yeri kesiyor, bu yüzden ham malzeme çevrildiğinde takım pime çarpar: pimleri ya da kesimi taşıyın.",
       "noHoldingTabs": "Tutucu köprü yok: alt yüz parçanın çevresini tamamen kestiğinde parça serbest kalır.",
-      "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın."
+      "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın.",
+      "reachesOtherModel": "Takım, bu işlemin izlemediği başka bir modelin içine kesiyor: yalnızca işlemin kendi modeli işlenir. Daha küçük bir sınır kullanın veya modelleri birbirinden uzaklaştırın."
     },
     "export": {
       "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
@@ -796,7 +797,6 @@
       "unreadableFile": "Bu dosya okunamadı.",
       "modelUnreadable": "Model okunamadı.",
       "importFailed": "Bu dosya içe aktarılamadı.",
-      "oneModel": "Bir proje yalnızca tek bir 3B model içerir.",
       "noShapes": "Bu dosyada içe aktarılacak şekil yok.",
       "stlImportOff": "3B model içe aktarma bu sunucuda kullanılamıyor.",
       "stepUnreadable": "Bu STEP dosyası okunamadı. CAD programınızdan yeniden dışa aktarıp tekrar deneyin.",
@@ -1498,7 +1498,6 @@
       "mm": "Milimetre",
       "in": "İnç"
     },
-    "start": "Başlamak için bir SVG veya DXF çizimi ya da bir STL veya STEP modeli içe aktarın.",
     "importDrawing": "SVG/DXF içe aktar…",
     "importModel": "STL veya STEP içe aktar…",
     "dpi": "DPI",
@@ -1515,7 +1514,6 @@
     "defaultText": "Metin"
   },
   "Terrain": {
-    "open": "Haritadan arazi…",
     "ribbon": "Arazi",
     "hint": "Haritadaki bir alanın kabartma modelini oluşturun",
     "title": "Haritadan arazi",
@@ -1558,13 +1556,11 @@
     "next": "İleri",
     "back": "Geri",
     "download": "STL indir",
-    "hasModel": "Bu projede zaten bir 3B model var: arazi yalnızca STL dosyası olarak indirilebilir.",
     "storeOff": "Bu sunucu 3B model saklayamıyor: arazi yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Arazi"
   },
   "ImageRelief": {
-    "open": "Görüntüden kabartma…",
     "ribbon": "Görüntü",
     "hint": "Gri tonlamalı bir görüntüden kabartma modeli oluşturun",
     "title": "Görüntüden kabartma",
@@ -1586,7 +1582,6 @@
     "saving": "Model projeye ekleniyor…",
     "generate": "Projeye ekle",
     "download": "STL indir",
-    "hasModel": "Bu projede zaten bir 3B model var: kabartma yalnızca STL dosyası olarak indirilebilir.",
     "storeOff": "Bu sunucu 3B modelleri saklayamaz: kabartma yalnızca STL dosyası olarak indirilebilir.",
     "cancel": "İptal",
     "defaultName": "Kabartma"

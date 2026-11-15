@@ -309,6 +309,7 @@ describe("vcarveToolpath", () => {
         parting: null,
         flip: null,
         tabs: null,
+        reachesOther: false,
         before: [],
         touchOff: null,
         pins: null,

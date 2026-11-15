@@ -46,14 +46,6 @@ import type { DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
 import { type ActionResult, hasPlacedHoles } from "./operation-actions";
 
-/** Why a model can't be imported: a project holds drawings and at most one model (ADR-0078). */
-export const ONE_MODEL: Message = { code: "workspace.oneModel" };
-
-/** Whether the project can take a model: it holds none yet. */
-export function canImportModel({ models }: ProjectDocument): boolean {
-  return models.length === 0;
-}
-
 /** The new drawing an import's shapes name, called after their file. */
 function importedDrawing(shapes: Shape[]): Drawing | null {
   const [first] = shapes;

@@ -1,6 +1,6 @@
 # ADR-0064: 3D finishing covers the same boundary as roughing
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-29
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4, S10), ADR-0030, ADR-0033, ADR-0038, ADR-0039, ADR-0063; issue #396. Supersedes ADR-0038's *What a margin clears* in part: finishing no longer stops at the model's edges.

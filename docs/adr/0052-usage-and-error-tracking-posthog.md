@@ -1,6 +1,6 @@
 # ADR-0052: Anonymous usage and error tracking with PostHog
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-20
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0013, ADR-0020, ADR-0044, ADR-0048, ADR-0050, ADR-0051; PRD-0007; #283

@@ -1,6 +1,6 @@
 # ADR-0051: Bug reports are prefilled GitHub issue drafts the user submits
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-20
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0013, ADR-0044, ADR-0045; #280

@@ -1,5 +1,5 @@
-import { DEFAULT_STL_LIMITS, type LonLat, modelRect } from "@furrow/cam-core";
-import { createProjectDocument, type Model } from "@furrow/document";
+import { DEFAULT_STL_LIMITS, type LonLat } from "@furrow/cam-core";
+import { createProjectDocument } from "@furrow/document";
 import { model } from "@furrow/document/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDocumentStore, type DocumentStore } from "../stores/document-store";
@@ -92,14 +92,12 @@ describe("importGeneratedModel", () => {
     expect(workspace.getState().selectedModelId).toBe(added?.id);
   });
 
-  it("refuses a project that has its model already", async () => {
+  it("adds a second model beside the first (#596)", async () => {
     await importGeneratedModel(terrain, "Terrain", { meshes, document, workspace }, "terrain");
     expect(
       await importGeneratedModel(terrain, "Terrain", { meshes, document, workspace }, "terrain"),
-    ).toEqual({
-      code: "workspace.oneModel",
-    });
-    expect(meshes.put).toHaveBeenCalledTimes(1);
+    ).toBeNull();
+    expect(document.getState().document.models).toHaveLength(2);
   });
 });
 

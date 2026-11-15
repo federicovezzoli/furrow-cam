@@ -1,6 +1,6 @@
 # ADR-0060: Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-24
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0011 (B1, B2), ADR-0003, ADR-0014, ADR-0016, ADR-0030, ADR-0031, ADR-0034; #354. Extends ADR-0031: a model is no longer machined from the top only.

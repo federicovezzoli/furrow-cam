@@ -1,6 +1,6 @@
 # ADR-0057: What the server returns to the browser carries message keys, not text
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-22
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0054; #296, #307.

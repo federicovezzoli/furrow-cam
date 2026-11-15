@@ -1,6 +1,6 @@
 # ADR-0028: Named project versions stored as full documents
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-15
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R13c), ADR-0003, ADR-0010

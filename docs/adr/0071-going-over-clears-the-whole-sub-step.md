@@ -1,6 +1,6 @@
 # ADR-0071: Relief passes go over a wall no lower than the tool anywhere along the level move
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-01
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S4), ADR-0033, ADR-0040, ADR-0070; issues #151, #439. Supersedes ADR-0040's height for going over.

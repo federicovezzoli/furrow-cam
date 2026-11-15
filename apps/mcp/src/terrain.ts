@@ -13,9 +13,8 @@ import { fileNameFor, parsePlace } from "@furrow/workspace/lib/place-search";
 import { MAX_ELEVATION_ZOOM } from "@furrow/workspace/lib/terrain-services";
 import { MAX_LATITUDE, shapeRing } from "@furrow/workspace/lib/terrain-square";
 import { fetchElevationTile, loadTerrainTiles } from "@furrow/workspace/lib/terrain-tiles";
-import { canImportModel, ONE_MODEL } from "@furrow/workspace/stores/geometry-actions";
 import { imageDecoder } from "./decoders";
-import { addMesh, making, text } from "./drawings-and-models";
+import { addMesh, making } from "./drawings-and-models";
 import { writeFileAtomic } from "./files";
 import { checkTarget, type Progress } from "./gcode";
 import { type Project, ToolError } from "./projects";
@@ -76,12 +75,10 @@ function ringOf(area: TerrainArea): LonLat[] {
 /**
  * The longest side a terrain of an area `span` (metres) takes in `project`:
  * `requested`, or by default what fits inside the stock less the model
- * border, as in the app. Throws a `ToolError` if the project already has a
- * model or `requested` doesn't fit.
+ * border, as in the app. Throws a `ToolError` if `requested` doesn't fit.
  */
 function sideIn(project: Project, span: [number, number], requested?: number): number {
   const { document } = project.store.getState();
-  if (!canImportModel(document)) throw new ToolError(text(ONE_MODEL));
   const fitting = fittingSide(document.stock, span);
   const side = requested ?? fitting;
   if (side > fitting + 1e-9) {
@@ -94,7 +91,7 @@ function sideIn(project: Project, span: [number, number], requested?: number): n
 
 /**
  * Makes the terrain of `request.area` and adds it to the project `open`
- * gives as its model, at the chosen size and centred on the stock, as the
+ * gives as a model, at the chosen size and centred on the stock, as the
  * app's *Terrain from a map* does (PRD-0014 T11, ADR-0082). Fetches the
  * area's elevation tiles from Mapterhorn, and nothing else. `open` is asked
  * again once the terrain is made, since the project may have changed, or
@@ -107,9 +104,6 @@ export async function importTerrain(
   progress?: Progress,
   signal?: AbortSignal,
 ) {
-  if (!canImportModel((await open()).store.getState().document)) {
-    throw new ToolError(text(ONE_MODEL));
-  }
   if (request.stl !== undefined) {
     if (!isAbsolute(request.stl) || !/\.stl$/i.test(request.stl)) {
       throw new ToolError(

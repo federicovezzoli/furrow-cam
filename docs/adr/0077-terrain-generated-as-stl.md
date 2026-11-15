@@ -1,6 +1,6 @@
 # ADR-0077: Terrain is generated in the browser as an STL mesh and imported like one
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0014, PRD-0005 (S1, S2), ADR-0004, ADR-0029, ADR-0030, ADR-0047, ADR-0050, ADR-0072, ADR-0076

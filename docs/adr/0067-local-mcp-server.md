@@ -1,6 +1,6 @@
 # ADR-0067: A local MCP server in `apps/mcp`, driving the workspace's document store headless
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-29
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0003, ADR-0004, ADR-0010, ADR-0011, ADR-0028, ADR-0044, ADR-0046, ADR-0047, ADR-0052; PRD-0012; #364

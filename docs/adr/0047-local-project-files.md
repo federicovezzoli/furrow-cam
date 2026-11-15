@@ -1,6 +1,6 @@
 # ADR-0047: Desktop projects are `.furrow` archives that carry their versions
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0007, PRD-0005, ADR-0003, ADR-0010, ADR-0028, ADR-0029, ADR-0044, ADR-0045; #184

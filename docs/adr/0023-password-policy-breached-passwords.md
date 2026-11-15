@@ -1,6 +1,6 @@
 # ADR-0023: Password length limits and breached-password check
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R17), ADR-0006, ADR-0013

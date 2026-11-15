@@ -724,7 +724,8 @@
       "noHoles": "Niets te boren: plaats gaten in de weergave of gebruik geselecteerde vormen.",
       "cutsPins": "Deze bewerking snijdt waar een paspen komt, dus het gereedschap zou de pen raken als het materiaal is omgedraaid: verplaats de pennen of de snede.",
       "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra de onderkant er helemaal omheen is gefreesd.",
-      "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge."
+      "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge.",
+      "reachesOtherModel": "Het gereedschap snijdt in een ander model, dat deze bewerking niet volgt: alleen het eigen model wordt bewerkt. Gebruik een kleinere begrenzing of zet de modellen verder uit elkaar."
     },
     "export": {
       "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
@@ -796,7 +797,6 @@
       "unreadableFile": "Dit bestand kon niet worden gelezen.",
       "modelUnreadable": "Het model kon niet worden gelezen.",
       "importFailed": "Dit bestand kon niet worden geïmporteerd.",
-      "oneModel": "Een project bevat maar één 3D-model.",
       "noShapes": "Dit bestand bevat geen vormen om te importeren.",
       "stlImportOff": "Het importeren van 3D-modellen is niet beschikbaar op deze server.",
       "stepUnreadable": "Dit STEP-bestand kon niet worden gelezen. Exporteer het opnieuw vanuit je CAD-programma en probeer het nog eens.",
@@ -1498,7 +1498,6 @@
       "mm": "Millimeter",
       "in": "Inch"
     },
-    "start": "Importeer een SVG- of DXF-tekening, of een STL- of STEP-model, om te beginnen.",
     "importDrawing": "SVG/DXF importeren…",
     "importModel": "STL of STEP importeren…",
     "dpi": "DPI",
@@ -1515,7 +1514,6 @@
     "defaultText": "Tekst"
   },
   "Terrain": {
-    "open": "Terrein van een kaart…",
     "ribbon": "Terrein",
     "hint": "Een reliëfmodel maken van een gebied op een kaart",
     "title": "Terrein van een kaart",
@@ -1558,13 +1556,11 @@
     "next": "Volgende",
     "back": "Terug",
     "download": "STL downloaden",
-    "hasModel": "Dit project heeft al zijn 3D-model: het terrein kan alleen als STL-bestand worden gedownload.",
     "storeOff": "Deze server kan geen 3D-modellen opslaan: het terrein kan alleen als STL-bestand worden gedownload.",
     "cancel": "Annuleren",
     "defaultName": "Terrein"
   },
   "ImageRelief": {
-    "open": "Reliëf van een afbeelding…",
     "ribbon": "Afbeelding",
     "hint": "Maak een reliëfmodel van een grijswaardenafbeelding",
     "title": "Reliëf van een afbeelding",
@@ -1586,7 +1582,6 @@
     "saving": "Model aan het project toevoegen…",
     "generate": "Aan project toevoegen",
     "download": "STL downloaden",
-    "hasModel": "Dit project heeft al zijn 3D-model: het reliëf kan alleen als STL-bestand worden gedownload.",
     "storeOff": "Deze server kan geen 3D-modellen opslaan: het reliëf kan alleen als STL-bestand worden gedownload.",
     "cancel": "Annuleren",
     "defaultName": "Reliëf"

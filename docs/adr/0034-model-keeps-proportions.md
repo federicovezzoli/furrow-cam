@@ -1,6 +1,6 @@
 # ADR-0034: Models keep their proportions and are cut off at the stock's bottom
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0005 (S2, S3), ADR-0030, ADR-0031

@@ -13,6 +13,7 @@ import { RouteIcon, RouteOffIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
+import { useShallow } from "zustand/react/shallow";
 import { type HeightmapUpdates, usePlayback } from "../../hooks/use-playback";
 import { heightmapCellLimit } from "../../lib/simulation-mesh";
 import { boxWithPoint } from "../../lib/viewport-scene";
@@ -21,6 +22,7 @@ import {
   useToolpathStore,
   useWorkspaceStore,
 } from "../../providers/workspace-stores";
+import { settledEntries } from "../../stores/toolpath-store";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
@@ -54,7 +56,7 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
   const units = useDocumentStore((s) => s.document.units);
   // As machined: operations that only cut hidden objects are off (ADR-0080).
   const operations = useDocumentStore((s) => machinedDocument(s.document).operations);
-  const entries = useToolpathStore((s) => s.entries);
+  const entries = useToolpathStore(useShallow(settledEntries));
   const { side } = playback;
   // The bottom side is played back over the top side's cuts, so its failures count too.
   const skipped = useMemo(

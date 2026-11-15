@@ -1,6 +1,6 @@
 # ADR-0019: Material-removal simulation with a heightmap
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-12
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0001 (R10), ADR-0003, ADR-0004, ADR-0008

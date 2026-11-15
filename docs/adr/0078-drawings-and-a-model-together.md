@@ -1,6 +1,6 @@
 # ADR-0078: A project holds drawings and one model together
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0009 (D1), PRD-0010, PRD-0014 (T7), PRD-0005 (S6), ADR-0031, ADR-0055, ADR-0060, ADR-0067. Supersedes the rule in ADR-0055 that a project never holds a model and drawings together.

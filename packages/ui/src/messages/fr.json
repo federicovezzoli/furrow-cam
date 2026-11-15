@@ -724,7 +724,8 @@
       "noHoles": "Rien à percer : placez des trous dans la vue ou utilisez les formes sélectionnées.",
       "cutsPins": "Cette opération coupe là où va un pion de centrage, donc l'outil toucherait le pion une fois le brut retourné : déplacez les pions ou la coupe.",
       "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
-      "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge."
+      "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge.",
+      "reachesOtherModel": "L’outil entame un autre modèle, que cette opération ne suit pas : seul son propre modèle est usiné. Utilisez une limite plus petite ou éloignez les modèles."
     },
     "export": {
       "allHidden": "Chaque opération active coupe quelque chose de masqué : affichez-le pour exporter.",
@@ -796,7 +797,6 @@
       "unreadableFile": "Ce fichier n’a pas pu être lu.",
       "modelUnreadable": "Le modèle n’a pas pu être lu.",
       "importFailed": "Ce fichier n’a pas pu être importé.",
-      "oneModel": "Un projet ne contient qu’un seul modèle 3D.",
       "noShapes": "Ce fichier ne contient aucune forme à importer.",
       "stlImportOff": "L’import de modèles 3D n’est pas disponible sur ce serveur.",
       "stepUnreadable": "Ce fichier STEP n’a pas pu être lu. Exportez-le à nouveau depuis votre logiciel de CAO et réessayez.",
@@ -1498,7 +1498,6 @@
       "mm": "Millimètres",
       "in": "Pouces"
     },
-    "start": "Importez un dessin SVG ou DXF, ou un modèle STL ou STEP, pour commencer.",
     "importDrawing": "Importer un SVG/DXF…",
     "importModel": "Importer un STL ou STEP…",
     "dpi": "PPP",
@@ -1515,7 +1514,6 @@
     "defaultText": "Texte"
   },
   "Terrain": {
-    "open": "Terrain depuis une carte…",
     "ribbon": "Terrain",
     "hint": "Créer un modèle en relief d'une zone sur une carte",
     "title": "Terrain depuis une carte",
@@ -1558,13 +1556,11 @@
     "next": "Suivant",
     "back": "Retour",
     "download": "Télécharger le STL",
-    "hasModel": "Ce projet a déjà son modèle 3D : le terrain peut seulement être téléchargé en fichier STL.",
     "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le terrain peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Terrain"
   },
   "ImageRelief": {
-    "open": "Relief depuis une image…",
     "ribbon": "Image",
     "hint": "Créer un modèle en relief à partir d'une image en niveaux de gris",
     "title": "Relief depuis une image",
@@ -1586,7 +1582,6 @@
     "saving": "Ajout du modèle au projet…",
     "generate": "Ajouter au projet",
     "download": "Télécharger le STL",
-    "hasModel": "Ce projet a déjà son modèle 3D : le relief peut seulement être téléchargé en fichier STL.",
     "storeOff": "Ce serveur ne peut pas stocker de modèles 3D : le relief peut seulement être téléchargé en fichier STL.",
     "cancel": "Annuler",
     "defaultName": "Relief"

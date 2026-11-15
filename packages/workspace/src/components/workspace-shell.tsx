@@ -102,9 +102,9 @@ export function WorkspaceShell() {
       <Ribbon>
         <RibbonGroup caption={importT("import")} tour="import">
           <ImportDrawingButton />
-          <ModelImportButton inRibbon />
-          <TerrainButton inRibbon />
-          <ImageReliefButton inRibbon />
+          <ModelImportButton />
+          <TerrainButton />
+          <ImageReliefButton />
           <AddTextButton />
         </RibbonGroup>
         <RibbonGroup caption={t("operations")} tour="add-operation">

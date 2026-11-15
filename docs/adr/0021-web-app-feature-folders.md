@@ -1,6 +1,6 @@
 # ADR-0021: Feature folders in the web app
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-14
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0002, ADR-0003, ADR-0006, ADR-0011

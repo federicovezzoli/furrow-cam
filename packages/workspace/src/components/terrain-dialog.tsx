@@ -52,7 +52,6 @@ import {
   useDocumentStoreApi,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { canImportModel } from "../stores/geometry-actions";
 import { RibbonButton } from "./ribbon";
 import { TerrainSearch } from "./terrain-search";
 
@@ -73,41 +72,24 @@ const SHAPE_ICONS: Record<AreaShape, React.ReactNode> = {
 };
 
 /**
- * Opens *Terrain from a map* (PRD-0014), from the empty project's import card
- * or the ribbon (`inRibbon`). Where the terrain can't become the project's
+ * The ribbon's button opening *Terrain from a map* (PRD-0014). Where the terrain can't become the project's
  * model (a server that can't store meshes, a project that has its model),
  * it can still be downloaded (T8).
  */
-export function TerrainButton({ inRibbon = false }: { inRibbon?: boolean }) {
+export function TerrainButton() {
   const t = useTranslations("Terrain");
   const [open, setOpen] = useState(false);
   const dialog = open && <TerrainDialog onClose={() => setOpen(false)} />;
-  if (inRibbon)
-    return (
-      <>
-        <RibbonButton
-          icon={<MountainIcon />}
-          label={t("ribbon")}
-          aria-label={t("title")}
-          data-demo="ribbon-terrain"
-          hint={t("hint")}
-          onClick={() => setOpen(true)}
-        />
-        {dialog}
-      </>
-    );
   return (
     <>
-      <Button
-        variant="outline"
-        size="compact"
-        data-demo="import-terrain"
+      <RibbonButton
+        icon={<MountainIcon />}
+        label={t("ribbon")}
+        aria-label={t("title")}
+        data-demo="ribbon-terrain"
+        hint={t("hint")}
         onClick={() => setOpen(true)}
-        className="justify-self-start"
-      >
-        <MountainIcon />
-        {t("open")}
-      </Button>
+      />
       {dialog}
     </>
   );
@@ -142,7 +124,6 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
   const workspace = useWorkspaceStoreApi();
   const stock = useDocumentStore((s) => s.document.stock);
   const storable = host.limits.meshes;
-  const hasModel = useDocumentStore((s) => !canImportModel(s.document));
   // A download stores nothing, so without the server's limits it takes the default ones.
   const limits = storable ?? DEFAULT_STL_LIMITS;
   const units = useDocumentStore((s) => s.document.units);
@@ -379,7 +360,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 min={1}
                 // A model added is placed at this size, so no larger than the stock less its
                 // border; one that can only be downloaded has nothing to do with the stock.
-                max={plan && storable && !hasModel ? fittingSide(stock, plan.span) : undefined}
+                max={plan && storable ? fittingSide(stock, plan.span) : undefined}
                 value={longestSide}
                 disabled={generating}
                 onValueChange={setSide}
@@ -416,9 +397,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 )}
                 {stale && <p>{t("previewLoading")}</p>}
               </div>
-              {(!storable || hasModel) && (
-                <p className="text-muted-foreground">{storable ? t("hasModel") : t("storeOff")}</p>
-              )}
+              {!storable && <p className="text-muted-foreground">{t("storeOff")}</p>}
               {error && (
                 <p className="text-destructive" role="alert">
                   {format(error)}
@@ -478,7 +457,7 @@ function TerrainDialog({ onClose }: { onClose: () => void }) {
                 {t("download")}
               </Button>
               <Button
-                disabled={!plan || generating || !storable || hasModel}
+                disabled={!plan || generating || !storable}
                 data-demo="terrain-generate"
                 onClick={() => void generate()}
               >

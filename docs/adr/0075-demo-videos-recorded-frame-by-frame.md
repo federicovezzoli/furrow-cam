@@ -1,6 +1,6 @@
 # ADR-0075: Demo videos are recorded a frame at a time on a frozen page clock
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-02
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0013 (D1–D6), PRD-0008, ADR-0042; #464

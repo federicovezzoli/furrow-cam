@@ -1,6 +1,6 @@
 # ADR-0037: Layer folders in cam-core
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-16
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0007, ADR-0011, ADR-0015, ADR-0021, ADR-0025; issue #132

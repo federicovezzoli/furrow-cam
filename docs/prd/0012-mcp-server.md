@@ -1,6 +1,6 @@
 # PRD-0012: MCP server
 
-- **Status:** Draft
+- **Status:** Partially shipped (phase 1 shipped; open: M11, the remote server, paused, #372)
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-24
 - **Related:** PRD-0001, PRD-0005, PRD-0007, ADR-0003, ADR-0004, ADR-0013, ADR-0028, ADR-0045, ADR-0047, ADR-0052, ADR-0067, ADR-0082

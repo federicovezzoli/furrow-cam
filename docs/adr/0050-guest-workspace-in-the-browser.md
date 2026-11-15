@@ -1,6 +1,6 @@
 # ADR-0050: Guests use the workspace with projects kept in the browser
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0008, PRD-0003, PRD-0004, ADR-0003, ADR-0004, ADR-0013, ADR-0017, ADR-0045, ADR-0047

@@ -1,6 +1,6 @@
 # ADR-0079: A project's machine snapshot links to the library machine it came from
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0003, ADR-0045, ADR-0067, PRD-0001 (R19), #512

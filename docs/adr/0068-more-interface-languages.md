@@ -1,6 +1,6 @@
 # ADR-0068: Seven more interface languages, with one variant each
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-30
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0054; #413

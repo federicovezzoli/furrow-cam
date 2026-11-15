@@ -1,9 +1,11 @@
 # PRD-0003: Freemium usage limits
 
-- **Status:** Draft
+- **Status:** Abandoned
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-11
 - **Related:** PRD-0001, ADR-0004, ADR-0013, ADR-0017
+
+> **2026-11-15: abandoned, never built.** Furrow CAM is no longer planning a free tier with usage limits, on the hosted instance or elsewhere; no limits were added. See ADR-0017.
 
 ## Problem
 
@@ -62,3 +64,4 @@ Self-hosters, who run the MIT-licensed code on their own infrastructure, must no
 ## Changelog
 
 - 2026-10-11: initial draft
+- 2026-11-15: abandoned, never built

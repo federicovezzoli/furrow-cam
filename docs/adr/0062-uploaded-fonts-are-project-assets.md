@@ -1,6 +1,6 @@
 # ADR-0062: Uploaded fonts are project assets, listed in the document like models
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-24
 - **Deciders:** Federico Vezzoli
 - **Related:** PRD-0010 (T7), ADR-0028, ADR-0029, ADR-0045, ADR-0047, ADR-0050, ADR-0059, ADR-0061; #352

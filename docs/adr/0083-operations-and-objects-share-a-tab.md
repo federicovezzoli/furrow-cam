@@ -1,6 +1,6 @@
 # ADR-0083: Operations and objects share a sidebar tab, one above the other
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-11
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0009, ADR-0080; supersedes in part ADR-0080 (the Objects pane as a third tab)

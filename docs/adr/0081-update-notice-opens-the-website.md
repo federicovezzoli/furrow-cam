@@ -1,6 +1,6 @@
 # ADR-0081: The update notice opens the website's download section
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-09
 - **Deciders:** Federico Vezzoli
 - **Related:** ADR-0048, ADR-0049, ADR-0074; #539

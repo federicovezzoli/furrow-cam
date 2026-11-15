@@ -1,6 +1,6 @@
 # Furrow CAM: agent guide
 
-Open source, web-based 2.5D CAM for CNC routers: import SVG/DXF, define operations (profile, pocket, drill), preview toolpaths, export G-code. Scope and requirements: [docs/prd/0001-mvp.md](docs/prd/0001-mvp.md). Every architectural decision is an ADR in [docs/adr/](docs/adr/README.md); read the relevant ones before changing an area. Work is tracked in GitHub issues (milestone "MVP").
+Open source CAM for CNC routers, on the web and as a desktop app: import SVG/DXF drawings, text, STL/STEP models, terrain from a map or a relief from an image; define operations (profile, pocket, drill, engrave, V-carve, relief roughing and finishing), on one side or two; preview and simulate the toolpaths, export G-code. Scope and requirements: [docs/prd/0001-mvp.md](docs/prd/0001-mvp.md). Every architectural decision is an ADR in [docs/adr/](docs/adr/README.md); read the relevant ones before changing an area. Work is tracked in GitHub issues (milestone "MVP").
 
 ## Commands
 
@@ -13,7 +13,7 @@ pnpm email:dev                # preview email templates (apps/web/src/emails) at
 
 pnpm check:fix && pnpm check  # Biome lint + format (no ESLint/Prettier)
 pnpm typecheck
-pnpm test                     # Vitest in packages/* and apps/web (src/**/*.test.ts)
+pnpm test                     # Vitest in packages/* and apps/{web,desktop,mcp,download} (*.test.ts, *.test.tsx)
 pnpm build
 pnpm changeset                # add a changeset for behaviour changes
 pnpm demos [name…]            # record the website demo videos at 2x into apps/demos/output (needs ffmpeg)
