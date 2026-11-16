@@ -1,5 +1,16 @@
 # @furrow/workspace
 
+## 0.29.0
+
+### Minor Changes
+
+- Profile tabs and two-sided holding tabs can be full height: they keep the stock's whole thickness, which no pass cuts, whatever the depth. ([#609](https://github.com/federicovezzoli/furrow-cam/pull/609))
+
+### Patch Changes
+
+- Holding tabs in a two-sided project are now drawn all the way to the model's surface, as they are cut, instead of stopping at the model's bounding box. ([#611](https://github.com/federicovezzoli/furrow-cam/pull/611))
+- Updated dependencies: @furrow/document@0.26.0, @furrow/cam-core@0.25.0, @furrow/ui@0.10.1, @furrow/post@0.15.11
+
 ## 0.28.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.26.0
+
+### Minor Changes
+
+- Profile tabs and two-sided holding tabs can be full height: they keep the stock's whole thickness, which no pass cuts, whatever the depth. ([#609](https://github.com/federicovezzoli/furrow-cam/pull/609))
+
 ## 0.25.0
 
 ### Minor Changes

@@ -1,5 +1,18 @@
 # @furrow/cam-core
 
+## 0.25.0
+
+### Minor Changes
+
+- Profile tabs and two-sided holding tabs can be full height: they keep the stock's whole thickness, which no pass cuts, whatever the depth. ([#609](https://github.com/federicovezzoli/furrow-cam/pull/609))
+
+### Patch Changes
+
+- Holding tabs in a two-sided project are now drawn all the way to the model's surface, as they are cut, instead of stopping at the model's bounding box. ([#611](https://github.com/federicovezzoli/furrow-cam/pull/611))
+- Linear pocket clearing no longer cuts a full-width slot on the far side of an island: after the laps, each pass now runs beside one already cut, within the step-over. ([#605](https://github.com/federicovezzoli/furrow-cam/pull/605))
+- Profiles now move over tabs faster: the tool rapids up out of the slot at each tab, across full-height tabs, and back down through the air the earlier passes cleared, plunging only the last of the way. ([#613](https://github.com/federicovezzoli/furrow-cam/pull/613))
+- Updated dependencies: @furrow/document@0.26.0
+
 ## 0.24.0
 
 ### Minor Changes
