@@ -190,7 +190,8 @@ export function toolpathInputs(
       parting: sided && (bottom ? sided.partingDepth - doc.stock.thickness : -sided.partingDepth),
       flip,
       // The bottom side leaves the tabs up to their thickness past the
-      // parting plane, the top side stops at the plane over them (ADR-0063).
+      // parting plane, the top side stops at the plane over them (ADR-0063);
+      // neither cuts into full-height ones (#606).
       tabs:
         sided &&
         strips.map(({ modelId, at, to }) => ({
@@ -198,9 +199,11 @@ export function toolpathInputs(
           from: flip ? flipPoint2(flip, at) : at,
           to: flip ? flipPoint2(flip, to) : to,
           width: sided.tabs?.width ?? 0,
-          top: flip
-            ? sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0)
-            : -sided.partingDepth,
+          top: sided.tabs?.fullHeight
+            ? 0
+            : flip
+              ? sided.partingDepth - doc.stock.thickness + (sided.tabs?.thickness ?? 0)
+              : -sided.partingDepth,
         })),
       reachesOther: reachesOtherModel(doc, operation, flip, stock),
       safeZ,

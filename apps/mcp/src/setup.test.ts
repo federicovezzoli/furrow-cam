@@ -123,13 +123,13 @@ describe("setTwoSidedSetup", () => {
       flipAxis: "y",
       partingDepth: 12,
       lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
-      tabs: { width: 5, thickness: 3, count: 2 },
+      tabs: { width: 5, thickness: 3, fullHeight: true, count: 2 },
     });
     expect(twoSided()).toMatchObject({
       flipAxis: "y",
       partingDepth: 12,
       lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
-      tabs: { width: 5, thickness: 3, positions: [] },
+      tabs: { width: 5, thickness: 3, fullHeight: true, positions: [] },
     });
     setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "edges", corner: "top_right" } });
     expect(twoSided()?.lineUp).toEqual({ type: "edges", corner: "top_right" });

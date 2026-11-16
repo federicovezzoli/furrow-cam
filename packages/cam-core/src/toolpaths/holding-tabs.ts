@@ -1,5 +1,8 @@
 import type { HoldingTabs, Model, Point, Stock } from "@furrow/document";
 import { type PlacedModel, placedModelBox } from "../scene/model";
+import { walkInward } from "../simulation/grid-walk";
+import type { Heightmap } from "../simulation/simulation";
+import { previewEmpty } from "./relief/mesh-raster";
 import { loopLength, nearestOnLoops, pointAlong, spreadAlong } from "./tabs";
 
 /**
@@ -85,6 +88,31 @@ export function holdingTabStrips(
       { modelId: model.id, at, to: [at[0] + normal[0] * outward, at[1] + normal[1] * outward] },
     ];
   });
+}
+
+/**
+ * `strip` carried on inward to the model's surface as its `preview` shows it
+ * (`modelHeightmap`, uncovered cells at `previewEmpty`), for drawing the tab as
+ * the 3D operations leave it (`reachModel`, #608). A strip whose way in meets
+ * no part of the model, or with no direction, is left as it is.
+ */
+export function reachPreview(
+  strip: HoldingTabStrip,
+  model: PlacedModel,
+  { heights, ...grid }: Heightmap,
+): HoldingTabStrip {
+  const { at, to } = strip;
+  const length = Math.hypot(at[0] - to[0], at[1] - to[1]);
+  if (length === 0) return strip;
+  const [du, dv] = [(at[0] - to[0]) / length, (at[1] - to[1]) / length];
+  const { min } = placedModelBox(model);
+  const scale = model.placement.scale;
+  const empty = previewEmpty(model.bounds, model.placement.rotation);
+  // In the preview's frame: unscaled, from the box's corner.
+  const start: Point = [(at[0] - min[0]) / scale, (at[1] - min[1]) / scale];
+  const hit = walkInward(grid, start, [du, dv], (cell) => (heights[cell] as number) > empty);
+  if (!hit || hit.steps === 0) return strip;
+  return { ...strip, at: [min[0] + hit.point[0] * scale, min[1] + hit.point[1] * scale] };
 }
 
 /** How far from `point` along the unit `direction` the stock's edge is. */

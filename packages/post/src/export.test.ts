@@ -78,7 +78,7 @@ function referenceProject(): ProjectDocument {
       finishPass: false,
       leadIn: null,
       ramp: false,
-      tabs: { width: 6, height: 2, positions: [[80, 20]] },
+      tabs: { width: 6, height: 2, fullHeight: false, positions: [[80, 20]] },
       startPoints: [],
       cornerOvercuts: null,
     },

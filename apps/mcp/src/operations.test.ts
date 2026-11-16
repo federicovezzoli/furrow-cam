@@ -63,7 +63,7 @@ describe("addOperation", () => {
     const id = addOperation(project, library, "profile", {
       targets: [{ drawingId: DRAWING_ID }],
       tool: { toolId: "mill" },
-      settings: { side: "inside", tabs: { count: 2, width: 8 } },
+      settings: { side: "inside", tabs: { count: 2, width: 8, fullHeight: true } },
     });
     expect(document().operations.at(-1)).toMatchObject({
       id,
@@ -80,12 +80,13 @@ describe("addOperation", () => {
         direction: "climb",
         depth: 18,
         allowance: 0,
-        tabs: { width: 8, height: 3 },
+        tabs: { width: 8, height: 3, fullHeight: true },
       },
     });
     const profile = operation(id);
     const tabs = profile?.type === "profile" ? profile.params.tabs : null;
     expect(tabs?.positions.length).toBeGreaterThanOrEqual(2);
+    expect(tabs?.fullHeight).toBe(true);
     expect(project.versions).toEqual([expect.objectContaining({ label: KEPT_VERSION_LABEL })]);
   });
 

@@ -101,6 +101,7 @@ function profile(
   overrides: Partial<ProfileParams> = {},
   shapes: Shape[] = [square],
   toolOverrides: Partial<Tool> = {},
+  entryClearance = 1,
 ): Toolpath {
   const operation: ProfileOperation = {
     id: "11111111-2222-4333-8444-555555555555",
@@ -112,7 +113,7 @@ function profile(
     tool: { ...tool, ...toolOverrides },
     params: { ...params, ...overrides },
   };
-  return profileToolpath(operation, shapes, { safeZ: 5, entryClearance: 1 });
+  return profileToolpath(operation, shapes, { safeZ: 5, entryClearance });
 }
 
 /** Consecutive moves as `[from, move]`, starting from the first move's target. */
@@ -568,7 +569,12 @@ describe("profileToolpath", () => {
 
 describe("profileToolpath with tabs", () => {
   /** 4 mm wide, 3 mm tall: over a 6 mm tool the centre stays up for 10 mm. */
-  const tabs = (positions: [number, number][]) => ({ width: 4, height: 3, positions });
+  const tabs = (positions: [number, number][]) => ({
+    width: 4,
+    height: 3,
+    fullHeight: false,
+    positions,
+  });
   const midSides: [number, number][] = [
     [50, 0],
     [100, 50],
@@ -587,7 +593,6 @@ describe("profileToolpath with tabs", () => {
   function intrusions(toolpath: Toolpath, top: number, half = 5, at = centres): Vec3[] {
     const found: Vec3[] = [];
     for (const [from, move] of steps(toolpath)) {
-      if (move.kind !== "feed") continue;
       for (let i = 0; i <= 20; i++) {
         const f = i / 20;
         const p = from.map((v, k) => v + ((move.to[k] as number) - v) * f) as Vec3;
@@ -614,15 +619,106 @@ describe("profileToolpath with tabs", () => {
     expect(toolpath.warnings).toEqual([]);
   });
 
+  it("leaves full-height tabs uncut, clearing the stock top over them (#606)", () => {
+    const full = { ...tabs([[50, 0]]), height: 6, fullHeight: true };
+    for (const extra of [{}, { ramp: true }, { allowance: 0.5, finishPass: true }]) {
+      const toolpath = profile({ ...extra, tabs: full });
+      expect(intrusions(toolpath, 1, 5, [[50, -3]])).toEqual([]);
+      const across = steps(toolpath).filter(([from, move]) => from[2] === 1 && move.to[2] === 1);
+      expect(across.length).toBeGreaterThan(1);
+      expect(toolpath.warnings).toEqual([]);
+    }
+    // Deeper cuts keep the tab whole: nothing depends on its height.
+    expect(intrusions(profile({ depth: 12, tabs: full }), 1, 5, [[50, -3]])).toEqual([]);
+  });
+
   it("goes straight up and down at the tab's edges", () => {
     const toolpath = profile({ tabs: tabs([[50, 0]]) });
     const vertical = steps(toolpath).filter(
-      ([from, move]) => move.kind === "feed" && from[2] < 0 && move.to[2] !== from[2],
+      ([from, move]) => from[2] < 0 && move.to[2] !== from[2] && move.to[2] < 0.5,
     );
     const ups = vertical.filter(([from, move]) => move.to[2] > from[2]);
     expect(ups).toHaveLength(2);
     for (const [from, move] of vertical) expect(move.to.slice(0, 2)).toEqual(from.slice(0, 2));
-    for (const [, move] of ups) expect(move).toMatchObject({ feedRate: tool.feedRate });
+    for (const [, move] of ups) expect(move.kind).toBe("rapid");
+  });
+
+  /** The moves down from the tab top at each tab's far edge, as [kind, from z, to z]. */
+  function descents(toolpath: Toolpath, top: number): [string, number, number][] {
+    const result: [string, number, number][] = [];
+    const all = steps(toolpath);
+    all.forEach(([from, move], i) => {
+      if (Math.abs(from[2] - top) > 1e-9 || move.to[2] >= top) return;
+      if (move.to[0] !== from[0] || move.to[1] !== from[1]) return;
+      result.push([move.kind, from[2], move.to[2]]);
+      const next = all[i + 1];
+      if (move.kind === "rapid" && next) result.push([next[1].kind, move.to[2], next[1].to[2]]);
+    });
+    return result;
+  }
+
+  it("rapids through the air past a tab, then plunges the last of the way", () => {
+    const c = DEFAULT_ENTRY_CLEARANCE;
+    // Passes at -2, -4, -6 over a tab topping out at -1: the clearance above the floor
+    // the earlier passes left comes below the tab top only on the last one.
+    const high = { ...tabs([[50, 0]]), height: 5 };
+    const plain = profile({ tabs: high });
+    const leadIn = profile({ tabs: high, leadIn: { radius: 3 } });
+    for (const toolpath of [plain, leadIn]) {
+      expect(descents(toolpath, -1)).toEqual([
+        ["feed", -1, -2],
+        ["feed", -1, -4],
+        ["rapid", -1, -4 + c],
+        ["feed", -4 + c, -6],
+      ]);
+    }
+    const plunges = steps(plain).filter(([from]) => from[2] === -4 + c);
+    for (const [, move] of plunges) expect(move).toMatchObject({ feedRate: tool.plungeRate });
+    // A normal 3 mm tab sits within a step of the floor: only feeds.
+    expect(descents(profile({ tabs: tabs([[50, 0]]) }), -3).map(([kind]) => kind)).toEqual([
+      "feed",
+      "feed",
+    ]);
+    // Ramping, the descent ends on the ramp, the rapid still at the clearance above the last lap.
+    const ramped = profile({ ramp: true, tabs: high });
+    expect(descents(ramped, -1).filter(([kind]) => kind === "rapid")).toEqual([
+      ["rapid", -1, -4 + c],
+    ]);
+    // With allowance, it stands to the stock top in front of the tool, so the lap plunges all the way.
+    const allowed = profile({ allowance: 0.5, finishPass: true, tabs: high });
+    expect(descents(allowed, -1).slice(-1)).toEqual([["feed", -1, -6]]);
+    // Without an entry clearance there is no margin for a rapid down.
+    const tight = profile({ tabs: high }, [square], {}, 0);
+    expect(descents(tight, -1).map(([kind]) => kind)).toEqual(["feed", "feed", "feed"]);
+    for (const toolpath of [plain, leadIn, ramped, allowed, tight]) {
+      expect(intrusions(toolpath, -1, 5, [[50, -3]])).toEqual([]);
+    }
+  });
+
+  it("rapids across a full-height tab, but feeds across a normal one", () => {
+    const c = DEFAULT_ENTRY_CLEARANCE;
+    const full = profile({ tabs: { ...tabs([[50, 0]]), height: 6, fullHeight: true } });
+    const over = (toolpath: Toolpath, top: number) =>
+      steps(toolpath).filter(
+        ([from, move]) =>
+          Math.abs(from[2] - top) < 1e-9 && move.to[2] === from[2] && move.to[1] === -3,
+      );
+    expect(over(full, c).length).toBeGreaterThan(0);
+    for (const [, move] of over(full, c)) expect(move.kind).toBe("rapid");
+    // The first pass comes down from the clearance at the plunge rate, the stock top still there.
+    expect(descents(full, c).map(([kind, , to]) => [kind, to])).toEqual([
+      ["feed", 0], // entering the stock
+      ["feed", -2],
+      ["rapid", -2 + c],
+      ["feed", -4],
+      ["rapid", -4 + c],
+      ["feed", -6],
+    ]);
+    const normal = profile({ tabs: tabs([[50, 0]]) });
+    expect(over(normal, -3).length).toBeGreaterThan(0);
+    for (const [, move] of over(normal, -3)) {
+      expect(move).toMatchObject({ kind: "feed", feedRate: tool.feedRate });
+    }
   });
 
   it("never starts a contour on a tab", () => {
@@ -700,7 +796,9 @@ describe("profileToolpath with tabs", () => {
     // Near enough to the depth passes (3.5 mm out) but not to the finish lap (3 mm out).
     const finishing = profile({ allowance: 0.5, finishPass: true, tabs: tabs([[50, -10.5]]) });
     expect(finishing.warnings).toEqual([{ code: "toolpath.tabsLeftOut", values: { count: 1 } }]);
-    const tall = profile({ tabs: { width: 4, height: 6, positions: [[50, 0]] } });
+    const tall = profile({
+      tabs: { width: 4, height: 6, fullHeight: false, positions: [[50, 0]] },
+    });
     expect(tall.warnings).toEqual([{ code: "toolpath.tabsTooTall" }]);
     expect(Math.max(...tall.moves.filter((m) => m.kind === "feed").map((m) => m.to[2]))).toBe(0);
   });
@@ -757,7 +855,12 @@ describe("profileToolpath with start points", () => {
   });
 
   it("moves a start point on a tab to the nearer end of the tab", () => {
-    const tabs = { width: 4, height: 3, positions: [[0, 50]] as [number, number][] };
+    const tabs = {
+      width: 4,
+      height: 3,
+      fullHeight: false,
+      positions: [[0, 50]] as [number, number][],
+    };
     const toolpath = profile({ tabs, startPoints: starts([0, 52]) });
     // Outside, climbing, the left side is cut upwards; the tab spans 45 to 55 there.
     expect(entry(toolpath)?.[0]).toBeCloseTo(-3, 6);
@@ -1060,7 +1163,12 @@ describe("profileToolpath with corner overcuts", () => {
   });
 
   it("keeps tabs where they are, and the tool at the tab top over an overcut a tab covers", () => {
-    const tabs = (positions: [number, number][]) => ({ width: 4, height: 3, positions });
+    const tabs = (positions: [number, number][]) => ({
+      width: 4,
+      height: 3,
+      fullHeight: false,
+      positions,
+    });
     const midSides: [number, number][] = [
       [50, 0],
       [100, 50],

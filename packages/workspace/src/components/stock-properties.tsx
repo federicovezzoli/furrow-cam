@@ -53,6 +53,7 @@ import {
   setFlipAxis,
   setHoldingTabSize,
   setHoldingTabs,
+  setHoldingTabsFullHeight,
   setLineUp,
   setPartingDepth,
   setStockDimension,
@@ -254,11 +255,18 @@ function HoldingTabFields() {
             units={units}
             min={MIN_STOCK}
             value={tabs.thickness}
+            disabled={tabs.fullHeight}
             onValueChange={(thickness) =>
               setRefused(setHoldingTabSize(store, "thickness", thickness) ? null : { depth, tabs })
             }
             error={tooThick ? t("holdingTabTooThick", { size: length(depth) }) : undefined}
             {...gestureHandlers(store)}
+          />
+          <Checkbox
+            id="holding-tab-full-height"
+            label={t("holdingTabFullHeight")}
+            checked={tabs.fullHeight}
+            onChange={(fullHeight) => setHoldingTabsFullHeight(store, fullHeight)}
           />
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">

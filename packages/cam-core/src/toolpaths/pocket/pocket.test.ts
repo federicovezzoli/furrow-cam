@@ -1,79 +1,24 @@
-import type { PocketOperation, PocketParams, PocketStrategy, Shape, Tool } from "@furrow/document";
+import type { PocketParams, PocketStrategy, Shape, Tool } from "@furrow/document";
 import { DRAWING_ID } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../../scene/stock";
 import { generateToolpath } from "../generate";
+import {
+  cutsAt,
+  distanceToSegment,
+  dumbbell,
+  island,
+  pocketOperation as operation,
+  rectangle,
+  type Segment,
+  square,
+  steps,
+  pocketTool as tool,
+  widestCut,
+} from "../link-test-utils";
 import type { Toolpath, ToolpathMove } from "../toolpath";
 import { crossesOnlyInside, pieces } from "./cut";
 import { pocketToolpath } from "./pocket";
-
-const tool: Tool = {
-  name: "6 mm upcut",
-  type: "flat_end_mill",
-  diameter: 6,
-  fluteCount: 2,
-  fluteLength: 22,
-  cutDirection: "upcut",
-  vAngle: null,
-  tipDiameter: null,
-  taperAngle: null,
-  spindleRpm: 18000,
-  feedRate: 1500,
-  plungeRate: 500,
-  plungeAngle: 3,
-  stepDown: 2,
-  notes: null,
-  color: "#2563eb",
-};
-
-const params: PocketParams = {
-  side: "inside",
-  strategy: { type: "offset" },
-  direction: "climb",
-  stepOver: 40,
-  depth: 6,
-  allowance: 0,
-  finishPass: false,
-  ramp: false,
-};
-
-function rectangle(id: string, x: number, y: number, width: number, height: number): Shape {
-  return {
-    id,
-    name: "Rectangle",
-    layer: "0",
-    drawingId: DRAWING_ID,
-    paths: [
-      {
-        start: [x, y],
-        segments: [
-          { kind: "line", to: [x + width, y] },
-          { kind: "line", to: [x + width, y + height] },
-          { kind: "line", to: [x, y + height] },
-        ],
-        closed: true,
-      },
-    ],
-  };
-}
-
-/** 100 × 100 mm. */
-const square = rectangle("4f8a1c2e-6b3d-4e5f-9a7b-8c9d0e1f2a3b", 0, 0, 100, 100);
-
-/** Radius 10 around (50, 50), drawn as its own shape: an island in the square. */
-const island: Shape = {
-  id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-  name: "Island",
-  layer: "0",
-  drawingId: DRAWING_ID,
-  paths: [
-    {
-      start: [60, 50],
-      segments: [{ kind: "arc", to: [60, 50], center: [50, 50], clockwise: false }],
-      closed: true,
-    },
-  ],
-};
 
 function pocket(
   overrides: Partial<PocketParams> = {},
@@ -86,66 +31,14 @@ function pocket(
   });
 }
 
-function operation(
-  overrides: Partial<PocketParams> = {},
-  shapes: Shape[] = [square],
-  toolOverrides: Partial<Tool> = {},
-): PocketOperation {
-  return {
-    id: "11111111-2222-4333-8444-555555555555",
-    name: "Pocket",
-    enabled: true,
-    stockSide: "top",
-    type: "pocket",
-    targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
-    tool: { ...tool, ...toolOverrides },
-    params: { ...params, ...overrides },
-  };
-}
-
-/** Consecutive moves as `[from, move]`, starting from the first move's target. */
-function steps(toolpath: Toolpath): [Vec3, ToolpathMove][] {
-  const result: [Vec3, ToolpathMove][] = [];
-  let from: Vec3 | null = null;
-  for (const move of toolpath.moves) {
-    if (from) result.push([from, move]);
-    from = move.to;
-  }
-  return result;
-}
-
-/** Feed moves that stay at height `z`, as 2D segments. */
-function cutsAt(toolpath: Toolpath, z: number): [[number, number], [number, number]][] {
-  return steps(toolpath)
-    .filter(([from, move]) => move.kind === "feed" && from[2] === z && move.to[2] === z)
-    .map(([from, move]) => [
-      [from[0], from[1]],
-      [move.to[0], move.to[1]],
-    ]);
-}
-
 /** Every move below the stock top, as 2D segments. */
-function cutsBelowTop(toolpath: Toolpath): [[number, number], [number, number]][] {
+function cutsBelowTop(toolpath: Toolpath): Segment[] {
   return steps(toolpath)
     .filter(([from, move]) => from[2] < 0 || move.to[2] < 0)
     .map(([from, move]) => [
       [from[0], from[1]],
       [move.to[0], move.to[1]],
     ]);
-}
-
-function distanceToSegment(
-  point: [number, number],
-  [a, b]: [[number, number], [number, number]],
-): number {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const lengthSquared = dx * dx + dy * dy;
-  const t =
-    lengthSquared > 0
-      ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared))
-      : 0;
-  return Math.hypot(point[0] - a[0] - t * dx, point[1] - a[1] - t * dy);
 }
 
 /** Grid points every `spacing` millimetres for which `keep` holds, that the tool centre at `z` comes no nearer than `reach` to. */
@@ -157,7 +50,7 @@ function missed(
   spacing = 1,
 ): [number, number][] {
   // Each cut filed under every cell `reach` wide it comes within `reach` of.
-  const cells = new Map<string, [[number, number], [number, number]][]>();
+  const cells = new Map<string, Segment[]>();
   for (const cut of cutsAt(toolpath, z)) {
     const [[ax, ay], [bx, by]] = cut;
     for (
@@ -204,37 +97,6 @@ const inSquare = ([x, y]: [number, number]) =>
   y < 100 &&
   Math.hypot(Math.max(0, 3 - x, x - 97), Math.max(0, 3 - y, y - 97)) <= 3;
 const offIsland = ([x, y]: [number, number]) => Math.hypot(x - 50, y - 50) > 10;
-
-/**
- * Two 40 mm squares joined by a 7 mm neck: wider than the 6 mm tool, too
- * narrow for clearing 1 mm of allowance off both walls.
- */
-const dumbbellCorners: [number, number][] = [
-  [40, 0],
-  [40, 16.5],
-  [60, 16.5],
-  [60, 0],
-  [100, 0],
-  [100, 40],
-  [60, 40],
-  [60, 23.5],
-  [40, 23.5],
-  [40, 40],
-  [0, 40],
-];
-const dumbbell: Shape = {
-  id: "0d9c8b7a-6f5e-4d3c-ab1a-0f9e8d7c6b5a",
-  name: "Dumbbell",
-  layer: "0",
-  drawingId: DRAWING_ID,
-  paths: [
-    {
-      start: [0, 0],
-      segments: dumbbellCorners.map((to) => ({ kind: "line" as const, to })),
-      closed: true,
-    },
-  ],
-};
 
 describe("pocketToolpath", () => {
   it("clears the whole pocket at every depth, down to the final depth", () => {
@@ -676,7 +538,7 @@ describe.each(STRATEGIES.map((strategy) => [Object.values(strategy).join(" "), s
 
     it("ramps no steeper than the plunge angle into uncut stock", () => {
       const toolpath = clear({ ramp: true });
-      const cutAt = new Map<number, [[number, number], [number, number]][]>();
+      const cutAt = new Map<number, Segment[]>();
       let ramps = 0;
       for (const [from, move] of steps(toolpath)) {
         const { to } = move;
@@ -809,39 +671,6 @@ describe("pocketToolpath with peel clearing", () => {
     shapes = [square, island],
     toolOverrides: Partial<Tool> = {},
   ) => pocket({ strategy: { type: "peel", start }, ...overrides }, shapes, toolOverrides);
-
-  /**
-   * How far from the cuts before it at `z` the tool centre gets, the cuts
-   * `starting` holds for left out: how wide it cuts sideways.
-   */
-  function widestCut(
-    toolpath: Toolpath,
-    z: number,
-    starting: (point: [number, number]) => boolean,
-  ): number {
-    const cuts = cutsAt(toolpath, z);
-    let widest = 0;
-    cuts.forEach(([a, b], i) => {
-      for (const t of [0.25, 0.5, 0.75, 1]) {
-        const point: [number, number] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-        if (starting(point)) continue;
-        let nearest = Infinity;
-        for (let j = 0; j < i; j++) {
-          nearest = Math.min(
-            nearest,
-            distanceToSegment(point, cuts[j] as [[number, number], [number, number]]),
-          );
-        }
-        // Along a cut, its own start.
-        nearest = Math.min(
-          nearest,
-          Math.hypot(point[0] - a[0], point[1] - a[1]) * (i === 0 ? Infinity : 1),
-        );
-        widest = Math.max(widest, nearest);
-      }
-    });
-    return widest;
-  }
 
   it("never cuts wider than the step-over after the starting cut", () => {
     const starts = {
@@ -1069,7 +898,7 @@ describe.each(
       { min: [...stock.min], max: [...stock.max] },
     );
   /** Points along `cut` no more than half a millimetre apart. */
-  const along = ([a, b]: [[number, number], [number, number]]) => {
+  const along = ([a, b]: Segment) => {
     const count = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5);
     return Array.from({ length: count + 1 }, (_, i): [number, number] => [
       a[0] + ((b[0] - a[0]) * i) / Math.max(count, 1),

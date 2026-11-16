@@ -1,4 +1,5 @@
 import { distance, type LinearAngle, type Point } from "@furrow/document";
+import { offset } from "../../geometry/clipper";
 import { projectOnLoop } from "../../geometry/loop";
 import type { Vec3 } from "../../scene/stock";
 import { Track } from "../passes";
@@ -9,6 +10,7 @@ import {
   type Layout,
   nearestFirst,
   type Piece,
+  polygons,
   type Ring,
   reach,
   staysDown,
@@ -23,13 +25,22 @@ type End = { point: Point; ring: number; at: number };
 /** A straight cut across the piece from lap to lap, on line `line`. */
 type Pass = { ends: [End, End]; line: number };
 
+/** A stretch of a line, from and to these positions along it. */
+type Span = [number, number];
+
 export type LinearPlan = {
   kind: "linear";
   /** The passes on each line, lines one step-over apart. */
   lines: Pass[][];
-  /** Position across the passes, in millimetres. */
+  /** Position along and across the passes, in millimetres. */
+  along: (point: Point) => number;
   across: (point: Point) => number;
   tolerance: number;
+  /**
+   * The stretches of each pass further than the step-over from the laps: what
+   * it would cut wider than that until the passes beside them are cut.
+   */
+  exposed: Map<Pass, Span[]>;
 };
 
 /**
@@ -50,36 +61,69 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
   const positions = piece.area.outer.map(across);
   const min = Math.min(...positions);
   const max = Math.max(...positions);
+  // The tool centre further than the step-over from every lap.
+  const deep = offset(polygons(piece), -(stepOver + tolerance), { arcTolerance: tolerance }).map(
+    (polygon) => [...polygon, polygon[0] as Point],
+  );
   const lines: Pass[][] = [];
+  const exposed = new Map<Pass, Span[]>();
   for (let v = min + stepOver; v < max - tolerance; v += stepOver) {
-    const crossings: End[] = [];
-    piece.rings.forEach(({ loop }, ring) => {
-      let at = 0;
-      for (let i = 1; i < loop.length; i++) {
-        const a = loop[i - 1] as Point;
-        const b = loop[i] as Point;
-        const va = across(a);
-        const vb = across(b);
-        // Half-open, so a line through a vertex crosses one of its edges.
-        if (va <= v !== vb <= v) {
-          const t = (v - va) / (vb - va);
-          const point: Point = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-          crossings.push({ point, ring, at: at + t * distance(a, b) });
-        }
-        at += distance(a, b);
-      }
-    });
-    crossings.sort((a, b) => along(a.point) - along(b.point));
+    const crossings = crossingsAt(
+      piece.rings.map(({ loop }) => loop),
+      v,
+      across,
+      along,
+    );
     const passes: Pass[] = [];
     for (let i = 0; i + 1 < crossings.length; i += 2) {
       const ends: [End, End] = [crossings[i] as End, crossings[i + 1] as End];
       if (distance(ends[0].point, ends[1].point) > tolerance) {
-        passes.push({ ends, line: lines.length });
+        const pass = { ends, line: lines.length };
+        passes.push(pass);
+        exposed.set(pass, []);
       }
+    }
+    const inside = crossingsAt(deep, v, across, along).map(({ point }) => along(point));
+    for (let i = 0; i + 1 < inside.length; i += 2) {
+      const stretch: Span = [inside[i] as number, inside[i + 1] as number];
+      // Inside the area, so within one pass.
+      const mid = (stretch[0] + stretch[1]) / 2;
+      const pass = passes.find((pass) => {
+        const [lo, hi] = span(along, 0, pass);
+        return mid >= lo && mid <= hi;
+      });
+      if (pass) exposed.get(pass)?.push(stretch);
     }
     lines.push(passes);
   }
-  return { kind: "linear", lines, across, tolerance };
+  return { kind: "linear", lines, along, across, tolerance, exposed };
+}
+
+/** Where `loops` cross the line `v` across, in order along it. */
+function crossingsAt(
+  loops: Point[][],
+  v: number,
+  across: (point: Point) => number,
+  along: (point: Point) => number,
+): End[] {
+  const crossings: End[] = [];
+  loops.forEach((loop, ring) => {
+    let at = 0;
+    for (let i = 1; i < loop.length; i++) {
+      const a = loop[i - 1] as Point;
+      const b = loop[i] as Point;
+      const va = across(a);
+      const vb = across(b);
+      // Half-open, so a line through a vertex crosses one of its edges.
+      if (va <= v !== vb <= v) {
+        const t = (v - va) / (vb - va);
+        const point: Point = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        crossings.push({ point, ring, at: at + t * distance(a, b) });
+      }
+      at += distance(a, b);
+    }
+  });
+  return crossings.sort((a, b) => along(a.point) - along(b.point));
 }
 
 /**
@@ -87,7 +131,8 @@ export function linearPlan(piece: Piece, angle: LinearAngle, layout: Layout): Li
  * offset ring, then the passes, each from lap to lap so the tool enters them
  * at depth. A pass is linked to the next on a neighbouring line along the
  * lap when the link stays between the two lines, within one step-over, which
- * makes the passes zig-zag. Otherwise the tool goes to the nearest pass left:
+ * makes the passes zig-zag. Otherwise the tool goes to the nearest pass left
+ * (of those beside what is cut, so none cuts wider than the step-over, #604):
  * along the lap it is on, which this level has cut, when the pass starts on
  * it; or through the cleared depth, or over the top, and straight down onto
  * the cleared lap.
@@ -104,13 +149,21 @@ export function cutLinear(
     cutRing(cut, ring, piece, container, z, clearedZ);
   }
   const left = new Set(plan.lines.flat());
+  // Struck off as the passes beside them are cut.
+  const exposed = new Map(plan.exposed);
+  const ready = new Set(plan.lines.flat().filter((pass) => exposed.get(pass)?.length === 0));
   let onLap = lapAt(piece.rings, cut.builder.position);
   let line: number | null = null;
   let sweep = 1;
   while (left.size > 0) {
+    // A point no pass on the line below covers has the edge, and so a lap,
+    // within the step-over of it, so from the bottom line up a pass is always
+    // ready; all of them only if rounding says otherwise.
+    const candidates = ready.size > 0 ? ready : left;
     const linked: Next | null =
-      onLap && line !== null ? link(plan, piece.rings, left, onLap, line, sweep) : null;
-    const next: Next = linked || nearestPass(cut, piece.rings, left, onLap, container, clearedZ);
+      onLap && line !== null ? link(plan, piece.rings, candidates, onLap, line, sweep) : null;
+    const next: Next =
+      linked || nearestPass(cut, piece.rings, candidates, onLap, container, clearedZ);
     const { pass, start, path } = next;
     if (linked && line !== null) sweep = Math.sign(pass.line - line);
     if (path) {
@@ -123,9 +176,29 @@ export function cutLinear(
     const end = pass.ends[0] === start ? pass.ends[1] : pass.ends[0];
     feedAlong(cut, [end.point], z);
     left.delete(pass);
+    ready.delete(pass);
+    const [lo, hi] = span(plan.along, plan.tolerance, pass);
+    for (const other of [pass.line - 1, pass.line + 1].flatMap((l) => plan.lines[l] ?? [])) {
+      const stretches = exposed.get(other);
+      if (!left.has(other) || !stretches?.length) continue;
+      // Beside the pass is the step-over across from it.
+      const rest = stretches.flatMap(([a, b]): Span[] =>
+        [[a, Math.min(b, lo)] as Span, [Math.max(a, hi), b] as Span].filter(
+          ([from, to]) => to - from > plan.tolerance,
+        ),
+      );
+      exposed.set(other, rest);
+      if (rest.length === 0) ready.add(other);
+    }
     onLap = end;
     line = pass.line;
   }
+}
+
+/** Where `pass` runs along its line, from lowest to highest, widened by `tolerance`. */
+function span(along: (point: Point) => number, tolerance: number, { ends: [a, b] }: Pass): Span {
+  const ends = [along(a.point), along(b.point)];
+  return [Math.min(...ends) - tolerance, Math.max(...ends) + tolerance];
 }
 
 /** Where on `rings` the tool at `here` is, if on one. */

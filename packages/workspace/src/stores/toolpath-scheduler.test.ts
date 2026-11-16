@@ -297,7 +297,12 @@ describe("scheduleToolpaths", () => {
     // The holding tabs alone (#357).
     documents.getState().change("Tabs", (draft) => {
       if (draft.stock.twoSided) {
-        draft.stock.twoSided.tabs = { width: 6, thickness: 2, positions: [[0, 0]] };
+        draft.stock.twoSided.tabs = {
+          width: 6,
+          thickness: 2,
+          fullHeight: false,
+          positions: [[0, 0]],
+        };
       }
     });
     expect(requests).toHaveLength(4);

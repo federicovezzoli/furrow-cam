@@ -61,7 +61,7 @@ describe("ProfileParams", () => {
   });
 
   it("rejects tabs without a width or height, or with malformed positions", () => {
-    const tabs = { width: 8, height: 3, positions: [[50, 0]] };
+    const tabs = { width: 8, height: 3, fullHeight: false, positions: [[50, 0]] };
     expect(ProfileParams.safeParse({ ...params, tabs: { ...tabs, positions: [] } }).success).toBe(
       true,
     );

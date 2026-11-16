@@ -132,6 +132,7 @@ const TabsInput = z
   .strictObject({
     width: z.number().optional(),
     height: z.number().optional(),
+    fullHeight: z.boolean().optional(),
     count: z.int().positive().optional(),
     spacing: z.number().positive().optional(),
     positions: z.array(Point).optional(),
@@ -204,6 +205,7 @@ function setTabs(store: DocumentStore, id: string, input: unknown) {
       tabs: {
         width: tabs.width ?? start.width,
         height: tabs.height ?? start.height,
+        fullHeight: tabs.fullHeight ?? start.fullHeight,
         positions: positions ?? start.positions,
       },
     }),

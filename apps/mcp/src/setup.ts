@@ -29,6 +29,7 @@ import {
   setHoldingTabPositions,
   setHoldingTabSize,
   setHoldingTabs,
+  setHoldingTabsFullHeight,
   setLineUp,
   setPartingDepth,
   setStockDimension,
@@ -112,7 +113,13 @@ export type TwoSidedRequest = {
     | null
     | { type: "edges"; corner: StockCorner }
     | { type: "pins"; diameter?: number; positions?: number[]; holes?: PinHoles };
-  tabs?: null | { width?: number; thickness?: number; count?: number; positions?: Point[] };
+  tabs?: null | {
+    width?: number;
+    thickness?: number;
+    fullHeight?: boolean;
+    count?: number;
+    positions?: Point[];
+  };
 };
 
 /**
@@ -174,6 +181,7 @@ export function setTwoSidedSetup(
         if (value === undefined || setHoldingTabSize(store, field, value)) continue;
         refuse({ tabs: { ...stock().twoSided?.tabs, [field]: value } });
       }
+      if (tabs.fullHeight !== undefined) setHoldingTabsFullHeight(store, tabs.fullHeight);
       if (tabs.count !== undefined) autoPlaceHoldingTabs(store, tabs.count);
       if (tabs.positions && !setHoldingTabPositions(store, tabs.positions)) {
         throw new ToolError("tabs.positions: holding tabs hold a model, and the project has none.");

@@ -347,6 +347,7 @@ export function setHoldingTabs(store: DocumentStore, on: boolean) {
     ? {
         width: 6,
         thickness: Math.min(2, bottomSideDepth(stock) / 2),
+        fullHeight: false,
         positions: autoHoldingTabPositions(models, HOLDING_TABS_PER_MODEL),
       }
     : null;
@@ -374,6 +375,14 @@ export function setHoldingTabSize(
     if (draftTabs) draftTabs[field] = value;
   });
   return true;
+}
+
+/** Makes the holding tabs the stock's whole thickness (#606), or their own thickness again. */
+export function setHoldingTabsFullHeight(store: DocumentStore, fullHeight: boolean) {
+  store.getState().change("setStock.tabs.fullHeight", (draft) => {
+    const tabs = draft.stock.twoSided?.tabs;
+    if (tabs) tabs.fullHeight = fullHeight;
+  });
 }
 
 /** Replaces the holding tabs with `count` spread round each model's outline. */

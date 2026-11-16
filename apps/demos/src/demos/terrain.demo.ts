@@ -100,4 +100,8 @@ export default async function terrain(r: Recorder) {
   await r.drag(120, -30, 3);
   await r.hold(1.5);
   r.poster();
+  // Then closer, at the middle of the view (the controls zoom to the cursor), to the finishing passes.
+  await r.moveToPoint(view.x + view.width / 2, view.y + view.height / 2, 0.6);
+  await r.wheel(-26, 2);
+  await r.hold(4);
 }

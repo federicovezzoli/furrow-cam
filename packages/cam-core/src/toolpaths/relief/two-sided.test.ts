@@ -191,7 +191,12 @@ describe("relief toolpaths on two sides", () => {
     ["y", (x, y) => [60 - x, y]],
   ])("leaves the holding tabs on the bottom side, turned over about %s", (flipAxis, flip) => {
     // A tab 6 mm wide and 2 mm thick, below the model, from x 27 to 33.
-    const tabs = { width: 6, thickness: 2, positions: [[30, 12] as [number, number]] };
+    const tabs = {
+      width: 6,
+      thickness: 2,
+      fullHeight: false,
+      positions: [[30, 12] as [number, number]],
+    };
     const operations = [roughing("top"), roughing("bottom"), finishing("bottom")];
     const doc = project(operations, { flipAxis, partingDepth: 9, tabs, lineUp: null });
     const [top, rough, finish] = toolpaths(doc) as Toolpath[];
@@ -223,12 +228,35 @@ describe("relief toolpaths on two sides", () => {
     }
   });
 
+  it("leaves full-height holding tabs uncut on both sides (#606)", () => {
+    const tabs = {
+      width: 6,
+      thickness: 2,
+      fullHeight: true,
+      positions: [[30, 12] as [number, number]],
+    };
+    const operations = [roughing("top"), roughing("bottom"), finishing("bottom")];
+    const doc = project(operations, { flipAxis: "x", partingDepth: 9, tabs, lineUp: null });
+    for (const input of toolpathInputs(doc)) expect(input.tabs?.map(({ top }) => top)).toEqual([0]);
+    for (const [index, toolpath] of (toolpaths(doc) as Toolpath[]).entries()) {
+      const after = simulate(operations[index] as Operation, toolpath);
+      // On the tab, halfway from the model to the stock edge: y 10 on the top side, 40 turned over.
+      const y = index === 0 ? 10 : 40;
+      expect(after(30 * 4, y * 4)).toBeGreaterThanOrEqual(-1e-6);
+    }
+  });
+
   it("warns about a model the tabs don't hold", () => {
     const other = { ...BLOCK, id: "00000000-0000-4000-8000-0000000000ff" };
     const onOther = roughing("bottom");
     if (onOther.type === "relief_rough") onOther.params.modelId = other.id;
     const operations = [roughing("bottom"), onOther];
-    const tabs = { width: 6, thickness: 2, positions: [[30, 12] as [number, number]] };
+    const tabs = {
+      width: 6,
+      thickness: 2,
+      fullHeight: false,
+      positions: [[30, 12] as [number, number]],
+    };
     const doc = project(operations, { flipAxis: "x", partingDepth: 9, tabs, lineUp: null });
     // Both models at the same place, so the tab goes to the first.
     const [held, loose] = toolpaths({ ...doc, models: [BLOCK, other] }) as Toolpath[];

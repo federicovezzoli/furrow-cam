@@ -13,6 +13,7 @@ import type { Rect } from "../../geometry/bounds";
 import { boxRect } from "../../scene/model";
 import { type Flip, type ModelView, modelView } from "../../scene/sides";
 import type { Vec3 } from "../../scene/stock";
+import { walkInward } from "../../simulation/grid-walk";
 import {
   type CutterProfile,
   cutterProfile,
@@ -480,27 +481,17 @@ export function reachModel(
   grid: ReliefGrid,
   heights: Float32Array,
 ): HoldingTab[] {
-  const { columns, rows, cellWidth, cellHeight } = grid;
-  const step = Math.min(cellWidth, cellHeight);
-  const steps = Math.ceil(Math.hypot(columns * cellWidth, rows * cellHeight) / step);
   return tabs.map((tab) => {
     const [fu, fv] = toPassFrame(grid.angle, tab.from);
     const [tu, tv] = toPassFrame(grid.angle, tab.to);
     const length = Math.hypot(fu - tu, fv - tv);
     if (length === 0) return tab;
     // Inwards, in the grid's coordinates.
-    const [du, dv] = [(fu - tu) / length, (fv - tv) / length];
-    for (let k = 0; k <= steps; k++) {
-      const u = fu - grid.origin[0] + du * k * step;
-      const v = fv - grid.origin[1] + dv * k * step;
-      // On a cell edge, the cell inwards: the outline is the grid's edge in finishing.
-      const column = Math.floor(u / cellWidth + du * 1e-9);
-      const row = Math.floor(v / cellHeight + dv * 1e-9);
-      if (column < 0 || column >= columns || row < 0 || row >= rows) continue;
-      if (heights[row * columns + column] === -Infinity) continue;
-      return k === 0 ? tab : { ...tab, from: toStock(grid, u, v) };
-    }
-    return tab;
+    const start: Point = [fu - grid.origin[0], fv - grid.origin[1]];
+    const direction: Point = [(fu - tu) / length, (fv - tv) / length];
+    const hit = walkInward(grid, start, direction, (cell) => heights[cell] !== -Infinity);
+    if (!hit || hit.steps === 0) return tab;
+    return { ...tab, from: toStock(grid, hit.point[0], hit.point[1]) };
   });
 }
 

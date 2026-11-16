@@ -83,7 +83,7 @@ export function Scene({
         <StartPoints color={palette.startPoint} />
         <Overcuts color={palette.overcut} />
         <Holes color={palette.hole} snapColor={palette.snap} />
-        <HoldingTabs color={palette.tab} />
+        <HoldingTabs color={palette.tab} previews={modelPreviews} />
         <PartingPlane color={palette.parting} />
       </SideFrame>
       <Toolpaths palette={palette} />

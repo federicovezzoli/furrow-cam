@@ -5,11 +5,24 @@ import type {
   ReliefFinishOperation,
   Tool,
 } from "@furrow/document";
-import { ballEndMill, endMill, model as modelFixture, vBit } from "@furrow/document/fixtures";
+import { ballEndMill, endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { signedArea } from "../../geometry/clipper";
 import { modelView } from "../../scene/sides";
 import { cutterProfile, simulateCuts } from "../../simulation/simulation";
+import {
+  finishing,
+  reliefOptions as options,
+  PYRAMID,
+  placed,
+  pyramidMesh,
+  rect,
+  SAMPLING,
+  STEP,
+  segmentsOf,
+  stepMesh,
+  wall,
+} from "../link-test-utils";
 import type { Toolpath, ToolpathMove } from "../toolpath";
 import {
   modelHeightsSteps,
@@ -21,70 +34,6 @@ import {
 import { reliefFinishSteps } from "./finishing";
 import { type SpiralRun, spiralRuns } from "./spiral";
 import { isoLines, tipHeightsSteps } from "./waterline";
-
-/** A horizontal rectangle at height `z`, as two triangles. */
-function rect(x0: number, y0: number, x1: number, y1: number, z: number): number[] {
-  return [x0, y0, z, x1, y0, z, x1, y1, z, x0, y0, z, x1, y1, z, x0, y1, z];
-}
-
-/** A vertical wall along Y at `x`, from `z0` up to `z1`: seen edge-on from above. */
-function wall(x: number, y0: number, y1: number, z0: number, z1: number): number[] {
-  return [x, y0, z0, x, y1, z0, x, y1, z1, x, y0, z0, x, y1, z1, x, y0, z1];
-}
-
-/** A model whose mesh coordinates are its stock coordinates, its top at the stock top. */
-function placed(width: number, length: number, depth: number): Model {
-  return {
-    ...modelFixture,
-    bounds: { min: [0, 0, -depth], max: [width, length, 0] },
-    placement: { rotation: [0, 0, 0], scale: 1, depth, top: 0, position: [0, 0] },
-  };
-}
-
-/** A 20 × 10 × 10 model: a plateau 4 mm below the top over x < 10, the floor at -10 beyond. */
-const STEP = placed(20, 10, 10);
-const stepMesh = new Float32Array([
-  ...rect(0, 0, 20, 10, -10),
-  ...rect(0, 0, 10, 10, -4),
-  ...wall(10, 0, 10, -10, -4),
-  ...rect(19.99, 9.99, 20, 10, 0),
-]);
-
-/** A 20 × 20 pyramid, 8 mm high, its apex at the stock top. */
-const PYRAMID = placed(20, 20, 8);
-const pyramidMesh = new Float32Array([
-  ...[0, 0, -8, 20, 0, -8, 10, 10, 0],
-  ...[20, 0, -8, 20, 20, -8, 10, 10, 0],
-  ...[20, 20, -8, 0, 20, -8, 10, 10, 0],
-  ...[0, 20, -8, 0, 0, -8, 10, 10, 0],
-]);
-
-function finishing(
-  tool: Tool,
-  strategy: FinishingStrategy,
-  params: Partial<ReliefFinishOperation["params"]> = {},
-): ReliefFinishOperation {
-  return {
-    id: "7c1e4b2a-9d3f-4a6e-8b5c-2f0e1d9a8b7c",
-    type: "relief_finish",
-    name: "Finish",
-    enabled: true,
-    stockSide: "top",
-    targets: [],
-    tool,
-    params: {
-      modelId: STEP.id,
-      strategy,
-      stepOver: 20,
-      stockToLeave: 0,
-      boundary: { type: "model" },
-      rest: false,
-      ...params,
-    },
-  };
-}
-
-const options = { safeZ: 5, entryClearance: 1 };
 
 function finish(
   tool: Tool,
@@ -99,14 +48,6 @@ function finish(
 type Feed = Extract<ToolpathMove, { kind: "feed" }>;
 const cuts = ({ moves }: Toolpath, tool: Tool) =>
   moves.filter((move): move is Feed => move.kind === "feed" && move.feedRate === tool.feedRate);
-
-/** Fails if the stock after `toolpath` is anywhere below the model offset by `stockToLeave`. */
-/**
- * Tools are dropped onto cell centres (ADR-0030), so a cutter's rim may reach
- * up to a cell's worth of a slope between them, as with parallel passes: the
- * pyramid's faces rise 0.8 in 1, over 0.1 mm cells.
- */
-const SAMPLING = 0.8 * 0.1 + 0.005;
 
 /** Fails if the stock after `toolpath` is anywhere more than `tolerance` below the model offset by `stockToLeave`. */
 function expectNoGouge(
@@ -444,14 +385,6 @@ describe("waterline", () => {
     expect(cuts(again, ballEndMill).length).toBeLessThan(cuts(first, ballEndMill).length / 10);
   });
 });
-
-function segmentsOf({ moves }: Toolpath): Float32Array {
-  const segments: number[] = [];
-  for (let i = 1; i < moves.length; i++) {
-    segments.push(...(moves[i - 1]?.to ?? []), ...(moves[i]?.to ?? []));
-  }
-  return new Float32Array(segments);
-}
 
 describe("spiralRuns", () => {
   /** The cell centres the runs pass through, in order, as points of a 1 × 1 grid. */

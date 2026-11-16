@@ -189,7 +189,7 @@ describe("workspace store", () => {
     });
     store.getState().selectOperation("op");
     store.getState().setEditing("tabs");
-    store.getState().prune(withTabs({ width: 6, height: 3, positions: [] }));
+    store.getState().prune(withTabs({ width: 6, height: 3, fullHeight: false, positions: [] }));
     expect(store.getState().editing).toBe("tabs");
     store.getState().prune(withTabs(null));
     expect(store.getState()).toMatchObject({ editing: null, selectedOperationId: "op" });

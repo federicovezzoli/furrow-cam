@@ -92,13 +92,16 @@ export type MillingDirection = z.infer<typeof MillingDirection>;
  * Holding tabs (#22): bridges of material the profile leaves so the part stays
  * attached to the stock. Rectangular: over a tab the tool rises straight to
  * `height` above the final depth, crosses it flat and goes straight back down,
- * on the passes that would otherwise cut lower.
+ * on the passes that would otherwise cut lower. Over a `fullHeight` tab it
+ * rises to the entry clearance above the stock top instead, on every pass.
  */
 export const ProfileTabs = z.strictObject({
   /** Length of the material left along the contour. */
   width: PositiveLength,
   /** Height of the material left, up from the profile's final depth. */
   height: PositiveLength,
+  /** Leave the stock's whole thickness at each tab (#606); `height` is kept but unused. */
+  fullHeight: z.boolean(),
   /** Where the tabs are, in stock coordinates; each goes to the nearest closed contour. */
   positions: z.array(Point),
 });

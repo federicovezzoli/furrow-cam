@@ -25,6 +25,7 @@ import {
   setHoldingTabPositions,
   setHoldingTabSize,
   setHoldingTabs,
+  setHoldingTabsFullHeight,
   setLineUp,
   setPartingDepth,
   setStockDimension,
@@ -478,6 +479,7 @@ describe("holding tabs (#357)", () => {
     expect(stock(store).twoSided?.tabs).toEqual({
       width: 6,
       thickness: 2,
+      fullHeight: false,
       positions: autoHoldingTabPositions([model], 4),
     });
     setHoldingTabs(store, false);
@@ -496,6 +498,9 @@ describe("holding tabs (#357)", () => {
     expect(setHoldingTabSize(store, "thickness", 8)).toBe(true);
     expect(setHoldingTabSize(store, "width", 10)).toBe(true);
     expect(stock(store).twoSided?.tabs).toMatchObject({ width: 10, thickness: 8 });
+    setHoldingTabsFullHeight(store, true);
+    expect(stock(store).twoSided?.tabs).toMatchObject({ thickness: 8, fullHeight: true });
+    setHoldingTabsFullHeight(store, false);
     // A deeper parting plane leaves the bottom side 4 mm: the tabs take half.
     setPartingDepth(store, 14);
     expect(stock(store).twoSided?.tabs?.thickness).toBe(2);

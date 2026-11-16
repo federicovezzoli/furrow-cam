@@ -919,7 +919,9 @@ describe("tabs", () => {
     expect(autoPlaceTabs(store, id, { count: 2 })).toMatchObject({ ok: false });
     addTab(store, id, [0, 0]);
     expect(store.getState().document).toBe(before);
-    updateProfileParams(store, id, { tabs: { width: 6, height: 3, positions: [] } });
+    updateProfileParams(store, id, {
+      tabs: { width: 6, height: 3, fullHeight: false, positions: [] },
+    });
     const withEmpty = store.getState().document;
     moveTab(store, id, 0, [1, 1]);
     removeTab(store, id, 3);

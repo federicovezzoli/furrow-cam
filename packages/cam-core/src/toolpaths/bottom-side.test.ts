@@ -46,7 +46,7 @@ const profile = (side: "inside" | "outside", direction: "climb" | "conventional"
       finishPass: false,
       leadIn: null,
       ramp: false,
-      tabs: tabs ? { width: 8, height: 2, positions: [[45, 10]] } : null,
+      tabs: tabs ? { width: 8, height: 2, fullHeight: false, positions: [[45, 10]] } : null,
       startPoints: [],
       cornerOvercuts: null,
     },

@@ -260,8 +260,15 @@ function TabsFields({
         label={t("tabHeight")}
         min={MIN_LENGTH}
         value={tabs.height}
+        disabled={tabs.fullHeight}
         onValueChange={(height) => onChange({ ...tabs, height })}
         {...length}
+      />
+      <Checkbox
+        id="profile-tab-full-height"
+        label={t("tabFullHeight")}
+        checked={tabs.fullHeight}
+        onChange={(fullHeight) => onChange({ ...tabs, fullHeight })}
       />
       {error && (
         <p role="alert" className="text-destructive">

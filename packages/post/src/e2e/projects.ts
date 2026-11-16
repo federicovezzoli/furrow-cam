@@ -148,7 +148,7 @@ function plate(): ProjectDocument {
       finishPass: false,
       leadIn: null,
       ramp: false,
-      tabs: { width: 6, height: 2, positions: [[80, 20]] },
+      tabs: { width: 6, height: 2, fullHeight: false, positions: [[80, 20]] },
       startPoints: [],
       cornerOvercuts: null,
     },
@@ -289,6 +289,7 @@ function svgPart(): ProjectDocument {
           tabs: {
             width: 8,
             height: 3,
+            fullHeight: false,
             positions: [
               [70, 20],
               [70, 80],
@@ -736,6 +737,7 @@ function pcShelf(): ProjectDocument {
   const tabs: ProfileTabs = {
     width: 10,
     height: 10,
+    fullHeight: false,
     positions: [
       [15, 205],
       [275, 205],
@@ -772,7 +774,7 @@ function pcShelfHandle(): ProjectDocument {
     ),
     shapes,
   );
-  const tabs: ProfileTabs = { width: 10, height: 5, positions: [[85, 10]] };
+  const tabs: ProfileTabs = { width: 10, height: 5, fullHeight: false, positions: [[85, 10]] };
   return {
     ...doc,
     operations: [outsideProfile(id, "Cut out", targets(doc, byName("rect1")), spiral8, 18, tabs)],
@@ -849,8 +851,6 @@ export function corpus(): CorpusProject[] {
       title: "Plate",
       covers: "the same part zeroed at the centre of the machine bed, manual spindle",
       document: valid(lowRiderPlate),
-      // The LowRider's Z is slower than the tab's climb.
-      warnings: [{ operation: "Cut out", message: { code: "grbl.slowed", values: { count: 1 } } }],
     },
     {
       name: "svg-part",

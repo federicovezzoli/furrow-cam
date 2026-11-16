@@ -346,7 +346,7 @@ describe("two-sided projects", () => {
         flipAxis: "x",
         partingDepth: 9,
         lineUp: null,
-        tabs: { width: 6, thickness, positions: [[0, 50]] },
+        tabs: { width: 6, thickness, fullHeight: false, positions: [[0, 50]] },
       },
     });
     expect(Stock.safeParse(withTabs(8.9)).success).toBe(true);

@@ -62,7 +62,7 @@ function render(tabs = false) {
     targets: [{ shapeId: SHAPE_ID, paths: null }],
     params: {
       ...profile.params,
-      tabs: tabs ? { width: 8, height: 3, positions: [] } : null,
+      tabs: tabs ? { width: 8, height: 3, fullHeight: false, positions: [] } : null,
       startPoints: [],
     },
   };

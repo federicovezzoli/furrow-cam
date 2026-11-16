@@ -96,7 +96,7 @@ export const MODEL_PREVIEW_CELLS = 1024 * 1024;
 /**
  * A mesh with `bounds`, rotated by `rotation`, as a heightmap in its rotated
  * frame (`rotatedFrameTransform`): its outline from `(0, 0)`, its top at
- * `z = 0` and uncovered cells at its bottom, in at most `maxCells` cells as
+ * `z = 0` and uncovered cells at `previewEmpty`, in at most `maxCells` cells as
  * close to square as its outline allows. Scaling and moving it as the
  * placement says shows the model as it will be cut. `null` for a mesh with
  * no width or length seen from above, which has nothing to cut.
@@ -123,7 +123,19 @@ export function modelHeightmap(
     positions,
     rotatedFrameTransform(bounds, rotation),
     grid,
-    min[2] - max[2],
+    previewEmpty(bounds, rotation),
   );
   return { ...grid, heights };
+}
+
+/**
+ * Where a model's preview (`modelHeightmap`) puts the cells no triangle
+ * covers: just below its bottom, as a `Float32Array` holds it, so a face at
+ * the bottom (a relief with no base) still tells from no model (#608).
+ */
+export function previewEmpty(bounds: Box3, rotation: Rotation): number {
+  const { min, max } = rotatedBounds(bounds, rotation);
+  const bottom = min[2] - max[2];
+  // Several float32 steps below the bottom, whatever its size.
+  return Math.fround(bottom - Math.max(1, -bottom) * 1e-6);
 }

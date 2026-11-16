@@ -111,9 +111,11 @@ type Cut = Descent & {
  *   lead-in that would leave the waste side is shortened, or left out.
  * - Each tab goes to the nearest closed contour, roughing and finishing alike,
  *   where the tool centre stays at or above the tab top for the tab's width
- *   plus the tool diameter: it rises straight up at the tab's edge, crosses it
- *   flat and goes straight back down. Passes above the tab top are untouched,
- *   and no contour starts on a tab.
+ *   plus the tool diameter: it rapids straight up at the tab's edge, crosses it
+ *   flat and goes straight back down, rapid through the air the earlier
+ *   passes cleared. Passes above the tab top are untouched,
+ *   and no contour starts on a tab. Over a full-height tab (#606) it stays at
+ *   the entry clearance above the stock top.
  * - Each start point (#426) on a path goes to the contour or open path that
  *   path makes, one per path. A closed contour starts there instead of halfway along its longest
  *   edge, or at the nearer end of a tab it falls on; an open path is cut from
@@ -260,10 +262,13 @@ export function contourToolpath(
 
   const { tabs } = params;
   if (tabs && tabs.positions.length > 0) {
-    if (tabs.height >= params.depth) {
-      warnings.push({ code: "toolpath.tabsTooTall" });
+    if (tabs.fullHeight) {
+      // Off the stock top, so the tool doesn't rub the tab's face.
+      cut.tabTop = cut.builder.clearance;
+    } else {
+      if (tabs.height >= params.depth) warnings.push({ code: "toolpath.tabsTooTall" });
+      cut.tabTop = Math.min(0, tabs.height - params.depth);
     }
-    cut.tabTop = Math.min(0, tabs.height - params.depth);
     const span = tabs.width + tool.diameter;
     const reach = offset + params.allowance + tabs.width;
     const placed = placeTabs(roughing.contours, tabs.positions, reach, span);
@@ -507,7 +512,8 @@ function cutContour(
     for (const level of levels) {
       builder.feed([plunge[0], plunge[1], level], cut.plungeRate);
       feedAlong(cut, loop.slice(0, 1), level);
-      feedTrack(cut, track, contour.tabs, 0, track.length, () => level);
+      // The schema keeps tabs off contours with a plunge point: no descents here.
+      feedTrack(cut, track, contour.tabs, 0, track.length, () => level, 0);
       feedAlong(cut, [plunge], level);
     }
     return;
@@ -521,7 +527,7 @@ function cutContour(
     for (const level of levels) {
       descend(cut, arc, z, level);
       feedAlong(cut, arc, level);
-      feedTrack(cut, track, contour.tabs, 0, track.length, () => level);
+      feedTrack(cut, track, contour.tabs, 0, track.length, () => level, z);
       feedAlong(cut, back, level);
       z = level;
     }
@@ -536,8 +542,14 @@ function cutContour(
       // Spiral down along the contour, then cut a full lap from where the ramp ended.
       const run = (z - level) * cut.rampRun;
       const from = z;
-      feedTrack(cut, track, contour.tabs, at, run, (travelled) =>
-        rampZ(from, level, travelled, run),
+      feedTrack(
+        cut,
+        track,
+        contour.tabs,
+        at,
+        run,
+        (travelled) => rampZ(from, level, travelled, run),
+        z,
       );
       at = (at + run) % track.length;
     } else {
@@ -545,7 +557,8 @@ function cutContour(
       const point = track.pointAt(at);
       builder.feed([point[0], point[1], level], cut.plungeRate);
     }
-    feedTrack(cut, track, contour.tabs, at, track.length, () => level);
+    // The ramp went deeper, but only over part of the lap.
+    feedTrack(cut, track, contour.tabs, at, track.length, () => level, z);
     z = level;
   }
 }
@@ -582,7 +595,7 @@ function finishContour(cut: Cut, contour: Contour, slot: Point, depth: number) {
   enter(cut, slot);
   builder.feed([slot[0], slot[1], depth], cut.plungeRate);
   builder.feed([start[0], start[1], depth], cut.feedRate);
-  feedTrack(cut, track, contour.tabs, 0, track.length, () => depth);
+  feedTrack(cut, track, contour.tabs, 0, track.length, () => depth, 0);
   builder.feed([slot[0], slot[1], depth], cut.feedRate);
 }
 
@@ -747,9 +760,11 @@ function enter(cut: Cut, point: Point) {
 
 /**
  * Feeds `run` millimetres along `track` from `at`, at height `z(travelled)`,
- * staying at or above the tab top over `tabs`: straight up at a tab's start,
- * then past its end straight back down at the plunge rate, even with ramping
- * on (#153). A ramp at the plunge angle would leave a wedge of stock as long
+ * staying at or above the tab top over `tabs`: a rapid straight up at a tab's
+ * start, across it as a rapid when the tab top is above the stock, then past
+ * its end a rapid straight down to the entry clearance above `floor`, the
+ * deepest the earlier passes are sure to have cut there, and the rest at the
+ * plunge rate, even with ramping on (#153). A ramp at the plunge angle would leave a wedge of stock as long
  * as the ramp behind each tab, 57 mm from a 3 mm tab at 3°, where the part
  * should be cut free; ramping is for entering the cut.
  */
@@ -760,6 +775,7 @@ function feedTrack(
   at: number,
   run: number,
   z: (travelled: number) => number,
+  floor: number,
 ) {
   const { builder, tabTop } = cut;
   let previous = track.pointAt(at);
@@ -767,18 +783,30 @@ function feedTrack(
   for (const [point, travelled] of track.walk(at, run)) {
     // Contours have a point at each end of a tab, so no step crosses one.
     const middle = (at + (previousTravelled + travelled) / 2) % track.length;
-    const lifted = tabTop !== null && inSpans(tabs, middle);
-    const height = (t: number) => (lifted && tabTop !== null ? Math.max(z(t), tabTop) : z(t));
+    const top = tabTop !== null && inSpans(tabs, middle) ? tabTop : null;
+    const height = (t: number) => (top !== null ? Math.max(z(t), top) : z(t));
     const from = height(previousTravelled);
     const current = builder.position?.[2];
-    if (current !== undefined && Math.abs(current - from) > 1e-9) {
-      builder.feed(
-        [previous[0], previous[1], from],
-        from < current ? cut.plungeRate : cut.feedRate,
-      );
+    if (current !== undefined && from > current + 1e-9) {
+      // Up out of the slot this pass has just cut.
+      if (top !== null) builder.rapid([previous[0], previous[1], from]);
+      else builder.feed([previous[0], previous[1], from], cut.feedRate);
+    } else if (current !== undefined && from < current - 1e-9) {
+      // Only past a tab, even one the last call ended on: down through air to just above the
+      // floor the earlier passes left. Without a clearance there is no margin for a rapid.
+      const air = Math.max(from, floor + builder.clearance);
+      if (builder.clearance > 0 && air < current - 1e-9) {
+        builder.rapid([previous[0], previous[1], air]);
+      }
+      builder.feed([previous[0], previous[1], from], cut.plungeRate);
     }
     const to = height(travelled);
-    builder.feed([point[0], point[1], to], to < from - 1e-9 ? cut.plungeRate : cut.feedRate);
+    // Over a full-height tab the tool crosses above the stock.
+    if (top !== null && top > 0) {
+      builder.rapid([point[0], point[1], to]);
+    } else {
+      builder.feed([point[0], point[1], to], to < from - 1e-9 ? cut.plungeRate : cut.feedRate);
+    }
     previous = point;
     previousTravelled = travelled;
   }

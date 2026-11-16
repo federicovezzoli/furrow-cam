@@ -262,7 +262,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 39,
+    schemaVersion: 40,
     units: "in",
     stock: {
       width: 300,
@@ -280,7 +280,7 @@ export function fullDocument(): ProjectDocument {
           positions: [-120, 120],
           holes: { type: "through", spoilboardDepth: 5 },
         },
-        tabs: { width: 6, thickness: 2, positions: [[0, 50]] },
+        tabs: { width: 6, thickness: 2, fullHeight: false, positions: [[0, 50]] },
       },
     },
     machine,
@@ -309,7 +309,7 @@ export function fullDocument(): ProjectDocument {
           finishPass: true,
           leadIn: { radius: 3 },
           ramp: true,
-          tabs: { width: 8, height: 3, positions: [[50, 0]] },
+          tabs: { width: 8, height: 3, fullHeight: false, positions: [[50, 0]] },
           startPoints: [{ start: [0, 50], plunge: null }],
           cornerOvercuts: { maxAngle: 90, excluded: [[0, 0]] },
         },

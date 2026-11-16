@@ -378,6 +378,26 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #606: profile and two-sided holding tabs can keep the stock's whole
+  // thickness. Existing ones keep their height or thickness.
+  39: (doc) => {
+    if (isObject(doc.stock) && isObject(doc.stock.twoSided) && isObject(doc.stock.twoSided.tabs)) {
+      doc.stock.twoSided.tabs.fullHeight ??= false;
+    }
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (
+          isObject(operation) &&
+          operation.type === "profile" &&
+          isObject(operation.params) &&
+          isObject(operation.params.tabs)
+        ) {
+          operation.params.tabs.fullHeight ??= false;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

@@ -669,6 +669,7 @@ export function defaultTabs(document: ProjectDocument, operation: ProfileOperati
   return {
     width: 6,
     height: Math.min(3, operation.params.depth / 2),
+    fullHeight: false,
     positions: autoTabPositions(operationShapes(document, operation), operation.params.side, {
       count: DEFAULT_TAB_COUNT,
     }),
