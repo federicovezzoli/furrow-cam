@@ -9,6 +9,7 @@ import { createDocumentStore } from "@furrow/workspace/stores/document-store";
 import { addTextItem, moveDrawing } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { change, createProjects, type Project, type Projects, ToolError } from "./projects";
+import { projectSummary } from "./summary";
 import { addText, editText } from "./text-items";
 
 let dir: string;
@@ -62,7 +63,7 @@ describe("addText", () => {
 
   it("refuses unknown fonts and invalid settings, changing nothing", async () => {
     await expect(addText(project, { text: "A", font: "Comic" })).rejects.toThrow(/no font "Comic"/);
-    await expect(addText(project, { text: "  " })).rejects.toThrow(ToolError);
+    await expect(addText(project, { text: "  " })).rejects.toThrow(/^text: (?!validation)/);
     await expect(addText(project, { text: "A", letterSpacing: -1 })).rejects.toThrow(
       /letterSpacing/,
     );
@@ -91,6 +92,20 @@ describe("addText", () => {
     expect(doc().fonts.map((font) => font.singleStroke)).toEqual([true]);
     await addText(project, { text: "C", fontFile: arvo, singleStroke: false });
     expect(doc().fonts.map((font) => font.singleStroke)).toEqual([false]);
+  });
+
+  it("keeps the flag a parallel call lists the same font file with", async () => {
+    await Promise.all([
+      addText(project, { text: "A", fontFile: arvo, singleStroke: true }),
+      addText(project, { text: "B", fontFile: arvo }),
+    ]);
+    expect(doc().fonts.map((font) => font.singleStroke)).toEqual([true]);
+    expect(projectSummary(doc()).fonts).toEqual(doc().fonts);
+  });
+
+  it("refuses singleStroke without a fontFile, and what isn't a file", async () => {
+    await expect(addText(project, { text: "A", singleStroke: true })).rejects.toThrow(/fontFile/);
+    await expect(addText(project, { text: "A", fontFile: dir })).rejects.toThrow(/isn't a file/);
   });
 
   it("refuses a fifth font, changing nothing", async () => {

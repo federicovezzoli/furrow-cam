@@ -83,6 +83,8 @@ export function projectSummary(document: ProjectDocument) {
         };
       },
     ),
+    // Uploaded fonts, which a text item's font names by sha256 (ADR-0062).
+    fonts: document.fonts,
     operations: document.operations,
   };
 }

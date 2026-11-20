@@ -17,7 +17,7 @@ import {
   StockCorner,
   TextAlign,
 } from "@furrow/document";
-import { DEFAULT_TEXT_HEIGHT, FONTS } from "@furrow/workspace/lib/fonts";
+import { DEFAULT_FONT, DEFAULT_TEXT_HEIGHT, FONTS } from "@furrow/workspace/lib/fonts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
@@ -882,7 +882,7 @@ export function createServer(projects: Projects = createProjects(), library = li
       .string()
       .optional()
       .describe(
-        `The font: ${FONTS.map((font) => `${font.name} (${font.kind === "singleStroke" ? "single-stroke, for engraving" : font.kind})`).join(", ")}, or a font the project holds, by name; ${FONTS[0].name} for a new text.`,
+        `The font: ${FONTS.map((font) => `${font.name} (${font.kind === "singleStroke" ? "single-stroke, for engraving" : font.kind})`).join(", ")}, or a font the project holds, by name or, when its name is a bundled font's, by the sha256 the summary's fonts list; ${FONTS.find((font) => font.id === DEFAULT_FONT)?.name} for a new text.`,
       ),
     fontFile: z
       .string()
@@ -894,7 +894,7 @@ export function createServer(projects: Projects = createProjects(), library = li
       .boolean()
       .optional()
       .describe(
-        "Whether fontFile is a single-stroke font (its strokes engraved as lines, not closed outlines); false for a new font.",
+        "Whether fontFile is a single-stroke font (its strokes engraved as lines, not closed outlines); false for a new font, unchanged for one the project holds. Changing it re-lays out only this text: change other text items in that font with edit_text.",
       ),
     height: z
       .number()

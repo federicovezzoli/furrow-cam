@@ -16,6 +16,7 @@ import { addFont, setFontSingleStroke } from "@furrow/workspace/stores/font-acti
 import { addTextItem, moveDrawing, setTextItem } from "@furrow/workspace/stores/geometry-actions";
 import { text } from "./drawings-and-models";
 import { change, type Project, ToolError } from "./projects";
+import { parsed } from "./setup";
 
 /** A text item's settings as an assistant gives them; those left out are the app's defaults, or stay as they are. */
 export type TextRequest = Partial<Omit<TextSettings, "placement">> & {
@@ -35,28 +36,33 @@ const bundled = new Map<string, Promise<Font>>();
 
 /**
  * Reads the font file at `path` as the app's upload checks it: size and
- * readable (`listFont` checks there is room for it). A font the project holds keeps its single-stroke
- * flag unless `singleStroke` is given.
+ * readable (`listFont` checks there is room for it). A font the project
+ * holds keeps its single-stroke flag unless `singleStroke` is given.
  */
 async function readFontFile(project: Project, path: string, given: boolean | undefined) {
   if (!isAbsolute(path)) throw new ToolError(`Give an absolute path, not ${JSON.stringify(path)}.`);
   let bytes: Uint8Array;
+  const tooLarge = () =>
+    new ToolError(
+      text({ code: "workspace.fontTooLarge", values: { mb: MAX_FONT_BYTES / 1_000_000 } }),
+    );
   try {
-    if ((await stat(path)).size > MAX_FONT_BYTES) {
-      throw new ToolError(
-        text({ code: "workspace.fontTooLarge", values: { mb: MAX_FONT_BYTES / 1_000_000 } }),
-      );
-    }
+    // Not a pipe or device, which reports no size and may never end.
+    const info = await stat(path);
+    if (!info.isFile()) throw new ToolError(`${JSON.stringify(path)} isn't a file.`);
+    if (info.size > MAX_FONT_BYTES) throw tooLarge();
     bytes = new Uint8Array(await readFile(path));
   } catch (error) {
     if (error instanceof ToolError) throw error;
     throw new ToolError(`Can't read ${path}: ${(error as Error).message}`);
   }
+  // It may have grown since `stat`.
+  if (bytes.byteLength > MAX_FONT_BYTES) throw tooLarge();
   const sha256 = await sha256Hex(bytes);
   const { fonts } = project.store.getState().document;
   const listed = fonts.find((font) => font.sha256 === sha256);
   const singleStroke = given ?? listed?.singleStroke ?? false;
-  const font = parsed(bytes, singleStroke);
+  const font = readFont(bytes, singleStroke);
   const fileName = basename(path);
   const listing: ProjectFont = listed
     ? { ...listed, singleStroke }
@@ -70,7 +76,7 @@ async function readFontFile(project: Project, path: string, given: boolean | und
   return { id: sha256, font, added: { listing, bytes } satisfies NewFont };
 }
 
-function parsed(bytes: Uint8Array, singleStroke: boolean): Font {
+function readFont(bytes: Uint8Array, singleStroke: boolean): Font {
   try {
     return parseFont(bytes, singleStroke);
   } catch {
@@ -99,14 +105,14 @@ async function findFont(project: Project, given: string): Promise<{ id: string; 
   const { fonts } = project.store.getState().document;
   const listed = fonts.find((font) => font.sha256 === given || font.name === given);
   if (!listed) {
-    const names = [...FONTS.map((font) => font.name), ...fonts.map((font) => font.name)];
+    const names = new Set([...FONTS.map((font) => font.name), ...fonts.map((font) => font.name)]);
     throw new ToolError(
-      `There's no font ${JSON.stringify(given)}: use one of ${names.join(", ")}, or give fontFile.`,
+      `There's no font ${JSON.stringify(given)}: use one of ${[...names].join(", ")}, a project font's sha256 from the summary, or give fontFile.`,
     );
   }
   const bytes = project.fonts.get(listed.sha256);
   if (!bytes) throw unavailable();
-  return { id: listed.sha256, font: parsed(bytes, listed.singleStroke) };
+  return { id: listed.sha256, font: readFont(bytes, listed.singleStroke) };
 }
 
 const unavailable = () => new ToolError(text(FONT_UNAVAILABLE));
@@ -115,34 +121,55 @@ const unavailable = () => new ToolError(text(FONT_UNAVAILABLE));
 async function prepare(project: Project, base: TextSettings, request: TextRequest) {
   const { position, fontFile, singleStroke, ...edits } = request;
   if (fontFile && edits.font) throw new ToolError("Give font or fontFile, not both.");
+  if (!fontFile && singleStroke !== undefined) {
+    throw new ToolError("singleStroke is said of a fontFile: give it with one.");
+  }
   const { id, font, added } = fontFile
     ? await readFontFile(project, fontFile, singleStroke)
     : { ...(await findFont(project, edits.font ?? base.font)), added: undefined };
-  const settings = TextSettings.safeParse({ ...base, ...edits, font: id });
-  if (!settings.success) {
-    const [issue] = settings.error.issues;
-    throw new ToolError(`Invalid ${issue?.path.join(".") ?? "settings"}: ${issue?.message}`);
-  }
+  const settings = parsed(TextSettings, { ...base, ...edits, font: id });
   let paths: Path[];
   try {
-    paths = textPaths(font, settings.data);
+    paths = textPaths(font, settings);
   } catch {
     throw new ToolError(text(TEXT_LAYOUT_FAILED));
   }
-  return { settings: settings.data, paths, added, position };
+  return { settings, paths, added, position };
 }
 
-/** Lists `added` in the project, inside a `change`, as the app's upload does. */
-function listFont(project: Project, added: NewFont | undefined) {
-  if (!added) return;
-  const { store } = project;
-  const { listing } = added;
-  if (!addFont(store, listing)) {
-    throw new ToolError(
-      text({ code: "workspace.tooManyFonts", values: { max: MAX_PROJECT_FONTS } }),
-    );
+type Prepared = Awaited<ReturnType<typeof prepare>>;
+
+/**
+ * Prepares `request` from `base()` and commits it with `commit`, inside a
+ * `change` that also lists its font file. Prepared again if the text item or
+ * the project's fonts changed while the font loaded (another tool call moved
+ * it, or listed the same font file with another single-stroke flag), as the
+ * app's edit queue does; nothing is awaited between that check and the change.
+ */
+async function commitSettled(
+  project: Project,
+  base: () => TextSettings,
+  request: TextRequest,
+  commit: (prepared: Prepared) => void,
+) {
+  for (;;) {
+    const { fonts } = project.store.getState().document;
+    const from = base();
+    const prepared = await prepare(project, from, request);
+    if (project.store.getState().document.fonts !== fonts || base() !== from) continue;
+    const { added } = prepared;
+    change(project, (store) => {
+      if (added && !addFont(store, added.listing)) {
+        throw new ToolError(
+          text({ code: "workspace.tooManyFonts", values: { max: MAX_PROJECT_FONTS } }),
+        );
+      }
+      if (added) setFontSingleStroke(store, added.listing.sha256, added.listing.singleStroke);
+      commit(prepared);
+    });
+    if (added) project.fonts.set(added.listing.sha256, added.bytes);
+    return;
   }
-  setFontSingleStroke(store, listing.sha256, listing.singleStroke);
 }
 
 /** Moves text item `id` so its origin lands at `position`, inside a `change`. */
@@ -167,16 +194,18 @@ export async function addText(project: Project, request: TextRequest & { text: s
     letterSpacing: 0,
     placement: { position: [0, 0], rotation: 0, mirrored: false },
   };
-  const { settings, paths, added, position } = await prepare(project, base, request);
   let id = "";
-  change(project, (store) => {
-    listFont(project, added);
-    const result = addTextItem(store, settings, paths);
-    if (!result.ok) throw new ToolError(text(result.error));
-    id = result.id;
-    place(project, id, position);
-  });
-  if (added) project.fonts.set(added.listing.sha256, added.bytes);
+  await commitSettled(
+    project,
+    () => base,
+    request,
+    ({ settings, paths, position }) => {
+      const result = addTextItem(project.store, settings, paths);
+      if (!result.ok) throw new ToolError(text(result.error));
+      id = result.id;
+      place(project, id, position);
+    },
+  );
   return { id };
 }
 
@@ -195,22 +224,12 @@ export async function editText(project: Project, id: string, request: TextReques
         : `The project has no text item ${JSON.stringify(id)}.`,
     );
   };
-  let base = current();
-  let prepared = await prepare(project, base, request);
-  // Changed by another tool call while the font loaded (moved, resized): laid out again from it, as the app's edit queue does.
-  while (current() !== base) {
-    base = current();
-    prepared = await prepare(project, base, request);
-  }
-  const { settings, paths, added, position } = prepared;
   let removedTabs = 0;
-  change(project, (store) => {
-    listFont(project, added);
-    const result = setTextItem(store, id, settings, paths);
+  await commitSettled(project, current, request, ({ settings, paths, position }) => {
+    const result = setTextItem(project.store, id, settings, paths);
     if (!result.ok) throw new ToolError(text(result.error));
     removedTabs = result.removedTabs;
     place(project, id, position);
   });
-  if (added) project.fonts.set(added.listing.sha256, added.bytes);
   return { removedTabs };
 }
