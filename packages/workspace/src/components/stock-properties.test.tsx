@@ -36,7 +36,6 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(document().stock.twoSided).toEqual({
       flipAxis: "x",
       partingDepth: 9,
-      tabs: null,
       lineUp: null,
     });
     fireEvent.change(screen.getByLabelText("Turned over about"), { target: { value: "y" } });
@@ -88,18 +87,47 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     expect(document().stock.twoSided).toMatchObject({ lineUp: null });
   });
 
+  it("offers no holding tabs without a model", () => {
+    render(createProjectDocument());
+    expect(screen.queryByRole("checkbox", { name: "Holding tabs" })).toBeNull();
+  });
+
+  it("offers holding tabs on one-sided projects with a model (#616)", () => {
+    const document = render({ ...createProjectDocument(), models: [model] });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
+    expect(document().stock).toMatchObject({ twoSided: null, tabs: { thickness: 2 } });
+  });
+
   it("turns holding tabs on, sizes them and spreads them round the models", () => {
     const document = render({ ...createProjectDocument(), models: [model] });
     fireEvent.click(screen.getByRole("checkbox", { name: "Two-sided" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
-    expect(document().stock.twoSided?.tabs).toMatchObject({ width: 6, thickness: 2 });
+    expect(document().stock.tabs).toMatchObject({ width: 6, thickness: 2 });
     expect(screen.getByText("4 tabs")).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/Tabs per model/), { target: { value: "3" } });
     fireEvent.blur(screen.getByLabelText(/Tabs per model/));
     fireEvent.click(screen.getByRole("button", { name: "Place" }));
-    expect(document().stock.twoSided?.tabs?.positions).toHaveLength(3);
+    expect(document().stock.tabs?.positions).toHaveLength(3);
     fireEvent.click(screen.getByRole("checkbox", { name: "Holding tabs" }));
-    expect(document().stock.twoSided?.tabs).toBeNull();
+    expect(document().stock.tabs).toBeNull();
+  });
+
+  it("counts the tabs already placed round each model (#618)", () => {
+    const document = render({
+      ...createProjectDocument(),
+      models: [model],
+      stock: {
+        ...createProjectDocument().stock,
+        tabs: { width: 6, thickness: 2, fullHeight: false, positions: Array(8).fill([0, 0]) },
+      },
+    });
+    expect(screen.getByLabelText(/Tabs per model/)).toHaveProperty("value", "8");
+    fireEvent.change(screen.getByLabelText(/Tabs per model/), { target: { value: "3" } });
+    fireEvent.blur(screen.getByLabelText(/Tabs per model/));
+    expect(screen.getByLabelText(/Tabs per model/)).toHaveProperty("value", "3");
+    fireEvent.click(screen.getByRole("button", { name: "Place" }));
+    expect(document().stock.tabs?.positions).toHaveLength(3);
+    expect(screen.getByLabelText(/Tabs per model/)).toHaveProperty("value", "3");
   });
 
   it("says a tab thickness is refused until the bottom side gets deeper", () => {
@@ -109,11 +137,11 @@ describe("StockProperties: two-sided (ADR-0060)", () => {
     const thickness = screen.getByLabelText(/Tab thickness/);
     fireEvent.change(thickness, { target: { value: "15" } });
     fireEvent.blur(thickness);
-    expect(screen.getByText(/Must be thinner than the bottom side's depth/)).toBeTruthy();
+    expect(screen.getByText(/Must be thinner than the depth cut round the part/)).toBeTruthy();
     const parting = screen.getByLabelText(/Parting depth/);
     fireEvent.change(parting, { target: { value: "2" } });
     fireEvent.blur(parting);
-    expect(screen.queryByText(/Must be thinner than the bottom side's depth/)).toBeNull();
+    expect(screen.queryByText(/Must be thinner than the depth cut round the part/)).toBeNull();
   });
 
   it("says when drills of the pins cut nothing, once the stock isn't lined up on pins", () => {

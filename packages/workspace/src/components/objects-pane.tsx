@@ -2,23 +2,29 @@
 
 import { type PathRef, pathKey } from "@furrow/cam-core";
 import { operationModelId, type Shape } from "@furrow/document";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { Button } from "@furrow/ui/components/ui/button";
+import { downloadFile } from "@furrow/ui/lib/download";
+import { errorText } from "@furrow/ui/lib/i18n";
 import { cn } from "@furrow/ui/lib/utils";
 import {
   BoxIcon,
   ChevronRightIcon,
+  DownloadIcon,
   EyeIcon,
   EyeOffIcon,
+  HexagonIcon,
   LockIcon,
   LockOpenIcon,
   ShapesIcon,
   SplineIcon,
   TypeIcon,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "use-intl";
 import { useFlaggedIds } from "../hooks/use-flagged-ids";
 import { shapePaths } from "../lib/path-selection";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -43,6 +49,8 @@ type Row = {
   expanded: boolean | null;
   parent: string | null;
   text: boolean;
+  /** A pattern drawing's row (ADR-0087). */
+  pattern?: boolean;
   /** Its own flags, which its eye and lock show and set. */
   hidden: boolean;
   locked: boolean;
@@ -60,7 +68,8 @@ const NOT_INHERITED = { hidden: false, locked: false };
  * viewport's selection shows here too, and a selected operation's targets
  * are marked. Hidden rows are dimmed and can't be selected; locked ones can.
  * An ARIA tree: arrows move and expand, Enter or Space selects, with
- * Shift/Ctrl/Cmd to add.
+ * Shift/Ctrl/Cmd to add. A model's row also downloads its stored mesh, which
+ * is always STL: a STEP import keeps only the STL made from it (ADR-0072).
  */
 export function ObjectsPane() {
   const t = useTranslations("Objects");
@@ -78,6 +87,21 @@ export function ObjectsPane() {
   );
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  const { meshes } = useWorkspaceHost();
+  const { alert } = useDialogs();
+  // One read at a time, so a second click on a slow fetch doesn't save the file twice.
+  const [downloading, startDownload] = useTransition();
+
+  async function download(modelId: string) {
+    const found = models.find(({ id }) => id === modelId);
+    if (!found) return;
+    try {
+      const bytes = await meshes.get(found.sha256);
+      downloadFile(new Uint8Array(bytes), stlFileName(found.fileName), "model/stl");
+    } catch (error) {
+      void alert(errorText(t, error, t("downloadFailed")));
+    }
+  }
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   const rows = useMemo(() => {
@@ -106,6 +130,7 @@ export function ObjectsPane() {
         expanded: shapes.length > 0 ? open : null,
         parent: null,
         text: drawing.text !== undefined,
+        pattern: drawing.pattern !== undefined,
         ...inherited,
         inherited: NOT_INHERITED,
       });
@@ -291,7 +316,9 @@ export function ObjectsPane() {
               ? SplineIcon
               : row.text
                 ? TypeIcon
-                : ShapesIcon;
+                : row.pattern
+                  ? HexagonIcon
+                  : ShapesIcon;
         return (
           <div
             key={row.key}
@@ -367,6 +394,22 @@ export function ObjectsPane() {
                 />
               </>
             )}
+            {row.kind === "model" && (
+              <Button
+                variant="ghost"
+                size="icon-compact"
+                aria-label={t("download", { name: row.label })}
+                title={t("download", { name: row.label })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  startDownload(() => download(row.id));
+                }}
+                disabled={downloading}
+                className="shrink-0 text-muted-foreground/50"
+              >
+                <DownloadIcon />
+              </Button>
+            )}
           </div>
         );
       })}
@@ -409,4 +452,9 @@ function FlagButton({
       <Icon />
     </Button>
   );
+}
+
+/** `part.step` → `part.stl`; a name without an extension gets one. */
+export function stlFileName(fileName: string): string {
+  return `${fileName.replace(/\.[^./\\]*$/, "")}.stl`;
 }

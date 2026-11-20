@@ -563,16 +563,20 @@
       "unknownDrawing": "Bilinmeyen çizim kimliği",
       "emptyDrawing": "Bir çizimde en az bir şekil olmalıdır",
       "textShapes": "Bir metin öğesinde tam olarak bir şekil olmalıdır",
+      "patternShapes": "Bir desende tam olarak bir şekil olmalıdır",
+      "textAndPattern": "Bir çizim hem metin hem desen olamaz",
+      "patternBoundary": "Bir desen, desen olmayan tek bir başka çizimin yollarını doldurur",
       "duplicateFont": "Yinelenen yazı tipi",
       "unknownFont": "Metin, projede bulunmayan bir yazı tipi kullanıyor",
       "tooManyFonts": "Bir projede en fazla {max} yazı tipi olabilir",
       "unknownShape": "Bilinmeyen şekil kimliği",
       "unknownPath": "Bilinmeyen yol",
+      "pathIndices": "Yol indeksleri artan sırada olmalı ve her biri bir kez geçmelidir",
+      "openBoundaryPath": "Bir desen yalnızca kapalı yolları doldurur",
       "pinHolesThrough": "Kör pim delikleri ham malzemenin içinde bitmelidir",
-      "tabsThickerThanSide": "Tutucu köprüler alt yüzün derinliğinden ince olmalıdır"
+      "tabsThickerThanSide": "Tutucu köprüler parçanın çevresinde kesilen derinlikten ince olmalıdır"
     },
     "operation": {
-      "pathIndices": "Yol indeksleri artan sırada olmalı ve her biri bir kez geçmelidir",
       "allowanceZeroOnLine": "Çizgi üzerinde 0 olmalıdır",
       "overcutsOnLine": "Çizgi üzerinde olamaz",
       "plungeWithTabs": "Tutma köprüleriyle olmaz",
@@ -723,7 +727,7 @@
       "holesOffStock": "Yerleştirilmiş bir delik ham malzemenin dışında.",
       "noHoles": "Delinecek bir şey yok: görünümde delik yerleştirin veya seçili şekilleri kullanın.",
       "cutsPins": "Bu işlem bir konumlama piminin geldiği yeri kesiyor, bu yüzden ham malzeme çevrildiğinde takım pime çarpar: pimleri ya da kesimi taşıyın.",
-      "noHoldingTabs": "Tutucu köprü yok: alt yüz parçanın çevresini tamamen kestiğinde parça serbest kalır.",
+      "noHoldingTabs": "Tutucu köprü yok: parça çevresi tamamen kesildiğinde serbest kalır.",
       "stockBoundaryTwoSided": "Her iki yüzde de tüm ham malzemeyi işlemek, parçanın tutunacağı bir çerçeve bırakmaz: bir kenar payı kullanın.",
       "reachesOtherModel": "Takım, bu işlemin izlemediği başka bir modelin içine kesiyor: yalnızca işlemin kendi modeli işlenir. Daha küçük bir sınır kullanın veya modelleri birbirinden uzaklaştırın."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "Yükseklikler indirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
       "inlayClosedPaths": "Kakma yapmak için kapalı yollar seçin.",
       "inlayGap": "Tutkal boşluğu en az 0 ve cep derinliğinden küçük olmalıdır.",
-      "inlayTooDeep": "Bu kakma V ucunun konisi veya malzeme için çok derin: cep koninin, parçanın tabanı malzemenin içinde kalmalıdır."
+      "inlayTooDeep": "Bu kakma V ucunun konisi veya malzeme için çok derin: cep koninin, parçanın tabanı malzemenin içinde kalmalıdır.",
+      "patternEmpty": "Sınırın içine hiçbir hücre sığmıyor: hücreleri veya içe boşluğu küçültün.",
+      "patternTooDense": "Hücreler bu sınır için çok küçük: büyütün.",
+      "patternFailed": "Desen oluşturulamadı.",
+      "patternNoSelection": "Doldurmak için bir çizimin kapalı yollarını seçin.",
+      "patternOneDrawing": "Yalnızca tek bir çizimin yollarını seçin.",
+      "patternOfPattern": "Bir desen başka bir desenle doldurulamaz.",
+      "patternNoClosedPath": "Seçimde doldurulacak kapalı yol yok."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
@@ -1101,7 +1112,9 @@
     "show": "{name} göster",
     "hide": "{name} gizle",
     "lock": "{name} kilitle",
-    "unlock": "{name} kilidini aç"
+    "unlock": "{name} kilidini aç",
+    "download": "{name} dosyasını STL olarak indir",
+    "downloadFailed": "Bu modelin dosyası okunamadı."
   },
   "ToolpathProgress": {
     "title": "Takım yolları hesaplanıyor · {done}/{total} tamamlandı",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Her iki yüz için ham malzemenin bu köşesini bir dayama köşesine dayayın. Yüzler yalnızca ham malzeme {axis} boyunca tam olarak {size} ise buluşur: ölçün.",
     "idlePinDrills": "{count, plural, one {# pim delme işlemi} other {# pim delme işlemi}} pim olmadan hiçbir şey kesmiyor.",
     "holdingTabs": "Tutucu köprüler",
-    "holdingTabsHint": "Alt yüzün ayırma derinliğinde bıraktığı ham malzeme şeritleri; böylece parça son pasoya kadar tutulur. Üst görünümde bunları modellerin dış hatları boyunca sürükleyin.",
+    "holdingTabsHint": "3B işlemlerin her modelin çevresinde, ham malzemenin tabanında ya da çift yüzde ayırma derinliğinde bıraktığı ham malzeme şeritleri; böylece parça son pasoya kadar tutulur. Üst görünümde bunları modellerin dış hatları boyunca sürükleyin.",
     "holdingTabWidth": "Köprü genişliği",
     "holdingTabThickness": "Köprü kalınlığı",
     "holdingTabFullHeight": "Tam yükseklik",
-    "holdingTabTooThick": "Alt yüzün derinliğinden ince olmalıdır: {size} değerinden az",
+    "holdingTabTooThick": "Parçanın çevresinde kesilen derinlikten ince olmalıdır: {size} değerinden az",
     "holdingTabsPerModel": "Model başına köprü",
     "placeHoldingTabs": "Yerleştir",
     "holdingTabCount": "{count, plural, =0 {Köprü yok} one {# köprü} other {# köprü}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Değiştirmek için yana sürükleyin"
+  },
+  "Pattern": {
+    "heading": "Desen",
+    "followsBoundary": "Doldurduğu çizimle birlikte taşınır, döner ve aynalanır: taşımak için o çizimi seçin. O çizimi yeniden boyutlandırmak dış hattı değiştirir; hücreler boyutlarını korur. Döndürme, aynalama ve kaydırma içindeki hücreleri taşır.",
+    "fill": "Desen",
+    "fillHint": "Seçili kapalı yolları bir desenle doldur",
+    "filling": "Dolduruluyor…",
+    "defaultName": "Desen",
+    "cell": "Hücre",
+    "cells": {
+      "square": "Kareler",
+      "brick": "Tuğlalar",
+      "hexagon": "Petek",
+      "triangle": "Üçgenler",
+      "diamond": "Baklavalar",
+      "circleSquare": "Daireler (kare ızgara)",
+      "circleHex": "Daireler (altıgen ızgara)",
+      "lines": "Çizgiler",
+      "crosshatch": "Çapraz tarama",
+      "wave": "Dalgalar",
+      "zigzag": "Zikzak",
+      "herringbone": "Balıksırtı",
+      "basketWeave": "Sepet örgüsü",
+      "fishScale": "Balık pulları",
+      "chevron": "Şeritler",
+      "star": "Yıldızlar",
+      "truchet": "Truchet yayları",
+      "voronoi": "Voronoi hücreleri"
+    },
+    "size": "Hücre boyutu",
+    "gap": "Aralık",
+    "inset": "İçe boşluk",
+    "amplitude": "Dalga yüksekliği",
+    "wavelength": "Dalga boyu",
+    "seed": "Tohum",
+    "rotation": "Döndürme",
+    "mirrored": "Aynalanmış",
+    "offset": {
+      "x": "Kaydırma X",
+      "y": "Kaydırma Y"
+    },
+    "tabsRemoved": "Artık hücrelerin üzerinde olmayan {count, plural, one {# tutucu} other {# tutucu}} kaldırıldı.",
+    "convert": "Çizime dönüştür",
+    "convertTitle": "Hücreleri aynı işlemlerle işlenen bir çizim olarak tut; artık sınırını izlemez"
   }
 }

@@ -15,6 +15,7 @@ import type { Translatable } from "@furrow/ui/lib/i18n";
 import { ShapesIcon, UploadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import { useSettledGestures } from "../hooks/use-settled-gestures";
 import { FONTS } from "../lib/fonts";
 import { shapePaths } from "../lib/path-selection";
 import { convertText, editText, textSettled, uploadedFonts, uploadFont } from "../lib/text-items";
@@ -60,35 +61,7 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
   const t = useTranslations("Text");
   const format = useFormatMessage();
 
-  /**
-   * The gesture start or end still waiting for the one before: a gesture begun
-   * while the last one's layouts land waits for it to commit, and so do its
-   * edits, so each gesture is its own undo step.
-   */
-  const pending = useRef<Promise<void> | null>(null);
-  function afterPending(step: () => void | Promise<void>): Promise<void> {
-    const next = (pending.current ?? Promise.resolve()).then(step);
-    pending.current = next;
-    void next.finally(() => {
-      if (pending.current === next) pending.current = null;
-    });
-    return next;
-  }
-  // A scrub or held arrow is one undo step: its layouts land before it ends.
-  const gestures = {
-    onGestureStart: () => {
-      const begin = () => store.getState().beginTransaction();
-      if (pending.current) void afterPending(begin);
-      else begin();
-    },
-    onGestureEnd: (cancelled: boolean) =>
-      afterPending(async () => {
-        await textSettled(drawingId);
-        const state = store.getState();
-        if (cancelled) state.cancelTransaction();
-        else state.commitTransaction();
-      }),
-  };
+  const { gestures, pending } = useSettledGestures(() => textSettled(drawingId));
 
   /** Applies `edits` once laid out; whether they were. */
   async function edit(edits: Partial<Omit<TextSettings, "placement">>): Promise<boolean> {

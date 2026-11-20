@@ -11,8 +11,9 @@ import {
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@furrow/ui/components/ui/native-select";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
+import { useTabCount } from "../../hooks/use-tab-count";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -23,6 +24,7 @@ import {
   autoPlaceTabs,
   DEFAULT_TAB_COUNT,
   defaultTabs,
+  tabContourCount,
   updateProfileParams,
 } from "../../stores/operation-actions";
 import { Checkbox } from "../checkbox";
@@ -235,7 +237,15 @@ function TabsFields({
   const editing = useWorkspaceStore((s) => s.editing === "tabs");
   const setEditing = useWorkspaceStore((s) => s.setEditing);
   const [mode, setMode] = useState<PlacementMode>("count");
-  const [count, setCount] = useState(DEFAULT_TAB_COUNT);
+  const geometry = useDocumentStore((s) => s.document.geometry);
+  const { targets } = operation;
+  const { side } = operation.params;
+  // Flattening and nesting every targeted path is slow on big drawings: only redo it when they change.
+  const contours = useMemo(
+    () => tabContourCount(geometry, targets, side),
+    [geometry, targets, side],
+  );
+  const [count, setCount] = useTabCount(tabs.positions.length, contours, DEFAULT_TAB_COUNT);
   const [spacing, setSpacing] = useState(100);
   const length = {
     layout: "inline",

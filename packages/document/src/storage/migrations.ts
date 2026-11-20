@@ -398,6 +398,18 @@ export const migrations: Readonly<Record<number, Migration>> = {
     }
     return doc;
   },
+  // #616: holding tabs belong to the stock, so one-sided projects have them
+  // too (ADR-0086). Two-sided ones keep theirs.
+  40: (doc) => {
+    if (isObject(doc.stock)) {
+      const { twoSided } = doc.stock;
+      doc.stock.tabs ??= (isObject(twoSided) && twoSided.tabs) || null;
+      if (isObject(twoSided)) delete twoSided.tabs;
+    }
+    return doc;
+  },
+  // #621: drawings can be patterns (ADR-0087). Existing documents have none.
+  41: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

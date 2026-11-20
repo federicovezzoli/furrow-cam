@@ -10,6 +10,7 @@ import type { DocumentStore } from "../stores/document-store";
 import { addFont, setFontSingleStroke } from "../stores/font-actions";
 import { addTextItem, convertTextToDrawing, setTextItem } from "../stores/geometry-actions";
 import type { ActionResult } from "../stores/operation-actions";
+import { createEditQueue, type EditResult } from "./edit-queue";
 import {
   inspectFont,
   layoutText,
@@ -59,19 +60,15 @@ export async function addText(
 }
 
 type Edits = Partial<Omit<TextSettings, "placement">>;
-type EditResult = { ok: true; removedTabs: number } | { ok: false; error: Message };
 
-/**
- * A text item's edits waiting to be laid out, merged so the latest value of
- * each setting wins, and the callers waiting on them. One queue runs at a
- * time per item.
- */
-type Queue = {
-  edits: Edits | null;
-  waiting: ((result: EditResult) => void)[];
-  fonts?: UploadedFonts;
-};
-const queues = new Map<string, Queue>();
+const textEdits = createEditQueue<TextSettings, Edits, UploadedFonts>({
+  read: (store, id) => store.getState().document.drawings.find((d) => d.id === id)?.text,
+  apply: (text, edits) => ({ ...text, ...edits }),
+  derive: (_, settings, fonts) => layout(settings, fonts),
+  // Moved, resized or turned: its placement or height changed.
+  moved: (store, id, before) => currentText(store, id) !== before,
+  commit: (store, id, settings, paths) => setTextItem(store, id, settings, paths),
+});
 
 /**
  * Changes text item `id`'s `edits` and lays it out again off the main thread,
@@ -87,18 +84,7 @@ export function editText(
   edits: Edits,
   fonts?: UploadedFonts,
 ): Promise<EditResult> {
-  return new Promise((resolve) => {
-    const queue = queues.get(id);
-    if (queue) {
-      queue.edits = { ...queue.edits, ...edits };
-      queue.waiting.push(resolve);
-      queue.fonts ??= fonts;
-      return;
-    }
-    const started: Queue = { edits, waiting: [resolve], fonts };
-    queues.set(id, started);
-    void run(store, id, started);
-  });
+  return textEdits.edit(store, id, edits, fonts);
 }
 
 /**
@@ -106,8 +92,7 @@ export function editText(
  * how the last went, or `null` if none was.
  */
 export function textSettled(id: string): Promise<EditResult | null> {
-  const queue = queues.get(id);
-  return queue ? new Promise((resolve) => queue.waiting.push(resolve)) : Promise.resolve(null);
+  return textEdits.settled(id);
 }
 
 /**
@@ -124,37 +109,6 @@ export async function convertText(store: DocumentStore, id: string): Promise<Act
   if (state.inTransaction) state.commitTransaction();
   convertTextToDrawing(store, id);
   return { ok: true };
-}
-
-async function run(store: DocumentStore, id: string, queue: Queue) {
-  let result: EditResult = { ok: true, removedTabs: 0 };
-  while (queue.edits) {
-    const edits = queue.edits;
-    queue.edits = null;
-    const text = currentText(store, id);
-    if (!text) break;
-    const settings = { ...text, ...edits };
-    const laid = await layout(settings, queue.fonts);
-    // Read again: `editText` may have queued newer edits during the layout.
-    const newer = queue.edits as Edits | null;
-    if (newer) {
-      // Lay theirs out over these instead.
-      queue.edits = { ...edits, ...newer };
-      continue;
-    }
-    if (!laid.ok) {
-      result = laid;
-      break;
-    }
-    // Moved, resized or turned meanwhile: lay it out again where it is now.
-    if (currentText(store, id) !== text) {
-      queue.edits = edits;
-      continue;
-    }
-    result = setTextItem(store, id, settings, laid.paths);
-  }
-  queues.delete(id);
-  for (const resolve of queue.waiting) resolve(result);
 }
 
 function currentText(store: DocumentStore, id: string) {

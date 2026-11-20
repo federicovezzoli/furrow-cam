@@ -20,16 +20,27 @@ export function autoTabPositions(
   placement: TabPlacement,
   tolerance = DEFAULT_CHORD_TOLERANCE,
 ): Point[] {
-  const loops = closedLoops(shapes, tolerance);
-  const freeing =
-    side === "outside" ? loops.filter((loop) => nestingDepth(loop, loops) % 2 === 0) : loops;
-  return freeing.flatMap((loop) => {
+  return tabContours(shapes, side, tolerance).flatMap((loop) => {
     const count = Math.max(
       1,
       Math.round("count" in placement ? placement.count : loopLength(loop) / placement.spacing),
     );
     return spreadAlong(loop, count);
   });
+}
+
+/**
+ * The closed paths of `shapes`, flattened, that a profile on `side` frees a
+ * piece with and gets tabs on: the outlines (even nesting depth) of an
+ * outside profile, every closed path otherwise.
+ */
+export function tabContours(
+  shapes: Shape[],
+  side: ProfileSide,
+  tolerance = DEFAULT_CHORD_TOLERANCE,
+): Point[][] {
+  const loops = closedLoops(shapes, tolerance);
+  return side === "outside" ? loops.filter((loop) => nestingDepth(loop, loops) % 2 === 0) : loops;
 }
 
 /** `count` points spread evenly along `loop`, the first half a gap from its start; none on a loop of no length. */

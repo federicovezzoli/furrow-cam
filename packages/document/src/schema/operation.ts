@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Point, type Shape } from "./geometry";
+import { Point, type Shape, ShapePaths } from "./geometry";
 import type { DocumentMessage } from "./message";
 import { Tool } from "./tool";
 import { Name, PositiveLength } from "./units";
@@ -15,22 +15,9 @@ export const OperationType = z.enum([
 ]);
 export type OperationType = z.infer<typeof OperationType>;
 
-/**
- * Some or all of a shape's paths (ADR-0018). Shapes aren't edited after
- * import, so path indices are stable.
- */
-export const OperationTarget = z.strictObject({
-  shapeId: z.uuid(),
-  /** Indices into the shape's `paths`, ascending, or `null` for all of them. */
-  paths: z
-    .array(z.int().nonnegative())
-    .min(1)
-    .refine((paths) => paths.every((path, i) => i === 0 || path > (paths[i - 1] as number)), {
-      message: "operation.pathIndices",
-    })
-    .nullable(),
-});
-export type OperationTarget = z.infer<typeof OperationTarget>;
+/** Some or all of a shape's paths an operation machines (ADR-0018). */
+export const OperationTarget = ShapePaths;
+export type OperationTarget = ShapePaths;
 
 /**
  * Distance between neighbouring passes, as a percentage of the tool's

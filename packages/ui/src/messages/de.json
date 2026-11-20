@@ -563,16 +563,20 @@
       "unknownDrawing": "Unbekannte Zeichnungs-ID",
       "emptyDrawing": "Eine Zeichnung braucht mindestens eine Form",
       "textShapes": "Ein Text braucht genau eine Form",
+      "patternShapes": "Ein Muster braucht genau eine Form",
+      "textAndPattern": "Eine Zeichnung kann nicht zugleich Text und Muster sein",
+      "patternBoundary": "Ein Muster füllt Pfade genau einer anderen Zeichnung, keines Musters",
       "duplicateFont": "Doppelte Schrift",
       "unknownFont": "Der Text nutzt eine Schrift, die das Projekt nicht enthält",
       "tooManyFonts": "Ein Projekt enthält höchstens {max} Schriften",
       "unknownShape": "Unbekannte Form-ID",
       "unknownPath": "Unbekannter Pfad",
+      "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
+      "openBoundaryPath": "Ein Muster füllt nur geschlossene Pfade",
       "pinHolesThrough": "Sacklöcher für die Stifte müssen im Rohteil enden",
-      "tabsThickerThanSide": "Haltestege müssen dünner sein als die Tiefe der Unterseite"
+      "tabsThickerThanSide": "Haltestege müssen dünner sein als die Tiefe, die um das Teil geschnitten wird"
     },
     "operation": {
-      "pathIndices": "Pfadindizes müssen aufsteigend sein, jeder einmal",
       "allowanceZeroOnLine": "Muss auf der Linie 0 sein",
       "overcutsOnLine": "Nicht auf der Linie",
       "plungeWithTabs": "Nicht mit Haltestegen",
@@ -723,7 +727,7 @@
       "holesOffStock": "Eine gesetzte Bohrung liegt außerhalb des Rohteils.",
       "noHoles": "Nichts zu bohren: Bohrungen im Ansichtsfenster setzen oder ausgewählte Formen verwenden.",
       "cutsPins": "Diese Operation schneidet dort, wo ein Passstift sitzt, daher würde das Werkzeug den Stift treffen, wenn das Rohteil gewendet ist: Verschiebe die Stifte oder den Schnitt.",
-      "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald die Unterseite rundherum schneidet.",
+      "noHoldingTabs": "Keine Haltestege: Das Teil löst sich, sobald es rundherum freigeschnitten ist.",
       "stockBoundaryTwoSided": "Wird auf beiden Seiten das ganze Rohteil bearbeitet, bleibt kein Rahmen, an dem das Teil hält: Arbeite mit einem Rand.",
       "reachesOtherModel": "Das Werkzeug schneidet in ein anderes Modell, dem diese Operation nicht folgt: Nur ihr eigenes Modell wird bearbeitet. Verwende eine kleinere Begrenzung oder rücke die Modelle auseinander."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "Die Höhendaten konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
       "inlayClosedPaths": "Wähle geschlossene Pfade aus, um daraus eine Einlage zu machen.",
       "inlayGap": "Der Leimspalt muss mindestens 0 und kleiner als die Taschentiefe sein.",
-      "inlayTooDeep": "Diese Einlage ist zu tief für den Kegel des V-Fräsers oder das Rohteil: Die Tasche muss im Kegel bleiben und der Boden des Einsatzes im Rohteil."
+      "inlayTooDeep": "Diese Einlage ist zu tief für den Kegel des V-Fräsers oder das Rohteil: Die Tasche muss im Kegel bleiben und der Boden des Einsatzes im Rohteil.",
+      "patternEmpty": "Keine Zelle passt in die Begrenzung: Zellen oder Einzug verkleinern.",
+      "patternTooDense": "Die Zellen sind für diese Begrenzung zu klein: vergrößern Sie sie.",
+      "patternFailed": "Das Muster konnte nicht erzeugt werden.",
+      "patternNoSelection": "Geschlossene Pfade einer Zeichnung zum Füllen auswählen.",
+      "patternOneDrawing": "Nur Pfade einer Zeichnung auswählen.",
+      "patternOfPattern": "Ein Muster kann nicht mit einem anderen gefüllt werden.",
+      "patternNoClosedPath": "Die Auswahl hat keinen geschlossenen Pfad zum Füllen."
     },
     "terrain": {
       "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",
@@ -1101,7 +1112,9 @@
     "show": "{name} einblenden",
     "hide": "{name} ausblenden",
     "lock": "{name} sperren",
-    "unlock": "{name} entsperren"
+    "unlock": "{name} entsperren",
+    "download": "{name} als STL herunterladen",
+    "downloadFailed": "Die Datei dieses Modells konnte nicht gelesen werden."
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Schieben Sie diese Ecke des Rohteils für beide Seiten in eine Anschlagecke. Die Seiten treffen sich nur, wenn das Rohteil entlang {axis} genau {size} misst: messen Sie es nach.",
     "idlePinDrills": "{count, plural, one {# Bohrung der Stifte bohrt} other {# Bohrungen der Stifte bohren}} ohne Stifte nichts.",
     "holdingTabs": "Haltestege",
-    "holdingTabsHint": "Streifen des Rohteils, die die Unterseite auf der Trenntiefe stehen lässt, damit das Teil bis zum letzten Durchgang hält. In der Draufsicht entlang der Modellumrisse ziehen.",
+    "holdingTabsHint": "Streifen des Rohteils, die die 3D-Operationen um jedes Modell stehen lassen, auf dem Boden des Rohteils oder, beidseitig, auf der Trenntiefe, damit das Teil bis zum letzten Durchgang hält. In der Draufsicht entlang der Modellumrisse ziehen.",
     "holdingTabWidth": "Stegbreite",
     "holdingTabThickness": "Stegdicke",
     "holdingTabFullHeight": "Volle Höhe",
-    "holdingTabTooThick": "Muss dünner sein als die Tiefe der Unterseite: weniger als {size}",
+    "holdingTabTooThick": "Muss dünner sein als die Tiefe, die um das Teil geschnitten wird: weniger als {size}",
     "holdingTabsPerModel": "Stege pro Modell",
     "placeHoldingTabs": "Verteilen",
     "holdingTabCount": "{count, plural, =0 {Keine Stege} one {# Steg} other {# Stege}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Seitlich ziehen zum Ändern"
+  },
+  "Pattern": {
+    "heading": "Muster",
+    "followsBoundary": "Es bewegt, dreht und spiegelt sich mit der Zeichnung, die es füllt: Wählen Sie diese aus, um es zu verschieben. Ändern Sie deren Größe, ändert sich der Umriss; die Zellen behalten ihre Größe. Drehung, Spiegelung und Versatz verschieben die Zellen darin.",
+    "fill": "Muster",
+    "fillHint": "Die ausgewählten geschlossenen Pfade mit einem Muster füllen",
+    "filling": "Wird gefüllt…",
+    "defaultName": "Muster",
+    "cell": "Zelle",
+    "cells": {
+      "square": "Quadrate",
+      "brick": "Ziegel",
+      "hexagon": "Waben",
+      "triangle": "Dreiecke",
+      "diamond": "Rauten",
+      "circleSquare": "Kreise (quadratisches Raster)",
+      "circleHex": "Kreise (Sechseckraster)",
+      "lines": "Linien",
+      "crosshatch": "Kreuzschraffur",
+      "wave": "Wellen",
+      "zigzag": "Zickzack",
+      "herringbone": "Fischgrät",
+      "basketWeave": "Korbgeflecht",
+      "fishScale": "Fischschuppen",
+      "chevron": "Chevrons",
+      "star": "Sterne",
+      "truchet": "Truchet-Bögen",
+      "voronoi": "Voronoi-Zellen"
+    },
+    "size": "Zellgröße",
+    "gap": "Abstand",
+    "inset": "Einzug",
+    "amplitude": "Wellenhöhe",
+    "wavelength": "Wellenlänge",
+    "seed": "Startwert",
+    "rotation": "Drehung",
+    "mirrored": "Gespiegelt",
+    "offset": {
+      "x": "Versatz X",
+      "y": "Versatz Y"
+    },
+    "tabsRemoved": "{count, plural, one {# Haltesteg entfernt, der} other {# Haltestege entfernt, die}} nicht mehr auf den Zellen lagen.",
+    "convert": "In Zeichnung umwandeln",
+    "convertTitle": "Die Zellen als Zeichnung behalten, von denselben Operationen bearbeitet; sie folgt ihrer Begrenzung nicht mehr"
   }
 }

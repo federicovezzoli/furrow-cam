@@ -6,6 +6,7 @@ import {
   excludeOvercuts,
   type HoldingTabStrip,
   holdingTabStrips,
+  holdingTabTop,
   holeSnapTargets,
   modelOutlines,
   nearestHoleSnap,
@@ -171,15 +172,16 @@ export function HoldingTabs({
   );
   const store = useDocumentStoreApi();
   const loops = useMemo(() => modelOutlines(models), [models]);
-  const tabs = stock.twoSided?.tabs;
+  const { tabs } = stock;
   const strips = useMemo(
     () => (tabs ? drawnHoldingTabStrips(stock, models, tabs, previews) : []),
     [stock, models, tabs, previews],
   );
-  if (!stock.twoSided || !tabs) return null;
+  if (!tabs) return null;
   // A full-height tab (#606) fills the stock from top to bottom.
   const thickness = tabs.fullHeight ? stock.thickness : tabs.thickness;
-  const top = tabs.fullHeight ? 0 : -stock.twoSided.partingDepth;
+  // Drawn from the top side; two-sided, the tab hangs below the parting plane it tops there.
+  const top = holdingTabTop(stock, tabs, false);
 
   return strips.map(({ at, to }, index) => (
     <TabMarker

@@ -4,6 +4,8 @@ import {
   DEFAULT_CHORD_TOLERANCE,
   drawingFit,
   holeSnapTargets,
+  MIN_LENGTH,
+  mapPlacement,
   mapShapes,
   mapText,
   mirrorPoint,
@@ -11,6 +13,7 @@ import {
   nearestOnLoops,
   type Rect,
   rotatePoint,
+  roundCoordinate,
   type SnapEdge,
   type SnapTarget,
   scalePoint,
@@ -32,6 +35,7 @@ import {
   type Message,
   type Operation,
   type Path,
+  type PatternSettings,
   type Point,
   type ProfileStartPoint,
   type ProjectDocument,
@@ -41,8 +45,10 @@ import {
   segmentIssue,
   type TextSettings,
 } from "@furrow/document";
+import type { Draft } from "immer";
+import { generatePattern, stalePatterns } from "../lib/patterns";
 import { FONT_REMOVED } from "../lib/text-layout";
-import type { DocumentStore } from "./document-store";
+import type { DocumentState, DocumentStore } from "./document-store";
 import { modelAnchor } from "./model-actions";
 import { type ActionResult, hasPlacedHoles } from "./operation-actions";
 
@@ -116,13 +122,13 @@ function placeDrawing(
   const [bx, by] = anchorPoint(bounds, anchor);
   const offset: Point = [x - bx, y - by];
   const moved = { ...drawing };
-  moveTextWithOutlines(moved, (point) => translatePoint(point, offset));
+  moveSettingsWithShapes(moved, (point) => translatePoint(point, offset));
   addDrawing(store, name, moved, translateShapes(shapes, offset));
   return true;
 }
 
 /** Adds `drawing` and its `shapes`, as they are, as one undo step. */
-function addDrawing(store: DocumentStore, name: string, drawing: Drawing, shapes: Shape[]) {
+export function addDrawing(store: DocumentStore, name: string, drawing: Drawing, shapes: Shape[]) {
   // One assignment, not a spread push: a file may hold more shapes than a call takes arguments.
   const geometry = store.getState().document.geometry.concat(shapes);
   store.getState().change(name, (draft) => {
@@ -158,41 +164,184 @@ export function setTextItem(
   ) {
     return { ok: false, error: FONT_REMOVED };
   }
+  const drawing = document.drawings.find((d) => d.id === id && d.text);
   const [shape] = drawingShapes(document.geometry, id);
-  if (!shape || !document.drawings.some((drawing) => drawing.id === id && drawing.text)) {
-    return { ok: true, removedTabs: 0 };
-  }
-  const index = document.geometry.indexOf(shape);
-  const loops = closedLoops([{ ...shape, paths }]);
-  const onOutlines = (position: Point) =>
-    (nearestOnLoops(loops, position)?.distance ?? Infinity) <= TAB_ON_OUTLINE;
-  /** Which tabs of each profile go: those on the old paths and off the new ones. */
-  const gone = new Map(
-    [...drawingMarkers(document, id)].map(([operationId, { tabs: own }]) => {
+  if (!drawing || !shape) return { ok: true, removedTabs: 0 };
+  // The patterns its letters bound fill the new ones (ADR-0087); one that no longer fits keeps its cells.
+  const derived = new Map([[id, paths]]);
+  const geometry = document.geometry.map((s) => (s === shape ? { ...shape, paths } : s));
+  const followers = followPatterns(store, document, geometry, new Set([shape.id]), derived, {
+    renumbered: true,
+  });
+  const change = derivedPathsChange(document, derived);
+  store.getState().change("setText", (draft) => {
+    const d = draft.drawings.find(({ id: candidate }) => candidate === id);
+    if (d) Object.assign(d, { name: textName(text.text), text });
+    for (const follower of draft.drawings) {
+      const settings = followers.get(follower.id);
+      if (settings) follower.pattern = settings;
+    }
+    change.apply(draft);
+  });
+  return { ok: true, removedTabs: change.removedTabs };
+}
+
+/**
+ * The change that sets the paths of the one shape of each drawing in
+ * `derived`, a text item's outlines or a pattern's cells, derived again from
+ * their settings (ADR-0059, ADR-0087). The shapes keep their ids, so the
+ * operations machining them still do; their targets listing some of their
+ * paths take all of them, as do pattern boundaries on them, since the old
+ * paths' numbers mean nothing in the new ones. The profile tabs on their old
+ * paths, first moved by `move` when they moved too, stay if they lie on the
+ * new ones and go otherwise: `removedTabs` counts them.
+ */
+export function derivedPathsChange(
+  document: ProjectDocument,
+  derived: ReadonlyMap<string, Path[]>,
+  move: (point: Point) => Point = (point) => point,
+): { removedTabs: number; apply: (draft: Draft<ProjectDocument>) => void } {
+  const changed: { index: number; shape: Shape; paths: Path[] }[] = [];
+  const shapeIds = new Set<string>();
+  /** Per profile, which of its tabs lie on the changed shapes' old paths, and which of those go. */
+  const owned = new Map<string, boolean[]>();
+  const gone = new Map<string, boolean[]>();
+  for (const [id, paths] of derived) {
+    const [shape] = drawingShapes(document.geometry, id);
+    if (!shape) continue;
+    changed.push({ index: document.geometry.indexOf(shape), shape, paths });
+    shapeIds.add(shape.id);
+    const loops = closedLoops([{ ...shape, paths }]);
+    for (const [operationId, { tabs }] of drawingMarkers(document, id)) {
+      if (!tabs.some(Boolean)) continue;
       const operation = document.operations.find((candidate) => candidate.id === operationId);
       const positions =
         operation?.type === "profile" ? (operation.params.tabs?.positions ?? []) : [];
-      return [operationId, own.map((mine, i) => mine && !onOutlines(positions[i] as Point))];
-    }),
-  );
+      const mine = owned.get(operationId) ?? positions.map(() => false);
+      const off = gone.get(operationId) ?? positions.map(() => false);
+      tabs.forEach((own, i) => {
+        if (!own) return;
+        mine[i] = true;
+        const at = move(positions[i] as Point);
+        if ((nearestOnLoops(loops, at)?.distance ?? Infinity) > TAB_ON_OUTLINE) off[i] = true;
+      });
+      owned.set(operationId, mine);
+      gone.set(operationId, off);
+    }
+  }
   let removedTabs = 0;
   for (const flags of gone.values()) removedTabs += flags.filter(Boolean).length;
-  store.getState().change("setText", (draft) => {
-    const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing) Object.assign(drawing, { name: textName(text.text), text });
-    // By index: finding it through the draft would read every shape.
-    const target = draft.geometry[index];
-    if (target) target.paths = paths;
-    for (const operation of draft.operations) {
-      for (const own of operation.targets) {
-        if (own.shapeId === shape.id && own.paths !== null) own.paths = null;
+  return {
+    removedTabs,
+    apply: (draft) => {
+      // By index: finding them through the draft would read every shape. New
+      // objects, as the draft's geometry may hold the frozen shapes themselves.
+      for (const { index, shape, paths } of changed) draft.geometry[index] = { ...shape, paths };
+      const selections = draft.drawings.flatMap((d) => d.pattern?.boundary ?? []);
+      for (const own of selections) {
+        if (shapeIds.has(own.shapeId) && own.paths !== null) own.paths = null;
       }
-      const flags = gone.get(operation.id);
-      const tabs = operation.type === "profile" ? operation.params.tabs : null;
-      if (flags?.some(Boolean) && tabs) tabs.positions = tabs.positions.filter((_, i) => !flags[i]);
+      for (const operation of draft.operations) {
+        for (const own of operation.targets) {
+          if (shapeIds.has(own.shapeId) && own.paths !== null) own.paths = null;
+        }
+        const mine = owned.get(operation.id);
+        const tabs = operation.type === "profile" ? operation.params.tabs : null;
+        if (!mine || !tabs) continue;
+        // Both flag lists index the tabs as they were: map, then filter, once.
+        const flags = gone.get(operation.id) ?? [];
+        tabs.positions = tabs.positions
+          .map((position, i) => (mine[i] ? move(position) : position))
+          .filter((_, i) => !flags[i]);
+      }
+    },
+  };
+}
+
+/**
+ * The patterns bounded by `shapeIds`, which changed to `geometry`, with their
+ * settings once their placement is mapped by `move` (none: it stays): each
+ * generated again into `derived`, cells keeping their size; or, during a
+ * gesture, marked to be generated when it commits (`stalePatterns`), its cells
+ * mapped by `move` into `derived` meanwhile. A pattern that can't be generated
+ * keeps its cells, or refuses with `refuse` set, returning the reason instead.
+ */
+function followPatterns(
+  store: DocumentStore,
+  document: ProjectDocument,
+  geometry: readonly Shape[],
+  shapeIds: ReadonlySet<string>,
+  derived: Map<string, Path[]>,
+  {
+    move = null,
+    exact = false,
+    renumbered = false,
+    refuse = false,
+  }: {
+    move?: ((point: Point) => Point) | null;
+    /** Whether the caller maps their cells exactly with `move`, so none is generated. */
+    exact?: boolean;
+    /** Whether the boundary's paths are numbered afresh, as a text item's are. */
+    renumbered?: boolean;
+    refuse?: boolean;
+  },
+): Map<string, PatternSettings> {
+  const deferred = store.getState().inTransaction;
+  const followers = new Map<string, PatternSettings>();
+  for (const drawing of document.drawings) {
+    const pattern = drawing.pattern;
+    if (!pattern?.boundary.some(({ shapeId }) => shapeIds.has(shapeId))) continue;
+    // Selections of paths whose numbers are about to change take the whole shape.
+    const boundary = pattern.boundary.map((own) =>
+      renumbered && shapeIds.has(own.shapeId) ? { ...own, paths: null } : own,
+    );
+    const placement = move ? mapPlacement(pattern.placement, move).placement : pattern.placement;
+    const settings: PatternSettings = { ...pattern, placement, boundary };
+    followers.set(drawing.id, settings);
+    if (exact) continue;
+    const [cells] = drawingShapes(document.geometry, drawing.id);
+    if (deferred) {
+      stalePatterns.add(settings);
+      if (move && cells) derived.set(drawing.id, mapShapes([cells], move, false)[0]?.paths ?? []);
+      continue;
     }
+    const generated = generatePattern(geometry, settings);
+    if (generated.ok) derived.set(drawing.id, generated.paths);
+    else if (refuse) throw new RefusedPattern(generated.error);
+  }
+  return followers;
+}
+
+/** Thrown inside an action by `followPatterns` to refuse it, changing nothing. */
+class RefusedPattern extends Error {
+  constructor(readonly error: Message) {
+    super(error.code);
+  }
+}
+
+/**
+ * Generates once, as part of the gesture closing, the patterns whose cells
+ * were only mapped during it (`stalePatterns`). The document store calls it
+ * before committing a transaction, so each stays one undo step.
+ */
+export function settlePatterns(state: DocumentState) {
+  const { document } = state;
+  const stale = document.drawings.filter(({ pattern }) => pattern && stalePatterns.has(pattern));
+  if (stale.length === 0) return;
+  const derived = new Map<string, Path[]>();
+  // shortcut: one generation on the main thread as a gesture ends; move it to the worker if a dense pattern's drop janks.
+  for (const { id, pattern } of stale) {
+    const generated = pattern ? generatePattern(document.geometry, pattern) : null;
+    if (generated?.ok) derived.set(id, generated.paths);
+  }
+  const change = derivedPathsChange(document, derived);
+  state.change("settlePatterns", (draft) => {
+    for (const drawing of draft.drawings) {
+      // A fresh copy, generated: no longer stale.
+      if (derived.has(drawing.id) && drawing.pattern) drawing.pattern = { ...drawing.pattern };
+    }
+    change.apply(draft);
   });
-  return { ok: true, removedTabs };
 }
 
 /** The shapes of drawing `id`. */
@@ -374,12 +523,16 @@ function drawingHoles(document: ProjectDocument, id: string): (point: Point) => 
 }
 
 /**
- * Keeps text item `drawing`'s placement on its outlines once `move` has
- * rewritten their points (ADR-0059). Every change to a text item's points
- * calls it with the same move, in the same undo step.
+ * Keeps a text item's or a pattern's placement on its shapes once `move` has
+ * rewritten their points (ADR-0059, ADR-0087). Every change that moves all of
+ * a text item's or a pattern's points calls it with the same move, in the
+ * same undo step.
  */
-export function moveTextWithOutlines(drawing: Drawing, move: (point: Point) => Point) {
+export function moveSettingsWithShapes(drawing: Drawing, move: (point: Point) => Point) {
   if (drawing.text) drawing.text = mapText(drawing.text, move);
+  if (drawing.pattern) {
+    drawing.pattern = { ...drawing.pattern, ...mapPlacement(drawing.pattern.placement, move) };
+  }
 }
 
 /** Whether a segment of `shapes` has no length, or an arc no radius (`segmentIssue`). */
@@ -401,6 +554,8 @@ type Transform = {
   shapes: (shapes: Shape[]) => Shape[];
   point: (point: Point) => Point;
   rotation?: (degrees: number) => number;
+  /** Whether it mirrors, which flips arcs' direction (`mapShapes`). */
+  mirrored?: boolean;
 };
 
 /**
@@ -416,39 +571,150 @@ function transformDrawing(
   transform: Transform,
 ): ActionResult {
   const { document } = store.getState();
+  const drawing = document.drawings.find((d) => d.id === id);
+  if (drawing?.pattern) return transformPattern(store, name, drawing, drawing.pattern, transform);
   const shapes = drawingShapes(document.geometry, id);
   if (shapes.length === 0) return { ok: true };
   const rewritten = transform.shapes(shapes);
   if (degenerate(rewritten)) return { ok: false, error: TOO_SMALL };
   const byId = new Map(rewritten.map((shape) => [shape.id, shape]));
   // One assignment, not one per shape, as on import.
+  const boundaries = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
+
+  // The patterns it bounds follow it (ADR-0087): moved, turned and mirrored
+  // with it, or generated again inside it when it is scaled, keeping their
+  // cells' size.
+  const { scale } = mapPlacement(
+    { position: [0, 0], rotation: 0, mirrored: false },
+    transform.point,
+  );
+  const rigid = Math.abs(scale - 1) < 1e-9;
+  const own = new Set(shapes.map((shape) => shape.id));
+  const derived = new Map<string, Path[]>();
+  let followers: Map<string, PatternSettings>;
+  try {
+    followers = followPatterns(store, document, boundaries, own, derived, {
+      move: transform.point,
+      exact: rigid,
+      refuse: true,
+    });
+  } catch (error) {
+    if (error instanceof RefusedPattern) return { ok: false, error: error.error };
+    throw error;
+  }
+  // A move, turn or mirror carries their cells exactly, path numbers and all.
+  const moved = [id];
+  if (rigid) {
+    for (const followerId of followers.keys()) {
+      for (const cell of mapShapes(
+        drawingShapes(document.geometry, followerId),
+        transform.point,
+        transform.mirrored ?? false,
+      )) {
+        byId.set(cell.id, cell);
+      }
+      moved.push(followerId);
+    }
+  }
   const geometry = document.geometry.map((shape) => byId.get(shape.id) ?? shape);
-  const markers = drawingMarkers(document, id, true);
+  const markers = moved.map((movedId) => drawingMarkers(document, movedId, true));
+  const regenerated = [...derived.keys()].map((followerId) =>
+    drawingMarkers(document, followerId, true),
+  );
+  const change = derivedPathsChange(document, derived, transform.point);
   store.getState().change(name, (draft) => {
     draft.geometry = geometry;
-    const drawing = draft.drawings.find((d) => d.id === id);
-    if (drawing) {
-      moveTextWithOutlines(drawing, transform.point);
-      if (transform.rotation)
-        drawing.rotation = normalizeDegrees(transform.rotation(drawing.rotation));
+    for (const d of draft.drawings) {
+      const settings = followers.get(d.id);
+      if (d.id !== id && !settings) continue;
+      if (d.id === id) moveSettingsWithShapes(d, transform.point);
+      else if (settings) d.pattern = settings;
+      if (transform.rotation) d.rotation = normalizeDegrees(transform.rotation(d.rotation));
     }
-    for (const operation of draft.operations) {
-      const moved = markers.get(operation.id);
-      const move = (positions: Point[], own: boolean[]) =>
-        positions.forEach((position, i) => {
-          if (own[i]) positions[i] = transform.point(position);
-        });
-      if (moved && operation.type === "drill") move(operation.params.points, moved.holes);
-      if (!moved || (operation.type !== "profile" && operation.type !== "engrave")) continue;
-      if (operation.type === "profile" && operation.params.tabs) {
-        move(operation.params.tabs.positions, moved.tabs);
-      }
-      if (operation.type === "profile" && operation.params.cornerOvercuts) {
-        move(operation.params.cornerOvercuts.excluded, moved.overcuts);
-      }
-      const params: StartPointParams = operation.params;
-      params.startPoints = moveStartPoints(params.startPoints, transform.point, moved.startPoints);
+    for (const ofDrawing of markers) moveMarkers(draft, ofDrawing, transform.point, true);
+    // Their tabs move, or go, with their new cells.
+    for (const ofDrawing of regenerated) moveMarkers(draft, ofDrawing, transform.point, false);
+    change.apply(draft);
+  });
+  return { ok: true };
+}
+
+/** Moves the markers in `markers` (`drawingMarkers`) with `point`, profile tabs only `withTabs`. */
+function moveMarkers(
+  draft: Draft<ProjectDocument>,
+  markers: Map<string, OwnMarkers>,
+  point: (point: Point) => Point,
+  withTabs: boolean,
+) {
+  for (const operation of draft.operations) {
+    const moved = markers.get(operation.id);
+    const move = (positions: Point[], own: boolean[]) =>
+      positions.forEach((position, i) => {
+        if (own[i]) positions[i] = point(position);
+      });
+    if (moved && operation.type === "drill") move(operation.params.points, moved.holes);
+    if (!moved || (operation.type !== "profile" && operation.type !== "engrave")) continue;
+    if (withTabs && operation.type === "profile" && operation.params.tabs) {
+      move(operation.params.tabs.positions, moved.tabs);
     }
+    if (operation.type === "profile" && operation.params.cornerOvercuts) {
+      move(operation.params.cornerOvercuts.excluded, moved.overcuts);
+    }
+    const params: StartPointParams = operation.params;
+    params.startPoints = moveStartPoints(params.startPoints, point, moved.startPoints);
+  }
+}
+
+/**
+ * Transforms pattern `drawing` on its own (ADR-0087): its placement maps with
+ * `transform`, a scale multiplying its cells' lengths but not its inset, and
+ * its cells are generated again inside the same boundary, as one undo step,
+ * or during a gesture mapped, and generated as it commits. Refuses, changing
+ * nothing, cells smaller than the shortest length or none left inside.
+ */
+function transformPattern(
+  store: DocumentStore,
+  name: string,
+  drawing: Drawing,
+  pattern: PatternSettings,
+  transform: Transform,
+): ActionResult {
+  const { document, inTransaction } = store.getState();
+  const { placement, scale } = mapPlacement(pattern.placement, transform.point);
+  const scaled = (length: number) => roundCoordinate(length * scale);
+  const settings: PatternSettings = {
+    ...pattern,
+    placement,
+    size: scaled(pattern.size),
+    gap: scaled(pattern.gap),
+    amplitude: scaled(pattern.amplitude),
+    wavelength: scaled(pattern.wavelength),
+  };
+  if (Math.min(settings.size, settings.amplitude, settings.wavelength) < MIN_LENGTH) {
+    return { ok: false, error: TOO_SMALL };
+  }
+  const [cells] = drawingShapes(document.geometry, drawing.id);
+  let paths: Path[];
+  if (inTransaction) {
+    stalePatterns.add(settings);
+    paths = cells
+      ? (mapShapes([cells], transform.point, transform.mirrored ?? false)[0]?.paths ?? [])
+      : [];
+  } else {
+    const generated = generatePattern(document.geometry, settings);
+    if (!generated.ok) return generated;
+    paths = generated.paths;
+  }
+  const markers = drawingMarkers(document, drawing.id, true);
+  const change = derivedPathsChange(document, new Map([[drawing.id, paths]]), transform.point);
+  store.getState().change(name, (draft) => {
+    const d = draft.drawings.find(({ id }) => id === drawing.id);
+    if (d) {
+      d.pattern = settings;
+      if (transform.rotation) d.rotation = normalizeDegrees(transform.rotation(d.rotation));
+    }
+    moveMarkers(draft, markers, transform.point, false);
+    change.apply(draft);
   });
   return { ok: true };
 }
@@ -507,6 +773,7 @@ function orientDrawing(
     shapes: () => translateShapes(turned, back),
     point: (point) => translatePoint(move(point, centre), back),
     rotation,
+    mirrored,
   });
 }
 
@@ -729,9 +996,10 @@ export function duplicateDrawing(store: DocumentStore, id: string): string | nul
   const geometry = document.geometry.concat(copies);
   const markers = drawingMarkers(document, id, true);
   store.getState().change("duplicateDrawing", (draft) => {
-    const { hidden: _, locked: __, ...original } = drawing;
+    // A pattern's copy is a plain drawing: it would fill the same boundary (ADR-0087).
+    const { hidden: _, locked: __, pattern: ___, ...original } = drawing;
     const copy = { ...original, id: copyId };
-    moveTextWithOutlines(copy, (point) => translatePoint(point, offset));
+    moveSettingsWithShapes(copy, (point) => translatePoint(point, offset));
     draft.drawings.push(copy);
     draft.geometry = geometry;
     for (const operation of draft.operations) {
@@ -787,6 +1055,12 @@ export function removeDrawing(store: DocumentStore, id: string) {
       draft.geometry.filter((shape) => shape.drawingId === id).map((shape) => shape.id),
     );
     draft.geometry = draft.geometry.filter((shape) => !removed.has(shape.id));
+    // A pattern it bounded becomes a plain drawing with the cells it had (ADR-0087, P8).
+    for (const drawing of draft.drawings) {
+      if (drawing.pattern?.boundary.some(({ shapeId }) => removed.has(shapeId))) {
+        delete drawing.pattern;
+      }
+    }
     draft.operations = draft.operations.filter((operation) => {
       const targets = operation.targets.filter(({ shapeId }) => !removed.has(shapeId));
       if (targets.length === operation.targets.length) return true;

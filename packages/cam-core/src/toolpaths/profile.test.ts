@@ -1231,6 +1231,7 @@ describe("generateToolpath", () => {
       zOrigin: "stock_top",
       touchOff: null,
       twoSided: null,
+      tabs: null,
     },
     machine:
       machineSafeZ === null

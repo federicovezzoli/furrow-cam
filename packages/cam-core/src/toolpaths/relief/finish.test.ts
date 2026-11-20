@@ -643,6 +643,7 @@ describe("generateToolpath", () => {
     flip: null,
     tabs: null,
     reachesOther: false,
+    loose: false,
     before: [],
     touchOff: null,
     pins: null,

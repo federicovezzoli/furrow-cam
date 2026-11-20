@@ -14,8 +14,10 @@ import { createMemoryHost } from "../lib/memory-host";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
 import {
+  autoPlaceTabs,
   defaultEngraveParams,
   defaultPocketParams,
+  moveTab,
   setStartPlunge,
 } from "../stores/operation-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
@@ -150,6 +152,34 @@ describe("OperationProperties", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit start points" }));
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(workspace.getState().editing).toBeNull();
+  });
+
+  it("counts the tabs already on each contour, and follows them (#618)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: fullDocument() }),
+    );
+    const count = () => window.document.getElementById("profile-tab-count") as HTMLInputElement;
+    const before = count().value;
+    act(() => {
+      autoPlaceTabs(store, OPERATION_ID, { count: 7 });
+    });
+    expect(count().value).toBe("7");
+    // A typed count survives a tab being moved.
+    fireEvent.change(count(), { target: { value: "5" } });
+    fireEvent.blur(count());
+    act(() => {
+      moveTab(store, OPERATION_ID, 0, [1, 1]);
+    });
+    expect(count().value).toBe("5");
+    act(() => {
+      store.getState().undo();
+      store.getState().undo();
+    });
+    expect(count().value).toBe(before);
   });
 
   it("counts plunge points, and keeps them and tabs apart (#427)", () => {

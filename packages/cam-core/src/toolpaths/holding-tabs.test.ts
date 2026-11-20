@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   autoHoldingTabPositions,
   holdingTabStrips,
+  holdingTabTop,
   modelOutlines,
   reachPreview,
 } from "./holding-tabs";
@@ -134,5 +135,30 @@ describe("reachPreview", () => {
     };
     expect(reachPreview(left, turned, preview)).toEqual({ ...left, at: [25, 30] });
     expect(reachPreview(right, turned, preview)).toEqual(right);
+  });
+});
+
+describe("holdingTabTop", () => {
+  const tabs = { thickness: 2, fullHeight: false };
+  const twoSided = { flipAxis: "x" as const, partingDepth: 9, lineUp: null };
+
+  it("stands one-sided tabs on the stock bottom (#616)", () => {
+    expect(holdingTabTop({ thickness: 18, twoSided: null }, tabs, false)).toBe(-16);
+  });
+
+  it("puts two-sided tabs past the parting plane below, at it above (ADR-0063)", () => {
+    expect(holdingTabTop({ thickness: 18, twoSided }, tabs, true)).toBe(-7);
+    expect(holdingTabTop({ thickness: 18, twoSided }, tabs, false)).toBe(-9);
+  });
+
+  it("tops full-height tabs at the stock top on any side (#606)", () => {
+    const full = { ...tabs, fullHeight: true };
+    for (const stock of [
+      { thickness: 18, twoSided: null },
+      { thickness: 18, twoSided },
+    ]) {
+      expect(holdingTabTop(stock, full, true)).toBe(0);
+      expect(holdingTabTop(stock, full, false)).toBe(0);
+    }
   });
 });

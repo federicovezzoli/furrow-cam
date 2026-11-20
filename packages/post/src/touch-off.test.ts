@@ -10,6 +10,7 @@ const stock: Stock = {
   zOrigin: "stock_top",
   touchOff: null,
   twoSided: null,
+  tabs: null,
 };
 
 describe("fillPlaceholders", () => {

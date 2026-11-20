@@ -563,16 +563,20 @@
       "unknownDrawing": "未知的图纸ID",
       "emptyDrawing": "图纸至少需要一个形状",
       "textShapes": "文字项必须恰好有一个形状",
+      "patternShapes": "图案必须恰好有一个形状",
+      "textAndPattern": "一个图形不能同时是文字项和图案",
+      "patternBoundary": "图案只能填充另一个非图案图形的路径",
       "duplicateFont": "字体重复",
       "unknownFont": "文字使用了项目中没有的字体",
       "tooManyFonts": "一个项目最多包含{max}种字体",
       "unknownShape": "未知的形状ID",
       "unknownPath": "未知的路径",
+      "pathIndices": "路径索引必须升序排列，且每个只出现一次",
+      "openBoundaryPath": "图案只能填充闭合路径",
       "pinHolesThrough": "盲孔定位销孔必须止于毛坯内部",
-      "tabsThickerThanSide": "保留桥必须比底面的加工深度薄"
+      "tabsThickerThanSide": "保留桥必须比工件周围的切削深度薄"
     },
     "operation": {
-      "pathIndices": "路径索引必须升序排列，且每个只出现一次",
       "allowanceZeroOnLine": "在线上加工时必须为0",
       "overcutsOnLine": "不能在线上",
       "plungeWithTabs": "不能与固定桥同时使用",
@@ -723,7 +727,7 @@
       "holesOffStock": "有一个放置的孔位于毛坯之外。",
       "noHoles": "没有可钻的内容:在视图中放置孔或使用所选形状。",
       "cutsPins": "此操作会切到定位销所在的位置，毛坯翻面后刀具会撞到定位销：请移动定位销或切削。",
-      "noHoldingTabs": "没有保留桥：底面绕工件一圈切完后，工件会松脱。",
+      "noHoldingTabs": "没有保留桥：工件四周切透后会松脱。",
       "stockBoundaryTwoSided": "两面都加工整个毛坯，将不会留下支撑工件的边框：请使用边距。",
       "reachesOtherModel": "刀具会切入另一个模型，而此操作不会沿该模型加工：只加工其自身的模型。请使用更小的边界，或将模型分开。"
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "无法获取高程数据。请检查网络连接后重试。",
       "inlayClosedPaths": "请选择闭合路径来制作镶嵌。",
       "inlayGap": "胶缝必须至少为 0，且小于凹槽深度。",
-      "inlayTooDeep": "此镶嵌对 V 形刀的锥体或毛坯来说太深：凹槽必须在锥体范围内，嵌件底面必须在毛坯内。"
+      "inlayTooDeep": "此镶嵌对 V 形刀的锥体或毛坯来说太深：凹槽必须在锥体范围内，嵌件底面必须在毛坯内。",
+      "patternEmpty": "边界内放不下任何单元:请缩小单元或内缩。",
+      "patternTooDense": "单元对此边界来说太小:请放大。",
+      "patternFailed": "无法生成图案。",
+      "patternNoSelection": "请选择要填充的图形的闭合路径。",
+      "patternOneDrawing": "请只选择一个图形的路径。",
+      "patternOfPattern": "图案不能用另一个图案填充。",
+      "patternNoClosedPath": "所选内容没有可填充的闭合路径。"
     },
     "terrain": {
       "noArea": "此区域太小，请绘制更大的区域。",
@@ -1101,7 +1112,9 @@
     "show": "显示 {name}",
     "hide": "隐藏 {name}",
     "lock": "锁定 {name}",
-    "unlock": "解锁 {name}"
+    "unlock": "解锁 {name}",
+    "download": "将 {name} 下载为 STL",
+    "downloadFailed": "无法读取此模型的文件。"
   },
   "ToolpathProgress": {
     "title": "正在计算刀具路径 · 已完成{done}/{total}",
@@ -1401,11 +1414,11 @@
     "edgesHint": "两面加工时都将毛坯的这个角推入靠山角。只有当毛坯沿{axis}恰好为{size}时，两面才能对齐：请测量。",
     "idlePinDrills": "{count, plural, other {#个定位销钻孔操作}}在没有定位销时不会切削任何内容。",
     "holdingTabs": "保留桥",
-    "holdingTabsHint": "底面在分模深度处保留的毛坯条，使工件在最后一刀之前保持固定。在顶视图中沿模型轮廓拖动它们。",
+    "holdingTabsHint": "3D 加工在每个模型周围保留的毛坯条，位于毛坯底部，或双面加工时位于分模深度，使工件在最后一刀之前保持固定。在顶视图中沿模型轮廓拖动它们。",
     "holdingTabWidth": "保留桥宽度",
     "holdingTabThickness": "保留桥厚度",
     "holdingTabFullHeight": "全高",
-    "holdingTabTooThick": "必须比底面的加工深度薄：小于{size}",
+    "holdingTabTooThick": "必须比工件周围的切削深度薄：小于{size}",
     "holdingTabsPerModel": "每个模型的保留桥数",
     "placeHoldingTabs": "放置",
     "holdingTabCount": "{count, plural, =0 {无保留桥} other {#个保留桥}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "左右拖动以更改"
+  },
+  "Pattern": {
+    "heading": "图案",
+    "followsBoundary": "它随所填充的图形一起移动、旋转和镜像：要移动它，请选择该图形。调整该图形的大小会改变轮廓，单元保持原有大小。旋转、镜像和偏移会移动其中的单元。",
+    "fill": "图案",
+    "fillHint": "用图案填充所选的闭合路径",
+    "filling": "正在填充…",
+    "defaultName": "图案",
+    "cell": "单元",
+    "cells": {
+      "square": "正方形",
+      "brick": "砖块",
+      "hexagon": "蜂窝",
+      "triangle": "三角形",
+      "diamond": "菱形",
+      "circleSquare": "圆(方形网格)",
+      "circleHex": "圆(六边形网格)",
+      "lines": "直线",
+      "crosshatch": "交叉线",
+      "wave": "波浪",
+      "zigzag": "锯齿",
+      "herringbone": "人字纹",
+      "basketWeave": "编篮纹",
+      "fishScale": "鱼鳞",
+      "chevron": "V 形纹",
+      "star": "星形",
+      "truchet": "Truchet 弧",
+      "voronoi": "Voronoi 单元"
+    },
+    "size": "单元大小",
+    "gap": "间隙",
+    "inset": "内缩",
+    "amplitude": "波高",
+    "wavelength": "波长",
+    "seed": "种子",
+    "rotation": "旋转",
+    "mirrored": "镜像",
+    "offset": {
+      "x": "X 偏移",
+      "y": "Y 偏移"
+    },
+    "tabsRemoved": "已移除 {count} 个不再位于单元上的连接片。",
+    "convert": "转换为图形",
+    "convertTitle": "将单元保留为图形,由相同的加工切削;它不再跟随其边界"
   }
 }

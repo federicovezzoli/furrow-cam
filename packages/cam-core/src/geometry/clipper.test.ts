@@ -1,9 +1,12 @@
 import { distance, type Point } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import {
+  clipLines,
+  clipToRect,
   containment,
   difference,
   intersection,
+  intersectionEach,
   nest,
   offset,
   type Polygon,
@@ -164,6 +167,50 @@ describe("booleans", () => {
 
   it("intersects shapes", () => {
     expect(totalArea(intersection([rect(0, 0, 10, 10)], [rect(5, 5, 10, 10)]))).toBeCloseTo(25, 6);
+  });
+
+  it("intersects touching subjects one by one, so they stay apart", () => {
+    const pieces = intersectionEach(
+      [[rect(0, 0, 10, 10)], [rect(10, 0, 10, 10)], [rect(50, 0, 1, 1)]],
+      [rect(5, 0, 10, 10)],
+    );
+    expect(pieces.map(totalArea)).toEqual([50, 50, 0]);
+  });
+
+  it("cuts rings to a rectangle, holes keeping their winding", () => {
+    const frame = [rect(0, 0, 100, 100), rect(20, 20, 60, 60).toReversed()];
+    const cut = clipToRect(frame, { min: [-10, -10], max: [50, 50] });
+    // The frame's quarter, less the hole's.
+    expect(totalArea(cut)).toBeCloseTo(50 * 50 - 30 * 30, 6);
+  });
+
+  it("clips open lines, which end on the clip's rings", () => {
+    const frame = [rect(0, 0, 100, 100), rect(20, 20, 60, 60).toReversed()];
+    const lines = clipLines(
+      [
+        [
+          [-10, 50],
+          [110, 50],
+        ],
+      ],
+      frame,
+    );
+    const ends = lines.map((line) => line.map(([x]) => x).sort((a, b) => a - b));
+    expect(ends.sort((a, b) => (a[0] as number) - (b[0] as number))).toEqual([
+      [0, 20],
+      [80, 100],
+    ]);
+    expect(
+      clipLines(
+        [
+          [
+            [200, 0],
+            [300, 0],
+          ],
+        ],
+        frame,
+      ),
+    ).toEqual([]);
   });
 
   it("keeps sub-micron coordinates to 0.0001 mm", () => {

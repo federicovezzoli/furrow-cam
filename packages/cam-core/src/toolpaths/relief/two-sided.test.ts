@@ -1,4 +1,12 @@
-import type { FlipAxis, Model, Operation, ProjectDocument, TwoSided } from "@furrow/document";
+// Relief toolpaths of two-sided projects, and the holding tabs they share with one-sided ones (#616).
+import type {
+  FlipAxis,
+  HoldingTabs,
+  Model,
+  Operation,
+  ProjectDocument,
+  TwoSided,
+} from "@furrow/document";
 import {
   ballEndMill,
   endMill,
@@ -55,7 +63,11 @@ function finishing(stockSide: Operation["stockSide"], rest = false): Operation {
   return { ...reliefFinish, id: id(), stockSide, tool: ballEndMill, params };
 }
 
-function project(operations: Operation[], twoSided: TwoSided): ProjectDocument {
+function project(
+  operations: Operation[],
+  twoSided: TwoSided | null,
+  tabs: HoldingTabs | null = null,
+): ProjectDocument {
   const doc = fullDocument();
   return {
     ...doc,
@@ -65,6 +77,7 @@ function project(operations: Operation[], twoSided: TwoSided): ProjectDocument {
       zOrigin: "stock_top",
       touchOff: null,
       twoSided,
+      tabs,
     },
     models: [BLOCK],
     operations,
@@ -94,7 +107,7 @@ describe("relief toolpaths on two sides", () => {
   ])("%s a symmetric model the same from below, mirrored, about %s", (_, cut, flipAxis, sx, sy) => {
     const operations = [cut("top"), cut("bottom")];
     const [top, bottom] = toolpaths(
-      project(operations, { flipAxis, partingDepth: 9, tabs: null, lineUp: null }),
+      project(operations, { flipAxis, partingDepth: 9, lineUp: null }),
     );
     const above = simulate(operations[0] as Operation, top as Toolpath);
     const below = simulate(operations[1] as Operation, bottom as Toolpath);
@@ -116,7 +129,7 @@ describe("relief toolpaths on two sides", () => {
   it("cuts each side down to the parting plane around the model and no further", () => {
     const operations = [roughing("top"), finishing("top"), roughing("bottom"), finishing("bottom")];
     const [roughTop, finishTop, roughBottom, finishBottom] = toolpaths(
-      project(operations, { flipAxis: "x", partingDepth: 6, tabs: null, lineUp: null }),
+      project(operations, { flipAxis: "x", partingDepth: 6, lineUp: null }),
     ) as Toolpath[];
     // 6 mm below the top, 12 mm below the bottom face.
     for (const toolpath of [roughTop, finishTop]) {
@@ -137,7 +150,7 @@ describe("relief toolpaths on two sides", () => {
     // 6 mm deep, so 3 mm of stock below it lies above the parting plane.
     const shallow = { ...BLOCK, placement: { ...BLOCK.placement, depth: 6 } };
     const doc = {
-      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null }),
+      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, lineUp: null }),
       models: [shallow],
     };
     const [top] = toolpaths(doc) as Toolpath[];
@@ -156,7 +169,7 @@ describe("relief toolpaths on two sides", () => {
     ]);
     const operations = [roughing("top"), finishing("top")];
     const [rough, finish] = toolpaths(
-      project(operations, { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null }),
+      project(operations, { flipAxis: "x", partingDepth: 9, lineUp: null }),
       cup,
     ) as Toolpath[];
     // Cells of 0.25 mm: the stock beside the model, then the pit's middle.
@@ -174,7 +187,7 @@ describe("relief toolpaths on two sides", () => {
     ]);
     const operations = [roughing("bottom"), finishing("bottom")];
     const [rough, finish] = toolpaths(
-      project(operations, { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null }),
+      project(operations, { flipAxis: "x", partingDepth: 9, lineUp: null }),
       mushroom,
     ) as Toolpath[];
     expect(simulate(operations[0] as Operation, rough as Toolpath)(20, 20)).toBeCloseTo(-9, 1);
@@ -198,7 +211,7 @@ describe("relief toolpaths on two sides", () => {
       positions: [[30, 12] as [number, number]],
     };
     const operations = [roughing("top"), roughing("bottom"), finishing("bottom")];
-    const doc = project(operations, { flipAxis, partingDepth: 9, tabs, lineUp: null });
+    const doc = project(operations, { flipAxis, partingDepth: 9, lineUp: null }, tabs);
     const [top, rough, finish] = toolpaths(doc) as Toolpath[];
     const inputs = toolpathInputs(doc);
     // The top side stops at the parting plane over them.
@@ -236,7 +249,7 @@ describe("relief toolpaths on two sides", () => {
       positions: [[30, 12] as [number, number]],
     };
     const operations = [roughing("top"), roughing("bottom"), finishing("bottom")];
-    const doc = project(operations, { flipAxis: "x", partingDepth: 9, tabs, lineUp: null });
+    const doc = project(operations, { flipAxis: "x", partingDepth: 9, lineUp: null }, tabs);
     for (const input of toolpathInputs(doc)) expect(input.tabs?.map(({ top }) => top)).toEqual([0]);
     for (const [index, toolpath] of (toolpaths(doc) as Toolpath[]).entries()) {
       const after = simulate(operations[index] as Operation, toolpath);
@@ -257,7 +270,7 @@ describe("relief toolpaths on two sides", () => {
       fullHeight: false,
       positions: [[30, 12] as [number, number]],
     };
-    const doc = project(operations, { flipAxis: "x", partingDepth: 9, tabs, lineUp: null });
+    const doc = project(operations, { flipAxis: "x", partingDepth: 9, lineUp: null }, tabs);
     // Both models at the same place, so the tab goes to the first.
     const [held, loose] = toolpaths({ ...doc, models: [BLOCK, other] }) as Toolpath[];
     expect(held?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
@@ -267,7 +280,7 @@ describe("relief toolpaths on two sides", () => {
   it("warns when the bottom side frees the part without tabs, or roughs the whole stock", () => {
     const operations = [roughing("top"), roughing("bottom"), finishing("bottom")];
     const [top, rough, finish] = toolpaths(
-      project(operations, { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null }),
+      project(operations, { flipAxis: "x", partingDepth: 9, lineUp: null }),
     ) as Toolpath[];
     expect(top?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
     expect(rough?.warnings).toContainEqual({ code: "toolpath.noHoldingTabs" });
@@ -288,7 +301,7 @@ describe("relief toolpaths on two sides", () => {
       finishing("bottom", true),
     ];
     const doc = {
-      ...project(operations, { flipAxis: "y", partingDepth: 9, tabs: null, lineUp: null }),
+      ...project(operations, { flipAxis: "y", partingDepth: 9, lineUp: null }),
     };
     const inputs = toolpathInputs({ ...doc, geometry: fullDocument().geometry });
     expect(inputs[4]?.before.map((input) => input.operation)).toEqual([
@@ -299,9 +312,69 @@ describe("relief toolpaths on two sides", () => {
 
   it("machines one-sided projects as before", () => {
     const doc = {
-      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null }),
+      ...project([roughing("top")], { flipAxis: "x", partingDepth: 9, lineUp: null }),
     };
     const [oneSided] = toolpathInputs({ ...doc, stock: { ...doc.stock, twoSided: null } });
-    expect(oneSided).toMatchObject({ parting: null, flip: null, tabs: null, stockBottom: -18 });
+    expect(oneSided).toMatchObject({ parting: null, flip: null, tabs: [], stockBottom: -18 });
+  });
+});
+
+describe("relief toolpaths on one side (#616)", () => {
+  const tabs = {
+    width: 6,
+    thickness: 2,
+    fullHeight: false,
+    positions: [[30, 12] as [number, number]],
+  };
+
+  it("leaves the holding tabs their thickness up from the stock bottom", () => {
+    const operations = [roughing("top"), finishing("top")];
+    const doc = project(operations, null, tabs);
+    const strip = { modelId: BLOCK.id, width: 6, from: [30, 20], to: [30, 0] };
+    expect(toolpathInputs(doc)[0]?.tabs).toEqual([{ ...strip, top: -16 }]);
+    const [rough, finish] = toolpaths(doc) as Toolpath[];
+    for (const [index, toolpath] of [rough, finish].entries()) {
+      const after = simulate(operations[index] as Operation, toolpath as Toolpath);
+      for (const [x, y] of [
+        [27.2, 3],
+        [30, 10],
+        [32.8, 18],
+      ]) {
+        expect(
+          after(Math.floor((x as number) * 4), Math.floor((y as number) * 4)),
+        ).toBeGreaterThanOrEqual(-16 - 1e-6);
+      }
+      expect(toolpath?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
+    }
+    // Beside the tab, the roughing cuts through to the stock bottom.
+    expect(simulate(operations[0] as Operation, rough as Toolpath)(45 * 4, 10 * 4)).toBeCloseTo(
+      -18,
+      1,
+    );
+  });
+
+  it("leaves full-height holding tabs uncut", () => {
+    const doc = project([roughing("top")], null, { ...tabs, fullHeight: true });
+    expect(toolpathInputs(doc)[0]?.tabs?.map(({ top }) => top)).toEqual([0]);
+  });
+
+  it("warns about a model cut free at the stock bottom without tabs, not one that stays on the stock", () => {
+    const [loose] = toolpaths(project([roughing("top"), finishing("top")], null)) as Toolpath[];
+    expect(loose?.warnings).toContainEqual({ code: "toolpath.noHoldingTabs" });
+    const shallow = { ...BLOCK, placement: { ...BLOCK.placement, depth: 12 } };
+    const doc = { ...project([roughing("top")], null), models: [shallow] };
+    const [held] = toolpaths(doc) as Toolpath[];
+    expect(held?.warnings).not.toContainEqual({ code: "toolpath.noHoldingTabs" });
+  });
+
+  it("doesn't warn about a model that fills the stock, with no stock round it to come loose from", () => {
+    const full = {
+      ...BLOCK,
+      bounds: { min: [0, 0, 0], max: [60, 50, 18] },
+      placement: { ...BLOCK.placement, position: [0, 0] },
+    } satisfies Model;
+    const doc = { ...project([roughing("top")], null), models: [full] };
+    expect(toolpathInputs(doc)[0]?.loose).toBe(false);
+    expect(toolpathInputs(project([roughing("top")], null))[0]?.loose).toBe(true);
   });
 });

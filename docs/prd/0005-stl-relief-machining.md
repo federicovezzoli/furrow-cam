@@ -47,6 +47,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | S10 | Other finishing patterns: waterline (constant Z) and spiral | Should |
 | S11 | Rest machining for 2D pockets, reusing S8 | Could |
 | S12 | 3D operations leave the touch-off pad, once the user turns it on, at the stock top (PRD-0002 Z11), so Z can be zeroed on it after the tool change between roughing and finishing | Should |
+| S13 | Holding tabs on one-sided jobs: the user can turn on the holding tabs of PRD-0011 B5 without making the project two-sided. Each stands its thickness up from the stock bottom, so a model reaching the stock bottom stays held until the last pass. A warning when such a model has none | Should |
 
 ## User flow
 
@@ -77,3 +78,4 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-11-01: S1b, STEP import, no longer a non-goal (#442, ADR-0072)
 - 2026-11-07: S2 adds *Center on stock* (#495)
 - 2026-11-15: S1c, several models per project (#596, ADR-0085)
+- 2026-11-16: S13, holding tabs on one-sided jobs (#616, ADR-0086)

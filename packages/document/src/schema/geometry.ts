@@ -117,6 +117,24 @@ export const Path = z
   });
 export type Path = z.infer<typeof Path>;
 
+/**
+ * Some or all of a shape's paths (ADR-0018): an operation's target or a
+ * pattern's boundary (ADR-0087). Imported shapes aren't edited, so path
+ * indices are stable.
+ */
+export const ShapePaths = z.strictObject({
+  shapeId: z.uuid(),
+  /** Indices into the shape's `paths`, ascending, or `null` for all of them. */
+  paths: z
+    .array(z.int().nonnegative())
+    .min(1)
+    .refine((paths) => paths.every((path, i) => i === 0 || path > (paths[i - 1] as number)), {
+      message: "document.pathIndices",
+    })
+    .nullable(),
+});
+export type ShapePaths = z.infer<typeof ShapePaths>;
+
 export const TextAlign = z.enum(["left", "center", "right"]);
 export type TextAlign = z.infer<typeof TextAlign>;
 
@@ -168,13 +186,80 @@ export type TextSettings = z.infer<typeof TextSettings>;
 export const DEFAULT_LINE_SPACING = 1.7;
 
 /**
+ * The cells a pattern tiles (PRD-0016 P6). `lines`, `crosshatch`, `wave`,
+ * `zigzag` and `truchet` draw open lines; the others closed cells.
+ */
+export const PatternCell = z.enum([
+  "square",
+  "brick",
+  "hexagon",
+  "triangle",
+  "diamond",
+  "circleSquare",
+  "circleHex",
+  "lines",
+  "crosshatch",
+  "wave",
+  "zigzag",
+  "herringbone",
+  "basketWeave",
+  "fishScale",
+  "chevron",
+  "star",
+  "truchet",
+  "voronoi",
+]);
+export type PatternCell = z.infer<typeof PatternCell>;
+
+/** The cells drawn as open lines, which have no gap and end on the boundary (P3). */
+export const LINE_PATTERN_CELLS: readonly PatternCell[] = [
+  "lines",
+  "crosshatch",
+  "wave",
+  "zigzag",
+  "truchet",
+];
+
+/**
+ * A pattern's settings (PRD-0016 P5, ADR-0087), from which its paths are
+ * generated inside its boundary. Lengths in millimetres.
+ */
+export const PatternSettings = z.strictObject({
+  cell: PatternCell,
+  /** A cell's width, or the spacing between a line pattern's lines. */
+  size: PositiveLength,
+  /** The wall left between closed cells, taken off each one; zero for shared edges. */
+  gap: z.number().nonnegative(),
+  /** How far inside the boundary the pattern stops (P3). */
+  inset: z.number().nonnegative(),
+  /** A wave's or a zigzag's height, crest to trough. */
+  amplitude: PositiveLength,
+  /** A wave's or a zigzag's length along its line, crest to crest. */
+  wavelength: PositiveLength,
+  /** Seeds the random cells (Truchet arcs, Voronoi cells), so they come out the same. */
+  seed: z.int().nonnegative().max(0xffff_ffff),
+  /**
+   * The pattern's origin, a cell corner, in stock coordinates, and the cells'
+   * turn and mirroring about it, as a text item's (ADR-0059). It moves with
+   * the boundary's drawing, so the cells follow it without changing size.
+   */
+  placement: TextPlacement,
+  /**
+   * The paths it fills, all of one other drawing, counted even-odd (P1). Paths
+   * picked by index are closed; a whole shape's open paths are ignored.
+   */
+  boundary: z.array(ShapePaths).min(1),
+});
+export type PatternSettings = z.infer<typeof PatternSettings>;
+
+/**
  * The shapes of one imported SVG or DXF file (ADR-0055), which are sized and
- * placed together, or a text item (ADR-0059). Its shapes name it with
+ * placed together, a text item (ADR-0059) or a pattern (ADR-0087). Its shapes name it with
  * `drawingId`.
  */
 export const Drawing = z.strictObject({
   id: z.uuid(),
-  /** Name of the imported file, or the text item's. */
+  /** Name of the imported file, or the text item's or the pattern's. */
   name: z.string(),
   /** The border, in millimetres, that *Fit to stock* leaves around it, as a model's (ADR-0038). */
   border: z.number().nonnegative(),
@@ -185,6 +270,8 @@ export const Drawing = z.strictObject({
   rotation: z.number().gt(-180).lte(180),
   /** A text item's settings; its outlines are its one shape, laid out from them (ADR-0059). */
   text: TextSettings.optional(),
+  /** A pattern's settings; its cells are its one shape, generated from them (ADR-0087). */
+  pattern: PatternSettings.optional(),
   /** Not drawn, picked or machined (ADR-0080); absent when shown. */
   hidden: z.literal(true).optional(),
   /** Drawn but not picked or moved in the viewport (ADR-0080); absent when unlocked. */

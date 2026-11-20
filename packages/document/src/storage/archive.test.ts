@@ -4,6 +4,8 @@ import {
   circle,
   fullDocument,
   model,
+  patternItem,
+  patternShape,
   square,
   textItem,
   textShape,
@@ -109,7 +111,7 @@ describe("packProjectArchive and readProjectArchive", () => {
     expect(archive.meshes).toEqual(meshes);
   });
 
-  it("round-trip several drawings and text items, in the document and its versions", async () => {
+  it("round-trip several drawings, text items and patterns, in the document and its versions", async () => {
     const other = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
     const base = fullDocument();
     const document: ProjectDocument = {
@@ -118,8 +120,9 @@ describe("packProjectArchive and readProjectArchive", () => {
         ...base.drawings,
         { id: other, name: "hole.svg", border: 5, rotation: 0 },
         textItem,
+        patternItem,
       ],
-      geometry: [square, { ...circle, drawingId: other }, textShape],
+      geometry: [square, { ...circle, drawingId: other }, textShape, patternShape],
     };
     const archive = await readProjectArchive(
       packProjectArchive(document, new Map(), [version("v", document)]),

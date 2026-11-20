@@ -1,6 +1,7 @@
 import type { Point } from "@furrow/document";
 import {
   booleanOpWithPolyTree,
+  Clipper64,
   FillRule as ClipperFillRule,
   ClipType,
   difference as clipDifference,
@@ -12,11 +13,16 @@ import {
   JoinType,
   type Path64,
   type Paths64,
+  PathType,
   PointInPolygonResult,
   type PolyPath64,
   PolyTree64,
+  Rect64Utils,
+  ReuseableDataContainer64,
+  rectClip,
   simplifyPaths,
 } from "clipper2-ts";
+import type { Rect } from "./bounds";
 import { DEFAULT_CHORD_TOLERANCE } from "./flatten";
 
 // Geometry kernel adapter (ADR-0007, ADR-0015). The rest of the CAM core uses
@@ -133,6 +139,48 @@ export function intersection(
   fillRule: FillRule = "nonZero",
 ): Polygon[] {
   return fromPaths(clipIntersect(toPaths(subject), toPaths(clip), FILL_RULES[fillRule]));
+}
+
+/**
+ * Each of `subjects` intersected with `clip` (non-zero) on its own, so subjects that
+ * touch or overlap stay apart: the pieces of each are one entry of the
+ * result, in order. `clip` is converted once for all of them.
+ */
+export function intersectionEach(subjects: Polygon[][], clip: Polygon[]): Polygon[][] {
+  const clipData = new ReuseableDataContainer64();
+  clipData.addPaths(toPaths(clip), PathType.Clip, false);
+  return subjects.map((subject) => {
+    const clipper = new Clipper64();
+    clipper.addReuseableData(clipData);
+    clipper.addSubject(toPaths(subject));
+    const solution: Paths64 = [];
+    clipper.execute(ClipType.Intersection, ClipperFillRule.NonZero, solution);
+    return fromPaths(solution);
+  });
+}
+
+/**
+ * The parts of `polygons` inside `rect`, each ring cut on its own and keeping
+ * its winding, so the area they cover under the non-zero rule is cut to the
+ * rectangle. Much faster than `intersection` with a rectangle.
+ */
+export function clipToRect(polygons: Polygon[], { min, max }: Rect): Polygon[] {
+  const [left, top] = [toPoint(min), toPoint(max)];
+  return fromPaths(rectClip(Rect64Utils.create(left.x, left.y, top.x, top.y), toPaths(polygons)));
+}
+
+/**
+ * The parts of the open polylines `lines` that lie inside `clip` (non-zero), each an open
+ * polyline ending on `clip`'s rings.
+ */
+export function clipLines(lines: Point[][], clip: Polygon[]): Point[][] {
+  const clipper = new Clipper64();
+  clipper.addOpenSubject(toPaths(lines));
+  clipper.addClip(toPaths(clip));
+  // Clipper2 wants a closed solution even when the subjects are all open.
+  const open: Paths64 = [];
+  clipper.execute(ClipType.Intersection, ClipperFillRule.NonZero, [], open);
+  return fromPaths(open);
 }
 
 /**

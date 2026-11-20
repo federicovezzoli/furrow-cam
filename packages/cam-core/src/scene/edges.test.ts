@@ -13,7 +13,6 @@ function stock(flipAxis: FlipAxis, corner: StockCorner | null = "bottom_right"):
     twoSided: {
       flipAxis,
       partingDepth: 9,
-      tabs: null,
       lineUp: corner && { type: "edges", corner },
     },
   };

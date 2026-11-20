@@ -95,6 +95,7 @@ function project(operations: Operation[], touchOff: TouchOffDisc | null): Projec
       zOrigin: "stock_top",
       touchOff: touchOff && { ...touchOff, toolChange: null },
       twoSided: null,
+      tabs: null,
     },
     models: [STEP],
     operations,

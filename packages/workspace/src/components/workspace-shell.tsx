@@ -40,6 +40,7 @@ import { ModelProperties } from "./model-properties";
 import { ObjectsPane } from "./objects-pane";
 import { OperationProperties } from "./operation-properties";
 import { OperationsPane } from "./operations-pane";
+import { FillPatternButton } from "./pattern-properties";
 import { Ribbon, RibbonGroup } from "./ribbon";
 import { SimulateButton } from "./simulate-button";
 import { StockProperties } from "./stock-properties";
@@ -106,6 +107,7 @@ export function WorkspaceShell() {
           <TerrainButton />
           <ImageReliefButton />
           <AddTextButton />
+          <FillPatternButton />
         </RibbonGroup>
         <RibbonGroup caption={t("operations")} tour="add-operation">
           <AddOperationButtons />

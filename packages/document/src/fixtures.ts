@@ -195,6 +195,46 @@ export const textShape: Shape = {
   ],
 };
 
+export const PATTERN_ID = "5d3a1f7c-2e9b-4c6d-8a0f-3b4e5c6d7e8f";
+
+/** A pattern (ADR-0087): 50 mm squares filling `square`, from its corner. */
+export const patternItem: Drawing = {
+  id: PATTERN_ID,
+  name: "Square grid",
+  border: 10,
+  rotation: 0,
+  pattern: {
+    cell: "square",
+    size: 50,
+    gap: 0,
+    inset: 0,
+    amplitude: 5,
+    wavelength: 20,
+    seed: 0,
+    placement: { position: [0, 0], rotation: 0, mirrored: false },
+    boundary: [{ shapeId: SQUARE_ID, paths: null }],
+  },
+};
+
+/** `patternItem`'s cells, its one shape: the bottom-left one. */
+export const patternShape: Shape = {
+  id: "e4f5a6b7-c8d9-4e0f-a1b2-c3d4e5f6a7b8",
+  name: "Square grid",
+  layer: "",
+  drawingId: PATTERN_ID,
+  paths: [
+    {
+      start: [0, 0],
+      segments: [
+        { kind: "line", to: [50, 0] },
+        { kind: "line", to: [50, 50] },
+        { kind: "line", to: [0, 50] },
+      ],
+      closed: true,
+    },
+  ],
+};
+
 /** An uploaded font (ADR-0062); its file is a project asset. */
 export const uploadedFont: ProjectFont = {
   sha256: "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
@@ -262,7 +302,7 @@ export const reliefRough: ReliefRoughOperation = {
 
 export function fullDocument(): ProjectDocument {
   return {
-    schemaVersion: 40,
+    schemaVersion: 42,
     units: "in",
     stock: {
       width: 300,
@@ -280,8 +320,8 @@ export function fullDocument(): ProjectDocument {
           positions: [-120, 120],
           holes: { type: "through", spoilboardDepth: 5 },
         },
-        tabs: { width: 6, thickness: 2, fullHeight: false, positions: [[0, 50]] },
       },
+      tabs: { width: 6, thickness: 2, fullHeight: false, positions: [[0, 50]] },
     },
     machine,
     machineId: null,

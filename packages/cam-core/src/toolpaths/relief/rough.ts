@@ -72,7 +72,7 @@ export type ReliefRoughOptions = {
   rest?: RestOptions | null;
   /** The touch-off pad, an island at every level (#147); `null` for none. */
   touchOff?: TouchOffDisc | null;
-  /** In a two-sided project, the holding tabs to leave, islands below their top (#357). */
+  /** The holding tabs to leave, islands below their top (#357, #616). */
   tabs?: readonly HoldingTab[];
 };
 

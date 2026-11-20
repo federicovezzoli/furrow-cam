@@ -24,6 +24,7 @@ const project: CheckedProject = {
     zOrigin: "stock_top",
     touchOff: null,
     twoSided: null,
+    tabs: null,
   },
   machine,
   operations: [

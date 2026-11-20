@@ -10,6 +10,7 @@ import {
   createProjectDocument,
   type Operation,
   type Path,
+  type PatternSettings,
   type Point,
   ProjectDocument,
   StockAnchor,
@@ -21,6 +22,8 @@ import {
   DRAWING_ID,
   fullDocument,
   model,
+  patternItem,
+  patternShape,
   reliefFinish,
   SQUARE_ID,
   square,
@@ -195,6 +198,21 @@ describe("removeDrawing", () => {
     ];
     return doc;
   }
+
+  it("turns the patterns it bounded into plain drawings (ADR-0087)", () => {
+    const doc = document();
+    const store = createDocumentStore({
+      ...doc,
+      drawings: [...doc.drawings, patternItem],
+      geometry: [...doc.geometry, patternShape],
+    });
+    removeDrawing(store, DRAWING_ID);
+    const after = store.getState().document;
+    const { pattern: _, ...plain } = patternItem;
+    expect(after.drawings.at(-1)).toEqual(plain);
+    expect(after.geometry.at(-1)).toEqual(patternShape);
+    expect(() => ProjectDocument.parse(after)).not.toThrow();
+  });
 
   it("removes its shapes, their targets and the operations left with none, in one undo step", () => {
     const store = createDocumentStore(document());
@@ -934,6 +952,34 @@ describe("setTextItem", () => {
     expect(() => ProjectDocument.parse(after)).not.toThrow();
     text.getState().undo();
     expect(text.getState().document).toEqual(before);
+  });
+
+  it("turns a pattern's boundary on some of its paths into the whole outlines", () => {
+    const text = store();
+    const doc = text.getState().document;
+    const pattern = patternItem.pattern as PatternSettings;
+    text.setState({
+      document: {
+        ...doc,
+        drawings: [
+          ...doc.drawings,
+          {
+            ...patternItem,
+            pattern: { ...pattern, boundary: [{ shapeId: textShape.id, paths: [0] }] },
+          },
+        ],
+        geometry: [...doc.geometry, patternShape],
+      },
+    });
+    setTextItem(text, TEXT_ID, { ...(textItem.text as TextSettings), text: "II" }, [
+      box(30, 10, 2),
+      box(34, 10, 2),
+    ]);
+    const after = text.getState().document;
+    expect(after.drawings.at(-1)?.pattern?.boundary).toEqual([
+      { shapeId: textShape.id, paths: null },
+    ]);
+    expect(() => ProjectDocument.parse(after)).not.toThrow();
   });
 
   it("keeps the tabs that lie on the new outlines", () => {

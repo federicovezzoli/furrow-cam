@@ -288,10 +288,16 @@ function SelectedDrawing({ color }: { color: string }) {
     () => id !== null && geometry.some((s) => s.drawingId === id && lockedIds.has(s.id)),
     [geometry, id, lockedIds],
   );
+  // A pattern is placed by its boundary (ADR-0088): its boundary is dragged instead.
+  const pattern = useDocumentStore((s) =>
+    s.document.drawings.some((drawing) => drawing.id === id && drawing.pattern),
+  );
   const draggable =
     useWorkspaceStore(
       (s) => s.view === "top" && s.side === "top" && s.editing === null && !s.pickingZero,
-    ) && !locked;
+    ) &&
+    !locked &&
+    !pattern;
   const store = useDocumentStoreApi();
   const canvas = useThree((s) => s.gl.domElement);
   const press = useRef<DrawingPress | null>(null);

@@ -1,4 +1,5 @@
 import { type Message, MessageError, type Path, Sha256, type TextSettings } from "@furrow/document";
+import { workerClient } from "./worker-client";
 
 /** An uploaded font's file and whether it is single-stroke (ADR-0062). */
 export type UploadedFontFile = { bytes: ArrayBuffer; singleStroke: boolean };
@@ -45,15 +46,18 @@ export const FONT_REMOVED: Message = { code: "workspace.fontRemoved" };
 /** Why text couldn't be laid out, when nothing more precise is known. */
 export const TEXT_LAYOUT_FAILED: Message = { code: "workspace.textLayoutFailed" };
 
-let worker: Worker | null = null;
-const waiting = new Map<number, (response: TextWorkerResponse) => void>();
-let nextId = 0;
 /**
  * The uploaded fonts sent to the running worker, by hash, with the
  * single-stroke flag sent. The worker may since have dropped one; it then
  * answers `missing`, and the font is sent again.
  */
 const sent = new Map<string, boolean>();
+
+const worker = workerClient<TextWorkerRequest, TextWorkerResponse>(
+  () => new Worker(new URL("../workers/text.worker.ts", import.meta.url), { type: "module" }),
+  (id) => ({ id, error: TEXT_LAYOUT_FAILED }),
+  () => sent.clear(),
+);
 
 /**
  * Text item `settings`' outlines in stock coordinates (`textPaths`), laid
@@ -70,7 +74,10 @@ export async function layoutText(
   const sha256 = Sha256.safeParse(settings.font).success ? settings.font : null;
   for (let attempt = 0; ; attempt++) {
     const font = sha256 ? await fontToSend(sha256, uploaded, attempt > 0) : undefined;
-    const response = await post({ kind: "layout", id: nextId++, settings, ...(font && { font }) });
+    const response = await worker.post(
+      (id) => ({ kind: "layout", id, settings, ...(font && { font }) }),
+      font ? [font.bytes] : [],
+    );
     if ("paths" in response) return response.paths;
     if (sha256) sent.delete(sha256);
     // Missing again right after it was sent can't be fixed by sending it again.
@@ -91,12 +98,10 @@ export async function inspectFont(
   singleStroke: boolean,
 ): Promise<string> {
   sent.set(sha256, singleStroke);
-  const response = await post({
-    kind: "inspect",
-    id: nextId++,
-    sha256,
-    font: { bytes, singleStroke },
-  });
+  const response = await worker.post(
+    (id) => ({ kind: "inspect", id, sha256, font: { bytes, singleStroke } }),
+    [bytes],
+  );
   if ("name" in response) return response.name;
   sent.delete(sha256);
   throw new TextLayoutError("error" in response ? response.error : TEXT_LAYOUT_FAILED);
@@ -123,34 +128,4 @@ async function fontToSend(
   }
   sent.set(sha256, singleStroke);
   return { bytes, singleStroke };
-}
-
-function post(request: TextWorkerRequest): Promise<TextWorkerResponse> {
-  const running = worker ?? start();
-  return new Promise((resolve) => {
-    waiting.set(request.id, resolve);
-    running.postMessage(request, request.font ? [request.font.bytes] : []);
-  });
-}
-
-function start(): Worker {
-  const started = new Worker(new URL("../workers/text.worker.ts", import.meta.url), {
-    type: "module",
-  });
-  started.onmessage = ({ data }: MessageEvent<TextWorkerResponse>) => {
-    const answer = waiting.get(data.id);
-    waiting.delete(data.id);
-    answer?.(data);
-  };
-  // A worker that fails to load fails every request; the next one starts another.
-  started.onerror = (event) => {
-    event.preventDefault();
-    started.terminate();
-    worker = null;
-    sent.clear();
-    for (const [id, answer] of waiting) answer({ id, error: TEXT_LAYOUT_FAILED });
-    waiting.clear();
-  };
-  worker = started;
-  return started;
 }

@@ -13,6 +13,7 @@ const stock: Stock = {
   zOrigin: "stock_top",
   touchOff: null,
   twoSided: null,
+  tabs: null,
 };
 
 function operation(name: string, tool: Tool = endMill): Operation {

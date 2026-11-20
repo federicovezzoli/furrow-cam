@@ -489,6 +489,7 @@ function sameInput(a: ToolpathInput, b: ToolpathInput, nested = true): boolean {
     // Holding tabs too, built afresh for every input.
     JSON.stringify(a.tabs) === JSON.stringify(b.tabs) &&
     a.reachesOther === b.reachesOther &&
+    a.loose === b.loose &&
     a.safeZ === b.safeZ &&
     a.entryClearance === b.entryClearance &&
     // A new disc every time, like the stock rectangle.

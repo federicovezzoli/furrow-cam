@@ -77,7 +77,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0060](0060-two-sided-projects.md) | Two-sided projects flip the stock about its centre line, and the bottom side has its own stock coordinates | Accepted; superseded in part by ADR-0063 |
 | [0061](0061-fonts-parsed-with-opentype-js.md) | Fonts are parsed and laid out with opentype.js, behind one adapter | Accepted |
 | [0062](0062-uploaded-fonts-are-project-assets.md) | Uploaded fonts are project assets, listed in the document like models | Accepted |
-| [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Accepted |
+| [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Accepted; superseded in part by ADR-0086 |
 | [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Accepted |
 | [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Accepted |
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Accepted |
@@ -100,3 +100,6 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0083](0083-operations-and-objects-share-a-tab.md) | Operations and objects share a sidebar tab, one above the other | Accepted |
 | [0084](0084-vcarve-inlays-start-depth.md) | V-carve inlays come from a start depth and a boundary path among the targets | Accepted |
 | [0085](0085-several-models.md) | A project holds several models, each machined on its own | Accepted |
+| [0086](0086-holding-tabs-belong-to-the-stock.md) | Holding tabs belong to the stock, so one-sided jobs have them too | Accepted |
+| [0087](0087-patterns-are-drawings-anchored-to-a-boundary.md) | A pattern is a drawing that keeps its settings and its boundary, and stores its cells as one shape | Accepted; superseded in part by ADR-0088 |
+| [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |

@@ -46,6 +46,7 @@ import {
 import { gestureHandlers } from "../stores/gesture-handlers";
 import { modelAnchor } from "../stores/model-actions";
 import type { ActionResult } from "../stores/operation-actions";
+import { PatternProperties } from "./pattern-properties";
 import { PROPERTIES_HEADER } from "./properties-header";
 import { TextProperties } from "./text-properties";
 
@@ -53,8 +54,9 @@ import { TextProperties } from "./text-properties";
  * The selected drawing's size and position (PRD-0009 D2, D3, D5, ADR-0055):
  * width and height, which keep its proportions, the border *Fit to stock*
  * leaves, mirroring and turning it (D6, D7), its position from the zero,
- * duplicating (D8) and removing it, each an undoable edit. A text item's
- * settings come first (PRD-0010).
+ * duplicating (D8) and removing it, each an undoable edit. A text item's or
+ * a pattern's settings come first (PRD-0010, PRD-0016); a pattern shows only
+ * those, as its boundary sizes, turns and places it (ADR-0088).
  */
 export function DrawingProperties({ drawingId }: { drawingId: string }) {
   const store = useDocumentStoreApi();
@@ -110,150 +112,158 @@ export function DrawingProperties({ drawingId }: { drawingId: string }) {
       </div>
 
       {drawing.text && <TextProperties drawingId={drawing.id} text={drawing.text} />}
+      {drawing.pattern && <PatternProperties drawingId={drawing.id} pattern={drawing.pattern} />}
 
-      <section aria-labelledby="drawing-size-heading" className="grid gap-2">
-        <h3 id="drawing-size-heading" className="font-medium">
-          {t("size")}
-        </h3>
-        {(
-          [
-            ["width", t("width"), bounds.max[0] - bounds.min[0]],
-            ["height", t("height"), bounds.max[1] - bounds.min[1]],
-          ] as const
-        ).map(([key, label, extent]) => (
-          <NumberField
-            key={key}
-            id={`drawing-${key}`}
-            label={label}
-            layout="inline"
-            quantity="length"
-            units={units}
-            min={MIN_LENGTH}
-            value={extent > 0 ? extent : null}
-            disabled={extent === 0}
-            // The same scale both ways, so the drawing keeps its proportions.
-            onValueChange={(value) => apply(key, setDrawingSize(store, drawing.id, key, value))}
-            error={error?.field === key ? error.message : undefined}
-            {...gestures}
-          />
-        ))}
-        {/* The border is only *Fit to stock*'s margin: moving the drawing leaves it behind. */}
-        <div className="flex items-end gap-1">
-          <NumberField
-            id="drawing-border"
-            label={t("border")}
-            layout="inline"
-            quantity="length"
-            units={units}
-            min={0}
-            value={drawing.border}
-            onValueChange={(value) => setDrawingBorder(store, drawing.id, value)}
-            className="flex-1"
-            {...gestures}
-          />
-          <Button
-            variant="outline"
-            size="compact"
-            onClick={() => apply("fit", fitDrawingToStock(store, drawing.id))}
-            title={t("fitTitle")}
-          >
-            <Maximize2Icon />
-            {t("fit")}
-          </Button>
-        </div>
-        <p className="text-muted-foreground">
-          {capped === null
-            ? t("borderNote")
-            : t("borderCapped", { size: localizeDecimal(capped, locale) })}
-        </p>
-        {error?.field === "fit" && (
-          <p role="alert" className="text-destructive">
-            {format(error.message)}
-          </p>
-        )}
-      </section>
+      {/* A pattern is sized, turned and placed by its boundary and its own settings (ADR-0088). */}
+      {!drawing.pattern && (
+        <>
+          <section aria-labelledby="drawing-size-heading" className="grid gap-2">
+            <h3 id="drawing-size-heading" className="font-medium">
+              {t("size")}
+            </h3>
+            {(
+              [
+                ["width", t("width"), bounds.max[0] - bounds.min[0]],
+                ["height", t("height"), bounds.max[1] - bounds.min[1]],
+              ] as const
+            ).map(([key, label, extent]) => (
+              <NumberField
+                key={key}
+                id={`drawing-${key}`}
+                label={label}
+                layout="inline"
+                quantity="length"
+                units={units}
+                min={MIN_LENGTH}
+                value={extent > 0 ? extent : null}
+                disabled={extent === 0}
+                // The same scale both ways, so the drawing keeps its proportions.
+                onValueChange={(value) => apply(key, setDrawingSize(store, drawing.id, key, value))}
+                error={error?.field === key ? error.message : undefined}
+                {...gestures}
+              />
+            ))}
+            {/* The border is only *Fit to stock*'s margin: moving the drawing leaves it behind. */}
+            <div className="flex items-end gap-1">
+              <NumberField
+                id="drawing-border"
+                label={t("border")}
+                layout="inline"
+                quantity="length"
+                units={units}
+                min={0}
+                value={drawing.border}
+                onValueChange={(value) => setDrawingBorder(store, drawing.id, value)}
+                className="flex-1"
+                {...gestures}
+              />
+              <Button
+                variant="outline"
+                size="compact"
+                onClick={() => apply("fit", fitDrawingToStock(store, drawing.id))}
+                title={t("fitTitle")}
+              >
+                <Maximize2Icon />
+                {t("fit")}
+              </Button>
+            </div>
+            <p className="text-muted-foreground">
+              {capped === null
+                ? t("borderNote")
+                : t("borderCapped", { size: localizeDecimal(capped, locale) })}
+            </p>
+            {error?.field === "fit" && (
+              <p role="alert" className="text-destructive">
+                {format(error.message)}
+              </p>
+            )}
+          </section>
 
-      <section aria-labelledby="drawing-orientation-heading" className="grid gap-2">
-        <h3 id="drawing-orientation-heading" className="font-medium">
-          {t("orientation")}
-        </h3>
-        <div className="flex flex-wrap gap-1">
-          {(
-            [
-              // lucide names its flips by the axis drawn, not the way things flip.
-              [t("mirrorX"), FlipVertical2Icon, () => mirrorDrawing(store, drawing.id, "x")],
-              [t("mirrorY"), FlipHorizontal2Icon, () => mirrorDrawing(store, drawing.id, "y")],
-              [t("rotateLeft"), RotateCcwIcon, () => rotateDrawing(store, drawing.id, 90)],
-              [t("rotateRight"), RotateCwIcon, () => rotateDrawing(store, drawing.id, -90)],
-            ] as const
-          ).map(([label, Icon, action]) => (
+          <section aria-labelledby="drawing-orientation-heading" className="grid gap-2">
+            <h3 id="drawing-orientation-heading" className="font-medium">
+              {t("orientation")}
+            </h3>
+            <div className="flex flex-wrap gap-1">
+              {(
+                [
+                  // lucide names its flips by the axis drawn, not the way things flip.
+                  [t("mirrorX"), FlipVertical2Icon, () => mirrorDrawing(store, drawing.id, "x")],
+                  [t("mirrorY"), FlipHorizontal2Icon, () => mirrorDrawing(store, drawing.id, "y")],
+                  [t("rotateLeft"), RotateCcwIcon, () => rotateDrawing(store, drawing.id, 90)],
+                  [t("rotateRight"), RotateCwIcon, () => rotateDrawing(store, drawing.id, -90)],
+                ] as const
+              ).map(([label, Icon, action]) => (
+                <Button
+                  key={label}
+                  variant="outline"
+                  size="icon-compact"
+                  onClick={() => apply("orientation", action())}
+                  aria-label={label}
+                  title={label}
+                >
+                  <Icon />
+                </Button>
+              ))}
+            </div>
+            {/* Its rotation since import (ADR-0066): a new value turns it by the difference. */}
+            <NumberField
+              id="drawing-angle"
+              label={t("angle")}
+              layout="inline"
+              quantity="number"
+              suffix="°"
+              value={drawing.rotation}
+              onValueChange={(value) =>
+                apply("orientation", setDrawingRotation(store, drawing.id, value))
+              }
+              {...gestures}
+            />
+            {error?.field === "orientation" && (
+              <p role="alert" className="text-destructive">
+                {format(error.message)}
+              </p>
+            )}
+          </section>
+
+          <section aria-labelledby="drawing-position-heading" className="grid gap-2">
+            <h3 id="drawing-position-heading" className="font-medium">
+              {t("position")}
+            </h3>
+            <p className="text-muted-foreground">
+              {t("positionHint", { anchor: modelAnchor(stock) })}
+            </p>
+            {offStock && (
+              <p role="status" className="flex gap-1.5 text-destructive">
+                <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span>{t("offStock")}</span>
+              </p>
+            )}
+            {(["x", "y"] as const).map((axis, i) => (
+              <NumberField
+                key={axis}
+                id={`drawing-${axis}`}
+                label={axis.toUpperCase()}
+                layout="inline"
+                quantity="length"
+                units={units}
+                value={offset[i] as number}
+                onValueChange={(value) => setDrawingOffset(store, drawing.id, axis, value)}
+                {...gestures}
+              />
+            ))}
             <Button
-              key={label}
               variant="outline"
-              size="icon-compact"
-              onClick={() => apply("orientation", action())}
-              aria-label={label}
-              title={label}
+              size="compact"
+              className="justify-self-end"
+              onClick={() => centerDrawingOnStock(store, drawing.id)}
+              title={t("centerTitle")}
             >
-              <Icon />
+              <LocateFixedIcon />
+              {t("center")}
             </Button>
-          ))}
-        </div>
-        {/* Its rotation since import (ADR-0066): a new value turns it by the difference. */}
-        <NumberField
-          id="drawing-angle"
-          label={t("angle")}
-          layout="inline"
-          quantity="number"
-          suffix="°"
-          value={drawing.rotation}
-          onValueChange={(value) =>
-            apply("orientation", setDrawingRotation(store, drawing.id, value))
-          }
-          {...gestures}
-        />
-        {error?.field === "orientation" && (
-          <p role="alert" className="text-destructive">
-            {format(error.message)}
-          </p>
-        )}
-      </section>
-
-      <section aria-labelledby="drawing-position-heading" className="grid gap-2">
-        <h3 id="drawing-position-heading" className="font-medium">
-          {t("position")}
-        </h3>
-        <p className="text-muted-foreground">{t("positionHint", { anchor: modelAnchor(stock) })}</p>
-        {offStock && (
-          <p role="status" className="flex gap-1.5 text-destructive">
-            <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>{t("offStock")}</span>
-          </p>
-        )}
-        {(["x", "y"] as const).map((axis, i) => (
-          <NumberField
-            key={axis}
-            id={`drawing-${axis}`}
-            label={axis.toUpperCase()}
-            layout="inline"
-            quantity="length"
-            units={units}
-            value={offset[i] as number}
-            onValueChange={(value) => setDrawingOffset(store, drawing.id, axis, value)}
-            {...gestures}
-          />
-        ))}
-        <Button
-          variant="outline"
-          size="compact"
-          className="justify-self-end"
-          onClick={() => centerDrawingOnStock(store, drawing.id)}
-          title={t("centerTitle")}
-        >
-          <LocateFixedIcon />
-          {t("center")}
-        </Button>
-      </section>
+          </section>
+        </>
+      )}
 
       <div className="flex justify-end gap-1">
         <Button variant="outline" size="compact" onClick={duplicate} title={t("duplicateTitle")}>

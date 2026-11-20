@@ -563,16 +563,20 @@
       "unknownDrawing": "Id di disegno sconosciuto",
       "emptyDrawing": "Un disegno deve avere almeno una forma",
       "textShapes": "Un testo deve avere esattamente una forma",
+      "patternShapes": "Un motivo deve avere esattamente una forma",
+      "textAndPattern": "Un disegno non può essere sia un testo sia un motivo",
+      "patternBoundary": "Un motivo riempie percorsi di un solo altro disegno, non di un motivo",
       "duplicateFont": "Font duplicato",
       "unknownFont": "Il testo usa un font che il progetto non contiene",
       "tooManyFonts": "Un progetto contiene al massimo {max} font",
       "unknownShape": "Id di forma sconosciuto",
       "unknownPath": "Percorso sconosciuto",
+      "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
+      "openBoundaryPath": "Un motivo riempie solo percorsi chiusi",
       "pinHolesThrough": "I fori ciechi dei perni devono finire dentro il grezzo",
-      "tabsThickerThanSide": "I ponticelli devono essere più sottili della profondità del lato inferiore"
+      "tabsThickerThanSide": "I ponticelli devono essere più sottili della profondità tagliata intorno al pezzo"
     },
     "operation": {
-      "pathIndices": "Gli indici dei percorsi devono essere crescenti, ognuno una volta",
       "allowanceZeroOnLine": "Deve essere 0 sulla linea",
       "overcutsOnLine": "Non sulla linea",
       "plungeWithTabs": "Non con i ponticelli di tenuta",
@@ -723,7 +727,7 @@
       "holesOffStock": "Un foro posizionato è fuori dal grezzo.",
       "noHoles": "Niente da forare: posiziona fori nella vista o usa le forme selezionate.",
       "cutsPins": "Questa operazione taglia dove va un perno di riferimento, quindi l'utensile colpirebbe il perno quando il grezzo è girato: sposta i perni o il taglio.",
-      "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena il lato inferiore taglia tutto intorno.",
+      "noHoldingTabs": "Nessun ponticello: il pezzo si stacca appena viene tagliato tutto intorno.",
       "stockBoundaryTwoSided": "Lavorare tutto il grezzo su entrambi i lati non lascia una cornice a cui il pezzo resti attaccato: usa un margine.",
       "reachesOtherModel": "L’utensile taglia dentro un altro modello, che questa operazione non segue: viene lavorato solo il suo modello. Usa un contorno più piccolo o allontana i modelli."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "Non è stato possibile scaricare le quote. Controlla la connessione e riprova.",
       "inlayClosedPaths": "Seleziona percorsi chiusi per farne un intarsio.",
       "inlayGap": "Lo spazio per la colla deve essere almeno 0 e minore della profondità della tasca.",
-      "inlayTooDeep": "Questo intarsio è troppo profondo per il cono della fresa a V o per il grezzo: la tasca deve restare nel cono e il fondo del tassello nel grezzo."
+      "inlayTooDeep": "Questo intarsio è troppo profondo per il cono della fresa a V o per il grezzo: la tasca deve restare nel cono e il fondo del tassello nel grezzo.",
+      "patternEmpty": "Nessuna cella sta nel contorno: riduci le celle o il rientro.",
+      "patternTooDense": "Le celle sono troppo piccole per questo contorno: ingrandiscile.",
+      "patternFailed": "Non è stato possibile generare il motivo.",
+      "patternNoSelection": "Seleziona percorsi chiusi di un disegno da riempire.",
+      "patternOneDrawing": "Seleziona percorsi di un solo disegno.",
+      "patternOfPattern": "Un motivo non può essere riempito con un altro.",
+      "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -1101,7 +1112,9 @@
     "show": "Mostra {name}",
     "hide": "Nascondi {name}",
     "lock": "Blocca {name}",
-    "unlock": "Sblocca {name}"
+    "unlock": "Sblocca {name}",
+    "download": "Scarica {name} come STL",
+    "downloadFailed": "Impossibile leggere il file di questo modello."
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Spingi questo angolo del grezzo in un angolo di battuta per entrambi i lati. I lati combaciano solo se il grezzo misura esattamente {size} lungo {axis}: misuralo.",
     "idlePinDrills": "{count, plural, one {# foratura dei perni non fora} other {# forature dei perni non forano}} nulla senza perni.",
     "holdingTabs": "Ponticelli",
-    "holdingTabsHint": "Strisce di grezzo che il lato inferiore lascia alla profondità di separazione, così il pezzo resta fermo fino all'ultima passata. Trascinali lungo i contorni dei modelli nella vista dall'alto.",
+    "holdingTabsHint": "Strisce di grezzo che le lavorazioni 3D lasciano intorno a ogni modello, sul fondo del grezzo o, a due lati, alla profondità di separazione, così il pezzo resta fermo fino all'ultima passata. Trascinali lungo i contorni dei modelli nella vista dall'alto.",
     "holdingTabWidth": "Larghezza ponticelli",
     "holdingTabThickness": "Spessore ponticelli",
     "holdingTabFullHeight": "Altezza piena",
-    "holdingTabTooThick": "Deve essere più sottile della profondità del lato inferiore: meno di {size}",
+    "holdingTabTooThick": "Deve essere più sottile della profondità tagliata intorno al pezzo: meno di {size}",
     "holdingTabsPerModel": "Ponticelli per modello",
     "placeHoldingTabs": "Posiziona",
     "holdingTabCount": "{count, plural, =0 {Nessun ponticello} one {# ponticello} other {# ponticelli}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Trascina lateralmente per cambiare"
+  },
+  "Pattern": {
+    "heading": "Motivo",
+    "followsBoundary": "Si sposta, ruota e si specchia con il disegno che riempie: seleziona quel disegno per spostarlo. Ridimensionarlo cambia il contorno; le celle mantengono la loro dimensione. Rotazione, specchiatura e spostamento muovono le celle al suo interno.",
+    "fill": "Motivo",
+    "fillHint": "Riempi i percorsi chiusi selezionati con un motivo",
+    "filling": "Riempimento…",
+    "defaultName": "Motivo",
+    "cell": "Cella",
+    "cells": {
+      "square": "Quadrati",
+      "brick": "Mattoni",
+      "hexagon": "Nido d'ape",
+      "triangle": "Triangoli",
+      "diamond": "Rombi",
+      "circleSquare": "Cerchi (griglia quadrata)",
+      "circleHex": "Cerchi (griglia esagonale)",
+      "lines": "Linee",
+      "crosshatch": "Tratteggio incrociato",
+      "wave": "Onde",
+      "zigzag": "Zigzag",
+      "herringbone": "Spina di pesce",
+      "basketWeave": "Intreccio a cesto",
+      "fishScale": "Squame",
+      "chevron": "Chevron",
+      "star": "Stelle",
+      "truchet": "Archi di Truchet",
+      "voronoi": "Celle di Voronoi"
+    },
+    "size": "Dimensione cella",
+    "gap": "Spazio",
+    "inset": "Rientro",
+    "amplitude": "Altezza onda",
+    "wavelength": "Lunghezza d'onda",
+    "seed": "Seme",
+    "rotation": "Rotazione",
+    "mirrored": "Specchiato",
+    "offset": {
+      "x": "Spostamento X",
+      "y": "Spostamento Y"
+    },
+    "tabsRemoved": "{count, plural, one {Rimossa # linguetta che non era più} other {Rimosse # linguette che non erano più}} sulle celle.",
+    "convert": "Converti in disegno",
+    "convertTitle": "Mantieni le celle come disegno, lavorato dalle stesse operazioni; non segue più il suo contorno"
   }
 }

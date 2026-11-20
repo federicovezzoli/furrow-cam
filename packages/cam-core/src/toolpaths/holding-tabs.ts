@@ -6,9 +6,9 @@ import { previewEmpty } from "./relief/mesh-raster";
 import { loopLength, nearestOnLoops, pointAlong, spreadAlong } from "./tabs";
 
 /**
- * Holding tabs of a two-sided project (PRD-0011 B5, ADR-0063): strips of
- * material the 3D operations leave between the part and the stock around it,
- * at the parting plane.
+ * Holding tabs (PRD-0011 B5, ADR-0063, ADR-0086): strips of material the 3D
+ * operations leave between the part and the stock around it, at the stock
+ * bottom of a one-sided project or the parting plane of a two-sided one.
  */
 
 /**
@@ -64,6 +64,23 @@ export function followModels(
  * either side carry it on inward to the model's surface (`reachModel`).
  */
 export type HoldingTabStrip = { modelId: string; at: Point; to: Point };
+
+/**
+ * How high the top of `stock`'s holding tabs is, in one side's stock
+ * coordinates: the stock top for full-height ones (#606); one-sided, their
+ * thickness up from the stock bottom (ADR-0086); two-sided, on the bottom
+ * side their thickness past the parting plane, on the top side the plane,
+ * where it stops over them (ADR-0063).
+ */
+export function holdingTabTop(
+  { thickness, twoSided }: Pick<Stock, "thickness" | "twoSided">,
+  tabs: Pick<HoldingTabs, "thickness" | "fullHeight">,
+  bottom: boolean,
+): number {
+  if (tabs.fullHeight) return 0;
+  if (!twoSided) return tabs.thickness - thickness;
+  return bottom ? twoSided.partingDepth - thickness + tabs.thickness : -twoSided.partingDepth;
+}
 
 /** The strips of `tabs`, one per position; none without models. */
 export function holdingTabStrips(

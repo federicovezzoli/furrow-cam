@@ -189,8 +189,9 @@ describe("migrations", () => {
     expect(parseProjectDocument(v20).drawings.at(-1)?.text?.text).toBe("A B C");
   });
 
-  it("leaves v4, v5 and v18 documents as they are", () => {
+  it("leaves v4, v5, v18 and v41 documents as they are", () => {
     const doc = fullDocument();
+    expect(parseProjectDocument({ ...doc, schemaVersion: 41 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);
@@ -209,7 +210,7 @@ describe("migrations", () => {
       type: "drill" as const,
       params: { depth: 10, peck: true, stepOver: 40, pins: false, points: [] },
     };
-    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null };
+    current.stock.twoSided = { flipAxis: "x", partingDepth: 9, lineUp: null };
     current.operations.push(drill);
     const { pins: _, ...v22Params } = drill.params;
     const v22 = {
@@ -236,13 +237,9 @@ describe("migrations", () => {
 
   it("gives v24 two-sided documents no holding tabs", () => {
     const current = fullDocument();
-    const { tabs: _, ...v24TwoSided } = current.stock.twoSided ?? {};
-    const v24 = {
-      ...current,
-      schemaVersion: 24,
-      stock: { ...current.stock, twoSided: v24TwoSided },
-    };
-    expect(parseProjectDocument(v24).stock.twoSided?.tabs).toBeNull();
+    const { tabs: _, ...v24Stock } = current.stock;
+    const v24 = { ...current, schemaVersion: 24, stock: v24Stock };
+    expect(parseProjectDocument(v24).stock.tabs).toBeNull();
     const oneSided = { ...current, stock: { ...current.stock, twoSided: null } };
     expect(parseProjectDocument({ ...oneSided, schemaVersion: 24 })).toEqual(oneSided);
   });
@@ -427,18 +424,31 @@ describe("migrations", () => {
   it("keeps v39 profile and holding tabs at their height", () => {
     const current = fullDocument();
     const [profile] = current.operations;
-    const { twoSided } = current.stock;
-    if (profile?.type !== "profile" || !profile.params.tabs || !twoSided?.tabs)
+    const { tabs: stockTabs, twoSided, ...stock } = current.stock;
+    if (profile?.type !== "profile" || !profile.params.tabs || !stockTabs)
       throw new Error("fullDocument has tabs");
     const { fullHeight: _, ...tabs } = profile.params.tabs;
-    const { fullHeight: __, ...holding } = twoSided.tabs;
+    const { fullHeight: __, ...holding } = stockTabs;
     const v39 = {
       ...current,
       schemaVersion: 39,
-      stock: { ...current.stock, twoSided: { ...twoSided, tabs: holding } },
+      stock: { ...stock, twoSided: { ...twoSided, tabs: holding } },
       operations: [{ ...profile, params: { ...profile.params, tabs } }],
     };
     expect(parseProjectDocument(v39)).toEqual(current);
+  });
+
+  it("moves v40 two-sided holding tabs to the stock, and gives one-sided stock none", () => {
+    const current = fullDocument();
+    const { tabs, twoSided, ...stock } = current.stock;
+    const v40 = {
+      ...current,
+      schemaVersion: 40,
+      stock: { ...stock, twoSided: { ...twoSided, tabs } },
+    };
+    expect(parseProjectDocument(v40)).toEqual(current);
+    const oneSided = { ...current, schemaVersion: 40, stock: { ...stock, twoSided: null } };
+    expect(parseProjectDocument(oneSided).stock).toEqual({ ...stock, twoSided: null, tabs: null });
   });
 
   it("gives v6 documents no models", () => {

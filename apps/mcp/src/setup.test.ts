@@ -19,6 +19,7 @@ import { addOperation } from "./operations";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
 import {
   chooseMachine,
+  setHoldingTabsSetup,
   setStock,
   setToolOf,
   setTouchOff,
@@ -45,7 +46,7 @@ beforeEach(async () => {
   const path = join(dir, "Part.furrow.json");
   // One-sided, with no pad, so each setting starts from the app's defaults.
   const document = fullDocument();
-  document.stock = { ...document.stock, touchOff: null, twoSided: null };
+  document.stock = { ...document.stock, touchOff: null, twoSided: null, tabs: null };
   await writeFile(path, JSON.stringify(document));
   project = await createProjects().get(path);
 });
@@ -108,7 +109,7 @@ describe("setTwoSidedSetup", () => {
   it("turns two-sided on at the app's default parting depth, and off", () => {
     setTwoSidedSetup(project, { twoSided: true });
     // No model: half the 18 mm stock.
-    expect(twoSided()).toEqual({ flipAxis: "x", partingDepth: 9, lineUp: null, tabs: null });
+    expect(twoSided()).toEqual({ flipAxis: "x", partingDepth: 9, lineUp: null });
     expect(projectSummary(document()).stock.inProjectUnits.twoSided).toMatch(
       /^Turned over about x/,
     );
@@ -117,19 +118,17 @@ describe("setTwoSidedSetup", () => {
     expect(projectSummary(document()).stock.inProjectUnits).not.toHaveProperty("twoSided");
   });
 
-  it("sets the flip axis, parting depth, line-up and holding tabs", () => {
+  it("sets the flip axis, parting depth and line-up", () => {
     setTwoSidedSetup(project, {
       twoSided: true,
       flipAxis: "y",
       partingDepth: 12,
       lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
-      tabs: { width: 5, thickness: 3, fullHeight: true, count: 2 },
     });
-    expect(twoSided()).toMatchObject({
+    expect(twoSided()).toEqual({
       flipAxis: "y",
       partingDepth: 12,
-      lineUp: { type: "pins", diameter: 8, positions: [-60, 60] },
-      tabs: { width: 5, thickness: 3, fullHeight: true, positions: [] },
+      lineUp: { type: "pins", diameter: 8, positions: [-60, 60], holes: expect.anything() },
     });
     setTwoSidedSetup(project, { twoSided: true, lineUp: { type: "edges", corner: "top_right" } });
     expect(twoSided()?.lineUp).toEqual({ type: "edges", corner: "top_right" });
@@ -143,12 +142,8 @@ describe("setTwoSidedSetup", () => {
       { partingDepth: 18 },
       { flipAxis: "y" as const, lineUp: { type: "pins" as const, positions: [0] } },
       { lineUp: { type: "pins" as const, holes: { type: "blind" as const, depth: 20 } } },
-      { tabs: { thickness: 9 } },
-      { tabs: { count: 2, positions: [[0, 0] as [number, number]] } },
-      { tabs: { positions: [[0, 0] as [number, number]] } },
       // The stock is 300 mm along X: a 6 mm pin reaches 147 mm from its centre at most.
       { lineUp: { type: "pins" as const, positions: [-148, 140] } },
-      { tabs: { width: -1 } },
     ]) {
       expect(() => setTwoSidedSetup(project, { twoSided: true, ...request })).toThrow(/^[\w.]+: /);
       expect(document()).toBe(before);
@@ -159,8 +154,44 @@ describe("setTwoSidedSetup", () => {
     expect(() => setTwoSidedSetup(project, { twoSided: false, partingDepth: 5 })).toThrow(
       "partingDepth can't be set",
     );
-    setTwoSidedSetup(project, { twoSided: false, lineUp: null, tabs: null });
+    setTwoSidedSetup(project, { twoSided: false, lineUp: null });
     expect(document().stock.twoSided).toBeNull();
+  });
+});
+
+describe("setHoldingTabsSetup", () => {
+  it("sets holding tabs on a one-sided project, and removes them", () => {
+    setHoldingTabsSetup(project, { width: 5, thickness: 17, fullHeight: true, count: 2 });
+    expect(document().stock).toMatchObject({
+      twoSided: null,
+      tabs: { width: 5, thickness: 17, fullHeight: true, positions: [] },
+    });
+    expect(projectSummary(document()).stock.inProjectUnits.tabs).toBe(
+      "0 holding tabs 0.1969 in wide, the stock's whole thickness.",
+    );
+    setHoldingTabsSetup(project, null);
+    expect(document().stock.tabs).toBeNull();
+    // A drawings-only project doesn't mention them once they're off.
+    expect(projectSummary(document()).stock.inProjectUnits).not.toHaveProperty("tabs");
+  });
+
+  it("refuses invalid settings as a whole, changing nothing", () => {
+    setTwoSidedSetup(project, { twoSided: true, partingDepth: 9 });
+    const before = document();
+    for (const request of [
+      { thickness: 9 },
+      { count: 2, positions: [[0, 0] as [number, number]] },
+      { positions: [[0, 0] as [number, number]] },
+      { width: -1 },
+    ]) {
+      expect(() => setHoldingTabsSetup(project, request)).toThrow(/^[\w.]+: /);
+      expect(document()).toBe(before);
+    }
+    // One-sided, they may be up to the stock's thickness.
+    setTwoSidedSetup(project, { twoSided: false });
+    expect(() => setHoldingTabsSetup(project, { thickness: 18 })).toThrow(/^[\w.]+: /);
+    setHoldingTabsSetup(project, { thickness: 9 });
+    expect(document().stock.tabs?.thickness).toBe(9);
   });
 
   it("round trips to a G-code file per side", async () => {

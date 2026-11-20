@@ -4,6 +4,7 @@ import { edgeSetup, touchOffOutsideStock } from "@furrow/cam-core";
 import {
   FlipAxis,
   type HoldingTabs,
+  holdingTabsDepth,
   StockCorner,
   stockPins,
   Units,
@@ -22,6 +23,7 @@ import type * as React from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { useLength } from "../hooks/use-length";
+import { useTabCount } from "../hooks/use-tab-count";
 import { ANCHOR_GRID, type ZeroChoice, zeroChoiceInDirection } from "../lib/anchor-grid";
 import type { MachineChoice } from "../lib/workspace-host";
 import { useWorkspaceHost } from "../providers/workspace-host";
@@ -128,6 +130,8 @@ export function StockProperties({ machines }: { machines: MachineChoice[] }) {
 
       <TwoSidedSection />
 
+      <HoldingTabsSection />
+
       <ZeroSection />
     </div>
   );
@@ -199,7 +203,6 @@ function TwoSidedSection() {
           />
           <p className="text-muted-foreground">{t("partingDepthHint")}</p>
           <PinFields />
-          <HoldingTabFields />
         </>
       )}
     </section>
@@ -207,29 +210,37 @@ function TwoSidedSection() {
 }
 
 /**
- * Holding tabs (PRD-0011 B5, ADR-0063), which the bottom side's 3D
- * operations leave between the part and the stock: their width and
+ * Holding tabs (PRD-0011 B5, ADR-0063, ADR-0086), which the 3D operations
+ * leave between the part and the stock: their width and
  * thickness, and a number of them to spread round each model. The tabs are
  * dragged along the models' outlines in the top view.
  */
-function HoldingTabFields() {
+function HoldingTabsSection() {
   const store = useDocumentStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const stock = useDocumentStore((s) => s.document.stock);
-  const [count, setCount] = useState(HOLDING_TABS_PER_MODEL);
+  const { tabs } = stock;
+  const models = useDocumentStore((s) => s.document.models.length);
+  const [count, setCount] = useTabCount(
+    tabs?.positions.length ?? 0,
+    models,
+    HOLDING_TABS_PER_MODEL,
+  );
   // What a thickness was refused against: once either changes, it may fit.
   const [refused, setRefused] = useState<{ depth: number; tabs: HoldingTabs } | null>(null);
   const t = useTranslations("Stock");
   const length = useLength(units);
-  const tabs = stock.twoSided?.tabs ?? null;
-  const depth = stock.thickness - (stock.twoSided?.partingDepth ?? 0);
+  const depth = holdingTabsDepth(stock);
   const tooThick = refused !== null && refused.depth === depth && refused.tabs === tabs;
+  // Only 3D operations leave them; tabs already on stay visible so they can be turned off.
+  if (models === 0 && !tabs) return null;
 
   return (
-    <>
+    <section aria-labelledby="holding-tabs-heading" className="grid gap-2">
       <Checkbox
         id="holding-tabs"
         label={t("holdingTabs")}
+        heading
         hint={t("holdingTabsHint")}
         checked={tabs !== null}
         onChange={(on) => setHoldingTabs(store, on)}
@@ -293,7 +304,7 @@ function HoldingTabFields() {
           </p>
         </div>
       )}
-    </>
+    </section>
   );
 }
 

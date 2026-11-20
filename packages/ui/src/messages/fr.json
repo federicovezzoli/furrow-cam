@@ -563,16 +563,20 @@
       "unknownDrawing": "Identifiant de dessin inconnu",
       "emptyDrawing": "Un dessin doit contenir au moins une forme",
       "textShapes": "Un texte doit avoir exactement une forme",
+      "patternShapes": "Un motif doit avoir exactement une forme",
+      "textAndPattern": "Un dessin ne peut pas être à la fois un texte et un motif",
+      "patternBoundary": "Un motif remplit les tracés d'un seul autre dessin, pas d'un motif",
       "duplicateFont": "Police en double",
       "unknownFont": "Le texte utilise une police que le projet ne contient pas",
       "tooManyFonts": "Un projet contient au plus {max} polices",
       "unknownShape": "Identifiant de forme inconnu",
       "unknownPath": "Tracé inconnu",
+      "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
+      "openBoundaryPath": "Un motif ne remplit que des tracés fermés",
       "pinHolesThrough": "Les trous borgnes des pions doivent s'arrêter dans le brut",
-      "tabsThickerThanSide": "Les attaches doivent être plus fines que la profondeur de la face du dessous"
+      "tabsThickerThanSide": "Les attaches doivent être plus fines que la profondeur coupée autour de la pièce"
     },
     "operation": {
-      "pathIndices": "Les indices de tracé doivent être croissants, chacun une fois",
       "allowanceZeroOnLine": "Doit être 0 sur la ligne",
       "overcutsOnLine": "Pas sur la ligne",
       "plungeWithTabs": "Pas avec des attaches",
@@ -723,7 +727,7 @@
       "holesOffStock": "Un trou placé est hors du brut.",
       "noHoles": "Rien à percer : placez des trous dans la vue ou utilisez les formes sélectionnées.",
       "cutsPins": "Cette opération coupe là où va un pion de centrage, donc l'outil toucherait le pion une fois le brut retourné : déplacez les pions ou la coupe.",
-      "noHoldingTabs": "Pas d'attaches : la pièce se détache dès que la face du dessous coupe tout autour.",
+      "noHoldingTabs": "Pas d'attaches : la pièce se détache dès qu'elle est découpée tout autour.",
       "stockBoundaryTwoSided": "Usiner tout le brut des deux côtés ne laisse aucun cadre où la pièce reste attachée : utilisez une marge.",
       "reachesOtherModel": "L’outil entame un autre modèle, que cette opération ne suit pas : seul son propre modèle est usiné. Utilisez une limite plus petite ou éloignez les modèles."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "Les altitudes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
       "inlayClosedPaths": "Sélectionnez des tracés fermés pour en faire une marqueterie.",
       "inlayGap": "Le jeu de colle doit être d'au moins 0 et inférieur à la profondeur de la poche.",
-      "inlayTooDeep": "Cette incrustation est trop profonde pour le cône de la fraise en V ou pour le brut : la poche doit rester dans le cône et le fond de la pièce dans le brut."
+      "inlayTooDeep": "Cette incrustation est trop profonde pour le cône de la fraise en V ou pour le brut : la poche doit rester dans le cône et le fond de la pièce dans le brut.",
+      "patternEmpty": "Aucune cellule ne tient dans le contour : réduisez les cellules ou le retrait.",
+      "patternTooDense": "Les cellules sont trop petites pour ce contour : agrandissez-les.",
+      "patternFailed": "Le motif n'a pas pu être généré.",
+      "patternNoSelection": "Sélectionnez des tracés fermés d'un dessin à remplir.",
+      "patternOneDrawing": "Sélectionnez les tracés d'un seul dessin.",
+      "patternOfPattern": "Un motif ne peut pas être rempli par un autre.",
+      "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -1101,7 +1112,9 @@
     "show": "Afficher {name}",
     "hide": "Masquer {name}",
     "lock": "Verrouiller {name}",
-    "unlock": "Déverrouiller {name}"
+    "unlock": "Déverrouiller {name}",
+    "download": "Télécharger {name} en STL",
+    "downloadFailed": "Impossible de lire le fichier de ce modèle."
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Poussez ce coin du brut dans un coin de butée pour les deux faces. Les faces ne se rejoignent que si le brut fait exactement {size} selon {axis} : mesurez-le.",
     "idlePinDrills": "{count, plural, one {# perçage des pions ne perce} other {# perçages des pions ne percent}} rien sans pions.",
     "holdingTabs": "Attaches",
-    "holdingTabsHint": "Bandes de brut que la face du dessous laisse à la profondeur de séparation, pour que la pièce tienne jusqu'à la dernière passe. Faites-les glisser le long des contours des modèles en vue de dessus.",
+    "holdingTabsHint": "Bandes de brut que les opérations 3D laissent autour de chaque modèle, au fond du brut ou, en double face, à la profondeur de séparation, pour que la pièce tienne jusqu'à la dernière passe. Faites-les glisser le long des contours des modèles en vue de dessus.",
     "holdingTabWidth": "Largeur des attaches",
     "holdingTabThickness": "Épaisseur des attaches",
     "holdingTabFullHeight": "Pleine hauteur",
-    "holdingTabTooThick": "Doit être plus fine que la profondeur de la face du dessous : moins de {size}",
+    "holdingTabTooThick": "Doit être plus fine que la profondeur coupée autour de la pièce : moins de {size}",
     "holdingTabsPerModel": "Attaches par modèle",
     "placeHoldingTabs": "Placer",
     "holdingTabCount": "{count, plural, =0 {Aucune attache} one {# attache} other {# attaches}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Faites glisser latéralement pour modifier"
+  },
+  "Pattern": {
+    "heading": "Motif",
+    "followsBoundary": "Il se déplace, tourne et se reflète avec le dessin qu'il remplit : sélectionnez ce dessin pour le déplacer. Redimensionner ce dessin change le contour ; les cellules gardent leur taille. La rotation, le miroir et le décalage déplacent les cellules à l'intérieur.",
+    "fill": "Motif",
+    "fillHint": "Remplir les tracés fermés sélectionnés avec un motif",
+    "filling": "Remplissage…",
+    "defaultName": "Motif",
+    "cell": "Cellule",
+    "cells": {
+      "square": "Carrés",
+      "brick": "Briques",
+      "hexagon": "Nid d'abeille",
+      "triangle": "Triangles",
+      "diamond": "Losanges",
+      "circleSquare": "Cercles (grille carrée)",
+      "circleHex": "Cercles (grille hexagonale)",
+      "lines": "Lignes",
+      "crosshatch": "Hachures croisées",
+      "wave": "Vagues",
+      "zigzag": "Zigzag",
+      "herringbone": "Chevrons (bâtons rompus)",
+      "basketWeave": "Vannerie",
+      "fishScale": "Écailles",
+      "chevron": "Chevrons",
+      "star": "Étoiles",
+      "truchet": "Arcs de Truchet",
+      "voronoi": "Cellules de Voronoï"
+    },
+    "size": "Taille de cellule",
+    "gap": "Écart",
+    "inset": "Retrait",
+    "amplitude": "Hauteur de vague",
+    "wavelength": "Longueur d'onde",
+    "seed": "Graine",
+    "rotation": "Rotation",
+    "mirrored": "En miroir",
+    "offset": {
+      "x": "Décalage X",
+      "y": "Décalage Y"
+    },
+    "tabsRemoved": "{count, plural, one {# attache retirée, qui n'était} other {# attaches retirées, qui n'étaient}} plus sur les cellules.",
+    "convert": "Convertir en dessin",
+    "convertTitle": "Garder les cellules comme dessin, usiné par les mêmes opérations ; il ne suit plus son contour"
   }
 }

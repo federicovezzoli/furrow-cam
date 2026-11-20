@@ -77,30 +77,42 @@ export function textFrame({ position, rotation, mirrored }: TextPlacement) {
 const PROBE = 1000;
 
 /**
- * Text item `text`'s settings once `move`, which keeps shapes' proportions
- * (`mapPath`), has rewritten its outlines (ADR-0059): its origin moves, a turn
- * adds to its rotation, a mirror flips it and a scale multiplies its height,
- * which its line and letter spacing are multiples of.
+ * A placement (a text item's or a pattern's, ADR-0059, ADR-0087) once `move`,
+ * which keeps shapes' proportions (`mapPath`), has rewritten what it places:
+ * its origin moves, a turn adds to its rotation and a mirror flips it.
+ * `scale` is how much the move scales lengths.
  */
-export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
-  // The text's own axes in the stock, after the move.
-  const frame = textFrame(text.placement);
+export function mapPlacement(
+  placement: TextPlacement,
+  move: (point: Point) => Point,
+): { placement: TextPlacement; scale: number } {
+  // The placement's own axes in the stock, after the move.
+  const frame = textFrame(placement);
   const [ox, oy] = move(frame([0, 0]));
   const [xx, xy] = move(frame([PROBE, 0]));
   const [yx, yy] = move(frame([0, PROBE]));
   const [ux, uy, vx, vy] = [xx - ox, xy - oy, yx - ox, yy - oy];
-  // The height comes from the y axis alone, so a move that stretches one axis would lose the outlines.
+  // The scale comes from the y axis alone, so a move that stretches one axis would lose the shapes.
   if (Math.abs(Math.hypot(ux, uy) - Math.hypot(vx, vy)) > PROBE * 1e-6) {
-    throw new Error("mapText needs a move that keeps shapes' proportions");
+    throw new Error("mapPlacement needs a move that keeps shapes' proportions");
   }
   const turned = (Math.atan2(vy, vx) * 180) / Math.PI - 90;
   return {
-    ...text,
-    height: roundCoordinate((text.height * Math.hypot(vx, vy)) / PROBE),
     placement: {
       position: [ox, oy],
       rotation: roundCoordinate(((turned % 360) + 360) % 360) % 360,
       mirrored: ux * vy - uy * vx < 0,
     },
+    scale: Math.hypot(vx, vy) / PROBE,
   };
+}
+
+/**
+ * Text item `text`'s settings once `move` has rewritten its outlines
+ * (`mapPlacement`): a scale multiplies its height, which its line and letter
+ * spacing are multiples of.
+ */
+export function mapText(text: TextSettings, move: (point: Point) => Point): TextSettings {
+  const { placement, scale } = mapPlacement(text.placement, move);
+  return { ...text, height: roundCoordinate(text.height * scale), placement };
 }

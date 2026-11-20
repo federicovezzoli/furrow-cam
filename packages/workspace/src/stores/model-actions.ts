@@ -64,7 +64,7 @@ function changeModel(
     if (!model) return;
     recipe(model, current);
     // Holding tabs keep their place round the model (#357).
-    const tabs = draft.stock.twoSided?.tabs;
+    const tabs = draft.stock.tabs;
     if (tabs) {
       const moved = followModels(tabs.positions, models, draft.models);
       if (

@@ -34,7 +34,7 @@ Furrow CAM machines from the top only (PRD-0005 S3, which lists flipping the sto
 | B2 | A model in a two-sided project is machined from both faces. Each side cuts all of the model it can see from its face, and around the model down to a parting height the user sets (half the model's depth by default), so models not widest at that height are cut without a skirt. The model's depth may now reach the full stock thickness | Must |
 | B3 | Relief roughing and finishing (PRD-0005 S4, S5, S10) work on the bottom side, on the model as seen from below | Must |
 | B4 | Locating pin holes: the user sets their diameter and positions on the flip axis, and chooses whether they go through the stock into the spoilboard (pins fixed in the spoilboard) or only into the stock to a depth they set. A drill operation on the top side cuts them, and the bottom side's zero is placed so the flipped stock lines up on them | Must |
-| B5 | Holding tabs keep the part attached to the surrounding stock at the parting height, so it does not come loose while the bottom side is cut. They belong to the two-sided setup and every 3D operation leaves them. The user sets their width and thickness, places a number of them evenly around the model's outline and drags them along it, as for profile tabs | Must |
+| B5 | Holding tabs keep the part attached to the surrounding stock at the parting height, so it does not come loose while the bottom side is cut. They belong to the stock and every 3D operation leaves them; one-sided jobs have them too (PRD-0005 S13). The user sets their width and thickness, places a number of them evenly around the model's outline and drags them along it, as for profile tabs | Must |
 | B6 | The viewport and the simulation show each side; the bottom side's simulation starts from the stock the top side left, flipped | Must |
 | B7 | G-code is exported as one file per side, named after the side, with the setup to do between them (flip, pins, zero) in the file's header comment | Must |
 | B8 | 2D operations (profile, pocket, drill, engrave, V-carve) on the bottom side, on drawings mirrored about the flip axis | Should |
@@ -58,3 +58,4 @@ Furrow CAM machines from the top only (PRD-0005 S3, which lists flipping the sto
 - 2026-10-23: initial draft
 - 2026-10-23: B4 the user chooses through or blind pin holes
 - 2026-10-28: B2 each side cuts all of the model it can see, the parting height bounds only the cut around it; B5 tabs belong to the setup (ADR-0063); open questions closed
+- 2026-11-16: B5 tabs belong to the stock, so one-sided jobs have them too (#616, ADR-0086)

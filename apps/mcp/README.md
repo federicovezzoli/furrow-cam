@@ -19,12 +19,14 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `import_file` | Imports an SVG or DXF drawing, or an STL or STEP 3D model, with the app's limits and placement; asks for the DPI or units when the file doesn't give them |
 | `import_terrain` | Makes a relief model of a real place from open elevation data, as the app's *Terrain from a map* does: an area about coordinates or a map link (names aren't searched), at the size, exaggeration and base you give; can also write it as an STL file |
 | `import_image_relief` | Makes a relief model from a greyscale PNG, JPEG or WebP image, as the app's *Relief from image* does: lighter is higher (darker with invert), at the width, relief height, base and smoothing you give |
+| `add_pattern` | Fills closed paths of one drawing with a pattern, as the app's *Pattern* command does: one of 18 cells (honeycomb, waves, Voronoi cells, …) at the size, gap, inset and rotation you give, which follows its boundary when the drawing moves or is resized |
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |
 | `turn_model` | Turns a model a quarter turn (or more) about the stock's X, Y or Z axis |
 | `set_stock` | Sets the stock's size and the units the app shows |
-| `set_two_sided` | Makes the project two-sided and sets its flip axis, parting depth, line-up and holding tabs |
+| `set_two_sided` | Makes the project two-sided and sets its flip axis, parting depth and line-up |
+| `set_holding_tabs` | Sets the holding tabs the 3D operations leave round each model, one-sided or two-sided |
 | `set_zero` | Sets the XY zero (a stock corner, edge or centre, or a custom point) and the Z zero |
 | `set_touch_off_pad` | Adds, moves or removes the touch-off pad |
 | `get_library` | Lists the desktop app's tool library and machines |

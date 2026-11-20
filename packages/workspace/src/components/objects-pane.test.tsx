@@ -8,15 +8,18 @@ import {
   OPERATION_ID,
   SQUARE_ID,
 } from "@furrow/document/fixtures";
-import { act, fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
 import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
 import type { DocumentStore } from "../stores/document-store";
 import { setObjectFlag } from "../stores/geometry-actions";
 import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
-import { ObjectsPane } from "./objects-pane";
+import { ObjectsPane, stlFileName } from "./objects-pane";
+
+const download = vi.hoisted(() => vi.fn());
+vi.mock("@furrow/ui/lib/download", () => ({ downloadFile: download }));
 
 type Seen = { store: DocumentStore | null; workspace: WorkspaceStore | null };
 
@@ -37,14 +40,15 @@ function render() {
     models: [model],
   };
   const seen: Seen = { store: null, workspace: null };
+  const host = createMemoryHost({ document: doc });
   renderWorkspace(
     <>
       <ObjectsPane />
       <Probe seen={seen} />
     </>,
-    createMemoryHost({ document: doc }),
+    host,
   );
-  return seen as { store: DocumentStore; workspace: WorkspaceStore };
+  return { ...(seen as { store: DocumentStore; workspace: WorkspaceStore }), host };
 }
 
 const row = (name: string) => screen.getByRole("treeitem", { name: new RegExp(`^${name}`) });
@@ -205,5 +209,28 @@ describe("ObjectsPane (ADR-0080)", () => {
     if (!chevron) throw new Error("no chevron");
     fireEvent.click(chevron);
     expect(document.activeElement).toBe(row("part.dxf"));
+  });
+
+  it("downloads a model's stored mesh as STL from its row only", async () => {
+    const { host } = render();
+    const bytes = new Uint8Array([1, 2, 3]);
+    host.stored.meshes.set(model.sha256, bytes.buffer);
+    expect(screen.getAllByRole("button", { name: /^Download / })).toHaveLength(1);
+    fireEvent.click(within(row(model.fileName)).getByRole("button", { name: /^Download / }));
+    await waitFor(() => expect(download).toHaveBeenCalledOnce());
+    expect(download).toHaveBeenCalledWith(bytes, "emblem.stl", "model/stl");
+  });
+
+  it("says so when the mesh can't be read", async () => {
+    render();
+    fireEvent.click(screen.getByRole("button", { name: /^Download / }));
+    expect(await screen.findByText("This model is missing.")).toBeTruthy();
+  });
+
+  it("names the download after the model with an .stl extension", () => {
+    expect(stlFileName("part.step")).toBe("part.stl");
+    expect(stlFileName("part.STL")).toBe("part.stl");
+    expect(stlFileName("my.part.stp")).toBe("my.part.stl");
+    expect(stlFileName("terrain")).toBe("terrain.stl");
   });
 });

@@ -3,13 +3,13 @@ import {
   type Point,
   pointsCoincide,
   type Segment,
-  segmentIssue,
   type TextSettings,
 } from "@furrow/document";
-import { pathBounds, type Rect } from "../geometry/bounds";
+import { joinRects, pathBounds, type Rect } from "../geometry/bounds";
 import { type FillRule, intersection, type Polygon, signedArea, union } from "../geometry/clipper";
 import { quadraticToCubic } from "../geometry/curve";
 import { flattenPath } from "../geometry/flatten";
+import { cleanPath, polygonPath } from "../geometry/path";
 import { textFrame } from "../geometry/scale";
 import { mapPath } from "../geometry/translate";
 import { emSize, type Font, type GlyphCommand, layoutLine } from "./font";
@@ -133,42 +133,11 @@ function mergeOverlaps(all: Path[][]): Path[] {
     if (indices.length === 1 && area(rings, "nonZero") - area(rings, "evenOdd") <= OVERLAP_AREA) {
       return glyphs[only] ?? [];
     }
-    return union(indices.flatMap((i) => polygons[i] ?? [])).map(polygonPath);
+    return union(indices.flatMap((i) => polygons[i] ?? [])).map((ring) => polygonPath(ring));
   });
 }
 
 /** The area `rings` fill under `fillRule`, in mm². */
 function area(rings: Polygon[], fillRule: FillRule): number {
   return Math.abs(union(rings, fillRule).reduce((sum, ring) => sum + signedArea(ring), 0));
-}
-
-function joinRects(a: Rect, b: Rect): Rect {
-  return {
-    min: [Math.min(a.min[0], b.min[0]), Math.min(a.min[1], b.min[1])],
-    max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1])],
-  };
-}
-
-/** A closed path of straight lines around `polygon`. */
-function polygonPath([start, ...rest]: Polygon): Path {
-  const segments = rest.map((to): Segment => ({ kind: "line", to }));
-  return { start: start ?? [0, 0], segments, closed: true };
-}
-
-/**
- * `path` without the segments that rounding or the font left with no
- * length, or `null` if nothing is left to cut: a lone point would read as a
- * drill position, and a closed single line as nothing.
- */
-function cleanPath(path: Path): Path | null {
-  const segments: Segment[] = [];
-  let current = path.start;
-  for (const segment of path.segments) {
-    if (segmentIssue(current, segment) !== null) continue;
-    segments.push(segment);
-    current = segment.to;
-  }
-  const [only] = segments;
-  if (!only || (path.closed && segments.length === 1 && only.kind === "line")) return null;
-  return { ...path, segments };
 }

@@ -563,16 +563,20 @@
       "unknownDrawing": "ID de desenho desconhecido",
       "emptyDrawing": "Um desenho precisa de pelo menos uma forma",
       "textShapes": "Um item de texto precisa de exatamente uma forma",
+      "patternShapes": "Um padrão precisa de exatamente uma forma",
+      "textAndPattern": "Um desenho não pode ser ao mesmo tempo um texto e um padrão",
+      "patternBoundary": "Um padrão preenche caminhos de um único outro desenho, não de um padrão",
       "duplicateFont": "Fonte duplicada",
       "unknownFont": "O texto usa uma fonte que o projeto não contém",
       "tooManyFonts": "Um projeto contém no máximo {max} fontes",
       "unknownShape": "ID de forma desconhecido",
       "unknownPath": "Caminho desconhecido",
+      "pathIndices": "Os índices dos caminhos devem ser crescentes, cada um uma vez",
+      "openBoundaryPath": "Um padrão só preenche caminhos fechados",
       "pinHolesThrough": "Furos cegos de pinos devem terminar dentro do material",
-      "tabsThickerThanSide": "As pontes de fixação devem ser mais finas que a profundidade do lado de baixo"
+      "tabsThickerThanSide": "As pontes de fixação devem ser mais finas que a profundidade cortada ao redor da peça"
     },
     "operation": {
-      "pathIndices": "Os índices dos caminhos devem ser crescentes, cada um uma vez",
       "allowanceZeroOnLine": "Deve ser 0 sobre a linha",
       "overcutsOnLine": "Não sobre a linha",
       "plungeWithTabs": "Não com pontes de fixação",
@@ -723,7 +727,7 @@
       "holesOffStock": "Um furo colocado está fora do material.",
       "noHoles": "Nada para furar: coloque furos na vista ou use as formas selecionadas.",
       "cutsPins": "Esta operação corta onde vai um pino de posicionamento, por isso a ferramenta bateria no pino quando o material for virado: mova os pinos ou o corte.",
-      "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que o lado de baixo corta todo o seu contorno.",
+      "noHoldingTabs": "Sem pontes de fixação: a peça se solta assim que é cortada todo ao redor.",
       "stockBoundaryTwoSided": "Usinar o material inteiro nos dois lados não deixa moldura para segurar a peça: use uma margem.",
       "reachesOtherModel": "A ferramenta corta dentro de outro modelo, que esta operação não segue: só o seu próprio modelo é maquinado. Use um limite menor ou afaste os modelos."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "Não foi possível transferir as altitudes. Verifique a ligação e tente novamente.",
       "inlayClosedPaths": "Selecione caminhos fechados para fazer uma incrustação.",
       "inlayGap": "A folga para a cola deve ser pelo menos 0 e menor que a profundidade do rebaixo.",
-      "inlayTooDeep": "Esta incrustação é profunda demais para o cone da fresa em V ou para o material: o rebaixo deve ficar dentro do cone e o fundo da peça dentro do material."
+      "inlayTooDeep": "Esta incrustação é profunda demais para o cone da fresa em V ou para o material: o rebaixo deve ficar dentro do cone e o fundo da peça dentro do material.",
+      "patternEmpty": "Nenhuma célula cabe no contorno: reduza as células ou o recuo.",
+      "patternTooDense": "As células são demasiado pequenas para este contorno: aumente-as.",
+      "patternFailed": "Não foi possível gerar o padrão.",
+      "patternNoSelection": "Selecione caminhos fechados de um desenho para preencher.",
+      "patternOneDrawing": "Selecione caminhos de um só desenho.",
+      "patternOfPattern": "Um padrão não pode ser preenchido com outro.",
+      "patternNoClosedPath": "A seleção não tem caminhos fechados para preencher."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
@@ -1101,7 +1112,9 @@
     "show": "Mostrar {name}",
     "hide": "Ocultar {name}",
     "lock": "Bloquear {name}",
-    "unlock": "Desbloquear {name}"
+    "unlock": "Desbloquear {name}",
+    "download": "Baixar {name} como STL",
+    "downloadFailed": "Não foi possível ler o arquivo deste modelo."
   },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Encoste este canto do material em um canto de esquadro nos dois lados. Os lados só se encontram se o material medir exatamente {size} em {axis}: meça-o.",
     "idlePinDrills": "{count, plural, one {# furação dos pinos não corta} other {# furações dos pinos não cortam}} nada sem pinos.",
     "holdingTabs": "Pontes de fixação",
-    "holdingTabsHint": "Tiras de material que o lado de baixo deixa na profundidade de divisão, para a peça ficar presa até a última passada. Arraste-as ao longo dos contornos dos modelos na vista superior.",
+    "holdingTabsHint": "Tiras de material que as operações 3D deixam ao redor de cada modelo, no fundo do material ou, em dois lados, na profundidade de divisão, para a peça ficar presa até a última passada. Arraste-as ao longo dos contornos dos modelos na vista superior.",
     "holdingTabWidth": "Largura da ponte",
     "holdingTabThickness": "Espessura da ponte",
     "holdingTabFullHeight": "Altura total",
-    "holdingTabTooThick": "Deve ser mais fina que a profundidade do lado de baixo: menos de {size}",
+    "holdingTabTooThick": "Deve ser mais fina que a profundidade cortada ao redor da peça: menos de {size}",
     "holdingTabsPerModel": "Pontes por modelo",
     "placeHoldingTabs": "Posicionar",
     "holdingTabCount": "{count, plural, =0 {Nenhuma ponte} one {# ponte} other {# pontes}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Arraste para os lados para alterar"
+  },
+  "Pattern": {
+    "heading": "Padrão",
+    "followsBoundary": "Move-se, roda e espelha-se com o desenho que preenche: selecione esse desenho para o mover. Redimensioná-lo muda o contorno; as células mantêm o tamanho. A rotação, o espelho e o deslocamento movem as células no seu interior.",
+    "fill": "Padrão",
+    "fillHint": "Preencher os caminhos fechados selecionados com um padrão",
+    "filling": "A preencher…",
+    "defaultName": "Padrão",
+    "cell": "Célula",
+    "cells": {
+      "square": "Quadrados",
+      "brick": "Tijolos",
+      "hexagon": "Favo de mel",
+      "triangle": "Triângulos",
+      "diamond": "Losangos",
+      "circleSquare": "Círculos (grelha quadrada)",
+      "circleHex": "Círculos (grelha hexagonal)",
+      "lines": "Linhas",
+      "crosshatch": "Tracejado cruzado",
+      "wave": "Ondas",
+      "zigzag": "Ziguezague",
+      "herringbone": "Espinha de peixe",
+      "basketWeave": "Cesto",
+      "fishScale": "Escamas",
+      "chevron": "Chevrons",
+      "star": "Estrelas",
+      "truchet": "Arcos de Truchet",
+      "voronoi": "Células de Voronoi"
+    },
+    "size": "Tamanho da célula",
+    "gap": "Espaço",
+    "inset": "Recuo",
+    "amplitude": "Altura da onda",
+    "wavelength": "Comprimento de onda",
+    "seed": "Semente",
+    "rotation": "Rotação",
+    "mirrored": "Espelhado",
+    "offset": {
+      "x": "Deslocamento X",
+      "y": "Deslocamento Y"
+    },
+    "tabsRemoved": "{count, plural, one {Removida # patilha que já não estava} other {Removidas # patilhas que já não estavam}} sobre as células.",
+    "convert": "Converter em desenho",
+    "convertTitle": "Manter as células como desenho, maquinado pelas mesmas operações; deixa de seguir o seu contorno"
   }
 }

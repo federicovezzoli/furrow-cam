@@ -93,6 +93,7 @@ function referenceProject(): ProjectDocument {
       zOrigin: "stock_top",
       touchOff: null,
       twoSided: null,
+      tabs: null,
     },
     machine: shapeoko,
     geometry: [plate, holes, recess],
@@ -182,7 +183,8 @@ describe("exportGcode", () => {
       const stock = {
         ...doc.stock,
         thickness: 18,
-        twoSided: { flipAxis: "x" as const, partingDepth: 9, tabs: null, lineUp: null },
+        twoSided: { flipAxis: "x" as const, partingDepth: 9, lineUp: null },
+        tabs: null,
       };
       return { ...doc, stock, models: [placed], operations };
     }
@@ -242,7 +244,8 @@ describe("exportGcode", () => {
         const doc = twoSided(operations);
         const stock = {
           ...doc.stock,
-          twoSided: { flipAxis: "y" as const, partingDepth: 9, tabs: null, lineUp: pins },
+          twoSided: { flipAxis: "y" as const, partingDepth: 9, lineUp: pins },
+          tabs: null,
         };
         return exportGcode({ ...doc, stock }, "Owl", context).files.at(-1)?.gcode;
       };
@@ -412,7 +415,11 @@ describe("exportGcode", () => {
             : undefined,
       }),
     );
-    expect(warnings).toEqual([{ operation: "Rough", message: { code: "toolpath.belowStock" } }]);
+    // Cut through the stock all round, with no tab to hold it (#616).
+    expect(warnings).toEqual([
+      { operation: "Rough", message: { code: "toolpath.noHoldingTabs" } },
+      { operation: "Rough", message: { code: "toolpath.belowStock" } },
+    ]);
     expect(gcode).toContain("(Operation: Rough)");
   });
 

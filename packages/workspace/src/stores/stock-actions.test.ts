@@ -476,18 +476,30 @@ describe("holding tabs (#357)", () => {
   it("start four round each model, 6 mm wide and 2 mm thick, and turn off", () => {
     const store = tabbedStore();
     setHoldingTabs(store, true);
-    expect(stock(store).twoSided?.tabs).toEqual({
+    expect(stock(store).tabs).toEqual({
       width: 6,
       thickness: 2,
       fullHeight: false,
       positions: autoHoldingTabPositions([model], 4),
     });
     setHoldingTabs(store, false);
-    expect(stock(store).twoSided?.tabs).toBeNull();
-    // A one-sided project has none to turn on.
-    const oneSided = newStore();
-    setHoldingTabs(oneSided, true);
-    expect(stock(oneSided).twoSided).toBeNull();
+    expect(stock(store).tabs).toBeNull();
+  });
+
+  it("are set on one-sided projects too, thinner than the stock (#616)", () => {
+    const store = createDocumentStore({ ...createProjectDocument(), models: [model] });
+    setHoldingTabs(store, true);
+    expect(stock(store).tabs).toMatchObject({ width: 6, thickness: 2 });
+    expect(setHoldingTabSize(store, "thickness", 18)).toBe(false);
+    expect(setHoldingTabSize(store, "thickness", 17)).toBe(true);
+    // Two-sided, the bottom side is shallower: the tabs take half its depth; one-sided again, they stay.
+    setTwoSided(store, true);
+    const half = (18 - (stock(store).twoSided?.partingDepth ?? 0)) / 2;
+    expect(half).toBeLessThan(17);
+    expect(stock(store).tabs?.thickness).toBe(half);
+    setTwoSided(store, false);
+    expect(stock(store).tabs).toMatchObject({ thickness: half });
+    expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
   });
 
   it("stay thinner than the bottom side's depth", () => {
@@ -497,15 +509,15 @@ describe("holding tabs (#357)", () => {
     expect(setHoldingTabSize(store, "width", 0)).toBe(false);
     expect(setHoldingTabSize(store, "thickness", 8)).toBe(true);
     expect(setHoldingTabSize(store, "width", 10)).toBe(true);
-    expect(stock(store).twoSided?.tabs).toMatchObject({ width: 10, thickness: 8 });
+    expect(stock(store).tabs).toMatchObject({ width: 10, thickness: 8 });
     setHoldingTabsFullHeight(store, true);
-    expect(stock(store).twoSided?.tabs).toMatchObject({ thickness: 8, fullHeight: true });
+    expect(stock(store).tabs).toMatchObject({ thickness: 8, fullHeight: true });
     setHoldingTabsFullHeight(store, false);
     // A deeper parting plane leaves the bottom side 4 mm: the tabs take half.
     setPartingDepth(store, 14);
-    expect(stock(store).twoSided?.tabs?.thickness).toBe(2);
+    expect(stock(store).tabs?.thickness).toBe(2);
     setStockDimension(store, "thickness", 15);
-    expect(stock(store).twoSided?.tabs?.thickness).toBe(0.5);
+    expect(stock(store).tabs?.thickness).toBe(0.5);
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
   });
 
@@ -513,11 +525,11 @@ describe("holding tabs (#357)", () => {
     const store = tabbedStore();
     setHoldingTabs(store, true);
     autoPlaceHoldingTabs(store, 2);
-    expect(stock(store).twoSided?.tabs?.positions).toEqual(autoHoldingTabPositions([model], 2));
+    expect(stock(store).tabs?.positions).toEqual(autoHoldingTabPositions([model], 2));
     moveHoldingTab(store, 1, [1, 2]);
     moveHoldingTab(store, 5, [3, 4]);
-    expect(stock(store).twoSided?.tabs?.positions[1]).toEqual([1, 2]);
-    expect(stock(store).twoSided?.tabs?.positions).toHaveLength(2);
+    expect(stock(store).tabs?.positions[1]).toEqual([1, 2]);
+    expect(stock(store).tabs?.positions).toHaveLength(2);
   });
 
   it("are set at positions moved onto the model's outline, refused without tabs or a model", () => {
@@ -527,7 +539,7 @@ describe("holding tabs (#357)", () => {
     const far: [number, number] = [-500, -500];
     expect(setHoldingTabPositions(store, [far])).toBe(true);
     const onOutline = nearestOnLoops(modelOutlines([model]), far)?.point;
-    expect(stock(store).twoSided?.tabs?.positions).toEqual([onOutline]);
+    expect(stock(store).tabs?.positions).toEqual([onOutline]);
     const empty = createDocumentStore(createProjectDocument());
     setTwoSided(empty, true);
     setHoldingTabs(empty, true);
@@ -538,7 +550,7 @@ describe("holding tabs (#357)", () => {
   it("keep their place on the model when it or the design moves", () => {
     const store = tabbedStore();
     setHoldingTabs(store, true);
-    const at = () => stock(store).twoSided?.tabs?.positions ?? [];
+    const at = () => stock(store).tabs?.positions ?? [];
     const before = at();
     const placed = () => store.getState().document.models[0]?.placement.position ?? [0, 0];
     const [x, y] = placed();
@@ -572,7 +584,6 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(stock(store).twoSided).toEqual({
       flipAxis: "x",
       partingDepth: 9,
-      tabs: null,
       lineUp: null,
     });
     setFlipAxis(store, "y");
@@ -580,7 +591,6 @@ describe("two-sided projects (ADR-0060)", () => {
     expect(stock(store).twoSided).toEqual({
       flipAxis: "y",
       partingDepth: 6,
-      tabs: null,
       lineUp: null,
     });
     // Outside the stock: refused.

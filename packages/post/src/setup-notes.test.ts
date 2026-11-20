@@ -11,10 +11,12 @@ const stock: Stock = {
   zOrigin: "stock_top",
   touchOff: null,
   twoSided: null,
+  tabs: null,
 };
 const twoSided: Stock = {
   ...stock,
-  twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null },
+  twoSided: { flipAxis: "x", partingDepth: 9, lineUp: null },
+  tabs: null,
 };
 
 describe("padLabel", () => {

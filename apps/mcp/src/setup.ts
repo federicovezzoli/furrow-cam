@@ -113,36 +113,25 @@ export type TwoSidedRequest = {
     | null
     | { type: "edges"; corner: StockCorner }
     | { type: "pins"; diameter?: number; positions?: number[]; holes?: PinHoles };
-  tabs?: null | {
-    width?: number;
-    thickness?: number;
-    fullHeight?: boolean;
-    count?: number;
-    positions?: Point[];
-  };
 };
 
 /**
  * Makes the project two-sided (PRD-0011, ADR-0060) and sets up its flip
- * axis, parting depth, line-up and holding tabs, as the app's two-sided
- * settings do; or one-sided again. Refused as a whole, changing nothing, if
- * any setting is.
+ * axis, parting depth and line-up, as the app's two-sided settings do; or
+ * one-sided again. Refused as a whole, changing nothing, if any setting is.
  */
 export function setTwoSidedSetup(
   project: Project,
-  { twoSided, flipAxis, partingDepth, lineUp, tabs }: TwoSidedRequest,
+  { twoSided, flipAxis, partingDepth, lineUp }: TwoSidedRequest,
 ) {
   // `null` agrees with turning the setup off.
-  const given = Object.entries({ flipAxis, partingDepth, lineUp, tabs }).filter(
+  const given = Object.entries({ flipAxis, partingDepth, lineUp }).filter(
     ([, value]) => value !== undefined && (twoSided || value !== null),
   );
   if (!twoSided && given.length > 0) {
     throw new ToolError(
       `twoSided: false removes the setup; ${given.map(([field]) => field).join(", ")} can't be set with it.`,
     );
-  }
-  if (tabs?.count !== undefined && tabs.positions !== undefined) {
-    throw new ToolError("tabs: give a count or positions, not both.");
   }
   // Every refusal below throws inside `change`, which undoes the whole call.
   change(project, (store) => {
@@ -173,19 +162,42 @@ export function setTwoSidedSetup(
     }
     const pins = stockPins(stock());
     if (pins && (lineUp?.type === "pins" || flipAxis)) keepPinsOnStock(stock(), pins);
-    if (tabs !== undefined) {
-      setHoldingTabs(store, tabs !== null);
-      if (!tabs) return;
-      for (const field of ["width", "thickness"] as const) {
-        const value = tabs[field];
-        if (value === undefined || setHoldingTabSize(store, field, value)) continue;
-        refuse({ tabs: { ...stock().twoSided?.tabs, [field]: value } });
-      }
-      if (tabs.fullHeight !== undefined) setHoldingTabsFullHeight(store, tabs.fullHeight);
-      if (tabs.count !== undefined) autoPlaceHoldingTabs(store, tabs.count);
-      if (tabs.positions && !setHoldingTabPositions(store, tabs.positions)) {
-        throw new ToolError("tabs.positions: holding tabs hold a model, and the project has none.");
-      }
+  });
+}
+
+/** What `set_holding_tabs` is given: each setting left out stays as it is. */
+export type HoldingTabsRequest = {
+  width?: number;
+  thickness?: number;
+  fullHeight?: boolean;
+  count?: number;
+  positions?: Point[];
+};
+
+/**
+ * Turns the holding tabs the 3D operations leave (ADR-0063, ADR-0086) on and
+ * sets them up, as the app's holding tab settings do, or off with `null`.
+ * Refused as a whole, changing nothing, if any setting is.
+ */
+export function setHoldingTabsSetup(project: Project, tabs: HoldingTabsRequest | null) {
+  if (tabs?.count !== undefined && tabs.positions !== undefined) {
+    throw new ToolError("tabs: give a count or positions, not both.");
+  }
+  change(project, (store) => {
+    setHoldingTabs(store, tabs !== null);
+    if (!tabs) return;
+    const stock = () => store.getState().document.stock;
+    for (const field of ["width", "thickness"] as const) {
+      const value = tabs[field];
+      if (value === undefined || setHoldingTabSize(store, field, value)) continue;
+      // Throws the document's message for the size the action refused.
+      parsed(Stock, { ...stock(), tabs: { ...stock().tabs, [field]: value } });
+      throw new ToolError(`${field}: the app refused this holding tab size.`);
+    }
+    if (tabs.fullHeight !== undefined) setHoldingTabsFullHeight(store, tabs.fullHeight);
+    if (tabs.count !== undefined) autoPlaceHoldingTabs(store, tabs.count);
+    if (tabs.positions && !setHoldingTabPositions(store, tabs.positions)) {
+      throw new ToolError("positions: holding tabs hold a model, and the project has none.");
     }
   });
 }

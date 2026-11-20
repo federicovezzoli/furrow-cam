@@ -1147,7 +1147,7 @@ export type ReliefFinishOptions = {
   rest?: RestOptions | null;
   /** The touch-off pad, which no pass cuts (#147); `null` for none. */
   touchOff?: TouchOffDisc | null;
-  /** In a two-sided project, the holding tabs to leave (#357). */
+  /** The holding tabs to leave (#357, #616). */
   tabs?: readonly HoldingTab[];
 };
 

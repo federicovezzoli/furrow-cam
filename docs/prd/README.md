@@ -30,3 +30,4 @@ Statuses: `Draft` · `Approved` · `Partially shipped` · `Shipped` · `Abandone
 | [0013](0013-demo-videos.md) | Automated demo videos | Partially shipped |
 | [0014](0014-terrain-from-a-map.md) | Terrain from a map | Partially shipped |
 | [0015](0015-relief-from-image.md) | Relief from an image | Shipped |
+| [0016](0016-patterns.md) | Patterns | Draft |

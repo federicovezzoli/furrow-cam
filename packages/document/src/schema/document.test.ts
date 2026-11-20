@@ -3,6 +3,8 @@ import {
   fullDocument,
   model,
   OPERATION_ID,
+  patternItem,
+  patternShape,
   reliefFinish,
   reliefRough,
   SQUARE_ID,
@@ -11,7 +13,7 @@ import {
   uploadedFont,
 } from "../fixtures";
 import { createProjectDocument, ProjectDocument, Stock, StockAnchor, XYOrigin } from "./document";
-import type { TextSettings } from "./geometry";
+import type { Path, PatternSettings, TextSettings } from "./geometry";
 import { DrillOperation, type Operation } from "./operation";
 
 describe("ProjectDocument", () => {
@@ -116,6 +118,79 @@ describe("ProjectDocument", () => {
     }
     expect(ProjectDocument.safeParse(text({ font: "" })).success).toBe(false);
     expect(ProjectDocument.safeParse(text({ align: "justify" })).success).toBe(false);
+  });
+
+  it("accepts patterns with one shape and a boundary of one other drawing", () => {
+    const doc = fullDocument();
+    const withPattern = {
+      ...doc,
+      drawings: [...doc.drawings, patternItem],
+      geometry: [...doc.geometry, patternShape],
+    };
+    expect(ProjectDocument.parse(withPattern)).toEqual(withPattern);
+    const issues = (changes: object, geometry = withPattern.geometry) =>
+      ProjectDocument.safeParse({
+        ...withPattern,
+        drawings: [...doc.drawings, { ...patternItem, ...changes }],
+        geometry,
+      }).error?.issues;
+    const second = { ...patternShape, id: "f5a6b7c8-d9e0-4f1a-b2c3-d4e5f6a7b8c9" };
+    expect(issues({}, [...withPattern.geometry, second])).toEqual([
+      expect.objectContaining({ path: ["drawings", 1], message: "document.patternShapes" }),
+    ]);
+    expect(issues({ text: textItem.text })).toEqual([
+      expect.objectContaining({ path: ["drawings", 1], message: "document.textAndPattern" }),
+    ]);
+    const settings = patternItem.pattern as PatternSettings;
+    const boundary = (selections: object[]) => ({ pattern: { ...settings, boundary: selections } });
+    expect(issues(boundary([{ shapeId: SQUARE_ID, paths: [1] }]))).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "pattern", "boundary", 0, "paths", 0],
+        message: "document.unknownPath",
+      }),
+    ]);
+    const open: Path = { start: [0, 0], segments: [{ kind: "line", to: [5, 0] }], closed: false };
+    const withOpen = withPattern.geometry.map((shape) =>
+      shape.id === SQUARE_ID ? { ...shape, paths: [...shape.paths, open] } : shape,
+    );
+    expect(issues(boundary([{ shapeId: SQUARE_ID, paths: [0, 1] }]), withOpen)).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "pattern", "boundary", 0, "paths", 1],
+        message: "document.openBoundaryPath",
+      }),
+    ]);
+    // A whole shape's open paths are ignored.
+    expect(issues({}, withOpen)).toBeUndefined();
+    expect(issues(boundary([{ shapeId: second.id, paths: null }]))).toEqual([
+      expect.objectContaining({ message: "document.unknownShape" }),
+    ]);
+    // Its own cells, or another pattern's, can't bound it.
+    expect(issues(boundary([{ shapeId: patternShape.id, paths: null }]))).toEqual([
+      expect.objectContaining({
+        path: ["drawings", 1, "pattern", "boundary"],
+        message: "document.patternBoundary",
+      }),
+    ]);
+    // Nor can two drawings' paths.
+    const withText = {
+      ...withPattern,
+      drawings: [...doc.drawings, textItem, patternItem],
+      geometry: [...withPattern.geometry, textShape],
+    };
+    const both = [
+      { shapeId: SQUARE_ID, paths: null },
+      { shapeId: textShape.id, paths: null },
+    ];
+    expect(
+      ProjectDocument.safeParse({
+        ...withText,
+        drawings: [...doc.drawings, textItem, { ...patternItem, ...boundary(both) }],
+      }).error?.issues,
+    ).toEqual([expect.objectContaining({ message: "document.patternBoundary" })]);
+    expect(issues({ pattern: { ...settings, boundary: [] } })).toHaveLength(1);
+    expect(issues({ pattern: { ...settings, cell: "spiral" } })).toHaveLength(1);
+    expect(issues({ pattern: { ...settings, size: 0 } })).toHaveLength(1);
+    expect(issues({ pattern: { ...settings, gap: -1 } })).toHaveLength(1);
   });
 
   it("accepts uploaded fonts that text uses, and rejects duplicates, unknown ones and too many", () => {
@@ -317,22 +392,22 @@ describe("Stock", () => {
 
 describe("two-sided projects", () => {
   it("cut each side down to a parting plane inside the stock", () => {
-    const stock = fullDocument().stock;
+    const stock = { ...fullDocument().stock, tabs: null };
     expect(
       Stock.safeParse({
         ...stock,
-        twoSided: { flipAxis: "y", partingDepth: 17.9, tabs: null, lineUp: null },
+        twoSided: { flipAxis: "y", partingDepth: 17.9, lineUp: null },
       }).success,
     ).toBe(true);
     for (const twoSided of [
-      { flipAxis: "x", partingDepth: 18, tabs: null, lineUp: null },
-      { flipAxis: "x", partingDepth: 0, tabs: null, lineUp: null },
-      { flipAxis: "z", partingDepth: 9, tabs: null, lineUp: null },
-      { flipAxis: "x", tabs: null, lineUp: null },
+      { flipAxis: "x", partingDepth: 18, lineUp: null },
+      { flipAxis: "x", partingDepth: 0, lineUp: null },
+      { flipAxis: "z", partingDepth: 9, lineUp: null },
+      { flipAxis: "x", lineUp: null },
     ]) {
       expect(Stock.safeParse({ ...stock, twoSided }).success).toBe(false);
     }
-    const below = { flipAxis: "x", partingDepth: 20, tabs: null, lineUp: null };
+    const below = { flipAxis: "x", partingDepth: 20, lineUp: null };
     expect(Stock.safeParse({ ...stock, twoSided: below }).error?.issues).toEqual([
       expect.objectContaining({ path: ["twoSided", "partingDepth"] }),
     ]);
@@ -340,22 +415,21 @@ describe("two-sided projects", () => {
 
   it("hold the part by tabs thinner than the bottom side's depth", () => {
     const { stock } = fullDocument();
-    const withTabs = (thickness: number) => ({
+    const withTabs = (thickness: number, twoSided: object | null = stock.twoSided) => ({
       ...stock,
-      twoSided: {
-        flipAxis: "x",
-        partingDepth: 9,
-        lineUp: null,
-        tabs: { width: 6, thickness, fullHeight: false, positions: [[0, 50]] },
-      },
+      twoSided,
+      tabs: { width: 6, thickness, fullHeight: false, positions: [[0, 50]] },
     });
     expect(Stock.safeParse(withTabs(8.9)).success).toBe(true);
     expect(Stock.safeParse(withTabs(9)).error?.issues).toEqual([
       expect.objectContaining({
-        path: ["twoSided", "tabs", "thickness"],
+        path: ["tabs", "thickness"],
         message: "document.tabsThickerThanSide",
       }),
     ]);
+    // One-sided (#616): thinner than the stock.
+    expect(Stock.safeParse(withTabs(17.9, null)).success).toBe(true);
+    expect(Stock.safeParse(withTabs(18, null)).success).toBe(false);
   });
 
   it("locate the turned-over stock on two pins or more, through or blind", () => {
@@ -363,7 +437,7 @@ describe("two-sided projects", () => {
     const pins = stock.twoSided?.lineUp;
     const withPins = (changes: object) => ({
       ...stock,
-      twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: { ...pins, ...changes } },
+      twoSided: { flipAxis: "x", partingDepth: 9, lineUp: { ...pins, ...changes } },
     });
     expect(Stock.safeParse(withPins({ holes: { type: "blind", depth: 8 } })).success).toBe(true);
     for (const changes of [
@@ -442,6 +516,7 @@ describe("createProjectDocument", () => {
         zOrigin: "stock_top",
         touchOff: null,
         twoSided: null,
+        tabs: null,
       },
       machine: null,
       geometry: [],

@@ -10,6 +10,7 @@ const stock: Stock = {
   zOrigin: "stock_top",
   touchOff: null,
   twoSided: null,
+  tabs: null,
 };
 const zeroed = (anchor: StockAnchor): Stock => ({ ...stock, xyOrigin: { anchor } });
 

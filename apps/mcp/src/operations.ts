@@ -160,7 +160,7 @@ function findOperation(document: ProjectDocument, id: string): Operation {
 }
 
 /** `inputs` as the document stores targets; throws a `ToolError` for a drawing, shape or path it hasn't. */
-function targetsOf(document: ProjectDocument, inputs: TargetInput[]): OperationTarget[] {
+export function targetsOf(document: ProjectDocument, inputs: TargetInput[]): OperationTarget[] {
   const targets = inputs.flatMap((input): OperationTarget[] => {
     if ("drawingId" in input) {
       if (!document.drawings.some((drawing) => drawing.id === input.drawingId)) {

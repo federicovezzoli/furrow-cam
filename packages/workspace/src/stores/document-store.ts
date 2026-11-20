@@ -3,6 +3,7 @@ import type { ProjectDocument } from "@furrow/document";
 import { applyPatches, type Draft, enablePatches, type Patch, produceWithPatches } from "immer";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
+import { settlePatterns } from "./geometry-actions";
 
 enablePatches();
 
@@ -135,6 +136,8 @@ export function createDocumentStore(document: ProjectDocument) {
 
         commitTransaction() {
           if (!transaction) return;
+          // Patterns only mapped during the gesture are generated as part of it (ADR-0087).
+          settlePatterns(get());
           const entry = transactionEntry(transaction, get().document);
           transaction = null;
           if (!entry) {

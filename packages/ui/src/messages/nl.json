@@ -563,16 +563,20 @@
       "unknownDrawing": "Onbekende tekening-id",
       "emptyDrawing": "Een tekening heeft minstens één vorm nodig",
       "textShapes": "Een tekstitem heeft precies één vorm nodig",
+      "patternShapes": "Een patroon heeft precies één vorm nodig",
+      "textAndPattern": "Een tekening kan niet zowel tekst als patroon zijn",
+      "patternBoundary": "Een patroon vult paden van één andere tekening, niet van een patroon",
       "duplicateFont": "Dubbel lettertype",
       "unknownFont": "De tekst gebruikt een lettertype dat niet in het project zit",
       "tooManyFonts": "Een project bevat hoogstens {max} lettertypen",
       "unknownShape": "Onbekende vorm-id",
       "unknownPath": "Onbekend pad",
+      "pathIndices": "Padindexen moeten oplopend zijn, elk één keer",
+      "openBoundaryPath": "Een patroon vult alleen gesloten paden",
       "pinHolesThrough": "Blinde pengaten moeten binnen het materiaal eindigen",
-      "tabsThickerThanSide": "Houdbruggen moeten dunner zijn dan de diepte van de onderkant"
+      "tabsThickerThanSide": "Houdbruggen moeten dunner zijn dan de diepte die rond het werkstuk wordt gefreesd"
     },
     "operation": {
-      "pathIndices": "Padindexen moeten oplopend zijn, elk één keer",
       "allowanceZeroOnLine": "Moet 0 zijn op de lijn",
       "overcutsOnLine": "Niet op de lijn",
       "plungeWithTabs": "Niet met houdbruggen",
@@ -723,7 +727,7 @@
       "holesOffStock": "Een geplaatst gat ligt buiten het materiaal.",
       "noHoles": "Niets te boren: plaats gaten in de weergave of gebruik geselecteerde vormen.",
       "cutsPins": "Deze bewerking snijdt waar een paspen komt, dus het gereedschap zou de pen raken als het materiaal is omgedraaid: verplaats de pennen of de snede.",
-      "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra de onderkant er helemaal omheen is gefreesd.",
+      "noHoldingTabs": "Geen houdbruggen: het werkstuk komt los zodra het er helemaal rondom uit is gefreesd.",
       "stockBoundaryTwoSided": "Als het hele materiaal aan beide kanten wordt bewerkt, blijft er geen raamwerk over waaraan het werkstuk kan hangen: gebruik een marge.",
       "reachesOtherModel": "Het gereedschap snijdt in een ander model, dat deze bewerking niet volgt: alleen het eigen model wordt bewerkt. Gebruik een kleinere begrenzing of zet de modellen verder uit elkaar."
     },
@@ -818,7 +822,14 @@
       "terrainUnavailable": "De hoogtes konden niet worden opgehaald. Controleer je verbinding en probeer het opnieuw.",
       "inlayClosedPaths": "Selecteer gesloten paden om er een inlegwerk van te maken.",
       "inlayGap": "De lijmspleet moet minstens 0 zijn en kleiner dan de diepte van de uitsparing.",
-      "inlayTooDeep": "Dit inlegwerk is te diep voor de kegel van de V-frees of voor het materiaal: de uitsparing moet binnen de kegel blijven en de bodem van het inlegstuk binnen het materiaal."
+      "inlayTooDeep": "Dit inlegwerk is te diep voor de kegel van de V-frees of voor het materiaal: de uitsparing moet binnen de kegel blijven en de bodem van het inlegstuk binnen het materiaal.",
+      "patternEmpty": "Geen cel past binnen de begrenzing: maak de cellen of de inspringing kleiner.",
+      "patternTooDense": "De cellen zijn te klein voor deze begrenzing: maak ze groter.",
+      "patternFailed": "Het patroon kon niet worden gemaakt.",
+      "patternNoSelection": "Selecteer gesloten paden van een tekening om te vullen.",
+      "patternOneDrawing": "Selecteer paden van één tekening.",
+      "patternOfPattern": "Een patroon kan niet met een ander worden gevuld.",
+      "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",
@@ -1101,7 +1112,9 @@
     "show": "{name} tonen",
     "hide": "{name} verbergen",
     "lock": "{name} vergrendelen",
-    "unlock": "{name} ontgrendelen"
+    "unlock": "{name} ontgrendelen",
+    "download": "{name} downloaden als STL",
+    "downloadFailed": "Het bestand van dit model kon niet worden gelezen."
   },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",
@@ -1401,11 +1414,11 @@
     "edgesHint": "Duw deze hoek van het materiaal voor beide zijden in een aanslaghoek. De zijden sluiten alleen op elkaar aan als het materiaal precies {size} is langs {axis}: meet het.",
     "idlePinDrills": "{count, plural, one {# boorbewerking voor de pennen freest} other {# boorbewerkingen voor de pennen frezen}} niets zonder pennen.",
     "holdingTabs": "Houdbruggen",
-    "holdingTabsHint": "Stroken materiaal die de onderkant op de scheidingsdiepte laat staan, zodat het werkstuk tot de laatste gang vast blijft zitten. Sleep ze in het bovenaanzicht langs de omtrek van de modellen.",
+    "holdingTabsHint": "Stroken materiaal die de 3D-bewerkingen rond elk model laten staan, op de bodem van het materiaal of, tweezijdig, op de scheidingsdiepte, zodat het werkstuk tot de laatste gang vast blijft zitten. Sleep ze in het bovenaanzicht langs de omtrek van de modellen.",
     "holdingTabWidth": "Brugbreedte",
     "holdingTabThickness": "Brugdikte",
     "holdingTabFullHeight": "Volledige hoogte",
-    "holdingTabTooThick": "Moet dunner zijn dan de diepte van de onderkant: minder dan {size}",
+    "holdingTabTooThick": "Moet dunner zijn dan de diepte die rond het werkstuk wordt gefreesd: minder dan {size}",
     "holdingTabsPerModel": "Bruggen per model",
     "placeHoldingTabs": "Plaatsen",
     "holdingTabCount": "{count, plural, =0 {Geen bruggen} one {# brug} other {# bruggen}}",
@@ -1721,5 +1734,49 @@
   },
   "NumberField": {
     "drag": "Sleep zijwaarts om te wijzigen"
+  },
+  "Pattern": {
+    "heading": "Patroon",
+    "followsBoundary": "Het verplaatst, draait en spiegelt mee met de tekening die het vult: selecteer die tekening om het te verplaatsen. Het formaat ervan wijzigen verandert de omtrek; de cellen houden hun grootte. Rotatie, spiegeling en verschuiving verplaatsen de cellen erbinnen.",
+    "fill": "Patroon",
+    "fillHint": "De geselecteerde gesloten paden met een patroon vullen",
+    "filling": "Bezig met vullen…",
+    "defaultName": "Patroon",
+    "cell": "Cel",
+    "cells": {
+      "square": "Vierkanten",
+      "brick": "Bakstenen",
+      "hexagon": "Honingraat",
+      "triangle": "Driehoeken",
+      "diamond": "Ruiten",
+      "circleSquare": "Cirkels (vierkant raster)",
+      "circleHex": "Cirkels (zeshoekig raster)",
+      "lines": "Lijnen",
+      "crosshatch": "Kruisarcering",
+      "wave": "Golven",
+      "zigzag": "Zigzag",
+      "herringbone": "Visgraat",
+      "basketWeave": "Mandvlecht",
+      "fishScale": "Visschubben",
+      "chevron": "Chevrons",
+      "star": "Sterren",
+      "truchet": "Truchet-bogen",
+      "voronoi": "Voronoi-cellen"
+    },
+    "size": "Celgrootte",
+    "gap": "Tussenruimte",
+    "inset": "Inspringing",
+    "amplitude": "Golfhoogte",
+    "wavelength": "Golflengte",
+    "seed": "Seed",
+    "rotation": "Rotatie",
+    "mirrored": "Gespiegeld",
+    "offset": {
+      "x": "Verschuiving X",
+      "y": "Verschuiving Y"
+    },
+    "tabsRemoved": "{count, plural, one {# lipje verwijderd dat} other {# lipjes verwijderd die}} niet meer op de cellen lagen.",
+    "convert": "Omzetten naar tekening",
+    "convertTitle": "De cellen als tekening behouden, bewerkt door dezelfde bewerkingen; volgt de begrenzing niet meer"
   }
 }

@@ -267,7 +267,8 @@ describe("scheduleToolpaths", () => {
       ...document,
       stock: {
         ...document.stock,
-        twoSided: { flipAxis: "x", partingDepth: 9, tabs: null, lineUp: null },
+        twoSided: { flipAxis: "x", partingDepth: 9, lineUp: null },
+        tabs: null,
       },
       models: [model],
       operations: [bottom],
@@ -296,14 +297,7 @@ describe("scheduleToolpaths", () => {
     answer();
     // The holding tabs alone (#357).
     documents.getState().change("Tabs", (draft) => {
-      if (draft.stock.twoSided) {
-        draft.stock.twoSided.tabs = {
-          width: 6,
-          thickness: 2,
-          fullHeight: false,
-          positions: [[0, 0]],
-        };
-      }
+      draft.stock.tabs = { width: 6, thickness: 2, fullHeight: false, positions: [[0, 0]] };
     });
     expect(requests).toHaveLength(4);
     expect(requests[3]?.input.tabs).toHaveLength(1);

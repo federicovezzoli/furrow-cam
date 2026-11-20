@@ -112,3 +112,11 @@ function cubicExtremes(p0: Point, p1: Point, p2: Point, p3: Point): Point[] {
   }
   return extremes;
 }
+
+/** The smallest rectangle holding both `a` and `b`. */
+export function joinRects(a: Rect, b: Rect): Rect {
+  return {
+    min: [Math.min(a.min[0], b.min[0]), Math.min(a.min[1], b.min[1])],
+    max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1])],
+  };
+}
