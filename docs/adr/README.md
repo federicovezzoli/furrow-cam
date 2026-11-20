@@ -26,7 +26,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0009](0009-ui-shadcn-tailwind.md) | UI components with shadcn/ui and Tailwind CSS | Accepted |
 | [0010](0010-state-management-zustand.md) | Client state management with Zustand and Immer | Accepted |
 | [0011](0011-monorepo-structure-and-tooling.md) | Monorepo structure and tooling | Accepted; superseded in part by ADR-0046 |
-| [0012](0012-ci-and-releases.md) | CI with GitHub Actions and releases with Changesets | Accepted |
+| [0012](0012-ci-and-releases.md) | CI with GitHub Actions and releases with Changesets | Accepted; superseded in part by ADR-0089 |
 | [0013](0013-data-minimisation.md) | Data minimisation for user accounts | Accepted |
 | [0014](0014-stock-coordinates.md) | Geometry is stored in stock coordinates | Accepted |
 | [0015](0015-clipper2-typescript-port.md) | Clipper2 TypeScript port (clipper2-ts) | Accepted |
@@ -103,3 +103,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0086](0086-holding-tabs-belong-to-the-stock.md) | Holding tabs belong to the stock, so one-sided jobs have them too | Accepted |
 | [0087](0087-patterns-are-drawings-anchored-to-a-boundary.md) | A pattern is a drawing that keeps its settings and its boundary, and stores its cells as one shape | Accepted; superseded in part by ADR-0088 |
 | [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |
+| [0089](0089-apps-share-the-workspace-version.md) | The web and desktop apps share the workspace's version | Accepted |

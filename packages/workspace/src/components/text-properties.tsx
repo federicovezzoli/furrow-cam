@@ -70,9 +70,11 @@ export function TextProperties({ drawingId, text }: { drawingId: string; text: T
     setError(result.ok ? null : result.error);
     if (!result.ok) return false;
     setRemovedTabs(result.removedTabs);
-    // The new outlines are numbered afresh: select all of them, as adding the text did.
+    // The new outlines are numbered afresh: select all of them, as adding the text did,
+    // unless the selection moved elsewhere while they were laid out.
     const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
-    if (shape) {
+    const selected = workspace.getState().selectedPaths;
+    if (shape && selected.length > 0 && selected.every((ref) => ref.shapeId === shape.id)) {
       workspace.getState().selectPaths(shapePaths(shape));
     }
     return true;

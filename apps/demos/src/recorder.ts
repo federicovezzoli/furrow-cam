@@ -40,6 +40,9 @@ function run(command: string, args: string[]) {
   });
 }
 
+/** Millimetres of path the simulator plays each second at 100× (`PLAYBACK_MM_PER_SECOND` × 100). */
+export const PLAYBACK_100X = 2500;
+
 /** A video being recorded: the page, a frame at a time, piped into ffmpeg. */
 export class Recorder {
   readonly page: Page;
@@ -165,8 +168,10 @@ export class Recorder {
     const shown = await this.page
       .locator('[data-demo="toolpath-warning"]')
       .filter({ visible: true })
-      .count();
-    if (shown > 0) throw new Error(`Demo "${this.#name}": ${shown} operations show warnings`);
+      .evaluateAll((icons) => icons.map((icon) => icon.getAttribute("aria-label")));
+    if (shown.length > 0) {
+      throw new Error(`Demo "${this.#name}": operations show warnings: ${shown.join("; ")}`);
+    }
   }
 
   /**
@@ -214,12 +219,14 @@ export class Recorder {
    * at 0.5, each is recorded twice.
    */
   async frame() {
+    const tick = this.#ticks + 1;
+    const copies = Math.floor(tick / this.#speed) - Math.floor((tick - 1) / this.#speed);
+    // Work the last input started lands before a recorded tick, so the 3D view draws it in this frame.
+    if (copies > 0) await this.#settled();
     await this.page.clock.runFor(1000 / FPS);
-    this.#ticks++;
-    const copies =
-      Math.floor(this.#ticks / this.#speed) - Math.floor((this.#ticks - 1) / this.#speed);
+    this.#ticks = tick;
     if (copies === 0) return;
-    await this.#swept();
+    await this.#settled();
     this.#last = await this.#screenshot();
     const stdin = this.#ffmpeg.stdin;
     if (!stdin || this.#ffmpeg.exitCode !== null) {
@@ -232,10 +239,13 @@ export class Recorder {
 
   /**
    * Waits, in real time, for the simulator's worker to sweep the stock up to
-   * the playback, so every run records it alike (ADR-0075).
+   * the playback, and for a pattern's edits to be generated (a scrub's
+   * included), so every run records them alike (ADR-0075).
    */
-  async #swept(timeout = 120_000) {
-    const sweeping = this.page.locator('[data-demo="playback-sweeping"]');
+  async #settled(timeout = 120_000) {
+    const sweeping = this.page.locator(
+      '[data-demo="playback-sweeping"], [data-demo="pattern-generating"]',
+    );
     const end = Date.now() + timeout;
     // React commits the flag on its own scheduler (a MessageChannel, which the
     // page clock doesn't fake): a message posted now arrives after that commit.
@@ -249,7 +259,9 @@ export class Recorder {
     );
     while ((await sweeping.count()) > 0) {
       if (Date.now() > end) {
-        throw new Error(`Demo "${this.#name}": timed out waiting for the simulation's worker`);
+        throw new Error(
+          `Demo "${this.#name}": timed out waiting for the simulation's or a pattern's worker`,
+        );
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
@@ -454,6 +466,21 @@ export class Recorder {
     await this.#press("down");
     await this.moveToPoint(this.#mouse.x + dx, this.#mouse.y + dy, seconds);
     await this.#press("up");
+  }
+
+  /**
+   * Scrubs the field `name` by `steps` (negative lowers it) over `seconds`,
+   * dragging its label sideways, with a short pause either side.
+   */
+  async scrub(name: string, steps: number, seconds: number) {
+    await this.anchor(name);
+    const box = await this.page.locator(`label[for="${name}"]`).boundingBox();
+    if (!box) throw new Error(`Demo "${this.#name}": field "${name}" has no label`);
+    await this.moveToPoint(box.x + Math.min(box.width / 2, 40), box.y + box.height / 2);
+    await this.hold(0.2);
+    // 4 px a step (`NumberField`), past the 3 px a press moves before it scrubs.
+    await this.drag(Math.sign(steps) * (Math.abs(steps) * 4 + 3), 0, seconds);
+    await this.hold(0.4);
   }
 
   /**

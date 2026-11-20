@@ -110,6 +110,8 @@ describe("AddTextButton", () => {
 describe("TextProperties", () => {
   it("edits the text, font, letter height and alignment, each one undo step keeping its place", async () => {
     render(<DrawingProperties drawingId={TEXT_ID} />, withText());
+    // Selected, as the panel opens from the selection.
+    act(() => stores.workspace.getState().selectPaths([{ shapeId: textShape.id, path: 0 }]));
     const field = screen.getByLabelText("Text", { selector: "textarea" });
     fireEvent.change(field, { target: { value: "Hello" } });
     fireEvent.keyDown(field, { key: "Enter", ctrlKey: true });

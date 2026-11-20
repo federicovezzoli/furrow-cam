@@ -2,6 +2,7 @@
   "changelog": ["./changelog.mjs", { "repo": "federicovezzoli/furrow-cam" }],
   "commit": false,
   "baseBranch": "main",
+  "linked": [["@furrow/workspace", "@furrow/web", "@furrow/desktop"]],
   "updateInternalDependencies": "patch",
   "privatePackages": { "version": true, "tag": true },
   "ignore": []

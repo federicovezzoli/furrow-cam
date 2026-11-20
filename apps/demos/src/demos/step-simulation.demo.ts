@@ -1,12 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Recorder } from "../recorder.ts";
+import { PLAYBACK_100X, type Recorder } from "../recorder.ts";
 
 /** The project V2 saved (PRD-0013 D7); `step` sorts, and so records, first (`main.ts`). */
 const project = join(import.meta.dirname, "../../output/step.furrow.zip");
-
-/** Millimetres of path played each second at 100× (`PLAYBACK_MM_PER_SECOND` × 100). */
-const SPEED = 2500;
 
 /** Plays `side` to its end at 100×, the camera orbiting slowly meanwhile. */
 async function playSide(r: Recorder, side: "top" | "bottom") {
@@ -16,7 +13,7 @@ async function playSide(r: Recorder, side: "top" | "bottom") {
   await r.click("play");
   const view = await r.moveTo("simulation", 0.5);
   await r.moveToPoint(view.x + view.width * 0.35, view.y + view.height * 0.6, 0.3);
-  await r.drag(240, 0, length / SPEED);
+  await r.drag(240, 0, length / PLAYBACK_100X);
   await r.hold(1);
 }
 

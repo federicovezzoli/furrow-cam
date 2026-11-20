@@ -97,10 +97,13 @@ export function PatternProperties({
   pattern: PatternSettings;
 }) {
   const store = useDocumentStoreApi();
+  const workspace = useWorkspaceStoreApi();
   const units = useDocumentStore((s) => s.document.units);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const [error, setError] = useState<Translatable | null>(null);
   const [removedTabs, setRemovedTabs] = useState(0);
+  // Edits still being generated: the demo recorder waits for none before each frame (ADR-0075).
+  const [generating, setGenerating] = useState(0);
   const t = useTranslations("Pattern");
   const format = useFormatMessage();
   const { gestures, pending } = useSettledGestures(() => patternSettled(drawingId));
@@ -110,10 +113,23 @@ export function PatternProperties({
   );
 
   async function edit(edits: PatternEdits) {
-    if (pending.current) await pending.current;
-    const result = await editPattern(store, drawingId, edits);
-    setError(result.ok ? null : result.error);
-    if (result.ok) setRemovedTabs(result.removedTabs);
+    setGenerating((count) => count + 1);
+    try {
+      if (pending.current) await pending.current;
+      const result = await editPattern(store, drawingId, edits);
+      setError(result.ok ? null : result.error);
+      if (!result.ok) return;
+      setRemovedTabs(result.removedTabs);
+      // The new cells are numbered afresh: select all of them, as filling did,
+      // unless the selection moved elsewhere while they were generated.
+      const [shape] = drawingShapes(store.getState().document.geometry, drawingId);
+      const selected = workspace.getState().selectedPaths;
+      if (shape && selected.length > 0 && selected.every((ref) => ref.shapeId === shape.id)) {
+        workspace.getState().selectPaths(shapePaths(shape));
+      }
+    } finally {
+      setGenerating((count) => count - 1);
+    }
   }
   const length = (
     key: "size" | "gap" | "inset" | "amplitude" | "wavelength",
@@ -139,6 +155,7 @@ export function PatternProperties({
       aria-labelledby="pattern-heading"
       className="grid gap-2"
       data-tour="pattern-properties"
+      data-demo={generating > 0 ? "pattern-generating" : undefined}
     >
       <h3 id="pattern-heading" className="font-medium">
         {t("heading")}
@@ -150,6 +167,7 @@ export function PatternProperties({
           <label
             key={cell}
             title={t(`cells.${cell}`)}
+            data-demo={`pattern-cell-${cell}`}
             className={cn(
               "aspect-square cursor-pointer rounded-sm border p-0.5 text-muted-foreground hover:bg-accent",
               "has-checked:border-primary has-checked:bg-accent has-checked:text-foreground",
