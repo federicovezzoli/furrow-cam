@@ -747,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Richiede FluidNC sulla scheda Jackpot di V1 Engineering: inizio programma, cambio utensile e fine usano comandi FluidNC. Le versioni GRBL, grblHAL e Marlin non sono ancora supportate.",
+        "firmware": "Richiede FluidNC sulla scheda Jackpot di V1 Engineering: inizio programma, cambio utensile e fine usano comandi FluidNC. Su una versione con GRBL, grblHAL o Marlin, svuota questi tre blocchi e, per Marlin, scegli il post-processore Marlin.",
         "manualRouter": "Rifilatrice manuale (es. una Makita RT0701C): imposta la velocità con la sua ghiera; il G-code non ne imposta nessuna.",
         "jackpotGcode": "Inizio programma, cambio utensile e fine sono il G-code Jackpot di V1 Engineering. L’inizio azzera X, Y e Z dove si trova la fresa e tasta Z con una piastrina da 0,5 mm, quindi porta prima la macchina sullo zero del progetto e usa la superficie del grezzo come zero Z. M62 P1 e M63 P1 comandano un relè opzionale della rifilatrice sul pin 27."
       },

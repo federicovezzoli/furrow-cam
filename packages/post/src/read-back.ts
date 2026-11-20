@@ -69,8 +69,17 @@ export function parseGcode(gcode: string): GcodeLine[] {
     .split("\n")
     .map((text, i) => {
       const number = i + 1;
-      const comments = [...text.matchAll(/\(([^)]*)\)/g)].map((match) => match[1]);
-      const code = text.replace(/\([^)]*\)/g, " ").trim();
+      // `( … )` comments, a `; …` one to the end of the line, and Marlin's `M0 message`.
+      const semicolon = text.indexOf(";");
+      const before = semicolon === -1 ? text : text.slice(0, semicolon);
+      const comments = [...before.matchAll(/\(([^)]*)\)/g)].map((match) => match[1]);
+      let code = before.replace(/\([^)]*\)/g, " ").trim();
+      const message = /^(M0*[01])\s+([^\s\d.-].*)$/.exec(code);
+      if (message) {
+        code = message[1] as string;
+        comments.push(message[2]);
+      }
+      if (semicolon !== -1) comments.push(text.slice(semicolon + 1).trim());
       const words: GcodeLine["words"] = [];
       for (const token of code.split(/\s+/).filter(Boolean)) {
         const match = /^([A-Z])(-?\d+(?:\.\d+)?)$/.exec(token);

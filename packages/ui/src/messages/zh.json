@@ -747,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "需要V1 Engineering的Jackpot主板上的FluidNC：程序开始、换刀和结束使用FluidNC命令。暂不支持GRBL、grblHAL和Marlin固件。",
+        "firmware": "需要V1 Engineering的Jackpot主板上的FluidNC：程序开始、换刀和结束使用FluidNC命令。在GRBL、grblHAL或Marlin固件上，请清空这三个代码块；Marlin还需选择Marlin后处理器。",
         "manualRouter": "手动修边机（例如Makita RT0701C）：通过其旋钮设置转速；G-code不设置转速。",
         "jackpotGcode": "程序开始、换刀和结束使用V1 Engineering的Jackpot G-code。程序开始时在刀具当前位置将X、Y和Z归零，并用0.5 mm的对刀板探测Z，因此请先将刀具移动到项目零点，并以毛坯顶面作为Z零点。M62 P1和M63 P1控制27号引脚上的可选修边机继电器。"
       },

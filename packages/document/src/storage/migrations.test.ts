@@ -189,9 +189,10 @@ describe("migrations", () => {
     expect(parseProjectDocument(v20).drawings.at(-1)?.text?.text).toBe("A B C");
   });
 
-  it("leaves v4, v5, v18 and v41 documents as they are", () => {
+  it("leaves v4, v5, v18, v41 and v42 documents as they are", () => {
     const doc = fullDocument();
     expect(parseProjectDocument({ ...doc, schemaVersion: 41 })).toEqual(doc);
+    expect(parseProjectDocument({ ...doc, schemaVersion: 42 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 4 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 5 })).toEqual(doc);
     expect(parseProjectDocument({ ...doc, schemaVersion: 18 })).toEqual(doc);

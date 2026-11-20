@@ -16,10 +16,11 @@ import {
   UNSAFE_FILE_NAME_CHARACTERS,
 } from "@furrow/document";
 import { grbl } from "./grbl/grbl";
+import { marlin } from "./marlin/marlin";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
-export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
+export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl, marlin };
 
 /** Used when the project has no machine profile. */
 export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
