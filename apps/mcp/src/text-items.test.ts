@@ -8,7 +8,7 @@ import { FONTS } from "@furrow/workspace/lib/fonts";
 import { createDocumentStore } from "@furrow/workspace/stores/document-store";
 import { addTextItem, moveDrawing } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { change, createProjects, type Project, type Projects, ToolError } from "./projects";
+import { change, createProjects, type Project, type Projects } from "./projects";
 import { projectSummary } from "./summary";
 import { addText, editText } from "./text-items";
 
