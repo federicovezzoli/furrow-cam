@@ -6,7 +6,7 @@ export type OsFamily = "macos" | "windows" | "linux" | "other";
 export type BrowserFamily = "chrome" | "safari" | "firefox" | "edge" | "other";
 
 const BOT =
-  /bot\b|bot\/|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|lighthouse|headless/i;
+  /bot\b|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|lighthouse|headless/i;
 const CLI =
   /curl|wget|python|go-http-client|node-fetch|undici|axios|okhttp|httpie|powershell|libwww-perl|java\/|aria2|winhttp/i;
 
