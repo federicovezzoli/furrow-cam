@@ -27,8 +27,8 @@ const DIALECTS: Record<
     /** The commands it writes: the modes, moves, dwell, spindle, pause and end. */
     allowed: Set<string>;
     modes: string[];
-    /** The dwell's word and how many seconds one of it is. */
-    dwell: { letter: string; seconds: number };
+    /** The dwell's word, in seconds. */
+    dwell: string;
     /** The last block's command, `null` when the program just stops. */
     end: string | null;
     /** Whether a line holds one command only, and rapids carry their feed (Marlin). */
@@ -51,14 +51,14 @@ const DIALECTS: Record<
       "M30",
     ]),
     modes: ["G21", "G90", "G94", "G17"],
-    dwell: { letter: "P", seconds: 1 },
+    dwell: "P",
     end: "M30",
     marlin: false,
   },
   marlin: {
     allowed: new Set(["G0", "G1", "G4", "G21", "G90", "G91", "M0", "M3", "M5"]),
     modes: ["G21", "G90"],
-    dwell: { letter: "S", seconds: 1 },
+    dwell: "S",
     end: null,
     marlin: true,
   },
@@ -164,9 +164,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
         spindle = false;
         speed = null;
       } else if (command === "G4") {
-        const word = line.words.find(({ letter }) => letter === dialect.dwell.letter);
-        if (word === undefined) fail(line.number, "words", `G4 without ${dialect.dwell.letter}`);
-        else dwell = word.value * dialect.dwell.seconds;
+        dwell = line.words.find(({ letter }) => letter === dialect.dwell)?.value;
+        if (dwell === undefined) fail(line.number, "words", `G4 without ${dialect.dwell}`);
       } else if (command === "M0") {
         if (!(position[2] >= top - EPSILON)) {
           fail(line.number, "pause", "pauses with the tool in the stock");
@@ -182,7 +181,7 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
     if (dwell !== undefined && dwell >= spinUpDelay - EPSILON) spinningUp = null;
     const dwells = commands.some(({ letter, value }) => letter === "G" && value === 4);
     for (const { letter, value } of line.words) {
-      const dwellWord = dwells && letter === dialect.dwell.letter;
+      const dwellWord = dwells && letter === dialect.dwell;
       if (!"GMXYZFS".includes(letter) && !dwellWord) {
         fail(line.number, "words", `unexpected word ${letter}`);
       }
