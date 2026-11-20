@@ -1,5 +1,12 @@
 # @furrow/mcp
 
+## 0.12.0
+
+### Minor Changes
+
+- Assistants can fill closed shapes of a project with a pattern, with the same cells, settings and defaults as the app's Pattern command, and see a pattern's settings in the project summary. ([#629](https://github.com/federicovezzoli/furrow-cam/pull/629))
+- Holding tabs are no longer only for two-sided projects: any project with a 3D model can turn them on, and on a one-sided job they stand up from the stock bottom so a model cut out all round stays held. A warning now says when such a model has none. ([#617](https://github.com/federicovezzoli/furrow-cam/pull/617))
+
 ## 0.11.0
 
 ### Minor Changes
