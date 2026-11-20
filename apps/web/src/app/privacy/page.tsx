@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
-const LAST_UPDATED = "11 November 2026";
+const LAST_UPDATED = "20 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -143,9 +143,11 @@ export default async function PrivacyPage() {
               stores the 3D model files you import (Cloudflare R2), in a bucket restricted to the
               European Union. They are only reachable through short-lived links the app gives you.
               It also runs the desktop app&apos;s download links and update checks
-              (download.furrow.cam): it receives your IP address and user agent with the request,
-              and we keep only a count of downloads per system and version, for three months. The
-              installer itself is downloaded from GitHub.
+              (download.furrow.cam): it receives your IP address and user agent with the request. We
+              keep only a count of downloads by system, version, kind of client (browser, bot or
+              command-line tool), country and region, for three months; the IP address itself, the
+              full user agent and your city are not kept. The installer itself is downloaded from
+              GitHub.
             </li>
             <li>
               <External href="https://resend.com/legal/privacy-policy">Resend</External> sends our
