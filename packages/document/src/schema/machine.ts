@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { FeedRate, Name, PositiveLength, SpindleRpm } from "./units";
 
-export const PostProcessorId = z.enum(["grbl"]);
+export const PostProcessorId = z.enum(["grbl", "marlin"]);
 export type PostProcessorId = z.infer<typeof PostProcessorId>;
 
 /**

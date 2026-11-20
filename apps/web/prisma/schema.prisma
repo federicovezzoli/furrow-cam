@@ -136,6 +136,7 @@ model Tool {
 
 enum PostProcessor {
   grbl
+  marlin
 }
 
 model Machine {
