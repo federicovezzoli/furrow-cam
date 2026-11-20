@@ -63,7 +63,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0046](0046-ui-packages.md) | UI packages may use React | Accepted |
 | [0047](0047-local-project-files.md) | Desktop projects are `.furrow` archives that carry their versions | Accepted |
 | [0048](0048-desktop-update-check.md) | The desktop app checks GitHub for newer versions and links to them | Accepted; superseded in part by ADR-0074 and ADR-0081 |
-| [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Accepted |
+| [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Accepted; superseded in part by ADR-0090 |
 | [0050](0050-guest-workspace-in-the-browser.md) | Guests use the workspace with projects kept in the browser | Accepted |
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Accepted |
 | [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Accepted |
@@ -104,3 +104,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0087](0087-patterns-are-drawings-anchored-to-a-boundary.md) | A pattern is a drawing that keeps its settings and its boundary, and stores its cells as one shape | Accepted; superseded in part by ADR-0088 |
 | [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |
 | [0089](0089-apps-share-the-workspace-version.md) | The web and desktop apps share the workspace's version | Accepted |
+| [0090](0090-download-counts-coarse-labels.md) | Download counts record coarse client and location labels | Accepted |
