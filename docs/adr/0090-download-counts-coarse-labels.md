@@ -55,4 +55,4 @@ ORDER BY downloads DESC
 - Data points written before this change have empty `blob3` to `blob7`; queries spanning the change must allow for empty values.
 - Regions from the IP address are rough (VPNs, mobile networks), so they are an estimate.
 - Unknown or new clients fall into `other` until the matcher learns them.
-- The privacy policy says downloads are counted by system, version, client kind, country and region, and that the IP address is not kept.
+- The privacy policy says downloads are counted by the platform and version asked for, the visitor's OS and browser family, client kind, country and region, and that the IP address is not kept.

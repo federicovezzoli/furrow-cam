@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslator())("Meta.privacyTitle") };
 }
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074).
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074, ADR-0090).
 const LAST_UPDATED = "20 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
@@ -144,10 +144,10 @@ export default async function PrivacyPage() {
               European Union. They are only reachable through short-lived links the app gives you.
               It also runs the desktop app&apos;s download links and update checks
               (download.furrow.cam): it receives your IP address and user agent with the request. We
-              keep only a count of downloads by system, version, kind of client (browser, bot or
-              command-line tool), country and region, for three months; the IP address itself, the
-              full user agent and your city are not kept. The installer itself is downloaded from
-              GitHub.
+              keep only a count of downloads by the system and version asked for, your operating
+              system and browser family, the kind of client (browser, bot or command-line tool),
+              your country and region, for three months; the IP address itself, the full user agent
+              and your city are not kept. The installer itself is downloaded from GitHub.
             </li>
             <li>
               <External href="https://resend.com/legal/privacy-policy">Resend</External> sends our

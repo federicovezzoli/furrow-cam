@@ -6,9 +6,9 @@ export type OsFamily = "macos" | "windows" | "linux" | "other";
 export type BrowserFamily = "chrome" | "safari" | "firefox" | "edge" | "other";
 
 const BOT =
-  /bot\b|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|lighthouse|headless/i;
+  /bot\b|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|lighthouse|headless/i;
 const CLI =
-  /curl|wget|python|go-http-client|node-fetch|undici|axios|okhttp|httpie|powershell|libwww-perl|java\/|aria2|winhttp/i;
+  /^node\b|curl|wget|python|go-http-client|node-fetch|undici|axios|okhttp|httpie|powershell|libwww-perl|java\/|aria2|winhttp/i;
 
 function clientKind(ua: string): ClientKind {
   if (BOT.test(ua)) return "bot";
@@ -17,8 +17,9 @@ function clientKind(ua: string): ClientKind {
 }
 
 function osFamily(ua: string): OsFamily {
-  // Phones and tablets first: iOS says "like Mac OS X", Android says "Linux".
-  if (/iPhone|iPad|iPod|Android/.test(ua)) return "other";
+  // Phones, tablets and Chromebooks first: iOS says "like Mac OS X", Android "Linux",
+  // ChromeOS "X11".
+  if (/iPhone|iPad|iPod|Android|CrOS/.test(ua)) return "other";
   if (/Windows/.test(ua)) return "windows";
   if (/Macintosh|Mac OS X/.test(ua)) return "macos";
   return /Linux|X11/.test(ua) ? "linux" : "other";

@@ -35,6 +35,16 @@ describe("userAgentLabels", () => {
       "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
       ["browser", "other", "chrome"],
     ],
+    [
+      "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      ["browser", "other", "chrome"],
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Telegram-iOS/11.4",
+      ["browser", "other", "other"],
+    ],
+    ["TelegramBot (like TwitterBot)", ["bot", "other", "other"]],
+    ["node", ["cli", "other", "other"]],
     ["curl/8.7.1", ["cli", "other", "other"]],
     ["Wget/1.24.5", ["cli", "other", "other"]],
     [
