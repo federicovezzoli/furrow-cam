@@ -5,7 +5,19 @@ import {
   TERRAIN_BASE,
   TERRAIN_EXAGGERATION,
 } from "@furrow/cam-core";
-import { FlipAxis, PatternCell, PinHoles, StockAnchor, StockCorner } from "@furrow/document";
+import {
+  DEFAULT_LINE_SPACING,
+  FlipAxis,
+  MAX_FONT_BYTES,
+  MAX_PROJECT_FONTS,
+  MIN_LETTER_SPACING,
+  PatternCell,
+  PinHoles,
+  StockAnchor,
+  StockCorner,
+  TextAlign,
+} from "@furrow/document";
+import { DEFAULT_TEXT_HEIGHT, FONTS } from "@furrow/workspace/lib/fonts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
@@ -40,6 +52,7 @@ import {
 } from "./setup";
 import { projectSummary } from "./summary";
 import { importTerrain, type TerrainArea } from "./terrain";
+import { addText, editText } from "./text-items";
 import { topView } from "./top-view";
 
 const projectPath = z
@@ -860,6 +873,95 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         return { ...addPattern(project, request), ...summary(project) };
+      }),
+  );
+
+  /** A text item's settings, for add_text (defaults said) and edit_text (left out: unchanged). */
+  const textSettings = {
+    font: z
+      .string()
+      .optional()
+      .describe(
+        `The font: ${FONTS.map((font) => `${font.name} (${font.kind === "singleStroke" ? "single-stroke, for engraving" : font.kind})`).join(", ")}, or a font the project holds, by name; ${FONTS[0].name} for a new text.`,
+      ),
+    fontFile: z
+      .string()
+      .optional()
+      .describe(
+        `Absolute path of a TTF, OTF or WOFF font file (not WOFF2) to add to the project, at most ${MAX_FONT_BYTES / 1e6} MB and ${MAX_PROJECT_FONTS} fonts per project, and set the text in; instead of font.`,
+      ),
+    singleStroke: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether fontFile is a single-stroke font (its strokes engraved as lines, not closed outlines); false for a new font.",
+      ),
+    height: z
+      .number()
+      .positive()
+      .optional()
+      .describe(`Cap height in mm; ${DEFAULT_TEXT_HEIGHT} for a new text.`),
+    align: TextAlign.optional().describe(
+      "Each line's alignment: left (new text), center or right.",
+    ),
+    lineSpacing: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        `Baseline to baseline, as a multiple of the height; ${DEFAULT_LINE_SPACING} for a new text.`,
+      ),
+    letterSpacing: z
+      .number()
+      .min(MIN_LETTER_SPACING)
+      .optional()
+      .describe(
+        `Extra space between characters, as a multiple of the height, negative tightens; 0 for a new text.`,
+      ),
+    position: z
+      .tuple([z.number(), z.number()])
+      .optional()
+      .describe(
+        "Where the text's origin (its first line's baseline at the alignment) goes, [x, y] in mm from the stock's bottom-left corner.",
+      ),
+  };
+
+  server.registerTool(
+    "add_text",
+    {
+      title: "Add text",
+      description:
+        "Adds a text item, as the app's Text command does: a drawing whose outlines are laid out from its text and font, machined by profile, pocket, engrave or V-carve like any drawing, and laid out again when edit_text changes it. Placed like an imported drawing (at the XY zero's corner of the stock less a 10 mm border) unless position is given; settings not given take the app's defaults. Lengths in mm. Returns the text item's id and the project summary.",
+      inputSchema: {
+        path: projectPath,
+        text: z.string().describe("The text; a line break starts a new line."),
+        ...textSettings,
+      },
+    },
+    ({ path, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        return { ...(await addText(project, request)), ...summary(project) };
+      }),
+  );
+
+  server.registerTool(
+    "edit_text",
+    {
+      title: "Edit text",
+      description:
+        "Changes a text item's settings, as its properties in the app do, and lays it out again; settings not given stay as they are. It keeps its place, turn and the operations machining it (an operation that targeted some of its paths takes all of them); profile tabs that no longer lie on its outlines are removed. Lengths in mm. Returns how many tabs were removed and the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: z.string().describe("The text item's drawing id, from the project summary."),
+        text: z.string().optional().describe("The text; a line break starts a new line."),
+        ...textSettings,
+      },
+    },
+    ({ path, id, ...request }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        return { ...(await editText(project, id, request)), ...summary(project) };
       }),
   );
 

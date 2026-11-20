@@ -10,6 +10,8 @@ build/
 dist/
 # copied from the root at prepack (ADR-0067)
 apps/mcp/LICENSE
+# copied from packages/workspace at build (scripts/fonts.mjs)
+apps/mcp/fonts/
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
