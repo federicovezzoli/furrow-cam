@@ -8,6 +8,9 @@ export type BundledFont = (typeof FONTS)[number];
 /** The font a new text item gets. */
 export const DEFAULT_FONT: BundledFont["id"] = "jetbrains-mono";
 
+/** A new text item's cap height, in millimetres. */
+export const DEFAULT_TEXT_HEIGHT = 20;
+
 const loaded = new Map<string, Promise<Font>>();
 
 /**
