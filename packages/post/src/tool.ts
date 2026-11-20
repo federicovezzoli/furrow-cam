@@ -22,18 +22,15 @@ export function sameBit(a: Tool, b: Tool): boolean {
  * millimetres and degrees, leaving out the fields that don't apply:
  * `(Furrow tool: type=v_bit diameter=12 vAngle=60 tipDiameter=0.2)`.
  */
-export function toolShapeComment({
-  type,
-  diameter,
-  vAngle,
-  tipDiameter,
-  taperAngle,
-}: Tool): string {
+export function toolShapeComment(
+  { type, diameter, vAngle, tipDiameter, taperAngle }: Tool,
+  write: (text: string) => string = comment,
+): string {
   const fields = [`type=${type}`, `diameter=${formatNumber(diameter)}`];
   if (vAngle !== null) fields.push(`vAngle=${formatNumber(vAngle)}`);
   if (tipDiameter !== null) fields.push(`tipDiameter=${formatNumber(tipDiameter)}`);
   if (taperAngle !== null) fields.push(`taperAngle=${formatNumber(taperAngle)}`);
-  return comment(`Furrow tool: ${fields.join(" ")}`);
+  return write(`Furrow tool: ${fields.join(" ")}`);
 }
 
 export function toolLabel(tool: Tool): string {
