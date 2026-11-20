@@ -294,5 +294,6 @@ describe("parseGcode", () => {
     expect(comment?.comment).toBe("up (fast)");
     expect(pause?.words).toEqual([{ letter: "M", value: 0 }]);
     expect(pause?.comment).toBe("Change the bit then resume");
+    expect(parseGcode("(Sign; v2)")[0]).toMatchObject({ words: [], comment: "Sign; v2" });
   });
 });
