@@ -6,19 +6,27 @@ import type { BlockLabel, CustomBlock } from "./read-back";
 type Axes = { x?: number; y?: number; z?: number };
 const AXES = ["x", "y", "z"] as const;
 
-/** A G-code comment, which can't nest or span lines. */
+/** `text` on one line, without control characters. */
+export function oneLine(text: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
+  return text.replace(/[\u0000-\u001f\u007f]+/g, " ");
+}
+
+/** A G-code comment in parentheses, which can't nest or span lines. */
 export function comment(text: string): string {
-  const safe = text
-    .replace(/\(/g, "[")
-    .replace(/\)/g, "]")
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it matches
-    .replace(/[\u0000-\u001f\u007f]+/g, " ");
-  return `(${safe})`;
+  return `(${oneLine(text).replace(/\(/g, "[").replace(/\)/g, "]")})`;
+}
+
+/** A G-code comment to the end of the line, which can't span lines. */
+export function lineComment(text: string): string {
+  return `; ${oneLine(text)}`;
 }
 
 /**
  * Collects G-code lines, writing only the coordinates and feed that change.
  * Coordinates go in in stock coordinates and come out in work coordinates.
+ * With a `rapidFeed`, rapids carry it as their `F`, for controllers that run
+ * `G0` at the last feed rate.
  */
 export class GcodeWriter {
   private readonly lines: string[] = [];
@@ -30,14 +38,18 @@ export class GcodeWriter {
   /** The operation being written, named if a move can't be. */
   operation: string | undefined;
 
-  constructor(private readonly offset: Vec3) {}
+  constructor(
+    private readonly offset: Vec3,
+    private readonly write: (text: string) => string = comment,
+    private readonly rapidFeed?: number,
+  ) {}
 
   line(text: string) {
     this.lines.push(text);
   }
 
   comment(text: string) {
-    this.lines.push(comment(text));
+    this.lines.push(this.write(text));
   }
 
   /** A custom block, verbatim; it may have moved the tool or changed modes. */
@@ -58,7 +70,7 @@ export class GcodeWriter {
   }
 
   rapidWork(to: Axes) {
-    this.move("G0", to);
+    this.move("G0", to, this.rapidFeed);
   }
 
   feed(to: Axes, feedRate: number) {

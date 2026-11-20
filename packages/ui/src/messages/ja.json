@@ -746,7 +746,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "V1 Engineering の Jackpot ボード上の FluidNC が必要です。プログラム開始、工具交換、終了で FluidNC のコマンドを使用します。GRBL、grblHAL、Marlin のビルドにはまだ対応していません。",
+        "firmware": "V1 Engineering の Jackpot ボード上の FluidNC が必要です。プログラム開始、工具交換、終了で FluidNC のコマンドを使用します。GRBL、grblHAL、Marlin のビルドではこの 3 つのブロックを空にし、Marlin ではポストプロセッサーに Marlin を選んでください。",
         "manualRouter": "手動ルーター（例：Makita RT0701C）：回転数はダイヤルで設定してください。G-code では設定しません。",
         "jackpotGcode": "プログラム開始、工具交換、終了は V1 Engineering の Jackpot 用 G-code です。開始時にビットの現在位置で X、Y、Z をゼロ設定し、0.5 mm のタッチプレートで Z をプローブするため、先にプロジェクトの原点にジョグし、素材上面を Z ゼロにしてください。M62 P1 と M63 P1 で、ピン 27 のオプションのルーターリレーをオン・オフします。"
       },

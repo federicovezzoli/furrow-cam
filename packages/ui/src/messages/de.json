@@ -746,7 +746,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Benötigt FluidNC auf dem Jackpot-Board von V1 Engineering: Programmstart, Werkzeugwechsel und Programmende verwenden FluidNC-Befehle. GRBL-, grblHAL- und Marlin-Aufbauten werden noch nicht unterstützt.",
+        "firmware": "Benötigt FluidNC auf dem Jackpot-Board von V1 Engineering: Programmstart, Werkzeugwechsel und Programmende verwenden FluidNC-Befehle. Bei einem Aufbau mit GRBL, grblHAL oder Marlin diese drei Blöcke leeren, und für Marlin den Marlin-Postprozessor wählen.",
         "manualRouter": "Manuelle Oberfräse (z. B. eine Makita RT0701C): stelle ihre Drehzahl am Rad ein; der G-Code setzt keine.",
         "jackpotGcode": "Programmstart, Werkzeugwechsel und Programmende sind der Jackpot-G-Code von V1 Engineering. Der Start setzt X, Y und Z dort auf null, wo der Fräser steht, und tastet Z mit einer 0,5-mm-Platte an: fahre die Maschine zuerst auf den Projektnullpunkt und verwende die Rohteiloberseite als Z-Null. M62 P1 und M63 P1 schalten ein optionales Fräsenrelais an Pin 27."
       },
