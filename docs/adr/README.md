@@ -104,3 +104,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0087](0087-patterns-are-drawings-anchored-to-a-boundary.md) | A pattern is a drawing that keeps its settings and its boundary, and stores its cells as one shape | Accepted; superseded in part by ADR-0088 |
 | [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |
 | [0089](0089-apps-share-the-workspace-version.md) | The web and desktop apps share the workspace's version | Accepted |
+| [0090](0090-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted |
