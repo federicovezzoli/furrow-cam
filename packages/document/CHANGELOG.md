@@ -1,5 +1,12 @@
 # @furrow/document
 
+## 0.27.0
+
+### Minor Changes
+
+- Holding tabs are no longer only for two-sided projects: any project with a 3D model can turn them on, and on a one-sided job they stand up from the stock bottom so a model cut out all round stays held. A warning now says when such a model has none. ([#617](https://github.com/federicovezzoli/furrow-cam/pull/617))
+- Projects can hold patterns: drawings whose cells are generated inside closed paths of another drawing, with their settings saved alongside so they stay editable. ([#627](https://github.com/federicovezzoli/furrow-cam/pull/627))
+
 ## 0.26.0
 
 ### Minor Changes

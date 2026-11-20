@@ -1,5 +1,18 @@
 # @furrow/cam-core
 
+## 0.26.0
+
+### Minor Changes
+
+- Holding tabs are no longer only for two-sided projects: any project with a 3D model can turn them on, and on a one-sided job they stand up from the stock bottom so a model cut out all round stays held. A warning now says when such a model has none. ([#617](https://github.com/federicovezzoli/furrow-cam/pull/617))
+- A pattern generator fills closed shapes with 18 kinds of cells (grids, bricks, honeycomb, circles, lines, waves, herringbone, fish scales, Voronoi cells and more), cut at the shape's outline and leaving its holes empty. ([#627](https://github.com/federicovezzoli/furrow-cam/pull/627))
+
+### Patch Changes
+
+- Select closed paths of a drawing and choose **Pattern** to fill them with one of 18 patterns. The pattern's settings stay editable, it follows its boundary when the drawing is moved, turned, mirrored or resized, and it can be converted to a plain drawing. ([#628](https://github.com/federicovezzoli/furrow-cam/pull/628))
+- The tab count next to *Place*, for profile tabs and holding tabs, now shows how many tabs each contour or model has, instead of always starting at 4. ([#619](https://github.com/federicovezzoli/furrow-cam/pull/619))
+- Updated dependencies: @furrow/document@0.27.0
+
 ## 0.25.0
 
 ### Minor Changes

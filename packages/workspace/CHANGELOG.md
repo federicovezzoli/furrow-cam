@@ -1,5 +1,20 @@
 # @furrow/workspace
 
+## 0.30.0
+
+### Minor Changes
+
+- Each model in the objects pane now has a download button that saves its mesh as an STL file, including models imported from STEP or generated from terrain or an image. ([#615](https://github.com/federicovezzoli/furrow-cam/pull/615))
+- Select closed paths of a drawing and choose **Pattern** to fill them with one of 18 patterns. The pattern's settings stay editable, it follows its boundary when the drawing is moved, turned, mirrored or resized, and it can be converted to a plain drawing. ([#628](https://github.com/federicovezzoli/furrow-cam/pull/628))
+- Holding tabs are no longer only for two-sided projects: any project with a 3D model can turn them on, and on a one-sided job they stand up from the stock bottom so a model cut out all round stays held. A warning now says when such a model has none. ([#617](https://github.com/federicovezzoli/furrow-cam/pull/617))
+
+### Patch Changes
+
+- A pattern's properties now show only its own settings, with a note that it follows the drawing it fills, and a new Mirrored option. A pattern is no longer dragged on its own in the viewport, and the gap is off for line patterns, which have no walls between cells. ([#630](https://github.com/federicovezzoli/furrow-cam/pull/630))
+- The tab count next to *Place* now also updates when a profile's side or paths change, and a typed count is kept while tabs are dragged. ([#620](https://github.com/federicovezzoli/furrow-cam/pull/620))
+- The tab count next to *Place*, for profile tabs and holding tabs, now shows how many tabs each contour or model has, instead of always starting at 4. ([#619](https://github.com/federicovezzoli/furrow-cam/pull/619))
+- Updated dependencies: @furrow/ui@0.10.2, @furrow/cam-core@0.26.0, @furrow/document@0.27.0, @furrow/post@0.15.12
+
 ## 0.29.0
 
 ### Minor Changes
