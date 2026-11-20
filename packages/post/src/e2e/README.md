@@ -6,6 +6,8 @@ Each project in [`projects.ts`](projects.ts) goes through the same steps as the 
 2. **Safety**, with [`check.ts`](check.ts). The checker reads the program back and fails on rapids through material (it replays the cuts on a heightmap, so pecking and rest machining may rapid where the material is already gone), moves below the stock bottom, feeds over the machine's limits, cuts with the spindle off, unsafe pauses and tool changes, and a bad start or end. Each failure gives a line number and a rule.
 3. **The warnings** the export gives, none unless the project lists them.
 
+The checker follows the machine's post-processor (ADR-0090): `plate-marlin` and `relief-marlin` are checked against Marlin's rules (one command a line, rapids with their feed, no `M30`).
+
 The `measured` tests check what the stored programs can't show at a glance: depths, tab heights, hole positions and, on the stock the program leaves (`simulateGcode`), that parts are cut free everywhere but at their tabs.
 
 The last four projects are real workshop jobs: a strut plate exported from OpenSCAD, a PC shelf and its handle drawn in Inkscape, and fluted cabinet doors. They use the same drawings, bits, depths and tabs as the Estlcam programs that cut them, and `measured against Estlcam` checks that the tool paths come out the same size. Where Furrow can't do what Estlcam did, the project says so: the doors' bowl bit is a ball end mill as wide.
