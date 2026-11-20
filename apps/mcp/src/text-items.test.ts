@@ -6,9 +6,9 @@ import { parseFont, textPaths } from "@furrow/cam-core";
 import { createProjectDocument, ProjectDocument, type TextSettings } from "@furrow/document";
 import { FONTS } from "@furrow/workspace/lib/fonts";
 import { createDocumentStore } from "@furrow/workspace/stores/document-store";
-import { addTextItem } from "@furrow/workspace/stores/geometry-actions";
+import { addTextItem, moveDrawing } from "@furrow/workspace/stores/geometry-actions";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createProjects, type Project, type Projects, ToolError } from "./projects";
+import { change, createProjects, type Project, type Projects, ToolError } from "./projects";
 import { addText, editText } from "./text-items";
 
 let dir: string;
@@ -85,6 +85,28 @@ describe("addText", () => {
     );
   });
 
+  it("keeps a project font's single-stroke flag unless told otherwise", async () => {
+    await addText(project, { text: "A", fontFile: arvo, singleStroke: true });
+    await addText(project, { text: "B", fontFile: arvo });
+    expect(doc().fonts.map((font) => font.singleStroke)).toEqual([true]);
+    await addText(project, { text: "C", fontFile: arvo, singleStroke: false });
+    expect(doc().fonts.map((font) => font.singleStroke)).toEqual([false]);
+  });
+
+  it("refuses a fifth font, changing nothing", async () => {
+    const fonts = Array.from({ length: 4 }, (_, i) => ({
+      sha256: String(i).repeat(64),
+      fileName: `f${i}.ttf`,
+      name: `F${i}`,
+      size: 1,
+      singleStroke: false,
+    }));
+    project.store.setState((state) => ({ document: { ...state.document, fonts } }));
+    await expect(addText(project, { text: "A", fontFile: arvo })).rejects.toThrow(/at most 4/);
+    expect(doc().drawings).toEqual([]);
+    expect(doc().fonts).toEqual(fonts);
+  });
+
   it("refuses a file that isn't a font", async () => {
     await expect(
       addText(project, { text: "A", fontFile: join(dir, "Sign.furrow") }),
@@ -107,6 +129,14 @@ describe("editText", () => {
     await editText(project, id, { position: [50, 30], font: "Pacifico" });
     expect(textOf(id)?.placement.position).toEqual([50, 30]);
     expect(textOf(id)?.font).toBe("pacifico");
+  });
+
+  it("keeps a move made while it lays the text out", async () => {
+    const { id } = await addText(project, { text: "A", position: [10, 10] });
+    const editing = editText(project, id, { text: "AB" });
+    change(project, (store) => moveDrawing(store, id, [5, 0]));
+    await editing;
+    expect(textOf(id)).toMatchObject({ text: "AB", placement: { position: [15, 10] } });
   });
 
   it("refuses what isn't a text item", async () => {

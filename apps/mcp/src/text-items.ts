@@ -3,7 +3,6 @@ import { basename, isAbsolute } from "node:path";
 import { type Font, fontName, parseFont, textPaths } from "@furrow/cam-core";
 import {
   DEFAULT_LINE_SPACING,
-  type Drawing,
   MAX_FONT_BYTES,
   MAX_PROJECT_FONTS,
   type Path,
@@ -35,8 +34,8 @@ type NewFont = { listing: ProjectFont; bytes: Uint8Array };
 const bundled = new Map<string, Promise<Font>>();
 
 /**
- * Reads the font file at `path` as the app's upload checks it: size, room in
- * the project, readable. A font the project holds keeps its single-stroke
+ * Reads the font file at `path` as the app's upload checks it: size and
+ * readable (`listFont` checks there is room for it). A font the project holds keeps its single-stroke
  * flag unless `singleStroke` is given.
  */
 async function readFontFile(project: Project, path: string, given: boolean | undefined) {
@@ -56,11 +55,6 @@ async function readFontFile(project: Project, path: string, given: boolean | und
   const sha256 = await sha256Hex(bytes);
   const { fonts } = project.store.getState().document;
   const listed = fonts.find((font) => font.sha256 === sha256);
-  if (!listed && fonts.length >= MAX_PROJECT_FONTS) {
-    throw new ToolError(
-      text({ code: "workspace.tooManyFonts", values: { max: MAX_PROJECT_FONTS } }),
-    );
-  }
   const singleStroke = given ?? listed?.singleStroke ?? false;
   const font = parsed(bytes, singleStroke);
   const fileName = basename(path);
@@ -192,17 +186,23 @@ export async function addText(project: Project, request: TextRequest & { text: s
  * `position` if given. Returns how many profile tabs went with its old outlines.
  */
 export async function editText(project: Project, id: string, request: TextRequest) {
-  const drawing: Drawing | undefined = project.store
-    .getState()
-    .document.drawings.find((d) => d.id === id);
-  if (!drawing?.text) {
+  const current = () => {
+    const drawing = project.store.getState().document.drawings.find((d) => d.id === id);
+    if (drawing?.text) return drawing.text;
     throw new ToolError(
       drawing
         ? `${JSON.stringify(id)} is a drawing, not a text item.`
         : `The project has no text item ${JSON.stringify(id)}.`,
     );
+  };
+  let base = current();
+  let prepared = await prepare(project, base, request);
+  // Changed by another tool call while the font loaded (moved, resized): laid out again from it, as the app's edit queue does.
+  while (current() !== base) {
+    base = current();
+    prepared = await prepare(project, base, request);
   }
-  const { settings, paths, added, position } = await prepare(project, drawing.text, request);
+  const { settings, paths, added, position } = prepared;
   let removedTabs = 0;
   change(project, (store) => {
     listFont(project, added);
