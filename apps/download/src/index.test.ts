@@ -22,8 +22,12 @@ function setup(pages: unknown[][] | Error, { cacheFails = false } = {}) {
   const writeDataPoint = vi.fn();
   const env = { DOWNLOADS: { writeDataPoint } as AnalyticsEngineDataset };
   const worker = createWorker({ fetch, cache: () => cache });
-  const get = (path: string, method = "GET") =>
-    worker.fetch(new Request(`https://download.furrow.cam${path}`, { method }), env);
+  const get = (path: string, method = "GET", headers?: HeadersInit, cf?: object) => {
+    const request = new Request(`https://download.furrow.cam${path}`, { method, headers });
+    // Node's Request has no `cf`; Cloudflare sets it on real requests.
+    if (cf) Object.defineProperty(request, "cf", { value: cf });
+    return worker.fetch(request, env);
+  };
   return { fetch, writeDataPoint, get };
 }
 
@@ -36,7 +40,21 @@ describe("download worker", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(writeDataPoint).toHaveBeenCalledWith({
       indexes: ["mac-arm64"],
-      blobs: ["mac-arm64", "0.3.0"],
+      blobs: ["mac-arm64", "0.3.0", "none", "other", "other", "none", "none"],
+    });
+  });
+
+  it("counts a download with coarse client and location labels only", async () => {
+    const { get, writeDataPoint } = setup([[desktopRelease("0.3.0")]]);
+    await get(
+      "/win",
+      "GET",
+      { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:133.0) Gecko/20100101 Firefox/133.0" },
+      { country: "IT", regionCode: "25", city: "Milan", postalCode: "20121", latitude: "45.4" },
+    );
+    expect(writeDataPoint).toHaveBeenCalledWith({
+      indexes: ["win"],
+      blobs: ["win", "0.3.0", "browser", "windows", "firefox", "IT", "25"],
     });
   });
 
