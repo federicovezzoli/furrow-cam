@@ -76,7 +76,7 @@ describe("suggestTouchOffToolChange", () => {
 
   it("moves to the pad in absolute coordinates where the block moves relatively", () => {
     expect(suggestTouchOffToolChange("G91\nG0 X10 Y10\nG0 Z-5\nG90\nM0")).toBe(
-      "G91\nG90 G0 X{padX} Y{padY}\nG91\nG0 Z-5\nG90\nM0",
+      "G91\nG90\nG0 X{padX} Y{padY}\nG91\nG0 Z-5\nG90\nM0",
     );
     // An arc mode isn't a distance mode.
     expect(suggestTouchOffToolChange("G91.1\nG0 X10 Y10\nM0")).toBe(
@@ -86,13 +86,13 @@ describe("suggestTouchOffToolChange", () => {
 
   it("moves to the pad in millimetres where the block works in inches", () => {
     expect(suggestTouchOffToolChange("G20\nG0 Z1\nG0 X1 Y1\nM0")).toBe(
-      "G20\nG0 Z1\nG21 G0 X{padX} Y{padY}\nG20\nM0",
+      "G20\nG0 Z1\nG21\nG0 X{padX} Y{padY}\nG20\nM0",
     );
     expect(suggestTouchOffToolChange("G91 G20\nG0 X1 Y1\nM0")).toBe(
-      "G91 G20\nG90 G21 G0 X{padX} Y{padY}\nG91 G20\nM0",
+      "G91 G20\nG90\nG21\nG0 X{padX} Y{padY}\nG91\nG20\nM0",
     );
     expect(suggestTouchOffToolChange("G20\nG28\nM0")).toBe(
-      "G20\nG21 G0 Z{safeZ}\nG0 X{padX} Y{padY}\nG20\nM0",
+      "G20\nG21\nG0 Z{safeZ}\nG0 X{padX} Y{padY}\nG20\nM0",
     );
   });
 
@@ -126,7 +126,7 @@ describe("suggestTouchOffToolChange", () => {
       "M5\nG0 Z{safeZ}\nG0 X{padX} Y{padY}\nM0",
     );
     expect(suggestTouchOffToolChange("G91 G28 Z0\nG30\nM0")).toBe(
-      "G91 G28 Z0\nG90 G0 Z{safeZ}\nG0 X{padX} Y{padY}\nG91\nM0",
+      "G91 G28 Z0\nG90\nG0 Z{safeZ}\nG0 X{padX} Y{padY}\nG91\nM0",
     );
     expect(suggestTouchOffToolChange("G28 X0 Y0 Z0\nM0")).toBe("G28 Z0\nG0 X{padX} Y{padY}\nM0");
     // Left with no axis words, it would move every axis: it goes.
