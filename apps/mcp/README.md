@@ -20,6 +20,8 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `import_terrain` | Makes a relief model of a real place from open elevation data, as the app's *Terrain from a map* does: an area about coordinates or a map link (names aren't searched), at the size, exaggeration and base you give; can also write it as an STL file |
 | `import_image_relief` | Makes a relief model from a greyscale PNG, JPEG or WebP image, as the app's *Relief from image* does: lighter is higher (darker with invert), at the width, relief height, base and smoothing you give |
 | `add_pattern` | Fills closed paths of one drawing with a pattern, as the app's *Pattern* command does: one of 18 cells (honeycomb, waves, Voronoi cells, …) at the size, gap, inset and rotation you give, which follows its boundary when the drawing moves or is resized |
+| `add_text` | Adds a text item, as the app's *Text* command does: the text in a bundled font, one the project holds, or a TTF, OTF or WOFF file you give, at the height, alignment, spacing and position you give |
+| `edit_text` | Changes a text item's text, font or other settings and lays it out again, keeping its place and the operations that machine it |
 | `fit_to_stock` | Scales a drawing or model to fit inside the stock less its border |
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |

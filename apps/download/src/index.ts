@@ -13,6 +13,7 @@ import {
   type Release,
   releaseFileUrl,
 } from "./installers";
+import { userAgentLabels } from "./user-agent";
 
 export const DESKTOP_RELEASES_URL = `https://github.com/${REPO}/releases?q=%40furrow%2Fdesktop&expanded=true`;
 
@@ -127,9 +128,19 @@ export function createWorker(deps: Deps) {
       // GitHub unreachable, or no release has this file yet: the release list still works.
       if (!installer) return redirect(DESKTOP_RELEASES_URL);
 
-      // Platform and version only: no IP address, user agent or other request data.
+      // Coarse labels only (ADR-0090): never the IP address, the raw user agent or the city.
       if (request.method === "GET") {
-        env.DOWNLOADS?.writeDataPoint({ indexes: [path], blobs: [path, installer.version] });
+        const cf = request.cf as { country?: string; regionCode?: string } | undefined;
+        env.DOWNLOADS?.writeDataPoint({
+          indexes: [path],
+          blobs: [
+            path,
+            installer.version,
+            ...userAgentLabels(request.headers.get("User-Agent")),
+            cf?.country || "none",
+            cf?.regionCode || "none",
+          ],
+        });
       }
       return redirect(installer.url);
     },

@@ -21,7 +21,7 @@ import {
   MAX_DRAWING_FILE_SIZE,
   parseDrawingFile,
 } from "../lib/drawing-import";
-import { DEFAULT_FONT } from "../lib/fonts";
+import { DEFAULT_FONT, DEFAULT_TEXT_HEIGHT } from "../lib/fonts";
 import { shapePaths } from "../lib/path-selection";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
@@ -63,9 +63,6 @@ export function ImportDrawingButton() {
     />
   );
 }
-
-/** A new text item's cap height, in millimetres. */
-const DEFAULT_TEXT_HEIGHT = 20;
 
 /**
  * Adds a text item (PRD-0010 T1), placed like an imported drawing, and

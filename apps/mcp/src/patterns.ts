@@ -4,6 +4,7 @@ import { addPatternItem, patternBoundary } from "@furrow/workspace/stores/patter
 import { text } from "./drawings-and-models";
 import { type TargetInput, targetsOf } from "./operations";
 import { change, type Project, ToolError, t } from "./projects";
+import { parsed } from "./setup";
 
 /** A pattern as an assistant asks for it: what it fills and the settings it changes from the app's defaults. */
 export type PatternRequest = Partial<Omit<PatternSettings, "placement" | "boundary">> & {
@@ -27,7 +28,7 @@ export function addPattern(project: Project, request: PatternRequest) {
   const bound = patternBoundary(document, targetsOf(document, targets));
   if (!bound.ok) throw new ToolError(text(bound.error));
   const [x, y] = boundaryCorner(document.geometry, bound.boundary);
-  const parsed = PatternSettings.safeParse({
+  const settings = parsed(PatternSettings, {
     ...DEFAULT_PATTERN,
     ...given,
     placement: {
@@ -37,20 +38,11 @@ export function addPattern(project: Project, request: PatternRequest) {
     },
     boundary: bound.boundary,
   });
-  if (!parsed.success) {
-    const [issue] = parsed.error.issues;
-    throw new ToolError(`Invalid ${issue?.path.join(".") ?? "settings"}: ${issue?.message}`);
-  }
-  const generated = generatePattern(document.geometry, parsed.data);
+  const generated = generatePattern(document.geometry, settings);
   if (!generated.ok) throw new ToolError(text(generated.error));
   let drawingId = "";
   change(project, (store) => {
-    drawingId = addPatternItem(
-      store,
-      name ?? t("Pattern.defaultName"),
-      parsed.data,
-      generated.paths,
-    );
+    drawingId = addPatternItem(store, name ?? t("Pattern.defaultName"), settings, generated.paths);
   });
   return { drawingId, cells: generated.paths.length };
 }

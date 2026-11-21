@@ -46,6 +46,7 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 | M11 | **Remote server (phase 2):** an MCP endpoint on the web app that reaches the signed-in user's cloud projects, with the user granting access through their account (OAuth) and able to revoke it | Should |
 | M12 | The desktop app offers to set up the local server for the user's MCP clients | Could |
 | M13 | Make a terrain from an area as the project's model, as the app does (PRD-0014 T11); the one tool that contacts a service, for the elevation tiles only (ADR-0082) | Should |
+| M14 | Add text items and change their settings (text, font, height, alignment, line and letter spacing, position) as the app does (PRD-0010), in a bundled font, one the project holds, or a font file added by path with the app's limits | Should |
 
 ## User flow
 
@@ -71,3 +72,4 @@ Users increasingly work with AI assistants (Claude, ChatGPT, editors with agents
 - 2026-10-24: phase 1 uploads nothing, but tool results go where the assistant sends them
 - 2026-10-29: the local server sends no usage events and makes no network requests (ADR-0067, #364)
 - 2026-11-11: terrain from the server, which then fetches elevation tiles while that tool runs (M13, ADR-0082)
+- 2026-11-20: text items from the server (M14, #577)

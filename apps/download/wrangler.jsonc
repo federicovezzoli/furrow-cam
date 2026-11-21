@@ -6,7 +6,7 @@
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "download.furrow.cam", "custom_domain": true }],
   "workers_dev": false,
-  // One data point per download: platform and version, nothing about the visitor.
+  // One data point per download: platform, version and coarse client and location labels (ADR-0090).
   "analytics_engine_datasets": [{ "binding": "DOWNLOADS", "dataset": "furrow_downloads" }],
   // Workers Logs would store request details, the IP address among them (ADR-0013).
   "observability": { "enabled": false }
