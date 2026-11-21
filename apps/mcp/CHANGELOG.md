@@ -1,5 +1,11 @@
 # @furrow/mcp
 
+## 0.13.0
+
+### Minor Changes
+
+- AI assistants can add text to a project and change it later, in one of the app's fonts or a font file you point them to, so "make a sign that says Rossi" no longer needs an SVG. ([#637](https://github.com/federicovezzoli/furrow-cam/pull/637))
+
 ## 0.12.0
 
 ### Minor Changes

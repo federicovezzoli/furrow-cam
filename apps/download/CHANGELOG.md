@@ -1,5 +1,11 @@
 # @furrow/download
 
+## 0.4.0
+
+### Minor Changes
+
+- Download counts now also record the kind of client (browser, bot or command-line tool), its system and browser family, and the country and region, without keeping the IP address or the full user agent. ([#647](https://github.com/federicovezzoli/furrow-cam/pull/647))
+
 ## 0.3.0
 
 ### Minor Changes
