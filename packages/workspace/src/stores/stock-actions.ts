@@ -49,7 +49,8 @@ export function setUnits(store: DocumentStore, units: Units) {
  * Moves the design on the stock by `offset`: its shapes, the text items'
  * placements (ADR-0059), the models placed with them (ADR-0031) and
  * everything else stored in stock coordinates with them, the profiles' tab
- * positions, the profiles' and engravings' start points and the touch-off pad (ADR-0043), which was placed on the zero
+ * positions, the profiles' and engravings' start points, the drills' placed
+ * holes (#429) and the touch-off pad (ADR-0043), which was placed on the zero
  * the design follows. `geometry` is the document's,
  * read outside the draft: reading every point through it would be slow.
  */
@@ -68,6 +69,9 @@ function moveDrawing(
     placement.position = translatePoint(placement.position, offset);
   }
   for (const operation of draft.operations) {
+    if (operation.type === "drill" && operation.params.points.length > 0) {
+      operation.params.points = operation.params.points.map((p) => translatePoint(p, offset));
+    }
     if (operation.type !== "profile" && operation.type !== "engrave") continue;
     const params: StartPointParams = operation.params;
     params.startPoints = moveStartPoints(params.startPoints, (point) =>

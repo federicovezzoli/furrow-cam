@@ -5,8 +5,14 @@ import {
   touchOffOutsideStock,
   xyOriginPosition,
 } from "@furrow/cam-core";
-import { createProjectDocument, ProjectDocument, StockAnchor, stockPins } from "@furrow/document";
-import { fullDocument, model } from "@furrow/document/fixtures";
+import {
+  createProjectDocument,
+  type Operation,
+  ProjectDocument,
+  StockAnchor,
+  stockPins,
+} from "@furrow/document";
+import { drill, fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import { createDocumentStore } from "./document-store";
 import { drawingAnchor, expectClose } from "./drawing-test-utils";
@@ -45,10 +51,21 @@ function newStore() {
 
 const stock = (store: ReturnType<typeof newStore>) => store.getState().document.stock;
 
-/** 300 × 200 mm stock zeroed at its bottom-left corner, with a square, a hole and a tab. */
+/**
+ * 300 × 200 mm stock zeroed at its bottom-left corner, with a square, a hole,
+ * a tab and a drill with a hole placed in the viewport (#429).
+ */
 function drawingStore() {
   const document = fullDocument();
   document.stock.xyOrigin = { anchor: "bottom_left" };
+  document.operations.push({
+    ...(document.operations[0] as Operation),
+    id: crypto.randomUUID(),
+    type: "drill",
+    tool: drill,
+    targets: [],
+    params: { depth: 6, peck: false, stepOver: 40, pins: false, points: [[10, 20]] },
+  });
   return createDocumentStore(document);
 }
 
@@ -64,7 +81,8 @@ function unalignedStore() {
 
 /**
  * How far the drawing (the square's first point), the first tab, the first
- * start point and the first excluded overcut are from where they were.
+ * start point, the first excluded overcut and the first placed drill hole are
+ * from where they were.
  */
 function moved(before: ProjectDocument, after: ProjectDocument) {
   const first = (document: ProjectDocument) => document.geometry[0]?.paths[0]?.start ?? [0, 0];
@@ -82,6 +100,10 @@ function moved(before: ProjectDocument, after: ProjectDocument) {
       (operation?.type === "profile" && operation.params.cornerOvercuts?.excluded[0]) || [0, 0]
     );
   };
+  const hole = (document: ProjectDocument) => {
+    const operation = document.operations.find(({ type }) => type === "drill");
+    return (operation?.type === "drill" && operation.params.points[0]) || [0, 0];
+  };
   const delta = (a: number[], b: number[]) => [
     (b[0] ?? 0) - (a[0] ?? 0),
     (b[1] ?? 0) - (a[1] ?? 0),
@@ -91,6 +113,7 @@ function moved(before: ProjectDocument, after: ProjectDocument) {
     tab: delta(tab(before), tab(after)),
     start: delta(start(before), start(after)),
     overcut: delta(overcut(before), overcut(after)),
+    hole: delta(hole(before), hole(after)),
   };
 }
 
@@ -143,10 +166,11 @@ describe("setStockDimension", () => {
     setStockDimension(store, "height", 300);
     const after = store.getState().document;
     expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
-    const { drawing, tab, start, overcut } = moved(before, after);
+    const { drawing, tab, start, overcut, hole } = moved(before, after);
     expectClose(tab, drawing);
     expectClose(start, drawing);
     expectClose(overcut, drawing);
+    expectClose(hole, drawing);
     store.getState().undo();
     store.getState().undo();
     expect(store.getState().document).toEqual(before);
@@ -210,8 +234,9 @@ describe("setXYAnchor", () => {
     setXYAnchor(store, anchor);
     const after = store.getState().document;
     expectClose(drawingAnchor(after, anchor), xyOriginPosition(after.stock));
-    const { drawing, tab } = moved(before, after);
+    const { drawing, tab, hole } = moved(before, after);
     expectClose(tab, drawing);
+    expectClose(hole, drawing);
     if (anchor === "center") {
       expect(after).toBe(before);
       return;
