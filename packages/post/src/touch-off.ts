@@ -126,10 +126,11 @@ export function suggestTouchOffToolChange(
     // A straight move or an arc: `movesXY` needs a known motion for anything but `G28`/`G30`.
     const kind = motion ?? 0;
     // The pad move is absolute and in millimetres, the placeholders' units; the block's modes come back after it.
+    // One command per line: Marlin runs only a line's first.
     const absolute = (...moves: string[]) => {
-      const set = [relative && "G90", inches && "G21"].filter(Boolean).join(" ");
-      const restore = [relative && "G91", inches && "G20"].filter(Boolean).join(" ");
-      return set ? [`${set} ${moves[0]}`, ...moves.slice(1), restore] : moves;
+      const set = [relative && "G90", inches && "G21"].filter((mode) => mode !== false);
+      const restore = [relative && "G91", inches && "G20"].filter((mode) => mode !== false);
+      return [...set, ...moves, ...restore];
     };
     const first = !placed;
     placed = true;
