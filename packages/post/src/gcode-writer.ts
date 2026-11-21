@@ -112,8 +112,9 @@ export class GcodeWriter {
     if (words.length === 0) return;
     if (feedRate !== undefined) {
       const text = formatNumber(feedRate);
-      if (this.written.f !== text) {
-        this.written.f = text;
+      // Kept with its command: a cut after a rapid's `F` writes its own, even an equal one.
+      if (this.written.f !== `${code}${text}`) {
+        this.written.f = `${code}${text}`;
         words.push(`F${text}`);
       }
     }

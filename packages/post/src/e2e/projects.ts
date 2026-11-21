@@ -832,7 +832,6 @@ function flutedDoors(): ProjectDocument {
   };
 }
 
-/** Every project, in the order their programs are checked. */
 /** A LowRider on Marlin (#578): a manual router, the default tool change. */
 const marlinLowRider: Machine = {
   ...lowRider,
@@ -840,6 +839,8 @@ const marlinLowRider: Machine = {
   postProcessor: "marlin",
   toolChange: null,
 };
+
+/** Every project, in the order their programs are checked. */
 
 export function corpus(): CorpusProject[] {
   const lowRiderPlate = plate();

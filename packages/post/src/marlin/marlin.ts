@@ -14,6 +14,8 @@ import { type Dialect, postProgram } from "../program";
  * - `M0` shows the rest of its line on the LCD, so its message isn't a comment.
  * - No `M30`, which deletes a file on the SD card, and no `M84`, which would
  *   let the steppers lose their position.
+ * - `M3 S` is in RPM only with `CUTTER_POWER_UNIT RPM`: Marlin's default,
+ *   `PWM255`, clamps it to full power. A manual spindle writes no `S`.
  * - Without `G0_FEEDRATE`, `G0` runs at the last `F`, so each rapid carries
  *   the machine's maximum XY feed (Marlin keeps each axis to its own) and the
  *   next cut writes its feed again.

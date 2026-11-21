@@ -245,6 +245,23 @@ describe("checkGcode on Marlin", () => {
     expect(spin("G4 P5000")).toContain("words");
   });
 
+  it("still carves a cut it refuses for its feed", () => {
+    // The rapid back into the hole isn't blamed for material the cut removed.
+    const gcode = cut(
+      "G0 Z5 F10000",
+      "M3 S12000",
+      "G0 X10 Y10",
+      "G0 Z0",
+      "G1 Z-1",
+      "G0 Z-0.5",
+      "G0 Z5",
+    );
+    expect(rules(gcode)).toEqual([
+      "8 feed: cuts at the feed of a rapid",
+      "8 feed: Z at 10000 mm/min, over 2500",
+    ]);
+  });
+
   it("ends with the spindle off and the tool up", () => {
     expect(rules(cut("G0 Z5 F10000", "M3 S12000", "G0 X10 Y10", "G1 Z-1 F500")).at(-1)).toBe(
       "8 end: ends in the stock",
@@ -295,5 +312,17 @@ describe("parseGcode", () => {
     expect(pause?.words).toEqual([{ letter: "M", value: 0 }]);
     expect(pause?.comment).toBe("Change the bit then resume");
     expect(parseGcode("(Sign; v2)")[0]).toMatchObject({ words: [], comment: "Sign; v2" });
+    expect(parseGcode("m0 6mm bit next")[0]).toMatchObject({
+      words: [{ letter: "M", value: 0 }],
+      comment: "6mm bit next",
+    });
+    // A timeout, not a message.
+    expect(parseGcode("M0 S30")[0]).toMatchObject({
+      words: [
+        { letter: "M", value: 0 },
+        { letter: "S", value: 30 },
+      ],
+      comment: null,
+    });
   });
 });
