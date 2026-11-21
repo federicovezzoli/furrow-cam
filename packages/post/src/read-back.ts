@@ -76,9 +76,10 @@ export function parseGcode(gcode: string): GcodeLine[] {
         (match) => (match[1] ?? match[2]?.trim()) as string,
       );
       let code = text.replace(COMMENT, " ").trim();
-      const message = /^(M0*[01])\s+([^\s\d.-].*)$/.exec(code);
-      if (message) {
-        code = message[1] as string;
+      const message = /^(M0*[01])\s+(.+)$/i.exec(code);
+      // `M0 S30` waits 30 s: its words aren't a message.
+      if (message && !/^([A-Z]\s*[-+]?(\d+\.?\d*|\.\d+)\s*)+$/i.test(message[2] as string)) {
+        code = (message[1] as string).toUpperCase();
         comments.unshift(message[2] as string);
       }
       const words: GcodeLine["words"] = [];

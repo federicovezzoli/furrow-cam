@@ -74,6 +74,12 @@ describe("marlin", () => {
     expect(post()).toContain("G1 Z-5 F500\nG0 Z5 F10000\nG0 X120\nG1 Z-5 F500\nG0 Z5 F10000\n");
   });
 
+  it("writes a cut's feed after a rapid even when it is the rapid's", () => {
+    const fast = { ...plunge, moves: plunge.moves.map((move) => ({ ...move, feedRate: 10000 })) };
+    const gcode = post({ operations: [{ operation: operation("Holes", drill), toolpath: fast }] });
+    expect(gcode).toContain("G0 X100 Y50\nG1 Z-5 F2500\n");
+  });
+
   it("pauses with its message on the LCD at a tool change", () => {
     expect(post()).toContain(
       'M5\nG0 Z5 F10000\nM0 Change the bit to 1/4" 2-flute upcut, 6.35 mm and zero Z again\nG21\nG90\n',

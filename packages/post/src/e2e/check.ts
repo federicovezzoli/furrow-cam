@@ -3,6 +3,7 @@
 // part of the package's API.
 import { type CutterProfile, cutterProfile, stockBounds, type Vec3 } from "@furrow/cam-core";
 import { machineSpinUpDelay, type PostProcessorId } from "@furrow/document";
+import { formatNumber } from "../format";
 import {
   type CheckedProject,
   EPSILON,
@@ -209,8 +210,10 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       rapidFeed = move?.kind === "rapid";
     }
     if (!move) continue;
-    if (dialect.marlin && move.kind === "rapid" && machine !== null && feed !== machine.maxFeedXY) {
-      fail(line.number, "feed", `rapid at F${feed}, not the machine's ${machine.maxFeedXY}`);
+    // The post writes the feed rounded, as every number.
+    const rapid = machine && Number(formatNumber(machine.maxFeedXY));
+    if (dialect.marlin && move.kind === "rapid" && rapid !== null && feed !== rapid) {
+      fail(line.number, "feed", `rapid at F${feed}, not the machine's ${rapid}`);
     }
     if (spinningUp !== null && spinUpDelay > 0) {
       fail(
@@ -244,8 +247,8 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       if (!spindle) fail(line.number, "spindle", "cuts with the spindle off");
       if (!paused) fail(line.number, "tool-change", "cuts with a new tool before pausing");
       if (!known) fail(line.number, "feed", "cuts from an unknown position");
-      if (dialect.marlin && rapidFeed) fail(line.number, "feed", "cuts at the feed of a rapid");
       else if (tool !== null) material.cut(tool, from, to);
+      if (dialect.marlin && rapidFeed) fail(line.number, "feed", "cuts at the feed of a rapid");
       const feedRate = move.feedRate;
       if (feedRate === null || !(feedRate > 0)) {
         fail(line.number, "feed", "cuts with no feed rate");
