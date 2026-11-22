@@ -1,3 +1,5 @@
+<img src="apps/web/src/app/icon.svg" alt="Furrow CAM logo" width="96" height="96">
+
 # Furrow CAM
 
 **Open source, web-based 2.5D CAM.** Turn 2D vector designs into G-code for CNC routers, right in your browser.
@@ -6,6 +8,11 @@
 
 [![CI](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/ci.yml)
 [![Release](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml/badge.svg)](https://github.com/federicovezzoli/furrow-cam/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/package-json/v/federicovezzoli/furrow-cam/main?filename=apps%2Fdesktop%2Fpackage.json&label=release)](https://github.com/federicovezzoli/furrow-cam/releases?q=%40furrow%2Fdesktop&expanded=true)
+
+![A profile, a pocket and a V-carve on a drawing and text](docs/images/screenshot-2d.jpg)
+
+![3D roughing and finishing toolpaths on a terrain model](docs/images/screenshot-3d.jpg)
 
 ## Desktop app
 

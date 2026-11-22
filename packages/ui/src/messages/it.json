@@ -1692,8 +1692,8 @@
         "body": "Crea un progetto qui, o importa un file di progetto. Puoi scegliere la macchina ora o più tardi, prima di esportare il G-code."
       },
       "import": {
-        "title": "Importa un disegno",
-        "body": "Parti da un file SVG o DXF: i suoi percorsi diventano le forme che tagli. Accanto puoi importare un modello STL o STEP da scolpire in 3D."
+        "title": "Aggiungi cosa tagliare",
+        "body": "Importa un disegno SVG o DXF, i cui percorsi diventano le forme che tagli, o un modello STL o STEP da scolpire in 3D. Puoi anche creare un terreno da una mappa, un rilievo da un’immagine o un testo, e riempire i percorsi chiusi con un motivo."
       },
       "properties": {
         "title": "Proprietà del progetto",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Aggiungi operazioni",
-        "body": "Aggiungi un’operazione (contorno, tasca, foratura, incisione o V-carve) per i percorsi selezionati, poi scegli fresa e profondità."
+        "body": "Aggiungi un’operazione per ciò che hai selezionato: contorno, tasca, foratura, incisione, V-carve o intarsio per i percorsi; sgrossatura e finitura per scolpire un modello, un terreno o un rilievo da immagine. Poi scegli fresa e profondità."
       },
       "preview": {
         "title": "Anteprima dei percorsi utensile",

@@ -1692,8 +1692,8 @@
         "body": "Create a project here, or import a project file. You can choose its machine now or later, before exporting G-code."
       },
       "import": {
-        "title": "Import a drawing",
-        "body": "Start from an SVG or DXF file: its paths become the shapes you cut. An STL or STEP model can go beside them, to carve in 3D."
+        "title": "Add what you'll cut",
+        "body": "Import an SVG or DXF drawing, whose paths become the shapes you cut, or an STL or STEP model to carve in 3D. You can also make terrain from a map, a relief from an image, or text, and fill closed paths with a pattern."
       },
       "properties": {
         "title": "Project properties",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Add operations",
-        "body": "Add an operation (profile, pocket, drill, engrave or V-carve) for the selected paths, then pick its bit and depths."
+        "body": "Add an operation for what you selected: profile, pocket, drill, engrave, V-carve or inlay for paths; rough and finish to carve a model, terrain or image relief. Then pick its bit and depths."
       },
       "preview": {
         "title": "Preview the toolpaths",

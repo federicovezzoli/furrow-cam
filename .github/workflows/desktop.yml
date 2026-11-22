@@ -52,6 +52,18 @@ jobs:
             target: --linux
     runs-on: ${{ matrix.os }}
     steps:
+      # A keyless build never asks for or sends telemetry (ADR-0052), so a release must have the key.
+      - name: Check the PostHog key
+        if: inputs.tag != ''
+        shell: bash
+        run: |
+          if [ -z "$POSTHOG_KEY" ]; then
+            echo "::error::Set the POSTHOG_KEY repository secret: a release build without it never asks for or sends usage statistics."
+            exit 1
+          fi
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+
       - uses: actions/checkout@v7
         with:
           # The release's own commit when given one; the triggering commit otherwise.
@@ -77,8 +89,8 @@ jobs:
           # Unsigned on purpose: don't pick up a certificate that happens to be on the runner.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           # PostHog project key for opt-in usage statistics and error reports (ADR-0052); unset, the app never asks.
-          POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
-          POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
 
       - uses: actions/upload-artifact@v7
         with:
