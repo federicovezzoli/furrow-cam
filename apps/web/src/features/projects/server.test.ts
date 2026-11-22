@@ -19,6 +19,11 @@ describe("isAccountProject", () => {
     expect(await isAccountProject(GUEST_PROJECT)).toBe(false);
   });
 
+  it("leaves guest projects open when the database is unreachable", async () => {
+    count.mockRejectedValueOnce(new Error("connection refused"));
+    expect(await isAccountProject(ACCOUNT_PROJECT)).toBe(false);
+  });
+
   it("doesn't query for an id that can't be a project's", async () => {
     count.mockClear();
     expect(await isAccountProject("not-a-uuid")).toBe(false);
