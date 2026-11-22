@@ -26,6 +26,11 @@ It needs [Node.js](https://nodejs.org) 22.2 or later.
 | `resize` | Sets a drawing's or model's width or height, or a model's depth, keeping its proportions |
 | `set_model_top` | Sinks a model's top below the stock top |
 | `turn_model` | Turns a model a quarter turn (or more) about the stock's X, Y or Z axis |
+| `move` | Moves a drawing, text item or model by an offset in millimetres |
+| `rotate` | Turns a drawing or text item by an angle in degrees |
+| `mirror` | Mirrors a drawing or text item left to right or top to bottom |
+| `duplicate` | Copies a drawing or text item beside it, with the operations that machine it |
+| `remove` | Removes a drawing, text item or model, and what the app removes with it |
 | `set_stock` | Sets the stock's size and the units the app shows |
 | `set_two_sided` | Makes the project two-sided and sets its flip axis, parting depth and line-up |
 | `set_holding_tabs` | Sets the holding tabs the 3D operations leave round each model, one-sided or two-sided |

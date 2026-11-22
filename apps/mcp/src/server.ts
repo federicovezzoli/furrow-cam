@@ -27,7 +27,18 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
+import {
+  duplicate,
+  fitToStock,
+  importFile,
+  mirror,
+  move,
+  remove,
+  resize,
+  rotate,
+  setTop,
+  turn,
+} from "./drawings-and-models";
 import { checkProject, computeToolpaths, exportProject, type Progress } from "./gcode";
 import { importImageRelief } from "./image-relief";
 import { libraryDir, readLibrary } from "./library";
@@ -497,6 +508,98 @@ export function createServer(projects: Projects = createProjects(), library = li
       respond(async () => {
         const project = await projects.get(path);
         turn(project, id, axis, turns);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "move",
+    {
+      title: "Move a drawing or model",
+      description:
+        "Moves a drawing, text item or model by an offset in millimetres along the stock's X and Y, with the tabs and holes on it (give 0 for an axis it stays on). A pattern follows the drawing it fills: move that one. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        dx: z.number().describe("How far to move along X, in millimetres."),
+        dy: z.number().describe("How far to move along Y, in millimetres."),
+      },
+    },
+    ({ path, id, dx, dy }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        move(project, id, [dx, dy]);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "rotate",
+    {
+      title: "Rotate a drawing",
+      description:
+        "Turns a drawing or text item by an angle in degrees, counter-clockwise for positive ones, keeping its point at the zero's corner or centre in place, as the app's rotation does. A model turns in quarter turns with turn_model; a pattern follows the drawing it fills. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        degrees: z.number().describe("The angle, in degrees, counter-clockwise."),
+      },
+    },
+    ({ path, id, degrees }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        rotate(project, id, degrees);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "mirror",
+    {
+      title: "Mirror a drawing",
+      description:
+        "Mirrors a drawing or text item in place, left to right (x) or top to bottom (y), as the app's mirror buttons do. A pattern follows the drawing it fills. Returns the project summary.",
+      inputSchema: {
+        path: projectPath,
+        id: itemId,
+        axis: z.enum(["x", "y"]).describe("x flips left to right, y top to bottom."),
+      },
+    },
+    ({ path, id, axis }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        mirror(project, id, axis);
+        return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "duplicate",
+    {
+      title: "Duplicate a drawing",
+      description:
+        "Copies a drawing or text item to the right of it, 10 mm away (the copy may run off the stock), as the app's Duplicate does: every operation machining it machines the copy too, and its tabs and holes are copied. A pattern's copy is a plain drawing. Returns the copy's id and the project summary.",
+      inputSchema: { path: projectPath, id: itemId },
+    },
+    ({ path, id }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        return { id: duplicate(project, id), ...summary(project) };
+      }),
+  );
+
+  server.registerTool(
+    "remove",
+    {
+      title: "Remove a drawing or model",
+      description:
+        "Removes a drawing, text item or model, as the app's Remove does: an operation loses its targets on a removed drawing, and goes if none are left; a model's operations go with it; a pattern it bounded becomes a plain drawing. Returns the project summary.",
+      inputSchema: { path: projectPath, id: itemId },
+    },
+    ({ path, id }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        remove(project, id);
         return summary(project);
       }),
   );
