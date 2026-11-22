@@ -1,5 +1,12 @@
 # @furrow/ui
 
+## 0.10.3
+
+### Patch Changes
+
+- Exporting G-code now warns when the program needs more travel than the machine profile has, so a job too big for the machine is caught before it runs into the end stops. ([#652](https://github.com/federicovezzoli/furrow-cam/pull/652))
+- Updated dependencies: @furrow/document@0.28.0, @furrow/cam-core@0.26.1
+
 ## 0.10.2
 
 ### Patch Changes

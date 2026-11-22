@@ -1,5 +1,17 @@
 # @furrow/workspace
 
+## 0.31.0
+
+### Minor Changes
+
+- Machines can now use the Marlin post-processor, for MPCNC and LowRider builds running Marlin. It follows Marlin's documentation and hasn't been tested on a Marlin machine yet. ([#639](https://github.com/federicovezzoli/furrow-cam/pull/639))
+
+### Patch Changes
+
+- Holes placed in the viewport now move with the design when the stock is resized or its zero moves to another corner, instead of staying where they were. ([#650](https://github.com/federicovezzoli/furrow-cam/pull/650))
+- Exporting G-code, and checking a project from an AI assistant, now warn when a bottom-side cut reaches a locating pin, as the operation's own warning already did. ([#651](https://github.com/federicovezzoli/furrow-cam/pull/651))
+- Updated dependencies: @furrow/post@0.16.0, @furrow/ui@0.10.3, @furrow/document@0.28.0, @furrow/cam-core@0.26.1
+
 ## 0.30.1
 
 ### Patch Changes

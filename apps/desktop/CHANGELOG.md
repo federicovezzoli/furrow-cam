@@ -1,5 +1,11 @@
 # @furrow/desktop
 
+## 0.31.0
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.31.0, @furrow/ui@0.10.3, @furrow/document@0.28.0, @furrow/cam-core@0.26.1
+
 ## 0.30.1
 
 ### Patch Changes

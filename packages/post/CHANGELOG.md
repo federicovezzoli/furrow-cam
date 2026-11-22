@@ -1,5 +1,17 @@
 # @furrow/post
 
+## 0.16.0
+
+### Minor Changes
+
+- Exporting G-code now warns when the program needs more travel than the machine profile has, so a job too big for the machine is caught before it runs into the end stops. ([#652](https://github.com/federicovezzoli/furrow-cam/pull/652))
+- Machines can now use the Marlin post-processor, for MPCNC and LowRider builds running Marlin. It follows Marlin's documentation and hasn't been tested on a Marlin machine yet. ([#639](https://github.com/federicovezzoli/furrow-cam/pull/639))
+
+### Patch Changes
+
+- Exporting G-code, and checking a project from an AI assistant, now warn when a bottom-side cut reaches a locating pin, as the operation's own warning already did. ([#651](https://github.com/federicovezzoli/furrow-cam/pull/651))
+- Updated dependencies: @furrow/document@0.28.0, @furrow/cam-core@0.26.1
+
 ## 0.15.12
 
 ### Patch Changes

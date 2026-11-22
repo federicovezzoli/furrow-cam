@@ -1,5 +1,12 @@
 # @furrow/web
 
+## 0.31.0
+
+### Patch Changes
+
+- Opening one of your projects after your session has expired now takes you to sign in, instead of saying the project doesn't exist in this browser. ([#654](https://github.com/federicovezzoli/furrow-cam/pull/654))
+- Updated dependencies: @furrow/workspace@0.31.0, @furrow/post@0.16.0, @furrow/ui@0.10.3, @furrow/document@0.28.0, @furrow/cam-core@0.26.1
+
 ## 0.30.2
 
 ### Patch Changes

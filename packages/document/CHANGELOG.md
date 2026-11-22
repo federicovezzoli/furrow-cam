@@ -1,5 +1,11 @@
 # @furrow/document
 
+## 0.28.0
+
+### Minor Changes
+
+- Machines can now use the Marlin post-processor, for MPCNC and LowRider builds running Marlin. It follows Marlin's documentation and hasn't been tested on a Marlin machine yet. ([#639](https://github.com/federicovezzoli/furrow-cam/pull/639))
+
 ## 0.27.0
 
 ### Minor Changes
