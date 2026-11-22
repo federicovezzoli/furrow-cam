@@ -1,4 +1,4 @@
-# ADR-0090: G-code dialects share one program; Marlin is the second
+# ADR-0091: G-code dialects share one program; Marlin is the second
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

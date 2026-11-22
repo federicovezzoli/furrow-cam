@@ -17,7 +17,7 @@ import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } fro
 import { travelWarnings } from "./travel";
 
 /**
- * How a G-code dialect writes what every program says (ADR-0090). Each
+ * How a G-code dialect writes what every program says (ADR-0091). Each
  * dialect folder fills one in; what they all do is `postProgram`'s.
  */
 export type Dialect = {

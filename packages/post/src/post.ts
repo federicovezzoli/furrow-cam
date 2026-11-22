@@ -78,7 +78,7 @@ export class GcodeExportError extends MessageError<PostWarning["message"]> {
 }
 
 /**
- * Turns toolpaths into a G-code dialect (PRD-0001 R12, ADR-0090). A new
+ * Turns toolpaths into a G-code dialect (PRD-0001 R12, ADR-0091). A new
  * dialect is a folder with its `Dialect`, registered in `POST_PROCESSORS`, and
  * a new `PostProcessorId` in the document schema.
  */

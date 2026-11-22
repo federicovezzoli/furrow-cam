@@ -21,7 +21,7 @@ export type { CheckedProject, GcodeMove };
 
 export type Violation = { line: number; rule: string; message: string };
 
-/** What each dialect writes and how (ADR-0090). */
+/** What each dialect writes and how (ADR-0091). */
 const DIALECTS: Record<
   PostProcessorId,
   {

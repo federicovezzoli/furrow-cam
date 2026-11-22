@@ -24,7 +24,7 @@ Many hobby routers come from a handful of communities with well-documented machi
 
 ## Non-goals
 
-- **Controllers without a compatible post-processor**, e.g. Masso-based machines. GRBL-compatible firmware (GRBL, grblHAL, FluidNC) and, since #578, Marlin (ADR-0090) are in scope. There are no presets for Marlin builds yet: a Marlin MPCNC or LowRider starts from the V1 Engineering preset with the Marlin post-processor and its Jackpot blocks cleared, as its firmware note says.
+- **Controllers without a compatible post-processor**, e.g. Masso-based machines. GRBL-compatible firmware (GRBL, grblHAL, FluidNC) and, since #578, Marlin (ADR-0091) are in scope. There are no presets for Marlin builds yet: a Marlin MPCNC or LowRider starts from the V1 Engineering preset with the Marlin post-processor and its Jackpot blocks cleared, as its firmware note says.
 - **Travel or soft-limit checks** against the machine's work area (relevant for Maslow; see PRD-0002 non-goals).
 - **Bit (tool) presets** for the same communities: a natural follow-up, in a separate PRD.
 - **Linked presets:** later changes to a preset don't update machines already created from it.

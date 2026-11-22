@@ -4,7 +4,7 @@ import type { PostProcessor } from "../post";
 import { type Dialect, postProgram } from "../program";
 
 /**
- * Marlin 2.1 (#578, ADR-0090), as its documentation describes it; not yet
+ * Marlin 2.1 (#578, ADR-0091), as its documentation describes it; not yet
  * checked on a machine.
  *
  * - One G-code per line: Marlin runs only a line's first. `G21` and `G90`,

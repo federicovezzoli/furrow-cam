@@ -6,7 +6,7 @@ Each project in [`projects.ts`](projects.ts) goes through the same steps as the 
 2. **Safety**, with [`check.ts`](check.ts). The checker reads the program back and fails on rapids through material (it replays the cuts on a heightmap, so pecking and rest machining may rapid where the material is already gone), moves below the stock bottom, feeds over the machine's limits, cuts with the spindle off, unsafe pauses and tool changes, and a bad start or end. Each failure gives a line number and a rule.
 3. **The warnings** the export gives, none unless the project lists them.
 
-The checker follows the machine's post-processor (ADR-0090): `plate-marlin` and `relief-marlin` are checked against Marlin's rules (one command a line, rapids with their feed, no `M30`).
+The checker follows the machine's post-processor (ADR-0091): `plate-marlin` and `relief-marlin` are checked against Marlin's rules (one command a line, rapids with their feed, no `M30`).
 
 The `measured` tests check what the stored programs can't show at a glance: depths, tab heights, hole positions and, on the stock the program leaves (`simulateGcode`), that parts are cut free everywhere but at their tabs.
 
