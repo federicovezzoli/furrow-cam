@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Toda operação ativa corta algo oculto: mostre para exportar.",
+      "exceedsTravel": "O programa abrange {span, number} mm em {axis}, mais do que os {travel, number} mm de curso da máquina: reduza o material ou o desenho, ou verifique o perfil da máquina.",
       "noEnabled": "Não há operações ativadas para exportar.",
       "noneHasToolpath": "Nenhuma das operações ativadas tem percurso para exportar.",
       "noToolpath": "Sem percurso, deixada fora do programa.",

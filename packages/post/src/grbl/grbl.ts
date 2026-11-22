@@ -16,6 +16,7 @@ import { type BlockLabel, customBlockWarnings } from "../read-back";
 import { padLabel, sideSetupLines, xyZeroLabel, zZeroLabel } from "../setup-notes";
 import { sameBit, toolLabel, toolShapeComment } from "../tool";
 import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "../touch-off";
+import { travelWarnings } from "../travel";
 
 /** The modes every coordinate assumes: millimetres, absolute, feed per minute, XY plane. */
 const MODES = "G21 G90 G94 G17";
@@ -103,6 +104,7 @@ function postGrbl(input: PostInput): PostOutput {
   const project = { stock, machine, operations: operations.map(({ operation }) => operation) };
   const { warnings } = program;
   warnings.push(...customBlockWarnings(gcode, project, program.out.customBlocks));
+  warnings.push(...travelWarnings(gcode, machine, program.out.customBlocks));
   return { gcode, warnings };
 }
 

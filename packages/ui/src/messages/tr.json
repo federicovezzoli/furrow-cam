@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
+      "exceedsTravel": "Program {axis} ekseninde {span, number} mm kaplıyor, makinenin {travel, number} mm hareket mesafesinden fazla: malzemeyi veya tasarımı küçültün ya da makine profilini kontrol edin.",
       "noEnabled": "Dışa aktarılacak etkin işlem yok.",
       "noneHasToolpath": "Etkin işlemlerin hiçbirinde dışa aktarılacak takım yolu yok.",
       "noToolpath": "Takım yolu yok, programa dahil edilmedi.",

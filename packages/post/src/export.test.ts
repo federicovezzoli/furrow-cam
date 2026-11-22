@@ -379,6 +379,16 @@ describe("exportGcode", () => {
     });
   });
 
+  it("warns when the program spans more than the machine travels", () => {
+    const travel = ({ message }: { message: { code: string } }) =>
+      message.code === "export.exceedsTravel";
+    expect(exportGcode(referenceProject(), "Plate").warnings.filter(travel)).toEqual([]);
+    const doc = { ...referenceProject(), machine: { ...shapeoko, workAreaX: 100 } };
+    const [warning, ...rest] = exportGcode(doc, "Plate").warnings.filter(travel);
+    expect(rest).toEqual([]);
+    expect(warning?.message.values).toMatchObject({ axis: "X", travel: 100 });
+  });
+
   it("writes no spindle speeds for a manual spindle", () => {
     const doc = referenceProject();
     doc.machine = lowRider;

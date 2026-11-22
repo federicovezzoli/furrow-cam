@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Ogni operazione attiva taglia qualcosa di nascosto: mostralo per esportare.",
+      "exceedsTravel": "Il programma si estende per {span, number} mm in {axis}, più dei {travel, number} mm di corsa della macchina: riduci il grezzo o il disegno, oppure controlla il profilo della macchina.",
       "noEnabled": "Non ci sono operazioni attive da esportare.",
       "noneHasToolpath": "Nessuna delle operazioni attive ha un percorso utensile da esportare.",
       "noToolpath": "Nessun percorso utensile, esclusa dal programma.",
