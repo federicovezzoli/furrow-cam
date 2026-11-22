@@ -79,7 +79,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0062](0062-uploaded-fonts-are-project-assets.md) | Uploaded fonts are project assets, listed in the document like models | Accepted |
 | [0063](0063-two-sided-silhouette-parting-and-holding-tabs.md) | Each side cuts all of the model it can see, and two-sided holding tabs are a setting of the setup | Accepted; superseded in part by ADR-0086 |
 | [0064](0064-finishing-covers-a-boundary.md) | 3D finishing covers the same boundary as roughing | Accepted |
-| [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Accepted |
+| [0065](0065-folders-inside-packages.md) | Folders inside packages, by layer or by implementation | Accepted; superseded in part by ADR-0092 |
 | [0066](0066-drawings-store-their-rotation.md) | Drawings store their rotation, which the angle field shows and sets | Accepted |
 | [0067](0067-local-mcp-server.md) | A local MCP server in `apps/mcp`, driving the workspace's document store headless | Accepted; superseded in part by ADR-0082 |
 | [0068](0068-more-interface-languages.md) | Seven more interface languages, with one variant each | Accepted |
@@ -105,4 +105,5 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |
 | [0089](0089-apps-share-the-workspace-version.md) | The web and desktop apps share the workspace's version | Accepted |
 | [0090](0090-download-counts-coarse-labels.md) | Download counts record coarse client and location labels | Accepted |
-| [0091](0091-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted |
+| [0091](0091-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted; superseded in part by ADR-0092 |
+| [0092](0092-post-layer-folders.md) | Layer folders in post | Accepted |
