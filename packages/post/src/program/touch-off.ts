@@ -1,6 +1,6 @@
 import { stockOffset } from "@furrow/cam-core";
 import type { Stock, TouchOffDisc } from "@furrow/document";
-import { formatNumber } from "./format";
+import { formatNumber } from "../format";
 import { comment } from "./gcode-writer";
 
 /**

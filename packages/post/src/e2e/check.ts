@@ -15,7 +15,7 @@ import {
   parseGcode,
   projectTools,
   round,
-} from "../read-back";
+} from "../read-back/read-back";
 
 export type { CheckedProject, GcodeMove };
 

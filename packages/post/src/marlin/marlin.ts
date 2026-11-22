@@ -1,7 +1,7 @@
 import { formatNumber } from "../format";
-import { lineComment, oneLine } from "../gcode-writer";
-import type { PostProcessor } from "../post";
-import { type Dialect, postProgram } from "../program";
+import type { Dialect, PostProcessor } from "../post";
+import { lineComment, oneLine } from "../program/gcode-writer";
+import { postProgram } from "../program/program";
 
 /**
  * Marlin 2.1 (#578, ADR-0091), as its documentation describes it; not yet

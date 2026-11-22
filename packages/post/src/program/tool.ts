@@ -1,5 +1,5 @@
 import type { Tool } from "@furrow/document";
-import { formatNumber } from "./format";
+import { formatNumber } from "../format";
 import { comment } from "./gcode-writer";
 
 /** Whether two tool snapshots are the same bit, so no tool change is needed. */

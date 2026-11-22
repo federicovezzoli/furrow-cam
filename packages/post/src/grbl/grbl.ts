@@ -1,7 +1,7 @@
 import { formatNumber } from "../format";
-import { comment } from "../gcode-writer";
-import type { PostProcessor } from "../post";
-import { type Dialect, postProgram } from "../program";
+import type { Dialect, PostProcessor } from "../post";
+import { comment } from "../program/gcode-writer";
+import { postProgram } from "../program/program";
 
 /**
  * GRBL 1.1 (PRD-0001 R11), and grblHAL and FluidNC, which read it: the modes

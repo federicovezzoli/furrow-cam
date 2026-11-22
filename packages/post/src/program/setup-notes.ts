@@ -8,8 +8,8 @@ import {
   type Tool,
   type TouchOff,
 } from "@furrow/document";
-import { formatNumber } from "./format";
-import type { SideSetup } from "./post";
+import { formatNumber } from "../format";
+import type { SideSetup } from "../post";
 import { toolLabel } from "./tool";
 
 /** Where the touch-off pad is, in work coordinates, and how wide. */
