@@ -92,4 +92,21 @@ describe("marlin", () => {
       "M0 Change the bit and zero Z on the touch-off pad\n",
     );
   });
+
+  it("warns when the program spans more than the machine travels", () => {
+    const narrow = { ...machine, postProcessor: "marlin" as const, workAreaX: 110 };
+    const input = {
+      name: "Test",
+      stock,
+      machine: narrow,
+      safeZ: 5,
+      operations: [{ operation: operation("Holes", drill), toolpath: plunge }],
+    };
+    const travel = marlin
+      .post(input)
+      .warnings.filter(({ message }) => message.code === "export.exceedsTravel");
+    expect(travel.map(({ message }) => message.values)).toEqual([
+      { axis: "X", span: 120, travel: 110 },
+    ]);
+  });
 });
