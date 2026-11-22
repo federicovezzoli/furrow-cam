@@ -16,6 +16,7 @@ import {
 } from "@furrow/document";
 import { grbl } from "./grbl/grbl";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
+import { travelWarnings } from "./travel";
 
 /** Every dialect, by the id machine profiles store. */
 export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
@@ -186,7 +187,8 @@ export function postToolpaths(
     });
     // Each side's program may say the same, e.g. of a custom block.
     const said = new Set(warnings.map((warning) => JSON.stringify(warning)));
-    warnings.push(...output.warnings.filter((warning) => !said.has(JSON.stringify(warning))));
+    const fresh = [...output.warnings, ...travelWarnings(output.gcode, doc.machine)];
+    warnings.push(...fresh.filter((warning) => !said.has(JSON.stringify(warning))));
     return { fileName, gcode: output.gcode };
   };
   if (!doc.stock.twoSided) {

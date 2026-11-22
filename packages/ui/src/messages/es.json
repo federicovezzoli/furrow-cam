@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
+      "exceedsTravel": "El programa abarca {span, number} mm en {axis}, más que los {travel, number} mm de recorrido de la máquina: reduce el material o el diseño, o revisa el perfil de la máquina.",
       "noEnabled": "No hay operaciones activadas que exportar.",
       "noneHasToolpath": "Ninguna de las operaciones activadas tiene una trayectoria que exportar.",
       "noToolpath": "Sin trayectoria, excluida del programa.",

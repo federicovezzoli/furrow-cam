@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Chaque opération active coupe quelque chose de masqué : affichez-le pour exporter.",
+      "exceedsTravel": "Le programme s'étend sur {span, number} mm en {axis}, plus que les {travel, number} mm de course de la machine : réduisez le brut ou le dessin, ou vérifiez le profil de la machine.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme.",

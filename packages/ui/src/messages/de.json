@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Jede aktive Operation schneidet etwas Ausgeblendetes: blende es ein, um zu exportieren.",
+      "exceedsTravel": "Das Programm erstreckt sich über {span, number} mm in {axis}, mehr als die {travel, number} mm Verfahrweg der Maschine: verkleinere das Rohteil oder den Entwurf oder prüfe das Maschinenprofil.",
       "noEnabled": "Es gibt keine aktivierten Operationen zum Exportieren.",
       "noneHasToolpath": "Keine der aktivierten Operationen hat eine Werkzeugbahn zum Exportieren.",
       "noToolpath": "Keine Werkzeugbahn, aus dem Programm ausgelassen.",

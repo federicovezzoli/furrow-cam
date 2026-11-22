@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
+      "exceedsTravel": "Het programma beslaat {span, number} mm in {axis}, meer dan de {travel, number} mm slag van de machine: maak het materiaal of ontwerp kleiner, of controleer het machineprofiel.",
       "noEnabled": "Er zijn geen ingeschakelde bewerkingen om te exporteren.",
       "noneHasToolpath": "Geen van de ingeschakelde bewerkingen heeft een gereedschapsbaan om te exporteren.",
       "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma.",
