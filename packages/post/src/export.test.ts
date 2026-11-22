@@ -10,6 +10,7 @@ import {
   DRAWING_ID,
   drill,
   endMill,
+  fullDocument,
   lowRider,
   model,
   reliefFinish,
@@ -343,6 +344,38 @@ describe("exportGcode", () => {
       const { files } = exportGcode(doc, "Owl", context, NAMING);
       expect(files.map((file) => file.fileName)).toEqual(["owl-2026-11-01-bottom.gcode"]);
       expect(files[0]?.gcode).toContain(`(Operation: ${plate?.name})`);
+    });
+
+    it("warns when a bottom-side cut reaches a locating pin (#395)", () => {
+      // The square's 18 mm outside profile, its top edge along y = 100, the flip axis.
+      const doc = fullDocument();
+      const profile = doc.operations[0] as Operation;
+      const bottomProfile = { ...profile, id: crypto.randomUUID(), stockSide: "bottom" as const };
+      const pinDrill: Operation = {
+        ...profile,
+        type: "drill",
+        tool: drill,
+        stockSide: "top",
+        targets: [],
+        params: { depth: 1, peck: false, stepOver: 40, pins: true, points: [] },
+      };
+      const warnings = (positions: number[]) => {
+        const holes = { type: "through" as const, spoilboardDepth: 5 };
+        const lineUp = { type: "pins" as const, diameter: 6, positions, holes };
+        const stock = {
+          ...doc.stock,
+          xyOrigin: { anchor: "bottom_left" as const },
+          touchOff: null,
+          twoSided: { flipAxis: "x" as const, partingDepth: 9, lineUp },
+          tabs: null,
+        };
+        const operations = [pinDrill, bottomProfile];
+        return exportGcode({ ...doc, stock, operations }, "Owl", context).warnings;
+      };
+      const cutsPins = { operation: bottomProfile.name, message: { code: "toolpath.cutsPins" } };
+      // A pin at x = 30, on the square's top edge.
+      expect(warnings([-120, 60])).toContainEqual(cutsPins);
+      expect(warnings([100, 140])).not.toContainEqual(cutsPins);
     });
   });
 
