@@ -1,5 +1,12 @@
 # @furrow/desktop
 
+## 0.31.1
+
+### Patch Changes
+
+- The desktop app now asks on first start whether to send anonymous usage statistics and error reports; earlier releases were built without the setting and never asked. ([#662](https://github.com/federicovezzoli/furrow-cam/pull/662))
+- Updated dependencies: @furrow/workspace@0.31.1
+
 ## 0.31.0
 
 ### Patch Changes

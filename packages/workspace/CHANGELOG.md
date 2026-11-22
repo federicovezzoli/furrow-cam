@@ -1,5 +1,11 @@
 # @furrow/workspace
 
+## 0.31.1
+
+### Patch Changes
+
+- The guided tour now describes everything the Import and Operations groups hold: terrain, image reliefs, text and patterns, and the inlay, roughing and finishing operations. Its buttons no longer overflow the popover when their labels are long. ([#660](https://github.com/federicovezzoli/furrow-cam/pull/660))
+
 ## 0.31.0
 
 ### Minor Changes
