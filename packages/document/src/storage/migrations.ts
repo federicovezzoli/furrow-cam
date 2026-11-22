@@ -410,6 +410,9 @@ export const migrations: Readonly<Record<number, Migration>> = {
   },
   // #621: drawings can be patterns (ADR-0087). Existing documents have none.
   41: (doc) => doc,
+  // #578: machines can use the Marlin post-processor. Existing ones use GRBL;
+  // the bump keeps older releases from opening documents that use it.
+  42: (doc) => doc,
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

@@ -50,7 +50,7 @@ describe("Machine", () => {
   });
 
   it("rejects unknown post-processors and non-positive sizes", () => {
-    expect(Machine.safeParse({ ...machine, postProcessor: "marlin" }).success).toBe(false);
+    expect(Machine.safeParse({ ...machine, postProcessor: "linuxcnc" }).success).toBe(false);
     expect(Machine.safeParse({ ...machine, workAreaZ: 0 }).success).toBe(false);
     expect(Machine.safeParse({ ...machine, safeZ: -1 }).success).toBe(false);
     expect(Machine.safeParse({ ...machine, safeZ: machine.workAreaZ }).success).toBe(false);

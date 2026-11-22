@@ -24,7 +24,7 @@ Many hobby routers come from a handful of communities with well-documented machi
 
 ## Non-goals
 
-- **Controllers without a compatible post-processor**, e.g. MPCNC or LowRider builds running Marlin, or Masso-based machines. Only GRBL-compatible firmware (GRBL, grblHAL, FluidNC) is in scope until other post-processors exist.
+- **Controllers without a compatible post-processor**, e.g. Masso-based machines. GRBL-compatible firmware (GRBL, grblHAL, FluidNC) and, since #578, Marlin (ADR-0091) are in scope. There are no presets for Marlin builds yet: a Marlin MPCNC or LowRider starts from the V1 Engineering preset with the Marlin post-processor and its Jackpot blocks cleared, as its firmware note says.
 - **Travel or soft-limit checks** against the machine's work area (relevant for Maslow; see PRD-0002 non-goals).
 - **Bit (tool) presets** for the same communities: a natural follow-up, in a separate PRD.
 - **Linked presets:** later changes to a preset don't update machines already created from it.
@@ -40,7 +40,7 @@ Many hobby routers come from a handful of communities with well-documented machi
 | M4 | **Build-to-size machines** (LowRider, MPCNC) have no default work area: the preset asks for the user's build dimensions, with a short explanation of how to measure them | Must |
 | M5 | Picking a preset creates an ordinary machine in the user's library, pre-filled from the preset and fully editable, with the model name as its default name | Must |
 | M6 | The **New machine** page offers "Start from a preset" (grouped by maker, searchable) or "Start from scratch" | Must |
-| M7 | Each preset states its required firmware; the picker shows it, e.g. "Requires FluidNC on the Jackpot board. GRBL, grblHAL and Marlin builds aren't supported yet" | Must |
+| M7 | Each preset states its required firmware; the picker shows it, e.g. "Requires FluidNC on the Jackpot board. On a GRBL, grblHAL or Marlin build, clear these three blocks, and for Marlin choose the Marlin post-processor" | Must |
 | M8 | Preset notes are shown when picking it, e.g. manual trim-router spindle, or for Maslow: keep the job inside the area you can cut, the firmware flattens moves outside its work area onto the edge instead of stopping | Must |
 | M9 | A new user with no machines is offered the preset picker when they first need a machine (e.g. before their first export) | Should |
 | M10 | Machines created from a preset count towards the machine limit when freemium limits are on (PRD-0003) | Must |

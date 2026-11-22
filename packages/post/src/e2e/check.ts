@@ -1,8 +1,9 @@
-// The rules every GRBL program `grbl` writes must keep to be safe to run
+// The rules every program the posts write must keep to be safe to run
 // (#149), read back with `../read-back`. Test support for the corpus, not
 // part of the package's API.
 import { type CutterProfile, cutterProfile, stockBounds, type Vec3 } from "@furrow/cam-core";
-import { machineSpinUpDelay } from "@furrow/document";
+import { machineSpinUpDelay, type PostProcessorId } from "@furrow/document";
+import { formatNumber } from "../format";
 import {
   type CheckedProject,
   EPSILON,
@@ -20,30 +21,58 @@ export type { CheckedProject, GcodeMove };
 
 export type Violation = { line: number; rule: string; message: string };
 
-/** The commands `grbl` writes: the modes, moves, dwell, spindle, pause and end. */
-const ALLOWED = new Set([
-  "G0",
-  "G1",
-  "G4",
-  "G17",
-  "G21",
-  "G90",
-  "G91",
-  "G94",
-  "M0",
-  "M3",
-  "M5",
-  "M30",
-]);
-const MODES = ["G21", "G90", "G94", "G17"] as const;
+/** What each dialect writes and how (ADR-0091). */
+const DIALECTS: Record<
+  PostProcessorId,
+  {
+    /** The commands it writes: the modes, moves, dwell, spindle, pause and end. */
+    allowed: Set<string>;
+    modes: string[];
+    /** The dwell's word, in seconds. */
+    dwell: string;
+    /** The last block's command, `null` when the program just stops. */
+    end: string | null;
+    /** Whether a line holds one command only, and rapids carry their feed (Marlin). */
+    marlin: boolean;
+  }
+> = {
+  grbl: {
+    allowed: new Set([
+      "G0",
+      "G1",
+      "G4",
+      "G17",
+      "G21",
+      "G90",
+      "G91",
+      "G94",
+      "M0",
+      "M3",
+      "M5",
+      "M30",
+    ]),
+    modes: ["G21", "G90", "G94", "G17"],
+    dwell: "P",
+    end: "M30",
+    marlin: false,
+  },
+  marlin: {
+    allowed: new Set(["G0", "G1", "G4", "G21", "G90", "G91", "M0", "M3", "M5"]),
+    modes: ["G21", "G90"],
+    dwell: "S",
+    end: null,
+    marlin: true,
+  },
+};
 
 /**
  * Every way `gcode`, posted from `project`, breaks the rules a program must
  * keep to be safe to run, empty when it keeps them all:
  *
- * - `words`: only the commands `grbl` writes, each word well formed.
- * - `modes`: millimetres, absolute coordinates, feed per minute and the XY
- *   plane are set before the first move.
+ * - `words`: only the commands the machine's dialect writes, each word well
+ *   formed; in Marlin, one command per line.
+ * - `modes`: millimetres and absolute coordinates are set before the first
+ *   move, and in GRBL feed per minute and the XY plane.
  * - `work-area`: the program spans no more than the machine's travel.
  * - `stock-bottom`: no move goes below the stock's bottom, into the bed.
  * - `rapid`: no rapid passes through material, going down, across or back
@@ -51,7 +80,8 @@ const MODES = ["G21", "G90", "G94", "G17"] as const;
  *   each tool's shape, so a rapid may go below the stock top where they cut
  *   it away: back into a pecked hole, across what roughing cleared.
  * - `feed`: every cut has a feed rate, its XY and Z components within the
- *   machine's maxima.
+ *   machine's maxima. In Marlin, every rapid has one too, and a cut's is
+ *   set after the last rapid, which `G0` would otherwise leave it at.
  * - `spindle`: the spindle turns while the tool cuts, at a speed in the
  *   machine's range, or with no `S` for a manual spindle.
  * - `pause`: the program pauses only with the tool above the stock and,
@@ -59,11 +89,12 @@ const MODES = ["G21", "G90", "G94", "G17"] as const;
  * - `tool-change`: a new tool (a `Tool:` comment, as `grbl` writes them)
  *   is one of the project's and, after the first, comes with a pause before
  *   it cuts.
- * - `end`: the spindle is off and the tool above the stock at `M30`, the
- *   last block.
+ * - `end`: the spindle is off and the tool above the stock at the end: at
+ *   `M30`, the last block, in GRBL; at the last block in Marlin, with no `M30`.
  */
 export function checkGcode(gcode: string, project: CheckedProject): Violation[] {
   const { stock, machine } = project;
+  const dialect = DIALECTS[machine?.postProcessor ?? "grbl"];
   const violations: Violation[] = [];
   const fail = (line: number, rule: string, message: string) =>
     violations.push({ line, rule, message });
@@ -96,10 +127,13 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
   const low: Vec3 = [Infinity, Infinity, Infinity];
   const high: Vec3 = [-Infinity, -Infinity, -Infinity];
   let ended: number | null = null;
+  /** The feed rate in force, and whether a rapid set it: Marlin runs `G0` at it. */
+  let feed: number | null = null;
+  let rapidFeed = false;
 
   for (const line of lines) {
     if (ended !== null && (line.words.length > 0 || line.comment !== null)) {
-      fail(line.number, "end", "blocks after M30");
+      fail(line.number, "end", `blocks after ${dialect.end}`);
       ended = null;
     }
     const label = line.comment?.startsWith("Tool: ") ? line.comment.slice(6) : null;
@@ -111,12 +145,16 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       if (toolCount > 1) paused = false;
     }
     const commands = line.words.filter(({ letter }) => letter === "G" || letter === "M");
+    if (dialect.marlin && commands.length > 1) {
+      fail(line.number, "words", "more than one command, of which Marlin runs the first");
+    }
     /** A dwell in this block, which GRBL runs after its spindle change whatever the word order. */
     let dwell: number | undefined;
     for (const { letter, value } of commands) {
       const command = `${letter}${value}`;
-      if (!ALLOWED.has(command))
-        fail(line.number, "words", `${command} isn't a command grbl writes`);
+      if (!dialect.allowed.has(command)) {
+        fail(line.number, "words", `${command} isn't a command the post writes`);
+      }
       modes.add(command);
       if (command === "M3") {
         const s = line.words.find((word) => word.letter === "S")?.value ?? null;
@@ -127,15 +165,15 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
         spindle = false;
         speed = null;
       } else if (command === "G4") {
-        dwell = line.words.find((word) => word.letter === "P")?.value;
-        if (dwell === undefined) fail(line.number, "words", "G4 without P");
+        dwell = line.words.find(({ letter }) => letter === dialect.dwell)?.value;
+        if (dwell === undefined) fail(line.number, "words", `G4 without ${dialect.dwell}`);
       } else if (command === "M0") {
         if (!(position[2] >= top - EPSILON)) {
           fail(line.number, "pause", "pauses with the tool in the stock");
         }
         if (spindle && !manualSpindle) fail(line.number, "pause", "pauses with the spindle on");
         paused = true;
-      } else if (command === "M30") {
+      } else if (command === dialect.end) {
         if (spindle) fail(line.number, "end", "ends with the spindle on");
         if (!(position[2] >= top - EPSILON)) fail(line.number, "end", "ends in the stock");
         ended = line.number;
@@ -144,10 +182,11 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
     if (dwell !== undefined && dwell >= spinUpDelay - EPSILON) spinningUp = null;
     const dwells = commands.some(({ letter, value }) => letter === "G" && value === 4);
     for (const { letter, value } of line.words) {
-      if (!"GMXYZFS".includes(letter) && !(letter === "P" && dwells)) {
+      const dwellWord = dwells && letter === dialect.dwell;
+      if (!"GMXYZFS".includes(letter) && !dwellWord) {
         fail(line.number, "words", `unexpected word ${letter}`);
       }
-      if (letter !== "S" || machine === null) continue;
+      if (letter !== "S" || dwellWord || machine === null) continue;
       const { spindleRpmMin: min, spindleRpmMax: max } = machine;
       if (min === null || max === null) {
         fail(line.number, "spindle", "sets a speed for a manual spindle");
@@ -165,7 +204,17 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
     }
 
     const move = moves.get(line.number);
+    const f = line.words.find(({ letter }) => letter === "F")?.value;
+    if (f !== undefined) {
+      feed = f;
+      rapidFeed = move?.kind === "rapid";
+    }
     if (!move) continue;
+    // The post writes the feed rounded, as every number.
+    const rapid = machine && Number(formatNumber(machine.maxFeedXY));
+    if (dialect.marlin && move.kind === "rapid" && rapid !== null && feed !== rapid) {
+      fail(line.number, "feed", `rapid at F${feed}, not the machine's ${rapid}`);
+    }
     if (spinningUp !== null && spinUpDelay > 0) {
       fail(
         line.number,
@@ -174,7 +223,7 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       );
       spinningUp = null;
     }
-    const missing = MODES.filter((mode) => !modes.has(mode));
+    const missing = dialect.modes.filter((mode) => !modes.has(mode));
     if (missing.length > 0) fail(line.number, "modes", `moves before ${missing.join(" ")}`);
     const { from, to } = move;
     for (let axis = 0; axis < 3; axis++) {
@@ -199,6 +248,7 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
       if (!paused) fail(line.number, "tool-change", "cuts with a new tool before pausing");
       if (!known) fail(line.number, "feed", "cuts from an unknown position");
       else if (tool !== null) material.cut(tool, from, to);
+      if (dialect.marlin && rapidFeed) fail(line.number, "feed", "cuts at the feed of a rapid");
       const feedRate = move.feedRate;
       if (feedRate === null || !(feedRate > 0)) {
         fail(line.number, "feed", "cuts with no feed rate");
@@ -228,8 +278,11 @@ export function checkGcode(gcode: string, project: CheckedProject): Violation[] 
   }
 
   const last = lines.at(-1)?.number ?? 0;
-  if (ended === null && !violations.some(({ rule }) => rule === "end")) {
-    fail(last, "end", "doesn't end with M30");
+  if (dialect.end === null) {
+    if (spindle) fail(last, "end", "ends with the spindle on");
+    if (!(position[2] >= top - EPSILON)) fail(last, "end", "ends in the stock");
+  } else if (ended === null && !violations.some(({ rule }) => rule === "end")) {
+    fail(last, "end", `doesn't end with ${dialect.end}`);
   }
   if (machine !== null) {
     const travel = [machine.workAreaX, machine.workAreaY, machine.workAreaZ];

@@ -105,3 +105,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0088](0088-pattern-panel-offers-only-its-settings.md) | A pattern is placed through its boundary and its own settings, not transformed on its own | Accepted |
 | [0089](0089-apps-share-the-workspace-version.md) | The web and desktop apps share the workspace's version | Accepted |
 | [0090](0090-download-counts-coarse-labels.md) | Download counts record coarse client and location labels | Accepted |
+| [0091](0091-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted |

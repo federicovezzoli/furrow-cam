@@ -11,6 +11,7 @@ import {
   type StockSide,
   type Tool,
 } from "@furrow/document";
+import type { Dialect } from "./program";
 
 /** Everything a post-processor needs to write one program. */
 export type PostInput = {
@@ -77,12 +78,14 @@ export class GcodeExportError extends MessageError<PostWarning["message"]> {
 }
 
 /**
- * Turns toolpaths into a G-code dialect (PRD-0001 R12). A new dialect is a
- * new implementation registered in `POST_PROCESSORS` and a new
- * `PostProcessorId` in the document schema.
+ * Turns toolpaths into a G-code dialect (PRD-0001 R12, ADR-0091). A new
+ * dialect is a folder with its `Dialect`, registered in `POST_PROCESSORS`, and
+ * a new `PostProcessorId` in the document schema.
  */
 export type PostProcessor = {
   id: PostProcessorId;
+  /** How it writes comments, pauses and the rest, e.g. for a block shown before export. */
+  dialect: Dialect;
   /** Extension of the exported file, with the dot. */
   extension: string;
   post(input: PostInput): PostOutput;
