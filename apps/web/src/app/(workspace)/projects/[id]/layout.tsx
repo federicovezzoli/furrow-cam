@@ -1,11 +1,11 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Loading } from "@/components/loading";
 import { meshLimits } from "@/features/assets/server";
 import { getSession } from "@/features/auth/server";
 import { listMachineChoices } from "@/features/machines/server";
-import { getProject } from "@/features/projects/server";
+import { getProject, isAccountProject } from "@/features/projects/server";
 import { listToolChoices } from "@/features/tools/server";
 import { GuestProjectShell } from "@/features/workspace/guest/guest-app";
 import {
@@ -33,7 +33,11 @@ async function Project({
 }: Pick<LayoutProps<"/projects/[id]">, "params" | "children">) {
   const { id } = await params;
   const session = await getSession();
-  if (!session) return <GuestProjectShell id={id}>{children}</GuestProjectShell>;
+  if (!session) {
+    // An account's project while signed out: the session expired, so ask to sign in again.
+    if (await isAccountProject(id)) redirect("/sign-in");
+    return <GuestProjectShell id={id}>{children}</GuestProjectShell>;
+  }
   const { user } = session;
   const userId = user.id;
   const [project, tools, machines, cookieStore] = await Promise.all([
