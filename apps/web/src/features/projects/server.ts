@@ -33,6 +33,17 @@ export function parseProjectId(id: unknown): string | null {
 }
 
 /**
+ * Whether `id` is some account's project. Signed out, that tells an expired
+ * session (sign in again) from a guest project kept in the browser: both are
+ * UUIDs at the same route, and an expired session leaves no cookie behind.
+ */
+export async function isAccountProject(id: string): Promise<boolean> {
+  const projectId = parseProjectId(id);
+  if (!projectId) return false;
+  return (await db.project.count({ where: { id: projectId } })) > 0;
+}
+
+/**
  * The signed-in user's projects, most recently saved first, with their
  * machine's name (`null` without one). Documents are left out.
  */
