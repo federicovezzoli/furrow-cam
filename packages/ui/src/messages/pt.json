@@ -1692,8 +1692,8 @@
         "body": "Crie um projeto aqui, ou importe um arquivo de projeto. Você pode escolher a máquina agora ou depois, antes de exportar o G-code."
       },
       "import": {
-        "title": "Importe um desenho",
-        "body": "Comece com um arquivo SVG ou DXF: os caminhos dele viram as formas que você corta. Ao lado, você pode importar um modelo STL ou STEP para entalhar em 3D."
+        "title": "Adicione o que vai cortar",
+        "body": "Importe um desenho SVG ou DXF, cujos caminhos viram as formas que você corta, ou um modelo STL ou STEP para entalhar em 3D. Você também pode criar um terreno a partir de um mapa, um relevo a partir de uma imagem ou um texto, e preencher caminhos fechados com um padrão."
       },
       "properties": {
         "title": "Propriedades do projeto",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Adicione operações",
-        "body": "Adicione uma operação (contorno, rebaixo, furação, gravação ou entalhe em V) para os caminhos selecionados e escolha a fresa e as profundidades."
+        "body": "Adicione uma operação para o que você selecionou: contorno, rebaixo, furação, gravação, entalhe em V ou incrustação para caminhos; desbaste e acabamento para entalhar um modelo, um terreno ou um relevo de imagem. Depois escolha a fresa e as profundidades."
       },
       "preview": {
         "title": "Visualize os percursos",

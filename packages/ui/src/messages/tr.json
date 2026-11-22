@@ -1692,8 +1692,8 @@
         "body": "Burada bir proje oluşturun veya bir proje dosyası içe aktarın. Makinesini şimdi ya da daha sonra, G-code dışa aktarmadan önce seçebilirsiniz."
       },
       "import": {
-        "title": "Çizim içe aktarın",
-        "body": "Bir SVG veya DXF dosyasıyla başlayın: yolları, keseceğiniz şekiller olur. Yanına 3B oymak için bir STL veya STEP modeli de ekleyebilirsiniz."
+        "title": "Keseceğinizi ekleyin",
+        "body": "Yolları keseceğiniz şekiller olan bir SVG veya DXF çizimi ya da 3B oymak için bir STL veya STEP modeli içe aktarın. Ayrıca haritadan arazi, görüntüden kabartma veya metin oluşturabilir, kapalı yolları bir desenle doldurabilirsiniz."
       },
       "properties": {
         "title": "Proje özellikleri",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "İşlem ekleyin",
-        "body": "Seçili yollar için bir işlem (kontur, cep, delme, gravür veya V oyma) ekleyin, ardından ucunu ve derinliklerini seçin."
+        "body": "Seçiminiz için bir işlem ekleyin: yollar için kontur, cep, delme, gravür, V oyma veya kakma; bir modeli, araziyi veya görüntü kabartmasını oymak için kaba ve ince işleme. Ardından ucunu ve derinliklerini seçin."
       },
       "preview": {
         "title": "Takım yollarını önizleyin",

@@ -1692,8 +1692,8 @@
         "body": "Crea aquí un proyecto, o importa un archivo de proyecto. Puedes elegir su máquina ahora o más tarde, antes de exportar el G-code."
       },
       "import": {
-        "title": "Importa un dibujo",
-        "body": "Empieza desde un archivo SVG o DXF: sus trazados se convierten en las formas que cortas. A su lado puedes añadir un modelo STL o STEP para tallar en 3D."
+        "title": "Añade lo que vas a cortar",
+        "body": "Importa un dibujo SVG o DXF, cuyos trazados se convierten en las formas que cortas, o un modelo STL o STEP para tallar en 3D. También puedes crear un terreno a partir de un mapa, un relieve a partir de una imagen o un texto, y rellenar trazados cerrados con un patrón."
       },
       "properties": {
         "title": "Propiedades del proyecto",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Añade operaciones",
-        "body": "Añade una operación (perfil, vaciado, taladrado, grabado o tallado en V) para los trazados seleccionados, y luego elige su fresa y sus profundidades."
+        "body": "Añade una operación para lo que has seleccionado: perfil, vaciado, taladrado, grabado, tallado en V o incrustación para trazados; desbaste y acabado para tallar un modelo, un terreno o un relieve de imagen. Luego elige su fresa y sus profundidades."
       },
       "preview": {
         "title": "Previsualiza las trayectorias",

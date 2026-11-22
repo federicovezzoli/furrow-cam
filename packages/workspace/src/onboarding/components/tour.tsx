@@ -265,22 +265,19 @@ function StepPopover({
         <p id={`${ids}-body`} className="text-muted-foreground">
           {t(`steps.${step.id}.body`)}
         </p>
-        <div className="mt-2 flex items-center gap-2">
+        {/* Wraps when long labels (Italian, Greek) don't fit beside each other. */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" className="-ml-3" onClick={onSkip}>
             {t("skip")}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-auto"
-            disabled={number === 1}
-            onClick={() => onMove(-1)}
-          >
-            {t("back")}
-          </Button>
-          <Button ref={next} size="sm" onClick={() => onMove(1)}>
-            {number === count ? t("done") : t("next")}
-          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" disabled={number === 1} onClick={() => onMove(-1)}>
+              {t("back")}
+            </Button>
+            <Button ref={next} size="sm" onClick={() => onMove(1)}>
+              {number === count ? t("done") : t("next")}
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </>

@@ -1692,8 +1692,8 @@
         "body": "Créez un projet ici, ou importez un fichier de projet. Vous pouvez choisir sa machine maintenant ou plus tard, avant d’exporter le G-code."
       },
       "import": {
-        "title": "Importer un dessin",
-        "body": "Partez d’un fichier SVG ou DXF : ses tracés deviennent les formes que vous coupez. Un modèle STL ou STEP peut s’y ajouter, à sculpter en 3D."
+        "title": "Ajouter ce que vous coupez",
+        "body": "Importez un dessin SVG ou DXF, dont les tracés deviennent les formes que vous coupez, ou un modèle STL ou STEP à sculpter en 3D. Vous pouvez aussi créer un terrain à partir d’une carte, un relief à partir d’une image ou un texte, et remplir des tracés fermés avec un motif."
       },
       "properties": {
         "title": "Propriétés du projet",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Ajouter des opérations",
-        "body": "Ajoutez une opération (contour, poche, perçage, gravure ou gravure en V) pour les tracés sélectionnés, puis choisissez sa fraise et ses profondeurs."
+        "body": "Ajoutez une opération pour votre sélection : contour, poche, perçage, gravure, gravure en V ou incrustation pour les tracés ; ébauche et finition pour sculpter un modèle, un terrain ou un relief d’image. Choisissez ensuite sa fraise et ses profondeurs."
       },
       "preview": {
         "title": "Prévisualiser les trajectoires",

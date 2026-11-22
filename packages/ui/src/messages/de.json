@@ -1692,8 +1692,8 @@
         "body": "Erstelle hier ein Projekt oder importiere eine Projektdatei. Seine Maschine kannst du jetzt oder später vor dem G-Code-Export wählen."
       },
       "import": {
-        "title": "Eine Zeichnung importieren",
-        "body": "Beginne mit einer SVG- oder DXF-Datei: ihre Pfade werden die Formen, die du schneidest. Daneben kann ein STL- oder STEP-Modell stehen, das du in 3D fräst."
+        "title": "Hinzufügen, was du fräst",
+        "body": "Importiere eine SVG- oder DXF-Zeichnung, deren Pfade die Formen werden, die du schneidest, oder ein STL- oder STEP-Modell, das du in 3D fräst. Du kannst auch Gelände aus einer Karte, ein Relief aus einem Bild oder Text erstellen und geschlossene Pfade mit einem Muster füllen."
       },
       "properties": {
         "title": "Projekteigenschaften",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Operationen hinzufügen",
-        "body": "Füge eine Operation (Kontur, Tasche, Bohren, Gravur oder V-Schnitzen) für die ausgewählten Pfade hinzu und wähle dann ihren Fräser und ihre Tiefen."
+        "body": "Füge eine Operation für deine Auswahl hinzu: Kontur, Tasche, Bohren, Gravur, V-Schnitzen oder Einlage für Pfade; Schruppen und Schlichten, um ein Modell, Gelände oder Bildrelief zu fräsen. Wähle dann ihren Fräser und ihre Tiefen."
       },
       "preview": {
         "title": "Werkzeugbahnen ansehen",

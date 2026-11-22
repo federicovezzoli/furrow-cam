@@ -1692,8 +1692,8 @@
         "body": "Maak hier een project aan, of importeer een projectbestand. Je kunt de machine nu of later kiezen, vóór het exporteren van G-code."
       },
       "import": {
-        "title": "Importeer een tekening",
-        "body": "Begin met een SVG- of DXF-bestand: de paden worden de vormen die je freest. Daarnaast kan een STL- of STEP-model komen om in 3D te frezen."
+        "title": "Voeg toe wat je freest",
+        "body": "Importeer een SVG- of DXF-tekening, waarvan de paden de vormen worden die je freest, of een STL- of STEP-model om in 3D te frezen. Je kunt ook terrein maken van een kaart, een reliëf van een afbeelding of tekst, en gesloten paden vullen met een patroon."
       },
       "properties": {
         "title": "Projecteigenschappen",
@@ -1709,7 +1709,7 @@
       },
       "operations": {
         "title": "Voeg bewerkingen toe",
-        "body": "Voeg een bewerking (contour, uitsparing, boren, graveren of V-carve) toe voor de geselecteerde paden en kies daarna de frees en de diepten."
+        "body": "Voeg een bewerking toe voor je selectie: contour, uitsparing, boren, graveren, V-carve of inlegwerk voor paden; voorfrezen en nafrezen om een model, terrein of afbeeldingsreliëf te frezen. Kies daarna de frees en de diepten."
       },
       "preview": {
         "title": "Bekijk de gereedschapsbanen",
