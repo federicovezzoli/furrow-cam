@@ -177,7 +177,12 @@
       }
     },
     {
-      "includes": ["packages/post/src/machine/**", "packages/post/src/read-back/**"],
+      "includes": [
+        "packages/post/src/post.ts",
+        "packages/post/src/format.ts",
+        "packages/post/src/machine/**",
+        "packages/post/src/read-back/**"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -200,13 +205,24 @@
                   },
                   {
                     "group": [
+                      "..",
+                      "../",
                       "../index",
                       "../export",
                       "../program/**",
                       "../grbl/**",
-                      "../marlin/**"
+                      "../marlin/**",
+                      ".",
+                      "./",
+                      "./index",
+                      "./export",
+                      "./machine/**",
+                      "./read-back/**",
+                      "./program/**",
+                      "./grbl/**",
+                      "./marlin/**"
                     ],
-                    "message": "machine/ and read-back/ import neither program/, the dialects nor export (ADR-0092)."
+                    "message": "The contract, machine/ and read-back/ import no higher layer of post (ADR-0092)."
                   }
                 ]
               }
