@@ -6,23 +6,29 @@ const small = { ...machine, workAreaX: 800, workAreaZ: 50 };
 
 describe("travelWarnings", () => {
   it("says nothing without a machine or within its travel", () => {
-    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X900 Z-100\n", null)).toEqual([]);
-    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X800 Y400 Z-1 F1000\n", small)).toEqual([]);
+    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X900 Z-100\n", null, [])).toEqual([]);
+    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X800 Y400 Z-1 F1000\n", small, [])).toEqual([]);
   });
 
   it("warns of an axis the program spans more of than the machine travels", () => {
-    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X900 Y0 Z-1 F1000\n", small)).toEqual([
+    expect(travelWarnings("G0 X0 Y0 Z5\nG1 X900 Y0 Z-1 F1000\n", small, [])).toEqual([
       { message: { code: "export.exceedsTravel", values: { axis: "X", span: 900, travel: 800 } } },
     ]);
   });
 
   it("warns of each axis over travel, in order", () => {
-    const warnings = travelWarnings("G0 X0 Y0 Z40\nG1 X900 Z-20 F1000\n", small);
+    const warnings = travelWarnings("G0 X0 Y0 Z40\nG1 X900 Z-20 F1000\n", small, []);
     expect(warnings.map(({ message }) => message.values?.axis)).toEqual(["X", "Z"]);
   });
 
   it("ignores axes the program hasn't set yet", () => {
-    const warnings = travelWarnings("G0 Z5\nG0 X10 Y10\nG1 Z-1 F500\n", small);
+    const warnings = travelWarnings("G0 Z5\nG0 X10 Y10\nG1 Z-1 F500\n", small, []);
     expect(warnings).toEqual([]);
+  });
+
+  it("leaves out the custom blocks, which may be hand-written or in machine coordinates", () => {
+    const gcode = "G0 X0 Y0 Z5\ng0z10 ; up\nG53 G0 X-700\nG38.2 Z-110\n$HZ\nG1 X10 Z-1 F500\n";
+    const blocks = [{ label: "programStart" as const, first: 2, last: 5 }];
+    expect(travelWarnings(gcode, small, blocks)).toEqual([]);
   });
 });

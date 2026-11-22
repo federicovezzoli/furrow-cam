@@ -1,17 +1,29 @@
 import type { Machine } from "@furrow/document";
 import type { PostWarning } from "./post";
-import { EPSILON, gcodeMoves, parseGcode, round } from "./read-back";
+import { type CustomBlock, EPSILON, gcodeMoves, parseGcode, round } from "./read-back";
 
 /**
  * A warning for each axis `gcode` spans more of than the machine travels
- * (`workAreaX/Y/Z`), none without a machine. Read back from the program, so it
- * covers retracts, tool changes and custom blocks as the machine will run them.
+ * (`workAreaX/Y/Z`), none without a machine. Read back from the program's own
+ * moves: the custom `blocks` are left out, since they are written by hand and
+ * may move in machine coordinates (`G53`), probe or park where work
+ * coordinates can't follow.
  */
-export function travelWarnings(gcode: string, machine: Machine | null): PostWarning[] {
+export function travelWarnings(
+  gcode: string,
+  machine: Machine | null,
+  blocks: readonly CustomBlock[],
+): PostWarning[] {
   if (machine === null) return [];
+  const own = gcode
+    .split("\n")
+    .map((line, i) =>
+      blocks.some(({ first, last }) => first <= i + 1 && i + 1 <= last) ? "" : line,
+    )
+    .join("\n");
   const low = [Infinity, Infinity, Infinity];
   const high = [-Infinity, -Infinity, -Infinity];
-  for (const { to } of gcodeMoves(parseGcode(gcode))) {
+  for (const { to } of gcodeMoves(parseGcode(own))) {
     to.forEach((value, axis) => {
       if (!Number.isFinite(value)) return;
       low[axis] = Math.min(low[axis] as number, value);
