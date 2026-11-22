@@ -96,6 +96,8 @@ jobs:
     uses: ./.github/workflows/desktop.yml
     with:
       tag: "@furrow/desktop@${{ needs.release.outputs.desktop-version }}"
+    # The PostHog key and host are secrets (ADR-0052); a called workflow gets none unless passed.
+    secrets: inherit
     permissions:
       contents: write
 
