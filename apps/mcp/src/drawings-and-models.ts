@@ -36,10 +36,9 @@ import {
   addModel,
   fitModelToStock,
   modelAnchor,
-  modelOffset,
+  moveModel,
   removeModel,
   setModelDepth,
-  setModelOffset,
   setModelScale,
   setModelTop,
   turnModelAbout,
@@ -253,9 +252,11 @@ export function turn(project: Project, id: string, axis: "x" | "y" | "z", turns:
   change(project, (store) => turnModelAbout(store, id, index, turns));
 }
 
-/** Drawing `id`, refusing a model or a pattern for `what` (a pattern follows its boundary, ADR-0088). */
-function drawing(project: Project, id: string, what: string) {
-  if (find(project, id).model) throw new ToolError(`A model can't be ${what}: only a drawing can.`);
+/** Throws a `ToolError` unless `id` is a drawing that isn't a pattern (a pattern follows its boundary, ADR-0088). */
+function refuseUnlessDrawing(project: Project, id: string, what: string, hint = "") {
+  if (find(project, id).model) {
+    throw new ToolError(`A model can't be ${what}: only a drawing can.${hint}`);
+  }
   if (project.store.getState().document.drawings.find((d) => d.id === id)?.pattern) {
     throw new ToolError(
       `A pattern can't be ${what}: it follows the drawing it fills, so change that one.`,
@@ -263,24 +264,19 @@ function drawing(project: Project, id: string, what: string) {
   }
 }
 
-/** Moves drawing or model `id` by `[dx, dy]` millimetres, as dragging it or its position fields do. */
+/** Moves drawing or model `id` by `[dx, dy]` millimetres, with its tabs and holes. */
 export function move(project: Project, id: string, [dx, dy]: [number, number]) {
-  const { model } = find(project, id);
-  if (!model) {
-    drawing(project, id, "moved");
-    change(project, (store) => moveDrawing(store, id, [dx, dy]));
+  if (find(project, id).model) {
+    change(project, (store) => moveModel(store, id, [dx, dy]));
     return;
   }
-  const [x, y] = modelOffset(project.store.getState().document.stock, model);
-  change(project, (store) => {
-    if (dx !== 0) setModelOffset(store, id, "x", x + dx);
-    if (dy !== 0) setModelOffset(store, id, "y", y + dy);
-  });
+  refuseUnlessDrawing(project, id, "moved");
+  change(project, (store) => moveDrawing(store, id, [dx, dy]));
 }
 
 /** Turns drawing `id` by `degrees`, counter-clockwise for positive ones, as the properties' rotation does. */
 export function rotate(project: Project, id: string, degrees: number) {
-  drawing(project, id, "rotated");
+  refuseUnlessDrawing(project, id, "rotated", " Turn it in quarter turns with turn_model.");
   let result: ActionResult | undefined;
   change(project, (store) => (result = rotateDrawing(store, id, degrees)));
   check(result);
@@ -288,7 +284,7 @@ export function rotate(project: Project, id: string, degrees: number) {
 
 /** Mirrors drawing `id` left to right (`"x"`) or top to bottom (`"y"`), in place. */
 export function mirror(project: Project, id: string, axis: "x" | "y") {
-  drawing(project, id, "mirrored");
+  refuseUnlessDrawing(project, id, "mirrored");
   let result: ActionResult | undefined;
   change(project, (store) => (result = mirrorDrawing(store, id, axis)));
   check(result);

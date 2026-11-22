@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { binaryStlSize } from "@furrow/cam-core";
-import { DRAWING_ID, fullDocument, OPERATION_ID } from "@furrow/document/fixtures";
+import { DRAWING_ID, endMill, fullDocument, model, OPERATION_ID } from "@furrow/document/fixtures";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +18,7 @@ import {
   setTop,
   turn,
 } from "./drawings-and-models";
+import { addOperation } from "./operations";
 import { addPattern } from "./patterns";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
 import { projectSummary } from "./summary";
@@ -308,9 +309,36 @@ describe("move, rotate, mirror, duplicate and remove", () => {
     expect(project.store.getState().document).toMatchObject({ drawings: [], operations: [] });
   });
 
-  it("removes a model with its operations", async () => {
-    const { id } = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
-    remove(project, id);
-    expect(summary().models).toEqual([]);
+  it("removes a model with its operations, keeping another model's", () => {
+    const other = { ...model, id: "a7b6c5d4-e3f2-4a1b-9c8d-7e6f5a4b3c2d" };
+    // A .furrow.json can't hold a model's mesh, which these don't need.
+    project.store.getState().load({ ...fullDocument(), operations: [], models: [model, other] });
+    const library = {
+      tools: [{ id: "mill", isDefault: true, tool: endMill }],
+      machines: [],
+      problems: [],
+    };
+    for (const { id } of [model, other]) {
+      addOperation(project, library, "relief_rough", { modelId: id, tool: { toolId: "mill" } });
+    }
+    remove(project, model.id);
+    const { models, operations } = project.store.getState().document;
+    expect(models.map((m) => m.id)).toEqual([other.id]);
+    expect(operations).toEqual([
+      expect.objectContaining({ params: expect.objectContaining({ modelId: other.id }) }),
+    ]);
+  });
+
+  it("moves a model's holding tabs with it, even past another model", () => {
+    // B's left edge is where A's right edge lands after the X part of the move alone.
+    const b = { ...model, id: "a7b6c5d4-e3f2-4a1b-9c8d-7e6f5a4b3c2d" };
+    b.placement = { ...model.placement, position: [130, 0] };
+    const document = fullDocument();
+    if (document.stock.tabs) document.stock.tabs.positions = [[100, 40]];
+    project.store.getState().load({ ...document, operations: [], models: [b, model] });
+    move(project, model.id, [30, 100]);
+    const [tab] = project.store.getState().document.stock.tabs?.positions ?? [];
+    expect(tab?.[0]).toBeCloseTo(130);
+    expect(tab?.[1]).toBeCloseTo(140);
   });
 });

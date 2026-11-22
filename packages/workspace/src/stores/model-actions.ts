@@ -212,6 +212,17 @@ export function setModelTop(store: DocumentStore, id: string, top: number) {
   });
 }
 
+/** Moves a model by `offset` millimetres as one change, its holding tabs with it. */
+export function moveModel(store: DocumentStore, id: string, offset: Point) {
+  if (offset[0] === 0 && offset[1] === 0) return;
+  changeModel(store, "moveModel", id, (model, current) => {
+    assignPlacement(model, {
+      ...current.placement,
+      position: translatePoint(current.placement.position, offset),
+    });
+  });
+}
+
 /** Moves a model so that the centre of its box seen from above is the stock's centre, whatever the zero. */
 export function centerModelOnStock(store: DocumentStore, id: string) {
   const { stock } = store.getState().document;

@@ -517,12 +517,12 @@ export function createServer(projects: Projects = createProjects(), library = li
     {
       title: "Move a drawing or model",
       description:
-        "Moves a drawing, text item or model by an offset in millimetres along the stock's X and Y, as dragging it in the app does, with the tabs and holes on it. A pattern follows the drawing it fills: move that one. Returns the project summary.",
+        "Moves a drawing, text item or model by an offset in millimetres along the stock's X and Y, with the tabs and holes on it (give 0 for an axis it stays on). A pattern follows the drawing it fills: move that one. Returns the project summary.",
       inputSchema: {
         path: projectPath,
         id: itemId,
-        dx: z.number().default(0).describe("How far to move along X, in millimetres."),
-        dy: z.number().default(0).describe("How far to move along Y, in millimetres."),
+        dx: z.number().describe("How far to move along X, in millimetres."),
+        dy: z.number().describe("How far to move along Y, in millimetres."),
       },
     },
     ({ path, id, dx, dy }) =>
