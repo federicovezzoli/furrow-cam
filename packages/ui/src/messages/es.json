@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Cada operación activa corta algo oculto: muéstralo para exportar.",
+      "exceedsTravel": "El programa abarca {span, number} mm en {axis}, más que los {travel, number} mm de recorrido de la máquina: reduce el material o el diseño, o revisa el perfil de la máquina.",
       "noEnabled": "No hay operaciones activadas que exportar.",
       "noneHasToolpath": "Ninguna de las operaciones activadas tiene una trayectoria que exportar.",
       "noToolpath": "Sin trayectoria, excluida del programa.",
@@ -746,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Requiere FluidNC en la placa Jackpot de V1 Engineering: el inicio del programa, el cambio de herramienta y el final usan comandos de FluidNC. Las compilaciones de GRBL, grblHAL y Marlin aún no se admiten.",
+        "firmware": "Requiere FluidNC en la placa Jackpot de V1 Engineering: el inicio del programa, el cambio de herramienta y el final usan comandos de FluidNC. En una compilación con GRBL, grblHAL o Marlin, vacía estos tres bloques y, para Marlin, elige el postprocesador Marlin.",
         "manualRouter": "Fresadora manual (p. ej. una Makita RT0701C): ajusta su velocidad con su rueda; el G-code no fija ninguna.",
         "jackpotGcode": "El inicio del programa, el cambio de herramienta y el final son el G-code Jackpot de V1 Engineering. El inicio pone a cero X, Y y Z donde está la fresa y palpa Z con una placa de 0,5 mm, así que lleva antes la máquina al cero del proyecto y usa la superficie del material como cero Z. M62 P1 y M63 P1 conmutan un relé opcional de la fresadora en el pin 27."
       },

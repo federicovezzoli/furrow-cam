@@ -50,6 +50,7 @@ export type PostOutput = {
 /** What exporting says (ADR-0054); toolpath warnings pass through as theirs. */
 export const POST_MESSAGES = [
   "export.allHidden",
+  "export.exceedsTravel",
   "export.noEnabled",
   "export.noneHasToolpath",
   "export.noToolpath",
@@ -76,12 +77,14 @@ export class GcodeExportError extends MessageError<PostWarning["message"]> {
 }
 
 /**
- * Turns toolpaths into a G-code dialect (PRD-0001 R12). A new dialect is a
- * new implementation registered in `POST_PROCESSORS` and a new
- * `PostProcessorId` in the document schema.
+ * Turns toolpaths into a G-code dialect (PRD-0001 R12, ADR-0091). A new
+ * dialect is a folder with its `Dialect`, registered in `POST_PROCESSORS`, and
+ * a new `PostProcessorId` in the document schema.
  */
 export type PostProcessor = {
   id: PostProcessorId;
+  /** How it writes comments, pauses and the rest, e.g. for a block shown before export. */
+  dialect: Dialect;
   /** Extension of the exported file, with the dot. */
   extension: string;
   post(input: PostInput): PostOutput;
@@ -112,3 +115,23 @@ export function postSteps(operations: PostInput["operations"]): PostStep[] {
     return steps;
   });
 }
+
+/**
+ * How a G-code dialect writes what every program says (ADR-0091). Each
+ * dialect folder fills one in; what they all do is `postProgram`'s
+ * (`program/program.ts`).
+ */
+export type Dialect = {
+  /** A comment, which can't nest or span lines. */
+  comment(text: string): string;
+  /** The lines setting the modes every coordinate assumes: millimetres and absolute. */
+  modes: string[];
+  /** A wait of `seconds`. */
+  dwell(seconds: number): string;
+  /** A pause showing `message`, until the user resumes. */
+  pause(message: string): string;
+  /** The program's last lines, after the rise and the rapid to the XY zero. */
+  end: string[];
+  /** Whether `G0` runs at the last `F`, so each carries the machine's maximum XY feed. */
+  rapidFeed: boolean;
+};

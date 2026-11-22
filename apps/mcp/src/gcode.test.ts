@@ -290,6 +290,44 @@ describe("checkProject", () => {
     expect(broken.warnings).toEqual(clean.warnings);
   });
 
+  it("warns when a bottom-side cut reaches a locating pin (#395)", async () => {
+    // The square's 18 mm outside profile on the bottom side, a pin at x = 30 on its top edge.
+    const document = bothSides();
+    const [top, bottom] = document.operations;
+    if (!top || !bottom || !document.stock.twoSided) throw new Error("Not two-sided");
+    const holes = { type: "through" as const, spoilboardDepth: 5 };
+    document.stock = {
+      ...document.stock,
+      xyOrigin: { anchor: "bottom_left" },
+      touchOff: null,
+      twoSided: {
+        ...document.stock.twoSided,
+        flipAxis: "x",
+        lineUp: { type: "pins", diameter: 6, positions: [-120, 60], holes },
+      },
+      tabs: null,
+    };
+    const pinDrill = {
+      ...top,
+      type: "drill",
+      tool: drill,
+      targets: [],
+      params: { depth: 1, peck: false, stepOver: 40, pins: true, points: [] },
+    } as typeof top;
+    const pinWarning = expect.stringContaining("cuts where a locating pin goes");
+    document.operations = [pinDrill, bottom];
+    const clean = await checkProject(await createProjects().get(await project(document)));
+    expect(clean.canExport).toBe(true);
+    expect(clean.warnings).toContainEqual(pinWarning);
+    // Still said when another operation's tool problem stops the export.
+    document.operations.push({ ...top, id: crypto.randomUUID(), tool: drill } as typeof top);
+    const broken = await checkProject(
+      await createProjects().get(await project(document, "Broken.furrow")),
+    );
+    expect(broken.canExport).toBe(false);
+    expect(broken.warnings).toContainEqual(pinWarning);
+  });
+
   it("lists the files an export would write", async () => {
     const path = join(dir, "Part.furrow");
     await writeFile(path, packProjectArchive(fullDocument(), new Map()));

@@ -2,10 +2,24 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { binaryStlSize } from "@furrow/cam-core";
+import { DRAWING_ID, endMill, fullDocument, model, OPERATION_ID } from "@furrow/document/fixtures";
 import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { fitToStock, importFile, resize, setTop, turn } from "./drawings-and-models";
+import {
+  duplicate,
+  fitToStock,
+  importFile,
+  mirror,
+  move,
+  remove,
+  resize,
+  rotate,
+  setTop,
+  turn,
+} from "./drawings-and-models";
+import { addOperation } from "./operations";
+import { addPattern } from "./patterns";
 import { createProjects, KEPT_VERSION_LABEL, type Project, t } from "./projects";
 import { projectSummary } from "./summary";
 
@@ -233,5 +247,98 @@ describe("fitToStock and resize", () => {
 
   it("refuses an id the project doesn't have", () => {
     expect(() => fitToStock(project, "nope")).toThrow("no drawing or model");
+  });
+});
+
+describe("move, rotate, mirror, duplicate and remove", () => {
+  const bounds = (id: string) => summary().drawings.find((d) => d.id === id)?.bounds;
+
+  it("moves a drawing and a model by an offset", async () => {
+    const drawing = await importFile(project, await file("sign.svg", svg(100, 50, "mm")), {});
+    const before = bounds(drawing.id);
+    move(project, drawing.id, [15, -5]);
+    expect(bounds(drawing.id)?.min).toEqual([
+      (before?.min[0] as number) + 15,
+      (before?.min[1] as number) - 5,
+    ]);
+
+    const model = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
+    const position = () => project.store.getState().document.models[0]?.placement.position;
+    const [x, y] = position() ?? [0, 0];
+    const steps = project.store.getState().past.length;
+    move(project, model.id, [20, 30]);
+    expect(position()?.[0]).toBeCloseTo(x + 20);
+    expect(position()?.[1]).toBeCloseTo(y + 30);
+    expect(project.store.getState().past).toHaveLength(steps + 1);
+  });
+
+  it("rotates and mirrors a drawing", async () => {
+    const { id } = await importFile(project, await file("sign.svg", svg(100, 50, "mm")), {});
+    rotate(project, id, 90);
+    expect(drawingSize()[0]).toBeCloseTo(50);
+    expect(drawingSize()[1]).toBeCloseTo(100);
+    expect(summary().drawings[0]?.rotation).toBe(90);
+    mirror(project, id, "x");
+    expect(summary().drawings[0]?.rotation).toBe(-90);
+  });
+
+  it("refuses to rotate, mirror or duplicate a model, or to move a pattern", async () => {
+    const model = await importFile(project, await file("emblem.stl", TETRAHEDRON), {});
+    expect(() => rotate(project, model.id, 90)).toThrow("only a drawing");
+    expect(() => mirror(project, model.id, "x")).toThrow("only a drawing");
+    expect(() => duplicate(project, model.id)).toThrow("only a drawing");
+    const drawing = await importFile(project, await file("panel.svg", svg(100, 100, "mm")), {});
+    const pattern = addPattern(project, { targets: [{ drawingId: drawing.id }] });
+    expect(() => move(project, pattern.drawingId, [1, 1])).toThrow("follows the drawing it fills");
+    expect(() => remove(project, "nope")).toThrow("no drawing or model");
+  });
+
+  it("duplicates a drawing with the operations that machine it, and removes it as the app does", async () => {
+    const path = join(dir, "Full.furrow.json");
+    await writeFile(path, JSON.stringify(fullDocument()));
+    project = await createProjects().get(path);
+    const copy = duplicate(project, DRAWING_ID);
+    expect(project.versions).toEqual([expect.objectContaining({ label: KEPT_VERSION_LABEL })]);
+    const { operations } = project.store.getState().document;
+    expect(summary().drawings.map((d) => d.id)).toEqual([DRAWING_ID, copy]);
+    expect(operations.find((o) => o.id === OPERATION_ID)?.targets).toHaveLength(4);
+    remove(project, copy);
+    expect(project.store.getState().document.operations[0]?.targets).toHaveLength(2);
+    // The operation's last targets go, and the operation with them.
+    remove(project, DRAWING_ID);
+    expect(project.store.getState().document).toMatchObject({ drawings: [], operations: [] });
+  });
+
+  it("removes a model with its operations, keeping another model's", () => {
+    const other = { ...model, id: "a7b6c5d4-e3f2-4a1b-9c8d-7e6f5a4b3c2d" };
+    // A .furrow.json can't hold a model's mesh, which these don't need.
+    project.store.getState().load({ ...fullDocument(), operations: [], models: [model, other] });
+    const library = {
+      tools: [{ id: "mill", isDefault: true, tool: endMill }],
+      machines: [],
+      problems: [],
+    };
+    for (const { id } of [model, other]) {
+      addOperation(project, library, "relief_rough", { modelId: id, tool: { toolId: "mill" } });
+    }
+    remove(project, model.id);
+    const { models, operations } = project.store.getState().document;
+    expect(models.map((m) => m.id)).toEqual([other.id]);
+    expect(operations).toEqual([
+      expect.objectContaining({ params: expect.objectContaining({ modelId: other.id }) }),
+    ]);
+  });
+
+  it("moves a model's holding tabs with it, even past another model", () => {
+    // B's left edge is where A's right edge lands after the X part of the move alone.
+    const b = { ...model, id: "a7b6c5d4-e3f2-4a1b-9c8d-7e6f5a4b3c2d" };
+    b.placement = { ...model.placement, position: [130, 0] };
+    const document = fullDocument();
+    if (document.stock.tabs) document.stock.tabs.positions = [[100, 40]];
+    project.store.getState().load({ ...document, operations: [], models: [b, model] });
+    move(project, model.id, [30, 100]);
+    const [tab] = project.store.getState().document.stock.tabs?.positions ?? [];
+    expect(tab?.[0]).toBeCloseTo(130);
+    expect(tab?.[1]).toBeCloseTo(140);
   });
 });

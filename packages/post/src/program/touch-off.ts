@@ -1,6 +1,7 @@
 import { stockOffset } from "@furrow/cam-core";
 import type { Stock, TouchOffDisc } from "@furrow/document";
-import { formatNumber } from "./format";
+import { formatNumber } from "../format";
+import { comment } from "./gcode-writer";
 
 /**
  * The placeholders the post fills in a custom block, the machine's or a
@@ -74,12 +75,16 @@ const ARC_WORDS = /[IJKR]\s*[-+]?(\d+\.?\d*|\.\d+)/gi;
  * move over the pad before it; without a block, it is the default tool
  * change with the move. The post fills the placeholders in, so the block
  * follows the machine's safe Z as it is when the program is exported.
+ * `pause` writes the default's pause, in the machine's dialect.
  */
-export function suggestTouchOffToolChange(toolChange: string | null): string {
+export function suggestTouchOffToolChange(
+  toolChange: string | null,
+  pause: (message: string) => string = (message) => `M0 ${comment(message)}`,
+): string {
   const rise = "G0 Z{safeZ}";
   const move = "G0 X{padX} Y{padY}";
   if (toolChange === null) {
-    return ["M5", rise, move, "M0 (Change the bit and zero Z on the touch-off pad)"].join("\n");
+    return ["M5", rise, move, pause("Change the bit and zero Z on the touch-off pad")].join("\n");
   }
   const lines = toolChange.split("\n");
   const zeroing = lines.findIndex((line) => ZEROING.test(codeOf(line)));
@@ -121,10 +126,11 @@ export function suggestTouchOffToolChange(toolChange: string | null): string {
     // A straight move or an arc: `movesXY` needs a known motion for anything but `G28`/`G30`.
     const kind = motion ?? 0;
     // The pad move is absolute and in millimetres, the placeholders' units; the block's modes come back after it.
+    // One command per line: Marlin runs only a line's first.
     const absolute = (...moves: string[]) => {
-      const set = [relative && "G90", inches && "G21"].filter(Boolean).join(" ");
-      const restore = [relative && "G91", inches && "G20"].filter(Boolean).join(" ");
-      return set ? [`${set} ${moves[0]}`, ...moves.slice(1), restore] : moves;
+      const set = [relative && "G90", inches && "G21"].filter((mode) => mode !== false);
+      const restore = [relative && "G91", inches && "G20"].filter((mode) => mode !== false);
+      return [...set, ...moves, ...restore];
     };
     const first = !placed;
     placed = true;

@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Etkin her işlem gizli bir şeyi kesiyor: dışa aktarmak için gösterin.",
+      "exceedsTravel": "Program {axis} ekseninde {span, number} mm kaplıyor, makinenin {travel, number} mm hareket mesafesinden fazla: malzemeyi veya tasarımı küçültün ya da makine profilini kontrol edin.",
       "noEnabled": "Dışa aktarılacak etkin işlem yok.",
       "noneHasToolpath": "Etkin işlemlerin hiçbirinde dışa aktarılacak takım yolu yok.",
       "noToolpath": "Takım yolu yok, programa dahil edilmedi.",
@@ -746,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "V1 Engineering’in Jackpot kartında FluidNC gerektirir: program başlangıcı, takım değişimi ve sonu FluidNC komutlarını kullanır. GRBL, grblHAL ve Marlin sürümleri henüz desteklenmiyor.",
+        "firmware": "V1 Engineering’in Jackpot kartında FluidNC gerektirir: program başlangıcı, takım değişimi ve sonu FluidNC komutlarını kullanır. GRBL, grblHAL veya Marlin sürümünde bu üç bloğu boşaltın; Marlin için Marlin post-işlemcisini seçin.",
         "manualRouter": "Manuel freze motoru (ör. Makita RT0701C): devrini kendi kadranından ayarlayın; G-code devir ayarlamaz.",
         "jackpotGcode": "Program başlangıcı, takım değişimi ve sonu, V1 Engineering’in Jackpot G-code’udur. Başlangıç; X, Y ve Z’yi ucun bulunduğu yerde sıfırlar ve Z’yi 0,5 mm’lik bir sıfırlama plakasıyla prob eder; bu nedenle önce jog ile projenin sıfır noktasına gidin ve Z sıfırı olarak ham malzeme üstünü kullanın. M62 P1 ve M63 P1, pin 27’deki isteğe bağlı bir freze motoru rölesini açıp kapatır."
       },

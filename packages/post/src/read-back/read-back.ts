@@ -12,8 +12,8 @@ import {
   type Vec3,
 } from "@furrow/cam-core";
 import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
-import { formatNumber } from "./format";
-import type { PostWarning } from "./post";
+import { formatNumber } from "../format";
+import type { PostWarning } from "../post";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
 export const EPSILON = 1e-3;
@@ -69,8 +69,19 @@ export function parseGcode(gcode: string): GcodeLine[] {
     .split("\n")
     .map((text, i) => {
       const number = i + 1;
-      const comments = [...text.matchAll(/\(([^)]*)\)/g)].map((match) => match[1]);
-      const code = text.replace(/\([^)]*\)/g, " ").trim();
+      // `( … )` comments and a `; …` one to the end of the line, whichever comes
+      // first, and Marlin's `M0 message`.
+      const COMMENT = /\(([^)]*)\)|;(.*)$/g;
+      const comments = [...text.matchAll(COMMENT)].map(
+        (match) => (match[1] ?? match[2]?.trim()) as string,
+      );
+      let code = text.replace(COMMENT, " ").trim();
+      const message = /^(M0*[01])\s+(.+)$/i.exec(code);
+      // `M0 S30` waits 30 s: its words aren't a message.
+      if (message && !/^([A-Z]\s*[-+]?(\d+\.?\d*|\.\d+)\s*)+$/i.test(message[2] as string)) {
+        code = (message[1] as string).toUpperCase();
+        comments.unshift(message[2] as string);
+      }
       const words: GcodeLine["words"] = [];
       for (const token of code.split(/\s+/).filter(Boolean)) {
         const match = /^([A-Z])(-?\d+(?:\.\d+)?)$/.exec(token);

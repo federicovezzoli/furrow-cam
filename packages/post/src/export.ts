@@ -1,4 +1,5 @@
 import {
+  checkPins,
   createCache,
   generateToolpath,
   machinedDocument,
@@ -15,10 +16,11 @@ import {
   UNSAFE_FILE_NAME_CHARACTERS,
 } from "@furrow/document";
 import { grbl } from "./grbl/grbl";
+import { marlin } from "./marlin/marlin";
 import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
 
 /** Every dialect, by the id machine profiles store. */
-export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl };
+export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl, marlin };
 
 /** Used when the project has no machine profile. */
 export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
@@ -132,8 +134,9 @@ export function enabledInputs(doc: ProjectDocument): ToolpathInput[] {
  * The G-code of the project `name` from toolpaths already computed (#133),
  * one for each of the document's enabled operations in order
  * (`enabledInputs`), as `exportGcode` posts them: the same program for the
- * same toolpaths. Throws when there is nothing to cut or an operation can't
- * cut with its tool, e.g. a drill bit on a profile.
+ * same toolpaths. Adds the warning of a bottom-side cut reaching a locating
+ * pin (`checkPins`), which toolpaths don't carry. Throws when there is nothing
+ * to cut or an operation can't cut with its tool, e.g. a drill bit on a profile.
  */
 export function postToolpaths(
   doc: ProjectDocument,
@@ -158,7 +161,9 @@ export function postToolpaths(
   const warnings: PostWarning[] = [];
   const toPost = computed.flatMap(({ input, toolpath }) => {
     const { name: operationName } = input.operation;
-    warnings.push(...toolpath.warnings.map((message) => ({ operation: operationName, message })));
+    // Applied here, not in generation, so moving a pin doesn't recompute toolpaths (#395).
+    const { warnings: own } = checkPins(input, toolpath);
+    warnings.push(...own.map((message) => ({ operation: operationName, message })));
     if (toolpath.moves.length > 0 || (toolpath.clearing?.length ?? 0) > 0) {
       return [{ operation: input.operation, toolpath }];
     }

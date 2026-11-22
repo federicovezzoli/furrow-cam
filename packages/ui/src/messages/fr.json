@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Chaque opération active coupe quelque chose de masqué : affichez-le pour exporter.",
+      "exceedsTravel": "Le programme s'étend sur {span, number} mm en {axis}, plus que les {travel, number} mm de course de la machine : réduisez le brut ou le dessin, ou vérifiez le profil de la machine.",
       "noEnabled": "Il n'y a aucune opération activée à exporter.",
       "noneHasToolpath": "Aucune des opérations activées n'a de trajectoire à exporter.",
       "noToolpath": "Pas de trajectoire, laissée hors du programme.",
@@ -746,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Nécessite FluidNC sur la carte Jackpot de V1 Engineering : le début du programme, le changement d’outil et la fin utilisent des commandes FluidNC. Les versions GRBL, grblHAL et Marlin ne sont pas encore prises en charge.",
+        "firmware": "Nécessite FluidNC sur la carte Jackpot de V1 Engineering : le début du programme, le changement d’outil et la fin utilisent des commandes FluidNC. Sur une version GRBL, grblHAL ou Marlin, videz ces trois blocs et, pour Marlin, choisissez le post-processeur Marlin.",
         "manualRouter": "Affleureuse manuelle (par ex. une Makita RT0701C) : réglez sa vitesse avec sa molette ; le G-code n’en règle aucune.",
         "jackpotGcode": "Le début du programme, le changement d’outil et la fin sont le G-code Jackpot de V1 Engineering. Le début met X, Y et Z à zéro là où se trouve la fraise et palpe Z avec une plaque de 0,5 mm : amenez d’abord la machine sur le zéro du projet et utilisez le dessus du brut comme zéro Z. M62 P1 et M63 P1 commandent un relais optionnel de l’affleureuse sur la broche 27."
       },

@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Elke actieve bewerking freest iets verborgens: toon het om te exporteren.",
+      "exceedsTravel": "Het programma beslaat {span, number} mm in {axis}, meer dan de {travel, number} mm slag van de machine: maak het materiaal of ontwerp kleiner, of controleer het machineprofiel.",
       "noEnabled": "Er zijn geen ingeschakelde bewerkingen om te exporteren.",
       "noneHasToolpath": "Geen van de ingeschakelde bewerkingen heeft een gereedschapsbaan om te exporteren.",
       "noToolpath": "Geen gereedschapsbaan, weggelaten uit het programma.",
@@ -746,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Vereist FluidNC op het Jackpot-board van V1 Engineering: de programmastart, gereedschapswissel en het einde gebruiken FluidNC-commando’s. GRBL-, grblHAL- en Marlin-builds worden nog niet ondersteund.",
+        "firmware": "Vereist FluidNC op het Jackpot-board van V1 Engineering: de programmastart, gereedschapswissel en het einde gebruiken FluidNC-commando’s. Maak op een build met GRBL, grblHAL of Marlin deze drie blokken leeg, en kies voor Marlin de Marlin-postprocessor.",
         "manualRouter": "Handmatige bovenfrees (bijv. een Makita RT0701C): stel het toerental in met de draaiknop; de G-code stelt er geen in.",
         "jackpotGcode": "De programmastart, gereedschapswissel en het einde zijn de Jackpot-G-code van V1 Engineering. De start nult X, Y en Z waar de frees staat en tast Z af met een tastplaat van 0,5 mm, dus jog eerst naar het nulpunt van het project en gebruik de bovenkant van het materiaal als Z-nul. M62 P1 en M63 P1 schakelen een optioneel relais voor de bovenfrees op pin 27."
       },

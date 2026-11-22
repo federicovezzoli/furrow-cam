@@ -733,6 +733,7 @@
     },
     "export": {
       "allHidden": "Toda operação ativa corta algo oculto: mostre para exportar.",
+      "exceedsTravel": "O programa abrange {span, number} mm em {axis}, mais do que os {travel, number} mm de curso da máquina: reduza o material ou o desenho, ou verifique o perfil da máquina.",
       "noEnabled": "Não há operações ativadas para exportar.",
       "noneHasToolpath": "Nenhuma das operações ativadas tem percurso para exportar.",
       "noToolpath": "Sem percurso, deixada fora do programa.",
@@ -746,7 +747,7 @@
     },
     "preset": {
       "v1e": {
-        "firmware": "Requer FluidNC na placa Jackpot da V1 Engineering: o início do programa, a troca de ferramenta e o fim usam comandos FluidNC. Versões com GRBL, grblHAL e Marlin ainda não são suportadas.",
+        "firmware": "Requer FluidNC na placa Jackpot da V1 Engineering: o início do programa, a troca de ferramenta e o fim usam comandos FluidNC. Numa versão com GRBL, grblHAL ou Marlin, esvazie estes três blocos e, para Marlin, escolha o pós-processador Marlin.",
         "manualRouter": "Tupia manual (por exemplo, uma Makita RT0701C): ajuste a rotação no seletor dela; o G-code não define nenhuma.",
         "jackpotGcode": "O início do programa, a troca de ferramenta e o fim são o G-code Jackpot da V1 Engineering. O início zera X, Y e Z onde está a fresa e apalpa Z com uma placa de toque de 0,5 mm, então mova a máquina (jog) até o ponto zero do projeto antes e use o topo do material como Z zero. M62 P1 e M63 P1 ligam e desligam um relé opcional da tupia no pino 27."
       },

@@ -1,6 +1,7 @@
 import { lstat, rm, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import {
+  checkPins,
   createCache,
   createReliefCache,
   DEFAULT_STL_LIMITS,
@@ -135,7 +136,7 @@ function toolpathWarnings(computed: readonly ComputedToolpath[]): string[] {
     const operation = input.operation.name;
     const empty = toolpath.moves.length === 0 && (toolpath.clearing?.length ?? 0) === 0;
     return [
-      ...toolpath.warnings.map((message) => warning({ operation, message })),
+      ...checkPins(input, toolpath).warnings.map((message) => warning({ operation, message })),
       ...(empty ? [warning({ operation, message: { code: "export.noToolpath" } })] : []),
     ];
   });

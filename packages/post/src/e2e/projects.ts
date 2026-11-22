@@ -832,7 +832,16 @@ function flutedDoors(): ProjectDocument {
   };
 }
 
+/** A LowRider on Marlin (#578): a manual router, the default tool change. */
+const marlinLowRider: Machine = {
+  ...lowRider,
+  name: "LowRider v3 (Marlin)",
+  postProcessor: "marlin",
+  toolChange: null,
+};
+
 /** Every project, in the order their programs are checked. */
+
 export function corpus(): CorpusProject[] {
   const lowRiderPlate = plate();
   lowRiderPlate.machine = lowRider;
@@ -848,6 +857,12 @@ export function corpus(): CorpusProject[] {
     ...padded.document.stock,
     touchOff: { x: 3, y: 3, diameter: 6, toolChange: null },
   };
+  const marlinPlate = plate();
+  marlinPlate.machine = marlinLowRider;
+  const marlinRelief = relief();
+  // A controlled spindle, so the program sets its speed and waits for it to spin up.
+  marlinRelief.document.machine = { ...shapeoko, name: "MPCNC (Marlin)", postProcessor: "marlin" };
+  marlinRelief.document.stock = { ...padded.document.stock };
   return [
     {
       name: "plate-shapeoko",
@@ -894,6 +909,20 @@ export function corpus(): CorpusProject[] {
       covers: "the same relief with a touch-off pad, left uncut and visited at each tool change",
       document: valid(padded.document),
       context: padded.context,
+    },
+    {
+      name: "plate-marlin",
+      title: "Plate",
+      covers: "the plate on Marlin: one command a line, ; comments, rapids with their feed, no M30",
+      document: valid(marlinPlate),
+    },
+    {
+      name: "relief-marlin",
+      title: "Relief",
+      covers:
+        "the relief with a touch-off pad on Marlin: G4 S spin-up, M0 messages at tool changes",
+      document: valid(marlinRelief.document),
+      context: marlinRelief.context,
     },
     {
       name: "strut-plate",

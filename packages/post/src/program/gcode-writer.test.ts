@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { GcodeExportError } from "../post";
 import { comment, GcodeWriter } from "./gcode-writer";
-import { GcodeExportError } from "./post";
 
 function lines(out: GcodeWriter): string[] {
   return out.toString().trimEnd().split("\n");

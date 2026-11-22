@@ -10,7 +10,7 @@ import {
   Units,
   ZOrigin,
 } from "@furrow/document";
-import { suggestTouchOffToolChange } from "@furrow/post";
+import { DEFAULT_POST_PROCESSOR, POST_PROCESSORS, suggestTouchOffToolChange } from "@furrow/post";
 import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
@@ -860,9 +860,14 @@ function TouchOffFields() {
 function TouchOffToolChange({ toolChange }: { toolChange: string | null }) {
   const store = useDocumentStoreApi();
   const machineBlock = useDocumentStore((s) => s.document.machine?.toolChange ?? null);
+  const postProcessor = useDocumentStore(
+    (s) => s.document.machine?.postProcessor ?? DEFAULT_POST_PROCESSOR,
+  );
   /** What's typed while editing; `null` shows the block that runs. */
   const [draft, setDraft] = useState<string | null>(null);
-  const block = toolChange ?? suggestTouchOffToolChange(machineBlock);
+  const block =
+    toolChange ??
+    suggestTouchOffToolChange(machineBlock, POST_PROCESSORS[postProcessor].dialect.pause);
   const t = useTranslations("Stock");
 
   function save() {

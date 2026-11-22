@@ -39,16 +39,17 @@ Furrow CAM is a Computer-Aided Manufacturing tool for **2.5D machining**: operat
 - **Drilling**: plunging holes at circle centres or points, or at spots clicked in the viewport with snapping
 - **Engraving**: following lines at a fixed depth, or a fixed line width with a V-bit, or chamfering edges to a width
 - **V-carving**: variable-depth carving with a V-bit, for crisp lettering and sharp corners, and V-carve inlays (a pocket and a mirrored plug that fits it)
-- **3D relief**: roughing in Z levels and parallel, waterline or spiral finishing on STL and STEP models, terrain made from a map or reliefs made from an image, with rest machining for a smaller bit and real-shape tapered ball-nose bits
+- **3D relief**: roughing in Z levels and parallel, waterline or spiral finishing on STL and STEP models, terrain made from a map or reliefs made from an image, with rest machining for a smaller bit and real-shape tapered ball-nose bits, and holding tabs that keep a model cut out all round attached to the stock
 - **Two-sided jobs**: flip the stock on locating pins and cut the bottom side too, with one G-code file per side, and a warning for any operation that would hit a pin
 
 It is **not** a full 3D CAM (relief only: no undercuts, 4th axis or tool tilting), and it is not a CAD tool. You design elsewhere, import here.
 
 ## Features
 
-- **Import** SVG and DXF drawings, several per project, then move, size, rotate, mirror, centre or fit each one to the stock; and any number of STL or STEP models for relief carving, in the same project, so a relief and the profile that cuts it out live together. A model can sit below the stock top, and an operation that would cut into another model warns
-- **Terrain from a map**: find a place, draw a rectangle, square, circle, ellipse or freehand area, preview the relief in 3D while choosing its size, exaggeration and base, and machine it like any model, or download it as an STL
-- **Relief from an image**: turn a greyscale PNG, JPEG or WebP into a relief model, inverted for a lithophane, then machine it or download it as an STL
+- **Import** SVG and DXF drawings, several per project, then move, size, rotate, mirror, centre or fit each one to the stock; and any number of STL or STEP models for relief carving, in the same project, so a relief and the profile that cuts it out live together. A model can sit below the stock top, and an operation that would cut into another model warns. Any model, imported or generated, downloads as an STL from the Objects tab
+- **Terrain from a map**: find a place, draw a rectangle, square, circle, ellipse or freehand area, preview the relief in 3D while choosing its size, exaggeration and base, and machine it like any model
+- **Relief from an image**: turn a greyscale PNG, JPEG or WebP into a relief model, inverted for a lithophane, and machine it like any model
+- **Patterns**: fill closed paths with one of 18 patterns that stay editable and follow the drawing when it moves, turns or resizes
 - **Objects tab**: every drawing, shape, path and model in one list, to select, hide or lock each one
 - **Text**: type text with bundled fonts (including a single-stroke font for engraving) or your own, then cut it or convert it into a drawing
 - **Zero point** on any of the stock's 9 anchors, a typed position, or a point picked in the viewport with snapping

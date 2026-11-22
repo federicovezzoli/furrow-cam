@@ -1,7 +1,7 @@
 import type { Operation } from "@furrow/document";
 import { drill, endMill, lowRider, machine } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { parseGcode } from "../read-back";
+import { parseGcode } from "../read-back/read-back";
 import { type CheckedProject, checkGcode, operationMoves } from "./check";
 
 const holes = {
@@ -190,6 +190,85 @@ describe("checkGcode", () => {
   });
 });
 
+describe("checkGcode on Marlin", () => {
+  const marlin: CheckedProject = {
+    ...project,
+    machine: { ...machine, postProcessor: "marlin", spinUpDelay: 0 },
+    operations: [{ ...holes, tool: endMill }],
+  };
+  const cut = (...lines: string[]) =>
+    ["G21", "G90", '; Tool: 1/4" 2-flute upcut, 6.35 mm', ...lines, "M5"].join("\n");
+  const rules = (gcode: string) =>
+    checkGcode(gcode, marlin).map(({ line, rule, message }) => `${line} ${rule}: ${message}`);
+
+  it("passes a program that keeps every rule, without M30", () => {
+    expect(
+      rules(cut("G0 Z5 F10000", "M3 S12000", "G0 X10 Y10", "G1 Z-1 F500", "G0 Z5 F10000")),
+    ).toEqual([]);
+  });
+
+  it("refuses two commands on a line and GRBL's modes", () => {
+    expect(rules(`G21 G90\n${cut("G0 Z5 F10000", "M30")}`)).toEqual([
+      "1 words: more than one command, of which Marlin runs the first",
+      "6 words: M30 isn't a command the post writes",
+    ]);
+  });
+
+  it("refuses rapids at a cut's feed, and cuts at a rapid's", () => {
+    expect(
+      rules(
+        cut(
+          "G0 Z5 F10000",
+          "M3 S12000",
+          "G0 X10 Y10",
+          "G1 Z-1 F500",
+          "G0 Z5",
+          "G0 X20 Y20 F10000",
+          "G1 Z-1",
+        ),
+      ),
+    ).toEqual([
+      "8 feed: rapid at F500, not the machine's 10000",
+      "10 feed: cuts at the feed of a rapid",
+      "10 feed: Z at 10000 mm/min, over 2500",
+      "11 end: ends in the stock",
+    ]);
+  });
+
+  it("reads G4 S as seconds", () => {
+    const slow = { ...marlin, machine: { ...machine, postProcessor: "marlin" as const } };
+    const spin = (dwell: string) =>
+      checkGcode(cut("G0 Z5 F10000", "M3 S12000", dwell, "G0 X10 Y10", "G0 Z5"), slow).map(
+        ({ rule }) => rule,
+      );
+    expect(spin(`G4 S${machine.spinUpDelay}`)).toEqual([]);
+    expect(spin("G4 P5000")).toContain("words");
+  });
+
+  it("still carves a cut it refuses for its feed", () => {
+    // The rapid back into the hole isn't blamed for material the cut removed.
+    const gcode = cut(
+      "G0 Z5 F10000",
+      "M3 S12000",
+      "G0 X10 Y10",
+      "G0 Z0",
+      "G1 Z-1",
+      "G0 Z-0.5",
+      "G0 Z5",
+    );
+    expect(rules(gcode)).toEqual([
+      "8 feed: cuts at the feed of a rapid",
+      "8 feed: Z at 10000 mm/min, over 2500",
+    ]);
+  });
+
+  it("ends with the spindle off and the tool up", () => {
+    expect(rules(cut("G0 Z5 F10000", "M3 S12000", "G0 X10 Y10", "G1 Z-1 F500")).at(-1)).toBe(
+      "8 end: ends in the stock",
+    );
+  });
+});
+
 describe("operationMoves", () => {
   it("splits a program's moves by operation", () => {
     const moves = operationMoves(program());
@@ -221,5 +300,29 @@ describe("parseGcode", () => {
         comment: "up",
       },
     ]);
+  });
+
+  it("reads ; comments and Marlin's M0 messages", () => {
+    const [comment, pause] = parseGcode("G0 Z5 ; up (fast)\nM0 Change the bit; then resume\n");
+    expect(comment?.words).toEqual([
+      { letter: "G", value: 0 },
+      { letter: "Z", value: 5 },
+    ]);
+    expect(comment?.comment).toBe("up (fast)");
+    expect(pause?.words).toEqual([{ letter: "M", value: 0 }]);
+    expect(pause?.comment).toBe("Change the bit then resume");
+    expect(parseGcode("(Sign; v2)")[0]).toMatchObject({ words: [], comment: "Sign; v2" });
+    expect(parseGcode("m0 6mm bit next")[0]).toMatchObject({
+      words: [{ letter: "M", value: 0 }],
+      comment: "6mm bit next",
+    });
+    // A timeout, not a message.
+    expect(parseGcode("M0 S30")[0]).toMatchObject({
+      words: [
+        { letter: "M", value: 0 },
+        { letter: "S", value: 30 },
+      ],
+      comment: null,
+    });
   });
 });
