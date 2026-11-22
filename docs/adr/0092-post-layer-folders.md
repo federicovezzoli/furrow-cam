@@ -28,9 +28,9 @@ export.ts            POST_PROCESSORS, exportGcode, file names
 e2e/                 corpus and checker (tests, not a layer)
 ```
 
-Layers, lowest first: `post.ts` and `format.ts`, then `machine/`, `read-back/`, `program/`, the dialect folders, and `export.ts`. A module imports only from its own layer or lower ones. `Dialect` moves into `post.ts`, so the contract imports nothing else in the package.
+Layers, lowest first: `post.ts` and `format.ts`, then `machine/` and `read-back/` (one layer: neither needs the other), `program/`, the dialect folders, and `export.ts`. A module imports only from its own layer or lower ones. `Dialect` moves into `post.ts`, so the contract imports nothing else in the package.
 
-A Biome `noRestrictedImports` override on `machine/**` and `read-back/**` keeps them from importing `program/`, a dialect folder, `export` or `index`. The rest stays a convention checked in review, as in `cam-core` (ADR-0037).
+A Biome `noRestrictedImports` override on `post.ts`, `format.ts`, `machine/**` and `read-back/**` keeps them from importing `program/`, a dialect folder, `export` or `index` (also written as `.` or `..`), and the contract from importing any folder. The rest stays a convention checked in review, as in `cam-core` (ADR-0037).
 
 A new dialect is still a folder beside `grbl/` (ADR-0091). A dialect with its own program writer keeps that writer in its folder and imports the helpers it reuses from `program/`.
 
