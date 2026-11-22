@@ -1,39 +1,21 @@
 import { activeTouchOff, stockOffset, type Vec3 } from "@furrow/cam-core";
 import { hasAccelerations, machineSpinUpDelay, type Tool, type TouchOff } from "@furrow/document";
-import { estimateTime, formatDuration } from "./estimate";
-import { GcodeWriter } from "./gcode-writer";
-import { limitFeed, spindleSpeed } from "./machine-limits";
+import { estimateTime, formatDuration } from "../machine/estimate";
+import { limitFeed, spindleSpeed } from "../machine/machine-limits";
 import {
+  type Dialect,
   type PostInput,
   type PostOutput,
   type PostStep,
   type PostWarning,
   postSteps,
-} from "./post";
-import { type BlockLabel, customBlockWarnings } from "./read-back";
+} from "../post";
+import { type BlockLabel, customBlockWarnings } from "../read-back/read-back";
+import { travelWarnings } from "../read-back/travel";
+import { GcodeWriter } from "./gcode-writer";
 import { padLabel, sideSetupLines, xyZeroLabel, zZeroLabel } from "./setup-notes";
 import { sameBit, toolLabel, toolShapeComment } from "./tool";
 import { fillPlaceholders, suggestTouchOffToolChange, unfilledPlaceholders } from "./touch-off";
-import { travelWarnings } from "./travel";
-
-/**
- * How a G-code dialect writes what every program says (ADR-0091). Each
- * dialect folder fills one in; what they all do is `postProgram`'s.
- */
-export type Dialect = {
-  /** A comment, which can't nest or span lines. */
-  comment(text: string): string;
-  /** The lines setting the modes every coordinate assumes: millimetres and absolute. */
-  modes: string[];
-  /** A wait of `seconds`. */
-  dwell(seconds: number): string;
-  /** A pause showing `message`, until the user resumes. */
-  pause(message: string): string;
-  /** The program's last lines, after the rise and the rapid to the XY zero. */
-  end: string[];
-  /** Whether `G0` runs at the last `F`, so each carries the machine's maximum XY feed. */
-  rapidFeed: boolean;
-};
 
 /** What writing one program keeps track of, from its header to its end. */
 type Program = {

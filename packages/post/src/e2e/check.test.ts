@@ -1,7 +1,7 @@
 import type { Operation } from "@furrow/document";
 import { drill, endMill, lowRider, machine } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
-import { parseGcode } from "../read-back";
+import { parseGcode } from "../read-back/read-back";
 import { type CheckedProject, checkGcode, operationMoves } from "./check";
 
 const holes = {

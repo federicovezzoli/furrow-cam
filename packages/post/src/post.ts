@@ -11,7 +11,6 @@ import {
   type StockSide,
   type Tool,
 } from "@furrow/document";
-import type { Dialect } from "./program";
 
 /** Everything a post-processor needs to write one program. */
 export type PostInput = {
@@ -116,3 +115,23 @@ export function postSteps(operations: PostInput["operations"]): PostStep[] {
     return steps;
   });
 }
+
+/**
+ * How a G-code dialect writes what every program says (ADR-0091). Each
+ * dialect folder fills one in; what they all do is `postProgram`'s
+ * (`program/program.ts`).
+ */
+export type Dialect = {
+  /** A comment, which can't nest or span lines. */
+  comment(text: string): string;
+  /** The lines setting the modes every coordinate assumes: millimetres and absolute. */
+  modes: string[];
+  /** A wait of `seconds`. */
+  dwell(seconds: number): string;
+  /** A pause showing `message`, until the user resumes. */
+  pause(message: string): string;
+  /** The program's last lines, after the rise and the rapid to the XY zero. */
+  end: string[];
+  /** Whether `G0` runs at the last `F`, so each carries the machine's maximum XY feed. */
+  rapidFeed: boolean;
+};

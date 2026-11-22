@@ -12,8 +12,8 @@ import {
   type Vec3,
 } from "@furrow/cam-core";
 import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
-import { formatNumber } from "./format";
-import type { PostWarning } from "./post";
+import { formatNumber } from "../format";
+import type { PostWarning } from "../post";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
 export const EPSILON = 1e-3;
