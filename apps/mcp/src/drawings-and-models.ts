@@ -24,14 +24,22 @@ import {
 import { stepToStl } from "@furrow/workspace/lib/step";
 import {
   drawingBounds,
+  duplicateDrawing,
   fitDrawingToStock,
+  mirrorDrawing,
+  moveDrawing,
+  removeDrawing,
+  rotateDrawing,
   setDrawingSize,
 } from "@furrow/workspace/stores/geometry-actions";
 import {
   addModel,
   fitModelToStock,
   modelAnchor,
+  modelOffset,
+  removeModel,
   setModelDepth,
+  setModelOffset,
   setModelScale,
   setModelTop,
   turnModelAbout,
@@ -243,4 +251,61 @@ export function turn(project: Project, id: string, axis: "x" | "y" | "z", turns:
   }
   const index = ({ x: 0, y: 1, z: 2 } as const)[axis];
   change(project, (store) => turnModelAbout(store, id, index, turns));
+}
+
+/** Drawing `id`, refusing a model or a pattern for `what` (a pattern follows its boundary, ADR-0088). */
+function drawing(project: Project, id: string, what: string) {
+  if (find(project, id).model) throw new ToolError(`A model can't be ${what}: only a drawing can.`);
+  if (project.store.getState().document.drawings.find((d) => d.id === id)?.pattern) {
+    throw new ToolError(
+      `A pattern can't be ${what}: it follows the drawing it fills, so change that one.`,
+    );
+  }
+}
+
+/** Moves drawing or model `id` by `[dx, dy]` millimetres, as dragging it or its position fields do. */
+export function move(project: Project, id: string, [dx, dy]: [number, number]) {
+  const { model } = find(project, id);
+  if (!model) {
+    drawing(project, id, "moved");
+    change(project, (store) => moveDrawing(store, id, [dx, dy]));
+    return;
+  }
+  const [x, y] = modelOffset(project.store.getState().document.stock, model);
+  change(project, (store) => {
+    if (dx !== 0) setModelOffset(store, id, "x", x + dx);
+    if (dy !== 0) setModelOffset(store, id, "y", y + dy);
+  });
+}
+
+/** Turns drawing `id` by `degrees`, counter-clockwise for positive ones, as the properties' rotation does. */
+export function rotate(project: Project, id: string, degrees: number) {
+  drawing(project, id, "rotated");
+  let result: ActionResult | undefined;
+  change(project, (store) => (result = rotateDrawing(store, id, degrees)));
+  check(result);
+}
+
+/** Mirrors drawing `id` left to right (`"x"`) or top to bottom (`"y"`), in place. */
+export function mirror(project: Project, id: string, axis: "x" | "y") {
+  drawing(project, id, "mirrored");
+  let result: ActionResult | undefined;
+  change(project, (store) => (result = mirrorDrawing(store, id, axis)));
+  check(result);
+}
+
+/** Copies drawing `id` beside it, with the operations, tabs and holes on it; returns the copy's id. */
+export function duplicate(project: Project, id: string): string {
+  if (find(project, id).model)
+    throw new ToolError("A model can't be duplicated: only a drawing can.");
+  let copy: string | null = null;
+  change(project, (store) => (copy = duplicateDrawing(store, id)));
+  if (!copy) throw new ToolError("This drawing has no shapes to copy.");
+  return copy;
+}
+
+/** Removes drawing or model `id` and what goes with it in the app (its operations, targets and tabs). */
+export function remove(project: Project, id: string) {
+  const { model } = find(project, id);
+  change(project, (store) => (model ? removeModel(store, id) : removeDrawing(store, id)));
 }
