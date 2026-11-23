@@ -1,11 +1,14 @@
 "use client";
 
 import { MIN_LENGTH, rotatedSize } from "@furrow/cam-core";
+import { useDialogs } from "@furrow/ui/components/dialogs";
 import { NumberField } from "@furrow/ui/components/number-field";
 import { Button } from "@furrow/ui/components/ui/button";
+import { formatMessage } from "@furrow/ui/lib/i18n";
 import { localizeDecimal } from "@furrow/ui/lib/locales";
 import {
   CircleAlertIcon,
+  LayersIcon,
   LocateFixedIcon,
   Maximize2Icon,
   RotateCwIcon,
@@ -13,8 +16,12 @@ import {
   Undo2Icon,
   XIcon,
 } from "lucide-react";
+import { useTransition } from "react";
 import { useLocale, useTranslations } from "use-intl";
+import { drawingsFromModel } from "../lib/model-drawings";
 import { cappedBorder, originalSize } from "../lib/model-size";
+import { shapePaths } from "../lib/path-selection";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useDocumentStoreApi,
@@ -44,6 +51,7 @@ const AXES = ["X", "Y", "Z"] as const;
  * quarter turns, size (with the size in the file), depth, the border *Fit to
  * stock* leaves, position from the zero and how far its top sits below the
  * stock top, each an undoable edit. Says that it is cut from the top only (S3).
+ * Makes a drawing of its flat levels and outline (ADR-0094).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();
@@ -53,8 +61,29 @@ export function ModelProperties({ modelId }: { modelId: string }) {
   const stock = useDocumentStore((s) => s.document.stock);
   const operationCount = useDocumentStore((s) => modelOperations(s.document, modelId).length);
   const t = useTranslations("Model");
+  const translate = useTranslations();
   const locale = useLocale();
+  const { meshes } = useWorkspaceHost();
+  const { alert } = useDialogs();
+  // One at a time, so a second click doesn't add the drawing twice.
+  const [drawing, startDrawing] = useTransition();
   if (!model) return null;
+
+  function makeDrawings() {
+    startDrawing(async () => {
+      const result = await drawingsFromModel(modelId, t("outlineLayer"), {
+        meshes,
+        document: store,
+      });
+      if (!result.ok) {
+        void alert(formatMessage(translate, result.error));
+        return;
+      }
+      const shapes = store.getState().document.geometry.filter((s) => s.drawingId === result.id);
+      workspace.getState().selectPaths(shapes.flatMap(shapePaths));
+      if (result.levels === 0) void alert(t("outlineOnly"));
+    });
+  }
 
   const { placement } = model;
   const [width, height, depth] = rotatedSize(model.bounds, placement.rotation);
@@ -239,6 +268,24 @@ export function ModelProperties({ modelId }: { modelId: string }) {
         {stock.twoSided && placement.top >= stock.twoSided.partingDepth && (
           <Warning>{t("belowParting")}</Warning>
         )}
+      </section>
+
+      <section aria-labelledby="model-drawings-heading" className="grid gap-2">
+        <h3 id="model-drawings-heading" className="font-medium">
+          {t("drawings")}
+        </h3>
+        <p className="text-muted-foreground">{t("drawingsHint")}</p>
+        <Button
+          variant="outline"
+          size="compact"
+          className="justify-self-end"
+          onClick={makeDrawings}
+          disabled={drawing}
+          data-demo="model-drawings"
+        >
+          <LayersIcon />
+          {t("makeDrawings")}
+        </Button>
       </section>
 
       <div className="flex justify-end">

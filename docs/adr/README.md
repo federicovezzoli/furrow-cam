@@ -86,7 +86,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0069](0069-model-sits-below-stock-top.md) | A model's top can sit below the stock top | Accepted |
 | [0070](0070-diagonal-moves-on-steep-faces.md) | Relief passes go straight down steep faces and merge within 0.02 mm | Accepted |
 | [0071](0071-going-over-clears-the-whole-sub-step.md) | Relief passes go over a wall no lower than the tool anywhere along the level move | Accepted |
-| [0072](0072-step-files-imported-as-stl.md) | STEP files are turned into STL on import, with OpenCascade in WebAssembly | Accepted |
+| [0072](0072-step-files-imported-as-stl.md) | STEP files are turned into STL on import, with OpenCascade in WebAssembly | Accepted; superseded in part by ADR-0094 |
 | [0073](0073-no-look-between-close-samples.md) | Relief passes don't look between samples close in height | Accepted |
 | [0074](0074-desktop-installs-updates.md) | The desktop app installs updates itself on Windows and Linux, through the download Worker | Accepted; superseded in part by ADR-0081 |
 | [0075](0075-demo-videos-recorded-frame-by-frame.md) | Demo videos are recorded a frame at a time on a frozen page clock | Accepted |
@@ -108,3 +108,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0091](0091-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted; superseded in part by ADR-0092 |
 | [0092](0092-post-layer-folders.md) | Layer folders in post | Accepted |
 | [0093](0093-consent-based-usage-tracking.md) | Detailed usage tracking with consent, the cookieless baseline without | Accepted |
+| [0094](0094-drawings-from-a-models-flat-faces.md) | Drawings from a model's flat faces; STEP models keep their faces | Accepted |

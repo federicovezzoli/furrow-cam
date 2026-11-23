@@ -74,6 +74,7 @@ describe("the MCP server", () => {
       "add_vcarve",
       "check_project",
       "create_project",
+      "drawings_from_model",
       "duplicate",
       "edit_operation",
       "edit_text",

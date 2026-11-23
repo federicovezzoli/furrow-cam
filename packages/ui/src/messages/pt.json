@@ -553,7 +553,8 @@
       "spindleMinMax": "Deve ser pelo menos a rotação mínima do spindle"
     },
     "model": {
-      "cornerOrder": "O canto mínimo não pode exceder o máximo"
+      "cornerOrder": "O canto mínimo não pode exceder o máximo",
+      "faceTriangles": "As faces do modelo devem repartir todos os seus triângulos"
     },
     "geometry": {
       "zeroLine": "Linha de comprimento zero",
@@ -841,7 +842,10 @@
       "patternNoSelection": "Selecione caminhos fechados de um desenho para preencher.",
       "patternOneDrawing": "Selecione caminhos de um só desenho.",
       "patternOfPattern": "Um padrão não pode ser preenchido com outro.",
-      "patternNoClosedPath": "A seleção não tem caminhos fechados para preencher."
+      "patternNoClosedPath": "A seleção não tem caminhos fechados para preencher.",
+      "modelDrawingsFailed": "Não foi possível criar os desenhos do modelo. Tente novamente.",
+      "noModelFaces": "Este modelo não tem nenhuma face voltada para cima: não há nada para desenhar.",
+      "modelChanged": "O modelo mudou enquanto os seus desenhos eram criados. Tente novamente."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",
@@ -1467,7 +1471,12 @@
     "position": "Posição",
     "positionHint": "Onde está o ponto {anchor, select, top_left {superior esquerdo} top_center {superior central} top_right {superior direito} middle_left {do meio à esquerda} middle_right {do meio à direita} bottom_left {inferior esquerdo} bottom_center {inferior central} bottom_right {inferior direito} other {central}} do modelo, medido a partir do zero. Movê-lo não muda a borda que <em>Ajustar ao material</em> deixa.",
     "removeTitle": "Remove também {count, plural, one {a operação que o usina} other {as # operações que o usinam}}",
-    "remove": "Remover modelo"
+    "remove": "Remover modelo",
+    "drawings": "Desenhos",
+    "drawingsHint": "Cria um desenho dos níveis planos do modelo, uma camada por profundidade, e da sua silhueta, para maquiná-lo com rebaixos, contornos e furações. O desenho fica onde o modelo está agora: não o acompanha.",
+    "makeDrawings": "Desenhos do modelo",
+    "outlineLayer": "Silhueta",
+    "outlineOnly": "O modelo não tem faces planas: o desenho contém apenas a sua silhueta."
   },
   "Drawing": {
     "closeLabel": "Fechar as propriedades do desenho",

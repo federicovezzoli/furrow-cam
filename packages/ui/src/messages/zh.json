@@ -553,7 +553,8 @@
       "spindleMinMax": "不能小于主轴最低转速"
     },
     "model": {
-      "cornerOrder": "最小角点不能超过最大角点"
+      "cornerOrder": "最小角点不能超过最大角点",
+      "faceTriangles": "模型的各个面必须分完它的所有三角形"
     },
     "geometry": {
       "zeroLine": "长度为零的直线",
@@ -841,7 +842,10 @@
       "patternNoSelection": "请选择要填充的图形的闭合路径。",
       "patternOneDrawing": "请只选择一个图形的路径。",
       "patternOfPattern": "图案不能用另一个图案填充。",
-      "patternNoClosedPath": "所选内容没有可填充的闭合路径。"
+      "patternNoClosedPath": "所选内容没有可填充的闭合路径。",
+      "modelDrawingsFailed": "无法生成模型的图纸，请重试。",
+      "noModelFaces": "此模型没有朝上的面，没有可绘制的内容。",
+      "modelChanged": "生成图纸时模型发生了变化，请重试。"
     },
     "terrain": {
       "noArea": "此区域太小，请绘制更大的区域。",
@@ -1467,7 +1471,12 @@
     "position": "位置",
     "positionHint": "模型{anchor, select, top_left {左上} top_center {上中} top_right {右上} middle_left {左中} middle_right {右中} bottom_left {左下} bottom_center {下中} bottom_right {右下} other {中心}}点的位置，从零点开始测量。移动模型不会改变<em>适配毛坯</em>保留的边距。",
     "removeTitle": "同时移除加工它的{count, plural, one {加工操作} other {#个加工操作}}",
-    "remove": "移除模型"
+    "remove": "移除模型",
+    "drawings": "图纸",
+    "drawingsHint": "为模型的各个平面层级（每个深度一个图层）及其外形生成图纸，以便用挖槽、轮廓和钻孔加工。图纸停留在模型当前的位置，不会跟随模型移动。",
+    "makeDrawings": "从模型生成图纸",
+    "outlineLayer": "外形",
+    "outlineOnly": "模型没有平面，因此图纸只包含其外形。"
   },
   "Drawing": {
     "closeLabel": "关闭图纸属性",

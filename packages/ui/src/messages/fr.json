@@ -553,7 +553,8 @@
       "spindleMinMax": "Doit être au moins la vitesse de broche minimale"
     },
     "model": {
-      "cornerOrder": "Le coin minimal ne doit pas dépasser le maximal"
+      "cornerOrder": "Le coin minimal ne doit pas dépasser le maximal",
+      "faceTriangles": "Les faces du modèle doivent se partager tous ses triangles"
     },
     "geometry": {
       "zeroLine": "Ligne de longueur nulle",
@@ -841,7 +842,10 @@
       "patternNoSelection": "Sélectionnez des tracés fermés d'un dessin à remplir.",
       "patternOneDrawing": "Sélectionnez les tracés d'un seul dessin.",
       "patternOfPattern": "Un motif ne peut pas être rempli par un autre.",
-      "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir."
+      "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir.",
+      "modelDrawingsFailed": "Les dessins du modèle n'ont pas pu être créés. Réessayez.",
+      "noModelFaces": "Ce modèle n'a aucune face tournée vers le haut : il n'y a rien à dessiner.",
+      "modelChanged": "Le modèle a changé pendant la création de ses dessins. Réessayez."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -1467,7 +1471,12 @@
     "position": "Position",
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du modèle, mesuré depuis le zéro. Le déplacer ne change pas la bordure que laisse <em>Ajuster au brut</em>.",
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui l’usine} other {les # opérations qui l’usinent}}",
-    "remove": "Retirer le modèle"
+    "remove": "Retirer le modèle",
+    "drawings": "Dessins",
+    "drawingsHint": "Crée un dessin des niveaux plats du modèle, un calque par profondeur, et de sa silhouette, pour l'usiner avec des poches, des contours et des perçages. Le dessin reste là où se trouve le modèle maintenant : il ne le suit pas.",
+    "makeDrawings": "Dessins du modèle",
+    "outlineLayer": "Silhouette",
+    "outlineOnly": "Le modèle n'a pas de faces planes : le dessin ne contient que sa silhouette."
   },
   "Drawing": {
     "closeLabel": "Fermer les propriétés du dessin",

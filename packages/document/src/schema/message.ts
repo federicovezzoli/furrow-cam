@@ -62,6 +62,7 @@ export const DOCUMENT_MESSAGES = [
   "machine.spindleBoth",
   "machine.spindleMinMax",
   "model.cornerOrder",
+  "model.faceTriangles",
   "geometry.zeroLine",
   "geometry.zeroCurve",
   "geometry.zeroArc",
