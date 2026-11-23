@@ -8,8 +8,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslator())("Meta.privacyTitle") };
 }
 
-// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074, ADR-0090).
-const LAST_UPDATED = "20 November 2026";
+// Keep in sync with what we actually store and who processes it (ADR-0013, ADR-0020, ADR-0023, ADR-0029, ADR-0036, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0074, ADR-0090, ADR-0093).
+const LAST_UPDATED = "23 November 2026";
 const CONTACT = "privacy@furrow.cam";
 
 /**
@@ -77,9 +77,11 @@ export default async function PrivacyPage() {
           </List>
           <p>
             We don't collect your name, a profile picture or any other personal details, and we
-            don't use tracking cookies. The app sets a cookie for your session, one that remembers
-            the workspace panel sizes and one that remembers the language you picked, and keeps your
-            light or dark theme choice in your browser&apos;s local storage.
+            don't use tracking cookies unless you allow detailed usage statistics (see PostHog
+            below). The app sets a cookie for your session, one that remembers the workspace panel
+            sizes and one that remembers the language you picked, and keeps your light or dark theme
+            choice in your browser&apos;s local storage. Once you answer the usage statistics
+            question, PostHog keeps your answer in your browser&apos;s local storage.
           </p>
         </Section>
 
@@ -102,12 +104,13 @@ export default async function PrivacyPage() {
             The desktop app keeps your projects, bits and machines in files on your computer and
             never sends them to us. It makes no network requests except two you are asked about on
             first start and can turn off in its Help menu: checking for a newer version, and sending
-            PostHog the anonymous usage statistics and error reports described below, with a new
-            random ID each time the app starts. Making a terrain from a map also reaches the map,
-            search and elevation services described under &quot;Maps and terrain&quot;, only while
-            you use it. The update check sends only your IP address and the app&apos;s user agent:
-            to GitHub on macOS, and to download.furrow.cam and then GitHub on Windows and Linux,
-            where the app also downloads the update from GitHub if you choose to install it.
+            PostHog the anonymous usage statistics and error reports described below, with a random
+            ID kept on your computer while you agree, so returning use can be counted, and deleted
+            when you turn them off. Making a terrain from a map also reaches the map, search and
+            elevation services described under &quot;Maps and terrain&quot;, only while you use it.
+            The update check sends only your IP address and the app&apos;s user agent: to GitHub on
+            macOS, and to download.furrow.cam and then GitHub on Windows and Linux, where the app
+            also downloads the update from GitHub if you choose to install it.
           </p>
         </Section>
 
@@ -122,7 +125,9 @@ export default async function PrivacyPage() {
               secure and working and to understand how it is used (legitimate interest).
             </li>
             <li>
-              Usage statistics and error reports from the desktop app: only if you agree (consent).
+              Detailed usage statistics on the website (an ID kept in your browser, which buttons
+              you use and screen recordings), and usage statistics and error reports from the
+              desktop app: only if you agree (consent), which you can withdraw at any time.
             </li>
           </List>
         </Section>
@@ -165,6 +170,17 @@ export default async function PrivacyPage() {
               projects, file names, drawings or email address, and nothing is linked to your
               account. With the request it receives your IP address and user agent, which it uses to
               tell visits apart for a day and doesn&apos;t store.
+              <br />
+              <br />
+              If you allow detailed usage statistics (the question shown on your first visit, and
+              &quot;Usage statistics&quot; in the footer or the account menu), PostHog also keeps a
+              random ID in a cookie and your browser&apos;s local storage, so your later visits can
+              be counted as yours, and receives which buttons and fields you use (the kind of
+              element and its place on the page, never its text) and recordings of the screen with
+              every text and input hidden and the 3D view left out. The recordings may include the
+              page&apos;s address, which can contain a project&apos;s ID. This is still not linked
+              to your account or email address, and you can withdraw it at any time, which deletes
+              the ID.
             </li>
             <li>
               <External href="https://haveibeenpwned.com/Privacy">Have I Been Pwned</External>{" "}

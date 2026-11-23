@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "账户",
     "takeTour": "开始导览",
+    "usageStatistics": "使用统计…",
     "signOut": "退出登录",
     "deleteAccount": "删除账户…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "报告问题",
     "privacy": "隐私",
-    "licences": "第三方许可"
+    "licences": "第三方许可",
+    "usageStatistics": "使用统计"
+  },
+  "UsageConsent": {
+    "title": "帮助改进 Furrow CAM？",
+    "body": "经您允许，我们还会了解您使用了哪些按钮，并在隐藏所有文字的情况下录制屏幕，以找出应用难用的地方。您的图纸和名称永远不会被录制，也不会与您的账户关联。如不允许，我们只统计匿名页面浏览和少量事件。",
+    "privacy": "隐私政策",
+    "allow": "允许",
+    "decline": "不用了",
+    "currentlyAllowed": "您目前允许此项。",
+    "currentlyDeclined": "您目前不允许此项。"
   },
   "Licences": {
     "title": "第三方许可",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "发送匿名使用统计和错误报告？",
-      "detail": "它们有助于修复崩溃并了解哪些功能被使用：例如“已导出G-code”之类的事件和错误信息，绝不包含你的文件、项目或任何可识别你身份的内容。你可以在“帮助”菜单中更改此设置。",
+      "detail": "它们有助于修复崩溃，并显示哪些功能被使用：例如“已导出 G-code”之类的事件和错误信息，并附带保存在这台电脑上的随机 ID 以统计重复使用，绝不包括您的文件、项目或任何能识别您身份的信息。您可以在“帮助”菜单中更改。",
       "send": "发送",
       "dontSend": "不发送"
     },

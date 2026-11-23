@@ -30,7 +30,7 @@ import type { Message, Model } from "@furrow/document";
  * - `image` builds the relief of an image's pixels, read on the main thread
  *   (PRD-0015); it comes back as a terrain does.
  * - `faces` finds the flat levels and the outline of a placed model whose
- *   STL is `bytes` (`modelFlatFaces`, ADR-0093).
+ *   STL is `bytes` (`modelFlatFaces`, ADR-0094).
  */
 export type MeshRequest =
   | { kind: "parse"; id: number; bytes: ArrayBuffer; limits: StlLimits }
@@ -63,7 +63,7 @@ export type MeshRequest =
       model: Pick<Model, "bounds" | "placement" | "faces">;
     };
 
-/** What the document records of a mesh (ADR-0029), and of a STEP file's faces (ADR-0093). */
+/** What the document records of a mesh (ADR-0029), and of a STEP file's faces (ADR-0094). */
 export type MeshSummary = { sha256: string; triangles: number; bounds: Box3; faces?: number[] };
 
 /** A terrain built in the worker, its STL as a buffer to transfer. */

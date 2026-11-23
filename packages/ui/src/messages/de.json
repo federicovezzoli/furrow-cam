@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Konto",
     "takeTour": "Tour starten",
+    "usageStatistics": "Nutzungsstatistik…",
     "signOut": "Abmelden",
     "deleteAccount": "Konto löschen…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Fehler melden",
     "privacy": "Datenschutz",
-    "licences": "Lizenzen von Drittanbietern"
+    "licences": "Lizenzen von Drittanbietern",
+    "usageStatistics": "Nutzungsstatistik"
+  },
+  "UsageConsent": {
+    "title": "Furrow CAM verbessern helfen?",
+    "body": "Mit deiner Erlaubnis sehen wir auch, welche Schaltflächen du nutzt, und zeichnen den Bildschirm mit verborgenem Text auf, um zu finden, wo die App schwer zu bedienen ist. Deine Zeichnungen und Namen werden nie aufgezeichnet, und nichts wird mit deinem Konto verknüpft. Ohne sie zählen wir nur anonyme Seitenaufrufe und einige Ereignisse.",
+    "privacy": "Datenschutzerklärung",
+    "allow": "Erlauben",
+    "decline": "Nein, danke",
+    "currentlyAllowed": "Du erlaubst das derzeit.",
+    "currentlyDeclined": "Du erlaubst das derzeit nicht."
   },
   "Licences": {
     "title": "Lizenzen von Drittanbietern",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Anonyme Nutzungsstatistiken und Fehlerberichte senden?",
-      "detail": "Sie helfen, Abstürze zu beheben, und zeigen, welche Funktionen genutzt werden: Ereignisse wie „G-code exportiert“ und Fehlermeldungen, nie deine Dateien, Projekte oder irgendetwas, das dich identifiziert. Du kannst das im Hilfe-Menü ändern.",
+      "detail": "Sie helfen, Abstürze zu beheben, und zeigen, welche Funktionen genutzt werden: Ereignisse wie „G-code exportiert“ und Fehlermeldungen, mit einer zufälligen ID auf diesem Computer, um wiederkehrende Nutzung zu zählen, nie deine Dateien, Projekte oder irgendetwas, das dich identifiziert. Du kannst das im Hilfe-Menü ändern.",
       "send": "Senden",
       "dontSend": "Nicht senden"
     },

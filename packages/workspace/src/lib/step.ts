@@ -62,7 +62,7 @@ export function faceSizes(mesh: Pick<OcctMesh, "index" | "brep_faces">): number[
 /**
  * Turns a STEP file into a binary STL in millimetres (ADR-0072), which is
  * then imported and stored like any STL, with `faces`, how many of its
- * triangles each face of the solid was meshed into (ADR-0093), unless
+ * triangles each face of the solid was meshed into (ADR-0094), unless
  * OpenCascade doesn't say. `wasm` reads OpenCascade's WebAssembly, loaded
  * only for the first STEP file. Refuses a file OpenCascade can't read or with
  * no solids, and a mesh that the STL limits wouldn't take, with a

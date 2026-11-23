@@ -141,7 +141,7 @@ export function addDrawing(store: DocumentStore, name: string, drawing: Drawing,
 }
 
 /**
- * Adds the drawing made from a model's flat faces (ADR-0093) as one undo
+ * Adds the drawing made from a model's flat faces (ADR-0094) as one undo
  * step, where the model lies on the stock: a shape per level, from the top
  * down, on a layer named after its height in the project's units (`Z -6 mm`),
  * then the outline on `outlineLayer`. It takes its name from the model's

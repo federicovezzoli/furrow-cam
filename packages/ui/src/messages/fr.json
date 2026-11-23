@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Compte",
     "takeTour": "Faire la visite guidée",
+    "usageStatistics": "Statistiques d’utilisation…",
     "signOut": "Se déconnecter",
     "deleteAccount": "Supprimer le compte…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Signaler un bug",
     "privacy": "Confidentialité",
-    "licences": "Licences tierces"
+    "licences": "Licences tierces",
+    "usageStatistics": "Statistiques d’utilisation"
+  },
+  "UsageConsent": {
+    "title": "Aider à améliorer Furrow CAM ?",
+    "body": "Avec votre accord, nous voyons aussi quels boutons vous utilisez et enregistrons l’écran avec tout le texte masqué, pour trouver où l’application est difficile à utiliser. Vos dessins et vos noms ne sont jamais enregistrés, et rien n’est lié à votre compte. Sans cela, nous ne comptons que des pages vues anonymes et quelques événements.",
+    "privacy": "Politique de confidentialité",
+    "allow": "Autoriser",
+    "decline": "Non merci",
+    "currentlyAllowed": "Vous l’autorisez actuellement.",
+    "currentlyDeclined": "Vous ne l’autorisez pas actuellement."
   },
   "Licences": {
     "title": "Licences tierces",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Envoyer des statistiques d'utilisation et des rapports d'erreur anonymes ?",
-      "detail": "Ils aident à corriger les plantages et montrent quelles fonctions sont utilisées : des événements comme « G-code exporté » et des messages d'erreur, jamais vos fichiers, vos projets ni rien qui vous identifie. Vous pouvez changer cela dans le menu Aide.",
+      "detail": "Ils aident à corriger les plantages et montrent quelles fonctions sont utilisées : des événements comme « G-code exporté » et des messages d’erreur, avec un identifiant aléatoire conservé sur cet ordinateur pour compter les utilisations répétées, jamais vos fichiers, vos projets ni rien qui vous identifie. Vous pouvez changer cela dans le menu Aide.",
       "send": "Envoyer",
       "dontSend": "Ne pas envoyer"
     },

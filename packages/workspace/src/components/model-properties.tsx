@@ -51,7 +51,7 @@ const AXES = ["X", "Y", "Z"] as const;
  * quarter turns, size (with the size in the file), depth, the border *Fit to
  * stock* leaves, position from the zero and how far its top sits below the
  * stock top, each an undoable edit. Says that it is cut from the top only (S3).
- * Makes a drawing of its flat levels and outline (ADR-0093).
+ * Makes a drawing of its flat levels and outline (ADR-0094).
  */
 export function ModelProperties({ modelId }: { modelId: string }) {
   const store = useDocumentStoreApi();

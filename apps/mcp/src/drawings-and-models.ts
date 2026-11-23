@@ -277,7 +277,7 @@ function refuseUnlessDrawing(project: Project, id: string, what: string, hint = 
 
 /**
  * Adds a drawing of model `id`'s flat levels and outline where the model
- * lies, as the app's *Drawings from model* does (ADR-0093). Returns the
+ * lies, as the app's *Drawings from model* does (ADR-0094). Returns the
  * drawing's id and its levels' heights below the stock top, from the top down.
  */
 export function drawingsFromModel(project: Project, id: string): { id: string; levels: number[] } {

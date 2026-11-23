@@ -413,7 +413,7 @@ export const migrations: Readonly<Record<number, Migration>> = {
   // #578: machines can use the Marlin post-processor. Existing ones use GRBL;
   // the bump keeps older releases from opening documents that use it.
   42: (doc) => doc,
-  // #665: a STEP model keeps its faces (ADR-0093). Existing models have none,
+  // #665: a STEP model keeps its faces (ADR-0094). Existing models have none,
   // as an STL's; the bump keeps older releases from opening documents that do.
   43: (doc) => doc,
 };

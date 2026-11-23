@@ -44,18 +44,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           {/* No fallback: pages stream in the request's language, never English first. */}
           <Suspense>
-            <LocalizedApp>{children}</LocalizedApp>
+            <LocalizedApp>
+              {children}
+              {/* After the page, so its effects run first; inside the locale for the consent prompt. */}
+              {env.NEXT_PUBLIC_POSTHOG_KEY && (
+                // Reads the current route, which is request data on dynamic pages.
+                <Suspense>
+                  <Telemetry
+                    apiKey={env.NEXT_PUBLIC_POSTHOG_KEY}
+                    host={posthogHost(env.NEXT_PUBLIC_POSTHOG_HOST)}
+                  />
+                </Suspense>
+              )}
+            </LocalizedApp>
           </Suspense>
         </ThemeProvider>
-        {env.NEXT_PUBLIC_POSTHOG_KEY && (
-          // Reads the current route, which is request data on dynamic pages.
-          <Suspense>
-            <Telemetry
-              apiKey={env.NEXT_PUBLIC_POSTHOG_KEY}
-              host={posthogHost(env.NEXT_PUBLIC_POSTHOG_HOST)}
-            />
-          </Suspense>
-        )}
       </body>
     </html>
   );

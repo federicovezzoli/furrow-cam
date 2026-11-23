@@ -24,14 +24,14 @@ export default function GlobalError(props: {
         <title>{t("Errors.globalTitle")}</title>
         <LocaleProvider locale={locale} onLocaleChange={() => {}}>
           <ErrorFallback {...props} message={t("Errors.global")} />
+          {/* The root layout and its telemetry are gone, or never loaded: start it here. */}
+          {process.env.NEXT_PUBLIC_POSTHOG_KEY && (
+            <Telemetry
+              apiKey={process.env.NEXT_PUBLIC_POSTHOG_KEY}
+              host={posthogHost(process.env.NEXT_PUBLIC_POSTHOG_HOST)}
+            />
+          )}
         </LocaleProvider>
-        {/* The root layout and its telemetry are gone, or never loaded: start it here. */}
-        {process.env.NEXT_PUBLIC_POSTHOG_KEY && (
-          <Telemetry
-            apiKey={process.env.NEXT_PUBLIC_POSTHOG_KEY}
-            host={posthogHost(process.env.NEXT_PUBLIC_POSTHOG_HOST)}
-          />
-        )}
       </body>
     </html>
   );

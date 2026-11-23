@@ -1,4 +1,4 @@
-# ADR-0093: Drawings from a model's flat faces; STEP models keep their faces
+# ADR-0094: Drawings from a model's flat faces; STEP models keep their faces
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

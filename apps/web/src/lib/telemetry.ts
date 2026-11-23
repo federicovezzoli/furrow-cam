@@ -1,8 +1,85 @@
+import { TELEMETRY_EVENTS } from "@furrow/workspace/lib/telemetry";
+
 /**
  * What PostHog may learn about the page (ADR-0052, as ADR-0020 before it):
  * the route pattern, never the concrete URL with its IDs, query string or
  * hash, and on the first page view only an external referrer's origin.
+ * With the visitor's consent, autocapture adds which element was used, by
+ * its own anchors and never its text (ADR-0093).
  */
+
+/** Asks the consent prompt to open again, from the footer or the account menu. */
+export const USAGE_SETTINGS_EVENT = "furrow:usage-settings";
+export function openUsageSettings() {
+  window.dispatchEvent(new Event(USAGE_SETTINGS_EVENT));
+}
+
+/** All a visitor who hasn't agreed sends: page views, errors and the workspace's events. */
+export function sentWithoutConsent(event: string) {
+  return event === "$pageview" || event === "$exception" || TELEMETRY_EVENTS.includes(event);
+}
+
+/** Attributes that may hold names the user typed: tooltips, labels, input values. */
+const TEXT_ATTRIBUTE = /^(title|alt|placeholder|label|download|value)$|^aria-/;
+
+/**
+ * An attribute's value as session replay may record it: masked when it may
+ * hold the user's text, as replay already masks every text node and input.
+ */
+export function maskReplayAttribute(name: string, value: string) {
+  return TEXT_ATTRIBUTE.test(name) ? "*".repeat(value.length) : value;
+}
+
+/**
+ * Attributes autocapture never reads, so they are in neither `$elements` nor
+ * the elements chain, which PostHog may send alone: those that may hold the
+ * user's text or a link with an ID, and classes, which are only noise.
+ */
+export const AUTOCAPTURE_IGNORED_ATTRIBUTES = [
+  "class",
+  "style",
+  "title",
+  "alt",
+  "placeholder",
+  "label",
+  "download",
+  "value",
+  "href",
+  "src",
+  "aria-label",
+  "aria-description",
+  "aria-roledescription",
+  "aria-valuetext",
+  "aria-placeholder",
+];
+
+/** An element's fields autocapture may send: its tag, position and our own anchors. */
+const KEPT_ELEMENT_FIELD =
+  /^(tag_name|nth_child|nth_of_type|attr__(data-tour|data-demo|data-slot|id|role|type))$/;
+/** Properties derived from an element's text, link, selectors or the text the visitor copied. */
+const ELEMENT_TEXT_PROPERTY = /^\$(el_text|external_click_url|selected_content|element_selectors)$/;
+
+/**
+ * The properties without any element's text, classes or other attributes,
+ * which may hold names the user typed (a `title` tooltip, a link to a
+ * project). The elements chain is kept: it was built without the ignored
+ * attributes, and with `mask_all_text` without text.
+ */
+export function scrubElements(properties: Record<string, unknown>): Record<string, unknown> {
+  const kept = Object.fromEntries(
+    Object.entries(properties).filter(([key]) => !ELEMENT_TEXT_PROPERTY.test(key)),
+  );
+  if (Array.isArray(kept.$elements)) {
+    kept.$elements = kept.$elements.map((element: unknown) =>
+      typeof element === "object" && element !== null
+        ? Object.fromEntries(
+            Object.entries(element).filter(([key]) => KEPT_ELEMENT_FIELD.test(key)),
+          )
+        : {},
+    );
+  }
+  return kept;
+}
 
 /** The page an event is captured on, as the telemetry component last saw it. */
 export type PageContext = {

@@ -69,7 +69,7 @@ import {
   type McpClient,
   mcpClients,
 } from "./mcp-setup";
-import { parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
+import { chooseTelemetry, parseTelemetryPrefs, type TelemetryPrefs } from "./telemetry";
 import { isTerrainRequest } from "./terrain";
 import {
   DOWNLOADS_PAGE,
@@ -137,8 +137,6 @@ const TELEMETRY_PARTITION = "telemetry";
 const POSTHOG_KEY = process.env.POSTHOG_KEY || null;
 /** Our proxy domain, or PostHog's EU cloud; also set at build time. */
 const POSTHOG_URL = posthogHost(process.env.POSTHOG_HOST);
-/** Anonymous: a new ID each launch, never stored. */
-const LAUNCH_ID = crypto.randomUUID();
 
 let window: BrowserWindow | null = null;
 /** Set by the window's own state: whether the open project has unsaved changes. */
@@ -175,7 +173,9 @@ let pickedLocale: Locale | null = null;
 // module, so each error is sent once and a session sends a limited number (ADR-0052).
 setTelemetrySink({
   track: trackEvent,
-  error: (error) => posthog?.captureException(error, LAUNCH_ID, appProperties()),
+  error: (error) => {
+    if (telemetryPrefs.id) posthog?.captureException(error, telemetryPrefs.id, appProperties());
+  },
 });
 // Observes uncaught errors without changing how they're handled. In Node's default mode an
 // unhandled rejection is raised as one, so it's seen here too.
@@ -225,6 +225,13 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
     telemetryPrefs = parseTelemetryPrefs(await readJson(telemetryPath()));
+    // Agreed before the ID was kept (ADR-0093): make one now, quietly, since the user chose
+    // nothing just now; if it can't be saved, the next launch makes another.
+    if (telemetryPrefs.enabled && !telemetryPrefs.id) {
+      telemetryPrefs = chooseTelemetry(telemetryPrefs, true, () => crypto.randomUUID());
+      const prefs = telemetryPrefs;
+      telemetryWrite = writeJson(telemetryPath(), prefs).catch(() => {});
+    }
     const saved = (await readJson(localePath())) as { picked?: unknown } | null;
     pickedLocale = isLocale(saved?.picked) ? saved.picked : null;
     applyTelemetry();
@@ -344,8 +351,10 @@ function appProperties() {
 }
 
 function trackEvent({ event, ...properties }: TelemetryEvent) {
+  if (!telemetryPrefs.id) return;
   posthog?.capture({
-    distinctId: LAUNCH_ID,
+    // Random, kept only while the user agrees, never linked to them (ADR-0093).
+    distinctId: telemetryPrefs.id,
     event,
     properties: { ...properties, ...appProperties() },
   });
@@ -363,13 +372,13 @@ async function askAboutTelemetry() {
     defaultId: 0,
     cancelId: 1,
   });
-  await saveTelemetryPrefs({ enabled: response === 0 });
+  await saveTelemetryChoice(response === 0);
   Menu.setApplicationMenu(buildMenu());
 }
 
 /** Applies the choice at once and saves it; a failed save keeps it until the app quits. */
-function saveTelemetryPrefs(change: TelemetryPrefs) {
-  telemetryPrefs = { ...telemetryPrefs, ...change };
+function saveTelemetryChoice(enabled: boolean) {
+  telemetryPrefs = chooseTelemetry(telemetryPrefs, enabled, () => crypto.randomUUID());
   applyTelemetry();
   const prefs = telemetryPrefs;
   telemetryWrite = telemetryWrite
@@ -885,8 +894,7 @@ function buildMenu() {
                 label: t("DesktopMain.menu.sendUsage"),
                 type: "checkbox" as const,
                 checked: telemetryPrefs.enabled === true,
-                click: (item: { checked: boolean }) =>
-                  void saveTelemetryPrefs({ enabled: item.checked }),
+                click: (item: { checked: boolean }) => void saveTelemetryChoice(item.checked),
               },
             ]
           : []),

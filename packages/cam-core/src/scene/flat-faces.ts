@@ -43,7 +43,7 @@ type Placed = { corners: Polygon; area: number; low: number; high: number };
 /**
  * The flat, upward-facing levels of `model`'s mesh `positions` (9 values
  * per triangle, as `parseStl` reads them) and its outline, in stock
- * coordinates as placed. With `faces` (a STEP file's, ADR-0093) a face is
+ * coordinates as placed. With `faces` (a STEP file's, ADR-0094) a face is
  * flat when all of it is; without, each triangle is taken on its own. A
  * level's outlines merge every flat face at its height; a round one becomes a
  * full-circle arc, so it is drilled and cut as a circle.

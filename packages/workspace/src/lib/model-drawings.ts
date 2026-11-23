@@ -7,7 +7,7 @@ import type { WorkspaceHost } from "./workspace-host";
 const FAILED: Message = { code: "workspace.modelDrawingsFailed" };
 
 /**
- * Makes a drawing of model `modelId`'s flat levels and outline (ADR-0093),
+ * Makes a drawing of model `modelId`'s flat levels and outline (ADR-0094),
  * found in a mesh worker of its own, and adds it as one undo step where the
  * model lies; the outline goes on the layer `outlineLayer`. Returns the new
  * drawing's id and how many levels it has, or why there is none: the model

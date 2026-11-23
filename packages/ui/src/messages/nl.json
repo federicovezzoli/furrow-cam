@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Rondleiding volgen",
+    "usageStatistics": "Gebruiksstatistieken…",
     "signOut": "Uitloggen",
     "deleteAccount": "Account verwijderen…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Bug melden",
     "privacy": "Privacy",
-    "licences": "Licenties van derden"
+    "licences": "Licenties van derden",
+    "usageStatistics": "Gebruiksstatistieken"
+  },
+  "UsageConsent": {
+    "title": "Helpen om Furrow CAM te verbeteren?",
+    "body": "Met je toestemming zien we ook welke knoppen je gebruikt en nemen we het scherm op met alle tekst verborgen, zodat we vinden waar de app lastig te gebruiken is. Je tekeningen en namen worden nooit opgenomen en niets wordt aan je account gekoppeld. Zonder toestemming tellen we alleen anonieme paginaweergaven en een paar gebeurtenissen.",
+    "privacy": "Privacybeleid",
+    "allow": "Toestaan",
+    "decline": "Nee, bedankt",
+    "currentlyAllowed": "Je staat dit nu toe.",
+    "currentlyDeclined": "Je staat dit nu niet toe."
   },
   "Licences": {
     "title": "Licenties van derden",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Anonieme gebruiksstatistieken en foutrapporten versturen?",
-      "detail": "Ze helpen crashes op te lossen en laten zien welke functies worden gebruikt: gebeurtenissen zoals “G-code geëxporteerd” en foutmeldingen, nooit je bestanden, projecten of iets waaraan je herkend kunt worden. Je kunt dit wijzigen in het menu Help.",
+      "detail": "Ze helpen crashes op te lossen en laten zien welke functies worden gebruikt: gebeurtenissen zoals \"G-code geëxporteerd\" en foutmeldingen, met een willekeurige ID op deze computer om herhaald gebruik te tellen, nooit je bestanden, projecten of iets dat jou identificeert. Je kunt dit wijzigen in het Help-menu.",
       "send": "Verstuur",
       "dontSend": "Verstuur niet"
     },

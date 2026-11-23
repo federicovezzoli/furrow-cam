@@ -63,7 +63,7 @@ export const Model = z
       }),
     placement: ModelPlacement,
     /**
-     * A STEP file's faces (ADR-0093): how many of the STL's triangles each
+     * A STEP file's faces (ADR-0094): how many of the STL's triangles each
      * face of the solid was meshed into, in the STL's order. Absent for an STL
      * file, whose triangles say nothing of the faces they were.
      */
