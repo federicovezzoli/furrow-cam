@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Hesap",
     "takeTour": "Tura katıl",
+    "usageStatistics": "Kullanım istatistikleri…",
     "signOut": "Çıkış yap",
     "deleteAccount": "Hesabı sil…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Hata bildir",
     "privacy": "Gizlilik",
-    "licences": "Üçüncü taraf lisansları"
+    "licences": "Üçüncü taraf lisansları",
+    "usageStatistics": "Kullanım istatistikleri"
+  },
+  "UsageConsent": {
+    "title": "Furrow CAM'i geliştirmeye yardım eder misiniz?",
+    "body": "İzninizle hangi düğmeleri kullandığınızı da görür ve uygulamanın nerede zor kullanıldığını bulmak için ekranı tüm metinler gizli olarak kaydederiz. Çizimleriniz ve adlarınız asla kaydedilmez ve hiçbir şey hesabınızla ilişkilendirilmez. İzin vermezseniz yalnızca anonim sayfa görüntülemelerini ve birkaç olayı sayarız.",
+    "privacy": "Gizlilik politikası",
+    "allow": "İzin ver",
+    "decline": "Hayır, teşekkürler",
+    "currentlyAllowed": "Şu anda buna izin veriyorsunuz.",
+    "currentlyDeclined": "Şu anda buna izin vermiyorsunuz."
   },
   "Licences": {
     "title": "Üçüncü taraf lisansları",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Anonim kullanım istatistikleri ve hata raporları gönderilsin mi?",
-      "detail": "Çökmelerin düzeltilmesine ve hangi özelliklerin kullanıldığının görülmesine yardımcı olurlar: “G-code dışa aktarıldı” gibi olaylar ve hata mesajları; asla dosyalarınız, projeleriniz veya sizi tanımlayan herhangi bir şey değil. Bunu Yardım menüsünden değiştirebilirsiniz.",
+      "detail": "Çökmeleri düzeltmeye yardımcı olur ve hangi özelliklerin kullanıldığını gösterir: \"G-code dışa aktarıldı\" gibi olaylar ve hata mesajları, tekrar kullanımı saymak için bu bilgisayarda saklanan rastgele bir kimlikle; asla dosyalarınız, projeleriniz veya sizi tanımlayan herhangi bir şey değil. Bunu Yardım menüsünden değiştirebilirsiniz.",
       "send": "Gönder",
       "dontSend": "Gönderme"
     },
@@ -542,7 +553,8 @@
       "spindleMinMax": "En az minimum iş mili devri kadar olmalıdır"
     },
     "model": {
-      "cornerOrder": "Minimum köşe maksimumu aşmamalıdır"
+      "cornerOrder": "Minimum köşe maksimumu aşmamalıdır",
+      "faceTriangles": "Modelin yüzleri tüm üçgenlerini paylaşmalıdır"
     },
     "geometry": {
       "zeroLine": "Sıfır uzunlukta çizgi",
@@ -830,7 +842,10 @@
       "patternNoSelection": "Doldurmak için bir çizimin kapalı yollarını seçin.",
       "patternOneDrawing": "Yalnızca tek bir çizimin yollarını seçin.",
       "patternOfPattern": "Bir desen başka bir desenle doldurulamaz.",
-      "patternNoClosedPath": "Seçimde doldurulacak kapalı yol yok."
+      "patternNoClosedPath": "Seçimde doldurulacak kapalı yol yok.",
+      "modelDrawingsFailed": "Modelin çizimleri oluşturulamadı. Tekrar deneyin.",
+      "noModelFaces": "Bu modelin yukarı bakan bir yüzü yok, bu yüzden çizilecek bir şey yok.",
+      "modelChanged": "Model, çizimleri oluşturulurken değişti. Tekrar deneyin."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",
@@ -1456,7 +1471,12 @@
     "position": "Konum",
     "positionHint": "Modelin {anchor, select, top_left {sol üst} top_center {üst orta} top_right {sağ üst} middle_left {sol orta} middle_right {sağ orta} bottom_left {sol alt} bottom_center {alt orta} bottom_right {sağ alt} other {merkez}} noktasının sıfırdan ölçülen konumu. Taşımak, <em>Ham malzemeye sığdır</em> işleminin bıraktığı kenar boşluğunu değiştirmez.",
     "removeTitle": "Onu işleyen {count, plural, one {işlemi} other {# işlemi}} de kaldırır",
-    "remove": "Modeli kaldır"
+    "remove": "Modeli kaldır",
+    "drawings": "Çizimler",
+    "drawingsHint": "Modelin düz seviyelerinin, her derinlik için bir katman olarak, ve dış hattının çizimini oluşturur; böylece cep, kontur ve delme işlemleriyle işlenebilir. Çizim, modelin şu an bulunduğu yerde kalır: onu takip etmez.",
+    "makeDrawings": "Modelden çizimler",
+    "outlineLayer": "Dış hat",
+    "outlineOnly": "Modelin düz yüzü yok, bu yüzden çizim yalnızca dış hattını içeriyor."
   },
   "Drawing": {
     "closeLabel": "Çizim özelliklerini kapat",

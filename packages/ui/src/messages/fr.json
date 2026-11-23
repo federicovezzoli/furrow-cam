@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Compte",
     "takeTour": "Faire la visite guidée",
+    "usageStatistics": "Statistiques d’utilisation…",
     "signOut": "Se déconnecter",
     "deleteAccount": "Supprimer le compte…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Signaler un bug",
     "privacy": "Confidentialité",
-    "licences": "Licences tierces"
+    "licences": "Licences tierces",
+    "usageStatistics": "Statistiques d’utilisation"
+  },
+  "UsageConsent": {
+    "title": "Aider à améliorer Furrow CAM ?",
+    "body": "Avec votre accord, nous voyons aussi quels boutons vous utilisez et enregistrons l’écran avec tout le texte masqué, pour trouver où l’application est difficile à utiliser. Vos dessins et vos noms ne sont jamais enregistrés, et rien n’est lié à votre compte. Sans cela, nous ne comptons que des pages vues anonymes et quelques événements.",
+    "privacy": "Politique de confidentialité",
+    "allow": "Autoriser",
+    "decline": "Non merci",
+    "currentlyAllowed": "Vous l’autorisez actuellement.",
+    "currentlyDeclined": "Vous ne l’autorisez pas actuellement."
   },
   "Licences": {
     "title": "Licences tierces",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Envoyer des statistiques d'utilisation et des rapports d'erreur anonymes ?",
-      "detail": "Ils aident à corriger les plantages et montrent quelles fonctions sont utilisées : des événements comme « G-code exporté » et des messages d'erreur, jamais vos fichiers, vos projets ni rien qui vous identifie. Vous pouvez changer cela dans le menu Aide.",
+      "detail": "Ils aident à corriger les plantages et montrent quelles fonctions sont utilisées : des événements comme « G-code exporté » et des messages d’erreur, avec un identifiant aléatoire conservé sur cet ordinateur pour compter les utilisations répétées, jamais vos fichiers, vos projets ni rien qui vous identifie. Vous pouvez changer cela dans le menu Aide.",
       "send": "Envoyer",
       "dontSend": "Ne pas envoyer"
     },
@@ -542,7 +553,8 @@
       "spindleMinMax": "Doit être au moins la vitesse de broche minimale"
     },
     "model": {
-      "cornerOrder": "Le coin minimal ne doit pas dépasser le maximal"
+      "cornerOrder": "Le coin minimal ne doit pas dépasser le maximal",
+      "faceTriangles": "Les faces du modèle doivent se partager tous ses triangles"
     },
     "geometry": {
       "zeroLine": "Ligne de longueur nulle",
@@ -830,7 +842,10 @@
       "patternNoSelection": "Sélectionnez des tracés fermés d'un dessin à remplir.",
       "patternOneDrawing": "Sélectionnez les tracés d'un seul dessin.",
       "patternOfPattern": "Un motif ne peut pas être rempli par un autre.",
-      "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir."
+      "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir.",
+      "modelDrawingsFailed": "Les dessins du modèle n'ont pas pu être créés. Réessayez.",
+      "noModelFaces": "Ce modèle n'a aucune face tournée vers le haut : il n'y a rien à dessiner.",
+      "modelChanged": "Le modèle a changé pendant la création de ses dessins. Réessayez."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
@@ -1456,7 +1471,12 @@
     "position": "Position",
     "positionHint": "Où se trouve le point {anchor, select, top_left {en haut à gauche} top_center {en haut au centre} top_right {en haut à droite} middle_left {au milieu à gauche} middle_right {au milieu à droite} bottom_left {en bas à gauche} bottom_center {en bas au centre} bottom_right {en bas à droite} other {central}} du modèle, mesuré depuis le zéro. Le déplacer ne change pas la bordure que laisse <em>Ajuster au brut</em>.",
     "removeTitle": "Retire aussi {count, plural, one {l’opération qui l’usine} other {les # opérations qui l’usinent}}",
-    "remove": "Retirer le modèle"
+    "remove": "Retirer le modèle",
+    "drawings": "Dessins",
+    "drawingsHint": "Crée un dessin des niveaux plats du modèle, un calque par profondeur, et de sa silhouette, pour l'usiner avec des poches, des contours et des perçages. Le dessin reste là où se trouve le modèle maintenant : il ne le suit pas.",
+    "makeDrawings": "Dessins du modèle",
+    "outlineLayer": "Silhouette",
+    "outlineOnly": "Le modèle n'a pas de faces planes : le dessin ne contient que sa silhouette."
   },
   "Drawing": {
     "closeLabel": "Fermer les propriétés du dessin",

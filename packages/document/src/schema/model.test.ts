@@ -49,6 +49,15 @@ describe("Model", () => {
     expect(Model.safeParse(withoutBorder).success).toBe(false);
   });
 
+  it("accepts a STEP model's faces only if they share out all its triangles", () => {
+    const faces = [model.triangles - 2, 2];
+    expect(Model.parse({ ...model, faces })).toEqual({ ...model, faces });
+    expect(Model.safeParse({ ...model, faces: [model.triangles - 1] }).error?.issues).toEqual([
+      expect.objectContaining({ path: ["faces"], message: "model.faceTriangles" }),
+    ]);
+    expect(Model.safeParse({ ...model, faces: [model.triangles, 0] }).success).toBe(false);
+  });
+
   it("rejects empty files, fractional counts and unknown keys", () => {
     expect(Model.safeParse({ ...model, size: 0 }).success).toBe(false);
     expect(Model.safeParse({ ...model, triangles: 1.5 }).success).toBe(false);

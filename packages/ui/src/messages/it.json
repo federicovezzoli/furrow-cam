@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Fai il tour",
+    "usageStatistics": "Statistiche di utilizzo…",
     "signOut": "Esci",
     "deleteAccount": "Elimina account…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Segnala un bug",
     "privacy": "Privacy",
-    "licences": "Licenze di terze parti"
+    "licences": "Licenze di terze parti",
+    "usageStatistics": "Statistiche di utilizzo"
+  },
+  "UsageConsent": {
+    "title": "Aiutare a migliorare Furrow CAM?",
+    "body": "Con il tuo permesso vediamo anche quali pulsanti usi e registriamo lo schermo con tutto il testo nascosto, per capire dove l'app è difficile da usare. I tuoi disegni e i tuoi nomi non vengono mai registrati e niente è collegato al tuo account. Senza, contiamo solo visite anonime e pochi eventi.",
+    "privacy": "Informativa sulla privacy",
+    "allow": "Consenti",
+    "decline": "No, grazie",
+    "currentlyAllowed": "Al momento lo consenti.",
+    "currentlyDeclined": "Al momento non lo consenti."
   },
   "Licences": {
     "title": "Licenze di terze parti",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Inviare statistiche d'uso e segnalazioni di errore anonime?",
-      "detail": "Aiutano a correggere i crash e mostrano quali funzioni vengono usate: eventi come \"G-code esportato\" e messaggi di errore, mai i tuoi file, i tuoi progetti o qualcosa che ti identifichi. Puoi cambiare idea dal menu Aiuto.",
+      "detail": "Aiutano a correggere i crash e mostrano quali funzioni vengono usate: eventi come \"G-code esportato\" e messaggi di errore, con un ID casuale conservato su questo computer per contare gli utilizzi ripetuti, mai i tuoi file, i tuoi progetti o qualcosa che ti identifichi. Puoi cambiare idea dal menu Aiuto.",
       "send": "Invia",
       "dontSend": "Non inviare"
     },
@@ -542,7 +553,8 @@
       "spindleMinMax": "Deve essere almeno la velocità minima del mandrino"
     },
     "model": {
-      "cornerOrder": "L'angolo minimo non può superare il massimo"
+      "cornerOrder": "L'angolo minimo non può superare il massimo",
+      "faceTriangles": "Le facce del modello devono ripartirne tutti i triangoli"
     },
     "geometry": {
       "zeroLine": "Linea di lunghezza zero",
@@ -830,7 +842,10 @@
       "patternNoSelection": "Seleziona percorsi chiusi di un disegno da riempire.",
       "patternOneDrawing": "Seleziona percorsi di un solo disegno.",
       "patternOfPattern": "Un motivo non può essere riempito con un altro.",
-      "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire."
+      "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire.",
+      "modelDrawingsFailed": "Non è stato possibile creare i disegni del modello. Riprova.",
+      "noModelFaces": "Questo modello non ha facce rivolte verso l'alto: non c'è niente da disegnare.",
+      "modelChanged": "Il modello è cambiato mentre se ne creavano i disegni. Riprova."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -1456,7 +1471,12 @@
     "position": "Posizione",
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del modello, misurato dallo zero. Spostarlo non cambia il bordo che lascia <em>Adatta al grezzo</em>.",
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lo lavora} other {le # operazioni che lo lavorano}}",
-    "remove": "Rimuovi il modello"
+    "remove": "Rimuovi il modello",
+    "drawings": "Disegni",
+    "drawingsHint": "Crea un disegno dei livelli piani del modello, un layer per ogni profondità, e della sua sagoma, per lavorarlo con tasche, contorni e forature. Il disegno resta dove si trova ora il modello: non lo segue.",
+    "makeDrawings": "Disegni dal modello",
+    "outlineLayer": "Sagoma",
+    "outlineOnly": "Il modello non ha facce piane: il disegno contiene solo la sua sagoma."
   },
   "Drawing": {
     "closeLabel": "Chiudi le proprietà del disegno",

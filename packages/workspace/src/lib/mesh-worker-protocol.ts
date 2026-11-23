@@ -4,12 +4,13 @@ import type {
   ImageRelief,
   ImageReliefSettings,
   LonLat,
+  ModelFlatFaces,
   Rotation,
   StlLimits,
   Terrain,
   TerrainSettings,
 } from "@furrow/cam-core";
-import type { Message } from "@furrow/document";
+import type { Message, Model } from "@furrow/document";
 
 /**
  * Messages to and from the mesh worker (ADR-0004), which reads STL files and
@@ -28,6 +29,8 @@ import type { Message } from "@furrow/document";
  *   STL comes back as `stl`, to be stored like an imported one.
  * - `image` builds the relief of an image's pixels, read on the main thread
  *   (PRD-0015); it comes back as a terrain does.
+ * - `faces` finds the flat levels and the outline of a placed model whose
+ *   STL is `bytes` (`modelFlatFaces`, ADR-0094).
  */
 export type MeshRequest =
   | { kind: "parse"; id: number; bytes: ArrayBuffer; limits: StlLimits }
@@ -52,10 +55,16 @@ export type MeshRequest =
       image: ImageData;
       settings: ImageReliefSettings;
       limits: StlLimits;
+    }
+  | {
+      kind: "faces";
+      id: number;
+      bytes: ArrayBuffer;
+      model: Pick<Model, "bounds" | "placement" | "faces">;
     };
 
-/** What the document records of a mesh (ADR-0029). */
-export type MeshSummary = { sha256: string; triangles: number; bounds: Box3 };
+/** What the document records of a mesh (ADR-0029), and of a STEP file's faces (ADR-0094). */
+export type MeshSummary = { sha256: string; triangles: number; bounds: Box3; faces?: number[] };
 
 /** A terrain built in the worker, its STL as a buffer to transfer. */
 export type GeneratedTerrain = MeshSummary &
@@ -73,6 +82,7 @@ export type MeshResponse =
   | { kind: "terrainProgress"; id: number; done: number; total: number }
   | ({ kind: "terrain"; id: number } & GeneratedTerrain)
   | ({ kind: "image"; id: number } & GeneratedRelief)
+  | ({ kind: "faces"; id: number } & ModelFlatFaces)
   /** `error` is for the user. */
   | { kind: "failed"; id: number; error: Message };
 

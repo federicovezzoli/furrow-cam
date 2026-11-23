@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Rondleiding volgen",
+    "usageStatistics": "Gebruiksstatistieken…",
     "signOut": "Uitloggen",
     "deleteAccount": "Account verwijderen…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Bug melden",
     "privacy": "Privacy",
-    "licences": "Licenties van derden"
+    "licences": "Licenties van derden",
+    "usageStatistics": "Gebruiksstatistieken"
+  },
+  "UsageConsent": {
+    "title": "Helpen om Furrow CAM te verbeteren?",
+    "body": "Met je toestemming zien we ook welke knoppen je gebruikt en nemen we het scherm op met alle tekst verborgen, zodat we vinden waar de app lastig te gebruiken is. Je tekeningen en namen worden nooit opgenomen en niets wordt aan je account gekoppeld. Zonder toestemming tellen we alleen anonieme paginaweergaven en een paar gebeurtenissen.",
+    "privacy": "Privacybeleid",
+    "allow": "Toestaan",
+    "decline": "Nee, bedankt",
+    "currentlyAllowed": "Je staat dit nu toe.",
+    "currentlyDeclined": "Je staat dit nu niet toe."
   },
   "Licences": {
     "title": "Licenties van derden",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Anonieme gebruiksstatistieken en foutrapporten versturen?",
-      "detail": "Ze helpen crashes op te lossen en laten zien welke functies worden gebruikt: gebeurtenissen zoals “G-code geëxporteerd” en foutmeldingen, nooit je bestanden, projecten of iets waaraan je herkend kunt worden. Je kunt dit wijzigen in het menu Help.",
+      "detail": "Ze helpen crashes op te lossen en laten zien welke functies worden gebruikt: gebeurtenissen zoals \"G-code geëxporteerd\" en foutmeldingen, met een willekeurige ID op deze computer om herhaald gebruik te tellen, nooit je bestanden, projecten of iets dat jou identificeert. Je kunt dit wijzigen in het Help-menu.",
       "send": "Verstuur",
       "dontSend": "Verstuur niet"
     },
@@ -542,7 +553,8 @@
       "spindleMinMax": "Moet minstens het minimale spindeltoerental zijn"
     },
     "model": {
-      "cornerOrder": "De minimale hoek mag niet groter zijn dan de maximale"
+      "cornerOrder": "De minimale hoek mag niet groter zijn dan de maximale",
+      "faceTriangles": "De vlakken van het model moeten al zijn driehoeken verdelen"
     },
     "geometry": {
       "zeroLine": "Lijn met lengte nul",
@@ -830,7 +842,10 @@
       "patternNoSelection": "Selecteer gesloten paden van een tekening om te vullen.",
       "patternOneDrawing": "Selecteer paden van één tekening.",
       "patternOfPattern": "Een patroon kan niet met een ander worden gevuld.",
-      "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen."
+      "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen.",
+      "modelDrawingsFailed": "De tekeningen van het model konden niet worden gemaakt. Probeer het opnieuw.",
+      "noModelFaces": "Dit model heeft geen vlak dat naar boven wijst, dus er valt niets te tekenen.",
+      "modelChanged": "Het model is gewijzigd terwijl de tekeningen werden gemaakt. Probeer het opnieuw."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",
@@ -1456,7 +1471,12 @@
     "position": "Positie",
     "positionHint": "Waar het punt {anchor, select, top_left {linksboven} top_center {midden boven} top_right {rechtsboven} middle_left {midden links} middle_right {midden rechts} bottom_left {linksonder} bottom_center {midden onder} bottom_right {rechtsonder} other {in het midden}} van het model ligt, gemeten vanaf het nulpunt. Verplaatsen verandert de rand die <em>Passend maken</em> vrijlaat niet.",
     "removeTitle": "Verwijdert ook de {count, plural, one {bewerking} other {# bewerkingen}} die het bewerken",
-    "remove": "Model verwijderen"
+    "remove": "Model verwijderen",
+    "drawings": "Tekeningen",
+    "drawingsHint": "Maakt een tekening van de vlakke niveaus van het model, een laag per diepte, en van zijn omtrek, om het te frezen met uitsparingen, contouren en boringen. De tekening blijft waar het model nu ligt: ze volgt het niet.",
+    "makeDrawings": "Tekeningen uit model",
+    "outlineLayer": "Omtrek",
+    "outlineOnly": "Het model heeft geen vlakke vlakken, dus de tekening bevat alleen zijn omtrek."
   },
   "Drawing": {
     "closeLabel": "Eigenschappen van tekening sluiten",

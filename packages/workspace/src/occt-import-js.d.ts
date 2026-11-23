@@ -3,6 +3,8 @@ declare module "occt-import-js" {
   export type OcctMesh = {
     attributes: { position: { array: number[] } };
     index: { array: number[] };
+    /** Each face of the solid: its first and last triangle in `index`. */
+    brep_faces?: { first: number; last: number }[];
   };
   export type OcctResult = { success: boolean; meshes?: OcctMesh[] };
   export type Occt = {

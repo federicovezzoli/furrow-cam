@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Take the tour",
+    "usageStatistics": "Usage statistics…",
     "signOut": "Sign out",
     "deleteAccount": "Delete account…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Report a bug",
     "privacy": "Privacy",
-    "licences": "Third-party licences"
+    "licences": "Third-party licences",
+    "usageStatistics": "Usage statistics"
+  },
+  "UsageConsent": {
+    "title": "Help improve Furrow CAM?",
+    "body": "With your permission, we also see which buttons you use and record the screen with every text hidden, so we can find where the app is hard to use. Your drawings and names are never recorded, and nothing is linked to your account. Without it, we only count anonymous page views and a few events.",
+    "privacy": "Privacy policy",
+    "allow": "Allow",
+    "decline": "No thanks",
+    "currentlyAllowed": "You currently allow this.",
+    "currentlyDeclined": "You currently don't allow this."
   },
   "Licences": {
     "title": "Third-party licences",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Send anonymous usage statistics and error reports?",
-      "detail": "They help fix crashes and show which features are used: events such as \"G-code exported\" and error messages, never your files, projects or anything that identifies you. You can change this in the Help menu.",
+      "detail": "They help fix crashes and show which features are used: events such as \"G-code exported\" and error messages, with a random ID kept on this computer to count returning use, never your files, projects or anything that identifies you. You can change this in the Help menu.",
       "send": "Send",
       "dontSend": "Don't Send"
     },
@@ -542,7 +553,8 @@
       "spindleMinMax": "Must be at least the minimum spindle speed"
     },
     "model": {
-      "cornerOrder": "The minimum corner must not exceed the maximum"
+      "cornerOrder": "The minimum corner must not exceed the maximum",
+      "faceTriangles": "The model's faces must account for all its triangles"
     },
     "geometry": {
       "zeroLine": "Zero-length line",
@@ -830,7 +842,10 @@
       "patternNoSelection": "Select closed paths of a drawing to fill.",
       "patternOneDrawing": "Select paths of one drawing only.",
       "patternOfPattern": "A pattern can't be filled with another.",
-      "patternNoClosedPath": "The selection has no closed path to fill."
+      "patternNoClosedPath": "The selection has no closed path to fill.",
+      "modelDrawingsFailed": "The model's drawings couldn't be made. Try again.",
+      "noModelFaces": "This model has no face looking up, so there is nothing to draw.",
+      "modelChanged": "The model changed while its drawings were being made. Try again."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",
@@ -1456,7 +1471,12 @@
     "position": "Position",
     "positionHint": "Where the model's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Moving it doesn't change the border that <em>Fit to stock</em> leaves.",
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that machine it",
-    "remove": "Remove model"
+    "remove": "Remove model",
+    "drawings": "Drawings",
+    "drawingsHint": "Make a drawing of the model's flat levels, a layer for each depth, and of its outline, to machine it with pockets, profiles and drills. The drawing stays where the model is now: it doesn't follow it.",
+    "makeDrawings": "Drawings from model",
+    "outlineLayer": "Outline",
+    "outlineOnly": "The model has no flat faces, so the drawing holds only its outline."
   },
   "Drawing": {
     "closeLabel": "Close drawing properties",

@@ -1,6 +1,7 @@
 import {
   type Box3,
   imageReliefMesh,
+  modelFlatFaces,
   modelHeightmap,
   parseStl,
   planTerrain,
@@ -84,15 +85,29 @@ async function handle(request: MeshRequest): Promise<MeshResponse> {
     return { kind: "terrain", id, sha256, triangles, bounds, size, stl: stl.buffer, ...terrain };
   }
   if (request.kind === "parse") {
-    const step = isStepFile(new Uint8Array(request.bytes));
-    const bytes = step
-      ? (await stepToStl(new Uint8Array(request.bytes), request.limits, occtWasm)).buffer
-      : request.bytes;
+    const step = isStepFile(new Uint8Array(request.bytes))
+      ? await stepToStl(new Uint8Array(request.bytes), request.limits, occtWasm)
+      : null;
+    const bytes = step ? step.stl.buffer : request.bytes;
     const mesh = parseStl(new Uint8Array(bytes), request.limits);
     const sha256 = await sha256Hex(bytes);
     keep(sha256, mesh);
     const { triangles, bounds } = mesh;
-    return { kind: "parsed", id, sha256, triangles, bounds, ...(step && { stl: bytes }) };
+    const faces = step?.faces;
+    return {
+      kind: "parsed",
+      id,
+      sha256,
+      triangles,
+      bounds,
+      ...(step && { stl: bytes }),
+      ...(faces && { faces }),
+    };
+  }
+
+  if (request.kind === "faces") {
+    const { positions } = parseStl(new Uint8Array(request.bytes), NO_LIMITS);
+    return { kind: "faces", id, ...modelFlatFaces(positions, request.model) };
   }
 
   let mesh = meshes.get(request.sha256);
