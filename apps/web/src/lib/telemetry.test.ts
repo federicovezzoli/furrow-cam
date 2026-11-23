@@ -92,7 +92,8 @@ describe("scrubElements", () => {
     const properties = scrubElements({
       $event_type: "click",
       $el_text: "My secret project",
-      $elements_chain: 'a:text="My secret project"attr__title="My secret project"',
+      $elements_chain: 'button:attr__data-tour="rename"nth-child="2"nth-of-type="1"',
+      $element_selectors: ['[title="My secret project"]'],
       $external_click_url: "https://example.com/?q=x",
       $elements: [
         {
@@ -113,6 +114,7 @@ describe("scrubElements", () => {
     });
     expect(properties).toEqual({
       $event_type: "click",
+      $elements_chain: 'button:attr__data-tour="rename"nth-child="2"nth-of-type="1"',
       $elements: [
         {
           tag_name: "button",
@@ -127,8 +129,9 @@ describe("scrubElements", () => {
     });
   });
 
-  it("drops a chain sent without its elements", () => {
-    expect(scrubElements({ $elements_chain: 'span:text="x"' })).toEqual({});
+  it("keeps a chain sent without its elements, built without text or ignored attributes", () => {
+    const chain = 'button:attr__data-tour="export"nth-child="1"nth-of-type="1"';
+    expect(scrubElements({ $elements_chain: chain })).toEqual({ $elements_chain: chain });
   });
 });
 

@@ -6,6 +6,7 @@ import { useParams, usePathname } from "next/navigation";
 import posthog from "posthog-js/no-external";
 import { useEffect, useState } from "react";
 import {
+  AUTOCAPTURE_IGNORED_ATTRIBUTES,
   externalOrigin,
   maskReplayAttribute,
   type PageContext,
@@ -44,7 +45,7 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
       opt_out_capturing_by_default: true,
       person_profiles: "never",
       // Dropped by `before_send` without consent.
-      autocapture: true,
+      autocapture: { element_attribute_ignorelist: AUTOCAPTURE_IGNORED_ATTRIBUTES },
       mask_all_text: true,
       capture_dead_clicks: false,
       enable_heatmaps: false,
@@ -53,11 +54,15 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
       capture_performance: false,
       // Errors go through `captureError`, which scrubs them.
       capture_exceptions: false,
-      // Recording starts only with consent; the 3D viewport's canvas is never recorded.
+      // Recording starts only with consent. Set here, not left to remote config: the 3D
+      // viewport's canvas and request bodies (project documents) are never recorded.
       session_recording: {
         maskAllInputs: true,
         maskTextSelector: "*",
         maskAttributeFn: maskReplayAttribute,
+        captureCanvas: { recordCanvas: false },
+        recordHeaders: false,
+        recordBody: false,
       },
       enable_recording_console_log: false,
       disable_surveys: true,

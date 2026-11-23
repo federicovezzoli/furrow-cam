@@ -30,16 +30,40 @@ export function maskReplayAttribute(name: string, value: string) {
   return TEXT_ATTRIBUTE.test(name) ? "*".repeat(value.length) : value;
 }
 
+/**
+ * Attributes autocapture never reads, so they are in neither `$elements` nor
+ * the elements chain, which PostHog may send alone: those that may hold the
+ * user's text or a link with an ID, and classes, which are only noise.
+ */
+export const AUTOCAPTURE_IGNORED_ATTRIBUTES = [
+  "class",
+  "style",
+  "title",
+  "alt",
+  "placeholder",
+  "label",
+  "download",
+  "value",
+  "href",
+  "src",
+  "aria-label",
+  "aria-description",
+  "aria-roledescription",
+  "aria-valuetext",
+  "aria-placeholder",
+];
+
 /** An element's fields autocapture may send: its tag, position and our own anchors. */
 const KEPT_ELEMENT_FIELD =
   /^(tag_name|nth_child|nth_of_type|attr__(data-tour|data-demo|data-slot|id|role|type))$/;
-/** Properties derived from an element's text, link or the text the visitor copied. */
-const ELEMENT_TEXT_PROPERTY = /^\$(el_text|elements_chain|external_click_url|selected_content)$/;
+/** Properties derived from an element's text, link, selectors or the text the visitor copied. */
+const ELEMENT_TEXT_PROPERTY = /^\$(el_text|external_click_url|selected_content|element_selectors)$/;
 
 /**
  * The properties without any element's text, classes or other attributes,
  * which may hold names the user typed (a `title` tooltip, a link to a
- * project). PostHog builds the elements chain from the kept `$elements`.
+ * project). The elements chain is kept: it was built without the ignored
+ * attributes, and with `mask_all_text` without text.
  */
 export function scrubElements(properties: Record<string, unknown>): Record<string, unknown> {
   const kept = Object.fromEntries(
