@@ -48,6 +48,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 | S11 | Rest machining for 2D pockets, reusing S8 | Could |
 | S12 | 3D operations leave the touch-off pad, once the user turns it on, at the stock top (PRD-0002 Z11), so Z can be zeroed on it after the tool change between roughing and finishing | Should |
 | S13 | Holding tabs on one-sided jobs: the user can turn on the holding tabs of PRD-0011 B5 without making the project two-sided. Each stands its thickness up from the stock bottom, so a model reaching the stock bottom stays held until the last pass. A warning when such a model has none | Should |
+| S14 | **Drawings from a model:** one command makes a drawing of a model's flat, upward-facing levels, a layer per height, and of its outline, where the model lies, so a 2.5D part is machined with pockets, profiles and drills instead of relief passes. Round holes become circles a drill operation takes. A STEP model's faces are kept on import so a face counts as flat only if all of it is (ADR-0093) | Should |
 
 ## User flow
 
@@ -63,7 +64,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 
 ## Open questions
 
-- Should a model also offer a 2D outline (its silhouette) for a profile cut-out, or is that drawn separately?
+None.
 
 ## Changelog
 
@@ -78,4 +79,5 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 - 2026-11-01: S1b, STEP import, no longer a non-goal (#442, ADR-0072)
 - 2026-11-07: S2 adds *Center on stock* (#495)
 - 2026-11-15: S1c, several models per project (#596, ADR-0085)
+- 2026-11-23: S14, drawings from a model's flat faces and outline, answering the open question on the silhouette (#665, ADR-0093)
 - 2026-11-16: S13, holding tabs on one-sided jobs (#616, ADR-0086)
