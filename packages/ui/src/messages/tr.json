@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Hesap",
     "takeTour": "Tura katıl",
+    "usageStatistics": "Kullanım istatistikleri…",
     "signOut": "Çıkış yap",
     "deleteAccount": "Hesabı sil…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Hata bildir",
     "privacy": "Gizlilik",
-    "licences": "Üçüncü taraf lisansları"
+    "licences": "Üçüncü taraf lisansları",
+    "usageStatistics": "Kullanım istatistikleri"
+  },
+  "UsageConsent": {
+    "title": "Furrow CAM'i geliştirmeye yardım eder misiniz?",
+    "body": "İzninizle hangi düğmeleri kullandığınızı da görür ve uygulamanın nerede zor kullanıldığını bulmak için ekranı tüm metinler gizli olarak kaydederiz. Çizimleriniz ve adlarınız asla kaydedilmez ve hiçbir şey hesabınızla ilişkilendirilmez. İzin vermezseniz yalnızca anonim sayfa görüntülemelerini ve birkaç olayı sayarız.",
+    "privacy": "Gizlilik politikası",
+    "allow": "İzin ver",
+    "decline": "Hayır, teşekkürler",
+    "currentlyAllowed": "Şu anda buna izin veriyorsunuz.",
+    "currentlyDeclined": "Şu anda buna izin vermiyorsunuz."
   },
   "Licences": {
     "title": "Üçüncü taraf lisansları",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Anonim kullanım istatistikleri ve hata raporları gönderilsin mi?",
-      "detail": "Çökmelerin düzeltilmesine ve hangi özelliklerin kullanıldığının görülmesine yardımcı olurlar: “G-code dışa aktarıldı” gibi olaylar ve hata mesajları; asla dosyalarınız, projeleriniz veya sizi tanımlayan herhangi bir şey değil. Bunu Yardım menüsünden değiştirebilirsiniz.",
+      "detail": "Çökmeleri düzeltmeye yardımcı olur ve hangi özelliklerin kullanıldığını gösterir: \"G-code dışa aktarıldı\" gibi olaylar ve hata mesajları, tekrar kullanımı saymak için bu bilgisayarda saklanan rastgele bir kimlikle; asla dosyalarınız, projeleriniz veya sizi tanımlayan herhangi bir şey değil. Bunu Yardım menüsünden değiştirebilirsiniz.",
       "send": "Gönder",
       "dontSend": "Gönderme"
     },

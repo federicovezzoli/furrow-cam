@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { externalOrigin, type PageContext, routePattern, scrubProperties } from "./telemetry";
+import {
+  externalOrigin,
+  maskReplayAttribute,
+  type PageContext,
+  routePattern,
+  scrubElements,
+  scrubProperties,
+  sentWithoutConsent,
+} from "./telemetry";
 
 const page: PageContext = {
   origin: "https://furrow.cam",
@@ -62,5 +70,80 @@ describe("externalOrigin", () => {
     );
     expect(externalOrigin("https://furrow.cam/projects/abc", "https://furrow.cam")).toBeNull();
     expect(externalOrigin("", "https://furrow.cam")).toBeNull();
+  });
+});
+
+describe("sentWithoutConsent", () => {
+  it("lets through page views, errors and the workspace's events", () => {
+    expect(sentWithoutConsent("$pageview")).toBe(true);
+    expect(sentWithoutConsent("$exception")).toBe(true);
+    expect(sentWithoutConsent("operation_added")).toBe(true);
+  });
+
+  it("holds back autocapture, replay and anything else", () => {
+    for (const event of ["$autocapture", "$rageclick", "$snapshot", "$opt_in", "$pageleave"]) {
+      expect(sentWithoutConsent(event)).toBe(false);
+    }
+  });
+});
+
+describe("scrubElements", () => {
+  it("keeps an element's tag, position and our anchors, never its text or other attributes", () => {
+    const properties = scrubElements({
+      $event_type: "click",
+      $el_text: "My secret project",
+      $elements_chain: 'button:attr__data-tour="rename"nth-child="2"nth-of-type="1"',
+      $element_selectors: ['[title="My secret project"]'],
+      $external_click_url: "https://example.com/?q=x",
+      $elements: [
+        {
+          tag_name: "button",
+          $el_text: "Rename",
+          classes: ["inline-flex"],
+          nth_child: 2,
+          nth_of_type: 1,
+          attr__class: "inline-flex",
+          attr__title: "My secret project",
+          "attr__aria-label": "Rename My secret project",
+          "attr__data-tour": "rename",
+          attr__type: "button",
+        },
+        { tag_name: "a", attr__href: "/projects/abc123", attr__id: "project-link" },
+        "not an element",
+      ],
+    });
+    expect(properties).toEqual({
+      $event_type: "click",
+      $elements_chain: 'button:attr__data-tour="rename"nth-child="2"nth-of-type="1"',
+      $elements: [
+        {
+          tag_name: "button",
+          nth_child: 2,
+          nth_of_type: 1,
+          "attr__data-tour": "rename",
+          attr__type: "button",
+        },
+        { tag_name: "a", attr__id: "project-link" },
+        {},
+      ],
+    });
+  });
+
+  it("keeps a chain sent without its elements, built without text or ignored attributes", () => {
+    const chain = 'button:attr__data-tour="export"nth-child="1"nth-of-type="1"';
+    expect(scrubElements({ $elements_chain: chain })).toEqual({ $elements_chain: chain });
+  });
+});
+
+describe("maskReplayAttribute", () => {
+  it("masks tooltips, labels and values, which may hold the user's names", () => {
+    expect(maskReplayAttribute("title", "Lid pocket")).toBe("**********");
+    expect(maskReplayAttribute("aria-label", "Delete Lid")).toBe("**********");
+    expect(maskReplayAttribute("value", "12")).toBe("**");
+  });
+
+  it("keeps what the layout needs", () => {
+    expect(maskReplayAttribute("class", "flex gap-2")).toBe("flex gap-2");
+    expect(maskReplayAttribute("data-tour", "operations")).toBe("operations");
   });
 });

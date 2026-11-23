@@ -37,6 +37,10 @@ const TelemetryEvent = z.discriminatedUnion("event", [
   z.strictObject({ event: z.literal("guest_imported"), projects: z.number().int().positive() }),
 ]);
 export type TelemetryEvent = z.infer<typeof TelemetryEvent>;
+/** The events' names: all the web app sends, with page views and errors, without consent. */
+export const TELEMETRY_EVENTS: readonly string[] = TelemetryEvent.options.map(
+  (option) => option.shape.event.value,
+);
 
 export type TelemetrySink = {
   track(event: TelemetryEvent): void;

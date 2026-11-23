@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Fai il tour",
+    "usageStatistics": "Statistiche di utilizzo…",
     "signOut": "Esci",
     "deleteAccount": "Elimina account…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Segnala un bug",
     "privacy": "Privacy",
-    "licences": "Licenze di terze parti"
+    "licences": "Licenze di terze parti",
+    "usageStatistics": "Statistiche di utilizzo"
+  },
+  "UsageConsent": {
+    "title": "Aiutare a migliorare Furrow CAM?",
+    "body": "Con il tuo permesso vediamo anche quali pulsanti usi e registriamo lo schermo con tutto il testo nascosto, per capire dove l'app è difficile da usare. I tuoi disegni e i tuoi nomi non vengono mai registrati e niente è collegato al tuo account. Senza, contiamo solo visite anonime e pochi eventi.",
+    "privacy": "Informativa sulla privacy",
+    "allow": "Consenti",
+    "decline": "No, grazie",
+    "currentlyAllowed": "Al momento lo consenti.",
+    "currentlyDeclined": "Al momento non lo consenti."
   },
   "Licences": {
     "title": "Licenze di terze parti",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Inviare statistiche d'uso e segnalazioni di errore anonime?",
-      "detail": "Aiutano a correggere i crash e mostrano quali funzioni vengono usate: eventi come \"G-code esportato\" e messaggi di errore, mai i tuoi file, i tuoi progetti o qualcosa che ti identifichi. Puoi cambiare idea dal menu Aiuto.",
+      "detail": "Aiutano a correggere i crash e mostrano quali funzioni vengono usate: eventi come \"G-code esportato\" e messaggi di errore, con un ID casuale conservato su questo computer per contare gli utilizzi ripetuti, mai i tuoi file, i tuoi progetti o qualcosa che ti identifichi. Puoi cambiare idea dal menu Aiuto.",
       "send": "Invia",
       "dontSend": "Non inviare"
     },

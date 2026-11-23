@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Account",
     "takeTour": "Take the tour",
+    "usageStatistics": "Usage statistics…",
     "signOut": "Sign out",
     "deleteAccount": "Delete account…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Report a bug",
     "privacy": "Privacy",
-    "licences": "Third-party licences"
+    "licences": "Third-party licences",
+    "usageStatistics": "Usage statistics"
+  },
+  "UsageConsent": {
+    "title": "Help improve Furrow CAM?",
+    "body": "With your permission, we also see which buttons you use and record the screen with every text hidden, so we can find where the app is hard to use. Your drawings and names are never recorded, and nothing is linked to your account. Without it, we only count anonymous page views and a few events.",
+    "privacy": "Privacy policy",
+    "allow": "Allow",
+    "decline": "No thanks",
+    "currentlyAllowed": "You currently allow this.",
+    "currentlyDeclined": "You currently don't allow this."
   },
   "Licences": {
     "title": "Third-party licences",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Send anonymous usage statistics and error reports?",
-      "detail": "They help fix crashes and show which features are used: events such as \"G-code exported\" and error messages, never your files, projects or anything that identifies you. You can change this in the Help menu.",
+      "detail": "They help fix crashes and show which features are used: events such as \"G-code exported\" and error messages, with a random ID kept on this computer to count returning use, never your files, projects or anything that identifies you. You can change this in the Help menu.",
       "send": "Send",
       "dontSend": "Don't Send"
     },

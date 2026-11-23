@@ -9,17 +9,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@furrow/ui/components/ui/dropdown-menu";
-import { ChevronDownIcon, CircleHelpIcon, LogOutIcon, Trash2Icon } from "lucide-react";
+import {
+  ChartNoAxesColumnIcon,
+  ChevronDownIcon,
+  CircleHelpIcon,
+  LogOutIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { openUsageSettings } from "@/lib/telemetry";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
 /**
  * The header's account menu: the signed-in email, the guided tour
  * (`onTakeTour` replays it, given the menu's button to give focus back to),
- * account deletion and sign-out.
+ * the usage statistics choice, account deletion and sign-out.
  */
 export function AccountMenu({
   email,
@@ -58,6 +65,12 @@ export function AccountMenu({
             <DropdownMenuItem onSelect={() => onTakeTour(trigger.current)}>
               <CircleHelpIcon />
               {t("takeTour")}
+            </DropdownMenuItem>
+          )}
+          {process.env.NEXT_PUBLIC_POSTHOG_KEY && (
+            <DropdownMenuItem onSelect={openUsageSettings}>
+              <ChartNoAxesColumnIcon />
+              {t("usageStatistics")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onSelect={signOut}>
