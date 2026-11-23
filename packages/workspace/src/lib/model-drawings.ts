@@ -11,7 +11,8 @@ const FAILED: Message = { code: "workspace.modelDrawingsFailed" };
  * found in a mesh worker of its own, and adds it as one undo step where the
  * model lies; the outline goes on the layer `outlineLayer`. Returns the new
  * drawing's id and how many levels it has, or why there is none: the model
- * has no face looking up, or its mesh couldn't be read.
+ * has no face looking up, it changed while the worker ran, or its mesh
+ * couldn't be read.
  */
 export async function drawingsFromModel(
   modelId: string,
@@ -31,6 +32,10 @@ export async function drawingsFromModel(
     if (found.kind !== "faces") return { ok: false, error: FAILED };
     // An undo step of its own, after any gesture still open, as `storeModel` does.
     await gestureDone(document);
+    // Moved, turned or removed meanwhile, or another document loaded (Immer makes a changed model a
+    // new object): the outlines would be in the wrong place.
+    const now = document.getState().document.models.find(({ id }) => id === modelId);
+    if (now !== model) return { ok: false, error: { code: "workspace.modelChanged" } };
     const id = addModelDrawing(document, model.fileName, found, outlineLayer);
     if (!id) return { ok: false, error: { code: "workspace.noModelFaces" } };
     return { ok: true, id, levels: found.levels.length };

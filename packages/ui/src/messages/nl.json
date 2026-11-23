@@ -844,7 +844,8 @@
       "patternOfPattern": "Een patroon kan niet met een ander worden gevuld.",
       "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen.",
       "modelDrawingsFailed": "De tekeningen van het model konden niet worden gemaakt. Probeer het opnieuw.",
-      "noModelFaces": "Dit model heeft geen vlak dat naar boven wijst, dus er valt niets te tekenen."
+      "noModelFaces": "Dit model heeft geen vlak dat naar boven wijst, dus er valt niets te tekenen.",
+      "modelChanged": "Het model is gewijzigd terwijl de tekeningen werden gemaakt. Probeer het opnieuw."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",

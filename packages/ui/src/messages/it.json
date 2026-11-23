@@ -844,7 +844,8 @@
       "patternOfPattern": "Un motivo non può essere riempito con un altro.",
       "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire.",
       "modelDrawingsFailed": "Non è stato possibile creare i disegni del modello. Riprova.",
-      "noModelFaces": "Questo modello non ha facce rivolte verso l'alto: non c'è niente da disegnare."
+      "noModelFaces": "Questo modello non ha facce rivolte verso l'alto: non c'è niente da disegnare.",
+      "modelChanged": "Il modello è cambiato mentre se ne creavano i disegni. Riprova."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",

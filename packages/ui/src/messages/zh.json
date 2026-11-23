@@ -844,7 +844,8 @@
       "patternOfPattern": "图案不能用另一个图案填充。",
       "patternNoClosedPath": "所选内容没有可填充的闭合路径。",
       "modelDrawingsFailed": "无法生成模型的图纸，请重试。",
-      "noModelFaces": "此模型没有朝上的面，没有可绘制的内容。"
+      "noModelFaces": "此模型没有朝上的面，没有可绘制的内容。",
+      "modelChanged": "生成图纸时模型发生了变化，请重试。"
     },
     "terrain": {
       "noArea": "此区域太小，请绘制更大的区域。",

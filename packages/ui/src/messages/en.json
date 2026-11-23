@@ -844,7 +844,8 @@
       "patternOfPattern": "A pattern can't be filled with another.",
       "patternNoClosedPath": "The selection has no closed path to fill.",
       "modelDrawingsFailed": "The model's drawings couldn't be made. Try again.",
-      "noModelFaces": "This model has no face looking up, so there is nothing to draw."
+      "noModelFaces": "This model has no face looking up, so there is nothing to draw.",
+      "modelChanged": "The model changed while its drawings were being made. Try again."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",

@@ -844,7 +844,8 @@
       "patternOfPattern": "Um padrão não pode ser preenchido com outro.",
       "patternNoClosedPath": "A seleção não tem caminhos fechados para preencher.",
       "modelDrawingsFailed": "Não foi possível criar os desenhos do modelo. Tente novamente.",
-      "noModelFaces": "Este modelo não tem nenhuma face voltada para cima: não há nada para desenhar."
+      "noModelFaces": "Este modelo não tem nenhuma face voltada para cima: não há nada para desenhar.",
+      "modelChanged": "O modelo mudou enquanto os seus desenhos eram criados. Tente novamente."
     },
     "terrain": {
       "noArea": "Esta área é demasiado pequena. Desenhe uma maior.",

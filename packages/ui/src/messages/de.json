@@ -844,7 +844,8 @@
       "patternOfPattern": "Ein Muster kann nicht mit einem anderen gefüllt werden.",
       "patternNoClosedPath": "Die Auswahl hat keinen geschlossenen Pfad zum Füllen.",
       "modelDrawingsFailed": "Die Zeichnungen des Modells konnten nicht erstellt werden. Versuche es erneut.",
-      "noModelFaces": "Dieses Modell hat keine nach oben zeigende Fläche, es gibt also nichts zu zeichnen."
+      "noModelFaces": "Dieses Modell hat keine nach oben zeigende Fläche, es gibt also nichts zu zeichnen.",
+      "modelChanged": "Das Modell hat sich geändert, während seine Zeichnungen erstellt wurden. Versuche es erneut."
     },
     "terrain": {
       "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",

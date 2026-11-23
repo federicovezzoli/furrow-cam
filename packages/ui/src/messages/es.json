@@ -844,7 +844,8 @@
       "patternOfPattern": "Un patrón no se puede rellenar con otro.",
       "patternNoClosedPath": "La selección no tiene trazados cerrados que rellenar.",
       "modelDrawingsFailed": "No se pudieron crear los dibujos del modelo. Inténtalo de nuevo.",
-      "noModelFaces": "Este modelo no tiene ninguna cara hacia arriba: no hay nada que dibujar."
+      "noModelFaces": "Este modelo no tiene ninguna cara hacia arriba: no hay nada que dibujar.",
+      "modelChanged": "El modelo cambió mientras se creaban sus dibujos. Inténtalo de nuevo."
     },
     "terrain": {
       "noArea": "Esta zona es demasiado pequeña. Dibuja una más grande.",

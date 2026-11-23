@@ -844,7 +844,8 @@
       "patternOfPattern": "Bir desen başka bir desenle doldurulamaz.",
       "patternNoClosedPath": "Seçimde doldurulacak kapalı yol yok.",
       "modelDrawingsFailed": "Modelin çizimleri oluşturulamadı. Tekrar deneyin.",
-      "noModelFaces": "Bu modelin yukarı bakan bir yüzü yok, bu yüzden çizilecek bir şey yok."
+      "noModelFaces": "Bu modelin yukarı bakan bir yüzü yok, bu yüzden çizilecek bir şey yok.",
+      "modelChanged": "Model, çizimleri oluşturulurken değişti. Tekrar deneyin."
     },
     "terrain": {
       "noArea": "Bu alan çok küçük. Daha büyük bir alan çizin.",

@@ -844,7 +844,8 @@
       "patternOfPattern": "Un motif ne peut pas être rempli par un autre.",
       "patternNoClosedPath": "La sélection n'a aucun tracé fermé à remplir.",
       "modelDrawingsFailed": "Les dessins du modèle n'ont pas pu être créés. Réessayez.",
-      "noModelFaces": "Ce modèle n'a aucune face tournée vers le haut : il n'y a rien à dessiner."
+      "noModelFaces": "Ce modèle n'a aucune face tournée vers le haut : il n'y a rien à dessiner.",
+      "modelChanged": "Le modèle a changé pendant la création de ses dessins. Réessayez."
     },
     "terrain": {
       "noArea": "Cette zone est trop petite. Dessinez-en une plus grande.",
