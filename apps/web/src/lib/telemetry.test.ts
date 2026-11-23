@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   externalOrigin,
+  maskReplayAttribute,
   type PageContext,
   routePattern,
   scrubElements,
@@ -128,5 +129,18 @@ describe("scrubElements", () => {
 
   it("drops a chain sent without its elements", () => {
     expect(scrubElements({ $elements_chain: 'span:text="x"' })).toEqual({});
+  });
+});
+
+describe("maskReplayAttribute", () => {
+  it("masks tooltips, labels and values, which may hold the user's names", () => {
+    expect(maskReplayAttribute("title", "Lid pocket")).toBe("**********");
+    expect(maskReplayAttribute("aria-label", "Delete Lid")).toBe("**********");
+    expect(maskReplayAttribute("value", "12")).toBe("**");
+  });
+
+  it("keeps what the layout needs", () => {
+    expect(maskReplayAttribute("class", "flex gap-2")).toBe("flex gap-2");
+    expect(maskReplayAttribute("data-tour", "operations")).toBe("operations");
   });
 });

@@ -7,6 +7,7 @@ import posthog from "posthog-js/no-external";
 import { useEffect, useState } from "react";
 import {
   externalOrigin,
+  maskReplayAttribute,
   type PageContext,
   routePattern,
   scrubElements,
@@ -53,7 +54,11 @@ export function Telemetry({ apiKey, host }: { apiKey: string; host: string }) {
       // Errors go through `captureError`, which scrubs them.
       capture_exceptions: false,
       // Recording starts only with consent; the 3D viewport's canvas is never recorded.
-      session_recording: { maskAllInputs: true, maskTextSelector: "*" },
+      session_recording: {
+        maskAllInputs: true,
+        maskTextSelector: "*",
+        maskAttributeFn: maskReplayAttribute,
+      },
       enable_recording_console_log: false,
       disable_surveys: true,
       disable_product_tours: true,

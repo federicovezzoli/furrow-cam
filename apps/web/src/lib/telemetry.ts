@@ -19,6 +19,17 @@ export function sentWithoutConsent(event: string) {
   return event === "$pageview" || event === "$exception" || TELEMETRY_EVENTS.includes(event);
 }
 
+/** Attributes that may hold names the user typed: tooltips, labels, input values. */
+const TEXT_ATTRIBUTE = /^(title|alt|placeholder|label|download|value)$|^aria-/;
+
+/**
+ * An attribute's value as session replay may record it: masked when it may
+ * hold the user's text, as replay already masks every text node and input.
+ */
+export function maskReplayAttribute(name: string, value: string) {
+  return TEXT_ATTRIBUTE.test(name) ? "*".repeat(value.length) : value;
+}
+
 /** An element's fields autocapture may send: its tag, position and our own anchors. */
 const KEPT_ELEMENT_FIELD =
   /^(tag_name|nth_child|nth_of_type|attr__(data-tour|data-demo|data-slot|id|role|type))$/;
