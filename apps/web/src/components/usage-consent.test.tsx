@@ -47,6 +47,8 @@ describe("UsageConsent", () => {
     expect(screen.queryByRole("heading")).toBeNull();
     act(openUsageSettings);
     expect(screen.getByText("You currently allow this.")).toBeTruthy();
+    // Reopened from the footer or the menu: focus moves to the prompt, so it's announced.
+    expect(document.activeElement).toBe(screen.getByRole("region"));
     fireEvent.click(screen.getByRole("button", { name: "No thanks" }));
     expect(onChange).toHaveBeenCalledWith(false);
     act(openUsageSettings);

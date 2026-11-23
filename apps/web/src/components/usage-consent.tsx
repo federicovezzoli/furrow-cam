@@ -3,7 +3,7 @@
 import { Button } from "@furrow/ui/components/ui/button";
 import Link from "next/link";
 import posthog from "posthog-js/no-external";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { USAGE_SETTINGS_EVENT } from "@/lib/telemetry";
 
@@ -16,6 +16,15 @@ export function UsageConsent({ onChange }: { onChange: (agreed: boolean) => void
   const t = useTranslations("UsageConsent");
   const [status, setStatus] = useState<"granted" | "denied" | "pending" | null>(null);
   const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  // Opened from the footer or the menu, which keeps focus: move it here so it's announced.
+  const focusOnOpen = useRef(false);
+
+  useEffect(() => {
+    if (!open || !focusOnOpen.current) return;
+    focusOnOpen.current = false;
+    panel.current?.focus();
+  }, [open]);
 
   useEffect(() => {
     const current = posthog.get_explicit_consent_status();
@@ -24,6 +33,7 @@ export function UsageConsent({ onChange }: { onChange: (agreed: boolean) => void
     const reopen = () => {
       setStatus(posthog.get_explicit_consent_status());
       setOpen(true);
+      focusOnOpen.current = true;
     };
     window.addEventListener(USAGE_SETTINGS_EVENT, reopen);
     return () => window.removeEventListener(USAGE_SETTINGS_EVENT, reopen);
@@ -39,6 +49,8 @@ export function UsageConsent({ onChange }: { onChange: (agreed: boolean) => void
 
   return (
     <section
+      ref={panel}
+      tabIndex={-1}
       aria-labelledby="usage-consent-title"
       className="fixed right-4 bottom-4 left-4 z-50 grid gap-3 rounded-lg border bg-background p-4 text-sm shadow-lg sm:left-auto sm:w-96"
     >
