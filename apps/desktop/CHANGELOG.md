@@ -1,5 +1,15 @@
 # @furrow/desktop
 
+## 0.32.0
+
+### Minor Changes
+
+- You can now allow detailed usage statistics: which buttons you use and screen recordings with every text hidden, never linked to your account. Without your permission only anonymous page views and a few events are counted, as before. The desktop app keeps a random ID while you agree, so returning use can be counted. ([#666](https://github.com/federicovezzoli/furrow-cam/pull/666))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/workspace@0.32.0, @furrow/cam-core@0.27.0, @furrow/document@0.29.0, @furrow/ui@0.11.0
+
 ## 0.31.1
 
 ### Patch Changes

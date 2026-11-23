@@ -1,5 +1,15 @@
 # @furrow/ui
 
+## 0.11.0
+
+### Minor Changes
+
+- A model's panel can now make a drawing of its flat levels, one layer per depth, and of its outline, so a 2.5D part imported as STL or STEP can be machined with pockets, profiles and drills instead of relief passes. Round holes come out as circles ready to drill. ([#667](https://github.com/federicovezzoli/furrow-cam/pull/667))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/cam-core@0.27.0, @furrow/document@0.29.0
+
 ## 0.10.3
 
 ### Patch Changes
