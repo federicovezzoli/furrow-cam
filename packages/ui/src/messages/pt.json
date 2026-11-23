@@ -17,6 +17,7 @@
   "AccountMenu": {
     "account": "Conta",
     "takeTour": "Fazer o tour",
+    "usageStatistics": "Estatísticas de uso…",
     "signOut": "Sair",
     "deleteAccount": "Excluir conta…"
   },
@@ -112,7 +113,17 @@
   "Footer": {
     "reportBug": "Relatar um erro",
     "privacy": "Privacidade",
-    "licences": "Licenças de terceiros"
+    "licences": "Licenças de terceiros",
+    "usageStatistics": "Estatísticas de uso"
+  },
+  "UsageConsent": {
+    "title": "Ajudar a melhorar o Furrow CAM?",
+    "body": "Com a sua permissão, também vemos quais botões você usa e gravamos a tela com todo o texto oculto, para descobrir onde o aplicativo é difícil de usar. Seus desenhos e nomes nunca são gravados e nada é vinculado à sua conta. Sem ela, contamos apenas visualizações de página anônimas e alguns eventos.",
+    "privacy": "Política de privacidade",
+    "allow": "Permitir",
+    "decline": "Não, obrigado",
+    "currentlyAllowed": "No momento, você permite isso.",
+    "currentlyDeclined": "No momento, você não permite isso."
   },
   "Licences": {
     "title": "Licenças de terceiros",
@@ -415,7 +426,7 @@
     },
     "telemetry": {
       "question": "Enviar estatísticas de uso e relatórios de erros anônimos?",
-      "detail": "Eles ajudam a corrigir travamentos e mostram quais recursos são usados: eventos como “G-code exportado” e mensagens de erro, nunca seus arquivos, projetos ou qualquer coisa que identifique você. Você pode mudar isso no menu Ajuda.",
+      "detail": "Elas ajudam a corrigir falhas e mostram quais recursos são usados: eventos como \"G-code exportado\" e mensagens de erro, com um ID aleatório guardado neste computador para contar o uso recorrente, nunca seus arquivos, projetos ou qualquer coisa que identifique você. Você pode mudar isso no menu Ajuda.",
       "send": "Enviar",
       "dontSend": "Não Enviar"
     },

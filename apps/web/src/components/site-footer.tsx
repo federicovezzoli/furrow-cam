@@ -1,7 +1,9 @@
 import { blankReportUrl, REPOSITORY_URL } from "@furrow/workspace/lib/bug-report";
 import Link from "next/link";
+import { env } from "@/env";
 import { getTranslator } from "@/lib/locale";
 import packageJson from "../../package.json";
+import { UsageSettingsButton } from "./usage-settings-button";
 
 // Changesets tags each release `<package>@<version>` (ADR-0012).
 const RELEASE_URL = `${REPOSITORY_URL}/releases/tag/${encodeURIComponent(`@furrow/web@${packageJson.version}`)}`;
@@ -45,6 +47,9 @@ export async function SiteFooter() {
         <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
           {t("Footer.privacy")}
         </Link>
+        {env.NEXT_PUBLIC_POSTHOG_KEY && (
+          <UsageSettingsButton>{t("Footer.usageStatistics")}</UsageSettingsButton>
+        )}
         <Link href="/licences" className="underline-offset-4 hover:text-foreground hover:underline">
           {t("Footer.licences")}
         </Link>
