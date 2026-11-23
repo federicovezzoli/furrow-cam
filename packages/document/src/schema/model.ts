@@ -45,33 +45,44 @@ export type ModelPlacement = z.infer<typeof ModelPlacement>;
  * is a project asset identified by the SHA-256 of the STL file's bytes
  * (ADR-0029). The rest describes it without downloading it.
  */
-export const Model = z.strictObject({
-  id: z.uuid(),
-  /** Hash of the STL file, the key of its project asset. */
-  sha256: Sha256,
-  /** Name of the imported file. */
-  fileName: z.string(),
-  /** Size of the STL file in bytes. */
-  size: z.number().int().positive(),
-  triangles: z.number().int().positive(),
-  /** The mesh's bounding box in the file's own coordinates, before placement. */
-  bounds: z
-    .strictObject({ min: Point3, max: Point3 })
-    .refine(({ min, max }) => min.every((value, i) => value <= (max[i] as number)), {
-      message: "model.cornerOrder",
-    }),
-  placement: ModelPlacement,
-  /**
-   * The border, in millimetres, that *Fit to stock* leaves between the model
-   * and the stock on every side (ADR-0038): `MODEL_BORDER` for a new model,
-   * never more than a quarter of the stock's smaller side when applied.
-   */
-  border: z.number().nonnegative(),
-  /** Not drawn, picked or machined (ADR-0080); absent when shown. */
-  hidden: z.literal(true).optional(),
-  /** Drawn but not picked or moved in the viewport (ADR-0080); absent when unlocked. */
-  locked: z.literal(true).optional(),
-});
+export const Model = z
+  .strictObject({
+    id: z.uuid(),
+    /** Hash of the STL file, the key of its project asset. */
+    sha256: Sha256,
+    /** Name of the imported file. */
+    fileName: z.string(),
+    /** Size of the STL file in bytes. */
+    size: z.number().int().positive(),
+    triangles: z.number().int().positive(),
+    /** The mesh's bounding box in the file's own coordinates, before placement. */
+    bounds: z
+      .strictObject({ min: Point3, max: Point3 })
+      .refine(({ min, max }) => min.every((value, i) => value <= (max[i] as number)), {
+        message: "model.cornerOrder",
+      }),
+    placement: ModelPlacement,
+    /**
+     * A STEP file's faces (ADR-0093): how many of the STL's triangles each
+     * face of the solid was meshed into, in the STL's order. Absent for an STL
+     * file, whose triangles say nothing of the faces they were.
+     */
+    faces: z.array(z.number().int().positive()).optional(),
+    /**
+     * The border, in millimetres, that *Fit to stock* leaves between the model
+     * and the stock on every side (ADR-0038): `MODEL_BORDER` for a new model,
+     * never more than a quarter of the stock's smaller side when applied.
+     */
+    border: z.number().nonnegative(),
+    /** Not drawn, picked or machined (ADR-0080); absent when shown. */
+    hidden: z.literal(true).optional(),
+    /** Drawn but not picked or moved in the viewport (ADR-0080); absent when unlocked. */
+    locked: z.literal(true).optional(),
+  })
+  .refine(
+    ({ faces, triangles }) => !faces || faces.reduce((sum, count) => sum + count, 0) === triangles,
+    { message: "model.faceTriangles", path: ["faces"] },
+  );
 export type Model = z.infer<typeof Model>;
 
 /** The border a new model leaves around it when fitted to the stock (ADR-0038), in millimetres. */
