@@ -33,10 +33,10 @@ function rect(x0: number, y0: number, x1: number, y1: number): Point[] {
   ];
 }
 
-/** A circle as a 32-gon, its vertices on it, as a mesher tessellates a hole. */
-function circle([cx, cy]: Point, radius: number): Point[] {
-  return Array.from({ length: 32 }, (_, i): Point => {
-    const angle = (i / 32) * 2 * Math.PI;
+/** A circle as a polygon, its vertices on it, as a mesher tessellates a hole. */
+function circle([cx, cy]: Point, radius: number, sides = 32): Point[] {
+  return Array.from({ length: sides }, (_, i): Point => {
+    const angle = (i / sides) * 2 * Math.PI;
     return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
   });
 }
@@ -143,6 +143,31 @@ describe("modelFlatFaces", () => {
     expect(
       modelFlatFaces(mesh(faces), { ...PLACED, faces: counts }).levels.map(({ z }) => z),
     ).toEqual([0, -3, -6]);
+  });
+
+  it("doesn't merge a gentle slope of near-flat strips into one level", () => {
+    // 40 strips, each flat within the tolerance, each 0.0025 mm below the last: 0.1 mm in all.
+    const strips = Array.from({ length: 40 }, (_, i) =>
+      flatFace(12 - i * 0.0025, rect(i, 0, i + 1, 60)),
+    );
+    const { levels } = modelFlatFaces(mesh(strips), PLACED);
+    expect(levels.length).toBeGreaterThan(1);
+    for (const { paths } of levels)
+      expect(bounds(paths)[2]! - bounds(paths)[0]!).toBeLessThanOrEqual(3);
+  });
+
+  it("reads a mesh whose triangles all face inwards as if they faced out", () => {
+    const inward = PLATE.map((face) => face.map((t) => [t[0], t[2], t[1]] as Triangle));
+    const { levels, outline } = modelFlatFaces(mesh(inward), PLACED);
+    expect(levels.map(({ z }) => z)).toEqual([0, -3, -6]);
+    expect(outline).toHaveLength(1);
+  });
+
+  it("keeps a large near-round ring as a polygon", () => {
+    // A 64-gon of radius 200: its chords stray 0.24 mm from the circle, more than drilling allows.
+    const big = flatFace(12, circle([250, 250], 200, 64));
+    const [level] = modelFlatFaces(mesh([big]), PLACED).levels;
+    expect(level?.paths[0]?.segments[0]?.kind).toBe("line");
   });
 
   it("leaves out levels too small to machine", () => {

@@ -286,6 +286,7 @@ export function drawingsFromModel(project: Project, id: string): { id: string; l
   const bytes = project.meshes.get(model.sha256);
   if (!bytes) throw new ToolError(text({ code: "workspace.modelDrawingsFailed" }));
   // The archive checked the mesh when the project was opened.
+  // shortcut: runs on the server's one thread, about 3 s for a 2-million-triangle mesh; move it to a worker thread if that bites.
   const found = modelFlatFaces(parseStl(bytes, DEFAULT_STL_LIMITS).positions, model);
   let drawingId: string | null = null;
   change(project, (store) => {

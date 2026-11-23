@@ -1,10 +1,11 @@
 import type { Model, Path, Point } from "@furrow/document";
 import { applyAffine } from "../geometry/affine";
-import { isRound, roundness } from "../geometry/circle";
+import { DRILL_DIAMETER_TOLERANCE, roundness } from "../geometry/circle";
 import { nest, type Polygon, signedArea, simplify, union } from "../geometry/clipper";
 import { polygonPath } from "../geometry/path";
 import { roundCoordinate } from "../geometry/round";
-import { modelTransform } from "./model";
+import { modelTransform, placedModelBox } from "./model";
+import type { Vec3 } from "./stock";
 
 /**
  * Drawings from a model's flat faces (#665): the 2D outlines that pocket,
@@ -54,51 +55,67 @@ export function modelFlatFaces(
 ): ModelFlatFaces {
   const transform = modelTransform(model);
   const count = positions.length / 9;
-  const triangles: Placed[] = [];
+  const vertex = (t: number, v: number): Vec3 => {
+    const i = t * 9 + v * 3;
+    return applyAffine(transform, [
+      positions[i] as number,
+      positions[i + 1] as number,
+      positions[i + 2] as number,
+    ]);
+  };
+
+  // Six times the volume the mesh encloses, negative when its triangles face inwards, as STL
+  // files often wind every one (mixed winding isn't mended). Heights are taken from the model's
+  // bottom, so an open surface facing up counts as positive too.
+  const bottom = placedModelBox(model).min[2];
+  let volume = 0;
   for (let t = 0; t < count; t++) {
-    const corners: Polygon = [];
+    const [a, b, c] = [vertex(t, 0), vertex(t, 1), vertex(t, 2)];
+    const [az, bz, cz] = [a[2] - bottom, b[2] - bottom, c[2] - bottom];
+    volume +=
+      a[0] * (b[1] * cz - bz * c[1]) -
+      a[1] * (b[0] * cz - bz * c[0]) +
+      az * (b[0] * c[1] - b[1] * c[0]);
+  }
+  const inward = volume < 0;
+
+  // Each triangle is placed as it is needed: a large mesh's would take gigabytes all at once.
+  const placed = (t: number): Placed => {
+    const vertices = [vertex(t, 0), vertex(t, 1), vertex(t, 2)];
+    if (inward) vertices.reverse();
+    const corners = vertices.map(([x, y]): Point => [x, y]);
+    const heights = vertices.map(([, , z]) => z);
+    return {
+      corners,
+      area: signedArea(corners),
+      low: Math.min(...heights),
+      high: Math.max(...heights),
+    };
+  };
+
+  // With `faces`, a face is flat if all of it is; without, each triangle is a face of its own.
+  const flat: Placed[] = [];
+  const outline = unionInChunks();
+  for (let t = 0, f = 0; t < count; f++) {
+    const end = t + (model.faces ? (model.faces[f] as number) : 1);
+    const face: Placed[] = [];
     let low = Infinity;
     let high = -Infinity;
-    for (let v = 0; v < 3; v++) {
-      const i = t * 9 + v * 3;
-      const [x, y, z] = applyAffine(transform, [
-        positions[i] as number,
-        positions[i + 1] as number,
-        positions[i + 2] as number,
-      ]);
-      corners.push([x, y]);
-      low = Math.min(low, z);
-      high = Math.max(high, z);
+    let area = 0;
+    for (; t < end; t++) {
+      const triangle = placed(t);
+      face.push(triangle);
+      low = Math.min(low, triangle.low);
+      high = Math.max(high, triangle.high);
+      area += triangle.area;
+      if (triangle.area > 0) outline.add(triangle.corners);
     }
-    triangles.push({ corners, area: signedArea(corners), low, high });
-  }
-
-  const flat: Placed[] = [];
-  if (model.faces) {
-    let first = 0;
-    for (const size of model.faces) {
-      const face = triangles.slice(first, first + size);
-      first += size;
-      // A loop, not a spread: a face may hold more triangles than a call takes arguments.
-      let low = Infinity;
-      let high = -Infinity;
-      let area = 0;
-      for (const triangle of face) {
-        low = Math.min(low, triangle.low);
-        high = Math.max(high, triangle.high);
-        area += triangle.area;
-      }
-      if (high - low <= LEVEL_TOLERANCE && area > 0) {
-        for (const triangle of face) flat.push({ ...triangle, low, high });
-      }
-    }
-  } else {
-    for (const triangle of triangles) {
-      if (triangle.high - triangle.low <= LEVEL_TOLERANCE && triangle.area > 0) flat.push(triangle);
+    if (high - low <= LEVEL_TOLERANCE && area > 0) {
+      for (const triangle of face) flat.push({ ...triangle, low, high });
     }
   }
 
-  // Highest first; a level runs on while each next triangle is within the tolerance of the last.
+  // Highest first; a level takes the triangles within the tolerance of its top.
   flat.sort((a, b) => b.high - a.high);
   const levels: FlatLevel[] = [];
   let group: Placed[] = [];
@@ -108,25 +125,65 @@ export function modelFlatFaces(
     group = [];
   };
   for (const triangle of flat) {
-    const last = group.at(-1);
-    if (last && last.high - triangle.high > LEVEL_TOLERANCE) close();
+    const [top] = group;
+    if (top && top.high - triangle.high > LEVEL_TOLERANCE) close();
     group.push(triangle);
   }
   close();
 
-  const upward = triangles.filter(({ area }) => area > 0).map(({ corners }) => corners);
-  const outline = nest(union(upward))
-    .map(({ outer }) => outer)
-    .filter((ring) => Math.abs(signedArea(ring)) >= MIN_RING_AREA)
-    .map(ringPath);
-  return { levels, outline };
+  return {
+    levels,
+    outline: nest(outline.result())
+      .map(({ outer }) => outer)
+      .filter((ring) => Math.abs(signedArea(ring)) >= MIN_RING_AREA)
+      .map(ringPath),
+  };
+}
+
+/** How many polygons Clipper2 unites at once: it slows down far more than in proportion on one huge input. */
+const UNION_CHUNK = 4096;
+
+/**
+ * The union of the polygons `add`ed, a chunk at a time, then of the chunks'
+ * results: about 2 s for 2 million triangles, where one union takes minutes.
+ */
+function unionInChunks() {
+  let chunk: Polygon[] = [];
+  let parts: Polygon[] = [];
+  const flush = () => {
+    if (chunk.length > 0) parts.push(...union(chunk));
+    chunk = [];
+  };
+  return {
+    add(polygon: Polygon) {
+      chunk.push(polygon);
+      if (chunk.length === UNION_CHUNK) flush();
+    },
+    result(): Polygon[] {
+      flush();
+      // Unite the results the same way while that still makes fewer of them.
+      while (parts.length > UNION_CHUNK) {
+        const before = parts;
+        parts = [];
+        for (const polygon of before) {
+          chunk.push(polygon);
+          if (chunk.length === UNION_CHUNK) flush();
+        }
+        flush();
+        if (parts.length >= before.length) break;
+      }
+      return union(parts);
+    },
+  };
 }
 
 /** The outlines of one level's triangles, or `null` if they cover too little. */
 function flatLevel(triangles: Placed[]): FlatLevel | null {
   const [first] = triangles;
   if (!first) return null;
-  const rings = simplify(union(triangles.map(({ corners }) => corners)), SIMPLIFY).filter(
+  const all = unionInChunks();
+  for (const { corners } of triangles) all.add(corners);
+  const rings = simplify(all.result(), SIMPLIFY).filter(
     (ring) => Math.abs(signedArea(ring)) >= MIN_RING_AREA,
   );
   // Outer rings count positive, holes negative.
@@ -142,7 +199,8 @@ function ringPath(ring: Polygon): Path {
     ring.map(([x, y]): Point => [roundCoordinate(x), roundCoordinate(y)]),
   );
   const round = ring.length >= 8 ? roundness(polygon) : null;
-  if (!round || !isRound(round)) return polygon;
+  // Within drilling's fixed tolerance only, not its share of the radius: a large near-round ring stays as it is.
+  if (!round || round.max - round.min > DRILL_DIAMETER_TOLERANCE) return polygon;
   // A tessellated circle's vertices lie on it; its chords cut inside.
   const center = round.center.map(roundCoordinate) as Point;
   const start: Point = [roundCoordinate(center[0] + round.max), center[1]];
