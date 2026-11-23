@@ -28,6 +28,7 @@ import type {
 import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import {
+  drawingsFromModel,
   duplicate,
   fitToStock,
   importFile,
@@ -509,6 +510,21 @@ export function createServer(projects: Projects = createProjects(), library = li
         const project = await projects.get(path);
         turn(project, id, axis, turns);
         return summary(project);
+      }),
+  );
+
+  server.registerTool(
+    "drawings_from_model",
+    {
+      title: "Make drawings from a model's flat faces",
+      description:
+        "Adds a drawing of a model's flat, upward-facing levels and its outline, where the model lies now, as the app's Drawings from model button does: one shape per level, on a layer named after its height (\"Z -6 mm\"), and the outline on the layer \"Outline\". Round holes come out as circles. Use it for a 2.5D part (flat floors, vertical walls, through holes): a pocket per level down to its depth, a profile on the outline and drill operations on the holes machine it faster and cleaner than relief roughing and finishing. The drawing doesn't follow the model if it is moved or turned later: make it again. Returns the drawing's id and its levels' depths below the stock top in millimetres, from the top down; an empty list means the model has no flat faces and the drawing holds only its outline.",
+      inputSchema: { path: projectPath, id: itemId },
+    },
+    ({ path, id }) =>
+      respond(async () => {
+        const project = await projects.get(path);
+        return drawingsFromModel(project, id);
       }),
   );
 

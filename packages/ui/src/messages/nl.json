@@ -542,7 +542,8 @@
       "spindleMinMax": "Moet minstens het minimale spindeltoerental zijn"
     },
     "model": {
-      "cornerOrder": "De minimale hoek mag niet groter zijn dan de maximale"
+      "cornerOrder": "De minimale hoek mag niet groter zijn dan de maximale",
+      "faceTriangles": "De vlakken van het model moeten al zijn driehoeken verdelen"
     },
     "geometry": {
       "zeroLine": "Lijn met lengte nul",
@@ -830,7 +831,9 @@
       "patternNoSelection": "Selecteer gesloten paden van een tekening om te vullen.",
       "patternOneDrawing": "Selecteer paden van één tekening.",
       "patternOfPattern": "Een patroon kan niet met een ander worden gevuld.",
-      "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen."
+      "patternNoClosedPath": "De selectie heeft geen gesloten pad om te vullen.",
+      "modelDrawingsFailed": "De tekeningen van het model konden niet worden gemaakt. Probeer het opnieuw.",
+      "noModelFaces": "Dit model heeft geen vlak dat naar boven wijst, dus er valt niets te tekenen."
     },
     "terrain": {
       "noArea": "Dit gebied is te klein. Teken een groter gebied.",
@@ -1456,7 +1459,12 @@
     "position": "Positie",
     "positionHint": "Waar het punt {anchor, select, top_left {linksboven} top_center {midden boven} top_right {rechtsboven} middle_left {midden links} middle_right {midden rechts} bottom_left {linksonder} bottom_center {midden onder} bottom_right {rechtsonder} other {in het midden}} van het model ligt, gemeten vanaf het nulpunt. Verplaatsen verandert de rand die <em>Passend maken</em> vrijlaat niet.",
     "removeTitle": "Verwijdert ook de {count, plural, one {bewerking} other {# bewerkingen}} die het bewerken",
-    "remove": "Model verwijderen"
+    "remove": "Model verwijderen",
+    "drawings": "Tekeningen",
+    "drawingsHint": "Maakt een tekening van de vlakke niveaus van het model, een laag per diepte, en van zijn omtrek, om het te frezen met uitsparingen, contouren en boringen. De tekening blijft waar het model nu ligt: ze volgt het niet.",
+    "makeDrawings": "Tekeningen uit model",
+    "outlineLayer": "Omtrek",
+    "outlineOnly": "Het model heeft geen vlakke vlakken, dus de tekening bevat alleen zijn omtrek."
   },
   "Drawing": {
     "closeLabel": "Eigenschappen van tekening sluiten",

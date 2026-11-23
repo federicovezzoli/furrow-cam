@@ -3,8 +3,10 @@ import {
   closedLoops,
   DEFAULT_CHORD_TOLERANCE,
   drawingFit,
+  formatQuantity,
   holeSnapTargets,
   MIN_LENGTH,
+  type ModelFlatFaces,
   mapPlacement,
   mapShapes,
   mapText,
@@ -25,6 +27,7 @@ import {
   targetedShapes,
   translatePoint,
   translateShapes,
+  unitLabel,
   xyOriginPosition,
 } from "@furrow/cam-core";
 import {
@@ -135,6 +138,40 @@ export function addDrawing(store: DocumentStore, name: string, drawing: Drawing,
     draft.drawings.push(drawing);
     draft.geometry = geometry;
   });
+}
+
+/**
+ * Adds the drawing made from a model's flat faces (ADR-0093) as one undo
+ * step, where the model lies on the stock: a shape per level, from the top
+ * down, on a layer named after its height in the project's units (`Z -6 mm`),
+ * then the outline on `outlineLayer`. It takes its name from the model's
+ * file and is not tied to the model. Returns its id, or `null`, adding
+ * nothing, if there are no outlines.
+ */
+export function addModelDrawing(
+  store: DocumentStore,
+  fileName: string,
+  { levels, outline }: ModelFlatFaces,
+  outlineLayer: string,
+): string | null {
+  const { units } = store.getState().document;
+  const drawingId = crypto.randomUUID();
+  const shape = (layer: string, paths: Path[]): Shape => ({
+    id: crypto.randomUUID(),
+    name: "",
+    layer,
+    source: fileName,
+    drawingId,
+    paths,
+  });
+  const height = (z: number) =>
+    `Z ${formatQuantity(z, "length", units)} ${unitLabel("length", units)}`;
+  const shapes = levels.map(({ z, paths }) => shape(height(z), paths));
+  if (outline.length > 0) shapes.push(shape(outlineLayer, outline));
+  if (shapes.length === 0) return null;
+  const drawing = { id: drawingId, name: fileName, border: DRAWING_BORDER, rotation: 0 };
+  addDrawing(store, "drawingsFromModel", drawing, shapes);
+  return drawingId;
 }
 
 /** How far off a text item's new outlines a tab may lie and stay: the flattening's chords, and float noise. */

@@ -542,7 +542,8 @@
       "spindleMinMax": "最小スピンドル回転数以上にしてください"
     },
     "model": {
-      "cornerOrder": "最小コーナーが最大を超えないようにしてください"
+      "cornerOrder": "最小コーナーが最大を超えないようにしてください",
+      "faceTriangles": "モデルの面はすべての三角形を分け合う必要があります"
     },
     "geometry": {
       "zeroLine": "長さゼロの線",
@@ -830,7 +831,9 @@
       "patternNoSelection": "塗りつぶす図面の閉じたパスを選択してください。",
       "patternOneDrawing": "1 つの図面のパスだけを選択してください。",
       "patternOfPattern": "パターンを別のパターンで塗りつぶすことはできません。",
-      "patternNoClosedPath": "選択範囲に塗りつぶせる閉じたパスがありません。"
+      "patternNoClosedPath": "選択範囲に塗りつぶせる閉じたパスがありません。",
+      "modelDrawingsFailed": "モデルの図面を作成できませんでした。もう一度お試しください。",
+      "noModelFaces": "このモデルには上を向いた面がないため、描くものがありません。"
     },
     "terrain": {
       "noArea": "この範囲は小さすぎます。もっと大きく描いてください。",
@@ -1456,7 +1459,12 @@
     "position": "位置",
     "positionHint": "モデルの{anchor, select, top_left {左上} top_center {上中央} top_right {右上} middle_left {左中央} middle_right {右中央} bottom_left {左下} bottom_center {下中央} bottom_right {右下} other {中央}}の点の位置で、原点から測ります。移動しても、<em>素材に合わせる</em>で残る余白は変わりません。",
     "removeTitle": "このモデルを加工する{count, plural, one {加工} other {#件の加工}}も削除します",
-    "remove": "モデルを削除"
+    "remove": "モデルを削除",
+    "drawings": "図面",
+    "drawingsHint": "モデルの平らな段（深さごとに 1 レイヤー）と外形の図面を作成し、ポケット、輪郭、穴あけで加工できるようにします。図面はモデルの現在の位置に残り、モデルには追従しません。",
+    "makeDrawings": "モデルから図面",
+    "outlineLayer": "外形",
+    "outlineOnly": "モデルに平らな面がないため、図面には外形だけが含まれます。"
   },
   "Drawing": {
     "closeLabel": "図面のプロパティを閉じる",

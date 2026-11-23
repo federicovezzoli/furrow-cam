@@ -74,8 +74,8 @@ export async function parseMesh(
 ): Promise<MeshSummary & { stl?: ArrayBuffer }> {
   const data = await runMeshWorker({ kind: "parse", id: 0, bytes, limits }, [bytes], UNREADABLE);
   if (data.kind !== "parsed") throw new MeshImportError(UNREADABLE);
-  const { sha256, triangles, bounds, stl } = data;
-  return { sha256, triangles, bounds, ...(stl && { stl }) };
+  const { sha256, triangles, bounds, stl, faces } = data;
+  return { sha256, triangles, bounds, ...(stl && { stl }), ...(faces && { faces }) };
 }
 
 /**
@@ -127,7 +127,7 @@ export async function importModel(
 }
 
 /** Resolves once no gesture holds the document's history open. */
-function gestureDone(document: DocumentStore): Promise<void> {
+export function gestureDone(document: DocumentStore): Promise<void> {
   if (!document.getState().inTransaction) return Promise.resolve();
   return new Promise((resolve) => {
     const stop = document.subscribe(({ inTransaction }) => {
@@ -161,13 +161,13 @@ export async function storeModel(
 ): Promise<Translatable | null> {
   const upload = await meshes.put(mesh.sha256, stored);
   if (upload.error !== undefined) return upload.error;
-  const { sha256, triangles, bounds } = mesh;
+  const { sha256, triangles, bounds, faces } = mesh;
   // An undo step of its own: a gesture still open (a drag) is let finish first, so cancelling
   // it can't take the model away after it was stored and selected.
   await gestureDone(document);
   const id = addModel(
     document,
-    { sha256, triangles, bounds, fileName, size: stored.size },
+    { sha256, triangles, bounds, fileName, size: stored.size, ...(faces && { faces }) },
     { fit },
   );
   workspace.getState().selectModel(id);

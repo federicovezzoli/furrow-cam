@@ -542,7 +542,8 @@
       "spindleMinMax": "Muss mindestens die minimale Spindeldrehzahl sein"
     },
     "model": {
-      "cornerOrder": "Die minimale Ecke darf die maximale nicht überschreiten"
+      "cornerOrder": "Die minimale Ecke darf die maximale nicht überschreiten",
+      "faceTriangles": "Die Flächen des Modells müssen alle seine Dreiecke aufteilen"
     },
     "geometry": {
       "zeroLine": "Linie der Länge null",
@@ -830,7 +831,9 @@
       "patternNoSelection": "Geschlossene Pfade einer Zeichnung zum Füllen auswählen.",
       "patternOneDrawing": "Nur Pfade einer Zeichnung auswählen.",
       "patternOfPattern": "Ein Muster kann nicht mit einem anderen gefüllt werden.",
-      "patternNoClosedPath": "Die Auswahl hat keinen geschlossenen Pfad zum Füllen."
+      "patternNoClosedPath": "Die Auswahl hat keinen geschlossenen Pfad zum Füllen.",
+      "modelDrawingsFailed": "Die Zeichnungen des Modells konnten nicht erstellt werden. Versuche es erneut.",
+      "noModelFaces": "Dieses Modell hat keine nach oben zeigende Fläche, es gibt also nichts zu zeichnen."
     },
     "terrain": {
       "noArea": "Dieses Gebiet ist zu klein. Zeichne ein größeres.",
@@ -1456,7 +1459,12 @@
     "position": "Position",
     "positionHint": "Wo der Punkt {anchor, select, top_left {oben links} top_center {oben Mitte} top_right {oben rechts} middle_left {Mitte links} middle_right {Mitte rechts} bottom_left {unten links} bottom_center {unten Mitte} bottom_right {unten rechts} other {in der Mitte}} des Modells liegt, vom Nullpunkt gemessen. Verschieben ändert nicht den Rand, den <em>An Rohteil anpassen</em> lässt.",
     "removeTitle": "Entfernt auch {count, plural, one {die Operation, die es bearbeitet} other {die # Operationen, die es bearbeiten}}",
-    "remove": "Modell entfernen"
+    "remove": "Modell entfernen",
+    "drawings": "Zeichnungen",
+    "drawingsHint": "Erstellt eine Zeichnung der ebenen Stufen des Modells, eine Ebene je Tiefe, und seines Umrisses, um es mit Taschen, Konturen und Bohrungen zu fräsen. Die Zeichnung bleibt, wo das Modell jetzt liegt: Sie folgt ihm nicht.",
+    "makeDrawings": "Zeichnungen aus Modell",
+    "outlineLayer": "Umriss",
+    "outlineOnly": "Das Modell hat keine ebenen Flächen, die Zeichnung enthält nur seinen Umriss."
   },
   "Drawing": {
     "closeLabel": "Zeichnungseigenschaften schließen",

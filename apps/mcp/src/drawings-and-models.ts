@@ -5,6 +5,7 @@ import {
   DEFAULT_STL_LIMITS,
   DEFAULT_SVG_DPI,
   drawingFit,
+  modelFlatFaces,
   parseStl,
   rotatedSize,
   StlImportError,
@@ -23,6 +24,7 @@ import {
 } from "@furrow/workspace/lib/drawing-import";
 import { stepToStl } from "@furrow/workspace/lib/step";
 import {
+  addModelDrawing,
   drawingBounds,
   duplicateDrawing,
   fitDrawingToStock,
@@ -116,7 +118,10 @@ export async function importFile(
     throw new ToolError(`Can't read ${path}: ${(error as Error).message}`);
   }
   if (kind === "stl") return importModel(project, name, bytes);
-  if (kind === "step") return importModel(project, name, await stepMesh(bytes));
+  if (kind === "step") {
+    const { stl, faces } = await stepMesh(bytes);
+    return importModel(project, name, stl, faces);
+  }
 
   const file = reading(() => parseDrawingFile(name, bytes));
   const needs = drawingFileNeeds(file);
@@ -144,10 +149,16 @@ function importDrawing(
   return { id: result.id, warnings: result.warnings.map(text) };
 }
 
-async function importModel(project: Project, fileName: string, bytes: Uint8Array) {
+async function importModel(
+  project: Project,
+  fileName: string,
+  bytes: Uint8Array,
+  faces?: number[],
+) {
   // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const { triangles, bounds }: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
-  return { id: await addMesh(project, { triangles, bounds, fileName }, bytes), warnings: [] };
+  const mesh = { triangles, bounds, fileName, ...(faces && { faces }) };
+  return { id: await addMesh(project, mesh, bytes), warnings: [] };
 }
 
 /**
@@ -156,7 +167,7 @@ async function importModel(project: Project, fileName: string, bytes: Uint8Array
  */
 export async function addMesh(
   project: Project,
-  mesh: Pick<Model, "triangles" | "bounds" | "fileName">,
+  mesh: Pick<Model, "triangles" | "bounds" | "fileName" | "faces">,
   bytes: Uint8Array,
   { fit = true }: { fit?: boolean } = {},
 ): Promise<string> {
@@ -262,6 +273,26 @@ function refuseUnlessDrawing(project: Project, id: string, what: string, hint = 
       `A pattern can't be ${what}: it follows the drawing it fills, so change that one.`,
     );
   }
+}
+
+/**
+ * Adds a drawing of model `id`'s flat levels and outline where the model
+ * lies, as the app's *Drawings from model* does (ADR-0093). Returns the
+ * drawing's id and its levels' heights below the stock top, from the top down.
+ */
+export function drawingsFromModel(project: Project, id: string): { id: string; levels: number[] } {
+  const { model } = find(project, id);
+  if (!model) throw new ToolError("Only a model has faces to draw: this is a drawing.");
+  const bytes = project.meshes.get(model.sha256);
+  if (!bytes) throw new ToolError(text({ code: "workspace.modelDrawingsFailed" }));
+  // The archive checked the mesh when the project was opened.
+  const found = modelFlatFaces(parseStl(bytes, DEFAULT_STL_LIMITS).positions, model);
+  let drawingId: string | null = null;
+  change(project, (store) => {
+    drawingId = addModelDrawing(store, model.fileName, found, t("Model.outlineLayer"));
+  });
+  if (!drawingId) throw new ToolError(text({ code: "workspace.noModelFaces" }));
+  return { id: drawingId, levels: found.levels.map(({ z }) => 0 - z) };
 }
 
 /** Moves drawing or model `id` by `[dx, dy]` millimetres, with its tabs and holes. */

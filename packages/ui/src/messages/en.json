@@ -542,7 +542,8 @@
       "spindleMinMax": "Must be at least the minimum spindle speed"
     },
     "model": {
-      "cornerOrder": "The minimum corner must not exceed the maximum"
+      "cornerOrder": "The minimum corner must not exceed the maximum",
+      "faceTriangles": "The model's faces must account for all its triangles"
     },
     "geometry": {
       "zeroLine": "Zero-length line",
@@ -830,7 +831,9 @@
       "patternNoSelection": "Select closed paths of a drawing to fill.",
       "patternOneDrawing": "Select paths of one drawing only.",
       "patternOfPattern": "A pattern can't be filled with another.",
-      "patternNoClosedPath": "The selection has no closed path to fill."
+      "patternNoClosedPath": "The selection has no closed path to fill.",
+      "modelDrawingsFailed": "The model's drawings couldn't be made. Try again.",
+      "noModelFaces": "This model has no face looking up, so there is nothing to draw."
     },
     "terrain": {
       "noArea": "This area is too small. Draw a larger one.",
@@ -1456,7 +1459,12 @@
     "position": "Position",
     "positionHint": "Where the model's {anchor, select, top_left {top left} top_center {top centre} top_right {top right} middle_left {middle left} middle_right {middle right} bottom_left {bottom left} bottom_center {bottom centre} bottom_right {bottom right} other {centre}} point is, measured from the zero. Moving it doesn't change the border that <em>Fit to stock</em> leaves.",
     "removeTitle": "Also removes the {count, plural, one {operation} other {# operations}} that machine it",
-    "remove": "Remove model"
+    "remove": "Remove model",
+    "drawings": "Drawings",
+    "drawingsHint": "Make a drawing of the model's flat levels, a layer for each depth, and of its outline, to machine it with pockets, profiles and drills. The drawing stays where the model is now: it doesn't follow it.",
+    "makeDrawings": "Drawings from model",
+    "outlineLayer": "Outline",
+    "outlineOnly": "The model has no flat faces, so the drawing holds only its outline."
   },
   "Drawing": {
     "closeLabel": "Close drawing properties",

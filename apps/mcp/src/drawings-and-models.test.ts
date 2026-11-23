@@ -7,6 +7,7 @@ import { formatMessage } from "@furrow/ui/lib/i18n";
 import { readProjectFile } from "@furrow/workspace/lib/project-file";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  drawingsFromModel,
   duplicate,
   fitToStock,
   importFile,
@@ -144,6 +145,37 @@ describe("importFile", () => {
     const stl = project.meshes.get(stored?.sha256 ?? "");
     expect(stl?.byteLength).toBe(stored?.size);
     expect(stl?.byteLength).toBe(binaryStlSize(stored?.triangles ?? 0));
+  }, 30_000);
+
+  it("keeps a STEP model's faces and makes drawings of its flat levels (#665)", async () => {
+    const step = await readFile(
+      new URL("../../../packages/workspace/src/lib/fixtures/plate-2.5d.step", import.meta.url),
+      "utf8",
+    );
+    const { id } = await importFile(project, await file("plate.step", step), {});
+    const [stored] = project.store.getState().document.models;
+    expect(stored?.faces?.reduce((sum, count) => sum + count, 0)).toBe(stored?.triangles);
+
+    const steps = project.store.getState().past.length;
+    const drawing = drawingsFromModel(project, id);
+    // The pocket is twice as deep as the step, wherever the model was fitted.
+    const [top, stepDepth, pocket] = drawing.levels;
+    expect(drawing.levels).toHaveLength(3);
+    expect(top).toBe(0);
+    expect(pocket).toBeCloseTo(2 * (stepDepth ?? 0), 6);
+    expect(project.store.getState().past).toHaveLength(steps + 1);
+
+    const { drawings, geometry } = project.store.getState().document;
+    expect(drawings.find((d) => d.id === drawing.id)?.name).toBe("plate.step");
+    const layers = geometry.filter((s) => s.drawingId === drawing.id).map(({ layer }) => layer);
+    expect(layers).toEqual([
+      "Z 0 mm",
+      expect.stringMatching(/^Z -/),
+      expect.any(String),
+      "Outline",
+    ]);
+
+    expect(() => drawingsFromModel(project, drawing.id)).toThrow("Only a model");
   }, 30_000);
 
   it("refuses a STEP file it can't read with the app's message", async () => {

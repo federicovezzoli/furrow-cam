@@ -1,10 +1,12 @@
-import { DEFAULT_STL_LIMITS, parseStl } from "@furrow/cam-core";
+import { circleCenter, DEFAULT_STL_LIMITS, modelFlatFaces, parseStl } from "@furrow/cam-core";
+import type { ModelPlacement } from "@furrow/document";
 import wasmUrl from "occt-import-js/dist/occt-import-js.wasm?url&inline";
 import { describe, expect, it, vi } from "vitest";
 import boxWithHole from "./fixtures/box-with-hole.step?raw";
 import boxWithHoleInch from "./fixtures/box-with-hole-inch.step?raw";
+import plate from "./fixtures/plate-2.5d.step?raw";
 import { OCCT_LICENCES } from "./occt-licences";
-import { isStepFile, stepToStl } from "./step";
+import { faceSizes, isStepFile, stepToStl } from "./step";
 
 const wasm = async () => (await fetch(wasmUrl)).arrayBuffer();
 const bytes = (text: string) => new TextEncoder().encode(text);
@@ -40,6 +42,43 @@ describe("isStepFile", () => {
   });
 });
 
+describe("faceSizes", () => {
+  const mesh = (triangles: number, brep_faces?: { first: number; last: number }[]) => ({
+    index: { array: Array.from({ length: triangles * 3 }, () => 0) },
+    ...(brep_faces && { brep_faces }),
+  });
+
+  it("counts each face's triangles, leaving out a face with none", () => {
+    const faces = [
+      { first: 0, last: 2 },
+      { first: 3, last: 2 },
+      { first: 3, last: 4 },
+    ];
+    expect(faceSizes(mesh(5, faces))).toEqual([3, 2]);
+  });
+
+  it("gives up unless the faces share out every triangle in order", () => {
+    expect(
+      faceSizes(
+        mesh(5, [
+          { first: 0, last: 1 },
+          { first: 3, last: 4 },
+        ]),
+      ),
+    ).toBeNull();
+    expect(faceSizes(mesh(5, [{ first: 0, last: 3 }]))).toBeNull();
+    expect(
+      faceSizes(
+        mesh(5, [
+          { first: 2, last: 4 },
+          { first: 0, last: 1 },
+        ]),
+      ),
+    ).toBeNull();
+    expect(faceSizes(mesh(5))).toBeNull();
+  });
+});
+
 describe("stepToStl", () => {
   it("says STEP import couldn't be loaded when the kernel fails to load, and tries again", async () => {
     vi.resetModules();
@@ -50,20 +89,74 @@ describe("stepToStl", () => {
     ).rejects.toMatchObject({
       detail: { code: "workspace.stepImportUnavailable" },
     });
-    const stl = await step.stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm);
+    const { stl } = await step.stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm);
     expect(parseStl(stl).bounds.max).toEqual([40, 20, 10]);
   }, 30_000);
 
   it("turns a solid into a closed STL mesh in millimetres", async () => {
-    const mesh = parseStl(await stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm));
+    const mesh = parseStl((await stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm)).stl);
     expect(mesh.bounds).toEqual({ min: [0, 0, 0], max: [40, 20, 10] });
     // The 40 x 20 x 10 mm box less its 10 mm hole, within 0.5% for the hole's facets.
     const solid = 40 * 20 * 10 - Math.PI * 5 ** 2 * 10;
     expect(Math.abs(volume(mesh.positions) - solid)).toBeLessThan(solid * 0.005);
   }, 30_000);
 
+  it("says how many of the STL's triangles each face of the solid was meshed into", async () => {
+    const { stl, faces } = await stepToStl(bytes(boxWithHole), DEFAULT_STL_LIMITS, wasm);
+    const mesh = parseStl(stl);
+    // Six sides and the hole's wall.
+    expect(faces).toHaveLength(7);
+    expect(faces?.reduce((sum, count) => sum + count, 0)).toBe(mesh.triangles);
+    const { levels, outline } = modelFlatFaces(mesh.positions, {
+      bounds: mesh.bounds,
+      placement: { rotation: [0, 0, 0], scale: 1, depth: 10, top: 0, position: [0, 0] },
+      ...(faces && { faces }),
+    });
+    // The top, with its hole as a circle; the bottom faces down.
+    expect(levels.map(({ z }) => z)).toEqual([0]);
+    const holes = levels[0]?.paths.map((path) => circleCenter(path)).filter(Boolean);
+    expect(holes).toEqual([[20, 10]]);
+    expect(outline).toHaveLength(1);
+  }, 30_000);
+
+  it("finds the levels, holes and outline of a 2.5D part, with its faces or without", async () => {
+    // 100 x 60 x 12 mm: a pocket 6 mm deep, a step 3 mm deep and four 6 mm through holes.
+    const { stl, faces } = await stepToStl(bytes(plate), DEFAULT_STL_LIMITS, wasm);
+    const mesh = parseStl(stl);
+    const placement: ModelPlacement = {
+      rotation: [0, 0, 0],
+      scale: 1,
+      depth: 12,
+      top: 0,
+      position: [0, 0],
+    };
+    for (const model of [
+      { bounds: mesh.bounds, placement, ...(faces && { faces }) },
+      { bounds: mesh.bounds, placement },
+    ]) {
+      const { levels, outline } = modelFlatFaces(mesh.positions, model);
+      expect(levels.map(({ z, paths }) => [z, paths.length])).toEqual([
+        [0, 7],
+        [-3, 1],
+        [-6, 1],
+      ]);
+      const holes = levels[0]?.paths.map((path) => circleCenter(path)).filter((c) => c !== null);
+      expect(holes?.map((point) => point.map((v) => Math.round(v * 100) / 100))).toEqual(
+        expect.arrayContaining([
+          [6, 6],
+          [94, 6],
+          [6, 54],
+          [94, 54],
+        ]),
+      );
+      expect(holes).toHaveLength(4);
+      expect(outline).toHaveLength(1);
+    }
+  }, 30_000);
+
   it("converts a file in inches", async () => {
-    const mesh = parseStl(await stepToStl(bytes(boxWithHoleInch), DEFAULT_STL_LIMITS, wasm));
+    const { stl } = await stepToStl(bytes(boxWithHoleInch), DEFAULT_STL_LIMITS, wasm);
+    const mesh = parseStl(stl);
     expect(mesh.bounds.max.map((v) => Math.round(v * 1000) / 1000)).toEqual([50.8, 25.4, 12.7]);
   }, 30_000);
 

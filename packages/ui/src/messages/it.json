@@ -542,7 +542,8 @@
       "spindleMinMax": "Deve essere almeno la velocità minima del mandrino"
     },
     "model": {
-      "cornerOrder": "L'angolo minimo non può superare il massimo"
+      "cornerOrder": "L'angolo minimo non può superare il massimo",
+      "faceTriangles": "Le facce del modello devono ripartirne tutti i triangoli"
     },
     "geometry": {
       "zeroLine": "Linea di lunghezza zero",
@@ -830,7 +831,9 @@
       "patternNoSelection": "Seleziona percorsi chiusi di un disegno da riempire.",
       "patternOneDrawing": "Seleziona percorsi di un solo disegno.",
       "patternOfPattern": "Un motivo non può essere riempito con un altro.",
-      "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire."
+      "patternNoClosedPath": "La selezione non ha percorsi chiusi da riempire.",
+      "modelDrawingsFailed": "Non è stato possibile creare i disegni del modello. Riprova.",
+      "noModelFaces": "Questo modello non ha facce rivolte verso l'alto: non c'è niente da disegnare."
     },
     "terrain": {
       "noArea": "Quest'area è troppo piccola. Disegnane una più grande.",
@@ -1456,7 +1459,12 @@
     "position": "Posizione",
     "positionHint": "Dove si trova il punto {anchor, select, top_left {in alto a sinistra} top_center {in alto al centro} top_right {in alto a destra} middle_left {al centro a sinistra} middle_right {al centro a destra} bottom_left {in basso a sinistra} bottom_center {in basso al centro} bottom_right {in basso a destra} other {centrale}} del modello, misurato dallo zero. Spostarlo non cambia il bordo che lascia <em>Adatta al grezzo</em>.",
     "removeTitle": "Rimuove anche {count, plural, one {l’operazione che lo lavora} other {le # operazioni che lo lavorano}}",
-    "remove": "Rimuovi il modello"
+    "remove": "Rimuovi il modello",
+    "drawings": "Disegni",
+    "drawingsHint": "Crea un disegno dei livelli piani del modello, un layer per ogni profondità, e della sua sagoma, per lavorarlo con tasche, contorni e forature. Il disegno resta dove si trova ora il modello: non lo segue.",
+    "makeDrawings": "Disegni dal modello",
+    "outlineLayer": "Sagoma",
+    "outlineOnly": "Il modello non ha facce piane: il disegno contiene solo la sua sagoma."
   },
   "Drawing": {
     "closeLabel": "Chiudi le proprietà del disegno",
