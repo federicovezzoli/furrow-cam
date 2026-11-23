@@ -66,7 +66,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0049](0049-stable-download-links.md) | Stable download links from a Cloudflare Worker, counted in Analytics Engine | Accepted; superseded in part by ADR-0090 |
 | [0050](0050-guest-workspace-in-the-browser.md) | Guests use the workspace with projects kept in the browser | Accepted |
 | [0051](0051-bug-reports-as-github-issue-drafts.md) | Bug reports are prefilled GitHub issue drafts the user submits | Accepted |
-| [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Accepted |
+| [0052](0052-usage-and-error-tracking-posthog.md) | Anonymous usage and error tracking with PostHog | Accepted; superseded in part by ADR-0093 |
 | [0053](0053-touch-off-suggest-every-xy-move.md) | Touch-off Suggest keeps the tool on the pad through every kind of XY move | Accepted |
 | [0054](0054-interface-languages.md) | Interface languages with use-intl, picked from the browser or the system | Accepted |
 | [0055](0055-several-drawings-transformed-in-place.md) | A project holds several drawings, each transformed by rewriting its points | Accepted |
@@ -107,3 +107,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0090](0090-download-counts-coarse-labels.md) | Download counts record coarse client and location labels | Accepted |
 | [0091](0091-g-code-dialects-share-one-program.md) | G-code dialects share one program; Marlin is the second | Accepted; superseded in part by ADR-0092 |
 | [0092](0092-post-layer-folders.md) | Layer folders in post | Accepted |
+| [0093](0093-consent-based-usage-tracking.md) | Detailed usage tracking with consent, the cookieless baseline without | Accepted |
