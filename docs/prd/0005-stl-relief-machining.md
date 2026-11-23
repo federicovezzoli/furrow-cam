@@ -79,5 +79,5 @@ None.
 - 2026-11-01: S1b, STEP import, no longer a non-goal (#442, ADR-0072)
 - 2026-11-07: S2 adds *Center on stock* (#495)
 - 2026-11-15: S1c, several models per project (#596, ADR-0085)
-- 2026-11-23: S14, drawings from a model's flat faces and outline, answering the open question on the silhouette (#665, ADR-0094)
 - 2026-11-16: S13, holding tabs on one-sided jobs (#616, ADR-0086)
+- 2026-11-23: S14, drawings from a model's flat faces and outline, answering the open question on the silhouette (#665, ADR-0094)
