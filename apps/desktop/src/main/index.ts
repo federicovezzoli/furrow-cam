@@ -225,8 +225,13 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     updatePrefs = parseUpdatePrefs(await readJson(updatesPath()));
     telemetryPrefs = parseTelemetryPrefs(await readJson(telemetryPath()));
-    // Agreed before the ID was kept (ADR-0093): make one now.
-    if (telemetryPrefs.enabled && !telemetryPrefs.id) void saveTelemetryChoice(true);
+    // Agreed before the ID was kept (ADR-0093): make one now, quietly, since the user chose
+    // nothing just now; if it can't be saved, the next launch makes another.
+    if (telemetryPrefs.enabled && !telemetryPrefs.id) {
+      telemetryPrefs = chooseTelemetry(telemetryPrefs, true, () => crypto.randomUUID());
+      const prefs = telemetryPrefs;
+      telemetryWrite = writeJson(telemetryPath(), prefs).catch(() => {});
+    }
     const saved = (await readJson(localePath())) as { picked?: unknown } | null;
     pickedLocale = isLocale(saved?.picked) ? saved.picked : null;
     applyTelemetry();
