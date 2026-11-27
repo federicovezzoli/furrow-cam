@@ -698,8 +698,8 @@
       "facetVertices": "Bu STL dosyası hasarlı: {line}. satırda bir yüzeyin üç köşe noktası yok.",
       "notStl": "Bu STL dosyası hasarlı: {line}. satırdaki “{word}” STL değil.",
       "unfinished": "Bu STL dosyası hasarlı: {line}. satırda son yüzey tamamlanmamış.",
-      "small": "Bu model yalnızca {size, number} mm. STL dosyalarının birimi yoktur: inç cinsinden dışa aktarıldıysa {inches, number} mm, metre cinsindense {metres, number} mm olur. Boyutunu panelinden ayarlayın veya “Ham malzemeye sığdır”ı kullanın.",
-      "largerThanStock": "Bu model {size, number} mm, ham malzemenin on katından fazla. STL dosyalarının birimi yoktur: dışa aktarma birimini kontrol edin, boyutunu panelinden ayarlayın veya “Ham malzemeye sığdır”ı kullanın."
+      "small": "Bu model yalnızca {size, number} mm. STL dosyaları birimlerini belirtmez: inç cinsinden dışa aktarıldıysa {inches, number} mm, metre cinsindense {metres, number} mm olur. Boyutunu panelinden ayarlayın veya “Ham malzemeye sığdır”ı kullanın.",
+      "largerThanStock": "Bu model {size, number} mm, ham malzemenin on katından fazla. STL dosyaları birimlerini belirtmez: dışa aktarma birimini kontrol edin, boyutunu panelinden ayarlayın veya “Ham malzemeye sığdır”ı kullanın."
     },
     "toolpath": {
       "skippedPoints": "{count, plural, one {# nokta} other {# nokta}} atlandı: bunun yerine delin.",

@@ -698,8 +698,8 @@
       "facetVertices": "Diese STL-Datei ist beschädigt: Eine Facette hat keine drei Eckpunkte in Zeile {line}.",
       "notStl": "Diese STL-Datei ist beschädigt: „{word}“ ist kein STL in Zeile {line}.",
       "unfinished": "Diese STL-Datei ist beschädigt: Die letzte Facette ist nicht abgeschlossen in Zeile {line}.",
-      "small": "Dieses Modell ist nur {size, number} mm groß. STL-Dateien haben keine Einheiten: In Zoll exportiert wäre es {inches, number} mm groß, in Metern {metres, number} mm. Lege seine Größe im Bereich fest oder nutze „An Rohteil anpassen“.",
-      "largerThanStock": "Dieses Modell ist {size, number} mm groß, mehr als das Zehnfache des Rohteils. STL-Dateien haben keine Einheiten: Prüfe die Einheit beim Export, lege seine Größe im Bereich fest oder nutze „An Rohteil anpassen“."
+      "small": "Dieses Modell ist nur {size, number} mm groß. STL-Dateien geben ihre Einheit nicht an: In Zoll exportiert wäre es {inches, number} mm groß, in Metern {metres, number} mm. Lege seine Größe im Bereich fest oder nutze „An Rohteil anpassen“.",
+      "largerThanStock": "Dieses Modell ist {size, number} mm groß, mehr als das Zehnfache des Rohteils. STL-Dateien geben ihre Einheit nicht an: Prüfe die Einheit beim Export, lege seine Größe im Bereich fest oder nutze „An Rohteil anpassen“."
     },
     "toolpath": {
       "skippedPoints": "{count, plural, one {# Punkt übersprungen} other {# Punkte übersprungen}}: Bohre sie stattdessen.",

@@ -698,8 +698,8 @@
       "facetVertices": "此STL文件已损坏：第{line}行有一个面片不是三个顶点。",
       "notStl": "此STL文件已损坏：第{line}行的“{word}”不是STL语法。",
       "unfinished": "此STL文件已损坏：第{line}行的最后一个面片不完整。",
-      "small": "此模型只有 {size, number} 毫米。STL 文件没有单位：若以英寸导出应为 {inches, number} 毫米，若以米导出应为 {metres, number} 毫米。请在面板中设置尺寸，或使用“适配毛坯”。",
-      "largerThanStock": "此模型有 {size, number} 毫米，超过毛坯的十倍。STL 文件没有单位：请检查导出单位，在面板中设置尺寸，或使用“适配毛坯”。"
+      "small": "此模型只有 {size, number} 毫米。STL 文件不记录单位：若以英寸导出应为 {inches, number} 毫米，若以米导出应为 {metres, number} 毫米。请在面板中设置尺寸，或使用“适配毛坯”。",
+      "largerThanStock": "此模型有 {size, number} 毫米，超过毛坯的十倍。STL 文件不记录单位：请检查导出单位，在面板中设置尺寸，或使用“适配毛坯”。"
     },
     "toolpath": {
       "skippedPoints": "已跳过{count, plural, other {#个点}}：请改用钻孔加工。",
