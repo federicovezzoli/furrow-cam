@@ -1,5 +1,12 @@
 # @furrow/cam-core
 
+## 0.27.1
+
+### Patch Changes
+
+- Drawings from a model with finely curved sides no longer leave the project unable to save: the outline no longer keeps points too close together for a drawing. ([#677](https://github.com/federicovezzoli/furrow-cam/pull/677))
+- Importing an STL that is far smaller than any part, or far larger than the stock, now warns that it may have been exported in inches or metres, and says what size it would then be. ([#678](https://github.com/federicovezzoli/furrow-cam/pull/678))
+
 ## 0.27.0
 
 ### Minor Changes

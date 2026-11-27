@@ -1,5 +1,17 @@
 # @furrow/workspace
 
+## 0.33.0
+
+### Minor Changes
+
+- An imported STL or STEP model now keeps the size it was drawn at, even when it is larger than the stock, instead of being scaled to fit. Click *Fit to stock* in its panel to fit it. ([#674](https://github.com/federicovezzoli/furrow-cam/pull/674))
+
+### Patch Changes
+
+- Drawings from a model with finely curved sides no longer leave the project unable to save: the outline no longer keeps points too close together for a drawing. ([#677](https://github.com/federicovezzoli/furrow-cam/pull/677))
+- Importing an STL that is far smaller than any part, or far larger than the stock, now warns that it may have been exported in inches or metres, and says what size it would then be. ([#678](https://github.com/federicovezzoli/furrow-cam/pull/678))
+- Updated dependencies: @furrow/cam-core@0.27.1, @furrow/ui@0.11.1, @furrow/post@0.16.2
+
 ## 0.32.0
 
 ### Minor Changes

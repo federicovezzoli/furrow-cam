@@ -1,5 +1,12 @@
 # @furrow/ui
 
+## 0.11.1
+
+### Patch Changes
+
+- Importing an STL that is far smaller than any part, or far larger than the stock, now warns that it may have been exported in inches or metres, and says what size it would then be. ([#678](https://github.com/federicovezzoli/furrow-cam/pull/678))
+- Updated dependencies: @furrow/cam-core@0.27.1
+
 ## 0.11.0
 
 ### Minor Changes
