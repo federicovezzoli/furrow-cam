@@ -106,38 +106,27 @@ export function addModel(
   const id = crypto.randomUUID();
   // The border it is aligned to is the one a later *Fit to stock* leaves.
   const border = MODEL_BORDER;
-  const placement = centred
-    ? centredPlacement(mesh.bounds, stock)
-    : anchoredPlacement(mesh.bounds, stock, border);
+  const anchor = centred ? "center" : modelAnchor(stock);
+  const point: Point = centred
+    ? [stock.width / 2, stock.height / 2]
+    : anchorPoint(stockInset(stock, border), anchor);
+  const placement = placementAt(mesh.bounds, stock, anchor, point);
   store.getState().change("addModel", (draft) => {
     draft.models.push({ ...mesh, id, placement, border });
   });
   return id;
 }
 
-/** A mesh at its own size, its top at the stock top and aligned at the zero's anchor to the stock less `border`. */
-function anchoredPlacement(bounds: Box3, stock: Stock, border: number): ModelPlacement {
-  const rotation: Rotation = [0, 0, 0];
-  const anchor = modelAnchor(stock);
-  const depth = proportionalDepth(bounds, rotation, 1) ?? stock.thickness;
-  const point = anchorPoint(stockInset(stock, border), anchor);
-  return {
-    rotation,
-    scale: 1,
-    depth,
-    top: 0,
-    position: positionAt(bounds, { rotation, scale: 1 }, anchor, point),
-  };
-}
-
-/** A mesh at its own size, its top at the stock top and centred on the stock. */
-function centredPlacement(bounds: Box3, stock: Stock): ModelPlacement {
+/** A mesh at its own size, unturned, its top at the stock top and its `anchor` point at `point`. */
+function placementAt(
+  bounds: Box3,
+  stock: Stock,
+  anchor: StockAnchor,
+  point: Point,
+): ModelPlacement {
   const rotation: Rotation = [0, 0, 0];
   const depth = proportionalDepth(bounds, rotation, 1) ?? stock.thickness;
-  const position = positionAt(bounds, { rotation, scale: 1 }, "center", [
-    stock.width / 2,
-    stock.height / 2,
-  ]);
+  const position = positionAt(bounds, { rotation, scale: 1 }, anchor, point);
   return { rotation, scale: 1, depth, top: 0, position };
 }
 
