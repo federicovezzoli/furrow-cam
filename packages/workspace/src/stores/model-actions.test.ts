@@ -1,4 +1,4 @@
-import { modelRect } from "@furrow/cam-core";
+import { type Box3, modelRect } from "@furrow/cam-core";
 import { createProjectDocument, type Model, ProjectDocument } from "@furrow/document";
 import { ballEndMill, fullDocument, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
@@ -25,7 +25,7 @@ import { setCustomXYOrigin, setStockDimension, setXYAnchor } from "./stock-actio
 const { id: _, placement: __, border: ___, ...mesh } = model;
 
 /** 600 × 400 × 18 mm stock zeroed at `anchor`, with the mesh imported. */
-function storeWithModel(anchor: "bottom_left" | "center" = "bottom_left") {
+function storeWithModel(anchor: "bottom_left" | "center" | "top_right" = "bottom_left") {
   const document = createProjectDocument();
   document.stock.xyOrigin = { anchor };
   const store = createDocumentStore(document);
@@ -35,25 +35,33 @@ function storeWithModel(anchor: "bottom_left" | "center" = "bottom_left") {
 }
 
 describe("addModel", () => {
-  it("fits inside the stock's border, aligned at the anchor, as one undo step", () => {
-    const { store, get } = storeWithModel("center");
-    // 100 × 80 into 600 × 400 less a 10 mm border: 4.75 times, 475 × 380, centred.
+  it("keeps the mesh's size, aligned at the anchor inside the border, as one undo step", () => {
+    const { store, get } = storeWithModel("top_right");
+    // The 100 × 80 mesh's top-right corner at the 600 × 400 stock's, less the 10 mm border.
     expect(get().placement).toEqual({
       rotation: [0, 0, 0],
-      scale: 4.75,
-      // The mesh's 12 mm, scaled like its outline, deeper than the stock.
-      depth: 57,
+      scale: 1,
+      depth: 12,
       top: 0,
-      position: [62.5, 10],
+      position: [490, 310],
     });
     expect(ProjectDocument.safeParse(store.getState().document).success).toBe(true);
     store.getState().undo();
     expect(store.getState().document.models).toEqual([]);
   });
 
-  it("keeps the mesh's size and centres it on the stock when not fitted", () => {
+  it("keeps a mesh larger than the stock at its size, past the stock's edges", () => {
     const store = createDocumentStore(createProjectDocument());
-    addModel(store, mesh, { fit: false });
+    const large = { ...mesh, bounds: { min: [0, 0, 0], max: [1000, 500, 40] } as Box3 };
+    addModel(store, large);
+    const added = store.getState().document.models[0] as Model;
+    expect(added.placement).toMatchObject({ scale: 1, depth: 40, top: 0 });
+    expect(modelRect(added)).toEqual({ min: [10, 10], max: [1010, 510] });
+  });
+
+  it("keeps the mesh's size and centres it on the stock when centred", () => {
+    const store = createDocumentStore(createProjectDocument());
+    addModel(store, mesh, { centred: true });
     const added = store.getState().document.models[0] as Model;
     expect(added.placement).toMatchObject({ scale: 1, depth: 12, top: 0 });
     // The 100 × 80 mesh in the middle of the 600 × 400 stock, whatever the zero.
@@ -89,8 +97,8 @@ describe("placement edits", () => {
     turnModelAbout(store, id, 2);
     expect(get().placement.rotation).toEqual([0, 0, 90]);
     const { min, max } = modelRect(get());
-    // 380 × 475 now, still centred on the stock.
-    expectClose([min[0], min[1], max[0], max[1]], [110, -37.5, 490, 437.5]);
+    // 80 × 100 now, still centred on the stock.
+    expectClose([min[0], min[1], max[0], max[1]], [260, 150, 340, 250]);
     expect(store.getState().past).toHaveLength(2);
   });
 
@@ -118,10 +126,12 @@ describe("placement edits", () => {
   it("sinks below the stock top, and a fit leaves it there", () => {
     const { store, id, get } = storeWithModel();
     setModelTop(store, id, 2.5);
-    expect(get().placement).toMatchObject({ scale: 4.75, depth: 57, top: 2.5 });
+    expect(get().placement).toMatchObject({ scale: 1, depth: 12, top: 2.5 });
     fitModelToStock(store, id);
-    expect(get().placement.top).toBe(2.5);
-    // The fit changed nothing, so one undo takes the top back.
+    expect(get().placement).toMatchObject({ scale: 4.75, depth: 57, top: 2.5 });
+    // Undoing the fit keeps the top; undoing again takes it back.
+    store.getState().undo();
+    expect(get().placement).toMatchObject({ scale: 1, top: 2.5 });
     store.getState().undo();
     expect(get().placement.top).toBe(0);
   });
@@ -144,7 +154,7 @@ describe("placement edits", () => {
     expect(get().border).toBe(0);
     expect(store.getState().past).toHaveLength(steps + 1);
     // Setting the border doesn't move the model; fitting does.
-    expect(get().placement).toMatchObject({ scale: 4.75, position: [10, 10] });
+    expect(get().placement).toMatchObject({ scale: 1, position: [10, 10] });
     fitModelToStock(store, id);
     // 100 × 80 into 600 × 400 whole: 5 times, edge to edge in Y.
     expect(get().placement).toMatchObject({ scale: 5, position: [0, 0] });
@@ -166,7 +176,7 @@ describe("placement edits", () => {
     setModelOffset(store, id, "x", 25);
     setModelOffset(store, id, "y", -10);
     expect(modelOffset(stock(), get())).toEqual([25, -10]);
-    expect(get().placement.position).toEqual([87.5, 0]);
+    expect(get().placement.position).toEqual([275, 150]);
   });
 
   it("centres the model's box on the stock, whatever the zero, keeping its size and top", () => {

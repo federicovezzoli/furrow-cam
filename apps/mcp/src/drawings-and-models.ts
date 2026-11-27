@@ -162,19 +162,19 @@ async function importModel(
 }
 
 /**
- * Adds the STL `bytes` as the project's model, fitted to the stock or, with
- * `fit: false`, at its size centred on it (a terrain, ADR-0077). Returns its id.
+ * Adds the STL `bytes` as the project's model, at its size aligned at the zero's
+ * anchor or, with `centred`, centred on the stock (a terrain, ADR-0077). Returns its id.
  */
 export async function addMesh(
   project: Project,
   mesh: Pick<Model, "triangles" | "bounds" | "fileName" | "faces">,
   bytes: Uint8Array,
-  { fit = true }: { fit?: boolean } = {},
+  { centred = false }: { centred?: boolean } = {},
 ): Promise<string> {
   const sha256 = await sha256Hex(bytes);
   let id = "";
   change(project, (store) => {
-    id = addModel(store, { ...mesh, sha256, size: bytes.byteLength }, { fit });
+    id = addModel(store, { ...mesh, sha256, size: bytes.byteLength }, { centred });
   });
   // The project file stores the mesh, as the desktop app's does (ADR-0029, ADR-0047).
   project.meshes.set(sha256, bytes);

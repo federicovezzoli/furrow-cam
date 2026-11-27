@@ -159,7 +159,7 @@ export async function importTerrain(
     project,
     { triangles: terrain.triangles, bounds, fileName: `${name}.stl` },
     terrain.stl,
-    { fit: false },
+    { centred: true },
   );
   const tenths = (value: number) => Math.round(value * 10) / 10;
   return {

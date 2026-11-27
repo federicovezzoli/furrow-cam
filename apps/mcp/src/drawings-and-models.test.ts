@@ -126,6 +126,8 @@ describe("importFile", () => {
     const { id } = await importFile(project, path, {});
     const [model] = summary().models;
     expect(model).toMatchObject({ id, fileName: "emblem.stl", triangles: 4 });
+    // At its size in the file, not fitted to the stock.
+    expect(model?.size).toMatchObject({ width: 40, height: 30, depth: 10 });
     await createProjects().save(project);
     const saved = await readProjectFile(new Uint8Array(await readFile(project.path)), t);
     const [stored] = saved.document.models;
@@ -158,7 +160,7 @@ describe("importFile", () => {
 
     const steps = project.store.getState().past.length;
     const drawing = drawingsFromModel(project, id);
-    // The pocket is twice as deep as the step, wherever the model was fitted.
+    // The pocket is twice as deep as the step, whatever the model's size.
     const [top, stepDepth, pocket] = drawing.levels;
     expect(drawing.levels).toHaveLength(3);
     expect(top).toBe(0);
