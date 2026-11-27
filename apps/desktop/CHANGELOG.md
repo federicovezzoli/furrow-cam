@@ -1,5 +1,12 @@
 # @furrow/desktop
 
+## 0.33.0
+
+### Patch Changes
+
+- Error reports from the desktop app work with the updated analytics library. ([#678](https://github.com/federicovezzoli/furrow-cam/pull/678))
+- Updated dependencies: @furrow/workspace@0.33.0, @furrow/cam-core@0.27.1, @furrow/ui@0.11.1
+
 ## 0.32.0
 
 ### Minor Changes

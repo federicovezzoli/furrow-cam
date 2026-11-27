@@ -1,5 +1,11 @@
 # @furrow/post
 
+## 0.16.2
+
+### Patch Changes
+
+- Updated dependencies: @furrow/cam-core@0.27.1
+
 ## 0.16.1
 
 ### Patch Changes
