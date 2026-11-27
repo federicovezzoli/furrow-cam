@@ -174,7 +174,11 @@ let pickedLocale: Locale | null = null;
 setTelemetrySink({
   track: trackEvent,
   error: (error) => {
-    if (telemetryPrefs.id) posthog?.captureException(error, telemetryPrefs.id, appProperties());
+    if (telemetryPrefs.id)
+      posthog?.captureException(error, {
+        distinctId: telemetryPrefs.id,
+        properties: appProperties(),
+      });
   },
 });
 // Observes uncaught errors without changing how they're handled. In Node's default mode an
