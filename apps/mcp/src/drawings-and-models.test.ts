@@ -142,7 +142,9 @@ describe("importFile", () => {
       .replaceAll("0 0 10", "0 0 0.39");
     const { warnings } = await importFile(project, await file("tiny.stl", inches), {});
     expect(warnings).toEqual([
-      expect.stringContaining("may be in inches, which would make it 40 mm"),
+      expect.stringMatching(
+        /in inches it would be 39\.9 mm, in metres 1,570 mm.*resize, or fit_to_stock/,
+      ),
     ]);
     expect(summary().models[0]?.size.width).toBeCloseTo(1.57, 5);
   });

@@ -215,14 +215,22 @@ describe("stlSizeWarning", () => {
     expect(stlSizeWarning(box(0, 0, 0), stock)).toBeNull();
   });
 
-  it("suggests inches, or metres when inches would still be tiny", () => {
+  it("reads a tiny mesh as inches and as metres, to three significant figures", () => {
+    // 100 mm in inches, or a 0.6 m relief in metres: the size alone can't tell.
     expect(stlSizeWarning(box(3.94, 3.15, 0.5), stock)).toEqual({
-      code: "stl.maybeInches",
-      values: { size: 3.94, likely: 100 },
+      code: "stl.small",
+      values: { size: 3.94, inches: 100, metres: 3940 },
     });
-    expect(stlSizeWarning(box(0.1, 0.08, 0.01), stock)).toEqual({
-      code: "stl.maybeMetres",
-      values: { size: 0.1, likely: 100 },
+    expect(stlSizeWarning(box(0.6, 0.4, 0.05), stock)?.values).toEqual({
+      size: 0.6,
+      inches: 15.2,
+      metres: 600,
+    });
+    // Never "0 mm" for a very small mesh.
+    expect(stlSizeWarning(box(0.003, 0.001, 0), stock)?.values).toEqual({
+      size: 0.003,
+      inches: 0.0762,
+      metres: 3,
     });
   });
 

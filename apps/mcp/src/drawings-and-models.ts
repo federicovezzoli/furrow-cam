@@ -163,7 +163,9 @@ async function importModel(
   const id = await addMesh(project, mesh, bytes);
   // A STEP file says its units; an STL's are only guessed from its size (#676).
   const warning = step ? null : stlSizeWarning(bounds, project.store.getState().document.stock);
-  return { id, warnings: warning ? [text(warning)] : [] };
+  // The app's wording names its panel; here, the tools that do the same.
+  const tools = " Through these tools: resize, or fit_to_stock.";
+  return { id, warnings: warning ? [text(warning) + tools] : [] };
 }
 
 /**

@@ -698,8 +698,7 @@
       "facetVertices": "Ce fichier STL est endommagé : une facette n'a pas trois sommets à la ligne {line}.",
       "notStl": "Ce fichier STL est endommagé : « {word} » n'est pas du STL à la ligne {line}.",
       "unfinished": "Ce fichier STL est endommagé : la dernière facette n'est pas terminée à la ligne {line}.",
-      "maybeInches": "Ce modèle ne mesure que {size, number} mm. Les fichiers STL n'ont pas d'unités : il est peut-être en pouces, soit {likely, number} mm. Réglez sa taille dans son panneau ou utilisez « Ajuster au brut ».",
-      "maybeMetres": "Ce modèle ne mesure que {size, number} mm. Les fichiers STL n'ont pas d'unités : il est peut-être en mètres, soit {likely, number} mm. Réglez sa taille dans son panneau ou utilisez « Ajuster au brut ».",
+      "small": "Ce modèle ne mesure que {size, number} mm. Les fichiers STL n'ont pas d'unités : exporté en pouces, il mesurerait {inches, number} mm, en mètres {metres, number} mm. Réglez sa taille dans son panneau ou utilisez « Ajuster au brut ».",
       "largerThanStock": "Ce modèle mesure {size, number} mm, plus de dix fois le brut. Les fichiers STL n'ont pas d'unités : vérifiez l'unité d'export, réglez sa taille dans son panneau ou utilisez « Ajuster au brut »."
     },
     "toolpath": {
