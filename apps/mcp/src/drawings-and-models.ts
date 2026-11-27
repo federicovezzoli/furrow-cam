@@ -10,6 +10,7 @@ import {
   rotatedSize,
   StlImportError,
   type StlMesh,
+  stlSizeWarning,
 } from "@furrow/cam-core";
 import { MessageError, type Model, sha256Hex, type Units } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
@@ -120,7 +121,7 @@ export async function importFile(
   if (kind === "stl") return importModel(project, name, bytes);
   if (kind === "step") {
     const { stl, faces } = await stepMesh(bytes);
-    return importModel(project, name, stl, faces);
+    return importModel(project, name, stl, { faces });
   }
 
   const file = reading(() => parseDrawingFile(name, bytes));
@@ -153,28 +154,34 @@ async function importModel(
   project: Project,
   fileName: string,
   bytes: Uint8Array,
-  faces?: number[],
+  step?: { faces?: number[] },
 ) {
+  const faces = step?.faces;
   // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const { triangles, bounds }: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
   const mesh = { triangles, bounds, fileName, ...(faces && { faces }) };
-  return { id: await addMesh(project, mesh, bytes), warnings: [] };
+  const id = await addMesh(project, mesh, bytes);
+  // A STEP file says its units; an STL's are only guessed from its size (#676).
+  const warning = step ? null : stlSizeWarning(bounds, project.store.getState().document.stock);
+  // The app's wording names its panel; here, the tools that do the same.
+  const tools = " Through these tools: resize, or fit_to_stock.";
+  return { id, warnings: warning ? [text(warning) + tools] : [] };
 }
 
 /**
- * Adds the STL `bytes` as the project's model, fitted to the stock or, with
- * `fit: false`, at its size centred on it (a terrain, ADR-0077). Returns its id.
+ * Adds the STL `bytes` as the project's model, at its size aligned at the zero's
+ * anchor or, with `centred`, centred on the stock (a terrain, ADR-0077). Returns its id.
  */
 export async function addMesh(
   project: Project,
   mesh: Pick<Model, "triangles" | "bounds" | "fileName" | "faces">,
   bytes: Uint8Array,
-  { fit = true }: { fit?: boolean } = {},
+  { centred = false }: { centred?: boolean } = {},
 ): Promise<string> {
   const sha256 = await sha256Hex(bytes);
   let id = "";
   change(project, (store) => {
-    id = addModel(store, { ...mesh, sha256, size: bytes.byteLength }, { fit });
+    id = addModel(store, { ...mesh, sha256, size: bytes.byteLength }, { centred });
   });
   // The project file stores the mesh, as the desktop app's does (ADR-0029, ADR-0047).
   project.meshes.set(sha256, bytes);

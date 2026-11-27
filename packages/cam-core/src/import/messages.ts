@@ -58,6 +58,8 @@ export const IMPORT_MESSAGES = [
   "stl.facetVertices",
   "stl.notStl",
   "stl.unfinished",
+  "stl.small",
+  "stl.largerThanStock",
   "terrain.noArea",
   "terrain.antimeridian",
   "terrain.tooWide",

@@ -31,7 +31,7 @@ export function ModelImportButton() {
   const host = useWorkspaceHost();
   const limits = host.limits.meshes;
   const importing = useWorkspaceStore(
-    (s) => s.modelImport !== null && s.modelImport.error === null,
+    (s) => s.modelImport !== null && s.modelImport.error === null && !s.modelImport.warning,
   );
   const input = useRef<HTMLInputElement>(null);
 

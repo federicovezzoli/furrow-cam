@@ -13,7 +13,7 @@ export default async function stl(r: Recorder) {
   await r.click("view-orbit");
   await r.hold(0.5);
 
-  // The stock first, so the terrain (162 × 161 × 44 mm) arrives fitted with
+  // The stock first, then the terrain (162 × 161 × 44 mm) fitted to it with
   // the 10 mm border: about 160 mm square, cutting 43 mm into the 48 mm stock.
   await r.click("tab-properties");
   await r.type("stock-width", "180");
@@ -22,6 +22,7 @@ export default async function stl(r: Recorder) {
   await r.chooseFile("ribbon-import-model", terrain);
   await r.waitForWork("model-width");
   await r.hold(1);
+  await r.click("fit-model");
   await r.click("close-model");
   await r.click("fit-stock");
   await r.click("tab-operations");

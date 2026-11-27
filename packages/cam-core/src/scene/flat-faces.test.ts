@@ -1,4 +1,4 @@
-import type { Model, Path, Point } from "@furrow/document";
+import { type Model, Path, type Point } from "@furrow/document";
 import { describe, expect, it } from "vitest";
 import { circleCenter } from "../geometry/circle";
 import { signedArea } from "../geometry/clipper";
@@ -176,6 +176,39 @@ describe("modelFlatFaces", () => {
       levels: [],
       outline: [expect.objectContaining({ closed: true })],
     });
+  });
+
+  it("returns only paths the document takes from a dome's crowded silhouette", () => {
+    // Seen from above, a wavy dome's rings crowd together at its rim and cross: the union of the
+    // triangles' shadows keeps vertices closer together than the document tolerance (#675).
+    const [rings, sides] = [300, 360];
+    const at = (ring: number, side: number): Vec3 => {
+      const polar = (ring / rings) * (Math.PI / 2);
+      const angle = ((side + (ring % 2) / 2) / sides) * 2 * Math.PI;
+      const r = 20 * Math.sin(polar) * (1 + 0.02 * Math.sin(7 * angle + 40 * polar));
+      return [40 + 1.6 * r * Math.cos(angle), 25 + r * Math.sin(angle), 20 * Math.cos(polar)];
+    };
+    const dome: Triangle[] = [];
+    for (let ring = 1; ring < rings; ring++)
+      for (let side = 0; side < sides; side++) {
+        const [a, b] = [at(ring, side), at(ring, side + 1)];
+        const [c, d] = [at(ring + 1, side), at(ring + 1, side + 1)];
+        dome.push([a, c, d], [a, d, b]);
+      }
+    const { levels, outline } = modelFlatFaces(mesh([dome]), PLACED);
+    expect(outline).toHaveLength(1);
+    for (const path of [...levels.flatMap(({ paths }) => paths), ...outline])
+      expect(Path.safeParse(path).success).toBe(true);
+  });
+
+  it("leaves out a ring with a side too short for a drawing", () => {
+    // Clipper2 doesn't simplify a triangle: this one keeps two corners 0.0005 mm apart.
+    const sliver: Triangle = [
+      [0, 0, 12],
+      [0.0005, 0, 12],
+      [0.0002, 60, 12],
+    ];
+    expect(modelFlatFaces(mesh([[sliver]]), PLACED)).toEqual({ levels: [], outline: [] });
   });
 
   it("finds nothing on a model with no upward face", () => {

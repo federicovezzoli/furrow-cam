@@ -26,6 +26,7 @@ import { shapePaths } from "../lib/path-selection";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
 import {
+  useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
   useWorkspaceStoreApi,
@@ -171,8 +172,18 @@ export function GeometryImport() {
     }
   }
 
+  const warning = modelImport?.warning;
+  // The size warning holds only while its model is there at the size it came in.
+  const warned = useDocumentStore(
+    (s) =>
+      warning !== undefined &&
+      s.document.models.some((m) => m.id === warning.modelId && m.placement.scale === 1),
+  );
+  const importing = modelImport !== null && modelImport.error === null && !warning;
+  /** Why a model couldn't be imported, or a warning about one that was. */
+  const modelMessage = modelImport?.error ?? (warned ? warning?.message : null) ?? null;
   /** Nothing to show over the viewport: imports start from the ribbon. */
-  const bare = !pending && !notice && !modelImport;
+  const bare = !pending && !notice && !importing && !modelMessage;
 
   return (
     <>
@@ -230,17 +241,23 @@ export function GeometryImport() {
               />
             )}
 
-            {modelImport && (
+            {modelImport && (importing || modelMessage) && (
               <div className="flex items-start gap-1">
-                {modelImport.error === null ? (
+                {modelMessage === null ? (
                   <p role="status" className="flex-1 break-all text-muted-foreground">
                     {t("importing", { file: modelImport.fileName })}
                   </p>
                 ) : (
                   <>
-                    <div role="alert" className="grid flex-1 gap-1 text-destructive">
+                    <div
+                      role={modelImport.error ? "alert" : "status"}
+                      className={cn(
+                        "grid flex-1 gap-1",
+                        modelImport.error ? "text-destructive" : "text-muted-foreground",
+                      )}
+                    >
                       <p className="font-medium break-all">{modelImport.fileName}</p>
-                      <p>{format(modelImport.error)}</p>
+                      <p>{format(modelMessage)}</p>
                     </div>
                     <Button
                       variant="ghost"
