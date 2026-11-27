@@ -45,14 +45,14 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Accepted |
 | [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Accepted |
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Accepted |
-| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Accepted; superseded in part by ADR-0034, ADR-0038, ADR-0055 and ADR-0060 |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Accepted; superseded in part by ADR-0034, ADR-0038, ADR-0055, ADR-0060 and ADR-0095 |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Accepted |
 | [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Accepted |
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Accepted |
 | [0035](0035-relief-rest-machining.md) | Rest machining simulates the earlier toolpaths on a coarser grid | Accepted |
 | [0036](0036-guided-tour-timestamps.md) | The account remembers when each guided tour was seen | Accepted |
 | [0037](0037-cam-core-layer-folders.md) | Layer folders in cam-core | Accepted; superseded in part by ADR-0065 |
-| [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Accepted; superseded in part by ADR-0064 |
+| [0038](0038-roughing-margin-and-model-border.md) | Roughing can clear a margin around the model, and fitted models leave a border | Accepted; superseded in part by ADR-0064 and ADR-0095 |
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Accepted |
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Accepted; superseded in part by ADR-0070 and ADR-0071 |
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Accepted; superseded in part by ADR-0043 |
@@ -109,3 +109,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0092](0092-post-layer-folders.md) | Layer folders in post | Accepted |
 | [0093](0093-consent-based-usage-tracking.md) | Detailed usage tracking with consent, the cookieless baseline without | Accepted |
 | [0094](0094-drawings-from-a-models-flat-faces.md) | Drawings from a model's flat faces; STEP models keep their faces | Accepted |
+| [0095](0095-models-import-at-their-size.md) | Models import at their size, even past the stock | Accepted |
