@@ -697,7 +697,10 @@
       "vertexCoordinates": "Questo file STL è danneggiato: un vertice non ha tre coordinate alla riga {line}.",
       "facetVertices": "Questo file STL è danneggiato: una faccia non ha tre vertici alla riga {line}.",
       "notStl": "Questo file STL è danneggiato: \"{word}\" non è STL alla riga {line}.",
-      "unfinished": "Questo file STL è danneggiato: l'ultima faccia non è finita alla riga {line}."
+      "unfinished": "Questo file STL è danneggiato: l'ultima faccia non è finita alla riga {line}.",
+      "maybeInches": "Questo modello misura solo {size, number} mm. I file STL non hanno unità, quindi potrebbe essere in pollici, cioè {likely, number} mm: imposta la sua dimensione nel pannello o usa «Adatta al grezzo».",
+      "maybeMetres": "Questo modello misura solo {size, number} mm. I file STL non hanno unità, quindi potrebbe essere in metri, cioè {likely, number} mm: imposta la sua dimensione nel pannello o usa «Adatta al grezzo».",
+      "largerThanStock": "Questo modello misura {size, number} mm, più di dieci volte il grezzo. I file STL non hanno unità: controlla l'unità di esportazione, imposta la sua dimensione nel pannello o usa «Adatta al grezzo»."
     },
     "toolpath": {
       "skippedPoints": "{count, plural, one {Saltato # punto} other {Saltati # punti}}: foralo invece.",

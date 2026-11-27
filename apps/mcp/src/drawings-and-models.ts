@@ -10,6 +10,7 @@ import {
   rotatedSize,
   StlImportError,
   type StlMesh,
+  stlSizeWarning,
 } from "@furrow/cam-core";
 import { MessageError, type Model, sha256Hex, type Units } from "@furrow/document";
 import { formatMessage, type Translatable } from "@furrow/ui/lib/i18n";
@@ -120,7 +121,7 @@ export async function importFile(
   if (kind === "stl") return importModel(project, name, bytes);
   if (kind === "step") {
     const { stl, faces } = await stepMesh(bytes);
-    return importModel(project, name, stl, faces);
+    return importModel(project, name, stl, { faces });
   }
 
   const file = reading(() => parseDrawingFile(name, bytes));
@@ -153,12 +154,16 @@ async function importModel(
   project: Project,
   fileName: string,
   bytes: Uint8Array,
-  faces?: number[],
+  step?: { faces?: number[] },
 ) {
+  const faces = step?.faces;
   // shortcut: parsed on the server's one thread, so other tool calls wait for a large STL; move it to a worker thread (as the app's mesh.worker.ts) if that bites.
   const { triangles, bounds }: StlMesh = reading(() => parseStl(bytes, DEFAULT_STL_LIMITS));
   const mesh = { triangles, bounds, fileName, ...(faces && { faces }) };
-  return { id: await addMesh(project, mesh, bytes), warnings: [] };
+  const id = await addMesh(project, mesh, bytes);
+  // A STEP file says its units; an STL's are only guessed from its size (#676).
+  const warning = step ? null : stlSizeWarning(bounds, project.store.getState().document.stock);
+  return { id, warnings: warning ? [text(warning)] : [] };
 }
 
 /**

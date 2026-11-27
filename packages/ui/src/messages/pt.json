@@ -697,7 +697,10 @@
       "vertexCoordinates": "Este arquivo STL está danificado: um vértice não tem três coordenadas na linha {line}.",
       "facetVertices": "Este arquivo STL está danificado: uma faceta não tem três vértices na linha {line}.",
       "notStl": "Este arquivo STL está danificado: “{word}” não é STL na linha {line}.",
-      "unfinished": "Este arquivo STL está danificado: a última faceta não termina na linha {line}."
+      "unfinished": "Este arquivo STL está danificado: a última faceta não termina na linha {line}.",
+      "maybeInches": "Este modelo mede apenas {size, number} mm. Arquivos STL não têm unidades, então ele pode estar em polegadas, o que daria {likely, number} mm: defina o tamanho no painel ou use “Ajustar ao material”.",
+      "maybeMetres": "Este modelo mede apenas {size, number} mm. Arquivos STL não têm unidades, então ele pode estar em metros, o que daria {likely, number} mm: defina o tamanho no painel ou use “Ajustar ao material”.",
+      "largerThanStock": "Este modelo mede {size, number} mm, mais de dez vezes o material. Arquivos STL não têm unidades: verifique a unidade de exportação, defina o tamanho no painel ou use “Ajustar ao material”."
     },
     "toolpath": {
       "skippedPoints": "{count, plural, one {# ponto ignorado} other {# pontos ignorados}}: use uma furação para eles.",

@@ -4,6 +4,7 @@ import {
   binaryStlTriangles,
   parseStl,
   StlImportError,
+  stlSizeWarning,
   writeBinaryStl,
 } from "./import";
 
@@ -197,5 +198,38 @@ describe("writeBinaryStl", () => {
     expect(binaryStlTriangles(binaryStlSize(20))).toBe(20);
     expect(binaryStlTriangles(binaryStlSize(20) - 1)).toBe(19);
     expect(binaryStlTriangles(10)).toBe(0);
+  });
+});
+
+describe("stlSizeWarning", () => {
+  const stock = { width: 600, height: 400 };
+  const box = (x: number, y: number, z: number) => ({
+    min: [0, 0, 0] as [number, number, number],
+    max: [x, y, z] as [number, number, number],
+  });
+
+  it("says nothing of a likely size, nor of a flat or empty mesh", () => {
+    expect(stlSizeWarning(box(100, 80, 12), stock)).toBeNull();
+    expect(stlSizeWarning(box(5, 2, 1), stock)).toBeNull();
+    expect(stlSizeWarning(box(6000, 10, 10), stock)).toBeNull();
+    expect(stlSizeWarning(box(0, 0, 0), stock)).toBeNull();
+  });
+
+  it("suggests inches, or metres when inches would still be tiny", () => {
+    expect(stlSizeWarning(box(3.94, 3.15, 0.5), stock)).toEqual({
+      code: "stl.maybeInches",
+      values: { size: 3.94, likely: 100 },
+    });
+    expect(stlSizeWarning(box(0.1, 0.08, 0.01), stock)).toEqual({
+      code: "stl.maybeMetres",
+      values: { size: 0.1, likely: 100 },
+    });
+  });
+
+  it("questions a mesh more than ten times the stock's longer side", () => {
+    expect(stlSizeWarning(box(100_000, 80_000, 12_000), stock)).toEqual({
+      code: "stl.largerThanStock",
+      values: { size: 100_000 },
+    });
   });
 });

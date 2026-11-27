@@ -697,7 +697,10 @@
       "vertexCoordinates": "この STL ファイルは破損しています：{line}行目で頂点の座標が 3 つではありません。",
       "facetVertices": "この STL ファイルは破損しています：{line}行目でファセットの頂点が 3 つではありません。",
       "notStl": "この STL ファイルは破損しています：{line}行目の「{word}」は STL ではありません。",
-      "unfinished": "この STL ファイルは破損しています：{line}行目で最後のファセットが終わっていません。"
+      "unfinished": "この STL ファイルは破損しています：{line}行目で最後のファセットが終わっていません。",
+      "maybeInches": "このモデルは {size, number} mm しかありません。STL ファイルには単位がないため、インチで書き出された可能性があります（その場合 {likely, number} mm）。パネルでサイズを設定するか、「素材に合わせる」を使ってください。",
+      "maybeMetres": "このモデルは {size, number} mm しかありません。STL ファイルには単位がないため、メートルで書き出された可能性があります（その場合 {likely, number} mm）。パネルでサイズを設定するか、「素材に合わせる」を使ってください。",
+      "largerThanStock": "このモデルは {size, number} mm あり、素材の10倍を超えています。STL ファイルには単位がありません。書き出し時の単位を確認するか、パネルでサイズを設定するか、「素材に合わせる」を使ってください。"
     },
     "toolpath": {
       "skippedPoints": "{count, plural, other {#個の点}}をスキップしました。代わりに穴あけしてください。",

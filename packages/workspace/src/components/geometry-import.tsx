@@ -173,6 +173,8 @@ export function GeometryImport() {
 
   /** Nothing to show over the viewport: imports start from the ribbon. */
   const bare = !pending && !notice && !modelImport;
+  /** Why a model couldn't be imported, or a warning about one that was; `null` while importing. */
+  const modelMessage = modelImport?.error ?? modelImport?.warning ?? null;
 
   return (
     <>
@@ -232,15 +234,21 @@ export function GeometryImport() {
 
             {modelImport && (
               <div className="flex items-start gap-1">
-                {modelImport.error === null ? (
+                {modelMessage === null ? (
                   <p role="status" className="flex-1 break-all text-muted-foreground">
                     {t("importing", { file: modelImport.fileName })}
                   </p>
                 ) : (
                   <>
-                    <div role="alert" className="grid flex-1 gap-1 text-destructive">
+                    <div
+                      role={modelImport.error ? "alert" : "status"}
+                      className={cn(
+                        "grid flex-1 gap-1",
+                        modelImport.error ? "text-destructive" : "text-muted-foreground",
+                      )}
+                    >
                       <p className="font-medium break-all">{modelImport.fileName}</p>
-                      <p>{format(modelImport.error)}</p>
+                      <p>{format(modelMessage)}</p>
                     </div>
                     <Button
                       variant="ghost"

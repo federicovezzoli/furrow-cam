@@ -697,7 +697,10 @@
       "vertexCoordinates": "This STL file is damaged: a vertex doesn't have three coordinates on line {line}.",
       "facetVertices": "This STL file is damaged: a facet doesn't have three vertices on line {line}.",
       "notStl": "This STL file is damaged: \"{word}\" isn't STL on line {line}.",
-      "unfinished": "This STL file is damaged: the last facet isn't finished on line {line}."
+      "unfinished": "This STL file is damaged: the last facet isn't finished on line {line}.",
+      "maybeInches": "This model is only {size, number} mm across. STL files have no units, so it may be in inches, which would make it {likely, number} mm: set its size in its panel, or use Fit to stock.",
+      "maybeMetres": "This model is only {size, number} mm across. STL files have no units, so it may be in metres, which would make it {likely, number} mm: set its size in its panel, or use Fit to stock.",
+      "largerThanStock": "This model is {size, number} mm across, more than ten times the stock. STL files have no units: check the units it was exported in, set its size in its panel, or use Fit to stock."
     },
     "toolpath": {
       "skippedPoints": "Skipped {count, plural, one {# point} other {# points}}: drill them instead.",

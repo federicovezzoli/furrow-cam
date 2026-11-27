@@ -14,8 +14,11 @@ export type ViewMode = "top" | "orbit";
  */
 export type HoveredGeometry = { shapeId: string; path: number; direct?: boolean };
 
-/** An STL file being imported, or why it couldn't be (PRD-0005 S1). */
-export type ModelImport = { fileName: string; error: Translatable | null };
+/**
+ * An STL file being imported, or why it couldn't be (PRD-0005 S1), or, once
+ * imported, a `warning` about its size (#676).
+ */
+export type ModelImport = { fileName: string; error: Translatable | null; warning?: Translatable };
 
 /** What the viewport edits on the selected operation. */
 export type EditMode = "tabs" | "startPoints" | "overcuts" | "holes";
