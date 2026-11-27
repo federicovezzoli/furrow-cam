@@ -21,5 +21,5 @@ Option 2. A new model is unrotated, at scale 1 (an STL's coordinates are millime
 
 ## Consequences
 
-- A model can arrive past the stock's edges; *Fit to stock* and the size fields are next to it in its panel.
+- A model can arrive past the stock's edges; *Fit to stock* and the size fields are next to it in its panel. The viewport's cameras fit the shown models as well as the stock and the zero, and fit again when a model is added or removed (not when one is moved).
 - `initialPlacement` in `@furrow/cam-core` is no longer used on import; the post end-to-end projects still use it to place a fitted model.

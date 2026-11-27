@@ -45,7 +45,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0028](0028-project-versions.md) | Named project versions stored as full documents | Accepted |
 | [0029](0029-mesh-storage-s3.md) | Meshes are stored as project assets in S3-compatible storage | Accepted |
 | [0030](0030-relief-toolpaths-heightmap.md) | Relief toolpaths from a model heightmap | Accepted |
-| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Accepted; superseded in part by ADR-0034, ADR-0038, ADR-0055, ADR-0060 and ADR-0095 |
+| [0031](0031-model-placement.md) | Models are placed by quarter turns, a scale and a depth, and aligned with the drawing | Accepted; superseded in part by ADR-0034, ADR-0038, ADR-0055, ADR-0060, ADR-0069 and ADR-0095 |
 | [0032](0032-relief-finishing-passes.md) | Relief finishing passes in their own frame, cancelled between slices | Accepted |
 | [0033](0033-relief-roughing-levels.md) | Relief roughing clears simplified level outlines with the pocket strategies | Accepted |
 | [0034](0034-model-keeps-proportions.md) | Models keep their proportions and are cut off at the stock's bottom | Accepted |
