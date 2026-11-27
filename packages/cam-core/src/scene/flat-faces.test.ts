@@ -201,6 +201,16 @@ describe("modelFlatFaces", () => {
       expect(Path.safeParse(path).success).toBe(true);
   });
 
+  it("leaves out a ring with a side too short for a drawing", () => {
+    // Clipper2 doesn't simplify a triangle: this one keeps two corners 0.0005 mm apart.
+    const sliver: Triangle = [
+      [0, 0, 12],
+      [0.0005, 0, 12],
+      [0.0002, 60, 12],
+    ];
+    expect(modelFlatFaces(mesh([[sliver]]), PLACED)).toEqual({ levels: [], outline: [] });
+  });
+
   it("finds nothing on a model with no upward face", () => {
     const down = flatFace(0, rect(0, 0, 10, 10)).map((t) => [t[0], t[2], t[1]] as Triangle);
     expect(modelFlatFaces(mesh([down]), PLACED)).toEqual({ levels: [], outline: [] });
