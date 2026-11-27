@@ -1,5 +1,5 @@
-import { type Box3, flattenPath, type Vec3 } from "@furrow/cam-core";
-import type { Path, Shape, TouchOffDisc } from "@furrow/document";
+import { type Box3, flattenPath, modelRect, type Vec3 } from "@furrow/cam-core";
+import type { Model, Path, Shape, TouchOffDisc } from "@furrow/document";
 
 /** Arm length in millimetres of the cross drawn for a single-point path (a drill location). */
 export const POINT_MARKER_SIZE = 3;
@@ -145,6 +145,24 @@ export function boxWithPoint({ min, max }: Box3, point: Vec3): Box3 {
     min: min.map((v, i) => Math.min(v, point[i] as number)) as Vec3,
     max: max.map((v, i) => Math.max(v, point[i] as number)) as Vec3,
   };
+}
+
+/**
+ * What the cameras fit: the stock `box`, the `zero` (which may lie outside it,
+ * ADR-0016) and the shown models, which may reach past the stock (ADR-0095).
+ */
+export function cameraFitBox(
+  box: Box3,
+  [zx, zy]: readonly [number, number],
+  models: readonly Pick<Model, "bounds" | "placement" | "hidden">[],
+): Box3 {
+  let fit = boxWithPoint(box, [zx, zy, 0]);
+  for (const model of models) {
+    if (model.hidden) continue;
+    const { min, max } = modelRect(model);
+    fit = boxWithPoint(boxWithPoint(fit, [min[0], min[1], 0]), [max[0], max[1], 0]);
+  }
+  return fit;
 }
 
 /** Room left around the stock when the camera fits it. */

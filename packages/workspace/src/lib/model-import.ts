@@ -140,8 +140,8 @@ export function gestureDone(document: DocumentStore): Promise<void> {
 
 /**
  * Stores the checked mesh `stored` in the project's `meshes` and adds it to
- * the document as one undo step, selected; `fit: false` keeps its size
- * (`addModel`). Returns why it couldn't, or `null`.
+ * the document as one undo step, selected, at its size; `centred` centres it on
+ * the stock (`addModel`). Returns why it couldn't, or `null`.
  */
 export async function storeModel(
   mesh: MeshSummary,
@@ -151,12 +151,12 @@ export async function storeModel(
     meshes,
     document,
     workspace,
-    fit,
+    centred,
   }: {
     meshes: WorkspaceHost["meshes"];
     document: DocumentStore;
     workspace: WorkspaceStore;
-    fit?: boolean;
+    centred?: boolean;
   },
 ): Promise<Translatable | null> {
   const upload = await meshes.put(mesh.sha256, stored);
@@ -168,7 +168,7 @@ export async function storeModel(
   const id = addModel(
     document,
     { sha256, triangles, bounds, fileName, size: stored.size, ...(faces && { faces }) },
-    { fit },
+    { centred },
   );
   workspace.getState().selectModel(id);
   return null;
@@ -188,7 +188,7 @@ export async function importGeneratedModel(
 ): Promise<Translatable | null> {
   const error = await storeModel(generated, new Blob([generated.stl]), `${name}.stl`, {
     ...host,
-    fit: false,
+    centred: true,
   });
   if (!error) track({ event: "file_imported", format });
   return error;

@@ -1,10 +1,11 @@
 import type { Box3 } from "@furrow/cam-core";
 import type { Path, Shape } from "@furrow/document";
-import { DRAWING_ID } from "@furrow/document/fixtures";
+import { DRAWING_ID, model } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   boxCenter,
   boxWithPoint,
+  cameraFitBox,
   fitOrbitPosition,
   fitTopZoom,
   gridLinePositions,
@@ -133,6 +134,19 @@ describe("camera fitting", () => {
       max: [stock.max[0], 450, stock.max[2]],
     });
     expect(boxWithPoint(stock, boxCenter(stock))).toEqual(stock);
+  });
+
+  it("grows the fitted box to the zero and to shown models past the stock", () => {
+    // A 100 × 80 model at x 550: 50 mm past the stock's right edge.
+    const past = {
+      ...model,
+      placement: { ...model.placement, position: [550, 100] as [number, number] },
+    };
+    expect(cameraFitBox(stock, [-20, 0], [past])).toEqual({
+      min: [-20, 0, -18],
+      max: [650, 400, 0],
+    });
+    expect(cameraFitBox(stock, [0, 0], [{ ...past, hidden: true }])).toEqual(stock);
   });
 
   it("zooms the top view to the stock's limiting side", () => {

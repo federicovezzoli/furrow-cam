@@ -15,6 +15,9 @@ catalogs:
     typescript:
       specifier: ^7
       version: 7.0.2
+    vitest:
+      specifier: ^5
+      version: 5.1.1
     zod:
       specifier: ^4.6.7
       version: 4.6.7
@@ -103,8 +106,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       posthog-node:
-        specifier: ^5.74.0
-        version: 5.74.0(@react-email/render@2.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
+        specifier: ^6.0.6
+        version: 6.0.6(@react-email/render@2.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -1738,14 +1741,8 @@ packages:
   '@posthog/browser-common@0.13.0':
     resolution: {integrity: sha512-8iI/lOsFdimOSIuYqZO/Fd3KWsPao49wz4nUL4DkBI4ZV07wT+97DcC7Vg7V+nt2cPPnDAYctxGzConKPdBhQA==}
 
-  '@posthog/core@1.68.0':
-    resolution: {integrity: sha512-5kjPcLquzj47qBGn52+7RRXrJJvrTHaRKgxV9izYPFzoVFEftFqSXYZF/ug+yialxDU73dR9apyi+mSaAeaXPw==}
-
   '@posthog/core@1.69.2':
     resolution: {integrity: sha512-toMfPKklwLW+a4ZY3/EzM3GNMVXmk2ylGb8NPJXRH4igXMoI8wgNL2jqXOiglWAXqFBLZGYFN1oQx6LVmUTxTg==}
-
-  '@posthog/types@1.425.1':
-    resolution: {integrity: sha512-mh7jyQ5lN+XCeOnMdYkBEFtO/G0TxeLOKTWNH6E6OZjxS4nVM0Tb2xQt+FG5DCFM9qzL2HmuX6A793TwlJVDvw==}
 
   '@posthog/types@1.427.1':
     resolution: {integrity: sha512-Kx9hWf6Au64CrBLafscANAeswkRFUMs4zlU9/gwB2Hf/9ggU9YNjbw/MQA5tt7cbzTCkh+4fNIPjQeJz7/j63w==}
@@ -5582,8 +5579,8 @@ packages:
       react:
         optional: true
 
-  posthog-node@5.74.0:
-    resolution: {integrity: sha512-lAnGzPVobruQ7rZe45kzcXKZAcCK3J+1dMNS3WOOdx9mnM4ECRc2WRxBdS1ncBO/h/vDtHIEmcuIr/LUxxze5w==}
+  posthog-node@6.0.6:
+    resolution: {integrity: sha512-7FMMQ4fk4Uqg/w2zpKVS8/Yv0doIz0HRcWML4WhxDTqqkS7eyXCvfGUuh+wLJbWYvdSm/7QNu9eeL31++G/dOw==}
     engines: {node: ^20.20.0 || >=22.22.0}
     peerDependencies:
       '@opentelemetry/api': ^1.2.0
@@ -8033,15 +8030,9 @@ snapshots:
     transitivePeerDependencies:
       - preact-render-to-string
 
-  '@posthog/core@1.68.0':
-    dependencies:
-      '@posthog/types': 1.425.1
-
   '@posthog/core@1.69.2':
     dependencies:
       '@posthog/types': 1.427.1
-
-  '@posthog/types@1.425.1': {}
 
   '@posthog/types@1.427.1': {}
 
@@ -11832,9 +11823,9 @@ snapshots:
     transitivePeerDependencies:
       - preact-render-to-string
 
-  posthog-node@5.74.0(@react-email/render@2.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)):
+  posthog-node@6.0.6(@react-email/render@2.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)):
     dependencies:
-      '@posthog/core': 1.68.0
+      '@posthog/core': 1.69.2
     optionalDependencies:
       '@react-email/render': 2.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
