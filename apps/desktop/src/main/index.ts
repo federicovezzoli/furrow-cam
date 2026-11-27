@@ -169,12 +169,21 @@ let posthog: PostHog | null = null;
 /** The language picked in the app; `null` follows the system's. */
 let pickedLocale: Locale | null = null;
 
+/** Every event's options: no person is made from its random ID (ADR-0093). */
+const EVENT_OPTIONS = { process_person_profile: false };
+
 // The main process's events and errors, the renderer's included, go through the shared
 // module, so each error is sent once and a session sends a limited number (ADR-0052).
 setTelemetrySink({
   track: trackEvent,
   error: (error) => {
-    if (telemetryPrefs.id) posthog?.captureException(error, telemetryPrefs.id, appProperties());
+    if (telemetryPrefs.id) {
+      posthog?.captureException(error, {
+        distinctId: telemetryPrefs.id,
+        properties: appProperties(),
+        options: EVENT_OPTIONS,
+      });
+    }
   },
 });
 // Observes uncaught errors without changing how they're handled. In Node's default mode an
@@ -347,7 +356,7 @@ function applyTelemetry() {
 
 /** Properties of every event: none of them about the user. */
 function appProperties() {
-  return { $process_person_profile: false, $os: process.platform, $app_version: app.getVersion() };
+  return { $os: process.platform, $app_version: app.getVersion() };
 }
 
 function trackEvent({ event, ...properties }: TelemetryEvent) {
@@ -357,6 +366,7 @@ function trackEvent({ event, ...properties }: TelemetryEvent) {
     distinctId: telemetryPrefs.id,
     event,
     properties: { ...properties, ...appProperties() },
+    options: EVENT_OPTIONS,
   });
 }
 

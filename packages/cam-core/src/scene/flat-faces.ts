@@ -2,7 +2,7 @@ import type { Model, Path, Point } from "@furrow/document";
 import { applyAffine } from "../geometry/affine";
 import { DRILL_DIAMETER_TOLERANCE, roundness } from "../geometry/circle";
 import { nest, type Polygon, signedArea, simplify, union } from "../geometry/clipper";
-import { polygonPath } from "../geometry/path";
+import { cleanPath, polygonPath } from "../geometry/path";
 import { roundCoordinate } from "../geometry/round";
 import { modelTransform, placedModelBox } from "./model";
 import type { Vec3 } from "./stock";
@@ -133,10 +133,10 @@ export function modelFlatFaces(
 
   return {
     levels,
-    outline: nest(outline.result())
+    outline: nest(simplify(outline.result(), SIMPLIFY))
       .map(({ outer }) => outer)
       .filter((ring) => Math.abs(signedArea(ring)) >= MIN_RING_AREA)
-      .map(ringPath),
+      .flatMap(ringPath),
   };
 }
 
@@ -190,19 +190,27 @@ function flatLevel(triangles: Placed[]): FlatLevel | null {
   const area = rings.reduce((sum, ring) => sum + signedArea(ring), 0);
   if (area < MIN_LEVEL_AREA) return null;
   const z = triangles.reduce((sum, { low, high }) => sum + low + high, 0) / (2 * triangles.length);
-  return { z: roundCoordinate(z), paths: rings.map(ringPath) };
+  const paths = rings.flatMap(ringPath);
+  return paths.length > 0 ? { z: roundCoordinate(z), paths } : null;
 }
 
-/** A ring as a path: a full-circle arc if it is round, as a tessellated hole is, else a polygon. */
-function ringPath(ring: Polygon): Path {
-  const polygon = polygonPath(
-    ring.map(([x, y]): Point => [roundCoordinate(x), roundCoordinate(y)]),
+/**
+ * A ring as a path: a full-circle arc if it is round, as a tessellated hole is, else a polygon
+ * without the sides shorter than the document's tolerance. None if no side is left: `simplify`
+ * leaves a triangle as it is, however thin (#675).
+ */
+function ringPath(ring: Polygon): Path[] {
+  const polygon = cleanPath(
+    polygonPath(ring.map(([x, y]): Point => [roundCoordinate(x), roundCoordinate(y)])),
   );
+  if (!polygon) return [];
   const round = ring.length >= 8 ? roundness(polygon) : null;
   // Within drilling's fixed tolerance only, not its share of the radius: a large near-round ring stays as it is.
-  if (!round || round.max - round.min > DRILL_DIAMETER_TOLERANCE) return polygon;
+  if (!round || round.max - round.min > DRILL_DIAMETER_TOLERANCE) return [polygon];
   // A tessellated circle's vertices lie on it; its chords cut inside.
   const center = round.center.map(roundCoordinate) as Point;
   const start: Point = [roundCoordinate(center[0] + round.max), center[1]];
-  return { start, segments: [{ kind: "arc", to: start, center, clockwise: false }], closed: true };
+  return [
+    { start, segments: [{ kind: "arc", to: start, center, clockwise: false }], closed: true },
+  ];
 }
