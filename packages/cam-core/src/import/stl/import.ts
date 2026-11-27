@@ -206,3 +206,39 @@ function positionsBounds(positions: Float32Array): Box3 {
   }
   return { min, max };
 }
+
+/** An STL whose longest side is shorter than this, in mm, was likely exported in other units. */
+const SMALL_SIDE = 5;
+/** How many times the stock's longer side an STL may be before its units are questioned. */
+const LARGE_FACTOR = 10;
+
+/** `value` to three significant figures, so a tiny size never reads 0. */
+const significant = (value: number) => Number(value.toPrecision(3));
+
+/**
+ * A warning when an STL's size, read as millimetres, suggests other units
+ * (ADR-0095, #676): far smaller than any part, with its size read as inches
+ * and as metres, since its size alone can't tell which; or far larger than
+ * the stock. `null` for a likely size.
+ */
+export function stlSizeWarning(
+  { min, max }: Box3,
+  stock: { width: number; height: number },
+): ImportMessage | null {
+  const side = Math.max(...max.map((v, i) => v - (min[i] as number)));
+  if (side <= 0) return null;
+  if (side < SMALL_SIDE) {
+    return {
+      code: "stl.small",
+      values: {
+        size: significant(side),
+        inches: significant(side * 25.4),
+        metres: significant(side * 1000),
+      },
+    };
+  }
+  if (side > LARGE_FACTOR * Math.max(stock.width, stock.height)) {
+    return { code: "stl.largerThanStock", values: { size: Math.round(side) } };
+  }
+  return null;
+}

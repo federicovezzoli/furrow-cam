@@ -697,7 +697,9 @@
       "vertexCoordinates": "Dit STL-bestand is beschadigd: een hoekpunt heeft geen drie coördinaten op regel {line}.",
       "facetVertices": "Dit STL-bestand is beschadigd: een facet heeft geen drie hoekpunten op regel {line}.",
       "notStl": "Dit STL-bestand is beschadigd: “{word}” is geen STL op regel {line}.",
-      "unfinished": "Dit STL-bestand is beschadigd: het laatste facet is niet afgesloten op regel {line}."
+      "unfinished": "Dit STL-bestand is beschadigd: het laatste facet is niet afgesloten op regel {line}.",
+      "small": "Dit model is maar {size, number} mm groot. STL-bestanden vermelden hun eenheid niet: geëxporteerd in inches zou het {inches, number} mm zijn, in meters {metres, number} mm. Stel de grootte in het paneel in of gebruik ‘Passend maken’.",
+      "largerThanStock": "Dit model is {size, number} mm groot, meer dan tien keer het materiaal. STL-bestanden vermelden hun eenheid niet: controleer de eenheid bij het exporteren, stel de grootte in het paneel in of gebruik ‘Passend maken’."
     },
     "toolpath": {
       "skippedPoints": "{count, plural, one {# punt} other {# punten}} overgeslagen: boor ze in plaats daarvan.",

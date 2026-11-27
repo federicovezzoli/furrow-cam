@@ -123,7 +123,8 @@ describe("importFile", () => {
 
   it("imports an STL model, stored with the project", async () => {
     const path = await file("emblem.stl", TETRAHEDRON);
-    const { id } = await importFile(project, path, {});
+    const { id, warnings } = await importFile(project, path, {});
+    expect(warnings).toEqual([]);
     const [model] = summary().models;
     expect(model).toMatchObject({ id, fileName: "emblem.stl", triangles: 4 });
     // At its size in the file, not fitted to the stock.
@@ -132,6 +133,20 @@ describe("importFile", () => {
     const saved = await readProjectFile(new Uint8Array(await readFile(project.path)), t);
     const [stored] = saved.document.models;
     expect(saved.meshes.get(stored?.sha256 ?? "")).toEqual(new TextEncoder().encode(TETRAHEDRON));
+  });
+
+  it("warns about an STL that looks like it is in inches, keeping its size (#676)", async () => {
+    // The 40 × 30 × 10 mm tetrahedron exported in inches.
+    const inches = TETRAHEDRON.replaceAll("40 0 0", "1.57 0 0")
+      .replaceAll("0 30 0", "0 1.18 0")
+      .replaceAll("0 0 10", "0 0 0.39");
+    const { warnings } = await importFile(project, await file("tiny.stl", inches), {});
+    expect(warnings).toEqual([
+      expect.stringMatching(
+        /in inches it would be 39\.9 mm, in metres 1,570 mm.*resize, or fit_to_stock/,
+      ),
+    ]);
+    expect(summary().models[0]?.size.width).toBeCloseTo(1.57, 5);
   });
 
   it("imports a STEP model, stored as the STL made from it", async () => {

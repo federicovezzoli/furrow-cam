@@ -1,4 +1,4 @@
-import type { StlLimits } from "@furrow/cam-core";
+import { type StlLimits, stlSizeWarning } from "@furrow/cam-core";
 import { type Message, MessageError } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { DocumentStore } from "../stores/document-store";
@@ -122,7 +122,13 @@ export async function importModel(
     fail(error);
     return;
   }
-  setModelImport(null);
+  // A STEP file says its units; an STL's are only guessed from its size.
+  const message = mesh.stl ? null : stlSizeWarning(mesh.bounds, document.getState().document.stock);
+  // `storeModel` selected the model it added.
+  const modelId = workspace.getState().selectedModelId;
+  setModelImport(
+    message && modelId ? { fileName, error: null, warning: { message, modelId } } : null,
+  );
   track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
 }
 

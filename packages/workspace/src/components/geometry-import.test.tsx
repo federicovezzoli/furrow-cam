@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { createProjectDocument } from "@furrow/document";
 import { fullDocument, model } from "@furrow/document/fixtures";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryHost } from "../lib/memory-host";
+import { useDocumentStoreApi, useWorkspaceStoreApi } from "../providers/workspace-stores";
+import type { DocumentStore } from "../stores/document-store";
+import { fitModelToStock } from "../stores/model-actions";
+import type { WorkspaceStore } from "../stores/workspace-store";
 import { renderWorkspace } from "../test-render";
 import { GeometryImport, ImportDrawingButton } from "./geometry-import";
 import { ModelImportButton } from "./model-import-button";
@@ -60,6 +64,36 @@ describe("GeometryImport in an empty project", () => {
     const { container } = renderWorkspace(<GeometryImport />);
     expect(screen.queryByRole("button")).toBeNull();
     expect(container.textContent).toBe("");
+  });
+});
+
+let stores: { document: DocumentStore; workspace: WorkspaceStore };
+
+function Stores() {
+  stores = { document: useDocumentStoreApi(), workspace: useWorkspaceStoreApi() };
+  return null;
+}
+
+describe("GeometryImport's STL size warning (#676)", () => {
+  it("shows while the model is at its file size, and goes once it is fitted", () => {
+    renderWorkspace(
+      <>
+        <Stores />
+        <GeometryImport />
+      </>,
+      createMemoryHost({ document: { ...createProjectDocument(), models: [model] } }),
+    );
+    const message = { code: "stl.small", values: { size: 3.94, inches: 100, metres: 3940 } };
+    act(() =>
+      stores.workspace.getState().setModelImport({
+        fileName: "emblem.stl",
+        error: null,
+        warning: { message, modelId: model.id },
+      }),
+    );
+    expect(screen.getByRole("status").textContent).toContain("only 3.94 mm across");
+    act(() => fitModelToStock(stores.document, model.id));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
 

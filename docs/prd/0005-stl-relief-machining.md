@@ -33,7 +33,7 @@ Furrow CAM only machines 2D drawings (PRD-0001), which lists "3D surfacing / fre
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| S1 | Import STL files, binary and ASCII, into a project. Files above **50 MB** or **2,000,000 triangles** are refused with a clear message; the operator can change both limits | Must |
+| S1 | Import STL files, binary and ASCII, into a project. Files above **50 MB** or **2,000,000 triangles** are refused with a clear message; the operator can change both limits. STL has no units, so a file far smaller than a part (under 5 mm, likely inches or metres) or more than ten times the stock gets a warning; it is still imported at its size | Must |
 | S1b | Import STEP files (`.step`, `.stp`) as models: the solids are turned into triangles in millimetres, within 0.05 mm of their surfaces, whatever unit the file uses, and the model then works like an STL. S1's limits apply to the file and to the mesh made from it (ADR-0072) | Should |
 | S1c | A project holds several models, each placed and machined on its own; a 3D operation warns when it cuts into another visible model (ADR-0085) | Should |
 | S2 | Place the model on the stock: it is imported at its size in the file, even past the stock's edges (ADR-0095); rotate it in 90° steps about each axis, scale it uniformly or fit it inside the stock less a border the user sets (10 mm by default, 0 for edge to edge), and set its depth into the stock and how far its top sits below the stock top (at it by default, ADR-0069). It is positioned relative to the zero point (ADR-0016) like the 2D drawing, and *Center on stock* centres it on the stock in X and Y, leaving its top and depth as they are | Must |
@@ -82,3 +82,4 @@ None.
 - 2026-11-16: S13, holding tabs on one-sided jobs (#616, ADR-0086)
 - 2026-11-23: S14, drawings from a model's flat faces and outline, answering the open question on the silhouette (#665, ADR-0094)
 - 2026-11-27: S2 imports a model at its size, even past the stock; fitting it is the user's choice (#673, ADR-0095)
+- 2026-11-27: S1 warns when an STL's size suggests other units than millimetres (#676)
