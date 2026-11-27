@@ -73,7 +73,7 @@ export async function importImageRelief(project: Project, request: ImageReliefRe
     project,
     { triangles: mesh.triangles, bounds, fileName: `${name}.stl` },
     mesh.stl,
-    { fit: false },
+    { centred: true },
   );
   return {
     id,

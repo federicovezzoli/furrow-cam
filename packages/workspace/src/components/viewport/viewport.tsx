@@ -21,7 +21,7 @@ import { useModelPreviews } from "../../hooks/use-model-previews";
 import { useSimulation } from "../../hooks/use-simulation";
 import { belongsElsewhere } from "../../lib/keyboard-target";
 import { heightmapCellLimit } from "../../lib/simulation-mesh";
-import { boxWithPoint } from "../../lib/viewport-scene";
+import { cameraFitBox } from "../../lib/viewport-scene";
 import {
   useDocumentStore,
   useWorkspaceStore,
@@ -63,12 +63,17 @@ export function Viewport() {
   const stock = useDocumentStore((s) => s.document.stock);
   const { width, height, thickness } = stock;
   const box = useMemo(() => stockBox({ width, height, thickness }), [width, height, thickness]);
-  // The cameras fit the stock and the zero, which may lie outside it (ADR-0016).
-  const fitBox = useMemo(() => boxWithPoint(box, [...xyOriginPosition(stock), 0]), [box, stock]);
-  // Pressing Fit or resizing the stock fits the camera again: new keys remount
-  // the cameras, which then find no saved pose.
+  const models = useDocumentStore((s) => s.document.models);
+  const fitBox = useMemo(
+    () => cameraFitBox(box, xyOriginPosition(stock), models),
+    [box, stock, models],
+  );
+  // Pressing Fit, resizing the stock or adding or removing a model fits the
+  // camera again: new keys remount the cameras, which then find no saved pose.
+  // Moving a model doesn't, so the view stays put while it is dragged.
   const [fits, setFits] = useState(0);
-  const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
+  const modelIds = models.map((model) => model.id).join();
+  const poseKey = `${view}:${fits}:${width}x${height}x${thickness}:${modelIds}`;
   const [poses] = useState<CameraPoses>(() => new Map());
   // A simulation of the stock before a resize would sit at the old size and depth.
   const sim = simulation.stock;

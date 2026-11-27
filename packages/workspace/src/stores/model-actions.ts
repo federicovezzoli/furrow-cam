@@ -2,13 +2,13 @@ import {
   anchorPoint,
   type Box3,
   followModels,
-  initialPlacement,
   modelRect,
   positionAt,
   proportionalDepth,
   type Rotation,
   replacePlacement,
   stockFit,
+  stockInset,
   translatePoint,
   turnModel,
   xyOriginPosition,
@@ -91,38 +91,42 @@ function assignPlacement(model: Draft<Model>, placement: ModelPlacement) {
 }
 
 /**
- * Adds an imported mesh as a model, as one undo step: fitted inside the
- * stock less a border, its top at the stock top and aligned at the zero's
- * anchor (ADR-0031, ADR-0038). With `fit: false` it keeps its size and is
+ * Adds an imported mesh as a model, as one undo step, at its own size even
+ * past the stock (ADR-0095): its top at the stock top, aligned at the zero's
+ * anchor to the stock less its border, as a drawing is. With `centred` it is
  * centred on the stock instead, as a terrain made at a chosen size is
  * (ADR-0077). Returns the model's id.
  */
 export function addModel(
   store: DocumentStore,
   mesh: Omit<Model, "id" | "placement" | "border">,
-  { fit = true }: { fit?: boolean } = {},
+  { centred = false }: { centred?: boolean } = {},
 ): string {
   const { stock } = store.getState().document;
   const id = crypto.randomUUID();
-  // The border it is fitted with is the one it keeps.
+  // The border it is aligned to is the one a later *Fit to stock* leaves.
   const border = MODEL_BORDER;
-  const placement = fit
-    ? initialPlacement(mesh.bounds, stock, modelAnchor(stock), border)
-    : centredPlacement(mesh.bounds, stock);
+  const anchor = centred ? "center" : modelAnchor(stock);
+  const point: Point = centred
+    ? [stock.width / 2, stock.height / 2]
+    : anchorPoint(stockInset(stock, border), anchor);
+  const placement = placementAt(mesh.bounds, stock, anchor, point);
   store.getState().change("addModel", (draft) => {
     draft.models.push({ ...mesh, id, placement, border });
   });
   return id;
 }
 
-/** A mesh at its own size, its top at the stock top and centred on the stock. */
-function centredPlacement(bounds: Box3, stock: Stock): ModelPlacement {
+/** A mesh at its own size, unturned, its top at the stock top and its `anchor` point at `point`. */
+function placementAt(
+  bounds: Box3,
+  stock: Stock,
+  anchor: StockAnchor,
+  point: Point,
+): ModelPlacement {
   const rotation: Rotation = [0, 0, 0];
   const depth = proportionalDepth(bounds, rotation, 1) ?? stock.thickness;
-  const position = positionAt(bounds, { rotation, scale: 1 }, "center", [
-    stock.width / 2,
-    stock.height / 2,
-  ]);
+  const position = positionAt(bounds, { rotation, scale: 1 }, anchor, point);
   return { rotation, scale: 1, depth, top: 0, position };
 }
 
