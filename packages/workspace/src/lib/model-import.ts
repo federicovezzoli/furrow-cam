@@ -123,8 +123,12 @@ export async function importModel(
     return;
   }
   // A STEP file says its units; an STL's are only guessed from its size.
-  const warning = mesh.stl ? null : stlSizeWarning(mesh.bounds, document.getState().document.stock);
-  setModelImport(warning ? { fileName, error: null, warning } : null);
+  const message = mesh.stl ? null : stlSizeWarning(mesh.bounds, document.getState().document.stock);
+  // `storeModel` selected the model it added.
+  const modelId = workspace.getState().selectedModelId;
+  setModelImport(
+    message && modelId ? { fileName, error: null, warning: { message, modelId } } : null,
+  );
   track({ event: "file_imported", format: mesh.stl ? "step" : "stl" });
 }
 

@@ -67,10 +67,14 @@ describe("importModel", () => {
     parsedBounds = { min: [0, 0, 0], max: [3.94, 3.15, 0.5] };
     await importFile();
     expect(document.getState().document.models[0]?.placement.scale).toBe(1);
+    const [added] = document.getState().document.models;
     expect(workspace.getState().modelImport).toEqual({
       fileName: "relief.stl",
       error: null,
-      warning: { code: "stl.maybeInches", values: { size: 3.94, likely: 100 } },
+      warning: {
+        message: { code: "stl.small", values: { size: 3.94, inches: 100, metres: 3940 } },
+        modelId: added?.id,
+      },
     });
   });
 

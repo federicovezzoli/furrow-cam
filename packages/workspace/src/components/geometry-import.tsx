@@ -26,6 +26,7 @@ import { shapePaths } from "../lib/path-selection";
 import { track } from "../lib/telemetry";
 import { addText } from "../lib/text-items";
 import {
+  useDocumentStore,
   useDocumentStoreApi,
   useWorkspaceStore,
   useWorkspaceStoreApi,
@@ -171,10 +172,18 @@ export function GeometryImport() {
     }
   }
 
+  const warning = modelImport?.warning;
+  // The size warning holds only while its model is there at the size it came in.
+  const warned = useDocumentStore(
+    (s) =>
+      warning !== undefined &&
+      s.document.models.some((m) => m.id === warning.modelId && m.placement.scale === 1),
+  );
+  const importing = modelImport !== null && modelImport.error === null && !warning;
+  /** Why a model couldn't be imported, or a warning about one that was. */
+  const modelMessage = modelImport?.error ?? (warned ? warning?.message : null) ?? null;
   /** Nothing to show over the viewport: imports start from the ribbon. */
-  const bare = !pending && !notice && !modelImport;
-  /** Why a model couldn't be imported, or a warning about one that was; `null` while importing. */
-  const modelMessage = modelImport?.error ?? modelImport?.warning ?? null;
+  const bare = !pending && !notice && !importing && !modelMessage;
 
   return (
     <>
@@ -232,7 +241,7 @@ export function GeometryImport() {
               />
             )}
 
-            {modelImport && (
+            {modelImport && (importing || modelMessage) && (
               <div className="flex items-start gap-1">
                 {modelMessage === null ? (
                   <p role="status" className="flex-1 break-all text-muted-foreground">
