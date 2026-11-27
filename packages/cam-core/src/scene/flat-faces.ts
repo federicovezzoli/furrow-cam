@@ -133,7 +133,7 @@ export function modelFlatFaces(
 
   return {
     levels,
-    outline: nest(outline.result())
+    outline: nest(simplify(outline.result(), SIMPLIFY))
       .map(({ outer }) => outer)
       .filter((ring) => Math.abs(signedArea(ring)) >= MIN_RING_AREA)
       .map(ringPath),
