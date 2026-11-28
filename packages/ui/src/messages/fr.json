@@ -1650,6 +1650,9 @@
     "simulating": "Simulation…",
     "simulationFailed": "Échec de la simulation : {error}",
     "notSimulated": "Non simulées, échec de la trajectoire : {operations}",
+    "programUnreadable": "Le programme ne peut pas être simulé au-delà de la ligne {line} : {reason, select, unreadable {ce n'est pas du G-code} unknownStart {elle coupe depuis une position inconnue} noTool {elle bouge avant de nommer la fraise} badTool {son commentaire de fraise ne décrit pas de fraise} badArc {son arc ne peut pas être suivi} noMotion {elle bouge sans G0, G1, G2 ni G3} other {elle ne peut pas être lue}}",
+    "programWarning": "{side, select, top {Face supérieure, ligne {line}} other {Ligne {line}}} : {code, select, unknownPosition {après {word}, la position de l'outil est inconnue : rien n'est simulé jusqu'à ce qu'un mouvement la fixe} other {{word} n'est pas simulé}}",
+    "moreProgramWarnings": "{count, plural, one {# autre avertissement} other {# autres avertissements}} dans le programme",
     "views": {
       "top": "Vue de dessus",
       "orbit": "Vue 3D"

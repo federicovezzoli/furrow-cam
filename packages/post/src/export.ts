@@ -17,7 +17,13 @@ import {
 } from "@furrow/document";
 import { grbl } from "./grbl/grbl";
 import { marlin } from "./marlin/marlin";
-import { GcodeExportError, type PostProcessor, type PostWarning, type SideSetup } from "./post";
+import {
+  GcodeExportError,
+  type PostProcessor,
+  type PostWarning,
+  type ProgramStep,
+  type SideSetup,
+} from "./post";
 
 /** Every dialect, by the id machine profiles store. */
 export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl, marlin };
@@ -25,8 +31,16 @@ export const POST_PROCESSORS: Record<PostProcessorId, PostProcessor> = { grbl, m
 /** Used when the project has no machine profile. */
 export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
 
-/** One program to save, e.g. `Plate.gcode`. */
-export type GcodeFile = { fileName: string; gcode: string };
+/**
+ * One program to save, e.g. `Plate.gcode`: the stock side it cuts in a
+ * two-sided project (else `null`), and where its steps went (`ProgramStep`).
+ */
+export type GcodeFile = {
+  fileName: string;
+  gcode: string;
+  side: "top" | "bottom" | null;
+  steps: ProgramStep[];
+};
 
 /**
  * What exporting gives: one file, or in a two-sided project one per side
@@ -180,7 +194,7 @@ export function postToolpaths(
   const fileNaming = { ...naming, date: naming.date ?? new Date() };
   const fileName = (side: "top" | "bottom" | null) =>
     gcodeFileName(name, fileNaming, side, processor.extension);
-  const post = (operations: typeof toPost, side: SideSetup | null, fileName: string) => {
+  const post = (operations: typeof toPost, side: SideSetup | null, fileName: string): GcodeFile => {
     const output = processor.post({
       name,
       stock: doc.stock,
@@ -192,7 +206,7 @@ export function postToolpaths(
     // Each side's program may say the same, e.g. of a custom block.
     const said = new Set(warnings.map((warning) => JSON.stringify(warning)));
     warnings.push(...output.warnings.filter((warning) => !said.has(JSON.stringify(warning))));
-    return { fileName, gcode: output.gcode };
+    return { fileName, gcode: output.gcode, side: side?.side ?? null, steps: output.steps };
   };
   if (!doc.stock.twoSided) {
     return { files: [post(toPost, null, fileName(null))], warnings };

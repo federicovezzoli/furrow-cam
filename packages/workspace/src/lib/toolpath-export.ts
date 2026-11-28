@@ -1,6 +1,14 @@
 import { type Toolpath, type ToolpathInput, toolpathKey } from "@furrow/cam-core";
-import type { ProjectDocument } from "@furrow/document";
-import { type GcodeExport, type GcodeNaming, postToolpaths } from "@furrow/post";
+import type { ProjectDocument, Stock, StockSide } from "@furrow/document";
+import {
+  type GcodeExport,
+  type GcodeFile,
+  type GcodeNaming,
+  ProgramReadError,
+  postToolpaths,
+  programCuts,
+} from "@furrow/post";
+import type { ProgramPlayback } from "../stores/toolpath-scheduler";
 
 /** An enabled operation's inputs, as the toolpath scheduler hashed them. */
 export type ExportInput = { operationId: string; inputHash: string; input: ToolpathInput };
@@ -84,4 +92,27 @@ export function exportFromResults(
     return { input, toolpath };
   });
   return postToolpaths(document, name, computed, naming);
+}
+
+/** `file` read back for the simulator (ADR-0096), or where it can't be. */
+export function readBack({ side, steps, gcode }: GcodeFile, stock: Stock): ProgramPlayback {
+  try {
+    const { cuts, lines, warnings } = programCuts(gcode, stock);
+    return { side, steps, cuts, lines, warnings };
+  } catch (error) {
+    if (!(error instanceof ProgramReadError)) throw error;
+    return { side, steps, error: { line: error.line, reason: error.reason } };
+  }
+}
+
+/**
+ * The programs among `files` that playing `side` needs: a one-sided
+ * project's only one; the side's own, and the top side's under the bottom
+ * side's (ADR-0060).
+ */
+export function playedFiles(files: readonly GcodeFile[], side: StockSide): GcodeFile[] {
+  return files.filter(
+    (file) =>
+      file.side === null || file.side === side || (side === "bottom" && file.side === "top"),
+  );
 }

@@ -7,7 +7,7 @@ import { type Group, LatheGeometry, Vector2 } from "three";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { cutterOutline } from "../../lib/cutter-outline";
-import { type PlaybackPart, partProgress } from "../../lib/playback-moves";
+import { type PlaybackPart, partAt, partProgress } from "../../lib/playback-moves";
 import { createPlaybackStore, type PlaybackStore } from "../../stores/playback-store";
 
 /** Sides of the drawn tool. */
@@ -59,14 +59,17 @@ export function PlaybackTool() {
   const invalidate = useThree((s) => s.invalidate);
   const group = useRef<Group>(null);
   const [cut, setCut] = useState(0);
+  const [color, setColor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!playback) return;
-    const { store, path } = playback;
+    const { store, path, parts } = playback;
     function place(distance: number) {
       const at = playbackPosition(path, distance);
       if (!at) return;
       setCut(at.cut);
+      // Steps cut with the same bit share one cut, so the colour is the step's.
+      setColor(partAt(parts, at.move)?.color ?? null);
       group.current?.position.set(...at.point);
       invalidate();
     }
@@ -97,7 +100,7 @@ export function PlaybackTool() {
     <group ref={group}>
       {geometry && (
         <mesh geometry={geometry}>
-          <meshMatcapMaterial color={playback.parts[cut]?.color ?? "#71717a"} />
+          <meshMatcapMaterial color={color ?? "#71717a"} />
         </mesh>
       )}
     </group>

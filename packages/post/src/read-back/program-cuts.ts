@@ -50,20 +50,15 @@ export class ProgramReadError extends Error {
   }
 }
 
-/** Where an operation starts, by its `(Operation: …)` comment. */
-export type ProgramPart = { name: string; line: number; cut: number; segment: number };
-
 export type ProgramCuts = {
   /** One per `(Furrow tool: …)` comment, rapids included (ADR-0019), in stock coordinates. */
   cuts: SimulationCut[];
   /** `lines[i][j]`: the line segment `j` of cut `i` comes from. */
   lines: Uint32Array[];
-  parts: ProgramPart[];
   warnings: ProgramWarning[];
 };
 
 const TOOL_COMMENT = "Furrow tool:";
-const OPERATION_COMMENT = "Operation: ";
 
 /** Modal and non-modal codes that change nothing the simulation follows. */
 const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
@@ -104,7 +99,6 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   const top = offset[2];
   const cuts: SimulationCut[] = [];
   const lines: Uint32Array[] = [];
-  const parts: ProgramPart[] = [];
   const warnings: ProgramWarning[] = [];
   let cut: { tool: CutterShape; segments: number[]; lines: number[] } | null = null;
   const finish = () => {
@@ -133,15 +127,6 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     if (comment?.startsWith(TOOL_COMMENT)) {
       finish();
       cut = { tool: readTool(comment, number), segments: [], lines: [] };
-    } else if (comment?.startsWith(OPERATION_COMMENT)) {
-      const index = Math.max(0, cuts.length + (cut ? 0 : -1));
-      const at = cut ? cut.lines.length : 0;
-      parts.push({
-        name: comment.slice(OPERATION_COMMENT.length),
-        line: number,
-        cut: index,
-        segment: at,
-      });
     }
 
     const axes: (number | undefined)[] = [undefined, undefined, undefined];
@@ -230,7 +215,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     }
   }
   finish();
-  return { cuts, lines, parts, warnings };
+  return { cuts, lines, warnings };
 }
 
 /** Line `number`, hand-written words tidied as GRBL reads them. */

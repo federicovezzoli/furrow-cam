@@ -482,12 +482,30 @@ describe("grbl", () => {
 
     it("splits operations into a step per tool, leaving out empty ones", () => {
       expect(postSteps([{ operation: vcarve, toolpath }])).toEqual([
-        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
-        { name: "Sign", tool: vBit, moves: toolpath.moves },
+        {
+          name: "Sign, clearing",
+          operationId: vcarve.id,
+          clearing: true,
+          tool: endMill,
+          moves: toolpath.clearing,
+        },
+        {
+          name: "Sign",
+          operationId: vcarve.id,
+          clearing: false,
+          tool: vBit,
+          moves: toolpath.moves,
+        },
       ]);
       const onlyClearing = { ...toolpath, moves: [] };
       expect(postSteps([{ operation: vcarve, toolpath: onlyClearing }])).toEqual([
-        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
+        {
+          name: "Sign, clearing",
+          operationId: vcarve.id,
+          clearing: true,
+          tool: endMill,
+          moves: toolpath.clearing,
+        },
       ]);
       // Without a clearing tool, stray clearing moves aren't cut.
       const plain = {
@@ -495,7 +513,13 @@ describe("grbl", () => {
         params: { startDepth: 0, maxDepth: 3, flatBottom: null },
       } as Operation;
       expect(postSteps([{ operation: plain, toolpath }])).toEqual([
-        { name: "Sign", tool: vBit, moves: toolpath.moves },
+        {
+          name: "Sign",
+          operationId: vcarve.id,
+          clearing: false,
+          tool: vBit,
+          moves: toolpath.moves,
+        },
       ]);
     });
   });

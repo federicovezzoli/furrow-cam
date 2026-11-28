@@ -1,13 +1,19 @@
 import type { SimulationCut, ToolpathLines } from "@furrow/cam-core";
-import type { FlipAxis, Operation, StockSide, Tool } from "@furrow/document";
+import { clearingTool, type FlipAxis, type Operation, type StockSide } from "@furrow/document";
+import type { ProgramReadReason, ProgramStep, ProgramWarning } from "@furrow/post";
+import type { Translatable } from "@furrow/ui/lib/i18n";
 import { toolpathsBySide } from "../stores/simulation-scheduler";
+import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 import type { ToolpathState } from "../stores/toolpath-store";
 
 /**
- * One tool's moves of an operation in a playback: its clearing moves
+ * One step of a played program (#683): an operation's clearing moves
  * (ADR-0026) or its own, cut with the tool coloured `color`. `firstMove`
- * numbers its first move among all the playback's, `moves` counts them.
- * `rapidsBefore[i]` counts the rapids among its first `i` moves.
+ * numbers its first segment among all the program's, `moves` counts them,
+ * from the line the step starts on to the next step's (the first step from
+ * the program's start, the last to its end). `done[k]` counts the segments
+ * of its toolpath `lines` the tool has made after `k` of the program's, and
+ * `rapidsBefore[i]` the rapids among the toolpath's first `i` segments.
  */
 export type PlaybackPart = {
   operationId: string;
@@ -17,110 +23,183 @@ export type PlaybackPart = {
   lines: ToolpathLines;
   firstMove: number;
   moves: number;
+  done: Uint32Array;
   rapidsBefore: Uint32Array;
 };
 
 /**
- * The toolpaths of the enabled `operations` in the order they are cut,
- * for playing them back (#100): `cuts` (one per part, rapids included, in the
- * order the tool makes them) and the `parts` they came from. Like the
- * simulation (ADR-0019), clearing moves come first with the clearing tool,
- * operations whose toolpath failed are left out, hidden toolpaths still cut,
- * and nothing is played back while any toolpath is computing (`null`). `key`
- * changes exactly when the moves may. They are the operations of `side`, the
- * one played back: the top side unless a two-sided project, turned over
- * about `flipAxis`, shows its bottom side. There, `before` holds the top
- * side's cuts, which leave the stock the bottom side's start from (ADR-0060),
- * and `before.key` changes exactly when they may.
+ * What the program played back depends on, as `key`: the toolpaths of the
+ * enabled operations of `side` (the one played back, the top side unless a
+ * two-sided project, turned over about `flipAxis`, shows its bottom side)
+ * and what else the post writes, `posted` (the machine's blocks, the stock's
+ * zero). On the bottom side, `before` keys the top side's program, whose cuts
+ * leave the stock the bottom side starts from (ADR-0060). Failed toolpaths
+ * are left out, as the simulation leaves them out of the program; `null`
+ * while any toolpath is computing.
  */
-export function playbackMoves(
+export function playbackKey(
   operations: readonly Operation[],
   entries: ToolpathState["entries"],
   shown: StockSide = "top",
   flipAxis: FlipAxis | null = null,
-): {
-  key: string;
-  side: StockSide;
-  cuts: SimulationCut[];
-  parts: PlaybackPart[];
-  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
-} | null {
+  posted: unknown = null,
+): { key: string; side: StockSide; before?: string } | null {
   const side = flipAxis ? shown : "top";
   const sides = toolpathsBySide(operations, entries, side);
   if (!sides) return null;
-  const cuts: SimulationCut[] = [];
-  const parts: PlaybackPart[] = [];
-  let firstMove = 0;
-  for (const { operation, tool, lines, clearing } of sides[side].runs) {
-    const moves = lines.kinds.length;
-    if (moves === 0) continue;
-    cuts.push(toolCut(tool, lines));
-    const rapidsBefore = new Uint32Array(moves + 1);
-    for (let i = 0; i < moves; i++) {
-      rapidsBefore[i + 1] = (rapidsBefore[i] as number) + (lines.kinds[i] as number);
-    }
-    parts.push({
-      operationId: operation.id,
-      name: clearing ? `${operation.name}, clearing` : operation.name,
-      clearing,
-      color: tool.color,
-      lines,
-      firstMove,
-      moves,
-      rapidsBefore,
-    });
-    firstMove += moves;
-  }
-  const topKey = JSON.stringify(sides.top.hashes);
-  if (!flipAxis || side === "top") return { key: topKey, side, cuts, parts };
-  const before = {
-    key: topKey,
-    cuts: sides.top.runs.map(({ tool, lines }) => toolCut(tool, lines)),
-    axis: flipAxis,
-  };
-  return {
-    key: JSON.stringify([topKey, flipAxis, sides.bottom.hashes]),
-    side,
-    cuts,
-    parts,
-    before,
-  };
-}
-
-/** The moves of `lines` made with `tool`, in the order the tool makes them. */
-function toolCut(
-  { type, diameter, vAngle, tipDiameter, taperAngle }: Tool,
-  lines: ToolpathLines,
-): SimulationCut {
-  return {
-    tool: { type, diameter, vAngle, tipDiameter, taperAngle },
-    segments: orderedSegments(lines),
-  };
-}
-
-/** The segments of `lines`, feeds and rapids together, in the order the tool makes them. */
-export function orderedSegments({ feeds, rapids, kinds }: ToolpathLines): Float32Array {
-  const segments = new Float32Array(kinds.length * 6);
-  let f = 0;
-  let r = 0;
-  for (let i = 0; i < kinds.length; i++) {
-    if (kinds[i] === 1) {
-      segments.set(rapids.subarray(r, r + 6), i * 6);
-      r += 6;
-    } else {
-      segments.set(feeds.subarray(f, f + 6), i * 6);
-      f += 6;
-    }
-  }
-  return segments;
+  const topKey = JSON.stringify([sides.top.hashes, posted]);
+  if (!flipAxis || side === "top") return { key: topKey, side };
+  return { key: JSON.stringify([topKey, flipAxis, sides.bottom.hashes]), side, before: topKey };
 }
 
 /**
- * How many of `part`'s feed and rapid segments are done after `move` moves
- * of the whole playback: all of them once it is past, none before it starts.
+ * The parts of a program read back (ADR-0096) from where the post wrote its
+ * `steps`, given the line of each of its segments (`lines`, one array per
+ * cut, in order), with the names and colours of `operations` and the
+ * toolpaths of `entries`. A step whose toolpath isn't ready is left out, its
+ * segments going to the part before.
+ */
+export function programParts(
+  steps: readonly ProgramStep[],
+  lines: readonly Uint32Array[],
+  operations: readonly Operation[],
+  entries: ToolpathState["entries"],
+): PlaybackPart[] {
+  const segmentLines = new Uint32Array(lines.reduce((total, cut) => total + cut.length, 0));
+  let at = 0;
+  for (const cut of lines) {
+    segmentLines.set(cut, at);
+    at += cut.length;
+  }
+  const kept = steps.flatMap((step, i) => {
+    const operation = operations.find((candidate) => candidate.id === step.operationId);
+    const entry = entries[step.operationId];
+    const toolpath =
+      entry?.status === "ready" ? (step.clearing ? entry.clearing : entry.lines) : undefined;
+    const tool = operation && (step.clearing ? clearingTool(operation) : operation.tool);
+    if (!operation || !toolpath || !tool) return [];
+    // The first part takes the program's start too.
+    const firstMove = i === 0 ? 0 : firstAtOrAfter(segmentLines, step.first);
+    return [{ step, operation, toolpath, color: tool.color, firstMove }];
+  });
+  return kept.map(({ step, operation, toolpath, color, firstMove }, i) => {
+    const end = kept[i + 1]?.firstMove ?? segmentLines.length;
+    const moves = end - firstMove;
+    const segments = toolpath.kinds.length;
+    const done = new Uint32Array(moves + 1);
+    // Toolpath segment `j` ends at move `j + 1`, on line `moveLines[j + 1]`.
+    let j = 0;
+    for (let k = 1; k <= moves; k++) {
+      const line = segmentLines[firstMove + k - 1] as number;
+      while (j < segments && (step.moveLines[j + 1] ?? Infinity) <= line) j++;
+      done[k] = j;
+    }
+    const rapidsBefore = new Uint32Array(segments + 1);
+    for (let s = 0; s < segments; s++) {
+      rapidsBefore[s + 1] = (rapidsBefore[s] as number) + (toolpath.kinds[s] as number);
+    }
+    return {
+      operationId: operation.id,
+      name: step.clearing ? `${operation.name}, clearing` : operation.name,
+      clearing: step.clearing,
+      color,
+      lines: toolpath,
+      firstMove,
+      moves,
+      done,
+      rapidsBefore,
+    };
+  });
+}
+
+/** The index of the first of the ascending `values` at least `value`. */
+function firstAtOrAfter(values: Uint32Array, value: number): number {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if ((values[middle] as number) < value) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+/** The part `move` (of the whole program) is in: the last one started. */
+export function partAt(parts: readonly PlaybackPart[], move: number): PlaybackPart | undefined {
+  return parts.findLast((part) => part.firstMove <= move) ?? parts[0];
+}
+
+/**
+ * How many of `part`'s toolpath feed and rapid segments are done after
+ * `move` segments of the whole program: all of them once it is past, none
+ * before it starts.
  */
 export function partProgress(part: PlaybackPart, move: number): { feeds: number; rapids: number } {
-  const done = Math.min(Math.max(move - part.firstMove, 0), part.moves);
+  const k = Math.min(Math.max(move - part.firstMove, 0), part.moves);
+  const done = part.done[k] as number;
   const rapids = part.rapidsBefore[done] as number;
   return { feeds: done - rapids, rapids };
+}
+
+/** Why the program can't be played: it can't be posted, or read back past `line`. */
+export type ProgramFailure =
+  | { line: number; reason: ProgramReadReason }
+  | { error: Translatable; operation?: string };
+
+/** The program played back (ADR-0096), as `usePlayback` keeps it. */
+export type PlayedProgram = {
+  key: string;
+  side: StockSide;
+  cuts: SimulationCut[];
+  before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
+  steps: ProgramStep[];
+  lines: Uint32Array[];
+  /** The top side's program's too on the bottom side, which it plays over (`side`). */
+  warnings: (ProgramWarning & { side?: "top" })[];
+  failure: ProgramFailure | null;
+};
+
+/** What an export of nothing says: no program to play, which the viewport says its own way. */
+const NOTHING_TO_POST = new Set(["export.noEnabled", "export.allHidden", "export.noneHasToolpath"]);
+
+/** The program `wanted` keys from the worker's `result`: the side it plays, and the top side's before it. */
+export function playedProgram(
+  wanted: NonNullable<ReturnType<typeof playbackKey>>,
+  result: GcodeExportResult,
+  flipAxis: FlipAxis | null,
+): PlayedProgram {
+  const played: PlayedProgram = {
+    key: wanted.key,
+    side: wanted.side,
+    cuts: [],
+    steps: [],
+    lines: [],
+    warnings: [],
+    failure: null,
+  };
+  if ("error" in result) {
+    const { error, operation } = result;
+    const nothing = typeof error !== "string" && "code" in error && NOTHING_TO_POST.has(error.code);
+    if (nothing) return played;
+    return { ...played, failure: { error, ...(operation !== undefined && { operation }) } };
+  }
+  const playbacks = result.playbacks ?? [];
+  const find = (side: StockSide) =>
+    playbacks.find((playback) => playback.side === (flipAxis ? side : null));
+  const shown = find(wanted.side);
+  const top = wanted.before !== undefined ? find("top") : undefined;
+  const unread = [top, shown].find((playback) => playback !== undefined && "error" in playback);
+  const failure = unread && "error" in unread ? unread.error : null;
+  const before =
+    wanted.before !== undefined && flipAxis
+      ? { key: wanted.before, cuts: top && "cuts" in top ? top.cuts : [], axis: flipAxis }
+      : undefined;
+  if (!shown || !("cuts" in shown)) return { ...played, before, failure };
+  const { cuts, steps, lines } = shown;
+  const topWarnings = top && "warnings" in top ? top.warnings : [];
+  const warnings = [
+    ...topWarnings.map((warning) => ({ ...warning, side: "top" as const })),
+    ...shown.warnings,
+  ];
+  return { ...played, cuts, steps, lines, warnings, before, failure };
 }

@@ -1,4 +1,5 @@
 import type { ToolpathLines, ToolpathMessage } from "@furrow/cam-core";
+import type { StockSide } from "@furrow/document";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -51,8 +52,11 @@ export type ToolpathEntry = { inputHash: string; previewKey?: string } & (
 export type ToolpathControls = {
   cancel: (operationId: string) => void;
   retry: (operationId: string) => void;
-  /** `name` is the project's, read at each attempt. */
-  exportGcode: (name: () => string) => Promise<GcodeExportResult>;
+  /** `name` is the project's, read at each attempt; `simulate` reads back that side's program (#683). */
+  exportGcode: (
+    name: () => string,
+    options?: { simulate?: StockSide | null },
+  ) => Promise<GcodeExportResult>;
 };
 
 /** What a cancelled toolpath says. */

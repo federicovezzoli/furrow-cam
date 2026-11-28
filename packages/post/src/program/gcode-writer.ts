@@ -44,6 +44,11 @@ export class GcodeWriter {
     private readonly rapidFeed?: number,
   ) {}
 
+  /** How many lines are written so far: the number of the last one. */
+  get lineCount(): number {
+    return this.lines.length;
+  }
+
   line(text: string) {
     this.lines.push(text);
   }

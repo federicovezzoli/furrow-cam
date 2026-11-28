@@ -3,7 +3,7 @@
 - **Status:** Partially shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-17
-- **Related:** PRD-0001 (R10, R11), ADR-0004, ADR-0019, ADR-0042, ADR-0096
+- **Related:** PRD-0001 (R10, R11), ADR-0004, ADR-0019, ADR-0042, ADR-0096, ADR-0097
 
 > **2026-11-28: picked up again** (ADR-0096, #682, #683, #684): the simulator will play the posted program, read back in `@furrow/post`, with its text beside it. The non-goal on other dialects is narrowed: Marlin is read too (ADR-0091).
 >
@@ -63,3 +63,4 @@ The material-removal simulation (PRD-0001 **R10**, ADR-0019) replays the toolpat
 
 - 2026-10-17: created (#134, ADR-0042)
 - 2026-11-28: picked up again; Marlin read too; P2 reader (#682, ADR-0096)
+- 2026-11-28: the simulator plays the posted program, warnings under the timeline (#683, ADR-0097); the program text and its highlighted line are next (#684)

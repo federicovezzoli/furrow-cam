@@ -69,7 +69,7 @@ describe("programCuts", () => {
     expect(warnings).toEqual([]);
   });
 
-  it("starts a cut at every tool comment and marks where operations start", () => {
+  it("starts a cut at every tool comment", () => {
     const gcode = program(
       "(Operation: Rough)",
       "G1 Z-1 F300",
@@ -79,14 +79,15 @@ describe("programCuts", () => {
       "G0 Z5",
       "G1 Z-1",
     );
-    const { cuts, parts } = programCuts(gcode, STOCK);
+    const { cuts, lines } = programCuts(gcode, STOCK);
     expect(cuts.map(({ tool }) => [tool.type, tool.vAngle, tool.tipDiameter])).toEqual([
       ["flat_end_mill", null, null],
       ["v_bit", 60, 0.2],
     ]);
-    expect(parts).toEqual([
-      { name: "Rough", line: 4, cut: 0, segment: 1 },
-      { name: "Chamfer", line: 8, cut: 1, segment: 0 },
+    // The pause is still made with the end mill; the V-bit's cut starts after its comment.
+    expect(lines.map((cut) => [...cut])).toEqual([
+      [3, 5],
+      [9, 10],
     ]);
   });
 
