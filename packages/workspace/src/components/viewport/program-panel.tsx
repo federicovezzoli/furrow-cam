@@ -34,7 +34,8 @@ type Program = NonNullable<ReturnType<typeof usePlayback>["program"]>;
 
 /**
  * The program played (#684, PRD-0006 P4–P6), as Export saves it, with line
- * numbers: the line the playback is on highlighted and kept in view, the
+ * numbers: the lines already run in green, the line the playback is on
+ * highlighted and kept in view, the
  * machine's custom blocks marked, and the warnings of reading it back, each
  * linked to its line. Clicking a line that moves the tool seeks to its first
  * move. Only the lines in view are drawn, so a relief's program scrolls smoothly.
@@ -134,6 +135,8 @@ export function ProgramPanel({
             const line = first + i + 1;
             const block = blockAt(blocks, line);
             const moves = path !== null && firstMoveOfLine(moveLines, path, line) !== null;
+            // The lines the machine has already run.
+            const done = current !== null && line < current;
             const Row = moves ? "button" : "div";
             return (
               <Row
@@ -146,6 +149,7 @@ export function ProgramPanel({
                   "absolute inset-x-0 flex w-max min-w-full items-center gap-3 whitespace-pre pr-2 text-left",
                   block ? "border-muted-foreground/40 border-l-2" : "border-transparent border-l-2",
                   moves && "cursor-pointer hover:bg-muted",
+                  done && "bg-emerald-500/10 hover:bg-emerald-500/15",
                   line === current && "bg-primary/15 hover:bg-primary/20",
                 )}
                 style={{ top: (line - 1) * ROW - offset + scroll, height: ROW }}
@@ -158,7 +162,7 @@ export function ProgramPanel({
                 >
                   {line}
                 </span>
-                <span>{code}</span>
+                <span className={cn(done && "text-emerald-700 dark:text-emerald-400")}>{code}</span>
               </Row>
             );
           })}
