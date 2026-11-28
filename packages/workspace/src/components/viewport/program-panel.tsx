@@ -56,6 +56,8 @@ export function ProgramPanel({
     const at = path && playbackPosition(path, s.distance);
     return at ? lineOfMove(moveLines, at.move) : null;
   });
+  // At the start nothing has run yet, not even the lines before the first move.
+  const started = useStore(store, (s) => s.distance > 0);
   const view = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState(0);
   const [height, setHeight] = useState(UNMEASURED);
@@ -136,7 +138,7 @@ export function ProgramPanel({
             const block = blockAt(blocks, line);
             const moves = path !== null && firstMoveOfLine(moveLines, path, line) !== null;
             // The lines the machine has already run.
-            const done = current !== null && line < current;
+            const done = started && current !== null && line < current;
             const Row = moves ? "button" : "div";
             return (
               <Row

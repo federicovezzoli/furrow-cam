@@ -38,8 +38,14 @@ describe("ProgramPanel", () => {
   it("highlights the line the playback is on", () => {
     const { store, code } = setup();
     expect(code(2).getAttribute("aria-current")).toBe("true");
+    // Before playing, not even the comment before the first move has run.
+    expect(code(1).className).not.toContain("emerald");
     act(() => store.getState().setDistance(15));
     expect(code(3).getAttribute("aria-current")).toBe("true");
+    // The lines before the one played have run.
+    expect(code(1).className).toContain("emerald");
+    expect(code(2).className).toContain("emerald");
+    expect(code(4).className).not.toContain("emerald");
     expect(code(2).getAttribute("aria-current")).toBeNull();
     act(() => store.getState().setDistance(35));
     expect(code(4).getAttribute("aria-current")).toBe("true");
