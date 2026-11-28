@@ -20,7 +20,7 @@ Statuses: `Draft` · `Approved` · `Partially shipped` · `Shipped` · `Abandone
 | [0003](0003-freemium-limits.md) | Freemium usage limits | Abandoned |
 | [0004](0004-machine-presets.md) | Machine presets | Shipped |
 | [0005](0005-stl-relief-machining.md) | STL relief machining | Partially shipped |
-| [0006](0006-gcode-simulation.md) | G-code simulation | Abandoned |
+| [0006](0006-gcode-simulation.md) | G-code simulation | Partially shipped |
 | [0007](0007-desktop-app.md) | Desktop app | Shipped |
 | [0008](0008-try-without-account.md) | Use the app without an account | Shipped |
 | [0009](0009-several-drawings.md) | Several drawings, arranged on the stock | Shipped |

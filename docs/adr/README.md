@@ -56,7 +56,7 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0039](0039-waterline-and-spiral-finishing.md) | Waterline contours from a map of tip heights, spirals along rows and columns | Accepted |
 | [0040](0040-steep-moves-between-samples.md) | Relief passes go over steep jumps between samples instead of cutting across them | Accepted; superseded in part by ADR-0070 and ADR-0071 |
 | [0041](0041-touch-off-pad.md) | A touch-off pad of stock top that no operation cuts | Accepted; superseded in part by ADR-0043 |
-| [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Accepted |
+| [0042](0042-gcode-simulation.md) | The G-code program is simulated from its text, with the cutter named in a comment | Accepted; superseded in part by ADR-0096 |
 | [0043](0043-touch-off-pad-opt-in.md) | The touch-off pad is opt-in, sits on the zero, follows the design and can have its own tool change | Accepted; superseded in part by ADR-0053 |
 | [0044](0044-desktop-app-electron.md) | The desktop app is an Electron shell around the shared workspace | Accepted; superseded in part by ADR-0048 and ADR-0052 |
 | [0045](0045-workspace-storage-interface.md) | The workspace saves and loads through a storage interface | Accepted |
@@ -110,3 +110,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0093](0093-consent-based-usage-tracking.md) | Detailed usage tracking with consent, the cookieless baseline without | Accepted |
 | [0094](0094-drawings-from-a-models-flat-faces.md) | Drawings from a model's flat faces; STEP models keep their faces | Accepted |
 | [0095](0095-models-import-at-their-size.md) | Models import at their size, even past the stock | Accepted |
+| [0096](0096-simulating-the-posted-program.md) | The simulator reads the posted program back, in `@furrow/post` | Accepted |

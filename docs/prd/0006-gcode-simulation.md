@@ -1,10 +1,12 @@
 # PRD-0006: G-code simulation
 
-- **Status:** Abandoned
+- **Status:** Partially shipped
 - **Author:** Federico Vezzoli
 - **Created:** 2026-10-17
-- **Related:** PRD-0001 (R10, R11), ADR-0004, ADR-0019, ADR-0042
+- **Related:** PRD-0001 (R10, R11), ADR-0004, ADR-0019, ADR-0042, ADR-0096
 
+> **2026-11-28: picked up again** (ADR-0096, #682, #683, #684): the simulator will play the posted program, read back in `@furrow/post`, with its text beside it. The non-goal on other dialects is narrowed: Marlin is read too (ADR-0091).
+>
 > **2026-10-17: abandoned after P3 and P7 shipped.** Exported programs name their cutter (P3, #165), and the toolpaths survive moving between the workspace and the simulator (P7, #167). The rest was dropped: the simulator page (#100, #174) plays the toolpaths back move by move, and the e2e corpus (#149) checks every exported program in CI. Custom G-code blocks are still unchecked; a check on export is planned (#179). See ADR-0042.
 
 ## Problem
@@ -60,3 +62,4 @@ The material-removal simulation (PRD-0001 **R10**, ADR-0019) replays the toolpat
 ## Changelog
 
 - 2026-10-17: created (#134, ADR-0042)
+- 2026-11-28: picked up again; Marlin read too; P2 reader (#682, ADR-0096)
