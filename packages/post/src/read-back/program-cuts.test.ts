@@ -140,6 +140,11 @@ describe("programCuts", () => {
       expect.arrayContaining([expect.closeTo(20, 2)]),
     );
     expect(centreOnly.lines[0]?.at(-1)).toBe(5);
+    // GRBL refuses both forms, so they warn; one with only R cuts nothing.
+    expect(centreOnly.warnings).toEqual([{ line: 5, code: "unsupported", word: "G2" }]);
+    const radiusOnly = programCuts(program("G1 Z-1 F300", "G3 R5"), STOCK);
+    expect(radiusOnly.warnings).toEqual([{ line: 5, code: "unsupported", word: "G3" }]);
+    expect(radiusOnly.lines[0]?.at(-1)).toBe(4);
     expect(Math.max(...xs)).toBeCloseTo(20, 2);
     expect(Math.min(...xs)).toBeCloseTo(10, 2);
   });

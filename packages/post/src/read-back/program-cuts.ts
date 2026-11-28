@@ -185,10 +185,15 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
       position = [Number.NaN, Number.NaN, Number.NaN];
       continue;
     }
-    // Marlin reads an arc with only its centre as a full circle.
+    const noAxes = axes.every((value) => value === undefined);
+    const arcWords = [arc.I, arc.J, arc.K, arc.R].some((value) => value !== undefined);
+    // GRBL refuses an arc without axis words; Marlin cuts a full circle about its centre.
+    if (noAxes && arcWords && (motion === 2 || motion === 3)) {
+      warnings.push({ line: number, code: "unsupported", word: `G${motion}` });
+    }
     const circle =
       (motion === 2 || motion === 3) && [arc.I, arc.J, arc.K].some((v) => v !== undefined);
-    if (axes.every((value) => value === undefined) && !circle) continue;
+    if (noAxes && !circle) continue;
     if (machine) {
       // Where machine coordinates are in work coordinates isn't known.
       position = position.map((value, axis) =>
