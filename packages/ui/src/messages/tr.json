@@ -1650,6 +1650,9 @@
     "simulating": "Simüle ediliyor…",
     "simulationFailed": "Simülasyon başarısız: {error}",
     "notSimulated": "Simüle edilmedi, takım yolu başarısız: {operations}",
+    "programUnreadable": "Program {line}. satırdan sonra simüle edilemiyor: {reason, select, unreadable {satır G-code değil} unknownStart {bilinmeyen bir konumdan kesiyor} noTool {ucu belirtmeden önce hareket ediyor} badTool {uç yorumu bir ucu tanımlamıyor} badArc {yayı izlenemiyor} noMotion {G0, G1, G2 ya da G3 olmadan hareket ediyor} other {okunamıyor}}",
+    "programWarning": "Satır {line}: {code, select, unknownPosition {{word} sonrasında takımın konumu bilinmiyor, bu yüzden bir hareket onu belirleyene kadar hiçbir şey simüle edilmiyor} other {{word} simüle edilmiyor}}",
+    "moreProgramWarnings": "Programda {count, plural, one {# uyarı daha} other {# uyarı daha}}",
     "views": {
       "top": "Üst görünüm",
       "orbit": "3B görünüm"

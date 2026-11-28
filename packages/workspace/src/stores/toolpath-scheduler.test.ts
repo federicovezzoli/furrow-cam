@@ -498,13 +498,29 @@ describe("scheduleToolpaths", () => {
     ]);
     schedule.receive({
       export: message.export,
-      files: [{ fileName: "plate.gcode", gcode: "G0" }],
+      files: [{ fileName: "plate.gcode", gcode: "G0", side: null, steps: [] }],
       warnings: [],
     });
     await expect(exported).resolves.toEqual({
-      files: [{ fileName: "plate.gcode", gcode: "G0" }],
+      files: [{ fileName: "plate.gcode", gcode: "G0", side: null, steps: [] }],
       warnings: [],
     });
+  });
+
+  it("posts only the toolpaths ready for the simulator, and asks for them read back (#683)", () => {
+    const { requests, exports, schedule } = setup();
+    void schedule.exportGcode(() => "Plate", { simulate: true });
+    // Still computing: left out, as a failed one would be.
+    expect((exports[0] as GcodeExportRequest).inputs).toEqual([]);
+    expect((exports[0] as GcodeExportRequest).simulate).toBe(true);
+    const [request] = requests as [ToolpathRequest];
+    schedule.receive({ ...request, ...compute(request.input) });
+    void schedule.exportGcode(() => "Plate", { simulate: true });
+    expect((exports[1] as GcodeExportRequest).inputs.map(({ operationId }) => operationId)).toEqual(
+      [OPERATION_ID],
+    );
+    void schedule.exportGcode(() => "Plate");
+    expect((exports[2] as GcodeExportRequest).simulate).toBeUndefined();
   });
 
   it("names the files after the version the document is, if unchanged since", () => {
@@ -525,7 +541,7 @@ describe("scheduleToolpaths", () => {
     // The program of the document as it was is never handed out.
     schedule.receive({
       export: first.export,
-      files: [{ fileName: "p.gcode", gcode: "G1 Z-3" }],
+      files: [{ fileName: "p.gcode", gcode: "G1 Z-3", side: null, steps: [] }],
       warnings: [],
     });
     expect(exports).toHaveLength(2);
@@ -534,11 +550,11 @@ describe("scheduleToolpaths", () => {
     expect(second.inputs[0]?.input.operation).toBe(documents.getState().document.operations[0]);
     schedule.receive({
       export: second.export,
-      files: [{ fileName: "p.gcode", gcode: "G1 Z-6" }],
+      files: [{ fileName: "p.gcode", gcode: "G1 Z-6", side: null, steps: [] }],
       warnings: [],
     });
     await expect(exported).resolves.toEqual({
-      files: [{ fileName: "p.gcode", gcode: "G1 Z-6" }],
+      files: [{ fileName: "p.gcode", gcode: "G1 Z-6", side: null, steps: [] }],
       warnings: [],
     });
     expect(exports).toHaveLength(2);
@@ -599,7 +615,7 @@ describe("scheduleToolpaths", () => {
     // Mid-drag, neither the old program nor one of the dragged value is taken.
     schedule.receive({
       export: first.export,
-      files: [{ fileName: "p.gcode", gcode: "G1 Z-3" }],
+      files: [{ fileName: "p.gcode", gcode: "G1 Z-3", side: null, steps: [] }],
       warnings: [],
     });
     expect(exports).toHaveLength(1);
@@ -611,10 +627,12 @@ describe("scheduleToolpaths", () => {
     expect(exports[1]?.document).toBe(documents.getState().document);
     schedule.receive({
       export: first.export,
-      files: [{ fileName: "p.gcode", gcode: "G1 Z-6" }],
+      files: [{ fileName: "p.gcode", gcode: "G1 Z-6", side: null, steps: [] }],
       warnings: [],
     });
-    await expect(exported).resolves.toMatchObject({ files: [{ gcode: "G1 Z-6" }] });
+    await expect(exported).resolves.toMatchObject({
+      files: [{ gcode: "G1 Z-6", side: null, steps: [] }],
+    });
   });
 
   it("gives up on an export after the project changed every time it was made", async () => {
@@ -625,7 +643,7 @@ describe("scheduleToolpaths", () => {
       const request = exports.at(-1) as GcodeExportRequest;
       schedule.receive({
         export: request.export,
-        files: [{ fileName: "p.gcode", gcode: "G0" }],
+        files: [{ fileName: "p.gcode", gcode: "G0", side: null, steps: [] }],
         warnings: [],
       });
     }

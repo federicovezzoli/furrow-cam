@@ -8,6 +8,7 @@ import {
   xyOriginPosition,
 } from "@furrow/cam-core";
 import { Button } from "@furrow/ui/components/ui/button";
+import { formatWarning } from "@furrow/ui/lib/i18n";
 import { Canvas } from "@react-three/fiber";
 import { RouteIcon, RouteOffIcon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -42,8 +43,8 @@ import {
 } from "./viewport";
 
 /**
- * The simulator's viewport (#100, ADR-0042): the stock cut move by move as
- * the playback advances, the tool drawn where it is, the toolpaths trailing
+ * The simulator's viewport (#100, ADR-0042, ADR-0096): the stock cut move by
+ * move as the posted program plays, the tool drawn where it is, the toolpaths trailing
  * behind it (unless hidden), and the timeline under the scene. Cameras,
  * views and, in a two-sided project, sides work as in the workspace.
  * `children` lead the timeline. Browser-only: load it with `next/dynamic` and `ssr: false`.
@@ -89,11 +90,13 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
       ? playback.heightmap
       : null;
   const t = useTranslations("Viewport");
+  const tAll = useTranslations();
   const status = [
     ...(side === "bottom" ? [t("bottomSideHint")] : []),
     // The top side is played back as it is cut, before the stock is turned over.
     ...(side === "top" && stock.twoSided ? [t("topSideSimulationHint")] : []),
     ...simulationStatus(t, { ...playback, skipped }),
+    ...programStatus(t, tAll, playback.program),
   ];
   const { store, path, parts } = playback;
   const scene = useMemo(() => path && { store, path, parts }, [store, path, parts]);
@@ -160,6 +163,33 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
       </PlaybackTimeline>
     </div>
   );
+}
+
+/** Warnings shown under the timeline; the rest are counted. */
+const SHOWN_WARNINGS = 3;
+
+/**
+ * What playing the program said (ADR-0096): why it can't be posted or read
+ * back past a line, and its first warnings, each with its line.
+ */
+function programStatus(
+  t: ReturnType<typeof useTranslations<"Viewport">>,
+  tAll: ReturnType<typeof useTranslations>,
+  program: ReturnType<typeof usePlayback>["program"],
+): string[] {
+  if (!program) return [];
+  const { failure, warnings } = program;
+  const lines: string[] = [];
+  if (failure && "line" in failure) lines.push(t("programUnreadable", failure));
+  else if (failure) {
+    const error = formatWarning(tAll, { operation: failure.operation, message: failure.error });
+    lines.push(t("simulationFailed", { error }));
+  }
+  for (const warning of warnings.slice(0, SHOWN_WARNINGS)) lines.push(t("programWarning", warning));
+  if (warnings.length > SHOWN_WARNINGS) {
+    lines.push(t("moreProgramWarnings", { count: warnings.length - SHOWN_WARNINGS }));
+  }
+  return lines;
 }
 
 /**

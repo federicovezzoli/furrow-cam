@@ -1,6 +1,14 @@
 import { type Toolpath, type ToolpathInput, toolpathKey } from "@furrow/cam-core";
-import type { ProjectDocument } from "@furrow/document";
-import { type GcodeExport, type GcodeNaming, postToolpaths } from "@furrow/post";
+import type { ProjectDocument, Stock } from "@furrow/document";
+import {
+  type GcodeExport,
+  type GcodeFile,
+  type GcodeNaming,
+  ProgramReadError,
+  postToolpaths,
+  programCuts,
+} from "@furrow/post";
+import type { ProgramPlayback } from "../stores/toolpath-scheduler";
 
 /** An enabled operation's inputs, as the toolpath scheduler hashed them. */
 export type ExportInput = { operationId: string; inputHash: string; input: ToolpathInput };
@@ -84,4 +92,15 @@ export function exportFromResults(
     return { input, toolpath };
   });
   return postToolpaths(document, name, computed, naming);
+}
+
+/** `file` read back for the simulator (ADR-0096), or where it can't be. */
+export function readBack({ side, steps, gcode }: GcodeFile, stock: Stock): ProgramPlayback {
+  try {
+    const { cuts, lines, warnings } = programCuts(gcode, stock);
+    return { side, steps, cuts, lines, warnings };
+  } catch (error) {
+    if (!(error instanceof ProgramReadError)) throw error;
+    return { side, steps, error: { line: error.line, reason: error.reason } };
+  }
 }

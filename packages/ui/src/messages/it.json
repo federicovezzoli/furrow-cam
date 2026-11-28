@@ -1650,6 +1650,9 @@
     "simulating": "Simulazione…",
     "simulationFailed": "Simulazione non riuscita: {error}",
     "notSimulated": "Non simulati, percorso utensile non riuscito: {operations}",
+    "programUnreadable": "Il programma non si può simulare oltre la riga {line}: {reason, select, unreadable {non è G-code} unknownStart {taglia da una posizione sconosciuta} noTool {si muove prima di nominare la fresa} badTool {il commento della fresa non descrive una fresa} badArc {il suo arco non si può seguire} noMotion {si muove senza G0, G1, G2 o G3} other {non si può leggere}}",
+    "programWarning": "Riga {line}: {code, select, unknownPosition {dopo {word} la posizione dell'utensile non è nota, quindi non si simula niente finché un movimento non la stabilisce} other {{word} non viene simulato}}",
+    "moreProgramWarnings": "{count, plural, one {Ancora # avviso} other {Ancora # avvisi}} nel programma",
     "views": {
       "top": "Vista dall’alto",
       "orbit": "Vista 3D"

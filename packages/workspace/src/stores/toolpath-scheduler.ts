@@ -1,5 +1,6 @@
 import {
   machinedDocument,
+  type SimulationCut,
   type ToolpathInput,
   toolpathInputs,
   toolpathKey,
@@ -10,8 +11,9 @@ import {
   type Message,
   machineSpinUpDelay,
   type ProjectDocument,
+  type StockSide,
 } from "@furrow/document";
-import type { GcodeExport } from "@furrow/post";
+import type { GcodeExport, ProgramReadReason, ProgramStep, ProgramWarning } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import type { ExportInput } from "../lib/toolpath-export";
 import { type DocumentStore, versionLabel } from "./document-store";
@@ -54,7 +56,19 @@ export type GcodeExportRequest = {
   version: string | null;
   inputs: ExportInput[];
   meshes?: ArrayBuffer[];
+  /** Also read each program back for the simulator (#683, `ProgramPlayback`). */
+  simulate?: true;
 };
+
+/**
+ * A program read back for the simulator (ADR-0096): the side it cuts
+ * (`null` unless two-sided), where its steps went, and its cuts with the
+ * line of each segment and its warnings, or where and why it can't be read.
+ */
+export type ProgramPlayback = { side: StockSide | null; steps: ProgramStep[] } & (
+  | { cuts: SimulationCut[]; lines: Uint32Array[]; warnings: ProgramWarning[] }
+  | { error: { line: number; reason: ProgramReadReason } }
+);
 
 export type ToolpathMessage =
   | ToolpathRequest
@@ -73,13 +87,17 @@ type PendingExport = {
   /** The project's name now, for the file and the program's header. */
   name: () => string;
   meshes: Map<string, ArrayBuffer>;
+  /** For the simulator: only toolpaths ready are posted, and each program is read back. */
+  simulate: boolean;
   restarts: number;
   resolve: (result: GcodeExportResult) => void;
 };
 
 /** The program, why it couldn't be exported, or the mesh the worker needs for it. */
 /** An export's error is a core package's message, with the operation it is about, if any. */
-export type GcodeExportResult = GcodeExport | { error: string | Message; operation?: string };
+export type GcodeExportResult =
+  | (GcodeExport & { playbacks?: ProgramPlayback[] })
+  | { error: string | Message; operation?: string };
 export type GcodeExportResponse = { export: number } & (
   | GcodeExportResult
   | { missingMesh: string }
@@ -328,11 +346,11 @@ export function scheduleToolpaths(
     const state = documents.getState();
     const machined = machinedDocument(state.document);
     const enabled = machined.operations.filter((operation) => operation.enabled);
-    const inputs = toolpathInputs(machined, enabled).map((input) => ({
-      operationId: input.operation.id,
-      inputHash: hashInput(input),
-      input,
-    }));
+    const { entries } = toolpaths.getState();
+    const inputs = toolpathInputs(machined, enabled)
+      .map((input) => ({ operationId: input.operation.id, inputHash: hashInput(input), input }))
+      // The simulator plays what is computed, leaving failed toolpaths out as it says.
+      .filter(({ operationId }) => !pending.simulate || entries[operationId]?.status === "ready");
     const used = new Set(inputs.flatMap(({ input }) => [...toolpathMeshes(input)]));
     const meshes = [...pending.meshes].flatMap(([sha256, mesh]) =>
       used.has(sha256) ? [mesh] : [],
@@ -345,6 +363,7 @@ export function scheduleToolpaths(
       version: versionLabel(state),
       inputs,
       ...(meshes.length > 0 && { meshes }),
+      ...(pending.simulate && { simulate: true as const }),
     };
     return pending.request;
   }
@@ -355,8 +374,10 @@ export function scheduleToolpaths(
      * The G-code of the document as it is when the program is ready, from the
      * toolpaths the worker holds (#133): an edit made while it is made starts
      * it again (#252). `name` is read at each attempt, so a rename counts too.
+     * With `simulate`, only toolpaths ready are posted, and each program is
+     * read back for the simulator (`playbacks`).
      */
-    exportGcode(name: () => string): Promise<GcodeExportResult> {
+    exportGcode(name: () => string, { simulate = false } = {}): Promise<GcodeExportResult> {
       return new Promise((resolve) => {
         const pending: PendingExport = {
           // Filled in by `exportRequest`.
@@ -369,6 +390,7 @@ export function scheduleToolpaths(
           },
           name,
           meshes: new Map(),
+          simulate,
           restarts: 0,
           resolve,
         };

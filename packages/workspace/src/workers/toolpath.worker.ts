@@ -17,7 +17,7 @@ import {
 import { type Machine, type Message, MessageError } from "@furrow/document";
 import { estimateTime } from "@furrow/post";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
-import { exportFromResults, ToolpathResults } from "../lib/toolpath-export";
+import { exportFromResults, readBack, ToolpathResults } from "../lib/toolpath-export";
 import type {
   GcodeExportRequest,
   ToolpathMessage,
@@ -187,6 +187,7 @@ async function exportProgram({
   version,
   inputs,
   meshes: files = [],
+  simulate,
 }: GcodeExportRequest) {
   try {
     // Every mesh asked for so far, for this export only, so the worker's two
@@ -219,7 +220,8 @@ async function exportProgram({
       (input) => generateToolpath(input, context),
       { version },
     );
-    scope.postMessage({ export: id, ...program });
+    const playbacks = simulate && program.files.map((file) => readBack(file, document.stock));
+    scope.postMessage({ export: id, ...program, ...(playbacks && { playbacks }) });
   } catch (error) {
     if (error instanceof MissingMeshError) {
       scope.postMessage({ export: id, missingMesh: error.sha256 });

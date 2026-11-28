@@ -5,13 +5,16 @@ import {
   type SimulationCut,
   simulateCuts,
   smallestCutWidth,
+  stockOffset,
   toolpathCuts,
   type Vec3,
 } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
 import { enabledInputs, exportGcode, postToolpaths } from "../export";
 import { oneFile } from "../export-test-utils";
+import { postSteps } from "../post";
 import { programCuts } from "../read-back/program-cuts";
+import { gcodeMoves, parseGcode } from "../read-back/read-back";
 import {
   checkGcode,
   formatViolations,
@@ -26,7 +29,7 @@ const projects = corpus();
 describe.each(projects)(
   "$name: $covers",
   ({ name, title, document, context, warnings: expected = [] }) => {
-    const { gcode, warnings } = oneFile(exportGcode(document, title, context));
+    const { gcode, warnings, steps } = oneFile(exportGcode(document, title, context));
 
     it("posts the program checked in", async () => {
       await expect(gcode).toMatchFileSnapshot(`programs/${name}.gcode`);
@@ -50,6 +53,38 @@ describe.each(projects)(
       const posted = oneFile(postToolpaths(document, title, computed));
       expect(posted.gcode).toBe(gcode);
       expect(posted.warnings).toEqual(warnings);
+    });
+
+    it("says on which line each step starts and each move went (#683)", () => {
+      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
+      const computed = enabledInputs(document).map((input) => ({
+        operation: input.operation,
+        toolpath: generateToolpath(input, toolpathContext),
+      }));
+      const expected = postSteps(computed);
+      expect(steps.map(({ operationId, clearing }) => [operationId, clearing])).toEqual(
+        expected.map(({ operationId, clearing }) => [operationId, clearing]),
+      );
+      const moves = new Map(gcodeMoves(parseGcode(gcode)).map((move) => [move.line, move]));
+      const offset = stockOffset(document.stock);
+      const wrong: string[] = [];
+      let last = 0;
+      for (const [i, { first, moveLines }] of steps.entries()) {
+        if (first <= last) wrong.push(`step ${i} starts on line ${first}, before line ${last}`);
+        last = first - 1;
+        for (const [j, line] of moveLines.entries()) {
+          const to = (expected[i]?.moves[j]?.to ?? []).map(
+            (v, axis) => v + (offset[axis] as number),
+          );
+          const move = moves.get(line);
+          const there = move?.to.every((v, axis) => Math.abs(v - (to[axis] as number)) < 1e-3);
+          // A move rounding left out keeps the line before it.
+          if (!(line > last ? there : line === last))
+            wrong.push(`step ${i} move ${j}: line ${line}`);
+          last = line;
+        }
+      }
+      expect(wrong.slice(0, 5)).toEqual([]);
     });
 
     it("leaves the same stock read back as its toolpaths do (ADR-0096)", () => {
