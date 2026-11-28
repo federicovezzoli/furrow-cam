@@ -135,9 +135,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     if (command !== undefined) {
       const homed = /^\$H([XYZ]*)$/i.exec(command)?.[1]?.toUpperCase();
       losses.push({ line: number, code: "unknownPosition", word: command });
-      position = position.map((value, axis) =>
-        homed && !homed.includes(AXES[axis] as string) ? value : Number.NaN,
-      ) as Vec3;
+      position = forget(position, (axis) => !homed || homed.includes(AXES[axis] as string));
       continue;
     }
     const line = readLine(text, number);
@@ -148,6 +146,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     }
 
     const axes: (number | undefined)[] = [undefined, undefined, undefined];
+    const named = (axis: number) => axes[axis] !== undefined;
     const arc: Record<"I" | "J" | "K" | "R", number | undefined> = {
       I: undefined,
       J: undefined,
@@ -210,16 +209,12 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
         if (position.every(Number.isFinite)) losses = [];
       } else if (ours && axes.some((value) => value !== undefined)) {
         losses.push({ line: number, code: "unknownPosition", word: "G10" });
-        position = position.map((value, axis) =>
-          axes[axis] === undefined ? value : Number.NaN,
-        ) as Vec3;
+        position = forget(position, named);
       }
       continue;
     }
     if (probe) {
-      position = position.map((value, axis) =>
-        axes[axis] === undefined ? value : Number.NaN,
-      ) as Vec3;
+      position = forget(position, named);
       continue;
     }
     const noAxes = axes.every((value) => value === undefined);
@@ -233,9 +228,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     if (noAxes && !circle) continue;
     if (machine) {
       // Where machine coordinates are in work coordinates isn't known.
-      position = position.map((value, axis) =>
-        axes[axis] === undefined ? value : Number.NaN,
-      ) as Vec3;
+      position = forget(position, named);
       continue;
     }
     if (motion === null) throw new ProgramReadError(number, "noMotion");
@@ -276,6 +269,11 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   // Losses are warned of at the move they mattered to.
   warnings.sort((a, b) => a.line - b.line);
   return { cuts, lines, warnings };
+}
+
+/** `position` with the axes `lost` says unknown. */
+function forget(position: Vec3, lost: (axis: number) => boolean): Vec3 {
+  return position.map((value, axis) => (lost(axis) ? Number.NaN : value)) as Vec3;
 }
 
 /** Line `number`, hand-written words tidied as GRBL reads them. */
