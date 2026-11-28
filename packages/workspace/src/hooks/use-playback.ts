@@ -8,13 +8,22 @@ import {
   playbackPath,
   playbackPosition,
 } from "@furrow/cam-core";
-import type { StockSide } from "@furrow/document";
+import type { FlipAxis, StockSide } from "@furrow/document";
 import { lazyWorker } from "@furrow/ui/lib/lazy-worker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { type PlaybackPart, playbackMoves } from "../lib/playback-moves";
+import {
+  moveLines,
+  type PlaybackPart,
+  type PlayedProgram,
+  playbackKey,
+  playedProgram,
+  programParts,
+} from "../lib/playback-moves";
+import { programRequests } from "../lib/program-requests";
 import { TEXTURE_WIDTH } from "../lib/simulation-mesh";
+import { useWorkspaceHost } from "../providers/workspace-host";
 import {
   useDocumentStore,
   useToolpathStore,
@@ -26,6 +35,7 @@ import {
   schedulePlayback,
 } from "../stores/playback-scheduler";
 import { advance, createPlaybackStore, type PlaybackStore } from "../stores/playback-store";
+import type { GcodeExportResult } from "../stores/toolpath-scheduler";
 import { settledEntries } from "../stores/toolpath-store";
 
 /** Tells a renderer which cells of a heightmap changed in place. */
@@ -42,13 +52,15 @@ type Loaded = {
 };
 
 /**
- * Playback of the open project's toolpaths (#100), while `maxCells` is set:
- * where the tool is (`store`), along which moves (`path`, `parts`), and the
- * stock it has cut so far, swept in a Web Worker as the playback moves
- * (ADR-0004, ADR-0019). `heightmap` changes in place; `updates` says which
- * cells did. While toolpaths recompute, the last moves and stock stay,
- * `pending` is true and the playback is paused: it neither plays nor cuts
- * until the new moves are in. In a two-sided project it plays the side the
+ * Playback of the open project's program (#683, ADR-0096), while `maxCells`
+ * is set: the G-code posted from the toolpaths computed, read back in the
+ * toolpath worker. Where the tool is (`store`), along which moves (`path`,
+ * `parts`), and the stock it has cut so far, swept in a Web Worker as the
+ * playback moves (ADR-0004, ADR-0019); what reading the program back said
+ * (`program`). `heightmap` changes in place; `updates` says which cells did.
+ * While toolpaths recompute or the program is made, the last moves and stock
+ * stay, `pending` is true and the playback is paused: it neither plays nor
+ * cuts until the new moves are in. In a two-sided project it plays the side the
  * workspace shows, the bottom side over the stock the top side left (ADR-0060);
  * switching sides starts that side's playback from the beginning, and nothing
  * of the other side's shows meanwhile. Derived data: none of it is saved.
@@ -70,19 +82,24 @@ export function usePlayback(maxCells: number | null) {
     },
   }));
   const enabled = maxCells !== null;
+  // What the post writes besides the toolpaths: the machine's blocks, the
+  // stock's zero, and tool names, which tell bits apart (`sameBit`) but not toolpaths.
+  const machine = useDocumentStore((s) => s.document.machine);
+  const stock = useDocumentStore((s) => s.document.stock);
 
-  const latest = useMemo(
-    () => (enabled ? playbackMoves(operations, entries, side, flipAxis) : null),
-    [enabled, operations, entries, side, flipAxis],
-  );
-  // Kept while toolpaths recompute, and the same object while their key is.
-  const [moves, setMoves] = useState(latest);
-  if (latest !== null && latest.key !== moves?.key) setMoves(latest);
+  const latest = useMemo(() => {
+    if (!enabled) return null;
+    const posted = [machine, stock, operations.map((operation) => operation.tool.name)];
+    return playbackKey(operations, entries, side, flipAxis, posted);
+  }, [enabled, operations, entries, side, flipAxis, machine, stock]);
+  // Kept while toolpaths recompute or the next program is made.
+  const [moves, setMoves] = useState<PlayedProgram | null>(null);
+  useProgram(latest, moves?.key ?? null, flipAxis, setMoves);
   // The other side's moves would play over this side's stock.
-  if (latest === null && moves !== null && moves.side !== side) setMoves(null);
+  if (moves !== null && moves.side !== (flipAxis ? side : "top")) setMoves(null);
   if (!enabled && moves !== null) setMoves(null);
   const path = useMemo(() => (moves ? playbackPath(moves.cuts) : null), [moves]);
-  const computing = enabled && latest === null;
+  const computing = enabled && (latest === null || latest.key !== moves?.key);
   const computingRef = useRef(computing);
   computingRef.current = computing;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -178,10 +195,21 @@ export function usePlayback(maxCells: number | null) {
   }, [computing, store]);
   usePlaybackClock(store, path?.length ?? 0, computing);
 
-  // The same moves, with names and colours as they are now: renaming an
-  // operation or recolouring its tool doesn't change its toolpath.
-  const parts: PlaybackPart[] =
-    (latest !== null && latest.key === moves?.key ? latest.parts : moves?.parts) ?? [];
+  // With names and colours as they are now: renaming an operation or
+  // recolouring its tool doesn't change its toolpath. Kept while they recompute.
+  const lastParts = useRef<PlaybackPart[]>([]);
+  const current = latest !== null && latest.key === moves?.key;
+  const lines = useMemo(() => moveLines(moves?.lines ?? []), [moves]);
+  const parts = useMemo(
+    () =>
+      !moves
+        ? []
+        : current
+          ? programParts(moves.steps, lines, operations, entries)
+          : lastParts.current,
+    [moves, lines, current, operations, entries],
+  );
+  lastParts.current = parts;
   // The other side's stock would show until this side's loads.
   const shown = loaded?.side === side ? loaded : null;
   return {
@@ -193,8 +221,56 @@ export function usePlayback(maxCells: number | null) {
     stock: shown?.stock ?? null,
     updates,
     error,
-    pending: enabled && (latest === null || shown === null),
+    program: moves && {
+      warnings: moves.warnings,
+      failure: moves.failure,
+      gcode: moves.gcode,
+      blocks: moves.blocks,
+      moveLines: lines,
+    },
+    pending: computing || (enabled && shown === null),
   };
+}
+
+/**
+ * Asks the toolpath worker for the program `latest` keys whenever it differs
+ * from the one played (`played`), one at a time (`programRequests`). The
+ * answer goes to `onProgram`.
+ */
+function useProgram(
+  latest: ReturnType<typeof playbackKey>,
+  played: string | null,
+  flipAxis: FlipAxis | null,
+  onProgram: (program: PlayedProgram) => void,
+) {
+  const controls = useToolpathStore((s) => s.controls);
+  const { name } = useWorkspaceHost().project;
+  const refs = useRef({ latest, flipAxis, name, onProgram });
+  refs.current = { latest, flipAxis, name, onProgram };
+  const requests = useRef<{ update: (played: string | null) => void } | null>(null);
+  useEffect(() => {
+    const made = programRequests(
+      (wanted: NonNullable<typeof latest>) =>
+        controls
+          .exportGcode(() => refs.current.name, { simulate: wanted.side })
+          .catch(
+            (error: unknown): GcodeExportResult => ({
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          ),
+      () => refs.current.latest,
+      (wanted, result) =>
+        refs.current.onProgram(playedProgram(wanted, result, refs.current.flipAxis)),
+    );
+    requests.current = made;
+    return () => {
+      made.stop();
+      requests.current = null;
+    };
+  }, [controls]);
+  // `controls` too: new requests ask for the program again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `latest` and `controls` trigger it, read through refs
+  useEffect(() => requests.current?.update(played), [latest, played, controls]);
 }
 
 /** Moves `store`'s playback along while it is playing, stopping at `length`; not while `held`. */

@@ -980,6 +980,10 @@
     "lineAtTop": "No topo do material, pelo ângulo de {angle}° da fresa.",
     "lineAtTopTip": "No topo do material, pelo ângulo de {angle}° e pela ponta de {tip} da fresa.",
     "chamferWidth": "Largura do chanfro",
+    "taper": "Entrada e saída graduais (caneluras)",
+    "taperStart": "Transição no início",
+    "taperEnd": "Transição no fim",
+    "taperHint": "Os caminhos abertos descem do topo do material até à profundidade ao longo do comprimento inicial e voltam a subir ao longo do final; onde os dois se sobrepõem, o sulco fica menos fundo.",
     "chamferDepth": "No topo do material; cortado a {depth} de profundidade.",
     "chamferTooWide": "Mais largo que o cone, então o chanfro fica só tão largo quanto a fresa permite.",
     "vcarve": "Entalhe em V",
@@ -1132,7 +1136,8 @@
     "lock": "Bloquear {name}",
     "unlock": "Desbloquear {name}",
     "download": "Baixar {name} como STL",
-    "downloadFailed": "Não foi possível ler o arquivo deste modelo."
+    "downloadFailed": "Não foi possível ler o arquivo deste modelo.",
+    "remove": "Excluir {name}"
   },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",
@@ -1645,6 +1650,15 @@
     "simulating": "Simulando…",
     "simulationFailed": "Falha na simulação: {error}",
     "notSimulated": "Não simulado, falha no percurso: {operations}",
+    "programUnreadable": "{side, select, top {O programa da face superior} other {O programa}} não pode ser simulado além da linha {line}: {reason, select, unreadable {não é G-code} unknownStart {corta a partir de uma posição desconhecida} noTool {move-se antes de nomear a fresa} badTool {o comentário da fresa não descreve uma fresa} badArc {o seu arco não pode ser seguido} noMotion {move-se sem G0, G1, G2 ou G3} other {não pode ser lida}}",
+    "programWarning": "{side, select, top {Face superior, linha {line}} other {Linha {line}}}: {code, select, unknownPosition {depois de {word} a posição da ferramenta é desconhecida, por isso nada é simulado até um movimento a definir} other {{word} não é simulado}}",
+    "moreProgramWarnings": "{count, plural, one {Mais # aviso} other {Mais # avisos}} no programa",
+    "program": "Programa",
+    "programWarnings": "Avisos do programa",
+    "showProgram": "Mostrar programa",
+    "showProgramShort": "Mostrar o programa",
+    "hideProgramShort": "Ocultar o programa",
+    "programBlock": "Bloco {block, select, programStart {Início do programa} toolChangePad {Troca de ferramenta na placa} toolChange {Troca de ferramenta} operationStart {Início da operação} other {Fim do programa}}",
     "views": {
       "top": "Vista superior",
       "orbit": "Vista 3D"

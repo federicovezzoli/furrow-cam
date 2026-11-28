@@ -1,7 +1,7 @@
 import type { Vec3 } from "@furrow/cam-core";
 import { formatNumber } from "../format";
+import type { BlockLabel, CustomBlock } from "../post";
 import { GcodeExportError } from "../post";
-import type { BlockLabel, CustomBlock } from "../read-back/read-back";
 
 type Axes = { x?: number; y?: number; z?: number };
 const AXES = ["x", "y", "z"] as const;
@@ -43,6 +43,11 @@ export class GcodeWriter {
     private readonly write: (text: string) => string = comment,
     private readonly rapidFeed?: number,
   ) {}
+
+  /** How many lines are written so far: the number of the last one. */
+  get lineCount(): number {
+    return this.lines.length;
+  }
 
   line(text: string) {
     this.lines.push(text);

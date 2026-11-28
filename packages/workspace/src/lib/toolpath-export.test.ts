@@ -1,9 +1,15 @@
 import { generateToolpath, toolpathInputs, toolpathKey } from "@furrow/cam-core";
 import type { ProjectDocument } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
-import { exportGcode } from "@furrow/post";
+import { exportGcode, type GcodeFile } from "@furrow/post";
 import { describe, expect, it, vi } from "vitest";
-import { type ExportInput, exportFromResults, ToolpathResults } from "./toolpath-export";
+import {
+  type ExportInput,
+  exportFromResults,
+  playedFiles,
+  readBack,
+  ToolpathResults,
+} from "./toolpath-export";
 
 /** The fixture project zeroed on the stock top, its enabled operations' inputs hashed by index. */
 function project(): { document: ProjectDocument; inputs: ExportInput[] } {
@@ -76,5 +82,64 @@ describe("ToolpathResults", () => {
     expect(results.size).toBe(1);
     expect(results.computed("b", "")).toBe(toolpath);
     expect(results.get("a", "2")).toBeUndefined();
+  });
+});
+
+describe("readBack", () => {
+  /** The lowest the program's segments from line `line` go, in stock coordinates. */
+  function lowest(playback: ReturnType<typeof readBack>, line: number): number {
+    if (!("cuts" in playback)) throw new Error("not read");
+    let low = Infinity;
+    for (const [i, cut] of playback.cuts.entries()) {
+      for (const [j, at] of (playback.lines[i] as Uint32Array).entries()) {
+        if (at === line) low = Math.min(low, cut.segments[j * 6 + 5] as number);
+      }
+    }
+    return low;
+  }
+
+  it("plays what the machine's own blocks cut, which no toolpath does (#683)", () => {
+    const { document } = project();
+    const plunge = "G1 Z5 F100";
+    const programStart = ["G21 G90", "G0 Z40", "G0 X20 Y20", plunge, "G0 Z40"].join("\n");
+    const changed = {
+      ...document,
+      machine: { ...(document.machine as NonNullable<ProjectDocument["machine"]>), programStart },
+    };
+    const [file] = exportGcode(changed, "Plate").files as [GcodeFile];
+    const line = file.gcode.split("\n").indexOf(plunge) + 1;
+    expect(line).toBeGreaterThan(0);
+    const playback = readBack(file, changed.stock);
+    // Zeroed on the machine bed: Z5 is 13 mm down into the 18 mm stock.
+    expect(lowest(playback, line)).toBeCloseTo(5 - changed.stock.thickness, 3);
+    expect(playback.steps).toEqual(file.steps);
+  });
+
+  it("says where a program can't be read", () => {
+    const { document } = project();
+    const [file] = exportGcode(document, "Plate").files as [GcodeFile];
+    const broken = { ...file, gcode: file.gcode.replace("\n", "\nG1 X\n") };
+    expect(readBack(broken, document.stock)).toMatchObject({
+      error: { line: 2, reason: "unreadable" },
+    });
+  });
+});
+
+describe("playedFiles", () => {
+  const file = (side: GcodeFile["side"]): GcodeFile => ({
+    fileName: "",
+    gcode: "",
+    side,
+    steps: [],
+    blocks: [],
+  });
+
+  it("reads back only the programs the side shown plays", () => {
+    expect(playedFiles([file(null)], "top")).toEqual([file(null)]);
+    const both = [file("top"), file("bottom")];
+    expect(playedFiles(both, "top")).toEqual([file("top")]);
+    // The bottom side is played over the stock the top side's program left.
+    expect(playedFiles(both, "bottom")).toEqual(both);
+    expect(playedFiles([file("bottom")], "top")).toEqual([]);
   });
 });

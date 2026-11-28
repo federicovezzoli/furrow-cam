@@ -482,12 +482,30 @@ describe("grbl", () => {
 
     it("splits operations into a step per tool, leaving out empty ones", () => {
       expect(postSteps([{ operation: vcarve, toolpath }])).toEqual([
-        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
-        { name: "Sign", tool: vBit, moves: toolpath.moves },
+        {
+          name: "Sign, clearing",
+          operationId: vcarve.id,
+          clearing: true,
+          tool: endMill,
+          moves: toolpath.clearing,
+        },
+        {
+          name: "Sign",
+          operationId: vcarve.id,
+          clearing: false,
+          tool: vBit,
+          moves: toolpath.moves,
+        },
       ]);
       const onlyClearing = { ...toolpath, moves: [] };
       expect(postSteps([{ operation: vcarve, toolpath: onlyClearing }])).toEqual([
-        { name: "Sign, clearing", tool: endMill, moves: toolpath.clearing },
+        {
+          name: "Sign, clearing",
+          operationId: vcarve.id,
+          clearing: true,
+          tool: endMill,
+          moves: toolpath.clearing,
+        },
       ]);
       // Without a clearing tool, stray clearing moves aren't cut.
       const plain = {
@@ -495,7 +513,13 @@ describe("grbl", () => {
         params: { startDepth: 0, maxDepth: 3, flatBottom: null },
       } as Operation;
       expect(postSteps([{ operation: plain, toolpath }])).toEqual([
-        { name: "Sign", tool: vBit, moves: toolpath.moves },
+        {
+          name: "Sign",
+          operationId: vcarve.id,
+          clearing: false,
+          tool: vBit,
+          moves: toolpath.moves,
+        },
       ]);
     });
   });
@@ -584,9 +608,49 @@ describe("grbl", () => {
       expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 X50"), "material", 5)]);
     });
 
-    it("stop at a move in machine coordinates", () => {
-      const { warnings, lineOf } = withToolChange("G53 G0 Z-5\nG1 Z-3 F300\nM0");
-      expect(warnings).toEqual([moveWarning("toolChange", lineOf("G53 G0 Z-5"), "unfollowed")]);
+    it("warn about a move into the stock after one in machine coordinates, until Z is set", () => {
+      const { warnings, lineOf } = withToolChange(
+        "G53 G0 Z-5\nG0 X150 Y100\nG1 Z-3 F300\nG0 Z20\nG0 X140\nG0 Z-2\nM0",
+      );
+      expect(warnings).toEqual([
+        moveWarning("toolChange", lineOf("G1 Z-3 F300"), "unknownPosition"),
+        moveWarning("toolChange", lineOf("G0 Z-2"), "material", 2),
+      ]);
+    });
+
+    it("follow a block that zeroes, probes and retracts (#688)", () => {
+      const block = [
+        "G10 L20 P0 X0 Y0 Z0 (set current location to zero)",
+        "G0 X10 Y10 F2000",
+        "M0 (MSG Attach probe)",
+        "G38.2 Z-110 F200 P0.5",
+        "G1 Z10 F900",
+        "M0 (MSG Remove probe)",
+        "M62 P1",
+      ].join("\n");
+      const { gcode, warnings } = post({
+        machine: { ...machine, programStart: block, programEnd: "G0 X150 Y100\nG0 Z-3" },
+        operations,
+      });
+      const line = gcode.split("\n").indexOf("G0 Z-3") + 1;
+      expect(warnings).toEqual([moveWarning("programEnd", line, "material", 3)]);
+    });
+
+    it("lose the axes a G10 L2 moves, and keep them for another work system", () => {
+      const { warnings, lineOf } = withToolChange(
+        "G10 L2 P2 X5\nG0 X150 Y100\nG0 Z-1\nG0 Z20\nG10 L2 P1 Z-5\nG0 Z-2\nM0",
+      );
+      expect(warnings).toEqual([
+        moveWarning("toolChange", lineOf("G0 Z-1"), "material", 1),
+        moveWarning("toolChange", lineOf("G0 Z-2"), "unknownPosition"),
+      ]);
+    });
+
+    it("stop at an arc", () => {
+      const { warnings, lineOf } = withToolChange("G2 X10 Y0 I5 J0\nG0 Z-3\nM0");
+      expect(warnings).toEqual([
+        moveWarning("toolChange", lineOf("G2 X10 Y0 I5 J0"), "unfollowed"),
+      ]);
     });
 
     it("check a tool-change block's moves before the pause with the bit it changes", () => {
@@ -607,12 +671,22 @@ describe("grbl", () => {
       expect(warnings).toEqual([moveWarning("toolChange", lineOf("G0 Z-3"), "material", 3)]);
     });
 
+    it("lose the axes a controller command homes, and all for any other", () => {
+      const { warnings, lineOf } = withToolChange(
+        "$HZ\nG0 X150 Y100\nG0 Z-1\nG0 Z20\n$LocalFS/Run=park.nc\nG0 Z-2\nM0",
+      );
+      expect(warnings).toEqual([
+        moveWarning("toolChange", lineOf("G0 Z-1"), "unknownPosition"),
+        moveWarning("toolChange", lineOf("G0 Z-2"), "unknownPosition"),
+      ]);
+    });
+
     it("stop at a line it can't read", () => {
       const { gcode, warnings } = post({
-        machine: { ...machine, programStart: "$H\nG21 G90" },
+        machine: { ...machine, programStart: "G21 G90 ?\nG0 Z5" },
         operations,
       });
-      const line = gcode.split("\n").indexOf("$H") + 1;
+      const line = gcode.split("\n").indexOf("G21 G90 ?") + 1;
       expect(warnings).toEqual([moveWarning("programStart", line, "unreadable")]);
     });
 

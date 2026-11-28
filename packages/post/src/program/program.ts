@@ -3,14 +3,16 @@ import { hasAccelerations, machineSpinUpDelay, type Tool, type TouchOff } from "
 import { estimateTime, formatDuration } from "../machine/estimate";
 import { limitFeed, spindleSpeed } from "../machine/machine-limits";
 import {
+  type BlockLabel,
   type Dialect,
   type PostInput,
   type PostOutput,
   type PostStep,
   type PostWarning,
+  type ProgramStep,
   postSteps,
 } from "../post";
-import { type BlockLabel, customBlockWarnings } from "../read-back/read-back";
+import { customBlockWarnings } from "../read-back/read-back";
 import { travelWarnings } from "../read-back/travel";
 import { GcodeWriter } from "./gcode-writer";
 import { padLabel, sideSetupLines, xyZeroLabel, zZeroLabel } from "./setup-notes";
@@ -91,10 +93,13 @@ export function postProgram(input: PostInput, dialect: Dialect): PostOutput {
   const steps = postSteps(operations);
   writeHeader(program, steps);
   let tool: Tool | null = null;
+  const written: ProgramStep[] = [];
   for (const step of steps) {
     writeTool(program, tool, step.tool);
     tool = step.tool;
-    writeOperation(program, step);
+    const first = program.out.lineCount + 1;
+    const moveLines = writeOperation(program, step);
+    written.push({ operationId: step.operationId, clearing: step.clearing, first, moveLines });
   }
   writeEnd(program);
 
@@ -103,7 +108,7 @@ export function postProgram(input: PostInput, dialect: Dialect): PostOutput {
   const { warnings } = program;
   warnings.push(...customBlockWarnings(gcode, project, program.out.customBlocks));
   warnings.push(...travelWarnings(gcode, machine, program.out.customBlocks));
-  return { gcode, warnings };
+  return { gcode, steps: written, blocks: program.out.customBlocks, warnings };
 }
 
 /** The name, the setup the user must do, the first tool's shape and the program start. */
@@ -172,8 +177,11 @@ function writeTool(program: Program, previous: Tool | null, tool: Tool) {
   out.line(toolShapeComment(tool, dialect.comment));
 }
 
-/** One step: its start, a rise to the retract height, the spindle, then its moves. */
-function writeOperation(program: Program, step: PostStep) {
+/**
+ * One step: its start, a rise to the retract height, the spindle, then its
+ * moves, whose lines it returns (`ProgramStep`).
+ */
+function writeOperation(program: Program, step: PostStep): Uint32Array {
   const { out, input } = program;
   const { machine, safeZ } = input;
   if (machine?.operationStart) {
@@ -187,7 +195,7 @@ function writeOperation(program: Program, step: PostStep) {
   out.forget();
   out.rapid({ z: safeZ });
   startSpindle(program, step);
-  writeMoves(program, step);
+  return writeMoves(program, step);
 }
 
 /** `M3` at the step's speed, kept in the machine's range, and a dwell if it must spin up. */
@@ -214,12 +222,13 @@ function startSpindle(program: Program, step: PostStep) {
   }
 }
 
-/** The step's moves, feeds lowered to the machine's maximums, warning if any was. */
-function writeMoves(program: Program, step: PostStep) {
+/** The step's moves, feeds lowered to the machine's maximums, warning if any was; their lines. */
+function writeMoves(program: Program, step: PostStep): Uint32Array {
   const { out, input } = program;
   let previous: Vec3 | null = null;
   let clamped = 0;
-  for (const move of step.moves) {
+  const lines = new Uint32Array(step.moves.length);
+  for (const [i, move] of step.moves.entries()) {
     const [x, y, z] = move.to;
     if (move.kind === "rapid") out.rapid({ x, y, z });
     else {
@@ -229,6 +238,7 @@ function writeMoves(program: Program, step: PostStep) {
       if (feed < move.feedRate) clamped++;
       out.feed({ x, y, z }, feed);
     }
+    lines[i] = out.lineCount;
     previous = move.to;
   }
   if (clamped > 0) {
@@ -237,6 +247,7 @@ function writeMoves(program: Program, step: PostStep) {
       message: { code: "grbl.slowed", values: { count: clamped } },
     });
   }
+  return lines;
 }
 
 /** The machine's program end, else the spindle off, a rise, back to the XY zero and the dialect's end. */

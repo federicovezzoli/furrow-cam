@@ -1,4 +1,5 @@
 import { distance, type Point } from "@furrow/document";
+import type { Vec3 } from "../scene/stock";
 import type { ToolpathBuilder } from "./toolpath";
 
 // Helpers the toolpath generators share.
@@ -47,6 +48,24 @@ export function distanceToSegment(point: Point, a: Point, b: Point): number {
       ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared))
       : 0;
   return Math.hypot(a[0] + t * dx - point[0], a[1] + t * dy - point[1]);
+}
+
+/**
+ * Feeds to `to`, at the plunge rate when that goes down more steeply than
+ * `steepest` (the tool's plunge angle, in radians).
+ */
+export function feedSloped(
+  builder: ToolpathBuilder,
+  to: Vec3,
+  rates: { steepest: number; feedRate: number; plungeRate: number },
+) {
+  const at = builder.position;
+  const drop = at ? at[2] - to[2] : 0;
+  const steep =
+    at !== null &&
+    drop > 0 &&
+    Math.atan2(drop, Math.hypot(to[0] - at[0], to[1] - at[1])) > rates.steepest + 1e-9;
+  builder.feed(to, steep ? rates.plungeRate : rates.feedRate);
 }
 
 /** How a generator goes down into the stock. */

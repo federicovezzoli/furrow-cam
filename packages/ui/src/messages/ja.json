@@ -980,6 +980,10 @@
     "lineAtTop": "素材上面での幅（ビットの角度 {angle}° から算出）。",
     "lineAtTopTip": "素材上面での幅（ビットの角度 {angle}° と先端 {tip} から算出）。",
     "chamferWidth": "面取り幅",
+    "taper": "徐々に深く・浅く（フルーティング）",
+    "taperStart": "開始側のテーパー",
+    "taperEnd": "終了側のテーパー",
+    "taperHint": "開いたパスは、開始側の長さでストック上面から深さまで下がり、終了側の長さで再び上がります。両者が重なる場合、溝はより浅いところで最深になります。",
     "chamferDepth": "素材上面での幅。深さ {depth} で加工します。",
     "chamferTooWide": "円錐部より広いため、面取り幅はビットが許す幅までになります。",
     "vcarve": "V カービング",
@@ -1132,7 +1136,8 @@
     "lock": "{name} をロック",
     "unlock": "{name} のロックを解除",
     "download": "{name} を STL でダウンロード",
-    "downloadFailed": "このモデルのファイルを読み込めませんでした。"
+    "downloadFailed": "このモデルのファイルを読み込めませんでした。",
+    "remove": "{name} を削除"
   },
   "ToolpathProgress": {
     "title": "ツールパスを計算中 · {total}件中{done}件完了",
@@ -1645,6 +1650,15 @@
     "simulating": "シミュレーション中…",
     "simulationFailed": "シミュレーションに失敗しました：{error}",
     "notSimulated": "ツールパスが失敗したため、シミュレーションしていません：{operations}",
+    "programUnreadable": "{side, select, top {上面のプログラム} other {プログラム}}は {line} 行目より先をシミュレーションできません: {reason, select, unreadable {G コードではありません} unknownStart {位置が分からないところから切削しています} noTool {ビットを指定する前に動いています} badTool {ビットのコメントがビットを表していません} badArc {円弧をたどれません} noMotion {G0、G1、G2、G3 のどれもなしで動いています} other {読み取れません}}",
+    "programWarning": "{side, select, top {上面 {line} 行目} other {{line} 行目}}: {code, select, unknownPosition {{word} の後は工具の位置が分からないため、動きで位置が決まるまで何もシミュレーションされません} other {{word} はシミュレーションされません}}",
+    "moreProgramWarnings": "プログラム内にあと {count, plural, other {# 件の警告}}",
+    "program": "プログラム",
+    "programWarnings": "プログラムの警告",
+    "showProgram": "プログラムを表示",
+    "showProgramShort": "プログラムを表示",
+    "hideProgramShort": "プログラムを隠す",
+    "programBlock": "{block, select, programStart {プログラム開始} toolChangePad {パッドでの工具交換} toolChange {工具交換} operationStart {工程開始} other {プログラム終了}}ブロック",
     "views": {
       "top": "上面図",
       "orbit": "3D ビュー"

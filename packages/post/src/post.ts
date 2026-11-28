@@ -40,9 +40,24 @@ export type SideSetup = {
   pins: boolean;
 };
 
+/** The custom blocks, as warnings name them. */
+export type BlockLabel =
+  | "programStart"
+  | "toolChangePad"
+  | "toolChange"
+  | "operationStart"
+  | "programEnd";
+
+/** Lines `first` to `last` (1-based) of a program: one custom block, named by `label`. */
+export type CustomBlock = { label: BlockLabel; first: number; last: number };
+
 export type PostOutput = {
   /** The program, one block per line, ending with a newline. */
   gcode: string;
+  /** Where each step went in it, in cutting order (`postSteps`). */
+  steps: ProgramStep[];
+  /** The machine's custom blocks in it, by line. */
+  blocks: CustomBlock[];
   /** Things the user should know, e.g. feeds lowered to the machine's limits. */
   warnings: PostWarning[];
 };
@@ -91,7 +106,26 @@ export type PostProcessor = {
 };
 
 /** The moves of one operation cut with one tool: a block of the program. */
-export type PostStep = { name: string; tool: Tool; moves: ToolpathMove[] };
+export type PostStep = {
+  name: string;
+  operationId: string;
+  /** Whether these are the operation's clearing moves (ADR-0026). */
+  clearing: boolean;
+  tool: Tool;
+  moves: ToolpathMove[];
+};
+
+/**
+ * Where a step went in its program, for following its toolpath as the
+ * program plays (#683): the line it starts on, and the line of each of its
+ * moves, the line before for a move rounding left out. 1-based.
+ */
+export type ProgramStep = {
+  operationId: string;
+  clearing: boolean;
+  first: number;
+  moveLines: Uint32Array;
+};
 
 /**
  * The steps of `operations`, in cutting order: each operation's own moves,
@@ -105,12 +139,20 @@ export function postSteps(operations: PostInput["operations"]): PostStep[] {
     if (clearing && toolpath.clearing && toolpath.clearing.length > 0) {
       steps.push({
         name: `${operation.name}, clearing`,
+        operationId: operation.id,
+        clearing: true,
         tool: clearing,
         moves: toolpath.clearing,
       });
     }
     if (toolpath.moves.length > 0) {
-      steps.push({ name: operation.name, tool: operation.tool, moves: toolpath.moves });
+      steps.push({
+        name: operation.name,
+        operationId: operation.id,
+        clearing: false,
+        tool: operation.tool,
+        moves: toolpath.moves,
+      });
     }
     return steps;
   });

@@ -135,13 +135,13 @@ describe("toolpath store", () => {
       cancel: (id) => cancelled.push(id),
       retry() {},
       exportGcode: async () => ({
-        files: [{ fileName: "plate.gcode", gcode: "G0" }],
+        files: [{ fileName: "plate.gcode", gcode: "G0", side: null, steps: [], blocks: [] }],
         warnings: [],
       }),
     });
     store.getState().controls.cancel("op");
     await expect(store.getState().controls.exportGcode(() => "Plate")).resolves.toMatchObject({
-      files: [{ gcode: "G0" }],
+      files: [{ gcode: "G0", side: null, steps: [], blocks: [] }],
     });
     store.getState().setControls(null);
     store.getState().controls.cancel("op");

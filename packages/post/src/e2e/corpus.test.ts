@@ -1,7 +1,20 @@
-import { createCache, generateToolpath, type SimulationCut, type Vec3 } from "@furrow/cam-core";
+import {
+  createCache,
+  generateToolpath,
+  heightmapGrid,
+  type SimulationCut,
+  simulateCuts,
+  smallestCutWidth,
+  stockOffset,
+  toolpathCuts,
+  type Vec3,
+} from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { enabledInputs, exportGcode, postToolpaths } from "../export";
+import { type ComputedToolpath, enabledInputs, exportGcode, postToolpaths } from "../export";
 import { oneFile } from "../export-test-utils";
+import { postSteps } from "../post";
+import { programCuts } from "../read-back/program-cuts";
+import { gcodeMoves, parseGcode } from "../read-back/read-back";
 import {
   checkGcode,
   formatViolations,
@@ -16,7 +29,17 @@ const projects = corpus();
 describe.each(projects)(
   "$name: $covers",
   ({ name, title, document, context, warnings: expected = [] }) => {
-    const { gcode, warnings } = oneFile(exportGcode(document, title, context));
+    const { gcode, warnings, steps } = oneFile(exportGcode(document, title, context));
+    /** The toolpaths as the workspace's toolpath worker computes them, one at a time with its own cache; computed once. */
+    let toolpaths: ComputedToolpath[] | undefined;
+    const computed = () => {
+      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
+      toolpaths ??= enabledInputs(document).map((input) => ({
+        input,
+        toolpath: generateToolpath(input, toolpathContext),
+      }));
+      return toolpaths;
+    };
 
     it("posts the program checked in", async () => {
       await expect(gcode).toMatchFileSnapshot(`programs/${name}.gcode`);
@@ -31,16 +54,71 @@ describe.each(projects)(
     });
 
     it("posts the same program from toolpaths computed beforehand (#133)", () => {
-      // As the workspace's toolpath worker computes them, one at a time with its own cache.
-      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
-      const computed = enabledInputs(document).map((input) => ({
-        input,
-        toolpath: generateToolpath(input, toolpathContext),
-      }));
-      const posted = oneFile(postToolpaths(document, title, computed));
+      const posted = oneFile(postToolpaths(document, title, computed()));
       expect(posted.gcode).toBe(gcode);
       expect(posted.warnings).toEqual(warnings);
     });
+
+    it("says on which line each step starts and each move went (#683)", () => {
+      const expected = postSteps(
+        computed().map(({ input, toolpath }) => ({ operation: input.operation, toolpath })),
+      );
+      expect(steps.map(({ operationId, clearing }) => [operationId, clearing])).toEqual(
+        expected.map(({ operationId, clearing }) => [operationId, clearing]),
+      );
+      const moves = new Map(gcodeMoves(parseGcode(gcode)).map((move) => [move.line, move]));
+      const offset = stockOffset(document.stock);
+      const wrong: string[] = [];
+      let last = 0;
+      for (const [i, { first, moveLines }] of steps.entries()) {
+        if (first <= last) wrong.push(`step ${i} starts on line ${first}, before line ${last}`);
+        last = first - 1;
+        for (const [j, line] of moveLines.entries()) {
+          const to = (expected[i]?.moves[j]?.to ?? []).map(
+            (v, axis) => v + (offset[axis] as number),
+          );
+          const move = moves.get(line);
+          const there = move?.to.every((v, axis) => Math.abs(v - (to[axis] as number)) < 1e-3);
+          // A move rounding left out keeps the line before it.
+          if (!(line > last ? there : line === last))
+            wrong.push(`step ${i} move ${j}: line ${line}`);
+          last = line;
+        }
+      }
+      expect(wrong.slice(0, 5)).toEqual([]);
+    });
+
+    it("leaves the same stock read back as its toolpaths do (ADR-0096)", () => {
+      const toolCuts = computed().flatMap(({ input, toolpath }) =>
+        toolpathCuts(input.operation, toolpath),
+      );
+      const { stock } = document;
+      const grid = heightmapGrid(stock, smallestCutWidth(toolCuts), 250_000);
+      const expected = simulateCuts(stock, toolCuts, grid).heights;
+      const read = programCuts(gcode, stock);
+      const actual = simulateCuts(stock, read.cuts, grid).heights;
+      // Within one cell: rounding to 0.001 mm can move a cell's centre in or out of a cut.
+      const { columns, rows } = grid;
+      const off: string[] = [];
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          let low = Infinity;
+          let high = -Infinity;
+          for (let r = Math.max(0, row - 1); r <= Math.min(rows - 1, row + 1); r++) {
+            for (let c = Math.max(0, column - 1); c <= Math.min(columns - 1, column + 1); c++) {
+              const height = expected[r * columns + c] as number;
+              low = Math.min(low, height);
+              high = Math.max(high, height);
+            }
+          }
+          const height = actual[row * columns + column] as number;
+          if (height < low - 0.01 || height > high + 0.01) off.push(`${column},${row}: ${height}`);
+        }
+      }
+      expect(off.slice(0, 5)).toEqual([]);
+      expect(read.warnings).toEqual([]);
+      // Two heightmaps of the relief projects, slow on CI's runners.
+    }, 30_000);
   },
 );
 

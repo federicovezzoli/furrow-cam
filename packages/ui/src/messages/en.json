@@ -980,6 +980,10 @@
     "lineAtTop": "At the stock top, from the bit's {angle}° angle.",
     "lineAtTopTip": "At the stock top, from the bit's {angle}° angle and {tip} tip.",
     "chamferWidth": "Chamfer width",
+    "taper": "Taper in and out (fluting)",
+    "taperStart": "Taper at start",
+    "taperEnd": "Taper at end",
+    "taperHint": "Open paths go from the stock top down to the depth over the start length and back up over the end length; where the two overlap the groove peaks shallower.",
     "chamferDepth": "On the stock top; cut {depth} deep.",
     "chamferTooWide": "Wider than the cone, so the chamfer is only as wide as the bit allows.",
     "vcarve": "V-carve",
@@ -1132,7 +1136,8 @@
     "lock": "Lock {name}",
     "unlock": "Unlock {name}",
     "download": "Download {name} as STL",
-    "downloadFailed": "Couldn't read this model's file."
+    "downloadFailed": "Couldn't read this model's file.",
+    "remove": "Delete {name}"
   },
   "ToolpathProgress": {
     "title": "Computing toolpaths · {done} of {total} done",
@@ -1645,6 +1650,15 @@
     "simulating": "Simulating…",
     "simulationFailed": "Simulation failed: {error}",
     "notSimulated": "Not simulated, toolpath failed: {operations}",
+    "programUnreadable": "{side, select, top {The top side's program} other {The program}} can't be simulated past line {line}: {reason, select, unreadable {it isn't G-code} unknownStart {it cuts from a position that isn't known} noTool {it moves before naming its bit} badTool {its bit comment doesn't describe a bit} badArc {its arc can't be followed} noMotion {it moves without G0, G1, G2 or G3} other {it can't be read}}",
+    "programWarning": "{side, select, top {Top side, line {line}} other {Line {line}}}: {code, select, unknownPosition {after {word} the tool's position isn't known, so nothing is simulated until a move sets it} other {{word} isn't simulated}}",
+    "moreProgramWarnings": "{count, plural, one {# more warning} other {# more warnings}} in the program",
+    "program": "Program",
+    "programWarnings": "Program warnings",
+    "showProgram": "Show program",
+    "showProgramShort": "Show the program",
+    "hideProgramShort": "Hide the program",
+    "programBlock": "{block, select, programStart {Program start} toolChangePad {Tool change on the pad} toolChange {Tool change} operationStart {Operation start} other {Program end}} block",
     "views": {
       "top": "Top view",
       "orbit": "3D view"

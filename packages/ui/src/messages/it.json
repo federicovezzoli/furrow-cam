@@ -980,6 +980,10 @@
     "lineAtTop": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa.",
     "lineAtTopTip": "Sulla superficie del grezzo, dall’angolo di {angle}° della fresa e dalla punta di {tip}.",
     "chamferWidth": "Larghezza smusso",
+    "taper": "Rastrema in entrata e in uscita (scanalatura)",
+    "taperStart": "Rastremazione iniziale",
+    "taperEnd": "Rastremazione finale",
+    "taperHint": "I percorsi aperti scendono dalla superficie del grezzo alla profondità lungo la lunghezza iniziale e risalgono lungo quella finale; dove le due si sovrappongono la scanalatura resta meno profonda.",
     "chamferDepth": "Sulla superficie del grezzo; taglio profondo {depth}.",
     "chamferTooWide": "Più largo del cono, quindi lo smusso è largo solo quanto la fresa consente.",
     "vcarve": "V-carve",
@@ -1132,7 +1136,8 @@
     "lock": "Blocca {name}",
     "unlock": "Sblocca {name}",
     "download": "Scarica {name} come STL",
-    "downloadFailed": "Impossibile leggere il file di questo modello."
+    "downloadFailed": "Impossibile leggere il file di questo modello.",
+    "remove": "Elimina {name}"
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",
@@ -1645,6 +1650,15 @@
     "simulating": "Simulazione…",
     "simulationFailed": "Simulazione non riuscita: {error}",
     "notSimulated": "Non simulati, percorso utensile non riuscito: {operations}",
+    "programUnreadable": "{side, select, top {Il programma del lato superiore} other {Il programma}} non si può simulare oltre la riga {line}: {reason, select, unreadable {non è G-code} unknownStart {taglia da una posizione sconosciuta} noTool {si muove prima di nominare la fresa} badTool {il commento della fresa non descrive una fresa} badArc {il suo arco non si può seguire} noMotion {si muove senza G0, G1, G2 o G3} other {non si può leggere}}",
+    "programWarning": "{side, select, top {Faccia superiore, riga {line}} other {Riga {line}}}: {code, select, unknownPosition {dopo {word} la posizione dell'utensile non è nota, quindi non si simula niente finché un movimento non la stabilisce} other {{word} non viene simulato}}",
+    "moreProgramWarnings": "{count, plural, one {Ancora # avviso} other {Ancora # avvisi}} nel programma",
+    "program": "Programma",
+    "programWarnings": "Avvisi del programma",
+    "showProgram": "Mostra programma",
+    "showProgramShort": "Mostra il programma",
+    "hideProgramShort": "Nascondi il programma",
+    "programBlock": "Blocco {block, select, programStart {Inizio programma} toolChangePad {Cambio utensile sulla piastrina} toolChange {Cambio utensile} operationStart {Inizio operazione} other {Fine programma}}",
     "views": {
       "top": "Vista dall’alto",
       "orbit": "Vista 3D"

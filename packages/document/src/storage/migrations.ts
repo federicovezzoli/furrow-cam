@@ -416,6 +416,18 @@ export const migrations: Readonly<Record<number, Migration>> = {
   // #665: a STEP model keeps its faces (ADR-0094). Existing models have none,
   // as an STL's; the bump keeps older releases from opening documents that do.
   43: (doc) => doc,
+  // #555: engravings can taper in and out along open paths (fluting).
+  // Existing ones cut at one depth.
+  44: (doc) => {
+    if (Array.isArray(doc.operations)) {
+      for (const operation of doc.operations) {
+        if (isObject(operation) && operation.type === "engrave" && isObject(operation.params)) {
+          operation.params.taper ??= null;
+        }
+      }
+    }
+    return doc;
+  },
 };
 
 /** Thrown when a document can't be upgraded to the current schema version. */

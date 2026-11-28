@@ -980,6 +980,10 @@
     "lineAtTop": "Aan de bovenkant van het materiaal, volgens de hoek van {angle}° van de frees.",
     "lineAtTopTip": "Aan de bovenkant van het materiaal, volgens de hoek van {angle}° en de punt van {tip} van de frees.",
     "chamferWidth": "Afschuiningsbreedte",
+    "taper": "Geleidelijk in en uit (cannelure)",
+    "taperStart": "Overgang aan het begin",
+    "taperEnd": "Overgang aan het eind",
+    "taperHint": "Open paden gaan over de beginlengte van de bovenkant van het materiaal naar de diepte en over de eindlengte weer omhoog; waar die twee overlappen, blijft de groef ondieper.",
     "chamferDepth": "Aan de bovenkant van het materiaal; {depth} diep gesneden.",
     "chamferTooWide": "Breder dan de kegel, dus de afschuining is maar zo breed als de frees toelaat.",
     "vcarve": "V-carve",
@@ -1132,7 +1136,8 @@
     "lock": "{name} vergrendelen",
     "unlock": "{name} ontgrendelen",
     "download": "{name} downloaden als STL",
-    "downloadFailed": "Het bestand van dit model kon niet worden gelezen."
+    "downloadFailed": "Het bestand van dit model kon niet worden gelezen.",
+    "remove": "{name} verwijderen"
   },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",
@@ -1645,6 +1650,15 @@
     "simulating": "Simuleren…",
     "simulationFailed": "Simulatie mislukt: {error}",
     "notSimulated": "Niet gesimuleerd, gereedschapsbaan mislukt: {operations}",
+    "programUnreadable": "{side, select, top {Het programma van de bovenkant} other {Het programma}} kan na regel {line} niet worden gesimuleerd: {reason, select, unreadable {het is geen G-code} unknownStart {het snijdt vanaf een onbekende positie} noTool {het beweegt voordat de frees is genoemd} badTool {het freescommentaar beschrijft geen frees} badArc {de boog is niet te volgen} noMotion {het beweegt zonder G0, G1, G2 of G3} other {het is niet te lezen}}",
+    "programWarning": "{side, select, top {Bovenkant, regel {line}} other {Regel {line}}}: {code, select, unknownPosition {na {word} is de positie van het gereedschap onbekend, dus wordt niets gesimuleerd tot een beweging die vastlegt} other {{word} wordt niet gesimuleerd}}",
+    "moreProgramWarnings": "{count, plural, one {Nog # waarschuwing} other {Nog # waarschuwingen}} in het programma",
+    "program": "Programma",
+    "programWarnings": "Programmawaarschuwingen",
+    "showProgram": "Programma tonen",
+    "showProgramShort": "Het programma tonen",
+    "hideProgramShort": "Het programma verbergen",
+    "programBlock": "Blok {block, select, programStart {Programmastart} toolChangePad {Gereedschapswissel op de plaat} toolChange {Gereedschapswissel} operationStart {Start van de bewerking} other {Programma-einde}}",
     "views": {
       "top": "Bovenaanzicht",
       "orbit": "3D-weergave"

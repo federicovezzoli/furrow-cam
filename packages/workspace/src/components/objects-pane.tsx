@@ -18,6 +18,7 @@ import {
   LockOpenIcon,
   ShapesIcon,
   SplineIcon,
+  Trash2Icon,
   TypeIcon,
 } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -31,7 +32,8 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { setObjectFlag } from "../stores/geometry-actions";
+import { drawingOperations, removeDrawing, setObjectFlag } from "../stores/geometry-actions";
+import { modelOperations, removeModel } from "../stores/model-actions";
 
 /** One row of the tree, in the order shown. */
 type Row = {
@@ -70,14 +72,19 @@ const NOT_INHERITED = { hidden: false, locked: false };
  * An ARIA tree: arrows move and expand, Enter or Space selects, with
  * Shift/Ctrl/Cmd to add. A model's row also downloads its stored mesh, which
  * is always STL: a STEP import keeps only the STL made from it (ADR-0072).
+ * Drawing and model rows delete their object, as their panels' Remove does.
  */
 export function ObjectsPane() {
   const t = useTranslations("Objects");
+  const tDrawing = useTranslations("Drawing");
+  const tModel = useTranslations("Model");
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const drawings = useDocumentStore((s) => s.document.drawings);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const models = useDocumentStore((s) => s.document.models);
+  // Redraws when operations change, for the delete buttons' counts read from `project` below.
+  useDocumentStore((s) => s.document.operations);
   const hiddenIds = useFlaggedIds("hidden");
   const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
   const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
@@ -262,6 +269,15 @@ export function ObjectsPane() {
     rowRefs.current.get(key)?.focus();
   }
 
+  /** Removes a drawing or model, focusing the next top-level row, else the previous one. */
+  function remove(row: Row, index: number) {
+    const tops = (list: Row[]) => list.filter(({ level }) => level === 1);
+    const next = tops(rows.slice(index + 1))[0] ?? tops(rows.slice(0, index)).at(-1);
+    if (row.kind === "drawing") removeDrawing(store, row.id);
+    else removeModel(store, row.id);
+    if (next) focus(next.key);
+  }
+
   function onKeyDown(event: React.KeyboardEvent, row: Row, index: number) {
     const move = (to: number) => {
       const target = rows[Math.max(0, Math.min(rows.length - 1, to))];
@@ -304,6 +320,7 @@ export function ObjectsPane() {
   // One row takes the Tab key: the focused one, else the first.
   const tabbable = rows.some(({ key }) => key === focusKey) ? focusKey : rows[0]?.key;
 
+  const project = store.getState().document;
   return (
     <div role="tree" aria-label={t("label")} aria-multiselectable className="grid p-2 text-ui">
       {rows.map((row, index) => {
@@ -410,10 +427,53 @@ export function ObjectsPane() {
                 <DownloadIcon />
               </Button>
             )}
+            {(row.kind === "drawing" || row.kind === "model") && (
+              <RemoveButton
+                label={t("remove", { name: row.label })}
+                also={
+                  row.kind === "drawing"
+                    ? removeTitle(tDrawing, drawingOperations(project, row.id).length)
+                    : removeTitle(tModel, modelOperations(project, row.id).length)
+                }
+                onClick={() => remove(row, index)}
+              />
+            )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+/** The panels' note on the operations a remove takes with it, if any. */
+function removeTitle(t: (key: "removeTitle", values: { count: number }) => string, count: number) {
+  return count > 0 ? t("removeTitle", { count }) : null;
+}
+
+/** Deletes a drawing or model, in one undo step, without selecting its row. */
+function RemoveButton({
+  label,
+  also,
+  onClick,
+}: {
+  label: string;
+  also: string | null;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-compact"
+      aria-label={label}
+      title={also ? `${label}\n${also}` : label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="shrink-0 text-muted-foreground/50"
+    >
+      <Trash2Icon />
+    </Button>
   );
 }
 

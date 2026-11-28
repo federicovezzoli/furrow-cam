@@ -980,6 +980,10 @@
     "lineAtTop": "Au dessus du brut, d’après l’angle de {angle}° de la fraise.",
     "lineAtTopTip": "Au dessus du brut, d’après l’angle de {angle}° de la fraise et sa pointe de {tip}.",
     "chamferWidth": "Largeur du chanfrein",
+    "taper": "Entrée et sortie progressives (cannelure)",
+    "taperStart": "Progression au début",
+    "taperEnd": "Progression à la fin",
+    "taperHint": "Les tracés ouverts descendent du dessus du brut jusqu’à la profondeur sur la longueur de début et remontent sur la longueur de fin ; là où les deux se chevauchent, la rainure reste moins profonde.",
     "chamferDepth": "Sur le dessus du brut ; coupé à {depth} de profondeur.",
     "chamferTooWide": "Plus large que le cône : le chanfrein n’est large que ce que la fraise permet.",
     "vcarve": "Gravure en V",
@@ -1132,7 +1136,8 @@
     "lock": "Verrouiller {name}",
     "unlock": "Déverrouiller {name}",
     "download": "Télécharger {name} en STL",
-    "downloadFailed": "Impossible de lire le fichier de ce modèle."
+    "downloadFailed": "Impossible de lire le fichier de ce modèle.",
+    "remove": "Supprimer {name}"
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",
@@ -1645,6 +1650,15 @@
     "simulating": "Simulation…",
     "simulationFailed": "Échec de la simulation : {error}",
     "notSimulated": "Non simulées, échec de la trajectoire : {operations}",
+    "programUnreadable": "{side, select, top {Le programme de la face supérieure} other {Le programme}} ne peut pas être simulé au-delà de la ligne {line} : {reason, select, unreadable {ce n'est pas du G-code} unknownStart {elle coupe depuis une position inconnue} noTool {elle bouge avant de nommer la fraise} badTool {son commentaire de fraise ne décrit pas de fraise} badArc {son arc ne peut pas être suivi} noMotion {elle bouge sans G0, G1, G2 ni G3} other {elle ne peut pas être lue}}",
+    "programWarning": "{side, select, top {Face supérieure, ligne {line}} other {Ligne {line}}} : {code, select, unknownPosition {après {word}, la position de l'outil est inconnue : rien n'est simulé jusqu'à ce qu'un mouvement la fixe} other {{word} n'est pas simulé}}",
+    "moreProgramWarnings": "{count, plural, one {# autre avertissement} other {# autres avertissements}} dans le programme",
+    "program": "Programme",
+    "programWarnings": "Avertissements du programme",
+    "showProgram": "Afficher le programme",
+    "showProgramShort": "Afficher le programme",
+    "hideProgramShort": "Masquer le programme",
+    "programBlock": "Bloc {block, select, programStart {Début du programme} toolChangePad {Changement d’outil sur la plaque} toolChange {Changement d’outil} operationStart {Début d’opération} other {Fin du programme}}",
     "views": {
       "top": "Vue de dessus",
       "orbit": "Vue 3D"
