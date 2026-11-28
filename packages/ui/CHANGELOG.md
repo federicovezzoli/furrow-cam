@@ -1,5 +1,15 @@
 # @furrow/ui
 
+## 0.12.0
+
+### Minor Changes
+
+- Engravings can taper in and out along open paths (fluting): the groove ramps from the stock top down to its depth over a length from each end, and with a V-bit it widens and narrows with the depth. ([#681](https://github.com/federicovezzoli/furrow-cam/pull/681))
+
+### Patch Changes
+
+- Updated dependencies: @furrow/document@0.30.0, @furrow/cam-core@0.28.0
+
 ## 0.11.1
 
 ### Patch Changes
