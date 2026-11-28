@@ -18,6 +18,7 @@ import {
   LockOpenIcon,
   ShapesIcon,
   SplineIcon,
+  Trash2Icon,
   TypeIcon,
 } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -31,7 +32,8 @@ import {
   useWorkspaceStore,
   useWorkspaceStoreApi,
 } from "../providers/workspace-stores";
-import { setObjectFlag } from "../stores/geometry-actions";
+import { drawingOperations, removeDrawing, setObjectFlag } from "../stores/geometry-actions";
+import { modelOperations, removeModel } from "../stores/model-actions";
 
 /** One row of the tree, in the order shown. */
 type Row = {
@@ -70,14 +72,18 @@ const NOT_INHERITED = { hidden: false, locked: false };
  * An ARIA tree: arrows move and expand, Enter or Space selects, with
  * Shift/Ctrl/Cmd to add. A model's row also downloads its stored mesh, which
  * is always STL: a STEP import keeps only the STL made from it (ADR-0072).
+ * Drawing and model rows delete their object, as their panels' Remove does.
  */
 export function ObjectsPane() {
   const t = useTranslations("Objects");
+  const tDrawing = useTranslations("Drawing");
+  const tModel = useTranslations("Model");
   const store = useDocumentStoreApi();
   const workspace = useWorkspaceStoreApi();
   const drawings = useDocumentStore((s) => s.document.drawings);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const models = useDocumentStore((s) => s.document.models);
+  const document = useDocumentStore((s) => s.document);
   const hiddenIds = useFlaggedIds("hidden");
   const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
   const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
@@ -410,10 +416,55 @@ export function ObjectsPane() {
                 <DownloadIcon />
               </Button>
             )}
+            {(row.kind === "drawing" || row.kind === "model") && (
+              <RemoveButton
+                label={t("remove", { name: row.label })}
+                also={
+                  row.kind === "drawing"
+                    ? removeTitle(tDrawing, drawingOperations(document, row.id).length)
+                    : removeTitle(tModel, modelOperations(document, row.id).length)
+                }
+                onClick={() =>
+                  row.kind === "drawing" ? removeDrawing(store, row.id) : removeModel(store, row.id)
+                }
+              />
+            )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+/** The panels' note on the operations a remove takes with it, if any. */
+function removeTitle(t: (key: "removeTitle", values: { count: number }) => string, count: number) {
+  return count > 0 ? t("removeTitle", { count }) : null;
+}
+
+/** Deletes a drawing or model, in one undo step, without selecting its row. */
+function RemoveButton({
+  label,
+  also,
+  onClick,
+}: {
+  label: string;
+  also: string | null;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-compact"
+      aria-label={label}
+      title={also ? `${label}. ${also}` : label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="shrink-0 text-muted-foreground/50"
+    >
+      <Trash2Icon />
+    </Button>
   );
 }
 

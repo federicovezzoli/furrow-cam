@@ -1132,7 +1132,8 @@
     "lock": "{name} sperren",
     "unlock": "{name} entsperren",
     "download": "{name} als STL herunterladen",
-    "downloadFailed": "Die Datei dieses Modells konnte nicht gelesen werden."
+    "downloadFailed": "Die Datei dieses Modells konnte nicht gelesen werden.",
+    "remove": "{name} löschen"
   },
   "ToolpathProgress": {
     "title": "Werkzeugbahnen werden berechnet · {done} von {total} fertig",

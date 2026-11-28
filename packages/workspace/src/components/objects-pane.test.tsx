@@ -227,6 +227,31 @@ describe("ObjectsPane (ADR-0080)", () => {
     expect(await screen.findByText("This model is missing.")).toBeTruthy();
   });
 
+  it("deletes a drawing or the model from its row, as one undo step, without selecting it", () => {
+    const { store, workspace } = render();
+    const operations = store.getState().document.operations.length;
+    // Shapes and paths have no delete button.
+    fireEvent.keyDown(row("part.dxf"), { key: "ArrowRight" });
+    fireEvent.keyDown(row("Square"), { key: "ArrowRight" });
+    expect(screen.getAllByRole("button", { name: /^Delete / })).toHaveLength(2);
+    const remove = within(row("part.dxf")).getByRole("button", { name: "Delete part.dxf" });
+    expect(remove.getAttribute("title")).toMatch(/^Delete part\.dxf\. Also removes the operation/);
+
+    fireEvent.click(remove);
+    expect(store.getState().document.drawings).toEqual([]);
+    expect(store.getState().document.operations.length).toBeLessThan(operations);
+    expect(workspace.getState().selectedPaths).toEqual([]);
+    act(() => store.getState().undo());
+    expect(store.getState().document.drawings).toHaveLength(1);
+    expect(store.getState().document.operations).toHaveLength(operations);
+
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${model.fileName}` }));
+    expect(store.getState().document.models).toEqual([]);
+    expect(workspace.getState().selectedModelId).toBeNull();
+    act(() => store.getState().undo());
+    expect(store.getState().document.models).toEqual([model]);
+  });
+
   it("names the download after the model with an .stl extension", () => {
     expect(stlFileName("part.step")).toBe("part.stl");
     expect(stlFileName("part.STL")).toBe("part.stl");

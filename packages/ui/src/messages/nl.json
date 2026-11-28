@@ -1132,7 +1132,8 @@
     "lock": "{name} vergrendelen",
     "unlock": "{name} ontgrendelen",
     "download": "{name} downloaden als STL",
-    "downloadFailed": "Het bestand van dit model kon niet worden gelezen."
+    "downloadFailed": "Het bestand van dit model kon niet worden gelezen.",
+    "remove": "{name} verwijderen"
   },
   "ToolpathProgress": {
     "title": "Gereedschapsbanen berekenen · {done} van {total} klaar",

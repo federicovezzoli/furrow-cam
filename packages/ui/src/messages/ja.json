@@ -1132,7 +1132,8 @@
     "lock": "{name} をロック",
     "unlock": "{name} のロックを解除",
     "download": "{name} を STL でダウンロード",
-    "downloadFailed": "このモデルのファイルを読み込めませんでした。"
+    "downloadFailed": "このモデルのファイルを読み込めませんでした。",
+    "remove": "{name} を削除"
   },
   "ToolpathProgress": {
     "title": "ツールパスを計算中 · {total}件中{done}件完了",
