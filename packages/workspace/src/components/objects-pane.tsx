@@ -268,6 +268,15 @@ export function ObjectsPane() {
     rowRefs.current.get(key)?.focus();
   }
 
+  /** Removes a drawing or model, focusing the next top-level row, else the previous one. */
+  function remove(row: Row, index: number) {
+    const tops = (list: Row[]) => list.filter(({ level }) => level === 1);
+    const next = tops(rows.slice(index + 1))[0] ?? tops(rows.slice(0, index)).at(-1);
+    if (row.kind === "drawing") removeDrawing(store, row.id);
+    else removeModel(store, row.id);
+    if (next) focus(next.key);
+  }
+
   function onKeyDown(event: React.KeyboardEvent, row: Row, index: number) {
     const move = (to: number) => {
       const target = rows[Math.max(0, Math.min(rows.length - 1, to))];
@@ -424,9 +433,7 @@ export function ObjectsPane() {
                     ? removeTitle(tDrawing, drawingOperations(document, row.id).length)
                     : removeTitle(tModel, modelOperations(document, row.id).length)
                 }
-                onClick={() =>
-                  row.kind === "drawing" ? removeDrawing(store, row.id) : removeModel(store, row.id)
-                }
+                onClick={() => remove(row, index)}
               />
             )}
           </div>

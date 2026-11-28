@@ -252,6 +252,15 @@ describe("ObjectsPane (ADR-0080)", () => {
     expect(store.getState().document.models).toEqual([model]);
   });
 
+  it("moves the focus to the next row, else the previous one, after a delete", () => {
+    const { store } = render();
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${model.fileName}` }));
+    expect(document.activeElement).toBe(row("part.dxf"));
+    act(() => store.getState().undo());
+    fireEvent.click(screen.getByRole("button", { name: "Delete part.dxf" }));
+    expect(document.activeElement).toBe(row(model.fileName));
+  });
+
   it("names the download after the model with an .stl extension", () => {
     expect(stlFileName("part.step")).toBe("part.stl");
     expect(stlFileName("part.STL")).toBe("part.stl");
