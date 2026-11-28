@@ -11,7 +11,7 @@ import { type MedialAxisBranch, medialAxis } from "../geometry/medial-axis";
 import type { Vec3 } from "../scene/stock";
 import { vBitConeDepth } from "./engrave";
 import type { ToolpathMessage } from "./messages";
-import { depthLevels } from "./passes";
+import { depthLevels, feedSloped } from "./passes";
 import { opening } from "./pocket/cut";
 import { clearPocket, type PocketOptions } from "./pocket/pocket";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
@@ -212,16 +212,12 @@ function cutRuns(
   levels: number[],
   tolerance: number,
 ) {
-  const steepest = (tool.plungeAngle * Math.PI) / 180;
-  const feed = (to: Vec3) => {
-    const at = builder.position;
-    const drop = at ? at[2] - to[2] : 0;
-    const steep =
-      at !== null &&
-      drop > 0 &&
-      Math.atan2(drop, Math.hypot(to[0] - at[0], to[1] - at[1])) > steepest + 1e-9;
-    builder.feed(to, steep ? tool.plungeRate : tool.feedRate);
+  const rates = {
+    steepest: (tool.plungeAngle * Math.PI) / 180,
+    feedRate: tool.feedRate,
+    plungeRate: tool.plungeRate,
   };
+  const feed = (to: Vec3) => feedSloped(builder, to, rates);
   const enter = (to: Vec3) => {
     const at = builder.position;
     if (!at || Math.hypot(at[0] - to[0], at[1] - to[1]) >= GEOMETRY_TOLERANCE) {

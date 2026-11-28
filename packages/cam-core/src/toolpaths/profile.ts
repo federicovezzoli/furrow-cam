@@ -30,6 +30,7 @@ import {
   type Descent,
   depthLevels,
   descend,
+  feedSloped,
   inBox,
   rampZ,
   Track,
@@ -628,15 +629,7 @@ function cutTaperedPath(
     const [x, y] = path[i] as Point;
     return [x, y, Math.max(-(depths[i] as number), level)];
   };
-  const feed = (to: Vec3) => {
-    const at = builder.position;
-    const drop = at ? at[2] - to[2] : 0;
-    const steep =
-      at !== null &&
-      drop > 0 &&
-      Math.atan2(drop, Math.hypot(to[0] - at[0], to[1] - at[1])) > cut.steepest + 1e-9;
-    builder.feed(to, steep ? cut.plungeRate : cut.feedRate);
-  };
+  const feed = (to: Vec3) => feedSloped(builder, to, cut);
   const last = path.length - 1;
   let at: number | null = null;
   levels.forEach((level, pass) => {
