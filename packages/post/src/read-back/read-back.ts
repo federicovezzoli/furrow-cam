@@ -67,29 +67,31 @@ export function parseGcode(gcode: string): GcodeLine[] {
   return gcode
     .replace(/\n$/, "")
     .split("\n")
-    .map((text, i) => {
-      const number = i + 1;
-      // `( … )` comments and a `; …` one to the end of the line, whichever comes
-      // first, and Marlin's `M0 message`.
-      const COMMENT = /\(([^)]*)\)|;(.*)$/g;
-      const comments = [...text.matchAll(COMMENT)].map(
-        (match) => (match[1] ?? match[2]?.trim()) as string,
-      );
-      let code = text.replace(COMMENT, " ").trim();
-      const message = /^(M0*[01])\s+(.+)$/i.exec(code);
-      // `M0 S30` waits 30 s: its words aren't a message.
-      if (message && !/^([A-Z]\s*[-+]?(\d+\.?\d*|\.\d+)\s*)+$/i.test(message[2] as string)) {
-        code = (message[1] as string).toUpperCase();
-        comments.unshift(message[2] as string);
-      }
-      const words: GcodeLine["words"] = [];
-      for (const token of code.split(/\s+/).filter(Boolean)) {
-        const match = /^([A-Z])(-?\d+(?:\.\d+)?)$/.exec(token);
-        if (!match) throw new Error(`line ${number}: "${token}" isn't a G-code word`);
-        words.push({ letter: match[1] as string, value: Number(match[2]) });
-      }
-      return { number, text, words, comment: comments.length > 0 ? comments.join(" ") : null };
-    });
+    .map((text, i) => parseGcodeLine(text, i + 1));
+}
+
+/** Line `number` of a program, throwing on text that isn't G-code. */
+export function parseGcodeLine(text: string, number: number): GcodeLine {
+  // `( … )` comments and a `; …` one to the end of the line, whichever comes
+  // first, and Marlin's `M0 message`.
+  const COMMENT = /\(([^)]*)\)|;(.*)$/g;
+  const comments = [...text.matchAll(COMMENT)].map(
+    (match) => (match[1] ?? match[2]?.trim()) as string,
+  );
+  let code = text.replace(COMMENT, " ").trim();
+  const message = /^(M0*[01])\s+(.+)$/i.exec(code);
+  // `M0 S30` waits 30 s: its words aren't a message.
+  if (message && !/^([A-Z]\s*[-+]?(\d+\.?\d*|\.\d+)\s*)+$/i.test(message[2] as string)) {
+    code = (message[1] as string).toUpperCase();
+    comments.unshift(message[2] as string);
+  }
+  const words: GcodeLine["words"] = [];
+  for (const token of code.split(/\s+/).filter(Boolean)) {
+    const match = /^([A-Z])(-?\d+(?:\.\d+)?)$/.exec(token);
+    if (!match) throw new Error(`line ${number}: "${token}" isn't a G-code word`);
+    words.push({ letter: match[1] as string, value: Number(match[2]) });
+  }
+  return { number, text, words, comment: comments.length > 0 ? comments.join(" ") : null };
 }
 
 /**
@@ -235,7 +237,7 @@ export function customBlockWarnings(
 }
 
 /** A hand-written block as `parseGcode` reads them, or unchanged if it isn't G-code. */
-function tidy(line: string): string {
+export function tidy(line: string): string {
   const code = line.replace(/\([^)]*\)|;.*$/g, " ").toUpperCase();
   if (code.replace(LOOSE_WORD, "").trim() !== "") return line;
   return [...code.matchAll(LOOSE_WORD)]
