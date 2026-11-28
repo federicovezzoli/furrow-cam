@@ -92,6 +92,30 @@ describe("OperationProperties", () => {
     expect(params().width).toBe(2);
   });
 
+  it("tapers an engraving on the line in and out (#555)", () => {
+    renderWorkspace(
+      <>
+        <Store />
+        <OperationProperties operationId={OPERATION_ID} />
+      </>,
+      createMemoryHost({ document: withEngraving(vBit) }),
+    );
+    const taper = () => {
+      const [engraving] = store.getState().document.operations;
+      if (engraving?.type !== "engrave") throw new Error("not an engraving");
+      return engraving.params.taper;
+    };
+    expect(document.getElementById("engrave-taper-start")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Taper in and out (fluting)"));
+    expect(taper()).toEqual({ start: 10, end: 10 });
+    const end = document.getElementById("engrave-taper-end") as HTMLInputElement;
+    fireEvent.change(end, { target: { value: "25" } });
+    fireEvent.keyDown(end, { key: "Enter" });
+    expect(taper()).toEqual({ start: 10, end: 25 });
+    fireEvent.change(screen.getByLabelText("Position"), { target: { value: "outside" } });
+    expect(document.getElementById("engrave-taper")).toBeNull();
+  });
+
   it("offers no chamfer for other bits (#554)", () => {
     renderWorkspace(
       <OperationProperties operationId={OPERATION_ID} />,

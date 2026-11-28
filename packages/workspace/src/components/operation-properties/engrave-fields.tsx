@@ -15,7 +15,11 @@ import { useLength } from "../../hooks/use-length";
 import { useDocumentStore, useDocumentStoreApi } from "../../providers/workspace-stores";
 import { gestureHandlers } from "../../stores/gesture-handlers";
 import { updateEngraveParams } from "../../stores/operation-actions";
+import { Checkbox } from "../checkbox";
 import { RampCheckbox, Row, SELECT_CLASS, StartPointsFields, useParamsUpdate } from "./fields";
+
+/** How far a new flute ramps in and out, in millimetres. */
+const DEFAULT_TAPER = 10;
 
 export function EngraveFields({ operation }: { operation: EngraveOperation }) {
   const store = useDocumentStoreApi();
@@ -110,6 +114,46 @@ export function EngraveFields({ operation }: { operation: EngraveOperation }) {
                 ? t("lineAtTopTip", { angle: tool.vAngle ?? 0, tip: lengthText(tip) })
                 : t("lineAtTop", { angle: tool.vAngle ?? 0 })}
           </p>
+        </>
+      )}
+      {params.side === "on" && (
+        <>
+          <Checkbox
+            id="engrave-taper"
+            label={t("taper")}
+            checked={params.taper !== null}
+            onChange={(checked) =>
+              update("taper", {
+                taper: checked ? { start: DEFAULT_TAPER, end: DEFAULT_TAPER } : null,
+              })
+            }
+          />
+          {params.taper && (
+            <>
+              <NumberField
+                id="engrave-taper-start"
+                label={t("taperStart")}
+                min={0}
+                value={params.taper.start}
+                onValueChange={(start) =>
+                  params.taper && update("taper", { taper: { ...params.taper, start } })
+                }
+                error={errors.taper}
+                {...length}
+              />
+              <NumberField
+                id="engrave-taper-end"
+                label={t("taperEnd")}
+                min={0}
+                value={params.taper.end}
+                onValueChange={(end) =>
+                  params.taper && update("taper", { taper: { ...params.taper, end } })
+                }
+                {...length}
+              />
+              <p className="text-muted-foreground">{t("taperHint")}</p>
+            </>
+          )}
         </>
       )}
       <RampCheckbox

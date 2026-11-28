@@ -118,6 +118,7 @@ export function defaultEngraveParams(document: ProjectDocument): EngraveParams {
     width: null,
     ramp: false,
     startPoints: [],
+    taper: null,
   };
 }
 
