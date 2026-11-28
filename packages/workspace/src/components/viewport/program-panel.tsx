@@ -66,8 +66,9 @@ export function ProgramPanel({
   }, [current]);
 
   function seek(line: number) {
-    const move = firstMoveOfLine(lines, line);
-    if (path && move !== null) store.getState().setDistance(moveStartDistance(path, move));
+    if (!path) return;
+    const move = firstMoveOfLine(lines, path, line);
+    if (move !== null) store.getState().setDistance(moveStartDistance(path, move));
   }
 
   /** Shows line `line` and, if it moves the tool, plays from there. */
@@ -85,7 +86,13 @@ export function ProgramPanel({
   );
   const linked = [
     ...(failure && "line" in failure
-      ? [{ line: failure.line, text: t("programUnreadable", failure) }]
+      ? [
+          {
+            // The top side's program isn't the one shown here.
+            line: failure.side === undefined ? failure.line : null,
+            text: t("programUnreadable", { ...failure, side: failure.side ?? "shown" }),
+          },
+        ]
       : []),
     ...warnings.map((warning) => ({
       // The top side's warnings are about a program not shown here.
@@ -109,7 +116,7 @@ export function ProgramPanel({
           {text.slice(first, last).map((code, i) => {
             const line = first + i + 1;
             const block = blockAt(blocks, line);
-            const moves = firstMoveOfLine(lines, line) !== null;
+            const moves = path !== null && firstMoveOfLine(lines, path, line) !== null;
             const Row = moves ? "button" : "div";
             return (
               <Row

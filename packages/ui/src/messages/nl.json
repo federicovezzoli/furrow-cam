@@ -1650,7 +1650,7 @@
     "simulating": "Simuleren…",
     "simulationFailed": "Simulatie mislukt: {error}",
     "notSimulated": "Niet gesimuleerd, gereedschapsbaan mislukt: {operations}",
-    "programUnreadable": "Het programma kan na regel {line} niet worden gesimuleerd: {reason, select, unreadable {het is geen G-code} unknownStart {het snijdt vanaf een onbekende positie} noTool {het beweegt voordat de frees is genoemd} badTool {het freescommentaar beschrijft geen frees} badArc {de boog is niet te volgen} noMotion {het beweegt zonder G0, G1, G2 of G3} other {het is niet te lezen}}",
+    "programUnreadable": "{side, select, top {Het programma van de bovenkant} other {Het programma}} kan na regel {line} niet worden gesimuleerd: {reason, select, unreadable {het is geen G-code} unknownStart {het snijdt vanaf een onbekende positie} noTool {het beweegt voordat de frees is genoemd} badTool {het freescommentaar beschrijft geen frees} badArc {de boog is niet te volgen} noMotion {het beweegt zonder G0, G1, G2 of G3} other {het is niet te lezen}}",
     "programWarning": "{side, select, top {Bovenkant, regel {line}} other {Regel {line}}}: {code, select, unknownPosition {na {word} is de positie van het gereedschap onbekend, dus wordt niets gesimuleerd tot een beweging die vastlegt} other {{word} wordt niet gesimuleerd}}",
     "moreProgramWarnings": "{count, plural, one {Nog # waarschuwing} other {Nog # waarschuwingen}} in het programma",
     "program": "Programma",

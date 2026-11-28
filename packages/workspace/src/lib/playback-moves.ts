@@ -1,4 +1,4 @@
-import type { SimulationCut, ToolpathLines } from "@furrow/cam-core";
+import type { PlaybackPath, SimulationCut, ToolpathLines } from "@furrow/cam-core";
 import { clearingTool, type FlipAxis, type Operation, type StockSide } from "@furrow/document";
 import type { CustomBlock, ProgramReadReason, ProgramStep, ProgramWarning } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
@@ -123,10 +123,21 @@ export function lineOfMove(moves: Uint32Array, move: number): number | null {
   return moves.length === 0 ? null : (moves[Math.min(move, moves.length - 1)] as number);
 }
 
-/** The first move from line `line` of the program, or `null` if it has none. */
-export function firstMoveOfLine(moves: Uint32Array, line: number): number | null {
-  const move = firstAtOrAfter(moves, line);
-  return moves[move] === line ? move : null;
+/**
+ * The first move from line `line` of the program (`moves`, `moveLines`) that
+ * goes somewhere along `path`, or `null` if it has none: seeking to a move
+ * that goes nowhere would land on the next one.
+ */
+export function firstMoveOfLine(
+  moves: Uint32Array,
+  path: Pick<PlaybackPath, "ends">,
+  line: number,
+): number | null {
+  for (let move = firstAtOrAfter(moves, line); moves[move] === line; move++) {
+    const start = move === 0 ? 0 : (path.ends[move - 1] as number);
+    if ((path.ends[move] as number) > start) return move;
+  }
+  return null;
 }
 
 /** The index of the first of the ascending `values` at least `value`. */
@@ -160,7 +171,8 @@ export function partProgress(part: PlaybackPart, move: number): { feeds: number;
 
 /** Why the program can't be played: it can't be posted, or read back past `line`. */
 export type ProgramFailure =
-  | { line: number; reason: ProgramReadReason }
+  /** On the bottom side, `side` says the top side's program, which it plays over, is the one. */
+  | { line: number; reason: ProgramReadReason; side?: "top" }
   | { error: Translatable; operation?: string };
 
 /** The program played back (ADR-0096), as `usePlayback` keeps it. */
@@ -213,7 +225,10 @@ export function playedProgram(
   const shown = find(wanted.side);
   const top = wanted.before !== undefined ? find("top") : undefined;
   const unread = [top, shown].find((playback) => playback !== undefined && "error" in playback);
-  const failure = unread && "error" in unread ? unread.error : null;
+  const failure =
+    unread && "error" in unread
+      ? { ...unread.error, ...(unread === top && unread !== shown && { side: "top" as const }) }
+      : null;
   const before =
     wanted.before !== undefined && flipAxis
       ? { key: wanted.before, cuts: top && "cuts" in top ? top.cuts : [], axis: flipAxis }

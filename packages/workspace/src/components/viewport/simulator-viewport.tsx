@@ -201,7 +201,8 @@ function programStatus(
   if (!program) return [];
   const { failure, warnings } = program;
   const lines: string[] = [];
-  if (failure && "line" in failure) lines.push(t("programUnreadable", failure));
+  if (failure && "line" in failure)
+    lines.push(t("programUnreadable", { ...failure, side: failure.side ?? "shown" }));
   else if (failure) {
     const error = formatWarning(tAll, { operation: failure.operation, message: failure.error });
     lines.push(t("simulationFailed", { error }));

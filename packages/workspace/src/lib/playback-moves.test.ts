@@ -3,7 +3,14 @@ import type { Operation } from "@furrow/document";
 import { endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { ToolpathEntry } from "../stores/toolpath-store";
-import { partAt, partProgress, playbackKey, playedProgram, programParts } from "./playback-moves";
+import {
+  firstMoveOfLine,
+  partAt,
+  partProgress,
+  playbackKey,
+  playedProgram,
+  programParts,
+} from "./playback-moves";
 
 /** A rapid down to (0, 0, -1), a feed to (`x`, 0, -1) and a rapid up. */
 function lines(x: number): ToolpathLines {
@@ -193,6 +200,23 @@ describe("partProgress", () => {
   });
 });
 
+describe("firstMoveOfLine", () => {
+  // Line 2 sets the position without moving, line 3 has a still move then a 5 mm one.
+  const moves = Uint32Array.of(2, 3, 3, 4);
+  const path = { ends: Float64Array.of(0, 0, 5, 15) };
+
+  it("seeks to the first move of a line that goes somewhere", () => {
+    expect(firstMoveOfLine(moves, path, 3)).toBe(2);
+    expect(firstMoveOfLine(moves, path, 4)).toBe(3);
+  });
+
+  it("finds none on a line without moves, or whose moves go nowhere", () => {
+    expect(firstMoveOfLine(moves, path, 1)).toBeNull();
+    expect(firstMoveOfLine(moves, path, 2)).toBeNull();
+    expect(firstMoveOfLine(moves, path, 5)).toBeNull();
+  });
+});
+
 describe("playedProgram", () => {
   const cut = (z: number) => ({ tool: endMill, segments: Float32Array.of(0, 0, 0, 0, 0, z) });
   const playback = (side: "top" | "bottom" | null, z: number) => ({
@@ -264,7 +288,8 @@ describe("playedProgram", () => {
       { ...files, playbacks: [unread, playback("bottom", -2)] },
       "x",
     );
-    expect(played.failure).toEqual({ line: 4, reason: "badArc" });
+    // Its line is in the top side's program, not the one shown.
+    expect(played.failure).toEqual({ line: 4, reason: "badArc", side: "top" });
     expect(played.before?.cuts).toEqual([]);
     expect(played.cuts).toEqual([cut(-2)]);
   });

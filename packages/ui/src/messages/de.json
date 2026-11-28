@@ -1650,7 +1650,7 @@
     "simulating": "Wird simuliert…",
     "simulationFailed": "Simulation fehlgeschlagen: {error}",
     "notSimulated": "Nicht simuliert, Werkzeugbahn fehlgeschlagen: {operations}",
-    "programUnreadable": "Das Programm lässt sich nach Zeile {line} nicht simulieren: {reason, select, unreadable {sie ist kein G-Code} unknownStart {sie schneidet von einer unbekannten Position aus} noTool {sie bewegt sich, bevor der Fräser genannt ist} badTool {ihr Fräserkommentar beschreibt keinen Fräser} badArc {ihr Bogen lässt sich nicht verfolgen} noMotion {sie bewegt sich ohne G0, G1, G2 oder G3} other {sie lässt sich nicht lesen}}",
+    "programUnreadable": "{side, select, top {Das Programm der Oberseite} other {Das Programm}} lässt sich nach Zeile {line} nicht simulieren: {reason, select, unreadable {sie ist kein G-Code} unknownStart {sie schneidet von einer unbekannten Position aus} noTool {sie bewegt sich, bevor der Fräser genannt ist} badTool {ihr Fräserkommentar beschreibt keinen Fräser} badArc {ihr Bogen lässt sich nicht verfolgen} noMotion {sie bewegt sich ohne G0, G1, G2 oder G3} other {sie lässt sich nicht lesen}}",
     "programWarning": "{side, select, top {Oberseite, Zeile {line}} other {Zeile {line}}}: {code, select, unknownPosition {nach {word} ist die Position des Werkzeugs unbekannt, daher wird nichts simuliert, bis eine Bewegung sie festlegt} other {{word} wird nicht simuliert}}",
     "moreProgramWarnings": "{count, plural, one {# weitere Warnung} other {# weitere Warnungen}} im Programm",
     "program": "Programm",
