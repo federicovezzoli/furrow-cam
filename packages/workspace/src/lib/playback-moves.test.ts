@@ -224,6 +224,11 @@ describe("playedProgram", () => {
     );
     expect(played.cuts).toEqual([cut(-2)]);
     expect(played.before).toEqual({ key: "t", cuts: [cut(-1)], axis: "x" });
+    // The top side's warnings count too: its cuts are under the bottom side's.
+    expect(played.warnings).toEqual([
+      { line: 9, code: "unsupported", word: "A1", side: "top" },
+      { line: 9, code: "unsupported", word: "A1" },
+    ]);
   });
 
   it("says why a program can't be played, but not that there is nothing to post", () => {

@@ -154,7 +154,8 @@ export type PlayedProgram = {
   before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
   steps: ProgramStep[];
   lines: Uint32Array[];
-  warnings: ProgramWarning[];
+  /** The top side's program's too on the bottom side, which it plays over (`side`). */
+  warnings: (ProgramWarning & { side?: "top" })[];
   failure: ProgramFailure | null;
 };
 
@@ -194,6 +195,11 @@ export function playedProgram(
       ? { key: wanted.before, cuts: top && "cuts" in top ? top.cuts : [], axis: flipAxis }
       : undefined;
   if (!shown || !("cuts" in shown)) return { ...played, before, failure };
-  const { cuts, steps, lines, warnings } = shown;
+  const { cuts, steps, lines } = shown;
+  const topWarnings = top && "warnings" in top ? top.warnings : [];
+  const warnings = [
+    ...topWarnings.map((warning) => ({ ...warning, side: "top" as const })),
+    ...shown.warnings,
+  ];
   return { ...played, cuts, steps, lines, warnings, before, failure };
 }

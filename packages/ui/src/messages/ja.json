@@ -1651,7 +1651,7 @@
     "simulationFailed": "シミュレーションに失敗しました：{error}",
     "notSimulated": "ツールパスが失敗したため、シミュレーションしていません：{operations}",
     "programUnreadable": "プログラムは {line} 行目より先をシミュレーションできません: {reason, select, unreadable {G コードではありません} unknownStart {位置が分からないところから切削しています} noTool {ビットを指定する前に動いています} badTool {ビットのコメントがビットを表していません} badArc {円弧をたどれません} noMotion {G0、G1、G2、G3 のどれもなしで動いています} other {読み取れません}}",
-    "programWarning": "{line} 行目: {code, select, unknownPosition {{word} の後は工具の位置が分からないため、動きで位置が決まるまで何もシミュレーションされません} other {{word} はシミュレーションされません}}",
+    "programWarning": "{side, select, top {上面 {line} 行目} other {{line} 行目}}: {code, select, unknownPosition {{word} の後は工具の位置が分からないため、動きで位置が決まるまで何もシミュレーションされません} other {{word} はシミュレーションされません}}",
     "moreProgramWarnings": "プログラム内にあと {count, plural, other {# 件の警告}}",
     "views": {
       "top": "上面図",

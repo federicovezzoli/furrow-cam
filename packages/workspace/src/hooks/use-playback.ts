@@ -80,14 +80,16 @@ export function usePlayback(maxCells: number | null) {
     },
   }));
   const enabled = maxCells !== null;
-  // What the post writes besides the toolpaths.
+  // What the post writes besides the toolpaths: the machine's blocks, the
+  // stock's zero, and tool names, which tell bits apart (`sameBit`) but not toolpaths.
   const machine = useDocumentStore((s) => s.document.machine);
   const stock = useDocumentStore((s) => s.document.stock);
 
-  const latest = useMemo(
-    () => (enabled ? playbackKey(operations, entries, side, flipAxis, [machine, stock]) : null),
-    [enabled, operations, entries, side, flipAxis, machine, stock],
-  );
+  const latest = useMemo(() => {
+    if (!enabled) return null;
+    const posted = [machine, stock, operations.map((operation) => operation.tool.name)];
+    return playbackKey(operations, entries, side, flipAxis, posted);
+  }, [enabled, operations, entries, side, flipAxis, machine, stock]);
   // Kept while toolpaths recompute or the next program is made.
   const [moves, setMoves] = useState<PlayedProgram | null>(null);
   useProgram(latest, moves?.key ?? null, flipAxis, setMoves);

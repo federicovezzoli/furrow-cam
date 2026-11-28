@@ -10,7 +10,7 @@ import {
   type Vec3,
 } from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
-import { enabledInputs, exportGcode, postToolpaths } from "../export";
+import { type ComputedToolpath, enabledInputs, exportGcode, postToolpaths } from "../export";
 import { oneFile } from "../export-test-utils";
 import { postSteps } from "../post";
 import { programCuts } from "../read-back/program-cuts";
@@ -30,6 +30,16 @@ describe.each(projects)(
   "$name: $covers",
   ({ name, title, document, context, warnings: expected = [] }) => {
     const { gcode, warnings, steps } = oneFile(exportGcode(document, title, context));
+    /** The toolpaths as the workspace's toolpath worker computes them, one at a time with its own cache; computed once. */
+    let toolpaths: ComputedToolpath[] | undefined;
+    const computed = () => {
+      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
+      toolpaths ??= enabledInputs(document).map((input) => ({
+        input,
+        toolpath: generateToolpath(input, toolpathContext),
+      }));
+      return toolpaths;
+    };
 
     it("posts the program checked in", async () => {
       await expect(gcode).toMatchFileSnapshot(`programs/${name}.gcode`);
@@ -44,24 +54,15 @@ describe.each(projects)(
     });
 
     it("posts the same program from toolpaths computed beforehand (#133)", () => {
-      // As the workspace's toolpath worker computes them, one at a time with its own cache.
-      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
-      const computed = enabledInputs(document).map((input) => ({
-        input,
-        toolpath: generateToolpath(input, toolpathContext),
-      }));
-      const posted = oneFile(postToolpaths(document, title, computed));
+      const posted = oneFile(postToolpaths(document, title, computed()));
       expect(posted.gcode).toBe(gcode);
       expect(posted.warnings).toEqual(warnings);
     });
 
     it("says on which line each step starts and each move went (#683)", () => {
-      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
-      const computed = enabledInputs(document).map((input) => ({
-        operation: input.operation,
-        toolpath: generateToolpath(input, toolpathContext),
-      }));
-      const expected = postSteps(computed);
+      const expected = postSteps(
+        computed().map(({ input, toolpath }) => ({ operation: input.operation, toolpath })),
+      );
       expect(steps.map(({ operationId, clearing }) => [operationId, clearing])).toEqual(
         expected.map(({ operationId, clearing }) => [operationId, clearing]),
       );
@@ -88,9 +89,8 @@ describe.each(projects)(
     });
 
     it("leaves the same stock read back as its toolpaths do (ADR-0096)", () => {
-      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
-      const toolCuts = enabledInputs(document).flatMap((input) =>
-        toolpathCuts(input.operation, generateToolpath(input, toolpathContext)),
+      const toolCuts = computed().flatMap(({ input, toolpath }) =>
+        toolpathCuts(input.operation, toolpath),
       );
       const { stock } = document;
       const grid = heightmapGrid(stock, smallestCutWidth(toolCuts), 250_000);
@@ -117,7 +117,8 @@ describe.each(projects)(
       }
       expect(off.slice(0, 5)).toEqual([]);
       expect(read.warnings).toEqual([]);
-    });
+      // Two heightmaps of the relief projects, slow on CI's runners.
+    }, 30_000);
   },
 );
 

@@ -185,7 +185,9 @@ function programStatus(
     const error = formatWarning(tAll, { operation: failure.operation, message: failure.error });
     lines.push(t("simulationFailed", { error }));
   }
-  for (const warning of warnings.slice(0, SHOWN_WARNINGS)) lines.push(t("programWarning", warning));
+  for (const warning of warnings.slice(0, SHOWN_WARNINGS)) {
+    lines.push(t("programWarning", { ...warning, side: warning.side ?? "shown" }));
+  }
   if (warnings.length > SHOWN_WARNINGS) {
     lines.push(t("moreProgramWarnings", { count: warnings.length - SHOWN_WARNINGS }));
   }

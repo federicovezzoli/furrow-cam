@@ -1651,7 +1651,7 @@
     "simulationFailed": "Η προσομοίωση απέτυχε: {error}",
     "notSimulated": "Δεν προσομοιώθηκε, η διαδρομή εργαλείου απέτυχε: {operations}",
     "programUnreadable": "Το πρόγραμμα δεν μπορεί να προσομοιωθεί μετά τη γραμμή {line}: {reason, select, unreadable {δεν είναι G-code} unknownStart {κόβει από άγνωστη θέση} noTool {κινείται πριν ονομάσει το κοπτικό} badTool {το σχόλιο του κοπτικού δεν περιγράφει κοπτικό} badArc {το τόξο της δεν μπορεί να ακολουθηθεί} noMotion {κινείται χωρίς G0, G1, G2 ή G3} other {δεν μπορεί να διαβαστεί}}",
-    "programWarning": "Γραμμή {line}: {code, select, unknownPosition {μετά το {word} η θέση του εργαλείου είναι άγνωστη, οπότε τίποτα δεν προσομοιώνεται μέχρι να την ορίσει μια κίνηση} other {το {word} δεν προσομοιώνεται}}",
+    "programWarning": "{side, select, top {Πάνω πλευρά, γραμμή {line}} other {Γραμμή {line}}}: {code, select, unknownPosition {μετά το {word} η θέση του εργαλείου είναι άγνωστη, οπότε τίποτα δεν προσομοιώνεται μέχρι να την ορίσει μια κίνηση} other {το {word} δεν προσομοιώνεται}}",
     "moreProgramWarnings": "{count, plural, one {Ακόμη # προειδοποίηση} other {Ακόμη # προειδοποιήσεις}} στο πρόγραμμα",
     "views": {
       "top": "Κάτοψη",

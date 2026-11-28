@@ -1651,7 +1651,7 @@
     "simulationFailed": "La simulación ha fallado: {error}",
     "notSimulated": "Sin simular, la trayectoria ha fallado: {operations}",
     "programUnreadable": "El programa no se puede simular más allá de la línea {line}: {reason, select, unreadable {no es G-code} unknownStart {corta desde una posición desconocida} noTool {se mueve antes de nombrar la fresa} badTool {su comentario de fresa no describe una fresa} badArc {su arco no se puede seguir} noMotion {se mueve sin G0, G1, G2 ni G3} other {no se puede leer}}",
-    "programWarning": "Línea {line}: {code, select, unknownPosition {tras {word} no se conoce la posición de la herramienta, así que no se simula nada hasta que un movimiento la fije} other {{word} no se simula}}",
+    "programWarning": "{side, select, top {Cara superior, línea {line}} other {Línea {line}}}: {code, select, unknownPosition {tras {word} no se conoce la posición de la herramienta, así que no se simula nada hasta que un movimiento la fije} other {{word} no se simula}}",
     "moreProgramWarnings": "{count, plural, one {# aviso más} other {# avisos más}} en el programa",
     "views": {
       "top": "Vista superior",
