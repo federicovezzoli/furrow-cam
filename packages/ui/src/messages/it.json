@@ -1132,7 +1132,8 @@
     "lock": "Blocca {name}",
     "unlock": "Sblocca {name}",
     "download": "Scarica {name} come STL",
-    "downloadFailed": "Impossibile leggere il file di questo modello."
+    "downloadFailed": "Impossibile leggere il file di questo modello.",
+    "remove": "Elimina {name}"
   },
   "ToolpathProgress": {
     "title": "Calcolo dei percorsi utensile · {done} di {total} completati",

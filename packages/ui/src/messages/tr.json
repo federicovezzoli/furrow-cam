@@ -1132,7 +1132,8 @@
     "lock": "{name} kilitle",
     "unlock": "{name} kilidini aç",
     "download": "{name} dosyasını STL olarak indir",
-    "downloadFailed": "Bu modelin dosyası okunamadı."
+    "downloadFailed": "Bu modelin dosyası okunamadı.",
+    "remove": "{name} öğesini sil"
   },
   "ToolpathProgress": {
     "title": "Takım yolları hesaplanıyor · {done}/{total} tamamlandı",

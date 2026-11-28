@@ -1132,7 +1132,8 @@
     "lock": "Verrouiller {name}",
     "unlock": "Déverrouiller {name}",
     "download": "Télécharger {name} en STL",
-    "downloadFailed": "Impossible de lire le fichier de ce modèle."
+    "downloadFailed": "Impossible de lire le fichier de ce modèle.",
+    "remove": "Supprimer {name}"
   },
   "ToolpathProgress": {
     "title": "Calcul des trajectoires · {done} sur {total} terminés",

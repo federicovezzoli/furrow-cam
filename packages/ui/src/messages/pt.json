@@ -1132,7 +1132,8 @@
     "lock": "Bloquear {name}",
     "unlock": "Desbloquear {name}",
     "download": "Baixar {name} como STL",
-    "downloadFailed": "Não foi possível ler o arquivo deste modelo."
+    "downloadFailed": "Não foi possível ler o arquivo deste modelo.",
+    "remove": "Excluir {name}"
   },
   "ToolpathProgress": {
     "title": "Calculando percursos · {done} de {total} prontos",

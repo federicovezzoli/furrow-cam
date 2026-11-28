@@ -1132,7 +1132,8 @@
     "lock": "Bloquear {name}",
     "unlock": "Desbloquear {name}",
     "download": "Descargar {name} como STL",
-    "downloadFailed": "No se pudo leer el archivo de este modelo."
+    "downloadFailed": "No se pudo leer el archivo de este modelo.",
+    "remove": "Eliminar {name}"
   },
   "ToolpathProgress": {
     "title": "Calculando trayectorias · {done} de {total} hechas",
