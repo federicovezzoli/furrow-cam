@@ -111,3 +111,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0094](0094-drawings-from-a-models-flat-faces.md) | Drawings from a model's flat faces; STEP models keep their faces | Accepted |
 | [0095](0095-models-import-at-their-size.md) | Models import at their size, even past the stock | Accepted |
 | [0096](0096-simulating-the-posted-program.md) | The simulator reads the posted program back, in `@furrow/post` | Accepted |
+| [0097](0097-simulator-plays-the-posted-program.md) | The simulator plays the program posted from the toolpaths ready | Accepted |
