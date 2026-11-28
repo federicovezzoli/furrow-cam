@@ -317,6 +317,13 @@ export type DrillOperation = z.infer<typeof DrillOperation>;
 export const EngraveSide = z.enum([...ProfileSide.options, "chamfer"]);
 export type EngraveSide = z.infer<typeof EngraveSide>;
 
+/** How far along an open path a fluted engraving ramps in from its start and out to its end. */
+export const EngraveTaper = z.strictObject({
+  start: z.number().nonnegative(),
+  end: z.number().nonnegative(),
+});
+export type EngraveTaper = z.infer<typeof EngraveTaper>;
+
 /**
  * Engrave parameters (#95): the paths followed on the line, or inside or
  * outside the closed ones with an edge of the groove on the line, cut to
@@ -335,6 +342,13 @@ export const EngraveParams = z.strictObject({
   ramp: z.boolean(),
   /** Where cuts start (#426), in stock coordinates; each goes to the nearest path. */
   startPoints: z.array(Point),
+  /**
+   * Fluting (#555): along each open path cut on the line, the depth goes from
+   * the stock top to `depth` over `start` millimetres from its first point and
+   * back over `end` to its last, peaking where the two meet on a path shorter
+   * than both. `null` cuts at one depth; closed paths and other sides ignore it.
+   */
+  taper: EngraveTaper.nullable(),
 });
 export type EngraveParams = z.infer<typeof EngraveParams>;
 

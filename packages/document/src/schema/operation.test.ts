@@ -208,7 +208,7 @@ describe("EngraveOperation", () => {
   const engrave = {
     ...profile,
     type: "engrave",
-    params: { side: "on", depth: 0.5, width: null, ramp: false, startPoints: [] },
+    params: { side: "on", depth: 0.5, width: null, ramp: false, startPoints: [], taper: null },
   };
   const vBit = { ...profile.tool, type: "v_bit", cutDirection: null, vAngle: 60, tipDiameter: 0 };
 
@@ -244,7 +244,14 @@ describe("EngraveOperation", () => {
   });
 
   it("rejects invalid params and the profile's options", () => {
-    const valid = { side: "outside", depth: 1, width: null, ramp: false, startPoints: [] };
+    const valid = {
+      side: "outside",
+      depth: 1,
+      width: null,
+      ramp: false,
+      startPoints: [],
+      taper: null,
+    };
     expect(EngraveParams.safeParse(valid).success).toBe(true);
     expect(EngraveParams.safeParse({ ...valid, depth: 0 }).success).toBe(false);
     expect(EngraveParams.safeParse({ ...valid, side: "left" }).success).toBe(false);

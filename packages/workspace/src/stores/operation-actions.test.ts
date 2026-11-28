@@ -520,7 +520,7 @@ describe("addEngraveOperation", () => {
       stockSide: "top",
       targets: [whole(square)],
       tool: vBit,
-      params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [] },
+      params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [], taper: null },
     });
     expect(ProjectDocument.parse(document())).toEqual(document());
   });
@@ -549,6 +549,10 @@ describe("addEngraveOperation", () => {
       width: null,
       ramp: true,
       startPoints: [],
+      taper: null,
+    });
+    expect(updateEngraveParams(store, id, { taper: { start: -1, end: 0 } })).toMatchObject({
+      ok: false,
     });
     expect(updateEngraveParams(store, id, { depth: 0 })).toMatchObject({ ok: false });
   });
