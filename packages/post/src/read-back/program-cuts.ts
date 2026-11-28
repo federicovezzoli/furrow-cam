@@ -66,7 +66,8 @@ const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 
 const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59]);
 /** Probing, which stops where it touches: the axes it names aren't known after it. */
 const PROBES = new Set([38.2, 38.3, 38.4, 38.5]);
-const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 117, 400]);
+// `M62`–`M65` switch a controller output, e.g. a spindle wired to a pin: nothing the simulation follows.
+const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 62, 63, 64, 65, 117, 400]);
 // `H` only names an offset for `G43`, which loses the position anyway; `L` and
 // `P` say which offset `G10` sets.
 const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H", "L"]);
@@ -123,6 +124,18 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   const texts = gcode.replace(/\n$/, "").split("\n");
   for (const [i, text] of texts.entries()) {
     const number = i + 1;
+    // A controller's own command, e.g. FluidNC's `$HZ` or `$LocalFS/Run=probe.nc`:
+    // homing loses the axes it homes, all of them if it names none; anything
+    // else, such as a macro, may move the machine anywhere.
+    const command = /^\s*(\$\S*)/.exec(text)?.[1];
+    if (command !== undefined) {
+      const homed = /^\$H([XYZ]*)$/i.exec(command)?.[1]?.toUpperCase();
+      warnings.push({ line: number, code: "unknownPosition", word: command });
+      position = position.map((value, axis) =>
+        homed && !homed.includes(AXES[axis] as string) ? value : Number.NaN,
+      ) as Vec3;
+      continue;
+    }
     const line = readLine(text, number);
     const comment = line.comment;
     if (comment?.startsWith(TOOL_COMMENT)) {

@@ -238,10 +238,7 @@ describe("programCuts", () => {
       "G1 X20 Z-1",
     ].join("\n");
     const { cuts, warnings } = programCuts(block, STOCK);
-    expect(warnings).toEqual([
-      { line: 6, code: "unknownPosition", word: "G38.2" },
-      { line: 8, code: "unsupported", word: "M62" },
-    ]);
+    expect(warnings).toEqual([{ line: 6, code: "unknownPosition", word: "G38.2" }]);
     const cut = cuts[0] as { segments: Float32Array };
     // G10 L20 makes X0 Y0 Z0 known; the probe loses Z only, and the retract above
     // the stock finds it again, so the feed after it is cut.
@@ -259,6 +256,22 @@ describe("programCuts", () => {
     expect(programCuts(program("G10 L2 P1 Z-50"), STOCK).warnings).toEqual([
       { line: 4, code: "unknownPosition", word: "G10" },
     ]);
+  });
+
+  it("loses the axes a controller command may move, e.g. FluidNC's $HZ or a macro", () => {
+    const { warnings } = programCuts(
+      program("M63 P1 (stop spindle pin27)", "$HZ", "G0 Z5", "G1 X20 F300", "M30"),
+      STOCK,
+    );
+    // M63 only switches an output, here the spindle's pin.
+    expect(warnings).toEqual([{ line: 5, code: "unknownPosition", word: "$HZ" }]);
+    // Homing Z keeps X and Y: once a move sets Z, feeds are followed again.
+    expect(readError(program("$HZ", "G1 X20 F300"))).toEqual({ line: 5, reason: "unknownStart" });
+    // A macro may move anywhere.
+    expect(readError(program("$LocalFS/Run=probe-xyz.nc", "G0 Z20", "G1 X20 F300"))).toEqual({
+      line: 6,
+      reason: "unknownStart",
+    });
   });
 
   it("skips words it doesn't support, saying which and where", () => {

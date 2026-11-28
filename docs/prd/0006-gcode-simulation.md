@@ -65,4 +65,4 @@ The material-removal simulation (PRD-0001 **R10**, ADR-0019) replays the toolpat
 - 2026-11-28: picked up again; Marlin read too; P2 reader (#682, ADR-0096)
 - 2026-11-28: the simulator plays the posted program, warnings under the timeline (#683, ADR-0097); the program text and its highlighted line are next (#684)
 - 2026-11-28: the program beside the simulator, its line highlighted, click to seek, warnings linked to their lines (#684)
-- 2026-11-28: the reader follows `G10 L20` zeroing, probing that loses only the axes it names, and a retract from an unknown height (#684)
+- 2026-11-28: the reader follows `G10 L20` zeroing, probing that loses only the axes it names, a retract from an unknown height, `$` controller commands (homing loses the axes it homes) and `M62`–`M65` outputs (#684)
