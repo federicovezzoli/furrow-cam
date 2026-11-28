@@ -85,8 +85,13 @@ export function parseGcodeLine(text: string, number: number): GcodeLine {
   return { number, text, words, comment: comments.length > 0 ? comments.join(" ") : null };
 }
 
-/** Codes after which no axis is known: stored positions, offsets, other work systems. */
-export const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59]);
+/** Codes after which no axis is known: stored positions and offsets. */
+export const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1]);
+/**
+ * The work coordinate systems. Switching to another loses every axis; the
+ * program is taken to start in `G54`, the one the posts' `P1` names.
+ */
+export const WORK_SYSTEMS = new Set([54, 55, 56, 57, 58, 59]);
 /** Probing, which stops where it touches: the axes it names aren't known after it. */
 export const PROBES = new Set([38.2, 38.3, 38.4, 38.5]);
 
@@ -136,13 +141,14 @@ export function offsetPosition(
  * `programCuts` follows it: `G10 L20` in the work system in use sets the axes
  * it names, other `G10`s there lose them; probing and `G53` lose the axes
  * they name, a controller command (`$HZ`) the ones it moves, `G28`, `G92`,
- * offsets and other work systems all of them. None of those is a move.
+ * offsets and a switch to another work system all of them. None of those is a move.
  */
 export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
   const moves: GcodeMove[] = [];
   let position: Vec3 = [Number.NaN, Number.NaN, Number.NaN];
   let motion: "rapid" | "feed" | null = null;
   let relative = false;
+  let system = 54;
   let feedRate: number | null = null;
   for (const line of lines) {
     const command = controllerCommand(line.text);
@@ -163,7 +169,10 @@ export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
       else if (letter === "G" && value === 53) other = "machine";
       else if (letter === "G" && PROBES.has(value)) other = "probe";
       else if (letter === "G" && UNKNOWN_AFTER.has(value)) other = "lost";
-      else if (letter === "L" || letter === "P") offsetWord[letter] = value;
+      else if (letter === "G" && WORK_SYSTEMS.has(value)) {
+        if (value !== system) other = "lost";
+        system = value;
+      } else if (letter === "L" || letter === "P") offsetWord[letter] = value;
       else if (letter === "F") feedRate = value;
       else if (letter === "X" || letter === "Y" || letter === "Z")
         axes["XYZ".indexOf(letter)] = value;

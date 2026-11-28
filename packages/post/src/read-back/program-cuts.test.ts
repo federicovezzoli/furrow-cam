@@ -226,6 +226,13 @@ describe("programCuts", () => {
     expect(readError(program("G92 X0", "G1 X5 F300"))).toEqual({ line: 5, reason: "unknownStart" });
   });
 
+  it("forgets every axis on a switch of work system, back to G54 too, and none on G54 in G54", () => {
+    expect(programCuts(program("G54", "G1 Z-1 F300"), STOCK).warnings).toEqual([]);
+    expect(programCuts(program("G55", "G0 X1 Y1 Z5", "G54", "G0 Z-1"), STOCK).warnings).toEqual([
+      { line: 6, code: "unknownPosition", word: "G54" },
+    ]);
+  });
+
   it("follows a block that zeroes where the tool is, probes and retracts (G10 L20)", () => {
     const block = [
       TOOL,

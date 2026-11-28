@@ -33,4 +33,12 @@ describe("gcodeMoves (#688)", () => {
       { line: 5, from: [N, N, N], to: [N, N, 5] },
     ]);
   });
+
+  it("lose every axis on a switch of work system, back to G54 too, and none on G54 in G54", () => {
+    expect(moves("G54\nG0 X1 Y2 Z3\nG55\nG0 Z5\nG54\nG0 Z-3")).toEqual([
+      { line: 2, from: [N, N, N], to: [1, 2, 3] },
+      { line: 4, from: [N, N, N], to: [N, N, 5] },
+      { line: 6, from: [N, N, N], to: [N, N, -3] },
+    ]);
+  });
 });

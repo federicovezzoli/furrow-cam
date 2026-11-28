@@ -18,6 +18,7 @@ import {
   parseGcodeLine,
   tidy,
   UNKNOWN_AFTER,
+  WORK_SYSTEMS,
 } from "./read-back";
 
 /** A word the simulation skips, or one after which it can't tell where the tool is. */
@@ -72,7 +73,7 @@ export type ProgramCuts = {
 const TOOL_COMMENT = "Furrow tool:";
 
 /** Modal and non-modal codes that change nothing the simulation follows. */
-const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
+const IGNORED_G = new Set([4, 40, 49, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
 // `M62`–`M65` switch a controller output, e.g. a spindle wired to a pin: nothing the simulation follows.
 const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 62, 63, 64, 65, 117, 400]);
 // `H` only names an offset for `G43`, which loses the position anyway; `L` and
@@ -129,6 +130,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   let motion: 0 | 1 | 2 | 3 | null = null;
   let relative = false;
   let scale = 1;
+  let system = 54;
   let plane: 17 | 18 | 19 = 17;
   const texts = gcode.replace(/\n$/, "").split("\n");
   for (const [i, text] of texts.entries()) {
@@ -178,6 +180,12 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
         else if (PROBES.has(value)) {
           probe = true;
           losses.push({ line: number, code: "unknownPosition", word });
+        } else if (WORK_SYSTEMS.has(value)) {
+          if (value !== system) {
+            lost = true;
+            losses.push({ line: number, code: "unknownPosition", word });
+          }
+          system = value;
         } else if (UNKNOWN_AFTER.has(value)) {
           lost = true;
           losses.push({ line: number, code: "unknownPosition", word });
