@@ -1653,6 +1653,12 @@
     "programUnreadable": "プログラムは {line} 行目より先をシミュレーションできません: {reason, select, unreadable {G コードではありません} unknownStart {位置が分からないところから切削しています} noTool {ビットを指定する前に動いています} badTool {ビットのコメントがビットを表していません} badArc {円弧をたどれません} noMotion {G0、G1、G2、G3 のどれもなしで動いています} other {読み取れません}}",
     "programWarning": "{side, select, top {上面 {line} 行目} other {{line} 行目}}: {code, select, unknownPosition {{word} の後は工具の位置が分からないため、動きで位置が決まるまで何もシミュレーションされません} other {{word} はシミュレーションされません}}",
     "moreProgramWarnings": "プログラム内にあと {count, plural, other {# 件の警告}}",
+    "program": "プログラム",
+    "programWarnings": "プログラムの警告",
+    "showProgram": "プログラムを表示",
+    "showProgramShort": "プログラムを表示",
+    "hideProgramShort": "プログラムを隠す",
+    "programBlock": "{block, select, programStart {プログラム開始} toolChangePad {パッドでの工具交換} toolChange {工具交換} operationStart {工程開始} other {プログラム終了}}ブロック",
     "views": {
       "top": "上面図",
       "orbit": "3D ビュー"

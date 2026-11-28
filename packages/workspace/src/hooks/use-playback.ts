@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import {
+  moveLines,
   type PlaybackPart,
   type PlayedProgram,
   playbackKey,
@@ -208,6 +209,7 @@ export function usePlayback(maxCells: number | null) {
     [moves, current, operations, entries],
   );
   lastParts.current = parts;
+  const lines = useMemo(() => moveLines(moves?.lines ?? []), [moves]);
   // The other side's stock would show until this side's loads.
   const shown = loaded?.side === side ? loaded : null;
   return {
@@ -219,7 +221,13 @@ export function usePlayback(maxCells: number | null) {
     stock: shown?.stock ?? null,
     updates,
     error,
-    program: moves && { warnings: moves.warnings, failure: moves.failure },
+    program: moves && {
+      warnings: moves.warnings,
+      failure: moves.failure,
+      gcode: moves.gcode,
+      blocks: moves.blocks,
+      lines,
+    },
     pending: computing || (enabled && shown === null),
   };
 }

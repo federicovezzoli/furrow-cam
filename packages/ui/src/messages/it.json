@@ -1653,6 +1653,12 @@
     "programUnreadable": "Il programma non si può simulare oltre la riga {line}: {reason, select, unreadable {non è G-code} unknownStart {taglia da una posizione sconosciuta} noTool {si muove prima di nominare la fresa} badTool {il commento della fresa non descrive una fresa} badArc {il suo arco non si può seguire} noMotion {si muove senza G0, G1, G2 o G3} other {non si può leggere}}",
     "programWarning": "{side, select, top {Faccia superiore, riga {line}} other {Riga {line}}}: {code, select, unknownPosition {dopo {word} la posizione dell'utensile non è nota, quindi non si simula niente finché un movimento non la stabilisce} other {{word} non viene simulato}}",
     "moreProgramWarnings": "{count, plural, one {Ancora # avviso} other {Ancora # avvisi}} nel programma",
+    "program": "Programma",
+    "programWarnings": "Avvisi del programma",
+    "showProgram": "Mostra programma",
+    "showProgramShort": "Mostra il programma",
+    "hideProgramShort": "Nascondi il programma",
+    "programBlock": "Blocco {block, select, programStart {Inizio programma} toolChangePad {Cambio utensile sulla piastrina} toolChange {Cambio utensile} operationStart {Inizio operazione} other {Fine programma}}",
     "views": {
       "top": "Vista dall’alto",
       "orbit": "Vista 3D"

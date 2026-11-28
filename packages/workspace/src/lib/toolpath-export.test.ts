@@ -131,6 +131,7 @@ describe("playedFiles", () => {
     gcode: "",
     side,
     steps: [],
+    blocks: [],
   });
 
   it("reads back only the programs the side shown plays", () => {

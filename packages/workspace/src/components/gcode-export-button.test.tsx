@@ -19,8 +19,14 @@ function TwoFiles() {
     retry() {},
     exportGcode: async () => ({
       files: [
-        { fileName: "Owl-top.gcode", gcode: "(top)", side: "top" as const, steps: [] },
-        { fileName: "Owl-bottom.gcode", gcode: "(bottom)", side: "bottom" as const, steps: [] },
+        { fileName: "Owl-top.gcode", gcode: "(top)", side: "top" as const, steps: [], blocks: [] },
+        {
+          fileName: "Owl-bottom.gcode",
+          gcode: "(bottom)",
+          side: "bottom" as const,
+          steps: [],
+          blocks: [],
+        },
       ],
       warnings: [],
     }),

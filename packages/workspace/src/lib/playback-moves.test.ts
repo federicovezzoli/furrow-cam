@@ -217,12 +217,26 @@ describe("playedProgram", () => {
   });
 
   it("plays the bottom side's program after the top side's", () => {
+    const file = (side: "top" | "bottom") => ({
+      fileName: `${side}.gcode`,
+      gcode: `(${side})`,
+      side,
+      steps: [],
+      blocks: [{ label: "programEnd" as const, first: 1, last: 1 }],
+    });
     const played = playedProgram(
       { key: "k", side: "bottom", before: "t" },
-      { ...files, playbacks: [playback("top", -1), playback("bottom", -2)] },
+      {
+        files: [file("top"), file("bottom")],
+        warnings: [],
+        playbacks: [playback("top", -1), playback("bottom", -2)],
+      },
       "x",
     );
     expect(played.cuts).toEqual([cut(-2)]);
+    // The text shown is the side played's, as Export saves it.
+    expect(played.gcode).toBe("(bottom)");
+    expect(played.blocks).toEqual(file("bottom").blocks);
     expect(played.before).toEqual({ key: "t", cuts: [cut(-1)], axis: "x" });
     // The top side's warnings count too: its cuts are under the bottom side's.
     expect(played.warnings).toEqual([

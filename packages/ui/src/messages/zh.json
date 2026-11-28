@@ -1653,6 +1653,12 @@
     "programUnreadable": "程序在第 {line} 行之后无法模拟：{reason, select, unreadable {这一行不是 G 代码} unknownStart {从未知位置开始切削} noTool {在指定刀具之前就移动了} badTool {刀具注释没有描述刀具} badArc {无法沿其圆弧移动} noMotion {没有 G0、G1、G2 或 G3 就移动了} other {无法读取}}",
     "programWarning": "{side, select, top {顶面第 {line} 行} other {第 {line} 行}}：{code, select, unknownPosition {{word} 之后刀具位置未知，在移动确定位置之前不会模拟任何内容} other {{word} 不会被模拟}}",
     "moreProgramWarnings": "程序中还有 {count, plural, other {# 条警告}}",
+    "program": "程序",
+    "programWarnings": "程序警告",
+    "showProgram": "显示程序",
+    "showProgramShort": "显示程序",
+    "hideProgramShort": "隐藏程序",
+    "programBlock": "{block, select, programStart {程序开始} toolChangePad {在对刀板上换刀} toolChange {换刀} operationStart {工序开始} other {程序结束}}块",
     "views": {
       "top": "顶视图",
       "orbit": "3D视图"

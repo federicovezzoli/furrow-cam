@@ -1653,6 +1653,12 @@
     "programUnreadable": "The program can't be simulated past line {line}: {reason, select, unreadable {it isn't G-code} unknownStart {it cuts from a position that isn't known} noTool {it moves before naming its bit} badTool {its bit comment doesn't describe a bit} badArc {its arc can't be followed} noMotion {it moves without G0, G1, G2 or G3} other {it can't be read}}",
     "programWarning": "{side, select, top {Top side, line {line}} other {Line {line}}}: {code, select, unknownPosition {after {word} the tool's position isn't known, so nothing is simulated until a move sets it} other {{word} isn't simulated}}",
     "moreProgramWarnings": "{count, plural, one {# more warning} other {# more warnings}} in the program",
+    "program": "Program",
+    "programWarnings": "Program warnings",
+    "showProgram": "Show program",
+    "showProgramShort": "Show the program",
+    "hideProgramShort": "Hide the program",
+    "programBlock": "{block, select, programStart {Program start} toolChangePad {Tool change on the pad} toolChange {Tool change} operationStart {Operation start} other {Program end}} block",
     "views": {
       "top": "Top view",
       "orbit": "3D view"
