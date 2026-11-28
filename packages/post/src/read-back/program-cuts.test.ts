@@ -212,15 +212,16 @@ describe("programCuts", () => {
     });
   });
 
-  it("forgets every axis after G28, probing or an offset", () => {
-    const { warnings } = programCuts(
-      program("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50", "G0 X1 Y1 Z5", "G43 H1"),
-      STOCK,
-    );
-    expect(warnings).toEqual([
+  it("forgets every axis after G28, probing or an offset, warning only where a move needs them", () => {
+    const warnings = (...lines: string[]) => programCuts(program(...lines), STOCK).warnings;
+    // Each time a move above the stock finds the position again, or none follows.
+    expect(warnings("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50", "G0 X1 Y1 Z5", "G43 H1")).toEqual([]);
+    // Taken to come straight down into the stock, or skipped.
+    expect(warnings("G28", "G0 X1 Y1 Z-1")).toEqual([
       { line: 4, code: "unknownPosition", word: "G28" },
-      { line: 6, code: "unknownPosition", word: "G38.2" },
-      { line: 8, code: "unknownPosition", word: "G43" },
+    ]);
+    expect(warnings("G38.2 Z-10 F50", "G0 X5", "G0 X6")).toEqual([
+      { line: 4, code: "unknownPosition", word: "G38.2" },
     ]);
     expect(readError(program("G92 X0", "G1 X5 F300"))).toEqual({ line: 5, reason: "unknownStart" });
   });
@@ -238,7 +239,8 @@ describe("programCuts", () => {
       "G1 X20 Z-1",
     ].join("\n");
     const { cuts, warnings } = programCuts(block, STOCK);
-    expect(warnings).toEqual([{ line: 6, code: "unknownPosition", word: "G38.2" }]);
+    // The retract after the probe finds Z again above the stock.
+    expect(warnings).toEqual([]);
     const cut = cuts[0] as { segments: Float32Array };
     // G10 L20 makes X0 Y0 Z0 known; the probe loses Z only, and the retract above
     // the stock finds it again, so the feed after it is cut.
@@ -253,7 +255,7 @@ describe("programCuts", () => {
       reason: "unknownStart",
     });
     // `L2` moves the zero by a machine position: the axes it names are lost.
-    expect(programCuts(program("G10 L2 P1 Z-50"), STOCK).warnings).toEqual([
+    expect(programCuts(program("G10 L2 P1 Z-50", "G0 X20"), STOCK).warnings).toEqual([
       { line: 4, code: "unknownPosition", word: "G10" },
     ]);
   });
@@ -263,8 +265,11 @@ describe("programCuts", () => {
       program("M63 P1 (stop spindle pin27)", "$HZ", "G0 Z5", "G1 X20 F300", "M30"),
       STOCK,
     );
-    // M63 only switches an output, here the spindle's pin.
-    expect(warnings).toEqual([{ line: 5, code: "unknownPosition", word: "$HZ" }]);
+    // M63 only switches an output, here the spindle's pin, and G0 Z5 finds Z again.
+    expect(warnings).toEqual([]);
+    expect(programCuts(program("$HZ", "G0 X20"), STOCK).warnings).toEqual([
+      { line: 4, code: "unknownPosition", word: "$HZ" },
+    ]);
     // Homing Z keeps X and Y: once a move sets Z, feeds are followed again.
     expect(readError(program("$HZ", "G1 X20 F300"))).toEqual({ line: 5, reason: "unknownStart" });
     // A macro may move anywhere.

@@ -17,8 +17,10 @@ export type ProgramWarning = {
   line: number;
   /**
    * `unsupported`: the word is skipped. `unknownPosition`: the axes it moves
-   * are unknown until the program sets them again, and nothing is cut
-   * meanwhile.
+   * are unknown until the program sets them again, and a move meanwhile was
+   * skipped, or taken to come straight down into the stock; one that finds the
+   * position again above the stock, such as a retract after probing, isn't
+   * worth a warning.
    */
   code: "unsupported" | "unknownPosition";
   /** The word as read, e.g. `G53` or `A10`. */
@@ -117,6 +119,8 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   };
 
   let position: Vec3 = [Number.NaN, Number.NaN, Number.NaN];
+  /** What lost the position since it was last known: warned of only if it matters. */
+  let losses: ProgramWarning[] = [];
   let motion: 0 | 1 | 2 | 3 | null = null;
   let relative = false;
   let scale = 1;
@@ -130,7 +134,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     const command = /^\s*(\$\S*)/.exec(text)?.[1];
     if (command !== undefined) {
       const homed = /^\$H([XYZ]*)$/i.exec(command)?.[1]?.toUpperCase();
-      warnings.push({ line: number, code: "unknownPosition", word: command });
+      losses.push({ line: number, code: "unknownPosition", word: command });
       position = position.map((value, axis) =>
         homed && !homed.includes(AXES[axis] as string) ? value : Number.NaN,
       ) as Vec3;
@@ -169,14 +173,14 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
         else if (value === 80) motion = null;
         else if (value === 53) {
           machine = true;
-          warnings.push({ line: number, code: "unknownPosition", word });
+          losses.push({ line: number, code: "unknownPosition", word });
         } else if (value === 10) setsOffset = true;
         else if (PROBES.has(value)) {
           probe = true;
-          warnings.push({ line: number, code: "unknownPosition", word });
+          losses.push({ line: number, code: "unknownPosition", word });
         } else if (UNKNOWN_AFTER.has(value)) {
           lost = true;
-          warnings.push({ line: number, code: "unknownPosition", word });
+          losses.push({ line: number, code: "unknownPosition", word });
         } else if (!IGNORED_G.has(value))
           warnings.push({ line: number, code: "unsupported", word });
       } else if (letter === "M") {
@@ -203,8 +207,9 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
           const word = axes[axis];
           return word === undefined ? value : word * scale;
         }) as Vec3;
+        if (position.every(Number.isFinite)) losses = [];
       } else if (ours && axes.some((value) => value !== undefined)) {
-        warnings.push({ line: number, code: "unknownPosition", word: "G10" });
+        losses.push({ line: number, code: "unknownPosition", word: "G10" });
         position = position.map((value, axis) =>
           axes[axis] === undefined ? value : Number.NaN,
         ) as Vec3;
@@ -243,11 +248,13 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     position = to;
     const known = (point: Vec3) => point.every(Number.isFinite);
     if (!known(from)) {
+      const above = known(to) && to[2] >= top;
       // A feed from where the tool isn't known can't be followed into the stock;
       // above it, e.g. a retract after probing, it cuts nothing.
-      if (motion !== 0 && !(known(to) && to[2] >= top)) {
-        throw new ProgramReadError(number, "unknownStart");
-      }
+      if (motion !== 0 && !above) throw new ProgramReadError(number, "unknownStart");
+      // Skipped, or taken to come straight down into the stock: what lost the position mattered.
+      if (!above) warnings.push(...losses);
+      losses = [];
       if (known(to)) segment(number, [to[0], to[1], Math.max(to[2], top)], to);
       continue;
     }
@@ -266,6 +273,8 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     }
   }
   finish();
+  // Losses are warned of at the move they mattered to.
+  warnings.sort((a, b) => a.line - b.line);
   return { cuts, lines, warnings };
 }
 
