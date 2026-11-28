@@ -15,6 +15,10 @@ export type EngraveOptions = ProfileOptions;
  *   the `grooveWidth` at the depth, so one edge of the groove is on the line;
  *   nested paths toggle inside and outside (even-odd) as for profiles. Open
  *   paths are skipped with a warning.
+ * - With a `taper` (fluting, #555), each open path cut `on` the line goes
+ *   from the stock top down to the depth and back up again along its length,
+ *   each pass only where the groove goes deeper than the pass before. A
+ *   V-bit's groove widens and narrows with the depth.
  * - `chamfer` cuts the closed paths as `outside` does (see `engraveCut`).
  * - A V-bit cut deeper than its cone, or a chamfer wider than it, is warned
  *   about, since the cut can't get wider than the cone.
@@ -36,6 +40,7 @@ export function engraveToolpath(
       ramp: params.ramp,
       startPoints: params.startPoints.map((start) => ({ start, plunge: null })),
       offset: cut.offset,
+      taper: params.taper,
     },
     options,
   );

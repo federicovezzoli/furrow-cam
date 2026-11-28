@@ -1,6 +1,7 @@
 import {
   type CornerOvercuts,
   distance,
+  type EngraveTaper,
   GEOMETRY_TOLERANCE,
   type MillingDirection,
   type Point,
@@ -14,6 +15,7 @@ import {
 import { containment, difference, offset, type Polygon, signedArea } from "../geometry/clipper";
 import { DEFAULT_CHORD_TOLERANCE, flattenPath } from "../geometry/flatten";
 import { type Projection, projectOnLoop } from "../geometry/loop";
+import type { Vec3 } from "../scene/stock";
 import type { ToolpathMessage } from "./messages";
 import {
   drawnCorners,
@@ -41,6 +43,7 @@ import {
   pointAlong,
   type Span,
 } from "./tabs";
+import { taperPath } from "./taper";
 import { type Toolpath, ToolpathBuilder } from "./toolpath";
 
 export type ProfileOptions = {
@@ -68,8 +71,11 @@ type Contour = {
   plunge: Point | null;
 };
 
-/** An open path the tool follows on the line, cut one way when a start point picked its end. */
-type OpenPath = { path: Point[]; oneWay: boolean };
+/**
+ * An open path the tool follows on the line, cut one way when a start point
+ * picked its end, with the final depth at each point when it tapers.
+ */
+type OpenPath = { path: Point[]; oneWay: boolean; depths: number[] | null };
 
 /** The contours of one offset, and where the tool centre may go without cutting the part. */
 type Contours = { contours: Contour[]; isFree: (point: Point) => boolean };
@@ -81,6 +87,8 @@ const LEAD_IN_ATTEMPTS = 4;
 type Cut = Descent & {
   feedRate: number;
   leadInRadius: number | null;
+  /** The steepest the tool goes down at the feed rate, in radians: its plunge angle. */
+  steepest: number;
   /** Height the tool stays at or above over tabs, or `null` without tabs. */
   tabTop: number | null;
   tolerance: number;
@@ -165,6 +173,8 @@ export type ContourCut = {
   /** Where cuts start, and where the tool plunges for them, in stock coordinates. */
   startPoints?: ProfileStartPoint[];
   cornerOvercuts?: CornerOvercuts | null;
+  /** Fluting (#555): open paths on the line ramp in and out over these lengths. */
+  taper?: EngraveTaper | null;
 };
 
 /** The toolpath of `settings` along `shapes` with `tool`, as `profileToolpath` describes. */
@@ -181,6 +191,7 @@ export function contourToolpath(
     tabs: null,
     startPoints: [],
     cornerOvercuts: null,
+    taper: null,
     ...settings,
   };
   const { offset } = params;
@@ -195,7 +206,7 @@ export function contourToolpath(
     for (const path of shape.paths) {
       if (path.segments.length === 0) points++;
       else if (path.closed) closed.push(flattenPath(path, tolerance).slice(0, -1));
-      else open.push({ path: flattenPath(path, tolerance), oneWay: false });
+      else open.push({ path: flattenPath(path, tolerance), oneWay: false, depths: null });
     }
   }
   if (points > 0) warnings.push({ code: "toolpath.skippedPoints", values: { count: points } });
@@ -214,11 +225,20 @@ export function contourToolpath(
         : null,
     minRampLength: radius,
     leadInRadius: params.leadIn?.radius ?? null,
+    steepest: (tool.plungeAngle * Math.PI) / 180,
     tabTop: null,
     tolerance,
     leadInMisfits: 0,
   };
   const levels = depthLevels(params.depth, tool.stepDown);
+  const { taper } = params;
+  if (taper && params.side === "on") {
+    for (const path of open) {
+      const tapered = taperPath(path.path, params.depth, taper, levels);
+      path.path = tapered.points;
+      path.depths = tapered.depths;
+    }
+  }
 
   const roughing = contours(closed, params, offset + params.allowance);
   const finishing = params.finishPass ? contours(closed, params, offset) : null;
@@ -312,7 +332,10 @@ export function contourToolpath(
 
   // Open paths never free the part, so they go before any closed contour.
   if (params.side === "on") {
-    for (const { path, oneWay } of open) cutOpenPath(cut, path, levels, oneWay);
+    for (const { path, oneWay, depths } of open) {
+      if (depths) cutTaperedPath(cut, path, depths, levels, oneWay);
+      else cutOpenPath(cut, path, levels, oneWay);
+    }
   }
 
   // A finish lap follows the depth passes it enters from, so inner contours
@@ -580,6 +603,68 @@ function cutOpenPath(cut: Cut, path: Point[], levels: number[], oneWay = false) 
     descend(cut, pass, z, level);
     feedAlong(cut, pass, level);
     z = level;
+  });
+}
+
+/**
+ * Cuts a fluted open path (#555) pass by pass as `cutOpenPath` does, each pass
+ * only where its final `depths` go below the pass before: from the point
+ * before that stretch to the point after, which the pass before cut to their
+ * final depth. The profile rises and falls once, so that is one stretch.
+ * Passes alternate direction, the tool going along the groove at the depth
+ * already cut to where the next one starts, or `oneWay` from the stock top.
+ * Going down more steeply than the plunge angle is at the plunge rate.
+ */
+function cutTaperedPath(
+  cut: Cut,
+  path: Point[],
+  depths: number[],
+  levels: number[],
+  oneWay: boolean,
+) {
+  if (new Track(path).length <= cut.tolerance) return;
+  const { builder } = cut;
+  const point = (i: number, level: number): Vec3 => {
+    const [x, y] = path[i] as Point;
+    return [x, y, Math.max(-(depths[i] as number), level)];
+  };
+  const feed = (to: Vec3) => {
+    const at = builder.position;
+    const drop = at ? at[2] - to[2] : 0;
+    const steep =
+      at !== null &&
+      drop > 0 &&
+      Math.atan2(drop, Math.hypot(to[0] - at[0], to[1] - at[1])) > cut.steepest + 1e-9;
+    builder.feed(to, steep ? cut.plungeRate : cut.feedRate);
+  };
+  const last = path.length - 1;
+  let at: number | null = null;
+  levels.forEach((level, pass) => {
+    const above = levels[pass - 1] ?? 0;
+    const deeper = (depth: number) => -depth < above - 1e-9;
+    const first = depths.findIndex(deeper);
+    if (first < 0) return;
+    let from = Math.max(0, first - 1);
+    let to = Math.min(last, depths.findLastIndex(deeper) + 1);
+    if (!oneWay && pass % 2 === 1) [from, to] = [to, from];
+    const step = to >= from ? 1 : -1;
+    let z = point(from, above)[2];
+    if (at === null || oneWay) {
+      enter(cut, path[from] as Point);
+      z = 0;
+    } else {
+      const back = from > at ? 1 : -1;
+      for (let i = at; i !== from; ) {
+        i += back;
+        feed(point(i, above));
+      }
+    }
+    const section: Point[] = [];
+    for (let i = from; i !== to + step; i += step) section.push(path[i] as Point);
+    const down = point(from, level)[2];
+    if (down < z) descend(cut, section, z, down);
+    for (let i = from + step; i !== to + step; i += step) feed(point(i, level));
+    at = to;
   });
 }
 
@@ -859,7 +944,10 @@ function placeStarts(
       contour.plunge = plunge;
     } else {
       const open = paths[best.index - contours.length] as OpenPath;
-      if (best.at > loopLength(line) / 2) open.path = [...line].reverse();
+      if (best.at > loopLength(line) / 2) {
+        open.path = [...line].reverse();
+        open.depths = open.depths && [...open.depths].reverse();
+      }
       open.oneWay = true;
     }
   }

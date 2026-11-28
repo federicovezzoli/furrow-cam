@@ -1,5 +1,6 @@
 import type { EngraveOperation, EngraveParams, Shape, Tool } from "@furrow/document";
 import {
+  ballEndMill,
   DRAWING_ID,
   endMill,
   fullDocument,
@@ -63,7 +64,15 @@ function engraving(
     type: "engrave",
     targets: shapes.map((shape) => ({ shapeId: shape.id, paths: null })),
     tool,
-    params: { side: "on", depth: 1, width: null, ramp: false, startPoints: [], ...params },
+    params: {
+      side: "on",
+      depth: 1,
+      width: null,
+      ramp: false,
+      startPoints: [],
+      taper: null,
+      ...params,
+    },
   };
 }
 
@@ -221,6 +230,124 @@ describe("engraveToolpath", () => {
       { code: "toolpath.engraveConeWide" },
     ]);
     expect(engrave([line], { depth: 6 }).warnings).toEqual([]);
+  });
+});
+
+describe("fluting", () => {
+  /** The flute's final depth along `line` (x from 10 to 90), 3 mm deep. */
+  const profile = (start: number, end: number) => (x: number) =>
+    3 * Math.min(1, start > 0 ? (x - 10) / start : 1, end > 0 ? (90 - x) / end : 1);
+
+  /** The lowest the tool centre goes at `x` along `line`, from the feed moves. */
+  function lowestAt(toolpath: Toolpath, x: number): number {
+    let lowest = 0;
+    let at: readonly number[] | null = null;
+    for (const move of toolpath.moves) {
+      if (move.kind === "feed" && at) {
+        const [x0, , z0] = at as [number, number, number];
+        const [x1, , z1] = move.to;
+        if ((x0 - x) * (x1 - x) <= 0 && x0 !== x1) {
+          lowest = Math.min(lowest, z0 + ((z1 - z0) * (x - x0)) / (x1 - x0));
+        } else if (x0 === x && x1 === x) lowest = Math.min(lowest, z0, z1);
+      }
+      at = move.to;
+    }
+    return lowest;
+  }
+
+  it("ramps in and out along an open path, never below the ramp", () => {
+    const toolpath = engrave([line], { depth: 3, taper: { start: 20, end: 30 } }, ballEndMill);
+    expect(toolpath.warnings).toEqual([]);
+    const depth = profile(20, 30);
+    for (let x = 10; x <= 90; x += 0.5) {
+      expect(-lowestAt(toolpath, x)).toBeCloseTo(depth(x), 6);
+    }
+  });
+
+  it("cuts each pass only where the flute goes deeper than the pass before", () => {
+    const toolpath = engrave([line], { depth: 3, taper: { start: 20, end: 30 } }, ballEndMill);
+    // Three 1 mm passes: the last cuts only where the flute is deeper than 2 mm.
+    const deepest = toolpath.moves.filter((move) => move.kind === "feed" && move.to[2] < -2);
+    const xs = deepest.map((move) => move.to[0]);
+    expect(Math.min(...xs)).toBeGreaterThan(10 + (20 * 2) / 3 - 1e-9);
+    expect(Math.max(...xs)).toBeLessThan(90 - (30 * 2) / 3 + 1e-9);
+    const below = (z: number) =>
+      toolpath.moves.filter((move) => move.kind === "feed" && move.to[2] < z - 1e-9);
+    // No move of the last pass goes back over the ends, which the first two cut.
+    expect(below(-2).every((move) => move.to[0] > 20 && move.to[0] < 70)).toBe(true);
+  });
+
+  it("peaks where the ramps meet when they are longer than the path", () => {
+    const toolpath = engrave([line], { depth: 3, taper: { start: 80, end: 80 } }, ballEndMill);
+    // A pointed flute: halfway along, half as deep.
+    expect(lowestAt(toolpath, 50)).toBeCloseTo(-1.5, 9);
+    expect(Math.min(...toolpath.moves.map((move) => move.to[2]))).toBeCloseTo(-1.5, 9);
+    expect(lowestAt(toolpath, 30)).toBeCloseTo(-0.75, 9);
+  });
+
+  it("starts at the drawn end a start point picks, the taper staying on the path", () => {
+    const toolpath = engrave(
+      [line],
+      { depth: 3, taper: { start: 0, end: 40 }, startPoints: [[90, 10]] },
+      ballEndMill,
+    );
+    const feeds = toolpath.moves.filter((move) => move.kind === "feed");
+    // Each pass starts from the shallow end, the one at x = 90.
+    expect(feeds[0]?.to).toEqual([90, 10, 0]);
+    const depth = profile(0, 40);
+    for (let x = 10; x <= 90; x += 0.5) {
+      expect(-lowestAt(toolpath, x)).toBeCloseTo(depth(x), 6);
+    }
+    // Full depth at the start of the path, plunged there (at the plunge rate).
+    expect(lowestAt(toolpath, 10)).toBeCloseTo(-3, 9);
+  });
+
+  it("goes down steeper than the plunge angle at the plunge rate", () => {
+    const toolpath = engrave([line], { depth: 3, taper: { start: 5, end: 5 } }, ballEndMill);
+    // Going down the 5 mm ramp in, 3 mm deep: steeper than the 3° plunge angle.
+    const steep = toolpath.moves.filter(
+      (move, i) =>
+        move.kind === "feed" &&
+        move.to[0] > 10 &&
+        move.to[0] <= 15 &&
+        move.to[2] < (toolpath.moves[i - 1]?.to[2] ?? 0),
+    );
+    expect(steep.length).toBeGreaterThan(0);
+    expect(
+      steep.every((move) => move.kind === "feed" && move.feedRate === ballEndMill.plungeRate),
+    ).toBe(true);
+  });
+
+  it("cuts closed paths at one depth", () => {
+    const flat = engrave([square], { depth: 3 });
+    expect(engrave([square], { depth: 3, taper: { start: 20, end: 20 } })).toEqual(flat);
+  });
+
+  it("widens and narrows a V-bit's groove with the depth", () => {
+    const sharp: Tool = { ...vBit, vAngle: 90, diameter: 12, stepDown: 3 };
+    const operation = engraving([line], { depth: 3, taper: { start: 30, end: 30 } }, sharp);
+    const toolpath = engraveToolpath(operation, [line], options);
+    expect(toolpath.warnings).toEqual([]);
+    const grid = { columns: 1000, rows: 200, cellWidth: 0.1, cellHeight: 0.1 };
+    const stock = simulateCuts(
+      { width: 100, height: 20, thickness: 18 },
+      toolpathCuts(operation, toolpath),
+      grid,
+    );
+    /** The groove's width on the stock top at `x`. */
+    const widthAt = (x: number) => {
+      const column = Math.floor(x / 0.1);
+      let cut = 0;
+      for (let row = 0; row < 200; row++) {
+        if ((stock.heights[row * 1000 + column] as number) < -1e-6) cut++;
+      }
+      return cut * 0.1;
+    };
+    // 90°: twice as wide as deep, ramping in over 30 mm.
+    expect(widthAt(25.05)).toBeCloseTo(2 * profile(30, 30)(25.05), 0);
+    expect(widthAt(50.05)).toBeCloseTo(6, 0);
+    expect(widthAt(80.05)).toBeCloseTo(2 * profile(30, 30)(80.05), 0);
+    expect(widthAt(25.05)).toBeLessThan(widthAt(35.05));
   });
 });
 
