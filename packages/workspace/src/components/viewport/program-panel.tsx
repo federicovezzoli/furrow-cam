@@ -16,6 +16,19 @@ const ROW = 20;
 const OVERSCAN = 20;
 /** The view's height before it is measured, e.g. in tests. */
 const UNMEASURED = 800;
+/** Browsers cut taller boxes short (Firefox at about 17.9 million px), so longer programs scroll by ratio. */
+const MAX_HEIGHT = 10_000_000;
+
+/**
+ * How `count` lines scroll in a view `view` px tall: in a box `height` px
+ * tall, at most `MAX_HEIGHT`, where scrolling 1 px moves `ratio` px down the
+ * program, so its last line can still be reached.
+ */
+export function programScroll(count: number, view: number): { height: number; ratio: number } {
+  const full = count * ROW;
+  const height = Math.min(full, MAX_HEIGHT);
+  return { height, ratio: full > height && height > view ? (full - view) / (height - view) : 1 };
+}
 
 type Program = NonNullable<ReturnType<typeof usePlayback>["program"]>;
 
@@ -36,15 +49,18 @@ export function ProgramPanel({
   program: Program;
 }) {
   const t = useTranslations("Viewport");
-  const { gcode, blocks, lines, warnings, failure } = program;
+  const { gcode, blocks, moveLines, warnings, failure } = program;
   const text = useMemo(() => gcode.replace(/\n$/, "").split("\n"), [gcode]);
   const current = useStore(store, (s) => {
     const at = path && playbackPosition(path, s.distance);
-    return at ? lineOfMove(lines, at.move) : null;
+    return at ? lineOfMove(moveLines, at.move) : null;
   });
   const view = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState(0);
   const [height, setHeight] = useState(UNMEASURED);
+  const { height: boxHeight, ratio } = programScroll(text.length, height);
+  /** How far down the program the view is, in px of `ROW` per line. */
+  const offset = scroll * ratio;
 
   useEffect(() => {
     const element = view.current;
@@ -59,27 +75,28 @@ export function ProgramPanel({
     const element = view.current;
     if (!element || current === null) return;
     const top = (current - 1) * ROW;
-    if (top < element.scrollTop || top + ROW > element.scrollTop + element.clientHeight) {
+    const shown = element.scrollTop * ratio;
+    if (top < shown || top + ROW > shown + element.clientHeight) {
       // The scroll event comes a frame later, and lines played meanwhile would be blank.
-      setScroll(scrollToLine(element, current));
+      setScroll(scrollToLine(element, current, ratio));
     }
-  }, [current]);
+  }, [current, ratio]);
 
   function seek(line: number) {
     if (!path) return;
-    const move = firstMoveOfLine(lines, path, line);
+    const move = firstMoveOfLine(moveLines, path, line);
     if (move !== null) store.getState().setDistance(moveStartDistance(path, move));
   }
 
   /** Shows line `line` and, if it moves the tool, plays from there. */
   function goTo(line: number) {
     const element = view.current;
-    if (element) setScroll(scrollToLine(element, line));
+    if (element) setScroll(scrollToLine(element, line, ratio));
     seek(line);
   }
 
-  const first = Math.max(Math.floor(scroll / ROW) - OVERSCAN, 0);
-  const last = Math.min(Math.ceil((scroll + height) / ROW) + OVERSCAN, text.length);
+  const first = Math.max(Math.floor(offset / ROW) - OVERSCAN, 0);
+  const last = Math.min(Math.ceil((offset + height) / ROW) + OVERSCAN, text.length);
   const warned = useMemo(
     () => new Set(warnings.filter((w) => w.side === undefined).map((w) => w.line)),
     [warnings],
@@ -112,11 +129,11 @@ export function ProgramPanel({
         className="min-h-0 flex-1 overflow-auto font-mono text-xs"
         onScroll={(event) => setScroll(event.currentTarget.scrollTop)}
       >
-        <div className="relative" style={{ height: text.length * ROW }}>
+        <div className="relative" style={{ height: boxHeight }}>
           {text.slice(first, last).map((code, i) => {
             const line = first + i + 1;
             const block = blockAt(blocks, line);
-            const moves = path !== null && firstMoveOfLine(lines, path, line) !== null;
+            const moves = path !== null && firstMoveOfLine(moveLines, path, line) !== null;
             const Row = moves ? "button" : "div";
             return (
               <Row
@@ -131,7 +148,7 @@ export function ProgramPanel({
                   moves && "cursor-pointer hover:bg-muted",
                   line === current && "bg-primary/15 hover:bg-primary/20",
                 )}
-                style={{ top: (line - 1) * ROW, height: ROW }}
+                style={{ top: (line - 1) * ROW - offset + scroll, height: ROW }}
               >
                 <span
                   className={cn(
@@ -174,9 +191,9 @@ export function ProgramPanel({
   );
 }
 
-/** Scrolls `element` to show line `line` a third of the way down; where it scrolled to. */
-function scrollToLine(element: HTMLElement, line: number): number {
-  element.scrollTop = Math.max((line - 1) * ROW - element.clientHeight / 3, 0);
+/** Scrolls `element` to show line `line` a third of the way down (`programScroll`); where it scrolled to. */
+function scrollToLine(element: HTMLElement, line: number, ratio: number): number {
+  element.scrollTop = Math.max((line - 1) * ROW - element.clientHeight / 3, 0) / ratio;
   return element.scrollTop;
 }
 

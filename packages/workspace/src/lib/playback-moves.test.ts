@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { ToolpathEntry } from "../stores/toolpath-store";
 import {
   firstMoveOfLine,
+  moveLines,
   partAt,
   partProgress,
   playbackKey,
@@ -138,10 +139,10 @@ describe("programParts", () => {
       moveLines: Uint32Array.of(32, 33, 33, 34),
     },
   ];
-  const segmentLines = [
+  const segmentLines = moveLines([
     Uint32Array.of(3, 11, 12, 13, 14, 15, 16, 19, 21, 22, 23, 24),
     Uint32Array.of(31, 32, 33, 34, 40),
-  ];
+  ]);
 
   it("splits the program at each step's first line, the first from its start, the last to its end", () => {
     const parts = programParts(steps, segmentLines, [profile, vcarve], entries);

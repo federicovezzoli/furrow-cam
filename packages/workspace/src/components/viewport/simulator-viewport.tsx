@@ -168,7 +168,8 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
             </p>
           )}
         </section>
-        {showProgram && playback.program && (
+        {/* Nothing to post, or the post failed: no text, and the timeline says why. */}
+        {showProgram && playback.program?.gcode && (
           <ProgramPanel store={store} path={path} program={playback.program} />
         )}
       </div>

@@ -54,18 +54,17 @@ export function playbackKey(
 
 /**
  * The parts of a program read back (ADR-0096) from where the post wrote its
- * `steps`, given the line of each of its segments (`lines`, one array per
- * cut, in order), with the names and colours of `operations` and the
+ * `steps`, given the line of each of its segments (`segmentLines`, all
+ * cuts' in a row, `moveLines`), with the names and colours of `operations` and the
  * toolpaths of `entries`. A step whose toolpath isn't ready is left out, its
  * segments going to the part before.
  */
 export function programParts(
   steps: readonly ProgramStep[],
-  lines: readonly Uint32Array[],
+  segmentLines: Uint32Array,
   operations: readonly Operation[],
   entries: ToolpathState["entries"],
 ): PlaybackPart[] {
-  const segmentLines = moveLines(lines);
   const kept = steps.flatMap((step, i) => {
     const operation = operations.find((candidate) => candidate.id === step.operationId);
     const entry = entries[step.operationId];

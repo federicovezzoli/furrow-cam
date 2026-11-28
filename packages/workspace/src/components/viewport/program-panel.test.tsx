@@ -5,7 +5,7 @@ import { act, fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createPlaybackStore } from "../../stores/playback-store";
 import { renderWorkspace } from "../../test-render";
-import { ProgramPanel } from "./program-panel";
+import { ProgramPanel, programScroll } from "./program-panel";
 
 // Four 10 mm moves along X: line 2's, line 3's and two of line 4's arc.
 const segments = Float32Array.of(
@@ -18,7 +18,7 @@ const path = playbackPath([{ tool: endMill, segments }]);
 const program = {
   gcode: "(Plate)\nG0 X10\nG1 X20\nG2 X40 I10\nM5\n",
   blocks: [{ label: "programEnd" as const, first: 5, last: 5 }],
-  lines: Uint32Array.of(2, 3, 4, 4),
+  moveLines: Uint32Array.of(2, 3, 4, 4),
   warnings: [
     { line: 3, code: "unsupported" as const, word: "A1" },
     { line: 5, code: "unsupported" as const, word: "B1" },
@@ -63,5 +63,14 @@ describe("ProgramPanel", () => {
     // A line without moves is shown, not played.
     fireEvent.click(warnings.getByRole("button", { name: "Line 5: B1 isn't simulated" }));
     expect(store.getState().distance).toBe(10);
+  });
+
+  it("scrolls a program too tall for a browser's box by ratio, to its last line", () => {
+    expect(programScroll(100, 800)).toEqual({ height: 2000, ratio: 1 });
+    const lines = 2_000_000;
+    const { height, ratio } = programScroll(lines, 800);
+    expect(height).toBe(10_000_000);
+    // Scrolled to the bottom, the view ends at the program's last line.
+    expect((height - 800) * ratio + 800).toBeCloseTo(lines * 20);
   });
 });
