@@ -235,19 +235,20 @@ describe("ObjectsPane (ADR-0080)", () => {
     fireEvent.keyDown(row("Square"), { key: "ArrowRight" });
     expect(screen.getAllByRole("button", { name: /^Delete / })).toHaveLength(2);
     const remove = within(row("part.dxf")).getByRole("button", { name: "Delete part.dxf" });
-    expect(remove.getAttribute("title")).toMatch(/^Delete part\.dxf\. Also removes the operation/);
+    expect(remove.getAttribute("title")).toMatch(/^Delete part\.dxf\nAlso removes the operation/);
 
+    // A click that reached the row would select the drawing instead of the model.
+    act(() => workspace.getState().selectModel(model.id));
     fireEvent.click(remove);
     expect(store.getState().document.drawings).toEqual([]);
     expect(store.getState().document.operations.length).toBeLessThan(operations);
-    expect(workspace.getState().selectedPaths).toEqual([]);
+    expect(workspace.getState().selectedModelId).toBe(model.id);
     act(() => store.getState().undo());
     expect(store.getState().document.drawings).toHaveLength(1);
     expect(store.getState().document.operations).toHaveLength(operations);
 
     fireEvent.click(screen.getByRole("button", { name: `Delete ${model.fileName}` }));
     expect(store.getState().document.models).toEqual([]);
-    expect(workspace.getState().selectedModelId).toBeNull();
     act(() => store.getState().undo());
     expect(store.getState().document.models).toEqual([model]);
   });

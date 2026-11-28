@@ -83,7 +83,8 @@ export function ObjectsPane() {
   const drawings = useDocumentStore((s) => s.document.drawings);
   const geometry = useDocumentStore((s) => s.document.geometry);
   const models = useDocumentStore((s) => s.document.models);
-  const document = useDocumentStore((s) => s.document);
+  // Redraws when operations change, for the delete buttons' counts read from `project` below.
+  useDocumentStore((s) => s.document.operations);
   const hiddenIds = useFlaggedIds("hidden");
   const selectedPaths = useWorkspaceStore((s) => s.selectedPaths);
   const selectedModelId = useWorkspaceStore((s) => s.selectedModelId);
@@ -319,6 +320,7 @@ export function ObjectsPane() {
   // One row takes the Tab key: the focused one, else the first.
   const tabbable = rows.some(({ key }) => key === focusKey) ? focusKey : rows[0]?.key;
 
+  const project = store.getState().document;
   return (
     <div role="tree" aria-label={t("label")} aria-multiselectable className="grid p-2 text-ui">
       {rows.map((row, index) => {
@@ -430,8 +432,8 @@ export function ObjectsPane() {
                 label={t("remove", { name: row.label })}
                 also={
                   row.kind === "drawing"
-                    ? removeTitle(tDrawing, drawingOperations(document, row.id).length)
-                    : removeTitle(tModel, modelOperations(document, row.id).length)
+                    ? removeTitle(tDrawing, drawingOperations(project, row.id).length)
+                    : removeTitle(tModel, modelOperations(project, row.id).length)
                 }
                 onClick={() => remove(row, index)}
               />
@@ -463,7 +465,7 @@ function RemoveButton({
       variant="ghost"
       size="icon-compact"
       aria-label={label}
-      title={also ? `${label}. ${also}` : label}
+      title={also ? `${label}\n${also}` : label}
       onClick={(event) => {
         event.stopPropagation();
         onClick();
