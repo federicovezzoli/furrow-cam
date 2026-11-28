@@ -9,7 +9,16 @@ import {
   type Vec3,
 } from "@furrow/cam-core";
 import { type Stock, ToolType } from "@furrow/document";
-import { type GcodeLine, parseGcodeLine, tidy } from "./read-back";
+import {
+  controllerCommand,
+  forget,
+  type GcodeLine,
+  offsetPosition,
+  PROBES,
+  parseGcodeLine,
+  tidy,
+  UNKNOWN_AFTER,
+} from "./read-back";
 
 /** A word the simulation skips, or one after which it can't tell where the tool is. */
 export type ProgramWarning = {
@@ -64,10 +73,6 @@ const TOOL_COMMENT = "Furrow tool:";
 
 /** Modal and non-modal codes that change nothing the simulation follows. */
 const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
-/** Codes after which no axis is known: stored positions, offsets, other work systems. */
-const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59]);
-/** Probing, which stops where it touches: the axes it names aren't known after it. */
-const PROBES = new Set([38.2, 38.3, 38.4, 38.5]);
 // `M62`–`M65` switch a controller output, e.g. a spindle wired to a pin: nothing the simulation follows.
 const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 62, 63, 64, 65, 117, 400]);
 // `H` only names an offset for `G43`, which loses the position anyway; `L` and
@@ -128,14 +133,10 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   const texts = gcode.replace(/\n$/, "").split("\n");
   for (const [i, text] of texts.entries()) {
     const number = i + 1;
-    // A controller's own command, e.g. FluidNC's `$HZ` or `$LocalFS/Run=probe.nc`:
-    // homing loses the axes it homes, all of them if it names none; anything
-    // else, such as a macro, may move the machine anywhere.
-    const command = /^\s*(\$\S*)/.exec(text)?.[1];
-    if (command !== undefined) {
-      const homed = /^\$H([XYZ]*)$/i.exec(command)?.[1]?.toUpperCase();
-      losses.push({ line: number, code: "unknownPosition", word: command });
-      position = forget(position, (axis) => !homed || homed.includes(AXES[axis] as string));
+    const command = controllerCommand(text);
+    if (command) {
+      losses.push({ line: number, code: "unknownPosition", word: command.word });
+      position = forget(position, command.loses);
       continue;
     }
     const line = readLine(text, number);
@@ -196,21 +197,16 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
       position = [Number.NaN, Number.NaN, Number.NaN];
       continue;
     }
-    // The work system in use: `P0`, or `G54`'s `P1`, which the posts use.
-    const ours = offsetWord.P === 0 || offsetWord.P === 1;
     if (setsOffset) {
-      // `L20`: where the tool is becomes the position given, e.g. `G10 L20 P0 X0 Y0 Z0`
-      // zeroes it; `L2` moves the zero by a machine position, which isn't known.
-      if (ours && offsetWord.L === 20) {
-        position = position.map((value, axis) => {
-          const word = axes[axis];
-          return word === undefined ? value : word * scale;
-        }) as Vec3;
-        if (position.every(Number.isFinite)) losses = [];
-      } else if (ours && axes.some((value) => value !== undefined)) {
+      const scaled = axes.map((value) => (value === undefined ? value : value * scale));
+      const next = offsetPosition(position, scaled, offsetWord);
+      if (
+        next.some((value, axis) => Number.isNaN(value) && !Number.isNaN(position[axis] as number))
+      ) {
         losses.push({ line: number, code: "unknownPosition", word: "G10" });
-        position = forget(position, named);
       }
+      position = next;
+      if (position.every(Number.isFinite)) losses = [];
       continue;
     }
     if (probe) {
@@ -269,11 +265,6 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   // Losses are warned of at the move they mattered to.
   warnings.sort((a, b) => a.line - b.line);
   return { cuts, lines, warnings };
-}
-
-/** `position` with the axes `lost` says unknown. */
-function forget(position: Vec3, lost: (axis: number) => boolean): Vec3 {
-  return position.map((value, axis) => (lost(axis) ? Number.NaN : value)) as Vec3;
 }
 
 /** Line `number`, hand-written words tidied as GRBL reads them. */
