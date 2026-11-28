@@ -1,5 +1,19 @@
 # @furrow/post
 
+## 0.17.0
+
+### Minor Changes
+
+- Programs can now be read back move by move, arcs, inches and machine-coordinate moves included, the first step towards a simulator that plays the G-code you export. ([#685](https://github.com/federicovezzoli/furrow-cam/pull/685))
+- The simulator now plays the G-code program you export, not the toolpaths it is made from, so your machine's own start, tool-change and end blocks cut the stock too. Lines it can't simulate are listed under the timeline. ([#686](https://github.com/federicovezzoli/furrow-cam/pull/686))
+- The simulator shows the program beside the stock, with the line being played highlighted. Click a line to play from there, or a warning to jump to its line; the machine's custom blocks are marked. ([#687](https://github.com/federicovezzoli/furrow-cam/pull/687))
+
+### Patch Changes
+
+- Export now keeps checking custom blocks for moves into the stock past `G10 L20` zeroing, probing, `G53` and controller commands like `$HZ`. It skips only the moves that need an axis the controller has lost, and checks again once a move sets it. ([#687](https://github.com/federicovezzoli/furrow-cam/pull/687))
+- The simulator now follows custom blocks that zero the machine where it stands (`G10 L20`), probe, retract, home an axis (`$HZ`) or run a controller macro, instead of stopping, and no longer warns about `M62`–`M65` outputs such as a spindle wired to a pin. It warns that the tool's position is unknown only when a move needed it, not after a probe the next move retracts from. ([#687](https://github.com/federicovezzoli/furrow-cam/pull/687))
+- Updated dependencies: @furrow/document@0.30.0, @furrow/cam-core@0.28.0
+
 ## 0.16.2
 
 ### Patch Changes
