@@ -1,5 +1,5 @@
 import { type Toolpath, type ToolpathInput, toolpathKey } from "@furrow/cam-core";
-import type { ProjectDocument, Stock } from "@furrow/document";
+import type { ProjectDocument, Stock, StockSide } from "@furrow/document";
 import {
   type GcodeExport,
   type GcodeFile,
@@ -103,4 +103,16 @@ export function readBack({ side, steps, gcode }: GcodeFile, stock: Stock): Progr
     if (!(error instanceof ProgramReadError)) throw error;
     return { side, steps, error: { line: error.line, reason: error.reason } };
   }
+}
+
+/**
+ * The programs among `files` that playing `side` needs: a one-sided
+ * project's only one; the side's own, and the top side's under the bottom
+ * side's (ADR-0060).
+ */
+export function playedFiles(files: readonly GcodeFile[], side: StockSide): GcodeFile[] {
+  return files.filter(
+    (file) =>
+      file.side === null || file.side === side || (side === "bottom" && file.side === "top"),
+  );
 }

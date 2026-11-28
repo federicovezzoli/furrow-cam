@@ -17,7 +17,7 @@ import {
 import { type Machine, type Message, MessageError } from "@furrow/document";
 import { estimateTime } from "@furrow/post";
 import { sha256Hex } from "../lib/mesh-worker-protocol";
-import { exportFromResults, readBack, ToolpathResults } from "../lib/toolpath-export";
+import { exportFromResults, playedFiles, readBack, ToolpathResults } from "../lib/toolpath-export";
 import type {
   GcodeExportRequest,
   ToolpathMessage,
@@ -220,7 +220,9 @@ async function exportProgram({
       (input) => generateToolpath(input, context),
       { version },
     );
-    const playbacks = simulate && program.files.map((file) => readBack(file, document.stock));
+    const playbacks =
+      simulate &&
+      playedFiles(program.files, simulate).map((file) => readBack(file, document.stock));
     scope.postMessage({ export: id, ...program, ...(playbacks && { playbacks }) });
   } catch (error) {
     if (error instanceof MissingMeshError) {

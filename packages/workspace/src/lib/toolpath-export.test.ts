@@ -3,7 +3,13 @@ import type { ProjectDocument } from "@furrow/document";
 import { fullDocument } from "@furrow/document/fixtures";
 import { exportGcode, type GcodeFile } from "@furrow/post";
 import { describe, expect, it, vi } from "vitest";
-import { type ExportInput, exportFromResults, readBack, ToolpathResults } from "./toolpath-export";
+import {
+  type ExportInput,
+  exportFromResults,
+  playedFiles,
+  readBack,
+  ToolpathResults,
+} from "./toolpath-export";
 
 /** The fixture project zeroed on the stock top, its enabled operations' inputs hashed by index. */
 function project(): { document: ProjectDocument; inputs: ExportInput[] } {
@@ -116,5 +122,23 @@ describe("readBack", () => {
     expect(readBack(broken, document.stock)).toMatchObject({
       error: { line: 2, reason: "unreadable" },
     });
+  });
+});
+
+describe("playedFiles", () => {
+  const file = (side: GcodeFile["side"]): GcodeFile => ({
+    fileName: "",
+    gcode: "",
+    side,
+    steps: [],
+  });
+
+  it("reads back only the programs the side shown plays", () => {
+    expect(playedFiles([file(null)], "top")).toEqual([file(null)]);
+    const both = [file("top"), file("bottom")];
+    expect(playedFiles(both, "top")).toEqual([file("top")]);
+    // The bottom side is played over the stock the top side's program left.
+    expect(playedFiles(both, "bottom")).toEqual(both);
+    expect(playedFiles([file("bottom")], "top")).toEqual([]);
   });
 });

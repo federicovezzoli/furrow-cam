@@ -56,8 +56,11 @@ export type GcodeExportRequest = {
   version: string | null;
   inputs: ExportInput[];
   meshes?: ArrayBuffer[];
-  /** Also read each program back for the simulator (#683, `ProgramPlayback`). */
-  simulate?: true;
+  /**
+   * Also read back for the simulator the programs that side plays
+   * (#683, `ProgramPlayback`, `playedFiles`).
+   */
+  simulate?: StockSide;
 };
 
 /**
@@ -87,8 +90,8 @@ type PendingExport = {
   /** The project's name now, for the file and the program's header. */
   name: () => string;
   meshes: Map<string, ArrayBuffer>;
-  /** For the simulator: only toolpaths ready are posted, and each program is read back. */
-  simulate: boolean;
+  /** For the simulator: only toolpaths ready are posted, and the side's programs are read back. */
+  simulate: StockSide | null;
   restarts: number;
   resolve: (result: GcodeExportResult) => void;
 };
@@ -363,7 +366,7 @@ export function scheduleToolpaths(
       version: versionLabel(state),
       inputs,
       ...(meshes.length > 0 && { meshes }),
-      ...(pending.simulate && { simulate: true as const }),
+      ...(pending.simulate && { simulate: pending.simulate }),
     };
     return pending.request;
   }
@@ -374,10 +377,13 @@ export function scheduleToolpaths(
      * The G-code of the document as it is when the program is ready, from the
      * toolpaths the worker holds (#133): an edit made while it is made starts
      * it again (#252). `name` is read at each attempt, so a rename counts too.
-     * With `simulate`, only toolpaths ready are posted, and each program is
-     * read back for the simulator (`playbacks`).
+     * With `simulate`, the side the simulator plays, only toolpaths ready are
+     * posted, and the programs that side plays are read back (`playbacks`).
      */
-    exportGcode(name: () => string, { simulate = false } = {}): Promise<GcodeExportResult> {
+    exportGcode(
+      name: () => string,
+      { simulate = null }: { simulate?: StockSide | null } = {},
+    ): Promise<GcodeExportResult> {
       return new Promise((resolve) => {
         const pending: PendingExport = {
           // Filled in by `exportRequest`.

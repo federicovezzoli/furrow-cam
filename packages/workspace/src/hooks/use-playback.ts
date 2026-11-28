@@ -20,6 +20,7 @@ import {
   playedProgram,
   programParts,
 } from "../lib/playback-moves";
+import { programRequests } from "../lib/program-requests";
 import { TEXTURE_WIDTH } from "../lib/simulation-mesh";
 import { useWorkspaceHost } from "../providers/workspace-host";
 import {
@@ -225,8 +226,8 @@ export function usePlayback(maxCells: number | null) {
 
 /**
  * Asks the toolpath worker for the program `latest` keys whenever it differs
- * from the one played (`played`), one at a time: an answer for a key no longer
- * wanted asks again for the latest. The answer goes to `onProgram`.
+ * from the one played (`played`), one at a time (`programRequests`). The
+ * answer goes to `onProgram`.
  */
 function useProgram(
   latest: ReturnType<typeof playbackKey>,
@@ -238,38 +239,30 @@ function useProgram(
   const { name } = useWorkspaceHost().project;
   const refs = useRef({ latest, flipAxis, name, onProgram });
   refs.current = { latest, flipAxis, name, onProgram };
-  const busy = useRef(false);
-  const mounted = useRef(true);
+  const requests = useRef<{ update: (played: string | null) => void } | null>(null);
   useEffect(() => {
-    mounted.current = true;
+    const made = programRequests(
+      (wanted: NonNullable<typeof latest>) =>
+        controls
+          .exportGcode(() => refs.current.name, { simulate: wanted.side })
+          .catch(
+            (error: unknown): GcodeExportResult => ({
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          ),
+      () => refs.current.latest,
+      (wanted, result) =>
+        refs.current.onProgram(playedProgram(wanted, result, refs.current.flipAxis)),
+    );
+    requests.current = made;
     return () => {
-      mounted.current = false;
+      made.stop();
+      requests.current = null;
     };
-  }, []);
-  useEffect(() => {
-    if (!latest || latest.key === played || busy.current) return;
-    function ask() {
-      const wanted = refs.current.latest;
-      if (!wanted) return;
-      busy.current = true;
-      controls
-        .exportGcode(() => refs.current.name, { simulate: true })
-        .catch(
-          (error: unknown): GcodeExportResult => ({
-            error: error instanceof Error ? error.message : String(error),
-          }),
-        )
-        .then((result) => {
-          busy.current = false;
-          if (!mounted.current) return;
-          const now = refs.current.latest;
-          if (now?.key === wanted.key) {
-            refs.current.onProgram(playedProgram(wanted, result, refs.current.flipAxis));
-          } else if (now) ask();
-        });
-    }
-    ask();
-  }, [latest, played, controls]);
+  }, [controls]);
+  // `controls` too: new requests ask for the program again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `latest` and `controls` trigger it, read through refs
+  useEffect(() => requests.current?.update(played), [latest, played, controls]);
 }
 
 /** Moves `store`'s playback along while it is playing, stopping at `length`; not while `held`. */

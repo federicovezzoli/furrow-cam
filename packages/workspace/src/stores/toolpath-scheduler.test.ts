@@ -509,13 +509,13 @@ describe("scheduleToolpaths", () => {
 
   it("posts only the toolpaths ready for the simulator, and asks for them read back (#683)", () => {
     const { requests, exports, schedule } = setup();
-    void schedule.exportGcode(() => "Plate", { simulate: true });
+    void schedule.exportGcode(() => "Plate", { simulate: "top" });
     // Still computing: left out, as a failed one would be.
     expect((exports[0] as GcodeExportRequest).inputs).toEqual([]);
-    expect((exports[0] as GcodeExportRequest).simulate).toBe(true);
+    expect((exports[0] as GcodeExportRequest).simulate).toBe("top");
     const [request] = requests as [ToolpathRequest];
     schedule.receive({ ...request, ...compute(request.input) });
-    void schedule.exportGcode(() => "Plate", { simulate: true });
+    void schedule.exportGcode(() => "Plate", { simulate: "top" });
     expect((exports[1] as GcodeExportRequest).inputs.map(({ operationId }) => operationId)).toEqual(
       [OPERATION_ID],
     );
