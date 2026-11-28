@@ -68,14 +68,19 @@ const OPERATION_COMMENT = "Operation: ";
 /** Modal and non-modal codes that change nothing the simulation follows. */
 const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
 /** Codes after which no axis is known: stored positions, probing, offsets, other work systems. */
-const UNKNOWN_AFTER = new Set([28, 30, 38.2, 38.3, 38.4, 38.5, 43.1, 92, 92.1, 55, 56, 57, 58, 59]);
-const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 400]);
-const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P"]);
+const UNKNOWN_AFTER = new Set([
+  28, 30, 38.2, 38.3, 38.4, 38.5, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59,
+]);
+const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 117, 400]);
+// `H` only names an offset for `G43`, which loses the position anyway.
+const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H"]);
 const AXES = "XYZ";
 const MM_PER_INCH = 25.4;
 /** GRBL's arc tolerances: the end point's radius may differ from the start's by this much. */
 const ARC_RADIUS_ERROR = 0.005;
 const ARC_RADIUS_RELATIVE_ERROR = 0.001;
+/** More chords than any real arc needs: a 1 m circle takes about 700. */
+const MAX_ARC_CHORDS = 100_000;
 /** The arc's two axes and its linear one, by plane, in GRBL's order. */
 const PLANES: Record<17 | 18 | 19, [number, number, number]> = {
   17: [0, 1, 2],
@@ -180,7 +185,10 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
       position = [Number.NaN, Number.NaN, Number.NaN];
       continue;
     }
-    if (axes.every((value) => value === undefined)) continue;
+    // Marlin reads an arc with only its centre as a full circle.
+    const circle =
+      (motion === 2 || motion === 3) && [arc.I, arc.J, arc.K].some((v) => v !== undefined);
+    if (axes.every((value) => value === undefined) && !circle) continue;
     if (machine) {
       // Where machine coordinates are in work coordinates isn't known.
       position = position.map((value, axis) =>
@@ -253,16 +261,24 @@ function readTool(comment: string, line: number): CutterShape {
     return value;
   };
   const diameter = length("diameter");
-  if (!type.success || diameter === null || !(diameter > 0)) {
-    throw new ProgramReadError(line, "badTool");
-  }
-  return {
-    type: type.data,
-    diameter,
-    vAngle: length("vAngle"),
-    tipDiameter: length("tipDiameter"),
-    taperAngle: length("taperAngle"),
-  };
+  const vAngle = length("vAngle");
+  const tipDiameter = length("tipDiameter");
+  const taperAngle = length("taperAngle");
+  // What `cutterProfile` needs of each type, in the document's ranges.
+  const valid =
+    type.success &&
+    diameter !== null &&
+    diameter > 0 &&
+    (tipDiameter === null || tipDiameter >= 0) &&
+    (type.data !== "v_bit" || (vAngle !== null && vAngle > 0 && vAngle < 180)) &&
+    (type.data !== "tapered_ball_end_mill" ||
+      (tipDiameter !== null &&
+        tipDiameter > 0 &&
+        taperAngle !== null &&
+        taperAngle > 0 &&
+        taperAngle < 90));
+  if (!valid) throw new ProgramReadError(line, "badTool");
+  return { type: type.data, diameter, vAngle, tipDiameter, taperAngle };
 }
 
 /**
@@ -324,6 +340,8 @@ function arcPoints(
       ? 2 * Math.acos(1 - DEFAULT_CHORD_TOLERANCE / radius)
       : Math.PI;
   const count = Math.max(1, Math.ceil(Math.abs(sweep) / step));
+  // A huge radius rounds the step to nothing.
+  if (!(count <= MAX_ARC_CHORDS)) throw new ProgramReadError(line, "badArc");
   const start = Math.atan2(sb, sa);
   const rise = (to[linear] as number) - (from[linear] as number);
   const points: Vec3[] = [];

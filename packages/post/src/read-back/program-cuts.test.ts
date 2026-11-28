@@ -96,6 +96,7 @@ describe("programCuts", () => {
       "g0 z5",
       "G0X.5 Y1 ; to the start",
       "M0 Change the bit",
+      "M117 Cutting, 1/4 inch bit",
     ].join("\n");
     const { cuts, warnings } = programCuts(gcode, STOCK);
     expect(cuts[0]?.tool.type).toBe("ball_end_mill");
@@ -133,6 +134,12 @@ describe("programCuts", () => {
       segments: Float32Array;
     };
     const xs = points(circle).map(([x]) => x);
+    // Marlin's full circle with only its centre.
+    const centreOnly = programCuts(program("G1 Z-1 F300", "G2 I5"), STOCK);
+    expect(points(centreOnly.cuts[0] as { segments: Float32Array }).map(([x]) => x)).toEqual(
+      expect.arrayContaining([expect.closeTo(20, 2)]),
+    );
+    expect(centreOnly.lines[0]?.at(-1)).toBe(5);
     expect(Math.max(...xs)).toBeCloseTo(20, 2);
     expect(Math.min(...xs)).toBeCloseTo(10, 2);
   });
@@ -164,6 +171,11 @@ describe("programCuts", () => {
       reason: "badArc",
     });
     expect(readError(program("G2 X20 Y10"))).toEqual({ line: 4, reason: "badArc" });
+    // A radius so large its chords round to nothing.
+    expect(readError(program("G2 X10 Y10 I100000000000000000000"))).toEqual({
+      line: 4,
+      reason: "badArc",
+    });
   });
 
   it("reads inches and relative moves", () => {
@@ -195,10 +207,14 @@ describe("programCuts", () => {
   });
 
   it("forgets every axis after G28, probing or an offset", () => {
-    const { warnings } = programCuts(program("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50"), STOCK);
+    const { warnings } = programCuts(
+      program("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50", "G0 X1 Y1 Z5", "G43 H1"),
+      STOCK,
+    );
     expect(warnings).toEqual([
       { line: 4, code: "unknownPosition", word: "G28" },
       { line: 6, code: "unknownPosition", word: "G38.2" },
+      { line: 8, code: "unknownPosition", word: "G43" },
     ]);
     expect(readError(program("G92 X0", "G1 X5 F300"))).toEqual({ line: 5, reason: "unknownStart" });
   });
@@ -220,7 +236,16 @@ describe("programCuts", () => {
       line: 1,
       reason: "badTool",
     });
-    expect(readError("(Furrow tool: type=v_bit)")).toEqual({ line: 1, reason: "badTool" });
+    for (const fields of [
+      "type=v_bit",
+      "type=v_bit diameter=12",
+      "type=v_bit diameter=12 vAngle=180",
+      "type=tapered_ball_end_mill diameter=3 tipDiameter=0.5",
+      "type=tapered_ball_end_mill diameter=3 taperAngle=5",
+      "type=flat_end_mill diameter=3 tipDiameter=-1",
+    ]) {
+      expect(readError(`(Furrow tool: ${fields})`)).toEqual({ line: 1, reason: "badTool" });
+    }
     expect(readError(["G80", TOOL, "G0 X1 Y1 Z1", "G80", "X2"].join("\n"))).toEqual({
       line: 5,
       reason: "noMotion",

@@ -73,13 +73,13 @@ export function parseGcode(gcode: string): GcodeLine[] {
 /** Line `number` of a program, throwing on text that isn't G-code. */
 export function parseGcodeLine(text: string, number: number): GcodeLine {
   // `( … )` comments and a `; …` one to the end of the line, whichever comes
-  // first, and Marlin's `M0 message`.
+  // first, and Marlin's `M0 message` and `M117 message`.
   const COMMENT = /\(([^)]*)\)|;(.*)$/g;
   const comments = [...text.matchAll(COMMENT)].map(
     (match) => (match[1] ?? match[2]?.trim()) as string,
   );
   let code = text.replace(COMMENT, " ").trim();
-  const message = /^(M0*[01])\s+(.+)$/i.exec(code);
+  const message = /^(M0*[01]|M117)\s+(.+)$/i.exec(code);
   // `M0 S30` waits 30 s: its words aren't a message.
   if (message && !/^([A-Z]\s*[-+]?(\d+\.?\d*|\.\d+)\s*)+$/i.test(message[2] as string)) {
     code = (message[1] as string).toUpperCase();
