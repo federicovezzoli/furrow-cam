@@ -1,7 +1,17 @@
-import { createCache, generateToolpath, type SimulationCut, type Vec3 } from "@furrow/cam-core";
+import {
+  createCache,
+  generateToolpath,
+  heightmapGrid,
+  type SimulationCut,
+  simulateCuts,
+  smallestCutWidth,
+  toolpathCuts,
+  type Vec3,
+} from "@furrow/cam-core";
 import { describe, expect, it } from "vitest";
 import { enabledInputs, exportGcode, postToolpaths } from "../export";
 import { oneFile } from "../export-test-utils";
+import { programCuts } from "../read-back/program-cuts";
 import {
   checkGcode,
   formatViolations,
@@ -40,6 +50,38 @@ describe.each(projects)(
       const posted = oneFile(postToolpaths(document, title, computed));
       expect(posted.gcode).toBe(gcode);
       expect(posted.warnings).toEqual(warnings);
+    });
+
+    it("leaves the same stock read back as its toolpaths do (ADR-0096)", () => {
+      const toolpathContext = { ...context, cuts: createCache<SimulationCut[]>(16) };
+      const toolCuts = enabledInputs(document).flatMap((input) =>
+        toolpathCuts(input.operation, generateToolpath(input, toolpathContext)),
+      );
+      const { stock } = document;
+      const grid = heightmapGrid(stock, smallestCutWidth(toolCuts), 250_000);
+      const expected = simulateCuts(stock, toolCuts, grid).heights;
+      const read = programCuts(gcode, stock);
+      const actual = simulateCuts(stock, read.cuts, grid).heights;
+      // Within one cell: rounding to 0.001 mm can move a cell's centre in or out of a cut.
+      const { columns, rows } = grid;
+      const off: string[] = [];
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          let low = Infinity;
+          let high = -Infinity;
+          for (let r = Math.max(0, row - 1); r <= Math.min(rows - 1, row + 1); r++) {
+            for (let c = Math.max(0, column - 1); c <= Math.min(columns - 1, column + 1); c++) {
+              const height = expected[r * columns + c] as number;
+              low = Math.min(low, height);
+              high = Math.max(high, height);
+            }
+          }
+          const height = actual[row * columns + column] as number;
+          if (height < low - 0.01 || height > high + 0.01) off.push(`${column},${row}: ${height}`);
+        }
+      }
+      expect(off.slice(0, 5)).toEqual([]);
+      expect(read.warnings).toEqual([]);
     });
   },
 );
