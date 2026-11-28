@@ -62,13 +62,14 @@ const TOOL_COMMENT = "Furrow tool:";
 
 /** Modal and non-modal codes that change nothing the simulation follows. */
 const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
-/** Codes after which no axis is known: stored positions, probing, offsets, other work systems. */
-const UNKNOWN_AFTER = new Set([
-  28, 30, 38.2, 38.3, 38.4, 38.5, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59,
-]);
+/** Codes after which no axis is known: stored positions, offsets, other work systems. */
+const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59]);
+/** Probing, which stops where it touches: the axes it names aren't known after it. */
+const PROBES = new Set([38.2, 38.3, 38.4, 38.5]);
 const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 117, 400]);
-// `H` only names an offset for `G43`, which loses the position anyway.
-const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H"]);
+// `H` only names an offset for `G43`, which loses the position anyway; `L` and
+// `P` say which offset `G10` sets.
+const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H", "L"]);
 const AXES = "XYZ";
 const MM_PER_INCH = 25.4;
 /** GRBL's arc tolerances: the end point's radius may differ from the start's by this much. */
@@ -138,7 +139,12 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     };
     let machine = false;
     let lost = false;
+    let probe = false;
+    /** `G10`: its axis words set an offset, they don't move. */
+    let setsOffset = false;
+    const offsetWord = { L: undefined as number | undefined, P: undefined as number | undefined };
     for (const { letter, value } of line.words) {
+      if (letter === "L" || letter === "P") offsetWord[letter] = value;
       const word = `${letter}${value}`;
       if (letter === "G") {
         if (value === 0 || value === 1 || value === 2 || value === 3) motion = value;
@@ -150,6 +156,10 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
         else if (value === 80) motion = null;
         else if (value === 53) {
           machine = true;
+          warnings.push({ line: number, code: "unknownPosition", word });
+        } else if (value === 10) setsOffset = true;
+        else if (PROBES.has(value)) {
+          probe = true;
           warnings.push({ line: number, code: "unknownPosition", word });
         } else if (UNKNOWN_AFTER.has(value)) {
           lost = true;
@@ -168,6 +178,30 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
 
     if (lost) {
       position = [Number.NaN, Number.NaN, Number.NaN];
+      continue;
+    }
+    // The work system in use: `P0`, or `G54`'s `P1`, which the posts use.
+    const ours = offsetWord.P === 0 || offsetWord.P === 1;
+    if (setsOffset) {
+      // `L20`: where the tool is becomes the position given, e.g. `G10 L20 P0 X0 Y0 Z0`
+      // zeroes it; `L2` moves the zero by a machine position, which isn't known.
+      if (ours && offsetWord.L === 20) {
+        position = position.map((value, axis) => {
+          const word = axes[axis];
+          return word === undefined ? value : word * scale;
+        }) as Vec3;
+      } else if (ours && axes.some((value) => value !== undefined)) {
+        warnings.push({ line: number, code: "unknownPosition", word: "G10" });
+        position = position.map((value, axis) =>
+          axes[axis] === undefined ? value : Number.NaN,
+        ) as Vec3;
+      }
+      continue;
+    }
+    if (probe) {
+      position = position.map((value, axis) =>
+        axes[axis] === undefined ? value : Number.NaN,
+      ) as Vec3;
       continue;
     }
     const noAxes = axes.every((value) => value === undefined);
@@ -196,7 +230,11 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     position = to;
     const known = (point: Vec3) => point.every(Number.isFinite);
     if (!known(from)) {
-      if (motion !== 0) throw new ProgramReadError(number, "unknownStart");
+      // A feed from where the tool isn't known can't be followed into the stock;
+      // above it, e.g. a retract after probing, it cuts nothing.
+      if (motion !== 0 && !(known(to) && to[2] >= top)) {
+        throw new ProgramReadError(number, "unknownStart");
+      }
       if (known(to)) segment(number, [to[0], to[1], Math.max(to[2], top)], to);
       continue;
     }

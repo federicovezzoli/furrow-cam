@@ -225,6 +225,42 @@ describe("programCuts", () => {
     expect(readError(program("G92 X0", "G1 X5 F300"))).toEqual({ line: 5, reason: "unknownStart" });
   });
 
+  it("follows a block that zeroes where the tool is, probes and retracts (G10 L20)", () => {
+    const block = [
+      TOOL,
+      "G21",
+      "G10 L20 P0 X0 Y0 Z0 (set current location to zero)",
+      "G0 X10 Y10 F2000",
+      "M0 (MSG Attach probe)",
+      "G38.2 Z-110 F200 P0.5",
+      "G1 Z10 F900",
+      "M62 P1",
+      "G1 X20 Z-1",
+    ].join("\n");
+    const { cuts, warnings } = programCuts(block, STOCK);
+    expect(warnings).toEqual([
+      { line: 6, code: "unknownPosition", word: "G38.2" },
+      { line: 8, code: "unsupported", word: "M62" },
+    ]);
+    const cut = cuts[0] as { segments: Float32Array };
+    // G10 L20 makes X0 Y0 Z0 known; the probe loses Z only, and the retract above
+    // the stock finds it again, so the feed after it is cut.
+    expect(segment(cut, 0)[1]).toEqual([10, 10, 0]);
+    expect(segment(cut, 2)).toEqual([
+      [10, 10, 10],
+      [20, 10, -1],
+    ]);
+    // Into the stock from an unknown height, a feed can't be followed.
+    expect(readError(program("G38.2 Z-110 F200", "G1 Z-1 F300"))).toEqual({
+      line: 5,
+      reason: "unknownStart",
+    });
+    // `L2` moves the zero by a machine position: the axes it names are lost.
+    expect(programCuts(program("G10 L2 P1 Z-50"), STOCK).warnings).toEqual([
+      { line: 4, code: "unknownPosition", word: "G10" },
+    ]);
+  });
+
   it("skips words it doesn't support, saying which and where", () => {
     const { warnings, cuts } = programCuts(program("G41 G1 X20 A10 F300", "M8", "M106"), STOCK);
     expect(warnings).toEqual([
