@@ -420,7 +420,6 @@ describe("migrations", () => {
       width: null,
       ramp: false,
       startPoints: [],
-      taper: null,
     } as const;
     const engrave = { ...profile, type: "engrave", params } as const;
     const v44 = { ...current, schemaVersion: 44, operations: [engrave] };
