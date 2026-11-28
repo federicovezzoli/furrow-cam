@@ -10,7 +10,7 @@ import {
 import { Button } from "@furrow/ui/components/ui/button";
 import { formatWarning } from "@furrow/ui/lib/i18n";
 import { Canvas } from "@react-three/fiber";
-import { RouteIcon, RouteOffIcon } from "lucide-react";
+import { FileCodeIcon, RouteIcon, RouteOffIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
@@ -27,6 +27,7 @@ import { settledEntries } from "../../stores/toolpath-store";
 import { type CameraPoses, OrbitCamera, TopCamera } from "./cameras";
 import { PlaybackProvider, PlaybackTool } from "./playback";
 import { PlaybackTimeline } from "./playback-timeline";
+import { ProgramPanel } from "./program-panel";
 import { ReportCapture } from "./report-capture";
 import { PartingPlane, Stock, WorkOrigin } from "./scene";
 import { PALETTES, type Palette } from "./scene-style";
@@ -45,7 +46,8 @@ import {
 /**
  * The simulator's viewport (#100, ADR-0042, ADR-0096): the stock cut move by
  * move as the posted program plays, the tool drawn where it is, the toolpaths trailing
- * behind it (unless hidden), and the timeline under the scene. Cameras,
+ * behind it (unless hidden), the program beside it (unless hidden, #684) and
+ * the timeline under the scene. Cameras,
  * views and, in a two-sided project, sides work as in the workspace.
  * `children` lead the timeline. Browser-only: load it with `next/dynamic` and `ssr: false`.
  */
@@ -80,6 +82,7 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
   const fitBox = useMemo(() => boxWithPoint(box, [...xyOriginPosition(stock), 0]), [box, stock]);
   const [fits, setFits] = useState(0);
   const [showToolpaths, setShowToolpaths] = useState(true);
+  const [showProgram, setShowProgram] = useState(true);
   const ToolpathsIcon = showToolpaths ? RouteIcon : RouteOffIcon;
   const poseKey = `${view}:${fits}:${width}x${height}x${thickness}`;
   const [poses] = useState<CameraPoses>(() => new Map());
@@ -104,53 +107,72 @@ export function SimulatorViewport({ children }: { children?: React.ReactNode }) 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section
-        aria-label={t("simulation")}
-        className="relative min-h-0 flex-1 bg-muted/40"
-        data-demo="simulation"
-      >
-        <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
-          <ReportCapture />
-          {view === "top" ? (
-            <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
-          ) : (
-            <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
-          )}
-          <PlaybackProvider value={scene}>
-            <SimulatorScene
-              box={box}
-              palette={palette}
-              heightmap={heightmap}
-              updates={playback.updates}
-              showToolpaths={showToolpaths}
-            />
-          </PlaybackProvider>
-          <TextureLimit onLimit={setMaxTextureSize} />
-        </Canvas>
-        <div className="absolute top-2 left-2 flex items-center gap-2">
-          <ViewButtons view={view} onFit={() => setFits((n) => n + 1)} />
-          <SideButtons />
-          <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
-            <Button
-              variant={showToolpaths ? "secondary" : "ghost"}
-              size="icon-compact"
-              aria-label={t("showToolpaths")}
-              aria-pressed={showToolpaths}
-              title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
-              onClick={() => setShowToolpaths(!showToolpaths)}
-              data-demo="show-toolpaths"
-            >
-              <ToolpathsIcon />
-            </Button>
-            <PartingButton />
+      <div className="flex min-h-0 flex-1">
+        <section
+          aria-label={t("simulation")}
+          className="relative min-h-0 min-w-0 flex-1 bg-muted/40"
+          data-demo="simulation"
+        >
+          <Canvas frameloop="demand" dpr={[1, 2]} aria-label={t("simulationScene")}>
+            <ReportCapture />
+            {view === "top" ? (
+              <TopCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
+            ) : (
+              <OrbitCamera key={poseKey} box={fitBox} poses={poses} poseKey={poseKey} />
+            )}
+            <PlaybackProvider value={scene}>
+              <SimulatorScene
+                box={box}
+                palette={palette}
+                heightmap={heightmap}
+                updates={playback.updates}
+                showToolpaths={showToolpaths}
+              />
+            </PlaybackProvider>
+            <TextureLimit onLimit={setMaxTextureSize} />
+          </Canvas>
+          <div className="absolute top-2 left-2 flex items-center gap-2">
+            <ViewButtons view={view} onFit={() => setFits((n) => n + 1)} />
+            <SideButtons />
+            <div role="toolbar" aria-label={t("cut")} className={TOOLBAR_GROUP}>
+              <Button
+                variant={showToolpaths ? "secondary" : "ghost"}
+                size="icon-compact"
+                aria-label={t("showToolpaths")}
+                aria-pressed={showToolpaths}
+                title={showToolpaths ? t("hideToolpathsShort") : t("showToolpathsShort")}
+                onClick={() => setShowToolpaths(!showToolpaths)}
+                data-demo="show-toolpaths"
+              >
+                <ToolpathsIcon />
+              </Button>
+              <PartingButton />
+            </div>
+            <div className={TOOLBAR_GROUP}>
+              <Button
+                variant={showProgram ? "secondary" : "ghost"}
+                size="icon-compact"
+                aria-label={t("showProgram")}
+                aria-pressed={showProgram}
+                title={showProgram ? t("hideProgramShort") : t("showProgramShort")}
+                onClick={() => setShowProgram(!showProgram)}
+                data-demo="show-program"
+              >
+                <FileCodeIcon />
+              </Button>
+            </div>
           </div>
-        </div>
-        {nothing && (
-          <p className="absolute inset-x-0 top-1/2 text-center text-ui text-muted-foreground">
-            {t("nothing")}
-          </p>
+          {nothing && (
+            <p className="absolute inset-x-0 top-1/2 text-center text-ui text-muted-foreground">
+              {t("nothing")}
+            </p>
+          )}
+        </section>
+        {/* Nothing to post, or the post failed: no text, and the timeline says why. */}
+        {showProgram && playback.program?.gcode && (
+          <ProgramPanel store={store} path={path} program={playback.program} />
         )}
-      </section>
+      </div>
       <PlaybackTimeline
         store={store}
         path={path}
@@ -180,7 +202,8 @@ function programStatus(
   if (!program) return [];
   const { failure, warnings } = program;
   const lines: string[] = [];
-  if (failure && "line" in failure) lines.push(t("programUnreadable", failure));
+  if (failure && "line" in failure)
+    lines.push(t("programUnreadable", { ...failure, side: failure.side ?? "shown" }));
   else if (failure) {
     const error = formatWarning(tAll, { operation: failure.operation, message: failure.error });
     lines.push(t("simulationFailed", { error }));

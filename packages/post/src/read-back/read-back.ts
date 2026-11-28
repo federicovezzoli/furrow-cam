@@ -13,7 +13,7 @@ import {
 } from "@furrow/cam-core";
 import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
 import { formatNumber } from "../format";
-import type { PostWarning } from "../post";
+import type { CustomBlock, PostWarning } from "../post";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
 export const EPSILON = 1e-3;
@@ -48,17 +48,6 @@ export type GcodeMove = {
 /** What a program is read against: the project it was posted from. */
 export type CheckedProject = Pick<ProjectDocument, "stock" | "machine" | "operations">;
 
-/** The custom blocks, as warnings name them. */
-export type BlockLabel =
-  | "programStart"
-  | "toolChangePad"
-  | "toolChange"
-  | "operationStart"
-  | "programEnd";
-
-/** Lines `first` to `last` (1-based) of a program: one custom block, named by `label`. */
-export type CustomBlock = { label: BlockLabel; first: number; last: number };
-
 /** What a custom block's move does, as `grbl.customBlockMove` says it. */
 type BlockProblem = "material" | "belowBottom" | "unknownPosition" | "unreadable" | "unfollowed";
 
@@ -78,6 +67,8 @@ export function parseGcodeLine(text: string, number: number): GcodeLine {
   const comments = [...text.matchAll(COMMENT)].map(
     (match) => (match[1] ?? match[2]?.trim()) as string,
   );
+  // A controller's own command, e.g. `$HZ`: no G-code words (`controllerCommand`).
+  if (/^\s*\$/.test(text)) return { number, text, words: [], comment: null };
   let code = text.replace(COMMENT, " ").trim();
   const message = /^(M0*[01]|M117)\s+(.+)$/i.exec(code);
   // `M0 S30` waits 30 s: its words aren't a message.
@@ -94,32 +85,116 @@ export function parseGcodeLine(text: string, number: number): GcodeLine {
   return { number, text, words, comment: comments.length > 0 ? comments.join(" ") : null };
 }
 
+/** Codes after which no axis is known: stored positions and offsets. */
+export const UNKNOWN_AFTER = new Set([28, 30, 43, 43.1, 92, 92.1]);
+/**
+ * The work coordinate systems. Switching to another loses every axis; the
+ * program is taken to start in `G54`, the one the posts' `P1` names.
+ */
+export const WORK_SYSTEMS = new Set([54, 55, 56, 57, 58, 59]);
+/** Probing, which stops where it touches: the axes it names aren't known after it. */
+export const PROBES = new Set([38.2, 38.3, 38.4, 38.5]);
+
+/**
+ * A controller's own command on line `text`, e.g. FluidNC's `$HZ` or
+ * `$LocalFS/Run=probe.nc`, and the axes it loses: homing loses the axes it
+ * homes, all of them if it names none; anything else, such as a macro, may
+ * move the machine anywhere. `null` if the line isn't one.
+ */
+export function controllerCommand(
+  text: string,
+): { word: string; loses: (axis: number) => boolean } | null {
+  const word = /^\s*(\$\S*)/.exec(text)?.[1];
+  if (word === undefined) return null;
+  const homed = /^\$H([XYZ]*)$/i.exec(word)?.[1]?.toUpperCase();
+  return { word, loses: (axis) => !homed || homed.includes("XYZ"[axis] as string) };
+}
+
+/** `position` with the axes `lost` says unknown. */
+export function forget(position: Vec3, lost: (axis: number) => boolean): Vec3 {
+  return position.map((value, axis) => (lost(axis) ? Number.NaN : value)) as Vec3;
+}
+
+/**
+ * Where the tool is after a `G10` naming `axes`. In the work system in use
+ * (`P0`, or `G54`'s `P1`, which the posts use), `L20` makes it the position
+ * given (`G10 L20 P0 X0 Y0 Z0` zeroes it), and another `L`, such as `L2`
+ * moving the zero by a machine position, loses the axes it names. Another
+ * work system leaves it as it was.
+ */
+export function offsetPosition(
+  position: Vec3,
+  axes: readonly (number | undefined)[],
+  { L, P }: { L?: number | undefined; P?: number | undefined },
+): Vec3 {
+  if (P !== 0 && P !== 1) return position;
+  return position.map((value, axis) => {
+    const word = axes[axis];
+    if (word === undefined) return value;
+    return L === 20 ? word : Number.NaN;
+  }) as Vec3;
+}
+
 /**
  * The moves of a program, starting from an unknown position. Coordinates are
- * absolute unless `G91` makes them relative.
+ * absolute unless `G91` makes them relative. The position is followed as
+ * `programCuts` follows it: `G10 L20` in the work system in use sets the axes
+ * it names, other `G10`s there lose them; probing and `G53` lose the axes
+ * they name, a controller command (`$HZ`) the ones it moves, `G28`, `G92`,
+ * offsets and a switch to another work system all of them. None of those is a move.
  */
 export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
   const moves: GcodeMove[] = [];
   let position: Vec3 = [Number.NaN, Number.NaN, Number.NaN];
   let motion: "rapid" | "feed" | null = null;
   let relative = false;
+  let system = 54;
   let feedRate: number | null = null;
   for (const line of lines) {
-    const target: Vec3 = [...position];
-    let moved = false;
+    const command = controllerCommand(line.text);
+    if (command) {
+      position = forget(position, command.loses);
+      continue;
+    }
+    const axes: (number | undefined)[] = [undefined, undefined, undefined];
+    const named = (axis: number) => axes[axis] !== undefined;
+    let other: "offset" | "probe" | "machine" | "lost" | null = null;
+    const offsetWord = { L: undefined as number | undefined, P: undefined as number | undefined };
     for (const { letter, value } of line.words) {
       if (letter === "G" && value === 0) motion = "rapid";
       else if (letter === "G" && value === 1) motion = "feed";
       else if (letter === "G" && value === 90) relative = false;
       else if (letter === "G" && value === 91) relative = true;
+      else if (letter === "G" && value === 10) other = "offset";
+      else if (letter === "G" && value === 53) other = "machine";
+      else if (letter === "G" && PROBES.has(value)) other = "probe";
+      else if (letter === "G" && UNKNOWN_AFTER.has(value)) other = "lost";
+      else if (letter === "G" && WORK_SYSTEMS.has(value)) {
+        if (value !== system) other = "lost";
+        system = value;
+      } else if (letter === "L" || letter === "P") offsetWord[letter] = value;
       else if (letter === "F") feedRate = value;
-      else if (letter === "X" || letter === "Y" || letter === "Z") {
-        const axis = "XYZ".indexOf(letter);
-        target[axis] = relative ? (target[axis] as number) + value : value;
-        moved = true;
-      }
+      else if (letter === "X" || letter === "Y" || letter === "Z")
+        axes["XYZ".indexOf(letter)] = value;
     }
-    if (!moved || motion === null) continue;
+    if (other === "lost") {
+      position = [Number.NaN, Number.NaN, Number.NaN];
+      continue;
+    }
+    if (other === "offset") {
+      position = offsetPosition(position, axes, offsetWord);
+      continue;
+    }
+    if (other !== null) {
+      position = forget(position, named);
+      continue;
+    }
+    if (axes.every((value) => value === undefined) || motion === null) continue;
+    const target = position.map((value, axis) => {
+      const word = axes[axis];
+      if (word === undefined) return value;
+      return relative ? value + word : word;
+    }) as Vec3;
     moves.push({
       line: line.number,
       kind: motion,
@@ -135,12 +210,8 @@ export function gcodeMoves(lines: GcodeLine[]): GcodeMove[] {
 /** A word with an optional sign and a number GRBL accepts: `X.5`, `z -2.`. */
 const LOOSE_WORD = /([A-Z])\s*([+-]?(?:\d+\.?\d*|\.\d+))/g;
 
-/**
- * Commands after which `gcodeMoves` can't tell where the tool is: arcs,
- * probing, machine coordinates, stored positions, offsets, work coordinate
- * systems and inches.
- */
-const UNFOLLOWED = new Set([2, 3, 10, 20, 28, 30, 38, 43, 53, 54, 55, 56, 57, 58, 59, 92]);
+/** Commands `gcodeMoves` doesn't follow: arcs and inches. */
+const UNFOLLOWED = new Set([2, 3, 20]);
 
 /**
  * A warning for each move in or after one of `blocks` (the machine's custom
@@ -148,9 +219,10 @@ const UNFOLLOWED = new Set([2, 3, 10, 20, 28, 30, 38, 43, 53, 54, 55, 56, 57, 58
  * stock top through material not cut away before it, or below the stock
  * bottom. The program's own feeds cut, and its own rapids are checked as the
  * custom blocks' moves are, since a block may leave the tool anywhere. Words
- * that don't move the tool are skipped; from a command after which the
- * position is unknown (`G53`, `G38.2`…) on, nothing is checked, and one
- * warning says so.
+ * that don't move the tool are skipped. A move below the stock top from
+ * where the tool isn't known (after `G53`, probing, `$H`…) is warned of,
+ * until a move sets the position again. From an arc or `G20` on, nothing is
+ * checked, and one warning says so.
  */
 export function customBlockWarnings(
   gcode: string,
@@ -289,9 +361,15 @@ export class Material {
    */
   pass(tool: CutterProfile | null, { from, to }: GcodeMove): number {
     // A move up out of a cut can still cross material on its way.
-    const lowest = Number.isNaN(from[2]) ? to[2] : Math.min(from[2], to[2]);
+    // From an unknown position only where it ends is known.
+    const lowest = from.some(Number.isNaN) ? to[2] : Math.min(from[2], to[2]);
     if (!(lowest < this.top - EPSILON)) return 0;
-    if (tool === null || from.some(Number.isNaN) || to.some(Number.isNaN)) return Number.NaN;
+    if (tool === null || to.some(Number.isNaN)) return Number.NaN;
+    if (from.some(Number.isNaN)) {
+      // Taken to come straight down, as `programCuts` does, so backing out isn't a second fault.
+      this.cut(tool, [to[0], to[1], Math.max(to[2], this.top)], to);
+      return Number.NaN;
+    }
     const depth = this.collision(tool, from, to);
     // What it went through is gone, so backing out of it is no second fault.
     this.cut(tool, from, to);

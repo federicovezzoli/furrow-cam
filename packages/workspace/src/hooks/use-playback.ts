@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import {
+  moveLines,
   type PlaybackPart,
   type PlayedProgram,
   playbackKey,
@@ -198,14 +199,15 @@ export function usePlayback(maxCells: number | null) {
   // recolouring its tool doesn't change its toolpath. Kept while they recompute.
   const lastParts = useRef<PlaybackPart[]>([]);
   const current = latest !== null && latest.key === moves?.key;
+  const lines = useMemo(() => moveLines(moves?.lines ?? []), [moves]);
   const parts = useMemo(
     () =>
       !moves
         ? []
         : current
-          ? programParts(moves.steps, moves.lines, operations, entries)
+          ? programParts(moves.steps, lines, operations, entries)
           : lastParts.current,
-    [moves, current, operations, entries],
+    [moves, lines, current, operations, entries],
   );
   lastParts.current = parts;
   // The other side's stock would show until this side's loads.
@@ -219,7 +221,13 @@ export function usePlayback(maxCells: number | null) {
     stock: shown?.stock ?? null,
     updates,
     error,
-    program: moves && { warnings: moves.warnings, failure: moves.failure },
+    program: moves && {
+      warnings: moves.warnings,
+      failure: moves.failure,
+      gcode: moves.gcode,
+      blocks: moves.blocks,
+      moveLines: lines,
+    },
     pending: computing || (enabled && shown === null),
   };
 }

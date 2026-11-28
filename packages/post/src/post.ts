@@ -40,11 +40,24 @@ export type SideSetup = {
   pins: boolean;
 };
 
+/** The custom blocks, as warnings name them. */
+export type BlockLabel =
+  | "programStart"
+  | "toolChangePad"
+  | "toolChange"
+  | "operationStart"
+  | "programEnd";
+
+/** Lines `first` to `last` (1-based) of a program: one custom block, named by `label`. */
+export type CustomBlock = { label: BlockLabel; first: number; last: number };
+
 export type PostOutput = {
   /** The program, one block per line, ending with a newline. */
   gcode: string;
   /** Where each step went in it, in cutting order (`postSteps`). */
   steps: ProgramStep[];
+  /** The machine's custom blocks in it, by line. */
+  blocks: CustomBlock[];
   /** Things the user should know, e.g. feeds lowered to the machine's limits. */
   warnings: PostWarning[];
 };

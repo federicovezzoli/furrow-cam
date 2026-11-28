@@ -3,7 +3,15 @@ import type { Operation } from "@furrow/document";
 import { endMill, vBit } from "@furrow/document/fixtures";
 import { describe, expect, it } from "vitest";
 import type { ToolpathEntry } from "../stores/toolpath-store";
-import { partAt, partProgress, playbackKey, playedProgram, programParts } from "./playback-moves";
+import {
+  firstMoveOfLine,
+  moveLines,
+  partAt,
+  partProgress,
+  playbackKey,
+  playedProgram,
+  programParts,
+} from "./playback-moves";
 
 /** A rapid down to (0, 0, -1), a feed to (`x`, 0, -1) and a rapid up. */
 function lines(x: number): ToolpathLines {
@@ -131,10 +139,10 @@ describe("programParts", () => {
       moveLines: Uint32Array.of(32, 33, 33, 34),
     },
   ];
-  const segmentLines = [
+  const segmentLines = moveLines([
     Uint32Array.of(3, 11, 12, 13, 14, 15, 16, 19, 21, 22, 23, 24),
     Uint32Array.of(31, 32, 33, 34, 40),
-  ];
+  ]);
 
   it("splits the program at each step's first line, the first from its start, the last to its end", () => {
     const parts = programParts(steps, segmentLines, [profile, vcarve], entries);
@@ -193,6 +201,23 @@ describe("partProgress", () => {
   });
 });
 
+describe("firstMoveOfLine", () => {
+  // Line 2 sets the position without moving, line 3 has a still move then a 5 mm one.
+  const moves = Uint32Array.of(2, 3, 3, 4);
+  const path = { ends: Float64Array.of(0, 0, 5, 15) };
+
+  it("seeks to the first move of a line that goes somewhere", () => {
+    expect(firstMoveOfLine(moves, path, 3)).toBe(2);
+    expect(firstMoveOfLine(moves, path, 4)).toBe(3);
+  });
+
+  it("finds none on a line without moves, or whose moves go nowhere", () => {
+    expect(firstMoveOfLine(moves, path, 1)).toBeNull();
+    expect(firstMoveOfLine(moves, path, 2)).toBeNull();
+    expect(firstMoveOfLine(moves, path, 5)).toBeNull();
+  });
+});
+
 describe("playedProgram", () => {
   const cut = (z: number) => ({ tool: endMill, segments: Float32Array.of(0, 0, 0, 0, 0, z) });
   const playback = (side: "top" | "bottom" | null, z: number) => ({
@@ -217,12 +242,26 @@ describe("playedProgram", () => {
   });
 
   it("plays the bottom side's program after the top side's", () => {
+    const file = (side: "top" | "bottom") => ({
+      fileName: `${side}.gcode`,
+      gcode: `(${side})`,
+      side,
+      steps: [],
+      blocks: [{ label: "programEnd" as const, first: 1, last: 1 }],
+    });
     const played = playedProgram(
       { key: "k", side: "bottom", before: "t" },
-      { ...files, playbacks: [playback("top", -1), playback("bottom", -2)] },
+      {
+        files: [file("top"), file("bottom")],
+        warnings: [],
+        playbacks: [playback("top", -1), playback("bottom", -2)],
+      },
       "x",
     );
     expect(played.cuts).toEqual([cut(-2)]);
+    // The text shown is the side played's, as Export saves it.
+    expect(played.gcode).toBe("(bottom)");
+    expect(played.blocks).toEqual(file("bottom").blocks);
     expect(played.before).toEqual({ key: "t", cuts: [cut(-1)], axis: "x" });
     // The top side's warnings count too: its cuts are under the bottom side's.
     expect(played.warnings).toEqual([
@@ -250,7 +289,8 @@ describe("playedProgram", () => {
       { ...files, playbacks: [unread, playback("bottom", -2)] },
       "x",
     );
-    expect(played.failure).toEqual({ line: 4, reason: "badArc" });
+    // Its line is in the top side's program, not the one shown.
+    expect(played.failure).toEqual({ line: 4, reason: "badArc", side: "top" });
     expect(played.before?.cuts).toEqual([]);
     expect(played.cuts).toEqual([cut(-2)]);
   });

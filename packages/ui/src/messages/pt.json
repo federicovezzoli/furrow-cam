@@ -1650,9 +1650,15 @@
     "simulating": "Simulando…",
     "simulationFailed": "Falha na simulação: {error}",
     "notSimulated": "Não simulado, falha no percurso: {operations}",
-    "programUnreadable": "O programa não pode ser simulado além da linha {line}: {reason, select, unreadable {não é G-code} unknownStart {corta a partir de uma posição desconhecida} noTool {move-se antes de nomear a fresa} badTool {o comentário da fresa não descreve uma fresa} badArc {o seu arco não pode ser seguido} noMotion {move-se sem G0, G1, G2 ou G3} other {não pode ser lida}}",
+    "programUnreadable": "{side, select, top {O programa da face superior} other {O programa}} não pode ser simulado além da linha {line}: {reason, select, unreadable {não é G-code} unknownStart {corta a partir de uma posição desconhecida} noTool {move-se antes de nomear a fresa} badTool {o comentário da fresa não descreve uma fresa} badArc {o seu arco não pode ser seguido} noMotion {move-se sem G0, G1, G2 ou G3} other {não pode ser lida}}",
     "programWarning": "{side, select, top {Face superior, linha {line}} other {Linha {line}}}: {code, select, unknownPosition {depois de {word} a posição da ferramenta é desconhecida, por isso nada é simulado até um movimento a definir} other {{word} não é simulado}}",
     "moreProgramWarnings": "{count, plural, one {Mais # aviso} other {Mais # avisos}} no programa",
+    "program": "Programa",
+    "programWarnings": "Avisos do programa",
+    "showProgram": "Mostrar programa",
+    "showProgramShort": "Mostrar o programa",
+    "hideProgramShort": "Ocultar o programa",
+    "programBlock": "Bloco {block, select, programStart {Início do programa} toolChangePad {Troca de ferramenta na placa} toolChange {Troca de ferramenta} operationStart {Início da operação} other {Fim do programa}}",
     "views": {
       "top": "Vista superior",
       "orbit": "Vista 3D"

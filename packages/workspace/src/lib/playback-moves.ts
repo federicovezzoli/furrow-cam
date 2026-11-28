@@ -1,6 +1,6 @@
-import type { SimulationCut, ToolpathLines } from "@furrow/cam-core";
+import type { PlaybackPath, SimulationCut, ToolpathLines } from "@furrow/cam-core";
 import { clearingTool, type FlipAxis, type Operation, type StockSide } from "@furrow/document";
-import type { ProgramReadReason, ProgramStep, ProgramWarning } from "@furrow/post";
+import type { CustomBlock, ProgramReadReason, ProgramStep, ProgramWarning } from "@furrow/post";
 import type { Translatable } from "@furrow/ui/lib/i18n";
 import { toolpathsBySide } from "../stores/simulation-scheduler";
 import type { GcodeExportResult } from "../stores/toolpath-scheduler";
@@ -54,23 +54,17 @@ export function playbackKey(
 
 /**
  * The parts of a program read back (ADR-0096) from where the post wrote its
- * `steps`, given the line of each of its segments (`lines`, one array per
- * cut, in order), with the names and colours of `operations` and the
+ * `steps`, given the line of each of its segments (`segmentLines`, all
+ * cuts' in a row, `moveLines`), with the names and colours of `operations` and the
  * toolpaths of `entries`. A step whose toolpath isn't ready is left out, its
  * segments going to the part before.
  */
 export function programParts(
   steps: readonly ProgramStep[],
-  lines: readonly Uint32Array[],
+  segmentLines: Uint32Array,
   operations: readonly Operation[],
   entries: ToolpathState["entries"],
 ): PlaybackPart[] {
-  const segmentLines = new Uint32Array(lines.reduce((total, cut) => total + cut.length, 0));
-  let at = 0;
-  for (const cut of lines) {
-    segmentLines.set(cut, at);
-    at += cut.length;
-  }
   const kept = steps.flatMap((step, i) => {
     const operation = operations.find((candidate) => candidate.id === step.operationId);
     const entry = entries[step.operationId];
@@ -112,6 +106,39 @@ export function programParts(
   });
 }
 
+/** The line of each of a program's moves, all cuts' in a row, from the lines of each cut's. */
+export function moveLines(lines: readonly Uint32Array[]): Uint32Array {
+  const all = new Uint32Array(lines.reduce((total, cut) => total + cut.length, 0));
+  let at = 0;
+  for (const cut of lines) {
+    all.set(cut, at);
+    at += cut.length;
+  }
+  return all;
+}
+
+/** The line move `move` of `moves` (`moveLines`) comes from; the last one's past the end, none if none. */
+export function lineOfMove(moves: Uint32Array, move: number): number | null {
+  return moves.length === 0 ? null : (moves[Math.min(move, moves.length - 1)] as number);
+}
+
+/**
+ * The first move from line `line` of the program (`moves`, `moveLines`) that
+ * goes somewhere along `path`, or `null` if it has none: seeking to a move
+ * that goes nowhere would land on the next one.
+ */
+export function firstMoveOfLine(
+  moves: Uint32Array,
+  path: Pick<PlaybackPath, "ends">,
+  line: number,
+): number | null {
+  for (let move = firstAtOrAfter(moves, line); moves[move] === line; move++) {
+    const start = move === 0 ? 0 : (path.ends[move - 1] as number);
+    if ((path.ends[move] as number) > start) return move;
+  }
+  return null;
+}
+
 /** The index of the first of the ascending `values` at least `value`. */
 function firstAtOrAfter(values: Uint32Array, value: number): number {
   let low = 0;
@@ -143,7 +170,8 @@ export function partProgress(part: PlaybackPart, move: number): { feeds: number;
 
 /** Why the program can't be played: it can't be posted, or read back past `line`. */
 export type ProgramFailure =
-  | { line: number; reason: ProgramReadReason }
+  /** On the bottom side, `side` says the top side's program, which it plays over, is the one. */
+  | { line: number; reason: ProgramReadReason; side?: "top" }
   | { error: Translatable; operation?: string };
 
 /** The program played back (ADR-0096), as `usePlayback` keeps it. */
@@ -154,6 +182,9 @@ export type PlayedProgram = {
   before?: { key: string; cuts: SimulationCut[]; axis: FlipAxis };
   steps: ProgramStep[];
   lines: Uint32Array[];
+  /** The text of the program played, as Export saves it, and its custom blocks. */
+  gcode: string;
+  blocks: CustomBlock[];
   /** The top side's program's too on the bottom side, which it plays over (`side`). */
   warnings: (ProgramWarning & { side?: "top" })[];
   failure: ProgramFailure | null;
@@ -174,6 +205,8 @@ export function playedProgram(
     cuts: [],
     steps: [],
     lines: [],
+    gcode: "",
+    blocks: [],
     warnings: [],
     failure: null,
   };
@@ -186,20 +219,25 @@ export function playedProgram(
   const playbacks = result.playbacks ?? [];
   const find = (side: StockSide) =>
     playbacks.find((playback) => playback.side === (flipAxis ? side : null));
+  const file = result.files.find((each) => each.side === (flipAxis ? wanted.side : null));
+  const text = { gcode: file?.gcode ?? "", blocks: file?.blocks ?? [] };
   const shown = find(wanted.side);
   const top = wanted.before !== undefined ? find("top") : undefined;
   const unread = [top, shown].find((playback) => playback !== undefined && "error" in playback);
-  const failure = unread && "error" in unread ? unread.error : null;
+  const failure =
+    unread && "error" in unread
+      ? { ...unread.error, ...(unread === top && unread !== shown && { side: "top" as const }) }
+      : null;
   const before =
     wanted.before !== undefined && flipAxis
       ? { key: wanted.before, cuts: top && "cuts" in top ? top.cuts : [], axis: flipAxis }
       : undefined;
-  if (!shown || !("cuts" in shown)) return { ...played, before, failure };
+  if (!shown || !("cuts" in shown)) return { ...played, ...text, before, failure };
   const { cuts, steps, lines } = shown;
   const topWarnings = top && "warnings" in top ? top.warnings : [];
   const warnings = [
     ...topWarnings.map((warning) => ({ ...warning, side: "top" as const })),
     ...shown.warnings,
   ];
-  return { ...played, cuts, steps, lines, warnings, before, failure };
+  return { ...played, ...text, cuts, steps, lines, warnings, before, failure };
 }

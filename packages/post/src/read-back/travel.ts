@@ -1,6 +1,6 @@
 import type { Machine } from "@furrow/document";
-import type { PostWarning } from "../post";
-import { type CustomBlock, EPSILON, gcodeMoves, parseGcode, round } from "./read-back";
+import type { CustomBlock, PostWarning } from "../post";
+import { EPSILON, gcodeMoves, parseGcode, round } from "./read-back";
 
 /**
  * A warning for each axis `gcode` spans more of than the machine travels

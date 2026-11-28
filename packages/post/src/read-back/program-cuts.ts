@@ -9,7 +9,17 @@ import {
   type Vec3,
 } from "@furrow/cam-core";
 import { type Stock, ToolType } from "@furrow/document";
-import { type GcodeLine, parseGcodeLine, tidy } from "./read-back";
+import {
+  controllerCommand,
+  forget,
+  type GcodeLine,
+  offsetPosition,
+  PROBES,
+  parseGcodeLine,
+  tidy,
+  UNKNOWN_AFTER,
+  WORK_SYSTEMS,
+} from "./read-back";
 
 /** A word the simulation skips, or one after which it can't tell where the tool is. */
 export type ProgramWarning = {
@@ -17,8 +27,10 @@ export type ProgramWarning = {
   line: number;
   /**
    * `unsupported`: the word is skipped. `unknownPosition`: the axes it moves
-   * are unknown until the program sets them again, and nothing is cut
-   * meanwhile.
+   * are unknown until the program sets them again, and a move meanwhile was
+   * skipped, or taken to come straight down into the stock; one that finds the
+   * position again above the stock, such as a retract after probing, isn't
+   * worth a warning.
    */
   code: "unsupported" | "unknownPosition";
   /** The word as read, e.g. `G53` or `A10`. */
@@ -61,14 +73,12 @@ export type ProgramCuts = {
 const TOOL_COMMENT = "Furrow tool:";
 
 /** Modal and non-modal codes that change nothing the simulation follows. */
-const IGNORED_G = new Set([4, 40, 49, 54, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
-/** Codes after which no axis is known: stored positions, probing, offsets, other work systems. */
-const UNKNOWN_AFTER = new Set([
-  28, 30, 38.2, 38.3, 38.4, 38.5, 43, 43.1, 92, 92.1, 55, 56, 57, 58, 59,
-]);
-const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 117, 400]);
-// `H` only names an offset for `G43`, which loses the position anyway.
-const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H"]);
+const IGNORED_G = new Set([4, 40, 49, 61, 61.1, 64, 80, 91.1, 93, 94, 28.1, 30.1]);
+// `M62`–`M65` switch a controller output, e.g. a spindle wired to a pin: nothing the simulation follows.
+const KNOWN_M = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 62, 63, 64, 65, 117, 400]);
+// `H` only names an offset for `G43`, which loses the position anyway; `L` and
+// `P` say which offset `G10` sets.
+const IGNORED_LETTERS = new Set(["F", "S", "T", "N", "P", "H", "L"]);
 const AXES = "XYZ";
 const MM_PER_INCH = 25.4;
 /** GRBL's arc tolerances: the end point's radius may differ from the start's by this much. */
@@ -115,13 +125,22 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
   };
 
   let position: Vec3 = [Number.NaN, Number.NaN, Number.NaN];
+  /** What lost the position since it was last known: warned of only if it matters. */
+  let losses: ProgramWarning[] = [];
   let motion: 0 | 1 | 2 | 3 | null = null;
   let relative = false;
   let scale = 1;
+  let system = 54;
   let plane: 17 | 18 | 19 = 17;
   const texts = gcode.replace(/\n$/, "").split("\n");
   for (const [i, text] of texts.entries()) {
     const number = i + 1;
+    const command = controllerCommand(text);
+    if (command) {
+      losses.push({ line: number, code: "unknownPosition", word: command.word });
+      position = forget(position, command.loses);
+      continue;
+    }
     const line = readLine(text, number);
     const comment = line.comment;
     if (comment?.startsWith(TOOL_COMMENT)) {
@@ -130,6 +149,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     }
 
     const axes: (number | undefined)[] = [undefined, undefined, undefined];
+    const named = (axis: number) => axes[axis] !== undefined;
     const arc: Record<"I" | "J" | "K" | "R", number | undefined> = {
       I: undefined,
       J: undefined,
@@ -138,7 +158,12 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     };
     let machine = false;
     let lost = false;
+    let probe = false;
+    /** `G10`: its axis words set an offset, they don't move. */
+    let setsOffset = false;
+    const offsetWord = { L: undefined as number | undefined, P: undefined as number | undefined };
     for (const { letter, value } of line.words) {
+      if (letter === "L" || letter === "P") offsetWord[letter] = value;
       const word = `${letter}${value}`;
       if (letter === "G") {
         if (value === 0 || value === 1 || value === 2 || value === 3) motion = value;
@@ -150,10 +175,20 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
         else if (value === 80) motion = null;
         else if (value === 53) {
           machine = true;
-          warnings.push({ line: number, code: "unknownPosition", word });
+          losses.push({ line: number, code: "unknownPosition", word });
+        } else if (value === 10) setsOffset = true;
+        else if (PROBES.has(value)) {
+          probe = true;
+          losses.push({ line: number, code: "unknownPosition", word });
+        } else if (WORK_SYSTEMS.has(value)) {
+          if (value !== system) {
+            lost = true;
+            losses.push({ line: number, code: "unknownPosition", word });
+          }
+          system = value;
         } else if (UNKNOWN_AFTER.has(value)) {
           lost = true;
-          warnings.push({ line: number, code: "unknownPosition", word });
+          losses.push({ line: number, code: "unknownPosition", word });
         } else if (!IGNORED_G.has(value))
           warnings.push({ line: number, code: "unsupported", word });
       } else if (letter === "M") {
@@ -170,6 +205,22 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
       position = [Number.NaN, Number.NaN, Number.NaN];
       continue;
     }
+    if (setsOffset) {
+      const scaled = axes.map((value) => (value === undefined ? value : value * scale));
+      const next = offsetPosition(position, scaled, offsetWord);
+      if (
+        next.some((value, axis) => Number.isNaN(value) && !Number.isNaN(position[axis] as number))
+      ) {
+        losses.push({ line: number, code: "unknownPosition", word: "G10" });
+      }
+      position = next;
+      if (position.every(Number.isFinite)) losses = [];
+      continue;
+    }
+    if (probe) {
+      position = forget(position, named);
+      continue;
+    }
     const noAxes = axes.every((value) => value === undefined);
     const arcWords = [arc.I, arc.J, arc.K, arc.R].some((value) => value !== undefined);
     // GRBL refuses an arc without axis words; Marlin cuts a full circle about its centre.
@@ -181,9 +232,7 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     if (noAxes && !circle) continue;
     if (machine) {
       // Where machine coordinates are in work coordinates isn't known.
-      position = position.map((value, axis) =>
-        axes[axis] === undefined ? value : Number.NaN,
-      ) as Vec3;
+      position = forget(position, named);
       continue;
     }
     if (motion === null) throw new ProgramReadError(number, "noMotion");
@@ -196,7 +245,13 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     position = to;
     const known = (point: Vec3) => point.every(Number.isFinite);
     if (!known(from)) {
-      if (motion !== 0) throw new ProgramReadError(number, "unknownStart");
+      const above = known(to) && to[2] >= top;
+      // A feed from where the tool isn't known can't be followed into the stock;
+      // above it, e.g. a retract after probing, it cuts nothing.
+      if (motion !== 0 && !above) throw new ProgramReadError(number, "unknownStart");
+      // Skipped, or taken to come straight down into the stock: what lost the position mattered.
+      if (!above) warnings.push(...losses);
+      losses = [];
       if (known(to)) segment(number, [to[0], to[1], Math.max(to[2], top)], to);
       continue;
     }
@@ -215,6 +270,8 @@ export function programCuts(gcode: string, stock: Stock): ProgramCuts {
     }
   }
   finish();
+  // Losses are warned of at the move they mattered to.
+  warnings.sort((a, b) => a.line - b.line);
   return { cuts, lines, warnings };
 }
 

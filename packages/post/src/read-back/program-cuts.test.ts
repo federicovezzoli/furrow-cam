@@ -212,17 +212,78 @@ describe("programCuts", () => {
     });
   });
 
-  it("forgets every axis after G28, probing or an offset", () => {
-    const { warnings } = programCuts(
-      program("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50", "G0 X1 Y1 Z5", "G43 H1"),
-      STOCK,
-    );
-    expect(warnings).toEqual([
+  it("forgets every axis after G28, probing or an offset, warning only where a move needs them", () => {
+    const warnings = (...lines: string[]) => programCuts(program(...lines), STOCK).warnings;
+    // Each time a move above the stock finds the position again, or none follows.
+    expect(warnings("G28", "G0 X1 Y1 Z5", "G38.2 Z-10 F50", "G0 X1 Y1 Z5", "G43 H1")).toEqual([]);
+    // Taken to come straight down into the stock, or skipped.
+    expect(warnings("G28", "G0 X1 Y1 Z-1")).toEqual([
       { line: 4, code: "unknownPosition", word: "G28" },
-      { line: 6, code: "unknownPosition", word: "G38.2" },
-      { line: 8, code: "unknownPosition", word: "G43" },
+    ]);
+    expect(warnings("G38.2 Z-10 F50", "G0 X5", "G0 X6")).toEqual([
+      { line: 4, code: "unknownPosition", word: "G38.2" },
     ]);
     expect(readError(program("G92 X0", "G1 X5 F300"))).toEqual({ line: 5, reason: "unknownStart" });
+  });
+
+  it("forgets every axis on a switch of work system, back to G54 too, and none on G54 in G54", () => {
+    expect(programCuts(program("G54", "G1 Z-1 F300"), STOCK).warnings).toEqual([]);
+    expect(programCuts(program("G55", "G0 X1 Y1 Z5", "G54", "G0 Z-1"), STOCK).warnings).toEqual([
+      { line: 6, code: "unknownPosition", word: "G54" },
+    ]);
+  });
+
+  it("follows a block that zeroes where the tool is, probes and retracts (G10 L20)", () => {
+    const block = [
+      TOOL,
+      "G21",
+      "G10 L20 P0 X0 Y0 Z0 (set current location to zero)",
+      "G0 X10 Y10 F2000",
+      "M0 (MSG Attach probe)",
+      "G38.2 Z-110 F200 P0.5",
+      "G1 Z10 F900",
+      "M62 P1",
+      "G1 X20 Z-1",
+    ].join("\n");
+    const { cuts, warnings } = programCuts(block, STOCK);
+    // The retract after the probe finds Z again above the stock.
+    expect(warnings).toEqual([]);
+    const cut = cuts[0] as { segments: Float32Array };
+    // G10 L20 makes X0 Y0 Z0 known; the probe loses Z only, and the retract above
+    // the stock finds it again, so the feed after it is cut.
+    expect(segment(cut, 0)[1]).toEqual([10, 10, 0]);
+    expect(segment(cut, 2)).toEqual([
+      [10, 10, 10],
+      [20, 10, -1],
+    ]);
+    // Into the stock from an unknown height, a feed can't be followed.
+    expect(readError(program("G38.2 Z-110 F200", "G1 Z-1 F300"))).toEqual({
+      line: 5,
+      reason: "unknownStart",
+    });
+    // `L2` moves the zero by a machine position: the axes it names are lost.
+    expect(programCuts(program("G10 L2 P1 Z-50", "G0 X20"), STOCK).warnings).toEqual([
+      { line: 4, code: "unknownPosition", word: "G10" },
+    ]);
+  });
+
+  it("loses the axes a controller command may move, e.g. FluidNC's $HZ or a macro", () => {
+    const { warnings } = programCuts(
+      program("M63 P1 (stop spindle pin27)", "$HZ", "G0 Z5", "G1 X20 F300", "M30"),
+      STOCK,
+    );
+    // M63 only switches an output, here the spindle's pin, and G0 Z5 finds Z again.
+    expect(warnings).toEqual([]);
+    expect(programCuts(program("$HZ", "G0 X20"), STOCK).warnings).toEqual([
+      { line: 4, code: "unknownPosition", word: "$HZ" },
+    ]);
+    // Homing Z keeps X and Y: once a move sets Z, feeds are followed again.
+    expect(readError(program("$HZ", "G1 X20 F300"))).toEqual({ line: 5, reason: "unknownStart" });
+    // A macro may move anywhere.
+    expect(readError(program("$LocalFS/Run=probe-xyz.nc", "G0 Z20", "G1 X20 F300"))).toEqual({
+      line: 6,
+      reason: "unknownStart",
+    });
   });
 
   it("skips words it doesn't support, saying which and where", () => {
