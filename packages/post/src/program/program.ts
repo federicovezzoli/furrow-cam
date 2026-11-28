@@ -3,6 +3,7 @@ import { hasAccelerations, machineSpinUpDelay, type Tool, type TouchOff } from "
 import { estimateTime, formatDuration } from "../machine/estimate";
 import { limitFeed, spindleSpeed } from "../machine/machine-limits";
 import {
+  type BlockLabel,
   type Dialect,
   type PostInput,
   type PostOutput,
@@ -11,7 +12,7 @@ import {
   type ProgramStep,
   postSteps,
 } from "../post";
-import { type BlockLabel, customBlockWarnings } from "../read-back/read-back";
+import { customBlockWarnings } from "../read-back/read-back";
 import { travelWarnings } from "../read-back/travel";
 import { GcodeWriter } from "./gcode-writer";
 import { padLabel, sideSetupLines, xyZeroLabel, zZeroLabel } from "./setup-notes";
@@ -107,7 +108,7 @@ export function postProgram(input: PostInput, dialect: Dialect): PostOutput {
   const { warnings } = program;
   warnings.push(...customBlockWarnings(gcode, project, program.out.customBlocks));
   warnings.push(...travelWarnings(gcode, machine, program.out.customBlocks));
-  return { gcode, steps: written, warnings };
+  return { gcode, steps: written, blocks: program.out.customBlocks, warnings };
 }
 
 /** The name, the setup the user must do, the first tool's shape and the program start. */

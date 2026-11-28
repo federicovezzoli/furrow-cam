@@ -18,6 +18,7 @@ import {
 import { grbl } from "./grbl/grbl";
 import { marlin } from "./marlin/marlin";
 import {
+  type CustomBlock,
   GcodeExportError,
   type PostProcessor,
   type PostWarning,
@@ -33,13 +34,15 @@ export const DEFAULT_POST_PROCESSOR: PostProcessorId = "grbl";
 
 /**
  * One program to save, e.g. `Plate.gcode`: the stock side it cuts in a
- * two-sided project (else `null`), and where its steps went (`ProgramStep`).
+ * two-sided project (else `null`), where its steps went (`ProgramStep`) and
+ * its custom blocks are.
  */
 export type GcodeFile = {
   fileName: string;
   gcode: string;
   side: "top" | "bottom" | null;
   steps: ProgramStep[];
+  blocks: CustomBlock[];
 };
 
 /**
@@ -206,7 +209,13 @@ export function postToolpaths(
     // Each side's program may say the same, e.g. of a custom block.
     const said = new Set(warnings.map((warning) => JSON.stringify(warning)));
     warnings.push(...output.warnings.filter((warning) => !said.has(JSON.stringify(warning))));
-    return { fileName, gcode: output.gcode, side: side?.side ?? null, steps: output.steps };
+    return {
+      fileName,
+      gcode: output.gcode,
+      side: side?.side ?? null,
+      steps: output.steps,
+      blocks: output.blocks,
+    };
   };
   if (!doc.stock.twoSided) {
     return { files: [post(toPost, null, fileName(null))], warnings };

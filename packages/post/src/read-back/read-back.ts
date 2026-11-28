@@ -13,7 +13,7 @@ import {
 } from "@furrow/cam-core";
 import { clearingTool, type ProjectDocument, type Tool } from "@furrow/document";
 import { formatNumber } from "../format";
-import type { PostWarning } from "../post";
+import type { CustomBlock, PostWarning } from "../post";
 
 /** Distance below which two coordinates count as equal: the programs' last decimal. */
 export const EPSILON = 1e-3;
@@ -47,17 +47,6 @@ export type GcodeMove = {
 
 /** What a program is read against: the project it was posted from. */
 export type CheckedProject = Pick<ProjectDocument, "stock" | "machine" | "operations">;
-
-/** The custom blocks, as warnings name them. */
-export type BlockLabel =
-  | "programStart"
-  | "toolChangePad"
-  | "toolChange"
-  | "operationStart"
-  | "programEnd";
-
-/** Lines `first` to `last` (1-based) of a program: one custom block, named by `label`. */
-export type CustomBlock = { label: BlockLabel; first: number; last: number };
 
 /** What a custom block's move does, as `grbl.customBlockMove` says it. */
 type BlockProblem = "material" | "belowBottom" | "unknownPosition" | "unreadable" | "unfollowed";
