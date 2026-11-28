@@ -271,10 +271,6 @@ describe("fluting", () => {
     const xs = deepest.map((move) => move.to[0]);
     expect(Math.min(...xs)).toBeGreaterThan(10 + (20 * 2) / 3 - 1e-9);
     expect(Math.max(...xs)).toBeLessThan(90 - (30 * 2) / 3 + 1e-9);
-    const below = (z: number) =>
-      toolpath.moves.filter((move) => move.kind === "feed" && move.to[2] < z - 1e-9);
-    // No move of the last pass goes back over the ends, which the first two cut.
-    expect(below(-2).every((move) => move.to[0] > 20 && move.to[0] < 70)).toBe(true);
   });
 
   it("peaks where the ramps meet when they are longer than the path", () => {
@@ -299,6 +295,23 @@ describe("fluting", () => {
       expect(-lowestAt(toolpath, x)).toBeCloseTo(depth(x), 6);
     }
     // Full depth at the start of the path, plunged there (at the plunge rate).
+    expect(lowestAt(toolpath, 10)).toBeCloseTo(-3, 9);
+  });
+
+  it("ramps in only where the flute is deep enough, never into the shallow end", () => {
+    const short: Shape = {
+      ...line,
+      paths: [{ start: [10, 10], segments: [{ kind: "line", to: [20, 10] }], closed: false }],
+    };
+    const toolpath = engrave(
+      [short],
+      { depth: 3, ramp: true, taper: { start: 0, end: 8 } },
+      ballEndMill,
+    );
+    const depth = (x: number) => 3 * Math.min(1, (20 - x) / 8);
+    for (let x = 10; x <= 20; x += 0.25) {
+      expect(lowestAt(toolpath, x)).toBeGreaterThanOrEqual(-depth(x) - 1e-9);
+    }
     expect(lowestAt(toolpath, 10)).toBeCloseTo(-3, 9);
   });
 

@@ -652,10 +652,13 @@ function cutTaperedPath(
         feed(point(i, above));
       }
     }
-    const section: Point[] = [];
-    for (let i = from; i !== to + step; i += step) section.push(path[i] as Point);
     const down = point(from, level)[2];
-    if (down < z) descend(cut, section, z, down);
+    // Ramp only where the flute is at least that deep, never into a shallower end.
+    const ramp: Point[] = [];
+    for (let i = from; i !== to + step && -(depths[i] as number) <= down + 1e-9; i += step) {
+      ramp.push(path[i] as Point);
+    }
+    if (down < z) descend(cut, ramp, z, down);
     for (let i = from + step; i !== to + step; i += step) feed(point(i, level));
     at = to;
   });
